@@ -439,3 +439,42 @@ npm run typecheck   # tsc --noEmit — clean
 npm run test        # vitest — 124 passing
 npm run build       # next build — clean (middleware compiles to Edge)
 ```
+
+## Production Deployment
+
+The platform is configured for [**Vercel**](https://vercel.com/docs/git) deployment. Every push to the `main` branch automatically triggers a production deploy.
+
+### Setup
+
+1. Connect your GitHub repository to Vercel: https://vercel.com/new
+2. Select this repository (`briando979-netizen/zekerflex-finale`)
+3. Configure environment variables in Vercel project settings:
+   - `AUTH_SECRET` (≥32 random chars)
+   - `DATABASE_URL` (PostgreSQL connection string)
+   - `REDIS_URL` (Redis connection string)
+   - `LLM_BASE_URL` (self-hosted model endpoint)
+   - All other vars from `.env.example`
+
+4. On the "Deployments" tab, Vercel will auto-deploy every push to `main`
+
+### Deployment Flow
+
+```
+git push origin main
+  → GitHub webhook → Vercel detects push
+    → Runs `npm run build`
+      → Compiles Next.js + Edge middleware
+        → Type-checks, runs tests, builds to `.next/`
+          → Deploys to Vercel's CDN (Edge Functions for middleware)
+```
+
+### Monitoring
+
+- **Vercel Dashboard**: https://vercel.com/dashboard
+- **Analytics**: Real-time request volume, latency, error rates
+- **Logs**: `Deployments` → select deployment → `Functions` tab
+- **Health check**: `GET /api/health` returns system status (platform admin-only)
+
+### Rollback
+
+In Vercel's "Deployments" tab, click "Promote to Production" on any previous build to instantly roll back.
