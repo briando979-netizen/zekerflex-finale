@@ -1,0 +1,174 @@
+# ZekerFlex Sovereign Box — production stack for a single VPS.
+#
+#   cp deploy/.env.production.example .env.production   # then fill it in
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Inbound ports: NONE. The app is only reachable through the Cloudflare Tunnel
+# (cloudflared makes an outbound connection to Cloudflare). Keep the VPS
+# firewall closed except for SSH.
+#
+# Optional extras behind profiles:
+#   --profile mail     postfix — real outbound e-mail relay (SMTP :587 internal)
+#   --profile maildev  mailpit — catch-all dev inbox instead of real delivery
+#   --profile voice    whisper  (speech-to-text)
+#   --profile images   sd       (image generation — heavy)
+#
+# Real e-mail delivery: run `--profile mail`, then set in .env.production
+#   SMTP_HOST=postfix  SMTP_PORT=587  SMTP_SECURE=false
+#   MAIL_FROM=noreply@zekerflex.com
+# Postfix delivers straight to recipients, or via a smarthost when you set
+# RELAYHOST + RELAYHOST_USERNAME/PASSWORD (Postmark, Mailgun, SES, …). Add SPF,
+# DKIM and DMARC records for your domain so mail isn't flagged as spam.
+#
+# This file never migrates or seeds the database. See deploy/README.md.
+
+name: zekerflex
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zekerflex-app:latest
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      NODE_ENV: production
+      # Wire the app to the in-compose services (override .env.production if
+      # you run Postgres/Redis/Ollama elsewhere).
+      DATABASE_URL: ${DATABASE_URL:-postgresql://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/zekerflex?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
+    volumes:
+      - app-storage:/app/storage
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    # No `ports:` — access is via cloudflared only.
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # Create a tunnel token in the Cloudflare dashboard (Zero Trust →
+      # Networks → Tunnels) and put it in .env.production.
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app: { condition: service_started }
+    networks: [internal]
+    # Alternative (credentials-file method): comment out TUNNEL_TOKEN and mount
+    #   ./deploy/cloudflared:/etc/cloudflared
+    # with config.yml + <tunnel-id>.json, then command: tunnel run <name>.
+
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zekerflex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: zekerflex
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zekerflex -d zekerflex"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  redis:
+    image: redis:7-bookworm
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks: [internal]
+    # For a GPU VPS, add:
+    #   deploy: { resources: { reservations: { devices: [{ capabilities: [gpu] }] } } }
+
+  # ---- optional --------------------------------------------------------------
+
+  # Real, self-hosted outbound mail relay. The app talks SMTP to it on :587.
+  postfix:
+    image: boky/postfix:latest
+    restart: unless-stopped
+    profiles: ["mail"]
+    environment:
+      ALLOWED_SENDER_DOMAINS: ${MAIL_DOMAIN:-zekerflex.com}
+      HOSTNAME: ${MAIL_HOSTNAME:-mail.zekerflex.com}
+      # Optional smarthost — leave empty to deliver directly to recipients:
+      RELAYHOST: ${RELAYHOST:-}
+      RELAYHOST_USERNAME: ${RELAYHOST_USERNAME:-}
+      RELAYHOST_PASSWORD: ${RELAYHOST_PASSWORD:-}
+      # Paste your DKIM private key (base64) to sign outgoing mail:
+      DKIM_AUTOGENERATE: ${DKIM_AUTOGENERATE:-}
+    volumes:
+      - postfix-spool:/var/spool/postfix
+    networks: [internal]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    profiles: ["maildev"]
+    environment:
+      MP_MAX_MESSAGES: "1000"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    volumes:
+      - mailpit-data:/data
+    networks: [internal]
+
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    restart: unless-stopped
+    profiles: ["voice"]
+    environment:
+      WHISPER__MODEL: Systran/faster-whisper-base
+      WHISPER__INFERENCE_DEVICE: cpu
+    volumes:
+      - whisper-cache:/root/.cache/huggingface
+    networks: [internal]
+
+  sd:
+    image: universonic/stable-diffusion-webui:latest
+    restart: unless-stopped
+    profiles: ["images"]
+    command: ["--api", "--listen", "--skip-torch-cuda-test", "--no-half"]
+    volumes:
+      - sd-models:/app/stable-diffusion-webui/models
+      - sd-outputs:/app/stable-diffusion-webui/outputs
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  app-storage:
+  pg-data:
+  redis-data:
+  ollama-models:
+  postfix-spool:
+  mailpit-data:
+  whisper-cache:
+  sd-models:
+  sd-outputs:

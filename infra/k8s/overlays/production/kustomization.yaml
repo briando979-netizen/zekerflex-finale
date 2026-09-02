@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zekerflex
+
+resources:
+  - ../../base
+  - storage-rwx.yaml
+
+patches:
+  # HA: 3 replicas on a ReadWriteMany volume (EFS / Filestore / Longhorn).
+  - target:
+      kind: Deployment
+      name: zekerflex-app
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+      - op: replace
+        path: /spec/template/spec/volumes/2/persistentVolumeClaim/claimName
+        value: zekerflex-storage-rwx
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: zekerflex-app
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 12
+  - target:
+      kind: PodDisruptionBudget
+      name: zekerflex-app
+    patch: |
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+  # Drop the base ReadWriteOnce PVC — production uses zekerflex-storage-rwx.
+  - patch: |
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: zekerflex-storage
+      $patch: delete
+
+images:
+  - name: ghcr.io/zekerflex/zekerflex-app
+    newTag: stable

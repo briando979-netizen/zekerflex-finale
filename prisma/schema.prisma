@@ -1,0 +1,1383 @@
+// ---------------------------------------------------------------------------
+// ZekerFlex - Prisma schema
+// PostgreSQL. All monetary values are stored as integer cents (Int) to avoid
+// floating point drift. Coordinates are decimal degrees (Float).
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================================
+// Enterprise hierarchy & identity
+// ===========================================================================
+
+enum TenantType {
+  PLATFORM
+  ENTERPRISE_HQ
+  FRANCHISE
+}
+
+enum UserRole {
+  FREELANCER
+  LOCAL_MANAGER // approves timesheets for one or more locations (branches)
+  HQ_ADMIN // manages an organization (tenant): SSO, billing, all locations
+  DISPUTE_MANAGER
+  PLATFORM_ADMIN
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+// Freelancer trust/quality tier. Drives a small matching bonus and unlocks
+// higher-value shifts / instant payout limits.
+enum BadgeLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+model Tenant {
+  id        String     @id @default(cuid())
+  name      String
+  type      TenantType
+  country   String     @default("NL") // ISO 3166-1 alpha-2
+  kvkNumber String?    @unique
+  vatNumber String?    @unique
+
+  parentId String?
+  parent   Tenant?  @relation("TenantHierarchy", fields: [parentId], references: [id])
+  children Tenant[] @relation("TenantHierarchy")
+
+  ssoEnabled   Boolean @default(false)
+  ssoIssuerUrl String?
+
+  // Validated Handelsregister data (KVKBase) captured at registration.
+  companyRegistrationId String?              @unique
+  companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
+
+  branches     Branch[]
+  memberships  Membership[]
+  invoicesFrom Invoice[]    @relation("InvoiceIssuerTenant")
+  invoicesTo   Invoice[]    @relation("InvoiceRecipientTenant")
+  modelAgreements ModelAgreement[]
+  apiKeys      ApiKey[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  fullName      String
+  phone         String?
+  // bcrypt hash; null for SSO-only accounts.
+  passwordHash  String?
+  kycStatus     KycStatus @default(NOT_STARTED)
+  disabledAt    DateTime?
+  lastLoginAt   DateTime?
+  // Null until the e-mail address is confirmed via the verification link.
+  emailVerifiedAt DateTime?
+
+  memberships        Membership[]
+  freelancerProfile  FreelancerProfile?
+  deviceFingerprints DeviceFingerprint[]
+  identityChecks     IdentityVerification[]
+  approvedTimesheets Timesheet[]           @relation("TimesheetApprover")
+  raisedDisputes     Dispute[]             @relation("DisputeRaisedBy")
+  resolvedDisputes   Dispute[]             @relation("DisputeResolvedBy")
+  auditLogs          AuditLog[]            @relation("AuditActor")
+  apiKeysCreated     ApiKey[]              @relation("ApiKeyCreatedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===========================================================================
+// External API access — lets a third-party system (an integration partner, a
+// connected employer's own tooling) call the public ZekerFlex API on behalf
+// of one organization. Keys are shown once at creation; only a SHA-256 hash
+// is stored, so a leaked database never reveals a usable key.
+// ===========================================================================
+model ApiKey {
+  id     String @id @default(cuid())
+  name   String // human label, e.g. "Boekhoudkoppeling Acme BV"
+  prefix String @unique // shown in lists, e.g. "zf_live_ab12cd34"
+  hashedKey String // sha256 hex of the full secret
+
+  // scopes this key may use, e.g. ["shifts:read", "invoices:read"]
+  scopes String[]
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdById String?
+  createdBy   User?   @relation("ApiKeyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// A user's role within a specific tenant (RBAC + multi-tenant).
+model Membership {
+  id       String   @id @default(cuid())
+  userId   String
+  tenantId String
+  role     UserRole
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Location scoping for LOCAL_MANAGER: empty => all locations of the org.
+  scopedBranches BranchManager[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tenantId, role])
+  @@index([tenantId])
+}
+
+model BranchManager {
+  id           String     @id @default(cuid())
+  membershipId String
+  branchId     String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, branchId])
+}
+
+// ===========================================================================
+// Branches (vestigingen) & auto-acceptance config
+// ===========================================================================
+
+model Branch {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name       String
+  costCenter String? // for aggregated invoicing per kostenplaats
+
+  addressLine String
+  postalCode  String
+  city        String
+  latitude    Float
+  longitude   Float
+
+  // Geofence radius used for check-in validation (meters).
+  geofenceRadiusMeters Int @default(150)
+
+  // Auto-acceptance / matching configuration (see types/matching.ts).
+  matchingConfig Json @default("{}")
+
+  managers   BranchManager[]
+  shifts     Shift[]
+  timesheets Timesheet[]
+  dbaRecords DbaComplianceRecord[]
+  modelAgreements ModelAgreement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ===========================================================================
+// Freelancer profile, skills, fraud & identity enforcement
+// ===========================================================================
+
+model FreelancerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kvkNumber String  @unique
+  vatNumber String? @unique
+  vatValid  Boolean @default(false) // VIES check result
+  kvkValid  Boolean @default(false) // KVKBase check result: active registration
+  kvkVerifiedAt DateTime?
+  country   String  @default("NL") // ISO 3166-1 alpha-2
+
+  // Validated Handelsregister data (KVKBase) captured at registration.
+  companyRegistrationId String?              @unique
+  companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
+
+  // Destination for instant SEPA payouts.
+  payoutIban String?
+
+  // Home base for travel-time estimation.
+  homeLatitude  Float
+  homeLongitude Float
+  homePostalCode String
+
+  // Behavioural notification timing. When both quiet-hour bounds are set the
+  // dispatcher suppresses push pings during that local window (the in-app offer
+  // still lands). Hours are 0-23 in `timezone`; the window wraps midnight when
+  // start > end (e.g. 22 -> 7).
+  timezone        String @default("Europe/Amsterdam")
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+
+  // Behavioural Timing Notifier v2: hours (0-23, local) learned from actual
+  // engagement events. When non-empty the dispatcher prefers these over the
+  // manual quiet-hours window. Recomputed by /api/internal/active-hours/recompute.
+  learnedActiveHours    Int[]     @default([])
+  activeHoursComputedAt DateTime?
+
+  // Rolling behavioural scores in [0,1].
+  reliabilityScore Float @default(0.7) // no-shows, cancellations, punctuality
+  acceptanceScore  Float @default(0.5) // historical offer acceptance rate
+
+  badgeLevel BadgeLevel @default(BRONZE)
+  shiftsCompleted Int    @default(0)
+
+  // Enforcement flags.
+  isBlacklisted    Boolean   @default(false)
+  blacklistReason  String?
+  matchingBlockedUntil DateTime? // set by DBA compliance throttle/block
+
+  skills       FreelancerSkill[]
+  assignments  ShiftAssignment[]
+  matches      ShiftMatch[]
+  timesheets   Timesheet[]
+  dbaRecords   DbaComplianceRecord[]
+  pushTokens   PushToken[]
+  webPushSubscriptions WebPushSubscription[]
+  engagementEvents  EngagementEvent[]
+  modelAgreements   ModelAgreement[]
+  replacementsGiven  ReplacementRequest[] @relation("ReplacementOriginal")
+  replacementsTaken  ReplacementRequest[] @relation("ReplacementSubstitute")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Skill {
+  id       String            @id @default(cuid())
+  name     String            @unique
+  category String
+  freelancers FreelancerSkill[]
+  shifts   Shift[]
+}
+
+model FreelancerSkill {
+  id           String @id @default(cuid())
+  freelancerId String
+  skillId      String
+  // Verified rating in [0,5] from client reviews.
+  rating       Float  @default(0)
+  shiftsWorked Int    @default(0)
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  skill      Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([freelancerId, skillId])
+}
+
+model DeviceFingerprint {
+  id           String   @id @default(cuid())
+  userId       String
+  hardwareHash String // SHA-256 of stable hardware attributes
+  platform     String
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  trusted      Boolean  @default(false)
+  // Populated when the same hardware hash is seen for a different user account.
+  sharedWithUserIds String[] @default([])
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hardwareHash])
+  @@index([hardwareHash])
+}
+
+model IdentityVerification {
+  id       String @id @default(cuid())
+  userId   String
+  provider String @default("DIDIT") // "DIDIT" | "VERIFF" | "READID"
+
+  // Didit hosted-verification session.
+  sessionId      String?   @unique // Didit session_id
+  sessionUrl     String? // hosted verification URL to redirect the user to
+  workflowId     String?
+  vendorData     String? // our correlation id sent to Didit
+  decisionStatus String? // raw Didit status: "Approved" | "Declined" | "In Review" | ...
+  lastWebhookAt  DateTime?
+
+  // Populated once the verification completes.
+  documentType       String? // "PASSPORT" | "ID_CARD" | "RESIDENCE_PERMIT"
+  documentNumberHash String?
+  nfcChipVerified    Boolean @default(false)
+  livenessScore      Float? // biometric liveness vector confidence [0,1]
+  faceMatchScore     Float?
+
+  status     KycStatus @default(PENDING)
+  verifiedAt DateTime?
+  expiresAt  DateTime?
+  rawPayload Json      @default("{}")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([documentNumberHash])
+}
+
+// Append-only audit + idempotency log for inbound Didit webhooks.
+model DiditWebhookEvent {
+  id              String   @id @default(cuid())
+  sessionId       String
+  status          String
+  webhookType     String?
+  signatureValid  Boolean
+  signatureMethod String? // "simple" | "v2" | "original"
+  rawPayload      Json
+  receivedAt      DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([receivedAt])
+}
+
+// ===========================================================================
+// Company registration (KVKBase / Dutch Handelsregister)
+// ===========================================================================
+
+enum CompanyStatus {
+  ACTIVE
+  DISSOLVED
+  UNKNOWN
+}
+
+model CompanyRegistration {
+  id        String @id @default(cuid())
+  kvkNumber String @unique
+  source    String @default("KVKBASE")
+
+  legalName           String
+  tradeName           String?
+  legalForm           String? // e.g. "Eenmanszaak", "Besloten Vennootschap"
+  status              CompanyStatus @default(UNKNOWN)
+  isActive            Boolean       @default(false)
+  insolvent           Boolean       @default(false)
+  establishmentNumber String? // vestigingsnummer of the main branch (enrichment)
+
+  street      String?
+  houseNumber String?
+  postalCode  String?
+  city        String?
+  country     String  @default("NL")
+
+  // SBI activity codes + the raw activity objects [{ sbiCode, description, isMain }].
+  sbiCodes   String[] @default([])
+  activities Json     @default("[]")
+
+  registrationDate DateTime? // KVK inschrijfdatum
+  employeeCount    Int?
+
+  // VAT (from KVKBase enriched lookup / VIES).
+  vatNumber      String?
+  vatValid       Boolean?
+  vatStatus      String? // "validated" | "stale" | "malformed" | "unvalidated"
+  vatValidatedAt DateTime?
+
+  rawProfile Json
+  fetchedAt  DateTime @default(now())
+
+  freelancerProfile FreelancerProfile?
+  tenant            Tenant?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Firebase Cloud Messaging device token (optional secondary push provider).
+model PushToken {
+  id           String   @id @default(cuid())
+  freelancerId String
+  token        String   @unique
+  platform     String // "ios" | "android" | "web"
+  lastSeenAt   DateTime @default(now())
+  disabledAt   DateTime?
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@index([freelancerId])
+}
+
+// W3C Web Push subscription (RFC 8291 aes128gcm). Primary, self-hosted push
+// channel - the platform holds the VAPID keypair and encrypts payloads itself;
+// no Firebase / Google service account involved.
+model WebPushSubscription {
+  id           String    @id @default(cuid())
+  freelancerId String
+  endpoint     String    @unique // push service URL (opaque, vendor-specific)
+  p256dh       String // base64url client public key (ECDH P-256)
+  authKey      String // base64url 16-byte client auth secret
+  userAgent    String?
+  lastSeenAt   DateTime  @default(now())
+  disabledAt   DateTime? // set when the push service reports 404/410 Gone
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([freelancerId])
+}
+
+// ===========================================================================
+// Shifts, matching & assignments
+// ===========================================================================
+
+enum ShiftStatus {
+  DRAFT
+  OPEN
+  MATCHING
+  PARTIALLY_FILLED
+  FILLED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchStatus {
+  SCORED
+  NOTIFIED
+  VIEWED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  AUTO_ASSIGNED
+}
+
+enum TravelMode {
+  DRIVING
+  TRANSIT
+  BICYCLING
+  WALKING
+}
+
+model Shift {
+  id       String @id @default(cuid())
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  title          String
+  description     String?
+  requiredSkillId String?
+  requiredSkill   Skill?  @relation(fields: [requiredSkillId], references: [id])
+  minSkillRating  Float   @default(0)
+
+  startsAt      DateTime
+  endsAt        DateTime
+  breakMinutes  Int      @default(0)
+  hourlyRateCents Int
+  positions     Int      @default(1)
+
+  status ShiftStatus @default(DRAFT)
+
+  matches     ShiftMatch[]
+  assignments ShiftAssignment[]
+  modelAgreements ModelAgreement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId, status])
+  @@index([startsAt])
+}
+
+model ShiftMatch {
+  id           String @id @default(cuid())
+  shiftId      String
+  freelancerId String
+
+  score        Float // final weighted score [0,1]
+  scoreBreakdown Json // { reliability, travel, skill, ... } - see types/matching.ts
+  travelMode   TravelMode
+  travelMinutes Int
+  distanceMeters Int
+  withinGeofence Boolean
+
+  status       MatchStatus @default(SCORED)
+  notifiedAt   DateTime?
+  respondedAt  DateTime?
+  expiresAt    DateTime?
+
+  shift      Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([shiftId, freelancerId])
+  @@index([shiftId, status])
+  @@index([freelancerId, status])
+}
+
+model ShiftAssignment {
+  id           String @id @default(cuid())
+  shiftId      String
+  freelancerId String
+
+  acceptedAt DateTime @default(now())
+  source     MatchStatus // ACCEPTED or AUTO_ASSIGNED
+  cancelledAt DateTime?
+  cancelReason String?
+
+  shift      Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  timesheet          Timesheet?
+  replacementRequest ReplacementRequest?
+  modelAgreement     ModelAgreement?
+
+  @@unique([shiftId, freelancerId])
+  @@index([freelancerId])
+}
+
+// ===========================================================================
+// Wet DBA model agreements (modelovereenkomsten)
+//
+// The moment a freelancer engages with a client (accepts / is auto-assigned to
+// a shift) the platform provisions a model-agreement instance for that
+// freelancer <-> client relationship, based on a Belastingdienst-registered
+// template. Work may start before it is signed; signatures are collected async.
+// ===========================================================================
+
+enum ModelAgreementType {
+  VRIJE_VERVANGING // free substitution (ZekerFlex default - 1-click replacement)
+  GEEN_WERKGEVERSGEZAG // no employer authority
+  TUSSENKOMST // intermediary
+  BRANCHE // sector-specific
+}
+
+enum ModelAgreementStatus {
+  DRAFT
+  PENDING_FREELANCER_SIGNATURE
+  PENDING_CLIENT_SIGNATURE
+  ACTIVE // both parties signed
+  DECLINED
+  SUPERSEDED
+  EXPIRED
+}
+
+model ModelAgreement {
+  id        String @id @default(cuid())
+  reference String @unique // ZF-MOD-2026-000123
+
+  freelancerId String
+  tenantId     String // opdrachtgever (organization)
+  branchId     String?
+  shiftId      String? // the engagement that first triggered generation
+  assignmentId String? @unique
+
+  type   ModelAgreementType   @default(VRIJE_VERVANGING)
+  status ModelAgreementStatus @default(PENDING_FREELANCER_SIGNATURE)
+
+  // Belastingdienst-registered template this instance is based on.
+  templateKey        String
+  templateVersion    String
+  belastingdienstNr  String? // official registration number, once filed
+
+  // Party snapshot at generation time (immutable once created).
+  freelancerLegalName String
+  freelancerKvkNumber String
+  clientLegalName     String
+  clientKvkNumber     String?
+
+  hourlyRateCents  Int?
+  scopeDescription String?
+
+  freelancerSignedAt DateTime?
+  clientSignedAt     DateTime?
+  documentUrl        String?
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch?           @relation(fields: [branchId], references: [id])
+  shift      Shift?            @relation(fields: [shiftId], references: [id])
+  assignment ShiftAssignment?  @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([freelancerId, status])
+  @@index([tenantId, status])
+}
+
+// Generic gap-free counter (model-agreement references, etc.).
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
+// Wet DBA "vrije vervanging" - 1-click in-app replacement.
+enum ReplacementStatus {
+  REQUESTED
+  ACCEPTED_BY_SUBSTITUTE
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+model ReplacementRequest {
+  id           String            @id @default(cuid())
+  assignmentId String            @unique
+  originalId   String
+  substituteId String?
+  status       ReplacementStatus @default(REQUESTED)
+  reason       String?
+  confirmedAt  DateTime?
+
+  assignment ShiftAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  original   FreelancerProfile @relation("ReplacementOriginal", fields: [originalId], references: [id])
+  substitute FreelancerProfile? @relation("ReplacementSubstitute", fields: [substituteId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ===========================================================================
+// Timesheets, GPS check-ins & disputes
+// ===========================================================================
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  DISPUTED
+  REJECTED
+  PAID
+}
+
+enum GpsEventType {
+  CHECK_IN
+  HEARTBEAT
+  CHECK_OUT
+}
+
+model Timesheet {
+  id           String @id @default(cuid())
+  assignmentId String @unique
+  freelancerId String
+  branchId     String
+
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  breakMinutes   Int      @default(0)
+
+  hourlyRateCents Int
+  // Denormalised billable hours, computed on submit/approve.
+  billableMinutes Int @default(0)
+
+  status       TimesheetStatus @default(DRAFT)
+  submittedAt  DateTime?
+  approvedAt   DateTime?
+  approvedById String?
+
+  assignment ShiftAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id])
+  branch     Branch            @relation(fields: [branchId], references: [id])
+  approvedBy User?             @relation("TimesheetApprover", fields: [approvedById], references: [id])
+
+  gpsEvents GpsEvent[]
+  dispute   Dispute?
+  invoices  Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId, status])
+  @@index([freelancerId, status])
+}
+
+model GpsEvent {
+  id          String       @id @default(cuid())
+  timesheetId String
+  type        GpsEventType
+  latitude    Float
+  longitude   Float
+  accuracyMeters Float
+  recordedAt  DateTime
+  // Distance from branch centroid at time of event, and whether inside geofence.
+  distanceToBranchMeters Float
+  withinGeofence Boolean
+  deviceHash  String
+  mocked      Boolean @default(false) // OS reported mock-location provider
+
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  @@index([timesheetId, type])
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_APPROVED // manager sided with freelancer's submitted hours
+  RESOLVED_OVERRULED // manager imposed corrected hours
+  ESCALATED
+}
+
+enum DisputeOrigin {
+  MANAGER_REVIEW // a person flagged the hours
+  FREELANCER_SUBMISSION // freelancer contested a correction
+  GEOFENCE_VIOLATION // auto-raised: a check-in/out landed outside the geofence
+  MOCK_LOCATION // auto-raised: OS reported a mock-location provider
+}
+
+model Dispute {
+  id          String        @id @default(cuid())
+  timesheetId String        @unique
+  raisedById  String? // null => system-raised
+  origin      DisputeOrigin @default(MANAGER_REVIEW)
+  status      DisputeStatus @default(OPEN)
+  reason      String
+
+  claimedMinutes  Int // hours submitted by freelancer
+  proposedMinutes Int // hours the client believes are correct
+  resolvedMinutes Int? // final decision
+
+  resolutionNote String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+
+  timesheet  Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  raisedBy   User?     @relation("DisputeRaisedBy", fields: [raisedById], references: [id])
+  resolvedBy User?     @relation("DisputeResolvedBy", fields: [resolvedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ===========================================================================
+// Billing (reverse / self-billing) & instant SEPA payouts
+// ===========================================================================
+
+enum InvoiceType {
+  SELF_BILL_FREELANCER // company <- freelancer services (created on freelancer's behalf)
+  PLATFORM_FEE // company <- ZekerFlex platform fee
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+enum VatTreatment {
+  STANDARD_RATE
+  REVERSE_CHARGE // intra-EU B2B
+  OUT_OF_SCOPE
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String        @unique
+  type        InvoiceType
+  status      InvoiceStatus @default(DRAFT)
+  timesheetId String
+
+  issuerTenantId    String? // for PLATFORM_FEE the issuer is the platform tenant
+  recipientTenantId String
+
+  issuerFreelancerId String? // for SELF_BILL_FREELANCER
+
+  currency     String       @default("EUR")
+  vatTreatment VatTreatment
+  vatRate      Float // e.g. 0.21 or 0
+  subtotalCents Int
+  vatCents     Int
+  totalCents   Int
+
+  pdfUrl String?
+
+  issuedAt DateTime?
+  lines    InvoiceLine[]
+  payment  Payment?
+
+  timesheet       Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  issuerTenant    Tenant?   @relation("InvoiceIssuerTenant", fields: [issuerTenantId], references: [id])
+  recipientTenant Tenant    @relation("InvoiceRecipientTenant", fields: [recipientTenantId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([timesheetId])
+  @@index([type, status])
+}
+
+// Monotonic per-(type, year) invoice counter. Incremented inside the approval
+// transaction with a row lock so numbers are gap-free and unique.
+model InvoiceSequence {
+  id       String @id @default(cuid())
+  type     InvoiceType
+  year     Int
+  lastValue Int   @default(0)
+
+  @@unique([type, year])
+}
+
+model InvoiceLine {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Float // hours
+  unitPriceCents Int
+  amountCents Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentMethod {
+  SEPA_INSTANT
+  SEPA_STANDARD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUBMITTED
+  SETTLED
+  FAILED
+  RETURNED
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  invoiceId     String        @unique
+  method        PaymentMethod @default(SEPA_INSTANT)
+  status        PaymentStatus @default(PENDING)
+  amountCents   Int
+  currency      String        @default("EUR")
+
+  debtorIban   String
+  creditorIban String
+  endToEndId   String  @unique // SEPA E2E reference / idempotency key
+  providerRef  String?
+  failureCode  String?
+
+  submittedAt DateTime?
+  settledAt   DateTime?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+}
+
+// ===========================================================================
+// Wet DBA compliance monitor
+// ===========================================================================
+
+enum DbaRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DbaAction {
+  NONE
+  WARN
+  THROTTLE // no new matches at this branch for a cool-down period
+  BLOCK // no new matches at this branch until manual review
+}
+
+model DbaComplianceRecord {
+  id           String @id @default(cuid())
+  freelancerId String
+  branchId     String
+
+  windowStart DateTime
+  windowEnd   DateTime
+
+  totalMinutes      Int
+  engagementCount   Int
+  distinctWeeks     Int
+  maxConsecutiveWeeks Int
+  clientRevenueShare Float // this client's share of freelancer's platform revenue
+
+  riskLevel DbaRiskLevel
+  action    DbaAction
+  rationale String
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  branch     Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([freelancerId, branchId])
+  @@index([riskLevel])
+  @@index([createdAt])
+}
+
+// ===========================================================================
+// Audit trail
+//
+// Append-only record of security- and money-sensitive actions. Written through
+// lib/audit.ts#recordAudit, which never throws - a failed audit write is logged
+// and swallowed so it cannot abort the operation it records. Read-only surface:
+// GET /api/admin/audit (PLATFORM_ADMIN).
+// ===========================================================================
+
+enum AuditCategory {
+  AUTH
+  SECURITY
+  TIMESHEET
+  BILLING
+  DISPUTE
+  KYC
+  COMPANY
+  AGREEMENT
+  MATCHING
+  ADMIN
+  SALES
+  ORCHESTRATION
+}
+
+model AuditLog {
+  id       String        @id @default(cuid())
+  category AuditCategory
+  action   String // dotted verb, e.g. "timesheet.approved", "auth.login.failed"
+  severity String        @default("info") // "info" | "warning" | "critical"
+
+  // Actor. actorUserId is null for system / integration events; actorLabel then
+  // carries a human hint ("system", "integration:didit", ...).
+  actorUserId String?
+  actorLabel  String  @default("system")
+  ipAddress   String?
+  userAgent   String?
+
+  // Subject of the action.
+  targetType String?
+  targetId   String?
+  summary    String
+  metadata   Json    @default("{}")
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([category, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
+}
+
+// ===========================================================================
+// Behavioural Timing Notifier v2 - engagement events
+//
+// Every meaningful in-app action is timestamped. `learnedActiveHours` on the
+// freelancer profile is derived from the last ~200 events and the dispatcher
+// prefers it over the manually configured quiet-hours window.
+// ===========================================================================
+
+enum EngagementKind {
+  APP_OPEN
+  OFFER_VIEWED
+  OFFER_RESPONDED
+  CHECK_IN
+  TIMESHEET_SUBMITTED
+}
+
+model EngagementEvent {
+  id           String         @id @default(cuid())
+  freelancerId String
+  kind         EngagementKind
+  occurredAt   DateTime       @default(now())
+
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@index([freelancerId, occurredAt])
+}
+
+// ===========================================================================
+// Sales-AI - lead pipeline + LLM-drafted outreach (a human sends it)
+// ===========================================================================
+
+enum SalesLeadStatus {
+  NEW
+  ENRICHED
+  DRAFTED
+  APPROVED
+  SENT
+  REPLIED
+  WON
+  LOST
+  DISQUALIFIED
+}
+
+enum SalesOutreachStatus {
+  DRAFT
+  APPROVED
+  SENT
+  DISCARDED
+}
+
+model SalesLead {
+  id           String          @id @default(cuid())
+  companyName  String
+  kvkNumber    String?
+  contactName  String?
+  contactEmail String?
+  city         String?
+  sector       String?
+  source       String          @default("manual") // "manual" | "kvkbase" | "import"
+  status       SalesLeadStatus @default(NEW)
+
+  // 0-100 fit score + the model's reasoning (heuristic or LLM).
+  score          Int?
+  scoreRationale String?
+  notes          String?
+
+  enrichmentJson Json      @default("{}")
+  createdById    String?
+  lastContactedAt DateTime?
+
+  outreach SalesOutreach[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([kvkNumber])
+}
+
+model SalesOutreach {
+  id      String              @id @default(cuid())
+  leadId  String
+  channel String              @default("email")
+  status  SalesOutreachStatus @default(DRAFT)
+
+  subject String
+  body    String
+
+  generatedByModel String?
+  editedByHuman    Boolean @default(false)
+  approvedById     String?
+  approvedAt       DateTime?
+  sentById         String?
+  sentAt           DateTime?
+
+  lead SalesLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId, status])
+}
+
+// ===========================================================================
+// Autonomous Orchestration Core (the "Jarvis loop")
+//
+// A cycle observes the platform (audit log, health, queue depths), asks the
+// self-hosted LLM to interpret it, and records findings. It NEVER applies code
+// or runs an un-confirmed mutation: CODE_PATCH findings hold a proposed diff as
+// text for a human; CONSOLE_MUTATION findings carry an admin-console confirm
+// token; CONSOLE_QUERY findings may carry a read-only result.
+// ===========================================================================
+
+enum OrchestrationTrigger {
+  CRON
+  MANUAL
+}
+
+enum OrchestrationRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum FindingSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FindingActionKind {
+  NONE
+  CONSOLE_QUERY
+  CONSOLE_MUTATION
+  CODE_PATCH
+  MANUAL
+}
+
+enum FindingStatus {
+  OPEN
+  ACKNOWLEDGED
+  ACTIONED
+  DISMISSED
+}
+
+model OrchestrationRun {
+  id        String                 @id @default(cuid())
+  trigger   OrchestrationTrigger
+  status    OrchestrationRunStatus  @default(RUNNING)
+  model     String
+  startedAt DateTime               @default(now())
+  finishedAt DateTime?
+
+  snapshotJson Json    @default("{}")
+  summary      String?
+  error        String?
+
+  findings OrchestrationFinding[]
+
+  @@index([status, startedAt])
+}
+
+model OrchestrationFinding {
+  id    String @id @default(cuid())
+  runId String
+
+  severity   FindingSeverity
+  category   String
+  title      String
+  detail     String
+  actionKind FindingActionKind @default(NONE)
+  status     FindingStatus     @default(OPEN)
+
+  // CONSOLE_QUERY: the read-only result. CONSOLE_MUTATION: a confirm token +
+  // impact. CODE_PATCH: a proposed unified diff + which files it touches.
+  actionPayload Json @default("{}")
+
+  resolvedById String?
+  resolvedAt   DateTime?
+  resolutionNote String?
+
+  run OrchestrationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([status, severity])
+}
+
+// ===========================================================================
+// Voice / TTS - spontaneous spoken status updates
+//
+// Events (build green, task done, orchestration finding, new sales lead) push a
+// VoiceAnnouncement. A connected admin client streams unspoken announcements
+// via GET /api/voice/stream and speaks them - server-side (Piper, if configured)
+// or with the browser's local speech synthesis. 100% local, no cloud TTS.
+// ===========================================================================
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model VoiceAnnouncement {
+  id       String               @id @default(cuid())
+  text     String
+  category String // "orchestration" | "sales" | "build" | "status" | "security"
+  priority AnnouncementPriority  @default(NORMAL)
+  source   String               @default("system")
+  spokenAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([spokenAt, createdAt])
+}
+
+// ===========================================================================
+// Local RAG - total memory (no pgvector: Float[] embeddings + JS cosine)
+//
+// Everything indexable is chunked, embedded via the self-hosted embedding model
+// (LLM_EMBED_MODEL) and stored here. `lib/rag/query.ts` retrieves context for
+// the AI's answers, orchestration analysis and semantic search - all local.
+// ===========================================================================
+
+enum RagSourceType {
+  CODE
+  AUDIT
+  DATABASE
+  LEGAL
+  SALES
+  INTERACTION
+}
+
+model RagChunk {
+  id          String        @id @default(cuid())
+  sourceType  RagSourceType
+  sourceRef   String // "lib/foo.ts" | "auditLog:<id>" | "salesLead:<id>" | ...
+  title       String
+  chunkIndex  Int           @default(0)
+  content     String
+  contentHash String        @unique // sha256(sourceRef|chunkIndex|content)
+  embedding   Float[]
+  embedDim    Int
+  tokens      Int           @default(0)
+  indexedAt   DateTime      @default(now())
+
+  @@index([sourceType])
+  @@index([sourceRef])
+}
+
+// ===========================================================================
+// AI budget governor - local throttling + token accounting
+//
+// Every call to the self-hosted model passes through lib/ai/governor.ts:
+// concurrency cap, per-minute rate window (time-slot), a daily token budget as
+// a runaway-loop circuit breaker, and a minimum spacing between requests. This
+// row records what each call actually cost.
+// ===========================================================================
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  purpose          String   @default("unknown") // "orchestration" | "rag" | "sales" | ...
+  model            String
+  endpointHost     String   @default("local")
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  durationMs       Int      @default(0)
+  throttledMs      Int      @default(0)
+  ok               Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([purpose, createdAt])
+}
+
+// ===========================================================================
+// Local uploads - files added via the chatbar "+" button
+//
+// Bytes are written to ./storage/uploads on the box's own disk (gitignored);
+// this row is the metadata. No object storage, no cloud.
+// ===========================================================================
+
+model Upload {
+  id           String   @id @default(cuid())
+  filename     String
+  mimeType     String   @default("application/octet-stream")
+  sizeBytes    Int
+  sha256       String
+  storageKey   String   @unique // relative path under the uploads root
+  uploadedById String?
+  jarvisTurnId String?
+  createdAt    DateTime @default(now())
+
+  jarvisTurn JarvisTurn? @relation(fields: [jarvisTurnId], references: [id], onDelete: SetNull)
+
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+// ===========================================================================
+// Jarvis conversational turns + live progress events
+//
+// A "turn" is one user message routed through the Jarvis core (RAG, admin
+// console, orchestration, briefing). Progress events stream to the chat UI as
+// collapsible blocks; each event names the sub-agent that produced it.
+// ===========================================================================
+
+enum JarvisTurnStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum JarvisEventKind {
+  THINKING
+  TOOL_CALL
+  TOOL_RESULT
+  AGENT_DELEGATION
+  MESSAGE
+  ERROR
+}
+
+model JarvisTurn {
+  id        String           @id @default(cuid())
+  userId    String?
+  prompt    String
+  status    JarvisTurnStatus  @default(RUNNING)
+  answer    String?
+  error     String?
+  startedAt DateTime         @default(now())
+  endedAt   DateTime?
+
+  events  JarvisEvent[]
+  uploads Upload[]
+
+  @@index([userId, startedAt])
+  @@index([status])
+}
+
+model JarvisEvent {
+  id      String          @id @default(cuid())
+  turnId  String
+  seq     Int
+  kind    JarvisEventKind
+  agent   String          @default("jarvis") // "jarvis" | "developer:tom" | "sales" | "analyst"
+  title   String
+  detail  String?
+  payload Json            @default("{}")
+  durationMs Int?
+  createdAt DateTime       @default(now())
+
+  turn JarvisTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
+
+  @@unique([turnId, seq])
+  @@index([turnId])
+}
+
+// ===========================================================================
+// Sovereign analytics - a local, cookie-free alternative to Google Analytics
+//
+// The client beacon (components/analytics/AnalyticsBeacon.tsx) posts events to
+// /api/analytics/track. Everything is stored here on the box; no third-party
+// script, no cross-site cookie. The session id is a per-tab random string in
+// sessionStorage, and the user-agent is only ever stored as a short hash.
+// ===========================================================================
+
+enum AnalyticsEventType {
+  PAGEVIEW
+  CLICK
+  INTERACTION
+  CUSTOM
+}
+
+model AnalyticsEvent {
+  id           String             @id @default(cuid())
+  type         AnalyticsEventType
+  path         String
+  referrerHost String?
+  sessionId    String // random per-tab id (sessionStorage, NOT a cookie)
+  userId       String?
+  label        String? // element label / custom event name
+  meta         Json               @default("{}")
+  uaHash       String? // sha256(user-agent).slice(0,16) - no raw UA stored
+  createdAt    DateTime           @default(now())
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([path, createdAt])
+  @@index([sessionId, createdAt])
+}

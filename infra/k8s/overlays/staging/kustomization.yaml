@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zekerflex-staging
+nameSuffix: -staging
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Ingress
+      name: zekerflex
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.zekerflex.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: staging.zekerflex.com
+  - target:
+      kind: ConfigMap
+      name: zekerflex-config
+    patch: |
+      - op: replace
+        path: /data/APP_BASE_URL
+        value: https://staging.zekerflex.com
+      - op: replace
+        path: /data/AUTH_URL
+        value: https://staging.zekerflex.com
+
+images:
+  - name: ghcr.io/zekerflex/zekerflex-app
+    newTag: main

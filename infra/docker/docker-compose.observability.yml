@@ -1,0 +1,80 @@
+# Optional observability sidecars for the single-VPS deployment. Compose them
+# alongside the main stack:
+#
+#   docker compose -f docker-compose.prod.yml \
+#     -f infra/docker/docker-compose.observability.yml up -d
+#
+# Nothing here is exposed to the internet — reach Grafana over the Cloudflare
+# Tunnel or an SSH port-forward.
+name: zekerflex
+
+services:
+  # Scrapes the app's /api/metrics-style endpoints and node/cadvisor.
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    networks: [internal]
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD}
+      GF_SERVER_ROOT_URL: https://grafana.zekerflex.com
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks: [internal]
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    command: ["--path.rootfs=/host"]
+    volumes:
+      - /:/host:ro,rslave
+    networks: [internal]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [internal]
+
+  # Ships container logs to Loki (query in Grafana).
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+    networks: [internal]
+
+  promtail:
+    image: grafana/promtail:latest
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+
+volumes:
+  prom-data:
+  grafana-data:
+  loki-data:
+
+networks:
+  internal:
+    external: true
+    name: zekerflex_internal

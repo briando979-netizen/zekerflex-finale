@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/internal/matching/tick",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/internal/active-hours/recompute",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/internal/orchestration/tick",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/internal/rag/reindex",
+      "schedule": "0 */12 * * *"
+    }
+  ]
+}

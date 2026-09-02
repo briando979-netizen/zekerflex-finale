@@ -1,0 +1,552 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --shell-pad: clamp(1.25rem, 5vw, 2.5rem);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-paper text-ink antialiased font-sans;
+  font-feature-settings: "ss01", "cv05";
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+::selection {
+  background: #4FE0A0;
+  color: #0C0E12;
+}
+
+:focus-visible {
+  outline: 2px solid #4FE0A0;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1180px;
+  padding-inline: var(--shell-pad);
+}
+/* Roomier on large / 4K displays without letting text lines run too wide. */
+@media (min-width: 1600px) {
+  .shell { max-width: 1320px; }
+}
+@media (min-width: 2200px) {
+  :root { --shell-pad: 3rem; }
+  .shell { max-width: 1440px; }
+}
+
+@layer components {
+
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold
+      transition-all duration-200 ease-spring focus-visible:outline-none focus-visible:ring-2
+      focus-visible:ring-brand-mint focus-visible:ring-offset-2 disabled:opacity-50
+      active:scale-[0.97];
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-white shadow-e1 hover:bg-brand-600 hover:shadow-e2 hover:-translate-y-px;
+  }
+  .btn-mint {
+    @apply btn bg-brand-mint text-ink shadow-glow hover:brightness-105 hover:-translate-y-px;
+  }
+  .btn-ghost {
+    @apply btn border border-hairstrong bg-white/60 text-ink backdrop-blur hover:bg-paper-soft hover:border-brand-300;
+  }
+  .btn-ghost-invert {
+    @apply btn border border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/[0.12] hover:border-white/35;
+  }
+
+  /* Base card, kept for compatibility. */
+  .card {
+    @apply rounded-xl2 border border-hair bg-white shadow-card;
+  }
+
+  /* Premium surface: layered elevation + a hairline gradient edge. */
+  .surface {
+    position: relative;
+    border-radius: 1.25rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fdfdfb 100%);
+    box-shadow: var(--tw-shadow, 0 2px 4px rgba(12,14,18,0.05), 0 14px 32px -12px rgba(12,14,18,0.14));
+    box-shadow: 0 1px 2px rgba(12,14,18,0.05), 0 14px 34px -14px rgba(12,14,18,0.16);
+  }
+  .surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(12,14,18,0.10), rgba(12,14,18,0.03) 40%, rgba(79,224,160,0.18));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .surface-hover {
+    transition: transform 0.35s var(--tw-ease, cubic-bezier(0.22,1,0.36,1)), box-shadow 0.35s ease;
+  }
+  .surface-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(12,14,18,0.07), 0 40px 70px -28px rgba(12,14,18,0.30);
+  }
+
+  .eyebrow {
+    @apply font-mono text-[0.72rem] font-medium uppercase tracking-[0.18em] text-brand-500;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .pill-ok { @apply pill text-ok; background: rgba(21, 128, 61, 0.1); }
+  .pill-warn { @apply pill text-warn; background: rgba(180, 83, 9, 0.1); }
+  .pill-crit { @apply pill text-crit; background: rgba(185, 28, 28, 0.1); }
+  .pill-neutral { @apply pill bg-paper-soft text-neutralx-600; }
+
+  .field-label { @apply block text-sm font-medium text-ink-soft; }
+  .field-input {
+    @apply mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2.5 text-sm
+      shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+  }
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+/* ============================================================ textures / bg */
+
+/* Subtle grain/gradient for dark hero sections */
+.hero-ink {
+  background:
+    radial-gradient(1100px 500px at 12% -10%, rgba(79, 224, 160, 0.16), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgba(14, 92, 74, 0.28), transparent 55%),
+    #0C0E12;
+}
+
+/* Dot grid — for app backgrounds and section fills */
+.dot-grid {
+  background-image: radial-gradient(rgba(12, 14, 18, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dot-grid-fade {
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+
+/* Ambient mesh for the app shell main area */
+.app-bg {
+  position: relative;
+  background:
+    radial-gradient(60rem 40rem at 100% -10%, rgba(79, 224, 160, 0.08), transparent 60%),
+    radial-gradient(50rem 40rem at -10% 20%, rgba(14, 92, 74, 0.06), transparent 55%),
+    #F4F5F1;
+}
+.app-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(12, 14, 18, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* Fine noise overlay (data-URI SVG) */
+.noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(100deg, #0E5C4A, #4FE0A0, #5FC7A8, #0E5C4A);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 9s ease infinite;
+}
+@media (prefers-reduced-motion: reduce) { .gradient-text { animation: none; } }
+
+/* Skeleton shimmer */
+.shimmer {
+  background: linear-gradient(90deg, rgba(12,14,18,0.04) 25%, rgba(12,14,18,0.09) 37%, rgba(12,14,18,0.04) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* ============================================================ immersive home */
+
+.shell-4k {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1920px;
+  padding-inline: clamp(1.25rem, 5vw, 5rem);
+}
+@media (min-width: 2600px) {
+  .shell-4k { padding-inline: 7rem; }
+}
+
+/* Fluid type — caps out so it never explodes on an 8K panel. */
+.fluid-hero {
+  font-size: clamp(2.75rem, 1.6rem + 5.2vw, 6.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+}
+.fluid-h2 {
+  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 3.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+.fluid-lead {
+  font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.5rem);
+  line-height: 1.6;
+}
+.fluid-stat {
+  font-size: clamp(2.5rem, 1.4rem + 4vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 30px 80px -30px rgba(0, 0, 0, 0.55);
+}
+.glass-light {
+  background: rgba(252, 252, 250, 0.7);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(12, 14, 18, 0.08);
+  box-shadow: 0 30px 70px -34px rgba(12, 14, 18, 0.22);
+}
+
+/* Scroll-reveal — base hidden state; JS adds [data-shown] */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+.reveal-blur {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(34px) scale(0.985);
+  transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1), transform 0.9s cubic-bezier(0.22,1,0.36,1), filter 0.9s ease;
+}
+.reveal-blur[data-shown="true"] { opacity: 1; filter: blur(0); transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-blur { opacity: 1; transform: none; filter: none; transition: none; }
+}
+
+/* Top scroll-progress bar */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+  background: linear-gradient(90deg, #0E5C4A, #4FE0A0);
+  z-index: 60;
+  will-change: transform;
+}
+
+/* Infinite marquee */
+.marquee {
+  display: flex;
+  width: max-content;
+  animation: ticker 38s linear infinite;
+}
+.marquee:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
+
+/* Seamless section blends */
+.blend-ink-paper {
+  background: linear-gradient(180deg, #0C0E12 0%, #10201b 45%, #F4F5F1 100%);
+}
+.blend-paper-ink {
+  background: linear-gradient(180deg, #F4F5F1 0%, #12251d 55%, #0C0E12 100%);
+}
+
+/* Aurora backdrop for dark sections */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  animation: aurora-drift 20s ease-in-out infinite;
+}
+.aurora::before {
+  width: 46vw;
+  height: 46vw;
+  left: -10vw;
+  top: -12vw;
+  background: radial-gradient(circle, rgba(79, 224, 160, 0.4), transparent 70%);
+}
+.aurora::after {
+  width: 40vw;
+  height: 40vw;
+  right: -8vw;
+  bottom: -14vw;
+  background: radial-gradient(circle, rgba(14, 92, 74, 0.55), transparent 70%);
+  animation-delay: -8s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora::before, .aurora::after { animation: none; }
+}
+
+/* ============================================================ ADMIN (dark)
+   Aniq-style admin surface. Scoped to .admin-scope so it never leaks into the
+   marketing site or the freelancer/employer dashboards. Dark by default; a
+   [data-theme="light"] on the same node flips every token. */
+
+.admin-scope {
+  --a-page: #08080a;
+  --a-panel: #131316;
+  --a-panel-2: #17171b;
+  --a-elev: #232327;
+  --a-elev-hover: #2b2b30;
+  --a-border: rgba(255, 255, 255, 0.07);
+  --a-border-strong: rgba(255, 255, 255, 0.12);
+  --a-text: #fafafa;
+  --a-dim: #a1a1aa;
+  --a-mute: #71717a;
+  --a-accent: #10b981;
+  --a-accent-soft: rgba(16, 185, 129, 0.14);
+  --a-blue: #60a5fa;
+  --a-amber: #f59e0b;
+  --a-red: #f87171;
+  --a-invert-bg: #fafafa;
+  --a-invert-fg: #0a0a0b;
+  --a-radius: 1rem;
+
+  color: var(--a-text);
+  background: var(--a-page);
+  font-feature-settings: "ss01";
+}
+
+.admin-scope[data-theme="light"] {
+  --a-page: #f6f6f7;
+  --a-panel: #ffffff;
+  --a-panel-2: #fbfbfc;
+  --a-elev: #f1f1f3;
+  --a-elev-hover: #e9e9ec;
+  --a-border: rgba(9, 9, 11, 0.09);
+  --a-border-strong: rgba(9, 9, 11, 0.16);
+  --a-text: #18181b;
+  --a-dim: #52525b;
+  --a-mute: #8a8a92;
+  --a-accent-soft: rgba(16, 185, 129, 0.12);
+  --a-invert-bg: #18181b;
+  --a-invert-fg: #fafafa;
+}
+
+/* structural helpers */
+.admin-scope .a-panel {
+  background: var(--a-panel);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius);
+}
+.admin-scope .a-elev { background: var(--a-elev); }
+.admin-scope .a-hair { border-color: var(--a-border); }
+.admin-scope .a-grid-bg {
+  background-image: linear-gradient(var(--a-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--a-border) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.admin-scope .a-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  border-radius: 999px; padding: 0.5rem 1rem;
+  font-size: 0.8125rem; font-weight: 600;
+  transition: all 0.16s ease; white-space: nowrap;
+}
+.admin-scope .a-btn-primary { background: var(--a-invert-bg); color: var(--a-invert-fg); }
+.admin-scope .a-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.admin-scope .a-btn-ghost {
+  background: var(--a-elev); color: var(--a-text);
+  border: 1px solid var(--a-border);
+}
+.admin-scope .a-btn-ghost:hover { background: var(--a-elev-hover); }
+
+.admin-scope .a-input {
+  width: 100%; border-radius: 0.65rem;
+  background: var(--a-panel-2); border: 1px solid var(--a-border);
+  color: var(--a-text); padding: 0.6rem 0.85rem; font-size: 0.875rem;
+  outline: none; transition: border-color 0.16s ease;
+}
+.admin-scope .a-input::placeholder { color: var(--a-mute); }
+.admin-scope .a-input:focus { border-color: var(--a-border-strong); }
+
+/* Make the shared component kit adopt the dark surface inside admin */
+.admin-scope .card,
+.admin-scope .surface {
+  background: var(--a-panel) !important;
+  border: 1px solid var(--a-border) !important;
+  border-radius: var(--a-radius) !important;
+  box-shadow: none !important;
+  color: var(--a-text);
+}
+.admin-scope .surface::before { display: none; }
+.admin-scope .surface-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.6) !important;
+}
+
+.admin-scope h1, .admin-scope h2, .admin-scope h3 { color: var(--a-text); }
+.admin-scope .text-ink,
+.admin-scope .text-ink-soft { color: var(--a-text) !important; }
+.admin-scope .text-neutralx-600,
+.admin-scope .text-neutralx-500 { color: var(--a-dim) !important; }
+.admin-scope .text-neutralx-400 { color: var(--a-mute) !important; }
+.admin-scope .text-brand-600,
+.admin-scope .text-brand-500 { color: var(--a-accent) !important; }
+.admin-scope .eyebrow { color: var(--a-accent) !important; }
+
+.admin-scope .border-hair,
+.admin-scope .border-hairstrong,
+.admin-scope .divide-hair > * { border-color: var(--a-border) !important; }
+.admin-scope .bg-paper-soft,
+.admin-scope .bg-white { background: var(--a-panel-2) !important; }
+/* neutralise white->paper gradients (Panel/PageHeader bars) on the dark surface */
+.admin-scope .bg-gradient-to-b.from-white,
+.admin-scope .bg-gradient-to-r.from-white,
+.admin-scope .bg-gradient-to-br.from-white {
+  background-image: none !important;
+  background: var(--a-panel-2) !important;
+}
+.admin-scope .field-input {
+  background: var(--a-panel-2) !important;
+  border-color: var(--a-border) !important;
+  color: var(--a-text) !important;
+}
+
+/* tables */
+.admin-scope table thead tr {
+  border-color: var(--a-border) !important;
+  color: var(--a-mute);
+}
+.admin-scope table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+.admin-scope[data-theme="light"] table tbody tr:hover { background: rgba(9, 9, 11, 0.02); }
+
+/* pills */
+.admin-scope .pill-ok { color: #4ade80; background: rgba(16, 185, 129, 0.15); }
+.admin-scope .pill-warn { color: #fbbf24; background: rgba(245, 158, 11, 0.15); }
+.admin-scope .pill-crit { color: #fca5a5; background: rgba(248, 113, 113, 0.15); }
+.admin-scope .pill-neutral { color: var(--a-dim); background: var(--a-elev); }
+
+/* KPI accent bar from ui.tsx still shows; soften its wash on dark */
+.admin-scope .surface > span[aria-hidden] { opacity: 0.9; }
+
+/* the 6-dot drag handle */
+.admin-scope .a-handle {
+  color: var(--a-mute);
+  letter-spacing: 1px;
+  cursor: grab;
+  user-select: none;
+}
+
+/* admin: catch raw form controls + buttons that don't use the kit classes */
+.admin-scope input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.admin-scope select,
+.admin-scope textarea {
+  background: var(--a-panel-2);
+  border-color: var(--a-border);
+  color: var(--a-text);
+}
+.admin-scope input::placeholder,
+.admin-scope textarea::placeholder { color: var(--a-mute); }
+
+.admin-scope .btn-ghost {
+  background: var(--a-elev);
+  border-color: var(--a-border);
+  color: var(--a-text);
+}
+.admin-scope .btn-ghost:hover { background: var(--a-elev-hover); }
+.admin-scope .btn-primary { background: var(--a-invert-bg); color: var(--a-invert-fg); }
+.admin-scope .btn-primary:hover { opacity: 0.9; background: var(--a-invert-bg); }
+
+.admin-scope code {
+  background: var(--a-elev);
+  color: var(--a-dim);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+}
+
+/* admin: soften the shared KpiCard tone washes on dark */
+.admin-scope .surface .bg-gradient-to-br { opacity: 0.4; }
+
+/* ---------------------------------------------------------------------------
+   The WhatsApp-style chat keeps its own light palette even on the dark admin
+   surface. Everything inside .chat-surface opts out of the admin overrides.
+   --------------------------------------------------------------------------- */
+.admin-scope .chat-surface,
+.admin-scope .chat-surface .card,
+.admin-scope .chat-surface .surface { color: #0c0e12; }
+.admin-scope .chat-surface .bg-white,
+.admin-scope .chat-surface.bg-white { background: #ffffff !important; }
+.admin-scope .chat-surface .bg-paper-soft { background: #ece5dd !important; }
+.admin-scope .chat-surface .bg-brand-50 { background: #d9f2e6 !important; }
+.admin-scope .chat-surface .text-ink { color: #0c0e12 !important; }
+.admin-scope .chat-surface .text-neutralx-600 { color: #4b5563 !important; }
+.admin-scope .chat-surface .text-neutralx-500 { color: #6b7280 !important; }
+.admin-scope .chat-surface .text-neutralx-400 { color: #9ca3af !important; }
+.admin-scope .chat-surface .text-brand-600 { color: #0e5c4a !important; }
+.admin-scope .chat-surface .border-hair,
+.admin-scope .chat-surface .border-hairstrong,
+.admin-scope .chat-surface .divide-hair > * { border-color: #e5e7eb !important; }
+.admin-scope .chat-surface input,
+.admin-scope .chat-surface textarea {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #0c0e12;
+}
+.admin-scope .chat-surface .btn-primary {
+  background: #0e5c4a;
+  color: #ffffff;
+}
+
+/* admin: dark modal / dropdown surfaces from the shared kit */
+.admin-scope .shadow-lift,
+.admin-scope .shadow-card,
+.admin-scope .shadow-e1,
+.admin-scope .shadow-e2,
+.admin-scope .shadow-e3 { box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7) !important; }

@@ -1,0 +1,100 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/zekerflex/zekerflex-app
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+  host: app.zekerflex.com
+  tls: true
+  tlsSecretName: zekerflex-tls
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  storageClass: ""
+
+# Non-secret env — rendered into a ConfigMap.
+config:
+  NODE_ENV: production
+  APP_BASE_URL: https://app.zekerflex.com
+  AUTH_URL: https://app.zekerflex.com
+  REDIS_URL: redis://zekerflex-redis:6379
+  LLM_BASE_URL: http://ollama:11434/v1
+  LLM_MODEL: llama3.1:8b
+  LLM_FAST_MODEL: llama3.2:1b
+  WHISPER_ENABLED: "true"
+  WHISPER_BASE_URL: http://whisper:8000/v1
+  MAIL_FROM: noreply@zekerflex.com
+  MAIL_ADMIN: info@zekerflex.com
+  MAIL_DOMAIN: zekerflex.com
+  SMTP_HOST: zekerflex-postfix
+  SMTP_PORT: "587"
+
+# Secret env. Prefer `existingSecret` (sealed-secrets / external-secrets) over
+# putting real values here.
+existingSecret: ""
+secret:
+  DATABASE_URL: ""
+  AUTH_SECRET: ""
+  INTERNAL_CRON_TOKEN: ""
+  WEBPUSH_VAPID_PUBLIC_KEY: ""
+  WEBPUSH_VAPID_PRIVATE_KEY: ""
+  WEBPUSH_CONTACT: "mailto:ops@zekerflex.com"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

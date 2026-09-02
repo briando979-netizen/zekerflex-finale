@@ -1,0 +1,44 @@
+# Local kind validation. Pairs with infra/k8s/dev/datastores.yaml.
+#   kind load docker-image zekerflex-app:local --name zekerflex
+#   helm upgrade --install zekerflex ./infra/helm/zekerflex -n zekerflex \
+#     -f infra/helm/zekerflex/values-local.yaml
+
+replicaCount: 1
+
+image:
+  repository: zekerflex-app
+  tag: local
+  pullPolicy: Never
+
+existingSecret: zekerflex-secrets
+
+ingress:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: "1", memory: 768Mi }
+
+config:
+  NODE_ENV: production
+  APP_BASE_URL: http://localhost:8080
+  AUTH_URL: http://localhost:8080
+  REDIS_URL: redis://zekerflex-redis:6379
+  LLM_BASE_URL: http://ollama:11434/v1
+  LLM_MODEL: llama3.1:8b
+  LLM_FAST_MODEL: llama3.2:1b
+  WHISPER_ENABLED: "false"
+  MAIL_FROM: noreply@zekerflex.com
+  MAIL_ADMIN: info@zekerflex.com
+  MAIL_DOMAIN: zekerflex.com

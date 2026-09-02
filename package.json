@@ -1,0 +1,64 @@
+{
+  "name": "zekerflex-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZekerFlex - Next-Gen Freelance & Work-Force Management Platform",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "db:seed:reset": "prisma db seed -- --reset",
+    "vapid:keys": "node scripts/vapid-keys.mjs",
+    "models": "node scripts/setup-models.mjs",
+    "launch": "node scripts/launch.mjs",
+    "daemon": "node scripts/daemon.mjs",
+    "test": "vitest run",
+    "whisper": "node scripts/whisper.mjs",
+    "services": "docker compose up -d mailpit whisper",
+    "gen:secrets": "node deploy/scripts/gen-secrets.mjs",
+    "deploy": "bash deploy/scripts/deploy.sh",
+    "backup": "bash deploy/scripts/backup.sh"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1",
+    "bcryptjs": "^2.4.3",
+    "ioredis": "^5.4.1",
+    "jose": "^5.9.6",
+    "next": "14.2.7",
+    "next-auth": "5.0.0-beta.25",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5",
+    "date-fns": "^3.6.0",
+    "firebase-admin": "^12.4.0",
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.7.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.16.5",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.45",
+    "prisma": "^5.19.1",
+    "tailwindcss": "^3.4.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

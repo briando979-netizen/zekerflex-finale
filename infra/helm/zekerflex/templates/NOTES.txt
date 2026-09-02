@@ -1,0 +1,18 @@
+ZekerFlex is deploying.
+
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "zekerflex.fullname" . }}
+
+{{ if .Values.ingress.enabled -}}
+URL:  https://{{ .Values.ingress.host }}
+{{- else -}}
+Port-forward:  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "zekerflex.fullname" . }} 3000:{{ .Values.service.port }}
+{{- end }}
+
+{{ if not .Values.existingSecret -}}
+WARNING: using an in-chart Secret. For production, set `existingSecret` and
+manage it with sealed-secrets or external-secrets.
+{{- end }}
+
+Health:    /api/health   (liveness)
+Ready:     /api/ready     (readiness — checks Postgres + Redis)
+GraphQL:   /api/graphql

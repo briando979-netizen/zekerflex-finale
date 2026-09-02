@@ -1,0 +1,32 @@
+# cloudflared config — credentials-file method (alternative to TUNNEL_TOKEN).
+#
+# Use this only if you created the tunnel with the CLI instead of the dashboard:
+#   cloudflared tunnel login
+#   cloudflared tunnel create zekerflex
+#   cloudflared tunnel route dns zekerflex app.jouwdomein.nl
+#
+# Copy this file to deploy/cloudflared/config.yml, replace <TUNNEL_ID>, and put
+# <TUNNEL_ID>.json (from ~/.cloudflared/) next to it. Then in
+# docker-compose.prod.yml: mount ./deploy/cloudflared:/etc/cloudflared and set
+#   command: tunnel run zekerflex
+
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+# Optional hardening: only accept requests that carry Cloudflare's headers.
+originRequest:
+  connectTimeout: 30s
+  noTLSVerify: false
+
+ingress:
+  # Main app.
+  - hostname: app.jouwdomein.nl
+    service: http://app:3000
+
+  # (Optional) expose the mail webview on a separate hostname, protected by a
+  # Cloudflare Access policy so only you can reach it.
+  # - hostname: mail.jouwdomein.nl
+  #   service: http://mailpit:8025
+
+  # Everything else → 404.
+  - service: http_status:404

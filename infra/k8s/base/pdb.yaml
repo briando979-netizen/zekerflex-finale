@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: zekerflex-app
+  labels:
+    app.kubernetes.io/name: zekerflex
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zekerflex
+      app.kubernetes.io/component: web

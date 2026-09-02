@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_USER: zekerflex
+          POSTGRES_PASSWORD: zekerflex
+          POSTGRES_DB: zekerflex
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U zekerflex"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-bookworm
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://zekerflex:zekerflex@localhost:5432/zekerflex?schema=public
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: ci_auth_secret_at_least_32_characters_long_xx
+      APP_BASE_URL: http://localhost:3000
+      WEBPUSH_VAPID_PUBLIC_KEY: BExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExample
+      WEBPUSH_VAPID_PRIVATE_KEY: ci_private_key_placeholder_value_xxxxxxxxxxx
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Prisma migrate (shadow check)
+        run: npx prisma migrate deploy
+
+      - name: Build
+        run: npx next build
+
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint infra/helm/zekerflex -f infra/helm/zekerflex/values-production.yaml
+      - name: Template renders
+        run: helm template zekerflex infra/helm/zekerflex -f infra/helm/zekerflex/values-production.yaml > /dev/null
+
+  kustomize-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          for overlay in staging production; do
+            echo "::group::$overlay"
+            kubectl kustomize "infra/k8s/overlays/$overlay" > /dev/null
+            echo "::endgroup::"
+          done

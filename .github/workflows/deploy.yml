@@ -1,0 +1,88 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Docker publish"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to deploy"
+        type: choice
+        options: [kubernetes, vps]
+        default: kubernetes
+      image_tag:
+        description: "Image tag (default: sha of triggering build)"
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  kubernetes:
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.target == 'kubernetes' ||
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          TAG="${{ inputs.image_tag }}"
+          [ -z "$TAG" ] && TAG="sha-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: kubeconfig
+        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region eu-central-1
+
+      - uses: azure/setup-helm@v4
+
+      - name: helm upgrade
+        run: |
+          helm upgrade --install zekerflex ./infra/helm/zekerflex \
+            --namespace zekerflex --create-namespace \
+            -f infra/helm/zekerflex/values-production.yaml \
+            --set image.tag=${{ steps.tag.outputs.tag }} \
+            --set existingSecret=zekerflex-secrets \
+            --wait --timeout 5m --atomic
+
+      - name: smoke test
+        run: |
+          kubectl -n zekerflex rollout status deploy/zekerflex-zekerflex --timeout=180s
+          kubectl -n zekerflex run smoke --rm -i --restart=Never --image=curlimages/curl -- \
+            -sf http://zekerflex-zekerflex/api/ready
+
+  vps:
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'vps'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      - name: Roll the systemd unit over SSM
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Name,Values=zekerflex-production-box" \
+            --parameters 'commands=["cd /opt/zekerflex","docker compose -f docker-compose.prod.yml --env-file .env.production pull","systemctl restart zekerflex.service","sleep 10","curl -sf http://127.0.0.1:3000/api/ready"]' \
+            --comment "deploy ${{ github.sha }}" \
+            --output text

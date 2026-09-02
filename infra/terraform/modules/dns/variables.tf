@@ -1,0 +1,9 @@
+variable "domain_name" { type = string }
+variable "create_hosted_zone" { type = bool }
+variable "app_fqdn" { type = string }
+variable "mail_fqdn" { type = string }
+variable "instance_public_ip" { type = string }
+variable "expose_http" { type = bool }
+variable "spf_extra_ip4" { type = list(string) }
+variable "dkim_txt_value" { type = string }
+variable "dmarc_rua" { type = string }

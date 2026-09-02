@@ -1,0 +1,63 @@
+# ZekerFlex Sovereign Box — optional local services.
+#
+# The platform runs without any of these; they light up extra features:
+#   mailpit  → real e-mail delivery + a webview       (/admin/mail)
+#   whisper  → sovereign speech-to-text for the mic   (Jarvis console)
+#   sd       → local image generation                 (/admin/studio)  [profile: images]
+#
+# Usage:
+#   docker compose up -d mailpit whisper       # mail + voice
+#   docker compose --profile images up -d      # + image generation
+#
+# Then in .env:
+#   SMTP_HOST=localhost   SMTP_PORT=1025
+#   WHISPER_ENABLED=true  WHISPER_BASE_URL=http://localhost:8000/v1
+#   IMAGE_ENABLED=true    IMAGE_BACKEND=a1111  IMAGE_BASE_URL=http://localhost:7860
+#
+# PostgreSQL, Redis and Ollama are expected to already be running on the host.
+
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: zekerflex-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # webview  → http://localhost:8025
+    environment:
+      MP_MAX_MESSAGES: "500"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      # show the sender's Gravatar as the avatar (matches real webmail).
+      # Register a Gravatar for info@zekerflex.com with the ZekerFlex logo.
+      MP_ENABLE_GRAVATAR: "true"
+
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: zekerflex-whisper
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # OpenAI-compatible /v1/audio/transcriptions
+    environment:
+      WHISPER__MODEL: Systran/faster-whisper-base
+      WHISPER__INFERENCE_DEVICE: cpu
+    volumes:
+      - whisper-cache:/root/.cache/huggingface
+
+  # Image generation — heavy; opt in with `--profile images`.
+  sd:
+    image: universonic/stable-diffusion-webui:latest
+    container_name: zekerflex-sd
+    restart: unless-stopped
+    profiles: ["images"]
+    ports:
+      - "7860:7860"
+    command: ["--api", "--listen", "--skip-torch-cuda-test", "--no-half"]
+    volumes:
+      - sd-models:/app/stable-diffusion-webui/models
+      - sd-outputs:/app/stable-diffusion-webui/outputs
+
+volumes:
+  whisper-cache:
+  sd-models:
+  sd-outputs:

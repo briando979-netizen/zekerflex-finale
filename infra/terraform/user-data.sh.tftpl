@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# ZekerFlex Sovereign Box bootstrap. Idempotent-ish: safe to re-run.
+set -euxo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+APP_DIR=/opt/zekerflex
+
+# --- base packages + Docker ------------------------------------------------
+apt-get update -y
+apt-get install -y ca-certificates curl gnupg unzip jq awscli
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+
+# --- SSM agent (keyless shell) ------------------------------------------
+snap install amazon-ssm-agent --classic || true
+systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+
+# --- app directory ------------------------------------------------------
+mkdir -p "$APP_DIR"
+cd "$APP_DIR"
+
+cat > "$APP_DIR/.env.production" <<EOF
+NODE_ENV=production
+APP_BASE_URL=https://${domain_fqdn}
+AUTH_URL=https://${domain_fqdn}
+APP_IMAGE=${app_image}
+CLOUDFLARE_TUNNEL_TOKEN=${cloudflare_tunnel_token}
+MAIL_DOMAIN=${domain_fqdn}
+MAIL_HOSTNAME=${mail_fqdn}
+RELAYHOST=${mail_relayhost}
+BACKUP_BUCKET=${backup_bucket}
+# Fill the remaining secrets (AUTH_SECRET, POSTGRES_PASSWORD, WEBPUSH_*, ...)
+# with:  aws ssm get-parameters-by-path --path /zekerflex/${environment}/ --with-decryption
+EOF
+chmod 600 "$APP_DIR/.env.production"
+
+# Pull compose + Dockerfile straight from the running image is not possible;
+# fetch them from the repo release artifact instead. For a private repo, use a
+# deploy key or the GitHub CLI. Placeholder: expect them uploaded via SSM/rsync.
+if [ ! -f "$APP_DIR/docker-compose.prod.yml" ]; then
+  curl -fsSL "https://raw.githubusercontent.com/zekerflex/zekerflex-platform/main/docker-compose.prod.yml" \
+    -o "$APP_DIR/docker-compose.prod.yml" || true
+fi
+
+# --- systemd unit: bring the stack up and keep it up -------------------
+cat > /etc/systemd/system/zekerflex.service <<'EOF'
+[Unit]
+Description=ZekerFlex Sovereign Box
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/zekerflex
+ExecStartPre=-/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production pull
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable zekerflex.service
+systemctl start zekerflex.service || true
+
+# --- nightly backup to S3 --------------------------------------------
+cat > /usr/local/bin/zekerflex-backup <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/zekerflex
+STAMP="$(date +%F-%H%M)"
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  pg_dump -U zekerflex zekerflex | gzip | \
+  aws s3 cp - "s3://__BACKUP_BUCKET__/pg/$STAMP.sql.gz"
+SCRIPT
+sed -i "s#__BACKUP_BUCKET__#${backup_bucket}#" /usr/local/bin/zekerflex-backup
+chmod +x /usr/local/bin/zekerflex-backup
+
+cat > /etc/cron.d/zekerflex-backup <<'CRON'
+30 3 * * * root /usr/local/bin/zekerflex-backup >> /var/log/zekerflex-backup.log 2>&1
+CRON
+
+echo "bootstrap complete" > /var/log/zekerflex-bootstrap.done

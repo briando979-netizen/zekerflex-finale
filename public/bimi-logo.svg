@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
+<title>ZekerFlex</title>
+<rect x="0" y="0" width="512" height="512" fill="#0C0E12"/>
+<g fill="#FAFAF8">
+<rect x="96" y="132" width="172" height="48"/>
+<polygon points="200,132 268,132 164,380 96,380"/>
+<rect x="96" y="332" width="172" height="48"/>
+<rect x="300" y="132" width="48" height="248"/>
+<rect x="300" y="132" width="132" height="48"/>
+<rect x="300" y="236" width="104" height="44"/>
+</g>
+</svg>

@@ -1,0 +1,29 @@
+# Copy to terraform.tfvars and fill in. Never commit the real file.
+
+aws_region  = "eu-central-1"
+environment = "production"
+
+domain_name   = "zekerflex.com"
+app_subdomain = "app"          # -> app.zekerflex.com ; "" for the apex
+
+manage_dns         = true
+create_hosted_zone = false      # true if the zone does not exist yet
+
+instance_type  = "t3.large"
+root_volume_gb = 120
+
+# Break-glass SSH. Leave admin_ssh_cidrs = [] to rely on SSM only.
+ssh_key_name    = ""
+admin_ssh_cidrs = []             # e.g. ["203.0.113.7/32"]
+
+# Cloudflare Tunnel: nothing inbound. Keep expose_http = false.
+expose_http             = false
+cloudflare_tunnel_token = ""     # from Zero Trust -> Networks -> Tunnels
+
+app_image = "ghcr.io/zekerflex/zekerflex-app:latest"
+
+# Mail / DNS deliverability
+mail_relayhost = ""              # "" = Postfix delivers directly
+spf_extra_ip4  = []              # extra senders, if any
+dkim_txt_value = ""              # paste after first `docker compose exec postfix ...`
+dmarc_rua      = "mailto:info@zekerflex.com"

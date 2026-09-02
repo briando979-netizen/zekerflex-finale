@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zekerflex-config
+  labels:
+    app.kubernetes.io/name: zekerflex
+data:
+  NODE_ENV: "production"
+  APP_BASE_URL: "https://app.zekerflex.com"
+  AUTH_URL: "https://app.zekerflex.com"
+  REDIS_URL: "redis://zekerflex-redis:6379"
+  LLM_BASE_URL: "http://ollama:11434/v1"
+  LLM_MODEL: "llama3.1:8b"
+  LLM_FAST_MODEL: "llama3.2:1b"
+  WHISPER_ENABLED: "true"
+  WHISPER_BASE_URL: "http://whisper:8000/v1"
+  MAIL_FROM: "noreply@zekerflex.com"
+  MAIL_ADMIN: "info@zekerflex.com"
+  MAIL_DOMAIN: "zekerflex.com"
+  SMTP_HOST: "zekerflex-postfix"
+  SMTP_PORT: "587"

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: zekerflex
+description: ZekerFlex Sovereign Box — hybrid freelance / uitzend platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+maintainers:
+  - name: ZekerFlex
+    email: info@zekerflex.com
+sources:
+  - https://github.com/zekerflex/zekerflex-platform
