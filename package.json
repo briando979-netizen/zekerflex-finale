@@ -30,7 +30,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.19.1",
+    "@prisma/client": "^7.10.0",
     "bcryptjs": "^2.4.3",
     "ioredis": "^5.4.1",
     "jose": "^5.9.6",
