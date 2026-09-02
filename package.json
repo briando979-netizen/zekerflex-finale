@@ -41,7 +41,7 @@
     "zod": "^3.23.8",
     "zustand": "^4.5.5",
     "date-fns": "^3.6.0",
-    "firebase-admin": "^12.4.0",
+    "firebase-admin": "^14.3.0",
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.7.0"
   },
