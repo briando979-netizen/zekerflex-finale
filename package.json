@@ -33,7 +33,7 @@
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "ioredis": "^5.4.1",
-    "jose": "^5.9.6",
+    "jose": "^6.2.10",
     "next": "14.2.7",
     "next-auth": "5.0.0-beta.25",
     "react": "^18.3.1",
