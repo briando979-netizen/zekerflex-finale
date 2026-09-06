@@ -4,6 +4,7 @@ import type { RoleGrant } from "@/lib/auth/session";
 declare module "next-auth" {
   interface User {
     roles?: RoleGrant[];
+    sessionVersion?: number;
   }
 
   interface Session {
@@ -17,5 +18,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     roles?: RoleGrant[];
+    sessionVersion?: number;
   }
 }

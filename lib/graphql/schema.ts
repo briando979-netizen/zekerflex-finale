@@ -1,6 +1,6 @@
 import { createSchema } from "graphql-yoga";
 import { GraphQLError } from "graphql";
-import type { UserRole } from "@prisma/client";
+import { Prisma, ShiftStatus, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPrincipal, hasRole, type Principal } from "@/lib/auth";
 import { getKpis } from "@/lib/admin/kpis";
@@ -147,9 +147,27 @@ const resolvers = {
       const p = requireRoles(ctx);
       const take = Math.min(Math.max(args.take ?? 25, 1), 100);
       const isManager = hasRole(p, ...MANAGER);
-      const where: Record<string, unknown> = {};
-      if (args.status) where.status = args.status;
+      const where: Prisma.ShiftWhereInput = {};
+      if (args.status) {
+        if (!Object.values(ShiftStatus).includes(args.status as ShiftStatus)) {
+          throw new GraphQLError("Invalid shift status", { extensions: { code: "BAD_USER_INPUT" } });
+        }
+        where.status = args.status as ShiftStatus;
+      }
       if (!isManager) where.status = "OPEN"; // freelancers only see open work
+      if (isManager && !hasRole(p, "PLATFORM_ADMIN")) {
+        const organizationIds = [...new Set(p.grants.map((grant) => grant.organizationId))];
+        const unrestrictedOrganizations = p.grants
+          .filter((grant) => grant.role === "HQ_ADMIN" || grant.locationIds.length === 0)
+          .map((grant) => grant.organizationId);
+        const branchIds = p.grants.flatMap((grant) => grant.locationIds);
+        where.branch = {
+          OR: [
+            ...(unrestrictedOrganizations.length ? [{ tenantId: { in: unrestrictedOrganizations } }] : []),
+            ...(branchIds.length ? [{ id: { in: branchIds }, tenantId: { in: organizationIds } }] : []),
+          ],
+        };
+      }
       const rows = await prisma.shift.findMany({
         where,
         take,
@@ -162,7 +180,7 @@ const resolvers = {
           endsAt: true,
           hourlyRateCents: true,
           positions: true,
-          branch: { select: { name: true, tenant: { select: { name: true } } } },
+          branch: { select: { id: true, name: true, tenant: { select: { id: true, name: true } } } },
         },
       });
       return rows.map((r) => ({
@@ -179,7 +197,7 @@ const resolvers = {
     },
 
     shift: async (_p: unknown, args: { id: string }, ctx: GraphQLContext) => {
-      requireRoles(ctx);
+      const p = requireRoles(ctx);
       const r = await prisma.shift.findUnique({
         where: { id: args.id },
         select: {
@@ -190,10 +208,19 @@ const resolvers = {
           endsAt: true,
           hourlyRateCents: true,
           positions: true,
-          branch: { select: { name: true, tenant: { select: { name: true } } } },
+          branch: { select: { id: true, name: true, tenant: { select: { id: true, name: true } } } },
         },
       });
       if (!r) return null;
+      if (hasRole(p, ...MANAGER) && !hasRole(p, "PLATFORM_ADMIN")) {
+        const allowed = p.grants.some((grant) =>
+          grant.organizationId === r.branch?.tenant.id &&
+          (grant.role === "HQ_ADMIN" || grant.locationIds.length === 0 || grant.locationIds.includes(r.branch.id)),
+        );
+        if (!allowed) return null;
+      } else if (!hasRole(p, ...MANAGER) && r.status !== "OPEN") {
+        return null;
+      }
       return {
         id: r.id,
         title: r.title,
@@ -208,17 +235,17 @@ const resolvers = {
     },
 
     platformKpis: async (_p: unknown, _a: unknown, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       return getKpis();
     },
 
     payrollRuns: async (_p: unknown, _a: unknown, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       return listRuns();
     },
 
     payrollRun: async (_p: unknown, args: { isoWeek: string }, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       const run = await getRun(args.isoWeek);
       return run ? serialiseRun(run) : null;
     },

@@ -45,6 +45,7 @@ interface DbAccount {
   fullName: string;
   email: string;
   grants: RoleGrant[];
+  sessionVersion: number;
 }
 
 /**
@@ -89,13 +90,14 @@ async function resolveDbAccount(rawEmail: string): Promise<DbAccount | null> {
   if (!email) return null;
   const user = await prisma.user.findFirst({
     where: { email, disabledAt: null },
-    select: { id: true, fullName: true, email: true },
+    select: { id: true, fullName: true, email: true, sessionVersion: true },
   });
   if (!user) return null;
   return {
     id: user.id,
     fullName: user.fullName,
     email: user.email,
+    sessionVersion: user.sessionVersion,
     grants: await loadGrants(user.id),
   };
 }
@@ -131,6 +133,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: typeof token.email === "string" ? token.email : "",
           name: typeof token.name === "string" ? token.name : "",
           roles: Array.isArray(token.roles) ? (token.roles as RoleGrant[]) : [],
+          sessionVersion: typeof token.sessionVersion === "number" ? token.sessionVersion : 1,
           remember,
         },
         remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS,
@@ -144,6 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: claims.email,
         name: claims.name,
         roles: claims.roles,
+        sessionVersion: claims.sessionVersion,
         remember: claims.remember === true,
       };
     },
@@ -226,6 +230,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.fullName,
           roles: await loadGrants(user.id),
+          sessionVersion: user.sessionVersion,
           remember: parsed.data.remember === "1",
         };
       },
@@ -299,6 +304,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.name = user.name ?? token.name ?? null;
           token.email = user.email ?? token.email ?? null;
           token.remember = (user as { remember?: boolean }).remember === true;
+          token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 1;
         } else {
           // OAuth path: bind the token to our DB account, not the provider id.
           const email = (user?.email ?? token.email ?? "").toString();
@@ -308,6 +314,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.name = dbAccount.fullName;
             token.email = dbAccount.email;
             token.roles = dbAccount.grants;
+            token.sessionVersion = dbAccount.sessionVersion;
           } else {
             token.roles = [];
           }

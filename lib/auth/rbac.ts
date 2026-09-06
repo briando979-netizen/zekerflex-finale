@@ -32,6 +32,45 @@ export interface RouteRule {
 }
 
 /**
+ * Deliberate unauthenticated transport surface. Webhooks and internal jobs
+ * authenticate with their own signature/secret in their route handlers.
+ * Everything else under /api is covered by the authenticated fallback below.
+ */
+interface PublicApiRule {
+  pattern: RegExp;
+  methods: readonly string[];
+  authentication: "public" | "signature" | "internal-secret";
+}
+
+export const PUBLIC_API_RULES: readonly PublicApiRule[] = [
+  { pattern: /^\/api\/auth(?:\/|$)/, methods: ["GET", "POST"], authentication: "public" },
+  { pattern: /^\/api\/public\/v1\/shifts\/?$/, methods: ["GET"], authentication: "public" },
+  { pattern: /^\/api\/webhooks\/didit\/?$/, methods: ["POST"], authentication: "signature" },
+  { pattern: /^\/api\/internal\/(?:active-hours\/recompute|ai\/watchdog|matching\/tick|orchestration\/tick|rag\/reindex)\/?$/, methods: ["GET", "POST"], authentication: "internal-secret" },
+  { pattern: /^\/api\/(?:health|ready|status)\/?$/, methods: ["GET"], authentication: "public" },
+  { pattern: /^\/api\/register\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/company\/(?:lookup|search)\/?$/, methods: ["GET"], authentication: "public" },
+  { pattern: /^\/api\/company\/register\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/demo\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/demo\/[^/]+\/ics\/?$/, methods: ["GET"], authentication: "public" },
+  { pattern: /^\/api\/(?:werken-bij|nieuwsbrief)\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/nieuwsbrief\/afmelden\/?$/, methods: ["GET", "POST"], authentication: "public" },
+  { pattern: /^\/api\/mail\/afmelden\/?$/, methods: ["GET", "POST"], authentication: "public" },
+  { pattern: /^\/api\/mail\/voorkeuren\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/kennis\/whitepaper\/[^/]+\/?$/, methods: ["GET"], authentication: "public" },
+  { pattern: /^\/api\/analytics\/track\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/chat\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/chat\/rate\/?$/, methods: ["POST"], authentication: "public" },
+  { pattern: /^\/api\/orgs\/[^/]+\/photo\/?$/, methods: ["GET"], authentication: "public" },
+];
+
+export function isPublicApiRoute(pathname: string, method = "GET"): boolean {
+  return PUBLIC_API_RULES.some(
+    (rule) => rule.pattern.test(pathname) && rule.methods.includes(method.toUpperCase()),
+  );
+}
+
+/**
  * Order matters: the most specific patterns must come first.
  */
 export const ROUTE_RULES: RouteRule[] = [
@@ -78,6 +117,11 @@ export const ROUTE_RULES: RouteRule[] = [
   {
     pattern: /^\/api\/shifts\/[^/]+\/match(?:\/|$)/,
     roles: ["LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN"],
+    redirectOnDeny: false,
+  },
+  {
+    pattern: /^\/api(?:\/|$)/,
+    roles: ["FREELANCER", "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN"],
     redirectOnDeny: false,
   },
 ];
