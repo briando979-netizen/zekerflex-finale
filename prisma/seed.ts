@@ -4,6 +4,11 @@ import {
   type Prisma,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { assertDemoSeedAllowed, demoSeedPassword } from "./seed-guard";
+
+// Fail before the first database query. Production seeding is an explicit,
+// two-part break-glass operation and can never use the published demo secret.
+assertDemoSeedAllowed(process.env);
 
 const prisma = new PrismaClient();
 
@@ -24,7 +29,7 @@ function minutesBetween(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 60_000);
 }
 
-const PASSWORD = "Zeker!2026";
+const PASSWORD = demoSeedPassword(process.env);
 // A single mod-97-valid NL test IBAN, reused for every freelancer payout.
 const TEST_IBAN = "NL91ABNA0417164300";
 

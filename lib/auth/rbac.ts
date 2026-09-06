@@ -32,6 +32,29 @@ export interface RouteRule {
 }
 
 /**
+ * Deliberate unauthenticated transport surface. Webhooks and internal jobs
+ * authenticate with their own signature/secret in their route handlers.
+ * Everything else under /api is covered by the authenticated fallback below.
+ */
+export const PUBLIC_API_PATTERNS: readonly RegExp[] = [
+  /^\/api\/auth(?:\/|$)/,
+  /^\/api\/public(?:\/|$)/,
+  /^\/api\/webhooks(?:\/|$)/,
+  /^\/api\/internal(?:\/|$)/,
+  /^\/api\/(?:health|ready|status)(?:\/|$)/,
+  /^\/api\/(?:register|company|demo|werken-bij|nieuwsbrief)(?:\/|$)/,
+  /^\/api\/mail\/(?:afmelden|voorkeuren)(?:\/|$)/,
+  /^\/api\/kennis\/whitepaper(?:\/|$)/,
+  /^\/api\/analytics\/track(?:\/|$)/,
+  /^\/api\/chat\/?$/,
+  /^\/api\/calls\/incoming(?:\/|$)/,
+];
+
+export function isPublicApiRoute(pathname: string): boolean {
+  return PUBLIC_API_PATTERNS.some((pattern) => pattern.test(pathname));
+}
+
+/**
  * Order matters: the most specific patterns must come first.
  */
 export const ROUTE_RULES: RouteRule[] = [
@@ -78,6 +101,11 @@ export const ROUTE_RULES: RouteRule[] = [
   {
     pattern: /^\/api\/shifts\/[^/]+\/match(?:\/|$)/,
     roles: ["LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN"],
+    redirectOnDeny: false,
+  },
+  {
+    pattern: /^\/api(?:\/|$)/,
+    roles: ["FREELANCER", "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN"],
     redirectOnDeny: false,
   },
 ];

@@ -129,3 +129,46 @@ export function assertBranchAccess(
 
 /** Alias using the platform's public vocabulary. */
 export const assertLocationAccess = assertBranchAccess;
+
+/** Execute an operation with a freshly database-rehydrated principal. */
+export async function withAuth<T>(operation: (principal: Principal) => Promise<T>): Promise<T> {
+  return operation(await requirePrincipal());
+}
+
+/** Authenticate and require at least one database-backed role. */
+export async function withRole<T>(
+  roles: readonly UserRole[],
+  operation: (principal: Principal) => Promise<T>,
+): Promise<T> {
+  const principal = await requirePrincipal();
+  requireRole(principal, ...roles);
+  return operation(principal);
+}
+
+/** Authenticate and assert membership of the organization selected by the server. */
+export async function withOrganizationAccess<T>(
+  organizationId: string,
+  operation: (principal: Principal) => Promise<T>,
+): Promise<T> {
+  const principal = await requirePrincipal();
+  assertOrganizationAccess(principal, organizationId);
+  return operation(principal);
+}
+
+/** Authenticate and enforce organization plus branch scope. */
+export async function withBranchAccess<T>(
+  branchId: string,
+  organizationId: string,
+  operation: (principal: Principal) => Promise<T>,
+): Promise<T> {
+  const principal = await requirePrincipal();
+  assertBranchAccess(principal, branchId, organizationId);
+  return operation(principal);
+}
+
+/** Authenticate and require the platform-wide administrator grant. */
+export async function withPlatformAdmin<T>(
+  operation: (principal: Principal) => Promise<T>,
+): Promise<T> {
+  return withRole(["PLATFORM_ADMIN"], operation);
+}

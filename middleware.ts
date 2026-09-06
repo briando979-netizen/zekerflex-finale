@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
-import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
+import { hasAnyRole, isPublicApiRoute, matchRouteRule } from "@/lib/auth/rbac";
 
 export const config = {
   matcher: [
@@ -10,6 +10,7 @@ export const config = {
     "/api/admin/:path*",
     "/api/timesheets/:path*",
     "/api/shifts/:path*",
+    "/api/:path*",
   ],
 };
 
@@ -27,6 +28,7 @@ function loginRedirect(req: NextRequest): NextResponse {
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  if (isPublicApiRoute(req.nextUrl.pathname)) return NextResponse.next();
   const rule = matchRouteRule(req.nextUrl.pathname);
   if (!rule) return NextResponse.next();
 
