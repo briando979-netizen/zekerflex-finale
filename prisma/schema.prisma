@@ -92,6 +92,8 @@ model User {
   lastLoginAt   DateTime?
   // Null until the e-mail address is confirmed via the verification link.
   emailVerifiedAt DateTime?
+  // Increment to revoke every previously issued session for this user.
+  sessionVersion Int @default(1)
 
   memberships        Membership[]
   freelancerProfile  FreelancerProfile?

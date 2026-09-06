@@ -47,6 +47,7 @@ export interface SessionClaims extends JWTPayload {
   email: string;
   name: string;
   roles: RoleGrant[];
+  sessionVersion: number;
   /** true when the user chose "ingelogd blijven" — drives the token lifetime */
   remember?: boolean;
 }
@@ -60,6 +61,7 @@ export interface SessionInput {
   email: string;
   name: string;
   roles: RoleGrant[];
+  sessionVersion: number;
   remember?: boolean;
 }
 
@@ -72,6 +74,7 @@ export async function encodeSession(
     email: input.email,
     name: input.name,
     roles: input.roles,
+    sessionVersion: input.sessionVersion,
     ...(input.remember ? { remember: true } : {}),
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -110,7 +113,9 @@ export async function decodeSession(
       typeof payload.sub !== "string" ||
       typeof payload.email !== "string" ||
       typeof payload.name !== "string" ||
-      !isRoleGrantArray(payload.roles)
+      !isRoleGrantArray(payload.roles) ||
+      !Number.isInteger(payload.sessionVersion) ||
+      Number(payload.sessionVersion) < 1
     ) {
       return null;
     }

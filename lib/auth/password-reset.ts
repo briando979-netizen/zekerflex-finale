@@ -101,7 +101,10 @@ export async function completePasswordReset(token: string, newPassword: string):
     return { ok: false, reason: "Deze herstellink is verlopen of al gebruikt. Vraag een nieuwe aan." };
   }
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
+  });
   await recordAudit({
     category: "SECURITY",
     action: "auth.password.reset",

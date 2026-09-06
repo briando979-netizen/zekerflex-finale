@@ -3,7 +3,7 @@
 ## Secure-by-default boundary
 
 Every `/api/*` request is authenticated by `middleware.ts`. The only exceptions
-are the explicit patterns in `PUBLIC_API_PATTERNS`. Routes in that allowlist are
+are the exact path-and-method pairs in `PUBLIC_API_RULES`. Routes in that allowlist are
 public business endpoints, health probes, or transports which verify a separate
 secret/signature (`webhooks` and `internal`). Adding a new route therefore does
 not accidentally publish it. Middleware is defense-in-depth only: protected
@@ -41,3 +41,17 @@ request.
 Client-supplied `organizationId`, `branchId`, monetary totals, roles, or user IDs
 are selectors at most; they are never evidence of authorization or financial
 truth.
+
+The allowlist intentionally does not exempt whole feature prefixes. For example,
+adding `/api/company/export` or a webhook for a new provider remains protected
+until its exact HTTP method, authentication mechanism, handler verification and
+regression test have been reviewed.
+
+Session tokens carry a `sessionVersion` that must still match the enabled user
+record. Password resets increment the database value, invalidating all existing
+cookies immediately; role and branch grants continue to be reloaded on every
+protected handler request.
+
+GraphQL applies request-size, depth, field and alias limits before execution.
+Manager shift queries are restricted to organizations and branches from current
+database grants; platform-wide payroll and KPI queries require `PLATFORM_ADMIN`.

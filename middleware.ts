@@ -28,7 +28,7 @@ function loginRedirect(req: NextRequest): NextResponse {
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
-  if (isPublicApiRoute(req.nextUrl.pathname)) return NextResponse.next();
+  if (isPublicApiRoute(req.nextUrl.pathname, req.method)) return NextResponse.next();
   const rule = matchRouteRule(req.nextUrl.pathname);
   if (!rule) return NextResponse.next();
 

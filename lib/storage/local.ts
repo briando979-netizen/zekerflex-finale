@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
@@ -25,7 +25,8 @@ function detectedMime(bytes: Buffer): string | null {
   if (bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return "image/jpeg";
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
   if (bytes.subarray(0, 4).toString() === "RIFF" && bytes.subarray(8, 12).toString() === "WEBP") return "image/webp";
-  if (bytes.length >= 12 && bytes.subarray(4, 8).toString() === "ftyp") return "image/heic";
+  if (bytes.length >= 12 && bytes.subarray(4, 8).toString() === "ftyp" &&
+      ["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(bytes.subarray(8, 12).toString())) return "image/heic";
   if (!bytes.includes(0) && !bytes.subarray(0, 1024).some((byte) => byte < 9 || (byte > 13 && byte < 32))) return "text/plain";
   return null;
 }
@@ -49,17 +50,26 @@ export async function storeUpload(input: { filename: string; mimeType: string; b
   const path = confinedPath(storageKey);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   await writeFile(path, input.bytes, { mode: 0o600, flag: "wx" });
-  return prisma.upload.create({ data: {
-    filename, mimeType, sizeBytes: input.bytes.length,
-    sha256: createHash("sha256").update(input.bytes).digest("hex"), storageKey,
-    ...(input.uploadedById ? { uploadedById: input.uploadedById } : {}),
-  } });
+  try {
+    return await prisma.upload.create({ data: {
+      filename, mimeType, sizeBytes: input.bytes.length,
+      sha256: createHash("sha256").update(input.bytes).digest("hex"), storageKey,
+      ...(input.uploadedById ? { uploadedById: input.uploadedById } : {}),
+    } });
+  } catch (error) {
+    await unlink(path).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function readUpload(id: string) {
   const record = await prisma.upload.findUnique({ where: { id } });
   if (!record) throw AppError.notFound("Bestand niet gevonden");
-  return { ...record, bytes: await readFile(confinedPath(record.storageKey)) };
+  const bytes = await readFile(confinedPath(record.storageKey));
+  if (record.sha256 && createHash("sha256").update(bytes).digest("hex") !== record.sha256) {
+    throw AppError.precondition("Bestandsintegriteit kon niet worden bevestigd");
+  }
+  return { ...record, bytes };
 }
 
 export async function ensureStorageWritable(): Promise<{ dir: string; writable: boolean; detail?: string }> {
@@ -67,7 +77,6 @@ export async function ensureStorageWritable(): Promise<{ dir: string; writable: 
     await mkdir(ROOT, { recursive: true, mode: 0o700 });
     const probe = resolve(ROOT, `.probe-${randomUUID()}`);
     await writeFile(probe, "", { mode: 0o600 });
-    const { unlink } = await import("node:fs/promises");
     await unlink(probe);
     return { dir: ROOT, writable: true };
   } catch (error) {

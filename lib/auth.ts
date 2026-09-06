@@ -41,7 +41,7 @@ export async function getPrincipal(): Promise<Principal | null> {
   if (!claims) return null;
 
   const user = await prisma.user.findFirst({
-    where: { id: claims.sub, disabledAt: null },
+    where: { id: claims.sub, disabledAt: null, sessionVersion: claims.sessionVersion },
     include: {
       memberships: {
         include: { scopedBranches: { select: { branchId: true } } },

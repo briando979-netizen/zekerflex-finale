@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -43,6 +43,26 @@ describe("storeUpload", () => {
     await expect(
       storeUpload({ filename: "x", mimeType: "text/plain", bytes: Buffer.alloc(0) }),
     ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it("rejects MIME spoofing", async () => {
+    await expect(storeUpload({
+      filename: "malware.pdf",
+      mimeType: "application/pdf",
+      bytes: Buffer.from("MZ executable"),
+    })).rejects.toMatchObject({ status: 422 });
+  });
+
+  it("removes the file if metadata persistence fails", async () => {
+    uploadCreate.mockRejectedValueOnce(new Error("database unavailable"));
+    await expect(storeUpload({
+      filename: "orphan.txt", mimeType: "text/plain", bytes: Buffer.from("safe text"),
+    })).rejects.toThrow("database unavailable");
+    expect(existsSync(process.env.UPLOADS_DIR!)).toBe(true);
+    const { readdir } = await import("node:fs/promises");
+    const days = await readdir(process.env.UPLOADS_DIR!);
+    const files = days.length ? await readdir(join(process.env.UPLOADS_DIR!, days[0]!)) : [];
+    expect(files.some((file) => file.endsWith("orphan.txt"))).toBe(false);
   });
 });
 
