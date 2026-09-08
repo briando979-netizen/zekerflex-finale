@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { AnalyticsEventType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/redis";
+import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
@@ -40,14 +40,10 @@ function cleanPath(path: string): string {
 }
 
 async function withinRate(sessionId: string): Promise<boolean> {
-  try {
-    const key = `analytics:rate:${Math.floor(Date.now() / 60_000)}:${sessionId}`;
-    const n = await redis.incr(key);
-    if (n === 1) await redis.expire(key, 90);
-    return n <= RATE_PER_MIN;
-  } catch {
-    return true; // fail-open - analytics must never block a page
-  }
+  // fail-open (fixedWindow default) - analytics must never block a page
+  const key = `analytics:rate:${Math.floor(Date.now() / 60_000)}:${sessionId}`;
+  const gate = await fixedWindow(key, RATE_PER_MIN, 90);
+  return gate.ok;
 }
 
 export async function trackEvents(

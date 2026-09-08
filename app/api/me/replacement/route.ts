@@ -4,7 +4,12 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { env } from "@/lib/env";
-import { createReplacementRequest, openReplacementForAssignment } from "@/lib/replacements/store";
+import {
+  createReplacementRequest,
+  openReplacementForAssignment,
+  getReplacementRequest,
+  cancelReplacementRequest,
+} from "@/lib/replacements/store";
 import { sendMail } from "@/lib/mail";
 
 export const runtime = "nodejs";
@@ -66,6 +71,28 @@ export async function POST(request: Request): Promise<NextResponse> {
     }).catch(() => undefined);
 
     return NextResponse.json({ ok: true, id: rec.id });
+  } catch (err) {
+    const { status, body } = toErrorBody(err);
+    return NextResponse.json(body, { status });
+  }
+}
+
+// DELETE /api/me/replacement { id }
+// "Trek vervanging in" — the freelancer withdraws their own open request. The
+// klus stops being re-listed on the marketplace; the assignment is untouched.
+export async function DELETE(request: Request): Promise<NextResponse> {
+  try {
+    const principal = await requirePrincipal();
+    const { id } = z
+      .object({ id: z.string().min(1).max(64) })
+      .parse(await request.json().catch(() => ({})));
+
+    const rec = await getReplacementRequest(id);
+    if (!rec || rec.userId !== principal.userId) throw AppError.notFound("Verzoek niet gevonden");
+    if (rec.status !== "open") throw AppError.precondition("Dit verzoek is al afgerond.");
+
+    await cancelReplacementRequest(id);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

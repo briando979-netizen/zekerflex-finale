@@ -59,6 +59,9 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
             <Link href="/voor-bedrijven" className="btn-ghost-invert text-base">
               Ik zoek mensen
             </Link>
+            <Link href="/shop" className="btn-ghost-invert text-base">
+              Naar de shop
+            </Link>
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/45">
             {["Bepaal je eigen uurtarief", "Kies je eigen klussen", "Bouw aan jouw toekomst"].map((t) => (

@@ -11,6 +11,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/uitzendbureau", label: "Werken via uitzendbureau" },
       { href: "/voor-bedrijven", label: "Voor bedrijven" },
       { href: "/prijzen", label: "Prijzen" },
+      { href: "/shop", label: "ZekerFlex shop" },
       { href: "/app", label: "Download de app" },
       { href: "/status", label: "Systeemstatus" },
     ],
@@ -19,6 +20,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Kennis",
     links: [
       { href: "/kennis", label: "Informatie" },
+      { href: "/uitleg", label: "Uitleg in het kort" },
       { href: "/kennis#kennisbank", label: "Kennisbank" },
       { href: "/kennis/wet-dba", label: "Wet DBA" },
       { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },

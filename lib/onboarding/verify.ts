@@ -221,36 +221,46 @@ export async function submitFreelancerOnboarding(
   }
 
   // --- KVK / Handelsregister -------------------------------------------
+  // Uitzendkrachten hebben geen KVK — sla de Handelsregister-check dan over.
+  const skipKvk = cleanKvk.length === 0;
   let kvkValid = false;
   let companyName: string | null = null;
   let companyTradeName: string | null = null;
   let companyStatus = "ONBEKEND";
-  try {
-    const reg = await registerFreelancerCompany({
-      freelancerProfileId,
-      kvkNumber: cleanKvk,
-      allowInactive: true,
-    });
-    kvkValid = reg.kvkValid;
-    companyName = reg.profile.legalName;
-    companyTradeName = reg.profile.tradeName;
-    companyStatus = reg.profile.status;
+  if (skipKvk) {
     checks.push({
-      label: "KVK Handelsregister",
-      ok: kvkValid,
-      detail: kvkValid
-        ? `${reg.profile.legalName} — actief`
-        : `Gevonden maar niet goedgekeurd: ${reg.validation.reasons.join(" ") || "onbekende reden"}`,
+      label: "Werkvorm",
+      ok: true,
+      detail: "Uitzendkracht — geen KVK vereist. Verloning loopt via de payroll.",
     });
-  } catch (err) {
-    checks.push({
-      label: "KVK Handelsregister",
-      ok: false,
-      detail:
-        err instanceof AppError
-          ? err.message
-          : "KVK-nummer kon niet worden gecontroleerd. Controleer het nummer.",
-    });
+  } else {
+    try {
+      const reg = await registerFreelancerCompany({
+        freelancerProfileId,
+        kvkNumber: cleanKvk,
+        allowInactive: true,
+      });
+      kvkValid = reg.kvkValid;
+      companyName = reg.profile.legalName;
+      companyTradeName = reg.profile.tradeName;
+      companyStatus = reg.profile.status;
+      checks.push({
+        label: "KVK Handelsregister",
+        ok: kvkValid,
+        detail: kvkValid
+          ? `${reg.profile.legalName} — actief`
+          : `Gevonden maar niet goedgekeurd: ${reg.validation.reasons.join(" ") || "onbekende reden"}`,
+      });
+    } catch (err) {
+      checks.push({
+        label: "KVK Handelsregister",
+        ok: false,
+        detail:
+          err instanceof AppError
+            ? err.message
+            : "KVK-nummer kon niet worden gecontroleerd. Controleer het nummer.",
+      });
+    }
   }
 
   // --- deterministic ID checks ---------------------------------------
@@ -318,7 +328,7 @@ export async function submitFreelancerOnboarding(
     companyStatus === "DISSOLVED";
   const autoApprove =
     !hardFail &&
-    kvkValid &&
+    (skipKvk || kvkValid) &&
     nameOk &&
     numOk &&
     expiryOk &&

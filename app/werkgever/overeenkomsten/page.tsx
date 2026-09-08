@@ -1,19 +1,17 @@
 import { requirePrincipal } from "@/lib/auth";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { AgreementsList } from "@/components/app/AgreementsList";
+import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function WerkgeverOvereenkomstenPage() {
   await requirePrincipal();
+  const a = getDict().agreements;
   return (
     <>
-      <PageHeader
-        title="Modelovereenkomsten"
-        eyebrow="Wet DBA"
-        subtitle="Elke samenwerking met een freelancer loopt via een door de Belastingdienst beoordeelde modelovereenkomst. Je ziet ze hier automatisch — ook voordat er getekend is — en kunt de pdf openen."
-      />
-      <Panel title="Alle overeenkomsten">
+      <PageHeader title={a.title} eyebrow={a.eyebrow} subtitle={a.subtitle} />
+      <Panel title={a.allPanel}>
         <div className="p-5">
           <AgreementsList side="client" />
         </div>

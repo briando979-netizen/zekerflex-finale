@@ -1,0 +1,41 @@
+{
+  "slug": "banaan",
+  "prompt": "maak een 30 seconden durende, Pixar-achtige animatiefilm over een eenzame banaan die een vriend vindt",
+  "created_at": "2026-09-04T05:03:27",
+  "brief": {
+    "prompt": "maak een 30 seconden durende, Pixar-achtige animatiefilm over een eenzame banaan die een vriend vindt",
+    "title": "Bananenbuddy",
+    "subject": "Een eenzame banaan vindt een vriend en leert dat hij niet alleen is.",
+    "style": "animation",
+    "mood": "playful",
+    "language": "nl",
+    "voice_gender": "female",
+    "duration_s": 30,
+    "aspect": "16:9",
+    "palette": [
+      "#F7DC6F",
+      "#8BC34A",
+      "#FFC107"
+    ],
+    "audience": "jonge kinderen en hun ouders",
+    "cta": "",
+    "notes": "Gebruik inspiratie uit de Pixar-films en maak het een warm en speelse animatie."
+  },
+  "style_profile": null,
+  "research": "**Kernfeiten en ideeën:**\n\n• De eenzame banaan, genaamd Benny, woont in een drukke stad waar hij zich overweldigd voelt.\n• Hij ontmoet een andere fruit, een leuke appel genaamd Alex, die hem introduceert aan andere fruit in de stad.\n• Benny ontdekt dat hij niet de enige is die zich eenzaam voelt en dat anderen ook bestrijden met hun eigen problemen.\n• Hij leert Alex kennen en samen gaan ze op avontuur om te ontdekken hoe de stad werkt en nieuwe vrienden te vinden.\n• Benny ontdekt dat hij niet alleen is en dat er een gemeenschap van fruit bestaat die om hem geeft.\n\n**Verrassend detail:**\n\n• De stad is vol met geheimen, zoals een geheime tuin waar fruit kan groeien en bloeien, en een ondergrondse rivier waar fruit kan zwemmen.\n\n**Emotionele kern:**\n\n• De kijker kan zich identificeren met Benny's gevoelens van eenzaamheid en overweldiging.\n• Het verhaal toont aan dat het niet erg is om je eenzaam te voelen, maar dat je altijd nieuwe vrienden kunt maken en dat je nooit alleen bent.\n• Het verhaal inspireert kinderen om hun eigen problemen te delen met anderen en te leren dat het samen zijn, dat de sleutel is tot gelukkig zijn.",
+  "script": null,
+  "voice": [],
+  "music_path": "",
+  "shot_clips": [],
+  "subtitle_path": "",
+  "outputs": {},
+  "done": [
+    "brief",
+    "research"
+  ],
+  "log": [
+    "05:03:27 brief opstellen",
+    "05:07:15   → \"Bananenbuddy\" · animation/playful · 30s · 16:9",
+    "05:07:15 onderzoek"
+  ]
+}

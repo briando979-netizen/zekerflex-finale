@@ -55,21 +55,28 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-paper-soft lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="min-h-screen bg-paper-soft lg:grid lg:grid-cols-[288px_1fr]">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[264px] transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-transform duration-300 ease-spring lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[288px] transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-transform duration-300 ease-spring lg:static lg:translate-x-0 ${
           open ? "translate-x-0 shadow-e3" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center gap-2.5 border-b border-hair px-5">
+        <div className="flex h-20 items-center gap-2.5 border-b border-hair px-5">
           <span className="transition-transform hover:rotate-6">
             <LogoGlyph size={28} />
           </span>
           <div className="leading-tight">
             <p className="font-display text-sm font-bold">ZekerFlex</p>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-brand-500">{brandLabel}</p>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-brand-500">{brandLabel} workspace</p>
           </div>
+        </div>
+
+        <div className="border-b border-hair px-4 py-4">
+          <Link href="/dashboard/klussen" onClick={() => setOpen(false)} className="group flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-white shadow-e2 transition hover:bg-brand-700">
+            <span><span className="block font-mono text-[10px] uppercase tracking-[0.15em] text-brand-mint">Volgende stap</span><span className="mt-1 block text-sm font-semibold">Vind nieuw werk</span></span>
+            <span className="text-xl transition-transform group-hover:translate-x-1" aria-hidden>→</span>
+          </Link>
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto p-3">
@@ -122,6 +129,9 @@ export function AppShell({
             <span className="h-1.5 w-1.5 rounded-full bg-brand-mint animate-pulse-dot" />
             Sovereign · lokaal gehost
           </div>
+          <Link href="/dashboard/profiel" className="mb-2 block rounded-xl px-3 py-2 text-xs font-medium text-neutralx-500 transition hover:bg-white hover:text-brand-600">
+            Profiel en voorkeuren →
+          </Link>
           <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-e1">
             <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">
               {initials(userName)}

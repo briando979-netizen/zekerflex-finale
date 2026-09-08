@@ -1,0 +1,41 @@
+/node_modules
+/.next
+/out
+/build
+/coverage
+
+.env
+.env.local
+.env.*.local
+
+*.log
+npm-debug.log*
+.DS_Store
+
+/.vscode
+
+prisma/*.db
+*.tsbuildinfo
+
+# local upload storage (sovereign box - files live on disk, not deployed)
+# anchored to repo root only — an unanchored "storage/" also matches lib/storage/
+/storage/
+/backups
+
+# infrastructure — never ship state or secrets
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+/infra
+
+/.vercel
+
+# local TTS cache for scripts/make-uitleg-videos.py
+scripts/.tts-cache
+
+# Video Studio — generated media, not needed to build/run the app
+/studio

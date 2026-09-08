@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyWebhook } from "@/lib/integrations/didit";
 import { applyWebhookPayload } from "@/lib/kyc/verification";
+import { claimIdempotency } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +54,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!verification.valid) {
     log.warn("rejected didit webhook (bad signature)", { sessionId });
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  }
+
+  const webhookId = String(
+    body.webhook_id ?? body.webhookId ?? body.id ?? createHash("sha256").update(rawBody).digest("hex"),
+  );
+  try {
+    if (!(await claimIdempotency(`didit:${webhookId}`, 24 * 60 * 60))) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+  } catch (err) {
+    log.warn("webhook idempotency store unavailable", { error: (err as Error).message });
   }
 
   try {

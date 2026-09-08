@@ -26,6 +26,10 @@ export interface PayslipRecord {
   weeksWorked: number;
   fiscalComplete: boolean;
   computed: ComputedPayslip;
+  /** instant advances already disbursed this week (uitzend only) */
+  advance: { grossCents: number; netPaidCents: number; feeCents: number; count: number } | null;
+  /** headline minus the advance the worker already received — what payroll still transfers */
+  toPayCents: number;
   generatedAt: string;
 }
 

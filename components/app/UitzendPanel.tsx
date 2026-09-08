@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UitzendContractCard } from "@/components/app/UitzendContractCard";
 
 interface Status {
   weeksWorked: number;
@@ -80,11 +81,23 @@ export function UitzendPanel() {
     }
   };
 
-  if (!s || !f) return null;
   const ibanHint = iban.length >= 15 ? (ibanLooksValid(iban) ? "geldig" : "checksum klopt niet") : "";
+
+  const contractBlock = (
+    <div>
+      <p className="field-label">Uitzendovereenkomst</p>
+      <div className="mt-2">
+        <UitzendContractCard />
+      </div>
+    </div>
+  );
+
+  if (!s || !f) return <div className="space-y-6 text-sm">{contractBlock}</div>;
 
   return (
     <div className="space-y-6 text-sm">
+      {contractBlock}
+
       {/* ABU phase / contract hours */}
       <div>
         <p className="field-label">Fase & contracturen (ABU)</p>

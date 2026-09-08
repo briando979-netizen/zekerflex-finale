@@ -11,6 +11,10 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Neon's pooled connection is fine for the app at runtime, but `prisma
+  // migrate deploy` needs a direct connection for its advisory lock / DDL.
+  // Falls back to DATABASE_URL when unset (e.g. local dev, non-Neon hosts).
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ===========================================================================
@@ -28,6 +32,7 @@ enum UserRole {
   LOCAL_MANAGER // approves timesheets for one or more locations (branches)
   HQ_ADMIN // manages an organization (tenant): SSO, billing, all locations
   DISPUTE_MANAGER
+  SALES // field sales rep: logs company visits, sends account invites
   PLATFORM_ADMIN
 }
 
@@ -73,6 +78,7 @@ model Tenant {
   invoicesTo   Invoice[]    @relation("InvoiceRecipientTenant")
   modelAgreements ModelAgreement[]
   apiKeys      ApiKey[]
+  webhookSubscriptions WebhookSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,6 +140,40 @@ model ApiKey {
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+}
+
+model WebhookSubscription {
+  id              String   @id @default(cuid())
+  tenantId        String
+  url             String
+  eventTypes      String[]
+  secretCiphertext String
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId, active])
+}
+
+model WebhookDelivery {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  eventType      String
+  payload        Json
+  statusCode     Int?
+  attempts       Int      @default(0)
+  deliveredAt    DateTime?
+  nextAttemptAt  DateTime?
+  lastError      String?
+  createdAt      DateTime @default(now())
+
+  subscription WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@index([nextAttemptAt])
 }
 
 // A user's role within a specific tenant (RBAC + multi-tenant).
@@ -221,8 +261,15 @@ model FreelancerProfile {
   companyRegistrationId String?              @unique
   companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
 
-  // Destination for instant SEPA payouts.
+  // Destination for instant SEPA payouts. Legacy/manual path — superseded by
+  // Stripe Connect below when the freelancer has completed that onboarding.
   payoutIban String?
+
+  // Stripe Connect Express — the freelancer's own onboarding to receive
+  // Transfers from the platform's Stripe balance, paid out to their bank by
+  // Stripe. stripePayoutsEnabled mirrors Stripe's account.payouts_enabled.
+  stripeConnectedAccountId String?  @unique
+  stripePayoutsEnabled     Boolean  @default(false)
 
   // Home base for travel-time estimation.
   homeLatitude  Float
@@ -696,6 +743,11 @@ model Timesheet {
   approvedAt   DateTime?
   approvedById String?
 
+  // Extra kosten (materiaal, reiskosten e.d.) die de freelancer, na vooraf
+  // overleg met de opdrachtgever, incl. btw wil meefactureren op de zzp-factuur.
+  extraCostsCents Int?
+  extraCostsNote  String?
+
   assignment ShiftAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id])
   branch     Branch            @relation(fields: [branchId], references: [id])
@@ -815,7 +867,14 @@ model Invoice {
 
   pdfUrl String?
 
+  // Online collection of the invoice via Stripe Checkout (employer-paid
+  // invoices only; the freelancer payout side still runs through
+  // Payment/SEPA above and never touches these fields).
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId   String? @unique
+
   issuedAt DateTime?
+  paidAt   DateTime?
   lines    InvoiceLine[]
   payment  Payment?
 
@@ -1015,16 +1074,24 @@ model EngagementEvent {
 }
 
 // ===========================================================================
-// Sales-AI - lead pipeline + LLM-drafted outreach (a human sends it)
+// Sales-AI - lead pipeline + LLM-drafted outreach
+//
+// The "recruiter motor" (lib/sales/engine.ts) discovers companies (KVKBase /
+// careers-page crawl / CSV), enriches + scores them, drafts a 3-step outreach
+// sequence and — in AUTOPILOT mode, within hard caps — sends it. REVIEW mode
+// (the default) leaves every mail as a DRAFT for a human to approve.
 // ===========================================================================
 
 enum SalesLeadStatus {
   NEW
   ENRICHED
+  QUEUED
   DRAFTED
   APPROVED
   SENT
   REPLIED
+  BOUNCED
+  UNSUBSCRIBED
   WON
   LOST
   DISQUALIFIED
@@ -1032,9 +1099,111 @@ enum SalesLeadStatus {
 
 enum SalesOutreachStatus {
   DRAFT
+  SCHEDULED
   APPROVED
   SENT
+  FAILED
+  SUPPRESSED
   DISCARDED
+}
+
+enum SalesSendMode {
+  REVIEW
+  AUTOPILOT
+}
+
+enum SalesCampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  DONE
+}
+
+enum SalesSourceKind {
+  KVKBASE
+  CAREERS_URL
+  CSV
+}
+
+model SalesCampaign {
+  id     String              @id @default(cuid())
+  name   String
+  status SalesCampaignStatus @default(DRAFT)
+  mode   SalesSendMode       @default(REVIEW)
+
+  // Hard limits, enforced by the engine.
+  dailyCap      Int     @default(40)
+  sendStartHour Int     @default(8)
+  sendEndHour   Int     @default(18)
+  workdaysOnly  Boolean @default(true)
+  minScore      Int     @default(55)
+  stepDelaysDays Int[]  @default([0, 4, 10])
+
+  // KVKBase discovery targeting.
+  targetSectors String[] @default([])
+  targetCities  String[] @default([])
+
+  fromAddress String?
+
+  // AUTOPILOT is a deliberate, audited opt-in.
+  autopilotConfirmedAt   DateTime?
+  autopilotConfirmedById String?
+
+  createdById String?
+
+  leads   SalesLead[]
+  sources SalesDiscoverySource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model SalesDiscoverySource {
+  id         String          @id @default(cuid())
+  campaignId String?
+  kind       SalesSourceKind
+  url        String?
+  label      String?
+  configJson Json            @default("{}")
+  enabled    Boolean         @default(true)
+  lastRunAt  DateTime?
+  lastResultJson Json?
+
+  campaign SalesCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+}
+
+model SalesSuppression {
+  email       String   @id
+  domain      String?
+  reason      String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([domain])
+}
+
+model SalesEngineRun {
+  id         String    @id @default(cuid())
+  campaignId String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  discovered Int       @default(0)
+  enriched   Int       @default(0)
+  scored     Int       @default(0)
+  drafted    Int       @default(0)
+  sent       Int       @default(0)
+  skipped    Int       @default(0)
+  errorsJson Json      @default("[]")
+  summary    String?
+
+  @@index([startedAt])
 }
 
 model SalesLead {
@@ -1043,27 +1212,47 @@ model SalesLead {
   kvkNumber    String?
   contactName  String?
   contactEmail String?
+  contactPhone String?
   city         String?
   sector       String?
-  source       String          @default("manual") // "manual" | "kvkbase" | "import"
+  source       String          @default("manual") // "manual" | "kvkbase" | "careers" | "import" | "field-visit"
   status       SalesLeadStatus @default(NEW)
+
+  campaignId     String?
+  sourceUrl      String?
+  vacancySignal  String?
+  discoveredEmail String?
+
+  // account-uitnodiging verstuurd na een bedrijfsbezoek
+  invitedAt       DateTime?
+  invitedTenantId String?
 
   // 0-100 fit score + the model's reasoning (heuristic or LLM).
   score          Int?
   scoreRationale String?
   notes          String?
 
+  // Outreach-sequence bookkeeping.
+  sequenceStep     Int       @default(0)
+  nextActionAt     DateTime?
+  suppressed       Boolean   @default(false)
+  suppressedReason String?
+  repliedAt        DateTime?
+  bouncedAt        DateTime?
+
   enrichmentJson Json      @default("{}")
   createdById    String?
   lastContactedAt DateTime?
 
   outreach SalesOutreach[]
+  campaign SalesCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([kvkNumber])
+  @@index([campaignId, nextActionAt])
 }
 
 model SalesOutreach {
@@ -1071,6 +1260,9 @@ model SalesOutreach {
   leadId  String
   channel String              @default("email")
   status  SalesOutreachStatus @default(DRAFT)
+
+  stepIndex   Int       @default(0)
+  scheduledAt DateTime?
 
   subject String
   body    String
@@ -1081,6 +1273,9 @@ model SalesOutreach {
   approvedAt       DateTime?
   sentById         String?
   sentAt           DateTime?
+  sentVia          String? // "autopilot" | "manual"
+  mailId           String?
+  failReason       String?
 
   lead SalesLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
@@ -1288,6 +1483,30 @@ model Upload {
 
   @@index([uploadedById])
   @@index([createdAt])
+}
+
+// Public webshop catalog managed by PLATFORM_ADMIN.
+model ShopProduct {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String
+  category      String
+  priceCents    Int
+  costCents     Int?     // inkoopprijs (COGS) — voor margeberekening in admin
+  stock         Int      @default(0)
+  imageUploadId String?
+  modelUploadId String?
+  imageUrl      String?
+  modelPhotoUrl String?
+  badge         String?
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active, sortOrder])
+  @@index([category, active])
 }
 
 // ===========================================================================

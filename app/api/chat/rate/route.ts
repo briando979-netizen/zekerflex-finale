@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { rateExchange } from "@/lib/learn/store";
-import { redis } from "@/lib/redis";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,13 +10,8 @@ export const dynamic = "force-dynamic";
 // Matches the exchange by its logged text; filesystem only.
 export async function POST(request: Request): Promise<NextResponse> {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  try {
-    const n = await redis.incr(`chatrate:rl:${ip}`);
-    if (n === 1) await redis.expire(`chatrate:rl:${ip}`, 60);
-    if (n > 20) return NextResponse.json({ ok: false }, { status: 429 });
-  } catch {
-    /* best effort */
-  }
+  const gate = await fixedWindow(`chatrate:rl:${ip}`, 20, 60);
+  if (!gate.ok) return NextResponse.json({ ok: false }, { status: 429 });
 
   try {
     const { q, a, up } = z

@@ -339,24 +339,25 @@ body {
    [data-theme="light"] on the same node flips every token. */
 
 .admin-scope {
-  --a-page: #08080a;
-  --a-panel: #131316;
-  --a-panel-2: #17171b;
-  --a-elev: #232327;
-  --a-elev-hover: #2b2b30;
-  --a-border: rgba(255, 255, 255, 0.07);
-  --a-border-strong: rgba(255, 255, 255, 0.12);
-  --a-text: #fafafa;
-  --a-dim: #a1a1aa;
-  --a-mute: #71717a;
+  --a-page: #f5f7fb;
+  --a-panel: #ffffff;
+  --a-panel-2: #fbfcff;
+  --a-elev: #f0f3f9;
+  --a-elev-hover: #e8edf7;
+  --a-border: rgba(15, 35, 75, 0.09);
+  --a-border-strong: rgba(15, 35, 75, 0.16);
+  --a-text: #17233b;
+  --a-dim: #5d6a80;
+  --a-mute: #8b96a8;
   --a-accent: #10b981;
   --a-accent-soft: rgba(16, 185, 129, 0.14);
   --a-blue: #60a5fa;
   --a-amber: #f59e0b;
   --a-red: #f87171;
-  --a-invert-bg: #fafafa;
-  --a-invert-fg: #0a0a0b;
-  --a-radius: 1rem;
+  --a-blue: #3155d8;
+  --a-invert-bg: #3155d8;
+  --a-invert-fg: #ffffff;
+  --a-radius: 0.75rem;
 
   color: var(--a-text);
   background: var(--a-page);
@@ -364,20 +365,40 @@ body {
 }
 
 .admin-scope[data-theme="light"] {
-  --a-page: #f6f6f7;
+  --a-page: #f5f7fb;
   --a-panel: #ffffff;
   --a-panel-2: #fbfbfc;
-  --a-elev: #f1f1f3;
-  --a-elev-hover: #e9e9ec;
-  --a-border: rgba(9, 9, 11, 0.09);
-  --a-border-strong: rgba(9, 9, 11, 0.16);
-  --a-text: #18181b;
-  --a-dim: #52525b;
-  --a-mute: #8a8a92;
+  --a-elev: #eef2f8;
+  --a-elev-hover: #e4eaf5;
+  --a-border: rgba(15, 35, 75, 0.09);
+  --a-border-strong: rgba(15, 35, 75, 0.16);
+  --a-text: #17233b;
+  --a-dim: #5d6a80;
+  --a-mute: #8b96a8;
   --a-accent-soft: rgba(16, 185, 129, 0.12);
-  --a-invert-bg: #18181b;
+  --a-invert-bg: #3155d8;
   --a-invert-fg: #fafafa;
 }
+
+/* Jampack-inspired admin frame: quiet canvas, blue utility line, crisp panels. */
+.admin-scope::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: 3px;
+  background: #3155d8;
+  pointer-events: none;
+}
+.admin-scope .a-panel {
+  box-shadow: 0 1px 2px rgba(15, 35, 75, 0.03), 0 10px 28px rgba(15, 35, 75, 0.045);
+}
+.admin-scope .a-btn-primary {
+  background: #3155d8;
+  color: #ffffff;
+  box-shadow: 0 5px 12px rgba(49, 85, 216, 0.18);
+}
+.admin-scope .a-btn-primary:hover { background: #2746bb; }
 
 /* structural helpers */
 .admin-scope .a-panel {

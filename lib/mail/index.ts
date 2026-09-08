@@ -322,12 +322,19 @@ export function verificationEmail(fullName: string, link: string, code?: string)
   };
 }
 
-export function welcomeEmail(fullName: string, type: "freelancer" | "bedrijf", appUrl: string): MailInput {
+export function welcomeEmail(
+  fullName: string,
+  type: "freelancer" | "bedrijf",
+  appUrl: string,
+  workerKind?: "zzp" | "flexwerker" | "uitzendkracht",
+): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   const next =
     type === "bedrijf"
       ? "Rond de onboarding van je organisatie af (KVK + eerste vestiging) en zet je eerste dienst uit."
-      : "Rond je verificatie af (KVK + identiteit) en bekijk de eerste klussen die bij je passen.";
+      : workerKind === "uitzendkracht"
+        ? "Rond je verificatie af (identiteit + rekeningnummer — geen KVK nodig) en bekijk de eerste klussen die bij je passen."
+        : "Rond je verificatie af (KVK + identiteit) en bekijk de eerste klussen die bij je passen.";
   return {
     to: "",
     subject: "Welkom bij ZekerFlex",

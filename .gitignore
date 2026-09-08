@@ -39,3 +39,15 @@ infra/terraform/backend.hcl
 infra/k8s/**/secret.yaml
 kubeconfig
 *.kubeconfig
+
+.vercel
+
+# lokale TTS-cache van scripts/make-uitleg-videos.py
+scripts/.tts-cache
+
+# Video Studio — gegenereerde projecten (script/manifest wel, media niet)
+studio/projects/*/work/
+studio/projects/*/clips/
+studio/projects/*/voice/
+studio/projects/*/out/
+.env*

@@ -35,8 +35,13 @@ export interface MyWorkItem {
   status: WorkStatus;
   confirmedAt: string | null;
   replacementRequested: boolean;
+  replacementRequestId: string | null;
+  replacementResponseCount: number;
   agreement: AgreementLite | null;
   timesheetStatus: string | null;
+  timesheetId: string | null;
+  clientTenantId: string | null;
+  clientName: string | null;
   offerRateCents: number | null;
   offerStatusLabel: string | null;
   /** employer cancelled this after you were assigned → you may file a 50% claim */
@@ -65,11 +70,11 @@ type ShiftRow = {
   positions: number;
   branchId: string;
   requiredSkill: { name: string } | null;
-  branch: { name: string; city: string; latitude: number; longitude: number };
+  branch: { name: string; city: string; latitude: number; longitude: number; tenant: { id: string; name: string } };
   _count: { assignments: number };
 };
 
-function toShift(row: ShiftRow, home: { lat: number; lng: number } | null): MarketplaceShift {
+export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null): MarketplaceShift {
   const hours = (row.endsAt.getTime() - row.startsAt.getTime()) / 3_600_000 - row.breakMinutes / 60;
   return {
     id: row.id,
@@ -106,7 +111,7 @@ const OFFER_LABEL: Record<string, string> = {
   declined: "Afgewezen",
 };
 
-const SHIFT_SELECT = {
+export const SHIFT_SELECT = {
   id: true,
   title: true,
   description: true,
@@ -117,7 +122,7 @@ const SHIFT_SELECT = {
   positions: true,
   branchId: true,
   requiredSkill: { select: { name: true } },
-  branch: { select: { name: true, city: true, latitude: true, longitude: true } },
+  branch: { select: { name: true, city: true, latitude: true, longitude: true, tenant: { select: { id: true, name: true } } } },
   _count: { select: { assignments: { where: { cancelledAt: null } } } },
 } as const;
 
@@ -144,7 +149,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
         cancelledAt: true,
         cancelReason: true,
         shift: { select: SHIFT_SELECT },
-        timesheet: { select: { status: true } },
+        timesheet: { select: { id: true, status: true } },
       },
       orderBy: { shift: { startsAt: "desc" } },
       take: 60,
@@ -174,8 +179,10 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientSigned: Boolean(a.clientSignedAt),
     });
   }
-  const replacementByAssignment = new Set(
-    replacements.filter((r) => r.userId === userId && r.status === "open").map((r) => r.assignmentId),
+  const replacementByAssignment = new Map(
+    replacements
+      .filter((r) => r.userId === userId && r.status === "open")
+      .map((r) => [r.assignmentId, r] as const),
   );
 
   const now = Date.now();
@@ -201,8 +208,13 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       status: o.status === "pending" ? "pending" : o.status === "accepted" ? "active" : "rejected",
       confirmedAt: null,
       replacementRequested: false,
+      replacementRequestId: null,
+      replacementResponseCount: 0,
       agreement: agreementByShift.get(o.shiftId) ?? null,
       timesheetStatus: null,
+      timesheetId: null,
+      clientTenantId: null,
+      clientName: null,
       offerRateCents: o.proposedRateCents,
       offerStatusLabel: OFFER_LABEL[o.status] ?? o.status,
       cancelledByEmployer: false,
@@ -214,7 +226,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   // ── accepted assignments ────────────────────────────────────────────
   for (const a of assignments) {
     const shift = toShift(a.shift as ShiftRow, home);
-    const isReplacement = replacementByAssignment.has(a.id);
+    const repl = replacementByAssignment.get(a.id);
+    const isReplacement = Boolean(repl);
     const item: MyWorkItem = {
       shift,
       assignmentId: a.id,
@@ -227,8 +240,13 @@ export async function getMyWork(userId: string): Promise<MyWork> {
             : "done",
       confirmedAt: prefs.confirmations[a.id] ?? null,
       replacementRequested: isReplacement,
+      replacementRequestId: repl?.id ?? null,
+      replacementResponseCount: repl?.responses.length ?? 0,
       agreement: agreementByShift.get(a.shift.id) ?? null,
       timesheetStatus: a.timesheet?.status ?? null,
+      timesheetId: a.timesheet?.id ?? null,
+      clientTenantId: a.shift.branch.tenant.id,
+      clientName: a.shift.branch.tenant.name,
       offerRateCents: null,
       offerStatusLabel: null,
       cancelledByEmployer: Boolean(
@@ -259,8 +277,13 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       status: "pending",
       confirmedAt: null,
       replacementRequested: false,
+      replacementRequestId: null,
+      replacementResponseCount: 0,
       agreement: null,
       timesheetStatus: null,
+      timesheetId: null,
+      clientTenantId: null,
+      clientName: null,
       offerRateCents: null,
       offerStatusLabel: "Aanbod ontvangen",
       cancelledByEmployer: false,

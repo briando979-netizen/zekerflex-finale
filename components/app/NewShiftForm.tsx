@@ -8,10 +8,10 @@ import { shiftCategory } from "@/lib/shifts/category";
 
 const initial: NewShiftState = { error: null };
 
-function Submit({ days }: { days: number }) {
+function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn-primary w-full">
+    <button type="submit" disabled={pending || blocked} className="btn-primary w-full disabled:opacity-50">
       {pending
         ? "Bezig met uitzetten…"
         : days > 1
@@ -26,15 +26,18 @@ const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 export function NewShiftForm({
   branches,
   templates,
+  minRateCents = 1620,
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
+  minRateCents?: number;
 }) {
+  const minRateEuro = minRateCents / 100;
   const [state, formAction] = useFormState(createShiftAction, initial);
   const [tpl, setTpl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [rateEuro, setRateEuro] = useState("15.00");
+  const [rateEuro, setRateEuro] = useState(minRateEuro.toFixed(2));
   const [breakMin, setBreakMin] = useState("30");
   const [positions, setPositions] = useState("1");
   const [startsAt, setStartsAt] = useState("");
@@ -146,8 +149,27 @@ export function NewShiftForm({
           </label>
           <label className="block sm:col-span-2">
             <span className="field-label">Uurtarief (€ bruto)</span>
-            <input type="number" step="0.50" min="5" value={rateEuro} onChange={(e) => setRateEuro(e.target.value)} className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">ZekerFlex rekent € 3,50 platformkosten per gewerkt uur — dit komt hierbovenop.</span>
+            <input
+              type="number"
+              step="0.10"
+              min={minRateEuro.toFixed(2)}
+              value={rateEuro}
+              onChange={(e) => setRateEuro(e.target.value)}
+              onBlur={(e) => {
+                const v = parseFloat(e.target.value.replace(",", "."));
+                if (Number.isFinite(v) && v < minRateEuro) setRateEuro(minRateEuro.toFixed(2));
+              }}
+              className="field-input"
+            />
+            <span className="mt-1 block text-xs text-neutralx-400">
+              Minimum € {minRateEuro.toFixed(2).replace(".", ",")} per uur. ZekerFlex rekent daarnaast
+              € 3,50 platformkosten per gewerkt uur — dat komt hierbovenop.
+            </span>
+            {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
+              <span className="mt-1 block text-xs font-medium text-crit">
+                Het uurtarief moet minimaal € {minRateEuro.toFixed(2).replace(".", ",")} zijn.
+              </span>
+            )}
           </label>
         </div>
 
@@ -187,7 +209,7 @@ export function NewShiftForm({
           )}
         </div>
 
-        <Submit days={totalDays} />
+        <Submit days={totalDays} blocked={hourlyRateCents < minRateCents} />
       </form>
 
       {/* live preview */}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Principal } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -16,13 +17,16 @@ export interface ShiftTemplate {
   skillName: string | null;
 }
 
+/** Minimum uurtarief (bruto) dat een opdrachtgever mag instellen. */
+export const MIN_SHIFT_RATE_CENTS = env.MIN_SHIFT_RATE_CENTS;
+
 export const SHIFT_TEMPLATES: ShiftTemplate[] = [
-  { key: "vakkenvuller", label: "Vakkenvuller", hourlyRateCents: 1450, breakMinutes: 30, description: "Vakken vullen, schappen aanvullen en netjes houden tijdens de dienst.", skillName: null },
-  { key: "kassa", label: "Kassamedewerker", hourlyRateCents: 1500, breakMinutes: 30, description: "Klanten gastvrij afrekenen en de kassa bemannen.", skillName: null },
-  { key: "magazijn", label: "Magazijnmedewerker", hourlyRateCents: 1600, breakMinutes: 30, description: "Goederen ontvangen, orderpicken en het magazijn op orde houden.", skillName: null },
-  { key: "schoonmaak", label: "Schoonmaakmedewerker", hourlyRateCents: 1550, breakMinutes: 15, description: "Schoonmaakronde volgens checklist: sanitair, kantines en algemene ruimtes.", skillName: null },
-  { key: "horeca", label: "Bediening / horeca", hourlyRateCents: 1600, breakMinutes: 30, description: "Gasten bedienen, bestellingen opnemen en uitserveren.", skillName: null },
-  { key: "receptie", label: "Receptiemedewerker", hourlyRateCents: 1700, breakMinutes: 30, description: "Bezoekers ontvangen, telefoon en post afhandelen.", skillName: null },
+  { key: "vakkenvuller", label: "Vakkenvuller", hourlyRateCents: 1620, breakMinutes: 30, description: "Vakken vullen, schappen aanvullen en netjes houden tijdens de dienst.", skillName: null },
+  { key: "kassa", label: "Kassamedewerker", hourlyRateCents: 1650, breakMinutes: 30, description: "Klanten gastvrij afrekenen en de kassa bemannen.", skillName: null },
+  { key: "magazijn", label: "Magazijnmedewerker", hourlyRateCents: 1700, breakMinutes: 30, description: "Goederen ontvangen, orderpicken en het magazijn op orde houden.", skillName: null },
+  { key: "schoonmaak", label: "Schoonmaakmedewerker", hourlyRateCents: 1650, breakMinutes: 15, description: "Schoonmaakronde volgens checklist: sanitair, kantines en algemene ruimtes.", skillName: null },
+  { key: "horeca", label: "Bediening / horeca", hourlyRateCents: 1700, breakMinutes: 30, description: "Gasten bedienen, bestellingen opnemen en uitserveren.", skillName: null },
+  { key: "receptie", label: "Receptiemedewerker", hourlyRateCents: 1800, breakMinutes: 30, description: "Bezoekers ontvangen, telefoon en post afhandelen.", skillName: null },
 ];
 
 export const createShiftSchema = z.object({
@@ -33,7 +37,13 @@ export const createShiftSchema = z.object({
   startsAt: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)),
   endsAt: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)),
   breakMinutes: z.coerce.number().int().min(0).max(240).default(0),
-  hourlyRateCents: z.coerce.number().int().min(500).max(20000),
+  hourlyRateCents: z.coerce
+    .number()
+    .int()
+    .min(env.MIN_SHIFT_RATE_CENTS, {
+      message: `Het minimum uurtarief is € ${(env.MIN_SHIFT_RATE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+    })
+    .max(20000),
   positions: z.coerce.number().int().min(1).max(50).default(1),
   /** extra calendar dates (yyyy-mm-dd) — the same time window is repeated on each */
   extraDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(30).optional(),

@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { chatStream, fastModel } from "@/lib/ai/client";
-import { redis } from "@/lib/redis";
+import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { logExchange, topExamples } from "@/lib/learn/store";
 import { searchKnowledge } from "@/lib/jarvis/public-knowledge";
+import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,15 +97,9 @@ export async function POST(request: Request): Promise<Response> {
     request.headers.get("x-real-ip") ||
     "local";
 
-  try {
-    const key = `chat:rl:${ip}`;
-    const n = await redis.incr(key);
-    if (n === 1) await redis.expire(key, 60);
-    if (n > 15) {
-      return textStream("Rustig aan — probeer het over een minuut nog eens.");
-    }
-  } catch {
-    /* best-effort */
+  const gate = await fixedWindow(`chat:rl:${ip}`, 15, 60);
+  if (!gate.ok) {
+    return textStream("Rustig aan — probeer het over een minuut nog eens.");
   }
 
   let parsed;
@@ -116,6 +111,11 @@ export async function POST(request: Request): Promise<Response> {
 
   const lastUser = [...parsed.messages].reverse().find((m) => m.role === "user");
   const question = lastUser?.content ?? "";
+  const guard = inspectPrompt(question);
+  if (!guard.allowed) {
+    logger.warn("prompt injection blocked", { reason: guard.reason, ip });
+    return textStream("Daar kan ik niet mee helpen. Stel een vraag over ZekerFlex.");
+  }
   const canned = lastUser ? pickCanned(lastUser.content) : null;
   if (canned && parsed.messages.length <= 2) {
     return textStream(canned, question);

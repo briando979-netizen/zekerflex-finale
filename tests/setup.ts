@@ -23,3 +23,6 @@ e.LLM_RETRY_MAX_WAIT_MS ??= "2000";
 // Deterministic, independent of the local .env.
 e.LLM_MODEL ??= "llama3.1:8b";
 e.LLM_TIMEOUT_MS ??= "30000";
+// Sales-recruiter motor: pinned off so tests never discover / send.
+e.SALES_ENGINE_ENABLED = "false";
+e.SALES_AUTOPILOT_ENABLED = "false";

@@ -5,6 +5,19 @@ _Bijgewerkt: 2026-08-31 · autonome code-inspectie, non-destructief_
 Dit document is de kritische zelf-analyse die de gebruiker vroeg: wat ontbreekt
 er nog, wat rammelt, en welke stappen zijn in deze ronde autonoom gezet.
 
+## Architectuurbesluit
+
+**Sovereign Box is de primaire productiearchitectuur.** De applicatie gebruikt
+een always-on daemon, lokale inference/TTS en persistente filesystem-opslag;
+die onderdelen passen niet betrouwbaar binnen Vercel Serverless Functions.
+Vercel is daarom uitsluitend een preview/demo-pad. Een echte Vercel-productie-
+variant vereist een afzonderlijk ontwerp met externe LLM, object storage,
+managed PostgreSQL/Redis en een externe scheduler.
+
+Dit voorkomt een gevaarlijke schijnzekerheid: een geslaagde `next build` bewijst
+alleen dat de webbundel bouwt, niet dat achtergrondjobs, uploads, mail,
+betalingen of lokale modellen productiegeschikt draaien.
+
 ---
 
 ## Deel 1 — Wat ontbrak nog voor 100% productie-klaar
@@ -32,6 +45,27 @@ er nog, wat rammelt, en welke stappen zijn in deze ronde autonoom gezet.
 | 🟠 mid | **Achtergrond-jobs buiten het web-proces** | `scripts/daemon.mjs` draait de cron-ticks in-process. Voor K8s: een aparte `CronJob`/worker-Deployment die de `/api/internal/*` endpoints hit, of BullMQ. |
 | 🟢 laag | **E2E-tests** | 124 unit-tests, geen browser-flow. Playwright op de kritieke paden (registratie → verificatie → dienst → timesheet → verloning). |
 | 🟢 laag | **Disaster recovery-draaiboek** | Backups gaan naar S3 (nightly `pg_dump`); een getest restore-script + RTO/RPO-document ontbreekt. |
+
+### Kritieke domeinrisico's die nog expliciet moeten worden gebouwd
+
+| Prioriteit | Onderdeel | Vereiste uitwerking |
+|---|---|---|
+| 🔴 hoog | **Betalingen en boekhouding** | Kies één PSP/bankpartner en implementeer idempotente payouts, webhook-verificatie, settlement-reconciliatie, SEPA-export, factuurnummering per tenant/jaar en creditnota's. Een berekende payout is nog geen uitgevoerde betaling. |
+| 🔴 hoog | **Matching zonder overboeking** | Accepteer een aanbod binnen één Prisma-transactie met een unieke database-constraint of locking-strategie. Voeg een concurrency-test toe met twee gelijktijdige acceptaties. |
+| 🔴 hoog | **AVG-governance** | Definieer bewaartermijnen voor GPS, documenten, auditlogs en exports; voeg verwijder-/anonimiseerflows toe en leg vast welke wettelijke bewaarplicht een verwijdering begrenst. |
+| 🔴 hoog | **Toegestane audit-anonimisering** | Maak auditregels append-only maar anonimiseer PII via een stabiele pseudoniemreferentie. Bewaar hash, volgnummer en ketenintegriteit; verwijder geen historische regels zonder een formeel migratie- en bewijsprotocol. |
+| 🟠 mid | **Rate limiting** | Centraliseer Redis-rate limiting voor login, KYC, bedrijfslookup, uploads, analytics en publieke webhooks; gebruik verschillende limieten per identiteit, IP en route. |
+| 🟠 mid | **Opslag en RAG** | Gebruik object storage voor uploads/backups en plan `pgvector` met indexen zodra de dataset groeit. Meet queryduur en event-loop blocking vóór migratie. |
+| 🟠 mid | **Digitale ondertekening** | Leg PDF-hash, documentversie, identiteit, timestamp, IP/user-agent en consent vast; laat juridisch toetsen of de gekozen handtekening en identity-check aan eIDAS-eisen voldoen. |
+| 🟢 laag | **Operationele bewaking** | Voeg metrics, job-heartbeats, foutbudgetten, alerts en een herstelrunbook met RPO/RTO toe. |
+
+### Aanbevolen uitvoeringsvolgorde
+
+1. Productiepad vastzetten op Sovereign Box en staging/restore-test uitvoeren.
+2. Matching-transactie en payout-ledger bouwen voordat echte betalingen worden aangezet.
+3. AVG-retentie, export, verwijdering en audit-anonimisering laten reviewen.
+4. Centrale rate limiting en observability activeren.
+5. Object storage en pgvector uitvoeren op basis van gemeten schaal, niet alleen op basis van toekomstige groei.
 
 ---
 

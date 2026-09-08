@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// Minimal, dependency-free PDF writer. Enough for invoices / agreements /
-// payslips: A4, Helvetica, text lines, headings, rules and simple two-column
-// rows. Produces a valid PDF 1.4 byte buffer. No fonts embedded (uses the PDF
+// Minimal, dependency-free PDF writer. A4, Helvetica, text lines, headings,
+// rules, two-column rows, word-wrapped paragraphs and automatic page breaks.
+// Produces a valid PDF 1.4 byte buffer. No fonts embedded (uses the PDF
 // standard-14 Helvetica), so only WinAnsi/Latin-1 text is safe — callers pass
 // text through `latin1()` which strips anything outside it.
 // ---------------------------------------------------------------------------
@@ -9,18 +9,21 @@
 const PAGE_W = 595.28; // A4 pt
 const PAGE_H = 841.89;
 const MARGIN = 56;
+const CONTENT_W = PAGE_W - 2 * MARGIN;
+const BOTTOM = MARGIN + 24;
 
 type Align = "left" | "right";
 
 interface Op {
-  kind: "text" | "rule" | "gap";
+  kind: "text" | "rule" | "gap" | "keep";
   text?: string;
   size?: number;
   bold?: boolean;
   align?: Align;
-  x?: number; // absolute x for right-aligned or columns
+  x?: number;
+  indent?: number;
   color?: [number, number, number];
-  height?: number; // gap
+  height?: number;
 }
 
 export class SimplePdf {
@@ -32,8 +35,46 @@ export class SimplePdf {
     return this;
   }
 
+  /** A section heading kept together with the next line. */
+  section(text: string, size = 12): this {
+    this.ops.push({ kind: "gap", height: 8 });
+    this.ops.push({ kind: "text", text, size, bold: true });
+    this.ops.push({ kind: "gap", height: 2 });
+    return this;
+  }
+
   line(text = "", size = 10.5, opts: { bold?: boolean; color?: [number, number, number] } = {}): this {
     this.ops.push({ kind: "text", text, size, bold: opts.bold ?? false, ...(opts.color ? { color: opts.color } : {}) });
+    return this;
+  }
+
+  /** Word-wrapped paragraph. `indent` shifts the whole block right (pt). */
+  paragraph(
+    text: string,
+    size = 10,
+    opts: { bold?: boolean; indent?: number; color?: [number, number, number] } = {},
+  ): this {
+    const indent = opts.indent ?? 0;
+    for (const ln of wrap(text, size, CONTENT_W - indent)) {
+      this.ops.push({
+        kind: "text",
+        text: ln,
+        size,
+        bold: opts.bold ?? false,
+        indent,
+        ...(opts.color ? { color: opts.color } : {}),
+      });
+    }
+    return this;
+  }
+
+  /** Numbered / bulleted list item, hanging-indented. */
+  item(marker: string, text: string, size = 10): this {
+    const lead = 22;
+    const lines = wrap(text, size, CONTENT_W - lead);
+    lines.forEach((ln, i) => {
+      this.ops.push({ kind: "text", text: i === 0 ? `${marker}  ${ln}` : ln, size, indent: i === 0 ? 0 : lead });
+    });
     return this;
   }
 
@@ -54,12 +95,18 @@ export class SimplePdf {
     return this;
   }
 
-  private buildContent(): string {
-    const parts: string[] = [];
+  private buildPages(): string[] {
+    const pages: string[] = [];
+    let parts: string[] = [];
     let y = PAGE_H - MARGIN;
-    // true right after a left-aligned text line, so a following right-aligned
-    // value renders on the same baseline (a label/value row).
     let canPairRight = false;
+
+    const flush = () => {
+      pages.push(parts.join("\n"));
+      parts = [];
+      y = PAGE_H - MARGIN;
+      canPairRight = false;
+    };
 
     for (const op of this.ops) {
       if (op.kind === "gap") {
@@ -68,52 +115,62 @@ export class SimplePdf {
         continue;
       }
       if (op.kind === "rule") {
+        if (y - 18 < BOTTOM) flush();
         y -= 6;
         parts.push(
-          `0.85 0.85 0.85 RG 0.7 w ${MARGIN.toFixed(2)} ${y.toFixed(2)} m ${(PAGE_W - MARGIN).toFixed(2)} ${y.toFixed(
-            2,
-          )} l S`,
+          `0.85 0.85 0.85 RG 0.7 w ${MARGIN.toFixed(2)} ${y.toFixed(2)} m ${(PAGE_W - MARGIN).toFixed(2)} ${y.toFixed(2)} l S`,
         );
         y -= 12;
         canPairRight = false;
         continue;
       }
-      // text
+
       const size = op.size ?? 10.5;
       const font = op.bold ? "F2" : "F1";
       const isRight = op.align === "right";
 
       if (isRight && canPairRight) {
-        // stay on the current baseline (pair with the label just drawn)
+        // stay on the current baseline
       } else {
+        if (y - (size + 5) < BOTTOM && !isRight) flush();
         y -= size + 5;
       }
 
       const text = escapePdf(latin1(op.text ?? ""));
       const width = isRight ? helveticaWidth(latin1(op.text ?? ""), size) : 0;
-      const x = isRight ? (op.x ?? PAGE_W - MARGIN) - width : MARGIN;
+      const x = isRight ? (op.x ?? PAGE_W - MARGIN) - width : MARGIN + (op.indent ?? 0);
       const [r, g, b] = op.color ?? [0.09, 0.13, 0.11];
       parts.push(`BT ${r} ${g} ${b} rg /${font} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td (${text}) Tj ET`);
 
       canPairRight = !isRight;
-      if (y < MARGIN + 30) break; // single page only — truncate rather than overflow
     }
-    return parts.join("\n");
+    if (parts.length) pages.push(parts.join("\n"));
+    return pages.length ? pages : [""];
   }
 
   toBuffer(): Buffer {
-    const content = this.buildContent();
+    const pageContents = this.buildPages();
+    const n = pageContents.length;
+
+    // object layout: 1 Catalog, 2 Pages, 3 F1, 4 F2, 5..(4+n) Page objs, (5+n)..(4+2n) content objs
+    const pageObjStart = 5;
+    const contentObjStart = 5 + n;
+
     const objs: string[] = [];
-    objs.push("<< /Type /Catalog /Pages 2 0 R >>");
-    objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    objs.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] ` +
-        `/Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,
-    );
-    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
-    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
-    const stream = `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}\nendstream`;
-    objs.push(stream);
+    objs.push("<< /Type /Catalog /Pages 2 0 R >>"); // 1
+    const kids = Array.from({ length: n }, (_, i) => `${pageObjStart + i} 0 R`).join(" ");
+    objs.push(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`); // 2
+    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"); // 3
+    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"); // 4
+    for (let i = 0; i < n; i += 1) {
+      objs.push(
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] ` +
+          `/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjStart + i} 0 R >>`,
+      );
+    }
+    for (const content of pageContents) {
+      objs.push(`<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}\nendstream`);
+    }
 
     let pdf = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
     const offsets: number[] = [];
@@ -130,8 +187,26 @@ export class SimplePdf {
   }
 }
 
+function wrap(text: string, size: number, maxWidth: number): string[] {
+  const clean = latin1(text).replace(/\s+/g, " ").trim();
+  if (!clean) return [""];
+  const words = clean.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? `${cur} ${w}` : w;
+    if (helveticaWidth(test, size) <= maxWidth || !cur) {
+      cur = test;
+    } else {
+      lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function latin1(s: string): string {
-  // Replace common typographic chars, then drop anything non-Latin-1.
   return s
     .replace(/[\u2018\u2019\u201A]/g, "'")
     .replace(/[\u201C\u201D\u201E]/g, '"')
@@ -144,8 +219,6 @@ function escapePdf(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[\r\n]+/g, " ");
 }
 
-// Helvetica AFM widths (per-1000 em) for the WinAnsi printable range we care
-// about. Anything unmapped falls back to 500 — right-alignment stays close.
 const HELV_W: Record<string, number> = {
   " ": 278, "!": 278, '"': 355, "#": 556, $: 556, "%": 889, "&": 667, "'": 191,
   "(": 333, ")": 333, "*": 389, "+": 584, ",": 278, "-": 333, ".": 278, "/": 278,

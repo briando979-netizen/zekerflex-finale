@@ -10,9 +10,21 @@ export const metadata: Metadata = { title: "Account aanmaken" };
 export default function RegisterPage({
   searchParams,
 }: {
-  searchParams: { type?: string };
+  searchParams: { type?: string; company?: string; kvk?: string; email?: string };
 }) {
   const defaultType = searchParams.type === "bedrijf" ? "bedrijf" : "freelancer";
+  const defaultWorkerKind =
+    searchParams.type === "uitzendkracht" || searchParams.type === "zzp" || searchParams.type === "flexwerker"
+      ? searchParams.type
+      : undefined;
+  const prefill =
+    searchParams.company || searchParams.kvk || searchParams.email
+      ? {
+          ...(searchParams.company ? { company: searchParams.company } : {}),
+          ...(searchParams.kvk && /^\d{8}$/.test(searchParams.kvk) ? { kvk: searchParams.kvk } : {}),
+          ...(searchParams.email ? { email: searchParams.email } : {}),
+        }
+      : undefined;
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
   return (
@@ -29,7 +41,12 @@ export default function RegisterPage({
         </>
       }
     >
-      <RegisterForm defaultType={defaultType} googleEnabled={googleEnabled} />
+      <RegisterForm
+        defaultType={defaultType}
+        {...(defaultWorkerKind ? { defaultWorkerKind } : {})}
+        {...(prefill ? { prefill } : {})}
+        googleEnabled={googleEnabled}
+      />
     </AuthShell>
   );
 }

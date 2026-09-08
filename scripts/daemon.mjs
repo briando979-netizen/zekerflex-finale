@@ -108,6 +108,7 @@ const jobs = [
   { path: "/api/internal/ai/watchdog", label: "ai-watchdog", everyMs: 20_000, firstDelayMs: 5_000 },
   { path: "/api/internal/matching/tick", label: "matching-tick", everyMs: 60_000, firstDelayMs: 10_000 },
   { path: "/api/internal/active-hours/recompute", label: "active-hours", everyMs: 4 * 3600_000, firstDelayMs: 60_000 },
+  { path: "/api/internal/sales/tick", label: "sales-motor", everyMs: 15 * 60_000, firstDelayMs: 2 * 60_000 },
   // Heavy LLM jobs: do NOT run at boot - they'd starve interactive Jarvis on a
   // slow box. First run after a few minutes, then on schedule.
   { path: "/api/internal/orchestration/tick", label: "orchestration", everyMs: 6 * 3600_000, firstDelayMs: 8 * 60_000 },

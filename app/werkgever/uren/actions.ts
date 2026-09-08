@@ -20,9 +20,13 @@ export async function approveTimesheetAction(timesheetId: string): Promise<Appro
     return {
       ok: true,
       message:
-        result.payout.status === "FAILED"
-          ? "Goedgekeurd. De uitbetaling wordt automatisch opnieuw geprobeerd."
-          : "Goedgekeurd en uitbetaling gestart.",
+        result.track === "payroll"
+          ? result.advance
+            ? `Goedgekeurd. € ${(result.advance.netCents / 100).toFixed(2).replace(".", ",")} is als voorschot uitbetaald; de rest volgt op de loonstrook van week ${result.payroll?.weekLabel ?? ""}.`.trim()
+            : `Goedgekeurd. De uren worden verloond in de payroll van week ${result.payroll?.weekLabel ?? ""}.`.trim()
+          : result.payout?.status === "FAILED"
+            ? "Goedgekeurd. De uitbetaling wordt automatisch opnieuw geprobeerd."
+            : "Goedgekeurd en uitbetaling gestart.",
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };

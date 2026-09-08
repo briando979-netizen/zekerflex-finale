@@ -2,7 +2,22 @@
 // free of the full env-schema validation — it's imported by statically collected
 // pages (layout, sitemap, robots, marketing) that run at build time without
 // secrets present.
-const APP_BASE_URL = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+function resolveAppBaseUrl(): string {
+  const raw = (process.env.APP_BASE_URL?.trim() || "").replace(/\/+$/, "");
+  if (!raw) return "http://localhost:3000";
+  try {
+    // eslint-disable-next-line no-new
+    new URL(raw);
+    return raw;
+  } catch {
+    // Malformed value (e.g. a bare "/") would otherwise crash every
+    // statically collected page (layout metadataBase, sitemap, robots) at
+    // build time. Fall back rather than take the whole build down.
+    return "http://localhost:3000";
+  }
+}
+
+const APP_BASE_URL = resolveAppBaseUrl();
 
 /**
  * Central SEO / site-identity constants. Everything that needs the canonical

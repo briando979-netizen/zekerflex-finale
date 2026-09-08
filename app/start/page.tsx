@@ -16,6 +16,7 @@ export default async function StartPage() {
   }
 
   if (isPlatformAdmin) redirect("/admin");
+  if (hasRole(principal, "SALES")) redirect("/sales");
   if (hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER")) {
     redirect("/werkgever");
   }

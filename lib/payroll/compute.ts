@@ -1,5 +1,6 @@
 import type { InvoiceMode, WorkerKind } from "@/lib/fiscal/store";
 import { env } from "@/lib/env";
+import { caoRates, ageOn, computeCaoLine } from "@/lib/payroll/cao";
 
 export { euro } from "@/lib/payroll/format";
 
@@ -34,6 +35,12 @@ export interface PayLineInput {
   workedOn: string; // ISO date
   hours: number; // billable hours, 2 decimals
   hourlyRateCents: number;
+  /** exacte begin/eind — vereist voor automatische CAO-toeslagen */
+  startISO?: string;
+  endISO?: string;
+  breakMinutes?: number;
+  /** branche-CAO van deze specifieke klus (overschrijft de payslip-default) */
+  caoKey?: string | null;
 }
 
 export interface PayslipComputeInput {
@@ -45,15 +52,39 @@ export interface PayslipComputeInput {
   /** cumulative distinct worked weeks up to and including this one */
   weeksWorked: number;
   lines: PayLineInput[];
+  /** branche-CAO voor de toeslagentabel (default "abu") */
+  caoKey?: string | null;
+  /** geboortedatum voor jeugdloon / WML-vloer */
+  birthDate?: string | null;
 }
 
 export interface PayslipLine extends PayLineInput {
   grossCents: number;
+  /** toeslagdeel van deze regel (nacht/weekend/feestdag/overwerk) */
+  toeslagCents?: number;
+}
+
+export interface CaoBreakdown {
+  caoKey: string;
+  caoLabel: string;
+  baseCents: number;
+  nachtCents: number;
+  weekendCents: number;
+  feestdagCents: number;
+  overwerkCents: number;
+  toeslagCents: number;
+  wmlFloorApplied: boolean;
+  nachtHours: number;
+  weekendHours: number;
+  feestdagHours: number;
+  overwerkHours: number;
 }
 
 export interface PayrollBreakdown {
   kind: "payroll";
   grossCents: number;
+  /** automatische CAO-toeslagen — null als er geen begin/eindtijden bekend zijn */
+  cao: CaoBreakdown | null;
   holidayAllowanceCents: number;
   holidayHoursReserveCents: number;
   shortLeaveReserveCents: number;
@@ -89,6 +120,15 @@ export interface ComputedPayslip {
 
 const r = (n: number) => Math.round(n);
 
+function sumBucket(
+  m: Map<string, ReturnType<typeof computeCaoLine>>,
+  key: keyof ReturnType<typeof computeCaoLine>,
+): number {
+  let s = 0;
+  for (const v of m.values()) s += (v[key] as number) ?? 0;
+  return Math.round(s * 100) / 100;
+}
+
 export function abuPhase(weeksWorked: number): "A" | "B" | "C" {
   if (weeksWorked <= 52) return "A";
   if (weeksWorked <= 52 + 156) return "B";
@@ -102,14 +142,75 @@ export function stippRegeling(weeksWorked: number): "geen" | "basis" | "plus" {
 }
 
 export function computePayslip(input: PayslipComputeInput): ComputedPayslip {
-  const lines: PayslipLine[] = input.lines.map((l) => ({
-    ...l,
-    grossCents: r(l.hours * l.hourlyRateCents),
-  }));
+  const isPayroll = input.workerKind === "uitzendkracht" || input.invoiceMode === "payroll";
+
+  // --- CAO-toeslagen (alleen payroll, alleen met begin/eindtijden) ---
+  let caoAgg: CaoBreakdown | null = null;
+  const caoByShift = new Map<string, ReturnType<typeof computeCaoLine>>();
+  const caoKeysUsed = new Set<string>();
+  if (isPayroll) {
+    let weekly = 0;
+    let base = 0;
+    let nacht = 0;
+    let weekend = 0;
+    let feest = 0;
+    let over = 0;
+    let floor = false;
+    let hasTimes = false;
+    for (const l of input.lines) {
+      if (!l.startISO || !l.endISO) continue;
+      hasTimes = true;
+      const cao = caoRates(l.caoKey ?? input.caoKey);
+      caoKeysUsed.add(cao.key);
+      const res = computeCaoLine({
+        startISO: l.startISO,
+        endISO: l.endISO,
+        breakMinutes: l.breakMinutes ?? 0,
+        hourlyRateCents: l.hourlyRateCents,
+        age: ageOn(input.birthDate ?? null, new Date(l.startISO)),
+        cao,
+        weeklyHoursBefore: weekly,
+      });
+      weekly += res.workedHours;
+      base += res.baseCents;
+      nacht += res.nachtCents;
+      weekend += res.weekendCents;
+      feest += res.feestdagCents;
+      over += res.overwerkCents;
+      floor = floor || res.wmlFloorApplied;
+      caoByShift.set(l.shiftId, res);
+    }
+    if (hasTimes) {
+      const soleKey = caoKeysUsed.size === 1 ? [...caoKeysUsed][0] : null;
+      caoAgg = {
+        caoKey: soleKey ?? "mixed",
+        caoLabel: soleKey ? caoRates(soleKey).label : "Meerdere branche-CAO's",
+        baseCents: base,
+        nachtCents: nacht,
+        weekendCents: weekend,
+        feestdagCents: feest,
+        overwerkCents: over,
+        toeslagCents: nacht + weekend + feest + over,
+        wmlFloorApplied: floor,
+        nachtHours: sumBucket(caoByShift, "nachtHours"),
+        weekendHours:
+          sumBucket(caoByShift, "zaterdagHours") + sumBucket(caoByShift, "zondagHours"),
+        feestdagHours: sumBucket(caoByShift, "feestdagHours"),
+        overwerkHours: sumBucket(caoByShift, "overwerkHours"),
+      };
+    }
+  }
+
+  const lines: PayslipLine[] = input.lines.map((l) => {
+    const c = caoByShift.get(l.shiftId);
+    return c
+      ? { ...l, grossCents: c.grossCents, toeslagCents: c.toeslagCents }
+      : { ...l, grossCents: r(l.hours * l.hourlyRateCents) };
+  });
   const totalHours = r(input.lines.reduce((s, l) => s + l.hours, 0) * 100) / 100;
   const grossCents = lines.reduce((s, l) => s + l.grossCents, 0);
 
-  if (input.workerKind === "uitzendkracht" || input.invoiceMode === "payroll") {
+  if (isPayroll) {
     const holidayAllowanceCents = r(grossCents * HOLIDAY_ALLOWANCE_PCT);
     const holidayHoursReserveCents = r(grossCents * HOLIDAY_HOURS_PCT);
     const shortLeaveReserveCents = r(grossCents * SHORT_LEAVE_PCT);
@@ -139,6 +240,7 @@ export function computePayslip(input: PayslipComputeInput): ComputedPayslip {
       breakdown: {
         kind: "payroll",
         grossCents,
+        cao: caoAgg,
         holidayAllowanceCents,
         holidayHoursReserveCents,
         shortLeaveReserveCents,

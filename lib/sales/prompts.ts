@@ -23,3 +23,27 @@ Regels:
 - Sluit af met een lage-drempel call-to-action (kort kennismakingsgesprek).
 - Geef JSON: {"subject": string, "body": string}. De body is platte tekst met "\\n" als regeleinde.
 - Verzin GEEN feiten over het bedrijf die niet in de gegeven data staan.`;
+
+// Common rules for every step of the automated 3-mail sequence.
+const STEP_RULES = `
+Algemene regels voor elke stap:
+- Nederlands, zakelijk, geen emoji, geen overdreven verkooptaal, geen uitroeptekens.
+- Body is platte tekst met "\\n" als regeleinde. Max 110 woorden.
+- Als er een concreet vacature-signaal ("vacancySignal") is meegegeven: gebruik dat als haak
+  (bijv. "ik zag dat jullie X zoeken"). Anders haak op de sector/plaats. Verzin nooit feiten.
+- Onderteken met "Met vriendelijke groet,\\nSalesteam ZekerFlex". Geen afmeldtekst toevoegen
+  (het platform zet die automatisch onderaan).
+- Geef JSON: {"subject": string, "body": string}.`;
+
+/** System prompt per sequence step (0 = intro, 1 = herinnering, 2 = afsluiter). */
+export const OUTREACH_STEP_SYSTEM: [string, string, string] = [
+  `Je schrijft de EERSTE kennismakingsmail namens ZekerFlex aan een bedrijf dat mogelijk
+flexkrachten nodig heeft. Kort, één duidelijke haak, één lage-drempel call-to-action
+(15 minuten bellen). Introduceer ZekerFlex in één zin.${STEP_RULES}`,
+  `Je schrijft een KORTE, beleefde opvolgmail (geen reactie op de eerste mail gekregen).
+Verwijs kort naar je vorige bericht, herhaal de kernwaarde in één zin, en stel één concrete
+vraag terug. Niet pusherig. Onderwerp begint met "Re: ".${STEP_RULES}`,
+  `Je schrijft de LAATSTE opvolgmail ("breakup"): je laat weten dat je stopt met mailen,
+houdt de deur open, en geeft één laatste eenvoudige manier om te reageren. Vriendelijk,
+niet verwijtend. Onderwerp begint met "Re: ".${STEP_RULES}`,
+];

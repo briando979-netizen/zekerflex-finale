@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
+import { isBlockedByAny } from "@/lib/employer/relations";
+import { payoutEligibility } from "@/lib/fiscal/eligibility";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -35,9 +37,11 @@ export async function applyToShift(
     },
   });
   if (!profile) throw AppError.forbidden("Rond eerst je verificatie af.");
-  if (profile.user.kycStatus !== "VERIFIED" || !profile.kvkValid) {
-    throw AppError.precondition("Je kunt pas diensten aannemen als je volledig geverifieerd bent.");
+  if (profile.user.kycStatus !== "VERIFIED") {
+    throw AppError.precondition("Je kunt pas diensten aannemen als je identiteit is geverifieerd.");
   }
+  const eligible = await payoutEligibility(userId);
+  if (!eligible.ok) throw AppError.precondition(eligible.reason ?? "Je kunt nog geen diensten aannemen.");
   if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.");
   if (profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now()) {
     throw AppError.precondition("Matching is tijdelijk beperkt vanwege Wet DBA-signalen.");
@@ -50,11 +54,14 @@ export async function applyToShift(
       status: true,
       startsAt: true,
       positions: true,
-      branch: { select: { latitude: true, longitude: true, geofenceRadiusMeters: true } },
+      branch: { select: { tenantId: true, latitude: true, longitude: true, geofenceRadiusMeters: true } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
   if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.");
+  if (await isBlockedByAny([shift.branch.tenantId], userId)) {
+    throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.");
+  }
   if (!OPEN_STATUSES.includes(shift.status as (typeof OPEN_STATUSES)[number])) {
     throw AppError.conflict("Deze dienst neemt geen aanmeldingen meer aan.");
   }

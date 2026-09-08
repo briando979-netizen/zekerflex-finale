@@ -442,39 +442,44 @@ npm run build       # next build — clean (middleware compiles to Edge)
 
 ## Production Deployment
 
-The platform is configured for [**Vercel**](https://vercel.com/docs/git) deployment. Every push to the `main` branch automatically triggers a production deploy.
+### Gekozen architectuur: Sovereign Box
 
-### Setup
+De officiële productieomgeving is een Linux VPS met Docker Compose en een
+Cloudflare Tunnel. Dit is vereist voor de huidige applicatie, omdat de stack
+een always-on daemon, Ollama/Piper, Redis, PostgreSQL en persistente lokale
+opslag gebruikt. Zie [`deploy/README.md`](deploy/README.md) voor de volledige
+installatie en [`infra/README.md`](infra/README.md) voor AWS/Kubernetes.
 
-1. Connect your GitHub repository to Vercel: https://vercel.com/new
-2. Select this repository (`briando979-netizen/zekerflex-finale`)
-3. Configure environment variables in Vercel project settings:
-   - `AUTH_SECRET` (≥32 random chars)
-   - `DATABASE_URL` (PostgreSQL connection string)
-   - `REDIS_URL` (Redis connection string)
-   - `LLM_BASE_URL` (self-hosted model endpoint)
-   - All other vars from `.env.example`
-
-4. On the "Deployments" tab, Vercel will auto-deploy every push to `main`
-
-### Deployment Flow
+De productieflow is:
 
 ```
 git push origin main
-  → GitHub webhook → Vercel detects push
-    → Runs `npm run build`
-      → Compiles Next.js + Edge middleware
-        → Type-checks, runs tests, builds to `.next/`
-          → Deploys to Vercel's CDN (Edge Functions for middleware)
+  → CI voert typecheck, tests en build uit
+    → image wordt gepubliceerd naar GHCR
+      → VPS haalt de image op en herstart zekerflex.service
+        → migraties worden expliciet uitgevoerd
+          → /api/ready controleert PostgreSQL en Redis
 ```
 
-### Monitoring
+Vercel blijft beschikbaar voor previews en tijdelijke demo-deployments. Het is
+geen primaire productieomgeving: serverless functies zijn niet geschikt voor
+`scripts/daemon.mjs`, lokale LLM/TTS-processen of uploads naar `UPLOADS_DIR`.
+Gebruik Vercel alleen met een externe LLM, object storage, managed database en
+externe job scheduler.
 
-- **Vercel Dashboard**: https://vercel.com/dashboard
-- **Analytics**: Real-time request volume, latency, error rates
-- **Logs**: `Deployments` → select deployment → `Functions` tab
-- **Health check**: `GET /api/health` returns system status (platform admin-only)
+### Productiechecklist
 
-### Rollback
+1. Vul `deploy/.env.production` in; zet secrets nooit in Git.
+2. Configureer de Cloudflare Tunnel naar `app:3000`.
+3. Start met `docker compose -f docker-compose.prod.yml up -d`.
+4. Voer `docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy` uit.
+5. Controleer `/api/health`, `/api/ready`, logs, backups en mailaflevering.
+6. Voer eerst een staging-deploy en restore-test uit voordat productie wordt geopend.
 
-In Vercel's "Deployments" tab, click "Promote to Production" on any previous build to instantly roll back.
+### Lokale controle
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```

@@ -5,7 +5,7 @@ import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { OnboardingForm } from "@/components/app/OnboardingForm";
 import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
-import { getFiscal } from "@/lib/fiscal/store";
+import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,8 @@ export default async function VerificatiePage() {
     );
   }
 
+  const isUitzend = invoiceModeFor(fiscal) === "payroll";
+
   const reasons =
     lastCheck && typeof lastCheck.rawPayload === "object" && lastCheck.rawPayload !== null
       ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
@@ -69,7 +71,11 @@ export default async function VerificatiePage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Rond je verificatie af"
-        subtitle="Koppel je KVK en upload je identiteitsbewijs. De ingebouwde controleur checkt echtheid en consistentie — meestal binnen een minuut."
+        subtitle={
+          isUitzend
+            ? "Vul je thuisbasis en rekeningnummer in en upload je identiteitsbewijs. Je hoeft geen KVK te koppelen — je werkt als uitzendkracht."
+            : "Koppel je KVK en upload je identiteitsbewijs. De ingebouwde controleur checkt echtheid en consistentie — meestal binnen een minuut."
+        }
       />
 
       {lastCheck && (
@@ -95,7 +101,7 @@ export default async function VerificatiePage() {
       )}
 
       <div className="card p-6">
-        <OnboardingForm defaultName={principal.fullName} />
+        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} />
       </div>
 
       <div className="mt-6 card p-6">

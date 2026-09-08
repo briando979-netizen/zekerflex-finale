@@ -41,9 +41,12 @@ export interface SepaInstantPayoutRequest {
   endToEndId: string; // idempotency key
   amountCents: number;
   currency: "EUR";
+  /** Required for the generic PSD2 path; ignored when stripeConnectedAccountId is set. */
   creditorIban: string;
   creditorName: string;
   remittanceInfo: string; // <=140 chars, appears on the bank statement
+  /** When set, the payout goes via Stripe Connect Transfer instead of the generic PSD2 API. */
+  stripeConnectedAccountId?: string | null;
 }
 
 export interface SepaInstantPayoutResult {

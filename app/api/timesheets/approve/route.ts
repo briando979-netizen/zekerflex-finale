@@ -56,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     const httpStatus =
-      result.payout.status === "FAILED" ? 202 : 200; // 202: approved, payout retrying
+      result.payout?.status === "FAILED" ? 202 : 200; // 202: approved, payout retrying
     return NextResponse.json(result, { status: httpStatus });
   } catch (err) {
     const { status, body } = toErrorBody(err);

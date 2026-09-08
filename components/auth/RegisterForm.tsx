@@ -37,18 +37,24 @@ function SubmitButton({ type, disabled }: { type: "freelancer" | "bedrijf"; disa
 
 export function RegisterForm({
   defaultType,
+  defaultWorkerKind,
+  prefill,
   googleEnabled,
 }: {
   defaultType: "freelancer" | "bedrijf";
+  defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
+  prefill?: { company?: string; kvk?: string; email?: string };
   googleEnabled: boolean;
 }) {
   const [type, setType] = useState<"freelancer" | "bedrijf">(defaultType);
-  const [workerKind, setWorkerKind] = useState<"zzp" | "flexwerker" | "uitzendkracht">("flexwerker");
+  const [workerKind, setWorkerKind] = useState<"zzp" | "flexwerker" | "uitzendkracht">(
+    defaultWorkerKind ?? "flexwerker",
+  );
   const [state, formAction] = useFormState(registerAction, initial);
 
   // ---- company (KVK) --------------------------------------------------
-  const [company, setCompany] = useState("");
-  const [kvk, setKvk] = useState("");
+  const [company, setCompany] = useState(prefill?.company ?? "");
+  const [kvk, setKvk] = useState(prefill?.kvk ?? "");
   const [kvkResults, setKvkResults] = useState<{ kvkNumber: string; name: string; city?: string }[]>([]);
   const [kvkConfigured, setKvkConfigured] = useState(true);
   const [kvkOpen, setKvkOpen] = useState(false);
@@ -73,7 +79,7 @@ export function RegisterForm({
   }, [company, type, kvk]);
 
   // ---- email availability -------------------------------------------
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefill?.email ?? "");
   const [emailState, setEmailState] = useState<"idle" | "checking" | "free" | "taken" | "invalid">("idle");
   useEffect(() => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

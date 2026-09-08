@@ -1,5 +1,6 @@
 import type { PayslipRecord } from "@/lib/payroll/store";
 import { euro } from "@/lib/payroll/format";
+import { explainPayslip } from "@/lib/payroll/explain";
 import { StatusPill } from "@/components/app/ui";
 
 const KIND_LABEL: Record<string, string> = {
@@ -71,6 +72,40 @@ export function PayslipList({ payslips }: { payslips: PayslipRecord[] }) {
 
               {b.kind === "payroll" ? (
                 <div className="divide-y divide-hair">
+                  {b.cao && (b.cao.toeslagCents > 0 || b.cao.wmlFloorApplied) && (
+                    <>
+                      <Row label={`Basisloon (${b.cao.caoLabel})`} value={euro(b.cao.baseCents)} />
+                      {b.cao.nachtCents > 0 && (
+                        <Row
+                          label={`Nachttoeslag (${b.cao.nachtHours.toLocaleString("nl-NL")} u)`}
+                          value={`+ ${euro(b.cao.nachtCents)}`}
+                        />
+                      )}
+                      {b.cao.weekendCents > 0 && (
+                        <Row
+                          label={`Weekendtoeslag (${b.cao.weekendHours.toLocaleString("nl-NL")} u)`}
+                          value={`+ ${euro(b.cao.weekendCents)}`}
+                        />
+                      )}
+                      {b.cao.feestdagCents > 0 && (
+                        <Row
+                          label={`Feestdagtoeslag (${b.cao.feestdagHours.toLocaleString("nl-NL")} u)`}
+                          value={`+ ${euro(b.cao.feestdagCents)}`}
+                        />
+                      )}
+                      {b.cao.overwerkCents > 0 && (
+                        <Row
+                          label={`Overwerktoeslag (${b.cao.overwerkHours.toLocaleString("nl-NL")} u)`}
+                          value={`+ ${euro(b.cao.overwerkCents)}`}
+                        />
+                      )}
+                      {b.cao.wmlFloorApplied && (
+                        <p className="py-1.5 text-[11px] text-warn">
+                          Uurtarief lag onder het wettelijk minimumloon — automatisch opgehoogd.
+                        </p>
+                      )}
+                    </>
+                  )}
                   <Row label="Brutoloon" value={euro(b.grossCents)} strong />
                   <Row label="Reservering vakantiegeld (8,33%)" value={euro(b.holidayAllowanceCents)} />
                   <Row label="Reservering vakantie-uren" value={euro(b.holidayHoursReserveCents)} />
@@ -84,6 +119,15 @@ export function PayslipList({ payslips }: { payslips: PayslipRecord[] }) {
                   )}
                   <Row label="Loonheffing (indicatief)" value={`- ${euro(b.wageTaxIndicativeCents)}`} />
                   <Row label="Netto (indicatief)" value={euro(b.netIndicativeCents)} strong />
+                  {p.advance && (
+                    <>
+                      <Row
+                        label={`Al betaald als voorschot (${p.advance.count}×)`}
+                        value={`- ${euro(p.advance.grossCents)}`}
+                      />
+                      <Row label="Nog uit te betalen via payroll" value={euro(p.toPayCents)} strong />
+                    </>
+                  )}
                   <p className="pt-2 text-[11px] text-neutralx-400">
                     De loonheffing is indicatief. De definitieve loonstrook volgt uit de loonaangifte
                     en kan afwijken door heffingskortingen en toeslagen.
@@ -105,6 +149,21 @@ export function PayslipList({ payslips }: { payslips: PayslipRecord[] }) {
                   </p>
                 </div>
               )}
+
+              <details className="mt-3 rounded-lg border border-hair bg-paper-soft/50">
+                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-semibold text-ink">
+                  💡 Zo is je {b.kind === "payroll" ? "loon" : "bedrag"} opgebouwd
+                </summary>
+                <ul className="space-y-2 px-3 pb-3 text-xs leading-relaxed text-neutralx-600">
+                  {explainPayslip(p).map((sentence, k) => (
+                    <li key={k} className="flex gap-2">
+                      <span aria-hidden className="text-neutralx-300">•</span>
+                      <span>{sentence}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+
               <a
                 href={`/api/me/payroll/${p.isoWeek}/pdf`}
                 target="_blank"

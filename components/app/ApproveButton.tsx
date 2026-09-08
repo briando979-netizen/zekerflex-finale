@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { approveTimesheetAction } from "@/app/werkgever/uren/actions";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export function ApproveButton({ timesheetId }: { timesheetId: string }) {
+  const c = useT().controls;
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -24,7 +26,7 @@ export function ApproveButton({ timesheetId }: { timesheetId: string }) {
         }
         className="btn-primary px-3 py-1.5 text-xs"
       >
-        {pending ? "Bezig…" : "Goedkeuren"}
+        {pending ? c.approving : c.approve}
       </button>
       {msg && !msg.ok && <span className="text-xs text-crit">{msg.text}</span>}
     </div>

@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { shiftCategory } from "@/lib/shifts/category";
 import { dateTime } from "@/components/app/ui";
+import { getDict } from "@/lib/i18n/server";
 
-const STATUS: Record<string, { label: string; tone: string }> = {
-  FILLED: { label: "Volledig bezet", tone: "#15803D" },
-  IN_PROGRESS: { label: "Loopt nu", tone: "#15803D" },
-  PARTIALLY_FILLED: { label: "Deels bezet", tone: "#B45309" },
-  OPEN: { label: "Werven", tone: "#B45309" },
-  MATCHING: { label: "Aan het matchen", tone: "#B45309" },
-  DRAFT: { label: "Concept", tone: "#616B78" },
-  COMPLETED: { label: "Afgerond", tone: "#616B78" },
-  CANCELLED: { label: "Geannuleerd", tone: "#B91C1C" },
+const TONE: Record<string, string> = {
+  FILLED: "#15803D",
+  IN_PROGRESS: "#15803D",
+  PARTIALLY_FILLED: "#B45309",
+  OPEN: "#B45309",
+  MATCHING: "#B45309",
+  DRAFT: "#616B78",
+  COMPLETED: "#616B78",
+  CANCELLED: "#B91C1C",
 };
 
 export function EmployerShiftCard({
@@ -30,9 +31,13 @@ export function EmployerShiftCard({
   };
   href?: string;
 }) {
+  const t = getDict().shiftStatus;
   const cat = shiftCategory(shift.title, shift.skill ?? null);
   const pct = shift.positions > 0 ? Math.round((shift.filled / shift.positions) * 100) : 0;
-  const st = STATUS[shift.status] ?? { label: shift.status, tone: "#616B78" };
+  const st = {
+    label: (t as Record<string, string>)[shift.status] ?? shift.status,
+    tone: TONE[shift.status] ?? "#616B78",
+  };
 
   return (
     <Link
@@ -70,7 +75,7 @@ export function EmployerShiftCard({
 
       <div className="p-4">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-neutralx-500">Bezetting</span>
+          <span className="text-neutralx-500">{t.occupancy}</span>
           <span className="num font-semibold text-ink">
             {shift.filled} / {shift.positions}
           </span>

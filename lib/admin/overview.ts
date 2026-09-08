@@ -46,6 +46,13 @@ export interface AdminOverview {
     pageviewsToday: number;
     visitorsToday: number;
   };
+  business: {
+    revenueTodayCents: number;
+    revenueMonthCents: number;
+    activeShifts: number;
+    usersTotal: number;
+    newUsersToday: number;
+  };
   agents: { agent: string; lastTitle: string; at: string }[];
   recentFindings: {
     severity: string;
@@ -79,6 +86,11 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
     voiceQueued,
     ragChunks,
     runningTurns,
+    revenueToday,
+    revenueMonth,
+    activeShifts,
+    usersTotal,
+    newUsersToday,
   ] = await Promise.all([
     safe(async () => {
       await prisma.$queryRaw`SELECT 1`;
@@ -118,6 +130,11 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
     safe(() => prisma.voiceAnnouncement.count({ where: { spokenAt: null } }), 0),
     safe(() => prisma.ragChunk.count(), 0),
     safe(() => prisma.jarvisTurn.count({ where: { status: "RUNNING" } }), 0),
+    safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: dayStart } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
+    safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
+    safe(() => prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gte: now } } }), 0),
+    safe(() => prisma.user.count(), 0),
+    safe(() => prisma.user.count({ where: { createdAt: { gte: dayStart } } }), 0),
   ]);
 
   const seen = new Set<string>();
@@ -152,6 +169,13 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
       activeVisitors: traffic?.activeVisitors ?? 0,
       pageviewsToday: traffic?.pageviewsToday ?? 0,
       visitorsToday: traffic?.visitorsToday ?? 0,
+    },
+    business: {
+      revenueTodayCents: revenueToday._sum.totalCents ?? 0,
+      revenueMonthCents: revenueMonth._sum.totalCents ?? 0,
+      activeShifts,
+      usersTotal,
+      newUsersToday,
     },
     agents,
     recentFindings: findings.map((f) => ({

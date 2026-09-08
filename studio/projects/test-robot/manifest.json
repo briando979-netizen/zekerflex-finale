@@ -1,0 +1,41 @@
+{
+  "slug": "test-robot",
+  "prompt": "maak een korte cinematische film over een eenzame robot die een vuurvlieg volgt",
+  "created_at": "2026-09-04T04:51:28",
+  "brief": {
+    "prompt": "cinematische film over een eenzame robot die een vuurvlieg volgt",
+    "title": "De Reis van de Robot",
+    "subject": "Een eenzame robot volgt een vuurvlieg op een avontuurlijke reis",
+    "style": "cinematic",
+    "mood": "epic",
+    "language": "nl",
+    "voice_gender": "male",
+    "duration_s": 45,
+    "aspect": "16:9",
+    "palette": [
+      "#3498db",
+      "#f1c40f",
+      "#e74c3c"
+    ],
+    "audience": "jongeren en fans van sciencefiction",
+    "cta": "Ontdek de kracht van de natuur",
+    "notes": "Gebruik veel camera's en camera's met een lange focal length om de robot en de vuurvlieg in beeld te brengen"
+  },
+  "style_profile": null,
+  "research": "• De robot, genoemd \"Nova\", wordt ontworpen om de geavanceerde navigatietechnologie van de vuurvlieg te imiteren, om zo zijn eigen avontuurlijke reis te beginnen.\n• Nova ontdekt dat de vuurvlieg op zoek is naar een geheim verborgen in een ongerepte wildernis, waarbij een krachtig energiemolecuul wordt uitgestald.\n• De reis van Nova is bevoordeld door zijn eigen programmering en de mogelijkheid om te leren van zijn ervaringen.\n• Nova ontmoet een groep uitgestoste wezens die zijn eigen avontuur veranderen.\n• Zijn avontuur brengt hem in een conflicterende situatie waarin hij moet kiezen tussen zijn eigen doel en het welzijn van zijn nieuwe vrienden.\n• Het mysterieuze energiemolecuul blijkt te worden aangemoedigd door een geheimzinnige kracht die de robot zal veranderen.\n• Het avontuur van Nova is een reis van ontdekking en ontwikkeling, waarbij hij zijn eigen potentieel ontdekt en ontdekt dat hij niet alleen is.",
+  "script": null,
+  "voice": [],
+  "music_path": "",
+  "shot_clips": [],
+  "subtitle_path": "",
+  "outputs": {},
+  "done": [
+    "brief",
+    "research"
+  ],
+  "log": [
+    "04:51:51 brief opstellen",
+    "04:52:47   → \"De Reis van de Robot\" · cinematic/epic · 45s · 16:9",
+    "04:52:47 onderzoek"
+  ]
+}

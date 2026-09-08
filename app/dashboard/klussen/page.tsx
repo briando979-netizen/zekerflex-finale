@@ -1,30 +1,39 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
-import { PageHeader, StatusPill } from "@/components/app/ui";
+import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
 
 export const dynamic = "force-dynamic";
 
-export default async function KlussenPage() {
+export default async function KlussenPage({
+  searchParams,
+}: {
+  searchParams: { employer?: string };
+}) {
   const principal = await requirePrincipal();
   const m = await getMarketplace(principal.userId);
+  const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
 
   return (
     <>
-      <PageHeader
-        title="Klussen"
-        subtitle="Open diensten die bij je passen. Filter, bekijk op de kaart, en neem er een aan."
-        action={
-          m.newSinceLastVisit > 0 ? (
-            <StatusPill tone="ok">{m.newSinceLastVisit} nieuw sinds je laatste bezoek</StatusPill>
-          ) : undefined
-        }
-      />
+      <div className="mb-5 flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
+            Vind jouw klus
+          </h1>
+          <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
+        </div>
+        {m.newSinceLastVisit > 0 && (
+          <StatusPill tone="ok">{m.newSinceLastVisit} nieuw</StatusPill>
+        )}
+      </div>
 
       {!m.canApply && m.blockReason && (
         <div className="card mb-6 flex flex-wrap items-center justify-between gap-3 border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
-          <span>{m.blockReason}</span>
+          <span>
+            Je kunt alvast rondkijken. {m.blockReason} Reageren op een klus kan zodra dat rond is.
+          </span>
           {/verificatie|geverifieerd/i.test(m.blockReason) && (
             <Link href="/dashboard/verificatie" className="btn-primary">
               Naar verificatie
@@ -47,7 +56,10 @@ export default async function KlussenPage() {
         <MarketplaceView
           shifts={m.shifts}
           home={m.home}
+          homeLabel={m.homeLabel}
+          initialQuery={initialQuery}
           canApply={m.canApply}
+          blockReason={m.blockReason}
           defaultMinRateCents={m.prefs.minHourlyRateCents}
           defaultMaxTravel={m.prefs.maxTravelMinutes}
         />

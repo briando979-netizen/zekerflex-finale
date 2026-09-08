@@ -6,6 +6,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listCounterOffers, setOfferStatus } from "@/lib/offers/store";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
@@ -49,7 +50,14 @@ const updateSchema = z.object({
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
   breakMinutes: z.number().int().min(0).max(240).optional(),
-  hourlyRateCents: z.number().int().min(500).max(50000).optional(),
+  hourlyRateCents: z
+    .number()
+    .int()
+    .min(MIN_SHIFT_RATE_CENTS, {
+      message: `Het minimum uurtarief is € ${(MIN_SHIFT_RATE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+    })
+    .max(50000)
+    .optional(),
   positions: z.number().int().min(1).max(50).optional(),
 });
 
@@ -212,6 +220,13 @@ export async function respondToOfferAction(
       select: { id: true, title: true, hourlyRateCents: true, status: true },
     });
     if (!shift) throw AppError.forbidden("Je hebt geen toegang tot deze dienst.");
+
+    if (decision === "accepted" && offer.proposedRateCents < MIN_SHIFT_RATE_CENTS) {
+      return {
+        ok: false,
+        message: `Dit tegenbod (${eur(offer.proposedRateCents)}/u) ligt onder het minimum uurtarief van ${eur(MIN_SHIFT_RATE_CENTS)}.`,
+      };
+    }
 
     await setOfferStatus(offerId, decision);
 

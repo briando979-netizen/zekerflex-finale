@@ -5,12 +5,15 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, EmptyState } from "@/components/app/ui";
 import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { listCounterOffers } from "@/lib/offers/store";
+import { getDict } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 export const dynamic = "force-dynamic";
 
 const OPEN = ["OPEN", "MATCHING", "PARTIALLY_FILLED"];
 
 export default async function WerkgeverDienstenPage() {
+  const sh = getDict().shifts;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const branchFilter = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
@@ -46,27 +49,27 @@ export default async function WerkgeverDienstenPage() {
   return (
     <>
       <PageHeader
-        title="Diensten"
-        eyebrow="Bezetting"
-        subtitle="Uitgezette diensten en hun bezetting. Klik door voor kandidaten en tegenbiedingen."
+        title={sh.title}
+        eyebrow={sh.eyebrow}
+        subtitle={sh.subtitle}
         action={
           <Link href="/werkgever/diensten/nieuw" className="btn-primary">
-            Dienst uitzetten
+            {sh.placeShift}
           </Link>
         }
       />
 
       {shifts.length === 0 ? (
         <EmptyState
-          title="Nog geen diensten"
-          body="Zet je eerste dienst uit. ZekerFlex rangschikt direct de beste kandidaten op reistijd en betrouwbaarheid."
-          cta={{ href: "/werkgever/diensten/nieuw", label: "Dienst uitzetten" }}
+          title={sh.emptyTitle}
+          body={sh.emptyBody}
+          cta={{ href: "/werkgever/diensten/nieuw", label: sh.placeShift }}
         />
       ) : (
         <div className="space-y-10">
-          <Group title="Werven" note="Deze diensten zijn nog niet vol." shifts={open} offerCounts={offerCountByShift} />
-          <Group title="Gepland & bezet" note="Bevestigde diensten die nog moeten plaatsvinden." shifts={planned} offerCounts={offerCountByShift} />
-          <Group title="Historie" note="Afgeronde en verlopen diensten." shifts={past} offerCounts={offerCountByShift} dim />
+          <Group title={sh.groupRecruiting} note={sh.groupRecruitingNote} shifts={open} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} />
+          <Group title={sh.groupPlanned} note={sh.groupPlannedNote} shifts={planned} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} />
+          <Group title={sh.groupHistory} note={sh.groupHistoryNote} shifts={past} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} dim />
         </div>
       )}
     </>
@@ -78,10 +81,12 @@ function Group({
   note,
   shifts,
   offerCounts,
+  offerBadge,
   dim = false,
 }: {
   title: string;
   note: string;
+  offerBadge: string;
   shifts: {
     id: string;
     title: string;
@@ -108,7 +113,7 @@ function Group({
           <div key={s.id} className="relative">
             {(offerCounts.get(s.id) ?? 0) > 0 && (
               <span className="absolute -right-2 -top-2 z-10 grid h-6 min-w-6 place-items-center rounded-full bg-warn px-1.5 text-[11px] font-bold text-white shadow">
-                {offerCounts.get(s.id)} bod
+                {fmt(offerBadge, { n: offerCounts.get(s.id) ?? 0 })}
               </span>
             )}
             <EmployerShiftCard

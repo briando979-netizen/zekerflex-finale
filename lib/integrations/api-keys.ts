@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 // ---------------------------------------------------------------------------
@@ -14,6 +14,9 @@ import { prisma } from "@/lib/prisma";
 
 export const AVAILABLE_SCOPES = [
   { key: "shifts:read", label: "Diensten lezen" },
+  { key: "shifts:write", label: "Diensten aanmaken" },
+  { key: "timesheets:read", label: "Goedgekeurde urenstaten lezen" },
+  { key: "webhooks:manage", label: "Webhooks beheren" },
   { key: "invoices:read", label: "Facturen lezen" },
   { key: "users:read", label: "Gebruikers lezen (alleen eigen organisatie)" },
 ] as const;
@@ -83,7 +86,10 @@ export async function verifyApiKey(rawKey: string): Promise<VerifiedApiKey | nul
   const hashedKey = createHash("sha256").update(rawKey).digest("hex");
 
   const row = await prisma.apiKey.findUnique({ where: { prefix } });
-  if (!row || row.revokedAt || row.hashedKey !== hashedKey) return null;
+  if (!row || row.revokedAt) return null;
+  const storedHash = Buffer.from(row.hashedKey, "hex");
+  const incomingHash = Buffer.from(hashedKey, "hex");
+  if (storedHash.length !== incomingHash.length || !timingSafeEqual(storedHash, incomingHash)) return null;
 
   void prisma.apiKey.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
   return { id: row.id, tenantId: row.tenantId, scopes: row.scopes };

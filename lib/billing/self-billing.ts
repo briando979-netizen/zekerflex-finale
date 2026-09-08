@@ -24,6 +24,9 @@ export interface ReverseBillingInput {
   /** Sequential invoice numbers, pre-reserved by the caller within a txn. */
   freelancerInvoiceNumber: string;
   platformInvoiceNumber: string;
+  /** "Extra kosten factureren" — VAT-inclusive amount the freelancer entered on submit. */
+  extraCostsGrossCents?: number | null;
+  extraCostsNote?: string | null;
 }
 
 const round = (n: number) => Math.round(n);
@@ -105,6 +108,30 @@ export function buildReverseBillingInvoices(
     input.freelancerVatValid,
   );
 
+  const serviceLines: InvoiceLineInput[] = [
+    {
+      description: `${input.shiftTitle} - ${input.workedOn
+        .toISOString()
+        .slice(0, 10)}`,
+      quantityHours: Number(hours.toFixed(2)),
+      unitPriceCents: input.hourlyRateCents,
+    },
+  ];
+
+  // "Extra kosten factureren": the freelancer entered a VAT-inclusive amount,
+  // but assemble() applies servicesVat.rate to the invoice subtotal, so back
+  // the VAT out of the entered gross to land on the same total.
+  if (input.extraCostsGrossCents && input.extraCostsGrossCents > 0) {
+    const netCents = servicesVat.rate > 0
+      ? round(input.extraCostsGrossCents / (1 + servicesVat.rate))
+      : input.extraCostsGrossCents;
+    serviceLines.push({
+      description: `Extra kosten — ${input.extraCostsNote ?? "in overleg met opdrachtgever"}`,
+      quantityHours: 1,
+      unitPriceCents: netCents,
+    });
+  }
+
   const freelancerInvoice = assemble(
     {
       type: "SELF_BILL_FREELANCER",
@@ -113,15 +140,7 @@ export function buildReverseBillingInvoices(
       recipientTenantId: input.recipientTenantId,
       issuerFreelancerId: input.freelancerId,
     },
-    [
-      {
-        description: `${input.shiftTitle} - ${input.workedOn
-          .toISOString()
-          .slice(0, 10)}`,
-        quantityHours: Number(hours.toFixed(2)),
-        unitPriceCents: input.hourlyRateCents,
-      },
-    ],
+    serviceLines,
     servicesVat,
   );
 

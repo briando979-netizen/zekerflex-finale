@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getFiscal, isComplete as isFiscalComplete } from "@/lib/fiscal/store";
+import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
+import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 
 export interface FreelancerOverview {
   hasProfile: boolean;
@@ -54,6 +55,8 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
     getFiscal(userId),
   ]);
   const fiscalDone = isFiscalComplete(fiscal);
+  const isUitzend = invoiceModeFor(fiscal) === "payroll";
+  const uitzendContractSigned = isUitzend ? Boolean(await activeUitzendContract(userId)) : true;
 
   if (!profile) {
     return {
@@ -138,11 +141,14 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
     profileComplete:
       fiscalDone && (profile.kvkValid || fiscal.vatValid || fiscal.korApplies || fiscal.workerKind === "uitzendkracht") &&
       Boolean(profile.payoutIban || fiscal.iban) &&
-      user?.kycStatus === "VERIFIED",
+      user?.kycStatus === "VERIFIED" &&
+      uitzendContractSigned,
     onboarding: [
       { label: "Account aangemaakt", done: true },
       { label: "Werkvorm & fiscale gegevens", done: fiscalDone },
-      { label: "KVK/btw gekoppeld en gevalideerd", done: profile.kvkValid || fiscal.vatValid || fiscal.korApplies },
+      isUitzend
+        ? { label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
+        : { label: "KVK/btw gekoppeld en gevalideerd", done: profile.kvkValid || fiscal.vatValid || fiscal.korApplies },
       { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
       { label: "Thuisbasis en rekeningnummer ingesteld", done: Boolean((profile.payoutIban || fiscal.iban) && profile.homePostalCode) },
     ],

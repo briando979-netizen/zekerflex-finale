@@ -15,6 +15,7 @@ const profileSchema = z.object({
   urgency: z.string().trim().max(60).optional(),
   priorPlatform: z.string().trim().max(60).optional(),
   profileStepDone: z.enum(["1", ""]).optional(),
+  coverStepDone: z.enum(["1", ""]).optional(),
 });
 
 /** Persist the wizard's profiling answers / a "profile step done" flag. */
@@ -38,9 +39,10 @@ export async function saveOnboardingProfileAction(formData: FormData): Promise<{
       ...(p.data.urgency ? { urgency: p.data.urgency } : {}),
       ...(p.data.priorPlatform ? { priorPlatform: p.data.priorPlatform } : {}),
       ...(p.data.profileStepDone === "1" ? { profileStepDone: true } : {}),
+      ...(p.data.coverStepDone === "1" ? { coverStepDone: true } : {}),
     },
   });
-  revalidatePath("/werkgever/onboarding");
+  revalidatePath("/werkgever");
   return { ok: true };
 }
 

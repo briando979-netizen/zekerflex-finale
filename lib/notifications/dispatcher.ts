@@ -11,6 +11,7 @@ import { sendShiftOffer } from "@/lib/notifications/push";
 import { mayPingNow } from "@/lib/notifications/timing";
 import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
+import { myOfferForShift } from "@/lib/offers/store";
 
 // ---------------------------------------------------------------------------
 // Realtime notification dispatcher
@@ -87,6 +88,31 @@ async function cleanup(shiftId: string): Promise<void> {
 function lpopResult(value: string | string[] | null): string[] {
   if (value == null) return [];
   return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * True when a shift has live wave state in Redis. A MATCHING shift with no
+ * state left is orphaned - either every candidate was exhausted (handled by
+ * `processMatchingFollowups`, which reverts to OPEN) or the hard `MAX_WAVES`
+ * cap was hit, which today does NOT revert the status. Used by the
+ * orchestration snapshot to surface shifts stuck this way.
+ */
+export async function hasActiveWaveState(shiftId: string): Promise<boolean> {
+  return (await redis.exists(stateKey(shiftId))) > 0;
+}
+
+/** Count MATCHING shifts with no live wave state - the MAX_WAVES dead end. */
+export async function countStuckMatchingShifts(): Promise<number> {
+  const shifts = await prisma.shift.findMany({
+    where: { status: ShiftStatus.MATCHING },
+    select: { id: true },
+    take: 200,
+  });
+  if (shifts.length === 0) return 0;
+  const flags = await Promise.all(
+    shifts.map((s) => hasActiveWaveState(s.id)),
+  );
+  return flags.filter((active) => !active).length;
 }
 
 // --- public API -----------------------------------------------------------
@@ -403,6 +429,13 @@ export async function recordOfferResponse(
     });
 
     // Provision the Wet DBA model agreement for this freelancer <-> client pair.
+    // The freelancer's "Reageren" moment (and the client's acceptance of it, if
+    // there was a tegenbod) are the electronic signatures.
+    const fp = await tx.freelancerProfile.findUnique({
+      where: { id: freelancerId },
+      select: { userId: true },
+    });
+    const offer = fp ? await myOfferForShift(fp.userId, shiftId) : null;
     await ensureModelAgreement(tx, {
       freelancerId,
       tenantId: shift.branch.tenantId,
@@ -411,6 +444,8 @@ export async function recordOfferResponse(
       assignmentId: assignment.id,
       hourlyRateCents: shift.hourlyRateCents,
       scopeDescription: shift.title,
+      ...(offer ? { freelancerSignedAt: new Date(offer.at) } : {}),
+      ...(offer?.respondedAt ? { clientSignedAt: new Date(offer.respondedAt) } : {}),
     });
 
     const filled = taken + 1 >= shift.positions;

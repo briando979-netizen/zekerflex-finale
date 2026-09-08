@@ -46,7 +46,11 @@ async function reset(): Promise<void> {
   await prisma.orchestrationFinding.deleteMany();
   await prisma.orchestrationRun.deleteMany();
   await prisma.salesOutreach.deleteMany();
+  await prisma.salesEngineRun.deleteMany();
+  await prisma.salesDiscoverySource.deleteMany();
+  await prisma.salesSuppression.deleteMany();
   await prisma.salesLead.deleteMany();
+  await prisma.salesCampaign.deleteMany();
   await prisma.engagementEvent.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.invoiceLine.deleteMany();
@@ -254,6 +258,105 @@ async function main(): Promise<void> {
       kycStatus: "VERIFIED",
       memberships: { create: { tenantId: hq.id, role: "DISPUTE_MANAGER" } },
     },
+  });
+
+  const salesRep = await prisma.user.create({
+    data: {
+      id: "usr_sales_rep",
+      email: "sales@zekerflex.nl",
+      fullName: "Sanne Sales",
+      passwordHash: pwHash,
+      kycStatus: "VERIFIED",
+      emailVerifiedAt: new Date(),
+      memberships: { create: { tenantId: platform.id, role: "SALES" } },
+    },
+  });
+  await prisma.salesLead.createMany({
+    data: [
+      {
+        companyName: "Bakkerij De Korenaar B.V.",
+        kvkNumber: "51234567",
+        contactName: "Joris de Bakker",
+        contactEmail: "joris@dekorenaar.example",
+        contactPhone: "06 12345678",
+        city: "Zwolle",
+        sector: "Ambachtelijke bakkerij",
+        source: "field-visit",
+        status: "NEW",
+        notes: "Bezocht tijdens ochtendrit. Zoekt weekendkrachten voor de winkel. Terugkoppeling volgende week.",
+        createdById: salesRep.id,
+      },
+      {
+        companyName: "Logistiek Centrum Hanzeland",
+        kvkNumber: "59876543",
+        contactName: "Petra Vos",
+        contactEmail: "p.vos@hanzeland.example",
+        contactPhone: "038 4001234",
+        city: "Zwolle",
+        sector: "Distributie & magazijn",
+        source: "field-visit",
+        status: "SENT",
+        invitedAt: new Date(Date.now() - 2 * 86_400_000),
+        notes: "Piek in november/december. Account-uitnodiging verstuurd, wacht op afronding.",
+        createdById: salesRep.id,
+      },
+    ],
+  });
+
+  // Sales-recruiter motor: één demo-campagne in REVIEW-modus (draait niet
+  // automatisch), een careers-bron en twee "gecrawlde" leads + één suppression.
+  const salesCampaign = await prisma.salesCampaign.create({
+    data: {
+      id: "camp_horeca_logistiek_randstad",
+      name: "Horeca & Logistiek Randstad",
+      status: "DRAFT",
+      mode: "REVIEW",
+      dailyCap: 25,
+      minScore: 55,
+      targetSectors: ["horeca", "logistiek"],
+      targetCities: ["Amsterdam", "Utrecht", "Rotterdam"],
+      createdById: salesRep.id,
+      sources: {
+        create: [
+          { kind: "CAREERS_URL", url: "https://example-horeca.nl/werken-bij", label: "Example Horeca" },
+        ],
+      },
+    },
+  });
+  await prisma.salesLead.createMany({
+    data: [
+      {
+        companyName: "Grand Café De Kade",
+        contactEmail: "hr@decade.example",
+        discoveredEmail: "hr@decade.example",
+        city: "Amsterdam",
+        sector: "horeca",
+        source: "careers",
+        sourceUrl: "https://decade.example/vacatures",
+        vacancySignal: "Open vacatures gezien: Medewerker bediening; Barista; Kok parttime",
+        status: "ENRICHED",
+        score: 74,
+        scoreRationale: "Horeca met vaste piekmomenten en meerdere openstaande vacatures (heuristiek).",
+        campaignId: salesCampaign.id,
+      },
+      {
+        companyName: "Randstad Warehousing",
+        contactEmail: "recruitment@rwh.example",
+        discoveredEmail: "recruitment@rwh.example",
+        city: "Utrecht",
+        sector: "logistiek",
+        source: "careers",
+        sourceUrl: "https://rwh.example/careers",
+        vacancySignal: "Open vacatures gezien: Magazijnmedewerker; Orderpicker; Heftruckchauffeur",
+        status: "QUEUED",
+        score: 81,
+        scoreRationale: "Distributie met structurele flexbehoefte en meerdere vestigingen (heuristiek).",
+        campaignId: salesCampaign.id,
+      },
+    ],
+  });
+  await prisma.salesSuppression.create({
+    data: { email: "geen-mail@voorbeeld.example", domain: "voorbeeld.example", reason: "manual" },
   });
 
   const managerAms = await prisma.user.create({
@@ -986,6 +1089,7 @@ async function main(): Promise<void> {
     { role: "PLATFORM_ADMIN", email: platformAdmin.email, password: PASSWORD },
     { role: "HQ_ADMIN", email: hqAdmin.email, password: PASSWORD },
     { role: "DISPUTE_MANAGER", email: disputeManager.email, password: PASSWORD },
+    { role: "SALES (buitendienst)", email: salesRep.email, password: PASSWORD },
     { role: "LOCAL_MANAGER (Amsterdam)", email: managerAms.email, password: PASSWORD },
     { role: "LOCAL_MANAGER (Utrecht)", email: managerUtr.email, password: PASSWORD },
     ...specs.map((s) => ({

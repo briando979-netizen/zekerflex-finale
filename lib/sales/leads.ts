@@ -19,11 +19,18 @@ export interface CreateLeadInput {
   kvkNumber?: string | undefined;
   contactName?: string | undefined;
   contactEmail?: string | undefined;
+  contactPhone?: string | undefined;
   city?: string | undefined;
   sector?: string | undefined;
   source?: string | undefined;
   notes?: string | undefined;
-  createdById: string;
+  /** DB user id, or null when the recruiter motor created it. */
+  createdById: string | null;
+  /** Motor-velden */
+  campaignId?: string | undefined;
+  sourceUrl?: string | undefined;
+  vacancySignal?: string | undefined;
+  discoveredEmail?: string | undefined;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -33,18 +40,23 @@ export async function createLead(input: CreateLeadInput) {
       kvkNumber: input.kvkNumber ?? null,
       contactName: input.contactName ?? null,
       contactEmail: input.contactEmail ?? null,
+      contactPhone: input.contactPhone ?? null,
       city: input.city ?? null,
       sector: input.sector ?? null,
       source: input.source ?? "manual",
       notes: input.notes ?? null,
-      createdById: input.createdById,
+      createdById: input.createdById ?? null,
+      campaignId: input.campaignId ?? null,
+      sourceUrl: input.sourceUrl ?? null,
+      vacancySignal: input.vacancySignal ?? null,
+      discoveredEmail: input.discoveredEmail ?? null,
     },
   });
   await recordAudit({
     category: "SALES",
     action: "sales.lead.created",
     actorUserId: input.createdById,
-    actorLabel: "user",
+    actorLabel: input.createdById ? "user" : "sales-ai",
     summary: `Sales lead aangemaakt: ${lead.companyName}`,
     targetType: "salesLead",
     targetId: lead.id,
@@ -86,6 +98,38 @@ export async function getLead(id: string) {
   return lead;
 }
 
+/** Leads a specific field rep logged, newest first. */
+export async function leadsByRep(userId: string, limit = 100) {
+  return prisma.salesLead.findMany({
+    where: { createdById: userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+/** Mark a lead as "account-uitnodiging verstuurd". */
+export async function markLeadInvited(id: string, actorUserId: string, tenantId?: string | null) {
+  const lead = await prisma.salesLead.update({
+    where: { id },
+    data: {
+      status: "SENT",
+      invitedAt: new Date(),
+      ...(tenantId ? { invitedTenantId: tenantId } : {}),
+      lastContactedAt: new Date(),
+    },
+  });
+  await recordAudit({
+    category: "SALES",
+    action: "sales.lead.invited",
+    actorUserId,
+    actorLabel: "user",
+    summary: `Account-uitnodiging verstuurd naar ${lead.companyName}`,
+    targetType: "salesLead",
+    targetId: id,
+  });
+  return lead;
+}
+
 const RETAIL_SBI_PREFIXES = ["47", "56", "49", "52", "53", "81", "82", "10", "55", "86", "88", "93"];
 
 function heuristicScore(sector: string | null, sbiCodes: string[]): {
@@ -103,7 +147,7 @@ function heuristicScore(sector: string | null, sbiCodes: string[]): {
 }
 
 /** Enrich a lead from the Handelsregister when it carries a KVK number. */
-export async function enrichLead(id: string, actorUserId: string) {
+export async function enrichLead(id: string, actorUserId: string | null) {
   const lead = await prisma.salesLead.findUnique({ where: { id } });
   if (!lead) throw AppError.notFound("Sales lead not found");
   if (!lead.kvkNumber || !isKvkBaseEnabled()) {
@@ -131,7 +175,7 @@ export async function enrichLead(id: string, actorUserId: string) {
     category: "SALES",
     action: "sales.lead.enriched",
     actorUserId,
-    actorLabel: "user",
+    actorLabel: actorUserId ? "user" : "sales-ai",
     summary: `Lead verrijkt via KVKBase: ${updated.companyName}`,
     targetType: "salesLead",
     targetId: id,
@@ -140,7 +184,7 @@ export async function enrichLead(id: string, actorUserId: string) {
 }
 
 /** Score a lead's fit (LLM, heuristic fallback). */
-export async function scoreLead(id: string, actorUserId: string) {
+export async function scoreLead(id: string, actorUserId: string | null) {
   const lead = await prisma.salesLead.findUnique({ where: { id } });
   if (!lead) throw AppError.notFound("Sales lead not found");
 
@@ -189,7 +233,7 @@ export async function scoreLead(id: string, actorUserId: string) {
     category: "SALES",
     action: "sales.lead.scored",
     actorUserId,
-    actorLabel: "user",
+    actorLabel: actorUserId ? "user" : "sales-ai",
     summary: `Lead ${updated.companyName} gescoord: ${score}/100`,
     targetType: "salesLead",
     targetId: id,

@@ -42,6 +42,11 @@ export const OPTIONAL_CATEGORIES: MailCategory[] = [
     label: "Nieuwsbrief",
     desc: "De algemene ZekerFlex-nieuwsbrief. Afmelden kan ook via de link onderaan elke nieuwsbrief.",
   },
+  {
+    slug: "sales-outreach",
+    label: "Zakelijke introductie van ZekerFlex",
+    desc: "Een eenmalige zakelijke kennismaking omdat je bedrijf mogelijk baat heeft bij flexibele bezetting. Je kunt je meteen afmelden.",
+  },
 ];
 
 const KIND_TO_CATEGORY: Record<string, string> = {
@@ -59,6 +64,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   onboarding: "tips",
   nieuwsbrief: "nieuwsbrief",
   digest: "klus-alerts",
+  "sales-outreach": "sales-outreach",
   // everything below is essential
   verification: "essential",
   welcome: "essential",
@@ -93,6 +99,8 @@ const REPLIABLE_KINDS = new Set([
   "demo-aanvraag-bevestiging",
   "open-sollicitatie",
   "open-sollicitatie-bevestiging",
+  // Sales outreach: a human on the sales side reads and answers replies.
+  "sales-outreach",
 ]);
 
 export function isAutomatedKind(kind?: string): boolean {

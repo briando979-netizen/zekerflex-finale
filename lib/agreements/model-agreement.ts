@@ -79,6 +79,16 @@ export interface EnsureModelAgreementInput {
   type?: ModelAgreementType;
   hourlyRateCents?: number | null;
   scopeDescription?: string | null;
+  /**
+   * Moment the freelancer committed — the instant they clicked "Reageren" /
+   * accepted the Opdracht. Counts as their electronic signature. Defaults to now.
+   */
+  freelancerSignedAt?: Date | null;
+  /**
+   * Moment the client committed — the instant they selected this freelancer for
+   * the Opdracht. Counts as their electronic signature. Defaults to now.
+   */
+  clientSignedAt?: Date | null;
 }
 
 export interface EnsureModelAgreementResult {
@@ -107,24 +117,35 @@ export async function ensureModelAgreement(
   });
 
   if (existing) {
+    const now = new Date();
+    const data: Prisma.ModelAgreementUncheckedUpdateInput = {};
+
     if (!existing.assignmentId && input.assignmentId) {
-      await tx.modelAgreement.update({
-        where: { id: existing.id },
-        data: {
-          assignmentId: input.assignmentId,
-          ...(input.shiftId && !existing.shiftId
-            ? { shiftId: input.shiftId }
-            : {}),
-          ...(input.branchId && !existing.branchId
-            ? { branchId: input.branchId }
-            : {}),
-        },
-      });
+      data.assignmentId = input.assignmentId;
+      if (input.shiftId && !existing.shiftId) data.shiftId = input.shiftId;
+      if (input.branchId && !existing.branchId) data.branchId = input.branchId;
+    }
+
+    // Back-fill electronic signatures — both parties have, by the time an
+    // agreement is provisioned, already committed on the platform (freelancer
+    // reacted, client selected them).
+    let nextStatus = existing.status;
+    if (!existing.freelancerSignedAt || !existing.clientSignedAt) {
+      const freelancerSignedAt = existing.freelancerSignedAt ?? input.freelancerSignedAt ?? now;
+      const clientSignedAt = existing.clientSignedAt ?? input.clientSignedAt ?? now;
+      nextStatus = nextStatusAfterSignature(freelancerSignedAt, clientSignedAt);
+      data.freelancerSignedAt = freelancerSignedAt;
+      data.clientSignedAt = clientSignedAt;
+      data.status = nextStatus;
+    }
+
+    if (Object.keys(data).length > 0) {
+      await tx.modelAgreement.update({ where: { id: existing.id }, data });
     }
     return {
       id: existing.id,
       reference: existing.reference,
-      status: existing.status,
+      status: nextStatus,
       created: false,
     };
   }
@@ -152,6 +173,13 @@ export async function ensureModelAgreement(
   const template = TEMPLATES[type];
   const reference = await nextReference(tx, new Date().getUTCFullYear());
 
+  // Both parties have already committed on the platform by the time we get
+  // here — the freelancer by reacting to the Opdracht, the client by selecting
+  // them — so the agreement is provisioned already signed (status ACTIVE).
+  const now = new Date();
+  const freelancerSignedAt = input.freelancerSignedAt ?? now;
+  const clientSignedAt = input.clientSignedAt ?? now;
+
   const created = await tx.modelAgreement.create({
     data: {
       reference,
@@ -161,7 +189,9 @@ export async function ensureModelAgreement(
       shiftId: input.shiftId ?? null,
       assignmentId: input.assignmentId ?? null,
       type,
-      status: ModelAgreementStatus.PENDING_FREELANCER_SIGNATURE,
+      status: nextStatusAfterSignature(freelancerSignedAt, clientSignedAt),
+      freelancerSignedAt,
+      clientSignedAt,
       templateKey: template.key,
       templateVersion: template.version,
       belastingdienstNr: template.belastingdienstNr,

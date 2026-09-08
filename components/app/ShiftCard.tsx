@@ -2,79 +2,14 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { shiftCategory } from "@/lib/shifts/category";
-import { formatMinutes, MODE_ORDER, type TravelModeKey } from "@/lib/geo/travel-modes";
-import { money, moneyExact, dateTime } from "@/components/app/ui";
+import { money, moneyExact } from "@/components/app/ui";
+import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
 
 // ---------------------------------------------------------------------------
-// Premium shift card — photo header, match ring, multi-modal travel chips,
-// pay + duration. Presentational; `action` is the (client) apply control.
+// Shift card — YoungOnes-style: photo header with the category + a save heart,
+// then company · title · when/where, badges and the pay line.
+// Presentational; `action` / `footerOverride` drive the apply control.
 // ---------------------------------------------------------------------------
-
-function ModeIcon({ mode }: { mode: TravelModeKey }) {
-  const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none" } as const;
-  if (mode === "transit")
-    return (
-      <svg {...p}>
-        <rect x="5" y="3" width="14" height="13" rx="2.5" stroke="currentColor" strokeWidth="2" />
-        <path d="M5 11h14M9 20l-2 2M15 20l2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="8.5" cy="13.5" r="1" fill="currentColor" />
-        <circle cx="15.5" cy="13.5" r="1" fill="currentColor" />
-      </svg>
-    );
-  if (mode === "driving")
-    return (
-      <svg {...p}>
-        <path d="M4 13l1.5-5A2 2 0 0 1 7.4 6.5h9.2a2 2 0 0 1 1.9 1.5L20 13M4 13h16v4H4v-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-        <circle cx="7.5" cy="17" r="1.5" fill="currentColor" />
-        <circle cx="16.5" cy="17" r="1.5" fill="currentColor" />
-      </svg>
-    );
-  if (mode === "bicycling")
-    return (
-      <svg {...p}>
-        <circle cx="6" cy="17" r="3.5" stroke="currentColor" strokeWidth="2" />
-        <circle cx="18" cy="17" r="3.5" stroke="currentColor" strokeWidth="2" />
-        <path d="M6 17l4-7h5l3 7M10 10l-1-3h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  return (
-    <svg {...p}>
-      <circle cx="13" cy="4.5" r="1.8" fill="currentColor" />
-      <path d="M13 8v5l3 3M13 13l-3 2-1 4M13 10l-4-1 1 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function TravelChips({ travel }: { travel: NonNullable<MarketplaceShift["travel"]> }) {
-  const shown = MODE_ORDER.filter((m) => {
-    const e = travel.byMode[m];
-    if (m === "walking") return e.distanceKm <= 6;
-    if (m === "bicycling") return e.distanceKm <= 20;
-    return true;
-  });
-  return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {shown.map((m) => {
-        const e = travel.byMode[m];
-        const isFast = m === travel.fastest.mode;
-        return (
-          <span
-            key={m}
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${
-              isFast
-                ? "bg-brand-50 text-brand-700 ring-1 ring-brand-500/25"
-                : "bg-paper-soft text-neutralx-500"
-            }`}
-            title={`${e.label} · ${e.distanceKm} km`}
-          >
-            <ModeIcon mode={m} />
-            {e.minutes}′
-          </span>
-        );
-      })}
-    </div>
-  );
-}
 
 const OFFER_LABEL: Record<string, string> = {
   pending: "in afwachting",
@@ -83,6 +18,17 @@ const OFFER_LABEL: Record<string, string> = {
   withdrawn: "ingetrokken",
 };
 
+const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+const MON = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+function whenLabel(start: Date, end: Date): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const day = `${WD[s.getDay()]} ${s.getDate()} ${MON[s.getMonth()]}.`;
+  const t = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${day} · ${t(s)}–${t(e)}`;
+}
+
 export function ShiftCard({
   shift,
   href,
@@ -90,21 +36,23 @@ export function ShiftCard({
   compact = false,
   ribbon,
   footerOverride,
+  idReminder = false,
   dim = false,
 }: {
   shift: MarketplaceShift;
   href: string;
   action?: ReactNode;
   compact?: boolean;
-  /** corner ribbon on the photo, e.g. "Vervanging" or a status */
   ribbon?: { label: string; tone?: "amber" | "brand" | "neutral" | "crit" };
-  /** replaces the Details + action footer entirely (e.g. a non-clickable status) */
+  /** pass `null` to hide the footer entirely; omit for the default seats + apply row */
   footerOverride?: ReactNode;
+  /** show a "Neem je ID mee" badge (used on confirmed klussen) */
+  idReminder?: boolean;
   dim?: boolean;
 }) {
   const cat = shiftCategory(shift.title, shift.skill);
-  const seatsFree = shift.positions - shift.taken;
   const score = shift.match ? Math.round(shift.match.score * 100) : null;
+  const special = score !== null && score >= 78;
   const ribbonBg =
     ribbon?.tone === "amber"
       ? "rgba(180,83,9,.92)"
@@ -121,106 +69,85 @@ export function ShiftCard({
       }`}
     >
       {/* photo */}
-      <Link href={href} className="relative block aspect-[16/9] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cat.photo}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <span className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent" />
+      <div className="relative aspect-[16/9] overflow-hidden">
+        <Link href={href} className="block h-full w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cat.photo}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <span className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
+        </Link>
         <span
           className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white backdrop-blur"
           style={{ background: `${cat.accent}cc` }}
         >
           {cat.label}
         </span>
-        {ribbon ? (
+        <div className="absolute right-3 top-3">
+          <SaveShiftHeart shiftId={shift.id} />
+        </div>
+        {ribbon && (
           <span
-            className="absolute right-3 top-3 rounded-full px-2 py-1 text-[11px] font-bold text-white backdrop-blur"
+            className="absolute left-3 bottom-3 rounded-full px-2 py-1 text-[11px] font-bold text-white backdrop-blur"
             style={{ background: ribbonBg }}
           >
             {ribbon.label}
           </span>
-        ) : score !== null ? (
-          <span
-            className="absolute right-3 top-3 rounded-full px-2 py-1 text-[11px] font-bold text-white backdrop-blur"
-            style={{ background: score >= 80 ? "rgba(14,92,74,.85)" : "rgba(12,14,18,.6)" }}
-            title={shift.match?.reasons.join(" · ")}
-          >
-            {score}% match
-          </span>
-        ) : null}
-        {shift.isReplacement && !ribbon && (
-          <span className="absolute left-3 top-11 rounded-full bg-warn/90 px-2 py-1 text-[11px] font-bold text-white backdrop-blur">
-            Vervanging
-          </span>
         )}
-        <div className="absolute inset-x-3 bottom-3 flex items-end justify-between text-white">
-          <div className="min-w-0">
-            <p className="truncate font-display text-lg font-bold leading-tight drop-shadow">{shift.title}</p>
-            <p className="truncate text-xs text-white/80">
-              {shift.branch} · {shift.city}
-              {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
-            </p>
-          </div>
-          <span className="num flex-shrink-0 rounded-lg bg-white/15 px-2 py-1 text-sm font-bold backdrop-blur">
-            {moneyExact(shift.hourlyRateCents)}/u
-          </span>
-        </div>
-      </Link>
+        <span className="num absolute bottom-3 right-3 rounded-lg bg-white/15 px-2 py-1 text-sm font-bold text-white backdrop-blur">
+          {moneyExact(shift.hourlyRateCents)}/u
+        </span>
+      </div>
 
       {/* body */}
       <div className="flex flex-1 flex-col p-4">
-        {(shift.series || shift.myOffer || shift.replacementNote) && (
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {shift.series && shift.series.total > 1 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
-                📅 {shift.series.total} dagen beschikbaar
-              </span>
-            )}
-            {shift.myOffer && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
-                Tegenbod {moneyExact(shift.myOffer.proposedRateCents)}/u · {OFFER_LABEL[shift.myOffer.status] ?? shift.myOffer.status}
-              </span>
-            )}
-            {shift.replacementNote && (
-              <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px] text-neutralx-500">
-                {shift.replacementNote}
-              </span>
-            )}
-          </div>
-        )}
-        {shift.travel && <TravelChips travel={shift.travel} />}
+        <Link href={href} className="block">
+          <p className="text-xs font-semibold text-brand-600">{shift.branch}</p>
+          <p className="mt-0.5 font-display text-base font-bold leading-snug text-ink">{shift.title}</p>
+        </Link>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-          <div>
-            <dt className="text-[11px] text-neutralx-400">Wanneer</dt>
-            <dd className="text-ink-soft">{dateTime(shift.startsAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-neutralx-400">Duur</dt>
-            <dd className="text-ink-soft">
-              {shift.hours} u{shift.breakMinutes ? ` · ${shift.breakMinutes}m pauze` : ""}
-            </dd>
-          </div>
-          {!compact && (
-            <>
-              <div>
-                <dt className="text-[11px] text-neutralx-400">Geschat bruto</dt>
-                <dd className="num font-semibold text-brand-600">{money(shift.grossCents)}</dd>
-              </div>
-              <div>
-                <dt className="text-[11px] text-neutralx-400">Snelste route</dt>
-                <dd className="text-ink-soft">
-                  {shift.travel ? `${shift.travel.fastest.label} · ${formatMinutes(shift.travel.fastest.minutes)}` : "—"}
-                </dd>
-              </div>
-            </>
+        <p className="mt-2 text-xs text-neutralx-500">
+          {whenLabel(shift.startsAt, shift.endsAt)}
+          {" · "}
+          {shift.city}
+          {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
+        </p>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {special && (
+            <span className="rounded border border-crit/30 px-1.5 py-0.5 text-[11px] font-semibold text-crit">
+              Speciaal voor jou
+            </span>
           )}
-        </dl>
+          <span className="rounded border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">
+            Freelance
+          </span>
+          {idReminder && (
+            <span className="rounded border border-hairstrong px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600">
+              Neem je ID mee
+            </span>
+          )}
+          {shift.series && shift.series.total > 1 && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+              +{shift.series.total} dagen
+            </span>
+          )}
+          {shift.myOffer && (
+            <span className="rounded-full bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
+              {shift.myOffer.proposedRateCents === shift.hourlyRateCents
+                ? "Reactie verstuurd"
+                : `Tegenbod ${moneyExact(shift.myOffer.proposedRateCents)}/u`}{" "}
+              · {OFFER_LABEL[shift.myOffer.status] ?? shift.myOffer.status}
+            </span>
+          )}
+          {shift.replacementNote && !ribbon && (
+            <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px] text-neutralx-500">{shift.replacementNote}</span>
+          )}
+        </div>
 
         {shift.match?.belowDesiredRate && (
           <p className="mt-2 text-[11px] font-medium text-warn">Onder je richttarief</p>
@@ -229,21 +156,23 @@ export function ShiftCard({
           <p className="mt-1 text-[11px] text-neutralx-400">Je werkte hier al {shift.workedHereBefore}×</p>
         )}
 
-        <div className="mt-auto pt-4">
-          {footerOverride ?? (
-            <div className="flex items-end justify-between">
-              <span className="num text-xs text-neutralx-400">
-                {seatsFree} van {shift.positions} plek{shift.positions === 1 ? "" : "ken"} vrij
-              </span>
-              <div className="flex items-center gap-2">
-                <Link href={href} className="btn-ghost px-3 py-1.5 text-xs">
-                  Details
-                </Link>
-                {action}
-              </div>
-            </div>
-          )}
+        <div className="mt-3 flex items-end justify-between border-t border-hair pt-3">
+          <div>
+            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} / uur</p>
+            {!compact && <p className="text-[11px] text-neutralx-400">Verdien ~ {money(shift.grossCents)}</p>}
+          </div>
+          <span className="num rounded-lg bg-paper-soft px-2 py-1 text-xs font-semibold text-neutralx-600">
+            {shift.hours} uur
+          </span>
         </div>
+
+        {footerOverride === null ? (
+          <div className="mt-auto" />
+        ) : (
+        <div className="mt-auto pt-3">
+          {footerOverride !== undefined ? footerOverride : action ? <div className="flex justify-end">{action}</div> : null}
+        </div>
+        )}
       </div>
     </article>
   );

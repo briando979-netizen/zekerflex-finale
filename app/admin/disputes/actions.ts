@@ -63,7 +63,10 @@ export async function resolveDisputeAction(
         correctedBillableMinutes: result.resolvedMinutes,
         correctionNote: parsed.data.note,
       });
-      extra = ` Timesheet ${approval.status.toLowerCase()}, uitbetaling ${approval.payout.status.toLowerCase()}.`;
+      extra =
+        approval.track === "payroll"
+          ? ` Timesheet ${approval.status.toLowerCase()}, verloning via payroll (week ${approval.payroll?.weekLabel ?? "?"}).`
+          : ` Timesheet ${approval.status.toLowerCase()}, uitbetaling ${approval.payout?.status.toLowerCase() ?? "-"}.`;
     }
 
     revalidatePath("/admin/disputes");

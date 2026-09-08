@@ -46,6 +46,16 @@ export const ROUTE_RULES: RouteRule[] = [
     redirectOnDeny: true,
   },
   {
+    pattern: /^\/sales(?:\/|$)/,
+    roles: ["SALES", "PLATFORM_ADMIN"],
+    redirectOnDeny: true,
+  },
+  {
+    pattern: /^\/api\/sales(?:\/|$)/,
+    roles: ["SALES", "PLATFORM_ADMIN"],
+    redirectOnDeny: false,
+  },
+  {
     pattern: /^\/admin\/disputes(?:\/|$)/,
     roles: ["DISPUTE_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN"],
     redirectOnDeny: true,

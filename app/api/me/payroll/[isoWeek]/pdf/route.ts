@@ -33,6 +33,15 @@ export async function GET(
     pdf.rule();
 
     if (b.kind === "payroll") {
+      if (b.cao && (b.cao.toeslagCents > 0 || b.cao.wmlFloorApplied)) {
+        pdf.row(`Basisloon (${b.cao.caoLabel})`, euro(b.cao.baseCents));
+        if (b.cao.nachtCents > 0) pdf.row("Nachttoeslag", `+ ${euro(b.cao.nachtCents)}`);
+        if (b.cao.weekendCents > 0) pdf.row("Weekendtoeslag", `+ ${euro(b.cao.weekendCents)}`);
+        if (b.cao.feestdagCents > 0) pdf.row("Feestdagtoeslag", `+ ${euro(b.cao.feestdagCents)}`);
+        if (b.cao.overwerkCents > 0) pdf.row("Overwerktoeslag", `+ ${euro(b.cao.overwerkCents)}`);
+        if (b.cao.wmlFloorApplied)
+          pdf.line("Uurtarief automatisch opgehoogd naar het wettelijk minimumloon.", 9);
+      }
       pdf.row("Brutoloon", euro(b.grossCents));
       pdf.row("Vakantiegeld (8,33%)", euro(b.holidayAllowanceCents));
       pdf.row("Reservering vakantie-uren", euro(b.holidayHoursReserveCents));

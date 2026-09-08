@@ -15,6 +15,7 @@ import {
   IMail,
   IUsers,
   IBriefcase,
+  IRocket,
 } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
@@ -27,11 +28,13 @@ const NAV = [
   { href: "/admin/jarvis", label: "Jarvis-assistent", icon: <IChat />, section: "Operatie" },
   { href: "/admin/verloning", label: "Wekelijkse verloning", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/fiscaal", label: "Werkvormen & btw", icon: <IDoc />, section: "Operatie" },
+  { href: "/admin/sales", label: "Sales-pijplijn", icon: <IRocket />, section: "Operatie" },
   { href: "/admin/disputes", label: "Disputen", icon: <IShield />, section: "Operatie" },
   { href: "/admin/berichten", label: "Berichten & Support", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/mail", label: "Mailbox", icon: <IMail />, section: "Communicatie" },
   { href: "/admin/nieuwsbrief", label: "Nieuwsbrief", icon: <IMail />, section: "Communicatie" },
   { href: "/admin/studio", label: "Studio (beeld)", icon: <IImage />, section: "Communicatie" },
+  { href: "/admin/shop", label: "Webshopbeheer", icon: <IBriefcase />, section: "Communicatie" },
   { href: "/admin/analytics", label: "Verkeer & analytics", icon: <IActivity />, section: "Inzicht" },
   { href: "/admin/audit", label: "Auditspoor", icon: <IDoc />, section: "Inzicht" },
   { href: "/admin/systeem", label: "Systeemstatus", icon: <IPulse />, section: "Inzicht" },

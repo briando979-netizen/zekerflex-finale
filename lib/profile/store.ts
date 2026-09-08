@@ -35,6 +35,7 @@ export interface OrgProfileExtra {
     urgency?: string;
     priorPlatform?: string;
     profileStepDone?: boolean;
+    coverStepDone?: boolean;
     completedAt?: string;
   };
   updatedAt?: string;

@@ -107,6 +107,28 @@ const schema = z.object({
   MAIL_REPLY_TO: z.string().default("info@zekerflex.com"),
   MAIL_UITZEND_FROM: z.string().default("uitzendbureau@zekerflex.com"),
   MAIL_NIEUWSBRIEF_FROM: z.string().default("nieuwsbrief@zekerflex.com"),
+  // Sender identity for the autonomous sales-recruiter outreach. An alias of the
+  // authenticated SMTP mailbox; replies land here and a human reads them.
+  MAIL_SALES_FROM: z.string().default("sales@zekerflex.com"),
+
+  // ---- Sales-recruiter motor (lib/sales/engine.ts) ------------------------
+  // Everything OFF by default. The motor never runs unless SALES_ENGINE_ENABLED
+  // is true, and it never sends without a human unless a campaign is on
+  // AUTOPILOT *and* SALES_AUTOPILOT_ENABLED is true.
+  SALES_ENGINE_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  SALES_AUTOPILOT_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  // Hard ceiling on outreach mails sent per calendar day across all campaigns.
+  SALES_DAILY_CAP_GLOBAL: z.coerce.number().int().positive().default(60),
+  // Max pages the careers-page crawler fetches per domain per run.
+  SALES_CRAWL_MAX_PAGES: z.coerce.number().int().positive().max(100).default(20),
+  // How often the daemon pings the sales tick (informational; the daemon owns the schedule).
+  SALES_ENGINE_TICK_MINUTES: z.coerce.number().int().positive().default(15),
 
   // Local speech-to-text for the Jarvis mic (optional, sovereign). An
   // OpenAI-compatible /audio/transcriptions endpoint: faster-whisper-server,
@@ -164,8 +186,19 @@ const schema = z.object({
     .transform((v) => v === "true"),
 
   // Local upload storage root (relative to cwd or absolute).
+  STORAGE_BACKEND: z.enum(["local", "s3"]).default("local"),
   UPLOADS_DIR: z.string().default("./storage/uploads"),
   UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(25_000_000),
+  STORAGE_S3_ENDPOINT: z.string().url().optional(),
+  STORAGE_S3_REGION: z.string().default("auto"),
+  STORAGE_S3_BUCKET: z.string().optional(),
+  STORAGE_S3_ACCESS_KEY_ID: z.string().optional(),
+  STORAGE_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  STORAGE_S3_FORCE_PATH_STYLE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  STORAGE_SIGNED_URL_TTL_S: z.coerce.number().int().positive().max(900).default(300),
 
   // Speak a status briefing on the first server activity after boot.
   JARVIS_BOOT_BRIEFING: z
@@ -177,6 +210,11 @@ const schema = z.object({
   SEPA_API_KEY: z.string().optional(),
   SEPA_CREDITOR_IBAN: z.string().optional(),
   SEPA_CREDITOR_NAME: z.string().default("ZekerFlex B.V."),
+
+  // Stripe — online collection of employer invoices (Checkout Sessions).
+  // Without a secret key, "Betaal nu" reports the provider as unconfigured.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
   // KVKBase - Dutch Handelsregister company data & VAT validation.
   KVKBASE_API_URL: z.string().url().default("https://api.kvkbase.nl"),
@@ -196,6 +234,8 @@ const schema = z.object({
 
   // Employer platform fee: a flat amount per billable hour (NOT a % of gross).
   PLATFORM_FEE_PER_HOUR_CENTS: z.coerce.number().int().min(0).default(350),
+  // Minimum uurtarief (bruto) dat een opdrachtgever voor een klus mag instellen.
+  MIN_SHIFT_RATE_CENTS: z.coerce.number().int().min(0).default(1620),
   // Legacy percentage fee — kept for old invoices / config; per-hour is authoritative.
   PLATFORM_FEE_RATE: z.coerce.number().min(0).max(1).default(0.08),
   VAT_RATE_STANDARD: z.coerce.number().min(0).max(1).default(0.21),
@@ -207,10 +247,30 @@ const schema = z.object({
   // Voorschot: fee on the advanced amount, settled against the next payout.
   ADVANCE_FEE_RATE: z.coerce.number().min(0).max(1).default(0.03),
   ADVANCE_MAX_RATE_OF_PENDING: z.coerce.number().min(0).max(1).default(0.8),
+  // Uitzendkracht "instant advance payout": share of the expected GROSS wage
+  // paid out within ~1 min on timesheet approval, reconciled by the weekly
+  // payroll run. Kept conservatively below the expected net so reconciliation
+  // never goes negative.
+  PAYROLL_ADVANCE_RATE_OF_GROSS: z.coerce.number().min(0).max(0.8).default(0.5),
 });
 
+/**
+ * A hosting dashboard (Vercel included) commonly stores an "unset" variable
+ * as an empty string rather than omitting the key. zod's `.default()` only
+ * kicks in for `undefined`, so a blank value would otherwise fail `.url()`,
+ * enum, and `.coerce.number()` checks instead of falling back. Normalise
+ * blanks to `undefined` before validation so declared defaults actually apply.
+ */
+function blankToUndefined(env: NodeJS.ProcessEnv): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(env)) {
+    out[key] = value === "" ? undefined : value;
+  }
+  return out;
+}
+
 function loadEnv() {
-  const parsed = schema.safeParse(process.env);
+  const parsed = schema.safeParse(blankToUndefined(process.env));
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)

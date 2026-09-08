@@ -19,6 +19,11 @@ import {
   triggerInstantPayout,
 } from "@/lib/billing/sepa";
 import { evaluateDbaCompliance } from "@/lib/dba-compliance";
+import { evaluatePayoutGate } from "@/lib/billing/payout-gate";
+import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
+import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
+import { createPayrollAdvance } from "@/lib/payouts/advances";
+import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import type { ComputedInvoice } from "@/types/billing";
 
 export interface ApproveTimesheetInput {
@@ -35,6 +40,12 @@ export interface ApproveTimesheetResult {
   timesheetId: string;
   status: TimesheetStatus;
   billableMinutes: number;
+  /**
+   * "invoice" = ZZP / flexwerker: two reverse-billing invoices + instant SEPA
+   * payout. "payroll" = uitzendkracht: no invoice, the hours flow into the
+   * weekly payroll run and land on a loonstrook.
+   */
+  track: "invoice" | "payroll";
   invoices: {
     id: string;
     number: string;
@@ -48,7 +59,10 @@ export interface ApproveTimesheetResult {
     amountCents: number;
     endToEndId: string;
     providerRef: string | null;
-  };
+  } | null;
+  payroll: { isoWeekId: string; weekLabel: string } | null;
+  /** payroll track only: the instant advance paid out within ~1 min */
+  advance: { amountCents: number; netCents: number; feeCents: number; payoutStatus: string } | null;
   dba: { riskLevel: string; action: string } | null;
 }
 
@@ -128,6 +142,47 @@ export async function approveTimesheet(
       }
     }
 
+    const billableMinutes =
+      input.correctedBillableMinutes ??
+      (ts.billableMinutes > 0 ? ts.billableMinutes : computeBillableMinutes(ts));
+    if (billableMinutes <= 0) {
+      throw AppError.validation("Billable minutes must be positive");
+    }
+
+    // --- Fraude-/fouten-detectie -------------------------------------
+    const fraudFlags = evaluateTimesheetFraud({
+      scheduledStart: ts.scheduledStart,
+      scheduledEnd: ts.scheduledEnd,
+      actualStart: ts.actualStart,
+      actualEnd: ts.actualEnd,
+      breakMinutes: ts.breakMinutes,
+      billableMinutes,
+      gpsEvents: ts.gpsEvents,
+      overlappingCount: await prisma.timesheet.count({
+        where: {
+          id: { not: ts.id },
+          freelancerId: ts.freelancerId,
+          status: { in: ["SUBMITTED", "APPROVED", "PAID", "DISPUTED"] },
+          scheduledStart: { lt: ts.scheduledEnd },
+          scheduledEnd: { gt: ts.scheduledStart },
+        },
+      }),
+    });
+    const blockingFraud = fraudFlags.filter(
+      (f) => f.severity === "critical" && !["MOCK_GPS", "GEOFENCE_FAIL", "NO_CHECKIN"].includes(f.code),
+    );
+    if (blockingFraud.length > 0 && !input.overrideGpsCheck) {
+      throw AppError.precondition(
+        `Handmatige controle nodig: ${blockingFraud.map((f) => f.message).join(" ")}`,
+      );
+    }
+
+    // --- Fork: uitzendkracht → payroll, everyone else → invoice + payout ---
+    const fiscal = await getFiscal(ts.freelancer.userId);
+    if (invoiceModeFor(fiscal) === "payroll") {
+      return approveViaPayroll({ ts, principal, billableMinutes, input, log });
+    }
+
     // --- Payout destination -------------------------------------------
     const iban = ts.freelancer.payoutIban;
     if (!iban || !isValidIban(iban)) {
@@ -142,13 +197,19 @@ export async function approveTimesheet(
       throw AppError.precondition("Platform tenant is not configured");
     }
 
-    const billableMinutes =
-      input.correctedBillableMinutes ??
-      (ts.billableMinutes > 0
-        ? ts.billableMinutes
-        : computeBillableMinutes(ts));
-    if (billableMinutes <= 0) {
-      throw AppError.validation("Billable minutes must be positive");
+    const payoutGate = evaluatePayoutGate({
+      timesheetApproved: true,
+      freelancerKvkValid: ts.freelancer.kvkValid,
+      freelancerVatValid: ts.freelancer.vatValid,
+      disputeOpen: ts.dispute !== null && ![
+        "RESOLVED_APPROVED",
+        "RESOLVED_OVERRULED",
+      ].includes(ts.dispute.status),
+    });
+    if (!payoutGate.released) {
+      throw AppError.precondition(
+        `Payout geblokkeerd: ${payoutGate.reasons.join(", ")}`,
+      );
     }
 
     // --- Transaction: approve + invoices + pending payment ------------
@@ -173,6 +234,8 @@ export async function approveTimesheet(
         workedOn: ts.scheduledStart,
         freelancerInvoiceNumber: freelancerNumber,
         platformInvoiceNumber: platformNumber,
+        extraCostsGrossCents: ts.extraCostsCents,
+        extraCostsNote: ts.extraCostsNote,
       });
 
       const updated = await tx.timesheet.update({
@@ -244,6 +307,9 @@ export async function approveTimesheet(
         creditorIban: iban,
         creditorName: ts.freelancer.user.fullName,
         remittanceInfo: `ZekerFlex ${persisted.freelancerInvoice.number}`,
+        stripeConnectedAccountId: ts.freelancer.stripePayoutsEnabled
+          ? ts.freelancer.stripeConnectedAccountId
+          : null,
       });
       payoutStatus = result.status;
       providerRef = result.providerRef;
@@ -295,6 +361,7 @@ export async function approveTimesheet(
         billableMinutes,
         correctedBillableMinutes: input.correctedBillableMinutes ?? null,
         overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+        fraudFlags: fraudFlags.map((f) => `${f.severity}:${f.code}`),
         freelancerId: ts.freelancerId,
         freelancerInvoice: persisted.freelancerInvoice.number,
         payoutStatus,
@@ -322,6 +389,9 @@ export async function approveTimesheet(
           ? TimesheetStatus.PAID
           : TimesheetStatus.APPROVED,
       billableMinutes,
+      track: "invoice",
+      payroll: null,
+      advance: null,
       invoices: [
         {
           id: persisted.freelancerInvoice.id,
@@ -350,6 +420,132 @@ export async function approveTimesheet(
   } finally {
     await unlock();
   }
+}
+
+/**
+ * Uitzendkracht track: no invoice, no instant SEPA. The timesheet is marked
+ * APPROVED so the weekly payroll run (`lib/payroll/engine.ts`) picks it up and
+ * turns it into a loonstrook with loonheffing, vakantiegeld etc.
+ */
+async function approveViaPayroll(args: {
+  ts: {
+    id: string;
+    branchId: string;
+    scheduledStart: Date;
+    hourlyRateCents: number;
+    branch: { name: string };
+    freelancerId: string;
+    freelancer: {
+      userId: string;
+      payoutIban: string | null;
+      stripeConnectedAccountId: string | null;
+      stripePayoutsEnabled: boolean;
+      user: { fullName: string };
+    };
+    dispute: { id: string; status: string } | null;
+  };
+  principal: Principal;
+  billableMinutes: number;
+  input: ApproveTimesheetInput;
+  log: ReturnType<typeof logger.child>;
+}): Promise<ApproveTimesheetResult> {
+  const { ts, principal, billableMinutes, input, log } = args;
+  const week = isoWeekOf(ts.scheduledStart);
+  const weekId = isoWeekId(week);
+  const weekLabel = isoWeekLabel(week);
+  const expectedGrossCents = Math.round((billableMinutes / 60) * ts.hourlyRateCents);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.timesheet.update({
+      where: { id: ts.id },
+      data: {
+        status: TimesheetStatus.APPROVED,
+        approvedAt: new Date(),
+        approvedById: principal.userId,
+        billableMinutes,
+      },
+    });
+    if (
+      ts.dispute &&
+      ts.dispute.status !== "RESOLVED_APPROVED" &&
+      ts.dispute.status !== "RESOLVED_OVERRULED"
+    ) {
+      await tx.dispute.update({
+        where: { id: ts.dispute.id },
+        data: {
+          status:
+            input.correctedBillableMinutes === undefined
+              ? "RESOLVED_APPROVED"
+              : "RESOLVED_OVERRULED",
+          resolvedMinutes: billableMinutes,
+          resolvedById: principal.userId,
+          resolvedAt: new Date(),
+          resolutionNote: input.correctionNote ?? "Resolved during timesheet approval",
+        },
+      });
+    }
+  });
+
+  // Instant advance payout (~50% of expected gross) within ~1 min — reconciled
+  // by the weekly payroll run. Best effort: never blocks the approval.
+  let advance: ApproveTimesheetResult["advance"] = null;
+  try {
+    const a = await createPayrollAdvance({
+      userId: ts.freelancer.userId,
+      workerName: ts.freelancer.user.fullName,
+      timesheetId: ts.id,
+      isoWeek: weekId,
+      expectedGrossCents,
+      creditorIban: ts.freelancer.payoutIban,
+      stripeConnectedAccountId: ts.freelancer.stripePayoutsEnabled
+        ? ts.freelancer.stripeConnectedAccountId
+        : null,
+    });
+    if (a) {
+      advance = {
+        amountCents: a.amountCents,
+        netCents: a.netCents,
+        feeCents: a.feeCents,
+        payoutStatus: a.payoutStatus ?? "PENDING",
+      };
+    }
+  } catch (err) {
+    log.warn("payroll advance failed", { error: (err as Error).message });
+  }
+
+  log.info("timesheet approved (payroll track)", { isoWeek: weekId, billableMinutes, advanceCents: advance?.amountCents ?? 0 });
+
+  await recordAudit({
+    category: "TIMESHEET",
+    action: "timesheet.approved",
+    actorUserId: principal.userId,
+    actorLabel: "user",
+    severity: input.overrideGpsCheck ? "warning" : "info",
+    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - verloning via payroll, week ${weekLabel}`,
+    targetType: "timesheet",
+    targetId: ts.id,
+    metadata: {
+      track: "payroll",
+      billableMinutes,
+      correctedBillableMinutes: input.correctedBillableMinutes ?? null,
+      overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+      freelancerId: ts.freelancerId,
+      isoWeek: weekId,
+      resolvedDisputeId: ts.dispute?.id ?? null,
+    },
+  });
+
+  return {
+    timesheetId: ts.id,
+    status: TimesheetStatus.APPROVED,
+    billableMinutes,
+    track: "payroll",
+    invoices: [],
+    payout: null,
+    payroll: { isoWeekId: weekId, weekLabel },
+    advance,
+    dba: null,
+  };
 }
 
 async function persistInvoice(

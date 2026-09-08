@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { getFiscal, invoiceModeFor, isComplete } from "@/lib/fiscal/store";
 import { computePayslip, type PayLineInput } from "@/lib/payroll/compute";
 import { getRun, saveRun, type PayrollRun, type PayslipRecord } from "@/lib/payroll/store";
+import { payrollAdvancesForWeek, reconcilePayrollAdvances } from "@/lib/payouts/advances";
 import {
   isoWeekId,
   isoWeekLabel,
@@ -62,11 +63,15 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
       billableMinutes: true,
       hourlyRateCents: true,
       scheduledStart: true,
+      scheduledEnd: true,
+      actualStart: true,
+      actualEnd: true,
+      breakMinutes: true,
       freelancer: {
         select: { id: true, userId: true, user: { select: { fullName: true, email: true } } },
       },
       assignment: { select: { shift: { select: { id: true, title: true } } } },
-      branch: { select: { name: true, tenant: { select: { name: true } } } },
+      branch: { select: { name: true, matchingConfig: true, tenant: { select: { name: true } } } },
     },
   });
 
@@ -85,6 +90,12 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
         email: t.freelancer.user.email ?? null,
         lines: [] as PayLineInput[],
       };
+    const s = t.actualStart ?? t.scheduledStart;
+    const e = t.actualEnd ?? t.scheduledEnd;
+    const caoKey =
+      typeof (t.branch?.matchingConfig as { caoKey?: string })?.caoKey === "string"
+        ? (t.branch!.matchingConfig as { caoKey: string }).caoKey
+        : null;
     bucket.lines.push({
       shiftId: t.assignment?.shift?.id ?? t.id,
       shiftTitle: t.assignment?.shift?.title ?? "Dienst",
@@ -92,6 +103,10 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
       workedOn: t.scheduledStart.toISOString().slice(0, 10),
       hours: round2(t.billableMinutes / 60),
       hourlyRateCents: t.hourlyRateCents,
+      startISO: s.toISOString(),
+      endISO: e.toISOString(),
+      breakMinutes: t.breakMinutes,
+      caoKey,
     });
     byUser.set(userId, bucket);
   }
@@ -111,7 +126,25 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
       loonheffingskorting: fiscal.loonheffingskorting,
       weeksWorked,
       lines: b.lines,
+      birthDate: fiscal.birthDate ?? null,
     });
+    // Instant-advance offset: what the platform already paid the worker this
+    // week (read-only here; the actual reconcile/flip happens on finaliseRun).
+    let advance: PayslipRecord["advance"] = null;
+    if (computed.breakdown.kind === "payroll") {
+      const adv = await payrollAdvancesForWeek(userId, isoWeekIdStr);
+      if (adv.length > 0) {
+        const grossCents = adv.reduce((s, a) => s + a.amountCents, 0);
+        advance = {
+          grossCents,
+          netPaidCents: adv.reduce((s, a) => s + a.netCents, 0),
+          feeCents: adv.reduce((s, a) => s + a.feeCents, 0),
+          count: adv.length,
+        };
+      }
+    }
+    const toPayCents = Math.max(0, computed.headlineCents - (advance?.grossCents ?? 0));
+
     payslips.push({
       userId,
       freelancerId: b.freelancerId,
@@ -123,6 +156,8 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
       weeksWorked,
       fiscalComplete: isComplete(fiscal),
       computed,
+      advance,
+      toPayCents,
       generatedAt: now,
     });
   }
@@ -151,7 +186,7 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
             : p.computed.breakdown.servicesCents),
         0,
       ),
-      payoutCents: payslips.reduce((s, p) => s + p.computed.headlineCents, 0),
+      payoutCents: payslips.reduce((s, p) => s + p.toPayCents, 0),
       fiscalIncomplete: payslips.filter((p) => !p.fiscalComplete).length,
     },
     payslips,
@@ -170,6 +205,14 @@ export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<Pay
   const run = await getRun(isoWeekIdStr);
   if (!run) throw new Error("Run niet gevonden — bouw hem eerst.");
   if (run.status === "finalised") return run;
+  // Reconcile the instant advances against each worker's net wage.
+  for (const p of run.payslips) {
+    if (p.computed.breakdown.kind !== "payroll") continue;
+    await reconcilePayrollAdvances(p.userId, run.isoWeek, p.computed.headlineCents).catch((err) =>
+      logger.warn("advance reconcile failed", { userId: p.userId, error: (err as Error).message }),
+    );
+  }
+
   run.status = "finalised";
   run.finalisedAt = new Date().toISOString();
   run.finalisedBy = by;

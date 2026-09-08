@@ -27,7 +27,7 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [clock, setClock] = useState("");
@@ -83,7 +83,7 @@ export function AdminShell({
       data-theme={theme}
       style={{ background: "var(--a-page)" }}
     >
-      <div className="flex min-h-screen flex-col gap-3 p-3 lg:p-4">
+      <div className="flex min-h-screen flex-col gap-3 p-3 pt-4 lg:p-4 lg:pt-5">
         {/* Topbar */}
         <header className="a-panel flex h-14 flex-shrink-0 items-center gap-3 px-3 lg:h-16 lg:px-4">
           <button
@@ -98,8 +98,8 @@ export function AdminShell({
           >
             <Bars />
           </button>
-          <Link href="/admin" className="flex flex-shrink-0 items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#0C0E12] text-[11px] font-bold text-white">
+          <Link href="/admin" className="flex flex-shrink-0 items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#3155D8] text-[11px] font-bold text-white shadow-sm">
               ZF
             </span>
             <span className="hidden font-display text-[0.95rem] font-bold sm:inline" style={{ color: "var(--a-text)" }}>
@@ -124,6 +124,12 @@ export function AdminShell({
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <Link href="/admin/bedrijven" className="a-btn a-btn-primary hidden sm:inline-flex">
+              + Bedrijf beheren
+            </Link>
+            <Link href="/admin/gebruikers" className="a-btn a-btn-ghost hidden md:inline-flex">
+              Gebruikers
+            </Link>
             <span className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium lg:flex"
               style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
               🇳🇱 NL
@@ -138,7 +144,7 @@ export function AdminShell({
             >
               {theme === "dark" ? <Sun /> : <Moon />}
             </button>
-            <NotificationsBell dark />
+            <NotificationsBell />
             <div ref={menuRef} className="relative">
               <button
                 type="button"

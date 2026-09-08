@@ -1,0 +1,92 @@
+{
+  "_comment": "Function-calling schema voor studio.agent — geef dit aan een LLM zodat het de studio als 'creatief directeur' kan aansturen. Elke tool komt overeen met een functie in studio/agent.py.",
+  "tools": [
+    {
+      "name": "start",
+      "description": "Begin een nieuw videoproject vanuit een Nederlandse opdracht. Analyseert een referentievideo als die is meegegeven, en stelt de brief op. Geeft de project-slug terug.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string", "description": "de opdracht in gewoon Nederlands" },
+          "reference": { "type": "string", "description": "YouTube-URL of lokaal videobestand als stijl/tempo-referentie" },
+          "aspect": { "type": "string", "enum": ["16:9", "9:16", "1:1"] },
+          "duration": { "type": "integer", "description": "gewenste duur in seconden" }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "plan",
+      "description": "Toon de huidige brief (titel, stijl, sfeer, duur, palet, call-to-action).",
+      "parameters": { "type": "object", "properties": { "slug": { "type": "string" } }, "required": ["slug"] }
+    },
+    {
+      "name": "set_brief",
+      "description": "Pas velden van de brief aan (bijv. mood, style, duration_s, cta, palette).",
+      "parameters": { "type": "object", "properties": { "slug": { "type": "string" } }, "required": ["slug"] }
+    },
+    {
+      "name": "write_script",
+      "description": "Schrijf/herschrijf het scenescript + storyboard (voice-over per shot, visuele regie, on-screen tekst, camerabeweging).",
+      "parameters": { "type": "object", "properties": { "slug": { "type": "string" } }, "required": ["slug"] }
+    },
+    {
+      "name": "show_script",
+      "description": "Toon het huidige script met alle shots.",
+      "parameters": { "type": "object", "properties": { "slug": { "type": "string" } }, "required": ["slug"] }
+    },
+    {
+      "name": "edit_shot",
+      "description": "Wijzig één shot (narration, visual, on_screen_text, motion, seconds). Zet productie-fases terug op 'nog te doen'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" }, "index": { "type": "integer" },
+          "narration": { "type": "string" }, "visual": { "type": "string" },
+          "on_screen_text": { "type": "string" },
+          "motion": { "type": "string", "enum": ["slow-push", "pan-left", "pan-right", "static", "whip", "orbit"] }
+        },
+        "required": ["slug", "index"]
+      }
+    },
+    {
+      "name": "add_shot",
+      "description": "Voeg een shot toe na een bestaande index.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" }, "after_index": { "type": "integer" },
+          "narration": { "type": "string" }, "visual": { "type": "string" },
+          "on_screen_text": { "type": "string" }, "motion": { "type": "string" }
+        },
+        "required": ["slug", "after_index", "narration", "visual"]
+      }
+    },
+    {
+      "name": "produce",
+      "description": "Voer de productie uit: voice-over, muziek, beeld per shot, woord-voor-woord ondertitels en de eindmontage. Geeft het pad naar final.mp4.",
+      "parameters": {
+        "type": "object",
+        "properties": { "slug": { "type": "string" }, "force": { "type": "boolean" } },
+        "required": ["slug"]
+      }
+    },
+    {
+      "name": "make",
+      "description": "Alles in één keer: van Nederlandse prompt naar afgemonteerde video.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string" }, "reference": { "type": "string" },
+          "aspect": { "type": "string" }, "duration": { "type": "integer" }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "status",
+      "description": "Toon welke fases klaar zijn en waar de output staat.",
+      "parameters": { "type": "object", "properties": { "slug": { "type": "string" } }, "required": ["slug"] }
+    }
+  ]
+}

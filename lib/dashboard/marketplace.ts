@@ -4,7 +4,9 @@ import { getPrefs, type UserPrefs } from "@/lib/prefs/store";
 import { travelByMode, fastestMode, type ModeEstimate, type TravelModeKey } from "@/lib/geo/travel-modes";
 import { detectSeries, type Series } from "@/lib/shifts/series";
 import { listReplacementRequests } from "@/lib/replacements/store";
-import { offersForUser, type OfferStatus } from "@/lib/offers/store";
+import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/store";
+import { tenantsBlockingUser } from "@/lib/employer/relations";
+import { payoutEligibility } from "@/lib/fiscal/eligibility";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -62,6 +64,7 @@ export interface MarketplaceData {
   canApply: boolean;
   blockReason: string | null;
   home: { lat: number; lng: number } | null;
+  homeLabel: string | null;
   prefs: UserPrefs;
   shifts: MarketplaceShift[];
   newSinceLastVisit: number;
@@ -134,8 +137,10 @@ async function resolveFreelancer(userId: string) {
       matchingBlockedUntil: true,
       homeLatitude: true,
       homeLongitude: true,
+      homePostalCode: true,
       reliabilityScore: true,
       skills: { select: { skill: { select: { name: true } } } },
+      companyRegistration: { select: { street: true, houseNumber: true, city: true } },
       user: { select: { kycStatus: true } },
     },
   });
@@ -143,29 +148,45 @@ async function resolveFreelancer(userId: string) {
 }
 
 export async function getMarketplace(userId: string): Promise<MarketplaceData> {
-  const [profile, prefs] = await Promise.all([resolveFreelancer(userId), getPrefs(userId)]);
+  const [profile, prefs, eligibility] = await Promise.all([
+    resolveFreelancer(userId),
+    getPrefs(userId),
+    payoutEligibility(userId),
+  ]);
+
+  const matchingBlocked = Boolean(
+    profile?.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now(),
+  );
 
   const canApply =
     !!profile &&
     profile.user.kycStatus === "VERIFIED" &&
-    profile.kvkValid &&
+    eligibility.ok &&
     !profile.isBlacklisted &&
-    !(profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now());
+    !matchingBlocked;
 
   const blockReason = !profile
     ? "Rond eerst je verificatie af om diensten aan te nemen."
-    : profile.user.kycStatus !== "VERIFIED" || !profile.kvkValid
-      ? "Je kunt pas aannemen als je volledig geverifieerd bent."
-      : profile.isBlacklisted
-        ? "Je account kan momenteel geen diensten aannemen."
-        : profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now()
-          ? "Matching is tijdelijk beperkt vanwege Wet DBA-signalen."
-          : null;
+    : profile.user.kycStatus !== "VERIFIED"
+      ? "Je kunt pas aannemen als je identiteit is geverifieerd."
+      : !eligibility.ok
+        ? eligibility.reason
+        : profile.isBlacklisted
+          ? "Je account kan momenteel geen diensten aannemen."
+          : matchingBlocked
+            ? "Matching is tijdelijk beperkt vanwege Wet DBA-signalen."
+            : null;
 
   const home =
     profile && Number.isFinite(profile.homeLatitude)
       ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
       : null;
+  const reg = profile?.companyRegistration;
+  const homeLabel = !profile
+    ? null
+    : reg?.street
+      ? `${reg.street}${reg.houseNumber ? ` ${reg.houseNumber}` : ""}, ${reg.city ?? ""}`.replace(/,\s*$/, "")
+      : profile.homePostalCode || null;
   const skills = new Set((profile?.skills ?? []).map((s) => s.skill.name));
 
   const takenShiftIds = profile
@@ -202,30 +223,64 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     if (o.status !== "withdrawn") offerByShift.set(o.shiftId, { proposedRateCents: o.proposedRateCents, status: o.status });
   }
 
-  const rows = await prisma.shift.findMany({
-    where: {
-      status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
-      startsAt: { gte: new Date() },
-      id: { notIn: takenShiftIds },
-    },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      startsAt: true,
-      endsAt: true,
-      breakMinutes: true,
-      hourlyRateCents: true,
-      positions: true,
-      createdAt: true,
-      branchId: true,
-      requiredSkill: { select: { name: true } },
-      branch: { select: { name: true, city: true, latitude: true, longitude: true } },
-      _count: { select: { assignments: { where: { cancelledAt: null } } } },
-    },
-    orderBy: { startsAt: "asc" },
-    take: 60,
-  });
+  // Once you've reacted to a klus it disappears from the marketplace — it only
+  // lives under "Mijn klussen → In afwachting" from then on.
+  const hiddenShiftIds = [
+    ...new Set([...takenShiftIds, ...myOffers.filter((o) => o.status !== "withdrawn").map((o) => o.shiftId)]),
+  ];
+
+  const SHIFT_CARD_SELECT = {
+    id: true,
+    title: true,
+    description: true,
+    startsAt: true,
+    endsAt: true,
+    breakMinutes: true,
+    hourlyRateCents: true,
+    positions: true,
+    createdAt: true,
+    branchId: true,
+    requiredSkill: { select: { name: true } },
+    branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true } },
+    _count: { select: { assignments: { where: { cancelledAt: null } } } },
+  } as const;
+
+  // Shifts a colleague needs covered: they may already be FILLED (the original
+  // still holds the seat), so pull them in explicitly rather than by status.
+  const replacementShiftIds = [...replacementByShift.keys()].filter((id) => !hiddenShiftIds.includes(id));
+
+  const [openRows, replacementRows] = await Promise.all([
+    prisma.shift.findMany({
+      where: {
+        status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
+        startsAt: { gte: new Date() },
+        id: { notIn: hiddenShiftIds },
+      },
+      select: SHIFT_CARD_SELECT,
+      orderBy: { startsAt: "asc" },
+      take: 60,
+    }),
+    replacementShiftIds.length
+      ? prisma.shift.findMany({
+          where: { id: { in: replacementShiftIds }, startsAt: { gte: new Date() } },
+          select: SHIFT_CARD_SELECT,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const merged = [...openRows];
+  const seenIds = new Set(openRows.map((s) => s.id));
+  for (const r of replacementRows) {
+    if (!seenIds.has(r.id)) merged.push(r);
+  }
+
+  // Hide klussen from opdrachtgevers who have blocked this freelancer.
+  const blockingTenants = await tenantsBlockingUser(
+    [...new Set(merged.map((s) => s.branch.tenantId))],
+    userId,
+  );
+  const rows = (blockingTenants.size ? merged.filter((s) => !blockingTenants.has(s.branch.tenantId)) : merged);
+  rows.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
   const lastSeen = prefs.marketplaceSeenAt ? new Date(prefs.marketplaceSeenAt).getTime() : 0;
   let newSinceLastVisit = 0;
@@ -280,7 +335,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
       };
     });
 
-  return { canApply, blockReason, home, prefs, shifts, newSinceLastVisit };
+  return { canApply, blockReason, home, homeLabel, prefs, shifts, newSinceLastVisit };
 }
 
 export interface AgreementSummary {
@@ -312,7 +367,7 @@ export interface ShiftDetail extends MarketplaceShift {
 }
 
 export async function getShiftDetail(userId: string, shiftId: string): Promise<ShiftDetail | null> {
-  const market = await getMarketplace(userId);
+  const [market, ownOffer] = await Promise.all([getMarketplace(userId), myOfferForShift(userId, shiftId)]);
   const inList = market.shifts.find((s) => s.id === shiftId);
 
   const row = await prisma.shift.findUnique({
@@ -466,6 +521,9 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       replacementNote: null,
       myOffer: null,
     } satisfies MarketplaceShift);
+  if (ownOffer && ownOffer.status !== "withdrawn") {
+    base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: ownOffer.status };
+  }
 
   const agreementType =
     typeof (row.branch.matchingConfig as { agreementType?: string })?.agreementType === "string"

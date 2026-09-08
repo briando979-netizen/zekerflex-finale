@@ -2,6 +2,7 @@ import { PaymentStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
+import { transferToConnectedAccount } from "@/lib/billing/stripe";
 import type {
   SepaInstantPayoutRequest,
   SepaInstantPayoutResult,
@@ -34,15 +35,44 @@ export function payoutEndToEndId(invoiceId: string): string {
  * bank/PSP. The provider is expected to be idempotent on `endToEndId`; we still
  * treat a 409 as a success (already submitted). Settlement confirmation arrives
  * asynchronously via webhook and flips the Payment to SETTLED.
+ *
+ * When the freelancer has a Stripe Connect account with payouts enabled, this
+ * dispatches to a Stripe Transfer instead — same signature, same idempotency
+ * key, so both call sites (timesheet approval, payroll advances) needed no
+ * change beyond passing `stripeConnectedAccountId` through.
  */
 export async function triggerInstantPayout(
   req: SepaInstantPayoutRequest,
 ): Promise<SepaInstantPayoutResult> {
-  if (!isValidIban(req.creditorIban)) {
-    throw AppError.validation("Creditor IBAN failed checksum validation");
-  }
   if (req.amountCents <= 0) {
     throw AppError.validation("Payout amount must be positive");
+  }
+
+  if (req.stripeConnectedAccountId) {
+    try {
+      const transfer = await transferToConnectedAccount({
+        endToEndId: req.endToEndId,
+        amountCents: req.amountCents,
+        currency: req.currency,
+        destinationAccountId: req.stripeConnectedAccountId,
+        description: req.remittanceInfo.slice(0, 140),
+      });
+      return {
+        status: PaymentStatus.SUBMITTED,
+        providerRef: transfer.transferId,
+        acceptedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      logger.error("Stripe Connect transfer failed", {
+        endToEndId: req.endToEndId,
+        error: (err as Error).message,
+      });
+      throw AppError.paymentFailed("Could not transfer via Stripe Connect");
+    }
+  }
+
+  if (!isValidIban(req.creditorIban)) {
+    throw AppError.validation("Creditor IBAN failed checksum validation");
   }
   if (!env.SEPA_API_BASE_URL || !env.SEPA_API_KEY || !env.SEPA_CREDITOR_IBAN) {
     throw AppError.upstream("Instant SEPA provider is not configured");

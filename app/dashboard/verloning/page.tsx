@@ -4,6 +4,7 @@ import { payslipsForUser } from "@/lib/payroll/store";
 import { euro } from "@/lib/payroll/format";
 import { PageHeader, Panel, KpiCard } from "@/components/app/ui";
 import { PayslipList } from "@/components/app/PayslipList";
+import { RebuildPayslipsButton } from "@/components/app/RebuildPayslipsButton";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,10 @@ export default async function VerloningPage() {
       )}
 
       <div className="mt-8">
-        <Panel title="Overzicht per week">
+        <Panel
+          title="Overzicht per week"
+          {...(isPayroll ? { action: <RebuildPayslipsButton /> } : {})}
+        >
           <div className="p-4">
             <PayslipList payslips={payslips} />
           </div>

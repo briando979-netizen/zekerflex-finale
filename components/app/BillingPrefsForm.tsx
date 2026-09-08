@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export function BillingPrefsForm({
   initial,
 }: {
   initial: { billingEmail: string; splitByCostCentre: boolean; costCentres: string[] };
 }) {
+  const b = useT().billing;
   const [billingEmail, setBillingEmail] = useState(initial.billingEmail);
   const [split, setSplit] = useState(initial.splitByCostCentre);
   const [centres, setCentres] = useState(initial.costCentres.join("\n"));
@@ -27,9 +29,9 @@ export function BillingPrefsForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billingEmail, splitByCostCentre: split, costCentres }),
       });
-      setMsg(r.ok ? "Opgeslagen" : "Opslaan mislukt");
+      setMsg(r.ok ? b.saved : b.saveFailed);
     } catch {
-      setMsg("Opslaan mislukt");
+      setMsg(b.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -39,17 +41,17 @@ export function BillingPrefsForm({
     <div className="space-y-5 p-5">
       <div>
         <label htmlFor="billing-email" className="field-label">
-          Factuur-e-mailadres
+          {b.emailLabel}
         </label>
         <input
           id="billing-email"
           type="email"
           value={billingEmail}
           onChange={(e) => setBillingEmail(e.target.value)}
-          placeholder="facturen@jouwbedrijf.nl"
+          placeholder={b.emailPh}
           className="mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-neutralx-500">Hier ontvang je alle facturen. Leeg = het account-e-mailadres.</p>
+        <p className="mt-1 text-xs text-neutralx-500">{b.emailHint}</p>
       </div>
 
       <label className="flex items-start gap-3">
@@ -60,34 +62,29 @@ export function BillingPrefsForm({
           className="mt-0.5 h-4 w-4 accent-brand-500"
         />
         <span className="text-sm text-neutralx-700">
-          <span className="font-medium text-ink">Aparte factuur per kostenplaats</span>
-          <span className="mt-0.5 block text-xs text-neutralx-500">
-            In plaats van één collectieve factuur ontvang je een factuur per afdeling, locatie of entiteit.
-          </span>
+          <span className="font-medium text-ink">{b.splitLabel}</span>
+          <span className="mt-0.5 block text-xs text-neutralx-500">{b.splitHint}</span>
         </span>
       </label>
 
       <div>
         <label htmlFor="cost-centres" className="field-label">
-          PO-nummers / kostenplaatsen
+          {b.poLabel}
         </label>
         <textarea
           id="cost-centres"
           rows={4}
           value={centres}
           onChange={(e) => setCentres(e.target.value)}
-          placeholder={"Eén per regel, bijv.:\nPO-2026-Amsterdam\nPO-2026-Rotterdam"}
+          placeholder={b.poPh}
           className="mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm leading-relaxed"
         />
-        <p className="mt-1 text-xs text-neutralx-500">
-          Bij het plaatsen van een dienst kies je welk PO-nummer erbij hoort. Dat bepaalt op welke factuur de dienst
-          terechtkomt.
-        </p>
+        <p className="mt-1 text-xs text-neutralx-500">{b.poHint}</p>
       </div>
 
       <div className="flex items-center gap-3">
         <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm">
-          {saving ? "Bezig…" : "Opslaan"}
+          {saving ? b.saving : b.save}
         </button>
         {msg && <span className="text-sm text-neutralx-600">{msg}</span>}
       </div>

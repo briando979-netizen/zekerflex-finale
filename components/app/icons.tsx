@@ -121,3 +121,96 @@ export function IMail(_: P) {
     </svg>
   );
 }
+export function ISearch(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M20 20l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function ICompass(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M15.5 8.5l-1.8 5-3.7 1.8 1.8-5 3.7-1.8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function IBell(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5 2 6H4c.5-1 2-2 2-6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function IRocket(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2M9 11a10 10 0 0 1 8-6c2 0 3 1 3 3a10 10 0 0 1-6 8l-3 1-3-3 1-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="14.5" cy="9.5" r="1.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+export function IHeart(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M12 20s-7-4.4-9.2-8.5C1.3 8.7 2.8 5.5 6 5.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.2 0 4.7 3.2 3.2 6C19 15.6 12 20 12 20Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function IBan(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function IPin(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M12 21c4-4.5 7-7.7 7-11a7 7 0 1 0-14 0c0 3.3 3 6.5 7 11Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+export function IHash(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function IKey(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="8" cy="15" r="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M11 12l9-9M17 3l3 3M15 5l2.5 2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function IList(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function IHelp(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.7-2 2-2 3.5M12 17.5v.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function ISettings(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L16.5 2h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L5.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}

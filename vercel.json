@@ -3,19 +3,19 @@
   "crons": [
     {
       "path": "/api/internal/matching/tick",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/internal/active-hours/recompute",
-      "schedule": "0 */4 * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/internal/orchestration/tick",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/internal/rag/reindex",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }

@@ -6,6 +6,8 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { defineQuery, type QueryHandler } from "@/lib/admin-console/types";
+import { countStuckMatchingShifts } from "@/lib/notifications/dispatcher";
+import { getTravelRoutingStats } from "@/lib/geo/travel-time";
 
 // ---------------------------------------------------------------------------
 // Read-only query registry. Each handler is a fixed, parameterised query -
@@ -266,6 +268,34 @@ const activeShifts = defineQuery({
   },
 });
 
+const matchingEngineHealth = defineQuery({
+  name: "matching_engine_health",
+  description:
+    "Gezondheid van de matching-engine: shifts die vastzitten op status MATCHING zonder actieve pushgolf (de MAX_WAVES-doodlopende weg), en hoeveel procent van de reistijdberekeningen terugvalt op de heuristiek omdat de Google Maps-routing-API niet gebruikt is.",
+  params: z.object({}),
+  paramsHint: "{} (geen parameters)",
+  async run() {
+    const [stuckShifts, travel] = await Promise.all([
+      countStuckMatchingShifts(),
+      getTravelRoutingStats(),
+    ]);
+    return {
+      columns: ["metric", "value"],
+      rows: [
+        { metric: "Vastgelopen MATCHING-shifts (geen actieve golf)", value: stuckShifts },
+        { metric: "Reistijd-lookups via Google (live)", value: travel.live },
+        { metric: "Reistijd-lookups via heuristiek (fallback)", value: travel.fallback },
+        { metric: "Fallback-percentage", value: `${travel.fallbackRatePct}%` },
+      ],
+      scalar: stuckShifts,
+      note:
+        stuckShifts > 0
+          ? `${stuckShifts} shift(s) vastgelopen - handmatig terugzetten naar OPEN of opnieuw matchen.`
+          : "Geen vastgelopen shifts gevonden.",
+    };
+  },
+});
+
 export const QUERIES: Record<string, QueryHandler> = Object.fromEntries(
   [
     platformKpis,
@@ -273,5 +303,6 @@ export const QUERIES: Record<string, QueryHandler> = Object.fromEntries(
     searchFreelancers,
     complianceOverview,
     activeShifts,
+    matchingEngineHealth,
   ].map((h) => [h.name, h]),
 );

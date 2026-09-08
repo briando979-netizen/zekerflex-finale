@@ -2,12 +2,17 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
-import { OUTREACH_SYSTEM, ZEKERFLEX_PITCH } from "@/lib/sales/prompts";
+import {
+  OUTREACH_STEP_SYSTEM,
+  OUTREACH_SYSTEM,
+  ZEKERFLEX_PITCH,
+} from "@/lib/sales/prompts";
 
 // ---------------------------------------------------------------------------
-// LLM-drafted outreach. A draft is generated on demand; a human reviews,
-// (optionally edits,) approves and then actually sends it from their own mail
-// client. `markSent` only records that it went out - the platform never sends.
+// LLM-drafted outreach. A draft is generated on demand. In REVIEW mode a human
+// reviews / edits / approves it and the recruiter motor (or the human) sends
+// it via lib/sales/send.ts. In AUTOPILOT mode the engine approves + sends
+// automatically within the campaign's hard caps.
 // ---------------------------------------------------------------------------
 
 interface DraftShape {
@@ -15,14 +20,25 @@ interface DraftShape {
   body: string;
 }
 
-export async function draftOutreach(leadId: string, actorUserId: string) {
+/**
+ * Generate a draft for a given sequence step (0 = intro, 1 = reminder,
+ * 2 = breakup). Falls back to the generic prompt for out-of-range steps.
+ */
+export async function draftOutreach(
+  leadId: string,
+  actorUserId: string | null,
+  stepIndex = 0,
+) {
   const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
   if (!lead) throw AppError.notFound("Sales lead not found");
+
+  const step = Math.max(0, Math.min(OUTREACH_STEP_SYSTEM.length - 1, stepIndex));
+  const system = OUTREACH_STEP_SYSTEM[step] ?? OUTREACH_SYSTEM;
 
   const enrichment = (lead.enrichmentJson ?? {}) as Record<string, unknown>;
   const draft = await chatJson<DraftShape>({
     messages: [
-      { role: "system", content: `${OUTREACH_SYSTEM}\n\nContext over ZekerFlex:\n${ZEKERFLEX_PITCH}` },
+      { role: "system", content: `${system}\n\nContext over ZekerFlex:\n${ZEKERFLEX_PITCH}` },
       {
         role: "user",
         content: JSON.stringify({
@@ -30,12 +46,15 @@ export async function draftOutreach(leadId: string, actorUserId: string) {
           contactName: lead.contactName,
           city: lead.city,
           sector: lead.sector,
+          vacancySignal: lead.vacancySignal,
+          stepIndex: step,
           enrichment,
         }),
       },
     ],
     temperature: 0.4,
     maxTokens: 500,
+    purpose: "sales-outreach",
   });
 
   const subject = String(draft.subject ?? "").trim().slice(0, 200);
@@ -50,13 +69,16 @@ export async function draftOutreach(leadId: string, actorUserId: string) {
         leadId,
         subject,
         body,
+        stepIndex: step,
         status: "DRAFT",
         generatedByModel: "self-hosted-llm",
       },
     }),
     prisma.salesLead.update({
       where: { id: leadId },
-      data: { status: lead.status === "SENT" ? lead.status : "DRAFTED" },
+      data: {
+        status: ["SENT", "REPLIED", "WON"].includes(lead.status) ? lead.status : "DRAFTED",
+      },
     }),
   ]);
 
@@ -64,8 +86,8 @@ export async function draftOutreach(leadId: string, actorUserId: string) {
     category: "SALES",
     action: "sales.outreach.drafted",
     actorUserId,
-    actorLabel: "user",
-    summary: `Concept-outreach gegenereerd voor ${lead.companyName}`,
+    actorLabel: actorUserId ? "user" : "sales-ai",
+    summary: `Concept-outreach (stap ${step + 1}) gegenereerd voor ${lead.companyName}`,
     targetType: "salesOutreach",
     targetId: outreach.id,
   });
@@ -111,7 +133,7 @@ export async function editOutreach(
   return updated;
 }
 
-export async function approveOutreach(id: string, actorUserId: string) {
+export async function approveOutreach(id: string, actorUserId: string | null) {
   const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
   if (!outreach) throw AppError.notFound("Outreach not found");
   if (outreach.status !== "DRAFT") {
@@ -131,9 +153,32 @@ export async function approveOutreach(id: string, actorUserId: string) {
     category: "SALES",
     action: "sales.outreach.approved",
     actorUserId,
-    actorLabel: "user",
+    actorLabel: actorUserId ? "user" : "sales-ai",
     severity: "info",
     summary: `Outreach goedgekeurd voor verzending (${id})`,
+    targetType: "salesOutreach",
+    targetId: id,
+  });
+  return updated;
+}
+
+/** Drop a draft/approved/scheduled outreach without sending it. */
+export async function discardOutreach(id: string, actorUserId: string | null) {
+  const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
+  if (!outreach) throw AppError.notFound("Outreach not found");
+  if (["SENT"].includes(outreach.status)) {
+    throw AppError.precondition("Een verzonden mail kan niet worden weggegooid");
+  }
+  const updated = await prisma.salesOutreach.update({
+    where: { id },
+    data: { status: "DISCARDED" },
+  });
+  await recordAudit({
+    category: "SALES",
+    action: "sales.outreach.discarded",
+    actorUserId,
+    actorLabel: actorUserId ? "user" : "sales-ai",
+    summary: `Concept-outreach weggegooid (${id})`,
     targetType: "salesOutreach",
     targetId: id,
   });

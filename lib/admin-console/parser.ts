@@ -3,6 +3,7 @@ import { chatJson } from "@/lib/ai/client";
 import { QUERIES } from "@/lib/admin-console/queries";
 import { MUTATIONS } from "@/lib/admin-console/mutations";
 import type { ParsedIntent } from "@/lib/admin-console/types";
+import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 // ---------------------------------------------------------------------------
 // Turn a Dutch admin question into exactly one registry entry via the
@@ -44,6 +45,13 @@ const rawIntentSchema = z.object({
  *   orchestrator turns that into a "reasoning layer offline" clarification.
  */
 export async function parseIntent(question: string): Promise<ParsedIntent> {
+  const guard = inspectPrompt(question);
+  if (!guard.allowed) {
+    return {
+      kind: "unknown",
+      reason: "Deze instructie lijkt de veiligheidsgrenzen van Jarvis te willen omzeilen.",
+    };
+  }
   const raw = await chatJson<unknown>({
     messages: [
       { role: "system", content: `${SYSTEM_PROMPT}\n\n${buildCatalog()}` },

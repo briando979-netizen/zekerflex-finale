@@ -129,6 +129,30 @@ const NAV: NavEntry[] = [
     },
   },
   {
+    key: "shop",
+    href: "/shop",
+    label: "Shop",
+    match: "/shop",
+    menu: {
+      werknemers: {
+        eyebrow: "ZekerFlex essentials",
+        cta: { label: "Bekijk de shop", href: "/shop" },
+        items: [
+          { title: "Werkdag essentials", desc: "Praktische items voor onderweg, op locatie en in je tas.", href: "/shop" },
+          { title: "Kleding & accessoires", desc: "Draag het merk dat werk zekerheid geeft.", href: "/shop#kleding" },
+        ],
+      },
+      bedrijven: {
+        eyebrow: "ZekerFlex shop",
+        cta: { label: "Naar de shop", href: "/shop" },
+        items: [
+          { title: "Teamwear", desc: "Herkenbaar en verzorgd op iedere locatie.", href: "/shop#kleding" },
+          { title: "Cadeaus voor je team", desc: "Kleine essentials met een grote glimlach.", href: "/shop#cadeaus" },
+        ],
+      },
+    },
+  },
+  {
     key: "over",
     href: "/over-ons",
     label: "Over ons",

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TriageBoard } from "@/components/admin/TriageBoard";
 import { AStat, APanel } from "@/components/admin/ui";
+import { money } from "@/components/app/ui";
 import { RingGauge, AreaChart } from "@/components/admin/charts";
 import {
   IActivity,
@@ -37,6 +38,7 @@ interface Overview {
     openFindings: number;
   };
   traffic: { activeVisitors: number; pageviewsToday: number; visitorsToday: number };
+  business: { revenueTodayCents: number; revenueMonthCents: number; activeShifts: number; usersTotal: number; newUsersToday: number };
   agents: { agent: string; lastTitle: string; at: string }[];
   recentFindings: { severity: string; category: string; title: string; createdAt: string }[];
   voiceQueued: number;
@@ -169,6 +171,13 @@ export function ControlCenter() {
         />
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AStat label="Omzet vandaag" value={money(o?.business.revenueTodayCents ?? 0)} icon={<IWallet />} sub="betaalde facturen" watermark={<BigIcon><IWallet /></BigIcon>} />
+        <AStat label="Omzet deze maand" value={money(o?.business.revenueMonthCents ?? 0)} icon={<IActivity />} sub="betaalde facturen" watermark={<BigIcon><IActivity /></BigIcon>} />
+        <AStat label="Actieve diensten" value={o?.business.activeShifts ?? "–"} icon={<IShield />} sub="open en gepland" watermark={<BigIcon><IShield /></BigIcon>} />
+        <AStat label="Nieuwe gebruikers" value={o?.business.newUsersToday ?? "–"} icon={<IUsers />} sub={`${o?.business.usersTotal ?? 0} totaal`} watermark={<BigIcon><IUsers /></BigIcon>} />
+      </div>
+
       <TriageBoard />
 
       <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
@@ -199,6 +208,22 @@ export function ControlCenter() {
                     {val ?? "–"}
                   </p>
                 </div>
+              ))}
+            </div>
+          </APanel>
+
+          <APanel title="Vandaag in beweging" subtitle="De belangrijkste operationele signalen">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                ["Nieuwe gebruikers", o?.business.newUsersToday ?? 0, "/admin/gebruikers", "emerald"],
+                ["Openstaande diensten", o?.business.activeShifts ?? 0, "/admin/bedrijven", "blue"],
+                ["Nieuwe omzet", money(o?.business.revenueTodayCents ?? 0), "/admin/fiscaal", "amber"],
+              ].map(([label, value, href, tone]) => (
+                <Link key={label as string} href={href as string} className="rounded-xl p-3 transition hover:brightness-110" style={{ background: tone === "emerald" ? "rgba(16,185,129,.12)" : tone === "blue" ? "rgba(96,165,250,.12)" : "rgba(245,158,11,.12)", border: "1px solid var(--a-border)" }}>
+                  <p className="text-xs" style={{ color: "var(--a-mute)" }}>{label as string}</p>
+                  <p className="num mt-2 font-display text-xl font-bold" style={{ color: "var(--a-text)" }}>{value as string | number}</p>
+                  <p className="mt-1 text-[11px]" style={{ color: "var(--a-accent)" }}>Openen →</p>
+                </Link>
               ))}
             </div>
           </APanel>

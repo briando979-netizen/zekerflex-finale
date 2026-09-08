@@ -8,8 +8,11 @@ import { getUserProfileExtra } from "@/lib/profile/store";
 import { getProfileStats } from "@/lib/dashboard/profile-stats";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { AvatarUpload } from "@/components/app/AvatarUpload";
+import { UitzendContractCard } from "@/components/app/UitzendContractCard";
+import { listCertificates } from "@/lib/certificates/store";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
+import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +37,8 @@ export default async function ProfielPage() {
         payoutIban: true,
         homePostalCode: true,
         timezone: true,
+        stripeConnectedAccountId: true,
+        stripePayoutsEnabled: true,
       },
     }),
     prisma.user.findUnique({
@@ -42,13 +47,16 @@ export default async function ProfielPage() {
     }),
     getFiscal(principal.userId),
   ]);
-  const [profileExtra, stats, mailPrefs] = await Promise.all([
+  const [profileExtra, stats, mailPrefs, certs] = await Promise.all([
     getUserProfileExtra(principal.userId),
     getProfileStats(principal.userId),
     mailPrefsView(user?.email ?? principal.email),
+    listCertificates(principal.userId),
   ]);
   const name = user?.fullName ?? principal.fullName;
   const stars = Math.round(stats.reviews.average);
+  const isUitzend = invoiceModeFor(fiscal) === "payroll";
+  const validCerts = certs.filter((c) => c.status === "valid").length;
 
   return (
     <>
@@ -124,7 +132,7 @@ export default async function ProfielPage() {
           {!o.profileComplete && (
             <div className="border-t border-hair px-5 py-4">
               <Link href="/dashboard/verificatie" className="btn-primary">
-                KVK koppelen & ID verifiëren
+                {isUitzend ? "Verificatie afronden" : "KVK koppelen & ID verifiëren"}
               </Link>
             </div>
           )}
@@ -153,45 +161,95 @@ export default async function ProfielPage() {
           </dl>
         </Panel>
 
-        <Panel title="Werkvorm & fiscaal">
-          <dl className="divide-y divide-hair text-sm">
-            <Field k="Werkvorm" v={fiscal.workerKind ? KIND_LABEL[fiscal.workerKind] : "Nog niet gekozen"} />
-            <Field
-              k="Btw-nummer"
-              v={
-                fiscal.vatNumber ? (
-                  <>
-                    {fiscal.vatNumber}{" "}
-                    <StatusPill tone={fiscal.vatValid ? "ok" : "warn"}>{fiscal.vatValid ? "gevalideerd" : fiscal.vatStatus ?? "open"}</StatusPill>
-                  </>
-                ) : fiscal.korApplies ? (
-                  "Kleineondernemersregeling"
-                ) : fiscal.workerKind === "uitzendkracht" ? (
-                  "n.v.t. (verloning)"
-                ) : (
-                  "—"
-                )
-              }
-            />
-            <Field k="KVK-nummer" v={fiscal.kvkNumber ?? profile?.kvkNumber ?? "—"} />
-            <Field k="Facturatie / verloning" v={MODE_LABEL[invoiceModeFor(fiscal)] ?? invoiceModeFor(fiscal)} />
-          </dl>
+        {isUitzend ? (
+          <Panel title="Werkvorm & verloning">
+            <dl className="divide-y divide-hair text-sm">
+              <Field k="Werkvorm" v="Uitzendkracht — ZekerFlex is je werkgever" />
+              <Field
+                k="BSN"
+                v={fiscal.bsnLast4 ? `bekend (eindigt op ${fiscal.bsnLast4})` : "Nog niet ingevuld"}
+              />
+              <Field k="Loonheffingskorting" v={fiscal.loonheffingskorting ? "Toegepast" : "Niet toegepast"} />
+              <Field k="Verloning" v="Wekelijkse loonstrook via payroll" />
+              <Field k="Btw / KVK" v="Niet nodig als uitzendkracht" />
+            </dl>
+            <div className="flex flex-wrap gap-4 border-t border-hair px-5 py-4 text-sm font-medium text-brand-600">
+              <Link href="/dashboard/verloning">Loonstroken & StiPP →</Link>
+              <Link href="/dashboard/fiscaal">BSN & loonheffing aanpassen →</Link>
+            </div>
+          </Panel>
+        ) : (
+          <Panel title="Werkvorm & fiscaal">
+            <dl className="divide-y divide-hair text-sm">
+              <Field k="Werkvorm" v={fiscal.workerKind ? KIND_LABEL[fiscal.workerKind] : "Nog niet gekozen"} />
+              <Field
+                k="Btw-nummer"
+                v={
+                  fiscal.vatNumber ? (
+                    <>
+                      {fiscal.vatNumber}{" "}
+                      <StatusPill tone={fiscal.vatValid ? "ok" : "warn"}>{fiscal.vatValid ? "gevalideerd" : fiscal.vatStatus ?? "open"}</StatusPill>
+                    </>
+                  ) : fiscal.korApplies ? (
+                    "Kleineondernemersregeling"
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+              <Field k="KVK-nummer" v={fiscal.kvkNumber ?? profile?.kvkNumber ?? "—"} />
+              <Field k="Facturatie" v={MODE_LABEL[invoiceModeFor(fiscal)] ?? invoiceModeFor(fiscal)} />
+            </dl>
+            <div className="border-t border-hair px-5 py-4">
+              <Link href="/dashboard/fiscaal" className="text-sm font-medium text-brand-600">
+                Werkvorm & btw aanpassen →
+              </Link>
+            </div>
+          </Panel>
+        )}
+
+        {isUitzend && (
+          <Panel title="Uitzendovereenkomst">
+            <div className="p-5">
+              <UitzendContractCard />
+            </div>
+          </Panel>
+        )}
+
+        <Panel title="Certificaten">
+          <div className="px-5 py-4 text-sm">
+            <p className="text-neutralx-600">
+              {certs.length === 0
+                ? "Nog geen certificaten toegevoegd."
+                : `${validCerts} geldig${certs.length > validCerts ? ` · ${certs.length - validCerts} in controle/verlopen` : ""}`}
+            </p>
+            <p className="mt-1 text-xs text-neutralx-500">
+              VCA, BHV, heftruck, rijbewijzen. Klussen die een certificaat vragen worden vrijgegeven
+              zodra het geldig is.
+            </p>
+          </div>
           <div className="border-t border-hair px-5 py-4">
-            <Link href="/dashboard/fiscaal" className="text-sm font-medium text-brand-600">
-              Werkvorm & btw aanpassen →
+            <Link href="/dashboard/certificaten" className="text-sm font-medium text-brand-600">
+              Certificaten beheren →
             </Link>
           </div>
         </Panel>
 
         <Panel title="Uitbetaling">
+          <div className="border-b border-hair">
+            <StripeConnectPayout
+              initialConnected={Boolean(profile?.stripeConnectedAccountId)}
+              initialPayoutsEnabled={Boolean(profile?.stripePayoutsEnabled)}
+            />
+          </div>
           <dl className="divide-y divide-hair text-sm">
-            <Field k="IBAN" v={profile?.payoutIban ?? "Nog niet ingesteld"} />
+            <Field k="IBAN (fallback)" v={fiscal.iban ?? profile?.payoutIban ?? "Nog niet ingesteld"} />
             <Field k="Postcode thuisbasis" v={profile?.homePostalCode ?? "—"} />
             <Field k="Tijdzone" v={profile?.timezone ?? "Europe/Amsterdam"} />
           </dl>
           <div className="border-t border-hair px-5 py-4">
-            <Link href="/dashboard/uitbetalingen" className="text-sm font-medium text-brand-600">
-              Bekijk uitbetalingen →
+            <Link href={isUitzend ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="text-sm font-medium text-brand-600">
+              {isUitzend ? "Bekijk je loonstroken →" : "Bekijk uitbetalingen →"}
             </Link>
           </div>
         </Panel>

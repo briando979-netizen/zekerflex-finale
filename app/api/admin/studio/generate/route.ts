@@ -15,7 +15,9 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 600;
+// Vercel caps Serverless Function duration at 300s on the Hobby plan; a slow
+// image backend can still exceed that, but 300 is the platform ceiling here.
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   presetKey: z.string().max(60).optional(),

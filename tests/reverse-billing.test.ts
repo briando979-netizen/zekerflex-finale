@@ -42,6 +42,24 @@ describe("buildReverseBillingInvoices", () => {
     expect(r.freelancerInvoice.totalCents).toBe(24000);
   });
 
+  it("adds a VAT-inclusive extra-costs line without double-charging VAT", () => {
+    const r = buildReverseBillingInvoices({
+      ...base,
+      freelancerCountry: "NL",
+      recipientCountry: "NL",
+      freelancerVatValid: true,
+      extraCostsGrossCents: 12_100, // EUR 121,00 incl. 21% VAT -> EUR 100 net
+      extraCostsNote: "Parkeerkosten",
+    });
+    expect(r.freelancerInvoice.lines).toHaveLength(2);
+    expect(r.freelancerInvoice.lines[1]!.unitPriceCents).toBe(10_000);
+    expect(r.freelancerInvoice.lines[1]!.description).toContain("Parkeerkosten");
+    expect(r.freelancerInvoice.subtotalCents).toBe(34_000);
+    expect(r.freelancerInvoice.vatCents).toBe(7_140);
+    // 29040 (shift incl. VAT) + 12100 (extra costs incl. VAT) exactly
+    expect(r.freelancerInvoice.totalCents).toBe(41_140);
+  });
+
   it("bills a separate platform-fee invoice at a flat rate per hour", () => {
     const r = buildReverseBillingInvoices({
       ...base,

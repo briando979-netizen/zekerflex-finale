@@ -96,3 +96,16 @@ export async function hasReviewed(
   const all = await listReviews(type, id);
   return all.some((r) => r.authorId === authorId && (!shiftId || r.shiftId === shiftId));
 }
+
+/** The review a specific author left for this subject (optionally for one shift). */
+export async function getReviewBy(
+  type: ReviewSubject,
+  id: string,
+  authorId: string,
+  shiftId?: string,
+): Promise<Review | null> {
+  const all = await listReviews(type, id);
+  return (
+    all.find((r) => r.authorId === authorId && (!shiftId || r.shiftId === shiftId)) ?? null
+  );
+}

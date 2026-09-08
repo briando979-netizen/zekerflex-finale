@@ -1,0 +1,280 @@
+{
+  "slug": "smoke-robot",
+  "prompt": "cinematische film over een eenzame robot die een vuurvlieg volgt",
+  "created_at": "2026-09-04T04:57:32",
+  "brief": {
+    "prompt": "cinematische film over een eenzame robot die een vuurvlieg volgt",
+    "title": "De Gloed",
+    "subject": "Een eenzame robot volgt een vuurvlieg door de nacht",
+    "style": "cinematic",
+    "mood": "epic",
+    "language": "nl",
+    "voice_gender": "male",
+    "duration_s": 20,
+    "aspect": "16:9",
+    "palette": [
+      "#05060a",
+      "#122844",
+      "#2f6fb0",
+      "#d7e6f5"
+    ],
+    "audience": "algemeen publiek",
+    "cta": "Volg het licht.",
+    "notes": ""
+  },
+  "style_profile": null,
+  "research": "",
+  "script": {
+    "title": "De Gloed",
+    "logline": "Een eenzame robot vindt hoop in een klein licht.",
+    "shots": [
+      {
+        "index": 0,
+        "narration": "In een stille, verlaten fabriek ontwaakt een robot.",
+        "visual": "a lone weathered robot powering up inside a vast dark abandoned factory, single shaft of light",
+        "on_screen_text": "",
+        "seconds": 4.6,
+        "motion": "slow-push",
+        "palette": []
+      },
+      {
+        "index": 1,
+        "narration": "Dan verschijnt er een vuurvlieg, zacht knipperend in het donker.",
+        "visual": "a single glowing firefly drifting through the darkness, soft bokeh",
+        "on_screen_text": "",
+        "seconds": 4.9,
+        "motion": "pan-right",
+        "palette": []
+      },
+      {
+        "index": 2,
+        "narration": "De robot strekt zijn hand uit en volgt het licht naar buiten.",
+        "visual": "the robot reaching a metal hand toward the firefly, walking out into a moonlit field",
+        "on_screen_text": "",
+        "seconds": 5.7,
+        "motion": "orbit",
+        "palette": []
+      },
+      {
+        "index": 3,
+        "narration": "",
+        "visual": "wide cinematic shot of the robot silhouetted against a huge starry sky, firefly leading the way",
+        "on_screen_text": "Volg het licht.",
+        "seconds": 3.2,
+        "motion": "slow-push",
+        "palette": []
+      }
+    ]
+  },
+  "voice": [
+    {
+      "shot_index": 0,
+      "audio_path": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\voice\\vo_00.m4a",
+      "duration": 4.0,
+      "words": [
+        {
+          "word": "In",
+          "start": 0.1,
+          "end": 0.275
+        },
+        {
+          "word": "een",
+          "start": 0.275,
+          "end": 0.35000000000000003
+        },
+        {
+          "word": "stille",
+          "start": 0.35,
+          "end": 0.7749999999999999
+        },
+        {
+          "word": "verlaten",
+          "start": 0.925,
+          "end": 1.4375
+        },
+        {
+          "word": "fabriek",
+          "start": 1.4375,
+          "end": 1.9375
+        },
+        {
+          "word": "ontwaakt",
+          "start": 1.9375,
+          "end": 2.4
+        },
+        {
+          "word": "een",
+          "start": 2.4,
+          "end": 2.475
+        },
+        {
+          "word": "robot",
+          "start": 2.475,
+          "end": 3.0875000000000004
+        }
+      ]
+    },
+    {
+      "shot_index": 1,
+      "audio_path": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\voice\\vo_01.m4a",
+      "duration": 4.2,
+      "words": [
+        {
+          "word": "Dan",
+          "start": 0.1,
+          "end": 0.3125
+        },
+        {
+          "word": "verschijnt",
+          "start": 0.3125,
+          "end": 0.6875
+        },
+        {
+          "word": "er",
+          "start": 0.6875,
+          "end": 0.75
+        },
+        {
+          "word": "een",
+          "start": 0.75,
+          "end": 0.85
+        },
+        {
+          "word": "vuurvlieg",
+          "start": 0.85,
+          "end": 1.4249999999999998
+        },
+        {
+          "word": "zacht",
+          "start": 1.775,
+          "end": 2.1374999999999997
+        },
+        {
+          "word": "knipperend",
+          "start": 2.1375,
+          "end": 2.7125000000000004
+        },
+        {
+          "word": "in",
+          "start": 2.7125,
+          "end": 2.8
+        },
+        {
+          "word": "het",
+          "start": 2.8,
+          "end": 2.8874999999999997
+        },
+        {
+          "word": "donker",
+          "start": 2.8875,
+          "end": 3.3375000000000004
+        }
+      ]
+    },
+    {
+      "shot_index": 2,
+      "audio_path": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\voice\\vo_02.m4a",
+      "duration": 4.0,
+      "words": [
+        {
+          "word": "De",
+          "start": 0.1,
+          "end": 0.275
+        },
+        {
+          "word": "robot",
+          "start": 0.275,
+          "end": 0.6625000000000001
+        },
+        {
+          "word": "strekt",
+          "start": 0.6625,
+          "end": 0.925
+        },
+        {
+          "word": "zijn",
+          "start": 0.925,
+          "end": 1.0625
+        },
+        {
+          "word": "hand",
+          "start": 1.0625,
+          "end": 1.3
+        },
+        {
+          "word": "uit",
+          "start": 1.3,
+          "end": 1.7000000000000002
+        },
+        {
+          "word": "en",
+          "start": 1.7,
+          "end": 1.825
+        },
+        {
+          "word": "volgt",
+          "start": 1.825,
+          "end": 2.075
+        },
+        {
+          "word": "het",
+          "start": 2.075,
+          "end": 2.2
+        },
+        {
+          "word": "licht",
+          "start": 2.2,
+          "end": 2.4250000000000003
+        },
+        {
+          "word": "naar",
+          "start": 2.425,
+          "end": 2.5374999999999996
+        },
+        {
+          "word": "buiten",
+          "start": 2.5375,
+          "end": 3.0625
+        }
+      ]
+    }
+  ],
+  "music_path": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\work\\music.m4a",
+  "shot_clips": [
+    "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\clips\\shot_00.mp4",
+    "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\clips\\shot_01.mp4",
+    "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\clips\\shot_02.mp4",
+    "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\clips\\shot_03.mp4"
+  ],
+  "subtitle_path": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\work\\subs.ass",
+  "outputs": {
+    "16:9": "C:\\Users\\pc\\Documents\\zekerflex finale\\studio\\projects\\smoke-robot\\out\\final.mp4"
+  },
+  "done": [
+    "reference",
+    "brief",
+    "research",
+    "script",
+    "reference",
+    "brief",
+    "research",
+    "script",
+    "voice",
+    "music",
+    "visuals",
+    "subtitles",
+    "assemble"
+  ],
+  "log": [
+    "04:58:14 voice-over (edge-tts)",
+    "04:58:19   → 3 regels ingesproken",
+    "04:58:19 muziek (synth)",
+    "04:58:22 beeld genereren (procedural)",
+    "04:58:22   shot 1/4 (4.6s) slow-push",
+    "04:58:38   shot 2/4 (4.9s) pan-right",
+    "04:58:56   shot 3/4 (5.7s) orbit",
+    "04:59:17   shot 4/4 (3.2s) slow-push",
+    "04:59:27 woord-voor-woord ondertitels",
+    "04:59:27 monteren met FFmpeg"
+  ]
+}

@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, dateShort } from "@/components/app/ui";
+import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -39,26 +40,21 @@ export default async function WerkgeverCompliancePage() {
   const high = records.filter((r) => r.riskLevel === "HIGH").length;
   const medium = records.filter((r) => r.riskLevel === "MEDIUM").length;
 
+  const cp = getDict().compliance;
   return (
     <>
-      <PageHeader
-        title="Compliance"
-        subtitle="Wet DBA-signalen per samenwerking. ZekerFlex beperkt matching automatisch bij hoog risico."
-      />
+      <PageHeader title={cp.title} subtitle={cp.subtitle} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Hoog risico" value={String(high)} tone={high > 0 ? "crit" : "default"} />
-        <KpiCard label="Aandacht" value={String(medium)} tone={medium > 0 ? "warn" : "default"} />
-        <KpiCard label="Beoordelingen" value={String(records.length)} />
+        <KpiCard label={cp.kpiHigh} value={String(high)} tone={high > 0 ? "crit" : "default"} />
+        <KpiCard label={cp.kpiMedium} value={String(medium)} tone={medium > 0 ? "warn" : "default"} />
+        <KpiCard label={cp.kpiCount} value={String(records.length)} />
       </div>
 
       <div className="mt-8">
-        <Panel title="Recente beoordelingen">
+        <Panel title={cp.recentPanel}>
           {records.length === 0 ? (
-            <EmptyState
-              title="Geen signalen"
-              body="Er zijn nog geen Wet DBA-risico's vastgesteld voor jouw vestigingen."
-            />
+            <EmptyState title={cp.emptyTitle} body={cp.emptyBody} />
           ) : (
             <ul className="divide-y divide-hair">
               {records.map((r) => (

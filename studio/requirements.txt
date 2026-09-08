@@ -1,0 +1,11 @@
+# ZekerFlex Video Studio
+pillow>=10
+numpy>=1.24
+imageio>=2.31
+imageio-ffmpeg>=0.4.9
+edge-tts>=6.1
+# optioneel — YouTube-referenties:
+# yt-dlp>=2024.0
+#
+# LLM: draai Ollama lokaal (ollama pull llama3.1:8b) OF zet een van
+#   ANTHROPIC_API_KEY / OPENAI_API_KEY / LLM_BASE_URL in de omgeving.

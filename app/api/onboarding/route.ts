@@ -9,7 +9,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const fieldsSchema = z.object({
-  kvkNumber: z.string().trim().min(6).max(20),
+  // absent for uitzendkrachten — they don't have a KVK
+  kvkNumber: z.string().trim().max(20).optional(),
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
   houseNumber: z.string().trim().min(1).max(12),
   payoutIban: z.string().trim().min(15).max(34),
@@ -32,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     const parsed = fieldsSchema.safeParse({
-      kvkNumber: form.get("kvkNumber"),
+      kvkNumber: form.get("kvkNumber") ?? undefined,
       postalCode: form.get("postalCode"),
       houseNumber: form.get("houseNumber"),
       payoutIban: form.get("payoutIban"),
@@ -60,7 +61,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await submitFreelancerOnboarding({
       userId: principal.userId,
-      kvkNumber: parsed.data.kvkNumber,
+      kvkNumber: parsed.data.kvkNumber ?? "",
       postalCode: parsed.data.postalCode,
       houseNumber: parsed.data.houseNumber,
       payoutIban: parsed.data.payoutIban,

@@ -23,7 +23,13 @@ const DOC_LABEL: Record<string, string> = {
   DRIVERS_LICENSE: "Rijbewijs",
 };
 
-export function OnboardingForm({ defaultName }: { defaultName: string }) {
+export function OnboardingForm({
+  defaultName,
+  requireKvk = true,
+}: {
+  defaultName: string;
+  requireKvk?: boolean;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
@@ -132,19 +138,31 @@ export function OnboardingForm({ defaultName }: { defaultName: string }) {
         <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
       )}
 
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-ink">1. Onderneming</legend>
-        <label className="block">
-          <span className="field-label">KVK-nummer</span>
-          <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
-          <span className="mt-1 block text-xs text-neutralx-400">
-            We controleren dit live in het Handelsregister.
-          </span>
-        </label>
-      </fieldset>
+      {requireKvk && (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold text-ink">1. Onderneming</legend>
+          <label className="block">
+            <span className="field-label">KVK-nummer</span>
+            <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
+            <span className="mt-1 block text-xs text-neutralx-400">
+              We controleren dit live in het Handelsregister.
+            </span>
+          </label>
+        </fieldset>
+      )}
+
+      {!requireKvk && (
+        <p className="rounded-lg border border-hair bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-500">
+          Je werkt als uitzendkracht — je hoeft geen KVK te koppelen. Vul hieronder je thuisbasis,
+          rekeningnummer en identiteitsbewijs in. Je BSN en loonheffingskorting vul je apart in bij
+          &ldquo;Uitzenden&rdquo;.
+        </p>
+      )}
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-ink">2. Thuisbasis & uitbetaling</legend>
+        <legend className="text-sm font-semibold text-ink">
+          {requireKvk ? "2." : "1."} Thuisbasis &amp; uitbetaling
+        </legend>
         <div className="grid grid-cols-[1fr_100px] gap-3">
           <label className="block">
             <span className="field-label">Postcode</span>
@@ -162,7 +180,9 @@ export function OnboardingForm({ defaultName }: { defaultName: string }) {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-ink">3. Identiteitsbewijs</legend>
+        <legend className="text-sm font-semibold text-ink">
+          {requireKvk ? "3." : "2."} Identiteitsbewijs
+        </legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="field-label">Type document</span>

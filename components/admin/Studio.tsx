@@ -156,17 +156,29 @@ export function Studio() {
   const ok = health?.configured && health?.reachable;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">Studio</h1>
-        <p className="mt-1 text-sm text-neutralx-600">
-          Genereer marketingbeelden met het lokale beeldmodel en plaats ze direct op de site.
-        </p>
+    <div className="studio-scope -m-4 min-h-[calc(100vh-7rem)] bg-[#151515] px-4 py-8 text-white lg:-m-8 lg:px-8 lg:py-10">
+      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="studio-kicker">ZekerFlex creative control</p>
+          <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Maak beelden die werk in beweging zetten.</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">Genereer, bewerk en publiceer visuele content vanuit één lokale creatieve werkplek.</p>
+        </div>
+        <div className="studio-status"><span className="h-2 w-2 rounded-full bg-[#8BEF3D]" /> {ok ? "Creative engine online" : "Creative engine offline"}</div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["AI Image", "Nieuwe campagnebeelden", "✦", "#8BEF3D"],
+          ["Brand assets", "Hero’s en social visuals", "▣", "#65B8FF"],
+          ["Site slots", "Direct publiceren", "↗", "#FFB84D"],
+          ["Local first", "Alles blijft op de box", "◉", "#D18CFF"],
+        ].map(([title, detail, icon, color]) => <div key={title} className="studio-tool"><span className="studio-tool-icon" style={{ color }}>{icon}</span><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-white/45">{detail}</p></div><span className="ml-auto text-white/25">›</span></div>)}
       </div>
 
       {/* backend status */}
       <div
-        className={`card p-4 text-sm ${
+        className={`studio-backend p-4 text-sm ${
           ok ? "border-ok/30 bg-ok/5" : "border-warn/30 bg-warn/5"
         }`}
       >
@@ -217,9 +229,9 @@ export function Studio() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         {/* controls */}
-        <div className="card space-y-5 p-5">
+        <div className="studio-panel space-y-5 p-5 sm:p-6">
           <div className="grid grid-cols-2 gap-1 rounded-full border border-hairstrong p-1">
             {(["preset", "idea"] as const).map((m) => (
               <button
@@ -318,7 +330,7 @@ export function Studio() {
         </div>
 
         {/* result */}
-        <div className="card flex flex-col p-5">
+        <div className="studio-panel flex min-h-[480px] flex-col p-5 sm:p-6">
           {result ? (
             <>
               <div className="overflow-hidden rounded-xl border border-hair bg-paper-soft">
@@ -369,26 +381,26 @@ export function Studio() {
 
       {/* slots overview */}
       <div>
-        <h2 className="mb-1 text-sm font-semibold text-ink">Beeldplekken op de site</h2>
-        <p className="mb-3 text-xs text-neutralx-500">
+        <div className="mb-4 flex items-end justify-between gap-4"><div><p className="studio-kicker">Asset library</p><h2 className="mt-2 font-display text-2xl font-bold">Beeldplekken op de site</h2></div><span className="text-xs text-white/40">{slots.filter((s) => s.ready).length}/{slots.length} live</span></div>
+        <p className="mb-3 text-xs text-white/45">
           Upload een eigen foto (stock of een shoot) of gebruik een gegenereerd beeld hierboven.
           Zodra er een foto staat, verdwijnt de illustratie automatisch op de site.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {slots.map((s) => (
-            <div key={s.key} className="card overflow-hidden">
+            <div key={s.key} className="studio-asset overflow-hidden">
               <div className="aspect-[4/3] bg-paper-soft">
                 {s.ready ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={`/marketing/${s.file}?v=${Date.now().toString(36)}`} alt={s.spec.alt} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-neutralx-400">
+                    <div className="flex h-full items-center justify-center text-xs text-white/35">
                     illustratie (geen foto)
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <span className="truncate text-xs font-medium text-ink">{SLOT_LABEL[s.key] ?? s.key}</span>
+                <span className="truncate text-xs font-medium text-white">{SLOT_LABEL[s.key] ?? s.key}</span>
                 <div className="flex flex-shrink-0 items-center gap-2">
                   <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline">
                     {s.ready ? "vervang" : "upload"}
@@ -417,6 +429,7 @@ export function Studio() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 import { llmHealth } from "@/lib/ai/client";
 import { pushChannels } from "@/lib/notifications/push";
+import { countStuckMatchingShifts } from "@/lib/notifications/dispatcher";
+import { getTravelRoutingStats } from "@/lib/geo/travel-time";
 
 // ---------------------------------------------------------------------------
 // Observation phase of the orchestration cycle: a compact, structured picture
@@ -35,6 +37,14 @@ export interface OrchestrationSnapshot {
   };
   dba: { high: number; critical: number };
   sales: { newLeads: number; draftsAwaitingApproval: number };
+  matching: {
+    /** MATCHING shifts with no live wave state - the MAX_WAVES dead end. */
+    stuckShifts: number;
+    /** Share of travel-routing lookups that fell back to the heuristic
+     * because the Google Maps Distance Matrix API was unavailable - also a
+     * proxy for how much the matching engine actually depends on Google. */
+    travelFallbackRatePct: number;
+  };
 }
 
 async function ok(fn: () => Promise<unknown>): Promise<boolean> {
@@ -66,6 +76,8 @@ export async function gatherSnapshot(): Promise<OrchestrationSnapshot> {
     dbaCritical,
     newLeads,
     draftsAwaitingApproval,
+    stuckMatchingShifts,
+    travelRoutingStats,
   ] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
@@ -101,6 +113,8 @@ export async function gatherSnapshot(): Promise<OrchestrationSnapshot> {
     prisma.dbaComplianceRecord.count({ where: { riskLevel: "CRITICAL" } }),
     prisma.salesLead.count({ where: { status: "NEW" } }),
     prisma.salesOutreach.count({ where: { status: "DRAFT" } }),
+    countStuckMatchingShifts(),
+    getTravelRoutingStats(),
   ]);
 
   return {
@@ -125,5 +139,9 @@ export async function gatherSnapshot(): Promise<OrchestrationSnapshot> {
     },
     dba: { high: dbaHigh, critical: dbaCritical },
     sales: { newLeads, draftsAwaitingApproval },
+    matching: {
+      stuckShifts: stuckMatchingShifts,
+      travelFallbackRatePct: travelRoutingStats.fallbackRatePct,
+    },
   };
 }

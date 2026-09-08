@@ -3,15 +3,16 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import { addReview, hasReviewed, listReviews, reviewSummary } from "@/lib/reviews/store";
+import { addReview, getReviewBy, hasReviewed, listReviews, reviewSummary } from "@/lib/reviews/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/reviews?type=freelancer|company&id=...  — summary + recent (6 months).
+//   &mine=1[&shiftId=...] also returns the caller's own review for this subject.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    await requirePrincipal();
+    const me = await requirePrincipal();
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
     const id = url.searchParams.get("id");
@@ -19,7 +20,12 @@ export async function GET(request: Request): Promise<NextResponse> {
       throw AppError.validation("type (freelancer|company) en id vereist");
     }
     const [summary, all] = await Promise.all([reviewSummary(type, id), listReviews(type, id)]);
-    return NextResponse.json({ summary, total: all.length });
+    const body: Record<string, unknown> = { summary, total: all.length };
+    if (url.searchParams.get("mine") === "1") {
+      const shiftId = url.searchParams.get("shiftId") ?? undefined;
+      body.mine = await getReviewBy(type, id, me.userId, shiftId);
+    }
+    return NextResponse.json(body);
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

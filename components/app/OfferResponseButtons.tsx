@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { useToast } from "@/components/ui/Toast";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export function OfferResponseButtons({ offerId }: { offerId: string }) {
+  const c = useT().controls;
   const toast = useToast();
   const [pending, start] = useTransition();
   const [done, setDone] = useState<null | "accepted" | "declined">(null);
@@ -12,7 +14,7 @@ export function OfferResponseButtons({ offerId }: { offerId: string }) {
   if (done) {
     return (
       <span className={done === "accepted" ? "pill-ok" : "pill-crit"}>
-        {done === "accepted" ? "Geaccepteerd" : "Afgewezen"}
+        {done === "accepted" ? c.accept : c.decline}
       </span>
     );
   }
@@ -33,7 +35,7 @@ export function OfferResponseButtons({ offerId }: { offerId: string }) {
         }
         className="btn-ghost px-3 py-1.5 text-xs"
       >
-        Afwijzen
+        {c.decline}
       </button>
       <button
         type="button"
@@ -49,7 +51,7 @@ export function OfferResponseButtons({ offerId }: { offerId: string }) {
         }
         className="btn-primary px-3 py-1.5 text-xs"
       >
-        Accepteren
+        {c.accept}
       </button>
     </div>
   );

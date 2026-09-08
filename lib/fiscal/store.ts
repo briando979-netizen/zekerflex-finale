@@ -40,6 +40,8 @@ export interface FiscalProfile {
   bsnLast4: string | null;
   bsnHash: string | null; // sha256 — never store the raw BSN
   loonheffingskorting: boolean;
+  /** geboortedatum (YYYY-MM-DD) — voor jeugdloon / WML-vloer */
+  birthDate: string | null;
 
   invoiceMode: InvoiceMode | null;
   iban: string | null;
@@ -61,6 +63,7 @@ export const EMPTY_FISCAL: FiscalProfile = {
   bsnLast4: null,
   bsnHash: null,
   loonheffingskorting: true,
+  birthDate: null,
   invoiceMode: null,
   iban: null,
   ibanValid: false,

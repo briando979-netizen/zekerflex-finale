@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { applyToShift } from "@/lib/matching/apply";
+import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { createCounterOffer } from "@/lib/offers/store";
@@ -83,6 +84,11 @@ export async function counterOfferAction(
     requireRole(principal, "FREELANCER");
     if (!Number.isFinite(proposedRateCents) || proposedRateCents < 1000 || proposedRateCents > 25000) {
       return { ok: false, message: "Voer een tarief tussen € 10 en € 250 per uur in." };
+    }
+
+    const eligible = await payoutEligibility(principal.userId);
+    if (!eligible.ok) {
+      return { ok: false, message: eligible.reason ?? "Je kunt nog niet op klussen reageren." };
     }
 
     const shift = await prisma.shift.findUnique({

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
-import { Photo } from "@/components/marketing/Photo";
-import { SceneWork } from "@/components/marketing/Scene";
+import { UitzendJobBoard } from "@/components/marketing/UitzendJobBoard";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Uitzendklussen via ZekerFlex",
@@ -10,12 +11,6 @@ export const metadata: Metadata = {
     "Uitzendklussen via ZekerFlex: bepaal je eigen uren, krijg vakantiegeld, pensioen (StiPP) en reiskosten, en laat al het papierwerk geregeld zijn. ZekerFlex is je werkgever — geen KVK nodig.",
   alternates: { canonical: "/uitzendbureau" },
 };
-
-const QUICK = [
-  "Bepaal je eigen uren",
-  "Vakantiegeld + pensioen + reiskosten",
-  "Al het papierwerk geregeld",
-];
 
 const PILLARS = [
   {
@@ -156,7 +151,16 @@ const FAQ = [
   },
 ];
 
-export default function UitzendbureauPage() {
+export default async function UitzendbureauPage() {
+  const openCount = await prisma.shift
+    .count({
+      where: {
+        status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
+        startsAt: { gte: new Date() },
+      },
+    })
+    .catch(() => 0);
+
   return (
     <>
       <script
@@ -175,39 +179,7 @@ export default function UitzendbureauPage() {
         }}
       />
 
-      <div className="hero-ink text-white">
-        <div className="shell grid gap-12 py-20 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-28">
-          <div>
-            <p className="eyebrow text-brand-mint">Via ons uitzendbureau</p>
-            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">
-              Uitzendklussen: vrijheid én zekerheid ineen
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/70">
-              Wil je leuke klussen doen wanneer het jou uitkomt? Terwijl je ook nog eens
-              vakantiegeld krijgt en pensioen opbouwt? Dan zijn uitzendklussen via ZekerFlex
-              wat voor jou. Geen KVK, geen facturen — ZekerFlex is je werkgever en verloont
-              je elke week.
-            </p>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/60">
-              {QUICK.map((q) => (
-                <li key={q} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand-mint" />
-                  {q}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register?type=uitzendkracht" className="btn-mint">
-                Verdien geld met uitzendklussen
-              </Link>
-              <Link href="#verwachtingen" className="btn-ghost-invert">
-                Wat kun je verwachten?
-              </Link>
-            </div>
-          </div>
-          <Photo name="team" fallback={<SceneWork />} className="shadow-lift" />
-        </div>
-      </div>
+      <UitzendJobBoard openCount={openCount} />
 
       {/* Drie pijlers */}
       <Section tone="paper">

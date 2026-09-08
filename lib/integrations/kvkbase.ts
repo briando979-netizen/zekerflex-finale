@@ -2,7 +2,7 @@ import { CompanyStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
-import { cached } from "@/lib/redis";
+import { cached, withCircuitBreaker } from "@/lib/redis";
 import type {
   CompanyActivity,
   CompanyProfile,
@@ -50,13 +50,15 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      headers: {
-        authorization: `Bearer ${env.KVKBASE_API_KEY}`,
-        accept: "application/json",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+    res = await withCircuitBreaker("kvkbase", () =>
+      fetch(url, {
+        headers: {
+          authorization: `Bearer ${env.KVKBASE_API_KEY}`,
+          accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      }),
+    );
   } catch (err) {
     logger.error("kvkbase transport error", {
       path,

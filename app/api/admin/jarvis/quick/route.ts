@@ -7,6 +7,7 @@ import { heuristicRoute } from "@/lib/jarvis/core";
 import { JARVIS_PERSONA } from "@/lib/jarvis/persona";
 import { jarvisStateLine } from "@/lib/admin/overview";
 import { logExchange, recentHistory, topExamples } from "@/lib/learn/store";
+import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,13 @@ export async function POST(request: Request): Promise<Response> {
         throw AppError.validation("Body must be JSON");
       }),
     );
+    const guard = inspectPrompt(prompt);
+    if (!guard.allowed) {
+      return NextResponse.json(
+        { error: { message: "Deze instructie valt buiten de veiligheidsgrenzen van Jarvis." } },
+        { status: 400 },
+      );
+    }
 
     const route = heuristicRoute(prompt);
     // Anything that isn't plain conversation goes to the full (audited) turn engine.

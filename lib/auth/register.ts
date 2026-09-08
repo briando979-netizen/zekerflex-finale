@@ -115,7 +115,12 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
   }
 
   // Welcome mail — best-effort, captured in the local mailbox regardless.
-  const tpl = welcomeEmail(input.fullName, input.type, env.APP_BASE_URL);
+  const tpl = welcomeEmail(
+    input.fullName,
+    input.type,
+    env.APP_BASE_URL,
+    input.type === "freelancer" ? input.workerKind : undefined,
+  );
   void sendMail({ ...tpl, to: email }).catch(() => undefined);
 
   return { userId, type: input.type, email };

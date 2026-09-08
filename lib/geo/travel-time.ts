@@ -1,4 +1,4 @@
-import { cached } from "@/lib/redis";
+import { cached, redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import {
   fetchDistanceMatrix,
@@ -74,9 +74,11 @@ export async function estimateTravel(
       logger.warn("travel routing unavailable, using heuristic", {
         error: (err as Error).message,
       });
+      void recordRoutingOutcome(false);
       return modes.map((m) => heuristicEstimate(origin, destination, m));
     }
 
+    void recordRoutingOutcome(true);
     return modes.map((mode) => {
       const leg = matrix.get(mode);
       if (!leg) return heuristicEstimate(origin, destination, mode);
@@ -88,6 +90,44 @@ export async function estimateTravel(
       };
     });
   });
+}
+
+const ROUTING_STAT_TTL_SECONDS = 60 * 60 * 24;
+const ROUTING_STAT_LIVE_KEY = "zf:travel:stat:live";
+const ROUTING_STAT_FALLBACK_KEY = "zf:travel:stat:fallback";
+
+/** Track live-Google-API vs heuristic-fallback outcomes so the orchestration
+ * loop and admin console can see how sovereign the routing actually is. */
+async function recordRoutingOutcome(live: boolean): Promise<void> {
+  const key = live ? ROUTING_STAT_LIVE_KEY : ROUTING_STAT_FALLBACK_KEY;
+  try {
+    await redis.incr(key);
+    await redis.expire(key, ROUTING_STAT_TTL_SECONDS);
+  } catch {
+    /* best-effort telemetry only */
+  }
+}
+
+export interface TravelRoutingStats {
+  live: number;
+  fallback: number;
+  fallbackRatePct: number;
+}
+
+/** Rolling ~24h count of routing decisions, reset whenever both counters expire. */
+export async function getTravelRoutingStats(): Promise<TravelRoutingStats> {
+  const [liveRaw, fallbackRaw] = await Promise.all([
+    redis.get(ROUTING_STAT_LIVE_KEY),
+    redis.get(ROUTING_STAT_FALLBACK_KEY),
+  ]);
+  const live = Number(liveRaw ?? "0") || 0;
+  const fallback = Number(fallbackRaw ?? "0") || 0;
+  const total = live + fallback;
+  return {
+    live,
+    fallback,
+    fallbackRatePct: total === 0 ? 0 : Math.round((fallback / total) * 1000) / 10,
+  };
 }
 
 /** The fastest estimate across all evaluated modes. */

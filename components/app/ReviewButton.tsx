@@ -10,6 +10,7 @@ export function ReviewButton({
   shiftId,
   label = "Beoordeel",
   done: initialDone = false,
+  onDone,
 }: {
   subjectType: "freelancer" | "company";
   subjectId: string;
@@ -17,6 +18,7 @@ export function ReviewButton({
   shiftId?: string;
   label?: string;
   done?: boolean;
+  onDone?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(5);
@@ -40,6 +42,7 @@ export function ReviewButton({
       }
       setDone(true);
       setOpen(false);
+      onDone?.();
     } catch (e) {
       setErr((e as Error).message);
     } finally {

@@ -52,3 +52,37 @@ export async function cached<T>(
   await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   return value;
 }
+
+/** Atomically claims an event for a bounded idempotency window. */
+export async function claimIdempotency(key: string, ttlSeconds: number): Promise<boolean> {
+  const result = await redis.set(`idempotency:${key}`, "1", "EX", ttlSeconds, "NX");
+  return result === "OK";
+}
+
+type CircuitState = { failures: number; openedUntil: number };
+const circuitStates = new Map<string, CircuitState>();
+
+/** Small process-local circuit breaker for outbound calls. */
+export async function withCircuitBreaker<T>(
+  name: string,
+  operation: () => Promise<T>,
+  options: { failureThreshold?: number; resetMs?: number } = {},
+): Promise<T> {
+  const failureThreshold = options.failureThreshold ?? 3;
+  const resetMs = options.resetMs ?? 30_000;
+  const state = circuitStates.get(name) ?? { failures: 0, openedUntil: 0 };
+  if (state.openedUntil > Date.now()) {
+    throw new Error(`${name} circuit is open`);
+  }
+
+  try {
+    const result = await operation();
+    circuitStates.delete(name);
+    return result;
+  } catch (error) {
+    state.failures += 1;
+    if (state.failures >= failureThreshold) state.openedUntil = Date.now() + resetMs;
+    circuitStates.set(name, state);
+    throw error;
+  }
+}

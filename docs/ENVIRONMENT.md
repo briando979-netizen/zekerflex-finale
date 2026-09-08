@@ -110,6 +110,7 @@ Starten: `npm run whisper` (lokaal) of `PROFILES="--profile voice"` (VPS).
 |---|---|
 | `SEPA_API_BASE_URL` / `SEPA_API_KEY` | ⚪ PSD2/betaalprovider. Zonder: uitbetalingen worden gesimuleerd |
 | `SEPA_CREDITOR_IBAN` / `SEPA_CREDITOR_NAME` | Debiteur-gegevens op de SEPA-opdracht |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | ⚪ Werkgevers betalen facturen online via Stripe Checkout. Zonder: "Betaal nu" geeft een foutmelding, factuur blijft handmatig af te handelen |
 
 ## Bedrijfslogica (tunables)
 

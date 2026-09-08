@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { JarvisEventKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { chat, chatJson, fastModel } from "@/lib/ai/client";
 import type { Principal } from "@/lib/auth";
@@ -15,6 +16,7 @@ import {
   JARVIS_ROUTER_PREFIX,
 } from "@/lib/jarvis/persona";
 import { jarvisStateLine } from "@/lib/admin/overview";
+import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 // ---------------------------------------------------------------------------
 // Jarvis conversational core.
@@ -162,6 +164,10 @@ async function recentDialogue(
 }
 
 export async function startTurn(input: StartTurnInput): Promise<{ turnId: string }> {
+  const guard = inspectPrompt(input.prompt);
+  if (!guard.allowed) {
+    throw AppError.validation("Deze instructie valt buiten de veiligheidsgrenzen van Jarvis.");
+  }
   const turn = await prisma.jarvisTurn.create({
     data: { userId: input.principal.userId, prompt: input.prompt.slice(0, 4000) },
   });
