@@ -4,6 +4,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { startFreelancerKyc } from "@/lib/kyc/verification";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,12 @@ export async function POST(): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "FREELANCER");
+
+    // Each start hits Didit's paid verification API — cap retries per user.
+    const gate = await fixedWindow(`kyc-start:rl:${principal.userId}`, 5, 3600);
+    if (!gate.ok) {
+      throw AppError.validation("Te veel pogingen — probeer het over een uur opnieuw.");
+    }
 
     const profile = await prisma.freelancerProfile.findUnique({
       where: { userId: principal.userId },

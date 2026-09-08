@@ -7,6 +7,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { createInvoiceCheckoutSession } from "@/lib/billing/stripe";
 import { recordAudit } from "@/lib/audit";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,13 @@ export async function POST(
 ): Promise<Response> {
   try {
     const principal = await requirePrincipal();
+
+    // Each call creates a real Stripe Checkout Session — cap retries per user.
+    const gate = await fixedWindow(`invoice-checkout:rl:${principal.userId}`, 10, 600);
+    if (!gate.ok) {
+      throw AppError.validation("Te veel pogingen — probeer het over enkele minuten opnieuw.");
+    }
+
     const scope = await resolveEmployerScope(principal);
 
     const invoice = await prisma.invoice.findUnique({

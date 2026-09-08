@@ -1,14 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvAppend, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// In-platform messaging ("de chat") — filesystem only, non-destructive.
-// Every account sees only its own threads. WhatsApp-style: 1-on-1 direct
-// threads + a "support" thread that every PLATFORM_ADMIN can answer.
-//   storage/chat/threads/<id>.json   — one file per thread (metadata + reads)
-//   storage/chat/msg/<id>.jsonl      — append-only messages for that thread
+// In-platform messaging ("de chat") — Postgres-backed (KeyValueStore) — was
+// local disk, unreliable on Vercel's serverless functions. Every account sees
+// only its own threads. WhatsApp-style: 1-on-1 direct threads + a "support"
+// thread that every PLATFORM_ADMIN can answer.
+//   key "chat-thread:<id>"     — one entry per thread (metadata + reads)
+//   key "chat-messages:<id>"   — message array for that thread
 // ---------------------------------------------------------------------------
 
 export type ThreadKind = "direct" | "support" | "group";
@@ -119,40 +118,19 @@ export function previewText(m: {
   }
 }
 
-function root(): string {
-  return join(process.cwd(), "storage", "chat");
-}
-const threadsDir = () => join(root(), "threads");
-const msgPath = (id: string) => join(root(), "msg", `${id.replace(/[^a-z0-9-]/gi, "")}.jsonl`);
-const threadPath = (id: string) => join(threadsDir(), `${id.replace(/[^a-z0-9-]/gi, "")}.json`);
+const threadKey = (id: string) => `chat-thread:${id}`;
+const messagesKey = (id: string) => `chat-messages:${id}`;
 
 async function writeThread(t: ChatThread): Promise<void> {
-  await mkdir(threadsDir(), { recursive: true });
-  await writeFile(threadPath(t.id), JSON.stringify(t, null, 2), "utf8");
+  await kvSet(threadKey(t.id), t);
 }
 
 export async function getThread(id: string): Promise<ChatThread | null> {
-  const p = threadPath(id);
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as ChatThread;
-  } catch {
-    return null;
-  }
+  return kvGet<ChatThread>(threadKey(id));
 }
 
 async function allThreads(): Promise<ChatThread[]> {
-  if (!existsSync(threadsDir())) return [];
-  const files = (await readdir(threadsDir())).filter((f) => f.endsWith(".json"));
-  const out: ChatThread[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(threadsDir(), f), "utf8")) as ChatThread);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  return kvListValues<ChatThread>("chat-thread:", 20_000);
 }
 
 function pairKey(a: string, b: string, contextKey?: string): string {
@@ -166,11 +144,11 @@ export async function ensureDirectThread(
   meta: ChatThread["meta"] = {},
 ): Promise<ChatThread> {
   if (userA === userB) throw new Error("cannot start a thread with yourself");
-  const key = pairKey(userA, userB, meta.contextKey);
+  const dedupeKey = pairKey(userA, userB, meta.contextKey);
   const existing = (await allThreads()).find(
     (t) =>
       t.kind === "direct" &&
-      pairKey(t.participants[0] ?? "", t.participants[1] ?? "", t.meta.contextKey) === key,
+      pairKey(t.participants[0] ?? "", t.participants[1] ?? "", t.meta.contextKey) === dedupeKey,
   );
   if (existing) return existing;
 
@@ -283,18 +261,8 @@ export async function getMessageById(threadId: string, messageId: string): Promi
 }
 
 export async function getMessages(threadId: string, limit = 200): Promise<ChatMessage[]> {
-  const p = msgPath(threadId);
-  if (!existsSync(p)) return [];
-  const lines = (await readFile(p, "utf8")).split("\n").filter(Boolean);
-  const out: ChatMessage[] = [];
-  for (const l of lines.slice(-limit)) {
-    try {
-      out.push(JSON.parse(l) as ChatMessage);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  const rows = (await kvGet<ChatMessage[]>(messagesKey(threadId))) ?? [];
+  return rows.slice(-limit);
 }
 
 export async function postMessage(
@@ -308,7 +276,6 @@ export async function postMessage(
   // text/system need words; attachment/location/call kinds may carry no text
   const needsText = kind === "text" || kind === "system";
   if (needsText && !clean) throw new Error("empty message");
-  await mkdir(join(root(), "msg"), { recursive: true });
   const msg: ChatMessage = {
     id: randomUUID().slice(0, 12),
     threadId,
@@ -322,7 +289,7 @@ export async function postMessage(
     ...(extra.replyTo ? { replyTo: extra.replyTo } : {}),
     ...(extra.auto ? { auto: true } : {}),
   };
-  await appendFile(msgPath(threadId), JSON.stringify(msg) + "\n", "utf8");
+  await kvAppend(messagesKey(threadId), msg, 5000);
 
   const t = await getThread(threadId);
   if (t) {

@@ -1,13 +1,12 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { isOptionalCategory, OPTIONAL_CATEGORIES } from "@/lib/mail/categories";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Per-recipient e-mail preferences, keyed by e-mail address so they work for
 // both accounts and non-accounts (job applicants, demo requesters).
-//   storage/mail/prefs/<sha256(lowercased email)>.json
+// Postgres-backed (KeyValueStore, key "mail-prefs:<sha256(lowercased email)>")
+// — was local disk, unreliable on Vercel's serverless functions.
 //
 // Essential mail (verification, invoices, payslips, …) always sends and is
 // never affected by this. Only optional categories (see mail/categories.ts)
@@ -25,11 +24,9 @@ export interface MailPrefs {
   updatedAt: string;
 }
 
-function dir(): string {
-  return join(process.cwd(), "storage", "mail", "prefs");
-}
+const PREFIX = "mail-prefs:";
 function key(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+  return `${PREFIX}${createHash("sha256").update(email.trim().toLowerCase()).digest("hex")}`;
 }
 
 function empty(email: string): MailPrefs {
@@ -43,32 +40,26 @@ function empty(email: string): MailPrefs {
 }
 
 async function read(email: string): Promise<MailPrefs> {
-  const p = join(dir(), `${key(email)}.json`);
-  if (!existsSync(p)) return empty(email);
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as Partial<MailPrefs>;
-    return {
-      ...empty(email),
-      ...raw,
-      off: (raw.off ?? []).filter(isOptionalCategory),
-    };
-  } catch {
-    return empty(email);
-  }
+  const raw = await kvGet<Partial<MailPrefs>>(key(email));
+  if (!raw) return empty(email);
+  return {
+    ...empty(email),
+    ...raw,
+    off: (raw.off ?? []).filter(isOptionalCategory),
+  };
 }
 
 async function write(rec: MailPrefs): Promise<MailPrefs> {
-  await mkdir(dir(), { recursive: true });
   const next = { ...rec, updatedAt: new Date().toISOString() };
-  await writeFile(join(dir(), `${key(rec.email)}.json`), JSON.stringify(next, null, 2), "utf8");
+  await kvSet(key(rec.email), next);
   return next;
 }
 
 /** Read prefs, creating (and persisting a token) on first access. */
 export async function getMailPrefs(email: string): Promise<MailPrefs> {
-  const p = join(dir(), `${key(email)}.json`);
+  const existing = await kvGet<Partial<MailPrefs>>(key(email));
   const rec = await read(email);
-  if (!existsSync(p)) await write(rec);
+  if (!existing) await write(rec);
   return rec;
 }
 
@@ -95,16 +86,10 @@ export async function setUnsubscribedAll(email: string, value: boolean): Promise
 }
 
 export async function findByToken(token: string): Promise<MailPrefs | null> {
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token) || !existsSync(dir())) return null;
-  for (const f of (await readdir(dir())).filter((x) => x.endsWith(".json"))) {
-    try {
-      const rec = JSON.parse(await readFile(join(dir(), f), "utf8")) as MailPrefs;
-      if (rec.token === token) return { ...empty(rec.email), ...rec, off: (rec.off ?? []).filter(isOptionalCategory) };
-    } catch {
-      /* skip */
-    }
-  }
-  return null;
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return null;
+  const rows = await kvListValues<MailPrefs>(PREFIX, 20_000);
+  const rec = rows.find((r) => r.token === token);
+  return rec ? { ...empty(rec.email), ...rec, off: (rec.off ?? []).filter(isOptionalCategory) } : null;
 }
 
 /** Summary for a preferences UI: which optional categories are on. */

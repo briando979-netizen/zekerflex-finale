@@ -88,6 +88,48 @@ async function reset(): Promise<void> {
 const RESET_REQUESTED =
   process.env.SEED_RESET === "true" || process.argv.includes("--reset");
 
+// ---------------------------------------------------------------------------
+// Production guard. This script plants demo companies, demo freelancers, and
+// a hardcoded, publicly-documented password (see PASSWORD above) — never
+// something a real environment should end up with. Local dev is always a
+// local/Docker Postgres; anything else (Neon, RDS, any hosted DATABASE_URL)
+// is refused outright for --reset, and requires an explicit one-time opt-in
+// for a first-time (non-destructive) seed.
+// ---------------------------------------------------------------------------
+function isLocalDatabase(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+const databaseUrl = process.env.DATABASE_URL ?? "";
+const targetsRemoteDatabase = databaseUrl !== "" && !isLocalDatabase(databaseUrl);
+
+if (targetsRemoteDatabase && RESET_REQUESTED) {
+  console.error(
+    "\n✕ Refusing to run: --reset / SEED_RESET targets a non-local DATABASE_URL.\n" +
+      "  This would wipe real data and replace it with demo accounts sharing one\n" +
+      "  public password. There is no override for this — reset only ever runs\n" +
+      "  against a local database.\n",
+  );
+  process.exit(1);
+}
+if (targetsRemoteDatabase && process.env.SEED_ALLOW_REMOTE !== "yes-i-am-sure") {
+  console.error(
+    "\n✕ Refusing to run: DATABASE_URL does not look like a local database.\n" +
+      "  This script creates demo accounts with a hardcoded, public password —\n" +
+      "  never point it at a real environment. For a genuine remote demo/staging\n" +
+      "  seed, set SEED_ALLOW_REMOTE=yes-i-am-sure and re-run deliberately.\n" +
+      "  For a real environment's first admin account, use\n" +
+      "  scripts/bootstrap-production.mjs instead — it creates one real admin,\n" +
+      "  no demo data, no shared password.\n",
+  );
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
   // --- Data protection ---------------------------------------------------
   // The seed NEVER wipes an initialised database unless explicitly asked

@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Annulerings-claims. Als een opdrachtgever een dienst annuleert nadat er
 // iemand was uitgekozen, kan de kracht een claim indienen voor 50% van de
-// klus. De opdrachtgever keurt goed of af. Filesystem, advisory:
-//   storage/claims/<id>.json
+// klus. De opdrachtgever keurt goed of af. Postgres-backed (KeyValueStore,
+// key "claim:<id>") — was local disk, unreliable op Vercel serverless.
 // ---------------------------------------------------------------------------
 
 export type ClaimStatus = "filed" | "approved" | "rejected" | "paid" | "withdrawn";
@@ -31,36 +29,19 @@ export interface CancellationClaim {
   decisionNote?: string;
 }
 
-const dir = () => join(process.cwd(), "storage", "claims");
-const file = (id: string) => join(dir(), `${id.replace(/[^a-z0-9-]/gi, "")}.json`);
+const key = (id: string) => `claim:${id}`;
 
 async function write(c: CancellationClaim): Promise<void> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(c.id), JSON.stringify(c, null, 2), "utf8");
+  await kvSet(key(c.id), c);
 }
 
 export async function getClaim(id: string): Promise<CancellationClaim | null> {
-  const p = file(id);
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as CancellationClaim;
-  } catch {
-    return null;
-  }
+  return kvGet<CancellationClaim>(key(id.replace(/[^a-z0-9-]/gi, "")));
 }
 
 async function all(): Promise<CancellationClaim[]> {
-  if (!existsSync(dir())) return [];
-  const files = (await readdir(dir())).filter((f) => f.endsWith(".json"));
-  const out: CancellationClaim[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(dir(), f), "utf8")) as CancellationClaim);
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.filedAt < b.filedAt ? 1 : -1));
+  const rows = await kvListValues<CancellationClaim>("claim:", 5000);
+  return rows.sort((a, b) => (a.filedAt < b.filedAt ? 1 : -1));
 }
 
 export async function claimsForFreelancer(userId: string): Promise<CancellationClaim[]> {

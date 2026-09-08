@@ -7,6 +7,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { decideClaim, getClaim } from "@/lib/claims/store";
 import { recordAudit } from "@/lib/audit";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,9 @@ export async function POST(
   try {
     const p = await requirePrincipal();
     requireRole(p, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
+
+    const gate = await fixedWindow(`claim-decide:rl:${p.userId}`, 30, 600);
+    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over enkele minuten opnieuw.");
 
     const claim = await getClaim(params.id);
     if (!claim) throw AppError.notFound("Claim niet gevonden.");

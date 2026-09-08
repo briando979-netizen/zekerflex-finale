@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,8 @@ export async function POST(request: Request, { params }: { params: { timesheetId
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "FREELANCER");
+    const gate = await fixedWindow(`timesheet-submit:rl:${principal.userId}`, 30, 600);
+    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over enkele minuten opnieuw.");
     const input = schema.parse(await request.json());
     const profile = await prisma.freelancerProfile.findUnique({ where: { userId: principal.userId }, select: { id: true } });
     if (!profile) throw AppError.forbidden("Geen werknemersprofiel gevonden");

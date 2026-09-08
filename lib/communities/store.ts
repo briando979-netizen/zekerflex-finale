@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ensureGroupThread, getGroupThreadByCommunity } from "@/lib/messaging/store";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Communities — user-made groups ("mijn community"). Each community owns one
-// group chat thread. Filesystem only:  storage/communities/<id>.json
+// group chat thread. Postgres-backed (KeyValueStore, key "community:<id>") —
+// was local disk, unreliable on Vercel's serverless functions.
 // ---------------------------------------------------------------------------
 
 export type CommunityRole = "owner" | "admin" | "member";
@@ -37,36 +36,18 @@ export interface Community {
   threadId?: string;
 }
 
-const dir = () => join(process.cwd(), "storage", "communities");
-const file = (id: string) => join(dir(), `${id.replace(/[^a-z0-9-]/gi, "")}.json`);
+const key = (id: string) => `community:${id}`;
 
 async function write(c: Community): Promise<void> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(c.id), JSON.stringify(c, null, 2), "utf8");
+  await kvSet(key(c.id), c);
 }
 
 export async function getCommunity(id: string): Promise<Community | null> {
-  const p = file(id);
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as Community;
-  } catch {
-    return null;
-  }
+  return kvGet<Community>(key(id.replace(/[^a-z0-9-]/gi, "")));
 }
 
 async function allCommunities(): Promise<Community[]> {
-  if (!existsSync(dir())) return [];
-  const files = (await readdir(dir())).filter((f) => f.endsWith(".json"));
-  const out: Community[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(dir(), f), "utf8")) as Community);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  return kvListValues<Community>("community:", 5000);
 }
 
 export function isMember(c: Community, userId: string): boolean {

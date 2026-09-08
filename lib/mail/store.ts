@@ -1,20 +1,16 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Filesystem-backed mail store. No database, no Redis.
-//   storage/mail/sent/<ts>-<id>.json   — one record per outbound message
-//   storage/mail/tokens/<token>.json   — e-mail verification tokens
-// This IS the admin's mailbox: /admin/mail reads storage/mail/sent.
+// Postgres-backed mail store (KeyValueStore) — was local disk, unreliable on
+// Vercel's serverless functions. Two independent uses:
+//   key "mail-sent:<id>"    — one record per outbound message (admin mailbox)
+//   key "mail-token:<token>" — e-mail verification tokens
+// This IS the admin's mailbox: /admin/mail reads the "mail-sent:" keys.
 // ---------------------------------------------------------------------------
 
-function root(): string {
-  return join(process.cwd(), "storage", "mail");
-}
-const sentDir = () => join(root(), "sent");
-const tokenDir = () => join(root(), "tokens");
+const sentKey = (id: string) => `mail-sent:${id}`;
+const tokenKey = (token: string) => `mail-token:${token}`;
 
 export interface SentRecord {
   id: string;
@@ -33,38 +29,16 @@ export interface SentRecord {
 }
 
 export async function saveSentMessage(rec: SentRecord): Promise<void> {
-  await mkdir(sentDir(), { recursive: true });
-  const safeTs = rec.at.replace(/[:.]/g, "-");
-  await writeFile(join(sentDir(), `${safeTs}-${rec.id}.json`), JSON.stringify(rec, null, 2), "utf8");
+  await kvSet(sentKey(rec.id), rec);
 }
 
 export async function listSentMessages(limit = 100): Promise<SentRecord[]> {
-  if (!existsSync(sentDir())) return [];
-  const files = (await readdir(sentDir()))
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .reverse()
-    .slice(0, limit);
-  const out: SentRecord[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(sentDir(), f), "utf8")) as SentRecord);
-    } catch {
-      /* skip a corrupt record */
-    }
-  }
-  return out;
+  const rows = await kvListValues<SentRecord>("mail-sent:", 5000);
+  return rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
 }
 
 export async function readSentMessage(id: string): Promise<SentRecord | null> {
-  if (!existsSync(sentDir())) return null;
-  const files = (await readdir(sentDir())).filter((f) => f.endsWith(`-${id}.json`));
-  if (!files[0]) return null;
-  try {
-    return JSON.parse(await readFile(join(sentDir(), files[0]), "utf8")) as SentRecord;
-  } catch {
-    return null;
-  }
+  return kvGet<SentRecord>(sentKey(id));
 }
 
 export async function mailboxStats(): Promise<{ total: number; delivered: number; failed: number }> {
@@ -93,12 +67,10 @@ export interface MintedToken {
 }
 
 export async function mintToken(userId: string, ttlSeconds: number): Promise<MintedToken> {
-  await mkdir(tokenDir(), { recursive: true });
   const token = randomBytes(24).toString("base64url");
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const rec: TokenRecord = { userId, exp: Date.now() + ttlSeconds * 1000, code, tries: 0 };
-  await writeFile(join(tokenDir(), `${token}.json`), JSON.stringify(rec), "utf8");
-  void pruneTokens();
+  await kvSet(tokenKey(token), rec);
   return { token, code };
 }
 
@@ -108,27 +80,21 @@ export async function mintToken(userId: string, ttlSeconds: number): Promise<Min
  * token is destroyed after 5 wrong attempts.
  */
 export async function consumeCode(userId: string, code: string): Promise<string | null> {
-  if (!/^\d{6}$/.test(code) || !existsSync(tokenDir())) return null;
-  const files = (await readdir(tokenDir())).filter((f) => f.endsWith(".json"));
-  for (const f of files) {
-    const path = join(tokenDir(), f);
-    try {
-      const rec = JSON.parse(await readFile(path, "utf8")) as TokenRecord;
-      if (rec.userId !== userId || !rec.code) continue;
-      if (rec.exp < Date.now()) {
-        await unlink(path).catch(() => undefined);
-        continue;
-      }
-      if (rec.code === code) {
-        await unlink(path).catch(() => undefined);
-        return rec.userId;
-      }
-      const tries = (rec.tries ?? 0) + 1;
-      if (tries >= 5) await unlink(path).catch(() => undefined);
-      else await writeFile(path, JSON.stringify({ ...rec, tries }), "utf8").catch(() => undefined);
-    } catch {
-      /* skip */
+  if (!/^\d{6}$/.test(code)) return null;
+  const entries = await kvListEntries<TokenRecord>("mail-token:", 5000);
+  for (const { key, value: rec } of entries) {
+    if (rec.userId !== userId || !rec.code) continue;
+    if (rec.exp < Date.now()) {
+      await kvDelete(key);
+      continue;
     }
+    if (rec.code === code) {
+      await kvDelete(key);
+      return rec.userId;
+    }
+    const tries = (rec.tries ?? 0) + 1;
+    if (tries >= 5) await kvDelete(key);
+    else await kvSet(key, { ...rec, tries });
   }
   return null;
 }
@@ -136,33 +102,22 @@ export async function consumeCode(userId: string, code: string): Promise<string 
 /** Returns the userId and deletes the token, or null when invalid/expired. */
 export async function consumeToken(token: string): Promise<string | null> {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return null;
-  const path = join(tokenDir(), `${token}.json`);
-  if (!existsSync(path)) return null;
-  try {
-    const rec = JSON.parse(await readFile(path, "utf8")) as TokenRecord;
-    await unlink(path).catch(() => undefined);
-    if (rec.exp < Date.now()) return null;
-    return rec.userId;
-  } catch {
-    return null;
-  }
+  const rec = await kvGet<TokenRecord>(tokenKey(token));
+  if (!rec) return null;
+  await kvDelete(tokenKey(token));
+  if (rec.exp < Date.now()) return null;
+  return rec.userId;
 }
 
 /** Latest still-valid token + code for a user, so the verify page can show it locally. */
 export async function latestVerification(
   userId: string,
 ): Promise<{ token: string; code: string | null } | null> {
-  if (!existsSync(tokenDir())) return null;
-  const files = (await readdir(tokenDir())).filter((f) => f.endsWith(".json"));
+  const entries = await kvListEntries<TokenRecord>("mail-token:", 5000);
   let best: { token: string; code: string | null; exp: number } | null = null;
-  for (const f of files) {
-    try {
-      const rec = JSON.parse(await readFile(join(tokenDir(), f), "utf8")) as TokenRecord;
-      if (rec.userId === userId && rec.exp > Date.now() && (!best || rec.exp > best.exp)) {
-        best = { token: f.replace(/\.json$/, ""), code: rec.code ?? null, exp: rec.exp };
-      }
-    } catch {
-      /* skip */
+  for (const { key, value: rec } of entries) {
+    if (rec.userId === userId && rec.exp > Date.now() && (!best || rec.exp > best.exp)) {
+      best = { token: key.slice("mail-token:".length), code: rec.code ?? null, exp: rec.exp };
     }
   }
   return best ? { token: best.token, code: best.code } : null;
@@ -171,20 +126,4 @@ export async function latestVerification(
 /** Latest still-valid link for a user, so the verify page can show it locally. */
 export async function latestTokenForUser(userId: string): Promise<string | null> {
   return (await latestVerification(userId))?.token ?? null;
-}
-
-async function pruneTokens(): Promise<void> {
-  try {
-    const files = (await readdir(tokenDir())).filter((f) => f.endsWith(".json"));
-    for (const f of files) {
-      try {
-        const rec = JSON.parse(await readFile(join(tokenDir(), f), "utf8")) as TokenRecord;
-        if (rec.exp < Date.now()) await unlink(join(tokenDir(), f)).catch(() => undefined);
-      } catch {
-        /* skip */
-      }
-    }
-  } catch {
-    /* dir may not exist yet */
-  }
 }

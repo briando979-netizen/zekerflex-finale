@@ -12,11 +12,11 @@ export const maxDuration = 60;
 
 // GET  /api/admin/payroll        — run history + the week that's ready to run
 // POST /api/admin/payroll        — { isoWeek, action: "build" | "finalise" }
-// Reads timesheets read-only; writes only to storage/payroll.
+// Reads timesheets read-only; writes only to PayrollRunRecord/PayslipRecord.
 export async function GET(): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN", "HQ_ADMIN");
+    requireRole(principal, "PLATFORM_ADMIN");
     const suggested = lastCompletedIsoWeek();
     return NextResponse.json({
       runs: await listRuns(),

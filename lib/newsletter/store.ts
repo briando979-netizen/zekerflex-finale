@@ -1,13 +1,11 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Filesystem-backed newsletter store. No database, no Redis — same pattern as
-// storage/mail.
-//   storage/newsletter/subscribers/<sha256(email)>.json  — one per address
-//   storage/newsletter/campaigns/<ts>-<id>.json          — one per broadcast
+// Postgres-backed newsletter store (KeyValueStore) — was local disk,
+// unreliable on Vercel's serverless functions.
+//   key "newsletter-subscriber:<sha256(email)>"  — one per address
+//   key "newsletter-campaign:<id>"               — one per broadcast
 //
 // Double opt-in: a signup lands as "pending" and only receives broadcasts once
 // the confirmation link is clicked ("confirmed"). Unsubscribing is one click
@@ -39,12 +37,6 @@ export interface Campaign {
   failed: number;
 }
 
-function root(): string {
-  return join(process.cwd(), "storage", "newsletter");
-}
-const subsDir = () => join(root(), "subscribers");
-const campDir = () => join(root(), "campaigns");
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function normalizeEmail(raw: string): string | null {
@@ -53,21 +45,18 @@ export function normalizeEmail(raw: string): string | null {
   return email;
 }
 
-function key(email: string): string {
-  return createHash("sha256").update(email).digest("hex");
+const SUB_PREFIX = "newsletter-subscriber:";
+const CAMP_PREFIX = "newsletter-campaign:";
+function subKey(email: string): string {
+  return `${SUB_PREFIX}${createHash("sha256").update(email).digest("hex")}`;
 }
 
 async function readSub(k: string): Promise<Subscriber | null> {
-  try {
-    return JSON.parse(await readFile(join(subsDir(), `${k}.json`), "utf8")) as Subscriber;
-  } catch {
-    return null;
-  }
+  return kvGet<Subscriber>(k);
 }
 
 async function writeSub(rec: Subscriber): Promise<void> {
-  await mkdir(subsDir(), { recursive: true });
-  await writeFile(join(subsDir(), `${key(rec.email)}.json`), JSON.stringify(rec, null, 2), "utf8");
+  await kvSet(subKey(rec.email), rec);
 }
 
 export interface SubscribeResult {
@@ -81,8 +70,7 @@ export interface SubscribeResult {
  * unsubscribed address is reset to pending and gets a fresh token.
  */
 export async function subscribe(email: string, source: string): Promise<SubscribeResult> {
-  const k = key(email);
-  const existing = await readSub(k);
+  const existing = await readSub(subKey(email));
 
   if (existing?.status === "confirmed") {
     return { status: "already-confirmed", subscriber: existing };
@@ -100,17 +88,9 @@ export async function subscribe(email: string, source: string): Promise<Subscrib
 }
 
 async function findByToken(token: string): Promise<Subscriber | null> {
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token) || !existsSync(subsDir())) return null;
-  const files = (await readdir(subsDir())).filter((f) => f.endsWith(".json"));
-  for (const f of files) {
-    try {
-      const rec = JSON.parse(await readFile(join(subsDir(), f), "utf8")) as Subscriber;
-      if (rec.token === token) return rec;
-    } catch {
-      /* skip */
-    }
-  }
-  return null;
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return null;
+  const rows = await kvListValues<Subscriber>(SUB_PREFIX, 50_000);
+  return rows.find((r) => r.token === token) ?? null;
 }
 
 export async function confirm(token: string): Promise<Subscriber | null> {
@@ -136,18 +116,9 @@ export async function unsubscribe(token: string): Promise<Subscriber | null> {
 }
 
 export async function listSubscribers(status?: SubscriberStatus): Promise<Subscriber[]> {
-  if (!existsSync(subsDir())) return [];
-  const files = (await readdir(subsDir())).filter((f) => f.endsWith(".json"));
-  const out: Subscriber[] = [];
-  for (const f of files) {
-    try {
-      const rec = JSON.parse(await readFile(join(subsDir(), f), "utf8")) as Subscriber;
-      if (!status || rec.status === status) out.push(rec);
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const rows = await kvListValues<Subscriber>(SUB_PREFIX, 50_000);
+  const filtered = status ? rows.filter((r) => r.status === status) : rows;
+  return filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function subscriberStats(): Promise<{
@@ -166,30 +137,12 @@ export async function subscriberStats(): Promise<{
 }
 
 export async function saveCampaign(rec: Omit<Campaign, "id" | "at">): Promise<Campaign> {
-  await mkdir(campDir(), { recursive: true });
   const full: Campaign = { ...rec, id: randomUUID().slice(0, 12), at: new Date().toISOString() };
-  await writeFile(
-    join(campDir(), `${full.at.replace(/[:.]/g, "-")}-${full.id}.json`),
-    JSON.stringify(full, null, 2),
-    "utf8",
-  );
+  await kvSet(`${CAMP_PREFIX}${full.id}`, full);
   return full;
 }
 
 export async function listCampaigns(limit = 50): Promise<Campaign[]> {
-  if (!existsSync(campDir())) return [];
-  const files = (await readdir(campDir()))
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .reverse()
-    .slice(0, limit);
-  const out: Campaign[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(campDir(), f), "utf8")) as Campaign);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  const rows = await kvListValues<Campaign>(CAMP_PREFIX, 2000);
+  return rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
 }

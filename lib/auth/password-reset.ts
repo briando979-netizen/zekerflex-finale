@@ -1,34 +1,32 @@
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, passwordResetEmail } from "@/lib/mail";
+import { fixedWindow } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
-// Password reset. Tokens live on disk, isolated from the e-mail-verification
-// tokens: storage/auth/reset/<token>.json  ->  { userId, exp }
-// One-time use, 1 hour TTL. No user enumeration on the request step.
+// Password reset. Tokens live in Postgres (PasswordResetToken), isolated from
+// the e-mail-verification tokens. One-time use, 1 hour TTL. No user
+// enumeration on the request step.
+//
+// Previously these tokens (and the request cooldown) lived on local disk / an
+// in-process Map — both unreliable on Vercel's serverless functions, whose
+// filesystem is read-only outside /tmp and whose /tmp is not shared across
+// invocations, and whose process memory does not persist across cold starts.
 // ---------------------------------------------------------------------------
 
 const TTL_SECONDS = 60 * 60;
 
-function dir(): string {
-  return join(process.cwd(), "storage", "auth", "reset");
-}
-
-// in-process cooldown so the endpoint can't be used to blast mail
-const cooldown = new Map<string, number>();
-
 export async function requestPasswordReset(rawEmail: string): Promise<void> {
   const email = rawEmail.toLowerCase().trim();
-  const now = Date.now();
-  if ((cooldown.get(email) ?? 0) > now) return;
-  cooldown.set(email, now + 60_000);
+
+  // Redis-backed cooldown so the endpoint can't be used to blast mail — works
+  // across every serverless instance, unlike an in-process Map.
+  const gate = await fixedWindow(`password-reset:rl:${email}`, 1, 60);
+  if (!gate.ok) return;
 
   const user = await prisma.user.findFirst({
     where: { email, disabledAt: null },
@@ -37,14 +35,10 @@ export async function requestPasswordReset(rawEmail: string): Promise<void> {
   // Silently succeed for unknown addresses or Google-only accounts.
   if (!user || !user.passwordHash) return;
 
-  await mkdir(dir(), { recursive: true });
-  await pruneExpired();
   const token = randomBytes(24).toString("base64url");
-  await writeFile(
-    join(dir(), `${token}.json`),
-    JSON.stringify({ userId: user.id, exp: now + TTL_SECONDS * 1000 }),
-    "utf8",
-  );
+  await prisma.passwordResetToken.create({
+    data: { id: token, userId: user.id, expiresAt: new Date(Date.now() + TTL_SECONDS * 1000) },
+  });
 
   const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/wachtwoord-herstellen?token=${token}`;
   const tpl = passwordResetEmail(user.fullName, link);
@@ -69,27 +63,26 @@ export interface ResetResult {
 
 async function consume(token: string): Promise<string | null> {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return null;
-  const path = join(dir(), `${token}.json`);
-  if (!existsSync(path)) return null;
+  // Atomic delete-and-return: a concurrent second use of the same token
+  // (double-click, replay) finds nothing to delete and fails closed.
+  let rec: { userId: string; expiresAt: Date };
   try {
-    const rec = JSON.parse(await readFile(path, "utf8")) as { userId: string; exp: number };
-    await unlink(path).catch(() => undefined);
-    if (rec.exp < Date.now()) return null;
-    return rec.userId;
+    rec = await prisma.passwordResetToken.delete({ where: { id: token } });
   } catch {
     return null;
   }
+  if (rec.expiresAt.getTime() < Date.now()) return null;
+  return rec.userId;
 }
 
 /** True when the token is still valid — used to show the form or an error. */
 export async function isResetTokenValid(token: string): Promise<boolean> {
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token) || !existsSync(join(dir(), `${token}.json`))) return false;
-  try {
-    const rec = JSON.parse(await readFile(join(dir(), `${token}.json`), "utf8")) as { exp: number };
-    return rec.exp >= Date.now();
-  } catch {
-    return false;
-  }
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return false;
+  const rec = await prisma.passwordResetToken.findUnique({
+    where: { id: token },
+    select: { expiresAt: true },
+  });
+  return Boolean(rec && rec.expiresAt.getTime() >= Date.now());
 }
 
 export async function completePasswordReset(token: string, newPassword: string): Promise<ResetResult> {
@@ -114,19 +107,4 @@ export async function completePasswordReset(token: string, newPassword: string):
   });
   logger.info("password reset completed", { userId });
   return { ok: true };
-}
-
-async function pruneExpired(): Promise<void> {
-  try {
-    for (const f of (await readdir(dir())).filter((x) => x.endsWith(".json"))) {
-      try {
-        const rec = JSON.parse(await readFile(join(dir(), f), "utf8")) as { exp: number };
-        if (rec.exp < Date.now()) await unlink(join(dir(), f)).catch(() => undefined);
-      } catch {
-        /* skip */
-      }
-    }
-  } catch {
-    /* dir may not exist */
-  }
 }

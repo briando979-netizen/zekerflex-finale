@@ -73,7 +73,7 @@ export function PayrollBoard() {
         <p className="mt-1 text-sm text-neutralx-600">
           Bundelt alle goedgekeurde uren per kalenderweek tot loonstroken (uitzendkracht) en
           wekelijkse facturen (zzp/flex). Leest de database alleen — concepten en definitieve
-          rondes staan in <code className="font-mono text-xs">storage/payroll</code>.
+          rondes staan in de database (<code className="font-mono text-xs">PayrollRunRecord</code>).
         </p>
       </div>
 

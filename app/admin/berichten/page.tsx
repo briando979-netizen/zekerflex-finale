@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminBerichtenPage() {
   const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN", "HQ_ADMIN")) {
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <APageHeader title="Geen toegang" subtitle="Berichten zijn voor beheerders." />;
   }
   return (

@@ -61,18 +61,13 @@ export const ROUTE_RULES: RouteRule[] = [
     redirectOnDeny: true,
   },
   {
-    pattern: /^\/admin\/(jarvis|analytics|studio|audit|systeem|mail)(?:\/|$)/,
+    pattern: /^\/admin\/(jarvis|analytics|studio|audit|systeem|mail|verloning|berichten)(?:\/|$)/,
     roles: ["PLATFORM_ADMIN"],
     redirectOnDeny: true,
   },
   {
-    pattern: /^\/admin\/verloning(?:\/|$)/,
-    roles: ["HQ_ADMIN", "PLATFORM_ADMIN"],
-    redirectOnDeny: true,
-  },
-  {
     pattern: /^\/admin(?:\/|$)/,
-    roles: ["HQ_ADMIN", "PLATFORM_ADMIN"],
+    roles: ["PLATFORM_ADMIN"],
     redirectOnDeny: true,
   },
   {

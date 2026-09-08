@@ -1480,9 +1480,150 @@ model Upload {
   createdAt    DateTime @default(now())
 
   jarvisTurn JarvisTurn? @relation(fields: [jarvisTurnId], references: [id], onDelete: SetNull)
+  complianceDocument ComplianceDocument?
+  certificate        Certificate?
 
   @@index([uploadedById])
   @@index([createdAt])
+}
+
+// ===========================================================================
+// Storage that used to live on local disk (storage/auth/reset,
+// storage/compliance, storage/certificates, storage/payroll,
+// storage/payouts/advances) — unsafe on Vercel's serverless functions, whose
+// filesystem is read-only outside /tmp and /tmp itself is not shared across
+// invocations. File *bytes* still go through Upload (local disk or S3 per
+// STORAGE_BACKEND); everything here is metadata that must survive between
+// requests, so it belongs in Postgres instead.
+// ===========================================================================
+
+// Generic JSON key-value store for the many small, low-traffic subsystems
+// that used to keep one JSON file per entity on local disk (chat threads,
+// reviews, claims, offers, communities, newsletter, demo bookings, fiscal
+// data, profile/messaging prefs, ...). Same root cause as the models above:
+// Vercel's serverless functions can't write outside /tmp. A generic table
+// here is a much faster, lower-risk migration than a bespoke relational
+// table per subsystem — every one of these was already "one JSON blob per
+// key", so the shape barely changes, only the storage backend does.
+model KeyValueStore {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model PasswordResetToken {
+  id        String   @id // the token itself (random, url-safe)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum ComplianceDocKind {
+  ID
+  BANK
+  OTHER
+}
+
+enum ComplianceDocStatus {
+  UPLOADED
+  APPROVED
+  REJECTED
+}
+
+model ComplianceDocument {
+  id         String              @id @default(cuid())
+  userId     String
+  kind       ComplianceDocKind
+  uploadId   String              @unique
+  status     ComplianceDocStatus @default(UPLOADED)
+  note       String?
+  uploadedAt DateTime            @default(now())
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+}
+
+enum CertificateStatus {
+  PENDING
+  VALID
+  EXPIRED
+  REJECTED
+}
+
+model Certificate {
+  id          String            @id @default(cuid())
+  userId      String
+  type        String
+  customLabel String?
+  number      String?
+  issuedOn    DateTime?
+  expiresOn   DateTime?
+  uploadId    String?           @unique
+  fileName    String?
+  status      CertificateStatus
+  statusNote  String?
+  addedAt     DateTime          @default(now())
+  verifiedAt  DateTime?
+
+  upload Upload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type])
+}
+
+model PayrollRunRecord {
+  isoWeek   String   @id
+  status    String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PayslipRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  isoWeek   String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@unique([userId, isoWeek])
+  @@index([userId])
+}
+
+model PayoutPreference {
+  userId    String   @id
+  speed     String
+  updatedAt DateTime @updatedAt
+}
+
+model AdvanceRecord {
+  id                 String    @id @default(cuid())
+  userId             String
+  amountCents        Int
+  feeCents           Int
+  netCents           Int
+  status             String
+  kind               String?
+  isoWeek            String?
+  timesheetId        String?
+  expectedGrossCents Int?
+  payoutStatus       String?
+  providerRef        String?
+  note               String?
+  requestedAt        DateTime  @default(now())
+  settledAt          DateTime?
+  paidAt             DateTime?
+  reconciledAt       DateTime?
+  reconciledNetCents Int?
+
+  @@index([userId, status])
+  @@index([userId, kind, isoWeek])
 }
 
 // Public webshop catalog managed by PLATFORM_ADMIN.

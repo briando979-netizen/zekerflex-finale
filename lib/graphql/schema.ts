@@ -208,17 +208,17 @@ const resolvers = {
     },
 
     platformKpis: async (_p: unknown, _a: unknown, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       return getKpis();
     },
 
     payrollRuns: async (_p: unknown, _a: unknown, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       return listRuns();
     },
 
     payrollRun: async (_p: unknown, args: { isoWeek: string }, ctx: GraphQLContext) => {
-      requireRoles(ctx, "HQ_ADMIN", "PLATFORM_ADMIN");
+      requireRoles(ctx, "PLATFORM_ADMIN");
       const run = await getRun(args.isoWeek);
       return run ? serialiseRun(run) : null;
     },

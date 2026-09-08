@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Fiscal / BTW profile per worker — filesystem, non-destructive.
-//   storage/fiscal/<userId>.json
+// Fiscal / BTW profile per worker — Postgres-backed (KeyValueStore, key
+// "fiscal:<userId>") — was local disk, unreliable on Vercel's serverless
+// functions.
 //
 // ZekerFlex serves three worker forms:
 //   "zzp"          — own company (KVK + BTW), reverse billing
@@ -71,29 +70,19 @@ export const EMPTY_FISCAL: FiscalProfile = {
   updatedAt: new Date(0).toISOString(),
 };
 
-function dir(): string {
-  return join(process.cwd(), "storage", "fiscal");
-}
-function path(userId: string): string {
-  return join(dir(), `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}.json`);
-}
+const PREFIX = "fiscal:";
+const key = (userId: string) => `${PREFIX}${userId}`;
 
 export async function getFiscal(userId: string): Promise<FiscalProfile> {
-  const p = path(userId);
-  if (!existsSync(p)) return { ...EMPTY_FISCAL };
-  try {
-    return { ...EMPTY_FISCAL, ...(JSON.parse(await readFile(p, "utf8")) as Partial<FiscalProfile>) };
-  } catch {
-    return { ...EMPTY_FISCAL };
-  }
+  const raw = await kvGet<Partial<FiscalProfile>>(key(userId));
+  return raw ? { ...EMPTY_FISCAL, ...raw } : { ...EMPTY_FISCAL };
 }
 
 export async function setFiscal(userId: string, patch: Partial<FiscalProfile>): Promise<FiscalProfile> {
-  await mkdir(dir(), { recursive: true });
   const current = await getFiscal(userId);
   const next: FiscalProfile = { ...current, ...patch, updatedAt: new Date().toISOString() };
   next.completedAt = isComplete(next) ? (current.completedAt ?? new Date().toISOString()) : null;
-  await writeFile(path(userId), JSON.stringify(next, null, 2), "utf8");
+  await kvSet(key(userId), next);
   return next;
 }
 
@@ -139,24 +128,16 @@ export interface FiscalSummary {
 }
 
 export async function listFiscalSummaries(): Promise<FiscalSummary[]> {
-  if (!existsSync(dir())) return [];
-  const files = (await readdir(dir())).filter((f) => f.endsWith(".json"));
-  const out: FiscalSummary[] = [];
-  for (const f of files) {
-    try {
-      const rec = JSON.parse(await readFile(join(dir(), f), "utf8")) as FiscalProfile;
-      out.push({
-        userId: f.replace(/\.json$/, ""),
-        workerKind: rec.workerKind,
-        vatNumber: rec.vatNumber,
-        vatValid: rec.vatValid,
-        invoiceMode: invoiceModeFor(rec),
-        complete: isComplete(rec),
-        updatedAt: rec.updatedAt,
-      });
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const rows = await kvListEntries<FiscalProfile>(PREFIX, 10_000);
+  return rows
+    .map(({ key: k, value: rec }) => ({
+      userId: k.slice(PREFIX.length),
+      workerKind: rec.workerKind,
+      vatNumber: rec.vatNumber,
+      vatValid: rec.vatValid,
+      invoiceMode: invoiceModeFor(rec),
+      complete: isComplete(rec),
+      updatedAt: rec.updatedAt,
+    }))
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }

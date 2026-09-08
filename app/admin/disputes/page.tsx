@@ -1,6 +1,7 @@
 import type { GpsEvent } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { DisputeConsole } from "@/components/disputes/DisputeConsole";
 import type { DisputeDto, GpsEventDto } from "@/types/disputes";
 
@@ -22,14 +23,17 @@ function toGpsDto(e: GpsEvent): GpsEventDto {
 }
 
 async function loadDisputes(
-  branchScope: string[] | "ALL",
+  scope: { tenantIds: string[]; branchIds: string[] | null },
 ): Promise<DisputeDto[]> {
   const disputes = await prisma.dispute.findMany({
     where: {
       status: { in: [...OPEN_STATUSES] },
-      ...(branchScope === "ALL"
-        ? {}
-        : { timesheet: { branchId: { in: branchScope } } }),
+      timesheet: {
+        branch: {
+          tenantId: { in: scope.tenantIds },
+          ...(scope.branchIds ? { id: { in: scope.branchIds } } : {}),
+        },
+      },
     },
     orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     include: {
@@ -121,12 +125,10 @@ export default async function DisputesPage() {
     );
   }
 
-  const scope: string[] | "ALL" = hasRole(principal, "PLATFORM_ADMIN")
-    ? "ALL"
-    : principal.managedBranchIds.length > 0
-      ? principal.managedBranchIds
-      : "ALL"; // unscoped CLIENT_ADMIN sees all branches of their tenant(s)
-
+  // Same scoping used everywhere else in the employer/admin surface: platform
+  // admins get every tenant, HQ_ADMIN/DISPUTE_MANAGER/LOCAL_MANAGER get only
+  // their own tenant(s) (and branches, if explicitly branch-scoped).
+  const scope = await resolveEmployerScope(principal);
   const disputes = await loadDisputes(scope);
 
   return (

@@ -1,16 +1,17 @@
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { prisma } from "@/lib/prisma";
 import type { ComputedPayslip } from "@/lib/payroll/compute";
 import type { WorkerKind } from "@/lib/fiscal/store";
 
 // ---------------------------------------------------------------------------
-// Weekly payroll store — filesystem only, non-destructive.
-//   storage/payroll/runs/<isoWeek>.json          — one run per ISO week
-//   storage/payroll/payslips/<userId>/<isoWeek>.json — per-worker payslip copy
-//
+// Weekly payroll store — Postgres-backed (PayrollRunRecord / PayslipRecord).
 // A "run" aggregates every worker with approved timesheets in that week. It is
 // derived data: rebuilding a draft run re-reads the (unchanged) database.
+//
+// Previously this lived on local disk (storage/payroll/*.json) — unreliable
+// on Vercel's serverless functions, whose filesystem is read-only outside
+// /tmp. The full run/payslip objects are kept as JSON columns rather than
+// fully normalised, since they're read-mostly and never queried by their
+// internal fields — only by isoWeek / userId, which are real columns.
 // ---------------------------------------------------------------------------
 
 export type RunStatus = "draft" | "finalised";
@@ -53,33 +54,26 @@ export interface PayrollRun {
   payslips: PayslipRecord[];
 }
 
-function root(): string {
-  return join(process.cwd(), "storage", "payroll");
-}
-const runsDir = () => join(root(), "runs");
-const payslipDir = (userId: string) =>
-  join(root(), "payslips", userId.replace(/[^a-zA-Z0-9_-]/g, ""));
-
-const safe = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "");
-
 export async function saveRun(run: PayrollRun): Promise<void> {
-  await mkdir(runsDir(), { recursive: true });
-  await writeFile(join(runsDir(), `${safe(run.id)}.json`), JSON.stringify(run, null, 2), "utf8");
-  for (const slip of run.payslips) {
-    const dir = payslipDir(slip.userId);
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, `${safe(slip.isoWeek)}.json`), JSON.stringify(slip, null, 2), "utf8");
-  }
+  await prisma.payrollRunRecord.upsert({
+    where: { isoWeek: run.id },
+    create: { isoWeek: run.id, status: run.status, data: run as object },
+    update: { status: run.status, data: run as object },
+  });
+  await prisma.$transaction(
+    run.payslips.map((slip) =>
+      prisma.payslipRecord.upsert({
+        where: { userId_isoWeek: { userId: slip.userId, isoWeek: slip.isoWeek } },
+        create: { userId: slip.userId, isoWeek: slip.isoWeek, data: slip as object },
+        update: { data: slip as object },
+      }),
+    ),
+  );
 }
 
 export async function getRun(isoWeek: string): Promise<PayrollRun | null> {
-  const p = join(runsDir(), `${safe(isoWeek)}.json`);
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as PayrollRun;
-  } catch {
-    return null;
-  }
+  const row = await prisma.payrollRunRecord.findUnique({ where: { isoWeek } });
+  return row ? (row.data as unknown as PayrollRun) : null;
 }
 
 export interface RunSummary {
@@ -94,50 +88,35 @@ export interface RunSummary {
 }
 
 export async function listRuns(limit = 26): Promise<RunSummary[]> {
-  if (!existsSync(runsDir())) return [];
-  const files = (await readdir(runsDir())).filter((f) => f.endsWith(".json")).sort().reverse().slice(0, limit);
-  const out: RunSummary[] = [];
-  for (const f of files) {
-    try {
-      const run = JSON.parse(await readFile(join(runsDir(), f), "utf8")) as PayrollRun;
-      out.push({
-        id: run.id,
-        isoWeek: run.isoWeek,
-        weekLabel: run.weekLabel,
-        status: run.status,
-        createdAt: run.createdAt,
-        workers: run.totals.workers,
-        payoutCents: run.totals.payoutCents,
-        fiscalIncomplete: run.totals.fiscalIncomplete,
-      });
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  const rows = await prisma.payrollRunRecord.findMany({
+    orderBy: { isoWeek: "desc" },
+    take: limit,
+  });
+  return rows.map((row) => {
+    const run = row.data as unknown as PayrollRun;
+    return {
+      id: run.id,
+      isoWeek: run.isoWeek,
+      weekLabel: run.weekLabel,
+      status: run.status,
+      createdAt: run.createdAt,
+      workers: run.totals.workers,
+      payoutCents: run.totals.payoutCents,
+      fiscalIncomplete: run.totals.fiscalIncomplete,
+    };
+  });
 }
 
 export async function payslipsForUser(userId: string, limit = 52): Promise<PayslipRecord[]> {
-  const dir = payslipDir(userId);
-  if (!existsSync(dir)) return [];
-  const files = (await readdir(dir)).filter((f) => f.endsWith(".json")).sort().reverse().slice(0, limit);
-  const out: PayslipRecord[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(dir, f), "utf8")) as PayslipRecord);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  const rows = await prisma.payslipRecord.findMany({
+    where: { userId },
+    orderBy: { isoWeek: "desc" },
+    take: limit,
+  });
+  return rows.map((row) => row.data as unknown as PayslipRecord);
 }
 
 export async function getPayslip(userId: string, isoWeek: string): Promise<PayslipRecord | null> {
-  const p = join(payslipDir(userId), `${safe(isoWeek)}.json`);
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as PayslipRecord;
-  } catch {
-    return null;
-  }
+  const row = await prisma.payslipRecord.findUnique({ where: { userId_isoWeek: { userId, isoWeek } } });
+  return row ? (row.data as unknown as PayslipRecord) : null;
 }

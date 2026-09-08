@@ -1,17 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { appendFile, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { getFiscal } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
+import { kvAppend, kvGet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Uitzendovereenkomst — the temp-work employment contract between ZekerFlex
 // (formeel werkgever) and the uitzendkracht. Signed once during onboarding by
 // tapping "Ondertekenen"; valid 3 kalendermaanden, then a fresh one is signed
 // to keep working. Electronically signed (no wet signature), like the
-// modelovereenkomst. Filesystem, non-destructive.
-//   storage/agreements/uitzend/<userId>.jsonl
+// modelovereenkomst. Postgres-backed (KeyValueStore, key
+// "uitzend-contracts:<userId>", array value) — was local disk, unreliable on
+// Vercel's serverless functions.
 // ---------------------------------------------------------------------------
 
 export const CONTRACT_MONTHS = 3;
@@ -34,12 +33,7 @@ export interface UitzendContract {
   weeksWorked: number;
 }
 
-function dir(): string {
-  return join(process.cwd(), "storage", "agreements", "uitzend");
-}
-function file(userId: string): string {
-  return join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.jsonl`);
-}
+const key = (userId: string) => `uitzend-contracts:${userId}`;
 
 function addMonths(d: Date, m: number): Date {
   const x = new Date(d);
@@ -48,17 +42,8 @@ function addMonths(d: Date, m: number): Date {
 }
 
 export async function listUitzendContracts(userId: string): Promise<UitzendContract[]> {
-  const p = file(userId);
-  if (!existsSync(p)) return [];
-  const out: UitzendContract[] = [];
-  for (const l of (await readFile(p, "utf8")).split("\n").filter(Boolean)) {
-    try {
-      out.push(JSON.parse(l) as UitzendContract);
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.signedAt < b.signedAt ? 1 : -1));
+  const rows = (await kvGet<UitzendContract[]>(key(userId))) ?? [];
+  return [...rows].sort((a, b) => (a.signedAt < b.signedAt ? 1 : -1));
 }
 
 /** The most recent contract that is still within its validity window. */
@@ -100,7 +85,6 @@ export async function signUitzendContract(
     weeksWorked: status?.weeksWorked ?? 0,
   };
 
-  await mkdir(dir(), { recursive: true });
-  await appendFile(file(userId), JSON.stringify(contract) + "\n", "utf8");
+  await kvAppend(key(userId), contract);
   return { contract, created: true };
 }

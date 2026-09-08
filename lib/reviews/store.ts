@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { appendFile, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvAppend, kvGet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Two-way reviews — an employer reviews a freelancer after a completed shift,
-// a freelancer reviews the company they worked for. Append-only, filesystem:
-//   storage/reviews/freelancer-<userId>.jsonl
-//   storage/reviews/company-<tenantId>.jsonl
+// a freelancer reviews the company they worked for. Postgres-backed
+// (KeyValueStore, key "reviews:<freelancer|company>-<id>", array value) — was
+// an append-only local .jsonl file, unreliable on Vercel serverless.
 // ---------------------------------------------------------------------------
 
 export type ReviewSubject = "freelancer" | "company";
@@ -34,9 +32,7 @@ export interface ReviewSummary {
   recent: Review[]; // last 6 months, newest first
 }
 
-const dir = () => join(process.cwd(), "storage", "reviews");
-const file = (type: ReviewSubject, id: string) =>
-  join(dir(), `${type}-${id.replace(/[^a-z0-9-]/gi, "")}.jsonl`);
+const key = (type: ReviewSubject, id: string) => `reviews:${type}-${id}`;
 
 export async function addReview(
   input: Omit<Review, "id" | "at">,
@@ -48,24 +44,13 @@ export async function addReview(
     id: randomUUID().slice(0, 12),
     at: new Date().toISOString(),
   };
-  await mkdir(dir(), { recursive: true });
-  await appendFile(file(input.subjectType, input.subjectId), JSON.stringify(review) + "\n", "utf8");
+  await kvAppend(key(input.subjectType, input.subjectId), review);
   return review;
 }
 
 export async function listReviews(type: ReviewSubject, id: string): Promise<Review[]> {
-  const p = file(type, id);
-  if (!existsSync(p)) return [];
-  const lines = (await readFile(p, "utf8")).split("\n").filter(Boolean);
-  const out: Review[] = [];
-  for (const l of lines) {
-    try {
-      out.push(JSON.parse(l) as Review);
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.at < b.at ? 1 : -1));
+  const rows = (await kvGet<Review[]>(key(type, id))) ?? [];
+  return [...rows].sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
 export async function reviewSummary(

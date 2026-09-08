@@ -13,7 +13,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN", "HQ_ADMIN");
+    requireRole(principal, "PLATFORM_ADMIN");
     const run = await getRun(params.isoWeek);
     if (!run) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Run niet gevonden" } }, { status: 404 });
     return NextResponse.json({ run });

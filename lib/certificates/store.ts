@@ -1,15 +1,15 @@
-import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { CertificateStatus as DbCertStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { storeUpload } from "@/lib/storage/local";
+import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // Certificaten van een kracht (VCA, BHV, heftruck, rijbewijzen, ...). Nodig
-// voor uitzendwerk en voor de matching-filter. Filesystem, non-destructief:
-//   storage/certificates/<userId>.json  → { items: Certificate[] }
-// Het bestand zelf gaat via de gedeelde upload-store (Upload-tabel).
+// voor uitzendwerk en voor de matching-filter. Metadata staat in Postgres
+// (Certificate) — overleeft een cold start op Vercel, in tegenstelling tot
+// het oude storage/certificates/<userId>.json. Het bestand zelf gaat nog
+// steeds via de gedeelde upload-store (Upload-tabel).
 // ---------------------------------------------------------------------------
 
 export type CertType =
@@ -67,11 +67,53 @@ export interface Certificate {
   verifiedAt?: string;
 }
 
-function dir(): string {
-  return join(process.cwd(), "storage", "certificates");
-}
-function file(userId: string): string {
-  return join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.json`);
+const STATUS_TO_DB: Record<CertStatus, DbCertStatus> = {
+  pending: DbCertStatus.PENDING,
+  valid: DbCertStatus.VALID,
+  expired: DbCertStatus.EXPIRED,
+  rejected: DbCertStatus.REJECTED,
+};
+const STATUS_FROM_DB: Record<DbCertStatus, CertStatus> = {
+  PENDING: "pending",
+  VALID: "valid",
+  EXPIRED: "expired",
+  REJECTED: "rejected",
+};
+
+const dateOnly = (d: Date | null): string | undefined => (d ? d.toISOString().slice(0, 10) : undefined);
+
+function toCertificate(row: {
+  id: string;
+  userId: string;
+  type: string;
+  customLabel: string | null;
+  number: string | null;
+  issuedOn: Date | null;
+  expiresOn: Date | null;
+  uploadId: string | null;
+  fileName: string | null;
+  status: DbCertStatus;
+  statusNote: string | null;
+  addedAt: Date;
+  verifiedAt: Date | null;
+}): Certificate {
+  const issuedOn = dateOnly(row.issuedOn);
+  const expiresOn = dateOnly(row.expiresOn);
+  return {
+    id: row.id,
+    userId: row.userId,
+    type: row.type as CertType,
+    ...(row.customLabel ? { customLabel: row.customLabel } : {}),
+    ...(row.number ? { number: row.number } : {}),
+    ...(issuedOn ? { issuedOn } : {}),
+    ...(expiresOn ? { expiresOn } : {}),
+    ...(row.uploadId ? { uploadId: row.uploadId } : {}),
+    ...(row.fileName ? { fileName: row.fileName } : {}),
+    status: STATUS_FROM_DB[row.status],
+    ...(row.statusNote ? { statusNote: row.statusNote } : {}),
+    addedAt: row.addedAt.toISOString(),
+    ...(row.verifiedAt ? { verifiedAt: row.verifiedAt.toISOString() } : {}),
+  };
 }
 
 function freshStatus(c: Certificate): Certificate {
@@ -86,19 +128,8 @@ function freshStatus(c: Certificate): Certificate {
 }
 
 export async function listCertificates(userId: string): Promise<Certificate[]> {
-  const p = file(userId);
-  if (!existsSync(p)) return [];
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as { items?: Certificate[] };
-    return (raw.items ?? []).map(freshStatus).sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1));
-  } catch {
-    return [];
-  }
-}
-
-async function writeAll(userId: string, items: Certificate[]): Promise<void> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), JSON.stringify({ items }, null, 2), "utf8");
+  const rows = await prisma.certificate.findMany({ where: { userId }, orderBy: { addedAt: "desc" } });
+  return rows.map(toCertificate).map(freshStatus);
 }
 
 /** Deterministische controle bij toevoegen. */
@@ -150,9 +181,10 @@ export async function addCertificate(userId: string, input: AddCertificateInput)
   let uploadId: string | undefined;
   let fileName: string | undefined;
   if (input.file && input.file.bytes.length > 0) {
+    const verifiedMimeType = sniffAndVerifyUploadType(input.file.bytes, ["pdf", "jpeg", "png", "webp"]);
     const stored = await storeUpload({
       filename: input.file.filename,
-      mimeType: input.file.mimeType,
+      mimeType: verifiedMimeType,
       bytes: input.file.bytes,
       uploadedById: userId,
     });
@@ -168,35 +200,33 @@ export async function addCertificate(userId: string, input: AddCertificateInput)
     hasFile: Boolean(uploadId),
   });
 
-  const now = new Date().toISOString();
-  const cert: Certificate = {
-    id: randomUUID().slice(0, 12),
-    userId,
-    type: input.type,
-    ...(input.customLabel ? { customLabel: input.customLabel.slice(0, 80) } : {}),
-    ...(input.number ? { number: input.number.trim().slice(0, 40) } : {}),
-    ...(input.issuedOn ? { issuedOn: input.issuedOn } : {}),
-    ...(input.expiresOn ? { expiresOn: input.expiresOn } : {}),
-    ...(uploadId ? { uploadId, ...(fileName ? { fileName } : {}) } : {}),
-    status,
-    statusNote: note,
-    addedAt: now,
-    ...(status === "valid" ? { verifiedAt: now } : {}),
-  };
-
-  const items = await listCertificates(userId);
-  items.unshift(cert);
-  await writeAll(userId, items);
-  return cert;
+  const now = new Date();
+  const row = await prisma.certificate.create({
+    data: {
+      userId,
+      type: input.type,
+      customLabel: input.customLabel?.slice(0, 80) ?? null,
+      number: input.number?.trim().slice(0, 40) ?? null,
+      issuedOn: input.issuedOn ? new Date(`${input.issuedOn}T00:00:00`) : null,
+      expiresOn: input.expiresOn ? new Date(`${input.expiresOn}T00:00:00`) : null,
+      uploadId: uploadId ?? null,
+      fileName: fileName ?? null,
+      status: STATUS_TO_DB[status],
+      statusNote: note,
+      addedAt: now,
+      verifiedAt: status === "valid" ? now : null,
+    },
+  });
+  return toCertificate(row);
 }
 
 export async function deleteCertificate(userId: string, id: string): Promise<void> {
-  const items = await listCertificates(userId);
-  await writeAll(userId, items.filter((c) => c.id !== id));
+  await prisma.certificate.deleteMany({ where: { id, userId } });
 }
 
 export async function getCertificate(userId: string, id: string): Promise<Certificate | null> {
-  return (await listCertificates(userId)).find((c) => c.id === id) ?? null;
+  const row = await prisma.certificate.findFirst({ where: { id, userId } });
+  return row ? freshStatus(toCertificate(row)) : null;
 }
 
 /** De certificaattypes waarvan de kracht een geldig (niet-verlopen) bewijs heeft. */

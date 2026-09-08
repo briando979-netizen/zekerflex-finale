@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Replacement requests on the filesystem — non-destructive by default. A
-// freelancer who can't make a shift asks for a substitute; the request is
-// logged here and e-mailed to ops. Other freelancers can respond ("ik neem
-// het over"); the original picks one and — only then — the assignment is
-// actually reassigned in the database (see lib/replacements/reassign.ts).
-//   storage/replacements/<id>.json
+// Replacement requests — Postgres-backed (KeyValueStore, key
+// "replacement:<id>") — was local disk, unreliable on Vercel's serverless
+// functions. A freelancer who can't make a shift asks for a substitute; the
+// request is logged here and e-mailed to ops. Other freelancers can respond
+// ("ik neem het over"); the original picks one and — only then — the
+// assignment is actually reassigned in the database (see
+// lib/replacements/reassign.ts).
 // ---------------------------------------------------------------------------
 
 export interface ReplacementResponse {
@@ -38,20 +37,7 @@ export interface ReplacementRequest {
   resolvedAt?: string;
 }
 
-function dir(): string {
-  return join(process.cwd(), "storage", "replacements");
-}
-
-function file(id: string): string {
-  const safe = id.replace(/[^a-zA-Z0-9_-]/g, "");
-  return join(dir(), `${safe}.json`);
-}
-
-async function write(rec: ReplacementRequest): Promise<ReplacementRequest> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(rec.id), JSON.stringify(rec, null, 2), "utf8");
-  return rec;
-}
+const key = (id: string) => `replacement:${id}`;
 
 function normalise(raw: Partial<ReplacementRequest>): ReplacementRequest {
   return {
@@ -73,6 +59,11 @@ function normalise(raw: Partial<ReplacementRequest>): ReplacementRequest {
   };
 }
 
+async function write(rec: ReplacementRequest): Promise<ReplacementRequest> {
+  await kvSet(key(rec.id), rec);
+  return rec;
+}
+
 export async function createReplacementRequest(
   input: Omit<ReplacementRequest, "id" | "at" | "status" | "responses">,
 ): Promise<ReplacementRequest> {
@@ -88,27 +79,13 @@ export async function createReplacementRequest(
 }
 
 export async function listReplacementRequests(limit = 100): Promise<ReplacementRequest[]> {
-  if (!existsSync(dir())) return [];
-  const files = (await readdir(dir())).filter((f) => f.endsWith(".json"));
-  const out: ReplacementRequest[] = [];
-  for (const f of files) {
-    try {
-      out.push(normalise(JSON.parse(await readFile(join(dir(), f), "utf8")) as Partial<ReplacementRequest>));
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
+  const rows = await kvListValues<Partial<ReplacementRequest>>("replacement:", 2000);
+  return rows.map(normalise).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
 }
 
 export async function getReplacementRequest(id: string): Promise<ReplacementRequest | null> {
-  const p = file(id);
-  if (!existsSync(p)) return null;
-  try {
-    return normalise(JSON.parse(await readFile(p, "utf8")) as Partial<ReplacementRequest>);
-  } catch {
-    return null;
-  }
+  const raw = await kvGet<Partial<ReplacementRequest>>(key(id.replace(/[^a-zA-Z0-9_-]/g, "")));
+  return raw ? normalise(raw) : null;
 }
 
 /** The single open request covering a given shift, if any. */

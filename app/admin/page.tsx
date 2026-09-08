@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
   const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN")) {
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return (
       <main className="p-8">
         <h1 className="text-lg font-semibold">Geen toegang</h1>

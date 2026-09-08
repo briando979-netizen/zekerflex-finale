@@ -1,14 +1,14 @@
-import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join, normalize, relative, sep } from "node:path";
+import { prisma } from "@/lib/prisma";
+import { ComplianceDocKind, ComplianceDocStatus } from "@prisma/client";
+import { storeUpload, readUpload } from "@/lib/storage/local";
+import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 
 // ---------------------------------------------------------------------------
 // Verplichte verificatiedocumenten per account: identiteitsbewijs +
-// (voor IBAN-controle) een bankafschrift/tenaamstelling. Files on disk, a
-// per-user index JSON. No Big-Tech, no DB schema change.
-//   storage/compliance/<userId>/<docId>            — the bytes
-//   storage/compliance/<userId>/index.json         — metadata + review status
+// (voor IBAN-controle) een bankafschrift/tenaamstelling. Bytes gaan via de
+// gedeelde Upload-store (lokaal of S3); metadata + reviewstatus staat in
+// Postgres (ComplianceDocument) — beide overleven een cold start op Vercel,
+// in tegenstelling tot het oude storage/compliance/<userId>/index.json.
 // ---------------------------------------------------------------------------
 
 export type DocKind = "id" | "bank" | "other";
@@ -26,39 +26,54 @@ export interface ComplianceDoc {
 }
 
 const MAX_BYTES = 12 * 1024 * 1024;
-const ALLOWED = [/^image\/(jpe?g|png|webp|heic|heif)$/i, /^application\/pdf$/i];
 
-function userDir(userId: string): string {
-  return join(process.cwd(), "storage", "compliance", userId.replace(/[^a-z0-9-]/gi, ""));
-}
-function jailed(userId: string, name: string): string {
-  const d = userDir(userId);
-  const abs = normalize(join(d, name));
-  if (relative(d, abs).startsWith("..") || relative(d, abs).startsWith(sep)) throw new Error("path escape");
-  return abs;
-}
-const indexPath = (userId: string) => jailed(userId, "index.json");
+const KIND_TO_DB: Record<DocKind, ComplianceDocKind> = {
+  id: ComplianceDocKind.ID,
+  bank: ComplianceDocKind.BANK,
+  other: ComplianceDocKind.OTHER,
+};
+const KIND_FROM_DB: Record<ComplianceDocKind, DocKind> = {
+  ID: "id",
+  BANK: "bank",
+  OTHER: "other",
+};
+const STATUS_FROM_DB: Record<ComplianceDocStatus, DocStatus> = {
+  UPLOADED: "uploaded",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+};
 
-async function readIndex(userId: string): Promise<ComplianceDoc[]> {
-  const p = indexPath(userId);
-  if (!existsSync(p)) return [];
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as ComplianceDoc[];
-  } catch {
-    return [];
-  }
-}
-async function writeIndex(userId: string, docs: ComplianceDoc[]): Promise<void> {
-  await mkdir(userDir(userId), { recursive: true });
-  await writeFile(indexPath(userId), JSON.stringify(docs, null, 2), "utf8");
+function toDoc(row: {
+  id: string;
+  kind: ComplianceDocKind;
+  status: ComplianceDocStatus;
+  note: string | null;
+  uploadedAt: Date;
+  upload: { filename: string; mimeType: string; sizeBytes: number };
+}): ComplianceDoc {
+  return {
+    id: row.id,
+    kind: KIND_FROM_DB[row.kind],
+    filename: row.upload.filename,
+    mimeType: row.upload.mimeType,
+    sizeBytes: row.upload.sizeBytes,
+    uploadedAt: row.uploadedAt.toISOString(),
+    status: STATUS_FROM_DB[row.status],
+    ...(row.note ? { note: row.note } : {}),
+  };
 }
 
 export async function listDocs(userId: string): Promise<ComplianceDoc[]> {
-  return (await readIndex(userId)).sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1));
+  const rows = await prisma.complianceDocument.findMany({
+    where: { userId },
+    orderBy: { uploadedAt: "desc" },
+    include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
+  });
+  return rows.map(toDoc);
 }
 
 export async function docStatus(userId: string): Promise<{ idOk: boolean; bankOk: boolean; complete: boolean }> {
-  const docs = await readIndex(userId);
+  const docs = await listDocs(userId);
   const idOk = docs.some((d) => d.kind === "id" && d.status !== "rejected");
   const bankOk = docs.some((d) => d.kind === "bank" && d.status !== "rejected");
   return { idOk, bankOk, complete: idOk && bankOk };
@@ -69,39 +84,45 @@ export async function storeDoc(
   kind: DocKind,
   input: { filename: string; mimeType: string; bytes: Buffer },
 ): Promise<ComplianceDoc> {
-  const mime = input.mimeType || "application/octet-stream";
-  if (!ALLOWED.some((re) => re.test(mime))) throw new Error("Alleen JPG, PNG of PDF");
   if (input.bytes.length === 0) throw new Error("Leeg bestand");
   if (input.bytes.length > MAX_BYTES) throw new Error("Bestand te groot (max 12 MB)");
+  // Sniffed from the actual bytes, never the client-supplied Content-Type —
+  // an ID/bank document upload is exactly the kind of endpoint MIME spoofing
+  // targets (e.g. claiming image/jpeg on an HTML file with a script tag).
+  const mime = sniffAndVerifyUploadType(input.bytes, ["pdf", "jpeg", "png", "webp"]);
 
-  const id = randomUUID().slice(0, 16);
-  await mkdir(userDir(userId), { recursive: true });
-  await writeFile(jailed(userId, id), input.bytes, { flag: "wx" });
-
-  const docs = await readIndex(userId);
-  // one active doc per kind (except "other") — supersede the previous
-  const kept = kind === "other" ? docs : docs.filter((d) => d.kind !== kind);
-  const doc: ComplianceDoc = {
-    id,
-    kind,
-    filename: input.filename.replace(/[^\w.\- ]+/g, "_").slice(0, 160) || "document",
+  const stored = await storeUpload({
+    filename: input.filename,
     mimeType: mime,
-    sizeBytes: input.bytes.length,
-    uploadedAt: new Date().toISOString(),
-    status: "uploaded",
-  };
-  await writeIndex(userId, [...kept, doc]);
-  return doc;
+    bytes: input.bytes,
+    uploadedById: userId,
+  });
+
+  const dbKind = KIND_TO_DB[kind];
+  // one active doc per kind (except "other") — supersede the previous
+  if (dbKind !== ComplianceDocKind.OTHER) {
+    await prisma.complianceDocument.deleteMany({ where: { userId, kind: dbKind } });
+  }
+
+  const row = await prisma.complianceDocument.create({
+    data: { userId, kind: dbKind, uploadId: stored.id },
+    include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
+  });
+  return toDoc(row);
 }
 
 export async function readDoc(
   userId: string,
   docId: string,
 ): Promise<{ bytes: Buffer; filename: string; mimeType: string } | null> {
-  const docs = await readIndex(userId);
-  const doc = docs.find((d) => d.id === docId.replace(/[^a-z0-9-]/gi, ""));
-  if (!doc) return null;
-  const p = jailed(userId, doc.id);
-  if (!existsSync(p)) return null;
-  return { bytes: await readFile(p), filename: doc.filename, mimeType: doc.mimeType };
+  const row = await prisma.complianceDocument.findFirst({
+    where: { id: docId.replace(/[^a-z0-9-]/gi, ""), userId },
+    select: { uploadId: true },
+  });
+  if (!row) return null;
+  try {
+    return await readUpload(row.uploadId);
+  } catch {
+    return null;
+  }
 }

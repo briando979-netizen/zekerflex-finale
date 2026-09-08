@@ -3,6 +3,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { storeUpload } from "@/lib/storage/local";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "PLATFORM_ADMIN");
+
+    const gate = await fixedWindow(`uploads:rl:${principal.userId}`, 30, 600);
+    if (!gate.ok) {
+      throw AppError.validation("Te veel uploads — probeer het over enkele minuten opnieuw.");
+    }
 
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verwacht multipart/form-data");

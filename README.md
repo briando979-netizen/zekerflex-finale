@@ -70,6 +70,13 @@ npm run dev
 
 ### Seeded logins (password `Zeker!2026`)
 
+> ⚠️ **Local development only.** This password is public — it's printed right
+> here, in this file. `prisma/seed.ts` refuses to run against anything but a
+> local database (see the guard at the top of that file); there is no
+> override for `--reset`. A real environment's first admin account comes from
+> `scripts/bootstrap-production.mjs` instead, which creates one real account
+> with a freshly generated password and no demo data.
+
 | Role | E-mail |
 | ---- | ------ |
 | PLATFORM_ADMIN | admin@zekerflex.nl |
@@ -86,7 +93,7 @@ npm run dev
   Prisma or Node crypto.
 * `middleware.ts` gates routes from `lib/auth/rbac.ts`:
   * `/admin/disputes/*` → `DISPUTE_MANAGER`, `HQ_ADMIN`, `PLATFORM_ADMIN`
-  * `/admin/*` → `HQ_ADMIN`, `PLATFORM_ADMIN`
+  * `/admin/*` → `PLATFORM_ADMIN` (employer-side admin views live under `/werkgever/*` instead)
   * `/api/timesheets/approve`, `/api/shifts/*/match` → `LOCAL_MANAGER`, `HQ_ADMIN`, `PLATFORM_ADMIN`
   * Denied page requests redirect to `/login`; denied API requests get JSON 401/403.
 * `lib/auth.ts#getPrincipal()` re-hydrates `(role, organization, locations)`

@@ -1,16 +1,15 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Per-user preferences on the filesystem — the same non-destructive pattern
-// as the mailbox and verification tokens. No database, no Redis, no schema.
-//   storage/prefs/<userId>.json
+// Per-user preferences. Postgres-backed (KeyValueStore, key "prefs:<userId>")
+// — was local disk, unreliable on Vercel's serverless functions.
 //
 // The matching engine / dispatcher MAY read this later; for now it only drives
 // the frontend (marketplace filters, rate hints, availability, job alerts,
 // shift confirmations).
 // ---------------------------------------------------------------------------
+
+const key = (userId: string) => `prefs:${userId}`;
 
 export type Daypart = "morning" | "afternoon" | "evening";
 
@@ -51,28 +50,13 @@ export const EMPTY_PREFS: UserPrefs = {
   updatedAt: new Date(0).toISOString(),
 };
 
-function dir(): string {
-  return join(process.cwd(), "storage", "prefs");
-}
-function path(userId: string): string {
-  // userId is a cuid — but guard anyway.
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return join(dir(), `${safe}.json`);
-}
-
 export async function getPrefs(userId: string): Promise<UserPrefs> {
-  const p = path(userId);
-  if (!existsSync(p)) return { ...EMPTY_PREFS };
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as Partial<UserPrefs>;
-    return { ...EMPTY_PREFS, ...raw, availability: raw.availability ?? {} };
-  } catch {
-    return { ...EMPTY_PREFS };
-  }
+  const raw = await kvGet<Partial<UserPrefs>>(key(userId));
+  if (!raw) return { ...EMPTY_PREFS };
+  return { ...EMPTY_PREFS, ...raw, availability: raw.availability ?? {} };
 }
 
 export async function setPrefs(userId: string, patch: Partial<UserPrefs>): Promise<UserPrefs> {
-  await mkdir(dir(), { recursive: true });
   const current = await getPrefs(userId);
   const next: UserPrefs = {
     ...current,
@@ -82,7 +66,7 @@ export async function setPrefs(userId: string, patch: Partial<UserPrefs>): Promi
     confirmations: patch.confirmations ?? current.confirmations,
     updatedAt: new Date().toISOString(),
   };
-  await writeFile(path(userId), JSON.stringify(next, null, 2), "utf8");
+  await kvSet(key(userId), next);
   return next;
 }
 

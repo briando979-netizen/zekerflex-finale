@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Personal contact book — saved / favourite people you message. Per account,
-// filesystem only:  storage/contacts/<userId>.json
+// Personal contact book — saved / favourite people you message. Postgres-
+// backed (KeyValueStore, key "contacts:<userId>") — was local disk,
+// unreliable on Vercel's serverless functions.
 // ---------------------------------------------------------------------------
 
 export interface SavedContact {
@@ -18,22 +17,14 @@ interface ContactBook {
   contacts: SavedContact[];
 }
 
-const dir = () => join(process.cwd(), "storage", "contacts");
-const file = (userId: string) => join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.json`);
+const key = (userId: string) => `contacts:${userId}`;
 
 async function read(userId: string): Promise<ContactBook> {
-  const p = file(userId);
-  if (!existsSync(p)) return { contacts: [] };
-  try {
-    return JSON.parse(await readFile(p, "utf8")) as ContactBook;
-  } catch {
-    return { contacts: [] };
-  }
+  return (await kvGet<ContactBook>(key(userId))) ?? { contacts: [] };
 }
 
 async function write(userId: string, book: ContactBook): Promise<void> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), JSON.stringify(book, null, 2), "utf8");
+  await kvSet(key(userId), book);
 }
 
 export async function listContacts(userId: string): Promise<SavedContact[]> {

@@ -1,13 +1,11 @@
-import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join, normalize, relative, sep } from "node:path";
+import { storeUpload, readUpload } from "@/lib/storage/local";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Chat attachments — voice notes, photos, documents. Stored per thread on the
-// box's own disk (no S3, no Upload table):
-//   storage/chat/media/<threadId>/<mediaId>          — the bytes
-//   storage/chat/media/<threadId>/<mediaId>.meta.json — filename + mime + size
+// Chat attachments — voice notes, photos, documents. Bytes go through the
+// shared Upload store (local disk or S3 per STORAGE_BACKEND); the one extra
+// field (voice-note duration) lives in the generic KeyValueStore. Was its own
+// local-disk implementation, unreliable on Vercel's serverless functions.
 // Access control is done by the caller (must be a thread participant).
 // ---------------------------------------------------------------------------
 
@@ -29,26 +27,14 @@ export interface StoredChatMedia {
   sizeBytes: number;
 }
 
-function mediaDir(threadId: string): string {
-  return join(process.cwd(), "storage", "chat", "media", threadId.replace(/[^a-z0-9-]/gi, ""));
-}
-function safeMediaId(id: string): string {
-  return id.replace(/[^a-z0-9-]/gi, "");
-}
-function jailed(threadId: string, name: string): string {
-  const dir = mediaDir(threadId);
-  const abs = normalize(join(dir, name));
-  const rel = relative(dir, abs);
-  if (rel.startsWith("..") || rel.startsWith(sep)) throw new Error("path escape");
-  return abs;
-}
-
 export function isAllowedChatMime(mime: string): boolean {
   return ALLOWED_MIME.some((re) => re.test(mime));
 }
 
+const durationKey = (mediaId: string) => `chat-media-duration:${mediaId}`;
+
 export async function storeChatMedia(
-  threadId: string,
+  _threadId: string,
   input: { filename: string; mimeType: string; bytes: Buffer; durationSec?: number },
 ): Promise<StoredChatMedia & { durationSec?: number }> {
   if (input.bytes.length === 0) throw new Error("leeg bestand");
@@ -56,34 +42,31 @@ export async function storeChatMedia(
   const mime = input.mimeType || "application/octet-stream";
   if (!isAllowedChatMime(mime)) throw new Error("bestandstype niet toegestaan");
 
-  const mediaId = randomUUID().slice(0, 16);
-  const filename =
-    input.filename.replace(/[^\w.\- ]+/g, "_").trim().slice(0, 160) || "bestand";
-  await mkdir(mediaDir(threadId), { recursive: true });
-  await writeFile(jailed(threadId, mediaId), input.bytes, { flag: "wx" });
-  const meta: StoredChatMedia & { durationSec?: number } = {
-    mediaId,
-    filename,
-    mimeType: mime,
-    sizeBytes: input.bytes.length,
+  const stored = await storeUpload({ filename: input.filename, mimeType: mime, bytes: input.bytes });
+  if (input.durationSec) {
+    await kvSet(durationKey(stored.id), Math.round(input.durationSec));
+  }
+  return {
+    mediaId: stored.id,
+    filename: stored.filename,
+    mimeType: stored.mimeType,
+    sizeBytes: stored.sizeBytes,
     ...(input.durationSec ? { durationSec: Math.round(input.durationSec) } : {}),
   };
-  await writeFile(jailed(threadId, `${mediaId}.meta.json`), JSON.stringify(meta), "utf8");
-  return meta;
 }
 
 export async function readChatMedia(
-  threadId: string,
+  _threadId: string,
   mediaId: string,
 ): Promise<{ bytes: Buffer; filename: string; mimeType: string } | null> {
-  const id = safeMediaId(mediaId);
-  const bytesPath = jailed(threadId, id);
-  const metaPath = jailed(threadId, `${id}.meta.json`);
-  if (!existsSync(bytesPath) || !existsSync(metaPath)) return null;
   try {
-    const meta = JSON.parse(await readFile(metaPath, "utf8")) as StoredChatMedia;
-    return { bytes: await readFile(bytesPath), filename: meta.filename, mimeType: meta.mimeType };
+    const file = await readUpload(mediaId);
+    return { bytes: file.bytes, filename: file.filename, mimeType: file.mimeType };
   } catch {
     return null;
   }
+}
+
+export async function chatMediaDuration(mediaId: string): Promise<number | null> {
+  return kvGet<number>(durationKey(mediaId));
 }

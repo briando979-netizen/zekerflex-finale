@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
-    requireRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
+    requireRole(principal, "PLATFORM_ADMIN");
     return NextResponse.json(await buildAdminOverview());
   } catch (err) {
     const { status, body } = toErrorBody(err);

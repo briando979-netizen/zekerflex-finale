@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Per-account chat preferences — quick replies, an away / auto-reply message,
-// and privacy toggles. Filesystem only:  storage/chat-settings/<userId>.json
+// and privacy toggles. Postgres-backed (KeyValueStore, key
+// "chat-settings:<userId>") — was local disk, unreliable on Vercel serverless.
 // ---------------------------------------------------------------------------
 
 export interface AutoReply {
@@ -36,23 +35,17 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   statusNote: "",
 };
 
-const dir = () => join(process.cwd(), "storage", "chat-settings");
-const file = (userId: string) => join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.json`);
+const key = (userId: string) => `chat-settings:${userId}`;
 
 export async function getChatSettings(userId: string): Promise<ChatSettings> {
-  const p = file(userId);
-  if (!existsSync(p)) return { ...DEFAULT_SETTINGS };
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as Partial<ChatSettings>;
-    return {
-      ...DEFAULT_SETTINGS,
-      ...raw,
-      autoReply: { ...DEFAULT_SETTINGS.autoReply, ...(raw.autoReply ?? {}) },
-      quickReplies: Array.isArray(raw.quickReplies) ? raw.quickReplies.slice(0, 20) : DEFAULT_SETTINGS.quickReplies,
-    };
-  } catch {
-    return { ...DEFAULT_SETTINGS };
-  }
+  const raw = await kvGet<Partial<ChatSettings>>(key(userId));
+  if (!raw) return { ...DEFAULT_SETTINGS };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    autoReply: { ...DEFAULT_SETTINGS.autoReply, ...(raw.autoReply ?? {}) },
+    quickReplies: Array.isArray(raw.quickReplies) ? raw.quickReplies.slice(0, 20) : DEFAULT_SETTINGS.quickReplies,
+  };
 }
 
 export interface ChatSettingsPatch {
@@ -85,7 +78,6 @@ export async function saveChatSettings(
     showOnlineStatus: patch.showOnlineStatus ?? current.showOnlineStatus,
     statusNote: (patch.statusNote ?? current.statusNote).slice(0, 140),
   };
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), JSON.stringify(next, null, 2), "utf8");
+  await kvSet(key(userId), next);
   return next;
 }

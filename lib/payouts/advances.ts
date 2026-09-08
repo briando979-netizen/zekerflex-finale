@@ -1,15 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { isValidIban, triggerInstantPayout } from "@/lib/billing/sepa";
 
 // ---------------------------------------------------------------------------
-// Voorschot (advance against the next payout). Filesystem, advisory —
-// no Payment / Invoice rows are touched.
-//   storage/payouts/advances/<userId>.jsonl
+// Voorschot (advance against the next payout). Postgres-backed (AdvanceRecord)
+// — no Payment / Invoice rows are touched.
 //
 // Two kinds:
 //   "manual"  — freelancer taps "voorschot", 3% fee, settled against the next
@@ -19,6 +16,10 @@ import { isValidIban, triggerInstantPayout } from "@/lib/billing/sepa";
 //               the weekly payroll run reconciles it against the net wage. This
 //               is legal because it's an advance ON wages, not wage payment —
 //               loonheffing/premies/pensioen are still processed by payroll.
+//
+// Previously this lived on local disk (storage/payouts/advances/*.jsonl) —
+// unreliable on Vercel's serverless functions, whose filesystem is read-only
+// outside /tmp.
 // ---------------------------------------------------------------------------
 
 export type AdvanceStatus = "requested" | "approved" | "settled" | "rejected";
@@ -48,30 +49,63 @@ export interface Advance {
   reconciledNetCents?: number;
 }
 
-const dir = () => join(process.cwd(), "storage", "payouts", "advances");
-const file = (userId: string) => join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.jsonl`);
+type AdvanceRow = {
+  id: string;
+  userId: string;
+  amountCents: number;
+  feeCents: number;
+  netCents: number;
+  status: string;
+  kind: string | null;
+  isoWeek: string | null;
+  timesheetId: string | null;
+  expectedGrossCents: number | null;
+  payoutStatus: string | null;
+  providerRef: string | null;
+  note: string | null;
+  requestedAt: Date;
+  settledAt: Date | null;
+  paidAt: Date | null;
+  reconciledAt: Date | null;
+  reconciledNetCents: number | null;
+};
+
+function toAdvance(row: AdvanceRow): Advance {
+  const kind: Advance["kind"] = row.kind === "manual" || row.kind === "payroll" ? row.kind : undefined;
+  return {
+    id: row.id,
+    userId: row.userId,
+    amountCents: row.amountCents,
+    feeCents: row.feeCents,
+    netCents: row.netCents,
+    requestedAt: row.requestedAt.toISOString(),
+    status: row.status as AdvanceStatus,
+    ...(row.settledAt ? { settledAt: row.settledAt.toISOString() } : {}),
+    ...(row.note ? { note: row.note } : {}),
+    ...(kind ? { kind } : {}),
+    ...(row.isoWeek ? { isoWeek: row.isoWeek } : {}),
+    ...(row.timesheetId ? { timesheetId: row.timesheetId } : {}),
+    ...(row.expectedGrossCents !== null ? { expectedGrossCents: row.expectedGrossCents } : {}),
+    ...(row.payoutStatus ? { payoutStatus: row.payoutStatus } : {}),
+    ...(row.providerRef !== undefined ? { providerRef: row.providerRef } : {}),
+    ...(row.paidAt ? { paidAt: row.paidAt.toISOString() } : {}),
+    ...(row.reconciledAt ? { reconciledAt: row.reconciledAt.toISOString() } : {}),
+    ...(row.reconciledNetCents !== null ? { reconciledNetCents: row.reconciledNetCents } : {}),
+  };
+}
 
 export async function listAdvances(userId: string): Promise<Advance[]> {
-  const p = file(userId);
-  if (!existsSync(p)) return [];
-  const lines = (await readFile(p, "utf8")).split("\n").filter(Boolean);
-  const out: Advance[] = [];
-  for (const l of lines) {
-    try {
-      out.push(JSON.parse(l) as Advance);
-    } catch {
-      /* skip */
-    }
-  }
-  return out.sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1));
+  const rows = await prisma.advanceRecord.findMany({ where: { userId }, orderBy: { requestedAt: "desc" } });
+  return rows.map(toAdvance);
 }
 
 /** Total advanced amount not yet settled (deducted from the next payout). */
 export async function outstandingAdvanceCents(userId: string): Promise<number> {
-  const all = await listAdvances(userId);
-  return all
-    .filter((a) => a.status === "requested" || a.status === "approved")
-    .reduce((s, a) => s + a.amountCents, 0);
+  const rows = await prisma.advanceRecord.findMany({
+    where: { userId, status: { in: ["requested", "approved"] } },
+    select: { amountCents: true },
+  });
+  return rows.reduce((s, a) => s + a.amountCents, 0);
 }
 
 export function advanceFee(amountCents: number): number {
@@ -99,39 +133,30 @@ export async function requestAdvance(
     );
   }
   const fee = advanceFee(amount);
-  const advance: Advance = {
-    id: randomUUID().slice(0, 12),
-    userId,
-    amountCents: amount,
-    feeCents: fee,
-    netCents: amount - fee,
-    requestedAt: new Date().toISOString(),
-    status: "requested",
-  };
-  await mkdir(dir(), { recursive: true });
-  await appendFile(file(userId), JSON.stringify(advance) + "\n", "utf8");
-  return advance;
+  const row = await prisma.advanceRecord.create({
+    data: {
+      id: randomUUID().slice(0, 12),
+      userId,
+      amountCents: amount,
+      feeCents: fee,
+      netCents: amount - fee,
+      status: "requested",
+    },
+  });
+  return toAdvance(row);
 }
 
 /** Mark advances settled once the next payout has cleared (admin / cron use). */
 export async function settleAdvances(userId: string): Promise<void> {
-  const all = await listAdvances(userId);
-  const now = new Date().toISOString();
-  const next = all.map((a) =>
-    a.status === "requested" || a.status === "approved" ? { ...a, status: "settled" as const, settledAt: now } : a,
-  );
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), next.map((a) => JSON.stringify(a)).join("\n") + "\n", "utf8");
+  await prisma.advanceRecord.updateMany({
+    where: { userId, status: { in: ["requested", "approved"] } },
+    data: { status: "settled", settledAt: new Date() },
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Payroll instant-advance
 // ---------------------------------------------------------------------------
-
-async function rewriteAll(userId: string, rows: Advance[]): Promise<void> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), rows.map((a) => JSON.stringify(a)).join("\n") + "\n", "utf8");
-}
 
 /**
  * Pay an instant advance on the expected wage of a just-approved uitzend
@@ -151,36 +176,26 @@ export async function createPayrollAdvance(input: {
   if (amountCents < 500) return null; // not worth an instant transfer
 
   // one advance per timesheet
-  const existing = (await listAdvances(input.userId)).find(
-    (a) => a.kind === "payroll" && a.timesheetId === input.timesheetId,
-  );
-  if (existing) return existing;
+  const existing = await prisma.advanceRecord.findFirst({
+    where: { kind: "payroll", timesheetId: input.timesheetId },
+  });
+  if (existing) return toAdvance(existing);
 
   const feeCents = advanceFee(amountCents);
   const netCents = amountCents - feeCents;
-  const now = new Date().toISOString();
-  const advance: Advance = {
-    id: randomUUID().slice(0, 12),
-    userId: input.userId,
-    amountCents,
-    feeCents,
-    netCents,
-    requestedAt: now,
-    status: "approved",
-    kind: "payroll",
-    isoWeek: input.isoWeek,
-    timesheetId: input.timesheetId,
-    expectedGrossCents: Math.round(input.expectedGrossCents),
-    payoutStatus: "PENDING",
-    providerRef: null,
-  };
+  const id = randomUUID().slice(0, 12);
+
+  let payoutStatus = "PENDING";
+  let providerRef: string | null = null;
+  let paidAt: Date | null = null;
+  let note: string | null = null;
 
   const iban = input.creditorIban ?? undefined;
   const canPayout = input.stripeConnectedAccountId || (iban && isValidIban(iban));
   if (canPayout) {
     try {
       const res = await triggerInstantPayout({
-        endToEndId: `ADV-${advance.id}`,
+        endToEndId: `ADV-${id}`,
         amountCents: netCents,
         currency: "EUR",
         creditorIban: iban ?? "UNKNOWN",
@@ -188,29 +203,46 @@ export async function createPayrollAdvance(input: {
         remittanceInfo: `ZekerFlex voorschot ${input.isoWeek}`,
         stripeConnectedAccountId: input.stripeConnectedAccountId ?? null,
       });
-      advance.payoutStatus = res.status;
-      advance.providerRef = res.providerRef;
-      if (res.status === "SETTLED" || res.status === "SUBMITTED") advance.paidAt = new Date().toISOString();
+      payoutStatus = res.status;
+      providerRef = res.providerRef;
+      if (res.status === "SETTLED" || res.status === "SUBMITTED") paidAt = new Date();
     } catch (err) {
-      advance.payoutStatus = "FAILED";
+      payoutStatus = "FAILED";
       logger.warn("payroll instant advance payout failed; queued for retry", {
-        advanceId: advance.id,
+        advanceId: id,
         error: (err as Error).message,
       });
     }
   } else {
-    advance.payoutStatus = "FAILED";
-    advance.note = "Geen geldig IBAN of gekoppelde Stripe-rekening — voorschot in wachtrij.";
+    payoutStatus = "FAILED";
+    note = "Geen geldig IBAN of gekoppelde Stripe-rekening — voorschot in wachtrij.";
   }
 
-  await mkdir(dir(), { recursive: true });
-  await appendFile(file(input.userId), JSON.stringify(advance) + "\n", "utf8");
-  return advance;
+  const row = await prisma.advanceRecord.create({
+    data: {
+      id,
+      userId: input.userId,
+      amountCents,
+      feeCents,
+      netCents,
+      status: "approved",
+      kind: "payroll",
+      isoWeek: input.isoWeek,
+      timesheetId: input.timesheetId,
+      expectedGrossCents: Math.round(input.expectedGrossCents),
+      payoutStatus,
+      providerRef,
+      paidAt,
+      note,
+    },
+  });
+  return toAdvance(row);
 }
 
 /** All payroll advances (any status) tied to a given week. */
 export async function payrollAdvancesForWeek(userId: string, isoWeek: string): Promise<Advance[]> {
-  return (await listAdvances(userId)).filter((a) => a.kind === "payroll" && a.isoWeek === isoWeek);
+  const rows = await prisma.advanceRecord.findMany({ where: { userId, kind: "payroll", isoWeek } });
+  return rows.map(toAdvance);
 }
 
 /**
@@ -222,23 +254,21 @@ export async function reconcilePayrollAdvances(
   isoWeek: string,
   netWageCents: number,
 ): Promise<{ grossCents: number; netPaidCents: number; feeCents: number; count: number }> {
-  const all = await listAdvances(userId);
-  const now = new Date().toISOString();
-  let grossCents = 0;
-  let netPaidCents = 0;
-  let feeCents = 0;
-  let count = 0;
-  const next = all.map((a) => {
-    if (a.kind !== "payroll" || a.isoWeek !== isoWeek) return a;
-    grossCents += a.amountCents;
-    netPaidCents += a.netCents;
-    feeCents += a.feeCents;
-    count += 1;
-    if (a.status === "approved") {
-      return { ...a, status: "settled" as const, settledAt: now, reconciledAt: now, reconciledNetCents: netWageCents };
-    }
-    return a;
-  });
-  if (count > 0) await rewriteAll(userId, next);
-  return { grossCents, netPaidCents, feeCents, count };
+  const rows = await prisma.advanceRecord.findMany({ where: { userId, kind: "payroll", isoWeek } });
+  const grossCents = rows.reduce((s, a) => s + a.amountCents, 0);
+  const netPaidCents = rows.reduce((s, a) => s + a.netCents, 0);
+  const feeCents = rows.reduce((s, a) => s + a.feeCents, 0);
+  const toSettle = rows.filter((a) => a.status === "approved").map((a) => a.id);
+  if (toSettle.length > 0) {
+    await prisma.advanceRecord.updateMany({
+      where: { id: { in: toSettle } },
+      data: {
+        status: "settled",
+        settledAt: new Date(),
+        reconciledAt: new Date(),
+        reconciledNetCents: netWageCents,
+      },
+    });
+  }
+  return { grossCents, netPaidCents, feeCents, count: rows.length };
 }

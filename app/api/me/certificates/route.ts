@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { addCertificate, listCertificates, CERT_TYPES, type CertType } from "@/lib/certificates/store";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");
+
+    const gate = await fixedWindow(`me-certificates:rl:${p.userId}`, 20, 600);
+    if (!gate.ok) throw AppError.validation("Te veel uploads — probeer het over enkele minuten opnieuw.");
 
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verstuur als multipart/form-data");

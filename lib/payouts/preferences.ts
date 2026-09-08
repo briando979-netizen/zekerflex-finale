@@ -1,13 +1,14 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
-// Freelancer payout-speed choice. Filesystem, non-destructive — this steers the
-// display + the advisory fee shown at hours-approval; it never rewrites a
-// Payment record.
-//   storage/payouts/prefs/<userId>.json
+// Freelancer payout-speed choice. Postgres-backed (PayoutPreference) — this
+// steers the display + the advisory fee shown at hours-approval; it never
+// rewrites a Payment record.
+//
+// Previously stored on local disk (storage/payouts/prefs/<userId>.json) —
+// unreliable on Vercel's serverless functions, whose filesystem is read-only
+// outside /tmp.
 // ---------------------------------------------------------------------------
 
 export type PayoutSpeed = "instant" | "threeDay" | "standard";
@@ -43,28 +44,21 @@ export const PAYOUT_SPEEDS: Record<
 
 export const DEFAULT_PREFS: PayoutPrefs = { speed: "standard", updatedAt: new Date(0).toISOString() };
 
-const dir = () => join(process.cwd(), "storage", "payouts", "prefs");
-const file = (userId: string) => join(dir(), `${userId.replace(/[^a-z0-9-]/gi, "")}.json`);
-
 export async function getPayoutPrefs(userId: string): Promise<PayoutPrefs> {
-  const p = file(userId);
-  if (!existsSync(p)) return { ...DEFAULT_PREFS };
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as Partial<PayoutPrefs>;
-    const speed: PayoutSpeed =
-      raw.speed && raw.speed in PAYOUT_SPEEDS ? (raw.speed as PayoutSpeed) : "standard";
-    return { speed, updatedAt: raw.updatedAt ?? DEFAULT_PREFS.updatedAt };
-  } catch {
-    return { ...DEFAULT_PREFS };
-  }
+  const row = await prisma.payoutPreference.findUnique({ where: { userId } });
+  if (!row) return { ...DEFAULT_PREFS };
+  const speed: PayoutSpeed = row.speed in PAYOUT_SPEEDS ? (row.speed as PayoutSpeed) : "standard";
+  return { speed, updatedAt: row.updatedAt.toISOString() };
 }
 
 export async function setPayoutSpeed(userId: string, speed: PayoutSpeed): Promise<PayoutPrefs> {
   if (!(speed in PAYOUT_SPEEDS)) throw new Error("onbekende uitbetaalsnelheid");
-  const next: PayoutPrefs = { speed, updatedAt: new Date().toISOString() };
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(userId), JSON.stringify(next, null, 2), "utf8");
-  return next;
+  const row = await prisma.payoutPreference.upsert({
+    where: { userId },
+    create: { userId, speed },
+    update: { speed },
+  });
+  return { speed: speed, updatedAt: row.updatedAt.toISOString() };
 }
 
 /** Fee withheld from a payout of `totalCents` at the given speed. */

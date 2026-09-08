@@ -1,17 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Demo requests from opdrachtgevers ("Vraag een demo aan"). Filesystem only:
-//   storage/demo/<ts>-<id>.json
-// No database, no Redis, no external scheduler.
+// Demo requests from opdrachtgevers ("Vraag een demo aan"). Postgres-backed
+// (KeyValueStore, key "demo:<id>") — was local disk, unreliable on Vercel.
 // ---------------------------------------------------------------------------
 
-function dir(): string {
-  return join(process.cwd(), "storage", "demo");
-}
+const key = (id: string) => `demo:${id}`;
 
 export interface DemoRequest {
   id: string;
@@ -32,36 +27,15 @@ export async function saveDemoRequest(input: Omit<DemoRequest, "id" | "at">): Pr
   const id = randomUUID().slice(0, 12);
   const at = new Date().toISOString();
   const rec: DemoRequest = { id, at, ...input };
-  await mkdir(dir(), { recursive: true });
-  await writeFile(join(dir(), `${at.replace(/[:.]/g, "-")}-${id}.json`), JSON.stringify(rec, null, 2), "utf8");
+  await kvSet(key(id), rec);
   return rec;
 }
 
 export async function getDemoRequest(id: string): Promise<DemoRequest | null> {
-  if (!/^[a-f0-9-]{6,20}$/.test(id) || !existsSync(dir())) return null;
-  const files = (await readdir(dir())).filter((f) => f.endsWith(`-${id}.json`));
-  if (!files[0]) return null;
-  try {
-    return JSON.parse(await readFile(join(dir(), files[0]), "utf8")) as DemoRequest;
-  } catch {
-    return null;
-  }
+  if (!/^[a-f0-9-]{6,20}$/.test(id)) return null;
+  return kvGet<DemoRequest>(key(id));
 }
 
 export async function listDemoRequests(limit = 200): Promise<DemoRequest[]> {
-  if (!existsSync(dir())) return [];
-  const files = (await readdir(dir()))
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .reverse()
-    .slice(0, limit);
-  const out: DemoRequest[] = [];
-  for (const f of files) {
-    try {
-      out.push(JSON.parse(await readFile(join(dir(), f), "utf8")) as DemoRequest);
-    } catch {
-      /* skip */
-    }
-  }
-  return out;
+  return kvListValues<DemoRequest>("demo:", limit);
 }

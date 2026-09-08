@@ -20,7 +20,7 @@ next-env.d.ts
 *.tsbuildinfo
 
 # local upload storage (sovereign box - files live on disk, not in git)
-storage/
+/storage/
 /backups
 .env.production
 

@@ -1,11 +1,9 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Per-organisation freelancer relations — favourites and blocks.
-// Filesystem only (same non-destructive pattern as prefs / replacements):
-//   storage/employer-relations/<tenantId>.json
+// Per-organisation freelancer relations — favourites and blocks. Postgres-
+// backed (KeyValueStore, key "employer-relations:<tenantId>") — was local
+// disk, unreliable on Vercel's serverless functions.
 //
 // favourites  → krachten die je graag terugziet (voor snel uitnodigen)
 // blocked     → krachten die je klussen niet meer mogen zien of aannemen
@@ -23,32 +21,19 @@ export interface EmployerRelations {
   blocked: FreelancerRef[];
 }
 
-const EMPTY: EmployerRelations = { favorites: [], blocked: [] };
-
-function dir(): string {
-  return join(process.cwd(), "storage", "employer-relations");
-}
-function file(tenantId: string): string {
-  return join(dir(), `${tenantId.replace(/[^a-zA-Z0-9_-]/g, "")}.json`);
-}
+const key = (tenantId: string) => `employer-relations:${tenantId}`;
 
 export async function getEmployerRelations(tenantId: string): Promise<EmployerRelations> {
-  const p = file(tenantId);
-  if (!existsSync(p)) return { favorites: [], blocked: [] };
-  try {
-    const raw = JSON.parse(await readFile(p, "utf8")) as Partial<EmployerRelations>;
-    return {
-      favorites: Array.isArray(raw.favorites) ? raw.favorites : [],
-      blocked: Array.isArray(raw.blocked) ? raw.blocked : [],
-    };
-  } catch {
-    return { favorites: [], blocked: [] };
-  }
+  const raw = await kvGet<Partial<EmployerRelations>>(key(tenantId));
+  if (!raw) return { favorites: [], blocked: [] };
+  return {
+    favorites: Array.isArray(raw.favorites) ? raw.favorites : [],
+    blocked: Array.isArray(raw.blocked) ? raw.blocked : [],
+  };
 }
 
 async function write(tenantId: string, rel: EmployerRelations): Promise<EmployerRelations> {
-  await mkdir(dir(), { recursive: true });
-  await writeFile(file(tenantId), JSON.stringify(rel, null, 2), "utf8");
+  await kvSet(key(tenantId), rel);
   return rel;
 }
 
