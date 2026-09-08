@@ -31,7 +31,9 @@ async function main() {
   }
 
   const platform = await prisma.tenant.create({
-    data: { name: "ZekerFlex B.V.", type: "PLATFORM", country: "NL" },
+    // Fixed id: lib/auth/register.ts and lib/auth/nextauth.ts hardcode
+    // "org_platform" as the tenant every self-serve signup joins.
+    data: { id: "org_platform", name: "ZekerFlex B.V.", type: "PLATFORM", country: "NL" },
   });
 
   const password = randomPassword();
