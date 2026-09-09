@@ -1,4 +1,9 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
 
@@ -42,6 +47,12 @@ export async function getObjectUrl(key: string): Promise<string> {
     s3(),
     new GetObjectCommand({ Bucket: env.STORAGE_S3_BUCKET, Key: key }),
     { expiresIn: env.STORAGE_SIGNED_URL_TTL_S },
+  );
+}
+
+export async function deleteObject(key: string): Promise<void> {
+  await s3().send(
+    new DeleteObjectCommand({ Bucket: env.STORAGE_S3_BUCKET, Key: key }),
   );
 }
 
