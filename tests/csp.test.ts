@@ -30,6 +30,8 @@ describe("buildContentSecurityPolicy — production", () => {
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
     expect(csp).toContain("connect-src 'self'");
+    expect(csp).toContain("worker-src 'self'");
+    expect(csp).toContain("manifest-src 'self'");
   });
 
   it("still allows the Google Fonts stylesheet + inline style (documented trade-off)", () => {

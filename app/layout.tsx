@@ -1,12 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import "./globals.css";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
+import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const TITLE = `${SITE.name} — ${SITE.tagline}`;
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FCFCFA" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0E12" },
+  ],
+  colorScheme: "light dark",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -52,7 +61,16 @@ export const metadata: Metadata = {
       ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
       : {},
   },
-  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: SITE.name,
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default async function RootLayout({
@@ -92,6 +110,7 @@ export default async function RootLayout({
         <Suspense fallback={null}>
           <AnalyticsBeacon />
         </Suspense>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

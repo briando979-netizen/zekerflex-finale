@@ -51,6 +51,10 @@ export function buildContentSecurityPolicy({ dev, nonce }: CspOptions): string {
     "img-src 'self' data: blob:",
     "media-src 'self' blob:",
     connectSrc,
+    // The service worker (/sw.js) — 'strict-dynamic' would otherwise drop the
+    // 'self' fallback for worker scripts and block it.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -6,6 +6,7 @@ import { getUserCard } from "@/lib/profile/card";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
+import { PushToggle } from "@/components/app/PushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,6 @@ export default async function AccountPage() {
           href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex-app",
           external: true,
         },
-        { label: "Pushmeldingen", href: "/dashboard/beschikbaarheid" },
         { label: "Favoriete opdrachtgevers", href: "/dashboard/klussen" },
         { label: "Verborgen opdrachtgevers", href: "/dashboard/account/verborgen" },
       ],
@@ -167,6 +167,10 @@ export default async function AccountPage() {
           <span className="text-neutralx-400">›</span>
         </Link>
       )}
+
+      <div className="mt-4">
+        <PushToggle />
+      </div>
 
       <div className="mt-4 space-y-5">
         {GROUPS.map((g, gi) => (
