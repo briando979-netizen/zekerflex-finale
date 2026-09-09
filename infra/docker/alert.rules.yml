@@ -1,0 +1,70 @@
+groups:
+  - name: zekerflex
+    rules:
+      # --- availability ---------------------------------------------------
+      - alert: AppDown
+        expr: up{job="zekerflex-app-health"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "ZekerFlex app is niet bereikbaar"
+
+      - alert: MetricsScrapeFailing
+        expr: up{job="zekerflex-app"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "/api/metrics wordt niet gescrapet (token/endpoint?)"
+
+      # --- scheduled jobs (heartbeats from lib/metrics) -----------------
+      - alert: CronJobStale
+        expr: time() - zf_cron_last_run_timestamp_seconds > 26 * 3600
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Cron job {{ $labels.job }} draaide >26u niet"
+
+      - alert: CronJobFailing
+        expr: zf_cron_last_run_success == 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Cron job {{ $labels.job }} eindigde met een fout"
+
+      # --- security ----------------------------------------------------
+      - alert: LoginFailureSpike
+        expr: increase(zf_login_failures_total[5m]) > 50
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Piek in mislukte logins (>50 in 5m) — mogelijk credential stuffing"
+
+      - alert: RateLimitSpike
+        expr: sum(increase(zf_rate_limited_total[5m])) > 500
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Veel 429's (>500 in 5m) — abuse of een kapotte client"
+
+      # --- money -----------------------------------------------------
+      - alert: PayoutFailures
+        expr: increase(zf_payouts_total{status="failed"}[15m]) > 3
+        for: 0m
+        labels: { severity: critical }
+        annotations:
+          summary: ">3 mislukte uitbetalingen in 15m — controleer de SEPA/Stripe-provider"
+
+      # --- runtime -------------------------------------------------
+      - alert: EventLoopLag
+        expr: zf_nodejs_eventloop_lag_seconds > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Node event-loop lag >500ms — iets blokkeert de request-thread"
+
+      - alert: HeapNearLimit
+        expr: zf_nodejs_heap_size_used_bytes / zf_nodejs_heap_size_total_bytes > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Heap-gebruik >90% van de totale heap"

@@ -63,7 +63,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
-    "postcss": "^8.4.45",
+    "postcss": "^8.5.28",
     "prisma": "^5.19.1",
     "tailwindcss": "^3.4.10",
     "ts-node": "^10.9.2",
@@ -72,5 +72,8 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }
