@@ -6,8 +6,10 @@ import { checkLlm } from "@/lib/ai/watchdog";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Daemon hits this on a short interval: pings the local model, tracks up/down
-// transitions and keeps the model warm (keep_alive).
+// Ideally hit on a short interval (pings the local model, tracks up/down
+// transitions, keeps it warm via keep_alive), but vercel.json currently
+// schedules it once daily — Vercel's Hobby plan only allows daily cron jobs.
+// A non-Vercel scheduler hitting this directly can already run as often as needed.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) {

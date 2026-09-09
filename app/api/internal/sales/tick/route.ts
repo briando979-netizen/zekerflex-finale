@@ -7,9 +7,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Cron entrypoint for the sales-recruiter motor. The daemon hits this every
- * ~15 min with the `x-internal-token` header. The engine is a no-op unless
- * SALES_ENGINE_ENABLED is true and no kill-switch is set.
+ * Cron entrypoint for the sales-recruiter motor. Ideally hit every ~15 min,
+ * but vercel.json currently schedules it once daily — Vercel's Hobby plan
+ * only allows daily cron jobs (Pro+ unlocks sub-daily; tighten the schedule
+ * there if this project upgrades). A non-Vercel scheduler hitting this with
+ * the `x-internal-token` header can already run as often as needed. The
+ * engine is a no-op unless SALES_ENGINE_ENABLED is true and no kill-switch is set.
  */
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);

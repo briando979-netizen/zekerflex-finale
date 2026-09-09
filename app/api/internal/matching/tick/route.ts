@@ -7,9 +7,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Cron entrypoint for the matching follow-up worker. Configure a scheduler
- * (Vercel Cron, GitHub Actions, k8s CronJob) to hit this every 30-60s with the
- * `x-internal-token` header (or `?token=`).
+ * Cron entrypoint for the matching follow-up worker. Ideally hit every
+ * 30-60s, but vercel.json currently schedules it once daily — Vercel's
+ * Hobby plan only allows daily cron jobs (Pro+ unlocks sub-daily). If/when
+ * this project moves to Pro, tighten the schedule in vercel.json; a
+ * non-Vercel scheduler (GitHub Actions, k8s CronJob) hitting this with the
+ * `x-internal-token` header (or `?token=`) can already run as often as needed.
  */
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);

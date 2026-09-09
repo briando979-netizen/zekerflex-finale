@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/internal/matching/tick",
-      "schedule": "* * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/internal/active-hours/recompute",
@@ -19,11 +19,11 @@
     },
     {
       "path": "/api/internal/sales/tick",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/internal/ai/watchdog",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
