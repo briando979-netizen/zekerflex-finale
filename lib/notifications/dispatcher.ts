@@ -12,6 +12,7 @@ import { mayPingNow } from "@/lib/notifications/timing";
 import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
+import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 
 // ---------------------------------------------------------------------------
 // Realtime notification dispatcher
@@ -384,6 +385,9 @@ export async function recordOfferResponse(
   }
 
   const outcome = await prisma.$transaction(async (tx) => {
+    // Serialise against every other seat-taker for this shift (see seat-lock.ts).
+    await lockShiftSeats(tx, shiftId);
+
     const match = await tx.shiftMatch.findUnique({
       where: { shiftId_freelancerId: { shiftId, freelancerId } },
     });

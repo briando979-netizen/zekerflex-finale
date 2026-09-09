@@ -6,6 +6,7 @@ import { getReplacementRequest, markReplacementResolved } from "@/lib/replacemen
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 
 // ---------------------------------------------------------------------------
 // Reassign a shift to a chosen substitute.
@@ -100,6 +101,10 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
     if (original.freelancerId === substitute.id) {
       throw AppError.validation("De vervanger doet deze dienst al.");
     }
+
+    // Serialise against every other seat-taker for this shift (see seat-lock.ts)
+    // so a concurrent accept cannot grab the seat we are about to hand over.
+    await lockShiftSeats(tx, original.shift.id);
 
     const clash = await tx.shiftAssignment.findUnique({
       where: { shiftId_freelancerId: { shiftId: original.shift.id, freelancerId: substitute.id } },

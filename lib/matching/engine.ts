@@ -12,6 +12,7 @@ import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
+import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -327,6 +328,11 @@ async function autoAssign(
   freelancerId: string,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    // Serialise against every other seat-taker for this shift (see seat-lock.ts).
+    // The Redis match lock only guards matching runs against each other, not
+    // against a freelancer accepting an offer at the same moment.
+    await lockShiftSeats(tx, shift.id);
+
     const taken = await tx.shiftAssignment.count({
       where: { shiftId: shift.id, cancelledAt: null },
     });

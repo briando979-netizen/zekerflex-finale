@@ -51,7 +51,7 @@ betalingen of lokale modellen productiegeschikt draaien.
 | Prioriteit | Onderdeel | Vereiste uitwerking |
 |---|---|---|
 | 🔴 hoog | **Betalingen en boekhouding** | Kies één PSP/bankpartner en implementeer idempotente payouts, webhook-verificatie, settlement-reconciliatie, SEPA-export, factuurnummering per tenant/jaar en creditnota's. Een berekende payout is nog geen uitgevoerde betaling. |
-| 🔴 hoog | **Matching zonder overboeking** | Accepteer een aanbod binnen één Prisma-transactie met een unieke database-constraint of locking-strategie. Voeg een concurrency-test toe met twee gelijktijdige acceptaties. |
+| ✅ gedaan | **Matching zonder overboeking** | Elke zitplaats-toewijzende transactie (offer-acceptatie, auto-assign, marketplace self-apply, vrije vervanging) neemt eerst `lockShiftSeats()` — een transaction-scoped `pg_advisory_xact_lock` per dienst — zodat gelijktijdige acceptaties serialiseren i.p.v. beide `taken = positions - 1` lezen. Regressietest: `tests/shift-seat-lock.test.ts` (twee gelijktijdige acceptaties → precies één assignment). |
 | 🔴 hoog | **AVG-governance** | Definieer bewaartermijnen voor GPS, documenten, auditlogs en exports; voeg verwijder-/anonimiseerflows toe en leg vast welke wettelijke bewaarplicht een verwijdering begrenst. |
 | 🔴 hoog | **Toegestane audit-anonimisering** | Maak auditregels append-only maar anonimiseer PII via een stabiele pseudoniemreferentie. Bewaar hash, volgnummer en ketenintegriteit; verwijder geen historische regels zonder een formeel migratie- en bewijsprotocol. |
 | 🟠 mid | **Rate limiting** | Centraliseer Redis-rate limiting voor login, KYC, bedrijfslookup, uploads, analytics en publieke webhooks; gebruik verschillende limieten per identiteit, IP en route. |
