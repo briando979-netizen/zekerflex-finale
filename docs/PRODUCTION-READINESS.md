@@ -49,6 +49,7 @@ betalingen of lokale modellen productiegeschikt draaien.
 | **Readiness vs liveness** | Alleen `/api/health` (liveness). Kubernetes/LB kon niet zien of Postgres/Redis bereikbaar zijn. | `/api/ready` — 200 alleen als DB + Redis pingen, anders 503. Gebruikt in alle deployment-paden. |
 | **GraphQL API** | `graphql` + `graphql-yoga` stonden in `package.json` maar er was geen endpoint. | `/api/graphql` (yoga, rolgebonde resolvers, hergebruikt bestaande libs). GraphiQL alleen buiten productie. |
 | **Infrastructuur-as-code** | Alleen een `docker-compose.prod.yml` + handmatige VPS-stappen. | `infra/terraform/` (AWS: VPC, EC2 + EIP + IMDSv2, IAM/SSM, S3-backups, Route53 met SPF/DKIM/DMARC/CAA, remote state + lock), `infra/helm/` + `infra/k8s/` (kustomize base + overlays, hardened pods, HPA, PDB, NetworkPolicy), `.github/workflows/` (CI, multi-arch image + SBOM + Trivy, Terraform plan/apply met approval, Helm/SSM deploy, CodeQL/gitleaks). |
+| **Securitytests** | Losse gevallen ontbraken voor gewijzigde-rol / verwijderde-membership / cross-org via ID-tampering. | `tests/auth-security.test.ts` uitgebreid (JWT claimt een rol/org die de DB nooit geeft → genegeerd; verwijderde membership werkt direct door). `tests/idor.test.ts` — route-niveau: werkgever van org A krijgt **403** op `invoices/[id]/checkout`, `invoices/[id]/pdf` en `model-agreements/[id]/sign` van org B. Bestaand: `auth-handlers`, `middleware`, `public-routes`, `session-rotation`, `tenant-isolation`, `upload-validate`. |
 
 ### Nog open (bewust niet in deze ronde — vereist keuzes of externe zaken)
 

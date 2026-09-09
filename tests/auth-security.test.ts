@@ -114,6 +114,50 @@ describe("getPrincipal — DB is authoritative over stale JWT claims", () => {
     expect(hasRole(p!, "LOCAL_MANAGER")).toBe(true);
     expect(p!.managedBranchIds).toEqual(["branch_ams"]);
   });
+
+  it("ignores a role/organisation the JWT claims but the DB never grants (fabricated or long-stale token)", async () => {
+    decodeSessionMock.mockResolvedValue({
+      sub: "usr_1",
+      email: "x@x.nl",
+      name: "X",
+      roles: [
+        { role: "PLATFORM_ADMIN", organizationId: "org_platform", locationIds: [] },
+        { role: "HQ_ADMIN", organizationId: "org_never", locationIds: [] },
+      ],
+    });
+    // DB: this user is only a FREELANCER, nothing else.
+    userFindFirst.mockResolvedValue({
+      id: "usr_1",
+      email: "x@x.nl",
+      fullName: "X",
+      emailVerifiedAt: new Date(),
+      memberships: [{ tenantId: "org_a", role: "FREELANCER", scopedBranches: [] }],
+    });
+    const p = await getPrincipal();
+    expect(hasRole(p!, "PLATFORM_ADMIN")).toBe(false);
+    expect(hasRole(p!, "HQ_ADMIN")).toBe(false);
+    expect(() => assertOrganizationAccess(p!, "org_never")).toThrow(/No membership/);
+    expect(() => requireRole(p!, "PLATFORM_ADMIN")).toThrow();
+  });
+
+  it("a deleted membership takes effect immediately — the previously-held org is no longer accessible", async () => {
+    decodeSessionMock.mockResolvedValue({
+      sub: "usr_1",
+      email: "x@x.nl",
+      name: "X",
+      roles: [{ role: "HQ_ADMIN", organizationId: "org_a", locationIds: [] }],
+    });
+    userFindFirst.mockResolvedValue({
+      id: "usr_1",
+      email: "x@x.nl",
+      fullName: "X",
+      emailVerifiedAt: new Date(),
+      memberships: [], // membership row removed since the token was minted
+    });
+    const p = await getPrincipal();
+    expect(p!.grants).toEqual([]);
+    expect(() => assertOrganizationAccess(p!, "org_a")).toThrow(/No membership/);
+  });
 });
 
 function principal(overrides: Partial<Principal>): Principal {
