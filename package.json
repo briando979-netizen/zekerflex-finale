@@ -42,7 +42,7 @@
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.7.0",
     "ioredis": "^5.4.1",
-    "jose": "^5.9.6",
+    "jose": "^6.2.12",
     "next": "^14.2.35",
     "next-auth": "^5.0.0-beta.32",
     "react": "^18.3.1",
