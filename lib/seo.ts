@@ -2,9 +2,16 @@
 // free of the full env-schema validation — it's imported by statically collected
 // pages (layout, sitemap, robots, marketing) that run at build time without
 // secrets present.
+// The canonical public origin. In production a missing/broken APP_BASE_URL
+// falls back to the real domain (not localhost) so a misconfigured build still
+// emits correct canonicals / OG URLs / sitemap entries rather than poisoning
+// the index with localhost. Dev keeps localhost.
+const PRODUCTION_ORIGIN = "https://zekerflex.nl";
+
 function resolveAppBaseUrl(): string {
+  const fallback = process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : "http://localhost:3000";
   const raw = (process.env.APP_BASE_URL?.trim() || "").replace(/\/+$/, "");
-  if (!raw) return "http://localhost:3000";
+  if (!raw) return fallback;
   try {
     // eslint-disable-next-line no-new
     new URL(raw);
@@ -13,7 +20,7 @@ function resolveAppBaseUrl(): string {
     // Malformed value (e.g. a bare "/") would otherwise crash every
     // statically collected page (layout metadataBase, sitemap, robots) at
     // build time. Fall back rather than take the whole build down.
-    return "http://localhost:3000";
+    return fallback;
   }
 }
 
@@ -80,6 +87,9 @@ export const SOCIALS: { name: string; href: string }[] = [
   { name: "Instagram", href: "https://www.instagram.com/zekerflex" },
   { name: "TikTok", href: "https://www.tiktok.com/@zekerflex" },
   { name: "YouTube", href: "https://www.youtube.com/@Zekerflex" },
+  // Add the LinkedIn company page here once it's live — for a B2B platform it's
+  // the strongest `sameAs` signal for entity resolution:
+  // { name: "LinkedIn", href: "https://www.linkedin.com/company/zekerflex" },
 ];
 
 /** App store links. Swap in the real listing URLs once the apps are published. */

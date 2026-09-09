@@ -14,13 +14,13 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 | Variabele | Lokaal (dev) | VPS (prod) | Wat het doet |
 |---|---|---|---|
 | `NODE_ENV` | `development` | `production` 🔴 | Zet cookie-security, logging, caching |
-| `APP_BASE_URL` | `http://localhost:3000` | `https://app.jouwdomein.com` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience |
-| `AUTH_URL` | — | `https://app.jouwdomein.com` 🔴 | NextAuth base-URL (achter de tunnel) |
+| `APP_BASE_URL` | `http://localhost:3000` | `https://zekerflex.nl` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience, **en elke SEO-canonical / OG-URL / sitemap-entry** |
+| `AUTH_URL` | — | `https://zekerflex.nl` 🔴 | NextAuth base-URL (achter de tunnel) |
 | `AUTH_TRUST_HOST` | `true` | `true` 🔴 | Vertrouw de `X-Forwarded-*` headers van cloudflared |
 | `AUTH_SECRET` | dev-string | 32+ random (`gen-secrets`) 🔴 | Ondertekent de sessie-JWT's |
 | `INTERNAL_CRON_TOKEN` | dev-string | 16+ random 🟡 | Beschermt de interne worker-endpoints |
-| `GOOGLE_SITE_VERIFICATION` | — | token 🟢 | Google Search Console property-verificatie (`<meta>`-methode). Zie `docs/SEO.md` |
-| `BING_SITE_VERIFICATION` | — | token 🟢 | Bing Webmaster Tools property-verificatie (optioneel) |
+| `GOOGLE_SITE_VERIFICATION` | — | token ⚪ | Google Search Console property-verificatie (`<meta>`-methode). Zie `docs/SEO.md` |
+| `BING_SITE_VERIFICATION` | — | token ⚪ | Bing Webmaster Tools property-verificatie (optioneel) |
 | `DATABASE_URL` | `postgresql://zekerflex:zekerflex@localhost:5432/zekerflex?schema=public` | `…@postgres:5432/…` 🔴 | PostgreSQL-verbinding |
 | `POSTGRES_PASSWORD` | — | sterk wachtwoord 🔴 | Alleen gelezen door `docker-compose.prod.yml` |
 | `REDIS_URL` | `redis://localhost:6379` | `redis://redis:6379` 🔴 | Locks, wachtrijen, rate-limits, AI-governor |

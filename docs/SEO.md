@@ -20,21 +20,37 @@ queries around the Wet DBA.
 merges metadata per segment, so a root canonical makes every page a "duplicate
 of /". Each indexable page spreads `...canonical("/path")` from `lib/seo.ts`.
 
+Canonical domain: **`https://zekerflex.nl`** (no `www`). Set as the default in
+`lib/seo.ts`, `deploy/.env.production.example`, `infra/helm/zekerflex/values.yaml`.
+The runtime still reads `APP_BASE_URL` first — the box/cluster must set it.
+
 ## What you need to do (one-time, outside the code)
 
-1. **Google Search Console** — add the property for the live domain, verify
-   with the HTML-tag method, and set `GOOGLE_SITE_VERIFICATION=<token>` in the
-   production env. Redeploy, confirm, then **submit `/sitemap.xml`**.
-2. **Bing Webmaster Tools** — same, `BING_SITE_VERIFICATION=<token>` (optional
-   but cheap; also feeds DuckDuckGo/ChatGPT search).
-3. Set `APP_BASE_URL` to the real `https://` domain — every canonical, OG URL,
-   sitemap entry and JSON-LD `@id` is built from it.
-4. After deploy, run the live URL through the
+1. **Set `APP_BASE_URL=https://zekerflex.nl`** (and `AUTH_URL=…`) in the
+   production env and restart the web container. Everything below depends on
+   the live site serving correct canonicals.
+   - Box: edit `.env.production`, then
+     `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
+   - K8s: it's already in `values.yaml`; `helm upgrade` + `kubectl rollout restart deploy/zekerflex-web`
+   - Verify: `curl -s https://zekerflex.nl/sitemap.xml | head` shows real URLs.
+2. **Google Search Console** ([search.google.com/search-console](https://search.google.com/search-console))
+   → Add property → **URL prefix** → `https://zekerflex.nl`. Two ways to verify:
+   - **HTML tag** — copy the `content="…"` value into `GOOGLE_SITE_VERIFICATION`
+     in the prod env, restart, click Verify.
+   - **HTML file** (no restart) — Google gives you `google<hash>.html`; drop it
+     in `public/` and it's served at `/google<hash>.html` on the next deploy.
+   Then: left menu → **Sitemaps** → add `sitemap.xml` → Submit.
+3. **Bing Webmaster Tools** ([bing.com/webmasters](https://www.bing.com/webmasters))
+   → Add site → it can **import straight from Search Console** (fastest).
+   Otherwise same as above with `BING_SITE_VERIFICATION` or a `BingSiteAuth.xml`
+   in `public/`. Submit the sitemap there too. (Also feeds DuckDuckGo / Copilot.)
+4. After deploy, run `https://zekerflex.nl/` through the
    [Rich Results Test](https://search.google.com/test/rich-results) and
    [Schema validator](https://validator.schema.org/) — expect Organization,
-   FAQ, Service and (on kennis pages) Article to be picked up.
-5. Fill in the real social handles in `SOCIALS` (`lib/seo.ts`) — they become
-   `sameAs` on the Organization schema and help entity resolution.
+   FAQ, Service and (on kennis pages) Article. Check the OG card at
+   [opengraph.xyz](https://www.opengraph.xyz).
+5. Add the LinkedIn company page to `SOCIALS` (`lib/seo.ts`) once it exists —
+   it's the strongest `sameAs` signal for a B2B platform.
 
 ## Keyword map (primary intent per page)
 
