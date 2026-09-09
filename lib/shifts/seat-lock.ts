@@ -17,8 +17,14 @@ import type { Prisma } from "@prisma/client";
 // lock is released automatically when the transaction commits or rolls back.
 // ---------------------------------------------------------------------------
 
-// Arbitrary namespace so this never collides with another advisory lock.
-const SEAT_LOCK_NAMESPACE = 0x5a465354; // "ZFST"
+// The advisory-lock key is hashtext('zf:seat:' || shiftId) — a single int4
+// (auto-widened to bigint), well distributed, and prefixed so it never
+// collides with another domain's advisory lock. NB: pg_advisory_xact_lock
+// returns `void`, which Prisma's $queryRaw cannot deserialize (P2010) — use
+// $executeRaw, and the single-argument form.
+function seatLockKey(shiftId: string): string {
+  return `zf:seat:${shiftId}`;
+}
 
 /**
  * Serialise seat allocation for one shift within the current transaction.
@@ -29,5 +35,5 @@ export async function lockShiftSeats(
   tx: Prisma.TransactionClient,
   shiftId: string,
 ): Promise<void> {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${SEAT_LOCK_NAMESPACE}, hashtext(${shiftId}))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${seatLockKey(shiftId)}))`;
 }

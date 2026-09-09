@@ -31,15 +31,15 @@ const h = vi.hoisted(() => {
 
   function makeTx() {
     const tx: Record<string, unknown> & { __release?: () => void } = {};
-    tx.$queryRaw = async (
+    tx.$executeRaw = async (
       strings: TemplateStringsArray,
       ...vals: unknown[]
     ) => {
       const sql = strings.join(" ? ");
       if (sql.includes("pg_advisory_xact_lock")) {
-        tx.__release = await acquire(`seat:${String(vals[1])}`);
+        tx.__release = await acquire(`seat:${String(vals[0])}`);
       }
-      return [];
+      return 1;
     };
     tx.shiftMatch = {
       findUnique: async () => ({ id: "m", status: "NOTIFIED", expiresAt: null }),
@@ -115,16 +115,17 @@ describe("lockShiftSeats", () => {
   it("takes a namespaced transaction-scoped advisory lock on the shift", async () => {
     const calls: string[] = [];
     const tx = {
-      $queryRaw: async (strings: TemplateStringsArray, ...vals: unknown[]) => {
+      // must be $executeRaw, not $queryRaw: pg_advisory_xact_lock returns void
+      $executeRaw: async (strings: TemplateStringsArray, ...vals: unknown[]) => {
         calls.push(strings.join("?") + " :: " + JSON.stringify(vals));
-        return [];
+        return 1;
       },
     };
     await lockShiftSeats(tx as never, "shift-abc");
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain("pg_advisory_xact_lock");
     expect(calls[0]).toContain("hashtext");
-    expect(calls[0]).toContain('"shift-abc"');
+    expect(calls[0]).toContain('"zf:seat:shift-abc"');
   });
 });
 
