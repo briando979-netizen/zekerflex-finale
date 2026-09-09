@@ -454,7 +454,6 @@ export function JarvisConsole() {
       | (new () => unknown)
       | undefined;
     if (!SR) return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rec: any = new (SR as any)();
     rec.lang = "nl-NL";
     rec.interimResults = true;
@@ -465,7 +464,6 @@ export function JarvisConsole() {
       setListening(true);
       setVoiceError(null);
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (ev: any) => {
       let live = "";
       for (let i = 0; i < ev.results.length; i++) {
@@ -543,7 +541,6 @@ export function JarvisConsole() {
   }, [startListening]);
 
   const stopListening = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (recRef.current as any)?.stop?.();
     if (mediaRef.current?.recorder.state === "recording") mediaRef.current.recorder.stop();
     setListening(false);

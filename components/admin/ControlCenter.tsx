@@ -355,12 +355,16 @@ export function ControlCenter() {
           <APanel title="Snel naar" pad={false}>
             <div className="grid gap-1 p-3">
               {(
+                // The real key is on the <Link> below; these are data, not a
+                // .map() return value, so react/jsx-key can't see that.
+                /* eslint-disable react/jsx-key */
                 [
                   ["Jarvis-console", "/admin/jarvis", <IChat />],
                   ["Wekelijkse verloning", "/admin/verloning", <IWallet />],
                   ["Verkeer & analytics", "/admin/analytics", <IActivity />],
                   ["Disputen", "/admin/disputes", <IShield />],
                 ] as const
+                /* eslint-enable react/jsx-key */
               ).map(([label, href, icon]) => (
                 <Link
                   key={href}
