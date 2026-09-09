@@ -30,7 +30,7 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
             {post.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-white/70">{post.excerpt}</p>
-          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/40">
+          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/60">
             {nlDate(post.date)} · {post.author} · {post.readMinutes} min lezen
           </p>
         </div>

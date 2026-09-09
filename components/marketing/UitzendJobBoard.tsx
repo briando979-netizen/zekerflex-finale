@@ -123,7 +123,7 @@ export function UitzendJobBoard({ openCount }: { openCount: number }) {
             </label>
             <button
               type="submit"
-              className="rounded-xl bg-[#ff7a1a] px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-105 sm:mt-[22px]"
+              className="rounded-xl bg-[#ff7a1a] px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-[#231400] transition hover:brightness-105 sm:mt-[22px]"
             >
               Klussen zoeken
             </button>
@@ -173,7 +173,7 @@ export function UitzendJobBoard({ openCount }: { openCount: number }) {
                 href={c.href}
                 className={`mt-4 inline-block rounded-xl px-4 py-2.5 text-center text-sm font-bold ${
                   c.primary
-                    ? "bg-[#ff7a1a] text-white hover:brightness-105"
+                    ? "bg-[#ff7a1a] text-[#231400] hover:brightness-105"
                     : "border border-hairstrong text-ink hover:bg-paper-soft"
                 }`}
               >

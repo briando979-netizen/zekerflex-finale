@@ -9,34 +9,28 @@ import { CREDS, login } from "./helpers";
 // docs/ACCESSIBILITY.md covers the rest (real keyboard walk-through, screen
 // reader, focus-visible, reduced motion).
 //
-// Acceptance criterion (enforced): zero `critical` violations, and zero
-// `serious` violations other than `color-contrast`, on every page below.
-//
-// `color-contrast` is a known, tracked debt — the marketing palette has
-// several muted-text tokens that land just under 4.5:1. These are catalogued
-// in docs/ACCESSIBILITY.md with the tokens to change; the gate lists them as
-// `[a11y contrast-debt]` on each run so the count can only go down. Everything
-// else (labels, link names, ARIA, landmarks, names/roles) is hard-blocked.
-// `moderate` / `minor` print as `[a11y advisory]`.
+// Acceptance criterion (enforced): zero violations at impact `serious` or
+// `critical` — colour-contrast included — on every page below. The palette
+// was taken through a contrast pass to clear this (see docs/ACCESSIBILITY.md).
+// `moderate` / `minor` findings print as `[a11y advisory]` so they don't rot,
+// but don't fail the build.
 // ---------------------------------------------------------------------------
 
 const WCAG_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
-const HARD_BLOCK = (v: { impact?: string | null; id: string }) =>
-  v.impact === "critical" || (v.impact === "serious" && v.id !== "color-contrast");
+const BLOCKING = new Set(["serious", "critical"]);
 
 async function audit(page: import("@playwright/test").Page, label: string) {
   const results = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
 
-  const blocking = results.violations.filter(HARD_BLOCK);
-  const contrastDebt = results.violations.filter(
-    (v) => v.id === "color-contrast" && v.impact === "serious",
-  );
-  const advisory = results.violations.filter(
-    (v) => !HARD_BLOCK(v) && v.id !== "color-contrast",
-  );
+  const blocking = results.violations.filter((v) => BLOCKING.has(v.impact ?? ""));
+  const advisory = results.violations.filter((v) => !BLOCKING.has(v.impact ?? ""));
 
-  for (const v of contrastDebt) {
-    console.warn(`[a11y contrast-debt] ${label}: ${v.nodes.length} node(s) below 4.5:1`);
+  if (process.env.A11Y_VERBOSE) {
+    for (const v of blocking) {
+      for (const n of v.nodes) {
+        console.warn(`    ${v.id}  ${n.target.join(" ")}\n      ${n.failureSummary?.split("\n")[1] ?? ""}`);
+      }
+    }
   }
   if (advisory.length) {
     console.warn(

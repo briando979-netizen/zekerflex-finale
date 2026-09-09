@@ -222,7 +222,7 @@ export function ControlCenter() {
                 <Link key={label as string} href={href as string} className="rounded-xl p-3 transition hover:brightness-110" style={{ background: tone === "emerald" ? "rgba(16,185,129,.12)" : tone === "blue" ? "rgba(96,165,250,.12)" : "rgba(245,158,11,.12)", border: "1px solid var(--a-border)" }}>
                   <p className="text-xs" style={{ color: "var(--a-mute)" }}>{label as string}</p>
                   <p className="num mt-2 font-display text-xl font-bold" style={{ color: "var(--a-text)" }}>{value as string | number}</p>
-                  <p className="mt-1 text-[11px]" style={{ color: "var(--a-accent)" }}>Openen →</p>
+                  <p className="mt-1 text-[11px]" style={{ color: "var(--a-accent-ink)" }}>Openen →</p>
                 </Link>
               ))}
             </div>

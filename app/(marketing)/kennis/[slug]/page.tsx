@@ -31,7 +31,7 @@ export default async function GuidePage(props: { params: Promise<{ slug: string 
             {g.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-white/70">{g.excerpt}</p>
-          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/40">
+          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/60">
             {g.readMinutes} min lezen · bijgewerkt {nlDate(g.updated)}
           </p>
         </div>

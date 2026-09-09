@@ -15,34 +15,29 @@ that runs `axe-core` against:
 
 Rules: `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`.
 
-**Acceptance criterion (enforced by the gate):**
-
-- zero **critical** violations;
-- zero **serious** violations *other than* `color-contrast`;
-- `color-contrast` (serious) is a tracked debt — see below. Each run prints
-  `[a11y contrast-debt] <page>: N node(s)`; that N must only go down.
-- `moderate` / `minor` print as `[a11y advisory]` — track, don't regress.
+**Acceptance criterion (enforced by the gate):** zero violations at impact
+**serious** or **critical** — colour-contrast included — on every page listed
+above. `moderate` / `minor` print as `[a11y advisory]`: track, don't regress.
+Run with `A11Y_VERBOSE=1` to print the failing selectors.
 
 axe catches ~30–40 % of WCAG issues (missing names/roles/alt text, ARIA
 misuse, contrast, landmark & heading order, duplicate ids). The rest needs the
 manual pass below.
 
-### Colour-contrast debt (burn-down)
+### Contrast pass (done)
 
-The marketing palette has muted-text tokens that land just under the 4.5:1 AA
-threshold for normal text. None are on primary content; all are secondary /
-metadata text. To clear:
+The palette had muted-text tokens just under 4.5:1. Changed:
 
-| Token / pattern | Now | Needs | Where |
+| Token / pattern | Was | Now | Where |
 |---|---|---|---|
-| `neutralx.400` | `#8A93A0` (~3.5:1 on paper) | ≥ `#6B7280` | `tailwind.config.ts` — muted body/metadata text sitewide |
-| `text-white/35…/55` on the dark bands (`#0A0C10`–`#1B1C20`) | 3.5–4.4:1 | `text-white/65` min | `app/(marketing)/*`, `components/marketing/*` (~31 sites) |
-| `--a-mute` / `--a-dim` | `#8B96A8` / `#5D6A80` | darken `--a-mute` to ~`#6B7688` | `app/globals.css` `.admin-scope` |
-| success-green pills | `#10B981` on pastel, 11 px | `#0F7A55` or larger text | badge components |
-| primary CTA button | `#FFF` on `#FF7A1A` (2.6:1) | **brand decision** — darker orange (`#C2410C`) or dark text on orange | `.btn-primary` / `.btn-mint` |
+| `neutralx.400` (muted body/metadata text, sitewide) | `#8A93A0` | `#6B7280` | `tailwind.config.ts` |
+| dark-band secondary text | `text-white/35…/45` | `/60`–`/65` | `app/(marketing)/*`, `components/marketing/*` |
+| admin `--a-mute` | `#8B96A8` | `#5F6774` | `app/globals.css .admin-scope` |
+| admin green micro-labels on tinted cards | `--a-accent` `#10B981` (2.3:1) | new `--a-accent-ink` `#0B6E54` | `app/globals.css`, `ControlCenter.tsx` |
+| uitzend CTA button / chip | white on `#FF7A1A` (2.6:1) | `#231400` on `#FF7A1A` (7:1) — bright orange kept, text darkened | `UitzendJobBoard.tsx` |
 
-The CTA-button row needs a visual/brand call; the rest is a mechanical token
-pass. Until done, these show as `[a11y contrast-debt]` and don't fail the gate.
+Large orange-on-dark headline accents (`text-[#ff7a1a]` in an `<h1>`) were
+left — they clear the 3:1 large-text bar.
 
 ## Manual checklist (per release touching UI)
 

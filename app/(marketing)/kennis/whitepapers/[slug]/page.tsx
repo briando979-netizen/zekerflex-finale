@@ -39,7 +39,7 @@ export default async function WhitepaperReaderPage(props: { params: Promise<{ sl
             <a href={`/api/kennis/whitepaper/${wp.slug}`} className="btn-mint">
               Download als PDF
             </a>
-            <span className="font-mono text-xs uppercase tracking-wide text-white/40">
+            <span className="font-mono text-xs uppercase tracking-wide text-white/60">
               {wp.readMinutes} min lezen · bijgewerkt {nlDate(wp.updated)}
             </span>
           </div>

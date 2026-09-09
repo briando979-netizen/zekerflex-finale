@@ -37,7 +37,7 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────── TRUST BAND */}
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
         <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/35">Gebouwd op</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60">Gebouwd op</span>
           {["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"].map(
             (t, i) => (
               <Reveal key={t} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75">
