@@ -18,12 +18,13 @@ test("employer approves a submitted timesheet and invoices are issued", async ({
 
   await row.getByRole("button", { name: /goedkeuren/i }).click();
 
-  // The green confirmation ("Goedgekeurd…"). A precondition failure would
-  // instead render red error text ("… mislukt" / "geblokkeerd").
+  // Success fires a toast ("Goedgekeurd…") that survives the row leaving the
+  // SUBMITTED/DISPUTED list when the server action revalidates it (Next 15).
   await expect(page.getByText(/Goedgekeurd/i).first()).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(/goedkeuren mislukt|geblokkeerd/i)).toHaveCount(0);
+  await expect(page.getByText(/goedkeuren mislukt/i)).toHaveCount(0);
 
-  // The real proof: both reverse-billing invoices now exist for the employer.
+  // The real proof of the money path: both reverse-billing invoices (freelancer
+  // self-bill + platform fee) now exist for the employer.
   await page.goto("/werkgever/facturen");
   await expect(page.locator("body")).toContainText(/ZF-SB-2026/);
   await expect(page.locator("body")).toContainText(/ZF-PF-2026/);
