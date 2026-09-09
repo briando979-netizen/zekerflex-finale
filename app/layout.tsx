@@ -20,7 +20,9 @@ export const metadata: Metadata = {
   authors: [{ name: SITE.name }],
   creator: SITE.name,
   publisher: SITE.name,
-  alternates: { canonical: "/" },
+  // No canonical here on purpose: Next merges metadata per route segment, so a
+  // canonical set on the root layout would make every page declare itself a
+  // duplicate of "/". Each indexable page sets its own via seo.ts `canonical()`.
   category: "business",
   formatDetection: { email: false, address: false, telephone: false },
   openGraph: {
@@ -41,6 +43,14 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
+  // Drop the Search Console / Bing tokens in via env (no rebuild-time secret) to
+  // claim the property and get indexing coverage + query reports.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : {},
   },
   icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
 };

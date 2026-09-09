@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
 import { GUIDES, POSTS, nlDate } from "@/lib/kennis/content";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Kennis",
+  title: "Kennisbank — flexwerk, Wet DBA, uitbetaling en verloning",
   description:
-    "Informatie, kennisbank, blogs en veelgestelde vragen over flexibel werken via ZekerFlex — Wet DBA, StiPP, uitbetaling en meer.",
+    "De ZekerFlex-kennisbank: gidsen, blogs, whitepapers en veelgestelde vragen over flexibel werken — Wet DBA, StiPP-pensioen, het ABU-fasensysteem, uitbetaling, facturen en verificatie.",
+  ...canonical("/kennis"),
 };
 
 const INFO = [

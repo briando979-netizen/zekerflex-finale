@@ -33,19 +33,43 @@ export const SITE = {
     "Het Nederlandse platform waar werknemers, flexwerkers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmatch, met de optie om dezelfde werkdag uitbetaald te worden, volledig Wet DBA-proof — en 100% zelf gehost.",
   shortDescription: "Slim gematcht, zelf je uitbetaling kiezen, volledig Wet DBA-proof.",
   keywords: [
+    // wat we zijn
     "zzp platform",
-    "flexwerk",
-    "uitzendwerk",
-    "freelance opdrachten",
-    "shifts",
-    "Wet DBA",
-    "sneller uitbetaald",
-    "modelovereenkomst",
+    "flexwerk platform",
+    "uitzendbureau alternatief",
+    "freelance opdrachten vinden",
+    "klussen platform",
+    "shifts app",
+    "flexpool software",
+    // zoekintentie — freelancers
+    "zzp klus vinden",
+    "freelance werk zonder tussenpersoon",
+    "bijbaan direct uitbetaald",
+    "zelfde dag uitbetaald werken",
+    "werken zonder KVK",
+    "uitzendkracht worden",
+    "flexwerk in de buurt",
+    // zoekintentie — werkgevers
     "zzp'er inhuren",
-    "flexpool",
+    "flexkrachten inhuren",
+    "personeel inhuren horeca",
+    "personeel inhuren retail",
+    "uitzendkrachten inhuren",
+    "tijdelijk personeel vinden",
+    // compliance
+    "Wet DBA proof",
+    "modelovereenkomst zzp",
+    "schijnzelfstandigheid voorkomen",
+    "handhaving Wet DBA 2026",
+    // verloning
+    "sneller uitbetaald zzp",
+    "wekelijkse verloning",
+    "StiPP pensioen uitzendkracht",
+    "ABU fasensysteem",
   ],
   twitter: "@zekerflex",
   email: "info@zekerflex.com",
+  foundingYear: "2025",
 } as const;
 
 /**
@@ -87,18 +111,43 @@ export const CONTACTS = {
   bounces: "bounced@zekerflex.com",
 } as const;
 
+const ORG_ID = `${SITE.url}/#organization`;
+const WEBSITE_ID = `${SITE.url}/#website`;
+
 /** schema.org Organization block for the homepage <head>. */
 export function organizationJsonLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": ORG_ID,
     name: SITE.name,
+    legalName: "ZekerFlex B.V.",
     url: SITE.url,
     logo: `${SITE.url}/icon.svg`,
+    image: `${SITE.url}/opengraph-image`,
+    slogan: SITE.tagline,
     description: SITE.description,
     email: SITE.email,
-    areaServed: "NL",
+    foundingDate: SITE.foundingYear,
+    areaServed: { "@type": "Country", name: "Netherlands" },
     knowsLanguage: "nl-NL",
+    address: { "@type": "PostalAddress", addressCountry: "NL" },
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: CONTACTS.support,
+        areaServed: "NL",
+        availableLanguage: ["nl"],
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "sales",
+        email: CONTACTS.sales,
+        areaServed: "NL",
+        availableLanguage: ["nl"],
+      },
+    ],
     sameAs: SOCIALS.map((s) => s.href),
   };
 }
@@ -107,10 +156,73 @@ export function websiteJsonLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": WEBSITE_ID,
     name: SITE.name,
     url: SITE.url,
     inLanguage: "nl-NL",
+    publisher: { "@id": ORG_ID },
   };
+}
+
+/**
+ * schema.org Service — what ZekerFlex actually offers, with the price points
+ * spelled out so they're eligible for offer rich-results on brand + category
+ * queries ("zzp platform kosten", "sneller uitbetaald zzp").
+ */
+export function serviceJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: "ZekerFlex — matching, verloning en uitbetaling voor flexwerk",
+    serviceType: "Arbeidsbemiddeling en flexpool-software",
+    provider: { "@id": ORG_ID },
+    areaServed: { "@type": "Country", name: "Netherlands" },
+    audience: [
+      { "@type": "Audience", audienceType: "zzp'ers en freelancers" },
+      { "@type": "Audience", audienceType: "flexwerkers en uitzendkrachten" },
+      { "@type": "Audience", audienceType: "werkgevers en opdrachtgevers" },
+    ],
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Meedoen als freelancer of flexwerker",
+        price: "0",
+        priceCurrency: "EUR",
+        description: "Gratis account, gratis matching. Je kiest zelf per dienst hoe snel je wordt uitbetaald.",
+      },
+      {
+        "@type": "Offer",
+        name: "Personeel inhuren als bedrijf",
+        priceCurrency: "EUR",
+        price: "3.50",
+        unitText: "gewerkt uur",
+        description: "€ 3,50 platformkosten per gewerkt uur, alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.",
+      },
+    ],
+  };
+}
+
+/** schema.org BreadcrumbList — pass an ordered [name, path] trail. */
+export function breadcrumbJsonLd(trail: [name: string, path: string][]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map(([name, path], i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name,
+      item: `${SITE.url}${path}`,
+    })),
+  };
+}
+
+/**
+ * Per-page canonical + OG url. Next merges metadata per segment, so the root
+ * layout must NOT set a canonical (it would make every page canonical to "/").
+ * Each indexable page calls this with its own path.
+ */
+export function canonical(path: string): { alternates: { canonical: string }; openGraph: { url: string } } {
+  return { alternates: { canonical: path }, openGraph: { url: `${SITE.url}${path}` } };
 }
 
 /** schema.org FAQPage — mirrors the public assistant's canned answers. */

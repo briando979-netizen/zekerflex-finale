@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GUIDES, guideBySlug, nlDate } from "@/lib/kennis/content";
+import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 
 export function generateStaticParams() {
   return GUIDES.map((g) => ({ slug: g.slug }));
@@ -11,7 +12,11 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const params = await props.params;
   const g = guideBySlug(params.slug);
   if (!g) return { title: "Kennisbank" };
-  return { title: g.title, description: g.excerpt };
+  return {
+    title: g.title,
+    description: g.excerpt,
+    ...canonical(`/kennis/${g.slug}`),
+  };
 }
 
 export default async function GuidePage(props: { params: Promise<{ slug: string }> }) {
@@ -19,8 +24,34 @@ export default async function GuidePage(props: { params: Promise<{ slug: string 
   const g = guideBySlug(params.slug);
   if (!g) notFound();
 
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: g.title,
+    description: g.excerpt,
+    dateModified: g.updated,
+    inLanguage: "nl-NL",
+    articleSection: g.category,
+    author: { "@type": "Organization", name: SITE.name },
+    publisher: { "@id": `${SITE.url}/#organization` },
+    mainEntityOfPage: `${SITE.url}/kennis/${g.slug}`,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            articleLd,
+            breadcrumbJsonLd([
+              ["Kennisbank", "/kennis"],
+              [g.title, `/kennis/${g.slug}`],
+            ]),
+          ]),
+        }}
+      />
       <div className="hero-ink text-white">
         <div className="shell py-16 md:py-20">
           <Link href="/kennis#kennisbank" className="text-sm font-medium text-white/60 hover:text-white">

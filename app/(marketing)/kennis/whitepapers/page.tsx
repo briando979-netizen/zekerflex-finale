@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CtaBand } from "@/components/marketing/primitives";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Whitepapers",
   description:
     "Download de ZekerFlex-whitepapers: werken als freelancer, omzet- en inkomstenbelasting, de kleineondernemersregeling, aftrekposten, administratie en verzekering.",
+  ...canonical("/kennis/whitepapers"),
 };
 
 function DocIcon() {

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneMatch, SceneWork, SceneApprove } from "@/components/marketing/Scene";
@@ -10,7 +11,17 @@ import { Marquee } from "@/components/marketing/Marquee";
 import { ShiftShowcase } from "@/components/marketing/ShiftShowcase";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
-import { faqJsonLd } from "@/lib/seo";
+import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "ZekerFlex — flexwerk & zzp-opdrachten, slim gematcht en sneller uitbetaald",
+  },
+  description:
+    "Hét Nederlandse platform voor flexwerk en zzp-opdrachten. Freelancers en flexkrachten vinden werk dat past bij hun vak en reistijd en kiezen zelf hoe snel ze worden uitbetaald. Bedrijven huren betrouwbaar personeel in voor € 3,50 per gewerkt uur — Wet DBA-proof, geen abonnement.",
+  keywords: [...SITE.keywords],
+  ...canonical("/"),
+};
 
 export default function HomePage() {
   return (
@@ -18,7 +29,9 @@ export default function HomePage() {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([faqJsonLd(), serviceJsonLd()]),
+        }}
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}
       <HeroStage
