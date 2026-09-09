@@ -152,6 +152,7 @@ analytics; Redis TTLs only cover locks / rate-limit counters, never data.
 
 `docs/ARCHITECTURE.md` — the diagrammed overview (system context, deployment
 topology, request lifecycle, module map, data stores, AI layer).
+`docs/DATA-MODEL.md` — the Prisma schema as ER diagrams, per domain.
 `docs/DATA-ANALYST-ROADMAP.md` — how to build analytics/BI on top, phased.
 `docs/SOVEREIGN-BOX.md` is the full architecture export (file structure, core
 contracts, code excerpts, the Jarvis system prompt). `lib/rag/knowledge/*.md`
