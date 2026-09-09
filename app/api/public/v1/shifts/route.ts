@@ -5,7 +5,7 @@ import { hasScope, verifyApiKey } from "@/lib/integrations/api-keys";
 import { requireApiKey } from "@/lib/api-keys/gateway";
 import { createShiftSchema } from "@/lib/shifts/create";
 import { recordAudit } from "@/lib/audit";
-import { runMatchingForShift } from "@/lib/matching-engine";
+import { runMatchingForShift } from "@/lib/matching/engine";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

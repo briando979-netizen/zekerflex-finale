@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { runMatchingForShift } from "@/lib/matching-engine";
+import { runMatchingForShift } from "@/lib/matching/engine";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -6,7 +6,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { runMatchingForShift } from "@/lib/matching-engine";
+import { runMatchingForShift } from "@/lib/matching/engine";
 
 export interface ShiftTemplate {
   key: string;

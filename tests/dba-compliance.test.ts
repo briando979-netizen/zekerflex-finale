@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, computeMetrics } from "@/lib/dba-compliance";
+import { classify, computeMetrics } from "@/lib/compliance/dba";
 import type { DbaMetrics, DbaThresholds } from "@/types/compliance";
 
 const THRESHOLDS: DbaThresholds = {

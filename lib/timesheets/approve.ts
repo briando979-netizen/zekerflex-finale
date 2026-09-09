@@ -18,7 +18,7 @@ import {
   payoutEndToEndId,
   triggerInstantPayout,
 } from "@/lib/billing/sepa";
-import { evaluateDbaCompliance } from "@/lib/dba-compliance";
+import { evaluateDbaCompliance } from "@/lib/compliance/dba";
 import { evaluatePayoutGate } from "@/lib/billing/payout-gate";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";

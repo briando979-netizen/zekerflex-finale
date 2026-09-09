@@ -10,7 +10,7 @@ import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
 import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
-import { assertFreelancerMatchable } from "@/lib/dba-compliance";
+import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import {
   resolveMatchingConfig,
