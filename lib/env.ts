@@ -49,16 +49,11 @@ const schema = z.object({
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   OPENOV_BASE_URL: z.string().url().default("https://api.openov.nl"),
 
-  // Push: self-hosted Web Push (VAPID / RFC 8291) is the primary channel.
-  // Firebase FCM is an optional secondary provider (native apps that still
-  // ship the Google SDK). Generate a VAPID keypair with `npm run vapid:keys`.
+  // Push: self-hosted Web Push (VAPID / RFC 8291) is the only channel.
+  // Generate a VAPID keypair with `npm run vapid:keys`.
   WEBPUSH_VAPID_PUBLIC_KEY: z.string().optional(),
   WEBPUSH_VAPID_PRIVATE_KEY: z.string().optional(),
   WEBPUSH_CONTACT: z.string().default("mailto:bounced@zekerflex.com"),
-
-  FIREBASE_PROJECT_ID: z.string().optional(),
-  FIREBASE_CLIENT_EMAIL: z.string().optional(),
-  FIREBASE_PRIVATE_KEY: z.string().optional(),
 
   // Self-hosted LLM (OpenAI-compatible: Ollama / vLLM / llama.cpp / LocalAI).
   // No Big-Tech SaaS dependency - points at a model running in the box.

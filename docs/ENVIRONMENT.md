@@ -48,7 +48,6 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 |---|---|
 | `WEBPUSH_VAPID_PUBLIC_KEY` / `WEBPUSH_VAPID_PRIVATE_KEY` | 🟡 Keypair voor push-meldingen — `npm run vapid:keys` of `gen-secrets` |
 | `WEBPUSH_CONTACT` | `mailto:info@zekerflex.com` — VAPID-contact |
-| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | ⚪ Optionele tweede push-provider (FCM) voor native apps |
 
 ## Uitgaande e-mail
 

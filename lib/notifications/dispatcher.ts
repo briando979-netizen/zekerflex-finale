@@ -17,7 +17,7 @@ import { myOfferForShift } from "@/lib/offers/store";
 // Realtime notification dispatcher
 //
 // The matching engine hands us a score-ranked list of eligible freelancers.
-// We push a first wave of FCM offers immediately and stash the remainder in a
+// We push a first wave of offers immediately and stash the remainder in a
 // Redis list. A follow-up job (sorted-set, scored by expiry) fires when the
 // wave's TTL elapses: it expires the unanswered offers and promotes the next
 // wave until the shift is filled or the queue is exhausted.

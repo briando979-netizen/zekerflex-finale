@@ -307,7 +307,6 @@ model FreelancerProfile {
   matches      ShiftMatch[]
   timesheets   Timesheet[]
   dbaRecords   DbaComplianceRecord[]
-  pushTokens   PushToken[]
   webPushSubscriptions WebPushSubscription[]
   engagementEvents  EngagementEvent[]
   modelAgreements   ModelAgreement[]
@@ -456,20 +455,6 @@ model CompanyRegistration {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// Firebase Cloud Messaging device token (optional secondary push provider).
-model PushToken {
-  id           String   @id @default(cuid())
-  freelancerId String
-  token        String   @unique
-  platform     String // "ios" | "android" | "web"
-  lastSeenAt   DateTime @default(now())
-  disabledAt   DateTime?
-
-  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
-
-  @@index([freelancerId])
 }
 
 // W3C Web Push subscription (RFC 8291 aes128gcm). Primary, self-hosted push

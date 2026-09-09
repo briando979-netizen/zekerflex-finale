@@ -16,7 +16,7 @@ const nextConfig = {
       bodySizeLimit: "2mb",
     },
     // Keep native / Node-only packages out of the RSC bundle.
-    serverComponentsExternalPackages: ["ioredis", "firebase-admin"],
+    serverComponentsExternalPackages: ["ioredis"],
   },
   logging: {
     fetches: { fullUrl: false },

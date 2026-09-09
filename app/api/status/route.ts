@@ -59,7 +59,7 @@ export async function GET(): Promise<NextResponse> {
     {
       key: "notifications",
       label: "Meldingen (push)",
-      ...operationalIf(channels.webPush || channels.fcm),
+      ...operationalIf(channels.webPush),
     },
   ];
 

@@ -54,12 +54,6 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
           ? "self-hosted (VAPID keypair configured)"
           : "set WEBPUSH_VAPID_* - run `npm run vapid:keys`",
       },
-      fcm: {
-        enabled: channels.fcm,
-        note: channels.fcm
-          ? "optional secondary provider active"
-          : "not configured (fine - Web Push is primary)",
-      },
     },
     sovereign:
       database.ok && cache.ok && llm.ok && channels.webPush,
