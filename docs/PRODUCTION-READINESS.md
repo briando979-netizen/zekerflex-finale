@@ -45,6 +45,7 @@ betalingen of lokale modellen productiegeschikt draaien.
 | 🟠 mid | **Achtergrond-jobs buiten het web-proces** | `scripts/daemon.mjs` draait de cron-ticks in-process. Voor K8s: een aparte `CronJob`/worker-Deployment die de `/api/internal/*` endpoints hit, of BullMQ. |
 | 🟢 laag | **E2E-tests** | 124 unit-tests, geen browser-flow. Playwright op de kritieke paden (registratie → verificatie → dienst → timesheet → verloning). |
 | 🟢 laag | **Disaster recovery-draaiboek** | Backups gaan naar S3 (nightly `pg_dump`); een getest restore-script + RTO/RPO-document ontbreekt. |
+| 🟡 deels | **Repo-omvang / grote binaries** | ~42 MB `.mp4`-uitlegfilmpjes staan niet meer in de index en zijn `.gitignore`'d (`public/videos/*.mp4`); de repo groeit niet verder. De `/uitleg`-pagina degradeert netjes zonder de bestanden (poster-`.jpg`'s blijven in git). Productie serveert ze uit object storage/CDN — zie `public/videos/README.md`. **Nog te doen:** de blobs uit de volledige historie strippen (`git filter-repo --path-glob 'public/videos/*.mp4' --invert-paths`) + force-push van `main`. Dat raakt alle open PR-branches en clones, dus de repo-eigenaar draait dit bewust op een rustig moment. |
 
 ### Kritieke domeinrisico's die nog expliciet moeten worden gebouwd
 
