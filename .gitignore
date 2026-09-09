@@ -4,6 +4,12 @@ out
 build
 coverage
 
+# Playwright E2E
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 .env
 .env.local
 .env.*.local

@@ -23,6 +23,8 @@
     "launch": "node scripts/launch.mjs",
     "daemon": "node scripts/daemon.mjs",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "whisper": "node scripts/whisper.mjs",
     "services": "docker compose up -d mailpit whisper",
     "gen:secrets": "node deploy/scripts/gen-secrets.mjs",
@@ -52,6 +54,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.5",
     "@types/react": "^18.3.5",
