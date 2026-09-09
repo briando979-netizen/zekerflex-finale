@@ -19,17 +19,28 @@ export const config = {
   ],
 };
 
-function jsonError(code: string, message: string, status: number): NextResponse {
-  return NextResponse.json({ error: { code, message } }, { status });
+export const CORRELATION_HEADER = "x-correlation-id";
+
+/** One id per request, reused from an upstream proxy if it already set one. */
+function correlationId(req: NextRequest): string {
+  return req.headers.get(CORRELATION_HEADER) || crypto.randomUUID();
 }
 
-function loginRedirect(req: NextRequest): NextResponse {
+function jsonError(code: string, message: string, status: number, correlationId: string): NextResponse {
+  const res = NextResponse.json({ error: { code, message, correlationId } }, { status });
+  res.headers.set(CORRELATION_HEADER, correlationId);
+  return res;
+}
+
+function loginRedirect(req: NextRequest, correlationId: string): NextResponse {
   const url = req.nextUrl.clone();
   url.pathname = "/login";
   url.search = `?callbackUrl=${encodeURIComponent(
     req.nextUrl.pathname + req.nextUrl.search,
   )}`;
-  return NextResponse.redirect(url);
+  const res = NextResponse.redirect(url);
+  res.headers.set(CORRELATION_HEADER, correlationId);
+  return res;
 }
 
 function sessionToken(req: NextRequest): string | undefined {
@@ -40,16 +51,28 @@ function sessionToken(req: NextRequest): string | undefined {
   );
 }
 
-function withIdentityHeaders(req: NextRequest, claims: { sub: string; email: string }): NextResponse {
+/**
+ * Forward the request with the correlation id + (when present) a verified
+ * identity hint as headers — route handlers and server components read these
+ * back via next/headers rather than re-decoding the token, and every log
+ * line for this request can bind the same correlationId.
+ */
+function next(req: NextRequest, correlationId: string, claims?: { sub: string; email: string }): NextResponse {
   const headers = new Headers(req.headers);
-  headers.set("x-zekerflex-user-id", claims.sub);
-  headers.set("x-zekerflex-user-email", claims.email);
+  headers.set(CORRELATION_HEADER, correlationId);
   headers.set("x-pathname", req.nextUrl.pathname);
-  return NextResponse.next({ request: { headers } });
+  if (claims) {
+    headers.set("x-zekerflex-user-id", claims.sub);
+    headers.set("x-zekerflex-user-email", claims.email);
+  }
+  const res = NextResponse.next({ request: { headers } });
+  res.headers.set(CORRELATION_HEADER, correlationId);
+  return res;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const pathname = req.nextUrl.pathname;
+  const cid = correlationId(req);
   const rule = matchRouteRule(pathname);
 
   if (!rule) {
@@ -58,21 +81,21 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     // have a rule), so this branch is API-only: default-deny unless the path
     // is explicitly public.
     if (!pathname.startsWith("/api/") || isPublicApiRoute(pathname)) {
-      return NextResponse.next();
+      return next(req, cid);
     }
     const claims = await decodeSession(sessionToken(req));
     if (!claims) {
-      return jsonError("UNAUTHENTICATED", "Authentication required", 401);
+      return jsonError("UNAUTHENTICATED", "Authentication required", 401, cid);
     }
-    return withIdentityHeaders(req, claims);
+    return next(req, cid, claims);
   }
 
   const claims = await decodeSession(sessionToken(req));
 
   if (!claims) {
     return rule.redirectOnDeny
-      ? loginRedirect(req)
-      : jsonError("UNAUTHENTICATED", "Authentication required", 401);
+      ? loginRedirect(req, cid)
+      : jsonError("UNAUTHENTICATED", "Authentication required", 401, cid);
   }
 
   if (!hasAnyRole(claims, rule.roles)) {
@@ -82,17 +105,20 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       const url = req.nextUrl.clone();
       url.pathname = "/start";
       url.search = "";
-      return NextResponse.redirect(url);
+      const res = NextResponse.redirect(url);
+      res.headers.set(CORRELATION_HEADER, cid);
+      return res;
     }
     return jsonError(
       "FORBIDDEN",
       `Requires one of: ${rule.roles.join(", ")}`,
       403,
+      cid,
     );
   }
 
   // Pass a verified identity hint + the pathname downstream (handlers and
   // layouts still re-validate; the pathname lets a layout skip its own gate
   // for e.g. the onboarding route it wraps).
-  return withIdentityHeaders(req, claims);
+  return next(req, cid, claims);
 }

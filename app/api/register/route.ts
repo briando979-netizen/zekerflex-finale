@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const log = logger.child({ route: "POST /api/register" });
+  const log = logger.forRequest(request, { route: "POST /api/register" });
   try {
     const json = await request.json().catch(() => {
       throw AppError.validation("Body must be JSON");

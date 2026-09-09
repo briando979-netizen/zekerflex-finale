@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * itself, since async methods (iDEAL, SEPA Direct Debit) confirm later.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const log = logger.child({ route: "POST /api/webhooks/stripe" });
+  const log = logger.forRequest(request, { route: "POST /api/webhooks/stripe" });
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature");
 

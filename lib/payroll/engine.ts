@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { AppError } from "@/lib/errors";
+import { acquireLock } from "@/lib/redis";
 import { getFiscal, invoiceModeFor, isComplete } from "@/lib/fiscal/store";
 import { computePayslip, type PayLineInput } from "@/lib/payroll/compute";
 import { getRun, saveRun, type PayrollRun, type PayslipRecord } from "@/lib/payroll/store";
@@ -202,21 +204,31 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
 }
 
 export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<PayrollRun> {
-  const run = await getRun(isoWeekIdStr);
-  if (!run) throw new Error("Run niet gevonden — bouw hem eerst.");
-  if (run.status === "finalised") return run;
-  // Reconcile the instant advances against each worker's net wage.
-  for (const p of run.payslips) {
-    if (p.computed.breakdown.kind !== "payroll") continue;
-    await reconcilePayrollAdvances(p.userId, run.isoWeek, p.computed.headlineCents).catch((err) =>
-      logger.warn("advance reconcile failed", { userId: p.userId, error: (err as Error).message }),
-    );
-  }
+  // Reads-then-writes run.status non-atomically below, so two concurrent
+  // finalise calls for the same week (a double click, a retried request)
+  // could both pass the "not yet finalised" check and both reconcile every
+  // worker's advances — a real double-processing risk. Serialize per week.
+  const unlock = await acquireLock(`payroll:finalise:${isoWeekIdStr}`, 30_000);
+  if (!unlock) throw AppError.conflict("Deze payrollrun wordt al gefinaliseerd.");
+  try {
+    const run = await getRun(isoWeekIdStr);
+    if (!run) throw new Error("Run niet gevonden — bouw hem eerst.");
+    if (run.status === "finalised") return run;
+    // Reconcile the instant advances against each worker's net wage.
+    for (const p of run.payslips) {
+      if (p.computed.breakdown.kind !== "payroll") continue;
+      await reconcilePayrollAdvances(p.userId, run.isoWeek, p.computed.headlineCents).catch((err) =>
+        logger.warn("advance reconcile failed", { userId: p.userId, error: (err as Error).message }),
+      );
+    }
 
-  run.status = "finalised";
-  run.finalisedAt = new Date().toISOString();
-  run.finalisedBy = by;
-  await saveRun(run);
-  logger.info("payroll run finalised", { isoWeek: isoWeekIdStr, by });
-  return run;
+    run.status = "finalised";
+    run.finalisedAt = new Date().toISOString();
+    run.finalisedBy = by;
+    await saveRun(run);
+    logger.info("payroll run finalised", { isoWeek: isoWeekIdStr, by });
+    return run;
+  } finally {
+    await unlock();
+  }
 }

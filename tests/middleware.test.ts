@@ -16,7 +16,7 @@ vi.mock("@/lib/auth/session", async () => {
   return { ...actual, decodeSession: (...a: unknown[]) => decodeSessionMock(...a) };
 });
 
-import { middleware } from "../middleware";
+import { middleware, CORRELATION_HEADER } from "../middleware";
 
 beforeEach(() => {
   decodeSessionMock.mockReset();
@@ -61,5 +61,27 @@ describe("middleware — default-deny for unmatched /api/* routes", () => {
     const res = await middleware(reqFor("/api/admin/mail"));
     // Authenticated but wrong role for the ROUTE_RULES-gated /api/admin/* -> 403, not 401.
     expect(res.status).toBe(403);
+  });
+});
+
+describe("middleware — correlation id", () => {
+  it("generates one and puts it on every response, including a 401", async () => {
+    decodeSessionMock.mockResolvedValue(null);
+    const res = await middleware(reqFor("/api/invoices/inv_1/checkout"));
+    expect(res.headers.get(CORRELATION_HEADER)).toMatch(/.+/);
+  });
+
+  it("reuses an id an upstream proxy already set, rather than replacing it", async () => {
+    const req = new NextRequest(new URL("https://zekerflex.com/api/register"), {
+      headers: { [CORRELATION_HEADER]: "upstream-id-123" },
+    });
+    const res = await middleware(req);
+    expect(res.headers.get(CORRELATION_HEADER)).toBe("upstream-id-123");
+  });
+
+  it("two different requests get two different generated ids", async () => {
+    const a = await middleware(reqFor("/api/register"));
+    const b = await middleware(reqFor("/api/register"));
+    expect(a.headers.get(CORRELATION_HEADER)).not.toBe(b.headers.get(CORRELATION_HEADER));
   });
 });

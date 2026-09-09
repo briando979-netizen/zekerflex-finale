@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
+import { claimIdempotency } from "@/lib/redis";
 import { getPayoutPrefs, setPayoutSpeed, PAYOUT_SPEEDS, payoutFee } from "@/lib/payouts/preferences";
 import {
   advanceFee,
@@ -72,6 +73,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { amountCents } = advanceSchema.parse(await request.json().catch(() => {
       throw AppError.validation("Body must be JSON");
     }));
+
+    // The cap check (outstandingAdvanceCents vs. maxAdvanceCents) reads then
+    // writes non-atomically, so two near-simultaneous requests (a double
+    // click, a client retry) could both pass the check before either commits
+    // and together exceed the cap. A short per-user claim serializes them.
+    const claimed = await claimIdempotency(`advance-request:${p.userId}`, 5);
+    if (!claimed) {
+      throw AppError.conflict("Er is al een voorschotaanvraag in verwerking. Probeer het over een paar seconden opnieuw.");
+    }
+
     const overview = await getFreelancerOverview(p.userId);
     try {
       const advance = await requestAdvance(p.userId, amountCents, overview.kpis.pendingPayoutCents);

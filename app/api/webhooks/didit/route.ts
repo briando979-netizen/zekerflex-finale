@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * an invalid signature gets 401.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const log = logger.child({ route: "POST /api/webhooks/didit" });
+  const log = logger.forRequest(request, { route: "POST /api/webhooks/didit" });
   const rawBody = await request.text();
 
   let verification: ReturnType<typeof verifyWebhook>;
