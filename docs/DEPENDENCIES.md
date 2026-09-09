@@ -36,6 +36,7 @@ These need a real migration, not a version bump. Each is its own piece of work.
 | `jose` 5 → 6 | 5.10.0 | Node-version floor + a few API renames in the session codec. |
 | `ioredis` 5 → 6 | 5.11.1 | Connection/option changes; the daemon + rate-limit + dispatcher all use it. |
 | `node` (Docker base) 20 → 26 | 20-bookworm-slim | Bump in step with the runtime the VPS/K8s actually runs. |
+| `hashicorp/aws` (terraform) 5 → 6 | 5.x | Provider v6 renames/removes attributes; needs a `terraform plan` review against live state. |
 
 Done: `vitest` 2 → 5 (+ `vite` 8 as a direct devDep, `@types/node` 22, config
 renamed to `vitest.config.mts`) — cleared the dev-only `vite`/`esbuild`/`vitest`
