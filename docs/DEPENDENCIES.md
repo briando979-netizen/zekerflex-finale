@@ -36,7 +36,10 @@ These need a real migration, not a version bump. Each is its own piece of work.
 | `jose` 5 → 6 | 5.10.0 | Node-version floor + a few API renames in the session codec. |
 | `ioredis` 5 → 6 | 5.11.1 | Connection/option changes; the daemon + rate-limit + dispatcher all use it. |
 | `node` (Docker base) 20 → 26 | 20-bookworm-slim | Bump in step with the runtime the VPS/K8s actually runs. |
-| `vitest` 2 → 5 | 2.1.9 | v3–v5 unbundled `vite` (needs it as a direct dep) + workspace→projects; re-verify all 45 test files. Clears the current dev-only `vite`/`esbuild` advisories. |
+
+Done: `vitest` 2 → 5 (+ `vite` 8 as a direct devDep, `@types/node` 22, config
+renamed to `vitest.config.mts`) — cleared the dev-only `vite`/`esbuild`/`vitest`
+advisories, so `npm audit` (incl. dev) is now **0**.
 
 ## Intentional pins
 
