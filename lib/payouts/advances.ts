@@ -198,7 +198,7 @@ export async function createPayrollAdvance(input: {
         endToEndId: `ADV-${id}`,
         amountCents: netCents,
         currency: "EUR",
-        creditorIban: iban ?? "UNKNOWN",
+        creditorIban: iban ?? "",
         creditorName: input.workerName,
         remittanceInfo: `ZekerFlex voorschot ${input.isoWeek}`,
         stripeConnectedAccountId: input.stripeConnectedAccountId ?? null,

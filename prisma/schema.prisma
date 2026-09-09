@@ -916,7 +916,7 @@ model Payment {
   amountCents   Int
   currency      String        @default("EUR")
 
-  debtorIban   String
+  debtorIban   String? // platform funding account; null until SEPA_CREDITOR_IBAN is configured
   creditorIban String
   endToEndId   String  @unique // SEPA E2E reference / idempotency key
   providerRef  String?

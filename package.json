@@ -2,6 +2,7 @@
   "name": "zekerflex-platform",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "ZekerFlex - Next-Gen Freelance & Work-Force Management Platform",
   "scripts": {
     "dev": "next dev",

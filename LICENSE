@@ -1,0 +1,29 @@
+ZekerFlex Platform — Proprietary Software License
+=================================================
+
+Copyright (c) 2026 ZekerFlex. All rights reserved.
+
+This software and its source code (the "Software") are proprietary and
+confidential. No license, express or implied, is granted to any party.
+
+You MAY NOT, without prior written permission from the copyright holder:
+
+  * use, run, or deploy the Software or any part of it;
+  * copy, reproduce, or distribute the Software or any part of it;
+  * modify, adapt, translate, or create derivative works of the Software;
+  * publish, sublicense, sell, rent, lease, or otherwise transfer the
+    Software or any rights in it;
+  * reverse engineer, decompile, or disassemble the Software except to the
+    extent that applicable law expressly permits despite this limitation.
+
+The Software is provided "AS IS", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and non-infringement. In no event shall the
+copyright holder be liable for any claim, damages or other liability arising
+from, out of or in connection with the Software or its use.
+
+Third-party components included in or referenced by the Software remain
+subject to their own licenses (see the respective package metadata and the
+node_modules tree).
+
+For licensing enquiries: legal@zekerflex.com
