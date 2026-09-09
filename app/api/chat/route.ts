@@ -93,7 +93,8 @@ function textStream(
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const gate = await fixedWindow(`rl:chat:${clientIp(request)}`, 15, 60);
+  const ip = clientIp(request);
+  const gate = await fixedWindow(`rl:chat:${ip}`, 15, 60);
   if (!gate.ok) {
     return textStream("Rustig aan — probeer het over een minuut nog eens.");
   }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
 import { pushChannels } from "@/lib/notifications/push";
+import { deploymentTarget, isDemoDeployment } from "@/lib/config/deployment";
 
 /** Is the local inference server reachable at all (not: is a model warm). */
 async function llmReachable(): Promise<boolean> {
@@ -69,6 +70,7 @@ export async function GET(): Promise<NextResponse> {
     {
       checkedAt: new Date().toISOString(),
       overall: worst,
+      deployment: { target: deploymentTarget(), demo: isDemoDeployment() },
       components,
     },
     { headers: { "cache-control": "no-store" } },

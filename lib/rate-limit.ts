@@ -86,7 +86,7 @@ export async function enforceRateLimit(spec: RateLimitSpec): Promise<RateResult>
     `rl:${spec.name}:${spec.identifier}`,
     spec.limit,
     spec.windowSeconds,
-    { failOpen: spec.failOpen },
+    spec.failOpen === undefined ? {} : { failOpen: spec.failOpen },
   );
   if (!gate.ok) {
     throw AppError.rateLimited(spec.message, gate.retryAfterSeconds || spec.windowSeconds);

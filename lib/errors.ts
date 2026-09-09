@@ -100,7 +100,7 @@ function isZodError(err: unknown): err is ZodLikeError {
 export function toErrorBody(err: unknown): {
   status: number;
   body: ErrorBody;
-  headers?: Record<string, string>;
+  headers: Record<string, string>;
 } {
   if (err instanceof AppError) {
     return {
@@ -119,10 +119,12 @@ export function toErrorBody(err: unknown): {
           details: err.flatten ? err.flatten() : err.issues,
         },
       },
+      headers: {},
     };
   }
   return {
     status: 500,
     body: { error: { code: "INTERNAL", message: "Unexpected server error" } },
+    headers: {},
   };
 }

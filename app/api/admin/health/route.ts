@@ -4,6 +4,7 @@ import { redis } from "@/lib/redis";
 import { llmHealth } from "@/lib/ai/client";
 import { pushChannels } from "@/lib/notifications/push";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { deploymentTarget, isDemoDeployment, deploymentNote } from "@/lib/config/deployment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,11 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const channels = pushChannels();
   const body = {
     checkedAt: new Date().toISOString(),
+    deployment: {
+      target: deploymentTarget(),
+      demo: isDemoDeployment(),
+      note: deploymentNote(),
+    },
     database,
     cache,
     llm,

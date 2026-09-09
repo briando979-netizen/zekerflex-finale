@@ -475,6 +475,13 @@ geen primaire productieomgeving: serverless functies zijn niet geschikt voor
 Gebruik Vercel alleen met een externe LLM, object storage, managed database en
 externe job scheduler.
 
+Dit onderscheid is nu ook zichtbaar in de runtime: `lib/config/deployment.ts`
+detecteert het target (`VERCEL` env → `vercel-demo`, anders een always-on Node
+proces → `sovereign-box`). Een demo-deployment logt bij boot een waarschuwing en
+`/api/status`, `/api/admin/health` en `/api/admin/system` rapporteren
+`deployment: { target, demo }`. Forceer het target expliciet met
+`ZEKERFLEX_TARGET=sovereign-box`.
+
 ### Productiechecklist
 
 1. Vul `deploy/.env.production` in; zet secrets nooit in Git.
