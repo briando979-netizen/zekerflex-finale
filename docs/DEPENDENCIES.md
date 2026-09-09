@@ -44,9 +44,42 @@ advisories, so `npm audit` (incl. dev) is now **0**.
 
 ## Intentional pins
 
-- **`next-auth` = `5.0.0-beta.32`** — v5 is required for the Edge-verifiable
-  session tokens the middleware reads. A move to "latest" is a *downgrade* to
-  v4. Ignored in `dependabot.yml`. Watch for the v5 stable release.
+### `next-auth` = `5.0.0-beta.32` (exact, no caret)
+
+v5 is required for the Edge-verifiable session tokens the middleware reads
+([lib/auth/session.ts](../lib/auth/session.ts) mints plain jose HS256 JWTs;
+next-auth is wired to them via its `jwt.encode`/`jwt.decode` hooks). npm's
+`latest` tag is **v4.24.15** — moving there is a *downgrade* that breaks Edge
+verification. There is no stable v5 and no RC; `beta.32` (published 2026-07-20)
+is the newest pre-release.
+
+This is a conscious, contained pin, not a TODO:
+
+- **Exact version**, no `^` — a new `beta.33` will not install itself. Bumping
+  is a deliberate act.
+- Ignored in [`.github/dependabot.yml`](../.github/dependabot.yml) so it never
+  shows up as weekly noise.
+- The surface we depend on is under test:
+  [`tests/auth-signin.test.ts`](../tests/auth-signin.test.ts) exercises the
+  credentials `authorize`, the `jwt.encode`/`decode` token contract, the
+  `jwt`/`session` role propagation and the Google `signIn` gate. The E2E suite
+  covers login / logout / wrong-password end to end.
+- next-auth is reduced to a thin shell here — `handlers`, `signIn`, `signOut`
+  (4 call sites). The middleware and every route use our own
+  `decodeSession` / `getPrincipal`, not `auth()`. If the beta ever becomes a
+  liability, replacing it is ~150 lines (credentials + a Google OAuth2
+  authorization-code flow on top of the session codec we already own).
+
+**When a stable v5 (or v5 RC) ships:**
+
+1. Branch off `main`. Bump `next-auth` to the exact stable version.
+2. Read the v5 beta→stable migration notes — particularly anything about
+   `jwt.encode`/`jwt.decode`, the `Credentials` provider return shape, and the
+   `signIn`/`session` callback signatures.
+3. `npm run typecheck && npm test && npm run test:e2e`. `tests/auth-signin.test.ts`
+   is the canary — it fails loudly if a hook contract changed.
+4. Real `next build` on Linux/Docker, then a manual login + Google login + logout.
+5. Drop the `next-auth` ignore from `dependabot.yml` if the line is stable again.
 
 ## When starting a deferred major
 
