@@ -194,7 +194,9 @@ export async function anonymizeUser(
       await tx.complianceDocument.deleteMany({ where: { userId } })
     ).count;
 
-    // Audit log stays append-only — scrub the PII inside it instead.
+    // Audit log stays append-only — scrub the PII inside it instead. The
+    // tamper-evident hash chain covers only the immutable identity fields, so
+    // rewriting summary / ipAddress / userAgent here does not break it.
     const auditRows = await tx.auditLog.findMany({
       where: {
         OR: [

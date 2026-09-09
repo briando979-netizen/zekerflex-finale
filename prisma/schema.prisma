@@ -1021,6 +1021,15 @@ model AuditLog {
   summary    String
   metadata   Json    @default("{}")
 
+  // Tamper-evident chain. `seq` is a gap-tolerant monotonic counter
+  // (`audit_log_seq`); `hash` covers the immutable identity fields + `prevHash`
+  // (NOT summary/ipAddress/userAgent, so AVG anonymisation can scrub PII in
+  // place without breaking the chain). Nullable only for rows written before
+  // the chain migration; `scripts/backfill-audit-chain.mjs` seals those.
+  seq      BigInt  @unique @default(autoincrement())
+  hash     String?
+  prevHash String?
+
   actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
@@ -1029,6 +1038,7 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([targetType, targetId])
   @@index([action, createdAt])
+  @@index([seq])
 }
 
 // ===========================================================================
