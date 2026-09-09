@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 import { autocompleteCompanies, isKvkBaseEnabled, searchCompanies } from "@/lib/integrations/kvkbase";
 
 export const runtime = "nodejs";
@@ -16,9 +17,13 @@ const schema = z.object({ q: z.string().trim().min(2).max(120) });
 // the paid KVKBase API.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`company-search:rl:${ip}`, 20, 60);
-    if (!gate.ok) throw AppError.validation("Te veel zoekopdrachten — probeer het over een minuut opnieuw.");
+    await enforceRateLimit({
+      name: "company-search",
+      identifier: clientIp(request),
+      limit: 20,
+      windowSeconds: 60,
+      message: "Te veel zoekopdrachten — probeer het over een minuut opnieuw.",
+    });
 
     if (!isKvkBaseEnabled()) {
       return NextResponse.json({ configured: false, results: [] });
@@ -47,8 +52,8 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({ configured: true, results: results.slice(0, 8) });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    if (status >= 500) logger.warn("public company search failed", { error: (err as Error).message });
-    return NextResponse.json(body, { status });
+    const res = jsonError(err);
+    if (res.status >= 500) logger.warn("public company search failed", { error: (err as Error).message });
+    return res;
   }
 }

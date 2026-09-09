@@ -7,7 +7,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { createInvoiceCheckoutSession } from "@/lib/billing/stripe";
 import { recordAudit } from "@/lib/audit";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,10 +22,13 @@ export async function POST(
     const principal = await requirePrincipal();
 
     // Each call creates a real Stripe Checkout Session — cap retries per user.
-    const gate = await fixedWindow(`invoice-checkout:rl:${principal.userId}`, 10, 600);
-    if (!gate.ok) {
-      throw AppError.validation("Te veel pogingen — probeer het over enkele minuten opnieuw.");
-    }
+    await enforceRateLimit({
+      name: "invoice-checkout",
+      identifier: principal.userId,
+      limit: 10,
+      windowSeconds: 600,
+      message: "Te veel pogingen — probeer het over enkele minuten opnieuw.",
+    });
 
     const scope = await resolveEmployerScope(principal);
 

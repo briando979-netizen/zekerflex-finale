@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
-import { fixedWindow } from "@/lib/rate-limit";
+import { AppError } from "@/lib/errors";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 import { findByToken, mailPrefsView, setCategory, setUnsubscribedAll } from "@/lib/mail/prefs";
 import { isOptionalCategory } from "@/lib/mail/categories";
 
@@ -19,9 +21,13 @@ const schema = z.object({
 // Rate-limited per IP against brute-forcing the token.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`mail-voorkeuren:rl:${ip}`, 20, 600);
-    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het later opnieuw.");
+    await enforceRateLimit({
+      name: "mail-voorkeuren",
+      identifier: clientIp(request),
+      limit: 20,
+      windowSeconds: 600,
+      message: "Te veel pogingen — probeer het later opnieuw.",
+    });
 
     const { token, category, on, unsubscribeAll } = schema.parse(await request.json().catch(() => ({})));
     const rec = await findByToken(token);
@@ -38,7 +44,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     const view = await mailPrefsView(rec.email);
     return NextResponse.json({ ok: true, ...view });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    return jsonError(err);
   }
 }

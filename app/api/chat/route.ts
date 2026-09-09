@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chatStream, fastModel } from "@/lib/ai/client";
 import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { logExchange, topExamples } from "@/lib/learn/store";
 import { searchKnowledge } from "@/lib/jarvis/public-knowledge";
@@ -92,12 +93,7 @@ function textStream(
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "local";
-
-  const gate = await fixedWindow(`chat:rl:${ip}`, 15, 60);
+  const gate = await fixedWindow(`rl:chat:${clientIp(request)}`, 15, 60);
   if (!gate.ok) {
     return textStream("Rustig aan — probeer het over een minuut nog eens.");
   }

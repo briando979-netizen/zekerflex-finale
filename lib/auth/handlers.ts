@@ -29,12 +29,12 @@ type AuthedHandler<P> = (
 ) => Promise<Response> | Response;
 
 function errorResponse(request: Request, err: unknown): NextResponse {
-  const { status, body } = toErrorBody(err);
+  const { status, body, headers } = toErrorBody(err);
   if (status >= 500) {
     const route = `${request.method} ${new URL(request.url).pathname}`;
     logger.forRequest(request, { route }).error("request failed", { error: (err as Error).message });
   }
-  return NextResponse.json(body, { status });
+  return NextResponse.json(body, { status, headers });
 }
 
 /** Requires a valid, non-disabled session. No role check. */

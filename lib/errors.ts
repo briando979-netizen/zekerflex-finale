@@ -11,6 +11,7 @@ export type ErrorCode =
   | "PRECONDITION_FAILED"
   | "COMPLIANCE_BLOCKED"
   | "PAYMENT_FAILED"
+  | "RATE_LIMITED"
   | "UPSTREAM_UNAVAILABLE"
   | "INTERNAL";
 
@@ -56,8 +57,26 @@ export class AppError extends Error {
   static paymentFailed(message: string, details?: unknown) {
     return new AppError("PAYMENT_FAILED", message, 502, details);
   }
+  static rateLimited(
+    message = "Te veel verzoeken — probeer het straks opnieuw.",
+    retryAfterSeconds = 60,
+  ) {
+    return new AppError("RATE_LIMITED", message, 429, { retryAfterSeconds });
+  }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);
+  }
+
+  /** Response headers this error should carry (e.g. Retry-After). */
+  get headers(): Record<string, string> {
+    if (this.code === "RATE_LIMITED") {
+      const retry = (this.details as { retryAfterSeconds?: number } | undefined)
+        ?.retryAfterSeconds;
+      if (typeof retry === "number" && retry > 0) {
+        return { "Retry-After": String(Math.ceil(retry)) };
+      }
+    }
+    return {};
   }
 }
 
@@ -78,11 +97,16 @@ function isZodError(err: unknown): err is ZodLikeError {
   return e.name === "ZodError" || typeof e.flatten === "function";
 }
 
-export function toErrorBody(err: unknown): { status: number; body: ErrorBody } {
+export function toErrorBody(err: unknown): {
+  status: number;
+  body: ErrorBody;
+  headers?: Record<string, string>;
+} {
   if (err instanceof AppError) {
     return {
       status: err.status,
       body: { error: { code: err.code, message: err.message, details: err.details } },
+      headers: err.headers,
     };
   }
   if (isZodError(err)) {

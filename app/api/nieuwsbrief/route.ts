@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 import { normalizeEmail, subscribe } from "@/lib/newsletter/store";
 import { newsletterConfirmEmail } from "@/lib/newsletter/mail";
 
@@ -19,9 +21,13 @@ const schema = z.object({
 // POST /api/nieuwsbrief — public double opt-in signup. Never touches DB/Redis.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`nieuwsbrief:rl:${ip}`, 5, 600);
-    if (!gate.ok) throw AppError.validation("Te veel aanmeldingen — probeer het later opnieuw.");
+    await enforceRateLimit({
+      name: "nieuwsbrief",
+      identifier: clientIp(request),
+      limit: 5,
+      windowSeconds: 600,
+      message: "Te veel aanmeldingen — probeer het later opnieuw.",
+    });
 
     const json = await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
@@ -47,8 +53,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       alreadySubscribed: res.status === "already-confirmed",
     });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    if (status >= 500) logger.error("newsletter signup failed", { error: (err as Error).message });
-    return NextResponse.json(body, { status });
+    const res = jsonError(err);
+    if (res.status >= 500) logger.error("newsletter signup failed", { error: (err as Error).message });
+    return res;
   }
 }

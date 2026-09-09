@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { docStatus, listDocs, storeDoc, type DocKind } from "@/lib/compliance/documents";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,8 +23,13 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const gate = await fixedWindow(`me-documents:rl:${p.userId}`, 20, 600);
-    if (!gate.ok) throw AppError.validation("Te veel uploads — probeer het over enkele minuten opnieuw.");
+    await enforceRateLimit({
+      name: "me-documents",
+      identifier: p.userId,
+      limit: 20,
+      windowSeconds: 600,
+      message: "Te veel uploads — probeer het over enkele minuten opnieuw.",
+    });
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verwacht multipart/form-data");
     });
