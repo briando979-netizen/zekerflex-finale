@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
-import { logger } from "@/lib/logger";
+import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { generateImage } from "@/lib/ai/images";
 import {
@@ -12,6 +10,7 @@ import {
   composePrompt,
   enhancePrompt,
 } from "@/lib/ai/image-prompts";
+import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,65 +29,55 @@ const bodySchema = z.object({
   enhance: z.boolean().optional(),
 });
 
-export async function POST(request: Request): Promise<NextResponse> {
-  const log = logger.child({ route: "POST /api/admin/studio/generate" });
-  try {
-    const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN");
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
+  const input = bodySchema.parse(
+    await request.json().catch(() => {
+      throw AppError.validation("Body must be JSON");
+    }),
+  );
 
-    const input = bodySchema.parse(
-      await request.json().catch(() => {
-        throw AppError.validation("Body must be JSON");
-      }),
-    );
+  const preset = input.presetKey
+    ? PROMPT_PRESETS.find((p) => p.key === input.presetKey)
+    : undefined;
 
-    const preset = input.presetKey
-      ? PROMPT_PRESETS.find((p) => p.key === input.presetKey)
-      : undefined;
-
-    let prompt: string;
-    if (preset) {
-      prompt = composePrompt(preset.base, input.extra);
-    } else if (input.idea) {
-      prompt = input.enhance ? await enhancePrompt(input.idea) : composePrompt(input.idea, input.extra);
-    } else {
-      throw AppError.validation("Kies een sjabloon of beschrijf zelf een idee.");
-    }
-
-    const aspect = input.aspect ?? preset?.aspect ?? "landscape";
-    const { width, height } = aspectToSize(aspect);
-
-    const image = await generateImage({
-      prompt,
-      negativePrompt: input.negativePrompt ?? NEGATIVE_PROMPT,
-      width,
-      height,
-      ...(input.steps ? { steps: input.steps } : {}),
-      ...(input.seed !== undefined ? { seed: input.seed } : {}),
-      purpose: `studio:${preset?.key ?? "custom"}`,
-    });
-
-    await recordAudit({
-      category: "ADMIN",
-      action: "studio.generate",
-      actorUserId: principal.userId,
-      actorLabel: "user",
-      summary: `Marketingbeeld gegenereerd (${aspect}, ${width}x${height})`,
-      metadata: { preset: preset?.key ?? null, backend: image.backend },
-    });
-
-    return NextResponse.json({
-      b64: image.b64,
-      mimeType: image.mimeType,
-      width: image.width,
-      height: image.height,
-      seed: image.seed ?? input.seed ?? null,
-      prompt,
-      aspect,
-    });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    if (status >= 500) log.error("studio generate failed", { error: (err as Error).message });
-    return NextResponse.json(body, { status });
+  let prompt: string;
+  if (preset) {
+    prompt = composePrompt(preset.base, input.extra);
+  } else if (input.idea) {
+    prompt = input.enhance ? await enhancePrompt(input.idea) : composePrompt(input.idea, input.extra);
+  } else {
+    throw AppError.validation("Kies een sjabloon of beschrijf zelf een idee.");
   }
-}
+
+  const aspect = input.aspect ?? preset?.aspect ?? "landscape";
+  const { width, height } = aspectToSize(aspect);
+
+  const image = await generateImage({
+    prompt,
+    negativePrompt: input.negativePrompt ?? NEGATIVE_PROMPT,
+    width,
+    height,
+    ...(input.steps ? { steps: input.steps } : {}),
+    ...(input.seed !== undefined ? { seed: input.seed } : {}),
+    purpose: `studio:${preset?.key ?? "custom"}`,
+  });
+
+  await recordAudit({
+    category: "ADMIN",
+    action: "studio.generate",
+    actorUserId: principal.userId,
+    actorLabel: "user",
+    summary: `Marketingbeeld gegenereerd (${aspect}, ${width}x${height})`,
+    metadata: { preset: preset?.key ?? null, backend: image.backend },
+  });
+
+  return NextResponse.json({
+    b64: image.b64,
+    mimeType: image.mimeType,
+    width: image.width,
+    height: image.height,
+    seed: image.seed ?? input.seed ?? null,
+    prompt,
+    aspect,
+  });
+});

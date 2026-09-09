@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { startTurn } from "@/lib/jarvis/core";
+import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,23 +14,16 @@ const bodySchema = z.object({
 
 // POST /api/admin/jarvis/turn - start a Jarvis turn; returns the turn id.
 // Progress is polled from GET /api/admin/jarvis/turns/:id.
-export async function POST(request: Request): Promise<NextResponse> {
-  try {
-    const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN");
-    const json = await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
-    });
-    const { prompt, uploadIds } = bodySchema.parse(json);
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
+  const json = await request.json().catch(() => {
+    throw AppError.validation("Body must be JSON");
+  });
+  const { prompt, uploadIds } = bodySchema.parse(json);
 
-    const { turnId } = await startTurn({
-      prompt,
-      principal,
-      ...(uploadIds ? { uploadIds } : {}),
-    });
-    return NextResponse.json({ turnId }, { status: 202 });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
-  }
-}
+  const { turnId } = await startTurn({
+    prompt,
+    principal,
+    ...(uploadIds ? { uploadIds } : {}),
+  });
+  return NextResponse.json({ turnId }, { status: 202 });
+});

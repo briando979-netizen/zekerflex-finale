@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { resolveFinding } from "@/lib/orchestration/core";
+import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,27 +14,17 @@ const bodySchema = z.object({
 });
 
 // PATCH /api/admin/orchestration/findings/:id
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
-  try {
-    const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN");
-    const { id } = paramsSchema.parse(params);
-    const json = await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
-    });
-    const { action, note } = bodySchema.parse(json);
+export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
+  const { id } = paramsSchema.parse(params);
+  const json = await request.json().catch(() => {
+    throw AppError.validation("Body must be JSON");
+  });
+  const { action, note } = bodySchema.parse(json);
 
-    const updated = await resolveFinding(id, {
-      action,
-      resolvedById: principal.userId,
-      ...(note !== undefined ? { note } : {}),
-    });
-    return NextResponse.json({ finding: updated });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
-  }
-}
+  const updated = await resolveFinding(id, {
+    action,
+    resolvedById: principal.userId,
+    ...(note !== undefined ? { note } : {}),
+  });
+  return NextResponse.json({ finding: updated });
+});

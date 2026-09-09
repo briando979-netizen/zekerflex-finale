@@ -1,10 +1,9 @@
-import { requirePrincipal, requireRole } from "@/lib/auth";
-import { toErrorBody } from "@/lib/errors";
 import {
   markSpoken,
   pendingAnnouncements,
   voiceCapabilities,
 } from "@/lib/voice/announce";
+import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,15 +16,7 @@ export const dynamic = "force-dynamic";
 const POLL_MS = 2000;
 const MAX_LIFETIME_MS = 5 * 60 * 1000;
 
-export async function GET(request: Request): Promise<Response> {
-  try {
-    const principal = await requirePrincipal();
-    requireRole(principal, "PLATFORM_ADMIN");
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return Response.json(body, { status });
-  }
-
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const encoder = new TextEncoder();
   const started = Date.now();
 
@@ -72,4 +63,4 @@ export async function GET(request: Request): Promise<Response> {
       Connection: "keep-alive",
     },
   });
-}
+});

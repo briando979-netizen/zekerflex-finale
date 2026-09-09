@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getPrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,34 +24,15 @@ const patchSchema = z.object({
   sortOrder: z.number().int().min(0).max(100_000).optional(),
 });
 
-async function admin() {
-  const principal = await getPrincipal();
-  if (!principal) throw AppError.unauthenticated();
-  requireRole(principal, "PLATFORM_ADMIN");
-  return principal;
-}
+export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
+  const data = patchSchema.parse(await request.json()) as import("@prisma/client").Prisma.ShopProductUpdateInput;
+  const product = await prisma.shopProduct.update({ where: { id: params.id }, data });
+  await recordAudit({ category: "ADMIN", action: "shop.product.updated", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct gewijzigd: ${product.name}`, targetType: "shop-product", targetId: product.id });
+  return NextResponse.json({ product });
+});
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
-  try {
-    const principal = await admin();
-    const data = patchSchema.parse(await request.json()) as import("@prisma/client").Prisma.ShopProductUpdateInput;
-    const product = await prisma.shopProduct.update({ where: { id: params.id }, data });
-    await recordAudit({ category: "ADMIN", action: "shop.product.updated", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct gewijzigd: ${product.name}`, targetType: "shop-product", targetId: product.id });
-    return NextResponse.json({ product });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
-  }
-}
-
-export async function DELETE(request: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
-  try {
-    const principal = await admin();
-    const product = await prisma.shopProduct.update({ where: { id: params.id }, data: { active: false } });
-    await recordAudit({ category: "ADMIN", action: "shop.product.archived", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct verborgen: ${product.name}`, targetType: "shop-product", targetId: product.id });
-    return NextResponse.json({ product });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
-  }
-}
+export const DELETE = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_request, { params, principal }) => {
+  const product = await prisma.shopProduct.update({ where: { id: params.id }, data: { active: false } });
+  await recordAudit({ category: "ADMIN", action: "shop.product.archived", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct verborgen: ${product.name}`, targetType: "shop-product", targetId: product.id });
+  return NextResponse.json({ product });
+});
