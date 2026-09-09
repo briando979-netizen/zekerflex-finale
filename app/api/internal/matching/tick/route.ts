@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { checkInternalToken } from "@/lib/internal-auth";
 import { processMatchingFollowups } from "@/lib/notifications/dispatcher";
 
 export const runtime = "nodejs";
@@ -12,28 +12,11 @@ export const dynamic = "force-dynamic";
  * `x-internal-token` header (or `?token=`).
  */
 async function handle(request: Request): Promise<NextResponse> {
-  const authHeader = request.headers.get("authorization");
-  const provided =
-    request.headers.get("x-internal-token") ??
-    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null) ??
-    new URL(request.url).searchParams.get("token");
-
-  if (env.INTERNAL_CRON_TOKEN) {
-    if (provided !== env.INTERNAL_CRON_TOKEN) {
-      return NextResponse.json(
-        { error: { code: "UNAUTHENTICATED", message: "Bad internal token" } },
-        { status: 401 },
-      );
-    }
-  } else if (env.NODE_ENV === "production") {
+  const gate = checkInternalToken(request);
+  if (!gate.ok) {
     return NextResponse.json(
-      {
-        error: {
-          code: "PRECONDITION_FAILED",
-          message: "INTERNAL_CRON_TOKEN is not configured",
-        },
-      },
-      { status: 412 },
+      { error: { code: "UNAUTHENTICATED", message: gate.message } },
+      { status: gate.status },
     );
   }
 

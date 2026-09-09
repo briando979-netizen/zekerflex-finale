@@ -31,7 +31,10 @@ const schema = z.object({
     .default("true")
     .transform((v) => v === "true"),
 
-  // Shared secret for internal cron endpoints (matching follow-up worker).
+  // Shared secret for internal cron/scheduler endpoints. CRON_SECRET is the
+  // name Vercel Cron auto-recognizes (auto-sends as a Bearer token when set);
+  // INTERNAL_CRON_TOKEN is accepted too, for a non-Vercel scheduler.
+  CRON_SECRET: z.string().min(16).optional(),
   INTERNAL_CRON_TOKEN: z.string().min(16).optional(),
 
   DATABASE_URL: z.string().min(1),
