@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { processMatchingFollowups } from "@/lib/notifications/dispatcher";
 
 export const runtime = "nodejs";
@@ -25,8 +26,10 @@ async function handle(request: Request): Promise<NextResponse> {
 
   try {
     const result = await processMatchingFollowups();
+    recordCronRun("matching-tick", true);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
+    recordCronRun("matching-tick", false);
     logger.error("matching tick failed", { error: (err as Error).message });
     return NextResponse.json(
       { error: { code: "INTERNAL", message: "Tick failed" } },

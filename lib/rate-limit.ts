@@ -1,5 +1,6 @@
 import { redis } from "@/lib/redis";
 import { AppError } from "@/lib/errors";
+import { recordRateLimited } from "@/lib/metrics";
 
 // ---------------------------------------------------------------------------
 // Shared fixed-window rate limiter.
@@ -89,6 +90,7 @@ export async function enforceRateLimit(spec: RateLimitSpec): Promise<RateResult>
     spec.failOpen === undefined ? {} : { failOpen: spec.failOpen },
   );
   if (!gate.ok) {
+    recordRateLimited(spec.name);
     throw AppError.rateLimited(spec.message, gate.retryAfterSeconds || spec.windowSeconds);
   }
   return gate;

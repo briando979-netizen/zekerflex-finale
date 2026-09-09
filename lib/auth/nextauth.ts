@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
+import { recordLoginFailure } from "@/lib/metrics";
 import {
   checkLoginAllowed,
   clearLoginFailures,
@@ -177,6 +178,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const registerFailure = async (userId: string | null) => {
           const { failures, locked } = await registerLoginFailure(email);
+          recordLoginFailure();
           logger.warn("failed login attempt", { email, failures, locked });
           await recordAudit({
             category: locked ? "SECURITY" : "AUTH",

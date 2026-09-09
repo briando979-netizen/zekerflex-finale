@@ -31,6 +31,7 @@ next-env.d.ts
 .env.production
 
 # infrastructure — never commit state or real secrets
+infra/docker/prometheus.token
 **/.terraform/*
 *.tfstate
 *.tfstate.*

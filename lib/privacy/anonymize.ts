@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
+import { recordUserErased } from "@/lib/metrics";
 import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 
@@ -239,6 +240,7 @@ export async function anonymizeUser(
     targetId: userId,
     metadata: { cleared },
   });
+  recordUserErased();
 
   return {
     userId,

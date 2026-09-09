@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
 import { recordAudit } from "@/lib/audit";
+import { recordPayout, recordTimesheetApproved } from "@/lib/metrics";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
 import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
@@ -386,6 +387,9 @@ export async function approveTimesheet(
       log.warn("DBA evaluation failed", { error: (err as Error).message });
     }
 
+    recordTimesheetApproved("invoice");
+    recordPayout(String(payoutStatus));
+
     return {
       timesheetId: ts.id,
       status:
@@ -538,6 +542,8 @@ async function approveViaPayroll(args: {
       resolvedDisputeId: ts.dispute?.id ?? null,
     },
   });
+
+  recordTimesheetApproved("payroll");
 
   return {
     timesheetId: ts.id,

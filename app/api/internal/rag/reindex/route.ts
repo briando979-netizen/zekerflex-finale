@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { reindexAll } from "@/lib/rag/reindex";
 
 export const runtime = "nodejs";
@@ -19,8 +20,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const result = await reindexAll();
+    recordCronRun("rag-reindex", true);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
+    recordCronRun("rag-reindex", false);
     logger.error("rag reindex failed", { error: (err as Error).message });
     return NextResponse.json(
       { error: { code: "INTERNAL", message: (err as Error).message } },

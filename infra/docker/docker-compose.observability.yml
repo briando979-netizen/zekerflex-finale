@@ -18,6 +18,7 @@ services:
       - --storage.tsdb.retention.time=15d
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.token:/etc/prometheus/token:ro
       - prom-data:/prometheus
     networks: [internal]
 

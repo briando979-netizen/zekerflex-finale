@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { recordShiftOffer } from "@/lib/metrics";
 import {
   isWebPushEnabled,
   sendWebPush,
@@ -83,5 +84,6 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
       webPushSubs: subs.length,
     });
   }
+  recordShiftOffer(delivered > 0);
   return delivered > 0;
 }
