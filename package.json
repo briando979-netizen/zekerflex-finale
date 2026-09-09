@@ -25,6 +25,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:a11y": "playwright test a11y",
+    "loadtest": "node scripts/loadtest.mjs",
     "whisper": "node scripts/whisper.mjs",
     "services": "docker compose up -d mailpit whisper",
     "gen:secrets": "node deploy/scripts/gen-secrets.mjs",
@@ -56,11 +58,13 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "autocannon": "^8.0.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.25",
@@ -76,6 +80,7 @@
     "node": ">=20.0.0"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "hyperid": { "uuid": "^11.1.0" }
   }
 }

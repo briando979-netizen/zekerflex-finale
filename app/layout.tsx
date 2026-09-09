@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { Providers } from "@/components/ui/Providers";
@@ -44,11 +45,16 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read the per-request nonce the middleware set (lib/security/csp.ts). This
+  // also opts every route into dynamic rendering — required, because a
+  // statically prerendered page can't carry a fresh nonce on its inline
+  // bootstrap scripts and the strict CSP would then block them.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="nl">
       <head>
@@ -66,6 +72,7 @@ export default function RootLayout({
       <body>
         <script
           type="application/ld+json"
+          nonce={nonce}
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([organizationJsonLd(), websiteJsonLd()]),

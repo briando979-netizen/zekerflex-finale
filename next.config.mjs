@@ -22,33 +22,14 @@ const nextConfig = {
     fetches: { fullUrl: false },
   },
   async headers() {
-    const dev = process.env.NODE_ENV !== "production";
-    // Next's App Router injects small inline bootstrap scripts without a nonce, so
-    // 'unsafe-inline' is required. `next dev` (React Refresh / HMR) additionally
-    // needs 'unsafe-eval'; the production bundle does not, so it stays strict.
-    const scriptSrc = dev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self' 'unsafe-inline'";
-    const connectSrc = dev ? "connect-src 'self' ws: http: https:" : "connect-src 'self'";
-    const csp = [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob:",
-      "media-src 'self' blob:",
-      connectSrc,
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-      ...(dev ? [] : ["upgrade-insecure-requests"]),
-    ].join("; ");
+    // The Content-Security-Policy is set per request in middleware.ts so
+    // `script-src` can carry a fresh nonce instead of 'unsafe-inline'
+    // (lib/security/csp.ts). Everything below is request-independent and stays
+    // here as a static header.
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

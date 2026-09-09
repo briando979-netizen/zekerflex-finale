@@ -48,6 +48,8 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e
 | `critical-path.spec.ts` | Employer approves the seeded submitted timesheet → reverse-billing invoices are issued and a payout row is created (SEPA provider unset → payout FAILED, which is the expected offline outcome) |
 | `rate-limit.spec.ts` | Hammering `/api/auth/check-email` yields a `429` with a `Retry-After` header |
 | `privacy.spec.ts` | A freelancer downloads their AVG art. 15/20 data export (JSON, no password hash) |
+| `csp.spec.ts` | Every response carries a strict `Content-Security-Policy`; in a production build `script-src` is nonce + `strict-dynamic` with no `unsafe-inline`, the nonce is per-request, and Next's scripts carry it |
+| `a11y.spec.ts` | `axe-core` (WCAG 2.1 AA) on the public pages + the three role dashboards — zero serious/critical violations. Also `npm run test:a11y`. See [../docs/ACCESSIBILITY.md](../docs/ACCESSIBILITY.md) |
 
 Seeded credentials (local only, password `Zeker!2026`): `admin@zekerflex.nl`,
 `hq@supermarktketen.nl`, `liam.gold@freelancer.nl`.
