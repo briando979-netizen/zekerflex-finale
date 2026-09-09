@@ -6,7 +6,7 @@
   "description": "ZekerFlex - Next-Gen Freelance & Work-Force Management Platform",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -29,7 +29,8 @@
     "services": "docker compose up -d mailpit whisper",
     "gen:secrets": "node deploy/scripts/gen-secrets.mjs",
     "deploy": "bash deploy/scripts/deploy.sh",
-    "backup": "bash deploy/scripts/backup.sh"
+    "backup": "bash deploy/scripts/backup.sh",
+    "build:with-migrate": "prisma generate && prisma migrate deploy && next build"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

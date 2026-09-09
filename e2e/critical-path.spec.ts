@@ -9,6 +9,7 @@ import { CREDS, login } from "./helpers";
 test("employer approves a submitted timesheet and invoices are issued", async ({
   page,
 }) => {
+  test.slow(); // login + approve + navigate, each a cold Next dev compile
   await login(page, CREDS.employer);
 
   await page.goto("/werkgever/uren");
@@ -17,13 +18,13 @@ test("employer approves a submitted timesheet and invoices are issued", async ({
 
   await row.getByRole("button", { name: /goedkeuren/i }).click();
 
-  // Success renders a pill with "Goedgekeurd…"; a precondition failure renders
-  // red error text. Assert we got the success pill.
-  await expect(page.locator("text=/Goedgekeurd/i").first()).toBeVisible({
-    timeout: 15_000,
-  });
+  // The green confirmation ("Goedgekeurd…"). A precondition failure would
+  // instead render red error text ("… mislukt" / "geblokkeerd").
+  await expect(page.getByText(/Goedgekeurd/i).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/goedkeuren mislukt|geblokkeerd/i)).toHaveCount(0);
 
-  // The freelancer self-billing invoice should now show up for the employer.
+  // The real proof: both reverse-billing invoices now exist for the employer.
   await page.goto("/werkgever/facturen");
-  await expect(page.locator("body")).toContainText(/ZF-|factuur|Factuur/i);
+  await expect(page.locator("body")).toContainText(/ZF-SB-2026/);
+  await expect(page.locator("body")).toContainText(/ZF-PF-2026/);
 });

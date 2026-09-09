@@ -1,6 +1,23 @@
 # ZekerFlex Sovereign Box — productie-gereedheid & zelf-evaluatie
 
-_Bijgewerkt: 2026-08-31 · autonome code-inspectie, non-destructief_
+_Bijgewerkt: 2026-09-09 · autonome code-inspectie_
+
+## Framework
+
+**Next.js 15.5.25** (was 14.2.35 — de laatste 14.2.x, zonder verdere
+security-patches). `npm audit --omit=dev` → **0 kwetsbaarheden**. Migratie:
+`@next/codemod next-async-request-api` (route-handlers `params` = `Promise`,
+pages `await` `params`/`searchParams`), `lib/auth/handlers.ts`-wrappers vangen
+de promise-params op, `lib/i18n/server.ts` `getLocale()`/`getDict()` zijn nu
+`async` (`cookies()` is async in 15). React blijft 18.3.1. NB: `next build` op
+**Windows** kan flakey falen in de post-compile FS-stappen (`.next/export`
+ENOTEMPTY / `.nft.json` ENOENT bij `output: "standalone"`); de **Docker-build
+draait op Linux** en heeft dit niet.
+
+**Openstaand build-issue:** `package.json` `"build"` bevat
+`prisma migrate deploy` — dat breekt de Docker-image-build (geen DB bereikbaar
+tijdens build) en botst met `deploy/README` waar migraties een losse stap zijn.
+`migrate deploy` uit dat script halen.
 
 Dit document is de kritische zelf-analyse die de gebruiker vroeg: wat ontbreekt
 er nog, wat rammelt, en welke stappen zijn in deze ronde autonoom gezet.
