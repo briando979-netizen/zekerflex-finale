@@ -150,6 +150,9 @@ analytics; Redis TTLs only cover locks / rate-limit counters, never data.
 
 ### Architecture export & knowledge base
 
+`docs/ARCHITECTURE.md` — the diagrammed overview (system context, deployment
+topology, request lifecycle, module map, data stores, AI layer).
+`docs/DATA-ANALYST-ROADMAP.md` — how to build analytics/BI on top, phased.
 `docs/SOVEREIGN-BOX.md` is the full architecture export (file structure, core
 contracts, code excerpts, the Jarvis system prompt). `lib/rag/knowledge/*.md`
 holds 15 deep technical guides (sovereign overview, code standards, AI governor,
