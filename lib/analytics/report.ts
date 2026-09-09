@@ -80,15 +80,47 @@ export interface TrafficSummary {
   days: { date: string; pageviews: number; visitors: number }[];
   topPaths: { path: string; pageviews: number }[];
   topReferrers: { host: string; count: number }[];
+  /** Marketing conversions in the window — all from server-side events. */
+  inbound: {
+    demoRequests: number;
+    jobApplications: number;
+    whitepaperDownloads: number;
+    topWhitepapers: { slug: string; downloads: number }[];
+  };
 }
+
+const INBOUND_LABELS = ["demo-request", "open-application", "whitepaper-download"];
 
 export async function trafficSummary(days = 7): Promise<TrafficSummary> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const events = await prisma.analyticsEvent.findMany({
-    where: { type: "PAGEVIEW", createdAt: { gte: since } },
-    select: { path: true, sessionId: true, createdAt: true, referrerHost: true },
-  });
+  const [events, conversions] = await Promise.all([
+    prisma.analyticsEvent.findMany({
+      where: { type: "PAGEVIEW", createdAt: { gte: since } },
+      select: { path: true, sessionId: true, createdAt: true, referrerHost: true },
+    }),
+    prisma.analyticsEvent.findMany({
+      where: { type: "CUSTOM", createdAt: { gte: since }, label: { in: INBOUND_LABELS } },
+      select: { label: true, meta: true },
+    }),
+  ]);
+
+  let demoRequests = 0;
+  let jobApplications = 0;
+  const wp = new Map<string, number>();
+  for (const e of conversions) {
+    if (e.label === "demo-request") demoRequests += 1;
+    else if (e.label === "open-application") jobApplications += 1;
+    else if (e.label === "whitepaper-download") {
+      const slug = (e.meta as { slug?: string } | null)?.slug ?? "onbekend";
+      wp.set(slug, (wp.get(slug) ?? 0) + 1);
+    }
+  }
+  const whitepaperDownloads = [...wp.values()].reduce((a, b) => a + b, 0);
+  const topWhitepapers = [...wp.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([slug, downloads]) => ({ slug, downloads }));
 
   const byDay = new Map<string, { pv: number; sessions: Set<string> }>();
   const byPath = new Map<string, number>();
@@ -115,5 +147,6 @@ export async function trafficSummary(days = 7): Promise<TrafficSummary> {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 8)
       .map(([host, count]) => ({ host, count })),
+    inbound: { demoRequests, jobApplications, whitepaperDownloads, topWhitepapers },
   };
 }

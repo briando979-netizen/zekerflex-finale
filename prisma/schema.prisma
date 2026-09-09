@@ -1210,7 +1210,7 @@ model SalesLead {
   contactPhone String?
   city         String?
   sector       String?
-  source       String          @default("manual") // "manual" | "kvkbase" | "careers" | "import" | "field-visit"
+  source       String          @default("manual") // "manual" | "kvkbase" | "careers" | "import" | "field-visit" | "demo-request"
   status       SalesLeadStatus @default(NEW)
 
   campaignId      String?

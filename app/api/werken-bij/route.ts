@@ -10,6 +10,8 @@ import { jsonError } from "@/lib/http/errors";
 import { CONTACTS } from "@/lib/seo";
 import { saveApplication, type StoredFile } from "@/lib/jobs/store";
 import { JOB_SKILLS } from "@/lib/jobs/skills";
+import { announce } from "@/lib/voice/announce";
+import { recordServerEvent } from "@/lib/analytics/track";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +101,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       files,
     );
 
+    void announce({
+      text: `Nieuwe open sollicitatie van ${app.name}${skills.length ? ` — interesse in ${skills.slice(0, 3).join(", ")}` : ""}.`,
+      category: "recruitment",
+      source: "marketing",
+    });
+    void recordServerEvent({
+      path: "/over-ons",
+      label: "open-application",
+      meta: { ref: app.id, skills: skills.length },
+    });
+
     // notify the recruitment inbox
     const summary = [
       `Naam: ${app.name}`,
@@ -123,7 +136,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         `<pre style="white-space:pre-wrap;font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#3C4A42">${summary
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")}</pre>
-         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${app.id} · bijlagen staan in storage/jobs.</p>`,
+         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${app.id} · bekijk de sollicitatie + bijlagen in /admin/sollicitaties.</p>`,
       ),
     }).catch((e) => logger.warn("open application notify failed", { error: (e as Error).message }));
 

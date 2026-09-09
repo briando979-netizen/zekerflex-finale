@@ -39,6 +39,7 @@ interface Overview {
   };
   traffic: { activeVisitors: number; pageviewsToday: number; visitorsToday: number };
   business: { revenueTodayCents: number; revenueMonthCents: number; activeShifts: number; usersTotal: number; newUsersToday: number };
+  inbound: { demoRequests: number; jobApplications: number; whitepaperDownloads: number };
   agents: { agent: string; lastTitle: string; at: string }[];
   recentFindings: { severity: string; category: string; title: string; createdAt: string }[];
   voiceQueued: number;
@@ -191,6 +192,8 @@ export function ControlCenter() {
                 ["Verlopen open shifts", o?.queues.staleOpenShifts, false],
                 ["Mislukte betalingen", o?.queues.failedPayments, o && o.queues.failedPayments > 0],
                 ["Open bevindingen", o?.queues.openFindings, o && o.queues.openFindings > 0],
+                ["Demo-aanvragen 7d", o?.inbound.demoRequests, false],
+                ["Open sollicitaties 7d", o?.inbound.jobApplications, false],
               ].map(([label, val, warn]) => (
                 <div
                   key={label as string}

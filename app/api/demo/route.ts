@@ -10,6 +10,8 @@ import { jsonError } from "@/lib/http/errors";
 import { CONTACTS } from "@/lib/seo";
 import { saveDemoRequest } from "@/lib/demo/store";
 import { formatDemoDate, isSelectableDemoDate, isValidDemoTime } from "@/lib/demo/slots";
+import { createLead } from "@/lib/sales/leads";
+import { recordServerEvent } from "@/lib/analytics/track";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +63,30 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const when = `${formatDemoDate(rec.date)} om ${rec.time}`;
     const base = env.APP_BASE_URL.replace(/\/+$/, "");
+
+    // A demo request is a warm B2B lead — land it in the sales pipeline
+    // (/admin/sales) next to the cold prospects, with the existing scoring +
+    // outreach. Awaited (so it survives on serverless) but non-fatal.
+    try {
+      await createLead({
+        companyName: d.company,
+        contactName: `${d.firstName} ${d.lastName}`,
+        contactEmail: d.email,
+        contactPhone: d.phone,
+        source: "demo-request",
+        sourceUrl: "/demo",
+        notes: `Demo aangevraagd voor ${when}.${d.note ? ` Opmerking: ${d.note}` : ""} (ref ${rec.id})`,
+        createdById: null,
+      });
+    } catch (e) {
+      logger.warn("demo -> sales lead failed", { error: (e as Error).message });
+    }
+
+    void recordServerEvent({
+      path: "/demo",
+      label: "demo-request",
+      meta: { company: d.company, ref: rec.id },
+    });
 
     await sendMail({
       to: CONTACTS.sales,
