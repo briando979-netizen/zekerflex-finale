@@ -5,11 +5,12 @@ import { unsubscribe } from "@/lib/newsletter/store";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nieuwsbrief afmelden", robots: { index: false } };
 
-export default async function AfmeldenPage({
-  searchParams,
-}: {
-  searchParams: { token?: string; done?: string };
-}) {
+export default async function AfmeldenPage(
+  props: {
+    searchParams: Promise<{ token?: string; done?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // Reached directly from a mail link with ?token= → unsubscribe now.
   // Reached via the one-click API redirect → ?done=1, already unsubscribed.
   if (searchParams.token && !searchParams.done) {

@@ -40,7 +40,7 @@ export default async function WerkgeverCompliancePage() {
   const high = records.filter((r) => r.riskLevel === "HIGH").length;
   const medium = records.filter((r) => r.riskLevel === "MEDIUM").length;
 
-  const cp = getDict().compliance;
+  const cp = (await getDict()).compliance;
   return (
     <>
       <PageHeader title={cp.title} subtitle={cp.subtitle} />

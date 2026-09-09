@@ -25,7 +25,8 @@ const schema = z
     path: ["extraCostsNote"],
   });
 
-export async function POST(request: Request, { params }: { params: { timesheetId: string } }): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ timesheetId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "FREELANCER");

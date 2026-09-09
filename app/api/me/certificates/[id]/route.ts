@@ -6,10 +6,8 @@ import { deleteCertificate } from "@/lib/certificates/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");

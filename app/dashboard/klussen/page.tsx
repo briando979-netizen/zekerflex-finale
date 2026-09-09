@@ -6,11 +6,12 @@ import { MarketplaceView } from "@/components/app/MarketplaceView";
 
 export const dynamic = "force-dynamic";
 
-export default async function KlussenPage({
-  searchParams,
-}: {
-  searchParams: { employer?: string };
-}) {
+export default async function KlussenPage(
+  props: {
+    searchParams: Promise<{ employer?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const principal = await requirePrincipal();
   const m = await getMarketplace(principal.userId);
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";

@@ -5,11 +5,12 @@ import { confirm } from "@/lib/newsletter/store";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nieuwsbrief bevestigen", robots: { index: false } };
 
-export default async function BevestigenPage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
+export default async function BevestigenPage(
+  props: {
+    searchParams: Promise<{ token?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const token = searchParams.token ?? "";
   const result = token ? await confirm(token) : null;
   const ok = Boolean(result);

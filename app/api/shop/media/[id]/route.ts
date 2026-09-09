@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 // image/model — readUpload() itself has no ownership check, so without this
 // guard any upload id (an ID document, a bank statement, ...) could be
 // fetched through what is meant to be a public product-photo endpoint.
-export async function GET(_request: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(_request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const linked = await prisma.shopProduct.findFirst({
       where: { OR: [{ imageUploadId: params.id }, { modelUploadId: params.id }] },

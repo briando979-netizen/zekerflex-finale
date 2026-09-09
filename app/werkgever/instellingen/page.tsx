@@ -30,7 +30,7 @@ interface Card {
 
 export default async function InstellingenPage() {
   const principal = await requirePrincipal();
-  const d = getDict();
+  const d = await getDict();
   const s = d.settings;
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];

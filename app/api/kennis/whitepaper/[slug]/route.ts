@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 // GET /api/kennis/whitepaper/<slug> — the whitepaper as a branded PDF download.
 // Public, no DB/Redis. Content is static so the response can be cached.
-export function GET(_req: Request, { params }: { params: { slug: string } }): Response {
+export async function GET(_req: Request, props: { params: Promise<{ slug: string }> }): Promise<Response> {
+  const params = await props.params;
   const wp = whitepaperBySlug(params.slug);
   if (!wp) return new Response("Not found", { status: 404 });
 

@@ -11,7 +11,8 @@ const TYPE_LABEL: Record<string, string> = {
   FRANCHISE: "Franchise",
 };
 
-export default async function BedrijvenPage({ searchParams }: { searchParams: { q?: string } }) {
+export default async function BedrijvenPage(props: { searchParams: Promise<{ q?: string }> }) {
+  const searchParams = await props.searchParams;
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return (

@@ -43,7 +43,8 @@ const INFO_CHIPS = [
   "🏖️ Vakantiegeld: nee",
 ];
 
-export default async function ShiftDetailPage({ params }: { params: { shiftId: string } }) {
+export default async function ShiftDetailPage(props: { params: Promise<{ shiftId: string }> }) {
+  const params = await props.params;
   const principal = await requirePrincipal();
   const s = await getShiftDetail(principal.userId, params.shiftId);
   if (!s) notFound();

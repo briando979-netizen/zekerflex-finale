@@ -29,15 +29,15 @@ export interface Principal {
   managedBranchIds: string[];
 }
 
-function readSessionToken(): string | undefined {
-  const fromCookie = cookies().get(SESSION_COOKIE)?.value;
+async function readSessionToken(): Promise<string | undefined> {
+  const fromCookie = (await cookies()).get(SESSION_COOKIE)?.value;
   if (fromCookie) return fromCookie;
-  const auth = headers().get("authorization");
+  const auth = (await headers()).get("authorization");
   return auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
 }
 
 export async function getPrincipal(): Promise<Principal | null> {
-  const claims = await decodeSession(readSessionToken());
+  const claims = await decodeSession(await readSessionToken());
   if (!claims) return null;
 
   const user = await prisma.user.findFirst({

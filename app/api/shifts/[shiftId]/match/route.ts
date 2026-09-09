@@ -14,10 +14,8 @@ const paramsSchema = z.object({ shiftId: z.string().min(1).max(128) });
  * POST /api/shifts/:shiftId/match
  * Kick off (or advance) matching for a shift. Idempotent per wave.
  */
-export async function POST(
-  _request: Request,
-  { params }: { params: { shiftId: string } },
-): Promise<NextResponse> {
+export async function POST(_request: Request, props: { params: Promise<{ shiftId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const log = logger.child({ route: "POST /api/shifts/[shiftId]/match" });
   try {
     const principal = await requirePrincipal();

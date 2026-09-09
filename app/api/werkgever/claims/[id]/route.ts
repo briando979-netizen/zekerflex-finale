@@ -15,10 +15,8 @@ export const dynamic = "force-dynamic";
 const schema = z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().max(500).optional() });
 
 // POST /api/werkgever/claims/:id — employer approves or rejects a 50% claim.
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     requireRole(p, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");

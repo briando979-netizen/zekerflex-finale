@@ -7,7 +7,8 @@ export function generateStaticParams() {
   return WHITEPAPERS.map((w) => ({ slug: w.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const w = whitepaperBySlug(params.slug);
   if (!w) return { title: "Whitepaper" };
   return { title: `${w.title} — whitepaper`, description: w.intro };
@@ -17,7 +18,8 @@ function nlDate(iso: string): string {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function WhitepaperReaderPage({ params }: { params: { slug: string } }) {
+export default async function WhitepaperReaderPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const wp = whitepaperBySlug(params.slug);
   if (!wp) notFound();
 

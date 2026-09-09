@@ -22,10 +22,8 @@ const paramsSchema = z.object({ id: z.string().min(1).max(128) });
  * client organization signs on the client's behalf. The signing party is
  * derived from the caller's role, not the request body.
  */
-export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const log = logger.child({ route: "POST /api/model-agreements/[id]/sign" });
   try {
     const principal = await requirePrincipal();

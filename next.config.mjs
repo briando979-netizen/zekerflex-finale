@@ -10,13 +10,13 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
   },
+  // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).
+  serverExternalPackages: ["ioredis"],
   experimental: {
     optimizePackageImports: ["date-fns"],
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    // Keep native / Node-only packages out of the RSC bundle.
-    serverComponentsExternalPackages: ["ioredis"],
   },
   logging: {
     fetches: { fullUrl: false },

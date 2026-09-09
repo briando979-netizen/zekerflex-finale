@@ -14,10 +14,8 @@ export const dynamic = "force-dynamic";
 
 // POST /api/invoices/:id/checkout — start a Stripe Checkout Session so the
 // employer can pay an ISSUED invoice online. Returns { url } to redirect to.
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<Response> {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     const principal = await requirePrincipal();
 

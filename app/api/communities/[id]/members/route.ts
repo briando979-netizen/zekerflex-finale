@@ -12,10 +12,8 @@ export const dynamic = "force-dynamic";
 const addSchema = z.object({ userId: z.string().min(1) });
 
 // POST /api/communities/:id/members — owner/admin adds someone directly.
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const c = await getCommunity(params.id);
@@ -36,10 +34,8 @@ export async function POST(
 }
 
 // DELETE /api/communities/:id/members?userId=  — remove a member, or leave yourself.
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const c = await getCommunity(params.id);

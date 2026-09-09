@@ -49,7 +49,7 @@ describe("withAuth", () => {
   it("returns 401 and never calls the handler when there is no valid session", async () => {
     requirePrincipalMock.mockRejectedValue(AppError.unauthenticated());
     const handler = vi.fn();
-    const res = await withAuth(handler)(new Request("http://x/"), { params: {} });
+    const res = await withAuth(handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
     expect(handler).not.toHaveBeenCalled();
   });
@@ -57,22 +57,22 @@ describe("withAuth", () => {
   it("calls the handler with the resolved principal attached to ctx", async () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
-    const ctx = { params: { id: "abc" } };
+    const ctx = { params: Promise.resolve({ id: "abc" }) };
     await withAuth(handler)(new Request("http://x/"), ctx);
     expect(handler).toHaveBeenCalledWith(expect.anything(), { params: { id: "abc" }, principal: PRINCIPAL });
   });
 
-  it("defaults ctx to an empty params object when the route has no dynamic segment", async () => {
+  it("resolves the params promise and hands the handler a plain params object", async () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
-    await withAuth(handler)(new Request("http://x/"));
+    await withAuth(handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(handler).toHaveBeenCalledWith(expect.anything(), { params: {}, principal: PRINCIPAL });
   });
 
   it("converts an AppError thrown by the handler into the matching status + code", async () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const handler = vi.fn().mockRejectedValue(AppError.forbidden("nope"));
-    const res = await withAuth(handler)(new Request("http://x/"), { params: {} });
+    const res = await withAuth(handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
     expect(await bodyOf(res)).toMatchObject({ error: { code: "FORBIDDEN" } });
   });
@@ -80,7 +80,7 @@ describe("withAuth", () => {
   it("converts an unexpected thrown error into a generic 500, never leaking the raw error", async () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const handler = vi.fn().mockRejectedValue(new Error("db connection string leaked here"));
-    const res = await withAuth(handler)(new Request("http://x/"), { params: {} });
+    const res = await withAuth(handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(500);
     const body = (await bodyOf(res)) as { error: { message: string } };
     expect(body.error.message).not.toContain("db connection string");
@@ -89,12 +89,12 @@ describe("withAuth", () => {
   it("logs a 500 (with the raw error, server-side only) but never logs a 4xx", async () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const handler = vi.fn().mockRejectedValue(new Error("boom"));
-    await withAuth(handler)(new Request("http://x/api/example"), { params: {} });
+    await withAuth(handler)(new Request("http://x/api/example"), { params: Promise.resolve({}) });
     expect(loggerErrorMock).toHaveBeenCalledWith("request failed", { error: "boom" });
 
     loggerErrorMock.mockReset();
     const handler4xx = vi.fn().mockRejectedValue(AppError.forbidden("nope"));
-    await withAuth(handler4xx)(new Request("http://x/api/example"), { params: {} });
+    await withAuth(handler4xx)(new Request("http://x/api/example"), { params: Promise.resolve({}) });
     expect(loggerErrorMock).not.toHaveBeenCalled();
   });
 });
@@ -106,7 +106,7 @@ describe("withAdminAccess", () => {
       throw AppError.forbidden("Requires one of: PLATFORM_ADMIN");
     });
     const handler = vi.fn();
-    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: {} });
+    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
     expect(handler).not.toHaveBeenCalled();
     expect(requireRoleMock).toHaveBeenCalledWith(PRINCIPAL, "PLATFORM_ADMIN");
@@ -116,7 +116,7 @@ describe("withAdminAccess", () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     requireRoleMock.mockReturnValue(undefined);
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
-    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: {} });
+    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
     expect(handler).toHaveBeenCalledOnce();
   });
@@ -124,7 +124,7 @@ describe("withAdminAccess", () => {
   it("still returns 401 (not 403) when there is no session at all", async () => {
     requirePrincipalMock.mockRejectedValue(AppError.unauthenticated());
     const handler = vi.fn();
-    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: {} });
+    const res = await withAdminAccess(["PLATFORM_ADMIN"], handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
     expect(requireRoleMock).not.toHaveBeenCalled();
   });
@@ -135,7 +135,7 @@ describe("withOrganizationAccess", () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const resolveOrgId = vi.fn().mockResolvedValue("org_a");
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
-    await withOrganizationAccess(resolveOrgId, handler)(new Request("http://x/"), { params: { id: "inv_1" } });
+    await withOrganizationAccess(resolveOrgId, handler)(new Request("http://x/"), { params: Promise.resolve({ id: "inv_1" }) });
     expect(resolveOrgId).toHaveBeenCalled();
     expect(assertOrganizationAccessMock).toHaveBeenCalledWith(PRINCIPAL, "org_a");
     expect(handler).toHaveBeenCalledOnce();
@@ -148,7 +148,7 @@ describe("withOrganizationAccess", () => {
     });
     const handler = vi.fn();
     const res = await withOrganizationAccess(() => "org_other", handler)(new Request("http://x/"), {
-      params: {},
+      params: Promise.resolve({}),
     });
     expect(res.status).toBe(403);
     expect(handler).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe("withBranchAccess", () => {
     requirePrincipalMock.mockResolvedValue(PRINCIPAL);
     const resolveIds = vi.fn().mockResolvedValue({ branchId: "branch_ams", tenantId: "org_a" });
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
-    await withBranchAccess(resolveIds, handler)(new Request("http://x/"), { params: {} });
+    await withBranchAccess(resolveIds, handler)(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(assertBranchAccessMock).toHaveBeenCalledWith(PRINCIPAL, "branch_ams", "org_a");
     expect(handler).toHaveBeenCalledOnce();
   });
@@ -174,7 +174,7 @@ describe("withBranchAccess", () => {
     const res = await withBranchAccess(
       () => ({ branchId: "branch_x", tenantId: "org_a" }),
       handler,
-    )(new Request("http://x/"), { params: {} });
+    )(new Request("http://x/"), { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
     expect(handler).not.toHaveBeenCalled();
   });

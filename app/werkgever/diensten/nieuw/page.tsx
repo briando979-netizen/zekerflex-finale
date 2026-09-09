@@ -10,7 +10,7 @@ import { getDict } from "@/lib/i18n/server";
 export const dynamic = "force-dynamic";
 
 export default async function NieuweDienstPage() {
-  const n = getDict().newShift;
+  const n = (await getDict()).newShift;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
 

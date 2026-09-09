@@ -104,7 +104,7 @@ export async function getEmployerCalendarMonth(
   return {
     year,
     month,
-    label: `${getDict().calendar.months[month]} ${year}`,
+    label: `${(await getDict()).calendar.months[month]} ${year}`,
     weeks,
     total: shifts.filter((s) => s.startsAt.getMonth() === month && s.startsAt.getFullYear() === year).length,
     prev: { y: prevD.getFullYear(), m: prevD.getMonth() },

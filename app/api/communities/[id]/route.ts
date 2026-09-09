@@ -15,10 +15,8 @@ import { getUserAvatars } from "@/lib/profile/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const c = await getCommunity(params.id);
@@ -53,10 +51,8 @@ const patchSchema = z.object({
   description: z.string().max(400).optional(),
 });
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const c = await getCommunity(params.id);

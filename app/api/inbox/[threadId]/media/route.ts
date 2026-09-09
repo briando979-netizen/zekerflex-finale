@@ -11,10 +11,8 @@ export const dynamic = "force-dynamic";
 // POST /api/inbox/:threadId/media  (multipart: file, optional durationSec)
 // Stores a chat attachment on the box's disk. Returns the descriptor to attach
 // to a message via POST /api/inbox/:threadId.
-export async function POST(
-  request: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const admin = await isPlatformAdmin(p.userId);
