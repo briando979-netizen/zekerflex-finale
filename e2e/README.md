@@ -47,6 +47,7 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e
 | `auth.spec.ts` | Seeded login for freelancer / employer / platform-admin lands on the right home screen; bad password is rejected |
 | `critical-path.spec.ts` | Employer approves the seeded submitted timesheet → reverse-billing invoices are issued and a payout row is created (SEPA provider unset → payout FAILED, which is the expected offline outcome) |
 | `rate-limit.spec.ts` | Hammering `/api/auth/check-email` yields a `429` with a `Retry-After` header |
+| `privacy.spec.ts` | A freelancer downloads their AVG art. 15/20 data export (JSON, no password hash) |
 
 Seeded credentials (local only, password `Zeker!2026`): `admin@zekerflex.nl`,
 `hq@supermarktketen.nl`, `liam.gold@freelancer.nl`.

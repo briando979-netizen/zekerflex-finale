@@ -86,6 +86,11 @@ export default async function AccountPage() {
         { label: "E-mailadres wijzigen", href: "/dashboard/profiel" },
         { label: "Wachtwoord wijzigen", href: "/wachtwoord-vergeten" },
         {
+          label: "Download mijn gegevens",
+          href: "/api/me/gegevens/export",
+          external: true,
+        },
+        {
           label: "Account verwijderen",
           href: "mailto:info@zekerflex.com?subject=Verzoek%20account%20verwijderen",
           external: true,
