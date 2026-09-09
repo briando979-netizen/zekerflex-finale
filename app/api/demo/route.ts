@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { sendMail, mailShell, mailButton } from "@/lib/mail";
+import { fixedWindow } from "@/lib/rate-limit";
 import { CONTACTS } from "@/lib/seo";
 import { saveDemoRequest } from "@/lib/demo/store";
 import { formatDemoDate, isSelectableDemoDate, isValidDemoTime } from "@/lib/demo/slots";
@@ -26,6 +27,10 @@ const schema = z.object({
 // POST /api/demo — public demo request from an opdrachtgever. Filesystem only.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`demo:rl:${ip}`, 5, 600);
+    if (!gate.ok) throw AppError.validation("Te veel aanvragen — probeer het later opnieuw.");
+
     const json = await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
     });

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { toErrorBody } from "@/lib/errors";
+import { AppError, toErrorBody } from "@/lib/errors";
 import { isBreached, scorePassword } from "@/lib/auth/password";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ const schema = z.object({
 // k-anonymity); it is never stored or logged.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`check-password:rl:${ip}`, 30, 60);
+    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over een minuut opnieuw.");
+
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json({ score: 0, label: "zeer zwak", warnings: [], breached: false });

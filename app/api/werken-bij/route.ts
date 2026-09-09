@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { sendMail, mailShell } from "@/lib/mail";
+import { fixedWindow } from "@/lib/rate-limit";
 import { CONTACTS } from "@/lib/seo";
 import { saveApplication, type StoredFile } from "@/lib/jobs/store";
 import { JOB_SKILLS } from "@/lib/jobs/skills";
@@ -50,6 +51,10 @@ async function readFile(form: FormData, field: string, kind: StoredFile["kind"])
 // POST /api/werken-bij — public open application. Filesystem only, no DB/Redis.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`werken-bij:rl:${ip}`, 5, 600);
+    if (!gate.ok) throw AppError.validation("Te veel aanvragen — probeer het later opnieuw.");
+
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verwacht multipart/form-data");
     });

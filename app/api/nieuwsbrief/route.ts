@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
+import { fixedWindow } from "@/lib/rate-limit";
 import { normalizeEmail, subscribe } from "@/lib/newsletter/store";
 import { newsletterConfirmEmail } from "@/lib/newsletter/mail";
 
@@ -18,6 +19,10 @@ const schema = z.object({
 // POST /api/nieuwsbrief — public double opt-in signup. Never touches DB/Redis.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`nieuwsbrief:rl:${ip}`, 5, 600);
+    if (!gate.ok) throw AppError.validation("Te veel aanmeldingen — probeer het later opnieuw.");
+
     const json = await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
     });

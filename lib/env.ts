@@ -18,6 +18,9 @@ const schema = z.object({
 
   // Auth (NextAuth v5 + jose HS256 session tokens).
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
+  // Retired signing secret(s), comma-separated — verification-only, during a
+  // key rotation. See lib/auth/session.ts.
+  AUTH_SECRET_PREVIOUS: z.string().optional(),
   AUTH_URL: z.string().url().optional(),
 
   // Google OAuth (optional - provider is only registered when both are set).

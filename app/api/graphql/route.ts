@@ -1,4 +1,5 @@
-import { createYoga } from "graphql-yoga";
+import { createYoga, type Plugin } from "graphql-yoga";
+import { NoSchemaIntrospectionCustomRule } from "graphql";
 import { EnvelopArmor } from "@escape.tech/graphql-armor";
 import { schema, buildContext } from "@/lib/graphql/schema";
 import { env } from "@/lib/env";
@@ -14,6 +15,15 @@ export const dynamic = "force-dynamic";
 // resolvers via pathological depth, aliasing or token count.
 const armor = new EnvelopArmor();
 
+// Blocks __schema/__type introspection in production so the full schema
+// can't be reconnoitred by a caller who isn't also building against
+// GraphiQL (disabled in production below).
+const disableIntrospectionInProduction: Plugin = {
+  onValidate({ addValidationRule }) {
+    if (env.NODE_ENV === "production") addValidationRule(NoSchemaIntrospectionCustomRule);
+  },
+};
+
 // GraphQL endpoint. GraphiQL is enabled outside production only (the production
 // CSP blocks its CDN assets anyway). Auth + role checks live in the resolvers,
 // via the principal resolved in the context.
@@ -25,7 +35,7 @@ const yoga = createYoga({
   fetchAPI: { Response },
   cors: false,
   landingPage: false,
-  plugins: [...armor.protect().plugins],
+  plugins: [...armor.protect().plugins, disableIntrospectionInProduction],
 });
 
 async function rateLimited(request: Request): Promise<Response | null> {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { toErrorBody } from "@/lib/errors";
+import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { fixedWindow } from "@/lib/rate-limit";
 import { autocompleteCompanies, isKvkBaseEnabled, searchCompanies } from "@/lib/integrations/kvkbase";
 
 export const runtime = "nodejs";
@@ -11,9 +12,14 @@ const schema = z.object({ q: z.string().trim().min(2).max(120) });
 
 // GET /api/company/search?q=… — public Handelsregister autocomplete for the
 // sign-up form. Returns { configured:false } when no KVKBase key is set, so the
-// UI can fall back to a plain name field.
+// UI can fall back to a plain name field. Rate-limited: each call proxies to
+// the paid KVKBase API.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`company-search:rl:${ip}`, 20, 60);
+    if (!gate.ok) throw AppError.validation("Te veel zoekopdrachten — probeer het over een minuut opnieuw.");
+
     if (!isKvkBaseEnabled()) {
       return NextResponse.json({ configured: false, results: [] });
     }

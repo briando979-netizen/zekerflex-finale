@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { toErrorBody } from "@/lib/errors";
+import { AppError, toErrorBody } from "@/lib/errors";
+import { fixedWindow } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,10 @@ const schema = z.object({ email: z.string().email().max(160) });
 // Returns only { valid, available } — nothing else about the account.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const gate = await fixedWindow(`check-email:rl:${ip}`, 20, 60);
+    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over een minuut opnieuw.");
+
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json({ valid: false, available: false });
