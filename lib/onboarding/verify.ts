@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { KycStatus, type Prisma } from "@prisma/client";
+import { ComplianceDocKind, KycStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
@@ -19,9 +19,20 @@ import { storeUpload } from "@/lib/storage/local";
 //     a local-LLM authenticity review that produces the human explanation.
 //  4. Approve automatically when everything lines up; otherwise leave it
 //     "in review" with concrete reasons — never a dead end.
+//
+// Capture is three photos in one go — front, back, selfie — not one generic
+// upload. The front image also satisfies the separate "Identiteitsbewijs"
+// compliance-document requirement (lib/compliance/documents.ts) so a
+// freelancer is never asked to upload the same ID twice.
 // ---------------------------------------------------------------------------
 
 export type DocKind = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
+
+export interface CapturedImage {
+  filename: string;
+  mimeType: string;
+  bytes: Buffer;
+}
 
 export interface OnboardingInput {
   userId: string;
@@ -33,7 +44,7 @@ export interface OnboardingInput {
   documentNumber: string;
   documentExpiry: string; // yyyy-mm-dd
   nameOnDocument: string;
-  file: { filename: string; mimeType: string; bytes: Buffer };
+  files: { front: CapturedImage; back: CapturedImage; selfie: CapturedImage };
 }
 
 export interface OnboardingResult {
@@ -170,17 +181,29 @@ export async function submitFreelancerOnboarding(
 
   const checks: OnboardingResult["checks"] = [];
 
-  // --- file sanity ---------------------------------------------------------
-  const mime = input.file.mimeType.toLowerCase();
-  const fileOk = ALLOWED_MIME.has(mime) && input.file.bytes.length > 8_000;
+  // --- file sanity (all three captures) -----------------------------------
+  const front = input.files.front;
+  const mime = front.mimeType.toLowerCase();
+  const imageOk = (f: CapturedImage) => ALLOWED_MIME.has(f.mimeType.toLowerCase()) && f.bytes.length > 8_000;
+  const frontOk = imageOk(front);
+  const backOk = imageOk(input.files.back);
+  const selfieOk = imageOk(input.files.selfie);
   checks.push({
-    label: "Documentbestand",
-    ok: fileOk,
-    detail: fileOk
-      ? `${mime}, ${(input.file.bytes.length / 1024).toFixed(0)} kB`
-      : "Gebruik een duidelijke foto of scan (JPG, PNG of PDF, min. 8 kB).",
+    label: "Documentfoto's (voor-, achterkant, selfie)",
+    ok: frontOk && backOk && selfieOk,
+    detail:
+      frontOk && backOk && selfieOk
+        ? `${mime}, ${(
+            (front.bytes.length + input.files.back.bytes.length + input.files.selfie.bytes.length) /
+            1024
+          ).toFixed(0)} kB samen`
+        : "Eén of meer foto's zijn niet leesbaar. Gebruik duidelijke, scherpe foto's (JPG, PNG of WebP, min. 8 kB per foto).",
   });
-  if (!fileOk) throw AppError.validation("Het geüploade document is niet leesbaar. Probeer een duidelijkere foto of scan.");
+  if (!frontOk || !backOk || !selfieOk) {
+    throw AppError.validation(
+      "Eén of meer van je foto's is niet leesbaar. Maak de voorkant, achterkant en selfie opnieuw met goed licht.",
+    );
+  }
 
   // --- geocode home base -------------------------------------------------
   const geo = await geocodePostcode(input.postalCode, input.houseNumber);
@@ -307,19 +330,30 @@ export async function submitFreelancerOnboarding(
     documentExpiry: input.documentExpiry,
     file: {
       mimeType: mime,
-      sizeBytes: input.file.bytes.length,
-      filename: input.file.filename,
+      sizeBytes: front.bytes.length,
+      filename: front.filename,
     },
     deterministic: checks,
   });
 
-  // --- store the document (on the box's own disk) ------------------
-  const stored = await storeUpload({
-    filename: input.file.filename,
-    mimeType: input.file.mimeType,
-    bytes: input.file.bytes,
-    uploadedById: user.id,
-  });
+  // --- store the three photos (on the box's own disk) -----------------
+  const [storedFront, storedBack, storedSelfie] = await Promise.all([
+    storeUpload({ filename: front.filename, mimeType: front.mimeType, bytes: front.bytes, uploadedById: user.id }),
+    storeUpload({
+      filename: input.files.back.filename,
+      mimeType: input.files.back.mimeType,
+      bytes: input.files.back.bytes,
+      uploadedById: user.id,
+    }),
+    storeUpload({
+      filename: input.files.selfie.filename,
+      mimeType: input.files.selfie.mimeType,
+      bytes: input.files.selfie.bytes,
+      uploadedById: user.id,
+    }),
+  ]);
+  // Kept for the doc-number hash below, unaffected by the rename.
+  const stored = storedFront;
 
   // --- combined decision -----------------------------------------
   const hardFail =
@@ -365,7 +399,13 @@ export async function submitFreelancerOnboarding(
         verifiedAt: outcome === "verified" ? new Date() : null,
         expiresAt: Number.isNaN(expiry.getTime()) ? null : expiry,
         rawPayload: JSON.parse(
-          JSON.stringify({ outcome, ai, checks, uploadId: stored.id, fileSha256: stored.sha256 }),
+          JSON.stringify({
+            outcome,
+            ai,
+            checks,
+            uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
+            fileSha256: stored.sha256,
+          }),
         ) as Prisma.InputJsonValue,
       },
     });
@@ -373,6 +413,22 @@ export async function submitFreelancerOnboarding(
       where: { id: user.id },
       data: { kycStatus },
     });
+
+    // The front-of-document photo we just captured *is* the "Identiteitsbewijs"
+    // compliance document (lib/compliance/documents.ts) — supersede any
+    // earlier one so the freelancer is never asked to upload their ID again
+    // on the same page. Mirrors storeDoc()'s "one active doc per kind" rule.
+    // Except a driver's license: ComplianceDocsPanel deliberately only accepts
+    // a passport or ID card there, so that combination still needs its own
+    // upload (a real, separate requirement — not the duplicate we're fixing).
+    if (input.documentType !== "DRIVERS_LICENSE") {
+      await tx.complianceDocument.deleteMany({
+        where: { userId: user.id, kind: ComplianceDocKind.ID },
+      });
+      await tx.complianceDocument.create({
+        data: { userId: user.id, kind: ComplianceDocKind.ID, uploadId: storedFront.id },
+      });
+    }
   });
 
   await recordAudit({
