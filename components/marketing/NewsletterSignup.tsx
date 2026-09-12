@@ -64,7 +64,7 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="jouw@email.nl"
           autoComplete="email"
-          className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-brand-mint/60 focus:outline-none"
+          className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm text-white placeholder:text-white/60 focus:border-brand-mint/60 focus:outline-none"
         />
         <button
           type="submit"

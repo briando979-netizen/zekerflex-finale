@@ -14,11 +14,13 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 | Variabele | Lokaal (dev) | VPS (prod) | Wat het doet |
 |---|---|---|---|
 | `NODE_ENV` | `development` | `production` 🔴 | Zet cookie-security, logging, caching |
-| `APP_BASE_URL` | `http://localhost:3000` | `https://app.jouwdomein.com` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience |
-| `AUTH_URL` | — | `https://app.jouwdomein.com` 🔴 | NextAuth base-URL (achter de tunnel) |
+| `APP_BASE_URL` | `http://localhost:3000` | `https://zekerflex.nl` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience, **en elke SEO-canonical / OG-URL / sitemap-entry** |
+| `AUTH_URL` | — | `https://zekerflex.nl` 🔴 | NextAuth base-URL (achter de tunnel) |
 | `AUTH_TRUST_HOST` | `true` | `true` 🔴 | Vertrouw de `X-Forwarded-*` headers van cloudflared |
 | `AUTH_SECRET` | dev-string | 32+ random (`gen-secrets`) 🔴 | Ondertekent de sessie-JWT's |
 | `INTERNAL_CRON_TOKEN` | dev-string | 16+ random 🟡 | Beschermt de interne worker-endpoints |
+| `GOOGLE_SITE_VERIFICATION` | — | token ⚪ | Google Search Console property-verificatie (`<meta>`-methode). Zie `docs/SEO.md` |
+| `BING_SITE_VERIFICATION` | — | token ⚪ | Bing Webmaster Tools property-verificatie (optioneel) |
 | `DATABASE_URL` | `postgresql://zekerflex:zekerflex@localhost:5432/zekerflex?schema=public` | `…@postgres:5432/…` 🔴 | PostgreSQL-verbinding |
 | `POSTGRES_PASSWORD` | — | sterk wachtwoord 🔴 | Alleen gelezen door `docker-compose.prod.yml` |
 | `REDIS_URL` | `redis://localhost:6379` | `redis://redis:6379` 🔴 | Locks, wachtrijen, rate-limits, AI-governor |
@@ -33,6 +35,8 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 | `LLM_FAST_MODEL` | — (valt terug op `LLM_MODEL`) | Klein snel model voor begroetingen/routing/korte chat |
 | `LLM_EMBED_MODEL` | — | Embeddings voor RAG (`nomic-embed-text`) |
 | `LLM_TIMEOUT_MS` | `30000` | Time-out per LLM-call (verhoog op CPU: `180000`) |
+| `LLM_VISION_MODEL` | — (uit) | Vision-model voor de KYC-beeldcontrole (`lib/kyc/vision.ts`). **Getest op CPU-only met `moondream`: 45-150s per call, onbetrouwbare JSON** — niet aanzetten zonder GPU + een sterker model (`llava:13b`, `qwen2.5vl:7b+`) en eigen hertest |
+| `LLM_VISION_TIMEOUT_MS` | `60000` | Time-out per beeldcontrole-call, los van `LLM_TIMEOUT_MS` |
 | `LLM_KEEP_ALIVE` | `30m` | Houdt het model geladen tussen calls |
 | `LLM_RETRY_MAX` / `LLM_RETRY_BASE_MS` / `LLM_RETRY_MAX_WAIT_MS` | `6` / `600` / `120000` | Stille auto-retry bij een hapering (nooit bij een time-out) |
 | `AI_MAX_CONCURRENCY` | `2` | Max. gelijktijdige LLM-calls |
@@ -48,7 +52,6 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 |---|---|
 | `WEBPUSH_VAPID_PUBLIC_KEY` / `WEBPUSH_VAPID_PRIVATE_KEY` | 🟡 Keypair voor push-meldingen — `npm run vapid:keys` of `gen-secrets` |
 | `WEBPUSH_CONTACT` | `mailto:info@zekerflex.com` — VAPID-contact |
-| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | ⚪ Optionele tweede push-provider (FCM) voor native apps |
 
 ## Uitgaande e-mail
 

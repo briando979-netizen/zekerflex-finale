@@ -15,7 +15,10 @@ export async function approveTimesheetAction(timesheetId: string): Promise<Appro
     const principal = await requirePrincipal();
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
     const result = await approveTimesheet({ timesheetId, principal });
-    revalidatePath("/werkgever/uren");
+    // Refresh the dashboard KPIs, but NOT this list: revalidating /werkgever/uren
+    // here re-renders the list synchronously (Next 15), which unmounts the
+    // ApproveButton before it can show the "Goedgekeurd" confirmation. The
+    // approved row stays visible with its green pill until the next navigation.
     revalidatePath("/werkgever");
     return {
       ok: true,

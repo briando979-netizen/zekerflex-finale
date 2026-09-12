@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
+import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 
 export const config = {
   matcher: [
@@ -16,31 +17,64 @@ export const config = {
     // itself forgot to call requirePrincipal(). Role/organization/branch
     // checks beyond "is logged in" remain the route's own responsibility.
     "/api/:path*",
+    // Everything that renders HTML — so the per-request CSP nonce below is
+    // attached to every document. Excludes API (JSON, handled above), Next
+    // internals and static assets. Prefetch requests are skipped so a hovered
+    // link doesn't force the target route into dynamic rendering.
+    {
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2|ttf|mp4|webmanifest|xml|txt)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };
 
 export const CORRELATION_HEADER = "x-correlation-id";
+const CSP_HEADER = "Content-Security-Policy";
+const NONCE_HEADER = "x-nonce";
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 /** One id per request, reused from an upstream proxy if it already set one. */
 function correlationId(req: NextRequest): string {
   return req.headers.get(CORRELATION_HEADER) || crypto.randomUUID();
 }
 
-function jsonError(code: string, message: string, status: number, correlationId: string): NextResponse {
-  const res = NextResponse.json({ error: { code, message, correlationId } }, { status });
-  res.headers.set(CORRELATION_HEADER, correlationId);
+interface RequestContext {
+  cid: string;
+  nonce: string;
+  csp: string;
+}
+
+/** Stamp the security + correlation headers every response out of here carries. */
+function decorate(res: NextResponse, ctx: RequestContext): NextResponse {
+  res.headers.set(CORRELATION_HEADER, ctx.cid);
+  res.headers.set(CSP_HEADER, ctx.csp);
   return res;
 }
 
-function loginRedirect(req: NextRequest, correlationId: string): NextResponse {
+function jsonError(
+  code: string,
+  message: string,
+  status: number,
+  ctx: RequestContext,
+): NextResponse {
+  return decorate(
+    NextResponse.json({ error: { code, message, correlationId: ctx.cid } }, { status }),
+    ctx,
+  );
+}
+
+function loginRedirect(req: NextRequest, ctx: RequestContext): NextResponse {
   const url = req.nextUrl.clone();
   url.pathname = "/login";
   url.search = `?callbackUrl=${encodeURIComponent(
     req.nextUrl.pathname + req.nextUrl.search,
   )}`;
-  const res = NextResponse.redirect(url);
-  res.headers.set(CORRELATION_HEADER, correlationId);
-  return res;
+  return decorate(NextResponse.redirect(url), ctx);
 }
 
 function sessionToken(req: NextRequest): string | undefined {
@@ -52,50 +86,60 @@ function sessionToken(req: NextRequest): string | undefined {
 }
 
 /**
- * Forward the request with the correlation id + (when present) a verified
- * identity hint as headers — route handlers and server components read these
- * back via next/headers rather than re-decoding the token, and every log
- * line for this request can bind the same correlationId.
+ * Forward the request with the correlation id, the CSP nonce, and (when
+ * present) a verified identity hint as headers — route handlers and server
+ * components read these back via next/headers rather than re-decoding the
+ * token, and every log line for this request can bind the same correlationId.
+ * Next itself reads `Content-Security-Policy` off the forwarded request to
+ * learn the nonce for its bootstrap <script>.
  */
-function next(req: NextRequest, correlationId: string, claims?: { sub: string; email: string }): NextResponse {
+function next(
+  req: NextRequest,
+  ctx: RequestContext,
+  claims?: { sub: string; email: string },
+): NextResponse {
   const headers = new Headers(req.headers);
-  headers.set(CORRELATION_HEADER, correlationId);
+  headers.set(CORRELATION_HEADER, ctx.cid);
   headers.set("x-pathname", req.nextUrl.pathname);
+  headers.set(NONCE_HEADER, ctx.nonce);
+  headers.set(CSP_HEADER, ctx.csp);
   if (claims) {
     headers.set("x-zekerflex-user-id", claims.sub);
     headers.set("x-zekerflex-user-email", claims.email);
   }
-  const res = NextResponse.next({ request: { headers } });
-  res.headers.set(CORRELATION_HEADER, correlationId);
-  return res;
+  return decorate(NextResponse.next({ request: { headers } }), ctx);
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const pathname = req.nextUrl.pathname;
-  const cid = correlationId(req);
+  const nonce = generateNonce();
+  const ctx: RequestContext = {
+    cid: correlationId(req),
+    nonce,
+    csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce }),
+  };
   const rule = matchRouteRule(pathname);
 
   if (!rule) {
-    // No specific role rule for this path. Page routes reaching here aren't
-    // in the matcher (only dashboard/werkgever/sales/admin are, and those all
-    // have a rule), so this branch is API-only: default-deny unless the path
-    // is explicitly public.
+    // No specific role rule for this path: HTML pages (marketing, /login,
+    // /register, …) and API routes that aren't explicitly public. Pages just
+    // get the headers; unlisted API paths default-deny.
     if (!pathname.startsWith("/api/") || isPublicApiRoute(pathname)) {
-      return next(req, cid);
+      return next(req, ctx);
     }
     const claims = await decodeSession(sessionToken(req));
     if (!claims) {
-      return jsonError("UNAUTHENTICATED", "Authentication required", 401, cid);
+      return jsonError("UNAUTHENTICATED", "Authentication required", 401, ctx);
     }
-    return next(req, cid, claims);
+    return next(req, ctx, claims);
   }
 
   const claims = await decodeSession(sessionToken(req));
 
   if (!claims) {
     return rule.redirectOnDeny
-      ? loginRedirect(req, cid)
-      : jsonError("UNAUTHENTICATED", "Authentication required", 401, cid);
+      ? loginRedirect(req, ctx)
+      : jsonError("UNAUTHENTICATED", "Authentication required", 401, ctx);
   }
 
   if (!hasAnyRole(claims, rule.roles)) {
@@ -105,20 +149,18 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       const url = req.nextUrl.clone();
       url.pathname = "/start";
       url.search = "";
-      const res = NextResponse.redirect(url);
-      res.headers.set(CORRELATION_HEADER, cid);
-      return res;
+      return decorate(NextResponse.redirect(url), ctx);
     }
     return jsonError(
       "FORBIDDEN",
       `Requires one of: ${rule.roles.join(", ")}`,
       403,
-      cid,
+      ctx,
     );
   }
 
   // Pass a verified identity hint + the pathname downstream (handlers and
   // layouts still re-validate; the pathname lets a layout skip its own gate
   // for e.g. the onboarding route it wraps).
-  return next(req, cid, claims);
+  return next(req, ctx, claims);
 }

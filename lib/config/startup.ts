@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { llmHealth, type LlmHealth } from "@/lib/ai/client";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { ensureStorageWritable } from "@/lib/storage/local";
+import { deploymentTarget, isDemoDeployment, type DeploymentTarget } from "@/lib/config/deployment";
 
 // ---------------------------------------------------------------------------
 // Self-healing startup checks for The Sovereign Box.
@@ -22,6 +23,7 @@ export interface StartupReport {
   ok: boolean;
   checkedAt: string;
   env: { ok: boolean; nodeEnv: string };
+  deployment: { target: DeploymentTarget; demo: boolean };
   database: {
     ok: boolean;
     latencyMs: number;
@@ -114,6 +116,7 @@ export async function runStartupChecks(): Promise<StartupReport> {
     ok: database.ok && redisOk,
     checkedAt: new Date().toISOString(),
     env: { ok: true, nodeEnv: env.NODE_ENV },
+    deployment: { target: deploymentTarget(), demo: isDemoDeployment() },
     database,
     redis: redisOk
       ? { ok: true, latencyMs: (cache as { ms: number }).ms }
@@ -130,6 +133,11 @@ export async function runStartupChecks(): Promise<StartupReport> {
     budget,
   };
 
+  if (report.deployment.demo) {
+    logger.warn("startup: running on a DEMO deployment (Vercel)", {
+      note: "schedulers and background jobs (payroll finalisation, matching follow-ups, sales autopilot) do NOT run here — see docs/PRODUCTION-READINESS.md",
+    });
+  }
   if (database.pendingMigrations.length > 0) {
     logger.warn("startup: pending database migrations", {
       pending: database.pendingMigrations,

@@ -23,10 +23,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox/:id — full conversation; marks it read for the caller.
-export async function GET(
-  _req: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     await touchPresence(p.userId);
@@ -107,10 +105,8 @@ const sendSchema = z.object({
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
-export async function POST(
-  request: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const admin = await isPlatformAdmin(p.userId);

@@ -9,7 +9,7 @@ import { fmt } from "@/lib/i18n/dictionaries";
 export const dynamic = "force-dynamic";
 
 export default async function GeblokkeerdPage() {
-  const b = getDict().blocked;
+  const b = (await getDict()).blocked;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];

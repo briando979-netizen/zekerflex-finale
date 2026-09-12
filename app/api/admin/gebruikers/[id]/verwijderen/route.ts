@@ -1,45 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { anonymizeUser } from "@/lib/privacy/anonymize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/admin/gebruikers/<id>/verwijderen — anonymises the account rather
-// than a hard delete: invoices, timesheets and audit entries keep pointing at
-// a valid row (legally required retention), but the person's data is gone and
-// the account can never log in again. Irreversible.
-export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_request, { params, principal }) => {
-  const user = await prisma.user.findUnique({ where: { id: params.id }, select: { id: true, fullName: true, email: true } });
-  if (!user) throw AppError.notFound("Gebruiker niet gevonden");
-  if (user.email.endsWith("@verwijderd.zekerflex.invalid")) {
-    return NextResponse.json({ ok: true, alreadyDeleted: true });
-  }
+// POST /api/admin/gebruikers/<id>/verwijderen — AVG art. 17 erasure.
+// Deep-anonymises the account (see lib/privacy/anonymize.ts): every erasable
+// identifier across user, freelancer profile, KYC, devices, documents and the
+// audit log is stripped. Data under a statutory retention duty (invoices,
+// timesheets, model agreements, payroll) is kept and listed in the response as
+// `retained`. Irreversible.
+export const POST = withAdminAccess<{ id: string }>(
+  ["PLATFORM_ADMIN"],
+  async (_request, { params, principal }) => {
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
+      select: { id: true },
+    });
+    if (!user) throw AppError.notFound("Gebruiker niet gevonden");
 
-  const anonEmail = `verwijderd-${params.id}@verwijderd.zekerflex.invalid`;
-  await prisma.user.update({
-    where: { id: params.id },
-    data: {
-      fullName: "Verwijderde gebruiker",
-      email: anonEmail,
-      phone: null,
-      passwordHash: null,
-      disabledAt: new Date(),
-    },
-  });
+    const report = await anonymizeUser(params.id, {
+      actorUserId: principal.userId,
+      reason: `verwijderd via admin door ${principal.email}`,
+    });
 
-  await recordAudit({
-    category: "SECURITY",
-    action: "admin.user.deleted",
-    severity: "critical",
-    actorUserId: principal.userId,
-    actorLabel: "user",
-    summary: `${principal.email} verwijderde (anonimiseerde) het account van ${user.fullName} (${user.email})`,
-    targetType: "user",
-    targetId: params.id,
-  });
-
-  return NextResponse.json({ ok: true });
-});
+    return NextResponse.json({ ok: true, ...report });
+  },
+);

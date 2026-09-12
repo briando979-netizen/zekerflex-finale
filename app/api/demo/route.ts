@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { sendMail, mailShell, mailButton } from "@/lib/mail";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 import { CONTACTS } from "@/lib/seo";
 import { saveDemoRequest } from "@/lib/demo/store";
 import { formatDemoDate, isSelectableDemoDate, isValidDemoTime } from "@/lib/demo/slots";
+import { createLead } from "@/lib/sales/leads";
+import { recordServerEvent } from "@/lib/analytics/track";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,9 +31,13 @@ const schema = z.object({
 // POST /api/demo — public demo request from an opdrachtgever. Filesystem only.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`demo:rl:${ip}`, 5, 600);
-    if (!gate.ok) throw AppError.validation("Te veel aanvragen — probeer het later opnieuw.");
+    await enforceRateLimit({
+      name: "demo",
+      identifier: clientIp(request),
+      limit: 5,
+      windowSeconds: 600,
+      message: "Te veel aanvragen — probeer het later opnieuw.",
+    });
 
     const json = await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
@@ -55,6 +63,30 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const when = `${formatDemoDate(rec.date)} om ${rec.time}`;
     const base = env.APP_BASE_URL.replace(/\/+$/, "");
+
+    // A demo request is a warm B2B lead — land it in the sales pipeline
+    // (/admin/sales) next to the cold prospects, with the existing scoring +
+    // outreach. Awaited (so it survives on serverless) but non-fatal.
+    try {
+      await createLead({
+        companyName: d.company,
+        contactName: `${d.firstName} ${d.lastName}`,
+        contactEmail: d.email,
+        contactPhone: d.phone,
+        source: "demo-request",
+        sourceUrl: "/demo",
+        notes: `Demo aangevraagd voor ${when}.${d.note ? ` Opmerking: ${d.note}` : ""} (ref ${rec.id})`,
+        createdById: null,
+      });
+    } catch (e) {
+      logger.warn("demo -> sales lead failed", { error: (e as Error).message });
+    }
+
+    void recordServerEvent({
+      path: "/demo",
+      label: "demo-request",
+      meta: { company: d.company, ref: rec.id },
+    });
 
     await sendMail({
       to: CONTACTS.sales,
@@ -91,8 +123,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     logger.info("demo request received", { id: rec.id, date: rec.date, time: rec.time });
     return NextResponse.json({ ok: true, id: rec.id, when });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    if (status >= 500) logger.error("demo request failed", { error: (err as Error).message });
-    return NextResponse.json(body, { status });
+    const res = jsonError(err);
+    if (res.status >= 500) logger.error("demo request failed", { error: (err as Error).message });
+    return res;
   }
 }

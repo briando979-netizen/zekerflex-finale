@@ -70,7 +70,9 @@ export function ShiftCard({
     >
       {/* photo */}
       <div className="relative aspect-[16/9] overflow-hidden">
-        <Link href={href} className="block h-full w-full">
+        {/* Decorative duplicate of the title link below — hidden from AT so the
+            card exposes exactly one meaningful link. */}
+        <Link href={href} className="block h-full w-full" aria-hidden="true" tabIndex={-1}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cat.photo}

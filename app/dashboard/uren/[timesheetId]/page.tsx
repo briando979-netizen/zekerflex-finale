@@ -11,7 +11,8 @@ import { PageHeader, Panel, dateTime, moneyExact } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function TimesheetPage({ params }: { params: { timesheetId: string } }) {
+export default async function TimesheetPage(props: { params: Promise<{ timesheetId: string }> }) {
+  const params = await props.params;
   const principal = await requirePrincipal();
   const profile = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },

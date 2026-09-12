@@ -7,7 +7,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { decideClaim, getClaim } from "@/lib/claims/store";
 import { recordAudit } from "@/lib/audit";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,17 +15,19 @@ export const dynamic = "force-dynamic";
 const schema = z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().max(500).optional() });
 
 // POST /api/werkgever/claims/:id — employer approves or rejects a 50% claim.
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     requireRole(p, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
 
-    const gate = await fixedWindow(`claim-decide:rl:${p.userId}`, 30, 600);
-    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over enkele minuten opnieuw.");
-
+    await enforceRateLimit({
+      name: "claim-decide",
+      identifier: p.userId,
+      limit: 30,
+      windowSeconds: 600,
+      message: "Te veel pogingen — probeer het over enkele minuten opnieuw.",
+    });
     const claim = await getClaim(params.id);
     if (!claim) throw AppError.notFound("Claim niet gevonden.");
 

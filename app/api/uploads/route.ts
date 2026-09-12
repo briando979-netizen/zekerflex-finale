@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { storeUpload } from "@/lib/storage/local";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
@@ -11,10 +11,13 @@ export const dynamic = "force-dynamic";
 // POST /api/uploads  (multipart/form-data, field "file")
 // Stores the file on the box's own disk. PLATFORM_ADMIN (the chatbar "+").
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
-  const gate = await fixedWindow(`uploads:rl:${principal.userId}`, 30, 600);
-  if (!gate.ok) {
-    throw AppError.validation("Te veel uploads — probeer het over enkele minuten opnieuw.");
-  }
+  await enforceRateLimit({
+    name: "uploads",
+    identifier: principal.userId,
+    limit: 30,
+    windowSeconds: 600,
+    message: "Te veel uploads — probeer het over enkele minuten opnieuw.",
+  });
 
   const form = await request.formData().catch(() => {
     throw AppError.validation("Verwacht multipart/form-data");

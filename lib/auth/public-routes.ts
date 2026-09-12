@@ -18,6 +18,7 @@ const PUBLIC_PREFIXES = [
   "/api/webhooks", // signature-verified (Stripe, Didit)
   "/api/public", // partner API — its own API-key auth (verifyApiKey/requireApiKey)
   "/api/internal", // cron/scheduler — its own shared-secret auth (checkInternalToken)
+  "/api/metrics", // Prometheus exposition — same shared-secret auth (checkInternalToken)
   "/api/health",
   "/api/ready",
   "/api/status",

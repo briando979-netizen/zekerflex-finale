@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { refreshAllActiveHours } from "@/lib/engagement/events";
 
 export const runtime = "nodejs";
@@ -19,8 +20,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const result = await refreshAllActiveHours();
+    recordCronRun("active-hours", true);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
+    recordCronRun("active-hours", false);
     logger.error("active-hours recompute failed", {
       error: (err as Error).message,
     });

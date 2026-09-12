@@ -8,10 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/model-agreements/:id/pdf — the modelovereenkomst as a PDF.
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const a = await prisma.modelAgreement.findUnique({

@@ -2,16 +2,36 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, FaqList, CtaBand } from "@/components/marketing/primitives";
 import { FULL_FAQ } from "@/lib/kennis/content";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Veelgestelde vragen",
   description:
     "Antwoorden op de meest gestelde vragen over aanmelden, matching, uitbetaling, facturen en compliance bij ZekerFlex.",
+  ...canonical("/kennis/faq"),
+};
+
+const faqPageLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  inLanguage: "nl-NL",
+  mainEntity: FULL_FAQ.flatMap((group) =>
+    group.items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  ),
 };
 
 export default function FaqPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageLd) }}
+      />
       <div className="hero-ink text-white">
         <div className="shell py-20 md:py-24">
           <Link href="/kennis" className="text-sm font-medium text-white/60 hover:text-white">

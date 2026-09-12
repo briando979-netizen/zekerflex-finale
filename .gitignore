@@ -4,6 +4,12 @@ out
 build
 coverage
 
+# Playwright E2E
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 .env
 .env.local
 .env.*.local
@@ -25,6 +31,7 @@ next-env.d.ts
 .env.production
 
 # infrastructure — never commit state or real secrets
+infra/docker/prometheus.token
 **/.terraform/*
 *.tfstate
 *.tfstate.*
@@ -44,6 +51,11 @@ kubeconfig
 
 # lokale TTS-cache van scripts/make-uitleg-videos.py
 scripts/.tts-cache
+
+# Marketing explainer videos — served from object storage / CDN in production,
+# kept on disk for local dev (the /uitleg page degrades gracefully without them).
+# ~42 MB; see public/videos/README.md.
+public/videos/*.mp4
 
 # Video Studio — gegenereerde projecten (script/manifest wel, media niet)
 studio/projects/*/work/

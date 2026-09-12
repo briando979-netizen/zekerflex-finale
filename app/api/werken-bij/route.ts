@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { sendMail, mailShell } from "@/lib/mail";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 import { CONTACTS } from "@/lib/seo";
 import { saveApplication, type StoredFile } from "@/lib/jobs/store";
 import { JOB_SKILLS } from "@/lib/jobs/skills";
+import { announce } from "@/lib/voice/announce";
+import { recordServerEvent } from "@/lib/analytics/track";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,9 +55,13 @@ async function readFile(form: FormData, field: string, kind: StoredFile["kind"])
 // POST /api/werken-bij — public open application. Filesystem only, no DB/Redis.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`werken-bij:rl:${ip}`, 5, 600);
-    if (!gate.ok) throw AppError.validation("Te veel aanvragen — probeer het later opnieuw.");
+    await enforceRateLimit({
+      name: "werken-bij",
+      identifier: clientIp(request),
+      limit: 5,
+      windowSeconds: 600,
+      message: "Te veel aanvragen — probeer het later opnieuw.",
+    });
 
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verwacht multipart/form-data");
@@ -93,6 +101,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       files,
     );
 
+    void announce({
+      text: `Nieuwe open sollicitatie van ${app.name}${skills.length ? ` — interesse in ${skills.slice(0, 3).join(", ")}` : ""}.`,
+      category: "recruitment",
+      source: "marketing",
+    });
+    void recordServerEvent({
+      path: "/over-ons",
+      label: "open-application",
+      meta: { ref: app.id, skills: skills.length },
+    });
+
     // notify the recruitment inbox
     const summary = [
       `Naam: ${app.name}`,
@@ -117,7 +136,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         `<pre style="white-space:pre-wrap;font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#3C4A42">${summary
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")}</pre>
-         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${app.id} · bijlagen staan in storage/jobs.</p>`,
+         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${app.id} · bekijk de sollicitatie + bijlagen in /admin/sollicitaties.</p>`,
       ),
     }).catch((e) => logger.warn("open application notify failed", { error: (e as Error).message }));
 
@@ -141,8 +160,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     logger.info("open application received", { id: app.id, skills: skills.length, files: files.length });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    if (status >= 500) logger.error("open application failed", { error: (err as Error).message });
-    return NextResponse.json(body, { status });
+    const res = jsonError(err);
+    if (res.status >= 500) logger.error("open application failed", { error: (err as Error).message });
+    return res;
   }
 }

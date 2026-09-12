@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Check {
   label: string;
@@ -23,6 +23,94 @@ const DOC_LABEL: Record<string, string> = {
   DRIVERS_LICENSE: "Rijbewijs",
 };
 
+/** One camera/upload capture — front, back, or selfie. Own preview state so a
+ * retry (remounted via `key`) starts clean without touching form.reset(). */
+function CaptureSlot({
+  name,
+  label,
+  hint,
+  capture,
+  round = false,
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  capture?: "environment" | "user";
+  round?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  return (
+    <div>
+      <span className="field-label">{label}</span>
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        className={`mt-1.5 flex w-full items-center gap-3 border border-dashed border-hairstrong px-3 py-3 text-left transition hover:border-brand-500 ${
+          round ? "rounded-full" : "rounded-lg"
+        }`}
+      >
+        <span
+          className={`grid h-12 w-12 flex-shrink-0 place-items-center overflow-hidden bg-paper-soft ${
+            round ? "rounded-full" : "rounded-md"
+          }`}
+        >
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <CameraIcon />
+          )}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-ink">
+            {preview ? "Vervangen" : "Foto maken / kiezen"}
+          </span>
+          <span className="block truncate text-xs text-neutralx-400">{hint}</span>
+        </span>
+      </button>
+      <input
+        ref={ref}
+        type="file"
+        name={name}
+        required
+        accept="image/jpeg,image/png,image/webp"
+        capture={capture}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          setPreview((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(f);
+          });
+        }}
+        className="sr-only"
+      />
+    </div>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="text-neutralx-400">
+      <path
+        d="M4 7h3l1.5-2h7L17 7h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function OnboardingForm({
   defaultName,
   requireKvk = true,
@@ -35,7 +123,7 @@ export function OnboardingForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0); // bump to remount + clear the 3 capture slots
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,7 +200,7 @@ export function OnboardingForm({
               onClick={() => {
                 setResult(null);
                 formRef.current?.reset();
-                setFileName(null);
+                setAttempt((a) => a + 1);
               }}
               className="btn-primary"
             >
@@ -179,7 +267,7 @@ export function OnboardingForm({
         </label>
       </fieldset>
 
-      <fieldset className="space-y-4">
+      <fieldset className="space-y-4" key={attempt}>
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "3." : "2."} Identiteitsbewijs
         </legend>
@@ -206,30 +294,36 @@ export function OnboardingForm({
           </label>
         </div>
 
-        <label className="block">
-          <span className="field-label">Foto of scan van het document</span>
-          <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-dashed border-hairstrong px-4 py-6">
-            <input
-              type="file"
-              name="document"
-              required
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-              className="text-sm text-neutralx-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
-            />
-          </div>
-          <span className="mt-1 block text-xs text-neutralx-400">
-            {fileName ? `Gekozen: ${fileName}` : "JPG, PNG of PDF. De ingebouwde ID-controleur beoordeelt echtheid en consistentie."}
-          </span>
-        </label>
+        <p className="text-xs leading-relaxed text-neutralx-500">
+          Drie foto&apos;s, in één keer — dit vervangt losse uploads verderop: de voorkant en achterkant
+          van je document, en een selfie zodat we kunnen zien dat jij het bent. Zorg voor goed licht en
+          scherpe tekst.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <CaptureSlot
+            name="documentFront"
+            label="Voorkant"
+            hint="Pasfoto-zijde van je document"
+            capture="environment"
+          />
+          <CaptureSlot
+            name="documentBack"
+            label="Achterkant"
+            hint="De kant zonder foto"
+            capture="environment"
+          />
+          <CaptureSlot name="selfie" label="Selfie" hint="Kijk recht in de camera" capture="user" round />
+        </div>
       </fieldset>
 
       <button type="submit" disabled={busy} className="btn-primary w-full">
         {busy ? "Bezig met controleren…" : "Verificatie versturen"}
       </button>
       <p className="text-xs leading-relaxed text-neutralx-400">
-        Je document wordt lokaal opgeslagen op de eigen infrastructuur van ZekerFlex en
-        alleen gebruikt voor deze verificatie. Er gaat niets naar externe partijen.
+        Je foto&apos;s worden lokaal opgeslagen op de eigen infrastructuur van ZekerFlex en alleen gebruikt
+        voor deze verificatie. Er gaat niets naar externe partijen. Dit voldoet meteen aan de
+        verplichte identiteitsbewijs-upload verderop op deze pagina — dat hoef je dus niet nog een keer
+        te doen.
       </p>
     </form>
   );

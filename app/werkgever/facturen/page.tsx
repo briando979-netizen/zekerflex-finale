@@ -10,7 +10,7 @@ import { getDict } from "@/lib/i18n/server";
 export const dynamic = "force-dynamic";
 
 export default async function WerkgeverFacturenPage() {
-  const iv = getDict().invoices;
+  const iv = (await getDict()).invoices;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const billing = scope.tenantIds[0] ? await getOrgProfileExtra(scope.tenantIds[0]) : {};

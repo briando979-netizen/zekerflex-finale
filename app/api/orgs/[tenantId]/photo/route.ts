@@ -7,10 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/orgs/:tenantId/photo — public company photo (used on marketing pages).
-export async function GET(
-  _req: Request,
-  { params }: { params: { tenantId: string } },
-): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ tenantId: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     const extra = await getOrgProfileExtra(params.tenantId);
     if (!extra.photoUploadId) {

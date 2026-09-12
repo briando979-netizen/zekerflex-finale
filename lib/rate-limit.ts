@@ -1,4 +1,6 @@
 import { redis } from "@/lib/redis";
+import { AppError } from "@/lib/errors";
+import { recordRateLimited } from "@/lib/metrics";
 
 // ---------------------------------------------------------------------------
 // Shared fixed-window rate limiter.
@@ -58,4 +60,38 @@ export async function fixedWindow(
       retryAfterSeconds: 0,
     };
   }
+}
+
+export interface RateLimitSpec {
+  /** Stable bucket name, e.g. "check-email" or "kyc-start". */
+  name: string;
+  /** Who is being limited: an IP (`clientIp(req)`), a userId, an API-key id. */
+  identifier: string;
+  limit: number;
+  windowSeconds: number;
+  /** Default true (a Redis fault lets the request through). */
+  failOpen?: boolean;
+  /** Message for the 429 body. */
+  message?: string;
+}
+
+/**
+ * Count one request and throw `AppError.rateLimited` (HTTP 429 + `Retry-After`)
+ * when the window is exhausted. The single choke point every route should use:
+ * it owns the key namespace (`rl:<name>:<identifier>`) and the response shape so
+ * individual handlers stop hand-rolling both. Returns the `RateResult` when the
+ * request is allowed, for callers that want to surface `X-RateLimit-*`.
+ */
+export async function enforceRateLimit(spec: RateLimitSpec): Promise<RateResult> {
+  const gate = await fixedWindow(
+    `rl:${spec.name}:${spec.identifier}`,
+    spec.limit,
+    spec.windowSeconds,
+    spec.failOpen === undefined ? {} : { failOpen: spec.failOpen },
+  );
+  if (!gate.ok) {
+    recordRateLimited(spec.name);
+    throw AppError.rateLimited(spec.message, gate.retryAfterSeconds || spec.windowSeconds);
+  }
+  return gate;
 }

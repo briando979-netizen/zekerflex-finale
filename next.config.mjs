@@ -10,45 +10,26 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
   },
+  // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).
+  serverExternalPackages: ["ioredis"],
   experimental: {
     optimizePackageImports: ["date-fns"],
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    // Keep native / Node-only packages out of the RSC bundle.
-    serverComponentsExternalPackages: ["ioredis", "firebase-admin"],
   },
   logging: {
     fetches: { fullUrl: false },
   },
   async headers() {
-    const dev = process.env.NODE_ENV !== "production";
-    // Next's App Router injects small inline bootstrap scripts without a nonce, so
-    // 'unsafe-inline' is required. `next dev` (React Refresh / HMR) additionally
-    // needs 'unsafe-eval'; the production bundle does not, so it stays strict.
-    const scriptSrc = dev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self' 'unsafe-inline'";
-    const connectSrc = dev ? "connect-src 'self' ws: http: https:" : "connect-src 'self'";
-    const csp = [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob:",
-      "media-src 'self' blob:",
-      connectSrc,
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-      ...(dev ? [] : ["upgrade-insecure-requests"]),
-    ].join("; ");
+    // The Content-Security-Policy is set per request in middleware.ts so
+    // `script-src` can carry a fresh nonce instead of 'unsafe-inline'
+    // (lib/security/csp.ts). Everything below is request-independent and stays
+    // here as a static header.
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -63,6 +44,27 @@ const nextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
         ],
+      },
+      {
+        // The service worker must be revalidated on every load (so a new
+        // sw.js ships immediately) and allowed to control the whole origin.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+          { key: "Content-Type", value: "text/javascript; charset=utf-8" },
+        ],
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [{ key: "Cache-Control", value: "public, max-age=3600" }],
       },
     ];
   },

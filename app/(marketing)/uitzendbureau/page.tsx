@@ -6,10 +6,20 @@ import { UitzendJobBoard } from "@/components/marketing/UitzendJobBoard";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Uitzendklussen via ZekerFlex",
+  title: "Uitzendwerk zonder KVK — uitzendklussen in heel Nederland",
   description:
-    "Uitzendklussen via ZekerFlex: bepaal je eigen uren, krijg vakantiegeld, pensioen (StiPP) en reiskosten, en laat al het papierwerk geregeld zijn. ZekerFlex is je werkgever — geen KVK nodig.",
+    "Werk als uitzendkracht via ZekerFlex, ook zonder KVK. Bepaal je eigen uren, krijg wekelijks loon met vakantiegeld, pensioen (StiPP), reiskosten en het ABU-fasensysteem. ZekerFlex is je werkgever — al het papierwerk geregeld.",
+  keywords: [
+    "uitzendwerk zonder KVK",
+    "uitzendkracht worden",
+    "uitzendbureau alternatief",
+    "wekelijks uitbetaald werken",
+    "flexwerk met vast contract",
+    "StiPP pensioen",
+    "ABU fasensysteem",
+  ],
   alternates: { canonical: "/uitzendbureau" },
+  openGraph: { url: "/uitzendbureau" },
 };
 
 const PILLARS = [

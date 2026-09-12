@@ -23,7 +23,7 @@ function Stars({ n }: { n: number }) {
 }
 
 export default async function WerkgeverBedrijfPage() {
-  const c = getDict().company;
+  const c = (await getDict()).company;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];

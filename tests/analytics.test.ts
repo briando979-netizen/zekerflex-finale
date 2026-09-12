@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { mockRedis, mockStore, createMany, findMany, count, groupBy } = vi.hoisted(() => {
+const { mockRedis, mockStore, create, createMany, findMany, count, groupBy } = vi.hoisted(() => {
   const store = new Map<string, number>();
   return {
     mockStore: store,
@@ -12,6 +12,7 @@ const { mockRedis, mockStore, createMany, findMany, count, groupBy } = vi.hoiste
       },
       expire: async () => 1,
     },
+    create: vi.fn().mockResolvedValue({ id: "evt_1" }),
     createMany: vi.fn().mockResolvedValue({ count: 0 }),
     findMany: vi.fn(),
     count: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("@/lib/redis", () => ({ redis: mockRedis }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     analyticsEvent: {
+      create: (...a: unknown[]) => create(...a),
       createMany: (...a: unknown[]) => createMany(...a),
       findMany: (...a: unknown[]) => findMany(...a),
       count: (...a: unknown[]) => count(...a),
@@ -31,8 +33,8 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { trackEvents } from "@/lib/analytics/track";
-import { liveTraffic } from "@/lib/analytics/report";
+import { recordServerEvent, trackEvents } from "@/lib/analytics/track";
+import { liveTraffic, trafficSummary } from "@/lib/analytics/report";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -86,5 +88,49 @@ describe("liveTraffic", () => {
     expect(t.activeVisitors).toBe(3);
     expect(t.pageviewsLast5m).toBe(42);
     expect(t.activePages[0]).toEqual({ path: "/admin", visitors: 5 });
+  });
+});
+
+describe("recordServerEvent — marketing conversions", () => {
+  it("writes a CUSTOM event with a fixed sessionId and never throws", async () => {
+    await recordServerEvent({ path: "/demo", label: "demo-request", meta: { company: "Acme" } });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: "CUSTOM",
+        path: "/demo",
+        label: "demo-request",
+        sessionId: "server",
+        meta: { company: "Acme" },
+      }),
+    });
+  });
+
+  it("swallows a DB failure", async () => {
+    create.mockRejectedValueOnce(new Error("db down"));
+    await expect(
+      recordServerEvent({ path: "/x", label: "whitepaper-download" }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("trafficSummary — inbound block", () => {
+  it("splits CUSTOM conversion events into demo / application / whitepaper counts", async () => {
+    findMany.mockImplementation(async ({ where }: { where: { type: string } }) => {
+      if (where.type === "PAGEVIEW") return [];
+      return [
+        { label: "demo-request", meta: {} },
+        { label: "demo-request", meta: {} },
+        { label: "open-application", meta: {} },
+        { label: "whitepaper-download", meta: { slug: "omzetbelasting" } },
+        { label: "whitepaper-download", meta: { slug: "omzetbelasting" } },
+        { label: "whitepaper-download", meta: { slug: "werken-via-zekerflex" } },
+      ];
+    });
+
+    const s = await trafficSummary(7);
+    expect(s.inbound.demoRequests).toBe(2);
+    expect(s.inbound.jobApplications).toBe(1);
+    expect(s.inbound.whitepaperDownloads).toBe(3);
+    expect(s.inbound.topWhitepapers[0]).toEqual({ slug: "omzetbelasting", downloads: 2 });
   });
 });

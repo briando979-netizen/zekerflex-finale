@@ -7,11 +7,12 @@ import { isResetTokenValid } from "@/lib/auth/password-reset";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nieuw wachtwoord instellen" };
 
-export default async function WachtwoordHerstellenPage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
+export default async function WachtwoordHerstellenPage(
+  props: {
+    searchParams: Promise<{ token?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const token = searchParams.token ?? "";
   const valid = token ? await isResetTokenValid(token) : false;
 

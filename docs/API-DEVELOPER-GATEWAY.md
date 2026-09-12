@@ -29,15 +29,15 @@ Elke sleutel is aan maximaal één organisatie gekoppeld. Requests zijn beperkt 
 
 ```bash
 curl -H "Authorization: Bearer zf_live_..." \
-  https://app.zekerflex.com/api/public/v1/shifts
+  https://zekerflex.nl/api/public/v1/shifts
 
 curl -X POST -H "Authorization: Bearer zf_live_..." \
   -H "Content-Type: application/json" \
   -d '{"branchId":"...","title":"Magazijnmedewerker","startsAt":"2026-10-01T08:00:00+02:00","endsAt":"2026-10-01T16:30:00+02:00","breakMinutes":30,"hourlyRateCents":1600,"positions":2}' \
-  https://app.zekerflex.com/api/public/v1/shifts
+  https://zekerflex.nl/api/public/v1/shifts
 
 curl -H "X-API-Key: zf_live_..." \
-  https://app.zekerflex.com/api/public/v1/timesheets/approved
+  https://zekerflex.nl/api/public/v1/timesheets/approved
 ```
 
 ## Webhooks

@@ -1,11 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
+import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const TITLE = `${SITE.name} — ${SITE.tagline}`;
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FCFCFA" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0E12" },
+  ],
+  colorScheme: "light dark",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -19,7 +29,9 @@ export const metadata: Metadata = {
   authors: [{ name: SITE.name }],
   creator: SITE.name,
   publisher: SITE.name,
-  alternates: { canonical: "/" },
+  // No canonical here on purpose: Next merges metadata per route segment, so a
+  // canonical set on the root layout would make every page declare itself a
+  // duplicate of "/". Each indexable page sets its own via seo.ts `canonical()`.
   category: "business",
   formatDetection: { email: false, address: false, telephone: false },
   openGraph: {
@@ -41,14 +53,36 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
-  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
+  // Drop the Search Console / Bing tokens in via env (no rebuild-time secret) to
+  // claim the property and get indexing coverage + query reports.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : {},
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: SITE.name,
+    statusBarStyle: "black-translucent",
+  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read the per-request nonce the middleware set (lib/security/csp.ts). This
+  // also opts every route into dynamic rendering — required, because a
+  // statically prerendered page can't carry a fresh nonce on its inline
+  // bootstrap scripts and the strict CSP would then block them.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="nl">
       <head>
@@ -66,6 +100,7 @@ export default function RootLayout({
       <body>
         <script
           type="application/ld+json"
+          nonce={nonce}
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([organizationJsonLd(), websiteJsonLd()]),
@@ -75,6 +110,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <AnalyticsBeacon />
         </Suspense>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

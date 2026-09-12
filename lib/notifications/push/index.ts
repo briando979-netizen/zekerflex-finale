@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import { isFcmEnabled, sendFcm } from "@/lib/notifications/push/fcm";
+import { recordShiftOffer } from "@/lib/metrics";
 import {
   isWebPushEnabled,
   sendWebPush,
@@ -9,9 +9,12 @@ import {
 // ---------------------------------------------------------------------------
 // Push fan-out.
 //
-// A freelancer may have Web Push subscriptions (primary, self-hosted) and/or
-// FCM tokens (optional). `sendShiftOffer` delivers over every channel it can,
-// disables subscriptions/tokens the service reports as gone, and never throws.
+// Web Push (self-hosted, no third party) is the only channel. FCM support
+// was removed: it pulled in firebase-admin, which drags a critical CVE via
+// its @google-cloud/* -> google-gax -> uuid dependency chain, for a channel
+// nothing here ever configured (env.FIREBASE_* was always unset). If a
+// native-app push channel is needed again later, re-add it as its own
+// module rather than reviving firebase-admin.
 // ---------------------------------------------------------------------------
 
 export interface ShiftOfferPush {
@@ -26,31 +29,22 @@ const OFFER_TTL_SECONDS = 15 * 60;
 
 export interface PushChannels {
   webPush: boolean;
-  fcm: boolean;
 }
 
 /** Which push channels are configured platform-wide. */
 export function pushChannels(): PushChannels {
-  return { webPush: isWebPushEnabled(), fcm: isFcmEnabled() };
+  return { webPush: isWebPushEnabled() };
 }
 
 export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
   const notification = { title: offer.title, body: offer.body };
   const data = { ...offer.data, type: "SHIFT_OFFER", shiftId: offer.shiftId };
 
-  const [subs, tokens] = await Promise.all([
-    isWebPushEnabled()
-      ? prisma.webPushSubscription.findMany({
-          where: { freelancerId: offer.freelancerId, disabledAt: null },
-        })
-      : Promise.resolve([]),
-    isFcmEnabled()
-      ? prisma.pushToken.findMany({
-          where: { freelancerId: offer.freelancerId, disabledAt: null },
-          select: { token: true },
-        })
-      : Promise.resolve([] as { token: string }[]),
-  ]);
+  const subs = isWebPushEnabled()
+    ? await prisma.webPushSubscription.findMany({
+        where: { freelancerId: offer.freelancerId, disabledAt: null },
+      })
+    : [];
 
   let delivered = 0;
 
@@ -83,28 +77,13 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
     }
   }
 
-  if (tokens.length > 0) {
-    const { successCount, deadTokens } = await sendFcm(
-      tokens.map((t) => t.token),
-      notification,
-      data,
-    );
-    delivered += successCount;
-    if (deadTokens.length > 0) {
-      await prisma.pushToken.updateMany({
-        where: { token: { in: deadTokens } },
-        data: { disabledAt: new Date() },
-      });
-    }
-  }
-
   if (delivered === 0) {
     logger.warn("shift offer not delivered on any channel", {
       freelancerId: offer.freelancerId,
       shiftId: offer.shiftId,
       webPushSubs: subs.length,
-      fcmTokens: tokens.length,
     });
   }
+  recordShiftOffer(delivered > 0);
   return delivered > 0;
 }

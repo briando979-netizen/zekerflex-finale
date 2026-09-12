@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — ZekerFlex</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #fcfcfa;
+        color: #17211c;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0c0e12; color: #fafaf8; }
+      }
+      .card { max-width: 22rem; padding: 2rem; text-align: center; }
+      h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+      p { margin: 0 0 1.25rem; opacity: 0.75; }
+      button {
+        font: inherit;
+        font-weight: 600;
+        padding: 0.6rem 1.2rem;
+        border: 0;
+        border-radius: 0.75rem;
+        background: #0e5c4a;
+        color: #fff;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Je bent offline</h1>
+      <p>ZekerFlex heeft een verbinding nodig. Zodra je weer online bent, werkt alles weer.</p>
+      <button onclick="location.reload()">Opnieuw proberen</button>
+    </div>
+  </body>
+</html>

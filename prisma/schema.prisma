@@ -9,8 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // Neon's pooled connection is fine for the app at runtime, but `prisma
   // migrate deploy` needs a direct connection for its advisory lock / DDL.
   // Falls back to DATABASE_URL when unset (e.g. local dev, non-Neon hosts).
@@ -72,12 +72,12 @@ model Tenant {
   companyRegistrationId String?              @unique
   companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
 
-  branches     Branch[]
-  memberships  Membership[]
-  invoicesFrom Invoice[]    @relation("InvoiceIssuerTenant")
-  invoicesTo   Invoice[]    @relation("InvoiceRecipientTenant")
-  modelAgreements ModelAgreement[]
-  apiKeys      ApiKey[]
+  branches             Branch[]
+  memberships          Membership[]
+  invoicesFrom         Invoice[]             @relation("InvoiceIssuerTenant")
+  invoicesTo           Invoice[]             @relation("InvoiceRecipientTenant")
+  modelAgreements      ModelAgreement[]
+  apiKeys              ApiKey[]
   webhookSubscriptions WebhookSubscription[]
 
   createdAt DateTime @default(now())
@@ -87,15 +87,15 @@ model Tenant {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  fullName      String
-  phone         String?
+  id              String    @id @default(cuid())
+  email           String    @unique
+  fullName        String
+  phone           String?
   // bcrypt hash; null for SSO-only accounts.
-  passwordHash  String?
-  kycStatus     KycStatus @default(NOT_STARTED)
-  disabledAt    DateTime?
-  lastLoginAt   DateTime?
+  passwordHash    String?
+  kycStatus       KycStatus @default(NOT_STARTED)
+  disabledAt      DateTime?
+  lastLoginAt     DateTime?
   // Null until the e-mail address is confirmed via the verification link.
   emailVerifiedAt DateTime?
 
@@ -103,11 +103,11 @@ model User {
   freelancerProfile  FreelancerProfile?
   deviceFingerprints DeviceFingerprint[]
   identityChecks     IdentityVerification[]
-  approvedTimesheets Timesheet[]           @relation("TimesheetApprover")
-  raisedDisputes     Dispute[]             @relation("DisputeRaisedBy")
-  resolvedDisputes   Dispute[]             @relation("DisputeResolvedBy")
-  auditLogs          AuditLog[]            @relation("AuditActor")
-  apiKeysCreated     ApiKey[]              @relation("ApiKeyCreatedBy")
+  approvedTimesheets Timesheet[]            @relation("TimesheetApprover")
+  raisedDisputes     Dispute[]              @relation("DisputeRaisedBy")
+  resolvedDisputes   Dispute[]              @relation("DisputeResolvedBy")
+  auditLogs          AuditLog[]             @relation("AuditActor")
+  apiKeysCreated     ApiKey[]               @relation("ApiKeyCreatedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -120,9 +120,9 @@ model User {
 // is stored, so a leaked database never reveals a usable key.
 // ===========================================================================
 model ApiKey {
-  id     String @id @default(cuid())
-  name   String // human label, e.g. "Boekhoudkoppeling Acme BV"
-  prefix String @unique // shown in lists, e.g. "zf_live_ab12cd34"
+  id        String @id @default(cuid())
+  name      String // human label, e.g. "Boekhoudkoppeling Acme BV"
+  prefix    String @unique // shown in lists, e.g. "zf_live_ab12cd34"
   hashedKey String // sha256 hex of the full secret
 
   // scopes this key may use, e.g. ["shifts:read", "invoices:read"]
@@ -143,32 +143,32 @@ model ApiKey {
 }
 
 model WebhookSubscription {
-  id              String   @id @default(cuid())
-  tenantId        String
-  url             String
-  eventTypes      String[]
+  id               String   @id @default(cuid())
+  tenantId         String
+  url              String
+  eventTypes       String[]
   secretCiphertext String
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   deliveries WebhookDelivery[]
 
   @@index([tenantId, active])
 }
 
 model WebhookDelivery {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   subscriptionId String
   eventType      String
   payload        Json
   statusCode     Int?
-  attempts       Int      @default(0)
+  attempts       Int       @default(0)
   deliveredAt    DateTime?
   nextAttemptAt  DateTime?
   lastError      String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   subscription WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
@@ -229,10 +229,10 @@ model Branch {
   // Auto-acceptance / matching configuration (see types/matching.ts).
   matchingConfig Json @default("{}")
 
-  managers   BranchManager[]
-  shifts     Shift[]
-  timesheets Timesheet[]
-  dbaRecords DbaComplianceRecord[]
+  managers        BranchManager[]
+  shifts          Shift[]
+  timesheets      Timesheet[]
+  dbaRecords      DbaComplianceRecord[]
   modelAgreements ModelAgreement[]
 
   createdAt DateTime @default(now())
@@ -250,12 +250,12 @@ model FreelancerProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  kvkNumber String  @unique
-  vatNumber String? @unique
-  vatValid  Boolean @default(false) // VIES check result
-  kvkValid  Boolean @default(false) // KVKBase check result: active registration
+  kvkNumber     String    @unique
+  vatNumber     String?   @unique
+  vatValid      Boolean   @default(false) // VIES check result
+  kvkValid      Boolean   @default(false) // KVKBase check result: active registration
   kvkVerifiedAt DateTime?
-  country   String  @default("NL") // ISO 3166-1 alpha-2
+  country       String    @default("NL") // ISO 3166-1 alpha-2
 
   // Validated Handelsregister data (KVKBase) captured at registration.
   companyRegistrationId String?              @unique
@@ -268,12 +268,12 @@ model FreelancerProfile {
   // Stripe Connect Express — the freelancer's own onboarding to receive
   // Transfers from the platform's Stripe balance, paid out to their bank by
   // Stripe. stripePayoutsEnabled mirrors Stripe's account.payouts_enabled.
-  stripeConnectedAccountId String?  @unique
-  stripePayoutsEnabled     Boolean  @default(false)
+  stripeConnectedAccountId String? @unique
+  stripePayoutsEnabled     Boolean @default(false)
 
   // Home base for travel-time estimation.
-  homeLatitude  Float
-  homeLongitude Float
+  homeLatitude   Float
+  homeLongitude  Float
   homePostalCode String
 
   // Behavioural notification timing. When both quiet-hour bounds are set the
@@ -294,36 +294,35 @@ model FreelancerProfile {
   reliabilityScore Float @default(0.7) // no-shows, cancellations, punctuality
   acceptanceScore  Float @default(0.5) // historical offer acceptance rate
 
-  badgeLevel BadgeLevel @default(BRONZE)
-  shiftsCompleted Int    @default(0)
+  badgeLevel      BadgeLevel @default(BRONZE)
+  shiftsCompleted Int        @default(0)
 
   // Enforcement flags.
-  isBlacklisted    Boolean   @default(false)
-  blacklistReason  String?
+  isBlacklisted        Boolean   @default(false)
+  blacklistReason      String?
   matchingBlockedUntil DateTime? // set by DBA compliance throttle/block
 
-  skills       FreelancerSkill[]
-  assignments  ShiftAssignment[]
-  matches      ShiftMatch[]
-  timesheets   Timesheet[]
-  dbaRecords   DbaComplianceRecord[]
-  pushTokens   PushToken[]
+  skills               FreelancerSkill[]
+  assignments          ShiftAssignment[]
+  matches              ShiftMatch[]
+  timesheets           Timesheet[]
+  dbaRecords           DbaComplianceRecord[]
   webPushSubscriptions WebPushSubscription[]
-  engagementEvents  EngagementEvent[]
-  modelAgreements   ModelAgreement[]
-  replacementsGiven  ReplacementRequest[] @relation("ReplacementOriginal")
-  replacementsTaken  ReplacementRequest[] @relation("ReplacementSubstitute")
+  engagementEvents     EngagementEvent[]
+  modelAgreements      ModelAgreement[]
+  replacementsGiven    ReplacementRequest[]  @relation("ReplacementOriginal")
+  replacementsTaken    ReplacementRequest[]  @relation("ReplacementSubstitute")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Skill {
-  id       String            @id @default(cuid())
-  name     String            @unique
-  category String
+  id          String            @id @default(cuid())
+  name        String            @unique
+  category    String
   freelancers FreelancerSkill[]
-  shifts   Shift[]
+  shifts      Shift[]
 }
 
 model FreelancerSkill {
@@ -341,13 +340,13 @@ model FreelancerSkill {
 }
 
 model DeviceFingerprint {
-  id           String   @id @default(cuid())
-  userId       String
-  hardwareHash String // SHA-256 of stable hardware attributes
-  platform     String
-  firstSeenAt  DateTime @default(now())
-  lastSeenAt   DateTime @default(now())
-  trusted      Boolean  @default(false)
+  id                String   @id @default(cuid())
+  userId            String
+  hardwareHash      String // SHA-256 of stable hardware attributes
+  platform          String
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+  trusted           Boolean  @default(false)
   // Populated when the same hardware hash is seen for a different user account.
   sharedWithUserIds String[] @default([])
 
@@ -458,20 +457,6 @@ model CompanyRegistration {
   updatedAt DateTime @updatedAt
 }
 
-// Firebase Cloud Messaging device token (optional secondary push provider).
-model PushToken {
-  id           String   @id @default(cuid())
-  freelancerId String
-  token        String   @unique
-  platform     String // "ios" | "android" | "web"
-  lastSeenAt   DateTime @default(now())
-  disabledAt   DateTime?
-
-  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
-
-  @@index([freelancerId])
-}
-
 // W3C Web Push subscription (RFC 8291 aes128gcm). Primary, self-hosted push
 // channel - the platform holds the VAPID keypair and encrypts payloads itself;
 // no Firebase / Google service account involved.
@@ -529,22 +514,22 @@ model Shift {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  title          String
+  title           String
   description     String?
   requiredSkillId String?
   requiredSkill   Skill?  @relation(fields: [requiredSkillId], references: [id])
   minSkillRating  Float   @default(0)
 
-  startsAt      DateTime
-  endsAt        DateTime
-  breakMinutes  Int      @default(0)
+  startsAt        DateTime
+  endsAt          DateTime
+  breakMinutes    Int      @default(0)
   hourlyRateCents Int
-  positions     Int      @default(1)
+  positions       Int      @default(1)
 
   status ShiftStatus @default(DRAFT)
 
-  matches     ShiftMatch[]
-  assignments ShiftAssignment[]
+  matches         ShiftMatch[]
+  assignments     ShiftAssignment[]
   modelAgreements ModelAgreement[]
 
   createdAt DateTime @default(now())
@@ -559,17 +544,17 @@ model ShiftMatch {
   shiftId      String
   freelancerId String
 
-  score        Float // final weighted score [0,1]
+  score          Float // final weighted score [0,1]
   scoreBreakdown Json // { reliability, travel, skill, ... } - see types/matching.ts
-  travelMode   TravelMode
-  travelMinutes Int
+  travelMode     TravelMode
+  travelMinutes  Int
   distanceMeters Int
   withinGeofence Boolean
 
-  status       MatchStatus @default(SCORED)
-  notifiedAt   DateTime?
-  respondedAt  DateTime?
-  expiresAt    DateTime?
+  status      MatchStatus @default(SCORED)
+  notifiedAt  DateTime?
+  respondedAt DateTime?
+  expiresAt   DateTime?
 
   shift      Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
@@ -586,9 +571,9 @@ model ShiftAssignment {
   shiftId      String
   freelancerId String
 
-  acceptedAt DateTime @default(now())
-  source     MatchStatus // ACCEPTED or AUTO_ASSIGNED
-  cancelledAt DateTime?
+  acceptedAt   DateTime    @default(now())
+  source       MatchStatus // ACCEPTED or AUTO_ASSIGNED
+  cancelledAt  DateTime?
   cancelReason String?
 
   shift      Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
@@ -642,9 +627,9 @@ model ModelAgreement {
   status ModelAgreementStatus @default(PENDING_FREELANCER_SIGNATURE)
 
   // Belastingdienst-registered template this instance is based on.
-  templateKey        String
-  templateVersion    String
-  belastingdienstNr  String? // official registration number, once filed
+  templateKey       String
+  templateVersion   String
+  belastingdienstNr String? // official registration number, once filed
 
   // Party snapshot at generation time (immutable once created).
   freelancerLegalName String
@@ -696,8 +681,8 @@ model ReplacementRequest {
   reason       String?
   confirmedAt  DateTime?
 
-  assignment ShiftAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  original   FreelancerProfile @relation("ReplacementOriginal", fields: [originalId], references: [id])
+  assignment ShiftAssignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  original   FreelancerProfile  @relation("ReplacementOriginal", fields: [originalId], references: [id])
   substitute FreelancerProfile? @relation("ReplacementSubstitute", fields: [substituteId], references: [id])
 
   createdAt DateTime @default(now())
@@ -732,7 +717,7 @@ model Timesheet {
   scheduledEnd   DateTime
   actualStart    DateTime?
   actualEnd      DateTime?
-  breakMinutes   Int      @default(0)
+  breakMinutes   Int       @default(0)
 
   hourlyRateCents Int
   // Denormalised billable hours, computed on submit/approve.
@@ -765,18 +750,18 @@ model Timesheet {
 }
 
 model GpsEvent {
-  id          String       @id @default(cuid())
-  timesheetId String
-  type        GpsEventType
-  latitude    Float
-  longitude   Float
-  accuracyMeters Float
-  recordedAt  DateTime
+  id                     String       @id @default(cuid())
+  timesheetId            String
+  type                   GpsEventType
+  latitude               Float
+  longitude              Float
+  accuracyMeters         Float
+  recordedAt             DateTime
   // Distance from branch centroid at time of event, and whether inside geofence.
   distanceToBranchMeters Float
-  withinGeofence Boolean
-  deviceHash  String
-  mocked      Boolean @default(false) // OS reported mock-location provider
+  withinGeofence         Boolean
+  deviceHash             String
+  mocked                 Boolean      @default(false) // OS reported mock-location provider
 
   timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
 
@@ -858,12 +843,12 @@ model Invoice {
 
   issuerFreelancerId String? // for SELF_BILL_FREELANCER
 
-  currency     String       @default("EUR")
-  vatTreatment VatTreatment
-  vatRate      Float // e.g. 0.21 or 0
+  currency      String       @default("EUR")
+  vatTreatment  VatTreatment
+  vatRate       Float // e.g. 0.21 or 0
   subtotalCents Int
-  vatCents     Int
-  totalCents   Int
+  vatCents      Int
+  totalCents    Int
 
   pdfUrl String?
 
@@ -891,21 +876,21 @@ model Invoice {
 // Monotonic per-(type, year) invoice counter. Incremented inside the approval
 // transaction with a row lock so numbers are gap-free and unique.
 model InvoiceSequence {
-  id       String @id @default(cuid())
-  type     InvoiceType
-  year     Int
-  lastValue Int   @default(0)
+  id        String      @id @default(cuid())
+  type      InvoiceType
+  year      Int
+  lastValue Int         @default(0)
 
   @@unique([type, year])
 }
 
 model InvoiceLine {
-  id          String @id @default(cuid())
-  invoiceId   String
-  description String
-  quantity    Float // hours
+  id             String @id @default(cuid())
+  invoiceId      String
+  description    String
+  quantity       Float // hours
   unitPriceCents Int
-  amountCents Int
+  amountCents    Int
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
@@ -924,14 +909,14 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  invoiceId     String        @unique
-  method        PaymentMethod @default(SEPA_INSTANT)
-  status        PaymentStatus @default(PENDING)
-  amountCents   Int
-  currency      String        @default("EUR")
+  id          String        @id @default(cuid())
+  invoiceId   String        @unique
+  method      PaymentMethod @default(SEPA_INSTANT)
+  status      PaymentStatus @default(PENDING)
+  amountCents Int
+  currency    String        @default("EUR")
 
-  debtorIban   String
+  debtorIban   String? // platform funding account; null until SEPA_CREDITOR_IBAN is configured
   creditorIban String
   endToEndId   String  @unique // SEPA E2E reference / idempotency key
   providerRef  String?
@@ -973,11 +958,11 @@ model DbaComplianceRecord {
   windowStart DateTime
   windowEnd   DateTime
 
-  totalMinutes      Int
-  engagementCount   Int
-  distinctWeeks     Int
+  totalMinutes        Int
+  engagementCount     Int
+  distinctWeeks       Int
   maxConsecutiveWeeks Int
-  clientRevenueShare Float // this client's share of freelancer's platform revenue
+  clientRevenueShare  Float // this client's share of freelancer's platform revenue
 
   riskLevel DbaRiskLevel
   action    DbaAction
@@ -1036,6 +1021,15 @@ model AuditLog {
   summary    String
   metadata   Json    @default("{}")
 
+  // Tamper-evident chain. `seq` is a gap-tolerant monotonic counter
+  // (`audit_log_seq`); `hash` covers the immutable identity fields + `prevHash`
+  // (NOT summary/ipAddress/userAgent, so AVG anonymisation can scrub PII in
+  // place without breaking the chain). Nullable only for rows written before
+  // the chain migration; `scripts/backfill-audit-chain.mjs` seals those.
+  seq      BigInt  @unique @default(autoincrement())
+  hash     String?
+  prevHash String?
+
   actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
@@ -1044,6 +1038,7 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([targetType, targetId])
   @@index([action, createdAt])
+  @@index([seq])
 }
 
 // ===========================================================================
@@ -1132,12 +1127,12 @@ model SalesCampaign {
   mode   SalesSendMode       @default(REVIEW)
 
   // Hard limits, enforced by the engine.
-  dailyCap      Int     @default(40)
-  sendStartHour Int     @default(8)
-  sendEndHour   Int     @default(18)
-  workdaysOnly  Boolean @default(true)
-  minScore      Int     @default(55)
-  stepDelaysDays Int[]  @default([0, 4, 10])
+  dailyCap       Int     @default(40)
+  sendStartHour  Int     @default(8)
+  sendEndHour    Int     @default(18)
+  workdaysOnly   Boolean @default(true)
+  minScore       Int     @default(55)
+  stepDelaysDays Int[]   @default([0, 4, 10])
 
   // KVKBase discovery targeting.
   targetSectors String[] @default([])
@@ -1161,14 +1156,14 @@ model SalesCampaign {
 }
 
 model SalesDiscoverySource {
-  id         String          @id @default(cuid())
-  campaignId String?
-  kind       SalesSourceKind
-  url        String?
-  label      String?
-  configJson Json            @default("{}")
-  enabled    Boolean         @default(true)
-  lastRunAt  DateTime?
+  id             String          @id @default(cuid())
+  campaignId     String?
+  kind           SalesSourceKind
+  url            String?
+  label          String?
+  configJson     Json            @default("{}")
+  enabled        Boolean         @default(true)
+  lastRunAt      DateTime?
   lastResultJson Json?
 
   campaign SalesCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
@@ -1215,12 +1210,12 @@ model SalesLead {
   contactPhone String?
   city         String?
   sector       String?
-  source       String          @default("manual") // "manual" | "kvkbase" | "careers" | "import" | "field-visit"
+  source       String          @default("manual") // "manual" | "kvkbase" | "careers" | "import" | "field-visit" | "demo-request"
   status       SalesLeadStatus @default(NEW)
 
-  campaignId     String?
-  sourceUrl      String?
-  vacancySignal  String?
+  campaignId      String?
+  sourceUrl       String?
+  vacancySignal   String?
   discoveredEmail String?
 
   // account-uitnodiging verstuurd na een bedrijfsbezoek
@@ -1240,12 +1235,12 @@ model SalesLead {
   repliedAt        DateTime?
   bouncedAt        DateTime?
 
-  enrichmentJson Json      @default("{}")
-  createdById    String?
+  enrichmentJson  Json      @default("{}")
+  createdById     String?
   lastContactedAt DateTime?
 
   outreach SalesOutreach[]
-  campaign SalesCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaign SalesCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1268,7 +1263,7 @@ model SalesOutreach {
   body    String
 
   generatedByModel String?
-  editedByHuman    Boolean @default(false)
+  editedByHuman    Boolean   @default(false)
   approvedById     String?
   approvedAt       DateTime?
   sentById         String?
@@ -1330,11 +1325,11 @@ enum FindingStatus {
 }
 
 model OrchestrationRun {
-  id        String                 @id @default(cuid())
-  trigger   OrchestrationTrigger
-  status    OrchestrationRunStatus  @default(RUNNING)
-  model     String
-  startedAt DateTime               @default(now())
+  id         String                 @id @default(cuid())
+  trigger    OrchestrationTrigger
+  status     OrchestrationRunStatus @default(RUNNING)
+  model      String
+  startedAt  DateTime               @default(now())
   finishedAt DateTime?
 
   snapshotJson Json    @default("{}")
@@ -1361,8 +1356,8 @@ model OrchestrationFinding {
   // impact. CODE_PATCH: a proposed unified diff + which files it touches.
   actionPayload Json @default("{}")
 
-  resolvedById String?
-  resolvedAt   DateTime?
+  resolvedById   String?
+  resolvedAt     DateTime?
   resolutionNote String?
 
   run OrchestrationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
@@ -1392,7 +1387,7 @@ model VoiceAnnouncement {
   id       String               @id @default(cuid())
   text     String
   category String // "orchestration" | "sales" | "build" | "status" | "security"
-  priority AnnouncementPriority  @default(NORMAL)
+  priority AnnouncementPriority @default(NORMAL)
   source   String               @default("system")
   spokenAt DateTime?
 
@@ -1479,7 +1474,7 @@ model Upload {
   jarvisTurnId String?
   createdAt    DateTime @default(now())
 
-  jarvisTurn JarvisTurn? @relation(fields: [jarvisTurnId], references: [id], onDelete: SetNull)
+  jarvisTurn         JarvisTurn?         @relation(fields: [jarvisTurnId], references: [id], onDelete: SetNull)
   complianceDocument ComplianceDocument?
   certificate        Certificate?
 
@@ -1634,7 +1629,7 @@ model ShopProduct {
   description   String
   category      String
   priceCents    Int
-  costCents     Int?     // inkoopprijs (COGS) — voor margeberekening in admin
+  costCents     Int? // inkoopprijs (COGS) — voor margeberekening in admin
   stock         Int      @default(0)
   imageUploadId String?
   modelUploadId String?
@@ -1677,7 +1672,7 @@ model JarvisTurn {
   id        String           @id @default(cuid())
   userId    String?
   prompt    String
-  status    JarvisTurnStatus  @default(RUNNING)
+  status    JarvisTurnStatus @default(RUNNING)
   answer    String?
   error     String?
   startedAt DateTime         @default(now())
@@ -1691,16 +1686,16 @@ model JarvisTurn {
 }
 
 model JarvisEvent {
-  id      String          @id @default(cuid())
-  turnId  String
-  seq     Int
-  kind    JarvisEventKind
-  agent   String          @default("jarvis") // "jarvis" | "developer:tom" | "sales" | "analyst"
-  title   String
-  detail  String?
-  payload Json            @default("{}")
+  id         String          @id @default(cuid())
+  turnId     String
+  seq        Int
+  kind       JarvisEventKind
+  agent      String          @default("jarvis") // "jarvis" | "developer:tom" | "sales" | "analyst"
+  title      String
+  detail     String?
+  payload    Json            @default("{}")
   durationMs Int?
-  createdAt DateTime       @default(now())
+  createdAt  DateTime        @default(now())
 
   turn JarvisTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
 

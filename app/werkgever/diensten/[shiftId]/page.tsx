@@ -17,8 +17,9 @@ import { fmt } from "@/lib/i18n/dictionaries";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmployerShiftPage({ params }: { params: { shiftId: string } }) {
-  const d = getDict().shiftDetail;
+export default async function EmployerShiftPage(props: { params: Promise<{ shiftId: string }> }) {
+  const params = await props.params;
+  const d = (await getDict()).shiftDetail;
   const QUEUE_LABEL: Record<string, string> = {
     SCORED: d.queueScored,
     NOTIFIED: d.queueNotified,

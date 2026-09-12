@@ -4,11 +4,12 @@ import { acceptInvite } from "@/lib/communities/store";
 
 export const dynamic = "force-dynamic";
 
-export default async function JoinCommunityPage({
-  params,
-}: {
-  params: { id: string; token: string };
-}) {
+export default async function JoinCommunityPage(
+  props: {
+    params: Promise<{ id: string; token: string }>;
+  }
+) {
+  const params = await props.params;
   const principal = await getPrincipal();
   if (!principal) {
     redirect(`/login?next=${encodeURIComponent(`/community/join/${params.id}/${params.token}`)}`);

@@ -14,7 +14,8 @@ const ROLE_LABEL: Record<string, string> = {
   PLATFORM_ADMIN: "Platformbeheerder",
 };
 
-export default async function GebruikerDetailPage({ params }: { params: { id: string } }) {
+export default async function GebruikerDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return (

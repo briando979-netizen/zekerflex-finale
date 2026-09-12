@@ -5,6 +5,7 @@ import { schema, buildContext } from "@/lib/graphql/schema";
 import { env } from "@/lib/env";
 import { getPrincipal } from "@/lib/auth";
 import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,13 +41,17 @@ const yoga = createYoga({
 
 async function rateLimited(request: Request): Promise<Response | null> {
   const principal = await getPrincipal().catch(() => null);
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const key = principal ? `graphql:rl:user:${principal.userId}` : `graphql:rl:ip:${ip}`;
+  const key = principal
+    ? `rl:graphql:user:${principal.userId}`
+    : `rl:graphql:ip:${clientIp(request)}`;
   const gate = await fixedWindow(key, 60, 60);
   if (gate.ok) return null;
   return new Response(JSON.stringify({ errors: [{ message: "Too many requests" }] }), {
     status: 429,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "Retry-After": String(gate.retryAfterSeconds || 60),
+    },
   });
 }
 

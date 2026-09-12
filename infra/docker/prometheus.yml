@@ -2,6 +2,9 @@ global:
   scrape_interval: 30s
   evaluation_interval: 30s
 
+rule_files:
+  - /etc/prometheus/alert.rules.yml
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
@@ -16,6 +19,19 @@ scrape_configs:
       - targets: ["cadvisor:8080"]
 
   - job_name: zekerflex-app
+    metrics_path: /api/metrics
+    scheme: http
+    # Same shared secret as the cron endpoints. Mount the token as a file:
+    #   echo -n "$INTERNAL_CRON_TOKEN" > infra/docker/prometheus.token
+    # (compose mounts ./prometheus.token → /etc/prometheus/token, gitignored)
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/token
+    static_configs:
+      - targets: ["app:3000"]
+
+  # Liveness only (no auth) — up/down for alerting.
+  - job_name: zekerflex-app-health
     metrics_path: /api/health
     scheme: http
     static_configs:

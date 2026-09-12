@@ -5,11 +5,12 @@ import { verifyEmployerInvite } from "@/lib/sales/invite";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Je ZekerFlex-account", robots: { index: false } };
 
-export default async function EmployerInvitePage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
+export default async function EmployerInvitePage(
+  props: {
+    searchParams: Promise<{ token?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const invite = searchParams.token ? await verifyEmployerInvite(searchParams.token) : null;
 
   if (!invite) {

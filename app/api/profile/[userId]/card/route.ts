@@ -10,10 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/profile/:userId/card — the popover shown when you click a person.
-export async function GET(
-  _req: Request,
-  { params }: { params: { userId: string } },
-): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ userId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const viewer = await requirePrincipal();
     const card = await getUserCard(params.userId);

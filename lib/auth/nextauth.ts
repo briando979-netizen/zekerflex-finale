@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
+import { recordLoginFailure } from "@/lib/metrics";
 import {
   checkLoginAllowed,
   clearLoginFailures,
@@ -102,7 +103,15 @@ async function resolveDbAccount(rawEmail: string): Promise<DbAccount | null> {
 
 const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+/**
+ * The full NextAuth v5 config. Exported (not just handed straight to
+ * `NextAuth()`) so `tests/auth-signin.test.ts` can exercise the pieces we
+ * actually depend on — the credentials `authorize`, the `jwt.encode/decode`
+ * hooks that mint/read our jose tokens, and the Google `signIn` gate — without
+ * standing up the whole framework. See docs/DEPENDENCIES.md for why this
+ * package is pinned to a beta.
+ */
+export const authOptions: NextAuthConfig = {
   trustHost: env.AUTH_TRUST_HOST,
   secret: env.AUTH_SECRET,
   // Cookie container spans the longest possible session; the real expiry is the
@@ -177,6 +186,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const registerFailure = async (userId: string | null) => {
           const { failures, locked } = await registerLoginFailure(email);
+          recordLoginFailure();
           logger.warn("failed login attempt", { email, failures, locked });
           await recordAudit({
             category: locked ? "SECURITY" : "AUTH",
@@ -328,4 +338,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
-});
+};
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);
