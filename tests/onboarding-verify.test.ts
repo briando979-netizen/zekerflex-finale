@@ -59,6 +59,9 @@ vi.mock("@/lib/storage/local", () => ({
   }),
 }));
 
+const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: null, face: null, model: null });
+vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
+
 vi.mock("@/lib/ai/client", () => ({
   chatJson: vi.fn().mockResolvedValue({
     verdict: "approved",
@@ -157,5 +160,94 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
 
     expect(complianceDeleteMany).not.toHaveBeenCalled();
     expect(complianceCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("submitFreelancerOnboarding — vision review (photo content)", () => {
+  it("rejects on a confident face mismatch, and does NOT wave the untrusted document into compliance", async () => {
+    userFindUnique.mockResolvedValue({
+      id: "usr_1",
+      fullName: "Jan Jansen",
+      kycStatus: "PENDING",
+      freelancerProfile: { id: "fp_1" },
+    });
+    runVisionReview.mockResolvedValueOnce({
+      available: true,
+      model: "moondream",
+      document: { plausible: true, confidence: 0.9, documentNumber: null, expiryDate: null, concerns: [] },
+      face: {
+        samePerson: false,
+        faceMatchConfidence: 0.85, // confident -> hard fail
+        looksLive: true,
+        livenessConfidence: 0.8,
+        concerns: ["Gezichten komen niet overeen"],
+      },
+    });
+
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+    });
+
+    expect(result.outcome).toBe("rejected");
+    expect(result.reasons).toContain("Gezichten komen niet overeen");
+    // A rejected verification must not still mark the compliance ID slot "done".
+    expect(complianceCreate).not.toHaveBeenCalled();
+
+    const ivArg = ivCreate.mock.calls[0]![0] as { data: { faceMatchScore: number; livenessScore: number } };
+    expect(ivArg.data.faceMatchScore).toBe(0.85);
+    expect(ivArg.data.livenessScore).toBe(0.8);
+  });
+
+  it("a LOW-confidence mismatch does not hard-block — falls to in_review, never a dead end", async () => {
+    userFindUnique.mockResolvedValue({
+      id: "usr_1",
+      fullName: "Jan Jansen",
+      kycStatus: "PENDING",
+      freelancerProfile: { id: "fp_1" },
+    });
+    runVisionReview.mockResolvedValueOnce({
+      available: true,
+      model: "moondream",
+      document: { plausible: true, confidence: 0.9, documentNumber: null, expiryDate: null, concerns: [] },
+      face: {
+        samePerson: false,
+        faceMatchConfidence: 0.4, // below the 0.7 hard-fail threshold
+        looksLive: true,
+        livenessConfidence: 0.6,
+        concerns: ["Twijfelachtig"],
+      },
+    });
+
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+    });
+
+    expect(result.outcome).toBe("in_review");
+  });
+
+  it("a vision model failure (unavailable) never blocks — same outcome as without vision", async () => {
+    userFindUnique.mockResolvedValue({
+      id: "usr_1",
+      fullName: "Jan Jansen",
+      kycStatus: "PENDING",
+      freelancerProfile: { id: "fp_1" },
+    });
+    runVisionReview.mockResolvedValueOnce({
+      available: false,
+      document: null,
+      face: null,
+      model: "moondream",
+      error: "timeout",
+    });
+
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+    });
+
+    expect(result.outcome).toBe("verified");
+    expect(result.checks.some((c) => c.label.includes("beeldcontrole"))).toBe(false);
   });
 });

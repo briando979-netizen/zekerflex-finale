@@ -65,6 +65,14 @@ const schema = z.object({
   LLM_FAST_MODEL: z.string().optional(),
   LLM_API_KEY: z.string().optional(),
   LLM_EMBED_MODEL: z.string().optional(),
+  // A vision-capable (multimodal) model for the KYC document/selfie review
+  // (lib/kyc/vision.ts). Unset by default -> that review is skipped and
+  // onboarding falls back to the text-only checks, never blocking on a
+  // missing model. Tested on CPU-only hardware with `moondream`: 45s-150s per
+  // call and unreliable JSON compliance — not production-ready without a GPU
+  // and/or a stronger model. See lib/kyc/vision.ts before enabling.
+  LLM_VISION_MODEL: z.string().optional(),
+  LLM_VISION_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
 
   // Self-hosted image generation (the marketing Studio). Optional - the Studio

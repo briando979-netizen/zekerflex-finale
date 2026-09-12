@@ -8,6 +8,7 @@ import { chatJson } from "@/lib/ai/client";
 import { geocodePostcode } from "@/lib/integrations/pdok";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
+import { runVisionReview } from "@/lib/kyc/vision";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -318,23 +319,53 @@ export async function submitFreelancerOnboarding(
       : "Het document lijkt verlopen of de datum is ongeldig",
   });
 
-  // --- AI authenticity review --------------------------------------
-  const ai = await aiAuthenticityReview({
-    accountName: user.fullName,
-    nameOnDocument: input.nameOnDocument,
-    kvkLegalName: companyName,
-    kvkTradeName: companyTradeName,
-    kvkStatus: companyStatus,
-    documentType: input.documentType,
-    documentNumber: input.documentNumber,
-    documentExpiry: input.documentExpiry,
-    file: {
-      mimeType: mime,
-      sizeBytes: front.bytes.length,
-      filename: front.filename,
-    },
-    deterministic: checks,
-  });
+  // --- AI authenticity review (text-only) + vision review (photo content),
+  // run together since both are independent local-LLM calls ----------------
+  const [ai, vision] = await Promise.all([
+    aiAuthenticityReview({
+      accountName: user.fullName,
+      nameOnDocument: input.nameOnDocument,
+      kvkLegalName: companyName,
+      kvkTradeName: companyTradeName,
+      kvkStatus: companyStatus,
+      documentType: input.documentType,
+      documentNumber: input.documentNumber,
+      documentExpiry: input.documentExpiry,
+      file: {
+        mimeType: mime,
+        sizeBytes: front.bytes.length,
+        filename: front.filename,
+      },
+      deterministic: checks,
+    }),
+    runVisionReview(input.files),
+  ]);
+
+  if (vision.available && vision.document) {
+    checks.push({
+      label: "Documentfoto-echtheid (beeldcontrole)",
+      ok: vision.document.plausible,
+      detail: vision.document.plausible
+        ? "Ziet eruit als een echte foto van een fysiek document"
+        : vision.document.concerns[0] ?? "De documentfoto's zien er niet betrouwbaar uit",
+    });
+  }
+  if (vision.available && vision.face) {
+    checks.push({
+      label: "Gezicht komt overeen met document (beeldcontrole)",
+      ok: vision.face.samePerson,
+      detail: vision.face.samePerson
+        ? "Selfie en pasfoto lijken dezelfde persoon"
+        : vision.face.concerns[0] ?? "Selfie en pasfoto lijken niet dezelfde persoon",
+    });
+    checks.push({
+      label: "Spoof-controle op de selfie (heuristisch, geen echte liveness-check)",
+      ok: vision.face.looksLive,
+      detail: vision.face.looksLive
+        ? "Ziet eruit als een rechtstreekse foto van een persoon"
+        : vision.face.concerns[0] ?? "De selfie lijkt mogelijk een foto van een foto of scherm",
+    });
+  }
 
   // --- store the three photos (on the box's own disk) -----------------
   const [storedFront, storedBack, storedSelfie] = await Promise.all([
@@ -356,10 +387,20 @@ export async function submitFreelancerOnboarding(
   const stored = storedFront;
 
   // --- combined decision -----------------------------------------
+  // A confident vision mismatch is a real fraud signal (someone else's ID) —
+  // hard-fail on it. Anything less than confident, or the model simply being
+  // unavailable, must never block: it falls through to autoApprove's checks
+  // below and lands in "in_review" at worst, same as every other soft signal.
+  const visionFaceMismatch =
+    vision.available && vision.face !== null && !vision.face.samePerson && vision.face.faceMatchConfidence >= 0.7;
   const hardFail =
     !expiryOk ||
     ai.verdict === "rejected" ||
-    companyStatus === "DISSOLVED";
+    companyStatus === "DISSOLVED" ||
+    visionFaceMismatch;
+  const visionOk =
+    !vision.available ||
+    ((vision.document?.plausible ?? true) && (vision.face?.samePerson ?? true) && (vision.face?.looksLive ?? true));
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
@@ -367,7 +408,8 @@ export async function submitFreelancerOnboarding(
     numOk &&
     expiryOk &&
     ai.verdict === "approved" &&
-    ai.confidence >= 0.65;
+    ai.confidence >= 0.65 &&
+    visionOk;
 
   const outcome: OnboardingResult["outcome"] = hardFail
     ? "rejected"
@@ -398,10 +440,16 @@ export async function submitFreelancerOnboarding(
         status: kycStatus,
         verifiedAt: outcome === "verified" ? new Date() : null,
         expiresAt: Number.isNaN(expiry.getTime()) ? null : expiry,
+        // Populated only when a vision model is configured (LLM_VISION_MODEL);
+        // a passive spoof heuristic, not a certified biometric liveness score —
+        // see lib/kyc/vision.ts.
+        livenessScore: vision.face?.livenessConfidence ?? null,
+        faceMatchScore: vision.face?.faceMatchConfidence ?? null,
         rawPayload: JSON.parse(
           JSON.stringify({
             outcome,
             ai,
+            vision,
             checks,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
             fileSha256: stored.sha256,
@@ -418,10 +466,12 @@ export async function submitFreelancerOnboarding(
     // compliance document (lib/compliance/documents.ts) — supersede any
     // earlier one so the freelancer is never asked to upload their ID again
     // on the same page. Mirrors storeDoc()'s "one active doc per kind" rule.
-    // Except a driver's license: ComplianceDocsPanel deliberately only accepts
-    // a passport or ID card there, so that combination still needs its own
-    // upload (a real, separate requirement — not the duplicate we're fixing).
-    if (input.documentType !== "DRIVERS_LICENSE") {
+    // Except: a driver's license (ComplianceDocsPanel deliberately only
+    // accepts a passport or ID card there — a real, separate requirement, not
+    // the duplicate we're fixing) or a rejected outcome (e.g. a confident
+    // vision face-mismatch) — don't wave through a document we just decided
+    // not to trust.
+    if (input.documentType !== "DRIVERS_LICENSE" && outcome !== "rejected") {
       await tx.complianceDocument.deleteMany({
         where: { userId: user.id, kind: ComplianceDocKind.ID },
       });

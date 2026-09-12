@@ -14,9 +14,20 @@ import { withGovernor } from "@/lib/ai/governor";
 // so the model, timeout and failure handling live in one place.
 // ---------------------------------------------------------------------------
 
+/** OpenAI-compatible multimodal content part — Ollama's /v1 endpoint accepts these for vision models. */
+export type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  /** A plain string for text-only turns, or parts (text + image_url) for a vision-model call. */
+  content: string | ChatContentPart[];
+}
+
+/** `data:` URL for a JPEG/PNG/WebP buffer — the shape `image_url.url` expects. */
+export function imageDataUrl(bytes: Buffer, mimeType: string): string {
+  return `data:${mimeType};base64,${bytes.toString("base64")}`;
 }
 
 export interface ChatOptions {
