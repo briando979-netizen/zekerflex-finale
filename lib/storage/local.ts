@@ -53,16 +53,29 @@ export async function storeUpload(input: {
   const filename = safeName(input.filename);
   const day = new Date().toISOString().slice(0, 10);
   const storageKey = `${day}/${randomUUID()}-${filename}`;
-  if (env.STORAGE_BACKEND === "s3") {
-    await putObject({
-      key: storageKey,
-      body: input.bytes,
-      contentType: input.mimeType || "application/octet-stream",
+  try {
+    if (env.STORAGE_BACKEND === "s3") {
+      await putObject({
+        key: storageKey,
+        body: input.bytes,
+        contentType: input.mimeType || "application/octet-stream",
+      });
+    } else {
+      const abs = join(uploadsRoot(), storageKey);
+      await mkdir(join(uploadsRoot(), day), { recursive: true });
+      await writeFile(abs, input.bytes, { flag: "wx" });
+    }
+  } catch (err) {
+    // The one place every upload funnels through — catch it here so every
+    // caller gets a clean, honest failure instead of a raw filesystem/SDK
+    // error (which can contain internal paths, e.g. a read-only serverless
+    // filesystem: STORAGE_BACKEND=local doesn't work on Vercel, only on a
+    // host with a real persistent disk — see docs/ENVIRONMENT.md).
+    logger.error("upload storage write failed", {
+      backend: env.STORAGE_BACKEND,
+      error: (err as Error).message,
     });
-  } else {
-    const abs = join(uploadsRoot(), storageKey);
-    await mkdir(join(uploadsRoot(), day), { recursive: true });
-    await writeFile(abs, input.bytes, { flag: "wx" });
+    throw AppError.upstream("Opslaan van het bestand is mislukt. Probeer het later opnieuw.");
   }
 
   const row = await prisma.upload.create({

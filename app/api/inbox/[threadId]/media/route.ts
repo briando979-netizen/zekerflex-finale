@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { canAccess, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { storeChatMedia } from "@/lib/messaging/media";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +40,11 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
       });
       return NextResponse.json({ attachment: stored }, { status: 201 });
     } catch (e) {
-      throw AppError.validation((e as Error).message);
+      // Forward storeChatMedia's own AppError checks verbatim; anything else
+      // is an unexpected storage/infra failure — never leak its raw message.
+      if (e instanceof AppError) throw e;
+      logger.error("chat media upload failed", { error: (e as Error).message });
+      throw AppError.upstream("Uploaden is mislukt. Probeer het later opnieuw.");
     }
   } catch (err) {
     const { status, body } = toErrorBody(err);

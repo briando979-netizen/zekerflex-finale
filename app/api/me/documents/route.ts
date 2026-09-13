@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { docStatus, listDocs, storeDoc, type DocKind } from "@/lib/compliance/documents";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +48,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       const status = await docStatus(p.userId);
       return NextResponse.json({ doc, status }, { status: 201 });
     } catch (e) {
-      throw AppError.validation((e as Error).message);
+      // storeDoc's own checks (empty file, too large, wrong type) already
+      // throw AppError — forward those verbatim. Anything else is an
+      // unexpected failure (e.g. the storage backend itself, disk/S3) and
+      // must never leak its raw message (can contain internal paths) to
+      // the client; log it server-side and return one safe message.
+      if (e instanceof AppError) throw e;
+      logger.error("document upload failed", { error: (e as Error).message });
+      throw AppError.upstream("Uploaden is mislukt. Probeer het later opnieuw.");
     }
   } catch (err) {
     const { status, body } = toErrorBody(err);
