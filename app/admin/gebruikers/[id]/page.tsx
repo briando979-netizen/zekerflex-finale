@@ -3,6 +3,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/components/app/ui";
 import { UserActions } from "@/components/admin/UserActions";
+import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,28 @@ const ROLE_LABEL: Record<string, string> = {
   DISPUTE_MANAGER: "Dispuutmanager",
   PLATFORM_ADMIN: "Platformbeheerder",
 };
+
+const DOC_KIND_LABEL: Record<DocKind, string> = {
+  id: "Identiteitsbewijs",
+  bank: "Bankafschrift",
+  other: "Overig",
+};
+
+const DOC_STATUS_TONE: Record<DocStatus, "ok" | "warn" | "crit"> = {
+  approved: "ok",
+  uploaded: "warn",
+  rejected: "crit",
+};
+
+const DOC_STATUS_LABEL: Record<DocStatus, string> = {
+  approved: "goedgekeurd",
+  uploaded: "in behandeling",
+  rejected: "afgekeurd",
+};
+
+function fileSize(bytes: number): string {
+  return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.round(bytes / 1000)} kB`;
+}
 
 export default async function GebruikerDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -45,7 +68,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     );
   }
 
-  const [auditEntries, approvedCount, disputesRaised, payoutTotal] = await Promise.all([
+  const [auditEntries, approvedCount, disputesRaised, payoutTotal, docs] = await Promise.all([
     prisma.auditLog.findMany({
       where: { OR: [{ actorUserId: user.id }, { targetType: "user", targetId: user.id }] },
       orderBy: { createdAt: "desc" },
@@ -58,6 +81,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
       where: { issuerFreelancerId: user.freelancerProfile?.id ?? "__none__", status: "PAID" },
       _sum: { totalCents: true },
     }),
+    listDocs(user.id),
   ]);
 
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
@@ -188,6 +212,37 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                     <StatusPill tone={c.status === "VERIFIED" ? "ok" : c.status === "REJECTED" ? "crit" : "warn"}>
                       {c.status}
                     </StatusPill>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title="Documenten">
+            {docs.length === 0 ? (
+              <EmptyState title="Nog niets geüpload" body="Deze gebruiker heeft nog geen document geüpload." />
+            ) : (
+              <ul className="divide-y divide-hair text-sm">
+                {docs.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">{DOC_KIND_LABEL[d.kind]}</p>
+                      <p className="truncate text-[11px] text-neutralx-400">
+                        {dateTime(new Date(d.uploadedAt))} · {fileSize(d.sizeBytes)}
+                        {d.note ? ` · ${d.note}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-3">
+                      <StatusPill tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</StatusPill>
+                      <a
+                        href={`/api/admin/gebruikers/${user.id}/documents/${d.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-brand-600 hover:underline"
+                      >
+                        Bekijken →
+                      </a>
+                    </div>
                   </li>
                 ))}
               </ul>

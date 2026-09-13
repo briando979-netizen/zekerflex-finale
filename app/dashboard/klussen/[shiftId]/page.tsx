@@ -334,7 +334,17 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <ShiftMap lat={s.branchLat} lng={s.branchLng} height={180} label={`${s.address}, ${s.city}`} />
         </div>
 
-        {/* Travel */}
+        {/* Travel — needs a saved home base (set during onboarding's postcode
+            geocode); show why instead of silently having nothing here. */}
+        {!s.travel && (
+          <p className="mt-3 rounded-xl border border-dashed border-hair bg-paper-soft px-4 py-3 text-sm text-neutralx-500">
+            Vul je thuisbasis in bij{" "}
+            <Link href="/dashboard/verificatie" className="font-medium text-brand-600 hover:underline">
+              Verificatie
+            </Link>{" "}
+            om hier je reistijd en afstand per vervoermiddel te zien.
+          </p>
+        )}
         {s.travel && (
           <details className="mt-3 rounded-xl border border-hair bg-white">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
