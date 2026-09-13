@@ -3,6 +3,7 @@ import { GraphQLError } from "graphql";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPrincipal, hasRole, type Principal } from "@/lib/auth";
+import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getKpis } from "@/lib/admin/kpis";
 import { buildWeeklyRun } from "@/lib/payroll/engine";
 import { getRun, listRuns, payslipsForUser } from "@/lib/payroll/store";
@@ -149,7 +150,18 @@ const resolvers = {
       const isManager = hasRole(p, ...MANAGER);
       const where: Record<string, unknown> = {};
       if (args.status) where.status = args.status;
-      if (!isManager) where.status = "OPEN"; // freelancers only see open work
+      if (!isManager) {
+        where.status = "OPEN"; // freelancers only see open work
+      } else if (!hasRole(p, "PLATFORM_ADMIN")) {
+        // A manager only sees shifts at the organizations/branches they're
+        // actually granted — same scoping the REST employer dashboard uses.
+        // Previously this resolver checked role only, so any manager could
+        // list every tenant's shifts over GraphQL regardless of membership.
+        const scope = await resolveEmployerScope(p);
+        where.branch = scope.branchIds
+          ? { id: { in: scope.branchIds } }
+          : { tenantId: { in: scope.tenantIds } };
+      }
       const rows = await prisma.shift.findMany({
         where,
         take,
@@ -179,9 +191,23 @@ const resolvers = {
     },
 
     shift: async (_p: unknown, args: { id: string }, ctx: GraphQLContext) => {
-      requireRoles(ctx);
-      const r = await prisma.shift.findUnique({
-        where: { id: args.id },
+      const p = requireRoles(ctx);
+      const isManager = hasRole(p, ...MANAGER);
+      const where: Record<string, unknown> = { id: args.id };
+      if (!isManager) {
+        where.status = "OPEN"; // same visibility rule as the list query
+      } else if (!hasRole(p, "PLATFORM_ADMIN")) {
+        const scope = await resolveEmployerScope(p);
+        where.branch = scope.branchIds
+          ? { id: { in: scope.branchIds } }
+          : { tenantId: { in: scope.tenantIds } };
+      }
+      // findFirst (not findUnique) so the scope above applies as part of the
+      // query — a shift outside the caller's visibility comes back as null,
+      // same as "doesn't exist", rather than a separate leak-prone check
+      // after an unscoped fetch.
+      const r = await prisma.shift.findFirst({
+        where,
         select: {
           id: true,
           title: true,
