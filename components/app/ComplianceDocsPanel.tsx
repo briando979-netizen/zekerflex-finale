@@ -114,6 +114,12 @@ export function ComplianceDocsPanel() {
   if (!d) return null;
   const idDoc = d.docs.find((x) => x.kind === "id");
   const bankDoc = d.docs.find((x) => x.kind === "bank");
+  // The ID slot is a fallback only: a normal onboarding submission already
+  // fills this automatically (lib/onboarding/verify.ts), so showing it as a
+  // second "mandatory" upload here reads as a duplicate ask. Only surface it
+  // again if it's actually still missing or got rejected — e.g. an older
+  // account from before that auto-fill existed.
+  const showId = !d.status.idOk;
 
   return (
     <div className="space-y-4">
@@ -123,21 +129,21 @@ export function ComplianceDocsPanel() {
         </p>
       ) : (
         <p className="rounded-lg bg-warn/10 px-3 py-2 text-sm text-neutralx-700">
-          Upload je identiteitsbewijs en een bankafschrift. Beide zijn verplicht voordat je uitbetaald kunt worden.
+          {showId
+            ? "Upload je identiteitsbewijs en een bankafschrift. Beide zijn verplicht voordat je uitbetaald kunt worden."
+            : "Upload een bankafschrift. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie."}
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <DocSlot
-          kind="id"
-          label="Identiteitsbewijs"
-          hint={
-            idDoc
-              ? "Automatisch ingevuld vanuit je identiteitsverificatie hierboven."
-              : "Vul eerst de verificatie hierboven in — die vult dit automatisch. Los uploaden kan ook."
-          }
-          doc={idDoc}
-          onUploaded={load}
-        />
+      <div className="space-y-3">
+        {showId && (
+          <DocSlot
+            kind="id"
+            label="Identiteitsbewijs"
+            hint="Vul eerst de verificatie hierboven in — die vult dit automatisch. Los uploaden kan ook."
+            doc={idDoc}
+            onUploaded={load}
+          />
+        )}
         <DocSlot
           kind="bank"
           label="Bankafschrift"
