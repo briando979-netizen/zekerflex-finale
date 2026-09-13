@@ -7,6 +7,7 @@ import { submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verif
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const fieldsSchema = z.object({
   // absent for uitzendkrachten — they don't have a KVK

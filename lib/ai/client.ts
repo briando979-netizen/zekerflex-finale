@@ -40,6 +40,16 @@ export interface ChatOptions {
   model?: string;
   /** Cost-accounting label for the governor ("orchestration", "rag", ...). */
   purpose?: string;
+  /**
+   * false = one attempt, no retry-with-backoff. Default true.
+   * The retry loop assumes a *transient* failure — the model is restarting,
+   * briefly unreachable — and is worth riding out for a background job. A
+   * call that blocks a live HTTP response (a form submit someone is staring
+   * at) needs the opposite assumption: if LLM_BASE_URL has nothing behind it
+   * at all (e.g. no Sovereign Box configured on a cloud deploy), retrying
+   * turns an instant ECONNREFUSED into a multi-minute hang for nothing.
+   */
+  retry?: boolean;
 }
 
 interface TokenUsage {
@@ -124,7 +134,9 @@ async function post(
   path: string,
   payload: unknown,
   timeoutMs: number,
+  retry = true,
 ): Promise<unknown> {
+  if (!retry) return postOnce(path, payload, timeoutMs);
   const deadline = Date.now() + env.LLM_RETRY_MAX_WAIT_MS;
   let attempt = 0;
   for (;;) {
@@ -169,6 +181,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult> {
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         },
         timeoutMs,
+        opts.retry ?? true,
       )) as {
         model?: string;
         choices?: { message?: { content?: string } }[];

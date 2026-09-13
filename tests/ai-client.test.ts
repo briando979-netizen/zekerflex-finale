@@ -88,6 +88,16 @@ describe("ai chat client", () => {
     // 1 initial + LLM_RETRY_MAX (3, from tests/setup.ts) retries
     expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("with retry:false, fails after exactly one attempt (no backoff wait)", async () => {
+    const fetchMock = mockFetch(() => {
+      throw new TypeError("fetch failed");
+    });
+    await expect(
+      chat({ messages: [{ role: "user", content: "hi" }], retry: false }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("extractJson", () => {

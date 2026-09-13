@@ -118,6 +118,7 @@ async function reviewDocument(
     temperature: 0.1,
     maxTokens: 300,
     timeoutMs: env.LLM_VISION_TIMEOUT_MS,
+    retry: false,
     messages: [
       { role: "system", content: DOC_SYSTEM },
       {
@@ -160,6 +161,7 @@ async function reviewFace(
     temperature: 0.1,
     maxTokens: 300,
     timeoutMs: env.LLM_VISION_TIMEOUT_MS,
+    retry: false,
     messages: [
       { role: "system", content: FACE_SYSTEM },
       {

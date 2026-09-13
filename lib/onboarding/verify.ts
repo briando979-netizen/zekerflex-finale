@@ -145,6 +145,13 @@ Richtlijnen:
       purpose: "kyc-review",
       temperature: 0.1,
       maxTokens: 400,
+      // This blocks a live onboarding submission — fail once, fast, rather
+      // than retrying for up to LLM_RETRY_MAX_WAIT_MS. No local LLM
+      // configured/reachable (e.g. this deploy has no Sovereign Box) must
+      // degrade in well under a second, not ~40s+, before falling through
+      // to the catch below.
+      timeoutMs: 8_000,
+      retry: false,
       messages: [
         { role: "system", content: system },
         { role: "user", content: JSON.stringify(payload, null, 2) },
