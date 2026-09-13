@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Prijzen",
+  title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
   description:
-    "Gratis voor freelancers. € 3,50 platformkosten per gewerkt uur voor bedrijven, alleen bij gebruik. Geen abonnement, geen verrassingen.",
+    "Wat kost ZekerFlex? Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten, geen verrassingen.",
+  keywords: ["zekerflex kosten", "zzp platform kosten", "uitzendbureau tarief", "flexpool prijs"],
+  ...canonical("/prijzen"),
 };
 
 const FAQ = [

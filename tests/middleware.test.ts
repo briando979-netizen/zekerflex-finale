@@ -64,6 +64,22 @@ describe("middleware — default-deny for unmatched /api/* routes", () => {
   });
 });
 
+describe("middleware — Content-Security-Policy", () => {
+  it("stamps a CSP on every response (page and API alike)", async () => {
+    decodeSessionMock.mockResolvedValue(null);
+    const res = await middleware(reqFor("/api/invoices/inv_1/checkout"));
+    expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
+  });
+
+  it("also stamps the CSP on a public HTML route like /login", async () => {
+    const res = await middleware(reqFor("/login"));
+    // NODE_ENV=test -> dev CSP shape; the strict prod shape (nonce +
+    // strict-dynamic, no unsafe-inline) is asserted in tests/csp.test.ts.
+    expect(res.headers.get("Content-Security-Policy")).toContain("script-src");
+    expect(decodeSessionMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("middleware — correlation id", () => {
   it("generates one and puts it on every response, including a 401", async () => {
     decodeSessionMock.mockResolvedValue(null);

@@ -205,13 +205,26 @@ Zet dit in een cron (`crontab -e`):
 Kopieer `./backups/` regelmatig naar een andere locatie (S3-compatible bucket,
 tweede server, …).
 
-**Herstellen** (op een lege stack):
+**Herstellen** (DESTRUCTIEF — overschrijft db + storage van het huidige
+compose-project):
 ```bash
-gunzip -c backups/<datum>/zekerflex-db.sql.gz | \
-  docker compose -f docker-compose.prod.yml exec -T postgres psql -U zekerflex -d zekerflex
-docker run --rm -v zekerflex_app-storage:/data -v "$(pwd)/backups/<datum>:/b" busybox \
-  sh -c "cd /data && tar xzf /b/storage.tar.gz"
+bash deploy/scripts/restore.sh backups/<datum>
+RESTORE_DB_ONLY=1 bash deploy/scripts/restore.sh backups/<datum>   # alleen de db
 ```
+
+**DR-drill (maandelijks, aanbevolen).** Test dat een backup écht herstelbaar is
+in een wégwerp-project, zodat je RTO/RPO kent:
+```bash
+BK=$(ls -1dt backups/*/ | head -1)
+docker compose -p zf-drill -f docker-compose.prod.yml up -d postgres
+COMPOSE_PROJECT_NAME=zf-drill bash deploy/scripts/restore.sh "$BK"   # bevestig met 'restore'
+docker compose -p zf-drill -f docker-compose.prod.yml up -d
+curl -fsS localhost:3001/api/ready       # map de drill-poort in een override-file
+docker compose -p zf-drill -f docker-compose.prod.yml down -v        # opruimen
+```
+
+Noteer de doorlooptijd (RTO) en het verlies-venster t.o.v. de laatste backup
+(RPO) in het runbook.
 
 ## 8 · Beveiliging & hardening
 

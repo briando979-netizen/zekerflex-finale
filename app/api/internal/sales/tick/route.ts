@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
 import { runSalesEngineTick } from "@/lib/sales/engine";
 
@@ -24,8 +25,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const result = await runSalesEngineTick();
+    recordCronRun("sales-motor", true);
     return NextResponse.json(result);
   } catch (err) {
+    recordCronRun("sales-motor", false);
     logger.error("sales tick failed", { error: (err as Error).message });
     return NextResponse.json(
       { error: { code: "INTERNAL", message: "Tick failed" } },

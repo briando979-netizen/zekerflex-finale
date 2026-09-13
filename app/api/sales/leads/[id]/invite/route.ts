@@ -11,10 +11,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/sales/leads/<id>/invite — stuur het bedrijf een account-uitnodiging.
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     requireRole(p, "SALES", "PLATFORM_ADMIN");

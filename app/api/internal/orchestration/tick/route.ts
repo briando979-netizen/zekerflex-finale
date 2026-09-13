@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { runOrchestrationCycle } from "@/lib/orchestration/core";
 
 export const runtime = "nodejs";
@@ -17,8 +18,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const result = await runOrchestrationCycle({ trigger: "CRON" });
+    recordCronRun("orchestration", true);
     return NextResponse.json({ ok: result.status === "COMPLETED", ...result });
   } catch (err) {
+    recordCronRun("orchestration", false);
     logger.error("orchestration tick failed", { error: (err as Error).message });
     return NextResponse.json(
       { error: { code: "INTERNAL", message: "Tick failed" } },

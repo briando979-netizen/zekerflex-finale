@@ -7,10 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/me/documents/:id — stream one of my own documents back.
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } },
-): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const doc = await readDoc(p.userId, params.id);

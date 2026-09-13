@@ -14,10 +14,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - app.zekerflex.com
+        - zekerflex.nl
       secretName: zekerflex-tls
   rules:
-    - host: app.zekerflex.com
+    - host: zekerflex.nl
       http:
         paths:
           - path: /

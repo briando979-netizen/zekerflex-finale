@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 type Cat = (typeof CATS)[number];
 
-export default function ShopPage({ searchParams }: { searchParams: { cat?: string } }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string }> }) {
+  const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
   return <ShopStorefront initialCat={initialCat} />;
 }

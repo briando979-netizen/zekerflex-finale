@@ -6,11 +6,12 @@ import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "E-mailvoorkeuren", robots: { index: false } };
 
-export default async function MailVoorkeurenPage({
-  searchParams,
-}: {
-  searchParams: { token?: string; done?: string };
-}) {
+export default async function MailVoorkeurenPage(
+  props: {
+    searchParams: Promise<{ token?: string; done?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const token = searchParams.token ?? "";
   const rec = token ? await findByToken(token) : null;
   const view = rec ? await mailPrefsView(rec.email) : null;

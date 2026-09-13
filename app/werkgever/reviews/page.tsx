@@ -23,8 +23,8 @@ function Stars({ n, className = "" }: { n: number; className?: string }) {
 }
 
 export default async function WerkgeverReviewsPage() {
-  const rv = getDict().reviews;
-  const co = getDict().company;
+  const rv = (await getDict()).reviews;
+  const co = (await getDict()).company;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];

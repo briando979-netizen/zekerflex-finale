@@ -4,11 +4,22 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneWork } from "@/components/marketing/Scene";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Voor freelancers",
+  title: "Flexwerk & zzp-opdrachten vinden",
   description:
-    "Werk dat past bij je vak en je reistijd. Zelf kiezen hoe snel je uitbetaald wordt, zonder facturen sturen, altijd Wet DBA-proof.",
+    "Vind flexwerk en zzp-opdrachten die passen bij je vak en je reistijd. Kies zelf per klus hoe snel je wordt uitbetaald — tot dezelfde werkdag — zonder facturen te sturen, altijd Wet DBA-proof. Meedoen is gratis.",
+  keywords: [
+    "zzp klus vinden",
+    "flexwerk vinden",
+    "freelance opdrachten",
+    "bijbaan direct uitbetaald",
+    "zelfde dag uitbetaald",
+    "werk in de buurt",
+    "freelance werk zonder tussenpersoon",
+  ],
+  ...canonical("/voor-freelancers"),
 };
 
 const BENEFITS = [

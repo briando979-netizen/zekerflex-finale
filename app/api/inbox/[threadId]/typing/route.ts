@@ -10,10 +10,8 @@ export const dynamic = "force-dynamic";
 const key = (threadId: string, userId: string) => `chat:typing:${threadId}:${userId}`;
 
 // POST — "I'm typing" (expires after 6s). GET — is anyone else typing?
-export async function POST(
-  _req: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function POST(_req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     await redis.set(key(params.threadId, p.userId), "1", "EX", 6);
@@ -23,10 +21,8 @@ export async function POST(
   return NextResponse.json({ ok: true });
 }
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const admin = await isPlatformAdmin(p.userId);

@@ -3,11 +3,13 @@ import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives
 import { Photo } from "@/components/marketing/Photo";
 import { SceneTeam } from "@/components/marketing/Scene";
 import { OpenApplicationForm } from "@/components/marketing/OpenApplicationForm";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Over ZekerFlex",
   description:
-    "Een onafhankelijk Nederlands platform voor flexibel werk — volledig lokaal gehost, zonder tussenpartijen.",
+    "Een onafhankelijk Nederlands platform voor flexibel werk — volledig lokaal gehost, zonder tussenpartijen. Dit is wie we zijn en waarom we ZekerFlex bouwen.",
+  ...canonical("/over-ons"),
 };
 
 export default function OverOnsPage() {

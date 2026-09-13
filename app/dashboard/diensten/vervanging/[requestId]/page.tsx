@@ -16,11 +16,12 @@ const BADGE: Record<string, string> = {
   PLATINUM: "Platina",
 };
 
-export default async function VervangingReactiesPage({
-  params,
-}: {
-  params: { requestId: string };
-}) {
+export default async function VervangingReactiesPage(
+  props: {
+    params: Promise<{ requestId: string }>;
+  }
+) {
+  const params = await props.params;
   const principal = await requirePrincipal();
   const req = await getReplacementRequest(params.requestId);
   if (!req || req.userId !== principal.userId) notFound();

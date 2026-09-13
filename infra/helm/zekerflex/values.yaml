@@ -39,7 +39,7 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "8m"
-  host: app.zekerflex.com
+  host: zekerflex.nl
   tls: true
   tlsSecretName: zekerflex-tls
 
@@ -70,8 +70,11 @@ persistence:
 # Non-secret env — rendered into a ConfigMap.
 config:
   NODE_ENV: production
-  APP_BASE_URL: https://app.zekerflex.com
-  AUTH_URL: https://app.zekerflex.com
+  APP_BASE_URL: https://zekerflex.nl
+  AUTH_URL: https://zekerflex.nl
+  # SEO verification tokens (optional) — override per environment:
+  # GOOGLE_SITE_VERIFICATION: ""
+  # BING_SITE_VERIFICATION: ""
   REDIS_URL: redis://zekerflex-redis:6379
   LLM_BASE_URL: http://ollama:11434/v1
   LLM_MODEL: llama3.1:8b

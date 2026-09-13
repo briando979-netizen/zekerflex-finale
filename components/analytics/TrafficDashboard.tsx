@@ -16,6 +16,12 @@ interface Summary {
   days: { date: string; pageviews: number; visitors: number }[];
   topPaths: { path: string; pageviews: number }[];
   topReferrers: { host: string; count: number }[];
+  inbound: {
+    demoRequests: number;
+    jobApplications: number;
+    whitepaperDownloads: number;
+    topWhitepapers: { slug: string; downloads: number }[];
+  };
 }
 
 function Row({ left, right, mute }: { left: string; right: string | number; mute?: boolean }) {
@@ -162,6 +168,23 @@ export function TrafficDashboard() {
             </ul>
           ) : (
             <Empty>Geen externe verwijzers.</Empty>
+          )}
+        </APanel>
+      </section>
+
+      <section className="mt-4">
+        <APanel title="Marketing-conversies" subtitle="laatste 7 dagen — instroom uit de site">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <AStat label="Demo-aanvragen" value={summary?.inbound.demoRequests ?? 0} sub="→ sales-pijplijn" />
+            <AStat label="Open sollicitaties" value={summary?.inbound.jobApplications ?? 0} sub="→ sollicitaties" />
+            <AStat label="Whitepaper-downloads" value={summary?.inbound.whitepaperDownloads ?? 0} />
+          </div>
+          {summary && summary.inbound.topWhitepapers.length > 0 && (
+            <ul className="mt-3 divide-y" style={{ borderColor: "var(--a-border)" }}>
+              {summary.inbound.topWhitepapers.map((w) => (
+                <Row key={w.slug} left={w.slug} right={w.downloads} />
+              ))}
+            </ul>
           )}
         </APanel>
       </section>

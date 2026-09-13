@@ -4,11 +4,22 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneApprove } from "@/components/marketing/Scene";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Voor bedrijven",
+  title: "Flexkrachten & zzp'ers inhuren",
   description:
-    "Betrouwbare zzp'ers, precies wanneer je ze nodig hebt. Automatische matching per vestiging, GPS check-in en Wet DBA-bewaking ingebouwd.",
+    "Huur betrouwbare zzp'ers en flexkrachten in, precies wanneer je ze nodig hebt — horeca, retail, logistiek en meer. Automatische matching per vestiging, GPS check-in en Wet DBA-bewaking ingebouwd. € 3,50 per gewerkt uur, geen abonnement.",
+  keywords: [
+    "zzp'er inhuren",
+    "flexkrachten inhuren",
+    "personeel inhuren horeca",
+    "personeel inhuren retail",
+    "tijdelijk personeel vinden",
+    "uitzendkrachten inhuren",
+    "flexpool opzetten",
+  ],
+  ...canonical("/voor-bedrijven"),
 };
 
 const BLOCKS = [

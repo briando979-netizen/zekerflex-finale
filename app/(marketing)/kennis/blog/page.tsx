@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { POSTS, nlDate } from "@/lib/kennis/content";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Blog",
   description: "Nieuws en achtergrond over flexibel werken, de Wet DBA en het ZekerFlex-platform.",
+  ...canonical("/kennis/blog"),
 };
 
 export default function BlogIndexPage() {

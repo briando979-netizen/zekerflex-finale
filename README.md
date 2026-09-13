@@ -34,11 +34,10 @@ application with a Node.js serverless backend, PostgreSQL/Prisma and Redis.
 │   │   ├── dispatcher.ts         # Redis-queued staged notification waves
 │   │   ├── worker.ts             # setInterval follow-up worker
 │   │   ├── timing.ts             # Quiet-hours contact window (pure)
-│   │   └── push/                 # Web Push (VAPID, self-hosted) + FCM fallback
+│   │   └── push/                 # Web Push (VAPID, self-hosted)
 │   │       ├── encrypt.ts        #   RFC 8291 aes128gcm (zero deps, Node crypto)
 │   │       ├── vapid.ts          #   RFC 8292 ES256 auth (jose)
 │   │       ├── web-push.ts       #   sender
-│   │       ├── fcm.ts            #   optional Firebase provider
 │   │       └── index.ts          #   sendShiftOffer fan-out
 │   ├── ai/                       # Self-hosted LLM adapter (OpenAI-compatible)
 │   ├── geo/                      # Geofencing + travel-time estimation
@@ -151,6 +150,10 @@ analytics; Redis TTLs only cover locks / rate-limit counters, never data.
 
 ### Architecture export & knowledge base
 
+`docs/ARCHITECTURE.md` — the diagrammed overview (system context, deployment
+topology, request lifecycle, module map, data stores, AI layer).
+`docs/DATA-MODEL.md` — the Prisma schema as ER diagrams, per domain.
+`docs/DATA-ANALYST-ROADMAP.md` — how to build analytics/BI on top, phased.
 `docs/SOVEREIGN-BOX.md` is the full architecture export (file structure, core
 contracts, code excerpts, the Jarvis system prompt). `lib/rag/knowledge/*.md`
 holds 15 deep technical guides (sovereign overview, code standards, AI governor,
@@ -358,11 +361,13 @@ Redis, the LLM **and** self-hosted Web Push are all up.
 * **`vapid.ts`** — RFC 8292 `Authorization: vapid t=…,k=…` ES256 JWT (via `jose`).
 * **`web-push.ts`** — a plain `POST` to the subscription endpoint; 404/410 flags
   the subscription for cleanup.
-* **`index.ts`** — `sendShiftOffer` fans out over every Web Push subscription and
-  (optionally) every FCM token a freelancer has, disabling dead ones.
+* **`index.ts`** — `sendShiftOffer` fans out over every Web Push subscription a
+  freelancer has, disabling dead ones.
 
-Firebase FCM (`fcm.ts`) is now an **optional** secondary provider — the platform
-works fully with `FIREBASE_*` unset.
+(Firebase Cloud Messaging support was removed — it pulled in `firebase-admin`
+solely for a channel nothing ever configured, dragging a critical CVE via its
+`@google-cloud/*` dependency chain along with it. Web Push is self-hosted and
+covers this need without a third party.)
 
 ```bash
 npm run vapid:keys          # → WEBPUSH_VAPID_PUBLIC_KEY / _PRIVATE_KEY for .env
@@ -429,7 +434,7 @@ until they are set.
 | ------ | ---- | -------------- |
 | Matching Engine | `lib/matching-engine.ts` | Weighted geo/reliability/skill/badge match + auto-accept |
 | Notification Dispatcher | `lib/notifications/dispatcher.ts` | Redis-queued staged push waves + follow-up worker + quiet-hours ping suppression |
-| Push delivery | `lib/notifications/push/` | Self-hosted Web Push (RFC 8291/8292, zero deps) with optional FCM fallback |
+| Push delivery | `lib/notifications/push/` | Self-hosted Web Push (RFC 8291/8292, zero deps) |
 | LLM adapter | `lib/ai/client.ts` | Single seam to a self-hosted OpenAI-compatible model (Ollama/vLLM/llama.cpp) |
 | Timesheet Approval | `app/api/timesheets/approve/route.ts` | Approve hours, emit 2 reverse-billing invoices, trigger instant SEPA |
 | GPS check-in ingestion | `app/api/timesheets/[timesheetId]/gps/route.ts` | Freelancer CHECK_IN / HEARTBEAT / CHECK_OUT, geofenced against the branch at record time (`lib/geo/geofencing.ts`), sets `actualStart` / `actualEnd` + billable minutes. An off-site or mock-location CHECK_IN/CHECK_OUT auto-opens a system-raised `Dispute` (`origin` GEOFENCE_VIOLATION / MOCK_LOCATION) that shows in the console immediately |
@@ -473,6 +478,13 @@ geen primaire productieomgeving: serverless functies zijn niet geschikt voor
 `scripts/daemon.mjs`, lokale LLM/TTS-processen of uploads naar `UPLOADS_DIR`.
 Gebruik Vercel alleen met een externe LLM, object storage, managed database en
 externe job scheduler.
+
+Dit onderscheid is nu ook zichtbaar in de runtime: `lib/config/deployment.ts`
+detecteert het target (`VERCEL` env → `vercel-demo`, anders een always-on Node
+proces → `sovereign-box`). Een demo-deployment logt bij boot een waarschuwing en
+`/api/status`, `/api/admin/health` en `/api/admin/system` rapporteren
+`deployment: { target, demo }`. Forceer het target expliciet met
+`ZEKERFLEX_TARGET=sovereign-box`.
 
 ### Productiechecklist
 

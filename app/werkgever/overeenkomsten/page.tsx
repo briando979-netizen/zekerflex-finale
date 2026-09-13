@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function WerkgeverOvereenkomstenPage() {
   await requirePrincipal();
-  const a = getDict().agreements;
+  const a = (await getDict()).agreements;
   return (
     <>
       <PageHeader title={a.title} eyebrow={a.eyebrow} subtitle={a.subtitle} />

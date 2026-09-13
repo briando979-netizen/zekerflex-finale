@@ -28,14 +28,15 @@ function parseMonth(m: string | undefined): { y: number; mo: number } {
 
 const key = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}`;
 
-export default async function KalenderPage({
-  searchParams,
-}: {
-  searchParams: { m?: string };
-}) {
+export default async function KalenderPage(
+  props: {
+    searchParams: Promise<{ m?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const principal = await requirePrincipal();
-  const t = getDict();
-  const localeTag = getLocale() === "en" ? "en-GB" : "nl-NL";
+  const t = await getDict();
+  const localeTag = (await getLocale()) === "en" ? "en-GB" : "nl-NL";
   const { y, mo } = parseMonth(searchParams.m);
   const cal = await getEmployerCalendarMonth(principal, y, mo);
 

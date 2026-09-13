@@ -11,11 +11,12 @@ import { ResendVerification } from "@/components/auth/ResendVerification";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "E-mailadres bevestigen" };
 
-export default async function VerifieerEmailPage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
+export default async function VerifieerEmailPage(
+  props: {
+    searchParams: Promise<{ token?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // Token in the URL: confirm and route on.
   if (searchParams.token) {
     const result = await confirmVerificationToken(searchParams.token);

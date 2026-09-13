@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findExchangeIdByText, rateExchange } from "@/lib/learn/store";
 import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,8 +10,7 @@ export const dynamic = "force-dynamic";
 // POST /api/chat/rate { q, a, up } — thumbs on a public-chat answer.
 // Matches the exchange by its logged text.
 export async function POST(request: Request): Promise<NextResponse> {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const gate = await fixedWindow(`chatrate:rl:${ip}`, 20, 60);
+  const gate = await fixedWindow(`rl:chat-rate:${clientIp(request)}`, 20, 60);
   if (!gate.ok) return NextResponse.json({ ok: false }, { status: 429 });
 
   try {

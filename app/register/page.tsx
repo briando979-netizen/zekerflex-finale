@@ -7,11 +7,12 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
 
-export default function RegisterPage({
-  searchParams,
-}: {
-  searchParams: { type?: string; company?: string; kvk?: string; email?: string };
-}) {
+export default async function RegisterPage(
+  props: {
+    searchParams: Promise<{ type?: string; company?: string; kvk?: string; email?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const defaultType = searchParams.type === "bedrijf" ? "bedrijf" : "freelancer";
   const defaultWorkerKind =
     searchParams.type === "uitzendkracht" || searchParams.type === "zzp" || searchParams.type === "flexwerker"

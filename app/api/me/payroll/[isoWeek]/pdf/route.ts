@@ -10,10 +10,8 @@ export const dynamic = "force-dynamic";
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 
 // GET /api/me/payroll/:isoWeek/pdf — your weekly loonstrook / factuuroverzicht as PDF.
-export async function GET(
-  _req: Request,
-  { params }: { params: { isoWeek: string } },
-): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ isoWeek: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const slip = await getPayslip(p.userId, params.isoWeek);

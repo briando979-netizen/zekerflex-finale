@@ -1,28 +1,55 @@
 version: 2
+
+# Cadence & policy: see docs/DEPENDENCIES.md
+#
+# The groups keep the weekly noise to ~4 PRs instead of ~15:
+#   npm-prod / npm-dev   — minor + patch, safe to merge after `npm test` + `npm run test:e2e`
+#   npm-prod-major       — one PR to triage; each needs its own migration ticket
+#   npm-dev-major        — one PR to triage
+# github-actions / docker / terraform are ungrouped (few, low-risk).
+
 updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
     open-pull-requests-limit: 10
     groups:
-      prod:
+      npm-prod:
         dependency-type: production
         update-types: [minor, patch]
-      dev:
+      npm-dev:
         dependency-type: development
+        update-types: [minor, patch]
+      npm-prod-major:
+        dependency-type: production
+        update-types: [major]
+      npm-dev-major:
+        dependency-type: development
+        update-types: [major]
+    ignore:
+      # next-auth is intentionally on v5-beta (needed for Edge-verifiable
+      # tokens); a bump to "latest" would downgrade to v4.
+      - dependency-name: "next-auth"
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
 
   - package-ecosystem: docker
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
 
   - package-ecosystem: terraform
     directory: "/infra/terraform"
     schedule:
       interval: weekly
+      day: monday
+    groups:
+      terraform:
+        patterns: ["*"]

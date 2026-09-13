@@ -81,3 +81,29 @@ export async function trackEvents(
   }
   return { accepted: rows.length };
 }
+
+/**
+ * A server-side conversion event (a whitepaper download, a demo request, …).
+ * No session id, no rate limit — these are low-volume and triggered by our own
+ * code, not the browser. Never throws; analytics must not break a response.
+ */
+export async function recordServerEvent(input: {
+  path: string;
+  label: string;
+  type?: AnalyticsEventType;
+  meta?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await prisma.analyticsEvent.create({
+      data: {
+        type: input.type ?? AnalyticsEventType.CUSTOM,
+        path: cleanPath(input.path),
+        label: input.label.slice(0, 200),
+        sessionId: "server",
+        meta: (input.meta ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+  } catch (err) {
+    logger.warn("server analytics event failed", { label: input.label, error: (err as Error).message });
+  }
+}

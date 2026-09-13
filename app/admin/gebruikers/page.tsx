@@ -19,11 +19,12 @@ const STATUS_TABS = [
   { key: "blocked", label: "Geblokkeerd" },
 ];
 
-export default async function GebruikersPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; status?: string };
-}) {
+export default async function GebruikersPage(
+  props: {
+    searchParams: Promise<{ q?: string; status?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return (

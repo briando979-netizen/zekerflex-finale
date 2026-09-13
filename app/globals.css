@@ -348,8 +348,11 @@ body {
   --a-border-strong: rgba(15, 35, 75, 0.16);
   --a-text: #17233b;
   --a-dim: #5d6a80;
-  --a-mute: #8b96a8;
+  --a-mute: #5f6774;
   --a-accent: #10b981;
+  /* Text-weight green for use on light/tinted surfaces (the solid --a-accent
+     only clears AA as a fill behind white, not as small text on a pastel). */
+  --a-accent-ink: #0b6e54;
   --a-accent-soft: rgba(16, 185, 129, 0.14);
   --a-blue: #60a5fa;
   --a-amber: #f59e0b;
@@ -374,7 +377,7 @@ body {
   --a-border-strong: rgba(15, 35, 75, 0.16);
   --a-text: #17233b;
   --a-dim: #5d6a80;
-  --a-mute: #8b96a8;
+  --a-mute: #5f6774;
   --a-accent-soft: rgba(16, 185, 129, 0.12);
   --a-invert-bg: #3155d8;
   --a-invert-fg: #fafafa;

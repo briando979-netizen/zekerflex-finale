@@ -2,23 +2,56 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { POSTS, postBySlug, nlDate } from "@/lib/kennis/content";
+import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 
 export function generateStaticParams() {
   return POSTS.map((p) => ({ slug: p.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const p = postBySlug(params.slug);
   if (!p) return { title: "Blog" };
-  return { title: p.title, description: p.excerpt };
+  return {
+    title: p.title,
+    description: p.excerpt,
+    ...canonical(`/kennis/blog/${p.slug}`),
+    openGraph: { type: "article", publishedTime: p.date, authors: [p.author] },
+  };
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const post = postBySlug(params.slug);
   if (!post) notFound();
 
+  const postLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    inLanguage: "nl-NL",
+    author: { "@type": "Organization", name: post.author },
+    publisher: { "@id": `${SITE.url}/#organization` },
+    mainEntityOfPage: `${SITE.url}/kennis/blog/${post.slug}`,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            postLd,
+            breadcrumbJsonLd([
+              ["Blog", "/kennis/blog"],
+              [post.title, `/kennis/blog/${post.slug}`],
+            ]),
+          ]),
+        }}
+      />
       <div className="hero-ink text-white">
         <div className="shell py-16 md:py-20">
           <Link href="/kennis/blog" className="text-sm font-medium text-white/60 hover:text-white">
@@ -28,7 +61,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             {post.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-white/70">{post.excerpt}</p>
-          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/40">
+          <p className="mt-6 font-mono text-xs uppercase tracking-wide text-white/60">
             {nlDate(post.date)} · {post.author} · {post.readMinutes} min lezen
           </p>
         </div>

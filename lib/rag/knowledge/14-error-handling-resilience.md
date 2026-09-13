@@ -18,7 +18,7 @@ Als Redis onbereikbaar is bij de throttle-checks: log een warning en **ga door**
 
 ### 3. Best-effort neventaken
 
-`recordAudit`, `announce`, `recordEngagement`, `sendShiftOffer`, `sendFcm`,
+`recordAudit`, `announce`, `recordEngagement`, `sendShiftOffer`,
 `recordUsage` — vangen alles zelf op, loggen een warning, retourneren `null`/void.
 Ze breken nooit de bovenliggende businesstransactie.
 

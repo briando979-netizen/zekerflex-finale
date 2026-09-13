@@ -12,10 +12,12 @@ jose):
   jose. `generateVapidKeys()`.
 - **`web-push.ts`** — `sendWebPush(target, payload, { ttlSeconds })`: kale POST
   naar het endpoint. 404/410 → `gone: true` (caller disablet de subscription).
-- **`fcm.ts`** — Firebase is nu een **optionele** tweede provider; de box werkt
-  volledig zonder `FIREBASE_*`.
-- **`index.ts`** — `sendShiftOffer` waaiert uit over alle `WebPushSubscription`s
-  én FCM-tokens; nooit een throw.
+- **`index.ts`** — `sendShiftOffer` waaiert uit over alle `WebPushSubscription`s;
+  nooit een throw.
+
+(FCM-ondersteuning is verwijderd — `firebase-admin` bracht een kritieke CVE mee
+via zijn `@google-cloud/*`-keten, voor een kanaal dat nergens geconfigureerd
+stond. Web Push is zelf-gehost en dekt dit al af.)
 
 Setup: `npm run vapid:keys` → `WEBPUSH_VAPID_PUBLIC_KEY` / `_PRIVATE_KEY` in
 `.env`. De browser abonneert met `applicationServerKey = <public key>` en POST

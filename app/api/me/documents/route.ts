@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { docStatus, listDocs, storeDoc, type DocKind } from "@/lib/compliance/documents";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,8 +24,13 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const gate = await fixedWindow(`me-documents:rl:${p.userId}`, 20, 600);
-    if (!gate.ok) throw AppError.validation("Te veel uploads — probeer het over enkele minuten opnieuw.");
+    await enforceRateLimit({
+      name: "me-documents",
+      identifier: p.userId,
+      limit: 20,
+      windowSeconds: 600,
+      message: "Te veel uploads — probeer het over enkele minuten opnieuw.",
+    });
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verwacht multipart/form-data");
     });
@@ -42,7 +48,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       const status = await docStatus(p.userId);
       return NextResponse.json({ doc, status }, { status: 201 });
     } catch (e) {
-      throw AppError.validation((e as Error).message);
+      // storeDoc's own checks (empty file, too large, wrong type) already
+      // throw AppError — forward those verbatim. Anything else is an
+      // unexpected failure (e.g. the storage backend itself, disk/S3) and
+      // must never leak its raw message (can contain internal paths) to
+      // the client; log it server-side and return one safe message.
+      if (e instanceof AppError) throw e;
+      logger.error("document upload failed", { error: (e as Error).message });
+      throw AppError.upstream("Uploaden is mislukt. Probeer het later opnieuw.");
     }
   } catch (err) {
     const { status, body } = toErrorBody(err);

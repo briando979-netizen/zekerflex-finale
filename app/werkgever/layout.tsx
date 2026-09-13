@@ -23,8 +23,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     redirect("/verifieer-email");
   }
 
-  const locale = getLocale();
-  const t = getDict();
+  const locale = await getLocale();
+  const t = await getDict();
   const nav = [
     { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
     { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },

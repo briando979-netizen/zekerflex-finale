@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { storeProfileImage } from "@/lib/profile/media";
 import { saveOrgProfileExtra } from "@/lib/profile/store";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       await saveOrgProfileExtra(tenantId, { photoUploadId: img.id });
       return NextResponse.json({ ok: true, photoUrl: `/api/orgs/${tenantId}/photo` }, { status: 201 });
     } catch (e) {
-      throw AppError.validation((e as Error).message);
+      if (e instanceof AppError) throw e;
+      logger.error("org photo upload failed", { error: (e as Error).message });
+      throw AppError.upstream("Uploaden is mislukt. Probeer het later opnieuw.");
     }
   } catch (err) {
     const { status, body } = toErrorBody(err);

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppError, toErrorBody } from "@/lib/errors";
 import { isBreached, scorePassword } from "@/lib/auth/password";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,9 +18,13 @@ const schema = z.object({
 // k-anonymity); it is never stored or logged.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const gate = await fixedWindow(`check-password:rl:${ip}`, 30, 60);
-    if (!gate.ok) throw AppError.validation("Te veel pogingen — probeer het over een minuut opnieuw.");
+    await enforceRateLimit({
+      name: "check-password",
+      identifier: clientIp(request),
+      limit: 30,
+      windowSeconds: 60,
+      message: "Te veel pogingen — probeer het over een minuut opnieuw.",
+    });
 
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
@@ -30,7 +35,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     const breached = await isBreached(password);
     return NextResponse.json({ ...s, breached });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    return jsonError(err);
   }
 }

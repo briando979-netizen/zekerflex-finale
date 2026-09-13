@@ -34,7 +34,9 @@ const config: Config = {
           mint: "#4FE0A0",
         },
         neutralx: {
-          400: "#8A93A0",
+          // 400 is muted/metadata text — darkened from #8A93A0 to clear WCAG
+          // AA (4.5:1) on the paper + white surfaces. See docs/ACCESSIBILITY.md.
+          400: "#6B7280",
           500: "#616B78",
           600: "#4A525E",
         },

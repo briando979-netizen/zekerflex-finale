@@ -19,7 +19,11 @@ import {
 // error boundary structural instead of something to remember.
 // ---------------------------------------------------------------------------
 
+// What our handlers see: params already resolved (Next 15 hands them a Promise;
+// the wrapper awaits it once so individual handlers stay synchronous).
 type RouteContext<P> = { params: P };
+// What Next 15 passes to the exported GET/POST: params is a Promise.
+type NextRouteContext<P> = { params: Promise<P> };
 // Response, not NextResponse: a couple of handlers stream (jarvis/quick's
 // SSE-style reply) via a plain `new Response(readableStream)`, which is not
 // assignable to NextResponse even though NextResponse extends Response.
@@ -29,20 +33,24 @@ type AuthedHandler<P> = (
 ) => Promise<Response> | Response;
 
 function errorResponse(request: Request, err: unknown): NextResponse {
-  const { status, body } = toErrorBody(err);
+  const { status, body, headers } = toErrorBody(err);
   if (status >= 500) {
     const route = `${request.method} ${new URL(request.url).pathname}`;
     logger.forRequest(request, { route }).error("request failed", { error: (err as Error).message });
   }
-  return NextResponse.json(body, { status });
+  return NextResponse.json(body, { status, headers });
 }
 
 /** Requires a valid, non-disabled session. No role check. */
 export function withAuth<P = Record<string, string>>(handler: AuthedHandler<P>) {
-  return async (request: Request, ctx: RouteContext<P> = { params: {} as P }): Promise<Response> => {
+  return async (
+    request: Request,
+    ctx: NextRouteContext<P>,
+  ): Promise<Response> => {
     try {
       const principal = await requirePrincipal();
-      return await handler(request, { ...ctx, principal });
+      const params = ((await ctx?.params) ?? {}) as P;
+      return await handler(request, { params, principal });
     } catch (err) {
       return errorResponse(request, err);
     }

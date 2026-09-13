@@ -25,7 +25,8 @@ const FOLDERS: { key: string; label: string; categories: AuditCategory[] }[] = [
   { key: "beheer", label: "Beheer & sales", categories: ["ADMIN", "SALES", "ORCHESTRATION"] },
 ];
 
-export default async function AuditPage({ searchParams }: { searchParams: { folder?: string; q?: string } }) {
+export default async function AuditPage(props: { searchParams: Promise<{ folder?: string; q?: string }> }) {
+  const searchParams = await props.searchParams;
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <NoAccess />;

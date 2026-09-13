@@ -5,11 +5,12 @@ import Link from "next/link";
  * The actual decision arrives via webhook; this page just reassures the user
  * and lets them re-check their status.
  */
-export default function KycCallbackPage({
-  searchParams,
-}: {
-  searchParams: { status?: string };
-}) {
+export default async function KycCallbackPage(
+  props: {
+    searchParams: Promise<{ status?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const status = searchParams.status ?? "submitted";
 
   return (

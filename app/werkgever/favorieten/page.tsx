@@ -18,7 +18,7 @@ const BADGE: Record<string, string> = {
 };
 
 export default async function FavorietenPage() {
-  const t = getDict();
+  const t = await getDict();
   const f = t.favorites;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);

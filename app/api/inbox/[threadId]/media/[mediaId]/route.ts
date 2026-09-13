@@ -11,8 +11,9 @@ export const dynamic = "force-dynamic";
 // GET /api/inbox/:threadId/media/:mediaId — stream a chat attachment to a participant.
 export async function GET(
   req: Request,
-  { params }: { params: { threadId: string; mediaId: string } },
+  props: { params: Promise<{ threadId: string; mediaId: string }> }
 ): Promise<Response> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const admin = await isPlatformAdmin(p.userId);

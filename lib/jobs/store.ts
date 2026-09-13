@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { storeUpload } from "@/lib/storage/local";
-import { kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Open job applications ("Werken bij ons"). Postgres-backed (KeyValueStore,
@@ -17,7 +17,7 @@ export interface JobApplication {
   phone?: string;
   skills: string[];
   motivationText?: string;
-  files: { kind: "motivatiebrief" | "cv"; filename: string }[];
+  files: { kind: "motivatiebrief" | "cv"; filename: string; uploadId?: string }[];
 }
 
 export interface StoredFile {
@@ -39,7 +39,7 @@ export async function saveApplication(
   const written: JobApplication["files"] = [];
   for (const f of files) {
     const stored = await storeUpload({ filename: f.filename, mimeType: f.mimeType, bytes: f.bytes });
-    written.push({ kind: f.kind, filename: stored.filename });
+    written.push({ kind: f.kind, filename: stored.filename, uploadId: stored.id });
   }
 
   const rec: JobApplication = { id, at, ...input, files: written };
@@ -50,4 +50,9 @@ export async function saveApplication(
 export async function listApplications(limit = 200): Promise<JobApplication[]> {
   const rows = await kvListValues<JobApplication>("job-application:", 2000);
   return rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
+}
+
+export async function getApplication(id: string): Promise<JobApplication | null> {
+  if (!/^[a-f0-9-]{6,20}$/.test(id)) return null;
+  return kvGet<JobApplication>(key(id));
 }

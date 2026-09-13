@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { getObjectBytes, putObject } from "@/lib/storage/s3";
+import { deleteObject, getObjectBytes, putObject } from "@/lib/storage/s3";
 
 // ---------------------------------------------------------------------------
 // Local storage remains the default; S3-compatible storage is selected with
@@ -53,16 +53,29 @@ export async function storeUpload(input: {
   const filename = safeName(input.filename);
   const day = new Date().toISOString().slice(0, 10);
   const storageKey = `${day}/${randomUUID()}-${filename}`;
-  if (env.STORAGE_BACKEND === "s3") {
-    await putObject({
-      key: storageKey,
-      body: input.bytes,
-      contentType: input.mimeType || "application/octet-stream",
+  try {
+    if (env.STORAGE_BACKEND === "s3") {
+      await putObject({
+        key: storageKey,
+        body: input.bytes,
+        contentType: input.mimeType || "application/octet-stream",
+      });
+    } else {
+      const abs = join(uploadsRoot(), storageKey);
+      await mkdir(join(uploadsRoot(), day), { recursive: true });
+      await writeFile(abs, input.bytes, { flag: "wx" });
+    }
+  } catch (err) {
+    // The one place every upload funnels through — catch it here so every
+    // caller gets a clean, honest failure instead of a raw filesystem/SDK
+    // error (which can contain internal paths, e.g. a read-only serverless
+    // filesystem: STORAGE_BACKEND=local doesn't work on Vercel, only on a
+    // host with a real persistent disk — see docs/ENVIRONMENT.md).
+    logger.error("upload storage write failed", {
+      backend: env.STORAGE_BACKEND,
+      error: (err as Error).message,
     });
-  } else {
-    const abs = join(uploadsRoot(), storageKey);
-    await mkdir(join(uploadsRoot(), day), { recursive: true });
-    await writeFile(abs, input.bytes, { flag: "wx" });
+    throw AppError.upstream("Opslaan van het bestand is mislukt. Probeer het later opnieuw.");
   }
 
   const row = await prisma.upload.create({
@@ -121,6 +134,36 @@ export async function readUpload(
     filename: row.filename,
     mimeType: row.mimeType,
   };
+}
+
+/**
+ * Permanently remove an upload — its bytes (disk or S3) and its `Upload` row.
+ * Best effort on the bytes: a missing object is not an error (idempotent, and
+ * an erasure sweep must not stall on a file that is already gone). Safe to call
+ * with an id that no longer exists.
+ */
+export async function deleteUpload(id: string): Promise<void> {
+  const row = await prisma.upload.findUnique({ where: { id } });
+  if (!row) return;
+
+  try {
+    if (env.STORAGE_BACKEND === "s3") {
+      await deleteObject(row.storageKey);
+    } else {
+      const abs = normalize(join(uploadsRoot(), row.storageKey));
+      const rel = relative(uploadsRoot(), abs);
+      if (!rel.startsWith("..") && !rel.startsWith(sep) && !isAbsolute(rel)) {
+        await rm(abs, { force: true });
+      }
+    }
+  } catch (err) {
+    logger.warn("upload bytes could not be deleted", {
+      id,
+      error: (err as Error).message,
+    });
+  }
+
+  await prisma.upload.delete({ where: { id } }).catch(() => undefined);
 }
 
 export async function ensureStorageWritable(): Promise<{

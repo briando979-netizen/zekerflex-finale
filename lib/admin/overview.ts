@@ -53,6 +53,12 @@ export interface AdminOverview {
     usersTotal: number;
     newUsersToday: number;
   };
+  /** Marketing instroom, laatste 7 dagen. */
+  inbound: {
+    demoRequests: number;
+    jobApplications: number;
+    whitepaperDownloads: number;
+  };
   agents: { agent: string; lastTitle: string; at: string }[];
   recentFindings: {
     severity: string;
@@ -137,6 +143,22 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
     safe(() => prisma.user.count({ where: { createdAt: { gte: dayStart } } }), 0),
   ]);
 
+  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const inboundRows = await safe(
+    () =>
+      prisma.analyticsEvent.groupBy({
+        by: ["label"],
+        where: {
+          type: "CUSTOM",
+          createdAt: { gte: weekStart },
+          label: { in: ["demo-request", "open-application", "whitepaper-download"] },
+        },
+        _count: { _all: true },
+      }),
+    [] as { label: string | null; _count: { _all: number } }[],
+  );
+  const inboundBy = (l: string) => inboundRows.find((r) => r.label === l)?._count._all ?? 0;
+
   const seen = new Set<string>();
   const agents = agentEvents
     .filter((e) => (seen.has(e.agent) ? false : (seen.add(e.agent), true)))
@@ -177,6 +199,11 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
       usersTotal,
       newUsersToday,
     },
+    inbound: {
+      demoRequests: inboundBy("demo-request"),
+      jobApplications: inboundBy("open-application"),
+      whitepaperDownloads: inboundBy("whitepaper-download"),
+    },
     agents,
     recentFindings: findings.map((f) => ({
       severity: f.severity,
@@ -203,6 +230,8 @@ export async function jarvisStateLine(): Promise<string> {
     `open bevindingen=${o.queues.openFindings}, ` +
     `actieve bezoekers=${o.traffic.activeVisitors}, ` +
     `bezoekers vandaag=${o.traffic.visitorsToday}, ` +
+    `demo-aanvragen 7d=${o.inbound.demoRequests}, ` +
+    `open sollicitaties 7d=${o.inbound.jobApplications}, ` +
     `geheugen-fragmenten=${o.ragChunks}, ` +
     `AI-tokens vandaag=${o.ai.tokensToday}/${o.ai.tokenBudget}.`
   );

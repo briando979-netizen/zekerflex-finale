@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
+import { recordCronRun } from "@/lib/metrics";
 import { checkLlm } from "@/lib/ai/watchdog";
 
 export const runtime = "nodejs";
@@ -20,8 +21,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const state = await checkLlm();
+    recordCronRun("ai-watchdog", true);
     return NextResponse.json({ ok: true, ...state });
   } catch (err) {
+    recordCronRun("ai-watchdog", false);
     logger.warn("ai watchdog tick failed", { error: (err as Error).message });
     return NextResponse.json({ ok: false }, { status: 200 });
   }

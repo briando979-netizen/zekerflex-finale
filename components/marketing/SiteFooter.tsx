@@ -83,7 +83,7 @@ export function SiteFooter() {
 
         {COLUMNS.map((col) => (
           <div key={col.title}>
-            <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/40">
+            <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">
               {col.title}
             </h3>
             <ul className="mt-4 space-y-2.5">
@@ -103,7 +103,7 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="shell flex flex-col items-start justify-between gap-3 py-6 text-xs text-white/45 sm:flex-row sm:items-center">
+        <div className="shell flex flex-col items-start justify-between gap-3 py-6 text-xs text-white/65 sm:flex-row sm:items-center">
           <p>© {year} ZekerFlex B.V. · Amsterdam</p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
             <Link href="/voorwaarden" className="hover:text-white">

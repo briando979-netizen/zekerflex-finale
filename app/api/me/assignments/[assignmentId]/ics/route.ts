@@ -23,10 +23,8 @@ function escapeText(s: string): string {
 // GET /api/me/assignments/<assignmentId>/ics — the shift as a calendar file.
 // Served inline so phones/laptops hand it straight to the calendar app; add
 // ?dl=1 to force a download instead.
-export async function GET(
-  req: Request,
-  { params }: { params: { assignmentId: string } },
-): Promise<Response> {
+export async function GET(req: Request, props: { params: Promise<{ assignmentId: string }> }): Promise<Response> {
+  const params = await props.params;
   const principal = await requirePrincipal();
   const forceDownload = new URL(req.url).searchParams.get("dl") === "1";
   const profile = await prisma.freelancerProfile.findUnique({

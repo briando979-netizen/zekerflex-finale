@@ -14,7 +14,7 @@ const TONE: Record<string, string> = {
   CANCELLED: "#B91C1C",
 };
 
-export function EmployerShiftCard({
+export async function EmployerShiftCard({
   shift,
   href = "/werkgever/diensten",
 }: {
@@ -31,7 +31,7 @@ export function EmployerShiftCard({
   };
   href?: string;
 }) {
-  const t = getDict().shiftStatus;
+  const t = (await getDict()).shiftStatus;
   const cat = shiftCategory(shift.title, shift.skill ?? null);
   const pct = shift.positions > 0 ? Math.round((shift.filled / shift.positions) * 100) : 0;
   const st = {

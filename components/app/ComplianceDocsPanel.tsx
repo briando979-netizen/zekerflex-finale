@@ -130,7 +130,11 @@ export function ComplianceDocsPanel() {
         <DocSlot
           kind="id"
           label="Identiteitsbewijs"
-          hint="Paspoort of ID-kaart (geen rijbewijs). Voor- en achterkant of de fotopagina."
+          hint={
+            idDoc
+              ? "Automatisch ingevuld vanuit je identiteitsverificatie hierboven."
+              : "Vul eerst de verificatie hierboven in — die vult dit automatisch. Los uploaden kan ook."
+          }
           doc={idDoc}
           onUploaded={load}
         />

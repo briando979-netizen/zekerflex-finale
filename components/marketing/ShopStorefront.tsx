@@ -247,7 +247,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
           >
             <label className="block text-xs font-semibold text-white/60">
               Je e-mailadres
-              <input type="email" required className="mt-1.5 w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40" placeholder="naam@voorbeeld.nl" />
+              <input type="email" required className="mt-1.5 w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/60" placeholder="naam@voorbeeld.nl" />
             </label>
             <fieldset className="flex flex-wrap gap-5 text-sm">
               <span className="font-semibold text-white/70">Interesse:</span>
@@ -255,7 +255,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
               <label className="flex items-center gap-2"><input type="radio" name="pref" className="accent-brand-mint" /> Zakelijk bestellen</label>
             </fieldset>
             <button type="submit" className="w-full rounded-lg bg-brand-mint py-3 text-sm font-bold text-ink transition hover:brightness-95">Mijn inschrijving bevestigen</button>
-            <p className="text-[11px] text-white/40">Bekijk ons privacybeleid voor meer informatie. Je kunt je op elk moment kosteloos uitschrijven.</p>
+            <p className="text-[11px] text-white/60">Bekijk ons privacybeleid voor meer informatie. Je kunt je op elk moment kosteloos uitschrijven.</p>
           </form>
         </div>
       </section>

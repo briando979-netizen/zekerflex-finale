@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ComplianceDocKind, ComplianceDocStatus } from "@prisma/client";
 import { storeUpload, readUpload } from "@/lib/storage/local";
 import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
+import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // Verplichte verificatiedocumenten per account: identiteitsbewijs +
@@ -84,8 +85,8 @@ export async function storeDoc(
   kind: DocKind,
   input: { filename: string; mimeType: string; bytes: Buffer },
 ): Promise<ComplianceDoc> {
-  if (input.bytes.length === 0) throw new Error("Leeg bestand");
-  if (input.bytes.length > MAX_BYTES) throw new Error("Bestand te groot (max 12 MB)");
+  if (input.bytes.length === 0) throw AppError.validation("Leeg bestand");
+  if (input.bytes.length > MAX_BYTES) throw AppError.validation("Bestand te groot (max 12 MB)");
   // Sniffed from the actual bytes, never the client-supplied Content-Type —
   // an ID/bank document upload is exactly the kind of endpoint MIME spoofing
   // targets (e.g. claiming image/jpeg on an HTML file with a script tag).

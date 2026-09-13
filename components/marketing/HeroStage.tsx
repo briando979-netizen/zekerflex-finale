@@ -63,7 +63,7 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
               Naar de shop
             </Link>
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/45">
+          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65">
             {["Bepaal je eigen uurtarief", "Kies je eigen klussen", "Bouw aan jouw toekomst"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
@@ -80,7 +80,7 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
             ref={glassRef}
             className="glass absolute -bottom-6 -left-4 w-[min(20rem,80%)] rounded-2xl p-4 will-change-transform sm:-left-10"
           >
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-white/45">
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-white/65">
               <span>Nieuwe dienst</span>
               <span className="pill bg-[rgba(79,224,160,0.16)] text-brand-mint">Gematcht in 6 min</span>
             </div>
@@ -99,7 +99,7 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
                 >
                   <span>
                     <span className="font-medium">{c.n}</span>
-                    <span className="ml-1 text-white/45">{c.m}</span>
+                    <span className="ml-1 text-white/65">{c.m}</span>
                   </span>
                   <span className="num font-mono text-white/70">{c.s}</span>
                 </div>
@@ -114,7 +114,7 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
         className="absolute inset-x-0 bottom-6 flex justify-center"
         aria-hidden
       >
-        <span className="flex flex-col items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/35">
+        <span className="flex flex-col items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/60">
           Scroll
           <span className="h-9 w-5 rounded-full border border-white/25">
             <span className="mx-auto mt-1.5 block h-2 w-1 animate-bounce rounded-full bg-white/50" />

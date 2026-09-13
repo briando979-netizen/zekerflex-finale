@@ -20,7 +20,8 @@ function addMinutes(date: string, time: string, mins: number): string {
 }
 
 // GET /api/demo/<id>/ics — the demo as a calendar file.
-export async function GET(_req: Request, { params }: { params: { id: string } }): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+  const params = await props.params;
   const rec = await getDemoRequest(params.id);
   if (!rec) return new Response("Not found", { status: 404 });
 

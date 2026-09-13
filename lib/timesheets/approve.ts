@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
 import { recordAudit } from "@/lib/audit";
+import { recordPayout, recordTimesheetApproved } from "@/lib/metrics";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
 import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
@@ -269,7 +270,10 @@ export async function approveTimesheet(
         tx,
         billing.freelancerInvoice,
       );
-      await persistInvoice(tx, billing.platformFeeInvoice);
+      const platformFeeInvoice = await persistInvoice(
+        tx,
+        billing.platformFeeInvoice,
+      );
 
       const payment = await tx.payment.create({
         data: {
@@ -277,7 +281,7 @@ export async function approveTimesheet(
           method: "SEPA_INSTANT",
           status: PaymentStatus.PENDING,
           amountCents: billing.freelancerPayoutCents,
-          debtorIban: env.SEPA_CREDITOR_IBAN ?? "UNKNOWN",
+          debtorIban: env.SEPA_CREDITOR_IBAN ?? null,
           creditorIban: iban,
           endToEndId: payoutEndToEndId(freelancerInvoice.id),
         },
@@ -286,6 +290,7 @@ export async function approveTimesheet(
       return {
         timesheet: updated,
         freelancerInvoice,
+        platformFeeInvoice,
         payment,
         billing,
       };
@@ -382,6 +387,9 @@ export async function approveTimesheet(
       log.warn("DBA evaluation failed", { error: (err as Error).message });
     }
 
+    recordTimesheetApproved("invoice");
+    recordPayout(String(payoutStatus));
+
     return {
       timesheetId: ts.id,
       status:
@@ -401,7 +409,7 @@ export async function approveTimesheet(
           vatCents: persisted.billing.freelancerInvoice.vatCents,
         },
         {
-          id: "-",
+          id: persisted.platformFeeInvoice.id,
           number: persisted.billing.platformFeeInvoice.number,
           type: "PLATFORM_FEE",
           totalCents: persisted.billing.platformFeeInvoice.totalCents,
@@ -534,6 +542,8 @@ async function approveViaPayroll(args: {
       resolvedDisputeId: ts.dispute?.id ?? null,
     },
   });
+
+  recordTimesheetApproved("payroll");
 
   return {
     timesheetId: ts.id,

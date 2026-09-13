@@ -1,6 +1,11 @@
 import type { AuditCategory, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { computeAuditHash, GENESIS_HASH } from "@/lib/audit-chain";
+
+// Fixed advisory-lock key so audit writes serialise (the hash chain needs a
+// deterministic predecessor). "ZFAUD" as an int32.
+const AUDIT_LOCK_KEY = 0x5a464155;
 
 // ---------------------------------------------------------------------------
 // Audit trail writer.
@@ -32,22 +37,61 @@ export interface AuditInput {
 }
 
 export async function recordAudit(input: AuditInput): Promise<void> {
+  const createdAt = new Date();
+  const severity = input.severity ?? "info";
+  const actorUserId = input.actorUserId ?? null;
+  const actorLabel = input.actorLabel ?? (actorUserId ? "user" : "system");
+  const targetType = input.targetType ?? null;
+  const targetId = input.targetId ?? null;
+
   try {
-    await prisma.auditLog.create({
-      data: {
+    await prisma.$transaction(async (tx) => {
+      // Serialise audit writes so the chain has a deterministic predecessor.
+      // $executeRaw (not $queryRaw): pg_advisory_xact_lock returns void.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${AUDIT_LOCK_KEY})`;
+
+      const row = await tx.auditLog.create({
+        data: {
+          category: input.category,
+          action: input.action,
+          summary: input.summary,
+          severity,
+          actorUserId,
+          actorLabel,
+          ipAddress: input.ipAddress ?? null,
+          userAgent: input.userAgent ?? null,
+          targetType,
+          targetId,
+          metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+          createdAt,
+        },
+        select: { id: true, seq: true },
+      });
+
+      const prev = await tx.auditLog.findFirst({
+        where: { seq: { lt: row.seq }, hash: { not: null } },
+        orderBy: { seq: "desc" },
+        select: { hash: true },
+      });
+      const prevHash = prev?.hash ?? GENESIS_HASH;
+
+      const hash = computeAuditHash({
+        seq: row.seq,
+        prevHash,
         category: input.category,
         action: input.action,
-        summary: input.summary,
-        severity: input.severity ?? "info",
-        actorUserId: input.actorUserId ?? null,
-        actorLabel:
-          input.actorLabel ?? (input.actorUserId ? "user" : "system"),
-        ipAddress: input.ipAddress ?? null,
-        userAgent: input.userAgent ?? null,
-        targetType: input.targetType ?? null,
-        targetId: input.targetId ?? null,
-        metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
-      },
+        severity,
+        actorUserId,
+        actorLabel,
+        targetType,
+        targetId,
+        createdAt,
+      });
+
+      await tx.auditLog.update({
+        where: { id: row.id },
+        data: { hash, prevHash },
+      });
     });
   } catch (err) {
     logger.error("audit write failed", {

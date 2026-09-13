@@ -28,10 +28,8 @@ const bodySchema = z.object({
  * (draft) timesheet. Each event is geofenced against the branch and stored;
  * CHECK_IN sets `actualStart`, CHECK_OUT sets `actualEnd` + billable minutes.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: { timesheetId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ timesheetId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const log = logger.child({ route: "POST /api/timesheets/[timesheetId]/gps" });
   try {
     const principal = await requirePrincipal();

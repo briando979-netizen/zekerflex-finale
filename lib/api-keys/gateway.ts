@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { fixedWindow } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { verifyApiKey, type ApiScope, type VerifiedApiKey } from "@/lib/integrations/api-keys";
 import { AppError } from "@/lib/errors";
 
@@ -18,8 +18,13 @@ export async function requireApiKey(request: Request, scope: ApiScope): Promise<
     throw AppError.forbidden(`Deze sleutel heeft geen '${scope}'-scope`);
   }
 
-  const gate = await fixedWindow(`api:rate:${key.id}`, 120, 60);
-  if (!gate.ok) throw AppError.upstream("API rate limit bereikt; probeer later opnieuw");
+  await enforceRateLimit({
+    name: "api-key",
+    identifier: key.id,
+    limit: 120,
+    windowSeconds: 60,
+    message: "API rate limit bereikt; probeer later opnieuw",
+  });
   return key;
 }
 

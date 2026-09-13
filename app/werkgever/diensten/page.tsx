@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const OPEN = ["OPEN", "MATCHING", "PARTIALLY_FILLED"];
 
 export default async function WerkgeverDienstenPage() {
-  const sh = getDict().shifts;
+  const sh = (await getDict()).shifts;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const branchFilter = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };

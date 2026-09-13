@@ -195,8 +195,8 @@ export function RegisterForm({
 
         {type === "freelancer" && (
           <div>
-            <span className="field-label">Je werkvorm</span>
-            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+            <span className="field-label" id="werkvorm-label">Je werkvorm</span>
+            <div className="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-labelledby="werkvorm-label">
               {WORKER_KINDS.map((w) => (
                 <button
                   key={w.k}
@@ -219,6 +219,7 @@ export function RegisterForm({
             <span className="field-label">Organisatie {kvkConfigured && <span className="text-neutralx-400">(zoek in het Handelsregister)</span>}</span>
             <input
               name="companyName"
+              aria-label="Organisatie"
               required
               autoComplete="organization"
               value={company}
@@ -299,6 +300,7 @@ export function RegisterForm({
             <input
               type={showPw ? "text" : "password"}
               name="password"
+              aria-label="Wachtwoord"
               required
               minLength={8}
               autoComplete="new-password"

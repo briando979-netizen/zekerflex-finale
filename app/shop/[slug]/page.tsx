@@ -15,7 +15,8 @@ function toDto(p: {
   };
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const p = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
   if (!p) return { title: "Product niet gevonden — ZekerFlex Shop" };
   return {
@@ -25,7 +26,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
+export default async function ProductPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const product = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
   if (!product || !product.active) notFound();
 

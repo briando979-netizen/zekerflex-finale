@@ -41,10 +41,8 @@ async function guard(threadId: string, userId: string) {
 }
 
 // POST — publish a signaling frame.
-export async function POST(
-  request: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const thread = await guard(params.threadId, p.userId);
@@ -97,10 +95,8 @@ export async function POST(
 }
 
 // GET ?callId=&since= — poll for signaling frames from the other party.
-export async function GET(
-  request: Request,
-  { params }: { params: { threadId: string } },
-): Promise<NextResponse> {
+export async function GET(request: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     await guard(params.threadId, p.userId);

@@ -2,27 +2,60 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WHITEPAPERS, whitepaperBySlug } from "@/lib/kennis/whitepapers";
+import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 
 export function generateStaticParams() {
   return WHITEPAPERS.map((w) => ({ slug: w.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const w = whitepaperBySlug(params.slug);
   if (!w) return { title: "Whitepaper" };
-  return { title: `${w.title} — whitepaper`, description: w.intro };
+  return {
+    title: `${w.title} — whitepaper`,
+    description: w.intro,
+    ...canonical(`/kennis/whitepapers/${w.slug}`),
+  };
 }
 
 function nlDate(iso: string): string {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function WhitepaperReaderPage({ params }: { params: { slug: string } }) {
+export default async function WhitepaperReaderPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const wp = whitepaperBySlug(params.slug);
   if (!wp) notFound();
 
+  const wpLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: wp.title,
+    description: wp.intro,
+    dateModified: wp.updated,
+    inLanguage: "nl-NL",
+    articleSection: wp.category,
+    author: { "@type": "Organization", name: SITE.name },
+    publisher: { "@id": `${SITE.url}/#organization` },
+    mainEntityOfPage: `${SITE.url}/kennis/whitepapers/${wp.slug}`,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            wpLd,
+            breadcrumbJsonLd([
+              ["Whitepapers", "/kennis/whitepapers"],
+              [wp.title, `/kennis/whitepapers/${wp.slug}`],
+            ]),
+          ]),
+        }}
+      />
       <div className="hero-ink text-white">
         <div className="shell py-16 md:py-20">
           <Link href="/kennis/whitepapers" className="text-sm font-medium text-white/60 hover:text-white">
@@ -37,7 +70,7 @@ export default function WhitepaperReaderPage({ params }: { params: { slug: strin
             <a href={`/api/kennis/whitepaper/${wp.slug}`} className="btn-mint">
               Download als PDF
             </a>
-            <span className="font-mono text-xs uppercase tracking-wide text-white/40">
+            <span className="font-mono text-xs uppercase tracking-wide text-white/60">
               {wp.readMinutes} min lezen · bijgewerkt {nlDate(wp.updated)}
             </span>
           </div>

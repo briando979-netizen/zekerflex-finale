@@ -23,7 +23,7 @@ import { fmt } from "@/lib/i18n/dictionaries";
 export const dynamic = "force-dynamic";
 
 export default async function WerkgeverStartPage() {
-  const t = getDict();
+  const t = await getDict();
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];

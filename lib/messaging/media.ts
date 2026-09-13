@@ -1,5 +1,6 @@
 import { storeUpload, readUpload } from "@/lib/storage/local";
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // Chat attachments — voice notes, photos, documents. Bytes go through the
@@ -37,10 +38,10 @@ export async function storeChatMedia(
   _threadId: string,
   input: { filename: string; mimeType: string; bytes: Buffer; durationSec?: number },
 ): Promise<StoredChatMedia & { durationSec?: number }> {
-  if (input.bytes.length === 0) throw new Error("leeg bestand");
-  if (input.bytes.length > MAX_BYTES) throw new Error(`bestand te groot (max ${MAX_BYTES / 1024 / 1024} MB)`);
+  if (input.bytes.length === 0) throw AppError.validation("leeg bestand");
+  if (input.bytes.length > MAX_BYTES) throw AppError.validation(`bestand te groot (max ${MAX_BYTES / 1024 / 1024} MB)`);
   const mime = input.mimeType || "application/octet-stream";
-  if (!isAllowedChatMime(mime)) throw new Error("bestandstype niet toegestaan");
+  if (!isAllowedChatMime(mime)) throw AppError.validation("bestandstype niet toegestaan");
 
   const stored = await storeUpload({ filename: input.filename, mimeType: mime, bytes: input.bytes });
   if (input.durationSec) {

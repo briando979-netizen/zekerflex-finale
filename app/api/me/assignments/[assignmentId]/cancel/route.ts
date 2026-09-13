@@ -15,10 +15,8 @@ export const dynamic = "force-dynamic";
 // POST /api/me/assignments/<assignmentId>/cancel { reason }
 // The freelancer cancels a shift they took, without a replacement. The seat is
 // freed and the shift returns to the marketplace. Counts toward reliability.
-export async function POST(
-  request: Request,
-  { params }: { params: { assignmentId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ assignmentId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const principal = await requirePrincipal();
     const { reason } = z

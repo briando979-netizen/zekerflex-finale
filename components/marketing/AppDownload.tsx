@@ -59,7 +59,7 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
               <AppleBadge />
               <PlayBadge />
             </div>
-            <p className="mt-4 text-xs text-white/45">
+            <p className="mt-4 text-xs text-white/65">
               Ook zonder app werkt alles gewoon in je browser via{" "}
               <a href="/login" className="underline hover:text-white/80">
                 inloggen
@@ -77,7 +77,7 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
                 <p className="mt-4 px-6 font-display text-sm font-semibold text-white/80">
                   Gematcht in 6 min
                 </p>
-                <p className="mt-1 px-6 text-xs text-white/40">Vakkenvuller · Amsterdam-West</p>
+                <p className="mt-1 px-6 text-xs text-white/60">Vakkenvuller · Amsterdam-West</p>
               </div>
             </div>
           </div>

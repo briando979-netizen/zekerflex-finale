@@ -67,7 +67,6 @@ async function reset(): Promise<void> {
   await prisma.shiftAssignment.deleteMany();
   await prisma.shift.deleteMany();
   await prisma.freelancerSkill.deleteMany();
-  await prisma.pushToken.deleteMany();
   await prisma.webPushSubscription.deleteMany();
   await prisma.diditWebhookEvent.deleteMany();
   await prisma.auditLog.deleteMany();
@@ -606,12 +605,6 @@ async function main(): Promise<void> {
             rating: sk.rating,
             shiftsWorked: sk.shifts,
           })),
-        },
-        pushTokens: {
-          create: {
-            token: `fcm-token-${s.id}`,
-            platform: s.id.endsWith("gold") ? "ios" : "android",
-          },
         },
       },
     });

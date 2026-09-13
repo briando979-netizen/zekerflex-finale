@@ -16,10 +16,8 @@ const bodySchema = z.object({ decision: z.enum(["ACCEPTED", "DECLINED"]) });
  * POST /api/shifts/:shiftId/offer
  * A freelancer accepts or declines a live shift offer they were notified about.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: { shiftId: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ shiftId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const log = logger.child({ route: "POST /api/shifts/[shiftId]/offer" });
   try {
     const principal = await requirePrincipal();

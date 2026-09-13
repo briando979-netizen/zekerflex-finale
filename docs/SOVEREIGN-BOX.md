@@ -38,7 +38,7 @@ lib/
                   advisory.ts · index.ts
   voice/      announce.ts · tts.ts · briefing.ts
   analytics/  track.ts · report.ts
-  notifications/  dispatcher.ts · timing.ts · push/{encrypt,vapid,web-push,fcm,index}
+  notifications/  dispatcher.ts · timing.ts · push/{encrypt,vapid,web-push,index}
   config/     load-env.ts · startup.ts
   storage/    local.ts
   auth/       session.ts · rbac.ts · nextauth.ts · login-throttle.ts

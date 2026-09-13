@@ -22,6 +22,25 @@ const fieldsSchema = z.object({
 
 const MAX_BYTES = 12_000_000;
 
+async function readImage(
+  form: FormData,
+  field: string,
+  label: string,
+): Promise<{ filename: string; mimeType: string; bytes: Buffer }> {
+  const file = form.get(field);
+  if (!(file instanceof File) || file.size === 0) {
+    throw AppError.validation(`Upload ${label}`);
+  }
+  if (file.size > MAX_BYTES) {
+    throw AppError.validation(`${label} is te groot (max 12 MB)`);
+  }
+  return {
+    filename: file.name || field,
+    mimeType: file.type || "application/octet-stream",
+    bytes: Buffer.from(await file.arrayBuffer()),
+  };
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
   const log = logger.child({ route: "POST /api/onboarding" });
   try {
@@ -49,15 +68,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    const file = form.get("document");
-    if (!(file instanceof File) || file.size === 0) {
-      throw AppError.validation("Upload een foto of scan van je identiteitsbewijs");
-    }
-    if (file.size > MAX_BYTES) {
-      throw AppError.validation("Het bestand is te groot (max 12 MB)");
-    }
-
-    const bytes = Buffer.from(await file.arrayBuffer());
+    // Three separate captures in one submission — front, back, selfie — so
+    // the freelancer never has to come back for a second, duplicate upload
+    // (submitFreelancerOnboarding also satisfies the compliance "id" slot
+    // from the front image, see lib/onboarding/verify.ts).
+    const [documentFront, documentBack, selfie] = await Promise.all([
+      readImage(form, "documentFront", "de voorkant van je document"),
+      readImage(form, "documentBack", "de achterkant van je document"),
+      readImage(form, "selfie", "een selfie"),
+    ]);
 
     const result = await submitFreelancerOnboarding({
       userId: principal.userId,
@@ -69,11 +88,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       documentNumber: parsed.data.documentNumber,
       documentExpiry: parsed.data.documentExpiry,
       nameOnDocument: parsed.data.nameOnDocument,
-      file: {
-        filename: file.name || "document",
-        mimeType: file.type || "application/octet-stream",
-        bytes,
-      },
+      files: { front: documentFront, back: documentBack, selfie },
     });
 
     return NextResponse.json(result, { status: 200 });

@@ -67,6 +67,6 @@ volledige rapport.
 `AuditLog`, `EngagementEvent`, `SalesLead`/`SalesOutreach`,
 `OrchestrationRun`/`OrchestrationFinding`, `VoiceAnnouncement`, `RagChunk`,
 `AiUsageLog`, `Upload`, `JarvisTurn`/`JarvisEvent`, `AnalyticsEvent`,
-`WebPushSubscription`, `PushToken`, `DeviceFingerprint`.
+`WebPushSubscription`, `DeviceFingerprint`.
 
 Geld overal in `Int` centen. `Json`-velden met een default.

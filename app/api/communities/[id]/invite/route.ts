@@ -15,10 +15,8 @@ const inviteSchema = z.union([
 ]);
 
 // POST /api/communities/:id/invite — invite a freelancer / anyone to the community.
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const c = await getCommunity(params.id);
@@ -57,10 +55,8 @@ export async function POST(
 const acceptSchema = z.object({ token: z.string().min(6) });
 
 // PUT /api/communities/:id/invite — accept an invite (token in body).
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } },
-): Promise<NextResponse> {
+export async function PUT(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   try {
     const p = await requirePrincipal();
     const { token } = acceptSchema.parse(await request.json().catch(() => {

@@ -25,7 +25,8 @@ const { mockRedis, store, expireCalls, mode } = vi.hoisted(() => {
 
 vi.mock("@/lib/redis", () => ({ redis: mockRedis }));
 
-import { fixedWindow } from "@/lib/rate-limit";
+import { fixedWindow, enforceRateLimit } from "@/lib/rate-limit";
+import { AppError, toErrorBody } from "@/lib/errors";
 
 afterEach(() => {
   store.clear();
@@ -64,5 +65,39 @@ describe("fixedWindow", () => {
     mode.fail = true;
     const res = await fixedWindow("k", 1, 60, { failOpen: false });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe("enforceRateLimit", () => {
+  const spec = { name: "signup", identifier: "1.2.3.4", limit: 2, windowSeconds: 60 };
+
+  it("returns the gate while under the limit", async () => {
+    const r1 = await enforceRateLimit(spec);
+    expect(r1.ok).toBe(true);
+    await enforceRateLimit(spec);
+  });
+
+  it("throws AppError.rateLimited (429 + Retry-After) once exhausted", async () => {
+    await enforceRateLimit(spec);
+    await enforceRateLimit(spec);
+    await expect(enforceRateLimit(spec)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      status: 429,
+    });
+
+    try {
+      await enforceRateLimit(spec);
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(AppError);
+      const { status, headers } = toErrorBody(err);
+      expect(status).toBe(429);
+      expect(headers?.["Retry-After"]).toBe("60");
+    }
+  });
+
+  it("namespaces the redis key as rl:<name>:<identifier>", async () => {
+    await enforceRateLimit(spec).catch(() => undefined);
+    expect([...store.keys()]).toContain("rl:signup:1.2.3.4");
   });
 });

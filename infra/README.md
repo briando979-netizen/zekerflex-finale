@@ -67,7 +67,7 @@ Store under `/zekerflex/production/` (referenced in the user-data script), then
 
 | Record | Purpose |
 |---|---|
-| `app.zekerflex.com A` | the box's Elastic IP |
+| `zekerflex.nl A` | the box's Elastic IP |
 | `zekerflex.com A` | apex → same IP |
 | `mail.zekerflex.com A` | Postfix relay host |
 | `zekerflex.com MX` | `10 mail.zekerflex.com` |

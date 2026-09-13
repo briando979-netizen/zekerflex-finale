@@ -10,7 +10,7 @@ import { fmt } from "@/lib/i18n/dictionaries";
 export const dynamic = "force-dynamic";
 
 export default async function UrenGoedkeurenPage() {
-  const h = getDict().hours;
+  const h = (await getDict()).hours;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const branchFilter = scope.branchIds

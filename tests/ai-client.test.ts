@@ -10,8 +10,8 @@ vi.mock("@/lib/ai/governor", () => ({
 import { chat, extractJson } from "@/lib/ai/client";
 
 function mockFetch(impl: (url: string, init: RequestInit) => Response | Promise<Response>) {
-  const fn = vi.fn(impl as never);
-  vi.stubGlobal("fetch", fn);
+  const fn = vi.fn(impl);
+  vi.stubGlobal("fetch", fn as unknown as typeof fetch);
   return fn;
 }
 

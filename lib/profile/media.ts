@@ -1,4 +1,5 @@
 import { storeUpload, readUpload } from "@/lib/storage/local";
+import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // Profile & organisation images (avatars, company photos). Bytes go through
@@ -15,10 +16,10 @@ export async function storeProfileImage(input: {
   bytes: Buffer;
 }): Promise<{ id: string; mimeType: string }> {
   if (!/^image\/(jpe?g|png|webp|gif|avif)$/i.test(input.mimeType)) {
-    throw new Error("Alleen JPG, PNG, WebP, GIF of AVIF");
+    throw AppError.validation("Alleen JPG, PNG, WebP, GIF of AVIF");
   }
-  if (input.bytes.length === 0) throw new Error("Leeg bestand");
-  if (input.bytes.length > MAX_BYTES) throw new Error("Afbeelding te groot (max 8 MB)");
+  if (input.bytes.length === 0) throw AppError.validation("Leeg bestand");
+  if (input.bytes.length > MAX_BYTES) throw AppError.validation("Afbeelding te groot (max 8 MB)");
   const stored = await storeUpload({ filename: input.filename, mimeType: input.mimeType, bytes: input.bytes });
   return { id: stored.id, mimeType: stored.mimeType };
 }

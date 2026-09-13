@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function WerkgeverBerichtenPage() {
   await requirePrincipal();
-  const m = getDict().messages;
+  const m = (await getDict()).messages;
   return (
     <>
       <PageHeader title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />

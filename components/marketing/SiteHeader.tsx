@@ -349,7 +349,7 @@ export function SiteHeader() {
             href="/voor-freelancers"
             onClick={() => pick("werknemers")}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-              audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/45 hover:text-white/80"
+              audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
             Werknemers
@@ -358,7 +358,7 @@ export function SiteHeader() {
             href="/voor-bedrijven"
             onClick={() => pick("bedrijven")}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-              audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/45 hover:text-white/80"
+              audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
             Bedrijven

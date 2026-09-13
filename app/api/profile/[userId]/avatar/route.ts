@@ -8,10 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/profile/:userId/avatar — a user's photo (visible to any signed-in user).
-export async function GET(
-  _req: Request,
-  { params }: { params: { userId: string } },
-): Promise<Response> {
+export async function GET(_req: Request, props: { params: Promise<{ userId: string }> }): Promise<Response> {
+  const params = await props.params;
   try {
     await requirePrincipal();
     const extra = await getUserProfileExtra(params.userId);

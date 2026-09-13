@@ -13,11 +13,12 @@ function safePath(raw: string | undefined): string {
   return "/start";
 }
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: { callbackUrl?: string; error?: string; reset?: string };
-}) {
+export default async function LoginPage(
+  props: {
+    searchParams: Promise<{ callbackUrl?: string; error?: string; reset?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
   return (
