@@ -3,6 +3,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/components/app/ui";
 import { UserActions } from "@/components/admin/UserActions";
+import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,16 @@ const ROLE_LABEL: Record<string, string> = {
   HQ_ADMIN: "Bedrijfsbeheerder",
   DISPUTE_MANAGER: "Dispuutmanager",
   PLATFORM_ADMIN: "Platformbeheerder",
+};
+
+// "AI_LOCAL" describes which check attempted the review, not that it
+// succeeded — on a deployment with no reachable LLM it always degrades to
+// "in_review" (see lib/onboarding/verify.ts), so label it by what a human
+// reviewer actually needs to know: how the identity was submitted.
+const CHECK_PROVIDER_LABEL: Record<string, string> = {
+  AI_LOCAL: "Zelf-verificatie (foto's)",
+  DIGITAL_WALLET: "Digitale ID-wallet",
+  DIDIT: "Didit (extern)",
 };
 
 const DOC_KIND_LABEL: Record<DocKind, string> = {
@@ -207,11 +218,14 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
             ) : (
               <ul className="divide-y divide-hair text-sm">
                 {user.identityChecks.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between px-5 py-2.5">
-                    <span className="text-ink-soft">{c.provider}</span>
-                    <StatusPill tone={c.status === "VERIFIED" ? "ok" : c.status === "REJECTED" ? "crit" : "warn"}>
-                      {c.status}
-                    </StatusPill>
+                  <li key={c.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                    <span className="text-ink-soft">{CHECK_PROVIDER_LABEL[c.provider] ?? c.provider}</span>
+                    <div className="flex items-center gap-3">
+                      <StatusPill tone={c.status === "VERIFIED" ? "ok" : c.status === "REJECTED" ? "crit" : "warn"}>
+                        {c.status}
+                      </StatusPill>
+                      {c.status === "PENDING" && <IdentityCheckActions userId={user.id} checkId={c.id} />}
+                    </div>
                   </li>
                 ))}
               </ul>
