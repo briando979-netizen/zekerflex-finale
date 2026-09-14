@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/components/app/ui";
 import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
+import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
 export const dynamic = "force-dynamic";
@@ -237,28 +238,47 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               <EmptyState title="Nog niets geüpload" body="Deze gebruiker heeft nog geen document geüpload." />
             ) : (
               <ul className="divide-y divide-hair text-sm">
-                {docs.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink">{DOC_KIND_LABEL[d.kind]}</p>
-                      <p className="truncate text-[11px] text-neutralx-400">
-                        {dateTime(new Date(d.uploadedAt))} · {fileSize(d.sizeBytes)}
-                        {d.note ? ` · ${d.note}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-shrink-0 items-center gap-3">
-                      <StatusPill tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</StatusPill>
-                      <a
-                        href={`/api/admin/gebruikers/${user.id}/documents/${d.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-medium text-brand-600 hover:underline"
-                      >
-                        Bekijken →
+                {docs.map((d) => {
+                  const fileUrl = `/api/admin/gebruikers/${user.id}/documents/${d.id}`;
+                  const isImage = d.mimeType.startsWith("image/");
+                  return (
+                    <li key={d.id} className="flex items-center gap-3 px-5 py-3">
+                      <a href={fileUrl} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                        {isImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={fileUrl}
+                            alt={`${DOC_KIND_LABEL[d.kind]} van ${user.fullName}`}
+                            className="h-16 w-16 rounded-lg border border-hair object-cover"
+                          />
+                        ) : (
+                          <span className="grid h-16 w-16 place-items-center rounded-lg border border-hair bg-paper-soft text-[10px] uppercase text-neutralx-400">
+                            {d.mimeType.split("/")[1] ?? "bestand"}
+                          </span>
+                        )}
                       </a>
-                    </div>
-                  </li>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-ink">{DOC_KIND_LABEL[d.kind]}</p>
+                        <p className="truncate text-[11px] text-neutralx-400">
+                          {dateTime(new Date(d.uploadedAt))} · {fileSize(d.sizeBytes)}
+                          {d.note ? ` · ${d.note}` : ""}
+                        </p>
+                        <a href={fileUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
+                          Volledig bekijken →
+                        </a>
+                      </div>
+                      <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                        <StatusPill tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</StatusPill>
+                        {d.kind === "bank" && d.status === "uploaded" && (
+                          <ComplianceDocActions userId={user.id} docId={d.id} />
+                        )}
+                        {d.kind === "id" && (
+                          <span className="text-[11px] text-neutralx-400">via Identiteitscontroles</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Panel>

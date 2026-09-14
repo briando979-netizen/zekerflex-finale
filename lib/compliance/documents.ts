@@ -135,3 +135,29 @@ export async function readDoc(
     return null;
   }
 }
+
+/**
+ * Admin sets a document's review status by hand (e.g. a bank statement —
+ * confirms the typed IBAN actually matches the name/account shown in the
+ * photo). Not used for kind "id": that document's status is governed by
+ * approving/rejecting the linked IdentityVerification instead (see
+ * POST /api/admin/gebruikers/<id>/identiteit/<checkId>), which also needs
+ * to update the user's kycStatus in the same step.
+ */
+export async function setDocStatus(
+  userId: string,
+  docId: string,
+  status: DocStatus,
+): Promise<ComplianceDoc | null> {
+  const row = await prisma.complianceDocument.findFirst({
+    where: { id: docId.replace(/[^a-z0-9-]/gi, ""), userId },
+    select: { id: true },
+  });
+  if (!row) return null;
+  const updated = await prisma.complianceDocument.update({
+    where: { id: row.id },
+    data: { status: status.toUpperCase() as ComplianceDocStatus },
+    include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
+  });
+  return toDoc(updated);
+}
