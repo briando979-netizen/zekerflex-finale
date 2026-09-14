@@ -350,6 +350,7 @@ export interface AgreementSummary {
 }
 
 export interface ShiftDetail extends MarketplaceShift {
+  dresscode: string | null;
   address: string;
   postalCode: string;
   geofenceRadiusMeters: number;
@@ -376,6 +377,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       id: true,
       title: true,
       description: true,
+      dresscode: true,
       startsAt: true,
       endsAt: true,
       breakMinutes: true,
@@ -532,6 +534,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
 
   return {
     ...base,
+    dresscode: row.dresscode,
     address: row.branch.addressLine,
     postalCode: row.branch.postalCode,
     geofenceRadiusMeters: row.branch.geofenceRadiusMeters,

@@ -516,6 +516,10 @@ model Shift {
 
   title           String
   description     String?
+  // Shown to a freelancer as a distinct "kledingvoorschriften" item, separate
+  // from the general description — the reageer flow asks them to explicitly
+  // accept it, so it needs its own field rather than being buried in prose.
+  dresscode       String?
   requiredSkillId String?
   requiredSkill   Skill?  @relation(fields: [requiredSkillId], references: [id])
   minSkillRating  Float   @default(0)

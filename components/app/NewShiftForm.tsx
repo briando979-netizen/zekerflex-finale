@@ -37,6 +37,7 @@ export function NewShiftForm({
   const [tpl, setTpl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dresscode, setDresscode] = useState("");
   const [rateEuro, setRateEuro] = useState(minRateEuro.toFixed(2));
   const [breakMin, setBreakMin] = useState("30");
   const [positions, setPositions] = useState("1");
@@ -128,6 +129,20 @@ export function NewShiftForm({
             Omschrijving <span className="text-neutralx-400">(optioneel)</span>
           </span>
           <textarea name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
+        </label>
+
+        <label className="block">
+          <span className="field-label">
+            Kledingvoorschriften <span className="text-neutralx-400">(optioneel)</span>
+          </span>
+          <textarea
+            name="dresscode"
+            rows={2}
+            value={dresscode}
+            onChange={(e) => setDresscode(e.target.value)}
+            placeholder="Bijv. veiligheidsschoenen verplicht, geen sieraden, bedrijfskleding wordt verstrekt…"
+            className="field-input"
+          />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">

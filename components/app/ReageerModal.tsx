@@ -7,6 +7,13 @@ import { useToast } from "@/components/ui/Toast";
 import { counterOfferAction } from "@/app/dashboard/klussen/actions";
 import { moneyExact } from "@/components/app/ui";
 
+export interface OtherShiftOption {
+  id: string;
+  title: string;
+  startsAt: string; // ISO
+  hourlyRateCents: number;
+}
+
 /**
  * "Reageer op deze klus" — the confirmation screen a freelancer sees before
  * reacting: beschikbaarheid (volledige dienst of flexibel), rate (tegenbod),
@@ -21,6 +28,8 @@ export function ReageerButton({
   endTime,
   conflict = false,
   agreementHref = null,
+  dresscode = null,
+  otherShifts = [],
   disabled = false,
   notReadyReason,
   label = "Reageer op deze klus",
@@ -33,6 +42,8 @@ export function ReageerButton({
   endTime: string; // "16:00"
   conflict?: boolean;
   agreementHref?: string | null;
+  dresscode?: string | null;
+  otherShifts?: OtherShiftOption[];
   disabled?: boolean;
   notReadyReason?: string | null;
   label?: string;
@@ -64,6 +75,8 @@ export function ReageerButton({
           endTime={endTime}
           conflict={conflict}
           agreementHref={agreementHref}
+          dresscode={dresscode}
+          otherShifts={otherShifts}
           onClose={() => setOpen(false)}
         />
       )}
@@ -79,6 +92,8 @@ function Modal({
   endTime,
   conflict,
   agreementHref,
+  dresscode,
+  otherShifts,
   onClose,
 }: {
   shiftId: string;
@@ -88,6 +103,8 @@ function Modal({
   endTime: string;
   conflict: boolean;
   agreementHref: string | null;
+  dresscode: string | null;
+  otherShifts: OtherShiftOption[];
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -102,12 +119,23 @@ function Modal({
   const [okAgreement, setOkAgreement] = useState(false);
   const [okDresscode, setOkDresscode] = useState(false);
   const [autoWithdraw, setAutoWithdraw] = useState(false);
+  const [showDresscode, setShowDresscode] = useState(false);
   const [hours, setHours] = useState(4);
+  const [extraIds, setExtraIds] = useState<Set<string>>(new Set());
   const [err, setErr] = useState<string | null>(null);
 
   const rateCents = Math.round(parseFloat(rate.replace(",", ".")) * 100);
   const isCounter = Number.isFinite(rateCents) && rateCents !== listedRateCents;
   const canConfirm = okAgreement && okDresscode && !pending;
+
+  function toggleExtra(id: string) {
+    setExtraIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function submit() {
     setErr(null);
@@ -125,7 +153,28 @@ function Modal({
       try {
         const r = await counterOfferAction(shiftId, rateCents, note);
         if (!r.ok) throw new Error(r.message);
-        toast.success("Je reactie staat bij Mijn klussen", `${clientName} bekijkt je reactie en kiest wie de klus doet.`);
+
+        // Extra days from the same employer: at their own listed rate, no
+        // negotiation — best-effort, one failing doesn't undo the main
+        // reaction that already succeeded.
+        const extras = otherShifts.filter((o) => extraIds.has(o.id));
+        let extraFailed = 0;
+        if (extras.length > 0) {
+          const results = await Promise.allSettled(
+            extras.map((o) => counterOfferAction(o.id, o.hourlyRateCents, note)),
+          );
+          extraFailed = results.filter((res) => res.status === "rejected" || !res.value.ok).length;
+        }
+
+        const extraOk = extras.length - extraFailed;
+        toast.success(
+          "Je reactie staat bij Mijn klussen",
+          extraOk > 0
+            ? `${clientName} bekijkt je reacties (${1 + extraOk} klussen) en kiest wie ze doet.${
+                extraFailed > 0 ? ` ${extraFailed} extra klus(sen) lukten niet — probeer die apart.` : ""
+              }`
+            : `${clientName} bekijkt je reactie en kiest wie de klus doet.`,
+        );
         onClose();
         router.push("/dashboard/diensten");
         router.refresh();
@@ -233,6 +282,44 @@ function Modal({
               )}
             </div>
 
+            {/* Ook reageren op andere dagen van dezelfde werkgever */}
+            {otherShifts.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-ink">Ook reageren op andere klussen van {clientName}?</p>
+                <p className="mt-0.5 text-xs text-neutralx-500">
+                  Elke geselecteerde klus wordt apart ingediend tegen het daar geldende tarief.
+                </p>
+                <div className="mt-2 space-y-2">
+                  {otherShifts.map((o) => {
+                    const od = new Date(o.startsAt);
+                    return (
+                      <label
+                        key={o.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-hair px-3 py-2.5 text-sm"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={extraIds.has(o.id)}
+                            onChange={() => toggleExtra(o.id)}
+                            className="h-4 w-4 accent-brand-500"
+                          />
+                          <span>
+                            <span className="block font-medium text-ink">{o.title}</span>
+                            <span className="block text-[11px] text-neutralx-400">
+                              {od.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })} ·{" "}
+                              {od.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="flex-shrink-0 font-semibold text-ink">{moneyExact(o.hourlyRateCents)}/u</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Motivatie */}
             <div>
               <p className="text-sm font-semibold text-ink">Waarom moet {clientName} jou uitkiezen?</p>
@@ -274,9 +361,22 @@ function Modal({
                   className="mt-0.5 h-4 w-4 accent-brand-500"
                 />
                 <span>
-                  Ik ga akkoord met de <span className="font-semibold underline">kledingvoorschriften</span> voor deze klus
+                  Ik ga akkoord met de{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowDresscode((v) => !v)}
+                    className="font-semibold underline"
+                  >
+                    kledingvoorschriften
+                  </button>{" "}
+                  voor deze klus
                 </span>
               </label>
+              {showDresscode && (
+                <p className="rounded-lg bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
+                  {dresscode || "Geen specifieke kledingvoorschriften opgegeven — kom representatief gekleed."}
+                </p>
+              )}
             </div>
 
             {/* Automatisch intrekken */}

@@ -109,17 +109,27 @@ const CANCEL_HOURS = 24;
  * vervanging / vergoeding / duur / belastingen / annulering / overig /
  * eigendommen / geheimhouding / rechtskeuze) filled with this engagement's data.
  */
-export async function agreementPdf(agreementId: string): Promise<{ bytes: Buffer; filename: string } | null> {
-  const a = await prisma.modelAgreement.findUnique({
-    where: { id: agreementId },
-    include: {
-      shift: { select: { title: true, startsAt: true, breakMinutes: true } },
-      tenant: { select: { name: true } },
-      branch: { select: { addressLine: true, postalCode: true, city: true } },
-    },
-  });
-  if (!a) return null;
+export interface AgreementPdfData {
+  reference: string;
+  freelancerLegalName: string | null;
+  freelancerKvkNumber: string | null;
+  clientLegalName: string | null;
+  clientKvkNumber: string | null;
+  templateKey: string;
+  templateVersion: string;
+  belastingdienstNr: string | null;
+  hourlyRateCents: number | null;
+  scopeDescription: string | null;
+  freelancerSignedAt: Date | null;
+  clientSignedAt: Date | null;
+  shift: { title: string; startsAt: Date; breakMinutes: number } | null;
+  tenant: { name: string } | null;
+  branch: { addressLine: string; postalCode: string; city: string } | null;
+}
 
+/** The actual modelovereenkomst rendering — shared by a real (signed or
+ * unsigned) agreement and by previewAgreementPdf()'s not-yet-existing one. */
+function renderAgreementPdf(a: AgreementPdfData): Buffer {
   const contractor = a.freelancerLegalName || "Opdrachtnemer";
   const clientName = a.clientLegalName || a.tenant?.name || "Opdrachtgever";
   const clientCity = a.branch?.city || "Nederland";
@@ -237,7 +247,84 @@ export async function agreementPdf(agreementId: string): Promise<{ bytes: Buffer
     color: [0.4, 0.45, 0.42],
   });
 
-  return { bytes: pdf.toBuffer(), filename: `${a.reference}.pdf` };
+  return pdf.toBuffer();
+}
+
+/** Build an A4 PDF for a real, provisioned model agreement. Returns null if not found. */
+export async function agreementPdf(agreementId: string): Promise<{ bytes: Buffer; filename: string } | null> {
+  const a = await prisma.modelAgreement.findUnique({
+    where: { id: agreementId },
+    include: {
+      shift: { select: { title: true, startsAt: true, breakMinutes: true } },
+      tenant: { select: { name: true } },
+      branch: { select: { addressLine: true, postalCode: true, city: true } },
+    },
+  });
+  if (!a) return null;
+  return { bytes: renderAgreementPdf(a), filename: `${a.reference}.pdf` };
+}
+
+// Mirrors the VRIJE_VERVANGING entry in lib/agreements/model-agreement.ts's
+// TEMPLATES map — that map isn't exported, and a preview always uses the
+// default type since no agreement (with a possibly different type) exists
+// yet to read it from.
+const PREVIEW_TEMPLATE = { key: "zekerflex/vrije-vervanging", version: "2024.1", belastingdienstNr: null as string | null };
+
+/**
+ * Preview of the modelovereenkomst a freelancer would be asked to accept —
+ * before one is actually provisioned (that only happens once they're
+ * selected for the shift, see ensureModelAgreement()). Neither party has
+ * signed anything yet, which the "Ondertekening" section states plainly.
+ */
+export async function previewAgreementPdf(
+  shiftId: string,
+  freelancerUserId: string,
+): Promise<{ bytes: Buffer; filename: string } | null> {
+  const shift = await prisma.shift.findUnique({
+    where: { id: shiftId },
+    select: {
+      title: true,
+      startsAt: true,
+      breakMinutes: true,
+      hourlyRateCents: true,
+      branch: {
+        select: {
+          addressLine: true,
+          postalCode: true,
+          city: true,
+          tenant: {
+            select: { name: true, kvkNumber: true, companyRegistration: { select: { legalName: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!shift) return null;
+
+  const profile = await prisma.freelancerProfile.findFirst({
+    where: { userId: freelancerUserId },
+    select: { kvkNumber: true, user: { select: { fullName: true } }, companyRegistration: { select: { legalName: true } } },
+  });
+  if (!profile) return null;
+
+  const data: AgreementPdfData = {
+    reference: "CONCEPT",
+    freelancerLegalName: profile.companyRegistration?.legalName ?? profile.user.fullName,
+    freelancerKvkNumber: profile.kvkNumber,
+    clientLegalName: shift.branch.tenant.companyRegistration?.legalName ?? shift.branch.tenant.name,
+    clientKvkNumber: shift.branch.tenant.kvkNumber,
+    templateKey: PREVIEW_TEMPLATE.key,
+    templateVersion: PREVIEW_TEMPLATE.version,
+    belastingdienstNr: PREVIEW_TEMPLATE.belastingdienstNr,
+    hourlyRateCents: shift.hourlyRateCents,
+    scopeDescription: shift.title,
+    freelancerSignedAt: null,
+    clientSignedAt: null,
+    shift: { title: shift.title, startsAt: shift.startsAt, breakMinutes: shift.breakMinutes },
+    tenant: { name: shift.branch.tenant.name },
+    branch: { addressLine: shift.branch.addressLine, postalCode: shift.branch.postalCode, city: shift.branch.city },
+  };
+  return { bytes: renderAgreementPdf(data), filename: "modelovereenkomst-concept.pdf" };
 }
 
 /**

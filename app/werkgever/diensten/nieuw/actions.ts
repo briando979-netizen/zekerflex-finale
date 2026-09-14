@@ -23,6 +23,7 @@ export async function createShiftAction(
     templateKey: formData.get("templateKey") || undefined,
     title: formData.get("title"),
     description: formData.get("description") || undefined,
+    dresscode: formData.get("dresscode") || undefined,
     startsAt: formData.get("startsAt"),
     endsAt: formData.get("endsAt"),
     breakMinutes: formData.get("breakMinutes") ?? 0,

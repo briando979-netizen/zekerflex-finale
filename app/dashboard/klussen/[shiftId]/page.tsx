@@ -135,7 +135,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         },
       })) > 0
     : false;
-  const agreementHref = s.agreement ? `/api/model-agreements/${s.agreement.id}/pdf` : null;
+  // Before a freelancer is actually selected, no ModelAgreement row exists
+  // yet (ensureModelAgreement() only provisions one at that point) — link to
+  // a preview of what would be created instead of nothing.
+  const agreementHref = s.agreement
+    ? `/api/model-agreements/${s.agreement.id}/pdf`
+    : `/api/model-agreements/preview?shiftId=${s.id}`;
 
   let assigned: {
     assignmentId: string;
@@ -390,7 +395,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="👤">
             We zoeken {s.positions} freelancer{s.positions === 1 ? "" : "s"}
           </InfoRow>
-          <InfoRow icon="👕">Er zijn kledingvoorschriften van toepassing</InfoRow>
+          <InfoRow icon="👕">
+            {s.dresscode || "Geen specifieke kledingvoorschriften opgegeven — kom representatief gekleed"}
+          </InfoRow>
           <InfoRow icon="⊘">
             {cancelPassed
               ? `De annuleringstermijn is verstreken op: ${fmtDay(cancelDeadline)}`
@@ -401,20 +408,21 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               <span className="mt-0.5 grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-hairstrong text-xs text-neutralx-400">
                 📄
               </span>
-              {s.agreement ? (
+              <div>
                 <a
-                  href={`/api/model-agreements/${s.agreement.id}/pdf`}
+                  href={agreementHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-semibold text-ink underline"
                 >
-                  Je modelovereenkomst
+                  {s.agreement ? "Je modelovereenkomst" : "Bekijk concept-modelovereenkomst"}
                 </a>
-              ) : (
-                <span className="text-neutralx-600">
-                  Zodra je wordt uitgekozen krijg je automatisch je modelovereenkomst
-                </span>
-              )}
+                {!s.agreement && (
+                  <p className="mt-0.5 text-xs text-neutralx-500">
+                    Nog niet definitief — zodra je wordt uitgekozen wordt deze automatisch vastgelegd.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </dl>
@@ -666,6 +674,13 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 endTime={hhmm(s.endsAt)}
                 conflict={conflict}
                 agreementHref={agreementHref}
+                dresscode={s.dresscode}
+                otherShifts={otherShifts.map((o) => ({
+                  id: o.id,
+                  title: o.title,
+                  startsAt: o.startsAt.toISOString(),
+                  hourlyRateCents: o.hourlyRateCents,
+                }))}
                 disabled={applyDisabled}
                 notReadyReason={applyBlockReason}
                 full
