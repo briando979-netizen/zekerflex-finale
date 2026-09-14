@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
@@ -166,18 +166,38 @@ export async function deleteUpload(id: string): Promise<void> {
   await prisma.upload.delete({ where: { id } }).catch(() => undefined);
 }
 
+/**
+ * Round-trips a throwaway probe through whichever backend is actually
+ * configured (STORAGE_BACKEND) — a local-disk check always reported
+ * "writable: false" on Vercel regardless of S3 being set up, since it never
+ * looked at which backend was in use.
+ */
 export async function ensureStorageWritable(): Promise<{
   dir: string;
   writable: boolean;
   detail?: string;
 }> {
+  if (env.STORAGE_BACKEND === "s3") {
+    const dir = `s3://${env.STORAGE_S3_BUCKET ?? "(STORAGE_S3_BUCKET niet ingesteld)"}`;
+    const key = `.health/write-test-${randomUUID()}`;
+    try {
+      await putObject({ key, body: Buffer.from("ok"), contentType: "text/plain" });
+      const bytes = await getObjectBytes(key);
+      if (bytes.toString("utf8") !== "ok") throw new Error("Roundtrip mismatch na schrijven");
+      await deleteObject(key);
+      return { dir, writable: true };
+    } catch (err) {
+      return { dir, writable: false, detail: (err as Error).message };
+    }
+  }
+
   const dir = uploadsRoot();
   try {
     await mkdir(dir, { recursive: true });
     const probe = join(dir, `.write-test-${randomUUID()}`);
     await writeFile(probe, "ok");
     await readFile(probe);
-    await (await import("node:fs/promises")).unlink(probe);
+    await unlink(probe);
     return { dir, writable: true };
   } catch (err) {
     return { dir, writable: false, detail: (err as Error).message };
