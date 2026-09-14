@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { OnboardingForm } from "@/components/app/OnboardingForm";
+import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
 import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -99,6 +100,10 @@ export default async function VerificatiePage() {
           )}
         </div>
       )}
+
+      <div className="mb-6">
+        <WalletVerifyButton requireKvk={!isUitzend} />
+      </div>
 
       <div className="card p-6">
         <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} />

@@ -9,6 +9,7 @@ import { geocodePostcode } from "@/lib/integrations/pdok";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
+import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -71,7 +72,7 @@ function nameTokens(s: string): string[] {
     .filter((t) => t.length >= 2 && !TUSSENVOEGSELS.has(t));
 }
 
-function nameSimilarity(a: string, b: string): number {
+export function nameSimilarity(a: string, b: string): number {
   const ta = new Set(nameTokens(a));
   const tb = new Set(nameTokens(b));
   if (ta.size === 0 || tb.size === 0) return 0;
@@ -178,42 +179,31 @@ Richtlijnen:
   }
 }
 
-export async function submitFreelancerOnboarding(
-  input: OnboardingInput,
-): Promise<OnboardingResult> {
-  const user = await prisma.user.findUnique({
-    where: { id: input.userId },
-    select: { id: true, fullName: true, kycStatus: true, freelancerProfile: { select: { id: true } } },
-  });
-  if (!user) throw AppError.notFound("Account niet gevonden");
+interface FreelancerBaseResult {
+  freelancerProfileId: string;
+  checks: OnboardingResult["checks"];
+  skipKvk: boolean;
+  kvkValid: boolean;
+  companyName: string | null;
+  companyTradeName: string | null;
+  companyStatus: string;
+}
 
+/**
+ * Geocode + create/update the FreelancerProfile + (optional) KVK check —
+ * shared by both the photo-capture and digital-wallet onboarding paths,
+ * which differ only in how the identity itself gets proven.
+ */
+async function ensureFreelancerBase(input: {
+  userId: string;
+  existingProfileId?: string | undefined;
+  kvkNumber: string;
+  postalCode: string;
+  houseNumber: string;
+  payoutIban: string;
+}): Promise<FreelancerBaseResult> {
   const checks: OnboardingResult["checks"] = [];
 
-  // --- file sanity (all three captures) -----------------------------------
-  const front = input.files.front;
-  const mime = front.mimeType.toLowerCase();
-  const imageOk = (f: CapturedImage) => ALLOWED_MIME.has(f.mimeType.toLowerCase()) && f.bytes.length > 8_000;
-  const frontOk = imageOk(front);
-  const backOk = imageOk(input.files.back);
-  const selfieOk = imageOk(input.files.selfie);
-  checks.push({
-    label: "Documentfoto's (voor-, achterkant, selfie)",
-    ok: frontOk && backOk && selfieOk,
-    detail:
-      frontOk && backOk && selfieOk
-        ? `${mime}, ${(
-            (front.bytes.length + input.files.back.bytes.length + input.files.selfie.bytes.length) /
-            1024
-          ).toFixed(0)} kB samen`
-        : "Eén of meer foto's zijn niet leesbaar. Gebruik duidelijke, scherpe foto's (JPG, PNG of WebP, min. 8 kB per foto).",
-  });
-  if (!frontOk || !backOk || !selfieOk) {
-    throw AppError.validation(
-      "Eén of meer van je foto's is niet leesbaar. Maak de voorkant, achterkant en selfie opnieuw met goed licht.",
-    );
-  }
-
-  // --- geocode home base -------------------------------------------------
   const geo = await geocodePostcode(input.postalCode, input.houseNumber);
   checks.push({
     label: "Thuisbasis",
@@ -223,14 +213,13 @@ export async function submitFreelancerOnboarding(
       : `${geo.street ?? ""} ${input.houseNumber}, ${geo.city ?? ""}`.trim(),
   });
 
-  // --- ensure a freelancer profile exists -------------------------------
   const cleanKvk = input.kvkNumber.replace(/[^\d]/g, "");
-  let freelancerProfileId = user.freelancerProfile?.id;
+  let freelancerProfileId = input.existingProfileId;
   if (!freelancerProfileId) {
     const created = await prisma.freelancerProfile.create({
       data: {
-        userId: user.id,
-        kvkNumber: cleanKvk || `pending-${user.id.slice(0, 8)}`,
+        userId: input.userId,
+        kvkNumber: cleanKvk || `pending-${input.userId.slice(0, 8)}`,
         payoutIban: input.payoutIban.replace(/\s+/g, "").toUpperCase(),
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
@@ -251,8 +240,6 @@ export async function submitFreelancerOnboarding(
     });
   }
 
-  // --- KVK / Handelsregister -------------------------------------------
-  // Uitzendkrachten hebben geen KVK — sla de Handelsregister-check dan over.
   const skipKvk = cleanKvk.length === 0;
   let kvkValid = false;
   let companyName: string | null = null;
@@ -293,6 +280,56 @@ export async function submitFreelancerOnboarding(
       });
     }
   }
+
+  return { freelancerProfileId, checks, skipKvk, kvkValid, companyName, companyTradeName, companyStatus };
+}
+
+export async function submitFreelancerOnboarding(
+  input: OnboardingInput,
+): Promise<OnboardingResult> {
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, fullName: true, kycStatus: true, freelancerProfile: { select: { id: true } } },
+  });
+  if (!user) throw AppError.notFound("Account niet gevonden");
+
+  const checks: OnboardingResult["checks"] = [];
+
+  // --- file sanity (all three captures) -----------------------------------
+  const front = input.files.front;
+  const mime = front.mimeType.toLowerCase();
+  const imageOk = (f: CapturedImage) => ALLOWED_MIME.has(f.mimeType.toLowerCase()) && f.bytes.length > 8_000;
+  const frontOk = imageOk(front);
+  const backOk = imageOk(input.files.back);
+  const selfieOk = imageOk(input.files.selfie);
+  checks.push({
+    label: "Documentfoto's (voor-, achterkant, selfie)",
+    ok: frontOk && backOk && selfieOk,
+    detail:
+      frontOk && backOk && selfieOk
+        ? `${mime}, ${(
+            (front.bytes.length + input.files.back.bytes.length + input.files.selfie.bytes.length) /
+            1024
+          ).toFixed(0)} kB samen`
+        : "Eén of meer foto's zijn niet leesbaar. Gebruik duidelijke, scherpe foto's (JPG, PNG of WebP, min. 8 kB per foto).",
+  });
+  if (!frontOk || !backOk || !selfieOk) {
+    throw AppError.validation(
+      "Eén of meer van je foto's is niet leesbaar. Maak de voorkant, achterkant en selfie opnieuw met goed licht.",
+    );
+  }
+
+  // --- home base + freelancer profile + KVK ------------------------------
+  const base = await ensureFreelancerBase({
+    userId: user.id,
+    existingProfileId: user.freelancerProfile?.id,
+    kvkNumber: input.kvkNumber,
+    postalCode: input.postalCode,
+    houseNumber: input.houseNumber,
+    payoutIban: input.payoutIban,
+  });
+  checks.push(...base.checks);
+  const { freelancerProfileId, skipKvk, kvkValid, companyName, companyTradeName, companyStatus } = base;
 
   // --- deterministic ID checks ---------------------------------------
   const simAccount = nameSimilarity(user.fullName, input.nameOnDocument);
@@ -519,5 +556,148 @@ export async function submitFreelancerOnboarding(
         : outcome === "rejected"
           ? "De verificatie is afgewezen. Controleer je gegevens en probeer opnieuw."
           : "Je aanvraag staat in behandeling."),
+  };
+}
+
+export interface WalletOnboardingInput {
+  userId: string;
+  attemptId: string;
+  kvkNumber: string;
+  postalCode: string;
+  houseNumber: string;
+  payoutIban: string;
+}
+
+/**
+ * Onboarding via an already-verified digital wallet credential (see
+ * lib/kyc/wallet.ts) instead of the 3-photo capture. The identity proof
+ * itself — cryptographic signature + trusted issuer + name/expiry checks —
+ * already happened in completeWalletVerification(); this consumes that
+ * one-shot result and runs the same downstream steps (home base, KVK,
+ * persistence, audit) as the photo path.
+ */
+export async function submitFreelancerOnboardingViaWallet(
+  input: WalletOnboardingInput,
+): Promise<OnboardingResult> {
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, fullName: true, freelancerProfile: { select: { id: true } } },
+  });
+  if (!user) throw AppError.notFound("Account niet gevonden");
+
+  const claims = await consumeVerifiedWalletAttempt(input.userId, input.attemptId);
+  if (!claims) {
+    throw AppError.validation(
+      "De wallet-verificatie is verlopen of al gebruikt. Rond de verificatie opnieuw af.",
+    );
+  }
+
+  const checks: OnboardingResult["checks"] = [
+    {
+      label: "Digitale ID-wallet",
+      ok: true,
+      detail: "Cryptografisch geverifieerd bij een vertrouwde uitgever",
+    },
+  ];
+
+  const base = await ensureFreelancerBase({
+    userId: user.id,
+    existingProfileId: user.freelancerProfile?.id,
+    kvkNumber: input.kvkNumber,
+    postalCode: input.postalCode,
+    houseNumber: input.houseNumber,
+    payoutIban: input.payoutIban,
+  });
+  checks.push(...base.checks);
+  const { skipKvk, kvkValid, companyName } = base;
+
+  const fullName = [claims.givenName, claims.familyName].filter(Boolean).join(" ").trim();
+  const simAccount = fullName ? nameSimilarity(user.fullName, fullName) : 0;
+  const simKvk = companyName && fullName ? nameSimilarity(companyName, fullName) : 0;
+  const nameOk = simAccount >= 0.5 || simKvk >= 0.5;
+  checks.push({
+    label: "Naam komt overeen",
+    ok: nameOk,
+    detail: nameOk
+      ? "Naam in de wallet komt overeen met je account"
+      : "De naam in de wallet wijkt af van je accountnaam",
+  });
+
+  const expiry = claims.expiryDate ? new Date(claims.expiryDate) : null;
+  const expiryOk = expiry !== null && !Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now();
+  checks.push({
+    label: "Geldigheid document",
+    ok: expiryOk,
+    detail: expiryOk
+      ? `Geldig tot ${expiry!.toLocaleDateString("nl-NL")}`
+      : "Het document in de wallet lijkt verlopen",
+  });
+
+  // The wallet's own DocumentType doesn't map 1:1 onto our three-way enum;
+  // only the mobile driver's license case matters here, since
+  // ComplianceDocsPanel's own upload policy special-cases exactly that kind.
+  const documentType: DocKind = claims.rawDocumentType.toLowerCase().includes("mdl")
+    ? "DRIVERS_LICENSE"
+    : "ID_CARD";
+
+  const hardFail = !nameOk || !expiryOk;
+  const autoApprove = !hardFail && (skipKvk || kvkValid);
+  const outcome: OnboardingResult["outcome"] = hardFail ? "rejected" : autoApprove ? "verified" : "in_review";
+  const kycStatus: KycStatus =
+    outcome === "verified" ? KycStatus.VERIFIED : outcome === "rejected" ? KycStatus.REJECTED : KycStatus.PENDING;
+
+  const docHash = createHash("sha256")
+    .update(`${documentType}:${(claims.documentNumber ?? "").trim().toUpperCase()}`)
+    .digest("hex")
+    .slice(0, 48);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.identityVerification.create({
+      data: {
+        userId: user.id,
+        provider: "DIGITAL_WALLET",
+        vendorData: user.id,
+        decisionStatus: outcome,
+        documentType,
+        documentNumberHash: docHash,
+        status: kycStatus,
+        verifiedAt: outcome === "verified" ? new Date() : null,
+        expiresAt: expiry && !Number.isNaN(expiry.getTime()) ? expiry : null,
+        rawPayload: JSON.parse(JSON.stringify({ outcome, claims, checks })) as Prisma.InputJsonValue,
+      },
+    });
+    await tx.user.update({ where: { id: user.id }, data: { kycStatus } });
+    // No file to store — docStatus() in lib/compliance/documents.ts also
+    // accepts a verified DIGITAL_WALLET IdentityVerification directly, so
+    // the separate "Identiteitsbewijs" upload slot is satisfied without one.
+  });
+
+  await recordAudit({
+    category: "KYC",
+    action: "kyc.wallet_verify",
+    actorUserId: user.id,
+    actorLabel: "user",
+    severity: outcome === "rejected" ? "warning" : "info",
+    summary: `Wallet-verificatie ${user.fullName}: ${outcome} (KVK ${kvkValid ? "geldig" : "niet geldig"})`,
+    targetType: "user",
+    targetId: user.id,
+    metadata: { outcome, kvkValid },
+  });
+
+  const reasons = checks.filter((c) => !c.ok).map((c) => c.detail);
+
+  return {
+    kycStatus,
+    kvkValid,
+    outcome,
+    companyName,
+    checks,
+    reasons: [...new Set(reasons)],
+    summary:
+      outcome === "verified"
+        ? "Je bent geverifieerd via je digitale ID-wallet en kunt diensten aannemen."
+        : outcome === "rejected"
+          ? "De walletverificatie kon niet worden bevestigd. Gebruik de foto-verificatie hieronder."
+          : "Je aanvraag staat in behandeling.",
   };
 }

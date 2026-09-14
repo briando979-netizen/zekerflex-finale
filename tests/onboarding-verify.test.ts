@@ -71,7 +71,12 @@ vi.mock("@/lib/ai/client", () => ({
   }),
 }));
 
-import { submitFreelancerOnboarding } from "@/lib/onboarding/verify";
+const consumeVerifiedWalletAttempt = vi.fn();
+vi.mock("@/lib/kyc/wallet", () => ({
+  consumeVerifiedWalletAttempt: (...a: unknown[]) => consumeVerifiedWalletAttempt(...a),
+}));
+
+import { submitFreelancerOnboarding, submitFreelancerOnboardingViaWallet } from "@/lib/onboarding/verify";
 
 function image(name: string, size = 20_000): { filename: string; mimeType: string; bytes: Buffer } {
   return { filename: name, mimeType: "image/jpeg", bytes: Buffer.alloc(size, 1) };
@@ -249,5 +254,81 @@ describe("submitFreelancerOnboarding — vision review (photo content)", () => {
 
     expect(result.outcome).toBe("verified");
     expect(result.checks.some((c) => c.label.includes("beeldcontrole"))).toBe(false);
+  });
+});
+
+describe("submitFreelancerOnboardingViaWallet", () => {
+  const WALLET_INPUT = {
+    userId: "usr_1",
+    attemptId: "attempt_1",
+    kvkNumber: "",
+    postalCode: "1012 AB",
+    houseNumber: "10",
+    payoutIban: "NL91ABNA0417164300",
+  };
+
+  it("throws when the wallet attempt is missing, expired, or already used — never touches the DB", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", freelancerProfile: { id: "fp_1" } });
+    consumeVerifiedWalletAttempt.mockResolvedValue(null);
+
+    await expect(submitFreelancerOnboardingViaWallet(WALLET_INPUT)).rejects.toThrow(/verlopen/);
+    expect(ivCreate).not.toHaveBeenCalled();
+  });
+
+  it("verifies straight through on a name match, no KVK needed (uitzendkracht)", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", freelancerProfile: { id: "fp_1" } });
+    consumeVerifiedWalletAttempt.mockResolvedValue({
+      givenName: "Jan",
+      familyName: "Jansen",
+      birthDate: "1990-01-01",
+      documentNumber: "AB1234567",
+      expiryDate: "2030-01-01",
+      issuingCountry: "NL",
+      rawDocumentType: "eu.europa.ec.eudi.pid.1",
+    });
+
+    const result = await submitFreelancerOnboardingViaWallet(WALLET_INPUT);
+
+    expect(result.outcome).toBe("verified");
+    const ivArg = ivCreate.mock.calls[0]![0] as { data: { provider: string; documentType: string } };
+    expect(ivArg.data.provider).toBe("DIGITAL_WALLET");
+    expect(ivArg.data.documentType).toBe("ID_CARD");
+    // No file was ever uploaded for this path.
+    expect(complianceCreate).not.toHaveBeenCalled();
+  });
+
+  it("maps a mobile driver's license credential to DRIVERS_LICENSE", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", freelancerProfile: { id: "fp_1" } });
+    consumeVerifiedWalletAttempt.mockResolvedValue({
+      givenName: "Jan",
+      familyName: "Jansen",
+      birthDate: "1990-01-01",
+      documentNumber: "AB1234567",
+      expiryDate: "2030-01-01",
+      issuingCountry: "NL",
+      rawDocumentType: "org.iso.18013.5.1.mDL",
+    });
+
+    await submitFreelancerOnboardingViaWallet(WALLET_INPUT);
+
+    const ivArg = ivCreate.mock.calls[0]![0] as { data: { documentType: string } };
+    expect(ivArg.data.documentType).toBe("DRIVERS_LICENSE");
+  });
+
+  it("rejects when the wallet's name doesn't match the account", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", freelancerProfile: { id: "fp_1" } });
+    consumeVerifiedWalletAttempt.mockResolvedValue({
+      givenName: "Someone",
+      familyName: "Else",
+      birthDate: "1990-01-01",
+      documentNumber: "AB1234567",
+      expiryDate: "2030-01-01",
+      issuingCountry: "NL",
+      rawDocumentType: "eu.europa.ec.eudi.pid.1",
+    });
+
+    const result = await submitFreelancerOnboardingViaWallet(WALLET_INPUT);
+
+    expect(result.outcome).toBe("rejected");
   });
 });

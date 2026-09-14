@@ -74,8 +74,16 @@ export async function listDocs(userId: string): Promise<ComplianceDoc[]> {
 }
 
 export async function docStatus(userId: string): Promise<{ idOk: boolean; bankOk: boolean; complete: boolean }> {
-  const docs = await listDocs(userId);
-  const idOk = docs.some((d) => d.kind === "id" && d.status !== "rejected");
+  const [docs, walletVerified] = await Promise.all([
+    listDocs(userId),
+    // A verified digital-wallet identity check (lib/kyc/wallet.ts) has no
+    // file to upload — it satisfies the "Identiteitsbewijs" slot directly.
+    prisma.identityVerification.findFirst({
+      where: { userId, provider: "DIGITAL_WALLET", status: "VERIFIED" },
+      select: { id: true },
+    }),
+  ]);
+  const idOk = docs.some((d) => d.kind === "id" && d.status !== "rejected") || Boolean(walletVerified);
   const bankOk = docs.some((d) => d.kind === "bank" && d.status !== "rejected");
   return { idOk, bankOk, complete: idOk && bankOk };
 }
