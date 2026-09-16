@@ -111,7 +111,10 @@ export function MessageBubble({
         <button
           type="button"
           onClick={() => onReply(m)}
-          className="mb-1 hidden text-xs text-neutralx-400 hover:text-brand-600 group-hover:block"
+          // Touch has no hover, so a hidden-until-hover reply icon would
+          // never appear there; only real hover-capable pointers get it
+          // hidden by default.
+          className="mb-1 block text-xs text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
           aria-label="Beantwoord"
         >
           ↩
@@ -195,7 +198,7 @@ export function MessageBubble({
         <button
           type="button"
           onClick={() => onReply(m)}
-          className="mb-1 hidden text-xs text-neutralx-400 hover:text-brand-600 group-hover:block"
+          className="mb-1 block text-xs text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
           aria-label="Beantwoord"
         >
           ↩

@@ -51,7 +51,7 @@ export function FreelancerShell({
             <Link
               href="/dashboard/klussen"
               aria-label="Zoeken"
-              className="grid h-9 w-9 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             >
               <ISearch />
             </Link>
@@ -73,7 +73,7 @@ export function FreelancerShell({
       {!focused && (
       <nav
         aria-label="Hoofdnavigatie"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-hair bg-white/95 backdrop-blur-xl lg:inset-x-auto lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 lg:rounded-full lg:border lg:border-hair lg:px-2 lg:shadow-lift"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-hair bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:inset-x-auto lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 lg:rounded-full lg:border lg:border-hair lg:px-2 lg:pb-0 lg:shadow-lift"
       >
         <ul className="mx-auto flex max-w-lg items-stretch justify-between lg:max-w-none lg:gap-1">
           {TABS.map((t) => {

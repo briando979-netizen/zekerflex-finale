@@ -92,7 +92,7 @@ export function AdminShell({
               setCollapsed((v) => !v);
               setMobileOpen((v) => !v);
             }}
-            className="a-elev grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl"
+            className="a-elev grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl"
             style={{ border: "1px solid var(--a-border)" }}
             aria-label="Menu"
           >
@@ -138,7 +138,7 @@ export function AdminShell({
             <button
               type="button"
               onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-              className="grid h-9 w-9 place-items-center rounded-xl"
+              className="grid h-11 w-11 place-items-center rounded-xl"
               style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}
               aria-label="Thema wisselen"
             >

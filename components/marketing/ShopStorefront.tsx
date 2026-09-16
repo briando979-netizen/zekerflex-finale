@@ -188,7 +188,11 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); add(p.id); }}
-                      className="absolute inset-x-3 bottom-3 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-0 transition group-hover:opacity-100"
+                      // Visible by default (touch has no hover — iPad included — so an
+                      // opacity-0-until-hover button would be invisible and effectively
+                      // unusable there); only real hover-capable pointers get the
+                      // fade-in-on-hover treatment.
+                      className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                     >
                       In winkelwagen
                     </button>

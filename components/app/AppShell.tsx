@@ -163,7 +163,7 @@ export function AppShell({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-hairstrong lg:hidden"
+            className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong lg:hidden"
             aria-label="Menu"
           >
             ☰

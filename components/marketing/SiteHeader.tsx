@@ -184,6 +184,7 @@ export function SiteHeader() {
   const [menu, setMenu] = useState<string | null>(null);
   const [stored, setStored] = useState<Audience | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -212,6 +213,19 @@ export function SiteHeader() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Hover opens/closes the submenu for mouse users; on a touch device (no
+  // hover, e.g. iPad landscape where this desktop nav already shows) a tap
+  // outside the open menu is the only way to dismiss it, so also listen for
+  // that explicitly rather than relying on mouseleave.
+  useEffect(() => {
+    if (!menu) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setMenu(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [menu]);
+
   const showMenu = (key: string) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setMenu(key);
@@ -220,6 +234,7 @@ export function SiteHeader() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setMenu(null), 140);
   };
+  const toggleMenu = (key: string) => setMenu((m) => (m === key ? null : key));
 
   // URL wins; otherwise the last explicit choice; default werknemers.
   const audience: Audience = pathname.startsWith("/voor-bedrijven")
@@ -258,7 +273,7 @@ export function SiteHeader() {
           <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-6 lg:flex">
+        <nav ref={navRef} className="ml-6 hidden items-center gap-6 lg:flex">
           {NAV.map((n) => {
             const active =
               n.match.startsWith("/") &&
@@ -268,20 +283,31 @@ export function SiteHeader() {
             return (
               <div
                 key={n.key}
-                className="relative"
+                className="relative flex items-center"
                 onMouseEnter={() => hasMenu && showMenu(n.key)}
                 onMouseLeave={() => hasMenu && scheduleClose()}
               >
                 <Link
                   href={n.href}
                   onFocus={() => hasMenu && showMenu(n.key)}
-                  aria-expanded={hasMenu ? menu === n.key : undefined}
-                  className={`flex items-center gap-1 py-2 text-sm font-semibold transition-colors ${
+                  className={`flex items-center py-2 text-sm font-semibold transition-colors ${
                     active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
                   {n.label}
-                  {hasMenu && (
+                </Link>
+                {hasMenu && (
+                  // Separate tap target from the label link above: on a touch
+                  // device (no :hover, e.g. iPad landscape where this nav is
+                  // already shown) this is the only way to open the submenu
+                  // without the label immediately navigating away.
+                  <button
+                    type="button"
+                    onClick={() => toggleMenu(n.key)}
+                    aria-label={`${n.label} submenu`}
+                    aria-expanded={menu === n.key}
+                    className="ml-0.5 grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
+                  >
                     <svg
                       width="10"
                       height="10"
@@ -291,8 +317,8 @@ export function SiteHeader() {
                     >
                       <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                  )}
-                </Link>
+                  </button>
+                )}
 
                 {hasMenu && variant && menu === n.key && (
                   <div
