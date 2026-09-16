@@ -223,10 +223,12 @@ export function ChatDock() {
   return (
     <>
       {!hideDock && (
+        // Below lg the freelancer shell shows a fixed bottom tab bar, so this
+        // floating button sits above it instead of overlapping it there.
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="fixed bottom-5 right-5 z-[55] flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-5 z-[55] flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105 lg:bottom-5"
           aria-label={open ? "Chat sluiten" : "Chat openen"}
         >
           {open ? <span className="text-xl">✕</span> : (
@@ -243,7 +245,7 @@ export function ChatDock() {
       )}
 
       {open && !hideDock && (
-        <div className="chat-surface fixed bottom-24 right-5 z-[55] flex h-[min(34rem,calc(100vh-8rem))] w-[calc(100vw-2.5rem)] max-w-[24rem] flex-col overflow-hidden rounded-2xl border border-hairstrong bg-white shadow-lift animate-slide-up-fade">
+        <div className="chat-surface fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-5 z-[55] flex h-[min(34rem,calc(100vh-12rem))] w-[calc(100vw-2.5rem)] max-w-[24rem] flex-col overflow-hidden rounded-2xl border border-hairstrong bg-white shadow-lift animate-slide-up-fade lg:bottom-24 lg:h-[min(34rem,calc(100vh-8rem))]">
           {!activeThread ? (
             <>
               <div className="flex items-center justify-between border-b border-hair bg-brand-500 px-4 py-3 text-white">

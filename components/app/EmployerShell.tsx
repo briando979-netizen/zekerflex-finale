@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
@@ -58,6 +58,7 @@ export function EmployerShell({
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -66,6 +67,17 @@ export function EmployerShell({
       /* ignore */
     }
   }, []);
+
+  // Touch devices (iPad) have no hover, so onMouseLeave never fires to close
+  // the menu — close on any tap/click outside it instead.
+  useEffect(() => {
+    if (!userMenu) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenu(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [userMenu]);
 
   function toggleCollapse() {
     setCollapsed((v) => {
@@ -208,7 +220,7 @@ export function EmployerShell({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-hairstrong lg:hidden"
+            className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong lg:hidden"
             aria-label="Menu"
           >
             ☰
@@ -256,7 +268,7 @@ export function EmployerShell({
 
             <Link
               href={helpHref}
-              className="grid h-9 w-9 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
               aria-label={t.shell.help}
               title={t.shell.help}
             >
@@ -265,11 +277,11 @@ export function EmployerShell({
 
             <NotificationsBell />
 
-            <div className="relative">
+            <div ref={userMenuRef} className="relative">
               <button
                 type="button"
                 onClick={() => setUserMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-lg border border-hairstrong bg-white px-2.5 py-1.5 text-sm font-medium text-ink"
+                className="flex min-h-11 items-center gap-2 rounded-lg border border-hairstrong bg-white px-2.5 py-1.5 text-sm font-medium text-ink"
               >
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-semibold text-white">
                   {initials(userName)}
@@ -280,10 +292,7 @@ export function EmployerShell({
                 </span>
               </button>
               {userMenu && (
-                <div
-                  className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-hair bg-white p-1.5 shadow-lift"
-                  onMouseLeave={() => setUserMenu(false)}
-                >
+                <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-hair bg-white p-1.5 shadow-lift">
                   <p className="px-3 py-1.5 text-xs text-neutralx-400">{userMeta}</p>
                   <Link href={settingsHref} className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
                     {t.shell.menuSettings}

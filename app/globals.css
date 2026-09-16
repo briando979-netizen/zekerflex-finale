@@ -120,8 +120,11 @@ body {
   .pill-neutral { @apply pill bg-paper-soft text-neutralx-600; }
 
   .field-label { @apply block text-sm font-medium text-ink-soft; }
+  /* text-base (16px), not text-sm: below 16px iOS Safari auto-zooms the
+     page on focus, which is disorienting on iPad. This also brings the
+     control to a full 44px tap target (py-2.5 + 24px line-height). */
   .field-input {
-    @apply mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2.5 text-sm
+    @apply mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2.5 text-base
       shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
   }
 }
@@ -129,13 +132,7 @@ body {
 .num { font-variant-numeric: tabular-nums; }
 
 /* ============================================================ sales (buitendienst / iPad) */
-/* Veldwerk-scherm: draait vooral op iPad tijdens een bedrijfsbezoek, dus
-   ruimere tikdoelen en 16px input-tekst (voorkomt dat iOS Safari inzoomt
-   zodra je een veld aantikt). */
-.sales-scope .field-input {
-  font-size: 16px;
-  min-height: 44px;
-}
+/* Veldwerk-scherm: draait vooral op iPad tijdens een bedrijfsbezoek. */
 .sales-scope button,
 .sales-scope a {
   touch-action: manipulation;

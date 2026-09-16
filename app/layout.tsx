@@ -15,6 +15,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#0C0E12" },
   ],
   colorScheme: "light dark",
+  // Lets fixed bars reach into the rounded-corner / home-indicator safe area
+  // on iPad Pro and iPhone when installed as a standalone app.
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
