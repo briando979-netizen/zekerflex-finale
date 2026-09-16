@@ -47,7 +47,7 @@ export function LeadWorkspace() {
   }, [load]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
+    <div className="grid gap-8 md:grid-cols-[360px_1fr]">
       <NewVisitForm onCreated={load} />
       <div>
         <h2 className="font-display text-lg font-bold text-ink">Mijn bezoeken</h2>
@@ -144,7 +144,7 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
           placeholder="Zoek in het Handelsregister…"
         />
         {open && hits.length > 0 && (
-          <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-hair bg-white shadow-lift">
+          <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto overflow-x-hidden rounded-xl border border-hair bg-white shadow-lift">
             {hits.map((h) => (
               <li key={h.kvkNumber}>
                 <button
@@ -155,7 +155,7 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
                     if (h.city) set("city", h.city);
                     setOpen(false);
                   }}
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-paper-soft"
+                  className="block min-h-11 w-full px-3 py-3 text-left text-sm hover:bg-paper-soft active:bg-paper-soft"
                 >
                   <span className="font-medium text-ink">{h.name}</span>
                   <span className="ml-2 text-xs text-neutralx-400">
@@ -172,7 +172,14 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="field-label">
           KVK-nummer
-          <input value={form.kvkNumber} onChange={(e) => set("kvkNumber", e.target.value)} className="field-input" placeholder="8 cijfers" />
+          <input
+            value={form.kvkNumber}
+            onChange={(e) => set("kvkNumber", e.target.value)}
+            className="field-input"
+            placeholder="8 cijfers"
+            inputMode="numeric"
+            autoComplete="off"
+          />
         </label>
         <label className="field-label">
           Plaats
@@ -182,16 +189,30 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
 
       <label className="field-label mt-3 block">
         Contactpersoon
-        <input value={form.contactName} onChange={(e) => set("contactName", e.target.value)} className="field-input" />
+        <input value={form.contactName} onChange={(e) => set("contactName", e.target.value)} className="field-input" autoComplete="name" />
       </label>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="field-label">
           E-mail
-          <input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} className="field-input" placeholder="voor de uitnodiging" />
+          <input
+            type="email"
+            value={form.contactEmail}
+            onChange={(e) => set("contactEmail", e.target.value)}
+            className="field-input"
+            placeholder="voor de uitnodiging"
+            inputMode="email"
+            autoComplete="email"
+          />
         </label>
         <label className="field-label">
           Telefoon
-          <input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} className="field-input" />
+          <input
+            type="tel"
+            value={form.contactPhone}
+            onChange={(e) => set("contactPhone", e.target.value)}
+            className="field-input"
+            autoComplete="tel"
+          />
         </label>
       </div>
       <label className="field-label mt-3 block">
@@ -204,7 +225,7 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
       </label>
 
       {msg && <p className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
-      <button type="submit" disabled={busy} className="btn-primary mt-4 w-full disabled:opacity-50">
+      <button type="submit" disabled={busy} className="btn-primary mt-4 min-h-12 w-full disabled:opacity-50">
         {busy ? "Opslaan…" : "Bezoek vastleggen"}
       </button>
     </form>
@@ -259,7 +280,7 @@ function LeadCard({ lead, onChange }: { lead: Lead; onChange: () => void }) {
             type="button"
             onClick={invite}
             disabled={busy || !lead.contactEmail}
-            className="btn-primary px-3 py-1.5 text-xs disabled:opacity-40"
+            className="btn-primary min-h-11 px-4 text-xs disabled:opacity-40"
             title={lead.contactEmail ? "" : "Vul eerst een e-mailadres in"}
           >
             {busy ? "Versturen…" : "Account aanmaken & versturen"}
@@ -273,7 +294,7 @@ function LeadCard({ lead, onChange }: { lead: Lead; onChange: () => void }) {
           href="/uitleg"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-semibold text-brand-600 underline"
+          className="inline-flex min-h-11 items-center px-1 text-xs font-semibold text-brand-600 underline"
         >
           Uitlegfilmpjes tonen
         </a>
