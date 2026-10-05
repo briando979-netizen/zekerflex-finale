@@ -38,14 +38,14 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1125.0",
-    "@aws-sdk/s3-request-presigner": "^3.1125.0",
+    "@aws-sdk/client-s3": "^3.1145.0",
+    "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@escape.tech/graphql-armor": "^3.2.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.6.0",
     "graphql": "^16.9.0",
-    "graphql-yoga": "^5.7.0",
+    "graphql-yoga": "^5.24.1",
     "id-verifier": "^0.1.0",
     "ioredis": "^5.4.1",
     "jose": "^5.9.6",
