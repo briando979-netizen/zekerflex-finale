@@ -53,32 +53,47 @@ export default async function SysteemPage() {
   ]);
   const channels = pushChannels();
 
-  const components = [
-    { label: "PostgreSQL", ok: db.ok, meta: `${db.ms} ms` },
-    { label: "Redis", ok: cache.ok, meta: `${cache.ms} ms` },
-    { label: "Lokale AI (Ollama)", ok: llm.ok, meta: llm.ok ? llm.model : "niet bereikbaar" },
+  // "off" = a deliberately optional feature that's simply not switched on —
+  // visually distinct from "crit", which means something expected to work is
+  // actually broken right now. Lumping both under one red "Storing" pill
+  // made an intentional, zero-cost choice (Whisper/Studio disabled) look like
+  // the same kind of problem as a genuine outage (Ollama unreachable).
+  type State = "ok" | "crit" | "off";
+  const components: { label: string; state: State; meta: string }[] = [
+    { label: "PostgreSQL", state: db.ok ? "ok" : "crit", meta: `${db.ms} ms` },
+    { label: "Redis", state: cache.ok ? "ok" : "crit", meta: `${cache.ms} ms` },
+    { label: "Lokale AI (Ollama)", state: llm.ok ? "ok" : "crit", meta: llm.ok ? llm.model : "niet bereikbaar" },
     {
       label: "Soevereiniteitsgrendel",
-      ok: budget ? budget.localInference : true,
+      state: (budget ? budget.localInference : true) ? "ok" : "crit",
       meta: budget ? (budget.localInference ? `lokaal · ${budget.host}` : "externe host!") : "onbekend",
     },
-    { label: "Web Push (VAPID)", ok: channels.webPush, meta: channels.webPush ? "geconfigureerd" : "niet ingesteld" },
+    {
+      label: "Web Push (VAPID)",
+      state: channels.webPush ? "ok" : "crit",
+      meta: channels.webPush ? "geconfigureerd" : "niet ingesteld",
+    },
     {
       label: "Spraakherkenning (Whisper)",
-      ok: whisperOk,
-      meta: !env.WHISPER_ENABLED ? "uitgeschakeld" : whisperOk ? env.WHISPER_MODEL : "start met: npm run whisper",
+      state: !env.WHISPER_ENABLED ? "off" : whisperOk ? "ok" : "crit",
+      meta: !env.WHISPER_ENABLED ? "uitgeschakeld (optioneel)" : whisperOk ? env.WHISPER_MODEL : "start met: npm run whisper",
     },
     {
       label: "Mailserver (SMTP)",
-      ok: smtpConfigured(),
+      state: smtpConfigured() ? "ok" : "crit",
       meta: smtpConfigured() ? `${env.SMTP_HOST}:${env.SMTP_PORT}` : "mailbox-only — zie /admin/mail",
     },
     {
       label: "Beeldgenerator (Studio)",
-      ok: env.IMAGE_ENABLED,
-      meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND} · ${env.IMAGE_BASE_URL}` : "uitgeschakeld",
+      state: env.IMAGE_ENABLED ? "ok" : "off",
+      meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND} · ${env.IMAGE_BASE_URL}` : "uitgeschakeld (optioneel)",
     },
   ];
+  const TONE: Record<State, { tone: "ok" | "crit" | "neutral"; label: string }> = {
+    ok: { tone: "ok", label: "OK" },
+    crit: { tone: "crit", label: "Storing" },
+    off: { tone: "neutral", label: "Uitgeschakeld" },
+  };
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -99,15 +114,18 @@ export default async function SysteemPage() {
 
       <Panel title="Componenten">
         <ul className="divide-y divide-hair">
-          {components.map((c) => (
-            <li key={c.label} className="flex items-center justify-between px-5 py-4">
-              <span className="text-sm font-medium text-ink">{c.label}</span>
-              <span className="flex items-center gap-3">
-                <span className="font-mono text-xs text-neutralx-400">{c.meta}</span>
-                <StatusPill tone={c.ok ? "ok" : "crit"}>{c.ok ? "OK" : "Storing"}</StatusPill>
-              </span>
-            </li>
-          ))}
+          {components.map((c) => {
+            const t = TONE[c.state];
+            return (
+              <li key={c.label} className="flex items-center justify-between px-5 py-4">
+                <span className="text-sm font-medium text-ink">{c.label}</span>
+                <span className="flex items-center gap-3">
+                  <span className="font-mono text-xs text-neutralx-400">{c.meta}</span>
+                  <StatusPill tone={t.tone}>{t.label}</StatusPill>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </Panel>
 

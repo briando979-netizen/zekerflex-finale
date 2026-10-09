@@ -146,12 +146,12 @@ describe("sales engine tick", () => {
     wireCampaign("REVIEW");
     await runSalesEngineTick({ campaignId: "c1", force: true });
 
-    const dueCall = leadFindMany.mock.calls.find(
-      ([args]: [{ where?: { score?: unknown } }]) =>
-        typeof args?.where?.score === "object" && args.where.score !== null && "gte" in (args.where.score as object),
-    );
+    const dueCall = leadFindMany.mock.calls.find((call: unknown[]) => {
+      const args = call[0] as { where?: { score?: unknown } };
+      return typeof args?.where?.score === "object" && args.where.score !== null && "gte" in (args.where.score as object);
+    });
     expect(dueCall).toBeTruthy();
-    const where = dueCall![0].where;
+    const where = (dueCall![0] as { where: Record<string, unknown> }).where;
     expect(where.vacancySignal).toEqual({ not: null });
     expect(where.AND).toEqual(
       expect.arrayContaining([
