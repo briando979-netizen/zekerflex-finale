@@ -38,6 +38,32 @@ const DOMAIN_COOLDOWN_DAYS = 14;
 const DOMAIN_GUESS_PER_TICK = 5;
 const DOMAIN_GUESS_RETRY_DAYS = 14;
 
+/**
+ * Mirrors the tick's own summary into the Jarvis event log under agent
+ * "sales" — the only thing that makes the Control Center's "Sales" agent
+ * tile light up. A cron tick has no human-chat turn to attach to, so this
+ * gives it its own minimal synthetic one. Best-effort: a logging failure
+ * must never affect the real tick result.
+ */
+async function logAgentActivity(summary: string, ok: boolean): Promise<void> {
+  try {
+    const turn = await prisma.jarvisTurn.create({
+      data: {
+        prompt: "Autonome sales-motor tick",
+        status: ok ? "COMPLETED" : "FAILED",
+        answer: ok ? summary : null,
+        error: ok ? null : summary,
+        endedAt: new Date(),
+      },
+    });
+    await prisma.jarvisEvent.create({
+      data: { turnId: turn.id, seq: 1, kind: "TOOL_CALL", agent: "sales", title: summary.slice(0, 200) },
+    });
+  } catch (err) {
+    logger.warn("sales engine: failed to log agent activity", { error: (err as Error).message });
+  }
+}
+
 async function safe<T>(label: string, fn: () => Promise<T>, fallback: T, errors: string[]): Promise<T> {
   try {
     return await fn();
@@ -505,8 +531,10 @@ export async function runSalesEngineTick(opts: SalesTickOptions = {}): Promise<S
       });
     }
     logger.info("sales engine tick done", { runId: run.id, ...base, errors: base.errors.length });
+    void logAgentActivity(summary, true);
     return base;
   } catch (err) {
+    void logAgentActivity(`Tick faalde: ${(err as Error).message}`, false);
     await prisma.salesEngineRun
       .update({
         where: { id: run.id },

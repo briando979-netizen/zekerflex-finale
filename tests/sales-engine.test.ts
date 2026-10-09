@@ -18,6 +18,8 @@ const leadUpdateMany = vi.fn().mockResolvedValue({});
 const leadFindFirst = vi.fn().mockResolvedValue(null);
 const discoverySourceFindFirst = vi.fn().mockResolvedValue(null);
 const discoverySourceCreate = vi.fn().mockResolvedValue({});
+const jarvisTurnCreate = vi.fn().mockResolvedValue({ id: "turn1" });
+const jarvisEventCreate = vi.fn().mockResolvedValue({});
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -38,6 +40,8 @@ vi.mock("@/lib/prisma", () => ({
       update: (...a: unknown[]) => leadUpdate(...a),
       updateMany: (...a: unknown[]) => leadUpdateMany(...a),
     },
+    jarvisTurn: { create: (...a: unknown[]) => jarvisTurnCreate(...a) },
+    jarvisEvent: { create: (...a: unknown[]) => jarvisEventCreate(...a) },
   },
 }));
 
@@ -140,6 +144,18 @@ describe("sales engine tick", () => {
     expect(sendOutreachMail).not.toHaveBeenCalled();
     expect(r.drafted).toBe(1);
     expect(r.sent).toBe(0);
+  });
+
+  it("logs a Jarvis agent event for \"sales\" so the Control Center agent tile reflects real ticks", async () => {
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+
+    expect(jarvisTurnCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "COMPLETED" }) }),
+    );
+    expect(jarvisEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ turnId: "turn1", agent: "sales", kind: "TOOL_CALL" }),
+    });
   });
 
   it("only queries due leads that have a vacancy signal and a known e-mail — never a bare KVK stub", async () => {
