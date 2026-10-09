@@ -275,6 +275,14 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 </p>
               )}
               <p className="mt-3 text-sm font-semibold text-ink">Vergeet niet je ID-kaart mee te nemen naar de klus!</p>
+              <a
+                href={agreementHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink underline"
+              >
+                📄 {s.agreement ? "Bekijk je modelovereenkomst" : "Bekijk concept-modelovereenkomst"}
+              </a>
             </>
           )}
           <div className={assigned.replacementRequested ? "" : "mt-4"}>
