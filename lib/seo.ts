@@ -6,7 +6,7 @@
 // falls back to the real domain (not localhost) so a misconfigured build still
 // emits correct canonicals / OG URLs / sitemap entries rather than poisoning
 // the index with localhost. Dev keeps localhost.
-const PRODUCTION_ORIGIN = "https://zekerflex.nl";
+const PRODUCTION_ORIGIN = "https://www.zekerflex.com";
 
 function resolveAppBaseUrl(): string {
   const fallback = process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : "http://localhost:3000";
@@ -168,6 +168,7 @@ export function websiteJsonLd(): Record<string, unknown> {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
     name: SITE.name,
+    alternateName: "Zeker Flex",
     url: SITE.url,
     inLanguage: "nl-NL",
     publisher: { "@id": ORG_ID },
