@@ -210,8 +210,15 @@ export async function respondToOfferAction(
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
 
     const offer = (await listCounterOffers(500)).find((o) => o.id === offerId);
-    if (!offer) return { ok: false, message: "Tegenbod niet gevonden." };
-    if (offer.status !== "pending") return { ok: false, message: "Dit tegenbod is al afgehandeld." };
+    if (!offer) return { ok: false, message: "Reactie niet gevonden." };
+    // A freelancer who simply agrees with the listed rate still goes through
+    // this same Offer record — only call it a "tegenbod" when they actually
+    // proposed a different one, so a plain reaction isn't framed as a negotiation.
+    const isCounter = offer.proposedRateCents !== offer.listedRateCents;
+    const noun = isCounter ? "tegenbod" : "reactie";
+    const Noun = isCounter ? "Tegenbod" : "Reactie";
+    const thisLabel = isCounter ? "Dit tegenbod" : "Deze reactie";
+    if (offer.status !== "pending") return { ok: false, message: `${thisLabel} is al afgehandeld.` };
 
     // verify the employer owns the shift
     const scope = await resolveEmployerScope(principal);
@@ -225,7 +232,7 @@ export async function respondToOfferAction(
     if (decision === "accepted" && offer.proposedRateCents < MIN_SHIFT_RATE_CENTS) {
       return {
         ok: false,
-        message: `Dit tegenbod (${eur(offer.proposedRateCents)}/u) ligt onder het minimum uurtarief van ${eur(MIN_SHIFT_RATE_CENTS)}.`,
+        message: `${thisLabel} (${eur(offer.proposedRateCents)}/u) ligt onder het minimum uurtarief van ${eur(MIN_SHIFT_RATE_CENTS)}.`,
       };
     }
 
@@ -260,7 +267,7 @@ export async function respondToOfferAction(
         action: "offer.accepted",
         actorUserId: principal.userId,
         actorLabel: "user",
-        summary: `Tegenbod ${eur(offer.proposedRateCents)}/u geaccepteerd voor "${shift.title}"`,
+        summary: `${Noun} (${eur(offer.proposedRateCents)}/u) geaccepteerd voor "${shift.title}"`,
         targetType: "shift",
         targetId: shift.id,
       });
@@ -280,8 +287,10 @@ export async function respondToOfferAction(
         thread.id,
         "system",
         decision === "accepted"
-          ? `Je tegenbod van ${eur(offer.proposedRateCents)}/u is geaccepteerd. Je bent toegewezen aan "${shift.title}" tegen dit tarief.`
-          : `Je tegenbod van ${eur(offer.proposedRateCents)}/u is helaas afgewezen. Het oorspronkelijke tarief van ${eur(offer.listedRateCents)}/u blijft gelden.`,
+          ? `Je ${noun} is geaccepteerd. Je bent toegewezen aan "${shift.title}" tegen ${eur(offer.proposedRateCents)}/u.`
+          : `Je ${noun} voor "${shift.title}" is helaas afgewezen.${
+              isCounter ? ` Het oorspronkelijke tarief van ${eur(offer.listedRateCents)}/u blijft gelden.` : ""
+            }`,
         "system",
       );
     } catch {
@@ -292,7 +301,7 @@ export async function respondToOfferAction(
     revalidatePath("/werkgever/diensten");
     return {
       ok: true,
-      message: decision === "accepted" ? "Tegenbod geaccepteerd — de kracht is toegewezen aan de dienst." : "Tegenbod afgewezen.",
+      message: decision === "accepted" ? `${Noun} geaccepteerd — de kracht is toegewezen aan de dienst.` : `${Noun} afgewezen.`,
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };

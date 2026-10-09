@@ -119,7 +119,9 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ink">
                         {o.freelancerName} · <span className="num text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
-                        <span className="ml-2 text-xs font-normal text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
+                        {o.proposedRateCents !== o.listedRateCents && (
+                          <span className="ml-2 text-xs font-normal text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
+                        )}
                       </p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-neutralx-500">
                         {o.reliability !== null && (

@@ -127,4 +127,20 @@ describe("respondToOfferAction", () => {
     expect(setOfferStatus).toHaveBeenCalledWith("offer1", "declined");
     expect(result.ok).toBe(true);
   });
+
+  it("calls a reaction at the listed rate a 'reactie', not a 'tegenbod'", async () => {
+    const plainReaction = { ...offer, listedRateCents: offer.proposedRateCents };
+    requirePrincipal.mockResolvedValue(manager());
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });
+    listCounterOffers.mockResolvedValue([plainReaction]);
+    shiftFindFirst.mockResolvedValue(shift);
+    shiftUpdate.mockResolvedValue({});
+    applyToShift.mockResolvedValue({ status: "ACCEPTED", shiftFilled: false });
+    setOfferStatus.mockResolvedValue({ ...plainReaction, status: "accepted" });
+
+    const result = await respondToOfferAction("offer1", "accepted");
+
+    expect(result.message.toLowerCase()).not.toContain("tegenbod");
+    expect(result.message).toContain("Reactie");
+  });
 });
