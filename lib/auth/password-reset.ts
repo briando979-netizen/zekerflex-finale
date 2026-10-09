@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, passwordResetEmail } from "@/lib/mail";
 import { fixedWindow } from "@/lib/rate-limit";
+import { clearLoginFailures } from "@/lib/auth/login-throttle";
 
 // ---------------------------------------------------------------------------
 // Password reset. Tokens live in Postgres (PasswordResetToken), isolated from
@@ -94,7 +95,17 @@ export async function completePasswordReset(token: string, newPassword: string):
     return { ok: false, reason: "Deze herstellink is verlopen of al gebruikt. Vraag een nieuwe aan." };
   }
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+    select: { email: true },
+  });
+  // Proving account ownership via a mailed reset link is exactly the
+  // recovery path a login-throttle lockout should respect — without this,
+  // a locked-out user who correctly resets their password stays locked out
+  // anyway for the full window, unable to ever place the one login attempt
+  // that would otherwise have cleared it.
+  await clearLoginFailures(updated.email.toLowerCase().trim());
   await recordAudit({
     category: "SECURITY",
     action: "auth.password.reset",
