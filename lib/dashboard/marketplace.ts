@@ -58,6 +58,8 @@ export interface MarketplaceShift {
   replacementNote: string | null;
   /** the signed-in freelancer's own counter-offer on this shift, if any */
   myOffer: { proposedRateCents: number; status: OfferStatus } | null;
+  /** only uitzendkrachten (payroll-track) can react to this shift */
+  viaUitzendbureau: boolean;
 }
 
 export interface MarketplaceData {
@@ -240,6 +242,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     positions: true,
     createdAt: true,
     branchId: true,
+    viaUitzendbureau: true,
     requiredSkill: { select: { name: true } },
     branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true } },
     _count: { select: { assignments: { where: { cancelledAt: null } } } },
@@ -325,6 +328,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         isReplacement: replacementByShift.has(s.id),
         replacementNote: replacementByShift.get(s.id) ?? null,
         myOffer: offerByShift.get(s.id) ?? null,
+        viaUitzendbureau: s.viaUitzendbureau,
         match: computeMatch(
           home,
           profile?.reliabilityScore ?? 0.7,
@@ -378,6 +382,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       title: true,
       description: true,
       dresscode: true,
+      viaUitzendbureau: true,
       startsAt: true,
       endsAt: true,
       breakMinutes: true,
@@ -522,6 +527,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       isReplacement: false,
       replacementNote: null,
       myOffer: null,
+      viaUitzendbureau: row.viaUitzendbureau,
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {
     base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: ownOffer.status };

@@ -98,10 +98,14 @@ export async function counterOfferAction(
         hourlyRateCents: true,
         status: true,
         startsAt: true,
+        viaUitzendbureau: true,
         branch: { select: { name: true } },
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
+    if (shift.viaUitzendbureau && eligible.track !== "payroll") {
+      return { ok: false, message: "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau." };
+    }
     if (!["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
       return { ok: false, message: "Deze dienst neemt geen biedingen meer aan." };
     }

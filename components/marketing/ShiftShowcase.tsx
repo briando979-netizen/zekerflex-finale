@@ -46,6 +46,7 @@ function sample(
     isReplacement: false,
     replacementNote: null,
     myOffer: null,
+    viaUitzendbureau: false,
     travel: { distanceKm: km, fastest: fastestMode(byMode), byMode },
     match: {
       score: score / 100,

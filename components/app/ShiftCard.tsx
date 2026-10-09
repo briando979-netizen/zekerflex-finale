@@ -125,9 +125,15 @@ export function ShiftCard({
               Speciaal voor jou
             </span>
           )}
-          <span className="rounded border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">
-            Freelance
-          </span>
+          {shift.viaUitzendbureau ? (
+            <span className="rounded border border-amber-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">
+              Via uitzendbureau
+            </span>
+          ) : (
+            <span className="rounded border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">
+              Freelance
+            </span>
+          )}
           {idReminder && (
             <span className="rounded border border-hairstrong px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600">
               Neem je ID mee

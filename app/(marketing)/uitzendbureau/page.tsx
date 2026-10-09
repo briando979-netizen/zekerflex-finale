@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { UitzendJobBoard } from "@/components/marketing/UitzendJobBoard";
+import { UitzendbureauContactForm } from "@/components/marketing/UitzendbureauContactForm";
 
 export const revalidate = 3600;
 
@@ -344,6 +345,24 @@ export default async function UitzendbureauPage() {
               {t}
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section>
+        <div id="werkgevers" className="scroll-mt-24" />
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+          <div>
+            <SectionHead
+              eyebrow="Voor werkgevers"
+              title="Zelf geen uitzendkrachten nodig — wel personeel inhuren?"
+            />
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft">
+              Via het ZekerFlex-uitzendbureau huur je uitzendkrachten in zonder gedoe met loonadministratie:
+              ZekerFlex is de formele werkgever, jij regelt alleen de bezetting. Vul het formulier in en we nemen
+              contact op om de mogelijkheden te bespreken.
+            </p>
+          </div>
+          <UitzendbureauContactForm />
         </div>
       </Section>
 

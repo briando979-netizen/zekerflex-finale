@@ -520,6 +520,10 @@ model Shift {
   // from the general description — the reageer flow asks them to explicitly
   // accept it, so it needs its own field rather than being buried in prose.
   dresscode       String?
+  // Restricts this shift to uitzendkrachten (payroll-track workers, see
+  // FiscalProfile.workerKind) — a zzp'er/flexwerker can see it in the
+  // marketplace but can't react to it. Set by the employer at creation time.
+  viaUitzendbureau Boolean @default(false)
   requiredSkillId String?
   requiredSkill   Skill?  @relation(fields: [requiredSkillId], references: [id])
   minSkillRating  Float   @default(0)

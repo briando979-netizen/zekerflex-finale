@@ -54,11 +54,15 @@ export async function applyToShift(
       status: true,
       startsAt: true,
       positions: true,
+      viaUitzendbureau: true,
       branch: { select: { tenantId: true, latitude: true, longitude: true, geofenceRadiusMeters: true } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
   if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.");
+  if (shift.viaUitzendbureau && eligible.track !== "payroll") {
+    throw AppError.forbidden("Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.");
+  }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {
     throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.");
   }

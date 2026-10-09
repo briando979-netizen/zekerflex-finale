@@ -77,6 +77,8 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   test: "essential",
   "demo-aanvraag": "essential",
   "demo-aanvraag-bevestiging": "essential",
+  "uitzendbureau-aanvraag": "essential",
+  "uitzendbureau-aanvraag-bevestiging": "essential",
   "open-sollicitatie": "essential",
   "open-sollicitatie-bevestiging": "essential",
   security: "essential",
@@ -97,6 +99,8 @@ const REPLIABLE_KINDS = new Set([
   "replacement",
   "demo-aanvraag",
   "demo-aanvraag-bevestiging",
+  "uitzendbureau-aanvraag",
+  "uitzendbureau-aanvraag-bevestiging",
   "open-sollicitatie",
   "open-sollicitatie-bevestiging",
   // Sales outreach: a human on the sales side reads and answers replies.

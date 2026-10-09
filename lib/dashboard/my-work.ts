@@ -69,6 +69,7 @@ type ShiftRow = {
   hourlyRateCents: number;
   positions: number;
   branchId: string;
+  viaUitzendbureau: boolean;
   requiredSkill: { name: string } | null;
   branch: { name: string; city: string; latitude: number; longitude: number; tenant: { id: string; name: string } };
   _count: { assignments: number };
@@ -102,6 +103,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     isReplacement: false,
     replacementNote: null,
     myOffer: null,
+    viaUitzendbureau: row.viaUitzendbureau,
   };
 }
 
@@ -121,6 +123,7 @@ export const SHIFT_SELECT = {
   hourlyRateCents: true,
   positions: true,
   branchId: true,
+  viaUitzendbureau: true,
   requiredSkill: { select: { name: true } },
   branch: { select: { name: true, city: true, latitude: true, longitude: true, tenant: { select: { id: true, name: true } } } },
   _count: { select: { assignments: { where: { cancelledAt: null } } } },

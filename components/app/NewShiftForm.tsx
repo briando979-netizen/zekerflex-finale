@@ -145,6 +145,17 @@ export function NewShiftForm({
           />
         </label>
 
+        <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
+          <input type="checkbox" name="viaUitzendbureau" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
+          <span>
+            <span className="block text-sm font-semibold text-ink">Via het ZekerFlex-uitzendbureau</span>
+            <span className="block text-xs text-neutralx-500">
+              Alleen uitzendkrachten (loon via ZekerFlex) kunnen hierop reageren — zzp&apos;ers en flexwerkers zien de
+              klus wel staan, maar kunnen er niet op reageren.
+            </span>
+          </span>
+        </label>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="field-label">Start</span>

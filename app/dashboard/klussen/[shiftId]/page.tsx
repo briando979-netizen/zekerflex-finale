@@ -108,12 +108,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     have: heldCerts.has(c.type),
   }));
   const missingRequiredCert = certList.find((c) => c.required && !c.have) ?? null;
-  const applyDisabled = !s.canApply || Boolean(missingRequiredCert);
+  const uitzendbureauBlocked = s.viaUitzendbureau && !isPayroll;
+  const applyDisabled = !s.canApply || Boolean(missingRequiredCert) || uitzendbureauBlocked;
   const applyBlockReason = !s.canApply
     ? s.blockReason
-    : missingRequiredCert
-      ? `Voor deze klus is een geldig ${missingRequiredCert.label} nodig. Voeg het toe bij Certificaten.`
-      : null;
+    : uitzendbureauBlocked
+      ? "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau."
+      : missingRequiredCert
+        ? `Voor deze klus is een geldig ${missingRequiredCert.label} nodig. Voeg het toe bij Certificaten.`
+        : null;
 
   // Cancellation deadline: 24h before the shift starts.
   const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
