@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
+import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
@@ -106,18 +107,35 @@ async function scoreCandidate(
   };
 }
 
+/**
+ * vatValid/kvkValid qualifies a zzp'er/flexwerker — but an uitzendkracht has
+ * neither by design (ZekerFlex is their employer, no KVK/btw needed), so a
+ * plain vatValid+kvkValid filter would exclude every uitzendkracht from ever
+ * being auto-matched at all. workerKind lives in the fiscal KV store, not a
+ * DB column, so that lookup only runs for candidates who need it: not
+ * zzp-eligible, or the shift is reserved for uitzendkrachten outright.
+ */
+export async function isMatchEligibleWorker(
+  profile: { userId: string; vatValid: boolean; kvkValid: boolean },
+  viaUitzendbureau: boolean,
+): Promise<boolean> {
+  const zzpEligible = profile.vatValid && profile.kvkValid;
+  if (zzpEligible && !viaUitzendbureau) return true;
+  const fiscal = await getFiscal(profile.userId);
+  return invoiceModeFor(fiscal) === "payroll";
+}
+
 async function loadCandidatePool(shift: {
   id: string;
   requiredSkillId: string | null;
   startsAt: Date;
   endsAt: Date;
+  viaUitzendbureau: boolean;
 }): Promise<CandidateInput[]> {
   const now = new Date();
   const profiles = await prisma.freelancerProfile.findMany({
     where: {
       isBlacklisted: false,
-      vatValid: true,
-      kvkValid: true,
       user: { kycStatus: "VERIFIED", disabledAt: null },
       OR: [
         { matchingBlockedUntil: null },
@@ -145,6 +163,8 @@ async function loadCandidatePool(shift: {
       reliabilityScore: true,
       acceptanceScore: true,
       badgeLevel: true,
+      vatValid: true,
+      kvkValid: true,
       skills: shift.requiredSkillId
         ? {
             where: { skillId: shift.requiredSkillId },
@@ -155,7 +175,12 @@ async function loadCandidatePool(shift: {
     take: 500,
   });
 
-  return profiles.map((p) => {
+  const checks = await Promise.all(
+    profiles.map((p) => isMatchEligibleWorker(p, shift.viaUitzendbureau)),
+  );
+  const eligible = profiles.filter((_, i) => checks[i]);
+
+  return eligible.map((p) => {
     const skills = p.skills as { rating: number }[] | false;
     return {
       freelancerId: p.id,
@@ -223,6 +248,7 @@ export async function runMatchingForShift(
       requiredSkillId: shift.requiredSkillId,
       startsAt: shift.startsAt,
       endsAt: shift.endsAt,
+      viaUitzendbureau: shift.viaUitzendbureau,
     });
     log.info("candidate pool loaded", { size: pool.length });
 
