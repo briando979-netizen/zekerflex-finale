@@ -191,6 +191,13 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   const history: MyWorkItem[] = [];
 
   // ── counter-offers ──────────────────────────────────────────────────
+  // A "live" assignment already represents an accepted offer in full (with
+  // agreement/timesheet) via the loop below — this set exists only to catch
+  // an accepted offer that, for whatever reason, never got one, so it still
+  // shows up (as "Geaccepteerd") instead of silently vanishing.
+  const assignedShiftIds = new Set(
+    assignments.filter((a) => !a.cancelledAt).map((a) => a.shift.id),
+  );
   const offerShiftIds = offers.filter((o) => o.status !== "withdrawn").map((o) => o.shiftId);
   const offerShifts = offerShiftIds.length
     ? await prisma.shift.findMany({ where: { id: { in: offerShiftIds } }, select: SHIFT_SELECT })
@@ -221,6 +228,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     };
     if (item.status === "pending") pending.push(item);
     else if (item.status === "rejected") history.push(item);
+    else if (item.status === "active" && !assignedShiftIds.has(o.shiftId)) pending.push(item);
   }
 
   // ── accepted assignments ────────────────────────────────────────────

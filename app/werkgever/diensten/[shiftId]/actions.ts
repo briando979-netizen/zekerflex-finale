@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listCounterOffers, setOfferStatus } from "@/lib/offers/store";
+import { applyToShift } from "@/lib/matching/apply";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 
@@ -228,16 +229,32 @@ export async function respondToOfferAction(
       };
     }
 
-    await setOfferStatus(offerId, decision);
-
     if (decision === "accepted") {
-      // The shift now pays the agreed rate (employer's own shift).
+      // The shift now pays the agreed rate (employer's own shift) — update
+      // before finalising so the assignment/timesheet snapshot the agreed rate.
       if (["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
         await prisma.shift.update({
           where: { id: shift.id },
           data: { hourlyRateCents: offer.proposedRateCents },
         });
       }
+      // The freelancer's tegenbod is their signature; the employer accepting
+      // it is the counter-signature (see ensureModelAgreement) — so this
+      // finalises the assignment right away. There is no separate "aannemen"
+      // control left for the freelancer to click once they've already reacted,
+      // so leaving it unfinished here made the shift silently vanish for them.
+      try {
+        await applyToShift(offer.userId, shift.id);
+      } catch (e) {
+        return {
+          ok: false,
+          message:
+            e instanceof AppError
+              ? `Accepteren is gelukt, maar toewijzen is niet gelukt: ${e.message}`
+              : "Accepteren is gelukt, maar de dienst automatisch toewijzen is mislukt.",
+        };
+      }
+      await setOfferStatus(offerId, decision);
       await recordAudit({
         category: "MATCHING",
         action: "offer.accepted",
@@ -247,6 +264,8 @@ export async function respondToOfferAction(
         targetType: "shift",
         targetId: shift.id,
       });
+    } else {
+      await setOfferStatus(offerId, decision);
     }
 
     // let the freelancer know in chat
@@ -261,7 +280,7 @@ export async function respondToOfferAction(
         thread.id,
         "system",
         decision === "accepted"
-          ? `Je tegenbod van ${eur(offer.proposedRateCents)}/u is geaccepteerd. Je kunt de klus nu aannemen tegen dit tarief.`
+          ? `Je tegenbod van ${eur(offer.proposedRateCents)}/u is geaccepteerd. Je bent toegewezen aan "${shift.title}" tegen dit tarief.`
           : `Je tegenbod van ${eur(offer.proposedRateCents)}/u is helaas afgewezen. Het oorspronkelijke tarief van ${eur(offer.listedRateCents)}/u blijft gelden.`,
         "system",
       );
@@ -273,7 +292,7 @@ export async function respondToOfferAction(
     revalidatePath("/werkgever/diensten");
     return {
       ok: true,
-      message: decision === "accepted" ? "Tegenbod geaccepteerd — de kracht kan nu aannemen." : "Tegenbod afgewezen.",
+      message: decision === "accepted" ? "Tegenbod geaccepteerd — de kracht is toegewezen aan de dienst." : "Tegenbod afgewezen.",
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };

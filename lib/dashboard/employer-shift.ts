@@ -4,6 +4,8 @@ import type { Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { listCounterOffers } from "@/lib/offers/store";
 import { listReplacementRequests } from "@/lib/replacements/store";
+import { getUserAvatars } from "@/lib/profile/store";
+import { reviewSummary } from "@/lib/reviews/store";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -35,6 +37,7 @@ export interface EmployerShiftView {
     name: string;
     reliability: number;
     badge: string;
+    avatarUrl: string | null;
     acceptedAt: Date;
     confirmed: boolean;
     replacementRequested: boolean;
@@ -47,6 +50,7 @@ export interface EmployerShiftView {
     score: number;
     travelMinutes: number;
     status: string;
+    avatarUrl: string | null;
   }[];
   offers: {
     id: string;
@@ -57,6 +61,11 @@ export interface EmployerShiftView {
     note: string;
     status: string;
     at: string;
+    avatarUrl: string | null;
+    reliability: number | null;
+    badge: string | null;
+    reviewAverage: number;
+    reviewCount: number;
   }[];
 }
 
@@ -125,6 +134,30 @@ export async function getEmployerShift(
   // confirmations live in each freelancer's prefs — skip a per-user read here;
   // the employer view treats "confirmed" as best-effort false unless we add it.
 
+  // A pending reaction only carried a name + proposed rate — nothing to help
+  // decide who to pick. Fetch photo/reliability/reviews for everyone shown
+  // on the page (reactions, already-assigned, queue) in one batch.
+  const pendingOfferRows = allOffers.filter((o) => o.shiftId === shift.id && o.status !== "withdrawn");
+  const offerUserIds = pendingOfferRows.map((o) => o.userId);
+  const allUserIds = [
+    ...new Set([
+      ...offerUserIds,
+      ...shift.assignments.map((a) => a.freelancer.userId),
+      ...shift.matches.map((m) => m.freelancer.userId),
+    ]),
+  ];
+  const [avatars, offerProfiles, offerReviews] = await Promise.all([
+    getUserAvatars(allUserIds),
+    prisma.freelancerProfile.findMany({
+      where: { userId: { in: offerUserIds } },
+      select: { userId: true, reliabilityScore: true, badgeLevel: true },
+    }),
+    Promise.all(offerUserIds.map((id) => reviewSummary("freelancer", id))),
+  ]);
+  const avatarUrl = (userId: string): string | null => (avatars[userId] ? `/api/profile/${userId}/avatar` : null);
+  const offerProfileByUser = new Map(offerProfiles.map((p) => [p.userId, p]));
+  const offerReviewByUser = new Map(offerUserIds.map((id, i) => [id, offerReviews[i]!]));
+
   const hours = (shift.endsAt.getTime() - shift.startsAt.getTime()) / 3_600_000 - shift.breakMinutes / 60;
   const grossPerSeat = Math.round(Math.max(0, hours) * shift.hourlyRateCents);
 
@@ -152,6 +185,7 @@ export async function getEmployerShift(
       name: a.freelancer.user.fullName,
       reliability: a.freelancer.reliabilityScore,
       badge: a.freelancer.badgeLevel,
+      avatarUrl: avatarUrl(a.freelancer.userId),
       acceptedAt: a.acceptedAt,
       confirmed: false,
       replacementRequested: replacementAssignmentIds.has(a.id),
@@ -166,10 +200,12 @@ export async function getEmployerShift(
         score: m.score,
         travelMinutes: m.travelMinutes,
         status: m.status,
+        avatarUrl: avatarUrl(m.freelancer.userId),
       })),
-    offers: allOffers
-      .filter((o) => o.shiftId === shift.id && o.status !== "withdrawn")
-      .map((o) => ({
+    offers: pendingOfferRows.map((o) => {
+      const profile = offerProfileByUser.get(o.userId);
+      const reviews = offerReviewByUser.get(o.userId);
+      return {
         id: o.id,
         userId: o.userId,
         freelancerName: o.freelancerName,
@@ -178,6 +214,12 @@ export async function getEmployerShift(
         note: o.note,
         status: o.status,
         at: o.at,
-      })),
+        avatarUrl: avatarUrl(o.userId),
+        reliability: profile?.reliabilityScore ?? null,
+        badge: profile?.badgeLevel ?? null,
+        reviewAverage: reviews?.average ?? 0,
+        reviewCount: reviews?.count ?? 0,
+      };
+    }),
   };
 }

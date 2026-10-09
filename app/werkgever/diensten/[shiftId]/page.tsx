@@ -114,12 +114,27 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <ul className="divide-y divide-hair">
               {pendingOffers.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">
-                      {o.freelancerName} · <span className="num text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
-                      <span className="ml-2 text-xs font-normal text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
-                    </p>
-                    {o.note && <p className="mt-0.5 text-xs text-neutralx-500">{o.note}</p>}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar url={o.avatarUrl} name={o.freelancerName} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">
+                        {o.freelancerName} · <span className="num text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
+                        <span className="ml-2 text-xs font-normal text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-neutralx-500">
+                        {o.reliability !== null && (
+                          <span title="Opkomstpercentage / betrouwbaarheid">
+                            ✓ {Math.round(o.reliability * 100)}% opkomst
+                          </span>
+                        )}
+                        {o.reviewCount > 0 ? (
+                          <span>★ {o.reviewAverage.toFixed(1)} ({o.reviewCount})</span>
+                        ) : (
+                          <span className="text-neutralx-400">nog geen beoordelingen</span>
+                        )}
+                      </p>
+                      {o.note && <p className="mt-0.5 text-xs text-neutralx-500">{o.note}</p>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
@@ -140,11 +155,14 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <ul className="divide-y divide-hair">
               {s.assigned.map((a) => (
                 <li key={a.assignmentId} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">{a.name}</p>
-                    <p className="text-xs text-neutralx-500">
-                      {fmt(d.reliability, { n: Math.round(a.reliability * 100) })} · {a.badge} · {fmt(d.acceptedOn, { date: dateTime(a.acceptedAt) })}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar url={a.avatarUrl} name={a.name} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">{a.name}</p>
+                      <p className="text-xs text-neutralx-500">
+                        {fmt(d.reliability, { n: Math.round(a.reliability * 100) })} · {a.badge} · {fmt(d.acceptedOn, { date: dateTime(a.acceptedAt) })}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {a.replacementRequested && <StatusPill tone="crit">{d.replacementPill}</StatusPill>}
@@ -170,11 +188,14 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <ul className="divide-y divide-hair">
               {s.queue.slice(0, 10).map((q) => (
                 <li key={q.freelancerId} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">{q.name}</p>
-                    <p className="text-xs text-neutralx-500">
-                      {fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes })}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar url={q.avatarUrl} name={q.name} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">{q.name}</p>
+                      <p className="text-xs text-neutralx-500">
+                        {fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes })}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusPill tone={q.status === "DECLINED" ? "crit" : q.status === "NOTIFIED" ? "warn" : "neutral"}>
@@ -199,6 +220,25 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </div>
       )}
     </div>
+  );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
+}
+
+function Avatar({ url, name }: { url: string | null; name: string }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="" className="h-10 w-10 flex-shrink-0 rounded-full object-cover" />
+    );
+  }
+  return (
+    <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">
+      {initials(name)}
+    </span>
   );
 }
 
