@@ -142,6 +142,24 @@ describe("sales engine tick", () => {
     expect(r.sent).toBe(0);
   });
 
+  it("only queries due leads that have a vacancy signal and a known e-mail — never a bare KVK stub", async () => {
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+
+    const dueCall = leadFindMany.mock.calls.find(
+      ([args]: [{ where?: { score?: unknown } }]) =>
+        typeof args?.where?.score === "object" && args.where.score !== null && "gte" in (args.where.score as object),
+    );
+    expect(dueCall).toBeTruthy();
+    const where = dueCall![0].where;
+    expect(where.vacancySignal).toEqual({ not: null });
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        { OR: [{ contactEmail: { not: null } }, { discoveredEmail: { not: null } }] },
+      ]),
+    );
+  });
+
   it("AUTOPILOT does not send while SALES_AUTOPILOT_ENABLED is off", async () => {
     // tests/setup.ts leaves SALES_AUTOPILOT_ENABLED unset -> false
     wireCampaign("AUTOPILOT");

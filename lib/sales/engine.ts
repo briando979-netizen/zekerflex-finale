@@ -335,9 +335,18 @@ async function processDueLeads(
       score: { gte: campaign.minScore },
       sequenceStep: { lt: campaign.stepDelaysDays.length },
       status: { notIn: ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED", "REPLIED"] },
-      OR: [
-        { sequenceStep: 0, outreach: { none: { status: { notIn: ["DISCARDED"] } } } },
-        { nextActionAt: { lte: now } },
+      // Only ever reach out once a lead has real data behind it — a
+      // confirmed vacancy signal from the careers-crawl and an actual
+      // e-mail — never just a bare KVKBase stub (name + KVK number).
+      vacancySignal: { not: null },
+      AND: [
+        { OR: [{ contactEmail: { not: null } }, { discoveredEmail: { not: null } }] },
+        {
+          OR: [
+            { sequenceStep: 0, outreach: { none: { status: { notIn: ["DISCARDED"] } } } },
+            { nextActionAt: { lte: now } },
+          ],
+        },
       ],
     },
     orderBy: [{ score: "desc" }, { createdAt: "asc" }],
