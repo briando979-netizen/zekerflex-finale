@@ -16,6 +16,7 @@ import {
 } from "@/lib/sales/campaign";
 import { discoverViaKvkBase } from "@/lib/sales/discovery/kvkbase";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
+import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 
 // ---------------------------------------------------------------------------
 // The recruiter motor. One tick:
@@ -34,6 +35,8 @@ const DISCOVERY_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const ENRICH_PER_TICK = 5;
 const DRAFT_PER_TICK = 8;
 const DOMAIN_COOLDOWN_DAYS = 14;
+const DOMAIN_GUESS_PER_TICK = 5;
+const DOMAIN_GUESS_RETRY_DAYS = 14;
 
 async function safe<T>(label: string, fn: () => Promise<T>, fallback: T, errors: string[]): Promise<T> {
   try {
@@ -221,6 +224,76 @@ async function enrichAndScore(
   return { enriched, scored };
 }
 
+/**
+ * KVKBase-discovered leads carry a company name but no URL, so the
+ * careers-crawler has nothing to crawl for them. Guess-and-verify a homepage
+ * per lead (bounded, see domain-guess.ts) and hand confirmed hits to the
+ * crawler as a new CAREERS_URL source — picked up on the next tick.
+ */
+async function resolveLeadDomains(campaign: SalesCampaign, errors: string[]): Promise<number> {
+  let created = 0;
+  const candidates = await prisma.salesLead.findMany({
+    where: {
+      campaignId: campaign.id,
+      sourceUrl: null,
+      status: { notIn: ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED"] },
+    },
+    orderBy: { createdAt: "asc" },
+    take: DOMAIN_GUESS_PER_TICK * 3,
+  });
+
+  let attempts = 0;
+  for (const lead of candidates) {
+    if (attempts >= DOMAIN_GUESS_PER_TICK) break;
+    const enrichment = (lead.enrichmentJson ?? {}) as { domainGuessAttemptedAt?: string };
+    if (enrichment.domainGuessAttemptedAt) {
+      const since = Date.now() - new Date(enrichment.domainGuessAttemptedAt).getTime();
+      if (since < DOMAIN_GUESS_RETRY_DAYS * 24 * 60 * 60 * 1000) continue;
+    }
+    attempts += 1;
+
+    const found = await safe(
+      `domain-guess:${lead.id}`,
+      () => guessAndVerifyDomain(lead.companyName),
+      null,
+      errors,
+    );
+
+    await prisma.salesLead
+      .update({
+        where: { id: lead.id },
+        data: {
+          enrichmentJson: {
+            ...((lead.enrichmentJson as object | null) ?? {}),
+            domainGuessAttemptedAt: new Date().toISOString(),
+          } as Prisma.InputJsonValue,
+        },
+      })
+      .catch(() => undefined);
+
+    if (!found) continue;
+
+    const existingSource = await prisma.salesDiscoverySource.findFirst({
+      where: { url: { startsWith: found.origin } },
+      select: { id: true },
+    });
+    if (existingSource) continue;
+
+    await prisma.salesDiscoverySource.create({
+      data: {
+        campaignId: campaign.id,
+        kind: "CAREERS_URL",
+        url: found.origin,
+        label: lead.companyName,
+        enabled: true,
+      },
+    });
+    await prisma.salesLead.update({ where: { id: lead.id }, data: { sourceUrl: found.origin } }).catch(() => undefined);
+    created += 1;
+  }
+  return created;
+}
+
 async function processDueLeads(
   campaign: SalesCampaign,
   errors: string[],
@@ -387,6 +460,12 @@ export async function runSalesEngineTick(opts: SalesTickOptions = {}): Promise<S
       const es = await enrichAndScore(campaign, base.errors);
       base.enriched += es.enriched;
       base.scored += es.scored;
+      base.discovered += await safe(
+        "domain-guess",
+        () => resolveLeadDomains(campaign, base.errors),
+        0,
+        base.errors,
+      );
       const dd = await processDueLeads(campaign, base.errors);
       base.drafted += dd.drafted;
       base.sent += dd.sent;

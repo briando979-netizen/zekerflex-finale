@@ -16,6 +16,8 @@ const leadFindMany = vi.fn();
 const leadUpdate = vi.fn().mockResolvedValue({});
 const leadUpdateMany = vi.fn().mockResolvedValue({});
 const leadFindFirst = vi.fn().mockResolvedValue(null);
+const discoverySourceFindFirst = vi.fn().mockResolvedValue(null);
+const discoverySourceCreate = vi.fn().mockResolvedValue({});
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -24,7 +26,12 @@ vi.mock("@/lib/prisma", () => ({
       update: (...a: unknown[]) => engineRunUpdate(...a),
     },
     salesCampaign: { findMany: (...a: unknown[]) => campaignFindMany(...a) },
-    salesDiscoverySource: { findMany: (...a: unknown[]) => sourceFindMany(...a), update: vi.fn() },
+    salesDiscoverySource: {
+      findMany: (...a: unknown[]) => sourceFindMany(...a),
+      update: vi.fn(),
+      findFirst: (...a: unknown[]) => discoverySourceFindFirst(...a),
+      create: (...a: unknown[]) => discoverySourceCreate(...a),
+    },
     salesLead: {
       findMany: (...a: unknown[]) => leadFindMany(...a),
       findFirst: (...a: unknown[]) => leadFindFirst(...a),
@@ -61,6 +68,10 @@ vi.mock("@/lib/sales/discovery/kvkbase", () => ({
 }));
 vi.mock("@/lib/sales/discovery/careers", () => ({
   crawlCareersSource: vi.fn().mockResolvedValue({ created: 0, updated: 0, pagesFetched: 0, blockedByRobots: 0, emailFound: null, vacancySignal: null, companyName: null }),
+}));
+const guessAndVerifyDomain = vi.fn().mockResolvedValue(null);
+vi.mock("@/lib/sales/discovery/domain-guess", () => ({
+  guessAndVerifyDomain: (...a: unknown[]) => guessAndVerifyDomain(...a),
 }));
 
 vi.mock("@/lib/sales/campaign", () => ({
@@ -102,9 +113,12 @@ const dueLead = {
 
 function wireCampaign(mode: "REVIEW" | "AUTOPILOT") {
   campaignFindMany.mockResolvedValue([{ ...campaign, mode, autopilotConfirmedAt: mode === "AUTOPILOT" ? new Date() : null }]);
-  leadFindMany.mockImplementation((args: { where?: { score?: unknown } }) => {
-    // enrichAndScore asks for score: null; processDueLeads asks for score: { gte }
-    if (args?.where?.score === null) return Promise.resolve([]);
+  leadFindMany.mockImplementation((args: { where?: { score?: unknown; sourceUrl?: unknown } }) => {
+    const where = args?.where ?? {};
+    // enrichAndScore asks for score: null; resolveLeadDomains asks for sourceUrl:
+    // null (no score key at all); processDueLeads asks for score: { gte }.
+    if (where.score === null) return Promise.resolve([]);
+    if (where.sourceUrl === null) return Promise.resolve([]);
     return Promise.resolve([dueLead]);
   });
 }
@@ -134,5 +148,58 @@ describe("sales engine tick", () => {
     const r = await runSalesEngineTick({ campaignId: "c1", force: true });
     expect(sendOutreachMail).not.toHaveBeenCalled();
     expect(r.sent).toBe(0);
+  });
+
+  it("turns a verified domain guess into a new CAREERS_URL source", async () => {
+    campaignFindMany.mockResolvedValue([{ ...campaign, mode: "REVIEW", autopilotConfirmedAt: null }]);
+    const noUrlLead = { id: "l2", companyName: "Bakkerij De Korenaar", enrichmentJson: {} };
+    leadFindMany.mockImplementation((args: { where?: { score?: unknown; sourceUrl?: unknown } }) => {
+      const where = args?.where ?? {};
+      if (where.score === null) return Promise.resolve([]);
+      if (where.sourceUrl === null) return Promise.resolve([noUrlLead]);
+      return Promise.resolve([]);
+    });
+    guessAndVerifyDomain.mockResolvedValue({
+      origin: "https://bakkerijkorenaar.nl",
+      matchedName: "Bakkerij De Korenaar",
+      similarity: 0.8,
+    });
+
+    const r = await runSalesEngineTick({ campaignId: "c1", force: true });
+
+    expect(guessAndVerifyDomain).toHaveBeenCalledWith("Bakkerij De Korenaar");
+    expect(discoverySourceCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        campaignId: "c1",
+        kind: "CAREERS_URL",
+        url: "https://bakkerijkorenaar.nl",
+      }),
+    });
+    expect(leadUpdate).toHaveBeenCalledWith({
+      where: { id: "l2" },
+      data: { sourceUrl: "https://bakkerijkorenaar.nl" },
+    });
+    expect(r.discovered).toBeGreaterThan(0);
+  });
+
+  it("does not re-create a source for a domain that's already known", async () => {
+    campaignFindMany.mockResolvedValue([{ ...campaign, mode: "REVIEW", autopilotConfirmedAt: null }]);
+    const noUrlLead = { id: "l3", companyName: "Bakkerij De Korenaar", enrichmentJson: {} };
+    leadFindMany.mockImplementation((args: { where?: { score?: unknown; sourceUrl?: unknown } }) => {
+      const where = args?.where ?? {};
+      if (where.score === null) return Promise.resolve([]);
+      if (where.sourceUrl === null) return Promise.resolve([noUrlLead]);
+      return Promise.resolve([]);
+    });
+    guessAndVerifyDomain.mockResolvedValue({
+      origin: "https://bakkerijkorenaar.nl",
+      matchedName: "Bakkerij De Korenaar",
+      similarity: 0.8,
+    });
+    discoverySourceFindFirst.mockResolvedValue({ id: "existing-source" });
+
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+
+    expect(discoverySourceCreate).not.toHaveBeenCalled();
   });
 });
