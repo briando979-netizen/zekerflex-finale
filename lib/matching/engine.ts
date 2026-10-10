@@ -14,6 +14,7 @@ import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -399,6 +400,11 @@ async function autoAssign(
       scopeDescription: shift.title,
     });
   });
+  void dispatchWebhook("shift.matched", shift.branch.tenantId, {
+    shiftId: shift.id,
+    freelancerId,
+    source: "AUTO_ASSIGNED",
+  }).catch(() => undefined);
 }
 
 function emptyResult(shiftId: string, evaluated: number): MatchingResult {

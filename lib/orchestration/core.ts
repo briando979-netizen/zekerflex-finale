@@ -62,6 +62,42 @@ const responseSchema = z.object({
   findings: z.array(findingSchema).max(20).default([]),
 });
 
+/**
+ * Mirrors a cycle's outcome into the Jarvis event log under agent "analyst" —
+ * the only thing that makes the Control Center's "Analyst" tile light up for
+ * autonomous (cron) cycles, which have no human-chat turn to attach to.
+ * When the cycle proposed a CODE_PATCH, also logs a "developer:tom" event —
+ * that tile reflects real dev-advisor activity, never a fabricated one.
+ * Best effort: a logging failure must never affect the real cycle result.
+ */
+async function logAgentActivity(
+  summary: string,
+  ok: boolean,
+  codePatchSummary?: string,
+): Promise<void> {
+  try {
+    const turn = await prisma.jarvisTurn.create({
+      data: {
+        prompt: "Autonome orchestratiecyclus",
+        status: ok ? "COMPLETED" : "FAILED",
+        answer: ok ? summary : null,
+        error: ok ? null : summary,
+        endedAt: new Date(),
+      },
+    });
+    await prisma.jarvisEvent.create({
+      data: { turnId: turn.id, seq: 1, kind: "TOOL_CALL", agent: "analyst", title: summary.slice(0, 200) },
+    });
+    if (codePatchSummary) {
+      await prisma.jarvisEvent.create({
+        data: { turnId: turn.id, seq: 2, kind: "TOOL_CALL", agent: "developer:tom", title: codePatchSummary.slice(0, 200) },
+      });
+    }
+  } catch (err) {
+    logger.warn("orchestration: failed to log agent activity", { error: (err as Error).message });
+  }
+}
+
 function catalogue(): string {
   const q = Object.values(QUERIES)
     .map((h) => `- ${h.name}: ${h.description} params=${h.paramsHint}`)
@@ -172,8 +208,17 @@ export async function runOrchestrationCycle(
       }),
     );
 
+    const codePatchTitles: string[] = [];
     for (const f of parsed.findings) {
       const payload = await buildActionPayload(f.actionKind, f.action);
+      if (
+        f.actionKind === FindingActionKind.CODE_PATCH &&
+        typeof payload === "object" &&
+        payload !== null &&
+        !("error" in payload)
+      ) {
+        codePatchTitles.push(f.title);
+      }
       await prisma.orchestrationFinding.create({
         data: {
           runId: run.id,
@@ -222,6 +267,14 @@ export async function runOrchestrationCycle(
       rephrase: true,
     });
 
+    void logAgentActivity(
+      parsed.summary || `Cyclus afgerond: ${parsed.findings.length} bevinding(en)`,
+      true,
+      codePatchTitles.length > 0
+        ? `Codepatch voorgesteld: ${codePatchTitles.join(", ")}`
+        : undefined,
+    );
+
     return {
       runId: run.id,
       status: "COMPLETED",
@@ -244,6 +297,7 @@ export async function runOrchestrationCycle(
       targetType: "orchestrationRun",
       targetId: run.id,
     });
+    void logAgentActivity(`Cyclus mislukt: ${message}`, false);
     if (err instanceof AppError) throw err;
     return {
       runId: run.id,

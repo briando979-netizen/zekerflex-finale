@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { recordEngagement } from "@/lib/engagement/events";
 import { evaluateGeofence } from "@/lib/geo/geofencing";
+import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / heartbeat / check-out ingestion.
@@ -83,6 +84,7 @@ export async function recordGpsEvent(
           latitude: true,
           longitude: true,
           geofenceRadiusMeters: true,
+          tenantId: true,
         },
       },
       freelancer: { select: { userId: true } },
@@ -253,9 +255,19 @@ export async function recordGpsEvent(
 
   if (input.type === GpsEventType.CHECK_IN) {
     void recordEngagement(input.freelancerProfileId, "CHECK_IN");
+    void dispatchWebhook("freelancer.checked_in", ts.branch.tenantId, {
+      timesheetId: ts.id,
+      freelancerId: input.freelancerProfileId,
+      recordedAt: recordedAt.toISOString(),
+      withinGeofence: geo.withinGeofence,
+    }).catch(() => undefined);
   }
 
   if (result.disputeRaised) {
+    void dispatchWebhook("dispute.opened", ts.branch.tenantId, {
+      timesheetId: ts.id,
+      origin: result.disputeRaised,
+    }).catch(() => undefined);
     await recordAudit({
       category: "DISPUTE",
       action: "dispute.auto_raised",

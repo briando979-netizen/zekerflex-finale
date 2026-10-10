@@ -1653,6 +1653,36 @@ model ShopProduct {
   @@index([category, active])
 }
 
+enum ShopOrderStatus {
+  RECEIVED
+  CONFIRMED
+  SHIPPED
+  CANCELLED
+}
+
+// Real order capture for the /shop checkout — the items are a priced snapshot
+// at order time (name/price can change later on ShopProduct; this is what the
+// customer actually agreed to pay).
+model ShopOrder {
+  id            String          @id @default(cuid())
+  status        ShopOrderStatus @default(RECEIVED)
+  firstName     String
+  lastName      String
+  email         String
+  address       String
+  postalCode    String
+  city          String
+  itemsJson     Json
+  subtotalCents Int
+  shippingCents Int
+  totalCents    Int
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
+
 // ===========================================================================
 // Jarvis conversational turns + live progress events
 //

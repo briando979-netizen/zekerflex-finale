@@ -30,6 +30,11 @@ next-env.d.ts
 /backups
 .env.production
 
+# Android TWA (Bubblewrap) — generated Gradle project + signing key; never
+# commit the keystore. Lives only on the machine that builds the Play Store
+# upload. See docs/MOBILE-APP.md.
+/android-twa/
+
 # infrastructure — never commit state or real secrets
 infra/docker/prometheus.token
 **/.terraform/*

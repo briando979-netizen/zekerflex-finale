@@ -32,6 +32,9 @@ export function ShopChrome({ children }: { children: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
   const [ordered, setOrdered] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", address: "", postalCode: "", city: "" });
   const [catalog, setCatalog] = useState<ApiProduct[]>([]);
   const { cart, add, remove, clear, count } = useShopCart();
 
@@ -49,6 +52,32 @@ export function ShopChrome({ children }: { children: ReactNode }) {
   const subtotal = items.reduce((s, p) => s + (p.priceCents / 100) * p.qty, 0);
   const shipping = subtotal >= 50 || subtotal === 0 ? 0 : 4.95;
   const total = subtotal + shipping;
+
+  const placeOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOrderError("");
+    setPlacing(true);
+    try {
+      const response = await fetch("/api/shop/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          items: items.map((p) => ({ productId: p.id, qty: p.qty })),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setOrderError(data?.error?.message ?? "Bestelling plaatsen is mislukt. Probeer het opnieuw.");
+        return;
+      }
+      setOrdered(true);
+    } catch {
+      setOrderError("Geen verbinding — controleer je internet en probeer het opnieuw.");
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-ink">
@@ -201,22 +230,23 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                 <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-mintwash text-2xl text-brand-600">✓</div>
                 <h3 className="mt-5 font-display text-xl font-bold">Bedankt voor je bestelling.</h3>
                 <p className="mx-auto mt-2 max-w-sm text-sm text-neutralx-600">We hebben je aanvraag ontvangen. De betaalstap wordt gekoppeld zodra de PSP is geconfigureerd.</p>
-                <button type="button" onClick={() => { setCheckout(false); setOrdered(false); clear(); }} className="mt-6 rounded-lg bg-ink px-6 py-2.5 text-sm font-bold text-white">Terug naar de shop</button>
+                <button type="button" onClick={() => { setCheckout(false); setOrdered(false); clear(); setForm({ firstName: "", lastName: "", email: "", address: "", postalCode: "", city: "" }); }} className="mt-6 rounded-lg bg-ink px-6 py-2.5 text-sm font-bold text-white">Terug naar de shop</button>
               </div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); setOrdered(true); }} className="mt-6 grid gap-4">
+              <form onSubmit={placeOrder} className="mt-6 grid gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="field-label">Voornaam<input required className="field-input" /></label>
-                  <label className="field-label">Achternaam<input required className="field-input" /></label>
+                  <label className="field-label">Voornaam<input required className="field-input" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} /></label>
+                  <label className="field-label">Achternaam<input required className="field-input" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></label>
                 </div>
-                <label className="field-label">E-mailadres<input required type="email" className="field-input" /></label>
-                <label className="field-label">Adres<input required className="field-input" /></label>
+                <label className="field-label">E-mailadres<input required type="email" className="field-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></label>
+                <label className="field-label">Adres<input required className="field-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} /></label>
                 <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-                  <label className="field-label">Postcode<input required className="field-input" /></label>
-                  <label className="field-label">Plaats<input required className="field-input" /></label>
+                  <label className="field-label">Postcode<input required className="field-input" value={form.postalCode} onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))} /></label>
+                  <label className="field-label">Plaats<input required className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} /></label>
                 </div>
                 <div className="mt-2 flex items-center justify-between border-t border-hair pt-4 font-display text-lg font-bold"><span>Totaal</span><span>{money(total)}</span></div>
-                <button className="w-full rounded-lg bg-ink py-3 text-sm font-bold text-white" type="submit">Bestelling plaatsen</button>
+                {orderError && <p className="text-sm font-semibold text-crit">{orderError}</p>}
+                <button className="w-full rounded-lg bg-ink py-3 text-sm font-bold text-white disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>{placing ? "Bestelling plaatsen…" : "Bestelling plaatsen"}</button>
                 <p className="text-center text-[11px] text-neutralx-400">Betaling volgt via de gekoppelde betaalprovider.</p>
               </form>
             )}

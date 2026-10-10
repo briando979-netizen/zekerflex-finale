@@ -13,6 +13,7 @@ import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
 // Realtime notification dispatcher
@@ -470,8 +471,14 @@ export async function recordOfferResponse(
         data: { status: MatchStatus.EXPIRED },
       });
     }
-    return { filled, open: shift.positions - (taken + 1) };
+    return { filled, open: shift.positions - (taken + 1), tenantId: shift.branch.tenantId };
   });
+
+  void dispatchWebhook("shift.matched", outcome.tenantId, {
+    shiftId,
+    freelancerId,
+    source: "ACCEPTED",
+  }).catch(() => undefined);
 
   if (outcome.filled) {
     await cleanup(shiftId);

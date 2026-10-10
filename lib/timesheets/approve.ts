@@ -25,6 +25,7 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
+import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import type { ComputedInvoice } from "@/types/billing";
 
 export interface ApproveTimesheetInput {
@@ -390,6 +391,12 @@ export async function approveTimesheet(
     recordTimesheetApproved("invoice");
     recordPayout(String(payoutStatus));
 
+    void dispatchWebhook("timesheet.approved", ts.branch.tenantId, {
+      timesheetId: ts.id,
+      billableMinutes,
+      track: "invoice",
+    }).catch(() => undefined);
+
     return {
       timesheetId: ts.id,
       status:
@@ -441,7 +448,7 @@ async function approveViaPayroll(args: {
     branchId: string;
     scheduledStart: Date;
     hourlyRateCents: number;
-    branch: { name: string };
+    branch: { name: string; tenantId: string };
     freelancerId: string;
     freelancer: {
       userId: string;
@@ -544,6 +551,12 @@ async function approveViaPayroll(args: {
   });
 
   recordTimesheetApproved("payroll");
+
+  void dispatchWebhook("timesheet.approved", ts.branch.tenantId, {
+    timesheetId: ts.id,
+    billableMinutes,
+    track: "payroll",
+  }).catch(() => undefined);
 
   return {
     timesheetId: ts.id,

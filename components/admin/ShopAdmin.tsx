@@ -23,6 +23,24 @@ type Product = {
 type FormState = Omit<Product, "id" | "imageUploadId" | "modelUploadId"> & { imageUploadId?: string | null; modelUploadId?: string | null };
 const empty: FormState = { name: "", slug: "", description: "", category: "Werkdag", priceCents: 0, costCents: null, stock: 0, imageUrl: null, modelPhotoUrl: null, badge: null, active: true, sortOrder: 0 };
 
+type OrderStatus = "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED";
+type Order = {
+  id: string;
+  status: OrderStatus;
+  firstName: string;
+  lastName: string;
+  email: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  itemsJson: { productId: string; name: string; priceCents: number; qty: number }[];
+  totalCents: number;
+  createdAt: string;
+};
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { RECEIVED: "Ontvangen", CONFIRMED: "Bevestigd", SHIPPED: "Verzonden", CANCELLED: "Geannuleerd" };
+
+const money = (euros: number) => `€ ${euros.toFixed(2).replace(".", ",")}`;
+
 const marge = (priceCents: number, costCents: number | null) =>
   costCents && priceCents ? `${Math.round((1 - costCents / priceCents) * 100)}%` : "—";
 
@@ -32,6 +50,8 @@ export function ShopAdmin() {
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState<"image" | "model" | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderMessage, setOrderMessage] = useState("");
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -39,7 +59,20 @@ export function ShopAdmin() {
     if (response.ok) setProducts(data.products);
     else setMessage(data?.error?.message ?? "Producten konden niet worden geladen.");
   };
-  useEffect(() => { void load(); }, []);
+  const loadOrders = async () => {
+    const response = await fetch("/api/shop/orders", { cache: "no-store" });
+    const data = await response.json();
+    if (response.ok) setOrders(data.orders);
+    else setOrderMessage(data?.error?.message ?? "Bestellingen konden niet worden geladen.");
+  };
+  useEffect(() => { void load(); void loadOrders(); }, []);
+
+  const setOrderStatus = async (id: string, status: OrderStatus) => {
+    const response = await fetch(`/api/shop/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    const data = await response.json();
+    if (!response.ok) { setOrderMessage(data?.error?.message ?? "Status bijwerken mislukt."); return; }
+    await loadOrders();
+  };
 
   const set = (key: keyof FormState, value: string | number | boolean | null) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -73,6 +106,37 @@ export function ShopAdmin() {
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button>{editing && <button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); }}>Annuleren</button>}</div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
     <section className="a-panel overflow-hidden"><div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}><p className="a-kicker">Live catalogus</p><h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{products.length} producten beheerd</h2></div><div className="divide-y" style={{ borderColor: "var(--a-border)" }}>{products.map((product) => <div key={product.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"><div className="h-20 w-20 overflow-hidden rounded-xl" style={{ background: "var(--a-panel-2)" }}>{product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-xs" style={{ color: "var(--a-mute)" }}>ZF</div>}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{product.name}</h3><span className="a-tag">{product.category}</span><span className={`a-tag ${product.active ? "a-tag-ok" : ""}`}>{product.active ? "Live" : "Verborgen"}</span></div><p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{product.stock} op voorraad · € {(product.priceCents / 100).toFixed(2).replace(".", ",")}{product.costCents ? ` · inkoop € ${(product.costCents / 100).toFixed(2).replace(".", ",")} (marge ${marge(product.priceCents, product.costCents)})` : ""} · {product.modelPhotoUrl ? "model-foto gekoppeld" : "zonder model-foto"}</p></div><div className="flex gap-2"><button type="button" className="a-button" onClick={() => edit(product)}>Bewerken</button>{product.active && <button type="button" className="a-button" onClick={() => archive(product.id)}>Verbergen</button>}</div></div>)}</div></section>
+
+    <section className="a-panel overflow-hidden">
+      <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
+        <p className="a-kicker">Orders</p>
+        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{orders.length} bestellingen</h2>
+        {orderMessage && <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{orderMessage}</p>}
+      </div>
+      <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
+        {orders.length === 0 && <p className="p-5 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen bestellingen binnengekomen.</p>}
+        {orders.map((order) => (
+          <div key={order.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{order.firstName} {order.lastName}</h3>
+                <span className="a-tag">{new Date(order.createdAt).toLocaleString("nl-NL")}</span>
+              </div>
+              <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{order.email} · {order.address}, {order.postalCode} {order.city}</p>
+              <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{order.itemsJson.map((l) => `${l.qty}x ${l.name}`).join(", ")}</p>
+              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</p>
+            </div>
+            <select
+              className="a-input w-auto"
+              value={order.status}
+              onChange={(e) => setOrderStatus(order.id, e.target.value as OrderStatus)}
+            >
+              {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </section>
   </div>;
 }
 

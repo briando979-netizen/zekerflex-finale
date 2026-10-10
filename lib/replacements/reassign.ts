@@ -7,6 +7,7 @@ import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
 // Reassign a shift to a chosen substitute.
@@ -190,8 +191,19 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
       await tx.shift.update({ where: { id: original.shift.id }, data: { status: desired } });
     }
 
-    return { newAssignmentId: assignment.id, shiftTitle: original.shift.title };
+    return {
+      newAssignmentId: assignment.id,
+      shiftTitle: original.shift.title,
+      shiftId: original.shift.id,
+      tenantId: original.shift.branch.tenantId,
+    };
   });
+
+  void dispatchWebhook("shift.matched", result.tenantId, {
+    shiftId: result.shiftId,
+    freelancerId: input.substituteUserId,
+    source: "REPLACEMENT",
+  }).catch(() => undefined);
 
   await markReplacementResolved(input.requestId, {
     userId: input.substituteUserId,
