@@ -1,43 +1,23 @@
-import { APP_LINKS } from "@/lib/seo";
+import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 
-function AppleBadge() {
+// Google Play badge, intentionally non-interactive: the Android app exists in
+// Play Console but is still in Draft (not published), so a link to a store
+// listing would 404. This is an honest "coming soon," not a working download
+// link — see docs/MOBILE-APP.md for where that stands.
+function PlayBadgeComingSoon() {
   return (
-    <a
-      href={APP_LINKS.appStore}
-      target="_blank"
-      rel="noreferrer noopener"
-      className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-white transition-colors hover:border-brand-mint hover:bg-white/[0.08]"
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.9-.9-3-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8ZM14.3 5.7c.6-.8 1-1.9.9-3-.9 0-2 .6-2.6 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3Z" />
-      </svg>
-      <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-white/50">Download in de</span>
-        <span className="block text-sm font-bold">App Store</span>
-      </span>
-    </a>
-  );
-}
-
-function PlayBadge() {
-  return (
-    <a
-      href={APP_LINKS.playStore}
-      target="_blank"
-      rel="noreferrer noopener"
-      className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-white transition-colors hover:border-brand-mint hover:bg-white/[0.08]"
-    >
+    <span className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-white/50">
       <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden>
-        <path d="M3.6 2.2c-.3.2-.5.6-.5 1.1v17.4c0 .5.2.9.5 1.1l9.5-9.8-9.5-9.8Z" fill="#4FE0A0" />
-        <path d="m16.8 8.6-3.2-1.9-2.8 2.9 2.8 2.9 3.3-1.9c.9-.6.9-1.5-.1-2Z" fill="#fff" />
-        <path d="M13.1 6.7 4.2 1.6c-.3-.2-.6-.2-.9-.1l9.1 9.4 2.7-2.9-2-1.3Z" fill="#fff" opacity=".85" />
-        <path d="m4.2 22.4 8.9-5.1 2-1.3-2.7-2.9-9.1 9.4c.3.1.6.1.9-.1Z" fill="#fff" opacity=".7" />
+        <path d="M3.6 2.2c-.3.2-.5.6-.5 1.1v17.4c0 .5.2.9.5 1.1l9.5-9.8-9.5-9.8Z" fill="currentColor" opacity=".5" />
+        <path d="m16.8 8.6-3.2-1.9-2.8 2.9 2.8 2.9 3.3-1.9c.9-.6.9-1.5-.1-2Z" fill="currentColor" opacity=".7" />
+        <path d="M13.1 6.7 4.2 1.6c-.3-.2-.6-.2-.9-.1l9.1 9.4 2.7-2.9-2-1.3Z" fill="currentColor" opacity=".6" />
+        <path d="m4.2 22.4 8.9-5.1 2-1.3-2.7-2.9-9.1 9.4c.3.1.6.1.9-.1Z" fill="currentColor" opacity=".5" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-white/50">Verkrijgbaar via</span>
-        <span className="block text-sm font-bold">Google Play</span>
+        <span className="block text-[10px] uppercase tracking-wide text-white/40">Binnenkort in de</span>
+        <span className="block text-sm font-bold">Google Play Store</span>
       </span>
-    </a>
+    </span>
   );
 }
 
@@ -55,12 +35,12 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
               Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je
               telefoon. Dezelfde functies als op het web, met meldingen die kloppen.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <AppleBadge />
-              <PlayBadge />
+            <div className="mt-7 flex flex-wrap items-start gap-3">
+              <InstallAppButton />
+              <PlayBadgeComingSoon />
             </div>
             <p className="mt-4 text-xs text-white/65">
-              Ook zonder app werkt alles gewoon in je browser via{" "}
+              Ook zonder installeren werkt alles gewoon in je browser via{" "}
               <a href="/login" className="underline hover:text-white/80">
                 inloggen
               </a>

@@ -93,11 +93,6 @@ export const SOCIALS: { name: string; href: string }[] = [
 ];
 
 /** App store links. Swap in the real listing URLs once the apps are published. */
-export const APP_LINKS = {
-  appStore: "https://apps.apple.com/nl/search?term=zekerflex",
-  playStore: "https://play.google.com/store/search?q=zekerflex&c=apps",
-} as const;
-
 /**
  * Purpose-specific contact addresses. All of these are aliases on the
  * zekerflex.com domain that forward to info@zekerflex.com; using the right one

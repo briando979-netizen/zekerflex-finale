@@ -2,6 +2,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/app/ui";
 import { ApiKeysBoard } from "@/components/admin/ApiKeysBoard";
+import { WebhooksBoard } from "@/components/admin/WebhooksBoard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,5 +23,10 @@ export default async function IntegratiesPage() {
     take: 300,
   });
 
-  return <ApiKeysBoard tenants={tenants} />;
+  return (
+    <div className="mx-auto max-w-4xl space-y-10">
+      <ApiKeysBoard tenants={tenants} />
+      <WebhooksBoard />
+    </div>
+  );
 }

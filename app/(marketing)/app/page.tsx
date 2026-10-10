@@ -4,7 +4,7 @@ import { AppDownload } from "@/components/marketing/AppDownload";
 export const metadata: Metadata = {
   title: "Download de app",
   description:
-    "De ZekerFlex-app voor iOS en Android: reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen vanaf je telefoon.",
+    "Installeer ZekerFlex als app op je telefoon (iOS en Android): reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen.",
   alternates: { canonical: "/app" },
 };
 
