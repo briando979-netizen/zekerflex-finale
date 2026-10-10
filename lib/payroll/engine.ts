@@ -6,6 +6,7 @@ import { getFiscal, invoiceModeFor, isComplete } from "@/lib/fiscal/store";
 import { computePayslip, type PayLineInput } from "@/lib/payroll/compute";
 import { getRun, saveRun, type PayrollRun, type PayslipRecord } from "@/lib/payroll/store";
 import { payrollAdvancesForWeek, reconcilePayrollAdvances } from "@/lib/payouts/advances";
+import { generateSepaBatch, type SepaExportResult } from "@/lib/payroll/sepa-export";
 import {
   isoWeekId,
   isoWeekLabel,
@@ -203,7 +204,13 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
   return { run, rebuilt: Boolean(existing) };
 }
 
-export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<PayrollRun> {
+export interface FinaliseRunResult {
+  run: PayrollRun;
+  /** null when the run was already finalised earlier — no batch re-generated. */
+  sepaBatch: SepaExportResult | null;
+}
+
+export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<FinaliseRunResult> {
   // Reads-then-writes run.status non-atomically below, so two concurrent
   // finalise calls for the same week (a double click, a retried request)
   // could both pass the "not yet finalised" check and both reconcile every
@@ -213,7 +220,7 @@ export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<Pay
   try {
     const run = await getRun(isoWeekIdStr);
     if (!run) throw new Error("Run niet gevonden — bouw hem eerst.");
-    if (run.status === "finalised") return run;
+    if (run.status === "finalised") return { run, sepaBatch: null };
     // Reconcile the instant advances against each worker's net wage.
     for (const p of run.payslips) {
       if (p.computed.breakdown.kind !== "payroll") continue;
@@ -227,7 +234,16 @@ export async function finaliseRun(isoWeekIdStr: string, by: string): Promise<Pay
     run.finalisedBy = by;
     await saveRun(run);
     logger.info("payroll run finalised", { isoWeek: isoWeekIdStr, by });
-    return run;
+
+    // Best-effort: the SEPA batch is the real payment artifact, but a missing
+    // config or bad IBAN must never block the run itself from being marked
+    // definitive — those are surfaced back for the admin to act on instead.
+    const sepaBatch = await generateSepaBatch(run, by).catch((err) => {
+      logger.error("payroll: SEPA batch generation threw", { isoWeek: isoWeekIdStr, error: (err as Error).message });
+      return { generated: false, totalCents: 0, lineCount: 0, skipped: [], blockedReason: (err as Error).message } as SepaExportResult;
+    });
+
+    return { run, sepaBatch };
   } finally {
     await unlock();
   }

@@ -10,6 +10,14 @@ interface Index {
   suggestedWeek: { id: string; label: string };
 }
 
+interface SepaBatchResult {
+  generated: boolean;
+  totalCents: number;
+  lineCount: number;
+  skipped: { userId: string; workerName: string; reason: string }[];
+  blockedReason?: string;
+}
+
 const KIND: Record<string, string> = { zzp: "Zzp", flexwerker: "Flex", uitzendkracht: "Uitzend" };
 
 export function PayrollBoard() {
@@ -17,6 +25,7 @@ export function PayrollBoard() {
   const [index, setIndex] = useState<Index | null>(null);
   const [week, setWeek] = useState("");
   const [run, setRun] = useState<PayrollRun | null>(null);
+  const [sepaBatch, setSepaBatch] = useState<SepaBatchResult | null>(null);
   const [busy, setBusy] = useState(false);
 
   const loadIndex = useCallback(async () => {
@@ -32,6 +41,7 @@ export function PayrollBoard() {
   }, [loadIndex]);
 
   const openRun = useCallback(async (isoWeek: string) => {
+    setSepaBatch(null);
     const r = await fetch(`/api/admin/payroll/${isoWeek}`, { cache: "no-store" });
     if (r.ok) setRun((await r.json()).run as PayrollRun);
   }, []);
@@ -49,13 +59,14 @@ export function PayrollBoard() {
         const data = await r.json();
         if (!r.ok) throw new Error(data?.error?.message ?? "Mislukt");
         setRun(data.run as PayrollRun);
-        toast.success(
-          action === "finalise"
-            ? "Verloningsronde definitief gemaakt"
-            : data.rebuilt
-              ? "Concept opnieuw berekend"
-              : `Concept aangemaakt — ${data.run.totals.workers} werkers`,
-        );
+        setSepaBatch(action === "finalise" ? (data.sepaBatch as SepaBatchResult | null) : null);
+        if (action === "finalise" && data.sepaBatch?.generated) {
+          toast.success(`Definitief gemaakt — SEPA-batch klaar (${data.sepaBatch.lineCount} regels)`);
+        } else if (action === "finalise") {
+          toast.success(data.sepaBatch?.blockedReason ? "Definitief gemaakt — geen betaalbestand: zie toelichting" : "Verloningsronde definitief gemaakt");
+        } else {
+          toast.success(data.rebuilt ? "Concept opnieuw berekend" : `Concept aangemaakt — ${data.run.totals.workers} werkers`);
+        }
         await loadIndex();
       } catch (e) {
         toast.error((e as Error).message);
@@ -126,6 +137,38 @@ export function PayrollBoard() {
               <p className="text-xs text-neutralx-400">totale uitbetaling</p>
             </div>
           </div>
+
+          {run.status === "finalised" && (
+            <div className="border-b border-hair bg-paper-soft px-5 py-3">
+              {sepaBatch?.generated ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-neutralx-600">
+                    SEPA-batch klaar: {sepaBatch.lineCount} regels, {euro(sepaBatch.totalCents)}. ZekerFlex voert
+                    niets zelf uit — download en verwerk in je eigen bankomgeving.
+                  </p>
+                  <a href={`/api/admin/payroll/${run.isoWeek}/sepa-batch`} className="btn-ghost text-xs">
+                    Download betaalbestand (.xml)
+                  </a>
+                </div>
+              ) : sepaBatch?.blockedReason ? (
+                <p className="text-xs text-crit">Geen betaalbestand gegenereerd: {sepaBatch.blockedReason}</p>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-neutralx-600">Betaalbestand (SEPA-batch) voor deze week, indien aanwezig.</p>
+                  <a href={`/api/admin/payroll/${run.isoWeek}/sepa-batch`} className="btn-ghost text-xs">
+                    Download betaalbestand (.xml)
+                  </a>
+                </div>
+              )}
+              {sepaBatch && sepaBatch.skipped.length > 0 && (
+                <ul className="mt-2 space-y-0.5 text-xs text-warn">
+                  {sepaBatch.skipped.map((s) => (
+                    <li key={s.userId || s.workerName}>⚠ {s.workerName}: {s.reason} — niet in de batch opgenomen.</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {run.totals.fiscalIncomplete > 0 && (
             <p className="border-b border-hair bg-warn/5 px-5 py-2 text-xs text-warn">

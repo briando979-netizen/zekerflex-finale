@@ -1618,6 +1618,26 @@ model PayoutPreference {
   updatedAt DateTime @updatedAt
 }
 
+// The SEPA Credit Transfer batch (pain.001.001.03) generated once a payroll
+// run is finalised — the real bank-ready payment file finaliseRun() used to
+// stop short of producing. Generated once, immutable (re-finalising an
+// already-finalised week is a no-op, see lib/payroll/engine.ts), downloaded
+// from the admin payroll board for a human to submit in their own banking
+// environment. ZekerFlex never calls a bank API to move this money itself.
+model PayrollSepaBatch {
+  id          String   @id @default(cuid())
+  isoWeek     String   @unique
+  xml         String
+  debtorIban  String
+  lineCount   Int
+  skippedJson Json
+  totalCents  Int
+  generatedAt DateTime @default(now())
+  generatedBy String
+
+  @@index([isoWeek])
+}
+
 model AdvanceRecord {
   id                 String    @id @default(cuid())
   userId             String

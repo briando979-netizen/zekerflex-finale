@@ -56,7 +56,7 @@ betalingen of lokale modellen productiegeschikt draaien.
 
 | Prioriteit | Item | Waarom / aanpak |
 |---|---|---|
-| 🔴 hoog | **Payroll → boekhouding-koppeling** | De verloningsengine berekent en legt vast, maar zet nog geen SEPA-batch klaar en boekt niet in een grootboek. Volgende stap: `finaliseRun` → `lib/billing/sepa.ts` pain.001-batch + export (CSV/UBL) naar de accountant. Loonaangifte (Digipoort/loonaangifteketen) blijft mensenwerk of een externe payroll-provider (bijv. Nmbrs/Loket API). |
+| ✅ gedaan (2026-10-10) | **Payroll → SEPA-batch** | `finaliseRun` genereert nu een echt pain.001.001.03-betaalbestand (`lib/billing/sepa-batch.ts` XML-generator, `lib/payroll/sepa-export.ts` orchestratie, `PayrollSepaBatch`-tabel, download via `/admin/verloning`). Best-effort: één ontbrekende/ongeldige IBAN blokkeert nooit de hele batch (wordt gerapporteerd), een ontbrekende `SEPA_CREDITOR_IBAN` blokkeert nooit het finaliseren zelf. Dit roept **geen** bank-API aan — een mens downloadt en verwerkt het bestand in de eigen bankomgeving, bewust (zie `lib/billing/sepa-batch.ts` top-comment). Nog niet gedaan: boeking in een grootboek/UBL-export naar de accountant, en loonaangifte (Digipoort/loonaangifteketen) blijft mensenwerk of een externe payroll-provider (bijv. Nmbrs/Loket API). |
 | 🔴 hoog | **Definitieve loonheffing** | Nu indicatief (vlak tarief). Een echte witte/groene tabel + heffingskortingen vereist óf een payroll-provider óf een onderhouden tarieftabel per jaar. Duidelijk als "indicatief" gelabeld in de UI. |
 | ✅ grotendeels | **Rate-limiting consolideren** | Alle route-handlers gaan nu via één `enforceRateLimit()` (`lib/rate-limit.ts`): vaste sleutel-namespace `rl:<naam>:<id>`, één `clientIp()`-parser (`lib/http/request.ts`), en een consistente **429 + `Retry-After`** i.p.v. de eerdere mix van 422/503. `lib/http/errors.ts#jsonError()` draagt de header ook op publieke routes. Bewust géén edge-laag: `fixedWindow` gebruikt de eigen ioredis; een edge-middleware zou een externe (Upstash) REST-store vergen, wat botst met het sovereign-uitgangspunt. `analytics/track` (fail-open boolean) en `auth/password-reset` (stille return, enumeration-safe) houden hun eigen gedrag. |
 | ✅ gedaan | **CSP zonder `unsafe-inline`** | `script-src` is nu `'self' 'nonce-<per-request>' 'strict-dynamic'` — geen `unsafe-inline`, geen `unsafe-eval` (prod). `middleware.ts` genereert per request een nonce (`lib/security/csp.ts`), zet 'm op de request- én response-header; de root-layout leest 'm via `headers()` waardoor elke route server-rendered wordt (een statisch geprerenderde pagina kan geen verse nonce op z'n inline scripts dragen). `next dev` houdt de losse CSP (React Refresh). `next.config.mjs` houdt alleen de request-onafhankelijke headers. Tests: `tests/csp.test.ts` (builder), `tests/middleware.test.ts` (header op elk antwoord), `e2e/csp.spec.ts` (prod-build: nonce per request, geen `unsafe-inline`, Next's scripts dragen de nonce, hydratie werkt). `style-src` houdt bewust `'unsafe-inline'` (styled-jsx; style-injectie is een veel zwakkere vector). **Kosten:** marketing-pagina's zijn nu `ƒ` i.p.v. `○` — zet een CDN/reverse-proxy-cache voor de publieke routes als het verkeer groeit (`docs/PERFORMANCE.md`). |
@@ -115,8 +115,10 @@ betalingen of lokale modellen productiegeschikt draaien.
   cumulatieve gewerkte weken).
 - Geen wijziging aan Redis-gebruik, sessies, `AuditLog`, of bestaande RBAC-rollen.
   Eén nieuwe RBAC-**route**regel toegevoegd (`/admin/verloning`), niets verwijderd.
-- Verificatie: `tsc` schoon · `vitest` 124/124 · `next build` schoon ·
-  `kubectl kustomize` (beide overlays) schoon · `docker buildx bake --print` schoon.
+- Verificatie op dat moment (2026-09-09): `tsc` schoon · `vitest` 124/124 ·
+  `next build` schoon · `kubectl kustomize` (beide overlays) schoon ·
+  `docker buildx bake --print` schoon. (De testsuite is sindsdien gegroeid —
+  zie de huidige `vitest run`-uitvoer voor de actuele stand, niet dit getal.)
 
 ## Deel 4 — Wat er daadwerkelijk is gedraaid en gedeployd
 

@@ -34,8 +34,8 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   );
 
   if (action === "finalise") {
-    const run = await finaliseRun(isoWeek, principal.userId);
-    return NextResponse.json({ run });
+    const { run, sepaBatch } = await finaliseRun(isoWeek, principal.userId);
+    return NextResponse.json({ run, sepaBatch });
   }
   const { run, rebuilt } = await buildWeeklyRun(isoWeek, principal.userId);
   return NextResponse.json({ run, rebuilt });
