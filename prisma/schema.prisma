@@ -1527,6 +1527,19 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
+// Confirms a self-service AVG art. 17 erasure request made without being
+// logged in (the Play Store "account deletion" web resource) — proves email
+// ownership the same way PasswordResetToken proves it for a password reset.
+model AccountDeletionToken {
+  id        String   @id // the token itself (random, url-safe)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 enum ComplianceDocKind {
   ID
   BANK

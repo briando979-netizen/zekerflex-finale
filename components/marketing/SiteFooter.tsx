@@ -124,6 +124,9 @@ export function SiteFooter() {
             <Link href="/copyright" className="hover:text-white">
               Copyright
             </Link>
+            <Link href="/account-verwijderen" className="hover:text-white">
+              Account verwijderen
+            </Link>
           </div>
         </div>
       </div>

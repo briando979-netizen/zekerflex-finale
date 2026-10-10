@@ -239,6 +239,8 @@ const nl = {
     cInvoiceS: "Welke informatie op je facturen verschijnt",
     cAccountT: "Persoonlijke accountinstellingen",
     cAccountS: "Je naam, wachtwoord, e-mail, telefoonnummer of taal wijzigen",
+    cDeleteAccountT: "Account verwijderen",
+    cDeleteAccountS: "Je account en persoonsgegevens laten verwijderen (AVG art. 17)",
   },
   reviews: {
     backToStart: "Jouw start",
@@ -691,6 +693,8 @@ const en: Dict = {
     cInvoiceS: "Which information appears on your invoices",
     cAccountT: "Personal account settings",
     cAccountS: "Change your name, password, email, phone number or language",
+    cDeleteAccountT: "Delete account",
+    cDeleteAccountS: "Request deletion of your account and personal data (GDPR art. 17)",
   },
   reviews: {
     backToStart: "Your start",

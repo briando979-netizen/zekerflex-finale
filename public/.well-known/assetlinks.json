@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "nl.zekerflex.app",
+      "package_name": "com.zekerflex",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_SHA256_OF_YOUR_ANDROID_SIGNING_KEY"
+        "D4:87:2E:B3:FC:86:FE:F3:26:66:C6:78:F6:E5:18:2F:97:8E:92:D5:AE:F6:EB:EC:1D:7E:12:90:76:AC:BA:2D"
       ]
     }
   }

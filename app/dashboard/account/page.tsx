@@ -90,11 +90,7 @@ export default async function AccountPage() {
           href: "/api/me/gegevens/export",
           external: true,
         },
-        {
-          label: "Account verwijderen",
-          href: "mailto:info@zekerflex.com?subject=Verzoek%20account%20verwijderen",
-          external: true,
-        },
+        { label: "Account verwijderen", href: "/dashboard/account/verwijderen" },
       ],
     },
     {

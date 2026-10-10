@@ -69,6 +69,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   verification: "essential",
   welcome: "essential",
   "wachtwoord-reset": "essential",
+  "account-verwijdering-bevestiging": "essential",
   "nieuwsbrief-bevestiging": "essential",
   invoice: "essential",
   payroll: "essential",

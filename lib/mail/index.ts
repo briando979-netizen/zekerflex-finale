@@ -365,3 +365,20 @@ export function passwordResetEmail(fullName: string, link: string): MailInput {
     ),
   };
 }
+
+export function accountDeletionEmail(fullName: string, link: string): MailInput {
+  const first = fullName.split(" ")[0] || fullName;
+  return {
+    to: "",
+    subject: "Bevestig het verwijderen van je ZekerFlex-account",
+    kind: "account-verwijdering-bevestiging",
+    text: `Hoi ${first},\n\nJe hebt gevraagd om je ZekerFlex-account te laten verwijderen. Klik op de link hieronder om dit te bevestigen; hij is 1 uur geldig. Je ziet daar precies welke gegevens meteen verwijderd worden en welke we (deels) moeten bewaren vanwege wettelijke bewaarplicht.\n\n${link}\n\nHeb je dit niet aangevraagd? Dan kun je deze mail negeren — er verandert niets aan je account.`,
+    html: shell(
+      "Account verwijderen bevestigen",
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je hebt gevraagd om je ZekerFlex-account te laten verwijderen. Klik op de knop om dit te bevestigen; de link is 1 uur geldig. Daar zie je precies welke gegevens meteen verwijderd worden en welke we (deels) moeten bewaren vanwege wettelijke bewaarplicht.</p>
+       <p style="margin:0 0 20px">${button(link, "Verwijdering bevestigen")}</p>
+       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
+       <p style="margin:16px 0 0;font-size:12px;color:#667469">Heb je dit niet aangevraagd? Negeer deze mail — er verandert niets aan je account.</p>`,
+    ),
+  };
+}

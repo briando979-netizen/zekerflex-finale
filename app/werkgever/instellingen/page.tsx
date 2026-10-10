@@ -60,6 +60,7 @@ export default async function InstellingenPage() {
 
   const account: Card[] = [
     { title: s.cAccountT, sub: s.cAccountS, icon: <IUser />, soon: true },
+    { title: s.cDeleteAccountT, sub: s.cDeleteAccountS, href: "/dashboard/account/verwijderen", icon: <IUser /> },
   ];
 
   return (
