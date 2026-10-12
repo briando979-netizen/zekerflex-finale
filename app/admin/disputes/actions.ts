@@ -62,6 +62,11 @@ export async function resolveDisputeAction(
         principal,
         correctedBillableMinutes: result.resolvedMinutes,
         correctionNote: parsed.data.note,
+        // A platform dispute manager resolving the dispute IS the manual
+        // review the GPS/fraud gate asks for — without this, "Direct
+        // goedkeuren" always failed with the exact precondition error it
+        // was meant to resolve.
+        overrideGpsCheck: true,
       });
       extra =
         approval.track === "payroll"

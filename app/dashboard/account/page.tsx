@@ -42,7 +42,12 @@ export default async function AccountPage() {
   ]);
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
-  const replacementsArranged = myReplacements.filter((r) => new Date(r.at) >= since).length;
+  // Only a request that actually found a substitute counts as "arranged" — an
+  // "open" (still pending) or "cancelled" (withdrawn, worked it yourself)
+  // request never resulted in a real replacement.
+  const replacementsArranged = myReplacements.filter(
+    (r) => r.status === "resolved" && new Date(r.at) >= since,
+  ).length;
   const reviews = card?.freelancer?.reviews ?? { average: 0, count: 0, distribution: {} as never };
   const stars = Math.round(reviews.average);
 

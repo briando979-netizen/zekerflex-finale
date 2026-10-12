@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePrincipal } from "@/lib/auth";
 import { TimesheetSubmitForm } from "@/components/app/TimesheetSubmitForm";
+import { HoursCorrectionPrompt } from "@/components/app/HoursCorrectionPrompt";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { getPayoutPrefs } from "@/lib/payouts/preferences";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -34,9 +35,18 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
       hourlyRateCents: true,
       assignment: { select: { shiftId: true, shift: { select: SHIFT_SELECT } } },
       branch: { select: { name: true, tenant: { select: { id: true, name: true } } } },
+      dispute: { select: { id: true, status: true, raisedById: true, claimedMinutes: true, proposedMinutes: true, reason: true } },
     },
   });
   if (!timesheet) notFound();
+
+  const correctionProposal =
+    timesheet.dispute &&
+    timesheet.dispute.status === "OPEN" &&
+    timesheet.dispute.raisedById &&
+    timesheet.dispute.proposedMinutes !== timesheet.dispute.claimedMinutes
+      ? timesheet.dispute
+      : null;
   const [payoutPrefs, fiscal] = await Promise.all([
     getPayoutPrefs(principal.userId),
     getFiscal(principal.userId),
@@ -61,6 +71,17 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
         title="Uren invullen"
         subtitle={`${timesheet.branch.name} · ${dateTime(timesheet.scheduledStart)}`}
       />
+      {correctionProposal && (
+        <div className="mb-6">
+          <HoursCorrectionPrompt
+            disputeId={correctionProposal.id}
+            timesheetId={timesheet.id}
+            claimedHours={correctionProposal.claimedMinutes / 60}
+            proposedHours={correctionProposal.proposedMinutes / 60}
+            reason={correctionProposal.reason}
+          />
+        </div>
+      )}
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
           {cardShift && (

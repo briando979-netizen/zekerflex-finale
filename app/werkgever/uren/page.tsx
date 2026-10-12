@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel, EmptyState, StatusPill, KpiCard, money, moneyExact, dateTime } from "@/components/app/ui";
 import { ApproveButton } from "@/components/app/ApproveButton";
+import { ProposeCorrectionButton } from "@/components/app/ProposeCorrectionButton";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -121,12 +122,23 @@ export default async function UrenGoedkeurenPage() {
                       </p>
                     ))}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center justify-end gap-3">
                   <span className="num font-mono text-sm font-medium text-ink">
                     {moneyExact(lineTotal(t))}
                   </span>
                   {t.status === "SUBMITTED" ? (
-                    <ApproveButton timesheetId={t.id} />
+                    <div className="flex flex-col items-end gap-1.5">
+                      <ApproveButton
+                        timesheetId={t.id}
+                        hasFlags={(fraud.get(t.id) ?? []).some((f) => f.severity !== "info")}
+                        hasCriticalFlag={(fraud.get(t.id) ?? []).some((f) => f.severity === "critical")}
+                        flagSummary={(fraud.get(t.id) ?? [])
+                          .filter((f) => f.severity !== "info")
+                          .map((f) => f.message)
+                          .join(" ")}
+                      />
+                      <ProposeCorrectionButton timesheetId={t.id} submittedHours={t.billableMinutes / 60} />
+                    </div>
                   ) : (
                     <span className="text-xs text-neutralx-400">{h.viaConsole}</span>
                   )}

@@ -70,6 +70,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   welcome: "essential",
   "wachtwoord-reset": "essential",
   "account-verwijdering-bevestiging": "essential",
+  "uren-correctie-voorstel": "essential",
   "nieuwsbrief-bevestiging": "essential",
   invoice: "essential",
   payroll: "essential",
@@ -108,6 +109,7 @@ const REPLIABLE_KINDS = new Set([
   "open-sollicitatie-bevestiging",
   "shop-order",
   "shop-order-bevestiging",
+  "uren-correctie-voorstel",
   // Sales outreach: a human on the sales side reads and answers replies.
   "sales-outreach",
 ]);

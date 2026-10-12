@@ -382,3 +382,28 @@ export function accountDeletionEmail(fullName: string, link: string): MailInput 
     ),
   };
 }
+
+export function hoursCorrectionProposedEmail(
+  fullName: string,
+  link: string,
+  shiftTitle: string,
+  claimedHours: number,
+  proposedHours: number,
+): MailInput {
+  const first = fullName.split(" ")[0] || fullName;
+  const claimed = claimedHours.toFixed(2).replace(".", ",");
+  const proposed = proposedHours.toFixed(2).replace(".", ",");
+  return {
+    to: "",
+    subject: `Voorstel voor correctie van je uren — ${shiftTitle}`,
+    kind: "uren-correctie-voorstel",
+    text: `Hoi ${first},\n\nDe opdrachtgever van "${shiftTitle}" wil je ingediende uren corrigeren: van ${claimed} naar ${proposed} uur. Dit gaat pas door als jij hiermee akkoord gaat.\n\nBekijk het voorstel en reageer:\n${link}\n\nBen je het er niet mee eens? Dan kun je weigeren — het gaat dan naar ZekerFlex voor een onafhankelijke beoordeling.`,
+    html: shell(
+      "Voorstel voor correctie van je uren",
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, de opdrachtgever van <strong>${shiftTitle}</strong> wil je ingediende uren corrigeren: van <strong>${claimed}</strong> naar <strong>${proposed}</strong> uur. Dit gaat pas door als jij hiermee akkoord gaat.</p>
+       <p style="margin:0 0 20px">${button(link, "Bekijk voorstel")}</p>
+       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
+       <p style="margin:16px 0 0;font-size:12px;color:#667469">Ben je het er niet mee eens? Dan kun je weigeren — het gaat dan naar ZekerFlex voor een onafhankelijke beoordeling.</p>`,
+    ),
+  };
+}
