@@ -10,6 +10,8 @@ import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import type { Theme } from "@/lib/theme/config";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -35,6 +37,7 @@ function Stars({ value }: { value: number }) {
 export function EmployerShell({
   nav,
   locale,
+  theme,
   orgName,
   rating,
   userName,
@@ -45,6 +48,7 @@ export function EmployerShell({
 }: {
   nav: NavItem[];
   locale: Locale;
+  theme: Theme;
   orgName: string;
   rating: { average: number; count: number } | null;
   userName: string;
@@ -106,7 +110,8 @@ export function EmployerShell({
 
   return (
     <div
-      className={`min-h-screen bg-paper-soft lg:grid ${
+      data-theme={theme}
+      className={`app-scope min-h-screen bg-paper-soft lg:grid ${
         collapsed ? "lg:grid-cols-[76px_1fr]" : "lg:grid-cols-[276px_1fr]"
       }`}
     >
@@ -265,6 +270,11 @@ export function EmployerShell({
                 ))}
               </select>
             </label>
+
+            <ThemeToggle
+              theme={theme}
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
+            />
 
             <Link
               href={helpHref}

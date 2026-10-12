@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
 
@@ -12,8 +13,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!hasRole(principal, "FREELANCER")) redirect("/start");
   if (!principal.emailVerifiedAt) redirect("/verifieer-email");
 
+  const theme = await getTheme();
+
   return (
-    <FreelancerShell userName={principal.fullName}>
+    <FreelancerShell userName={principal.fullName} theme={theme}>
       {children}
       <ChatDock />
     </FreelancerShell>

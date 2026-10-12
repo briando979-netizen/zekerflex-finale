@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch } from "@/components/app/icons";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import type { Theme } from "@/lib/theme/config";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -22,9 +24,11 @@ const TABS = [
 
 export function FreelancerShell({
   userName,
+  theme,
   children,
 }: {
   userName: string;
+  theme: Theme;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -39,7 +43,7 @@ export function FreelancerShell({
   const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
 
   return (
-    <div className="app-bg noise flex min-h-screen flex-col bg-paper-soft">
+    <div data-theme={theme} className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
       {/* Top bar */}
       {!focused && (
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
@@ -48,6 +52,10 @@ export function FreelancerShell({
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-crit to-crit/40" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle
+              theme={theme}
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
+            />
             <Link
               href="/dashboard/klussen"
               aria-label="Zoeken"

@@ -589,3 +589,98 @@ body {
 .admin-scope .shadow-e1,
 .admin-scope .shadow-e2,
 .admin-scope .shadow-e3 { box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7) !important; }
+
+/* ============================================================ APP (freelancer/employer) dark mode
+   Same technique as .admin-scope above: CSS variables + !important overrides
+   on the Tailwind utility classes already used throughout /dashboard and
+   /werkgever, so no page/component needed to change. Scoped to .app-scope
+   (set on FreelancerShell/EmployerShell's root) so marketing, auth and the
+   admin console (which already has its own, separate dark mode) are
+   untouched. Light by default; [data-theme="dark"] flips every token. */
+
+.app-scope[data-theme="dark"] {
+  --app-surface: #0B0D11;
+  --app-card: #15181E;
+  --app-fg: #F2F3F0;
+  --app-fg-muted: #9AA3AF;
+  --app-fg-faint: #717784;
+  --app-edge: #262B33;
+  --app-edge-strong: #343A44;
+
+  color-scheme: dark;
+  color: var(--app-fg);
+  background-color: var(--app-surface);
+}
+
+.app-scope[data-theme="dark"] .text-ink,
+.app-scope[data-theme="dark"] .text-ink-soft { color: var(--app-fg) !important; }
+.app-scope[data-theme="dark"] .text-neutralx-600,
+.app-scope[data-theme="dark"] .text-neutralx-500 { color: var(--app-fg-muted) !important; }
+.app-scope[data-theme="dark"] .text-neutralx-400 { color: var(--app-fg-faint) !important; }
+
+.app-scope[data-theme="dark"] .bg-paper-soft,
+.app-scope[data-theme="dark"] .bg-paper { background-color: var(--app-surface) !important; }
+.app-scope[data-theme="dark"] .bg-white { background-color: var(--app-card) !important; }
+/* Translucent header/sheet surfaces (bg-white/NN) — same dark card colour at the same alpha. */
+.app-scope[data-theme="dark"] .bg-white\/15 { background-color: rgba(21,24,30,0.15) !important; }
+.app-scope[data-theme="dark"] .bg-white\/60 { background-color: rgba(21,24,30,0.6) !important; }
+.app-scope[data-theme="dark"] .bg-white\/70 { background-color: rgba(21,24,30,0.7) !important; }
+.app-scope[data-theme="dark"] .bg-white\/75 { background-color: rgba(21,24,30,0.75) !important; }
+.app-scope[data-theme="dark"] .bg-white\/80 { background-color: rgba(21,24,30,0.8) !important; }
+.app-scope[data-theme="dark"] .bg-white\/85 { background-color: rgba(21,24,30,0.85) !important; }
+.app-scope[data-theme="dark"] .bg-white\/90 { background-color: rgba(21,24,30,0.9) !important; }
+.app-scope[data-theme="dark"] .bg-white\/95 { background-color: rgba(21,24,30,0.95) !important; }
+
+.app-scope[data-theme="dark"] .border-hair,
+.app-scope[data-theme="dark"] .border-hairstrong,
+.app-scope[data-theme="dark"] .divide-hair > * { border-color: var(--app-edge) !important; }
+
+.app-scope[data-theme="dark"] .card,
+.app-scope[data-theme="dark"] .surface {
+  background: var(--app-card) !important;
+  border-color: var(--app-edge) !important;
+  color: var(--app-fg);
+}
+.app-scope[data-theme="dark"] .surface::before { display: none; }
+.app-scope[data-theme="dark"] .surface-hover:hover {
+  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.6) !important;
+}
+
+.app-scope[data-theme="dark"] .bg-gradient-to-b.from-white,
+.app-scope[data-theme="dark"] .bg-gradient-to-r.from-white,
+.app-scope[data-theme="dark"] .bg-gradient-to-br.from-white {
+  background-image: none !important;
+  background-color: var(--app-card) !important;
+}
+
+.app-scope[data-theme="dark"] .field-input,
+.app-scope[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.app-scope[data-theme="dark"] select,
+.app-scope[data-theme="dark"] textarea {
+  background-color: var(--app-card) !important;
+  border-color: var(--app-edge) !important;
+  color: var(--app-fg) !important;
+}
+.app-scope[data-theme="dark"] input::placeholder,
+.app-scope[data-theme="dark"] textarea::placeholder { color: var(--app-fg-faint) !important; }
+
+.app-scope[data-theme="dark"] .btn-ghost {
+  background-color: var(--app-card) !important;
+  border-color: var(--app-edge-strong) !important;
+  color: var(--app-fg) !important;
+}
+.app-scope[data-theme="dark"] .pill-neutral {
+  background-color: var(--app-surface) !important;
+  color: var(--app-fg-muted) !important;
+}
+
+.app-scope[data-theme="dark"] .shadow-lift,
+.app-scope[data-theme="dark"] .shadow-card,
+.app-scope[data-theme="dark"] .shadow-e1,
+.app-scope[data-theme="dark"] .shadow-e2,
+.app-scope[data-theme="dark"] .shadow-e3 { box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7) !important; }
+
+.app-scope[data-theme="dark"] code {
+  background: var(--app-card);
+  color: var(--app-fg-muted);
+}

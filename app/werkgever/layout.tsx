@@ -5,6 +5,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { reviewSummary } from "@/lib/reviews/store";
 import { prisma } from "@/lib/prisma";
 import { getDict, getLocale } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme/server";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
@@ -24,6 +25,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   }
 
   const locale = await getLocale();
+  const theme = await getTheme();
   const t = await getDict();
   const nav = [
     { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
@@ -53,6 +55,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       <EmployerShell
         nav={nav}
         locale={locale}
+        theme={theme}
         orgName={tenant?.name ?? t.shell.orgFallback}
         rating={rating ? { average: rating.average, count: rating.count } : null}
         userName={principal.fullName}

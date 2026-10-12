@@ -7,6 +7,8 @@ import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
+import { getTheme } from "@/lib/theme/server";
+import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,7 @@ export default async function AccountPage() {
   const since = new Date();
   since.setMonth(since.getMonth() - 6);
 
-  const [card, overview, fiscal, myReplacements, matched, notCompleted] = await Promise.all([
+  const [card, overview, fiscal, myReplacements, matched, notCompleted, theme] = await Promise.all([
     getUserCard(principal.userId),
     getFreelancerOverview(principal.userId),
     getFiscal(principal.userId),
@@ -39,6 +41,7 @@ export default async function AccountPage() {
           where: { freelancerId: profile.id, acceptedAt: { gte: since }, cancelledAt: { not: null } },
         })
       : Promise.resolve(0),
+    getTheme(),
   ]);
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
@@ -108,10 +111,7 @@ export default async function AccountPage() {
       items: [{ label: "Privacy instellingen", href: "/privacy" }],
     },
     {
-      items: [
-        { label: "Weergave", value: "Licht" },
-        { label: "Taal", value: "Nederlands" },
-      ],
+      items: [{ label: "Taal", value: "Nederlands" }],
     },
   ];
 
@@ -181,6 +181,10 @@ export default async function AccountPage() {
             ))}
           </div>
         ))}
+
+        <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+          <ThemeToggleRow theme={theme} />
+        </div>
 
         <form action={logoutAction} className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
           <button
