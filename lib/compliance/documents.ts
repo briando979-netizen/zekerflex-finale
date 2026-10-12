@@ -3,6 +3,7 @@ import { ComplianceDocKind, ComplianceDocStatus } from "@prisma/client";
 import { storeUpload, readUpload } from "@/lib/storage/local";
 import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { AppError } from "@/lib/errors";
+import { getFiscal, setFiscal } from "@/lib/fiscal/store";
 
 // ---------------------------------------------------------------------------
 // Verplichte verificatiedocumenten per account: identiteitsbewijs +
@@ -117,7 +118,49 @@ export async function storeDoc(
     data: { userId, kind: dbKind, uploadId: stored.id },
     include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
   });
+
+  // A fresh bank document clears the "payout on hold" flag a recent IBAN
+  // change set — on both tracks, harmlessly a no-op on whichever doesn't apply.
+  if (kind === "bank") {
+    await clearIbanPendingVerification(userId).catch(() => undefined);
+  }
+
   return toDoc(row);
+}
+
+/**
+ * The old bank document no longer proves anything about a NEW account
+ * number — delete it so docStatus().bankOk honestly goes back to false
+ * until a fresh one is uploaded.
+ */
+export async function invalidateBankDoc(userId: string): Promise<void> {
+  await prisma.complianceDocument.deleteMany({ where: { userId, kind: ComplianceDocKind.BANK } });
+}
+
+/**
+ * Convenience wrapper for callers (e.g. the zzp onboarding resubmit path)
+ * that don't already hold a FiscalProfile/FreelancerProfile write of their
+ * own: invalidates the old bank doc AND sets the payout-hold flag on both
+ * tracks in one call. See lib/timesheets/approve.ts and
+ * lib/payroll/sepa-export.ts for where the hold is actually enforced.
+ */
+export async function flagIbanChanged(userId: string): Promise<void> {
+  await Promise.all([
+    invalidateBankDoc(userId),
+    prisma.freelancerProfile
+      .update({ where: { userId }, data: { payoutIbanPendingVerification: true } })
+      .catch(() => undefined),
+    setFiscal(userId, { ibanPendingVerification: true }).catch(() => undefined),
+  ]);
+}
+
+async function clearIbanPendingVerification(userId: string): Promise<void> {
+  await Promise.all([
+    prisma.freelancerProfile
+      .update({ where: { userId }, data: { payoutIbanPendingVerification: false } })
+      .catch(() => undefined),
+    setFiscal(userId, { ibanPendingVerification: false }).catch(() => undefined),
+  ]);
 }
 
 export async function readDoc(
@@ -151,7 +194,7 @@ export async function setDocStatus(
 ): Promise<ComplianceDoc | null> {
   const row = await prisma.complianceDocument.findFirst({
     where: { id: docId.replace(/[^a-z0-9-]/gi, ""), userId },
-    select: { id: true },
+    select: { id: true, kind: true },
   });
   if (!row) return null;
   const updated = await prisma.complianceDocument.update({
@@ -159,5 +202,16 @@ export async function setDocStatus(
     data: { status: status.toUpperCase() as ComplianceDocStatus },
     include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
   });
+
+  // A rejected bank document no longer proves the current IBAN — hold
+  // payouts again until a replacement is uploaded and accepted.
+  if (row.kind === ComplianceDocKind.BANK && status === "rejected") {
+    await Promise.all([
+      prisma.freelancerProfile
+        .update({ where: { userId }, data: { payoutIbanPendingVerification: true } })
+        .catch(() => undefined),
+      setFiscal(userId, { ibanPendingVerification: true }).catch(() => undefined),
+    ]).catch(() => undefined);
+  }
   return toDoc(updated);
 }

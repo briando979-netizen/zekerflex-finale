@@ -264,6 +264,13 @@ model FreelancerProfile {
   // Destination for instant SEPA payouts. Legacy/manual path — superseded by
   // Stripe Connect below when the freelancer has completed that onboarding.
   payoutIban String?
+  // True from the moment payoutIban is CHANGED on an already-verified profile
+  // until a fresh bank document (ComplianceDocument kind=BANK) is uploaded for
+  // it — see lib/compliance/documents.ts. Payouts are held while this is true
+  // (lib/timesheets/approve.ts) so a hijacked account can't silently redirect
+  // future payouts to a new account. Never retroactively set for existing
+  // IBANs that were never changed — this only gates new changes.
+  payoutIbanPendingVerification Boolean @default(false)
 
   // Stripe Connect Express — the freelancer's own onboarding to receive
   // Transfers from the platform's Stripe balance, paid out to their bank by
@@ -291,7 +298,12 @@ model FreelancerProfile {
   activeHoursComputedAt DateTime?
 
   // Rolling behavioural scores in [0,1].
-  reliabilityScore Float @default(0.7) // no-shows, cancellations, punctuality
+  // Starts at 100% (benefit of the doubt for a worker with no history yet —
+  // matches attendancePct()'s null-for-no-history handling in
+  // lib/profile/card.ts) — no-shows, cancellations, punctuality.
+  // NOTE: nothing currently adjusts this after account creation; it's a
+  // static starting value, not yet a real, continuously-computed score.
+  reliabilityScore Float @default(1.0)
   acceptanceScore  Float @default(0.5) // historical offer acceptance rate
 
   badgeLevel      BadgeLevel @default(BRONZE)

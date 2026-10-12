@@ -21,6 +21,7 @@ interface Fiscal {
   loonheffingskorting: boolean;
   iban: string | null;
   ibanValid: boolean;
+  ibanPendingVerification: boolean;
   bsnLast4: string | null;
 }
 
@@ -74,7 +75,7 @@ export function UitzendPanel() {
       });
       if (r.ok) {
         const d = await r.json();
-        setF((p) => (p ? { ...p, iban: d.iban, ibanValid: d.ibanValid } : p));
+        setF((p) => (p ? { ...p, iban: d.iban, ibanValid: d.ibanValid, ibanPendingVerification: d.ibanPendingVerification } : p));
       }
     } finally {
       setSavingIban(false);
@@ -183,8 +184,19 @@ export function UitzendPanel() {
           {ibanHint && (
             <span className={ibanLooksValid(iban) ? "text-ok" : "text-crit"}>{ibanHint}</span>
           )}
-          {f.ibanValid && !ibanHint && <span className="text-ok">opgeslagen IBAN is gecontroleerd ✓</span>}
+          {f.ibanValid && !ibanHint && f.ibanPendingVerification && (
+            <span className="text-warn">checksum klopt, maar wacht op een nieuw bankafschrift (zie hieronder)</span>
+          )}
+          {f.ibanValid && !ibanHint && !f.ibanPendingVerification && (
+            <span className="text-ok">opgeslagen IBAN is gecontroleerd ✓</span>
+          )}
         </p>
+        {f.ibanPendingVerification && (
+          <p className="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs text-ink">
+            Je hebt je rekeningnummer gewijzigd. Uitbetalingen worden aangehouden totdat je hieronder een nieuw
+            bankafschrift uploadt waarop je naam én dit rekeningnummer staan.
+          </p>
+        )}
         {f.bsnLast4 && (
           <p className="mt-2 text-xs text-neutralx-400">BSN bekend (eindigt op {f.bsnLast4}) — nooit onversleuteld opgeslagen.</p>
         )}

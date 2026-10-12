@@ -70,7 +70,7 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
         { label: "Thuisbasis en rekeningnummer ingesteld", done: false },
       ],
       badgeLevel: "BRONZE",
-      reliabilityScore: 0.7,
+      reliabilityScore: 1.0,
       shiftsCompleted: 0,
       kpis: { upcoming: 0, actionNeeded: 0, earnedThisMonthCents: 0, pendingPayoutCents: 0 },
       upcoming: [],

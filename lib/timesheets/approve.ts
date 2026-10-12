@@ -190,6 +190,15 @@ export async function approveTimesheet(
     if (!iban || !isValidIban(iban)) {
       throw AppError.precondition("Freelancer has no valid payout IBAN on file");
     }
+    // The freelancer recently changed their IBAN and hasn't re-verified it
+    // with a fresh bank document yet (lib/compliance/documents.ts) — hold
+    // the payout rather than silently sending money to a newly-added,
+    // unverified account (e.g. after an account takeover).
+    if (ts.freelancer.payoutIbanPendingVerification) {
+      throw AppError.precondition(
+        "Rekeningnummer is recent gewijzigd en nog niet geverifieerd — freelancer moet een bankafschrift uploaden voordat uitbetaald kan worden.",
+      );
+    }
 
     const platformTenant = await prisma.tenant.findFirst({
       where: { type: "PLATFORM" },
@@ -453,6 +462,7 @@ async function approveViaPayroll(args: {
     freelancer: {
       userId: string;
       payoutIban: string | null;
+      payoutIbanPendingVerification: boolean;
       stripeConnectedAccountId: string | null;
       stripePayoutsEnabled: boolean;
       user: { fullName: string };
@@ -502,9 +512,15 @@ async function approveViaPayroll(args: {
   });
 
   // Instant advance payout (~50% of expected gross) within ~1 min — reconciled
-  // by the weekly payroll run. Best effort: never blocks the approval.
+  // by the weekly payroll run. Best effort: never blocks the approval. Also
+  // held while a recent IBAN change hasn't been re-verified (same reasoning
+  // as the invoice track's hard block above) — the full balance still
+  // arrives normally once SEPA export (lib/payroll/sepa-export.ts) resumes.
   let advance: ApproveTimesheetResult["advance"] = null;
   try {
+    if (ts.freelancer.payoutIbanPendingVerification) {
+      throw new Error("IBAN recent gewijzigd, nog niet geverifieerd — voorschot aangehouden");
+    }
     const a = await createPayrollAdvance({
       userId: ts.freelancer.userId,
       workerName: ts.freelancer.user.fullName,

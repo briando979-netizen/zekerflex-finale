@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { buildSepaCreditTransferBatch, type SepaBatchLine } from "@/lib/billing/sepa-batch";
 import type { PayrollRun } from "@/lib/payroll/store";
+import { getFiscal } from "@/lib/fiscal/store";
 
 export interface SepaBatchSkip {
   userId: string;
@@ -47,22 +48,37 @@ export async function generateSepaBatch(run: PayrollRun, generatedBy: string): P
     };
   }
 
+  // Uitzendkrachten set their IBAN via /dashboard/verificatie (fiscal.iban,
+  // the KV-backed FiscalProfile) — FreelancerProfile.payoutIban is the
+  // zzp/flexwerker field and is typically null for them. Check both, same
+  // fallback order as lib/fiscal/eligibility.ts's payoutEligibility().
   const profiles = await prisma.freelancerProfile.findMany({
     where: { id: { in: payrollSlips.map((p) => p.freelancerId) } },
-    select: { id: true, payoutIban: true },
+    select: { id: true, payoutIban: true, payoutIbanPendingVerification: true },
   });
-  const ibanByFreelancerId = new Map(profiles.map((p) => [p.id, p.payoutIban]));
+  const profileByFreelancerId = new Map(profiles.map((p) => [p.id, p]));
 
   const skipped: SepaBatchSkip[] = [];
   const lines: SepaBatchLine[] = [];
   const slipByEndToEndId = new Map<string, (typeof payrollSlips)[number]>();
-  payrollSlips.forEach((p, i) => {
+  for (const [i, p] of payrollSlips.entries()) {
     const endToEndId = `ZF-${run.isoWeek}-${String(i + 1).padStart(4, "0")}`;
     slipByEndToEndId.set(endToEndId, p);
-    const iban = ibanByFreelancerId.get(p.freelancerId);
+    const profile = profileByFreelancerId.get(p.freelancerId);
+    let iban = profile?.payoutIban ?? null;
+    let pending = profile?.payoutIbanPendingVerification ?? false;
+    if (!iban) {
+      const fiscal = await getFiscal(p.userId);
+      iban = fiscal.iban;
+      pending = fiscal.ibanPendingVerification;
+    }
     if (!iban) {
       skipped.push({ userId: p.userId, workerName: p.workerName, reason: "Geen rekeningnummer op het profiel" });
-      return;
+      continue;
+    }
+    if (pending) {
+      skipped.push({ userId: p.userId, workerName: p.workerName, reason: "Rekeningnummer recent gewijzigd, nog niet geverifieerd met een bankafschrift" });
+      continue;
     }
     lines.push({
       endToEndId,
@@ -71,7 +87,7 @@ export async function generateSepaBatch(run: PayrollRun, generatedBy: string): P
       amountCents: p.toPayCents,
       remittanceInfo: `ZekerFlex loon ${run.weekLabel}`,
     });
-  });
+  }
 
   let built: ReturnType<typeof buildSepaCreditTransferBatch>;
   try {

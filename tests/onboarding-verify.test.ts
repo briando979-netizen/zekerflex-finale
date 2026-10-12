@@ -12,6 +12,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const userFindUnique = vi.fn();
 const userUpdate = vi.fn();
 const freelancerProfileUpdate = vi.fn().mockResolvedValue({});
+// No existing payoutIban by default — these tests aren't about IBAN changes,
+// so ensureFreelancerBase's "did it change?" check should stay false.
+const freelancerProfileFindUnique = vi.fn().mockResolvedValue({ payoutIban: null });
 const ivCreate = vi.fn();
 const complianceDeleteMany = vi.fn();
 const complianceCreate = vi.fn();
@@ -29,7 +32,10 @@ const txn = vi.fn(async (fn: (tx: unknown) => unknown) =>
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { findUnique: (...a: unknown[]) => userFindUnique(...a) },
-    freelancerProfile: { update: (...a: unknown[]) => freelancerProfileUpdate(...a) },
+    freelancerProfile: {
+      update: (...a: unknown[]) => freelancerProfileUpdate(...a),
+      findUnique: (...a: unknown[]) => freelancerProfileFindUnique(...a),
+    },
     $transaction: (fn: (tx: unknown) => unknown) => txn(fn),
   },
 }));

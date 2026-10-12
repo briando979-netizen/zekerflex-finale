@@ -45,6 +45,12 @@ export interface FiscalProfile {
   invoiceMode: InvoiceMode | null;
   iban: string | null;
   ibanValid: boolean; // IBAN checksum (MOD-97) verified
+  // True from the moment `iban` is CHANGED on an already-verified profile
+  // until a fresh bank document is uploaded for it — mirrors
+  // FreelancerProfile.payoutIbanPendingVerification for the zzp/flexwerker
+  // track. Payroll payouts are held while this is true. Never retroactively
+  // set for an IBAN that was never changed.
+  ibanPendingVerification: boolean;
 
   completedAt: string | null;
   updatedAt: string;
@@ -66,6 +72,7 @@ export const EMPTY_FISCAL: FiscalProfile = {
   invoiceMode: null,
   iban: null,
   ibanValid: false,
+  ibanPendingVerification: false,
   completedAt: null,
   updatedAt: new Date(0).toISOString(),
 };

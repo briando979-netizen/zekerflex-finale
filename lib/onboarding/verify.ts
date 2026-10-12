@@ -10,6 +10,7 @@ import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
+import { flagIbanChanged } from "@/lib/compliance/documents";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -229,15 +230,24 @@ async function ensureFreelancerBase(input: {
     });
     freelancerProfileId = created.id;
   } else {
+    const cleanIban = input.payoutIban.replace(/\s+/g, "").toUpperCase();
+    const existing = await prisma.freelancerProfile.findUnique({
+      where: { id: freelancerProfileId },
+      select: { payoutIban: true },
+    });
+    // Only a CHANGE to an already-set IBAN needs re-verification — the first
+    // time this profile ever gets one (fresh onboarding) is not a "change".
+    const ibanChanged = Boolean(existing?.payoutIban) && existing!.payoutIban !== cleanIban;
     await prisma.freelancerProfile.update({
       where: { id: freelancerProfileId },
       data: {
-        payoutIban: input.payoutIban.replace(/\s+/g, "").toUpperCase(),
+        payoutIban: cleanIban,
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
         homePostalCode: geo.postalCode,
       },
     });
+    if (ibanChanged) await flagIbanChanged(input.userId).catch(() => undefined);
   }
 
   const skipKvk = cleanKvk.length === 0;

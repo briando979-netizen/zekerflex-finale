@@ -17,7 +17,12 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
+const getFiscal = vi.fn();
+vi.mock("@/lib/fiscal/store", () => ({ getFiscal: (...a: unknown[]) => getFiscal(...a) }));
+
 import { generateSepaBatch } from "@/lib/payroll/sepa-export";
+
+const NO_FISCAL = { iban: null, ibanPendingVerification: false };
 
 const VALID_IBAN = "NL39RABO0300065264";
 
@@ -84,7 +89,7 @@ describe("generateSepaBatch", () => {
 
   it("generates and persists a batch when config and IBANs are all in order", async () => {
     envMock.SEPA_CREDITOR_IBAN = "NL91ABNA0417164300";
-    freelancerFindMany.mockResolvedValue([{ id: "fp1", payoutIban: VALID_IBAN }]);
+    freelancerFindMany.mockResolvedValue([{ id: "fp1", payoutIban: VALID_IBAN, payoutIbanPendingVerification: false }]);
     batchUpsert.mockResolvedValue({});
 
     const result = await generateSepaBatch(run([payrollSlip()]), "admin");
@@ -104,9 +109,10 @@ describe("generateSepaBatch", () => {
   it("skips a worker with no IBAN on file instead of failing the whole batch", async () => {
     envMock.SEPA_CREDITOR_IBAN = "NL91ABNA0417164300";
     freelancerFindMany.mockResolvedValue([
-      { id: "fp1", payoutIban: VALID_IBAN },
-      { id: "fp2", payoutIban: null },
+      { id: "fp1", payoutIban: VALID_IBAN, payoutIbanPendingVerification: false },
+      { id: "fp2", payoutIban: null, payoutIbanPendingVerification: false },
     ]);
+    getFiscal.mockResolvedValue(NO_FISCAL);
     batchUpsert.mockResolvedValue({});
 
     const result = await generateSepaBatch(
@@ -130,5 +136,50 @@ describe("generateSepaBatch", () => {
     expect(result.generated).toBe(false);
     expect(result.blockedReason).toMatch(/Geen payroll-werkers/);
     expect(freelancerFindMany).not.toHaveBeenCalled();
+  });
+
+  // Uitzendkrachten set their IBAN on /dashboard/verificatie (fiscal.iban),
+  // not the zzp/flexwerker FreelancerProfile.payoutIban field — a worker who
+  // only ever used that (the normal uitzend flow) must not be skipped as
+  // "no IBAN" just because the profile field happens to be null.
+  it("falls back to fiscal.iban when FreelancerProfile.payoutIban is null", async () => {
+    envMock.SEPA_CREDITOR_IBAN = "NL91ABNA0417164300";
+    freelancerFindMany.mockResolvedValue([{ id: "fp1", payoutIban: null, payoutIbanPendingVerification: false }]);
+    getFiscal.mockResolvedValue({ iban: VALID_IBAN, ibanPendingVerification: false });
+    batchUpsert.mockResolvedValue({});
+
+    const result = await generateSepaBatch(run([payrollSlip()]), "admin");
+
+    expect(result.generated).toBe(true);
+    expect(result.lineCount).toBe(1);
+    expect(getFiscal).toHaveBeenCalledWith("u1");
+  });
+
+  it("skips (and never calls getFiscal for) a worker whose profile IBAN is pending re-verification", async () => {
+    envMock.SEPA_CREDITOR_IBAN = "NL91ABNA0417164300";
+    freelancerFindMany.mockResolvedValue([{ id: "fp1", payoutIban: VALID_IBAN, payoutIbanPendingVerification: true }]);
+    batchUpsert.mockResolvedValue({});
+
+    const result = await generateSepaBatch(run([payrollSlip()]), "admin");
+
+    expect(result.generated).toBe(false);
+    expect(result.skipped).toEqual([
+      expect.objectContaining({ userId: "u1", reason: expect.stringContaining("niet geverifieerd") }),
+    ]);
+    expect(getFiscal).not.toHaveBeenCalled();
+  });
+
+  it("skips a worker whose fiscal.iban (uitzend track) is pending re-verification", async () => {
+    envMock.SEPA_CREDITOR_IBAN = "NL91ABNA0417164300";
+    freelancerFindMany.mockResolvedValue([{ id: "fp1", payoutIban: null, payoutIbanPendingVerification: false }]);
+    getFiscal.mockResolvedValue({ iban: VALID_IBAN, ibanPendingVerification: true });
+    batchUpsert.mockResolvedValue({});
+
+    const result = await generateSepaBatch(run([payrollSlip()]), "admin");
+
+    expect(result.generated).toBe(false);
+    expect(result.skipped).toEqual([
+      expect.objectContaining({ userId: "u1", reason: expect.stringContaining("niet geverifieerd") }),
+    ]);
   });
 });

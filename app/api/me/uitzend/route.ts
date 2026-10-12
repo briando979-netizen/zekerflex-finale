@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { getFiscal, setFiscal, type FiscalProfile } from "@/lib/fiscal/store";
 import { isValidIban } from "@/lib/billing/sepa";
+import { invalidateBankDoc } from "@/lib/compliance/documents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +22,7 @@ export async function GET(): Promise<NextResponse> {
         loonheffingskorting: fiscal.loonheffingskorting,
         iban: fiscal.iban,
         ibanValid: fiscal.ibanValid,
+        ibanPendingVerification: fiscal.ibanPendingVerification,
         bsnLast4: fiscal.bsnLast4,
         workerKind: fiscal.workerKind,
       },
@@ -45,17 +48,32 @@ export async function PUT(request: Request): Promise<NextResponse> {
     }));
 
     const patch: Partial<FiscalProfile> = {};
+    let ibanChanged = false;
     if (input.loonheffingskorting !== undefined) patch.loonheffingskorting = input.loonheffingskorting;
     if (input.iban !== undefined) {
       const clean = input.iban.replace(/\s+/g, "").toUpperCase();
+      const before = await getFiscal(p.userId);
+      // Only a CHANGE to an already-set IBAN needs re-verification — the
+      // first time a worker ever sets one (onboarding) is not a "change".
+      ibanChanged = Boolean(before.iban) && before.iban !== clean;
       patch.iban = clean;
       patch.ibanValid = isValidIban(clean);
+      if (ibanChanged) patch.ibanPendingVerification = true;
     }
     const saved = await setFiscal(p.userId, patch);
+    if (ibanChanged) {
+      await Promise.all([
+        invalidateBankDoc(p.userId).catch(() => undefined),
+        prisma.freelancerProfile
+          .update({ where: { userId: p.userId }, data: { payoutIbanPendingVerification: true } })
+          .catch(() => undefined),
+      ]);
+    }
     return NextResponse.json({
       loonheffingskorting: saved.loonheffingskorting,
       iban: saved.iban,
       ibanValid: saved.ibanValid,
+      ibanPendingVerification: saved.ibanPendingVerification,
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);
