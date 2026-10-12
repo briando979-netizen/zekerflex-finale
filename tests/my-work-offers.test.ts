@@ -3,9 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // An accepted tegenbod computed status "active" but the push logic only
 // checked for "pending"/"rejected" — so it landed in none of the three
 // buckets and silently vanished from "Mijn klussen" ("het verdwijnt").
-// Now: it still shows (as "Geaccepteerd") unless a real assignment for that
-// shift already represents it, to avoid showing the same shift twice once
-// accepting an offer finalises a real assignment.
+// Now: it still shows (as "Geaccepteerd"), under the SAME tab its status
+// says it belongs in ("Uitgekozen", not "In afwachting" — tabs must only
+// ever show their own category, never another tab's cards), unless a real
+// assignment for that shift already represents it, to avoid showing the
+// same shift twice (once from the stale offer, once from the live
+// assignment) once accepting an offer finalises a real assignment.
 
 const freelancerProfileFindUnique = vi.fn();
 const shiftAssignmentFindMany = vi.fn();
@@ -71,7 +74,7 @@ function acceptedOffer(shiftId: string) {
 afterEach(() => vi.clearAllMocks());
 
 describe("getMyWork — accepted offers", () => {
-  it("still shows an accepted offer with no real assignment yet, instead of dropping it", async () => {
+  it("still shows an accepted offer with no real assignment yet, under Uitgekozen (not Pending)", async () => {
     freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
     shiftAssignmentFindMany.mockResolvedValue([]);
     modelAgreementFindMany.mockResolvedValue([]);
@@ -81,9 +84,9 @@ describe("getMyWork — accepted offers", () => {
 
     const work = await getMyWork("u1");
 
-    expect(work.pending.map((i) => i.shift.id)).toContain("shiftA");
-    expect(work.pending.find((i) => i.shift.id === "shiftA")?.offerStatusLabel).toBe("Geaccepteerd");
-    expect(work.active).toHaveLength(0);
+    expect(work.active.map((i) => i.shift.id)).toContain("shiftA");
+    expect(work.active.find((i) => i.shift.id === "shiftA")?.offerStatusLabel).toBe("Geaccepteerd");
+    expect(work.pending).toHaveLength(0);
     expect(work.history).toHaveLength(0);
   });
 
@@ -109,5 +112,33 @@ describe("getMyWork — accepted offers", () => {
     expect(work.pending.map((i) => i.shift.id)).not.toContain("shiftB");
     expect(work.active.map((i) => i.shift.id)).toContain("shiftB");
     expect(work.active).toHaveLength(1);
+  });
+
+  it("shows a shift exactly once when a stale rejected offer and a live assignment both exist", async () => {
+    // A rejected/old counter-offer for a shift that was later (re-)assigned
+    // for real must not ALSO show up as a separate "Gearchiveerd" card next
+    // to the live assignment's own "Uitgekozen" card — the live assignment
+    // is the one authoritative, current card for that shift.
+    freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
+    shiftAssignmentFindMany.mockResolvedValue([
+      {
+        id: "asg1",
+        acceptedAt: new Date(),
+        cancelledAt: null,
+        cancelReason: null,
+        shift: shiftRow("shiftC", "Klus C"),
+        timesheet: null,
+      },
+    ]);
+    modelAgreementFindMany.mockResolvedValue([]);
+    shiftMatchFindMany.mockResolvedValue([]);
+    offersForUser.mockResolvedValue([{ ...acceptedOffer("shiftC"), status: "rejected" as const }]);
+    shiftFindMany.mockResolvedValue([shiftRow("shiftC", "Klus C")]);
+
+    const work = await getMyWork("u1");
+
+    const allIds = [...work.pending, ...work.active, ...work.history].filter((i) => i.shift.id === "shiftC");
+    expect(allIds).toHaveLength(1);
+    expect(work.active.map((i) => i.shift.id)).toContain("shiftC");
   });
 });

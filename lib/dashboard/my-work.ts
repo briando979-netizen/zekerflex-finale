@@ -194,20 +194,27 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   const history: MyWorkItem[] = [];
 
   // ── counter-offers ──────────────────────────────────────────────────
-  // A "live" assignment already represents an accepted offer in full (with
-  // agreement/timesheet) via the loop below — this set exists only to catch
-  // an accepted offer that, for whatever reason, never got one, so it still
-  // shows up (as "Geaccepteerd") instead of silently vanishing.
+  // A live assignment is always the authoritative, current state of a klus
+  // for this freelancer — once one exists for a shift, any offer/counter-offer
+  // record for that same shift is history that already did its job (it led to
+  // the assignment, or was superseded by a later one) and must not ALSO
+  // surface as a separate card, or the same klus shows up under two tabs at
+  // once. This set also catches the one case a live assignment can't cover:
+  // an accepted offer that, for whatever reason, never got a real assignment
+  // row, so it still shows up (under "Uitgekozen", matching its real status)
+  // instead of silently vanishing.
   const assignedShiftIds = new Set(
     assignments.filter((a) => !a.cancelledAt).map((a) => a.shift.id),
   );
-  const offerShiftIds = offers.filter((o) => o.status !== "withdrawn").map((o) => o.shiftId);
+  const offerShiftIds = offers
+    .filter((o) => o.status !== "withdrawn" && !assignedShiftIds.has(o.shiftId))
+    .map((o) => o.shiftId);
   const offerShifts = offerShiftIds.length
     ? await prisma.shift.findMany({ where: { id: { in: offerShiftIds } }, select: SHIFT_SELECT })
     : [];
   const offerShiftById = new Map(offerShifts.map((s) => [s.id, s]));
   for (const o of offers) {
-    if (o.status === "withdrawn") continue;
+    if (o.status === "withdrawn" || assignedShiftIds.has(o.shiftId)) continue;
     const row = offerShiftById.get(o.shiftId);
     if (!row) continue;
     const shift = toShift(row, home);
@@ -229,9 +236,11 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       offerStatusLabel: OFFER_LABEL[o.status] ?? o.status,
       cancelledByEmployer: false,
     };
+    // Each item lands in exactly the one bucket that matches its own status —
+    // an "active" (accepted) item belongs under Uitgekozen, never Pending.
     if (item.status === "pending") pending.push(item);
     else if (item.status === "rejected") history.push(item);
-    else if (item.status === "active" && !assignedShiftIds.has(o.shiftId)) pending.push(item);
+    else if (item.status === "active") active.push(item);
   }
 
   // ── accepted assignments ────────────────────────────────────────────
