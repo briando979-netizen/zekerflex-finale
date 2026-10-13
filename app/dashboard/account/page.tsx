@@ -143,7 +143,7 @@ export default async function AccountPage() {
           <span className="text-neutralx-300">{"★★★★★".slice(stars)}</span>
         </div>
         <Link
-          href="/dashboard/profiel"
+          href="/dashboard/beoordelingen"
           className="mt-1 inline-block text-sm font-semibold text-ink underline underline-offset-2"
         >
           {reviews.count} {reviews.count === 1 ? "beoordeling" : "beoordelingen"}

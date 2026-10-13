@@ -253,6 +253,17 @@ const nl = {
     countOne: "{n} review",
     reviewer: "Freelancer · {date}",
   },
+  myReviews: {
+    backToStart: "Jouw account",
+    title: "Mijn beoordelingen",
+    subtitle: "Beoordelingen die opdrachtgevers na een afgeronde klus over jou hebben achtergelaten.",
+    emptyTitle: "Nog geen beoordelingen",
+    emptyBody:
+      "Zodra je een klus hebt afgerond, kan de opdrachtgever een beoordeling achterlaten. Die verschijnt hier.",
+    count: "{n} beoordelingen",
+    countOne: "{n} beoordeling",
+    reviewer: "{date}",
+  },
   shifts: {
     title: "Klussen",
     eyebrow: "Bezetting",
@@ -709,6 +720,16 @@ const en: Dict = {
     count: "{n} reviews",
     countOne: "{n} review",
     reviewer: "Freelancer · {date}",
+  },
+  myReviews: {
+    backToStart: "Your account",
+    title: "My reviews",
+    subtitle: "Ratings employers left about you after completing a job.",
+    emptyTitle: "No reviews yet",
+    emptyBody: "Once you complete a job, the employer can leave a rating. It appears here.",
+    count: "{n} reviews",
+    countOne: "{n} review",
+    reviewer: "{date}",
   },
   shifts: {
     title: "Jobs",
