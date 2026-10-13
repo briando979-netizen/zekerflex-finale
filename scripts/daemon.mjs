@@ -114,6 +114,7 @@ const jobs = [
   { path: "/api/internal/orchestration/tick", label: "orchestration", everyMs: 6 * 3600_000, firstDelayMs: 8 * 60_000 },
   { path: "/api/internal/rag/reindex", label: "rag-reindex", everyMs: 12 * 3600_000, firstDelayMs: 3 * 60_000 },
   { path: "/api/internal/privacy/retention-sweep", label: "retention-sweep", everyMs: 24 * 3600_000, firstDelayMs: 10 * 60_000 },
+  { path: "/api/internal/payroll/abu-phase-sweep", label: "abu-phase-sweep", everyMs: 24 * 3600_000, firstDelayMs: 12 * 60_000 },
 ];
 
 let jobTimers = [];

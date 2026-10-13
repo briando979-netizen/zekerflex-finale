@@ -88,6 +88,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   security: "essential",
   dispute: "essential",
   payout: "essential",
+  "abu-fase-overgang": "essential",
   generic: "essential",
 };
 

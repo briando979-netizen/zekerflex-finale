@@ -25,6 +25,10 @@
     {
       "path": "/api/internal/ai/watchdog",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/internal/payroll/abu-phase-sweep",
+      "schedule": "0 5 * * *"
     }
   ]
 }

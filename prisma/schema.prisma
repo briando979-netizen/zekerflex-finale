@@ -315,6 +315,13 @@ model FreelancerProfile {
   blacklistReason      String?
   matchingBlockedUntil DateTime? // set by DBA compliance throttle/block
 
+  // Last ABU-fase (A/B/C) seen for this uitzendkracht by the phase-transition
+  // sweep (lib/payroll/abu-phase-sweep.ts) — getUitzendStatus() recomputes the
+  // phase fresh from timesheets every time, so this is the only persisted
+  // value a transition can be diffed against.
+  lastAbuPhase   String?
+  lastAbuPhaseAt DateTime?
+
   skills               FreelancerSkill[]
   assignments          ShiftAssignment[]
   matches              ShiftMatch[]
