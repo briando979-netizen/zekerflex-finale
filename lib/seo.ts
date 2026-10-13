@@ -222,13 +222,36 @@ export function breadcrumbJsonLd(trail: [name: string, path: string][]): Record<
   };
 }
 
+/** Default OG/Twitter image — the file-convention route at app/opengraph-image.tsx. */
+const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630, alt: `${SITE.name} — ${SITE.tagline}` };
+
 /**
- * Per-page canonical + OG url. Next merges metadata per segment, so the root
- * layout must NOT set a canonical (it would make every page canonical to "/").
- * Each indexable page calls this with its own path.
+ * Per-page canonical + full OpenGraph block. Next.js metadata merging REPLACES
+ * a parent's `openGraph` object wholesale the moment a child segment declares
+ * its own `openGraph` key — it does not deep-merge nested objects field by
+ * field. Earlier this returned just `{ openGraph: { url } }`, which meant
+ * every page spreading it (13 of them) silently clobbered the root layout's
+ * og:type/og:image/og:site_name/og:locale with that single `url` field. Each
+ * indexable page calls this with its own path (and optionally a page-specific
+ * OG title/description) so the full block survives on every page, not just
+ * the root.
  */
-export function canonical(path: string): { alternates: { canonical: string }; openGraph: { url: string } } {
-  return { alternates: { canonical: path }, openGraph: { url: `${SITE.url}${path}` } };
+export function canonical(
+  path: string,
+  og?: { title?: string; description?: string },
+): { alternates: { canonical: string }; openGraph: Record<string, unknown> } {
+  return {
+    alternates: { canonical: path },
+    openGraph: {
+      url: `${SITE.url}${path}`,
+      type: "website",
+      siteName: SITE.name,
+      locale: SITE.locale,
+      images: [OG_IMAGE],
+      ...(og?.title ? { title: og.title } : {}),
+      ...(og?.description ? { description: og.description } : {}),
+    },
+  };
 }
 
 /** schema.org FAQPage — mirrors the public assistant's canned answers. */

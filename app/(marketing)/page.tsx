@@ -13,14 +13,15 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
 
+const TITLE = "ZekerFlex — flexwerk & zzp-opdrachten, slim gematcht en sneller uitbetaald";
+const DESCRIPTION =
+  "Hét Nederlandse platform voor flexwerk en zzp-opdrachten. Freelancers en flexkrachten vinden werk dat past bij hun vak en reistijd en kiezen zelf hoe snel ze worden uitbetaald. Bedrijven huren betrouwbaar personeel in voor € 3,50 per gewerkt uur — Wet DBA-proof, geen abonnement.";
+
 export const metadata: Metadata = {
-  title: {
-    absolute: "ZekerFlex — flexwerk & zzp-opdrachten, slim gematcht en sneller uitbetaald",
-  },
-  description:
-    "Hét Nederlandse platform voor flexwerk en zzp-opdrachten. Freelancers en flexkrachten vinden werk dat past bij hun vak en reistijd en kiezen zelf hoe snel ze worden uitbetaald. Bedrijven huren betrouwbaar personeel in voor € 3,50 per gewerkt uur — Wet DBA-proof, geen abonnement.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
   keywords: [...SITE.keywords],
-  ...canonical("/"),
+  ...canonical("/", { title: TITLE, description: DESCRIPTION }),
 };
 
 export default function HomePage() {

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { hasScope, verifyApiKey } from "@/lib/integrations/api-keys";
 import { requireApiKey } from "@/lib/api-keys/gateway";
+import { rateLimitHeaders } from "@/lib/http/rate-limit-headers";
 import { createShiftSchema } from "@/lib/shifts/create";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
@@ -16,11 +16,7 @@ export const dynamic = "force-dynamic";
 // every organization's open shifts; a tenant-scoped key sees only its own.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const auth = request.headers.get("authorization") ?? "";
-    const raw = auth.replace(/^Bearer\s+/i, "").trim();
-    const key = raw ? await verifyApiKey(raw) : null;
-    if (!key) throw AppError.unauthenticated("Ongeldige of ontbrekende API-sleutel");
-    if (!hasScope(key, "shifts:read")) throw AppError.forbidden("Deze sleutel heeft geen 'shifts:read'-scope");
+    const { key, rate } = await requireApiKey(request, "shifts:read");
 
     const shifts = await prisma.shift.findMany({
       where: {
@@ -41,28 +37,31 @@ export async function GET(request: Request): Promise<NextResponse> {
       take: 100,
     });
 
-    return NextResponse.json({
-      data: shifts.map((s) => ({
-        id: s.id,
-        title: s.title,
-        startsAt: s.startsAt,
-        endsAt: s.endsAt,
-        hourlyRateCents: s.hourlyRateCents,
-        positions: s.positions,
-        status: s.status,
-        branch: s.branch.name,
-        city: s.branch.city,
-      })),
-    });
+    return NextResponse.json(
+      {
+        data: shifts.map((s) => ({
+          id: s.id,
+          title: s.title,
+          startsAt: s.startsAt,
+          endsAt: s.endsAt,
+          hourlyRateCents: s.hourlyRateCents,
+          positions: s.positions,
+          status: s.status,
+          branch: s.branch.name,
+          city: s.branch.city,
+        })),
+      },
+      { headers: rateLimitHeaders(rate) },
+    );
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    const { status, body, headers } = toErrorBody(err);
+    return NextResponse.json(body, { status, headers });
   }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const key = await requireApiKey(request, "shifts:write");
+    const { key, rate } = await requireApiKey(request, "shifts:write");
     if (!key.tenantId) throw AppError.precondition("Deze API-sleutel is niet aan een organisatie gekoppeld");
     const body = createShiftSchema.parse(await request.json());
     const branch = await prisma.branch.findFirst({ where: { id: body.branchId, tenantId: key.tenantId }, select: { id: true } });
@@ -73,9 +72,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const shift = await prisma.shift.create({ data: { branchId: branch.id, title: body.title, ...(body.description ? { description: body.description } : {}), startsAt, endsAt, breakMinutes: body.breakMinutes, hourlyRateCents: body.hourlyRateCents, positions: body.positions, status: "OPEN" }, select: { id: true, title: true, startsAt: true, endsAt: true, status: true } });
     void runMatchingForShift(shift.id).catch(() => undefined);
     await recordAudit({ category: "MATCHING", action: "api.shift.created", actorLabel: `api-key:${key.id}`, summary: `Dienst via API aangemaakt: ${shift.title}`, targetType: "shift", targetId: shift.id, metadata: { tenantId: key.tenantId } });
-    return NextResponse.json({ data: shift }, { status: 201 });
+    return NextResponse.json({ data: shift }, { status: 201, headers: rateLimitHeaders(rate) });
   } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    const { status, body, headers } = toErrorBody(err);
+    return NextResponse.json(body, { status, headers });
   }
 }

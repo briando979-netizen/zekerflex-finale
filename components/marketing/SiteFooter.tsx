@@ -14,6 +14,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/shop", label: "ZekerFlex shop" },
       { href: "/app", label: "Download de app" },
       { href: "/status", label: "Systeemstatus" },
+      { href: "/developers", label: "API voor ontwikkelaars" },
     ],
   },
   {
@@ -33,6 +34,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Bedrijf",
     links: [
       { href: "/over-ons", label: "Over ZekerFlex" },
+      { href: "/contact", label: "Contact" },
       { href: "/demo", label: "Vraag een demo aan" },
       { href: "/over-ons#werken-bij", label: "Werken bij ons" },
       { href: "/status", label: "Uptime & incidenten" },

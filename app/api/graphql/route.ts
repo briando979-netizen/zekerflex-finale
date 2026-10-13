@@ -4,7 +4,8 @@ import { EnvelopArmor } from "@escape.tech/graphql-armor";
 import { schema, buildContext } from "@/lib/graphql/schema";
 import { env } from "@/lib/env";
 import { getPrincipal } from "@/lib/auth";
-import { fixedWindow } from "@/lib/rate-limit";
+import { fixedWindow, type RateResult } from "@/lib/rate-limit";
+import { rateLimitHeaders } from "@/lib/http/rate-limit-headers";
 import { clientIp } from "@/lib/http/request";
 
 export const runtime = "nodejs";
@@ -39,27 +40,33 @@ const yoga = createYoga({
   plugins: [...armor.protect().plugins, disableIntrospectionInProduction],
 });
 
-async function rateLimited(request: Request): Promise<Response | null> {
+async function rateGate(request: Request): Promise<RateResult> {
   const principal = await getPrincipal().catch(() => null);
   const key = principal
     ? `rl:graphql:user:${principal.userId}`
     : `rl:graphql:ip:${clientIp(request)}`;
-  const gate = await fixedWindow(key, 60, 60);
-  if (gate.ok) return null;
-  return new Response(JSON.stringify({ errors: [{ message: "Too many requests" }] }), {
-    status: 429,
-    headers: {
-      "content-type": "application/json",
-      "Retry-After": String(gate.retryAfterSeconds || 60),
-    },
-  });
+  return fixedWindow(key, 60, 60);
+}
+
+/** Attaches standard RateLimit-* headers to whatever yoga (or the 429 branch) returns. */
+async function handle(request: Request): Promise<Response> {
+  const gate = await rateGate(request);
+  if (!gate.ok) {
+    return new Response(JSON.stringify({ errors: [{ message: "Too many requests" }] }), {
+      status: 429,
+      headers: { "content-type": "application/json", "Retry-After": String(gate.retryAfterSeconds || 60), ...rateLimitHeaders(gate) },
+    });
+  }
+  const response = await yoga.handleRequest(request, {});
+  for (const [k, v] of Object.entries(rateLimitHeaders(gate))) response.headers.set(k, v);
+  return response;
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return (await rateLimited(request)) ?? yoga.handleRequest(request, {});
+  return handle(request);
 }
 export async function POST(request: Request): Promise<Response> {
-  return (await rateLimited(request)) ?? yoga.handleRequest(request, {});
+  return handle(request);
 }
 export async function OPTIONS(request: Request): Promise<Response> {
   return yoga.handleRequest(request, {});

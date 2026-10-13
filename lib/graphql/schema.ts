@@ -37,17 +37,21 @@ function requireRoles(ctx: GraphQLContext, ...roles: UserRole[]): Principal {
 }
 
 const typeDefs = /* GraphQL */ `
+  """The authenticated caller. Null for an unauthenticated request."""
   type Viewer {
     userId: ID!
     email: String!
     fullName: String!
+    "The caller's role grants, e.g. FREELANCER, LOCAL_MANAGER, PLATFORM_ADMIN."
     roles: [String!]!
     emailVerified: Boolean!
   }
 
+  """A posted work shift. Freelancers only ever see OPEN shifts; managers see their own organization's."""
   type Shift {
     id: ID!
     title: String!
+    "OPEN | MATCHING | PARTIALLY_FILLED | COMPLETED | CANCELLED | DRAFT"
     status: String!
     startsAt: String!
     endsAt: String!
@@ -57,6 +61,7 @@ const typeDefs = /* GraphQL */ `
     tenantName: String
   }
 
+  """A platform KPI time series, as shown on the admin dashboard. PLATFORM_ADMIN only."""
   type Kpi {
     key: String!
     label: String!
@@ -84,6 +89,7 @@ const typeDefs = /* GraphQL */ `
     phase: String
   }
 
+  """A single weekly payroll run, identified by ISO week (e.g. "2026-W35"). PLATFORM_ADMIN only."""
   type PayrollRun {
     isoWeek: String!
     weekLabel: String!
@@ -102,6 +108,7 @@ const typeDefs = /* GraphQL */ `
     fiscalIncomplete: Int!
   }
 
+  """One freelancer's own payslip for a given ISO week. Returned only for the authenticated freelancer."""
   type Payslip {
     isoWeek: String!
     weekLabel: String!
@@ -114,17 +121,24 @@ const typeDefs = /* GraphQL */ `
   }
 
   type Query {
+    "The authenticated caller, or null when unauthenticated."
     me: Viewer
+    "Shifts visible to the caller: OPEN only for freelancers, scoped to the caller's organization for managers."
     shifts(status: String, take: Int = 25): [Shift!]!
+    "A single shift by id, subject to the same visibility rule as shifts(). Returns null if not visible."
     shift(id: ID!): Shift
+    "Platform-wide KPI series. Requires PLATFORM_ADMIN."
     platformKpis: [Kpi!]!
+    "Summaries of past weekly payroll runs. Requires PLATFORM_ADMIN."
     payrollRuns: [PayrollRunSummary!]!
+    "A single payroll run's full detail by ISO week. Requires PLATFORM_ADMIN."
     payrollRun(isoWeek: String!): PayrollRun
+    "The authenticated freelancer's own payslip history. Requires the FREELANCER role."
     myPayslips: [Payslip!]!
   }
 
   type Mutation {
-    """Rebuild the (draft) weekly payroll run for an ISO week, e.g. "2026-W35". Admin only, filesystem only."""
+    """Rebuild the (draft) weekly payroll run for an ISO week, e.g. "2026-W35". Requires PLATFORM_ADMIN. Filesystem-only — never writes to Postgres."""
     buildPayrollRun(isoWeek: String!): PayrollRun!
   }
 `;

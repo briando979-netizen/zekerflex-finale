@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { mockRedis, store, expireCalls, mode } = vi.hoisted(() => {
+const { mockRedis, store, ttlStore, expireCalls, mode } = vi.hoisted(() => {
   const s = new Map<string, number>();
+  const ttls = new Map<string, number>();
   const calls: Array<[string, number]> = [];
   const m = { fail: false };
   return {
     store: s,
+    ttlStore: ttls,
     expireCalls: calls,
     mode: m,
     mockRedis: {
@@ -17,7 +19,12 @@ const { mockRedis, store, expireCalls, mode } = vi.hoisted(() => {
       },
       expire: async (k: string, ttl: number) => {
         calls.push([k, ttl]);
+        ttls.set(k, ttl);
         return 1;
+      },
+      ttl: async (k: string) => {
+        if (m.fail) throw new Error("redis down");
+        return ttls.get(k) ?? -1;
       },
     },
   };
@@ -30,6 +37,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 
 afterEach(() => {
   store.clear();
+  ttlStore.clear();
   expireCalls.length = 0;
   mode.fail = false;
 });

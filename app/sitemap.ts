@@ -29,6 +29,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
     entry("/over-ons", 0.6, "monthly"),
+    entry("/contact", 0.5, "yearly"),
+    entry("/developers", 0.6, "monthly"),
 
     // Knowledge hub — the long-tail keyword surface
     entry("/kennis", 0.7, "weekly"),

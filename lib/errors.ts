@@ -60,21 +60,28 @@ export class AppError extends Error {
   static rateLimited(
     message = "Te veel verzoeken — probeer het straks opnieuw.",
     retryAfterSeconds = 60,
+    limit?: number,
   ) {
-    return new AppError("RATE_LIMITED", message, 429, { retryAfterSeconds });
+    return new AppError("RATE_LIMITED", message, 429, { retryAfterSeconds, limit });
   }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);
   }
 
-  /** Response headers this error should carry (e.g. Retry-After). */
+  /** Response headers this error should carry (e.g. Retry-After, RateLimit-*). */
   get headers(): Record<string, string> {
     if (this.code === "RATE_LIMITED") {
-      const retry = (this.details as { retryAfterSeconds?: number } | undefined)
-        ?.retryAfterSeconds;
-      if (typeof retry === "number" && retry > 0) {
-        return { "Retry-After": String(Math.ceil(retry)) };
+      const details = this.details as { retryAfterSeconds?: number; limit?: number } | undefined;
+      const headers: Record<string, string> = {};
+      if (typeof details?.retryAfterSeconds === "number" && details.retryAfterSeconds > 0) {
+        headers["Retry-After"] = String(Math.ceil(details.retryAfterSeconds));
+        headers["RateLimit-Reset"] = String(Math.ceil(details.retryAfterSeconds));
       }
+      if (typeof details?.limit === "number") {
+        headers["RateLimit-Limit"] = String(details.limit);
+        headers["RateLimit-Remaining"] = "0";
+      }
+      return headers;
     }
     return {};
   }

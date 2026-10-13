@@ -3,6 +3,8 @@ import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
+import { prefersMarkdown } from "@/lib/http/accept";
+import { markdownFor } from "@/lib/agent-content/markdown-pages";
 
 export const config = {
   matcher: [
@@ -112,6 +114,26 @@ function next(
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const pathname = req.nextUrl.pathname;
+
+  // Markdown content negotiation: an agent sending `Accept: text/markdown`
+  // gets the real Markdown rendering for the handful of pages that have one
+  // (see lib/agent-content/markdown-pages.ts), instead of the normal HTML.
+  // The HTML branch falls through to Next's own page rendering below, whose
+  // framework-level Vary header (rsc, next-router-state-tree, …) can't be
+  // amended from middleware — Next overwrites whatever Vary middleware sets
+  // once the page actually renders. Not needed here anyway: this is a
+  // genuinely different response (Markdown, 200) for this one request, not a
+  // cache-variant of the same page.
+  const markdown = markdownFor(pathname);
+  if (markdown !== null) {
+    if (prefersMarkdown(req.headers.get("accept"))) {
+      return new NextResponse(markdown, {
+        status: 200,
+        headers: { "Content-Type": "text/markdown; charset=utf-8", Vary: "Accept" },
+      });
+    }
+  }
+
   const nonce = generateNonce();
   const ctx: RequestContext = {
     cid: correlationId(req),

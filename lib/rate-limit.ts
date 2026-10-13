@@ -25,6 +25,8 @@ export interface RateResult {
   remaining: number;
   /** rough seconds until the window resets; 0 while still under the limit. */
   retryAfterSeconds: number;
+  /** real seconds left on the window's Redis TTL — for RateLimit-Reset, on success or failure alike. */
+  resetSeconds: number;
 }
 
 /**
@@ -44,12 +46,15 @@ export async function fixedWindow(
     const count = await redis.incr(key);
     if (count === 1) await redis.expire(key, windowSeconds);
     const ok = count <= limit;
+    const ttl = await redis.ttl(key);
+    const resetSeconds = ttl > 0 ? ttl : windowSeconds;
     return {
       ok,
       count,
       limit,
       remaining: Math.max(0, limit - count),
-      retryAfterSeconds: ok ? 0 : windowSeconds,
+      retryAfterSeconds: ok ? 0 : resetSeconds,
+      resetSeconds,
     };
   } catch {
     return {
@@ -58,6 +63,7 @@ export async function fixedWindow(
       limit,
       remaining: limit,
       retryAfterSeconds: 0,
+      resetSeconds: windowSeconds,
     };
   }
 }
@@ -91,7 +97,7 @@ export async function enforceRateLimit(spec: RateLimitSpec): Promise<RateResult>
   );
   if (!gate.ok) {
     recordRateLimited(spec.name);
-    throw AppError.rateLimited(spec.message, gate.retryAfterSeconds || spec.windowSeconds);
+    throw AppError.rateLimited(spec.message, gate.retryAfterSeconds || spec.windowSeconds, spec.limit);
   }
   return gate;
 }

@@ -11,6 +11,7 @@ const { mockRedis, mockStore, create, createMany, findMany, count, groupBy } = v
         return n;
       },
       expire: async () => 1,
+      ttl: async () => -1,
     },
     create: vi.fn().mockResolvedValue({ id: "evt_1" }),
     createMany: vi.fn().mockResolvedValue({ count: 0 }),
