@@ -115,6 +115,13 @@ Starten: `npm run whisper` (lokaal) of `PROFILES="--profile voice"` (VPS).
 | `SEPA_CREDITOR_IBAN` / `SEPA_CREDITOR_NAME` | Debiteur-gegevens op de SEPA-opdracht |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | ⚪ Werkgevers betalen facturen online via Stripe Checkout. Zonder: "Betaal nu" geeft een foutmelding, factuur blijft handmatig af te handelen |
 
+## Chat-bellen (TURN-relay)
+
+| Variabele | Wat het doet |
+|---|---|
+| `TURN_HOST` / `TURN_SHARED_SECRET` | ⚪ Self-hosted coturn (`docker-compose.prod.yml --profile turn`). Zonder: bellen valt terug op alleen STUN, wat niet verbindt achter symmetric NAT / strikte firewalls. Zie `deploy/README.md` §5 voor de firewall-poorten |
+| `TURN_REALM` | `zekerflex.com` — alleen de realm die coturn zelf adverteert tijdens de auth-challenge; de browser leest hem automatisch af en hoeft hem niet vooraf te kennen |
+
 ## Bedrijfslogica (tunables)
 
 | Variabele | Default | Wat het doet |

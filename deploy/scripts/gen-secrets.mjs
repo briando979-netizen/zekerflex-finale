@@ -26,8 +26,14 @@ INTERNAL_CRON_TOKEN=${b64(24)}
 POSTGRES_PASSWORD=${b64(24).replace(/[+/=]/g, "").slice(0, 28)}
 WEBPUSH_VAPID_PUBLIC_KEY=${v.publicKey}
 WEBPUSH_VAPID_PRIVATE_KEY=${v.privateKey}
+TURN_SHARED_SECRET=${b64(32)}
 # -------------------------------------------------------------------------
 
 Reminder: also set DATABASE_URL with the same POSTGRES_PASSWORD, and paste your
 CLOUDFLARE_TUNNEL_TOKEN from the Cloudflare dashboard.
+
+TURN_SHARED_SECRET is only needed if you run \`--profile turn\` (coturn, for
+chat calls) — also set TURN_HOST to the VPS's public IP or a DNS record with
+the Cloudflare proxy OFF for that hostname, and open the firewall ports
+listed next to the coturn service in docker-compose.prod.yml.
 `);

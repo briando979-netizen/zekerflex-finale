@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fmtDuration } from "./shared";
 import { Portal } from "./Portal";
+import { Avatar } from "./Avatar";
+import { makeRingback } from "./ringtone";
 
 type Mode = "audio" | "video" | "screen";
 type Role = "caller" | "callee";
@@ -16,11 +18,32 @@ interface Signal {
   at: string;
 }
 
-// Sovereign default: host/LAN candidates only. Set NEXT_PUBLIC_STUN_URL to add a
-// STUN server if peers sit behind different NATs.
-const ICE: RTCIceServer[] = process.env.NEXT_PUBLIC_STUN_URL
-  ? [{ urls: process.env.NEXT_PUBLIC_STUN_URL }]
-  : [];
+// Two peers are almost never on the same LAN, so host-only candidates fail to
+// connect in practice — a STUN server is the minimum needed to discover each
+// side's public IP:port (it never sees or relays media). NEXT_PUBLIC_STUN_URL
+// can override/extend this. Symmetric NAT / strict corporate firewalls still
+// need a TURN relay to actually forward media — fetched below, per call, from
+// /api/calls/turn (self-hosted coturn; falls back to STUN-only if unset).
+const STUN: RTCIceServer[] = [
+  ...(process.env.NEXT_PUBLIC_STUN_URL ? [{ urls: process.env.NEXT_PUBLIC_STUN_URL }] : []),
+  { urls: "stun:stun.cloudflare.com:3478" },
+  { urls: "stun:stun.l.google.com:19302" },
+];
+
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
+    const r = await fetch("/api/calls/turn", { cache: "no-store", signal: controller.signal });
+    clearTimeout(timer);
+    if (!r.ok) return STUN;
+    const d = (await r.json()) as { turn: { urls: string[]; username: string; credential: string } | null };
+    if (!d.turn) return STUN;
+    return [...STUN, { urls: d.turn.urls, username: d.turn.username, credential: d.turn.credential }];
+  } catch {
+    return STUN;
+  }
+}
 
 export function CallOverlay({
   threadId,
@@ -28,6 +51,9 @@ export function CallOverlay({
   mode,
   role,
   peerName,
+  peerUserId,
+  peerRole,
+  avatars,
   onEnd,
 }: {
   threadId: string;
@@ -35,6 +61,9 @@ export function CallOverlay({
   mode: Mode;
   role: Role;
   peerName: string;
+  peerUserId: string;
+  peerRole: string;
+  avatars: Record<string, string>;
   onEnd: () => void;
 }) {
   const [state, setState] = useState<"ringing" | "connecting" | "live" | "ended">(
@@ -103,8 +132,8 @@ export function CallOverlay({
     if (localVideo.current) localVideo.current.srcObject = stream;
   };
 
-  const makePc = useCallback(() => {
-    const peer = new RTCPeerConnection({ iceServers: ICE });
+  const makePc = useCallback((ice: RTCIceServer[]) => {
+    const peer = new RTCPeerConnection({ iceServers: ice });
     peer.onicecandidate = (e) => {
       if (e.candidate) void post("candidate", e.candidate.toJSON());
     };
@@ -162,7 +191,9 @@ export function CallOverlay({
   useEffect(() => {
     let alive = true;
     (async () => {
-      const peer = makePc();
+      const ice = await fetchIceServers();
+      if (!alive) return;
+      const peer = makePc(ice);
       if (role === "caller") {
         const stream = await getMedia().catch(() => null);
         if (!stream || !alive) return cleanup(false);
@@ -198,6 +229,14 @@ export function CallOverlay({
     const t = setTimeout(() => cleanup(true), 45_000);
     return () => clearTimeout(t);
   }, [state, cleanup]);
+
+  // ring-back tone while the caller waits for the other side to pick up
+  useEffect(() => {
+    if (role !== "caller" || state !== "ringing") return;
+    const ringer = makeRingback();
+    ringer.start();
+    return () => ringer.stop();
+  }, [role, state]);
 
   const toggleMute = () => {
     const on = !muted;
@@ -256,7 +295,7 @@ export function CallOverlay({
           <video ref={remoteVideo} autoPlay playsInline className="h-full w-full bg-black object-contain" />
         ) : (
           <div className="grid h-full w-full place-items-center">
-            <div className="grid h-28 w-28 place-items-center rounded-full bg-white/10 text-4xl">🔊</div>
+            <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={112} />
           </div>
         )}
         <video

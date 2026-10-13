@@ -175,7 +175,26 @@ PROFILES="--profile voice" bash deploy/scripts/deploy.sh
 
 # lokale beeldgeneratie (zwaar — GPU aanbevolen)
 PROFILES="--profile images" bash deploy/scripts/deploy.sh
+
+# TURN-relay zodat chat-bellen ook werkt achter symmetric NAT / zakelijke firewalls
+PROFILES="--profile turn" bash deploy/scripts/deploy.sh
 ```
+
+### Bellen écht laten verbinden (TURN)
+
+Zonder dit valt bellen terug op alleen STUN, wat voor de meeste thuis-/mobiele
+netwerken werkt, maar niet achter symmetric NAT of een strikte zakelijke
+firewall — het gesprek blijft dan op "Verbinden…" hangen zonder beeld of geluid.
+
+1. Zet `TURN_SHARED_SECRET` (uit `gen-secrets.mjs`) en `TURN_HOST` in
+   `.env.production`. `TURN_HOST` is het publieke IP van deze VPS, of een
+   DNS A-record met de Cloudflare-proxy **uit** (grijze wolk) voor dat ene
+   hostnaam — de tunnel die de rest van de app ontsluit draagt alleen
+   HTTP(S), geen willekeurig UDP-relayverkeer.
+2. Open op de VPS-firewall: `3478/udp`, `3478/tcp` en `49160-49200/udp`
+   (zie de `coturn`-service in `docker-compose.prod.yml` voor de exacte
+   poorten — dit is de **enige** uitzondering op "geen inbound poorten").
+3. `PROFILES="--profile turn" bash deploy/scripts/deploy.sh`.
 
 Statuscontrole in de app: **`/admin/systeem`** toont per component (Postgres,
 Redis, Ollama, Whisper, SMTP, Studio) of hij bereikbaar is.
@@ -229,7 +248,9 @@ Noteer de doorlooptijd (RTO) en het verlies-venster t.o.v. de laatste backup
 ## 8 · Beveiliging & hardening
 
 - **Geen inbound poorten.** De VPS-firewall staat alleen op SSH; alle
-  web-toegang loopt via de tunnel.
+  web-toegang loopt via de tunnel. De enige uitzondering is `--profile turn`
+  (coturn voor chat-bellen), die bewust een paar UDP/TCP-poorten open nodig
+  heeft — zie §5.
 - **SSH**: sleutel-only, root-login uit (`PermitRootLogin no`), overweeg
   `fail2ban`.
 - **Cloudflare**: zet SSL/TLS-mode op *Full (strict)* niet nodig — de tunnel

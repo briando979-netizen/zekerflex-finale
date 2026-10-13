@@ -8,6 +8,7 @@ import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
 import { Portal } from "./Portal";
+import { makeRingtone } from "./ringtone";
 import {
   dayLabel,
   fmtTime,
@@ -46,8 +47,8 @@ export function InboxPage() {
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const [call, setCall] = useState<null | { threadId: string; callId: string; mode: "audio" | "video" | "screen"; role: "caller" | "callee"; peerName: string }>(null);
-  const [incoming, setIncoming] = useState<null | { threadId: string; callId: string; mode: string; fromName: string }>(null);
+  const [call, setCall] = useState<null | { threadId: string; callId: string; mode: "audio" | "video" | "screen"; role: "caller" | "callee"; peerName: string; peerUserId: string; peerRole: string }>(null);
+  const [incoming, setIncoming] = useState<null | { threadId: string; callId: string; mode: string; fromUserId: string; fromName: string; fromRole: string }>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
@@ -100,6 +101,7 @@ export function InboxPage() {
 
   useEffect(() => {
     if (!active) return;
+    setMessages([]);
     void loadThread(active);
     const i = setInterval(() => activeRef.current && loadThread(activeRef.current), 3000);
     return () => clearInterval(i);
@@ -136,6 +138,14 @@ export function InboxPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, active]);
+
+  // ringtone while an incoming call is waiting on accept/decline
+  useEffect(() => {
+    if (!incoming || call) return;
+    const ringer = makeRingtone();
+    ringer.start();
+    return () => ringer.stop();
+  }, [incoming, call]);
 
   const otherOf = (t: ThreadRow): { userId: string; name: string; role: string; support: boolean } => {
     if (t.kind === "support") return { userId: "support", name: "ZekerFlex Support", role: "support", support: true };
@@ -205,7 +215,7 @@ export function InboxPage() {
   const startCall = (mode: "audio" | "video" | "screen") => {
     if (!activeThread || activeThread.kind !== "direct") return;
     const o = otherOf(activeThread);
-    setCall({ threadId: activeThread.id, callId: randId(), mode, role: "caller", peerName: o.name });
+    setCall({ threadId: activeThread.id, callId: randId(), mode, role: "caller", peerName: o.name, peerUserId: o.userId, peerRole: o.role });
   };
 
   const acceptIncoming = () => {
@@ -221,6 +231,8 @@ export function InboxPage() {
       mode: incoming.mode as "audio" | "video" | "screen",
       role: "callee",
       peerName: incoming.fromName,
+      peerUserId: incoming.fromUserId,
+      peerRole: incoming.fromRole,
     });
     setIncoming(null);
   };
@@ -428,6 +440,7 @@ export function InboxPage() {
           </div>
 
           <Composer
+            key={activeThread.id}
             threadId={activeThread.id}
             quickReplies={quickReplies}
             replyTo={replyTo}
@@ -478,6 +491,9 @@ export function InboxPage() {
           mode={call.mode}
           role={call.role}
           peerName={call.peerName}
+          peerUserId={call.peerUserId}
+          peerRole={call.peerRole}
+          avatars={avatars}
           onEnd={() => { setCall(null); if (active) void loadThread(active); }}
         />
       )}

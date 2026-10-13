@@ -27,7 +27,9 @@ export async function GET(): Promise<NextResponse> {
             threadId: t.id,
             callId,
             mode: meta.mode,
+            fromUserId: meta.caller,
             fromName: dir.get(meta.caller)?.name ?? "Onbekend",
+            fromRole: dir.get(meta.caller)?.role ?? "employer",
           },
         });
       }

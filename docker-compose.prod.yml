@@ -12,6 +12,8 @@
 #   --profile maildev  mailpit — catch-all dev inbox instead of real delivery
 #   --profile voice    whisper  (speech-to-text)
 #   --profile images   sd       (image generation — heavy)
+#   --profile turn     coturn   (TURN relay for chat calls — see below; this
+#                                is the ONE exception to "inbound ports: none")
 #
 # Real e-mail delivery: run `--profile mail`, then set in .env.production
 #   SMTP_HOST=postfix  SMTP_PORT=587  SMTP_SECURE=false
@@ -157,6 +159,41 @@ services:
       - sd-models:/app/stable-diffusion-webui/models
       - sd-outputs:/app/stable-diffusion-webui/outputs
     networks: [internal]
+
+  # TURN relay for chat calls (audio/video/screen-share) — without this, two
+  # peers behind symmetric NAT or a strict corporate firewall can never reach
+  # each other and the call silently never connects. STUN alone (always on,
+  # see components/chat/CallOverlay.tsx) already covers most home/mobile
+  # networks; this closes the rest.
+  #
+  # This is the only service in the stack that needs real inbound exposure:
+  # host networking (the ~40-port UDP relay range isn't practical to map
+  # through Docker's bridge NAT) and an open VPS firewall for:
+  #   - 3478/udp, 3478/tcp   (TURN control)
+  #   - 49160-49200/udp      (media relay — raise the range for more
+  #                           concurrent TURN-relayed calls)
+  # TURN_HOST must be a bare IP or a DNS A-record with Cloudflare proxying OFF
+  # (grey-cloud) for that one hostname — the Cloudflare Tunnel used elsewhere
+  # only carries HTTP(S), not arbitrary UDP relay traffic.
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    restart: unless-stopped
+    profiles: ["turn"]
+    network_mode: host
+    command:
+      - "-n"
+      - "--listening-port=3478"
+      - "--min-port=49160"
+      - "--max-port=49200"
+      - "--fingerprint"
+      - "--lt-cred-mech"
+      - "--use-auth-secret"
+      - "--static-auth-secret=${TURN_SHARED_SECRET:?set TURN_SHARED_SECRET in .env.production}"
+      - "--realm=${TURN_REALM:-zekerflex.com}"
+      - "--no-cli"
+      - "--no-tlsv1"
+      - "--no-tlsv1_1"
+      - "--log-file=stdout"
 
 networks:
   internal:

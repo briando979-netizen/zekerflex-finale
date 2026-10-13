@@ -225,6 +225,15 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  // Self-hosted TURN relay (coturn, docker-compose.prod.yml --profile turn) for
+  // chat calls. Without it, calls fall back to STUN-only, which fails to
+  // connect for peers behind symmetric NAT / strict corporate firewalls.
+  // TURN_HOST must be a bare IP or DNS A-record with Cloudflare proxying OFF
+  // (grey-cloud) — the tunnel only carries HTTP(S), not arbitrary UDP relay.
+  TURN_HOST: z.string().optional(),
+  TURN_SHARED_SECRET: z.string().min(16).optional(),
+  TURN_REALM: z.string().default("zekerflex.com"),
+
   // KVKBase - Dutch Handelsregister company data & VAT validation.
   KVKBASE_API_URL: z.string().url().default("https://api.kvkbase.nl"),
   KVKBASE_API_KEY: z.string().optional(),
