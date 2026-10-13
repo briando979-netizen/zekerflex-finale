@@ -31,6 +31,7 @@ export async function createShiftAction(
     hourlyRateCents: formData.get("hourlyRateCents"),
     positions: formData.get("positions") ?? 1,
     extraDates: extraDatesRaw ? extraDatesRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+    poolId: formData.get("poolId") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Controleer de ingevulde gegevens." };

@@ -5,6 +5,7 @@ import { haversineMeters } from "@/lib/geo/geofencing";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { isBlockedByAny } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
+import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -55,6 +56,7 @@ export async function applyToShift(
       startsAt: true,
       positions: true,
       viaUitzendbureau: true,
+      visibility: true,
       branch: { select: { tenantId: true, latitude: true, longitude: true, geofenceRadiusMeters: true } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
@@ -65,6 +67,9 @@ export async function applyToShift(
   }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {
     throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.");
+  }
+  if (shift.visibility === "POOL_ONLY" && !(await isInvitedToPoolOnlyShift(shiftId, userId))) {
+    throw AppError.forbidden("Deze dienst is nog niet open voor aanmeldingen.");
   }
   if (!OPEN_STATUSES.includes(shift.status as (typeof OPEN_STATUSES)[number])) {
     throw AppError.conflict("Deze dienst neemt geen aanmeldingen meer aan.");

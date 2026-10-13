@@ -79,6 +79,7 @@ model Tenant {
   modelAgreements      ModelAgreement[]
   apiKeys              ApiKey[]
   webhookSubscriptions WebhookSubscription[]
+  favoritePools        FavoritePool[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -504,6 +505,11 @@ enum ShiftStatus {
   CANCELLED
 }
 
+enum ShiftVisibility {
+  PUBLIC // on the open marketplace, matched/notified to the full eligible pool
+  POOL_ONLY // only invited FavoritePool member(s) can see/match/apply until published
+}
+
 enum MatchStatus {
   SCORED
   NOTIFIED
@@ -548,6 +554,13 @@ model Shift {
 
   status ShiftStatus @default(DRAFT)
 
+  // Set at creation when the employer invites a favorite pool instead of
+  // going straight to the open marketplace (see lib/shifts/create.ts). Stays
+  // POOL_ONLY until the employer explicitly publishes it (publishShiftAction)
+  // or forever if they never do — there is no automatic expiry/timeout.
+  visibility  ShiftVisibility   @default(PUBLIC)
+  poolInvites ShiftPoolInvite[]
+
   matches         ShiftMatch[]
   assignments     ShiftAssignment[]
   modelAgreements ModelAgreement[]
@@ -557,6 +570,55 @@ model Shift {
 
   @@index([branchId, status])
   @@index([startsAt])
+}
+
+// ===========================================================================
+// Favorite pools — an employer groups favorited freelancers into named pools
+// so a new shift can be privately invited to one pool before it ever reaches
+// the open marketplace (lib/pools/store.ts, lib/shifts/create.ts). Separate
+// from EmployerRelations.favorites (lib/employer/relations.ts, a flat KV
+// list) because resolving "is freelancer X invited to shift Y" needs a real
+// join against the matching-engine/marketplace queries, not a JSON blob scan.
+// ===========================================================================
+model FavoritePool {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+
+  members FavoritePoolMember[]
+  invites ShiftPoolInvite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model FavoritePoolMember {
+  id               String       @id @default(cuid())
+  poolId           String
+  pool             FavoritePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  freelancerUserId String
+
+  addedAt DateTime @default(now())
+
+  @@unique([poolId, freelancerUserId])
+  @@index([freelancerUserId])
+}
+
+model ShiftPoolInvite {
+  id      String       @id @default(cuid())
+  shiftId String
+  shift   Shift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  poolId  String
+  pool    FavoritePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([shiftId, poolId])
+  @@index([shiftId])
+  @@index([poolId])
 }
 
 model ShiftMatch {

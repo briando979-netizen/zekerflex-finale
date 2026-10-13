@@ -11,6 +11,7 @@ import { listCounterOffers, setOfferStatus } from "@/lib/offers/store";
 import { applyToShift } from "@/lib/matching/apply";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
+import { runMatchingForShift } from "@/lib/matching/engine";
 
 export interface OfferResponse {
   ok: boolean;
@@ -29,6 +30,7 @@ async function assertOwnsShift(shiftId: string) {
       title: true,
       description: true,
       status: true,
+      visibility: true,
       startsAt: true,
       endsAt: true,
       breakMinutes: true,
@@ -195,6 +197,33 @@ export async function cancelShiftAction(shiftId: string, reason: string): Promis
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     return { ok: false, message: "Annuleren mislukt." };
+  }
+}
+
+/** Employer puts a pool-only shift on the open marketplace — matches/notifies everyone else. */
+export async function publishShiftAction(shiftId: string): Promise<OfferResponse> {
+  try {
+    const { shift } = await assertOwnsShift(shiftId);
+    if (shift.visibility !== "POOL_ONLY") {
+      return { ok: false, message: "Deze dienst staat al op de open markt." };
+    }
+    if (["COMPLETED", "CANCELLED"].includes(shift.status)) {
+      return { ok: false, message: "Deze dienst is al afgerond of geannuleerd." };
+    }
+
+    await prisma.shift.update({ where: { id: shift.id }, data: { visibility: "PUBLIC" } });
+    try {
+      await runMatchingForShift(shift.id);
+    } catch {
+      /* non-fatal — the shift is public either way; matching retries on the next tick */
+    }
+
+    revalidatePath(`/werkgever/diensten/${shift.id}`);
+    revalidatePath("/werkgever/diensten");
+    return { ok: true, message: "Dienst staat nu op de open markt." };
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: err.message };
+    return { ok: false, message: "Publiceren mislukt." };
   }
 }
 

@@ -6,6 +6,7 @@ import { listCounterOffers } from "@/lib/offers/store";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { getUserAvatars } from "@/lib/profile/store";
 import { reviewSummary } from "@/lib/reviews/store";
+import { poolsInvitedToShift } from "@/lib/pools/store";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -26,6 +27,8 @@ export interface EmployerShiftView {
   hourlyRateCents: number;
   positions: number;
   status: string;
+  visibility: string;
+  invitedPool: { id: string; name: string } | null;
   skill: string | null;
   hours: number;
   grossPerSeatCents: number;
@@ -90,6 +93,7 @@ export async function getEmployerShift(
       hourlyRateCents: true,
       positions: true,
       status: true,
+      visibility: true,
       requiredSkill: { select: { name: true } },
       branch: { select: { id: true, name: true, city: true } },
       assignments: {
@@ -124,9 +128,10 @@ export async function getEmployerShift(
   });
   if (!shift) return null;
 
-  const [replacements, allOffers] = await Promise.all([
+  const [replacements, allOffers, invitedPools] = await Promise.all([
     listReplacementRequests(300),
     listCounterOffers(500),
+    shift.visibility === "POOL_ONLY" ? poolsInvitedToShift(shift.id) : Promise.resolve([]),
   ]);
   const replacementAssignmentIds = new Set(
     replacements.filter((r) => r.status === "open").map((r) => r.assignmentId),
@@ -174,6 +179,8 @@ export async function getEmployerShift(
     hourlyRateCents: shift.hourlyRateCents,
     positions: shift.positions,
     status: shift.status,
+    visibility: shift.visibility,
+    invitedPool: invitedPools[0] ?? null,
     skill: shift.requiredSkill?.name ?? null,
     hours: Math.round(Math.max(0, hours) * 10) / 10,
     grossPerSeatCents: grossPerSeat,

@@ -38,9 +38,14 @@ export default async function FavorietenPage() {
         eyebrow={f.eyebrow}
         subtitle={f.subtitle}
         action={
-          <Link href="/werkgever/diensten/nieuw" className="btn-primary">
-            {f.placeShift}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/werkgever/favorieten/pools" className="btn-ghost">
+              Pools beheren
+            </Link>
+            <Link href="/werkgever/diensten/nieuw" className="btn-primary">
+              {f.placeShift}
+            </Link>
+          </div>
         }
       />
 

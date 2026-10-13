@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { listPools } from "@/lib/pools/store";
 
 export interface ShiftTemplate {
   key: string;
@@ -49,6 +50,8 @@ export const createShiftSchema = z.object({
   positions: z.coerce.number().int().min(1).max(50).default(1),
   /** extra calendar dates (yyyy-mm-dd) — the same time window is repeated on each */
   extraDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(30).optional(),
+  /** Privately invite this favorite pool instead of going straight to the open marketplace. */
+  poolId: z.string().min(1).max(128).optional(),
 });
 export type CreateShiftInput = z.infer<typeof createShiftSchema>;
 
@@ -69,9 +72,16 @@ export async function createShift(
     : { tenantId: { in: scope.tenantIds } };
   const branch = await prisma.branch.findFirst({
     where: { AND: [{ id: input.branchId }, scopeWhere] },
-    select: { id: true, name: true, matchingConfig: true },
+    select: { id: true, name: true, matchingConfig: true, tenantId: true },
   });
   if (!branch) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
+
+  let pool: { id: string; name: string } | null = null;
+  if (input.poolId) {
+    const found = (await listPools(branch.tenantId)).find((p) => p.id === input.poolId);
+    if (!found) throw AppError.forbidden("Deze pool bestaat niet (meer) voor jouw organisatie.");
+    pool = { id: found.id, name: found.name };
+  }
 
   const startsAt = new Date(input.startsAt);
   const endsAt = new Date(input.endsAt);
@@ -97,26 +107,36 @@ export async function createShift(
   }
   windows.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
-  const created = await prisma.$transaction(
-    windows.map((w) =>
-      prisma.shift.create({
-        data: {
-          branchId: branch.id,
-          title: input.title,
-          ...(input.description ? { description: input.description } : {}),
-          ...(input.dresscode ? { dresscode: input.dresscode } : {}),
-          viaUitzendbureau: input.viaUitzendbureau,
-          startsAt: w.startsAt,
-          endsAt: w.endsAt,
-          breakMinutes: input.breakMinutes,
-          hourlyRateCents: input.hourlyRateCents,
-          positions: input.positions,
-          status: "OPEN",
-        },
-        select: { id: true },
-      }),
-    ),
-  );
+  const created = await prisma.$transaction(async (tx) => {
+    const rows = [];
+    for (const w of windows) {
+      rows.push(
+        await tx.shift.create({
+          data: {
+            branchId: branch.id,
+            title: input.title,
+            ...(input.description ? { description: input.description } : {}),
+            ...(input.dresscode ? { dresscode: input.dresscode } : {}),
+            viaUitzendbureau: input.viaUitzendbureau,
+            startsAt: w.startsAt,
+            endsAt: w.endsAt,
+            breakMinutes: input.breakMinutes,
+            hourlyRateCents: input.hourlyRateCents,
+            positions: input.positions,
+            status: "OPEN",
+            visibility: pool ? "POOL_ONLY" : "PUBLIC",
+          },
+          select: { id: true },
+        }),
+      );
+    }
+    if (pool) {
+      await tx.shiftPoolInvite.createMany({
+        data: rows.map((r) => ({ shiftId: r.id, poolId: pool!.id })),
+      });
+    }
+    return rows;
+  });
   const shift = created[0]!;
 
   await recordAudit({
@@ -126,7 +146,7 @@ export async function createShift(
     actorLabel: "user",
     summary: `Dienst "${input.title}" uitgezet bij ${branch.name} (${input.positions}x${
       windows.length > 1 ? `, ${windows.length} dagen` : ""
-    })`,
+    })${pool ? ` — privé uitgenodigd: pool "${pool.name}"` : ""}`,
     targetType: "shift",
     targetId: shift.id,
     metadata: {
@@ -134,6 +154,7 @@ export async function createShift(
       hourlyRateCents: input.hourlyRateCents,
       template: input.templateKey ?? null,
       days: windows.length,
+      poolId: pool?.id ?? null,
     },
   });
 

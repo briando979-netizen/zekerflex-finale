@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
+import { listPools } from "@/lib/pools/store";
 import { PageHeader } from "@/components/app/ui";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
 import { getDict } from "@/lib/i18n/server";
@@ -22,6 +23,9 @@ export default async function NieuweDienstPage() {
     orderBy: { name: "asc" },
   });
 
+  const tenantId = scope.tenantIds[0];
+  const pools = tenantId ? await listPools(tenantId) : [];
+
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
@@ -39,7 +43,12 @@ export default async function NieuweDienstPage() {
         <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">{n.noBranches}</div>
       ) : (
         <div className="surface p-6">
-          <NewShiftForm branches={branches} templates={SHIFT_TEMPLATES} minRateCents={MIN_SHIFT_RATE_CENTS} />
+          <NewShiftForm
+            branches={branches}
+            templates={SHIFT_TEMPLATES}
+            minRateCents={MIN_SHIFT_RATE_CENTS}
+            pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
+          />
         </div>
       )}
     </div>

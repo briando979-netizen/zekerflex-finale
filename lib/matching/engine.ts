@@ -15,6 +15,7 @@ import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
+import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -132,6 +133,7 @@ async function loadCandidatePool(shift: {
   startsAt: Date;
   endsAt: Date;
   viaUitzendbureau: boolean;
+  restrictToUserIds?: string[] | null;
 }): Promise<CandidateInput[]> {
   const now = new Date();
   const profiles = await prisma.freelancerProfile.findMany({
@@ -155,6 +157,7 @@ async function loadCandidatePool(shift: {
       ...(shift.requiredSkillId
         ? { skills: { some: { skillId: shift.requiredSkillId } } }
         : {}),
+      ...(shift.restrictToUserIds ? { userId: { in: shift.restrictToUserIds } } : {}),
     },
     select: {
       id: true,
@@ -244,11 +247,19 @@ export async function runMatchingForShift(
       startsAt: shift.startsAt,
     };
 
+    // A privately pool-invited shift only ever matches/notifies the invited
+    // pool's members — never the full platform-wide candidate pool — until
+    // the employer explicitly publishes it (publishShiftAction flips
+    // visibility back to PUBLIC and re-runs matching unrestricted).
+    const restrictToUserIds =
+      shift.visibility === "POOL_ONLY" ? await invitedPoolMemberUserIds(shift.id) : null;
+
     const pool = await loadCandidatePool({
       id: shift.id,
       requiredSkillId: shift.requiredSkillId,
       startsAt: shift.startsAt,
       endsAt: shift.endsAt,
+      restrictToUserIds,
       viaUitzendbureau: shift.viaUitzendbureau,
     });
     log.info("candidate pool loaded", { size: pool.length });

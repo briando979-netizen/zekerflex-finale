@@ -27,10 +27,12 @@ export function NewShiftForm({
   branches,
   templates,
   minRateCents = 1620,
+  pools = [],
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
   minRateCents?: number;
+  pools?: { id: string; name: string; memberCount: number }[];
 }) {
   const minRateEuro = minRateCents / 100;
   const [state, formAction] = useFormState(createShiftAction, initial);
@@ -45,6 +47,7 @@ export function NewShiftForm({
   const [endsAt, setEndsAt] = useState("");
   const [extraDates, setExtraDates] = useState<string[]>([]);
   const [multi, setMulti] = useState(false);
+  const [poolId, setPoolId] = useState("");
 
   function applyTemplate(t: ShiftTemplate) {
     setTpl(t.key);
@@ -234,6 +237,26 @@ export function NewShiftForm({
             </>
           )}
         </div>
+
+        {pools.length > 0 && (
+          <label className="block">
+            <span className="field-label">
+              Eerst privé uitnodigen <span className="text-neutralx-400">(optioneel)</span>
+            </span>
+            <select name="poolId" value={poolId} onChange={(e) => setPoolId(e.target.value)} className="field-input">
+              <option value="">Direct op de open markt</option>
+              {pools.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.memberCount} {p.memberCount === 1 ? "lid" : "leden"})
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-neutralx-400">
+              Alleen deze pool ziet en kan reageren op de dienst. Je zet &apos;m later zelf op de open markt — dat
+              gebeurt niet automatisch.
+            </span>
+          </label>
+        )}
 
         <Submit days={totalDays} blocked={hourlyRateCents < minRateCents} />
       </form>

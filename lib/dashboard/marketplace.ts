@@ -258,6 +258,12 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
         startsAt: { gte: new Date() },
         id: { notIn: hiddenShiftIds },
+        // A privately pool-invited shift stays hidden from the open
+        // marketplace for everyone except an invited pool's own members.
+        OR: [
+          { visibility: "PUBLIC" },
+          { poolInvites: { some: { pool: { members: { some: { freelancerUserId: userId } } } } } },
+        ],
       },
       select: SHIFT_CARD_SELECT,
       orderBy: { startsAt: "asc" },
