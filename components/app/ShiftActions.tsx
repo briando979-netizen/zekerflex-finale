@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { RegelVervangingFlow } from "@/components/app/RegelVervangingFlow";
 import { AddToCalendarButton } from "@/components/app/AddToCalendarButton";
 import type { CalendarEvent } from "@/lib/calendar/links";
+import { NOTICE_HOURS } from "@/lib/claims/policy";
 
 // ---------------------------------------------------------------------------
 // Action set for a shift the freelancer has been assigned to:
@@ -115,10 +116,16 @@ export function ShiftActions({
     <CancelShiftModal
       assignmentId={assignmentId}
       shiftTitle={shiftTitle}
+      startsAtISO={startsAtISO}
       onClose={() => setCancelOpen(false)}
-      onCancelled={() => {
+      onCancelled={(late) => {
         setCancelOpen(false);
-        toast.success("Klus afgezegd", "De dienst staat weer open op het platform.");
+        toast.success(
+          "Klus afgezegd",
+          late
+            ? "Omdat dit buiten de opzegtermijn is, kan de opdrachtgever een vergoeding van 50% claimen."
+            : "De dienst staat weer open op het platform.",
+        );
         router.refresh();
       }}
     />
@@ -254,17 +261,22 @@ export function ShiftActions({
 function CancelShiftModal({
   assignmentId,
   shiftTitle,
+  startsAtISO,
   onClose,
   onCancelled,
 }: {
   assignmentId: string;
   shiftTitle: string;
+  startsAtISO: string;
   onClose: () => void;
-  onCancelled: () => void;
+  onCancelled: (late: boolean) => void;
 }) {
   const toast = useToast();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const hoursUntilStart = (new Date(startsAtISO).getTime() - Date.now()) / 3_600_000;
+  const withinNotice = hoursUntilStart >= NOTICE_HOURS;
 
   async function cancelShift() {
     if (reason.trim().length < 3) {
@@ -280,7 +292,7 @@ function CancelShiftModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message ?? "Afzeggen mislukt");
-      onCancelled();
+      onCancelled(Boolean(data?.late));
     } catch (e) {
       toast.error((e as Error).message);
       setBusy(false);
@@ -294,11 +306,20 @@ function CancelShiftModal({
           <h2 className="font-display text-lg font-bold text-ink">Zeg deze klus af</h2>
           <p className="mt-1 text-sm text-neutralx-600">&ldquo;{shiftTitle}&rdquo;</p>
 
-          <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
-            <span className="font-semibold text-warn">Let op:</span> zonder vervanger afzeggen telt mee
-            in je betrouwbaarheidsscore en kan je matching beperken. Deze actie kun je niet ongedaan
-            maken.
-          </div>
+          {withinNotice ? (
+            <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
+              <span className="font-semibold text-warn">Let op:</span> zonder vervanger afzeggen telt mee
+              in je betrouwbaarheidsscore en kan je matching beperken. Je zegt af binnen de opzegtermijn
+              ({NOTICE_HOURS} uur), dus hier zijn geen kosten aan verbonden. Deze actie kun je niet
+              ongedaan maken.
+            </div>
+          ) : (
+            <div className="mt-3 rounded-lg border border-crit/30 bg-crit/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
+              <span className="font-semibold text-crit">Let op:</span> je zegt af binnen {NOTICE_HOURS} uur voor
+              aanvang. De opdrachtgever krijgt hierdoor de optie om 50% van deze dienst bij jou in rekening
+              te brengen. Dit telt ook mee in je betrouwbaarheidsscore. Deze actie kun je niet ongedaan maken.
+            </div>
+          )}
 
           <label className="mt-3 block text-xs font-medium text-neutralx-500">
             Waarom wil je deze klus afzeggen?

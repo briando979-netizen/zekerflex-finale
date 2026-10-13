@@ -89,6 +89,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   dispute: "essential",
   payout: "essential",
   "abu-fase-overgang": "essential",
+  "annuleringsclaim-factuur": "essential",
   generic: "essential",
 };
 

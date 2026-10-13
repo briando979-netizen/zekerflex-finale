@@ -29,6 +29,10 @@
     {
       "path": "/api/internal/payroll/abu-phase-sweep",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/internal/claims/collections-sweep",
+      "schedule": "0 9 * * *"
     }
   ]
 }

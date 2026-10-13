@@ -5,9 +5,11 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { decideClaim, getClaim } from "@/lib/claims/store";
+import { issueClaimInvoice } from "@/lib/claims/billing";
 import { recordAudit } from "@/lib/audit";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +49,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     const updated = await decideClaim(params.id, decision, p.userId, note);
     if (!updated) throw AppError.validation("Claim is al afgehandeld.");
+
+    if (decision === "approved") {
+      await issueClaimInvoice(updated).catch((err) =>
+        logger.warn("claim approved but invoice issuance failed", { claimId: updated.id, error: (err as Error).message }),
+      );
+    }
 
     await recordAudit({
       category: "MATCHING",

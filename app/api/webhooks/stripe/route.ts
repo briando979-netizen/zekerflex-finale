@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
-import { InvoiceStatus } from "@prisma/client";
+import { InvoiceStatus, InvoiceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { constructWebhookEvent } from "@/lib/billing/stripe";
 import { claimIdempotency } from "@/lib/redis";
 import { recordAudit } from "@/lib/audit";
+import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +57,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
-      select: { id: true, number: true, status: true },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        type: true,
+        claimId: true,
+        totalCents: true,
+        currency: true,
+        recipientFreelancerId: true,
+      },
     });
     if (!invoice) {
       log.warn("stripe webhook: invoice not found", { invoiceId });
@@ -82,6 +92,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         targetId: invoice.id,
         metadata: { sessionId: session.id, eventType: event.type },
       });
+
+      if (invoice.type === InvoiceType.CANCELLATION_PENALTY && invoice.claimId) {
+        await fulfillPaidClaim(invoice);
+      }
     }
   }
 

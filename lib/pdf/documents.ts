@@ -16,6 +16,7 @@ const TYPE_LABEL: Record<string, string> = {
   SELF_BILL_FREELANCER: "Dienstfactuur (self-billing)",
   PLATFORM_FEE: "Platformkosten",
   REVERSE_BILL_CLIENT: "Factuur opdrachtgever",
+  CANCELLATION_PENALTY: "Annuleringsvergoeding",
 };
 
 /** Build an A4 PDF for a single invoice. Returns null if not found. */
@@ -26,12 +27,14 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
       lines: true,
       issuerTenant: { select: { name: true } },
       recipientTenant: { select: { name: true } },
+      recipientFreelancer: { select: { user: { select: { fullName: true } } } },
       timesheet: { select: { scheduledStart: true, branch: { select: { name: true } } } },
       payment: { select: { status: true, settledAt: true, amountCents: true } },
     },
   });
   if (!inv) return null;
 
+  const recipientName = inv.recipientTenant?.name ?? inv.recipientFreelancer?.user.fullName ?? "Onbekend";
   let issuerName = inv.issuerTenant?.name ?? "ZekerFlex";
   if (inv.issuerFreelancerId) {
     const fp = await prisma.freelancerProfile.findUnique({
@@ -50,7 +53,7 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   pdf.row("Factuurnummer", inv.number, { bold: true });
   pdf.row("Datum", nlDate(inv.issuedAt ?? inv.createdAt));
   pdf.row("Van", issuerName);
-  pdf.row("Aan", inv.recipientTenant.name);
+  pdf.row("Aan", recipientName);
   if (inv.timesheet) {
     pdf.row("Werkdag", nlDate(inv.timesheet.scheduledStart));
     pdf.row("Locatie", inv.timesheet.branch.name);

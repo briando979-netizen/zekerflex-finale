@@ -3,6 +3,7 @@ import type { InvoiceType, Prisma } from "@prisma/client";
 const PREFIX: Record<InvoiceType, string> = {
   SELF_BILL_FREELANCER: "ZF-SB",
   PLATFORM_FEE: "ZF-PF",
+  CANCELLATION_PENALTY: "ZF-CP",
 };
 
 /**

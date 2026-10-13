@@ -80,6 +80,7 @@ model Tenant {
   apiKeys              ApiKey[]
   webhookSubscriptions WebhookSubscription[]
   favoritePools        FavoritePool[]
+  credits              TenantCredit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -264,7 +265,7 @@ model FreelancerProfile {
 
   // Destination for instant SEPA payouts. Legacy/manual path — superseded by
   // Stripe Connect below when the freelancer has completed that onboarding.
-  payoutIban String?
+  payoutIban                    String?
   // True from the moment payoutIban is CHANGED on an already-verified profile
   // until a fresh bank document (ComplianceDocument kind=BANK) is uploaded for
   // it — see lib/compliance/documents.ts. Payouts are held while this is true
@@ -332,6 +333,8 @@ model FreelancerProfile {
   modelAgreements      ModelAgreement[]
   replacementsGiven    ReplacementRequest[]  @relation("ReplacementOriginal")
   replacementsTaken    ReplacementRequest[]  @relation("ReplacementSubstitute")
+  // Cancellation-penalty invoices where this freelancer is the debtor (employer_owed direction).
+  penaltyInvoicesOwed  Invoice[]             @relation("InvoiceRecipientFreelancer")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -539,19 +542,19 @@ model Shift {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  title           String
-  description     String?
+  title            String
+  description      String?
   // Shown to a freelancer as a distinct "kledingvoorschriften" item, separate
   // from the general description — the reageer flow asks them to explicitly
   // accept it, so it needs its own field rather than being buried in prose.
-  dresscode       String?
+  dresscode        String?
   // Restricts this shift to uitzendkrachten (payroll-track workers, see
   // FiscalProfile.workerKind) — a zzp'er/flexwerker can see it in the
   // marketplace but can't react to it. Set by the employer at creation time.
   viaUitzendbureau Boolean @default(false)
-  requiredSkillId String?
-  requiredSkill   Skill?  @relation(fields: [requiredSkillId], references: [id])
-  minSkillRating  Float   @default(0)
+  requiredSkillId  String?
+  requiredSkill    Skill?  @relation(fields: [requiredSkillId], references: [id])
+  minSkillRating   Float   @default(0)
 
   startsAt        DateTime
   endsAt          DateTime
@@ -905,6 +908,7 @@ model Dispute {
 enum InvoiceType {
   SELF_BILL_FREELANCER // company <- freelancer services (created on freelancer's behalf)
   PLATFORM_FEE // company <- ZekerFlex platform fee
+  CANCELLATION_PENALTY // late-cancel / no-show 50% claim, either direction — see lib/claims
 }
 
 enum InvoiceStatus {
@@ -925,12 +929,21 @@ model Invoice {
   number      String        @unique
   type        InvoiceType
   status      InvoiceStatus @default(DRAFT)
-  timesheetId String
+  // Null for CANCELLATION_PENALTY — those don't stem from a worked timesheet.
+  timesheetId String?
 
-  issuerTenantId    String? // for PLATFORM_FEE the issuer is the platform tenant
-  recipientTenantId String
+  issuerTenantId        String? // for PLATFORM_FEE the issuer is the platform tenant
+  // Null when the debtor is a freelancer instead of a tenant (recipientFreelancerId set instead) —
+  // the employer_owed direction of a cancellation-penalty claim.
+  recipientTenantId     String?
+  // Set only for CANCELLATION_PENALTY invoices where a freelancer is the debtor (late-cancel /
+  // no-show owed to the employer). See lib/claims/billing.ts.
+  recipientFreelancerId String?
 
   issuerFreelancerId String? // for SELF_BILL_FREELANCER
+
+  // Back-reference to the KV CancellationClaim that generated this invoice (lib/claims/store.ts).
+  claimId String?
 
   currency      String       @default("EUR")
   vatTreatment  VatTreatment
@@ -947,19 +960,27 @@ model Invoice {
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String? @unique
 
+  // Collections lifecycle (CANCELLATION_PENALTY only) — see lib/claims/collections-sweep.ts.
+  dueAt              DateTime?
+  reminderSentAt     DateTime? // free statutory 14-day notice (WIK) before incassokosten may apply
+  overdueEscalatedAt DateTime? // moved into the internal incasso queue, lateFeeCents charged
+  lateFeeCents       Int?
+
   issuedAt DateTime?
   paidAt   DateTime?
   lines    InvoiceLine[]
   payment  Payment?
 
-  timesheet       Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
-  issuerTenant    Tenant?   @relation("InvoiceIssuerTenant", fields: [issuerTenantId], references: [id])
-  recipientTenant Tenant    @relation("InvoiceRecipientTenant", fields: [recipientTenantId], references: [id])
+  timesheet           Timesheet?         @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  issuerTenant        Tenant?            @relation("InvoiceIssuerTenant", fields: [issuerTenantId], references: [id])
+  recipientTenant     Tenant?            @relation("InvoiceRecipientTenant", fields: [recipientTenantId], references: [id])
+  recipientFreelancer FreelancerProfile? @relation("InvoiceRecipientFreelancer", fields: [recipientFreelancerId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@index([timesheetId])
   @@index([type, status])
+  @@index([claimId])
 }
 
 // Monotonic per-(type, year) invoice counter. Incremented inside the approval
@@ -1019,6 +1040,29 @@ model Payment {
   createdAt DateTime @default(now())
 
   @@index([status])
+}
+
+// ===========================================================================
+// Tenant credit ledger — there is no bank rail to pay a tenant/employer out
+// directly (only freelancers have a Stripe Connect account), so an
+// employer_owed cancellation-penalty claim that a freelancer pays is credited
+// here instead and deducted from that tenant's next generated invoice (see
+// lib/billing/self-billing.ts and lib/claims/billing.ts).
+// ===========================================================================
+model TenantCredit {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  amountCents        Int
+  reason             String
+  sourceClaimId      String // the CancellationClaim (KV, lib/claims/store.ts) this credit came from
+  appliedAt          DateTime? // null = not yet deducted from an invoice
+  appliedToInvoiceId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, appliedAt])
 }
 
 // ===========================================================================

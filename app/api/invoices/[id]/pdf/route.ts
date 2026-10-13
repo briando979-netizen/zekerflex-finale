@@ -11,21 +11,24 @@ export const dynamic = "force-dynamic";
 async function mayAccessInvoice(p: Principal, invoiceId: string): Promise<boolean> {
   const inv = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    select: { recipientTenantId: true, issuerFreelancerId: true },
+    select: { recipientTenantId: true, recipientFreelancerId: true, issuerFreelancerId: true },
   });
   if (!inv) return false;
 
-  // freelancer who issued it
-  if (inv.issuerFreelancerId) {
+  // freelancer who issued it, or who is the debtor on a penalty invoice
+  for (const freelancerProfileId of [inv.issuerFreelancerId, inv.recipientFreelancerId]) {
+    if (!freelancerProfileId) continue;
     const fp = await prisma.freelancerProfile.findFirst({
-      where: { id: inv.issuerFreelancerId, userId: p.userId },
+      where: { id: freelancerProfileId, userId: p.userId },
       select: { id: true },
     });
     if (fp) return true;
   }
   // employer of the recipient tenant
-  const scope = await resolveEmployerScope(p).catch(() => null);
-  if (scope?.tenantIds.includes(inv.recipientTenantId)) return true;
+  if (inv.recipientTenantId) {
+    const scope = await resolveEmployerScope(p).catch(() => null);
+    if (scope?.tenantIds.includes(inv.recipientTenantId)) return true;
+  }
 
   return p.grants.some((g) => g.role === "PLATFORM_ADMIN");
 }

@@ -9,6 +9,12 @@ import { createInvoiceCheckoutSession } from "@/lib/billing/stripe";
 import { recordAudit } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
+const DESCRIPTIONS: Record<InvoiceType, string> = {
+  [InvoiceType.PLATFORM_FEE]: "ZekerFlex platformfee",
+  [InvoiceType.SELF_BILL_FREELANCER]: "ZekerFlex dienst (zzp)",
+  [InvoiceType.CANCELLATION_PENALTY]: "ZekerFlex annuleringsvergoeding",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -40,21 +46,33 @@ export async function POST(_req: Request, props: { params: Promise<{ id: string 
         totalCents: true,
         currency: true,
         recipientTenantId: true,
+        recipientFreelancerId: true,
       },
     });
     if (!invoice) throw AppError.notFound("Factuur niet gevonden");
-    if (!scope.tenantIds.includes(invoice.recipientTenantId)) {
+
+    let billingEmail: string | null = null;
+    if (invoice.recipientTenantId) {
+      if (!scope.tenantIds.includes(invoice.recipientTenantId)) {
+        throw AppError.forbidden("Geen toegang tot deze factuur");
+      }
+      const billing = await getOrgProfileExtra(invoice.recipientTenantId);
+      billingEmail = billing.billingEmail ?? null;
+    } else if (invoice.recipientFreelancerId) {
+      const ownProfile = await prisma.freelancerProfile.findUnique({ where: { userId: principal.userId }, select: { id: true, user: { select: { email: true } } } });
+      if (!ownProfile || ownProfile.id !== invoice.recipientFreelancerId) {
+        throw AppError.forbidden("Geen toegang tot deze factuur");
+      }
+      billingEmail = ownProfile.user.email;
+    } else {
       throw AppError.forbidden("Geen toegang tot deze factuur");
     }
+
     if (invoice.status !== "ISSUED") {
       throw AppError.precondition("Alleen openstaande facturen kunnen betaald worden");
     }
 
-    const billing = await getOrgProfileExtra(invoice.recipientTenantId);
-    const description =
-      invoice.type === InvoiceType.PLATFORM_FEE
-        ? "ZekerFlex platformfee"
-        : "ZekerFlex dienst (zzp)";
+    const description = DESCRIPTIONS[invoice.type];
 
     const session = await createInvoiceCheckoutSession({
       invoiceId: invoice.id,
@@ -62,7 +80,7 @@ export async function POST(_req: Request, props: { params: Promise<{ id: string 
       description,
       totalCents: invoice.totalCents,
       currency: invoice.currency,
-      billingEmail: billing.billingEmail ?? null,
+      billingEmail,
     });
 
     await prisma.invoice.update({

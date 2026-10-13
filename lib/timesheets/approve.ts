@@ -14,6 +14,7 @@ import { recordPayout, recordTimesheetApproved } from "@/lib/metrics";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
 import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
+import { applyPendingTenantCredits } from "@/lib/billing/credits";
 import {
   isValidIban,
   payoutEndToEndId,
@@ -284,6 +285,7 @@ export async function approveTimesheet(
         tx,
         billing.platformFeeInvoice,
       );
+      await applyPendingTenantCredits(tx, ts.branch.tenantId, platformFeeInvoice.id, platformFeeInvoice.totalCents);
 
       const payment = await tx.payment.create({
         data: {

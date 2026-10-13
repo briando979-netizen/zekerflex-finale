@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { MyWorkItem } from "@/lib/dashboard/my-work";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
+import { CancellationClaimButton } from "@/components/app/CancellationClaimButton";
 import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
 
 type TabId = "pending" | "active" | "history";
@@ -245,6 +246,14 @@ function ActiveFooter({ item }: { item: MyWorkItem }) {
 
 function HistoryFooter({ item, onHide }: { item: MyWorkItem; onHide: (workKey: string) => void }) {
   if (item.status === "cancelled") {
+    if (item.cancelledByEmployer) {
+      return (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-crit">Geannuleerd door opdrachtgever</p>
+          <CancellationClaimButton shiftId={item.shift.id} shiftTitle={item.shift.title} />
+        </div>
+      );
+    }
     return <p className="text-sm font-semibold text-crit">Geannuleerd</p>;
   }
   if (item.status === "rejected") {

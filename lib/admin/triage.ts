@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { listReplacementRequests } from "@/lib/replacements/store";
+import { claimsInIncasso } from "@/lib/claims/store";
 
 // Unified "needs a human" queue, built from read-only queries + the filesystem
 // replacement requests. No writes anywhere.
@@ -20,7 +21,7 @@ export async function getTriage(): Promise<TriageItem[]> {
   const now = Date.now();
   const items: TriageItem[] = [];
 
-  const [disputes, submitted, failedPayments, dbaHigh, kycPending, staleShifts, replacements] = await Promise.all([
+  const [disputes, submitted, failedPayments, dbaHigh, kycPending, staleShifts, replacements, incassoClaims] = await Promise.all([
     prisma.dispute.findMany({
       where: { status: { in: ["OPEN", "UNDER_REVIEW", "ESCALATED"] } },
       select: { id: true, reason: true, origin: true, createdAt: true, timesheet: { select: { branch: { select: { name: true } } } } },
@@ -58,6 +59,7 @@ export async function getTriage(): Promise<TriageItem[]> {
       take: 20,
     }),
     listReplacementRequests(50),
+    claimsInIncasso(),
   ]);
 
   for (const d of disputes) {
@@ -124,6 +126,17 @@ export async function getTriage(): Promise<TriageItem[]> {
       detail: "wacht op afronding verificatie",
       href: "/admin/audit",
       at: u.updatedAt.toISOString(),
+    });
+  }
+  for (const c of incassoClaims) {
+    items.push({
+      id: `incasso-${c.id}`,
+      kind: "Incasso",
+      severity: "medium",
+      title: `Incasso-dossier — ${c.shiftTitle}`,
+      detail: `${c.branchName} · € ${(c.claimedCents / 100).toFixed(2)} + € ${((c.lateFeeCents ?? 0) / 100).toFixed(2)} incassokosten`,
+      href: "/admin",
+      at: c.overdueEscalatedAt ?? c.filedAt,
     });
   }
   for (const s of staleShifts.filter((x) => x._count.assignments < x.positions)) {
