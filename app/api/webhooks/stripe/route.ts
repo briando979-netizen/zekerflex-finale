@@ -7,6 +7,7 @@ import { constructWebhookEvent } from "@/lib/billing/stripe";
 import { claimIdempotency } from "@/lib/redis";
 import { recordAudit } from "@/lib/audit";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
+import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     event.type === "checkout.session.async_payment_succeeded"
   ) {
     const session = event.data.object as Stripe.Checkout.Session;
+
+    if (session.mode === "subscription") {
+      await activateApiSubscription(session);
+      return NextResponse.json({ ok: true });
+    }
+
     const invoiceId = session.metadata?.invoiceId;
     if (!invoiceId) {
       log.warn("stripe session without invoiceId metadata", { sessionId: session.id });
@@ -109,6 +116,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (updated.count > 0) {
       log.info("stripe connect account status changed", { accountId: account.id, payoutsEnabled });
     }
+  }
+
+  if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
+    await syncApiSubscription(event.data.object as Stripe.Subscription, event.type);
   }
 
   return NextResponse.json({ ok: true });

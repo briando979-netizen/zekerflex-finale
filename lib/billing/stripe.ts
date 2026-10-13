@@ -63,6 +63,79 @@ export async function createInvoiceCheckoutSession(
 }
 
 // ---------------------------------------------------------------------------
+// Recurring billing — public API subscriptions (lib/api-plans/catalog.ts).
+// Separate from the one-off Checkout above: a subscription needs a
+// persistent Stripe Customer (Tenant.stripeCustomerId) to attach the
+// recurring Price to, and a Billing Portal link so a tenant can upgrade/
+// downgrade/cancel without us building that UI ourselves.
+// ---------------------------------------------------------------------------
+
+export interface SubscriptionCheckoutInput {
+  stripeCustomerId: string;
+  planKey: string;
+  planLabel: string;
+  priceCentsPerMonth: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/** One-off Checkout Session in subscription mode — price_data is inline, so no Stripe Product/Price needs to exist beforehand. */
+export async function createSubscriptionCheckoutSession(
+  input: SubscriptionCheckoutInput,
+): Promise<Stripe.Checkout.Session> {
+  if (input.priceCentsPerMonth <= 0) {
+    throw AppError.validation("Subscription price must be positive to collect payment");
+  }
+  const stripe = getStripeClient();
+
+  return stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: input.stripeCustomerId,
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          recurring: { interval: "month" },
+          product_data: { name: `ZekerFlex API — ${input.planLabel}` },
+          unit_amount: input.priceCentsPerMonth,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: { planKey: input.planKey },
+    subscription_data: { metadata: { planKey: input.planKey } },
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+  });
+}
+
+/** Stripe-hosted portal for a tenant to change plan, update payment method, or cancel. */
+export async function createBillingPortalSession(
+  stripeCustomerId: string,
+  returnUrl: string,
+): Promise<Stripe.BillingPortal.Session> {
+  const stripe = getStripeClient();
+  return stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl });
+}
+
+/** Get-or-create the Stripe Customer for a tenant, persisting the id. Call inside the caller's own transaction/update if atomicity matters. */
+export async function ensureStripeCustomer(input: {
+  existingCustomerId: string | null;
+  email?: string | null;
+  name: string;
+  tenantId: string;
+}): Promise<string> {
+  if (input.existingCustomerId) return input.existingCustomerId;
+  const stripe = getStripeClient();
+  const customer = await stripe.customers.create({
+    name: input.name,
+    ...(input.email ? { email: input.email } : {}),
+    metadata: { tenantId: input.tenantId },
+  });
+  return customer.id;
+}
+
+// ---------------------------------------------------------------------------
 // Stripe Connect Express — freelancer payout onboarding + transfers.
 // ---------------------------------------------------------------------------
 

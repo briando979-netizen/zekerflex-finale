@@ -44,7 +44,7 @@ export default async function InstellingenPage() {
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/bedrijf", icon: <IPin /> },
     { title: s.cCostT, sub: s.cCostS, href: "/werkgever/facturen", icon: <IHash /> },
     { title: s.cUsersT, sub: s.cUsersS, icon: <IUsers />, soon: true },
-    { title: s.cApiT, sub: s.cApiS, icon: <IKey />, soon: true },
+    { title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> },
     { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/overeenkomsten", icon: <IDoc /> },
   ];
 

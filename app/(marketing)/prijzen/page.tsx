@@ -16,6 +16,7 @@ const FAQ = [
   { q: "Wanneer wordt de fee voor bedrijven berekend?", a: "Op het moment dat goedgekeurde uren tot een uitbetaling leiden. Geen werk, geen fee." },
   { q: "Betaalt een freelancer iets voor de uitbetaling?", a: "Alleen als je sneller wilt dan de reguliere termijn. Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of eerder tegen een fee: bij urengoedkeuring 4% van de factuur, binnen 3 dagen 2%, of direct. Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Kan ik een offerte op maat krijgen?", a: "Voor grotere organisaties met veel vestigingen kijken we naar volumeafspraken. Neem contact op via sales@zekerflex.com." },
+  { q: "Wat kost de API?", a: "Los van de klusprijs: de publieke API heeft een gratis tier en betaalde abonnementen voor hogere limieten. Zie /developers voor de prijzen." },
 ];
 
 export default function PrijzenPage() {
@@ -98,6 +99,20 @@ export default function PrijzenPage() {
       </Section>
 
       <Section tone="soft">
+        <div id="api" className="scroll-mt-24" />
+        <SectionHead
+          eyebrow="Los van de klusprijs"
+          title="API-toegang voor ontwikkelaars"
+          intro="Een eigen systeem koppelen aan ZekerFlex (diensten lezen/aanmaken, uren ophalen, webhooks) is een los product met eigen abonnementen — de klusprijs hierboven blijft ongewijzigd."
+        />
+        <div className="mt-8">
+          <Link href="/developers#pricing" className="btn-primary">
+            Bekijk API-abonnementen
+          </Link>
+        </div>
+      </Section>
+
+      <Section tone="paper">
         <div id="faq" className="scroll-mt-24" />
         <SectionHead eyebrow="Veelgestelde vragen" title="Over de kosten" />
         <div className="mt-10">

@@ -135,9 +135,11 @@ export function openApiSpec(): Record<string, unknown> {
           scheme: "bearer",
           bearerFormat: "zf_live_...",
           description:
-            "A ZekerFlex API key, as `Authorization: Bearer zf_live_...` (the shifts/timesheets/webhooks endpoints also accept it as an `x-api-key` header). Request one via " +
+            "A ZekerFlex API key, as `Authorization: Bearer zf_live_...` (the shifts/timesheets/webhooks endpoints also accept it as an `x-api-key` header). Create one yourself (Free tier, no payment needed) at " +
+            SITE.url +
+            "/werkgever/integraties, or contact " +
             CONTACTS.partners +
-            ".",
+            " for Scale-level volume.",
         },
       },
       schemas: {
@@ -271,7 +273,7 @@ const FORBIDDEN = {
 };
 
 const RATE_LIMITED = {
-  description: "Too many requests — the key's rate limit (120/min) was exceeded.",
+  description: "Too many requests — your plan's per-minute or monthly limit was exceeded. See /developers for plan limits.",
   headers: { ...RATE_LIMIT_HEADERS, "Retry-After": { schema: { type: "integer" }, description: "Seconds until you may retry." } },
   content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
 };

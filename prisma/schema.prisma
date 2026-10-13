@@ -72,12 +72,17 @@ model Tenant {
   companyRegistrationId String?              @unique
   companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
 
+  // Stripe Customer for recurring billing (API subscriptions) — separate from the
+  // one-off Checkout sessions on Invoice, which don't need a persistent customer.
+  stripeCustomerId String? @unique
+
   branches             Branch[]
   memberships          Membership[]
   invoicesFrom         Invoice[]             @relation("InvoiceIssuerTenant")
   invoicesTo           Invoice[]             @relation("InvoiceRecipientTenant")
   modelAgreements      ModelAgreement[]
   apiKeys              ApiKey[]
+  apiSubscription      ApiSubscription?
   webhookSubscriptions WebhookSubscription[]
   favoritePools        FavoritePool[]
   credits              TenantCredit[]
@@ -142,6 +147,32 @@ model ApiKey {
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+}
+
+// ===========================================================================
+// A tenant's paid tier for the public API (lib/api-plans/catalog.ts holds the
+// actual plan definitions — rate limits, monthly caps, allowed scopes — as
+// code constants, not DB rows, mirroring how PLATFORM_FEE_PER_HOUR_CENTS is a
+// plain env-configurable constant rather than a database-driven price table).
+// No row at all (or status != "active") means the tenant is effectively on
+// the free plan: lib/api-keys/gateway.ts treats "no subscription" as free,
+// not as "blocked".
+// ===========================================================================
+model ApiSubscription {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  planKey String @default("free") // see lib/api-plans/catalog.ts PLAN_KEYS
+  status  String @default("active") // "active" | "past_due" | "canceled"
+
+  stripeSubscriptionId String?   @unique
+  currentPeriodEnd     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
 }
 
 model WebhookSubscription {

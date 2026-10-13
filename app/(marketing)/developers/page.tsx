@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
 import { canonical, CONTACTS, SITE } from "@/lib/seo";
+import { PLAN_KEYS, API_PLANS } from "@/lib/api-plans/catalog";
+
+const euro = (cents: number) => `€${(cents / 100).toFixed(0)}`;
 
 const TITLE = "Developers — ZekerFlex API";
 const DESCRIPTION =
@@ -61,13 +65,51 @@ export default function DevelopersPage() {
 x-api-key: zf_live_...`}</Code>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutralx-600">
           Keys are scoped (<code>shifts:read</code>, <code>shifts:write</code>, <code>timesheets:read</code>,{" "}
-          <code>webhooks:manage</code>) and rate-limited to 120 requests/minute — every response carries{" "}
-          <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code> and <code>RateLimit-Reset</code>{" "}
-          headers so you can self-throttle before hitting a 429. API access is currently provisioned
-          per partner/organization rather than self-service signup — request a key via{" "}
+          <code>webhooks:manage</code>, <code>invoices:read</code>, <code>users:read</code>) and rate-limited
+          per your plan (see pricing below) — every response carries <code>RateLimit-Limit</code>,{" "}
+          <code>RateLimit-Remaining</code> and <code>RateLimit-Reset</code> headers so you can self-throttle
+          before hitting a 429. Logged-in employers create and manage their own keys at{" "}
+          <Link href="/werkgever/integraties" className="font-semibold text-brand-700 hover:underline">
+            /werkgever/integraties
+          </Link>{" "}
+          — no need to email anyone for the Free tier. Need Scale-level volume? Talk to{" "}
           <a href={`mailto:${CONTACTS.partners}`} className="font-semibold text-brand-700 hover:underline">
             {CONTACTS.partners}
           </a>
+          .
+        </p>
+      </Section>
+
+      <Section tone="soft">
+        <div id="pricing" className="scroll-mt-24" />
+        <SectionHead eyebrow="Pricing" title="Plans" />
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {PLAN_KEYS.map((key) => {
+            const plan = API_PLANS[key];
+            return (
+              <div key={key} className="card p-5">
+                <p className="font-display text-base font-bold text-ink">{plan.label}</p>
+                <p className="mt-1 text-xl font-bold text-ink">
+                  {plan.priceCentsPerMonth === null
+                    ? "Custom"
+                    : plan.priceCentsPerMonth === 0
+                      ? "Free"
+                      : `${euro(plan.priceCentsPerMonth)}/mo`}
+                </p>
+                <ul className="mt-3 space-y-1 text-xs text-neutralx-600">
+                  <li>{plan.rateLimitPerMinute} req/min</li>
+                  <li>{plan.monthlyRequestCap ? `${plan.monthlyRequestCap.toLocaleString("en-US")}/month` : "Negotiated"}</li>
+                  <li>{plan.scopes.length} scopes</li>
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-6 text-sm text-neutralx-600">
+          Start free, upgrade any time from{" "}
+          <Link href="/werkgever/integraties" className="font-semibold text-brand-700 hover:underline">
+            /werkgever/integraties
+          </Link>
           .
         </p>
       </Section>
