@@ -14,6 +14,8 @@ import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
 import { BackLink } from "@/components/app/BackLink";
+import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
+import { updatePersonalInfoAction } from "@/app/dashboard/profiel/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -148,10 +150,13 @@ export default async function ProfielPage() {
               initialHasAvatar={Boolean(profileExtra.avatarUploadId)}
             />
           </div>
-          <dl className="divide-y divide-hair text-sm">
-            <Field k="Naam" v={user?.fullName ?? principal.fullName} />
+          <PersonalInfoForm
+            action={updatePersonalInfoAction}
+            initialFullName={user?.fullName ?? principal.fullName}
+            initialPhone={user?.phone ?? ""}
+          />
+          <dl className="divide-y divide-hair border-t border-hair text-sm">
             <Field k="E-mail" v={user?.email ?? principal.email} />
-            <Field k="Telefoon" v={user?.phone ?? "—"} />
             <Field
               k="Identiteit (KYC)"
               v={

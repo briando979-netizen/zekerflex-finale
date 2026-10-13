@@ -195,6 +195,11 @@ export function CallOverlay({
             setState("connecting");
           } else if (s.type === "answer" && role === "caller") {
             await peer.setRemoteDescription(new RTCSessionDescription(s.data as RTCSessionDescriptionInit));
+            // The other side has picked up — stop the ring-back immediately
+            // rather than waiting for ICE to fully connect, which can take a
+            // few more seconds and left the ringtone audibly playing well
+            // after the callee had already answered.
+            setState("connecting");
           } else if (s.type === "candidate") {
             await peer.addIceCandidate(new RTCIceCandidate(s.data as RTCIceCandidateInit));
           } else if (s.type === "end" || s.type === "decline") {
