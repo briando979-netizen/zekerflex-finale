@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { MyWorkItem } from "@/lib/dashboard/my-work";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
+import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
 
 type TabId = "pending" | "active" | "history";
 
@@ -35,8 +36,14 @@ export function MyKlussenView({
   const [panel, setPanel] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [days, setDays] = useState<Set<string>>(new Set());
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const items = work[tab];
+  function hideItem(workKey: string) {
+    setHidden((prev) => new Set(prev).add(workKey));
+    void dismissWorkItemAction(workKey);
+  }
+
+  const items = work[tab].filter((it) => !hidden.has(it.workKey));
 
   const dayOptions = useMemo(() => {
     const seen = new Map<string, Date>();
@@ -185,7 +192,7 @@ export function MyKlussenView({
         <div className="grid gap-4 sm:grid-cols-2">
           {shown.map((item) => (
             <ShiftCard
-              key={(item.assignmentId ?? item.shift.id) + item.status}
+              key={item.workKey}
               shift={item.shift}
               href={`/dashboard/klussen/${item.shift.id}`}
               idReminder={tab === "active"}
@@ -195,7 +202,7 @@ export function MyKlussenView({
                   <ActiveFooter item={item} />
                 ) : (
                   <div className="space-y-3">
-                    <HistoryFooter item={item} />
+                    <HistoryFooter item={item} onHide={hideItem} />
                     {item.status === "done" && item.clientTenantId && (
                       <CompanyReviewInline tenantId={item.clientTenantId} shiftId={item.shift.id} />
                     )}
@@ -236,15 +243,24 @@ function ActiveFooter({ item }: { item: MyWorkItem }) {
   );
 }
 
-function HistoryFooter({ item }: { item: MyWorkItem }) {
+function HistoryFooter({ item, onHide }: { item: MyWorkItem; onHide: (workKey: string) => void }) {
   if (item.status === "cancelled") {
     return <p className="text-sm font-semibold text-crit">Geannuleerd</p>;
   }
   if (item.status === "rejected") {
     return (
-      <p className="text-sm font-semibold text-neutralx-500">
-        {item.offerRateCents ? "Tegenbod afgewezen" : "Niet uitgekozen"}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-neutralx-500">
+          {item.offerRateCents ? "Tegenbod afgewezen" : "Niet uitgekozen"}
+        </p>
+        <button
+          type="button"
+          onClick={() => onHide(item.workKey)}
+          className="flex-shrink-0 text-xs font-medium text-neutralx-400 underline-offset-2 hover:text-neutralx-600 hover:underline"
+        >
+          Verbergen
+        </button>
+      </div>
     );
   }
   switch (item.timesheetStatus) {

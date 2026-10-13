@@ -1,5 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
 import { PageHeader, Panel } from "@/components/app/ui";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function VerzekeringPage() {
   await requirePrincipal();
   return (
     <>
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader
         title="Verzekering"
         eyebrow="Automatisch geregeld"

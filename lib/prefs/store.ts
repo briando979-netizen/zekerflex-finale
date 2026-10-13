@@ -35,6 +35,8 @@ export interface UserPrefs {
   confirmations: Record<string, string>;
   /** last time the marketplace was opened, for "new since your last visit" */
   marketplaceSeenAt: string | null;
+  /** "Mijn klussen" history cards the freelancer explicitly hid (see lib/dashboard/my-work.ts) */
+  dismissedWorkItemIds: string[];
   updatedAt: string;
 }
 
@@ -47,6 +49,7 @@ export const EMPTY_PREFS: UserPrefs = {
   jobAlerts: [],
   confirmations: {},
   marketplaceSeenAt: null,
+  dismissedWorkItemIds: [],
   updatedAt: new Date(0).toISOString(),
 };
 
@@ -64,6 +67,7 @@ export async function setPrefs(userId: string, patch: Partial<UserPrefs>): Promi
     availability: patch.availability ?? current.availability,
     jobAlerts: patch.jobAlerts ?? current.jobAlerts,
     confirmations: patch.confirmations ?? current.confirmations,
+    dismissedWorkItemIds: patch.dismissedWorkItemIds ?? current.dismissedWorkItemIds,
     updatedAt: new Date().toISOString(),
   };
   await kvSet(key(userId), next);
@@ -74,5 +78,14 @@ export async function confirmAssignment(userId: string, assignmentId: string): P
   const current = await getPrefs(userId);
   return setPrefs(userId, {
     confirmations: { ...current.confirmations, [assignmentId]: new Date().toISOString() },
+  });
+}
+
+/** Permanently hides a "Mijn klussen" history card — it never resurfaces in any tab. */
+export async function dismissWorkItem(userId: string, workKey: string): Promise<UserPrefs> {
+  const current = await getPrefs(userId);
+  if (current.dismissedWorkItemIds.includes(workKey)) return current;
+  return setPrefs(userId, {
+    dismissedWorkItemIds: [...current.dismissedWorkItemIds, workKey].slice(-500),
   });
 }

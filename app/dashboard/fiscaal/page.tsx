@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { getFiscal } from "@/lib/fiscal/store";
 import { PageHeader } from "@/components/app/ui";
 import { FiscalForm } from "@/components/app/FiscalForm";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function FiscaalPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader
         title="Werkvorm & fiscale gegevens"
         subtitle="Kies je werkvorm en vul je btw- of loongegevens in. Zo verzorgt ZekerFlex je facturatie of verloning correct."

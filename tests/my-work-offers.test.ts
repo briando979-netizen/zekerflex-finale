@@ -25,8 +25,9 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+const getPrefs = vi.fn().mockResolvedValue({ confirmations: {}, dismissedWorkItemIds: [] });
 vi.mock("@/lib/prefs/store", () => ({
-  getPrefs: vi.fn().mockResolvedValue({ confirmations: {} }),
+  getPrefs: (...a: unknown[]) => getPrefs(...a),
 }));
 vi.mock("@/lib/replacements/store", () => ({
   listReplacementRequests: vi.fn().mockResolvedValue([]),
@@ -140,5 +141,43 @@ describe("getMyWork — accepted offers", () => {
     const allIds = [...work.pending, ...work.active, ...work.history].filter((i) => i.shift.id === "shiftC");
     expect(allIds).toHaveLength(1);
     expect(work.active.map((i) => i.shift.id)).toContain("shiftC");
+  });
+});
+
+describe("getMyWork — matched but not chosen", () => {
+  it("surfaces a DECLINED/EXPIRED match as a 'Niet uitgekozen' history card (previously silently vanished)", async () => {
+    freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
+    shiftAssignmentFindMany.mockResolvedValue([]);
+    modelAgreementFindMany.mockResolvedValue([]);
+    offersForUser.mockResolvedValue([]);
+    shiftFindMany.mockResolvedValue([]);
+    shiftMatchFindMany
+      .mockResolvedValueOnce([]) // the "pending open matches" query
+      .mockResolvedValueOnce([
+        { id: "match1", shift: shiftRow("shiftD", "Klus D"), respondedAt: null, expiresAt: new Date(), createdAt: new Date() },
+      ]); // the "not chosen" query
+
+    const work = await getMyWork("u1");
+
+    expect(work.history).toHaveLength(1);
+    expect(work.history[0]).toMatchObject({ status: "rejected", offerRateCents: null, workKey: "nm:match1" });
+  });
+
+  it("a dismissed workKey never resurfaces", async () => {
+    freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
+    shiftAssignmentFindMany.mockResolvedValue([]);
+    modelAgreementFindMany.mockResolvedValue([]);
+    offersForUser.mockResolvedValue([]);
+    shiftFindMany.mockResolvedValue([]);
+    shiftMatchFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: "match2", shift: shiftRow("shiftE", "Klus E"), respondedAt: null, expiresAt: new Date(), createdAt: new Date() },
+      ]);
+    getPrefs.mockResolvedValueOnce({ confirmations: {}, dismissedWorkItemIds: ["nm:match2"] });
+
+    const work = await getMyWork("u1");
+
+    expect(work.history).toHaveLength(0);
   });
 });

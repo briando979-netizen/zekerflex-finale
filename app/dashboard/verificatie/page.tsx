@@ -7,6 +7,7 @@ import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
 import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function VerificatiePage() {
   if (o.profileComplete) {
     return (
       <div className="mx-auto max-w-2xl">
+        <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
         <PageHeader title="Verificatie" subtitle="Je account is volledig geverifieerd." />
         <Panel title="Status">
           <div className="px-5 py-6">
@@ -70,6 +72,7 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader
         title="Rond je verificatie af"
         subtitle={

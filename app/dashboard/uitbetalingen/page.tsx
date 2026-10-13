@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact, dateShort } from "@/components/app/ui";
 import { PayoutSpeedPanel } from "@/components/app/PayoutSpeedPanel";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function UitbetalingenPage() {
 
   return (
     <>
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader title="Uitbetalingen" subtitle="Automatisch aangemaakte facturen en directe SEPA-overboekingen." />
 
       <div className="grid gap-4 sm:grid-cols-3">

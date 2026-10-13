@@ -56,7 +56,7 @@ export async function getNotifications(principal: Principal): Promise<Notificati
       select: { id: true },
     });
     if (profile) {
-      const [prefs, assignments, actionTimesheets, replacements, offers] = await Promise.all([
+      const [prefs, assignments, actionTimesheets, replacements, offers, notChosen] = await Promise.all([
         getPrefs(principal.userId),
         prisma.shiftAssignment.findMany({
           where: {
@@ -72,6 +72,14 @@ export async function getNotifications(principal: Principal): Promise<Notificati
         }),
         listReplacementRequests(300),
         offersForUser(principal.userId),
+        // Matched/notified but the seat went to someone else, or the response
+        // window expired — previously surfaced nowhere at all.
+        prisma.shiftMatch.findMany({
+          where: { freelancerId: profile.id, status: { in: ["DECLINED", "EXPIRED"] } },
+          select: { id: true, respondedAt: true, expiresAt: true, createdAt: true, shift: { select: { id: true, title: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        }),
       ]);
 
       for (const a of assignments) {
@@ -122,6 +130,17 @@ export async function getNotifications(principal: Principal): Promise<Notificati
             urgent: false,
           });
         }
+      }
+      for (const m of notChosen) {
+        out.push({
+          id: `match:${m.id}`,
+          kind: "shift",
+          title: "Niet uitgekozen",
+          body: `${m.shift.title}: deze klus is niet (meer) voor jou — een ander is gekozen of de reactietijd is verlopen.`,
+          href: "/dashboard/diensten",
+          at: (m.respondedAt ?? m.expiresAt ?? m.createdAt).toISOString(),
+          urgent: false,
+        });
       }
       const myOpenReplacements = replacements.filter((r) => r.userId === principal.userId && r.status === "open");
       for (const r of myOpenReplacements) {

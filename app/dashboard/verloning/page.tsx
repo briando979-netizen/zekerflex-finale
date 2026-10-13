@@ -5,6 +5,7 @@ import { euro } from "@/lib/payroll/format";
 import { PageHeader, Panel, KpiCard } from "@/components/app/ui";
 import { PayslipList } from "@/components/app/PayslipList";
 import { RebuildPayslipsButton } from "@/components/app/RebuildPayslipsButton";
+import { BackLink } from "@/components/app/BackLink";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function VerloningPage() {
 
   return (
     <>
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader
         title="Verloning"
         subtitle={

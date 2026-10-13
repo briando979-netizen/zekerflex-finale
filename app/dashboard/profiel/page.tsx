@@ -13,6 +13,7 @@ import { listCertificates } from "@/lib/certificates/store";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function ProfielPage() {
 
   return (
     <>
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <PageHeader title="Account" subtitle="Je gegevens, verificatie en uitbetaalinstellingen." />
 
       {/* hero — matches the app's Account overview */}

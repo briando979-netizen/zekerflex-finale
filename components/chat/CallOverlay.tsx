@@ -66,7 +66,7 @@ export function CallOverlay({
   avatars: Record<string, string>;
   onEnd: () => void;
 }) {
-  const [state, setState] = useState<"ringing" | "connecting" | "live" | "ended">(
+  const [state, setState] = useState<"ringing" | "connecting" | "live" | "ended" | "failed">(
     role === "caller" ? "ringing" : "connecting",
   );
   const [muted, setMuted] = useState(false);
@@ -82,6 +82,7 @@ export function CallOverlay({
   const started = useRef(0);
   const poll = useRef<ReturnType<typeof setInterval> | null>(null);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ended = useRef(false);
 
   const post = useCallback(
@@ -95,19 +96,27 @@ export function CallOverlay({
   );
 
   const cleanup = useCallback(
-    (notify: boolean) => {
+    (notify: boolean, failed = false) => {
       if (ended.current) return;
       ended.current = true;
       if (poll.current) clearInterval(poll.current);
       if (tick.current) clearInterval(tick.current);
+      if (disconnectTimer.current) clearTimeout(disconnectTimer.current);
       localStream.current?.getTracks().forEach((t) => t.stop());
       pc.current?.close();
       if (notify) {
         const dur = started.current ? Math.round((Date.now() - started.current) / 1000) : 0;
         void post("end", { durationSec: dur });
       }
-      setState("ended");
-      onEnd();
+      if (failed) {
+        // Keep the overlay up with a clear error instead of silently
+        // vanishing — a silent close looked exactly like "it just doesn't
+        // connect" with no way to tell what happened.
+        setState("failed");
+      } else {
+        setState("ended");
+        onEnd();
+      }
     },
     [onEnd, post],
   );
@@ -144,11 +153,23 @@ export function CallOverlay({
     };
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === "connected") {
+        if (disconnectTimer.current) {
+          clearTimeout(disconnectTimer.current);
+          disconnectTimer.current = null;
+        }
         started.current = started.current || Date.now();
         setState("live");
         if (!tick.current) tick.current = setInterval(() => setSecs((s) => s + 1), 1000);
+      } else if (peer.connectionState === "disconnected") {
+        // Often transient (a brief network blip) — ICE can recover back to
+        // "connected" on its own. Give it a grace period instead of tearing
+        // the call down on the first flicker.
+        if (!disconnectTimer.current) {
+          disconnectTimer.current = setTimeout(() => cleanup(started.current > 0, true), 8_000);
+        }
+      } else if (["failed", "closed"].includes(peer.connectionState)) {
+        cleanup(started.current > 0, true);
       }
-      if (["failed", "disconnected", "closed"].includes(peer.connectionState)) cleanup(false);
     };
     pc.current = peer;
     return peer;
@@ -287,28 +308,46 @@ export function CallOverlay({
           {state === "connecting" && "Verbinden…"}
           {state === "live" && fmtDuration(secs)}
           {state === "ended" && "Beëindigd"}
+          {state === "failed" && "Verbinding mislukt"}
         </span>
       </div>
 
-      <div className="relative flex-1">
-        {showVideo ? (
-          <video ref={remoteVideo} autoPlay playsInline className="h-full w-full bg-black object-contain" />
-        ) : (
-          <div className="grid h-full w-full place-items-center">
-            <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={112} />
+      {state === "failed" ? (
+        <div className="grid flex-1 place-items-center px-6 text-center">
+          <div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crit/20 text-3xl">⚠️</div>
+            <p className="mt-4 text-base font-semibold">Kon niet verbinden met {peerName}</p>
+            <p className="mt-1.5 max-w-sm text-sm text-white/60">
+              Dit gebeurt meestal als jullie netwerken geen directe verbinding kunnen opzetten. Probeer het
+              opnieuw, of vraag de ander om via wifi te bellen in plaats van mobiel internet.
+            </p>
+            <button type="button" onClick={() => { setState("ended"); onEnd(); }} className="btn-primary mt-5">
+              Sluiten
+            </button>
           </div>
-        )}
-        <video
-          ref={localVideo}
-          autoPlay
-          playsInline
-          muted
-          className={`absolute bottom-4 right-4 w-32 rounded-lg border border-white/20 bg-black object-cover ${
-            showVideo ? "" : "hidden"
-          }`}
-        />
-      </div>
+        </div>
+      ) : (
+        <div className="relative flex-1">
+          {showVideo ? (
+            <video ref={remoteVideo} autoPlay playsInline className="h-full w-full bg-black object-contain" />
+          ) : (
+            <div className="grid h-full w-full place-items-center">
+              <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={112} />
+            </div>
+          )}
+          <video
+            ref={localVideo}
+            autoPlay
+            playsInline
+            muted
+            className={`absolute bottom-4 right-4 w-32 rounded-lg border border-white/20 bg-black object-cover ${
+              showVideo ? "" : "hidden"
+            }`}
+          />
+        </div>
+      )}
 
+      {state !== "failed" && (
       <div className="flex items-center justify-center gap-4 p-6">
         <button
           type="button"
@@ -345,6 +384,7 @@ export function CallOverlay({
           📵
         </button>
       </div>
+      )}
     </div>
     </Portal>
   );

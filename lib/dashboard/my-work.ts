@@ -30,6 +30,8 @@ export interface AgreementLite {
 }
 
 export interface MyWorkItem {
+  /** stable identity for dismissing a card (see dismissWorkItem) */
+  workKey: string;
   shift: MarketplaceShift;
   assignmentId: string | null;
   status: WorkStatus;
@@ -220,6 +222,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     const shift = toShift(row, home);
     shift.myOffer = { proposedRateCents: o.proposedRateCents, status: o.status };
     const item: MyWorkItem = {
+      workKey: `o:${o.id}`,
       shift,
       assignmentId: null,
       status: o.status === "pending" ? "pending" : o.status === "accepted" ? "active" : "rejected",
@@ -249,6 +252,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     const repl = replacementByAssignment.get(a.id);
     const isReplacement = Boolean(repl);
     const item: MyWorkItem = {
+      workKey: `a:${a.id}`,
       shift,
       assignmentId: a.id,
       status: a.cancelledAt
@@ -285,13 +289,14 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       respondedAt: null,
       shift: { startsAt: { gte: new Date() } },
     },
-    select: { shift: { select: SHIFT_SELECT }, expiresAt: true },
+    select: { id: true, shift: { select: SHIFT_SELECT }, expiresAt: true },
     take: 20,
   });
   const pendingShiftIds = new Set(pending.map((p) => p.shift.id));
   for (const m of openMatches) {
     if (pendingShiftIds.has(m.shift.id)) continue;
     pending.push({
+      workKey: `m:${m.id}`,
       shift: toShift(m.shift as ShiftRow, home),
       assignmentId: null,
       status: "pending",
@@ -310,6 +315,53 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     });
   }
 
+  // ── matched but not chosen ("Niet uitgekozen") ──────────────────────────
+  // The matching engine notifies several candidates per shift (lib/matching/
+  // engine.ts) and the dispatcher marks a match DECLINED (freelancer said no)
+  // or EXPIRED (window passed / someone else got the seat) — but nothing ever
+  // surfaced that to the freelancer: it just silently disappeared from
+  // "In afwachting" with no trace anywhere. The "Niet uitgekozen" label
+  // already existed in HistoryFooter but was unreachable dead code because no
+  // item was ever built with offerRateCents: null + status "rejected" from
+  // this source.
+  const coveredShiftIds = new Set([...assignedShiftIds, ...offerShiftIds, ...pendingShiftIds]);
+  const notChosen = await prisma.shiftMatch.findMany({
+    where: {
+      freelancerId: profile.id,
+      status: { in: ["DECLINED", "EXPIRED"] },
+      shiftId: { notIn: [...coveredShiftIds] },
+    },
+    select: { id: true, shift: { select: SHIFT_SELECT }, respondedAt: true, expiresAt: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 30,
+  });
+  for (const m of notChosen) {
+    history.push({
+      workKey: `nm:${m.id}`,
+      shift: toShift(m.shift as ShiftRow, home),
+      assignmentId: null,
+      status: "rejected",
+      confirmedAt: null,
+      replacementRequested: false,
+      replacementRequestId: null,
+      replacementResponseCount: 0,
+      agreement: null,
+      timesheetStatus: null,
+      timesheetId: null,
+      clientTenantId: null,
+      clientName: null,
+      offerRateCents: null,
+      offerStatusLabel: null,
+      cancelledByEmployer: false,
+    });
+  }
+
   active.sort((a, b) => a.shift.startsAt.getTime() - b.shift.startsAt.getTime());
-  return { pending, active, history };
+
+  const prefsDismissed = new Set(prefs.dismissedWorkItemIds);
+  return {
+    pending,
+    active,
+    history: history.filter((item) => !prefsDismissed.has(item.workKey)),
+  };
 }

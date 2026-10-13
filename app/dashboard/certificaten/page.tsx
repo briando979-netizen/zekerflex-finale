@@ -1,5 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
 import { CertificatesManager } from "@/components/app/CertificatesManager";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export default async function CertificatenPage() {
 
   return (
     <>
+      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
       <div className="mb-5">
         <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
           Certificaten

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { HiddenEmployersList } from "@/components/app/HiddenEmployersList";
+import { BackLink } from "@/components/app/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -9,12 +9,7 @@ export default async function VerborgenOpdrachtgeversPage() {
 
   return (
     <>
-      <Link
-        href="/dashboard/account"
-        className="text-sm font-medium text-neutralx-500 hover:text-brand-600"
-      >
-        ← Terug naar account
-      </Link>
+      <BackLink fallbackHref="/dashboard/account" label="Account" />
 
       <div className="my-5">
         <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

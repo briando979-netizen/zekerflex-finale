@@ -15,6 +15,11 @@ function makeRinger(freqs: number[], onMs: number, offMs: number): Ringer {
 
   const cycle = () => {
     if (!active || !ctx) return;
+    // The context is created inside a React effect, not synchronously inside
+    // the click handler that started the call — browsers treat that as
+    // outside the user-gesture window and start it "suspended" (silent).
+    // Resuming is safe to call repeatedly; it's a no-op once already running.
+    if (ctx.state !== "running") void ctx.resume().catch(() => undefined);
     const now = ctx.currentTime;
     const onSec = onMs / 1000;
     const gain = ctx.createGain();
