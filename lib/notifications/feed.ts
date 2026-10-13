@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Principal } from "@/lib/auth";
 import { hasRole } from "@/lib/auth";
 import { getPrefs } from "@/lib/prefs/store";
-import { offersForUser } from "@/lib/offers/store";
+import { offersForUser, listCounterOffers } from "@/lib/offers/store";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { listThreadsForUser, getMessages, unreadForUser } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
@@ -141,7 +141,7 @@ export async function getNotifications(principal: Principal): Promise<Notificati
   if (hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER") && !admin) {
     const scope = await resolveEmployerScope(principal);
     const bf = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
-    const [toApprove, openShifts, offers] = await Promise.all([
+    const [toApprove, openShifts, myShifts] = await Promise.all([
       prisma.timesheet.count({ where: { branch: bf, status: "SUBMITTED" } }),
       prisma.shift.findMany({
         where: {
@@ -151,9 +151,31 @@ export async function getNotifications(principal: Principal): Promise<Notificati
         },
         select: { id: true, title: true, startsAt: true, positions: true, _count: { select: { assignments: { where: { cancelledAt: null } } } } },
       }),
-      offersForUser("__none__").catch(() => []),
+      // Pending counter-offers on THIS employer's shifts — getNotifications()
+      // used to call offersForUser("__none__"), a literal placeholder id that
+      // matches nothing, so a freelancer's "reactie" never reached the bell.
+      prisma.shift.findMany({
+        where: { branch: bf, startsAt: { gte: new Date(now - 24 * 3600_000) } },
+        select: { id: true },
+        take: 500,
+      }),
     ]);
-    void offers;
+    const myShiftIds = new Set(myShifts.map((s) => s.id));
+    const pendingOffers =
+      myShiftIds.size > 0
+        ? (await listCounterOffers(500)).filter((o) => o.status === "pending" && myShiftIds.has(o.shiftId))
+        : [];
+    for (const o of pendingOffers) {
+      out.push({
+        id: `emp:offer:${o.id}`,
+        kind: "offer",
+        title: "Nieuw tegenbod",
+        body: `${o.freelancerName} biedt € ${(o.proposedRateCents / 100).toFixed(2)}/u voor ${o.shiftTitle}.`,
+        href: `/werkgever/diensten/${o.shiftId}`,
+        at: o.at,
+        urgent: true,
+      });
+    }
     if (toApprove > 0) {
       out.push({
         id: "emp:approve",

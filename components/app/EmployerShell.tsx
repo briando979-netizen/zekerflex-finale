@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { RecentResponseAlert } from "@/components/app/RecentResponseAlert";
 import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
@@ -328,6 +329,8 @@ export function EmployerShell({
           <div className="mx-auto max-w-6xl 2xl:max-w-7xl">{children}</div>
         </main>
       </div>
+
+      <RecentResponseAlert />
     </div>
   );
 }
