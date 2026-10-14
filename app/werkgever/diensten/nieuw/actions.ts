@@ -18,8 +18,19 @@ export async function createShiftAction(
   requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
 
   const extraDatesRaw = String(formData.get("extraDates") ?? "").trim();
+  const adHocLabel = String(formData.get("adHocLabel") ?? "").trim();
+  const adHocAddress = adHocLabel
+    ? {
+        label: adHocLabel,
+        postalCode: String(formData.get("adHocPostalCode") ?? ""),
+        city: String(formData.get("adHocCity") ?? ""),
+        latitude: Number(formData.get("adHocLatitude")),
+        longitude: Number(formData.get("adHocLongitude")),
+      }
+    : undefined;
   const parsed = createShiftSchema.safeParse({
-    branchId: formData.get("branchId"),
+    branchId: adHocAddress ? undefined : formData.get("branchId"),
+    adHocAddress,
     templateKey: formData.get("templateKey") || undefined,
     title: formData.get("title"),
     description: formData.get("description") || undefined,

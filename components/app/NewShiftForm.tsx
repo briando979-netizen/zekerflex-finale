@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import type { ShiftTemplate } from "@/lib/shifts/create";
 import { shiftCategory } from "@/lib/shifts/category";
+import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 
 const initial: NewShiftState = { error: null };
 
@@ -48,6 +50,10 @@ export function NewShiftForm({
   const [extraDates, setExtraDates] = useState<string[]>([]);
   const [multi, setMulti] = useState(false);
   const [poolId, setPoolId] = useState("");
+  const [oneOff, setOneOff] = useState(false);
+  const [adHocAddress, setAdHocAddress] = useState<PickedAddress | null>(null);
+  const [adHocPostalCode, setAdHocPostalCode] = useState("");
+  const [adHocCity, setAdHocCity] = useState("");
 
   function applyTemplate(t: ShiftTemplate) {
     setTpl(t.key);
@@ -110,17 +116,64 @@ export function NewShiftForm({
         <input type="hidden" name="hourlyRateCents" value={Number.isFinite(hourlyRateCents) ? hourlyRateCents : 0} />
         <input type="hidden" name="extraDates" value={extraDates.join(",")} />
 
-        <label className="block">
-          <span className="field-label">Vestiging</span>
-          <select name="branchId" required className="field-input">
-            {branches.length === 0 && <option value="">Geen vestiging beschikbaar</option>}
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name} — {b.city}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <label className="flex items-center gap-2 text-xs font-medium text-neutralx-500">
+            <input
+              type="checkbox"
+              checked={oneOff}
+              onChange={(e) => setOneOff(e.target.checked)}
+              className="accent-brand-500"
+            />
+            Eenmalige locatie (bijv. een demo op afstand) — geen vaste vestiging
+          </label>
+
+          {!oneOff ? (
+            <label className="mt-2 block">
+              <span className="field-label">Vestiging</span>
+              <select name="branchId" required className="field-input">
+                {branches.length === 0 && <option value="">Geen vestiging beschikbaar</option>}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} — {b.city}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-neutralx-400">
+                Vestigingen beheer je op{" "}
+                <Link href="/werkgever/locaties" className="font-medium text-brand-600 hover:underline">
+                  /werkgever/locaties
+                </Link>
+                .
+              </span>
+            </label>
+          ) : (
+            <div className="mt-2 space-y-3">
+              <label className="block">
+                <span className="field-label">Adres</span>
+                <AddressAutocomplete value={adHocAddress} onPick={setAdHocAddress} placeholder="Zoek adres…" />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="field-label">Postcode</span>
+                  <input
+                    value={adHocPostalCode}
+                    onChange={(e) => setAdHocPostalCode(e.target.value)}
+                    className="field-input"
+                  />
+                </label>
+                <label className="block">
+                  <span className="field-label">Plaats</span>
+                  <input value={adHocCity} onChange={(e) => setAdHocCity(e.target.value)} className="field-input" />
+                </label>
+              </div>
+              <input type="hidden" name="adHocLabel" value={adHocAddress?.label ?? ""} />
+              <input type="hidden" name="adHocPostalCode" value={adHocPostalCode} />
+              <input type="hidden" name="adHocCity" value={adHocCity} />
+              <input type="hidden" name="adHocLatitude" value={adHocAddress?.lat ?? ""} />
+              <input type="hidden" name="adHocLongitude" value={adHocAddress?.lng ?? ""} />
+            </div>
+          )}
+        </div>
 
         <label className="block">
           <span className="field-label">Titel van de dienst</span>
@@ -280,7 +333,7 @@ export function NewShiftForm({
             <div className="absolute inset-x-3 bottom-3 text-white">
               <p className="truncate font-display text-lg font-bold drop-shadow">{title || "Titel van de dienst"}</p>
               <p className="truncate text-xs text-white/80">
-                {branches[0]?.name ?? "Vestiging"}
+                {oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging"}
                 {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
               </p>
             </div>

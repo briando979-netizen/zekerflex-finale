@@ -30,9 +30,20 @@ export const SHIFT_TEMPLATES: ShiftTemplate[] = [
   { key: "receptie", label: "Receptiemedewerker", hourlyRateCents: 1800, breakMinutes: 30, description: "Bezoekers ontvangen, telefoon en post afhandelen.", skillName: null },
 ];
 
-export const createShiftSchema = z.object({
-  branchId: z.string().min(1).max(128),
-  templateKey: z.string().max(40).optional(),
+/** A one-off klus-locatie (e.g. an offsite demo) instead of a saved vestiging. */
+export const adHocAddressSchema = z.object({
+  label: z.string().trim().min(3).max(200),
+  postalCode: z.string().trim().min(4).max(12),
+  city: z.string().trim().min(2).max(100),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export const createShiftSchema = z
+  .object({
+    branchId: z.string().min(1).max(128).optional(),
+    adHocAddress: adHocAddressSchema.optional(),
+    templateKey: z.string().max(40).optional(),
   title: z.string().trim().min(3).max(120),
   description: z.string().trim().max(1000).optional(),
   dresscode: z.string().trim().max(500).optional(),
@@ -52,7 +63,11 @@ export const createShiftSchema = z.object({
   extraDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(30).optional(),
   /** Privately invite this favorite pool instead of going straight to the open marketplace. */
   poolId: z.string().min(1).max(128).optional(),
-});
+  })
+  .refine((v) => Boolean(v.branchId) !== Boolean(v.adHocAddress), {
+    message: "Kies een vestiging óf een eenmalige locatie (niet beide, niet geen van beide).",
+    path: ["branchId"],
+  });
 export type CreateShiftInput = z.infer<typeof createShiftSchema>;
 
 export interface CreateShiftResult {
@@ -67,14 +82,39 @@ export async function createShift(
 ): Promise<CreateShiftResult> {
   const scope = await resolveEmployerScope(principal);
 
-  const scopeWhere = scope.branchIds
-    ? { id: { in: scope.branchIds } }
-    : { tenantId: { in: scope.tenantIds } };
-  const branch = await prisma.branch.findFirst({
-    where: { AND: [{ id: input.branchId }, scopeWhere] },
-    select: { id: true, name: true, matchingConfig: true, tenantId: true },
-  });
-  if (!branch) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
+  let branch: { id: string; name: string; matchingConfig: unknown; tenantId: string };
+  if (input.adHocAddress) {
+    // One-off klus-locatie (e.g. an offsite demo): no pre-registered vestiging
+    // needed. A wider default geofence than a permanent branch's 150m, since
+    // staff are checking in somewhere unfamiliar.
+    const tenantId = scope.tenantIds[0];
+    if (!tenantId) throw AppError.forbidden("Geen organisatie gekoppeld aan je account.");
+    branch = await prisma.branch.create({
+      data: {
+        tenantId,
+        kind: "AD_HOC",
+        name: `Eenmalige locatie — ${input.adHocAddress.label}`,
+        addressLine: input.adHocAddress.label,
+        postalCode: input.adHocAddress.postalCode,
+        city: input.adHocAddress.city,
+        latitude: input.adHocAddress.latitude,
+        longitude: input.adHocAddress.longitude,
+        geofenceRadiusMeters: 300,
+      },
+      select: { id: true, name: true, matchingConfig: true, tenantId: true },
+    });
+  } else {
+    if (!input.branchId) throw AppError.validation("Kies een vestiging of een eenmalige locatie.");
+    const scopeWhere = scope.branchIds
+      ? { id: { in: scope.branchIds } }
+      : { tenantId: { in: scope.tenantIds } };
+    const found = await prisma.branch.findFirst({
+      where: { AND: [{ id: input.branchId }, scopeWhere] },
+      select: { id: true, name: true, matchingConfig: true, tenantId: true },
+    });
+    if (!found) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
+    branch = found;
+  }
 
   let pool: { id: string; name: string } | null = null;
   if (input.poolId) {

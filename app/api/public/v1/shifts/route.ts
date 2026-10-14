@@ -64,6 +64,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { key, rate } = await requireApiKey(request, "shifts:write");
     if (!key.tenantId) throw AppError.precondition("Deze API-sleutel is niet aan een organisatie gekoppeld");
     const body = createShiftSchema.parse(await request.json());
+    // The public API doesn't support eenmalige klus-locaties (dashboard-only convenience) — always requires a saved branchId.
+    if (!body.branchId) throw AppError.validation("branchId is verplicht");
     const branch = await prisma.branch.findFirst({ where: { id: body.branchId, tenantId: key.tenantId }, select: { id: true } });
     if (!branch) throw AppError.forbidden("Vestiging hoort niet bij de organisatie van deze sleutel");
     const startsAt = new Date(body.startsAt);
