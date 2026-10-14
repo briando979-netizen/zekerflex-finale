@@ -9,10 +9,14 @@ export const dynamic = "force-dynamic";
 function toDto(p: {
   id: string; slug: string; name: string; description: string; category: string;
   priceCents: number; stock: number; imageUrl: string | null; modelPhotoUrl: string | null; badge: string | null;
+  variants?: { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
+  bundleOf?: { itemProduct: { id: string; name: string; imageUrl: string | null; priceCents: number } }[];
 }): PdpProduct {
   return {
     id: p.id, slug: p.slug, name: p.name, description: p.description, category: p.category,
     priceCents: p.priceCents, stock: p.stock, imageUrl: p.imageUrl, modelPhotoUrl: p.modelPhotoUrl, badge: p.badge,
+    variants: p.variants ?? [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
+    ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
   };
 }
 
@@ -31,7 +35,13 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
 
 export default async function ProductPage(props: { params: Promise<{ slug: string }> }) {
   const params = await props.params;
-  const product = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
+  const product = await prisma.shopProduct.findUnique({
+    where: { slug: params.slug },
+    include: {
+      variants: { orderBy: { createdAt: "asc" } },
+      bundleOf: { include: { itemProduct: { select: { id: true, name: true, imageUrl: true, priceCents: true } } } },
+    },
+  });
   if (!product || !product.active) notFound();
 
   const related = await prisma.shopProduct.findMany({
@@ -52,7 +62,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
               description: product.description,
               slug: product.slug,
               priceCents: product.priceCents,
-              inStock: product.stock > 0,
+              inStock: product.variants.length > 0 ? product.variants.some((v) => v.stock > 0) : product.stock > 0,
               imageUrl: product.imageUrl,
             }),
           ),

@@ -1832,6 +1832,9 @@ model ShopProduct {
   slug          String   @unique
   description   String
   category      String
+  gender        String? // "heren" | "vrouwen" | "kinderen" | "unisex" — null = not gendered (e.g. PBM)
+  collection    String? // e.g. "Winter 2026", "Zakelijk" — null for the existing Werk & PBM line
+  isBundle      Boolean  @default(false)
   priceCents    Int
   costCents     Int? // inkoopprijs (COGS) — voor margeberekening in admin
   stock         Int      @default(0)
@@ -1845,8 +1848,47 @@ model ShopProduct {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  variants    ShopProductVariant[]
+  bundleOf    ShopBundleItem[]     @relation("BundleProduct")
+  includedIn  ShopBundleItem[]     @relation("ItemProduct")
+
   @@index([active, sortOrder])
   @@index([category, active])
+  @@index([gender, collection])
+}
+
+// One stock-tracked purchasable unit of a product (a specific size/color
+// combination). Products without real variants still get exactly one row
+// (see the seed/migration note) so the cart/checkout pipeline always keys
+// on a variantId, never a bare productId.
+model ShopProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size       String?
+  color      String?
+  priceCents Int? // null = inherit ShopProduct.priceCents
+  stock      Int      @default(0)
+  sku        String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+}
+
+// A bundle ShopProduct (isBundle: true) lists the real products it contains,
+// purely for display ("Deze bundel bevat:") — it's still sold and paid for
+// as a single line at the bundle's own ShopProduct.priceCents.
+model ShopBundleItem {
+  id              String @id @default(cuid())
+  bundleProductId String
+  itemProductId   String
+  qty             Int    @default(1)
+
+  bundleProduct ShopProduct @relation("BundleProduct", fields: [bundleProductId], references: [id], onDelete: Cascade)
+  itemProduct   ShopProduct @relation("ItemProduct", fields: [itemProductId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleProductId, itemProductId])
 }
 
 enum ShopOrderStatus {

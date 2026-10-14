@@ -23,6 +23,7 @@ vi.mock("@/lib/mail", () => ({
 const shopOrderFindUnique = vi.fn();
 const shopOrderUpdate = vi.fn();
 const shopOrderUpdateMany = vi.fn();
+const shopVariantUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shopOrder: {
@@ -30,6 +31,7 @@ vi.mock("@/lib/prisma", () => ({
       update: (...a: unknown[]) => shopOrderUpdate(...a),
       updateMany: (...a: unknown[]) => shopOrderUpdateMany(...a),
     },
+    shopProductVariant: { updateMany: (...a: unknown[]) => shopVariantUpdateMany(...a) },
     invoice: { findUnique: vi.fn(), update: vi.fn() },
     freelancerProfile: { updateMany: vi.fn() },
   },
@@ -54,7 +56,7 @@ const ORDER = {
   address: "Hoofdstraat 1",
   postalCode: "1000AA",
   city: "Amsterdam",
-  itemsJson: [{ name: "Werkschoenen S3", priceCents: 1999, qty: 2, imageUrl: "/shop/schoenen.jpg" }],
+  itemsJson: [{ variantId: "var_1", name: "Werkschoenen S3", priceCents: 1999, qty: 2, imageUrl: "/shop/schoenen.jpg" }],
   subtotalCents: 3998,
   shippingCents: 495,
   totalCents: 4493,
@@ -89,6 +91,28 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
       }),
     );
     expect(sendMail).toHaveBeenCalledTimes(2); // admin notify + customer confirmation
+    expect(shopVariantUpdateMany).toHaveBeenCalledWith({
+      where: { id: "var_1", stock: { gte: 2 } },
+      data: { stock: { decrement: 2 } },
+    });
+  });
+
+  it("still marks the order paid but records an audit entry when a variant was oversold in the race window", async () => {
+    constructWebhookEvent.mockReturnValue({
+      id: "evt_1b",
+      type: "checkout.session.completed",
+      data: {
+        object: { mode: "payment", payment_status: "paid", payment_intent: "pi_123", metadata: { shopOrderId: "order_1" } },
+      },
+    });
+    shopOrderFindUnique.mockResolvedValue(ORDER);
+    shopOrderUpdate.mockResolvedValue({ ...ORDER, status: "RECEIVED" });
+    shopVariantUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    const res = await POST(webhookReq({}));
+    expect(res.status).toBe(200);
+    expect(shopOrderUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "RECEIVED" }) }));
+    expect(sendMail).toHaveBeenCalledTimes(2);
   });
 
   it("is idempotent — a repeat delivery for an already-RECEIVED order sends no mail again", async () => {

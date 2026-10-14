@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; sku: string };
+
 type Product = {
   id: string;
   name: string;
@@ -18,10 +20,14 @@ type Product = {
   badge: string | null;
   active: boolean;
   sortOrder: number;
+  gender: string | null;
+  collection: string | null;
+  isBundle: boolean;
+  variants: Variant[];
 };
 
-type FormState = Omit<Product, "id" | "imageUploadId" | "modelUploadId"> & { imageUploadId?: string | null; modelUploadId?: string | null };
-const empty: FormState = { name: "", slug: "", description: "", category: "Werkdag", priceCents: 0, costCents: null, stock: 0, imageUrl: null, modelPhotoUrl: null, badge: null, active: true, sortOrder: 0 };
+type FormState = Omit<Product, "id" | "imageUploadId" | "modelUploadId" | "variants"> & { imageUploadId?: string | null; modelUploadId?: string | null };
+const empty: FormState = { name: "", slug: "", description: "", category: "Werkdag", priceCents: 0, costCents: null, stock: 0, imageUrl: null, modelPhotoUrl: null, badge: null, active: true, sortOrder: 0, gender: null, collection: null, isBundle: false };
 
 type OrderStatus = "PENDING_PAYMENT" | "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED" | "PAYMENT_FAILED";
 type Order = {
@@ -33,7 +39,7 @@ type Order = {
   address: string;
   postalCode: string;
   city: string;
-  itemsJson: { productId: string; name: string; priceCents: number; qty: number }[];
+  itemsJson: { productId: string; variantId?: string; name: string; priceCents: number; qty: number; size?: string | null; color?: string | null }[];
   totalCents: number;
   carrier: string | null;
   trackingNumber: string | null;
@@ -61,6 +67,9 @@ export function ShopAdmin() {
   const [uploading, setUploading] = useState<"image" | "model" | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderMessage, setOrderMessage] = useState("");
+  const [variantsOpen, setVariantsOpen] = useState<string | null>(null);
+  const [variantForm, setVariantForm] = useState({ size: "", color: "", priceCents: "", stock: "0" });
+  const [variantMessage, setVariantMessage] = useState("");
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -118,13 +127,101 @@ export function ShopAdmin() {
   const edit = (product: Product) => { setEditing(product.id); setForm(product); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); };
 
+  const addVariant = async (productId: string) => {
+    setVariantMessage("");
+    const response = await fetch(`/api/shop/products/${productId}/variants`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        size: variantForm.size || null,
+        color: variantForm.color || null,
+        priceCents: variantForm.priceCents === "" ? null : Number(variantForm.priceCents),
+        stock: Number(variantForm.stock || 0),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) { setVariantMessage(data?.error?.message ?? "Variant toevoegen mislukt."); return; }
+    setVariantForm({ size: "", color: "", priceCents: "", stock: "0" });
+    await load();
+  };
+  const removeVariant = async (productId: string, variantId: string) => {
+    await fetch(`/api/shop/products/${productId}/variants/${variantId}`, { method: "DELETE" });
+    await load();
+  };
+
   return <div className="mx-auto max-w-7xl space-y-6">
     <header className="a-panel flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="a-kicker">Commerce / catalogus</p><h1 className="a-title mt-2">Webshopbeheer</h1><p className="a-subtitle mt-1">Beheer assortiment, voorraad en alle beeldmaterialen van ZekerFlex.</p></div><a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk publieke shop ↗</a></header>
     <form onSubmit={save} className="a-panel grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
+      <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button>{editing && <button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); }}>Annuleren</button>}</div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
-    <section className="a-panel overflow-hidden"><div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}><p className="a-kicker">Live catalogus</p><h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{products.length} producten beheerd</h2></div><div className="divide-y" style={{ borderColor: "var(--a-border)" }}>{products.map((product) => <div key={product.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"><div className="h-20 w-20 overflow-hidden rounded-xl" style={{ background: "var(--a-panel-2)" }}>{product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-xs" style={{ color: "var(--a-mute)" }}>ZF</div>}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{product.name}</h3><span className="a-tag">{product.category}</span><span className={`a-tag ${product.active ? "a-tag-ok" : ""}`}>{product.active ? "Live" : "Verborgen"}</span></div><p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{product.stock} op voorraad · € {(product.priceCents / 100).toFixed(2).replace(".", ",")}{product.costCents ? ` · inkoop € ${(product.costCents / 100).toFixed(2).replace(".", ",")} (marge ${marge(product.priceCents, product.costCents)})` : ""} · {product.modelPhotoUrl ? "model-foto gekoppeld" : "zonder model-foto"}</p></div><div className="flex gap-2"><button type="button" className="a-button" onClick={() => edit(product)}>Bewerken</button>{product.active && <button type="button" className="a-button" onClick={() => archive(product.id)}>Verbergen</button>}</div></div>)}</div></section>
+    <section className="a-panel overflow-hidden">
+      <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
+        <p className="a-kicker">Live catalogus</p>
+        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{products.length} producten beheerd</h2>
+      </div>
+      <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
+        {products.map((product) => (
+          <div key={product.id} className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="h-20 w-20 overflow-hidden rounded-xl" style={{ background: "var(--a-panel-2)" }}>
+                {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-xs" style={{ color: "var(--a-mute)" }}>ZF</div>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{product.name}</h3>
+                  <span className="a-tag">{product.category}</span>
+                  {product.gender && <span className="a-tag">{product.gender}</span>}
+                  {product.collection && <span className="a-tag">{product.collection}</span>}
+                  {product.isBundle && <span className="a-tag">Bundel</span>}
+                  <span className={`a-tag ${product.active ? "a-tag-ok" : ""}`}>{product.active ? "Live" : "Verborgen"}</span>
+                </div>
+                <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{product.stock} op voorraad · € {(product.priceCents / 100).toFixed(2).replace(".", ",")}{product.costCents ? ` · inkoop € ${(product.costCents / 100).toFixed(2).replace(".", ",")} (marge ${marge(product.priceCents, product.costCents)})` : ""} · {product.modelPhotoUrl ? "model-foto gekoppeld" : "zonder model-foto"} · {product.variants.length} variant(en)</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" className="a-button" onClick={() => setVariantsOpen(variantsOpen === product.id ? null : product.id)}>Varianten</button>
+                <button type="button" className="a-button" onClick={() => edit(product)}>Bewerken</button>
+                {product.active && <button type="button" className="a-button" onClick={() => archive(product.id)}>Verbergen</button>}
+              </div>
+            </div>
+            {variantsOpen === product.id && (
+              <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)", background: "var(--a-panel-2)" }}>
+                {product.variants.length === 0 ? (
+                  <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen varianten — dit product toont één keuze (eigen voorraad = productvoorraad).</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead><tr style={{ color: "var(--a-mute)" }}><th className="pb-2 text-left">Maat</th><th className="pb-2 text-left">Kleur</th><th className="pb-2 text-left">Prijs</th><th className="pb-2 text-left">Voorraad</th><th className="pb-2 text-left">SKU</th><th /></tr></thead>
+                    <tbody>
+                      {product.variants.map((v) => (
+                        <tr key={v.id} style={{ color: "var(--a-text)" }}>
+                          <td className="py-1 pr-3">{v.size ?? "—"}</td>
+                          <td className="py-1 pr-3">{v.color ?? "—"}</td>
+                          <td className="py-1 pr-3">{v.priceCents != null ? money(v.priceCents / 100) : "erft van product"}</td>
+                          <td className="py-1 pr-3">{v.stock}</td>
+                          <td className="py-1 pr-3 font-mono text-xs" style={{ color: "var(--a-mute)" }}>{v.sku}</td>
+                          <td className="py-1"><button type="button" className="a-button text-xs" onClick={() => removeVariant(product.id, v.id)}>Verwijderen</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <form
+                  className="mt-3 flex flex-wrap items-end gap-2"
+                  onSubmit={(e) => { e.preventDefault(); void addVariant(product.id); }}
+                >
+                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Maat<input className="a-input w-20" value={variantForm.size} onChange={(e) => setVariantForm((f) => ({ ...f, size: e.target.value }))} placeholder="M" /></label>
+                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Kleur<input className="a-input w-28" value={variantForm.color} onChange={(e) => setVariantForm((f) => ({ ...f, color: e.target.value }))} placeholder="Zwart" /></label>
+                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Prijs (centen)<input className="a-input w-28" value={variantForm.priceCents} onChange={(e) => setVariantForm((f) => ({ ...f, priceCents: e.target.value }))} placeholder="optioneel" /></label>
+                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Voorraad<input className="a-input w-20" type="number" min="0" value={variantForm.stock} onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))} /></label>
+                  <button type="submit" className="a-button a-button-primary text-xs">Variant toevoegen</button>
+                </form>
+                {variantMessage && <p className="mt-2 text-xs" style={{ color: "var(--a-dim)" }}>{variantMessage}</p>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
 
     <section className="a-panel overflow-hidden">
       <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>

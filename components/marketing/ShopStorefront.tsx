@@ -4,11 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 
 // De shop-homepage: hero-carrousel, productraster, categorie-/inspiratielijsten
 // en nieuwsbrief. Promo-balk, header en footer zitten in ShopChrome (layout).
 
 type Category = "Alles" | "Werk & PBM" | "Kleding" | "Werkdag" | "Cadeaus";
+type Gender = "Alle" | "Heren" | "Vrouwen" | "Kinderen";
+const GENDER_VALUE: Record<Exclude<Gender, "Alle">, string> = { Heren: "heren", Vrouwen: "vrouwen", Kinderen: "kinderen" };
+type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 type Product = {
   id: string;
   slug?: string | undefined;
@@ -16,19 +20,23 @@ type Product = {
   description: string;
   price: number;
   category: Exclude<Category, "Alles">;
+  gender?: string | null;
   label?: string | null;
   imageUrl?: string | null;
+  variants: Variant[];
 };
 
+const oneSize = (id: string, stock = 10): Variant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
+
 const FALLBACK: Product[] = [
-  { id: "shoes-s3", slug: "veiligheidsschoenen-s3", name: "Veiligheidsschoenen S3", description: "Stalen neus, doortreedbescherming en antislipzool.", price: 49.95, category: "Werk & PBM", label: "Verplicht PBM", imageUrl: "/shifts/logistiek.jpg" },
-  { id: "gloves", slug: "werkhandschoenen-grip", name: "Werkhandschoenen met grip (3 paar)", description: "Ademende nitril-coating, sterke grip.", price: 12.95, category: "Werk & PBM", label: "3 paar", imageUrl: "/shifts/bouw.jpg" },
-  { id: "vest", slug: "veiligheidshesje", name: "Reflecterend veiligheidshesje", description: "EN ISO 20471 klasse 2.", price: 6.95, category: "Werk & PBM", label: "Zichtbaarheid", imageUrl: "/shifts/evenement.jpg" },
-  { id: "helmet", slug: "veiligheidshelm", name: "Veiligheidshelm wit", description: "EN 397, verstelbaar.", price: 12.95, category: "Werk & PBM", label: "Bouw", imageUrl: "/shifts/bouw.jpg" },
-  { id: "tee", slug: "slim-fit-contrast-tshirt-heren", name: "Slim fit contrast-T-shirt heren", description: "95% biologisch katoen, 5% elastaan.", price: 27.95, category: "Kleding", label: "Bio-katoen", imageUrl: "/shop/ringer-tee-1.jpg" },
-  { id: "meshbag", slug: "biologische-mesh-boodschappentas", name: "Biologische mesh boodschappentas", description: "100% biologisch katoen, tot 6 kg.", price: 12.95, category: "Werkdag", label: "Bio-katoen", imageUrl: "/shop/mesh-boodschappentas-1.jpg" },
-  { id: "hoodie", name: "ZekerFlex Everyday Hoodie", description: "Zware organic katoenmix, relaxed fit.", price: 69, category: "Kleding", label: "Bestseller", imageUrl: null },
-  { id: "bottle", name: "Shift Bottle", description: "Dubbelwandig staal, 600 ml.", price: 29, category: "Werkdag", label: "Elke dag", imageUrl: null },
+  { id: "shoes-s3", slug: "veiligheidsschoenen-s3", name: "Veiligheidsschoenen S3", description: "Stalen neus, doortreedbescherming en antislipzool.", price: 49.95, category: "Werk & PBM", label: "Verplicht PBM", imageUrl: "/shifts/logistiek.jpg", variants: oneSize("shoes-s3") },
+  { id: "gloves", slug: "werkhandschoenen-grip", name: "Werkhandschoenen met grip (3 paar)", description: "Ademende nitril-coating, sterke grip.", price: 12.95, category: "Werk & PBM", label: "3 paar", imageUrl: "/shifts/bouw.jpg", variants: oneSize("gloves") },
+  { id: "vest", slug: "veiligheidshesje", name: "Reflecterend veiligheidshesje", description: "EN ISO 20471 klasse 2.", price: 6.95, category: "Werk & PBM", label: "Zichtbaarheid", imageUrl: "/shifts/evenement.jpg", variants: oneSize("vest") },
+  { id: "helmet", slug: "veiligheidshelm", name: "Veiligheidshelm wit", description: "EN 397, verstelbaar.", price: 12.95, category: "Werk & PBM", label: "Bouw", imageUrl: "/shifts/bouw.jpg", variants: oneSize("helmet") },
+  { id: "tee", slug: "slim-fit-contrast-tshirt-heren", name: "Slim fit contrast-T-shirt heren", description: "95% biologisch katoen, 5% elastaan.", price: 27.95, category: "Kleding", gender: "heren", label: "Bio-katoen", imageUrl: "/shop/ringer-tee-1.jpg", variants: oneSize("tee") },
+  { id: "meshbag", slug: "biologische-mesh-boodschappentas", name: "Biologische mesh boodschappentas", description: "100% biologisch katoen, tot 6 kg.", price: 12.95, category: "Werkdag", label: "Bio-katoen", imageUrl: "/shop/mesh-boodschappentas-1.jpg", variants: oneSize("meshbag") },
+  { id: "hoodie", name: "ZekerFlex Everyday Hoodie", description: "Zware organic katoenmix, relaxed fit.", price: 69, category: "Kleding", label: "Bestseller", imageUrl: null, variants: oneSize("hoodie") },
+  { id: "bottle", name: "Shift Bottle", description: "Dubbelwandig staal, 600 ml.", price: 29, category: "Werkdag", label: "Elke dag", imageUrl: null, variants: oneSize("bottle") },
 ];
 
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
@@ -56,6 +64,7 @@ const HERO_SLIDES = [
 
 export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category }) {
   const [category, setCategory] = useState<Category>(initialCat);
+  const [gender, setGender] = useState<Gender>("Alle");
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<Product[]>(FALLBACK);
   const [slide, setSlide] = useState(0);
@@ -78,8 +87,18 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
             description: String(it.description ?? ""),
             price: Number(it.priceCents) / 100,
             category: (it.category as Product["category"]) ?? "Werkdag",
+            gender: typeof it.gender === "string" ? it.gender : null,
             label: typeof it.badge === "string" ? it.badge : null,
             imageUrl: typeof it.imageUrl === "string" ? it.imageUrl : null,
+            variants: Array.isArray(it.variants) && it.variants.length > 0
+              ? (it.variants as Record<string, unknown>[]).map((v) => ({
+                  id: String(v.id),
+                  size: typeof v.size === "string" ? v.size : null,
+                  color: typeof v.color === "string" ? v.color : null,
+                  priceCents: typeof v.priceCents === "number" ? v.priceCents : null,
+                  stock: Number(v.stock ?? 0),
+                }))
+              : oneSize(String(it.id), Number(it.stock ?? 0)),
           })),
         );
       })
@@ -97,9 +116,10 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
     return catalog.filter(
       (p) =>
         (category === "Alles" || p.category === category) &&
+        (gender === "Alle" || p.gender === GENDER_VALUE[gender]) &&
         (!q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)),
     );
-  }, [catalog, category, query]);
+  }, [catalog, category, gender, query]);
 
   const pick = (c: Category) => {
     setCategory(c);
@@ -154,6 +174,20 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
 
       {/* productraster */}
       <section ref={gridRef} className="shell scroll-mt-24 py-12 md:py-16">
+        {catalog.some((p) => p.gender) && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(["Alle", "Heren", "Vrouwen", "Kinderen"] as Gender[]).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGender(g)}
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${gender === g ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold md:text-3xl">{category === "Alles" ? "Alle producten" : category}</h2>
@@ -175,6 +209,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
             {shown.map((p) => {
+              const singleVariant = p.variants.length <= 1 ? p.variants[0] : null;
               const inner = (
                 <>
                   <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-paper-soft">
@@ -185,17 +220,24 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
                       <div className="grid h-full w-full place-items-center"><LogoGlyph size={64} tone="dark" /></div>
                     )}
                     {p.label && <span className="absolute left-3 top-3 rounded bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">{p.label}</span>}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); add(p.id); }}
-                      // Visible by default (touch has no hover — iPad included — so an
-                      // opacity-0-until-hover button would be invisible and effectively
-                      // unusable there); only real hover-capable pointers get the
-                      // fade-in-on-hover treatment.
-                      className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                    >
-                      In winkelwagen
-                    </button>
+                    {singleVariant ? (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); add(singleVariant.id); }}
+                        // Visible by default (touch has no hover — iPad included — so an
+                        // opacity-0-until-hover button would be invisible and effectively
+                        // unusable there); only real hover-capable pointers get the
+                        // fade-in-on-hover treatment.
+                        className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                      >
+                        In winkelwagen
+                      </button>
+                    ) : (
+                      // Meerdere maten/kleuren — kies eerst op de productpagina.
+                      <span className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink/90 py-2 text-center text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
+                        Kies maat/kleur →
+                      </span>
+                    )}
                   </div>
                   <div className="mt-3">
                     <h3 className="text-sm font-semibold leading-snug">{p.name}</h3>
@@ -242,25 +284,13 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
       <section className="border-t border-hair bg-ink text-white">
         <div className="shell grid gap-8 py-12 md:grid-cols-2 md:py-16">
           <div>
-            <h2 className="font-display text-2xl font-bold md:text-3xl">Deals, nieuwe PBM en tips<br />rechtstreeks in je e-mail</h2>
-            <p className="mt-3 max-w-md text-sm text-white/60">Ontvang kortingen, nieuwe producten en werkveiligheidstips in onze nieuwsbrief.</p>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">10% korting + nieuwe PBM en tips<br />rechtstreeks in je e-mail</h2>
+            <p className="mt-3 max-w-md text-sm text-white/60">
+              Schrijf je in en ontvang de code <span className="font-mono font-bold text-brand-mint">WELKOM10</span> voor
+              10% korting op je eerste bestelling — in te vullen bij het afrekenen.
+            </p>
           </div>
-          <form
-            onSubmit={(e) => { e.preventDefault(); (e.currentTarget.querySelector("input[type=email]") as HTMLInputElement).value = ""; alert("Bedankt! Bevestig je inschrijving via de e-mail die we sturen."); }}
-            className="space-y-4"
-          >
-            <label className="block text-xs font-semibold text-white/60">
-              Je e-mailadres
-              <input type="email" required className="mt-1.5 w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/60" placeholder="naam@voorbeeld.nl" />
-            </label>
-            <fieldset className="flex flex-wrap gap-5 text-sm">
-              <span className="font-semibold text-white/70">Interesse:</span>
-              <label className="flex items-center gap-2"><input type="radio" name="pref" defaultChecked className="accent-brand-mint" /> Werkkleding & PBM</label>
-              <label className="flex items-center gap-2"><input type="radio" name="pref" className="accent-brand-mint" /> Zakelijk bestellen</label>
-            </fieldset>
-            <button type="submit" className="w-full rounded-lg bg-brand-mint py-3 text-sm font-bold text-ink transition hover:brightness-95">Mijn inschrijving bevestigen</button>
-            <p className="text-[11px] text-white/60">Bekijk ons privacybeleid voor meer informatie. Je kunt je op elk moment kosteloos uitschrijven.</p>
-          </form>
+          <NewsletterSignup source="shop" />
         </div>
       </section>
     </>

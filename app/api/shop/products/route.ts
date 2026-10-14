@@ -13,7 +13,10 @@ const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().regex(/^[a-z0-9-]+$/).max(120),
   description: z.string().trim().min(10).max(600),
-  category: z.enum(["Kleding", "Werkdag", "Cadeaus"]),
+  category: z.enum(["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"]),
+  gender: z.enum(["heren", "vrouwen", "kinderen", "unisex"]).nullable().optional(),
+  collection: z.string().trim().max(60).nullable().optional(),
+  isBundle: z.boolean().default(false),
   priceCents: z.number().int().nonnegative().max(1_000_000),
   costCents: z.number().int().nonnegative().max(1_000_000).nullable().optional(),
   stock: z.number().int().nonnegative().max(1_000_000),
@@ -40,6 +43,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     const products = await prisma.shopProduct.findMany({
       ...(isAdmin ? {} : { where: { active: true } }),
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      include: {
+        variants: { orderBy: { createdAt: "asc" } },
+        bundleOf: { include: { itemProduct: { select: { id: true, name: true, imageUrl: true, priceCents: true } } } },
+      },
     });
     return NextResponse.json({ products });
   } catch (err) {
@@ -52,6 +59,8 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const parsed = productSchema.parse(await request.json());
   const data = {
     ...parsed,
+    gender: parsed.gender ?? null,
+    collection: parsed.collection ?? null,
     imageUploadId: parsed.imageUploadId ?? null,
     modelUploadId: parsed.modelUploadId ?? null,
     imageUrl: parsed.imageUrl ?? null,
@@ -60,6 +69,13 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     costCents: parsed.costCents ?? null,
   };
   const product = await prisma.shopProduct.create({ data });
+  // Elk product krijgt meteen één variant-rij (zonder maat/kleur, erft de
+  // productprijs) zodat de bestel-pijplijn altijd tegen een echte
+  // ShopProductVariant kan afrekenen — een admin kan daarna maat/kleur-
+  // varianten toevoegen via het variantenpaneel.
+  const defaultVariant = await prisma.shopProductVariant.create({
+    data: { productId: product.id, size: null, color: null, priceCents: null, stock: product.stock, sku: `${product.slug}-one` },
+  });
   await recordAudit({ category: "ADMIN", action: "shop.product.created", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct aangemaakt: ${product.name}`, targetType: "shop-product", targetId: product.id });
-  return NextResponse.json({ product }, { status: 201 });
+  return NextResponse.json({ product: { ...product, variants: [defaultVariant] } }, { status: 201 });
 });

@@ -9,7 +9,7 @@ vi.mock("@/lib/billing/stripe", () => ({
   createShopOrderCheckoutSession: (...a: unknown[]) => createCheckoutSession(...a),
 }));
 
-const findMany = vi.fn();
+const variantFindMany = vi.fn();
 const orderCreate = vi.fn();
 const orderUpdate = vi.fn();
 const orderFindMany = vi.fn();
@@ -18,7 +18,7 @@ const requireRole = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    shopProduct: { findMany: (...a: unknown[]) => findMany(...a) },
+    shopProductVariant: { findMany: (...a: unknown[]) => variantFindMany(...a) },
     shopOrder: {
       create: (...a: unknown[]) => orderCreate(...a),
       update: (...a: unknown[]) => orderUpdate(...a),
@@ -41,7 +41,14 @@ function req(body: unknown) {
   });
 }
 
-const PRODUCT = { id: "prod_1", name: "Werkschoenen S3", priceCents: 1999, imageUrl: "/shop/schoenen.jpg" };
+const VARIANT = {
+  id: "var_1",
+  size: null,
+  color: null,
+  priceCents: null,
+  stock: 10,
+  product: { id: "prod_1", name: "Werkschoenen S3", priceCents: 1999, imageUrl: "/shop/schoenen.jpg" },
+};
 
 const valid = {
   firstName: "Jan",
@@ -50,14 +57,14 @@ const valid = {
   address: "Hoofdstraat 1",
   postalCode: "1000AA",
   city: "Amsterdam",
-  items: [{ productId: "prod_1", qty: 2 }],
+  items: [{ variantId: "var_1", qty: 2 }],
 };
 
 afterEach(() => vi.clearAllMocks());
 
 describe("POST /api/shop/orders", () => {
   it("creates a PENDING_PAYMENT order, re-pricing server-side, and starts a Stripe Checkout session", async () => {
-    findMany.mockResolvedValue([PRODUCT]);
+    variantFindMany.mockResolvedValue([VARIANT]);
     orderCreate.mockResolvedValue({ id: "order_1" });
     orderUpdate.mockResolvedValue({});
     createCheckoutSession.mockResolvedValue({ id: "cs_test_1", url: "https://checkout.stripe.com/cs_test_1" });
@@ -76,7 +83,18 @@ describe("POST /api/shop/orders", () => {
           subtotalCents: 3998,
           shippingCents: 495,
           totalCents: 4493,
-          itemsJson: [{ productId: "prod_1", name: "Werkschoenen S3", priceCents: 1999, qty: 2, imageUrl: "/shop/schoenen.jpg" }],
+          itemsJson: [
+            {
+              variantId: "var_1",
+              productId: "prod_1",
+              name: "Werkschoenen S3",
+              priceCents: 1999,
+              qty: 2,
+              imageUrl: "/shop/schoenen.jpg",
+              size: null,
+              color: null,
+            },
+          ],
         }),
       }),
     );
@@ -91,13 +109,39 @@ describe("POST /api/shop/orders", () => {
     expect(orderUpdate).toHaveBeenCalledWith({ where: { id: "order_1" }, data: { stripeSessionId: "cs_test_1" } });
   });
 
+  it("builds the line name with maat/kleur when the variant has them", async () => {
+    variantFindMany.mockResolvedValue([{ ...VARIANT, size: "M", color: "Zwart" }]);
+    orderCreate.mockResolvedValue({ id: "order_1b" });
+    orderUpdate.mockResolvedValue({});
+    createCheckoutSession.mockResolvedValue({ id: "cs_1b", url: "https://checkout.stripe.com/cs_1b" });
+
+    await POST(req(valid));
+
+    expect(createCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lines: [{ name: "Werkschoenen S3 — Maat M, Zwart", priceCents: 1999, qty: 2 }] }),
+    );
+  });
+
+  it("re-prices against the variant's own price override when set", async () => {
+    variantFindMany.mockResolvedValue([{ ...VARIANT, priceCents: 2499 }]);
+    orderCreate.mockResolvedValue({ id: "order_1c" });
+    orderUpdate.mockResolvedValue({});
+    createCheckoutSession.mockResolvedValue({ id: "cs_1c", url: "https://checkout.stripe.com/cs_1c" });
+
+    await POST(req({ ...valid, items: [{ variantId: "var_1", qty: 1 }] }));
+
+    expect(orderCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subtotalCents: 2499 }) }),
+    );
+  });
+
   it("is free shipping at or above €50 subtotal", async () => {
-    findMany.mockResolvedValue([{ id: "prod_1", name: "Werkschoenen S3", priceCents: 2500, imageUrl: null }]);
+    variantFindMany.mockResolvedValue([{ ...VARIANT, product: { ...VARIANT.product, priceCents: 2500, imageUrl: null } }]);
     orderCreate.mockResolvedValue({ id: "order_2" });
     orderUpdate.mockResolvedValue({});
     createCheckoutSession.mockResolvedValue({ id: "cs_2", url: "https://checkout.stripe.com/cs_2" });
 
-    await POST(req({ ...valid, items: [{ productId: "prod_1", qty: 2 }] }));
+    await POST(req({ ...valid, items: [{ variantId: "var_1", qty: 2 }] }));
 
     expect(orderCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -107,12 +151,12 @@ describe("POST /api/shop/orders", () => {
   });
 
   it("ignores any client-sent price and never trusts it", async () => {
-    findMany.mockResolvedValue([PRODUCT]);
+    variantFindMany.mockResolvedValue([VARIANT]);
     orderCreate.mockResolvedValue({ id: "order_3" });
     orderUpdate.mockResolvedValue({});
     createCheckoutSession.mockResolvedValue({ id: "cs_3", url: "https://checkout.stripe.com/cs_3" });
 
-    await POST(req({ ...valid, items: [{ productId: "prod_1", qty: 1, priceCents: 1 }] }));
+    await POST(req({ ...valid, items: [{ variantId: "var_1", qty: 1, priceCents: 1 }] }));
 
     expect(orderCreate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ subtotalCents: 1999 }) }),
@@ -120,9 +164,18 @@ describe("POST /api/shop/orders", () => {
   });
 
   it("rejects an order where none of the items are still active/available", async () => {
-    findMany.mockResolvedValue([]);
+    variantFindMany.mockResolvedValue([]);
     const res = await POST(req(valid));
     expect(res.status).toBe(422);
+    expect(orderCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects an order when a line's quantity exceeds the variant's stock", async () => {
+    variantFindMany.mockResolvedValue([{ ...VARIANT, stock: 1 }]);
+    const res = await POST(req(valid));
+    const json = await res.json();
+    expect(res.status).toBe(422);
+    expect(json.error.message).toContain("Niet genoeg op voorraad");
     expect(orderCreate).not.toHaveBeenCalled();
   });
 
@@ -139,7 +192,7 @@ describe("POST /api/shop/orders", () => {
   });
 
   it("marks the order PAYMENT_FAILED and surfaces an error when Stripe can't start a session", async () => {
-    findMany.mockResolvedValue([PRODUCT]);
+    variantFindMany.mockResolvedValue([VARIANT]);
     orderCreate.mockResolvedValue({ id: "order_4" });
     orderUpdate.mockResolvedValue({});
     createCheckoutSession.mockRejectedValue(new Error("stripe down"));

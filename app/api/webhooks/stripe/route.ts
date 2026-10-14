@@ -21,6 +21,37 @@ interface ShopOrderLine {
   priceCents: number;
   qty: number;
   imageUrl?: string | null;
+  variantId?: string;
+  size?: string | null;
+  color?: string | null;
+}
+
+/** Decrements variant stock for a just-paid order. Best-effort per line: if a
+ * variant was oversold in the window between checkout and payment (rare race),
+ * the order still gets marked paid — the customer already paid — but the
+ * shortfall is recorded so admin can follow up. */
+async function decrementVariantStock(orderId: string, lines: ShopOrderLine[]): Promise<void> {
+  const shortfalls: string[] = [];
+  for (const line of lines) {
+    if (!line.variantId) continue;
+    const res = await prisma.shopProductVariant.updateMany({
+      where: { id: line.variantId, stock: { gte: line.qty } },
+      data: { stock: { decrement: line.qty } },
+    });
+    if (res.count === 0) shortfalls.push(`${line.name} x${line.qty}`);
+  }
+  if (shortfalls.length > 0) {
+    logger.warn("shop order oversold", { orderId, shortfalls });
+    await recordAudit({
+      category: "ADMIN",
+      action: "shop.order.oversold",
+      actorLabel: "integration:stripe",
+      summary: `Shopbestelling ${orderId} betaald maar niet genoeg voorraad voor: ${shortfalls.join(", ")}`,
+      targetType: "shop-order",
+      targetId: orderId,
+      metadata: { shortfalls },
+    });
+  }
 }
 
 /** Sends the admin notification + customer confirmation for a just-paid shop order (product photos + a link to the PDF receipt). Best-effort — never throws. */
@@ -155,6 +186,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           targetId: updated.id,
           metadata: { sessionId: session.id, eventType: event.type, totalCents: updated.totalCents },
         });
+        await decrementVariantStock(updated.id, (updated.itemsJson as ShopOrderLine[] | null) ?? []);
         await notifyShopOrderPaid(updated);
       }
       return NextResponse.json({ ok: true });

@@ -24,10 +24,13 @@ const schema = z.object({
   postalCode: z.string().trim().min(3).max(12),
   city: z.string().trim().min(1).max(80),
   items: z
-    .array(z.object({ productId: z.string().min(1), qty: z.number().int().positive().max(99) }))
+    .array(z.object({ variantId: z.string().min(1), qty: z.number().int().positive().max(99) }))
     .min(1)
     .max(40),
 });
+
+const variantLabel = (size: string | null, color: string | null): string =>
+  [size ? `Maat ${size}` : null, color].filter(Boolean).join(", ");
 
 // POST /api/shop/orders — public checkout submit. Prices are never trusted
 // from the client: every line is re-priced server-side against the live,
@@ -51,24 +54,47 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     const d = parsed.data;
 
-    const products = await prisma.shopProduct.findMany({
-      where: { id: { in: d.items.map((i) => i.productId) }, active: true },
-      select: { id: true, name: true, priceCents: true, imageUrl: true },
+    const variants = await prisma.shopProductVariant.findMany({
+      where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
+      include: { product: { select: { id: true, name: true, priceCents: true, imageUrl: true } } },
     });
-    const byId = new Map(products.map((p) => [p.id, p]));
+    const byId = new Map(variants.map((v) => [v.id, v]));
 
-    const lines = d.items
-      .map((i) => {
-        const p = byId.get(i.productId);
-        return p
-          ? { productId: p.id, name: p.name, priceCents: p.priceCents, qty: i.qty, imageUrl: p.imageUrl }
-          : null;
-      })
-      .filter(
-        (l): l is { productId: string; name: string; priceCents: number; qty: number; imageUrl: string | null } =>
-          l !== null,
-      );
+    type Line = {
+      variantId: string;
+      productId: string;
+      name: string;
+      priceCents: number;
+      qty: number;
+      imageUrl: string | null;
+      size: string | null;
+      color: string | null;
+    };
+    const lines: Line[] = [];
+    const outOfStock: string[] = [];
+    for (const i of d.items) {
+      const v = byId.get(i.variantId);
+      if (!v) continue;
+      const label = variantLabel(v.size, v.color);
+      if (v.stock < i.qty) {
+        outOfStock.push(label ? `${v.product.name} (${label})` : v.product.name);
+        continue;
+      }
+      lines.push({
+        variantId: v.id,
+        productId: v.product.id,
+        name: label ? `${v.product.name} — ${label}` : v.product.name,
+        priceCents: v.priceCents ?? v.product.priceCents,
+        qty: i.qty,
+        imageUrl: v.product.imageUrl,
+        size: v.size,
+        color: v.color,
+      });
+    }
 
+    if (outOfStock.length > 0) {
+      throw AppError.validation(`Niet genoeg op voorraad: ${outOfStock.join(", ")}. Pas je winkelwagen aan.`);
+    }
     if (lines.length === 0) {
       throw AppError.validation("Geen van deze producten is nog beschikbaar.");
     }

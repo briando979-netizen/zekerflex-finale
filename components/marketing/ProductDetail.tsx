@@ -6,6 +6,8 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { specFor } from "@/lib/shop/product-specs";
 
+export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
+export type PdpBundleItem = { id: string; name: string; imageUrl: string | null; priceCents: number };
 export type PdpProduct = {
   id: string;
   slug: string;
@@ -17,6 +19,8 @@ export type PdpProduct = {
   imageUrl: string | null;
   modelPhotoUrl: string | null;
   badge: string | null;
+  variants: PdpVariant[];
+  bundleItems?: PdpBundleItem[];
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -30,6 +34,23 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
   const [added, setAdded] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
   const hasSize = Boolean(spec.sizeTable);
+
+  const sizes = useMemo(
+    () => [...new Set(product.variants.map((v) => v.size).filter((s): s is string => Boolean(s)))],
+    [product.variants],
+  );
+  const colors = useMemo(
+    () => [...new Set(product.variants.map((v) => v.color).filter((c): c is string => Boolean(c)))],
+    [product.variants],
+  );
+  const [selSize, setSelSize] = useState<string | null>(sizes[0] ?? null);
+  const [selColor, setSelColor] = useState<string | null>(colors[0] ?? null);
+  const needsSelection = product.variants.length > 1;
+  const variant = needsSelection
+    ? product.variants.find((v) => (sizes.length === 0 || v.size === selSize) && (colors.length === 0 || v.color === selColor))
+    : product.variants[0];
+  const variantPriceCents = variant?.priceCents ?? product.priceCents;
+  const variantStock = variant?.stock ?? product.stock;
 
   return (
     <div className="shell py-8 md:py-12">
@@ -75,9 +96,44 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
             <span className="inline-block rounded bg-mintwash px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">{product.badge}</span>
           )}
           <h1 className="mt-2 font-display text-3xl font-bold leading-tight">{product.name}</h1>
-          <p className="mt-3 text-2xl font-bold">{money(product.priceCents)}</p>
+          <p className="mt-3 text-2xl font-bold">{money(variantPriceCents)}</p>
           <p className="mt-1 text-xs text-neutralx-500">Incl. btw · gratis verzending vanaf € 50</p>
           {spec.fit && <p className="mt-4 text-sm text-neutralx-600"><span className="font-semibold text-ink">Pasvorm:</span> {spec.fit}</p>}
+
+          {sizes.length > 0 && (
+            <div className="mt-5">
+              <p className="text-sm font-semibold text-ink">Maat</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {sizes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => { setSelSize(s); setAdded(false); }}
+                    className={`rounded-lg border px-3.5 py-2 text-sm font-semibold transition ${selSize === s ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {colors.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-ink">Kleur</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {colors.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => { setSelColor(c); setAdded(false); }}
+                    className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${selColor === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 flex items-center gap-3">
             <div className="inline-flex items-center rounded-full border border-hairstrong">
@@ -87,11 +143,11 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
             </div>
             <button
               type="button"
-              onClick={() => { add(product.id, qty); setAdded(true); }}
-              disabled={product.stock <= 0}
+              onClick={() => { if (variant) { add(variant.id, qty); setAdded(true); } }}
+              disabled={!variant || variantStock <= 0}
               className="flex-1 rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-500 disabled:opacity-40"
             >
-              {product.stock <= 0 ? "Uitverkocht" : "In winkelwagen"}
+              {!variant ? "Kies een optie" : variantStock <= 0 ? "Uitverkocht" : "In winkelwagen"}
             </button>
           </div>
           {added && (
@@ -101,8 +157,26 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
             </p>
           )}
           <p className="mt-2 text-xs text-neutralx-400">
-            {product.stock > 0 ? `${product.stock} op voorraad · voor 22:00 besteld, morgen in huis` : "Tijdelijk niet leverbaar"}
+            {variant
+              ? variantStock > 0
+                ? `${variantStock} op voorraad · voor 22:00 besteld, morgen in huis`
+                : "Tijdelijk niet leverbaar in deze optie"
+              : "Kies een maat/kleur om de voorraad te zien"}
           </p>
+
+          {product.bundleItems && product.bundleItems.length > 0 && (
+            <div className="mt-6 rounded-xl border border-hair p-4">
+              <p className="text-sm font-semibold text-ink">Deze bundel bevat:</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-neutralx-600">
+                {product.bundleItems.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between">
+                    <span>{b.name}</span>
+                    <span className="text-neutralx-400">{money(b.priceCents)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* productomschrijving */}
           <div className="mt-8 border-t border-hair pt-6">
