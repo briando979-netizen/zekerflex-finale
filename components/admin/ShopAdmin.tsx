@@ -23,7 +23,7 @@ type Product = {
 type FormState = Omit<Product, "id" | "imageUploadId" | "modelUploadId"> & { imageUploadId?: string | null; modelUploadId?: string | null };
 const empty: FormState = { name: "", slug: "", description: "", category: "Werkdag", priceCents: 0, costCents: null, stock: 0, imageUrl: null, modelPhotoUrl: null, badge: null, active: true, sortOrder: 0 };
 
-type OrderStatus = "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED";
+type OrderStatus = "PENDING_PAYMENT" | "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED" | "PAYMENT_FAILED";
 type Order = {
   id: string;
   status: OrderStatus;
@@ -35,9 +35,18 @@ type Order = {
   city: string;
   itemsJson: { productId: string; name: string; priceCents: number; qty: number }[];
   totalCents: number;
+  carrier: string | null;
+  trackingNumber: string | null;
   createdAt: string;
 };
-const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { RECEIVED: "Ontvangen", CONFIRMED: "Bevestigd", SHIPPED: "Verzonden", CANCELLED: "Geannuleerd" };
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  PENDING_PAYMENT: "Wacht op betaling",
+  RECEIVED: "Betaald",
+  CONFIRMED: "Bevestigd",
+  SHIPPED: "Verzonden",
+  CANCELLED: "Geannuleerd",
+  PAYMENT_FAILED: "Betaling mislukt",
+};
 
 const money = (euros: number) => `€ ${euros.toFixed(2).replace(".", ",")}`;
 
@@ -71,6 +80,16 @@ export function ShopAdmin() {
     const response = await fetch(`/api/shop/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     const data = await response.json();
     if (!response.ok) { setOrderMessage(data?.error?.message ?? "Status bijwerken mislukt."); return; }
+    await loadOrders();
+  };
+  const setOrderTracking = async (id: string, carrier: string, trackingNumber: string) => {
+    const response = await fetch(`/api/shop/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ carrier: carrier || null, trackingNumber: trackingNumber || null }),
+    });
+    const data = await response.json();
+    if (!response.ok) { setOrderMessage(data?.error?.message ?? "Tracking bijwerken mislukt."); return; }
     await loadOrders();
   };
 
@@ -126,13 +145,27 @@ export function ShopAdmin() {
               <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{order.itemsJson.map((l) => `${l.qty}x ${l.name}`).join(", ")}</p>
               <p className="mt-1 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</p>
             </div>
-            <select
-              className="a-input w-auto"
-              value={order.status}
-              onChange={(e) => setOrderStatus(order.id, e.target.value as OrderStatus)}
-            >
-              {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <select
+                className="a-input w-auto"
+                value={order.status}
+                onChange={(e) => setOrderStatus(order.id, e.target.value as OrderStatus)}
+              >
+                {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  void setOrderTracking(order.id, String(fd.get("carrier") ?? ""), String(fd.get("trackingNumber") ?? ""));
+                }}
+              >
+                <input name="carrier" defaultValue={order.carrier ?? ""} placeholder="postnl / dhl" className="a-input w-24 text-xs" />
+                <input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="Track & trace" className="a-input w-32 text-xs" />
+                <button type="submit" className="a-button text-xs">Opslaan</button>
+              </form>
+            </div>
           </div>
         ))}
       </div>

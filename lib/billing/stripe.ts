@@ -118,6 +118,55 @@ export async function createBillingPortalSession(
   return stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl });
 }
 
+export interface ShopOrderCheckoutInput {
+  orderId: string;
+  email: string;
+  lines: { name: string; priceCents: number; qty: number }[];
+  shippingCents: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/**
+ * One-off Checkout Session for a /shop order. Line items are re-priced
+ * server-side before this is ever called (see app/api/shop/orders/route.ts) —
+ * this just reflects that already-trusted total to Stripe.
+ */
+export async function createShopOrderCheckoutSession(
+  input: ShopOrderCheckoutInput,
+): Promise<Stripe.Checkout.Session> {
+  const stripe = getStripeClient();
+
+  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = input.lines.map((l) => ({
+    price_data: {
+      currency: "eur",
+      product_data: { name: l.name },
+      unit_amount: l.priceCents,
+    },
+    quantity: l.qty,
+  }));
+  if (input.shippingCents > 0) {
+    line_items.push({
+      price_data: {
+        currency: "eur",
+        product_data: { name: "Verzending" },
+        unit_amount: input.shippingCents,
+      },
+      quantity: 1,
+    });
+  }
+
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items,
+    customer_email: input.email,
+    metadata: { shopOrderId: input.orderId },
+    payment_intent_data: { metadata: { shopOrderId: input.orderId } },
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+  });
+}
+
 /** Get-or-create the Stripe Customer for a tenant, persisting the id. Call inside the caller's own transaction/update if atomicity matters. */
 export async function ensureStripeCustomer(input: {
   existingCustomerId: string | null;

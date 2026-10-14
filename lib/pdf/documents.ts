@@ -99,6 +99,56 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   return { bytes: pdf.toBuffer(), filename: `${inv.number}.pdf` };
 }
 
+interface ShopOrderLine {
+  name: string;
+  priceCents: number;
+  qty: number;
+}
+
+/** Build an A4 receipt/invoice PDF for a paid /shop order. Returns null if not found or not yet paid. */
+export async function shopOrderReceiptPdf(orderId: string): Promise<{ bytes: Buffer; filename: string } | null> {
+  const order = await prisma.shopOrder.findUnique({ where: { id: orderId } });
+  if (!order) return null;
+
+  const lines = (order.itemsJson as unknown as ShopOrderLine[]) ?? [];
+
+  const pdf = new SimplePdf();
+  pdf.heading("ZekerFlex — Werk & PBM shop", 18);
+  pdf.line(order.status === "RECEIVED" ? "Betaalde bestelling" : "Bestelling", 11, { color: [0.05, 0.36, 0.29] });
+  pdf.gap(8);
+  pdf.rule();
+
+  pdf.row("Referentie", order.id, { bold: true });
+  pdf.row("Datum", nlDate(order.createdAt));
+  pdf.row("Naam", `${order.firstName} ${order.lastName}`);
+  pdf.row("Adres", `${order.address}, ${order.postalCode} ${order.city}`);
+  pdf.gap(6);
+  pdf.rule();
+
+  pdf.line("Artikel", 10, { bold: true });
+  pdf.gap(2);
+  for (const l of lines) {
+    pdf.row(`${l.qty}x ${l.name}`, euro(l.priceCents * l.qty));
+  }
+  pdf.gap(4);
+  pdf.rule();
+
+  pdf.row("Subtotaal", euro(order.subtotalCents));
+  pdf.row("Verzending", order.shippingCents === 0 ? "Gratis" : euro(order.shippingCents));
+  pdf.row("Totaal", euro(order.totalCents), { bold: true, size: 12 });
+
+  pdf.gap(14);
+  pdf.line(
+    order.status === "RECEIVED" ? "Betaald via Stripe (iDEAL/kaart)." : "Betaalstatus: nog niet bevestigd.",
+    9.5,
+    { color: order.status === "RECEIVED" ? [0.05, 0.45, 0.2] : [0.45, 0.35, 0.05] },
+  );
+  pdf.gap(10);
+  pdf.line("ZekerFlex Sovereign Box — 100% in Nederland gehost.", 8.5, { color: [0.4, 0.45, 0.42] });
+
+  return { bytes: pdf.toBuffer(), filename: `bestelling-${order.id}.pdf` };
+}
+
 const nlLong = (d: Date | string) =>
   new Date(d).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const nlLongTime = (d: Date | string) =>

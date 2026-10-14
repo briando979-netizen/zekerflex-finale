@@ -1850,30 +1850,36 @@ model ShopProduct {
 }
 
 enum ShopOrderStatus {
-  RECEIVED
+  PENDING_PAYMENT // Stripe Checkout session created, awaiting payment confirmation
+  RECEIVED // paid — ready for fulfillment
   CONFIRMED
   SHIPPED
   CANCELLED
+  PAYMENT_FAILED
 }
 
 // Real order capture for the /shop checkout — the items are a priced snapshot
 // at order time (name/price can change later on ShopProduct; this is what the
 // customer actually agreed to pay).
 model ShopOrder {
-  id            String          @id @default(cuid())
-  status        ShopOrderStatus @default(RECEIVED)
-  firstName     String
-  lastName      String
-  email         String
-  address       String
-  postalCode    String
-  city          String
-  itemsJson     Json
-  subtotalCents Int
-  shippingCents Int
-  totalCents    Int
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id                     String          @id @default(cuid())
+  status                 ShopOrderStatus @default(PENDING_PAYMENT)
+  firstName              String
+  lastName               String
+  email                  String
+  address                String
+  postalCode             String
+  city                   String
+  itemsJson              Json
+  subtotalCents          Int
+  shippingCents          Int
+  totalCents             Int
+  stripeSessionId        String?         @unique
+  stripePaymentIntentId  String?         @unique
+  carrier                String? // e.g. "postnl" | "dhl" - free text, shown next to the tracking link
+  trackingNumber         String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   @@index([status, createdAt])
   @@index([email])

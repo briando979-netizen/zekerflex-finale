@@ -5,11 +5,11 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { getPrincipal, requireRole } from "@/lib/auth";
-import { sendMail, mailShell } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
 import { recordAudit } from "@/lib/audit";
+import { createShopOrderCheckoutSession } from "@/lib/billing/stripe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,16 +53,21 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const products = await prisma.shopProduct.findMany({
       where: { id: { in: d.items.map((i) => i.productId) }, active: true },
-      select: { id: true, name: true, priceCents: true },
+      select: { id: true, name: true, priceCents: true, imageUrl: true },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
     const lines = d.items
       .map((i) => {
         const p = byId.get(i.productId);
-        return p ? { productId: p.id, name: p.name, priceCents: p.priceCents, qty: i.qty } : null;
+        return p
+          ? { productId: p.id, name: p.name, priceCents: p.priceCents, qty: i.qty, imageUrl: p.imageUrl }
+          : null;
       })
-      .filter((l): l is { productId: string; name: string; priceCents: number; qty: number } => l !== null);
+      .filter(
+        (l): l is { productId: string; name: string; priceCents: number; qty: number; imageUrl: string | null } =>
+          l !== null,
+      );
 
     if (lines.length === 0) {
       throw AppError.validation("Geen van deze producten is nog beschikbaar.");
@@ -74,6 +79,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const order = await prisma.shopOrder.create({
       data: {
+        status: "PENDING_PAYMENT",
         firstName: d.firstName,
         lastName: d.lastName,
         email: d.email,
@@ -91,52 +97,36 @@ export async function POST(request: Request): Promise<NextResponse> {
       category: "ADMIN",
       action: "shop.order.created",
       actorLabel: "system",
-      summary: `Shopbestelling ${order.id} ontvangen (${money(totalCents)}, ${lines.length} regel(s))`,
+      summary: `Shopbestelling ${order.id} aangemaakt, wacht op betaling (${money(totalCents)}, ${lines.length} regel(s))`,
       targetType: "shop-order",
       targetId: order.id,
       metadata: { email: d.email, totalCents, lines: lines.length },
     });
 
-    const lineRows = lines
-      .map((l) => `${l.qty}x ${l.name} — ${money(l.priceCents * l.qty)}`)
-      .join("\n");
-    const lineRowsHtml = lines
-      .map((l) => `<tr><td style="padding:4px 0">${l.qty}x ${l.name.replace(/</g, "&lt;")}</td><td style="padding:4px 0;text-align:right">${money(l.priceCents * l.qty)}</td></tr>`)
-      .join("");
+    // Confirmation mails go out from the Stripe webhook once payment is
+    // actually confirmed (app/api/webhooks/stripe/route.ts) — never here,
+    // since nothing has been paid yet at this point.
+    const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
+    let session;
+    try {
+      session = await createShopOrderCheckoutSession({
+        orderId: order.id,
+        email: d.email,
+        lines: lines.map((l) => ({ name: l.name, priceCents: l.priceCents, qty: l.qty })),
+        shippingCents,
+        successUrl: `${baseUrl}/shop/bestelling/${order.id}?paid=1`,
+        cancelUrl: `${baseUrl}/shop/bestelling/${order.id}?cancelled=1`,
+      });
+    } catch (err) {
+      logger.error("shop order checkout session failed", { orderId: order.id, error: (err as Error).message });
+      await prisma.shopOrder.update({ where: { id: order.id }, data: { status: "PAYMENT_FAILED" } });
+      throw AppError.upstream("Kon geen betaalscherm starten — probeer het zo opnieuw.");
+    }
 
-    await sendMail({
-      to: env.MAIL_ADMIN,
-      replyTo: d.email,
-      kind: "shop-order",
-      subject: `Nieuwe shopbestelling — ${order.id}`,
-      text: `Nieuwe bestelling via de ZekerFlex-shop\n\n${d.firstName} ${d.lastName}\n${d.email}\n${d.address}, ${d.postalCode} ${d.city}\n\n${lineRows}\n\nSubtotaal: ${money(subtotalCents)}\nVerzending: ${shippingCents === 0 ? "Gratis" : money(shippingCents)}\nTotaal: ${money(totalCents)}\n\nBestelreferentie: ${order.id}`,
-      html: mailShell(
-        "Nieuwe shopbestelling",
-        `<p style="margin:0 0 4px"><strong>${d.firstName} ${d.lastName}</strong></p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${d.email}<br/>${d.address}, ${d.postalCode} ${d.city}</p>
-         <table style="width:100%;font-size:14px;color:#3C4A42">${lineRowsHtml}</table>
-         <p style="margin:10px 0 0;font-size:14px;color:#3C4A42">Totaal: <strong>${money(totalCents)}</strong></p>
-         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
-      ),
-    }).catch((e) => logger.warn("shop order notify failed", { error: (e as Error).message }));
+    await prisma.shopOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
 
-    await sendMail({
-      to: d.email,
-      from: env.MAIL_FROM,
-      kind: "shop-order-bevestiging",
-      subject: "Je bestelling bij de ZekerFlex-shop",
-      text: `Hoi ${d.firstName},\n\nBedankt voor je bestelling. We hebben 'm ontvangen en gaan 'm inpakken.\n\n${lineRows}\n\nTotaal: ${money(totalCents)}\n\nBestelreferentie: ${order.id}`,
-      html: mailShell(
-        "Bestelling ontvangen",
-        `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${d.firstName}, bedankt voor je bestelling. We hebben 'm ontvangen en gaan 'm inpakken.</p>
-         <table style="width:100%;font-size:14px;color:#3C4A42">${lineRowsHtml}</table>
-         <p style="margin:10px 0 0;font-size:14px;color:#3C4A42">Totaal: <strong>${money(totalCents)}</strong></p>
-         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
-      ),
-    }).catch((e) => logger.warn("shop order confirmation failed", { error: (e as Error).message }));
-
-    logger.info("shop order received", { id: order.id, totalCents, lines: lines.length });
-    return NextResponse.json({ ok: true, id: order.id, totalCents });
+    logger.info("shop order pending payment", { id: order.id, totalCents, lines: lines.length });
+    return NextResponse.json({ ok: true, id: order.id, totalCents, checkoutUrl: session.url });
   } catch (err) {
     const res = jsonError(err);
     if (res.status >= 500) logger.error("shop order failed", { error: (err as Error).message });
