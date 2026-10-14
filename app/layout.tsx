@@ -5,6 +5,7 @@ import "./globals.css";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
+import { CookieConsent } from "@/components/marketing/CookieConsent";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const TITLE = `${SITE.name} — ${SITE.tagline}`;
@@ -110,6 +111,7 @@ export default async function RootLayout({
           }}
         />
         <Providers>{children}</Providers>
+        <CookieConsent />
         <Suspense fallback={null}>
           <AnalyticsBeacon />
         </Suspense>

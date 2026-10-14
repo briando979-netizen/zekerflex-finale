@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 
 // Gedeelde shop-chrome: promo-balk, brede header met categorie-nav + gecentreerd
 // logo + winkelwagen, en de uitgebreide footer. Zit in app/shop/layout.tsx zodat
@@ -162,7 +163,8 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             <div className="flex flex-wrap gap-4">
               <Link href="/privacy" className="hover:text-ink">Privacyverklaring</Link>
               <Link href="/voorwaarden" className="hover:text-ink">Algemene voorwaarden</Link>
-              <button type="button" className="hover:text-ink">Cookie-instellingen</button>
+              <Link href="/cookiebeleid" className="hover:text-ink">Cookiebeleid</Link>
+              <CookieSettingsButton className="hover:text-ink" />
               <Link href="/toegankelijkheid" className="hover:text-ink">Toegankelijkheid</Link>
             </div>
           </div>

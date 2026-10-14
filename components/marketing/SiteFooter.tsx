@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { SocialLinks } from "@/components/marketing/SocialLinks";
+import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -116,6 +117,10 @@ export function SiteFooter() {
             </Link>
             <Link href="/cookiebeleid" className="hover:text-white">
               Cookiebeleid
+            </Link>
+            <CookieSettingsButton className="hover:text-white" />
+            <Link href="/toegankelijkheid" className="hover:text-white">
+              Toegankelijkheid
             </Link>
             <Link href="/dsa" className="hover:text-white">
               Digital Services Act

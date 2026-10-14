@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { canonical, productJsonLd } from "@/lib/seo";
 import { ProductDetail, type PdpProduct } from "@/components/marketing/ProductDetail";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +20,12 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const params = await props.params;
   const p = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
   if (!p) return { title: "Product niet gevonden — ZekerFlex Shop" };
+  const title = `${p.name} — ZekerFlex Shop`;
+  const description = p.description.slice(0, 160);
   return {
-    title: `${p.name} — ZekerFlex Shop`,
-    description: p.description.slice(0, 160),
-    alternates: { canonical: `/shop/${p.slug}` },
+    title,
+    description,
+    ...canonical(`/shop/${p.slug}`, { title, description, ...(p.imageUrl ? { image: p.imageUrl } : {}) }),
   };
 }
 
@@ -37,5 +40,25 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     take: 4,
   });
 
-  return <ProductDetail product={toDto(product)} related={related.map(toDto)} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            productJsonLd({
+              name: product.name,
+              description: product.description,
+              slug: product.slug,
+              priceCents: product.priceCents,
+              inStock: product.stock > 0,
+              imageUrl: product.imageUrl,
+            }),
+          ),
+        }}
+      />
+      <ProductDetail product={toDto(product)} related={related.map(toDto)} />
+    </>
+  );
 }

@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/seo";
+import { prisma } from "@/lib/prisma";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const entry = (
     path: string,
@@ -49,6 +50,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry("/privacy", 0.3, "yearly"),
     entry("/voorwaarden", 0.3, "yearly"),
     entry("/cookiebeleid", 0.3, "yearly"),
+    entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
+
+    // Shop — the storefront and every active product's own page
+    entry("/shop", 0.7, "daily"),
+    ...(await prisma.shopProduct.findMany({
+      where: { active: true },
+      select: { slug: true, updatedAt: true },
+    })).map((p) => entry(`/shop/${p.slug}`, 0.6, "weekly", p.updatedAt)),
   ];
 }

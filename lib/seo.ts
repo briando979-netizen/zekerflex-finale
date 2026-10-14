@@ -238,7 +238,7 @@ const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630,
  */
 export function canonical(
   path: string,
-  og?: { title?: string; description?: string },
+  og?: { title?: string; description?: string; image?: string },
 ): { alternates: { canonical: string }; openGraph: Record<string, unknown> } {
   return {
     alternates: { canonical: path },
@@ -247,9 +247,39 @@ export function canonical(
       type: "website",
       siteName: SITE.name,
       locale: SITE.locale,
-      images: [OG_IMAGE],
+      images: [og?.image ? { url: og.image, width: 1200, height: 1200, alt: og.title ?? SITE.name } : OG_IMAGE],
       ...(og?.title ? { title: og.title } : {}),
       ...(og?.description ? { description: og.description } : {}),
+    },
+  };
+}
+
+/**
+ * schema.org Product — one per active /shop/[slug] page, so individual
+ * products are eligible for price/availability rich results in search.
+ */
+export function productJsonLd(p: {
+  name: string;
+  description: string;
+  slug: string;
+  priceCents: number;
+  inStock: boolean;
+  imageUrl?: string | null;
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: p.name,
+    description: p.description,
+    image: p.imageUrl ? (p.imageUrl.startsWith("http") ? p.imageUrl : `${SITE.url}${p.imageUrl}`) : `${SITE.url}/opengraph-image`,
+    brand: { "@type": "Brand", name: SITE.name },
+    offers: {
+      "@type": "Offer",
+      url: `${SITE.url}/shop/${p.slug}`,
+      priceCurrency: "EUR",
+      price: (p.priceCents / 100).toFixed(2),
+      availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: { "@id": ORG_ID },
     },
   };
 }

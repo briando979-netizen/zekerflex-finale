@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonical } from "@/lib/seo";
+import { canonical, productJsonLd } from "@/lib/seo";
 
 // canonical() previously returned just { openGraph: { url } } — since Next.js
 // metadata merging REPLACES a parent segment's `openGraph` object wholesale
@@ -34,5 +34,48 @@ describe("canonical", () => {
     const { openGraph } = canonical("/prijzen");
     expect(openGraph.title).toBeUndefined();
     expect(openGraph.description).toBeUndefined();
+  });
+
+  it("uses a page-specific image when given one (e.g. a shop product photo)", () => {
+    const { openGraph } = canonical("/shop/werkhandschoenen", { title: "Werkhandschoenen", image: "/shop/gloves.jpg" });
+    expect(openGraph.images).toEqual([
+      { url: "/shop/gloves.jpg", width: 1200, height: 1200, alt: "Werkhandschoenen" },
+    ]);
+  });
+});
+
+describe("productJsonLd", () => {
+  const BASE = {
+    name: "Werkhandschoenen met grip",
+    description: "Ademende nitril-coating, sterke grip.",
+    slug: "werkhandschoenen-grip",
+    priceCents: 1295,
+    inStock: true,
+  };
+
+  it("builds a schema.org Product with an EUR Offer", () => {
+    const ld = productJsonLd(BASE);
+    expect(ld["@type"]).toBe("Product");
+    expect(ld.offers).toMatchObject({
+      "@type": "Offer",
+      priceCurrency: "EUR",
+      price: "12.95",
+      availability: "https://schema.org/InStock",
+    });
+  });
+
+  it("marks out-of-stock products accordingly rather than always claiming availability", () => {
+    const ld = productJsonLd({ ...BASE, inStock: false });
+    expect((ld.offers as { availability: string }).availability).toBe("https://schema.org/OutOfStock");
+  });
+
+  it("resolves a relative product image against the site origin", () => {
+    const ld = productJsonLd({ ...BASE, imageUrl: "/shop/gloves.jpg" });
+    expect(ld.image).toMatch(/^https?:\/\/.*\/shop\/gloves\.jpg$/);
+  });
+
+  it("falls back to the default OG image when the product has none", () => {
+    const ld = productJsonLd({ ...BASE, imageUrl: null });
+    expect(ld.image).toMatch(/\/opengraph-image$/);
   });
 });
