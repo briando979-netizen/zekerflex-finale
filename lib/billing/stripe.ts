@@ -162,6 +162,10 @@ export async function createShopOrderCheckoutSession(
     customer_email: input.email,
     metadata: { shopOrderId: input.orderId },
     payment_intent_data: { metadata: { shopOrderId: input.orderId } },
+    // De shop belooft op meerdere plekken een "WELKOM10"-kortingscode bij
+    // nieuwsbrief-inschrijving — zonder dit vinkje heeft Checkout geen veld
+    // om die code in te vullen, dus de belofte zou nergens inlosbaar zijn.
+    allow_promotion_codes: true,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
   });

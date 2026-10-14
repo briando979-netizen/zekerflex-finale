@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 
 // De shop-homepage: hero-carrousel, productraster, categorie-/inspiratielijsten
@@ -27,6 +28,18 @@ type Product = {
 };
 
 const oneSize = (id: string, stock = 10): Variant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
+
+type PriceBucket = "Alle" | "onder15" | "15-30" | "vanaf30";
+const PRICE_BUCKET_LABEL: Record<PriceBucket, string> = { Alle: "Alle prijzen", onder15: "Tot € 15", "15-30": "€ 15 – € 30", vanaf30: "Vanaf € 30" };
+const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
+  if (bucket === "Alle") return true;
+  if (bucket === "onder15") return price < 15;
+  if (bucket === "15-30") return price >= 15 && price <= 30;
+  return price > 30;
+};
+
+type SortOrder = "relevantie" | "prijs-op" | "prijs-af" | "naam";
+const SORT_LABEL: Record<SortOrder, string> = { relevantie: "Relevantie", "prijs-op": "Prijs: laag naar hoog", "prijs-af": "Prijs: hoog naar laag", naam: "Naam A–Z" };
 
 const FALLBACK: Product[] = [
   { id: "shoes-s3", slug: "veiligheidsschoenen-s3", name: "Veiligheidsschoenen S3", description: "Stalen neus, doortreedbescherming en antislipzool.", price: 49.95, category: "Werk & PBM", label: "Verplicht PBM", imageUrl: "/shifts/logistiek.jpg", variants: oneSize("shoes-s3") },
@@ -66,10 +79,16 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
   const [category, setCategory] = useState<Category>(initialCat);
   const [gender, setGender] = useState<Gender>("Alle");
   const [query, setQuery] = useState("");
+  const [onlyWishlist, setOnlyWishlist] = useState(false);
+  const [sizeFilter, setSizeFilter] = useState<string>("Alle");
+  const [colorFilter, setColorFilter] = useState<string>("Alle");
+  const [priceBucket, setPriceBucket] = useState<PriceBucket>("Alle");
+  const [sort, setSort] = useState<SortOrder>("relevantie");
   const [catalog, setCatalog] = useState<Product[]>(FALLBACK);
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(true);
   const { add } = useShopCart();
+  const wishlist = useShopWishlist();
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => setCategory(initialCat), [initialCat]);
@@ -111,15 +130,46 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
     return () => clearInterval(t);
   }, [playing]);
 
-  const shown = useMemo(() => {
+  // Basisset vóór maat/kleur/prijs — hierop worden de beschikbare
+  // filteropties berekend, zodat een gekozen filter niet zijn eigen
+  // alternatieven uit de lijst laat verdwijnen.
+  const facetScope = useMemo(() => {
     const q = query.trim().toLowerCase();
     return catalog.filter(
       (p) =>
         (category === "Alles" || p.category === category) &&
         (gender === "Alle" || p.gender === GENDER_VALUE[gender]) &&
+        (!onlyWishlist || wishlist.has(p.id)) &&
         (!q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)),
     );
-  }, [catalog, category, gender, query]);
+  }, [catalog, category, gender, query, onlyWishlist, wishlist]);
+
+  const availableSizes = useMemo(
+    () => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))],
+    [facetScope],
+  );
+  const availableColors = useMemo(
+    () => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.color).filter((c): c is string => Boolean(c))))],
+    [facetScope],
+  );
+
+  useEffect(() => { if (sizeFilter !== "Alle" && !availableSizes.includes(sizeFilter)) setSizeFilter("Alle"); }, [availableSizes, sizeFilter]);
+  useEffect(() => { if (colorFilter !== "Alle" && !availableColors.includes(colorFilter)) setColorFilter("Alle"); }, [availableColors, colorFilter]);
+
+  const shown = useMemo(() => {
+    const filtered = facetScope.filter(
+      (p) =>
+        (sizeFilter === "Alle" || p.variants.some((v) => v.size === sizeFilter)) &&
+        (colorFilter === "Alle" || p.variants.some((v) => v.color === colorFilter)) &&
+        inPriceBucket(p.price, priceBucket),
+    );
+    if (sort === "relevantie") return filtered;
+    const sorted = [...filtered];
+    if (sort === "prijs-op") sorted.sort((a, b) => a.price - b.price);
+    else if (sort === "prijs-af") sorted.sort((a, b) => b.price - a.price);
+    else sorted.sort((a, b) => a.name.localeCompare(b.name, "nl"));
+    return sorted;
+  }, [facetScope, sizeFilter, colorFilter, priceBucket, sort]);
 
   const pick = (c: Category) => {
     setCategory(c);
@@ -201,11 +251,53 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
             {SUB_NAV.map((c) => (
               <button key={c} type="button" onClick={() => setCategory(c)} className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${category === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}>{c}</button>
             ))}
+            <button
+              type="button"
+              onClick={() => setOnlyWishlist((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${onlyWishlist ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+            >
+              <IconHeart filled={onlyWishlist} /> Favorieten{wishlist.count > 0 ? ` (${wishlist.count})` : ""}
+            </button>
           </div>
         </div>
 
+        <div className="mb-6 flex flex-wrap items-center gap-3 border-y border-hair py-3">
+          {availableSizes.length > 0 && (
+            <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
+              Maat
+              <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
+                <option value="Alle">Alle</option>
+                {availableSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+          )}
+          {availableColors.length > 0 && (
+            <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
+              Kleur
+              <select value={colorFilter} onChange={(e) => setColorFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
+                <option value="Alle">Alle</option>
+                {availableColors.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          )}
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
+            Prijs
+            <select value={priceBucket} onChange={(e) => setPriceBucket(e.target.value as PriceBucket)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
+              {(Object.keys(PRICE_BUCKET_LABEL) as PriceBucket[]).map((b) => <option key={b} value={b}>{PRICE_BUCKET_LABEL[b]}</option>)}
+            </select>
+          </label>
+          <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-neutralx-600">
+            Sorteren
+            <select value={sort} onChange={(e) => setSort(e.target.value as SortOrder)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
+              {(Object.keys(SORT_LABEL) as SortOrder[]).map((s) => <option key={s} value={s}>{SORT_LABEL[s]}</option>)}
+            </select>
+          </label>
+        </div>
+
         {shown.length === 0 ? (
-          <p className="py-16 text-center text-sm text-neutralx-500">Geen artikelen gevonden.</p>
+          <p className="py-16 text-center text-sm text-neutralx-500">
+            {onlyWishlist ? "Nog niets aan je favorieten toegevoegd." : "Geen artikelen gevonden."}
+          </p>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
             {shown.map((p) => {
@@ -220,6 +312,14 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
                       <div className="grid h-full w-full place-items-center"><LogoGlyph size={64} tone="dark" /></div>
                     )}
                     {p.label && <span className="absolute left-3 top-3 rounded bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">{p.label}</span>}
+                    <button
+                      type="button"
+                      aria-label={wishlist.has(p.id) ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+                      onClick={(e) => { e.preventDefault(); wishlist.toggle(p.id); }}
+                      className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
+                    >
+                      <IconHeart filled={wishlist.has(p.id)} />
+                    </button>
                     {singleVariant ? (
                       <button
                         type="button"
@@ -301,6 +401,14 @@ function IconSearch() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-neutralx-400">
       <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+export function IconHeart({ filled }: { filled: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s-7.5-4.6-10-9.1C.5 8.6 2 5 5.6 5 8 5 10 6.5 12 9c2-2.5 4-4 6.4-4C22 5 23.5 8.6 22 11.9 19.5 16.4 12 21 12 21z" />
     </svg>
   );
 }

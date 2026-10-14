@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import { useShopWishlist } from "@/components/marketing/useShopWishlist";
+import { IconHeart } from "@/components/marketing/ShopStorefront";
 import { specFor } from "@/lib/shop/product-specs";
 
 export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
@@ -27,6 +29,7 @@ const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",
 
 export function ProductDetail({ product, related }: { product: PdpProduct; related: PdpProduct[] }) {
   const { add, count } = useShopCart();
+  const wishlist = useShopWishlist();
   const spec = useMemo(() => specFor(product.slug, product.description), [product]);
   const gallery = [product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[];
   const [active, setActive] = useState(0);
@@ -92,9 +95,19 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
 
         {/* info */}
         <div>
-          {product.badge && (
-            <span className="inline-block rounded bg-mintwash px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">{product.badge}</span>
-          )}
+          <div className="flex items-start justify-between gap-3">
+            {product.badge ? (
+              <span className="inline-block rounded bg-mintwash px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">{product.badge}</span>
+            ) : <span />}
+            <button
+              type="button"
+              aria-label={wishlist.has(product.id) ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+              onClick={() => wishlist.toggle(product.id)}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-hairstrong text-ink transition hover:border-ink"
+            >
+              <IconHeart filled={wishlist.has(product.id)} />
+            </button>
+          </div>
           <h1 className="mt-2 font-display text-3xl font-bold leading-tight">{product.name}</h1>
           <p className="mt-3 text-2xl font-bold">{money(variantPriceCents)}</p>
           <p className="mt-1 text-xs text-neutralx-500">Incl. btw · gratis verzending vanaf € 50</p>
