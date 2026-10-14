@@ -249,7 +249,19 @@ export function ControlCenter() {
             </div>
           </APanel>
 
-          <APanel title="Agenten" subtitle="Autonome onderdelen">
+          <APanel
+            title="Agenten"
+            subtitle="Autonome onderdelen"
+            action={
+              <Link
+                href="/admin/sim"
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                style={{ background: "rgba(16,185,129,0.15)", color: "#4ade80" }}
+              >
+                Open de Sim →
+              </Link>
+            }
+          >
             <div className="grid grid-cols-2 gap-2.5">
               {(["jarvis", "analyst", "developer:tom", "sales"] as const).map((a) => {
                 const row = o?.agents.find((r) => r.agent === a);
@@ -363,6 +375,8 @@ export function ControlCenter() {
                 /* eslint-disable react/jsx-key */
                 [
                   ["Jarvis-console", "/admin/jarvis", <IChat />],
+                  ["De Sim — kantoorvloer", "/admin/sim", <IPulse />],
+                  ["Advertentiegenerator", "/admin/ads", <IActivity />],
                   ["Wekelijkse verloning", "/admin/verloning", <IWallet />],
                   ["Verkeer & analytics", "/admin/analytics", <IActivity />],
                   ["Disputen", "/admin/disputes", <IShield />],

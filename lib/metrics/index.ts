@@ -127,3 +127,27 @@ export async function renderMetrics(): Promise<string> {
 export function metricsContentType(): string {
   return metrics().registry.contentType;
 }
+
+export interface CronJobStatus {
+  job: string;
+  /** null = never recorded a run since this process started. */
+  lastRunAt: string | null;
+  lastRunOk: boolean | null;
+}
+
+/** Real last-run/success readout for the background jobs scripts/daemon.mjs drives — for the admin Sim view. */
+export async function cronStatusSnapshot(jobs: readonly string[]): Promise<CronJobStatus[]> {
+  const m = metrics();
+  const [runGauge, successGauge] = await Promise.all([m.cronLastRun.get(), m.cronLastSuccess.get()]);
+  const runByJob = new Map(runGauge.values.map((v) => [v.labels.job as string, v.value]));
+  const successByJob = new Map(successGauge.values.map((v) => [v.labels.job as string, v.value]));
+
+  return jobs.map((job) => {
+    const ts = runByJob.get(job);
+    return {
+      job,
+      lastRunAt: ts ? new Date(ts * 1000).toISOString() : null,
+      lastRunOk: successByJob.has(job) ? successByJob.get(job) === 1 : null,
+    };
+  });
+}
