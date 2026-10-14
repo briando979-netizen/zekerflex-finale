@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { JOB_SKILLS } from "@/lib/jobs/skills";
 
 const ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt";
@@ -204,9 +205,9 @@ export function OpenApplicationForm() {
           Ik ga ermee akkoord dat ZekerFlex mijn gegevens en documenten verwerkt voor deze sollicitatie. Ze worden
           maximaal 6 maanden bewaard en daarna verwijderd, tenzij ik eerder om verwijdering vraag via
           werkenbij@zekerflex.com. Zie de{" "}
-          <a href="/privacy" className="underline hover:text-ink">
+          <Link href="/privacy" className="underline hover:text-ink">
             privacyverklaring
-          </a>
+          </Link>
           .
         </span>
       </label>

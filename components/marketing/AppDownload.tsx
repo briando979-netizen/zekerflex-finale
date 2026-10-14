@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 
 // Google Play badge, intentionally non-interactive: the Android app exists in
@@ -41,9 +42,9 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
             </div>
             <p className="mt-4 text-xs text-white/65">
               Ook zonder installeren werkt alles gewoon in je browser via{" "}
-              <a href="/login" className="underline hover:text-white/80">
+              <Link href="/login" className="underline hover:text-white/80">
                 inloggen
-              </a>
+              </Link>
               .
             </p>
           </div>

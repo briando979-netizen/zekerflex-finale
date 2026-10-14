@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { registerAction, type RegisterState } from "@/app/register/actions";
 import { googleLoginAction } from "@/app/login/actions";
@@ -372,8 +373,8 @@ export function RegisterForm({
 
       <p className="mt-4 text-xs leading-relaxed text-neutralx-400">
         Door een account aan te maken ga je akkoord met de{" "}
-        <a href="/voorwaarden" className="underline">voorwaarden</a> en de{" "}
-        <a href="/privacy" className="underline">privacyverklaring</a>.
+        <Link href="/voorwaarden" className="underline">voorwaarden</Link> en de{" "}
+        <Link href="/privacy" className="underline">privacyverklaring</Link>.
         {type === "freelancer" && " Na aanmelding rond je je profiel af met je KVK en identiteitsverificatie."}
       </p>
     </div>

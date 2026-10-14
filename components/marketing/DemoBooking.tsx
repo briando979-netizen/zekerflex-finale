@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
 
 type Step = "date" | "time" | "info" | "done";
@@ -262,9 +263,9 @@ export function DemoBooking() {
               />
               <span className="text-xs leading-relaxed text-neutralx-600">
                 Ik ga akkoord dat ZekerFlex mijn gegevens gebruikt om deze demo in te plannen. Zie de{" "}
-                <a href="/privacy" className="underline hover:text-ink">
+                <Link href="/privacy" className="underline hover:text-ink">
                   privacy policy
-                </a>
+                </Link>
                 .
               </span>
             </label>

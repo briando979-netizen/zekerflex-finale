@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPrincipal } from "@/lib/auth";
 import { acceptInvite } from "@/lib/communities/store";
@@ -23,9 +24,9 @@ export default async function JoinCommunityPage(
         <>
           <h1 className="font-display text-2xl font-bold text-ink">Je bent lid van “{community.name}”</h1>
           <p className="mt-2 text-sm text-neutralx-600">Je vindt de community-chat nu in je berichten.</p>
-          <a href="/dashboard/berichten" className="btn-primary mt-6 inline-block">
+          <Link href="/dashboard/berichten" className="btn-primary mt-6 inline-block">
             Naar berichten
-          </a>
+          </Link>
         </>
       ) : (
         <>
@@ -33,9 +34,9 @@ export default async function JoinCommunityPage(
           <p className="mt-2 text-sm text-neutralx-600">
             Deze uitnodiging is verlopen, al gebruikt, of voor een ander account bedoeld.
           </p>
-          <a href="/dashboard" className="btn-ghost mt-6 inline-block">
+          <Link href="/dashboard" className="btn-ghost mt-6 inline-block">
             Naar dashboard
-          </a>
+          </Link>
         </>
       )}
     </main>

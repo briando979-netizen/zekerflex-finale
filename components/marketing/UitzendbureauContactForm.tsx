@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export function UitzendbureauContactForm() {
   const [form, setForm] = useState({ contactName: "", company: "", email: "", phone: "", headcount: "", sector: "", note: "" });
@@ -131,9 +132,9 @@ export function UitzendbureauContactForm() {
           />
           <span className="text-xs leading-relaxed text-neutralx-600">
             Ik ga akkoord dat ZekerFlex mijn gegevens gebruikt om contact op te nemen. Zie de{" "}
-            <a href="/privacy" className="underline hover:text-ink">
+            <Link href="/privacy" className="underline hover:text-ink">
               privacy policy
-            </a>
+            </Link>
             .
           </span>
         </label>

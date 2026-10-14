@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type State = "idle" | "sending" | "done" | "error";
 
@@ -83,9 +84,9 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
         />
         <span>
           Ja, stuur me af en toe nieuws over ZekerFlex. Afmelden kan altijd. Zie de{" "}
-          <a href="/privacy" className="underline hover:text-white/80">
+          <Link href="/privacy" className="underline hover:text-white/80">
             privacyverklaring
-          </a>
+          </Link>
           .
         </span>
       </label>
