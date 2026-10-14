@@ -16,6 +16,9 @@ import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
 
 const OPEN_STATUSES = ["OPEN", "MATCHING", "PARTIALLY_FILLED"] as const;
 
+/** How long after a shift's real start time a late direct acceptance is still allowed (e.g. a no-show backfill). Mirrors app/dashboard/klussen/actions.ts's counter-offer path. */
+const LATE_ACCEPT_GRACE_MS = 2 * 60 * 60 * 1000;
+
 export interface ApplyResult {
   status: MatchStatus;
   shiftFilled: boolean;
@@ -74,7 +77,9 @@ export async function applyToShift(
   if (!OPEN_STATUSES.includes(shift.status as (typeof OPEN_STATUSES)[number])) {
     throw AppError.conflict("Deze dienst neemt geen aanmeldingen meer aan.");
   }
-  if (shift.startsAt.getTime() < Date.now()) throw AppError.conflict("Deze dienst is al begonnen.");
+  if (shift.startsAt.getTime() + LATE_ACCEPT_GRACE_MS < Date.now()) {
+    throw AppError.conflict("Deze dienst is al meer dan 2 uur geleden begonnen — aanmelden kan niet meer.");
+  }
   if (shift._count.assignments >= shift.positions) throw AppError.conflict("Deze dienst is al vol.");
 
   const already = await prisma.shiftAssignment.findUnique({

@@ -13,6 +13,9 @@ import { env } from "@/lib/env";
 const moneyExact = (c: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
 
+/** How long after a shift's real start time a late reaction/acceptance is still allowed (e.g. a no-show backfill). */
+const LATE_REACTION_GRACE_MS = 2 * 60 * 60 * 1000;
+
 export interface ApplyResult {
   ok: boolean;
   message: string;
@@ -109,8 +112,8 @@ export async function counterOfferAction(
     if (!["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
       return { ok: false, message: "Deze dienst neemt geen biedingen meer aan." };
     }
-    if (shift.startsAt.getTime() < Date.now()) {
-      return { ok: false, message: "Deze dienst is al begonnen." };
+    if (shift.startsAt.getTime() + LATE_REACTION_GRACE_MS < Date.now()) {
+      return { ok: false, message: "Deze dienst is al meer dan 2 uur geleden begonnen — reageren kan niet meer." };
     }
 
     await createCounterOffer({

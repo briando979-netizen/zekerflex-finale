@@ -75,3 +75,37 @@ describe("counterOfferAction — viaUitzendbureau gate", () => {
     expect(createCounterOffer).toHaveBeenCalled();
   });
 });
+
+describe("counterOfferAction — late-reaction grace window", () => {
+  it("still allows a tegenbod within 2 hours after the shift's real start", async () => {
+    requirePrincipal.mockResolvedValue(freelancer());
+    payoutEligibility.mockResolvedValue({ ok: true, track: "invoice", reason: null });
+    shiftFindUnique.mockResolvedValue({
+      ...uitzendShift,
+      viaUitzendbureau: false,
+      startsAt: new Date(Date.now() - 90 * 60_000), // 90 min ago
+    });
+    createCounterOffer.mockResolvedValue({ id: "o1" });
+
+    const result = await counterOfferAction("shift1", 1800, "");
+
+    expect(result.ok).toBe(true);
+    expect(createCounterOffer).toHaveBeenCalled();
+  });
+
+  it("refuses a tegenbod more than 2 hours after the shift's real start", async () => {
+    requirePrincipal.mockResolvedValue(freelancer());
+    payoutEligibility.mockResolvedValue({ ok: true, track: "invoice", reason: null });
+    shiftFindUnique.mockResolvedValue({
+      ...uitzendShift,
+      viaUitzendbureau: false,
+      startsAt: new Date(Date.now() - 150 * 60_000), // 2.5h ago
+    });
+
+    const result = await counterOfferAction("shift1", 1800, "");
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("2 uur");
+    expect(createCounterOffer).not.toHaveBeenCalled();
+  });
+});

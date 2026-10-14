@@ -122,19 +122,23 @@ function Modal({
   const [showDresscode, setShowDresscode] = useState(false);
   const [hours, setHours] = useState(4);
   const [extraIds, setExtraIds] = useState<Set<string>>(new Set());
+  const [extraRates, setExtraRates] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
 
   const rateCents = Math.round(parseFloat(rate.replace(",", ".")) * 100);
   const isCounter = Number.isFinite(rateCents) && rateCents !== listedRateCents;
   const canConfirm = okAgreement && okDresscode && !pending;
 
-  function toggleExtra(id: string) {
+  function toggleExtra(id: string, listedCents: number) {
     setExtraIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    setExtraRates((prev) =>
+      prev[id] !== undefined ? prev : { ...prev, [id]: (listedCents / 100).toFixed(2).replace(".", ",") },
+    );
   }
 
   function submit() {
@@ -142,6 +146,18 @@ function Modal({
     if (!okAgreement || !okDresscode) return setErr("Ga akkoord met de overeenkomst en de voorschriften.");
     if (!Number.isFinite(rateCents) || rateCents < 1000 || rateCents > 25000) {
       return setErr("Voer een uurtarief tussen € 10 en € 250 in.");
+    }
+    if (mode === "flex") {
+      if (from < startTime) return setErr(`Je starttijd kan niet eerder zijn dan ${startTime}, de werkelijke starttijd van de dienst.`);
+      if (to <= from) return setErr("De eindtijd moet na de starttijd liggen.");
+    }
+    const extraRateCents: Record<string, number> = {};
+    for (const id of extraIds) {
+      const cents = Math.round(parseFloat((extraRates[id] ?? "").replace(",", ".")) * 100);
+      if (!Number.isFinite(cents) || cents < 1000 || cents > 25000) {
+        return setErr("Voer voor elke geselecteerde extra klus een uurtarief tussen € 10 en € 250 in.");
+      }
+      extraRateCents[id] = cents;
     }
     const parts: string[] = [];
     if (motivation.trim()) parts.push(motivation.trim());
@@ -154,14 +170,14 @@ function Modal({
         const r = await counterOfferAction(shiftId, rateCents, note);
         if (!r.ok) throw new Error(r.message);
 
-        // Extra days from the same employer: at their own listed rate, no
-        // negotiation — best-effort, one failing doesn't undo the main
+        // Extra days from the same employer: each can carry its own
+        // tegenbod — best-effort, one failing doesn't undo the main
         // reaction that already succeeded.
         const extras = otherShifts.filter((o) => extraIds.has(o.id));
         let extraFailed = 0;
         if (extras.length > 0) {
           const results = await Promise.allSettled(
-            extras.map((o) => counterOfferAction(o.id, o.hourlyRateCents, note)),
+            extras.map((o) => counterOfferAction(o.id, extraRateCents[o.id] ?? o.hourlyRateCents, note)),
           );
           extraFailed = results.filter((res) => res.status === "rejected" || !res.value.ok).length;
         }
@@ -235,6 +251,8 @@ function Modal({
                     <input
                       type="time"
                       value={from}
+                      min={startTime}
+                      max={endTime}
                       onChange={(e) => setFrom(e.target.value)}
                       className="mt-1 w-full rounded border border-hairstrong px-2 py-1.5 text-sm"
                     />
@@ -244,6 +262,8 @@ function Modal({
                     <input
                       type="time"
                       value={to}
+                      min={from}
+                      max={endTime}
                       onChange={(e) => setTo(e.target.value)}
                       className="mt-1 w-full rounded border border-hairstrong px-2 py-1.5 text-sm"
                     />
@@ -287,33 +307,47 @@ function Modal({
               <div>
                 <p className="text-sm font-semibold text-ink">Ook reageren op andere klussen van {clientName}?</p>
                 <p className="mt-0.5 text-xs text-neutralx-500">
-                  Elke geselecteerde klus wordt apart ingediend tegen het daar geldende tarief.
+                  Elke geselecteerde klus wordt apart ingediend — je mag voor elke klus je eigen tarief voorstellen.
                 </p>
                 <div className="mt-2 space-y-2">
                   {otherShifts.map((o) => {
                     const od = new Date(o.startsAt);
+                    const checked = extraIds.has(o.id);
                     return (
-                      <label
+                      <div
                         key={o.id}
                         className="flex items-center justify-between gap-3 rounded-lg border border-hair px-3 py-2.5 text-sm"
                       >
-                        <span className="flex items-center gap-2.5">
+                        <label className="flex min-w-0 flex-1 items-center gap-2.5">
                           <input
                             type="checkbox"
-                            checked={extraIds.has(o.id)}
-                            onChange={() => toggleExtra(o.id)}
-                            className="h-4 w-4 accent-brand-500"
+                            checked={checked}
+                            onChange={() => toggleExtra(o.id, o.hourlyRateCents)}
+                            className="h-4 w-4 flex-shrink-0 accent-brand-500"
                           />
-                          <span>
-                            <span className="block font-medium text-ink">{o.title}</span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-ink">{o.title}</span>
                             <span className="block text-[11px] text-neutralx-400">
                               {od.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })} ·{" "}
                               {od.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </span>
-                        </span>
-                        <span className="flex-shrink-0 font-semibold text-ink">{moneyExact(o.hourlyRateCents)}/u</span>
-                      </label>
+                        </label>
+                        {checked ? (
+                          <span className="flex flex-shrink-0 items-center gap-1 font-semibold text-ink">
+                            €
+                            <input
+                              value={extraRates[o.id] ?? ""}
+                              inputMode="decimal"
+                              onChange={(e) => setExtraRates((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                              className="w-14 rounded border border-hairstrong bg-white px-1.5 py-1 text-right text-sm"
+                            />
+                            /u
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 font-semibold text-ink">{moneyExact(o.hourlyRateCents)}/u</span>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
