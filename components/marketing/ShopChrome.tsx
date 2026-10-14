@@ -137,7 +137,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
 
           <div className="flex flex-1 items-center justify-end gap-4">
             <span className="hidden text-xs font-semibold text-neutralx-500 sm:inline">NL</span>
-            <Link href="/dashboard" aria-label="Account" className="hover:text-brand-600"><IconUser /></Link>
+            <Link href="/shop/account" aria-label="Mijn account" className="hover:text-brand-600"><IconUser /></Link>
             <button type="button" onClick={() => setDrawer(true)} aria-label="Winkelwagen" className="relative hover:text-brand-600">
               <IconBag />
               {count > 0 && (
@@ -202,6 +202,22 @@ export function ShopChrome({ children }: { children: ReactNode }) {
               <h2 className="font-display text-xl font-bold">Winkelwagen ({count})</h2>
               <button type="button" onClick={() => setDrawer(false)} aria-label="Sluiten" className="grid h-9 w-9 place-items-center rounded-full border border-hair text-xl">×</button>
             </div>
+            {items.length > 0 && (
+              <div className="border-b border-hair py-3">
+                {subtotal >= 50 ? (
+                  <p className="text-xs font-semibold text-brand-600">✓ Je hebt gratis verzending</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-neutralx-600">
+                      Nog <span className="font-semibold text-ink">{money(50 - subtotal)}</span> voor gratis verzending
+                    </p>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-paper-soft">
+                      <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${Math.min(100, (subtotal / 50) * 100)}%` }} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto py-4">
               {items.length === 0 ? (
                 <div className="py-16 text-center"><LogoGlyph size={44} /><p className="mt-4 font-semibold">Je winkelwagen is leeg.</p></div>
@@ -238,6 +254,9 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                 <div className="mt-1 flex justify-between text-sm text-neutralx-600"><span>Verzending</span><span>{shipping === 0 ? "Gratis" : money(shipping)}</span></div>
                 <div className="mt-3 flex justify-between font-display text-lg font-bold"><span>Totaal</span><span>{money(total)}</span></div>
                 <button type="button" onClick={() => { setDrawer(false); setCheckout(true); }} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white">Afrekenen</button>
+                <Link href="/shop/account" onClick={() => setDrawer(false)} className="mt-3 block text-center text-xs font-semibold text-neutralx-500 hover:text-ink">
+                  Mijn bestellingen en favorieten →
+                </Link>
               </div>
             )}
           </aside>

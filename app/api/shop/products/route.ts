@@ -5,6 +5,7 @@ import { getPrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { shopImageRef } from "@/lib/shop/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,8 +23,8 @@ const productSchema = z.object({
   stock: z.number().int().nonnegative().max(1_000_000),
   imageUploadId: z.string().max(128).nullable().optional(),
   modelUploadId: z.string().max(128).nullable().optional(),
-  imageUrl: z.string().url().nullable().optional(),
-  modelPhotoUrl: z.string().url().nullable().optional(),
+  imageUrl: shopImageRef.nullable().optional(),
+  modelPhotoUrl: shopImageRef.nullable().optional(),
   badge: z.string().trim().max(40).nullable().optional(),
   active: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(100_000).default(0),

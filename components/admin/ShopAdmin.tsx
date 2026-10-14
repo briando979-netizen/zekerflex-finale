@@ -54,7 +54,18 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PAYMENT_FAILED: "Betaling mislukt",
 };
 
+type ShopStats = {
+  revenueCents: number;
+  revenue30dCents: number;
+  paidOrderCount: number;
+  pendingOrderCount: number;
+  totalOrderCount: number;
+  topProducts: { name: string; qty: number; revenueCents: number }[];
+  lowStock: { variantId: string; productName: string; slug: string; size: string | null; color: string | null; stock: number }[];
+};
+
 const money = (euros: number) => `€ ${euros.toFixed(2).replace(".", ",")}`;
+const moneyCents = (cents: number) => money(cents / 100);
 
 const marge = (priceCents: number, costCents: number | null) =>
   costCents && priceCents ? `${Math.round((1 - costCents / priceCents) * 100)}%` : "—";
@@ -70,6 +81,8 @@ export function ShopAdmin() {
   const [variantsOpen, setVariantsOpen] = useState<string | null>(null);
   const [variantForm, setVariantForm] = useState({ size: "", color: "", priceCents: "", stock: "0" });
   const [variantMessage, setVariantMessage] = useState("");
+  const [stats, setStats] = useState<ShopStats | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -83,13 +96,18 @@ export function ShopAdmin() {
     if (response.ok) setOrders(data.orders);
     else setOrderMessage(data?.error?.message ?? "Bestellingen konden niet worden geladen.");
   };
-  useEffect(() => { void load(); void loadOrders(); }, []);
+  const loadStats = async () => {
+    const response = await fetch("/api/shop/stats", { cache: "no-store" });
+    if (response.ok) setStats(await response.json());
+  };
+  useEffect(() => { void load(); void loadOrders(); void loadStats(); }, []);
 
   const setOrderStatus = async (id: string, status: OrderStatus) => {
     const response = await fetch(`/api/shop/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     const data = await response.json();
     if (!response.ok) { setOrderMessage(data?.error?.message ?? "Status bijwerken mislukt."); return; }
     await loadOrders();
+    await loadStats();
   };
   const setOrderTracking = async (id: string, carrier: string, trackingNumber: string) => {
     const response = await fetch(`/api/shop/orders/${id}`, {
@@ -121,11 +139,11 @@ export function ShopAdmin() {
     const response = await fetch(editing ? `/api/shop/products/${editing}` : "/api/shop/products", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     const data = await response.json();
     if (!response.ok) { setMessage(data?.error?.message ?? "Opslaan mislukt."); return; }
-    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setEditing(null); await load();
+    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setEditing(null); await load(); void loadStats();
   };
 
   const edit = (product: Product) => { setEditing(product.id); setForm(product); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); };
+  const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); void loadStats(); };
 
   const addVariant = async (productId: string) => {
     setVariantMessage("");
@@ -142,15 +160,82 @@ export function ShopAdmin() {
     const data = await response.json();
     if (!response.ok) { setVariantMessage(data?.error?.message ?? "Variant toevoegen mislukt."); return; }
     setVariantForm({ size: "", color: "", priceCents: "", stock: "0" });
-    await load();
+    await load(); void loadStats();
   };
   const removeVariant = async (productId: string, variantId: string) => {
     await fetch(`/api/shop/products/${productId}/variants/${variantId}`, { method: "DELETE" });
-    await load();
+    await load(); void loadStats();
   };
 
   return <div className="mx-auto max-w-7xl space-y-6">
-    <header className="a-panel flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="a-kicker">Commerce / catalogus</p><h1 className="a-title mt-2">Webshopbeheer</h1><p className="a-subtitle mt-1">Beheer assortiment, voorraad en alle beeldmaterialen van ZekerFlex.</p></div><a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk publieke shop ↗</a></header>
+    <header className="a-panel flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="a-kicker">Commerce / catalogus</p><h1 className="a-title mt-2">Webshopbeheer</h1><p className="a-subtitle mt-1">Beheer assortiment, voorraad en alle beeldmaterialen van ZekerFlex.</p></div><div className="flex gap-2"><button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg live preview" : "Live preview"}</button><a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk publieke shop ↗</a></div></header>
+
+    {stats && (
+      <section className="a-panel p-6">
+        <p className="a-kicker">Statistieken</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
+            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Omzet (betaald, totaal)</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{moneyCents(stats.revenueCents)}</p>
+          </div>
+          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
+            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Omzet laatste 30 dagen</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{moneyCents(stats.revenue30dCents)}</p>
+          </div>
+          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
+            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Betaalde bestellingen</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{stats.paidOrderCount}<span className="ml-2 text-sm font-normal" style={{ color: "var(--a-mute)" }}>/ {stats.totalOrderCount} totaal</span></p>
+          </div>
+          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
+            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Wacht op betaling</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{stats.pendingOrderCount}</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Bestverkocht</p>
+            {stats.topProducts.length === 0 ? (
+              <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen betaalde bestellingen.</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {stats.topProducts.map((p) => (
+                  <li key={p.name} className="flex justify-between" style={{ color: "var(--a-text)" }}>
+                    <span>{p.name}</span>
+                    <span style={{ color: "var(--a-mute)" }}>{p.qty}x · {moneyCents(p.revenueCents)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Lage voorraad (≤ 5)</p>
+            {stats.lowStock.length === 0 ? (
+              <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Niets kritiek — alle varianten hebben genoeg voorraad.</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {stats.lowStock.map((v) => (
+                  <li key={v.variantId} className="flex justify-between" style={{ color: "var(--a-text)" }}>
+                    <span>{v.productName}{[v.size, v.color].filter(Boolean).length > 0 ? ` (${[v.size, v.color].filter(Boolean).join(", ")})` : ""}</span>
+                    <span className={v.stock === 0 ? "font-semibold text-red-600" : ""} style={v.stock > 0 ? { color: "var(--a-mute)" } : undefined}>{v.stock} op voorraad</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {showPreview && (
+      <section className="a-panel overflow-hidden p-0">
+        <div className="flex items-center justify-between border-b p-4" style={{ borderColor: "var(--a-border)" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Live preview — /shop</p>
+          <p className="text-xs" style={{ color: "var(--a-mute)" }}>Dit is de echte, live site. Ververs na het opslaan van wijzigingen.</p>
+        </div>
+        <iframe src="/shop" title="Live preview van de shop" className="h-[600px] w-full border-0" />
+      </section>
+    )}
+
     <form onSubmit={save} className="a-panel grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button>{editing && <button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); }}>Annuleren</button>}</div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
