@@ -62,8 +62,9 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
               description: product.description,
               slug: product.slug,
               priceCents: product.priceCents,
-              inStock: product.variants.length > 0 ? product.variants.some((v) => v.stock > 0) : product.stock > 0,
+              inStock: product.stock > 0,
               imageUrl: product.imageUrl,
+              variants: product.variants.map((v) => ({ priceCents: v.priceCents, stock: v.stock })),
             }),
           ),
         }}

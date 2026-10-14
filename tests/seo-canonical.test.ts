@@ -78,4 +78,37 @@ describe("productJsonLd", () => {
     const ld = productJsonLd({ ...BASE, imageUrl: null });
     expect(ld.image).toMatch(/\/opengraph-image$/);
   });
+
+  it("still emits a single Offer when every variant shares the same price", () => {
+    const ld = productJsonLd({ ...BASE, variants: [{ priceCents: 1295, stock: 3 }, { priceCents: 1295, stock: 0 }] });
+    expect(ld.offers).toMatchObject({ "@type": "Offer", price: "12.95", availability: "https://schema.org/InStock" });
+  });
+
+  it("emits an AggregateOffer with low/high price when variants price differently, instead of one mismatched price", () => {
+    const ld = productJsonLd({
+      ...BASE,
+      variants: [
+        { priceCents: 1295, stock: 2 },
+        { priceCents: 1495, stock: 0 },
+      ],
+    });
+    expect(ld.offers).toMatchObject({
+      "@type": "AggregateOffer",
+      priceCurrency: "EUR",
+      lowPrice: "12.95",
+      highPrice: "14.95",
+      offerCount: 2,
+      availability: "https://schema.org/InStock",
+    });
+  });
+
+  it("rolls up availability from the variants (out of stock only when every variant is)", () => {
+    const ld = productJsonLd({ ...BASE, inStock: true, variants: [{ priceCents: 1295, stock: 0 }, { priceCents: 1295, stock: 0 }] });
+    expect((ld.offers as { availability: string }).availability).toBe("https://schema.org/OutOfStock");
+  });
+
+  it("ignores the stale top-level inStock flag once variants are given", () => {
+    const ld = productJsonLd({ ...BASE, inStock: false, variants: [{ priceCents: 1295, stock: 5 }] });
+    expect((ld.offers as { availability: string }).availability).toBe("https://schema.org/InStock");
+  });
 });

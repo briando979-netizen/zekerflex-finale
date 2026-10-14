@@ -257,6 +257,13 @@ export function canonical(
 /**
  * schema.org Product — one per active /shop/[slug] page, so individual
  * products are eligible for price/availability rich results in search.
+ *
+ * When a product has maat/kleur-varianten with their own prijs, a single
+ * fixed `price` would mismatch what the page actually shows once a shopper
+ * picks a variant — Google's structured-data rich results treat that
+ * mismatch as invalid markup. So with >1 distinct variant price this emits
+ * an AggregateOffer (lowPrice/highPrice) instead of one Offer; availability
+ * also rolls up from the variants rather than a single stale stock number.
  */
 export function productJsonLd(p: {
   name: string;
@@ -265,7 +272,36 @@ export function productJsonLd(p: {
   priceCents: number;
   inStock: boolean;
   imageUrl?: string | null;
+  variants?: { priceCents: number | null; stock: number }[];
 }): Record<string, unknown> {
+  const hasVariants = Boolean(p.variants && p.variants.length > 0);
+  const prices = hasVariants ? p.variants!.map((v) => v.priceCents ?? p.priceCents) : [p.priceCents];
+  const low = Math.min(...prices);
+  const high = Math.max(...prices);
+  const inStock = hasVariants ? p.variants!.some((v) => v.stock > 0) : p.inStock;
+  const availability = inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+
+  const offers =
+    low === high
+      ? {
+          "@type": "Offer",
+          url: `${SITE.url}/shop/${p.slug}`,
+          priceCurrency: "EUR",
+          price: (low / 100).toFixed(2),
+          availability,
+          seller: { "@id": ORG_ID },
+        }
+      : {
+          "@type": "AggregateOffer",
+          url: `${SITE.url}/shop/${p.slug}`,
+          priceCurrency: "EUR",
+          lowPrice: (low / 100).toFixed(2),
+          highPrice: (high / 100).toFixed(2),
+          offerCount: prices.length,
+          availability,
+          seller: { "@id": ORG_ID },
+        };
+
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -273,14 +309,7 @@ export function productJsonLd(p: {
     description: p.description,
     image: p.imageUrl ? (p.imageUrl.startsWith("http") ? p.imageUrl : `${SITE.url}${p.imageUrl}`) : `${SITE.url}/opengraph-image`,
     brand: { "@type": "Brand", name: SITE.name },
-    offers: {
-      "@type": "Offer",
-      url: `${SITE.url}/shop/${p.slug}`,
-      priceCurrency: "EUR",
-      price: (p.priceCents / 100).toFixed(2),
-      availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@id": ORG_ID },
-    },
+    offers,
   };
 }
 
