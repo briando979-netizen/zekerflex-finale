@@ -255,7 +255,7 @@ export function InboxPage() {
   return (
     <div className="chat-surface grid h-[calc(100vh-15rem)] grid-cols-[minmax(0,20rem)_1fr] overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
       {/* ─── left pane ─── */}
-      <div className="flex flex-col border-r border-hair">
+      <div className="flex min-h-0 flex-col border-r border-hair">
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
           <p className="font-display text-sm font-bold text-ink">Berichten</p>
           <div className="ml-auto flex items-center gap-1">
@@ -369,7 +369,7 @@ export function InboxPage() {
       {!activeThread ? (
         <div className="grid place-items-center text-sm text-neutralx-400">Kies een gesprek</div>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex min-h-0 flex-col">
           <div className="flex items-center gap-3 border-b border-hair px-4 py-2.5">
             <Avatar userId={otherOf(activeThread).userId} name={otherOf(activeThread).name} role={otherOf(activeThread).role} avatars={avatars} size={38} support={otherOf(activeThread).support} />
             <button type="button" onClick={() => activeThread.kind === "direct" && setCardUser(otherOf(activeThread).userId)} className="min-w-0 text-left">

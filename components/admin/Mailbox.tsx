@@ -44,6 +44,11 @@ export function Mailbox() {
   const [open, setOpen] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<string | null>(null);
 
   async function refresh() {
     try {
@@ -79,6 +84,38 @@ export function Mailbox() {
       setTestMsg("Testmail mislukt.");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function sendCustom() {
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await fetch("/api/admin/mail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject, text: body }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSendMsg(d?.error?.message ?? "Versturen mislukt.");
+        return;
+      }
+      setSendMsg(
+        d.delivered
+          ? `Verstuurd naar ${to} via SMTP.`
+          : d.transport === "smtp"
+            ? `Opgeslagen in de mailbox, maar SMTP faalde: ${d.error ?? "onbekend"}`
+            : `Opgeslagen in de mailbox (geen SMTP ingesteld).`,
+      );
+      setTo("");
+      setSubject("");
+      setBody("");
+      void refresh();
+    } catch {
+      setSendMsg("Versturen mislukt.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -132,6 +169,46 @@ export function Mailbox() {
             </ol>
           </div>
         )}
+      </div>
+
+      {/* compose */}
+      <div className="card space-y-3 p-5">
+        <div className="text-sm font-semibold">Zelf een e-mail versturen</div>
+        <p className="text-xs text-neutralx-500">
+          Naar een freelancer, een werkgever of een ander bedrijf — los van de automatische systeemmails hierboven.
+        </p>
+        <input
+          type="email"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="naar@voorbeeld.nl"
+          className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+        />
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Onderwerp"
+          className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+        />
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Bericht. Lege regel = nieuwe alinea."
+          rows={6}
+          className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm leading-relaxed"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sendCustom}
+            disabled={sending || !to.includes("@") || subject.trim().length < 2 || body.trim().length < 2}
+            className="btn-primary text-sm disabled:opacity-50"
+          >
+            {sending ? "Bezig…" : "Versturen"}
+          </button>
+          <span className="text-xs text-neutralx-500">Antwoorden gaan naar jouw eigen e-mailadres.</span>
+        </div>
+        {sendMsg && <p className="text-sm text-neutralx-700">{sendMsg}</p>}
       </div>
 
       {/* stats + test */}

@@ -90,6 +90,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   payout: "essential",
   "abu-fase-overgang": "essential",
   "annuleringsclaim-factuur": "essential",
+  "admin-bericht": "essential",
   generic: "essential",
 };
 
@@ -114,6 +115,8 @@ const REPLIABLE_KINDS = new Set([
   "uren-correctie-voorstel",
   // Sales outreach: a human on the sales side reads and answers replies.
   "sales-outreach",
+  // Admin-composed ad-hoc mail — replyTo is the sending admin's own address.
+  "admin-bericht",
 ]);
 
 export function isAutomatedKind(kind?: string): boolean {

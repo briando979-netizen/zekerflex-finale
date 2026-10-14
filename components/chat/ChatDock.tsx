@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { Composer, type OutgoingMessage } from "./Composer";
@@ -22,7 +21,6 @@ import {
 const randId = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 
 export function ChatDock() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
   const [threads, setThreads] = useState<ThreadRow[]>([]);
@@ -227,8 +225,12 @@ export function ChatDock() {
     setIncoming(null);
   };
 
-  // The dedicated inbox pages show the full conversation UI (but calls still work there).
-  const hideDock = pathname?.endsWith("/berichten");
+  // Every page that mounts this component already has a full "Chat" entry in
+  // its own nav (werkgever sidebar, freelancer bottom tabs, admin nav) — so
+  // the floating launcher button/panel is always redundant and stays hidden.
+  // This component still has to stay mounted everywhere for the incoming-call
+  // ringtone/overlay below, which isn't gated by hideDock.
+  const hideDock = true;
   if (!available) return null;
 
   return (
