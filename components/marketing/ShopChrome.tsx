@@ -10,13 +10,16 @@ import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButto
 // logo + winkelwagen, en de uitgebreide footer. Zit in app/shop/layout.tsx zodat
 // elke /shop-pagina dezelfde omlijsting krijgt.
 
+type ApiVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 type ApiProduct = {
   id: string;
   slug?: string | null;
   name: string;
   priceCents: number;
   imageUrl?: string | null;
+  variants?: ApiVariant[];
 };
+type CartLine = { variantId: string; name: string; priceCents: number; imageUrl: string | null; qty: number };
 
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 
@@ -45,10 +48,29 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       .catch(() => undefined);
   }, []);
 
-  const items = useMemo(
-    () => catalog.filter((p) => cart[p.id]).map((p) => ({ ...p, qty: cart[p.id]! })),
-    [catalog, cart],
-  );
+  // De winkelwagen is sleutelt op variantId (maat/kleur), niet productId —
+  // elk product uit de catalogus levert dus al zijn variant-rijen aan de kaart.
+  const items = useMemo<CartLine[]>(() => {
+    const byVariantId = new Map<string, { product: ApiProduct; variant: ApiVariant }>();
+    for (const p of catalog) {
+      for (const v of p.variants ?? []) byVariantId.set(v.id, { product: p, variant: v });
+    }
+    return Object.entries(cart)
+      .map(([variantId, qty]) => {
+        const hit = byVariantId.get(variantId);
+        if (!hit) return null;
+        const { product, variant } = hit;
+        const label = [variant.size ? `Maat ${variant.size}` : null, variant.color].filter(Boolean).join(", ");
+        return {
+          variantId,
+          name: label ? `${product.name} — ${label}` : product.name,
+          priceCents: variant.priceCents ?? product.priceCents,
+          imageUrl: product.imageUrl ?? null,
+          qty,
+        };
+      })
+      .filter((l): l is CartLine => l !== null);
+  }, [catalog, cart]);
   const subtotal = items.reduce((s, p) => s + (p.priceCents / 100) * p.qty, 0);
   const shipping = subtotal >= 50 || subtotal === 0 ? 0 : 4.95;
   const total = subtotal + shipping;
@@ -63,7 +85,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          items: items.map((p) => ({ productId: p.id, qty: p.qty })),
+          items: items.map((l) => ({ variantId: l.variantId, qty: l.qty })),
         }),
       });
       const data = await response.json();
@@ -185,26 +207,26 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                 <div className="py-16 text-center"><LogoGlyph size={44} /><p className="mt-4 font-semibold">Je winkelwagen is leeg.</p></div>
               ) : (
                 <div className="space-y-4">
-                  {items.map((p) => (
-                    <div key={p.id} className="flex gap-3">
+                  {items.map((l) => (
+                    <div key={l.variantId} className="flex gap-3">
                       <div className="h-20 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-paper-soft">
-                        {p.imageUrl ? (
+                        {l.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                          <img src={l.imageUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <div className="grid h-full place-items-center"><LogoGlyph size={28} /></div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold">{p.name}</p>
-                        <p className="mt-0.5 text-xs text-neutralx-500">{money(p.priceCents / 100)}</p>
+                        <p className="text-sm font-semibold">{l.name}</p>
+                        <p className="mt-0.5 text-xs text-neutralx-500">{money(l.priceCents / 100)}</p>
                         <div className="mt-1.5 inline-flex items-center rounded-full border border-hair text-sm">
-                          <button type="button" onClick={() => remove(p.id)} className="px-2.5 py-1">−</button>
-                          <span className="min-w-6 text-center">{p.qty}</span>
-                          <button type="button" onClick={() => add(p.id)} className="px-2.5 py-1">+</button>
+                          <button type="button" onClick={() => remove(l.variantId)} className="px-2.5 py-1">−</button>
+                          <span className="min-w-6 text-center">{l.qty}</span>
+                          <button type="button" onClick={() => add(l.variantId)} className="px-2.5 py-1">+</button>
                         </div>
                       </div>
-                      <p className="text-sm font-semibold">{money((p.priceCents / 100) * p.qty)}</p>
+                      <p className="text-sm font-semibold">{money((l.priceCents / 100) * l.qty)}</p>
                     </div>
                   ))}
                 </div>
