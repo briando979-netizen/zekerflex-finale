@@ -10,7 +10,7 @@ import { encryptWebhookSecret } from "@/lib/webhooks/crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ url: z.string().url(), eventTypes: z.array(z.enum(["shift.matched", "freelancer.checked_in", "timesheet.approved", "dispute.opened"])).min(1).max(20) });
+const schema = z.object({ url: z.string().url(), eventTypes: z.array(z.enum(["shift.matched", "freelancer.checked_in", "timesheet.approved", "dispute.opened", "invoice.issued"])).min(1).max(20) });
 
 // POST /api/public/v1/webhooks — register a webhook subscription. Authenticate
 // with `Authorization: Bearer zf_live_...` (see /admin/integraties). Requires

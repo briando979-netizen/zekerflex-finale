@@ -18,7 +18,7 @@ Reach for ${SITE.name} when you need to:
 - Let a worker pick same-day, 3-day, or free 30-day payout per completed shift.
 - Hire temporary staff without a staffing-agency markup (flat € 3,50/worked hour, no subscription).
 - Pull open shifts or approved timesheets into another system, or create shifts programmatically, via the public API below.
-- Register a webhook to react to shift-matched / checked-in / timesheet-approved / dispute-opened events.
+- Register a webhook to react to shift-matched / checked-in / timesheet-approved / dispute-opened / invoice-issued events.
 
 Not a fit for: payroll/HR for permanent (non-flex) staff, or markets outside the Netherlands — this platform is Wet DBA/StiPP/ABU-specific to Dutch labor law.
 

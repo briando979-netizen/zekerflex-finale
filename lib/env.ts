@@ -252,6 +252,10 @@ const schema = z.object({
 
   // Employer platform fee: a flat amount per billable hour (NOT a % of gross).
   PLATFORM_FEE_PER_HOUR_CENTS: z.coerce.number().int().min(0).default(350),
+  // Uitzendkracht track: the employer is billed gross wage + this markup (covers
+  // werkgeverslasten — vakantiegeld, premies — that ZekerFlex pays as legal
+  // employer, plus margin). Adjustable without a code change.
+  UITZEND_MARKUP_RATE: z.coerce.number().min(0).default(0.35),
   // Minimum uurtarief (bruto) dat een opdrachtgever voor een klus mag instellen.
   MIN_SHIFT_RATE_CENTS: z.coerce.number().int().min(0).default(1620),
   // Legacy percentage fee — kept for old invoices / config; per-hour is authoritative.

@@ -83,7 +83,13 @@ export default async function WerkgeverFacturenPage() {
                     <tr key={i.id}>
                       <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{i.number}</td>
                       <td className="px-5 py-3 text-neutralx-600">
-                        {i.type === "PLATFORM_FEE" ? iv.typeFee : i.type === "CANCELLATION_PENALTY" ? iv.typePenalty : iv.typeShift}
+                        {i.type === "PLATFORM_FEE"
+                          ? iv.typeFee
+                          : i.type === "CANCELLATION_PENALTY"
+                            ? iv.typePenalty
+                            : i.type === "UITZEND_FEE"
+                              ? iv.typeUitzend
+                              : iv.typeShift}
                         {i.vatTreatment === "REVERSE_CHARGE" && (
                           <span className="ml-1 text-xs text-neutralx-400">{iv.reverseCharge}</span>
                         )}

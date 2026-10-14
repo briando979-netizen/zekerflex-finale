@@ -242,10 +242,16 @@ model BranchManager {
 // Branches (vestigingen) & auto-acceptance config
 // ===========================================================================
 
+enum BranchKind {
+  PERMANENT // self-service-managed vestiging, shown on /werkgever/locaties
+  AD_HOC // one-off address entered directly on a shift (e.g. an offsite demo) — hidden from the locations list
+}
+
 model Branch {
-  id       String @id @default(cuid())
+  id       String     @id @default(cuid())
   tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind     BranchKind @default(PERMANENT)
 
   name       String
   costCenter String? // for aggregated invoicing per kostenplaats
@@ -940,6 +946,7 @@ enum InvoiceType {
   SELF_BILL_FREELANCER // company <- freelancer services (created on freelancer's behalf)
   PLATFORM_FEE // company <- ZekerFlex platform fee
   CANCELLATION_PENALTY // late-cancel / no-show 50% claim, either direction — see lib/claims
+  UITZEND_FEE // company <- ZekerFlex (uitzendbureau): gross wage + markup, payroll track only
 }
 
 enum InvoiceStatus {

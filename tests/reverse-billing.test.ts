@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
+import { buildReverseBillingInvoices, buildUitzendInvoice } from "@/lib/billing/self-billing";
 import { isValidIban, payoutEndToEndId } from "@/lib/billing/sepa";
 
 const base = {
@@ -73,6 +73,38 @@ describe("buildReverseBillingInvoices", () => {
     expect(r.platformFeeInvoice.type).toBe("PLATFORM_FEE");
     // the worker's payout is untouched by the fee
     expect(r.freelancerPayoutCents).toBe(29040);
+  });
+});
+
+describe("buildUitzendInvoice", () => {
+  const uitzendBase = {
+    timesheetId: "cltimesheet0000000000000000",
+    billableMinutes: 480, // 8h
+    hourlyRateCents: 3000, // EUR 30 gross wage
+    recipientTenantId: "cltenant00000000000000000000",
+    platformTenantId: "clplatform0000000000000000000",
+    shiftTitle: "Magazijn",
+    workedOn: new Date("2026-08-20T09:00:00Z"),
+    invoiceNumber: "ZF-UZ-2026-000001",
+  };
+
+  it("bills gross wage plus the uitzendopslag, with 21% VAT domestically", () => {
+    const inv = buildUitzendInvoice({ ...uitzendBase, recipientCountry: "NL" });
+    // wage: 8h * EUR 30 = 24000. markup: 35% of 24000 = 8400. subtotal 32400.
+    expect(inv.lines).toHaveLength(2);
+    expect(inv.lines[0]!.amountCents).toBe(24_000);
+    expect(inv.lines[1]!.amountCents).toBe(8_400);
+    expect(inv.subtotalCents).toBe(32_400);
+    expect(inv.vatTreatment).toBe("STANDARD_RATE");
+    expect(inv.vatCents).toBe(6_804); // 21% of 32400
+    expect(inv.totalCents).toBe(39_204);
+    expect(inv.type).toBe("UITZEND_FEE");
+  });
+
+  it("falls back to out-of-scope VAT for a cross-border client rather than guessing reverse charge", () => {
+    const inv = buildUitzendInvoice({ ...uitzendBase, recipientCountry: "DE" });
+    expect(inv.vatTreatment).toBe("OUT_OF_SCOPE");
+    expect(inv.vatCents).toBe(0);
   });
 });
 

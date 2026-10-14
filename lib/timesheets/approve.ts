@@ -13,7 +13,7 @@ import { recordAudit } from "@/lib/audit";
 import { recordPayout, recordTimesheetApproved } from "@/lib/metrics";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
-import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
+import { buildReverseBillingInvoices, buildUitzendInvoice } from "@/lib/billing/self-billing";
 import { applyPendingTenantCredits } from "@/lib/billing/credits";
 import {
   isValidIban,
@@ -27,6 +27,8 @@ import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
+import { getOrgProfileExtra } from "@/lib/profile/store";
+import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
 import type { ComputedInvoice } from "@/types/billing";
 
 export interface ApproveTimesheetInput {
@@ -45,8 +47,9 @@ export interface ApproveTimesheetResult {
   billableMinutes: number;
   /**
    * "invoice" = ZZP / flexwerker: two reverse-billing invoices + instant SEPA
-   * payout. "payroll" = uitzendkracht: no invoice, the hours flow into the
-   * weekly payroll run and land on a loonstrook.
+   * payout. "payroll" = uitzendkracht: one UITZEND_FEE invoice to the client
+   * (gross wage + uitzendopslag); the worker's own pay flows into the weekly
+   * payroll run and lands on a loonstrook, not an invoice.
    */
   track: "invoice" | "payroll";
   invoices: {
@@ -407,6 +410,21 @@ export async function approveTimesheet(
       billableMinutes,
       track: "invoice",
     }).catch(() => undefined);
+    void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
+      invoiceId: persisted.platformFeeInvoice.id,
+      number: persisted.platformFeeInvoice.number,
+      type: "PLATFORM_FEE",
+      totalCents: persisted.billing.platformFeeInvoice.totalCents,
+    }).catch(() => undefined);
+
+    await notifyInvoiceIssued({
+      tenantId: ts.branch.tenantId,
+      orgName: ts.branch.tenant.name,
+      invoiceNumber: persisted.platformFeeInvoice.number,
+      totalCents: persisted.billing.platformFeeInvoice.totalCents,
+      description: `platformkosten, shift @ ${ts.branch.name}`,
+      log,
+    });
 
     return {
       timesheetId: ts.id,
@@ -459,7 +477,7 @@ async function approveViaPayroll(args: {
     branchId: string;
     scheduledStart: Date;
     hourlyRateCents: number;
-    branch: { name: string; tenantId: string };
+    branch: { name: string; tenantId: string; tenant: { name: string; country: string } };
     freelancerId: string;
     freelancer: {
       userId: string;
@@ -482,7 +500,15 @@ async function approveViaPayroll(args: {
   const weekLabel = isoWeekLabel(week);
   const expectedGrossCents = Math.round((billableMinutes / 60) * ts.hourlyRateCents);
 
-  await prisma.$transaction(async (tx) => {
+  const platformTenant = await prisma.tenant.findFirst({
+    where: { type: "PLATFORM" },
+    select: { id: true },
+  });
+  if (!platformTenant) {
+    throw AppError.precondition("Platform tenant is not configured");
+  }
+
+  const { uitzendInvoice } = await prisma.$transaction(async (tx) => {
     await tx.timesheet.update({
       where: { id: ts.id },
       data: {
@@ -511,6 +537,21 @@ async function approveViaPayroll(args: {
         },
       });
     }
+
+    const invoiceNumber = await nextInvoiceNumber(tx, "UITZEND_FEE");
+    const computed = buildUitzendInvoice({
+      timesheetId: ts.id,
+      billableMinutes,
+      hourlyRateCents: ts.hourlyRateCents,
+      recipientTenantId: ts.branch.tenantId,
+      recipientCountry: ts.branch.tenant.country,
+      platformTenantId: platformTenant.id,
+      shiftTitle: `Shift @ ${ts.branch.name}`,
+      workedOn: ts.scheduledStart,
+      invoiceNumber,
+    });
+    const uitzendInvoice = await persistInvoice(tx, computed);
+    return { uitzendInvoice };
   });
 
   // Instant advance payout (~50% of expected gross) within ~1 min — reconciled
@@ -575,18 +616,73 @@ async function approveViaPayroll(args: {
     billableMinutes,
     track: "payroll",
   }).catch(() => undefined);
+  void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
+    invoiceId: uitzendInvoice.id,
+    number: uitzendInvoice.number,
+    type: "UITZEND_FEE",
+    totalCents: uitzendInvoice.totalCents,
+  }).catch(() => undefined);
+
+  await notifyInvoiceIssued({
+    tenantId: ts.branch.tenantId,
+    orgName: ts.branch.tenant.name,
+    invoiceNumber: uitzendInvoice.number,
+    totalCents: uitzendInvoice.totalCents,
+    description: `uitzendkracht-uren, week ${weekLabel}`,
+    log,
+    from: env.MAIL_UITZEND_FROM,
+  });
 
   return {
     timesheetId: ts.id,
     status: TimesheetStatus.APPROVED,
     billableMinutes,
     track: "payroll",
-    invoices: [],
+    invoices: [
+      {
+        id: uitzendInvoice.id,
+        number: uitzendInvoice.number,
+        type: "UITZEND_FEE",
+        totalCents: uitzendInvoice.totalCents,
+        vatCents: uitzendInvoice.vatCents,
+      },
+    ],
     payout: null,
     payroll: { isoWeekId: weekId, weekLabel },
     advance,
     dba: null,
   };
+}
+
+/**
+ * Best-effort "nieuwe factuur" mail to the tenant's billing contact. Never
+ * blocks or rolls back the approval — a mail failure (or a tenant with no
+ * billingEmail set) is logged and swallowed, same as the instant-advance
+ * payout above.
+ */
+async function notifyInvoiceIssued(args: {
+  tenantId: string;
+  orgName: string;
+  invoiceNumber: string;
+  totalCents: number;
+  description: string;
+  log: ReturnType<typeof logger.child>;
+  from?: string;
+}): Promise<void> {
+  try {
+    const extra = await getOrgProfileExtra(args.tenantId);
+    if (!extra.billingEmail) return;
+    const mail = invoiceIssuedEmail(
+      args.orgName,
+      `${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/facturen`,
+      args.invoiceNumber,
+      args.totalCents,
+      args.description,
+    );
+    await sendMail({ ...mail, to: extra.billingEmail, ...(args.from ? { from: args.from } : {}) });
+  } catch (err) {
+    args.log.warn("invoice-issued mail failed", { error: (err as Error).message, invoiceNumber: args.invoiceNumber });
+  }
 }
 
 async function persistInvoice(

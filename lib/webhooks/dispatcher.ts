@@ -2,7 +2,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { decryptWebhookSecret } from "@/lib/webhooks/crypto";
 
-export type WebhookEventType = "shift.matched" | "freelancer.checked_in" | "timesheet.approved" | "dispute.opened";
+export type WebhookEventType = "shift.matched" | "freelancer.checked_in" | "timesheet.approved" | "dispute.opened" | "invoice.issued";
 
 function signature(secret: string, timestamp: string, body: string): string {
   return createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");

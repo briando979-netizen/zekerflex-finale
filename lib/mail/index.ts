@@ -383,6 +383,28 @@ export function accountDeletionEmail(fullName: string, link: string): MailInput 
   };
 }
 
+export function invoiceIssuedEmail(
+  orgName: string,
+  link: string,
+  invoiceNumber: string,
+  totalCents: number,
+  description: string,
+): MailInput {
+  const total = (totalCents / 100).toFixed(2).replace(".", ",");
+  return {
+    to: "",
+    subject: `Nieuwe factuur ${invoiceNumber} — € ${total}`,
+    kind: "invoice",
+    text: `Hoi,\n\nEr staat een nieuwe factuur voor ${orgName} op ZekerFlex: ${invoiceNumber}, € ${total} (${description}).\n\nBekijk en betaal de factuur:\n${link}`,
+    html: shell(
+      "Nieuwe factuur",
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Er staat een nieuwe factuur voor <strong>${orgName}</strong> op ZekerFlex: <strong>${invoiceNumber}</strong>, <strong>€ ${total}</strong> (${description}).</p>
+       <p style="margin:0 0 20px">${button(link, "Bekijk factuur")}</p>
+       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>`,
+    ),
+  };
+}
+
 export function hoursCorrectionProposedEmail(
   fullName: string,
   link: string,

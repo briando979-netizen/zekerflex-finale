@@ -175,3 +175,62 @@ export function buildReverseBillingInvoices(
     freelancerPayoutCents: freelancerInvoice.totalCents,
   };
 }
+
+export interface UitzendInvoiceInput {
+  timesheetId: string;
+  billableMinutes: number;
+  /** Gross hourly wage rate paid to the uitzendkracht via payroll. */
+  hourlyRateCents: number;
+  recipientTenantId: string;
+  recipientCountry: string;
+  platformTenantId: string;
+  shiftTitle: string;
+  workedOn: Date;
+  invoiceNumber: string;
+}
+
+/**
+ * Build the single invoice billed to the client for an uitzendkracht shift:
+ * gross wage cost + ZekerFlex's uitzendopslag (env.UITZEND_MARKUP_RATE), which
+ * covers werkgeverslasten (vakantiegeld, premies) that ZekerFlex pays as the
+ * legal employer, plus margin. Unlike the zzp/flexwerker track there is no
+ * self-billing freelancer invoice — the worker is paid via the weekly payroll
+ * run (lib/payroll/engine.ts), not an instant SEPA payout against an invoice.
+ */
+export function buildUitzendInvoice(input: UitzendInvoiceInput): ComputedInvoice {
+  const hours = input.billableMinutes / 60;
+  // Conservative: only the domestic NL-NL case is a known-correct VAT
+  // treatment for this track (an uitzendkracht is never VAT-registered, so
+  // there's no freelancer-VAT proxy to reuse like the reverse-billing path
+  // above does); a cross-border client falls to OUT_OF_SCOPE for manual
+  // review rather than guessing at reverse charge.
+  const vat = resolveVat("NL", input.recipientCountry, false);
+
+  const wageCents = round(hours * input.hourlyRateCents);
+  const markupCents = round(wageCents * env.UITZEND_MARKUP_RATE);
+
+  return assemble(
+    {
+      type: "UITZEND_FEE",
+      number: input.invoiceNumber,
+      timesheetId: input.timesheetId,
+      recipientTenantId: input.recipientTenantId,
+      issuerTenantId: input.platformTenantId,
+    },
+    [
+      {
+        description: `Loonkosten uitzendkracht - ${input.shiftTitle} - ${input.workedOn
+          .toISOString()
+          .slice(0, 10)}`,
+        quantityHours: Number(hours.toFixed(2)),
+        unitPriceCents: input.hourlyRateCents,
+      },
+      {
+        description: `ZekerFlex uitzendopslag (${Math.round(env.UITZEND_MARKUP_RATE * 100)}% — werkgeverslasten en bemiddeling)`,
+        quantityHours: 1,
+        unitPriceCents: markupCents,
+      },
+    ],
+    vat,
+  );
+}

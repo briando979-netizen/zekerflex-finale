@@ -231,7 +231,7 @@ export function openApiSpec(): Record<string, unknown> {
               type: "array",
               minItems: 1,
               maxItems: 20,
-              items: { type: "string", enum: ["shift.matched", "freelancer.checked_in", "timesheet.approved", "dispute.opened"] },
+              items: { type: "string", enum: ["shift.matched", "freelancer.checked_in", "timesheet.approved", "dispute.opened", "invoice.issued"] },
             },
           },
           required: ["url", "eventTypes"],

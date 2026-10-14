@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { AVAILABLE_SCOPES, type ApiScope } from "@/lib/integrations/scopes";
 
 // ---------------------------------------------------------------------------
 // API keys for external systems (an integration partner, or a connected
@@ -12,16 +13,9 @@ import { prisma } from "@/lib/prisma";
 // prefix finds the row before the full hash is compared.
 // ---------------------------------------------------------------------------
 
-export const AVAILABLE_SCOPES = [
-  { key: "shifts:read", label: "Diensten lezen" },
-  { key: "shifts:write", label: "Diensten aanmaken" },
-  { key: "timesheets:read", label: "Goedgekeurde urenstaten lezen" },
-  { key: "webhooks:manage", label: "Webhooks beheren" },
-  { key: "invoices:read", label: "Facturen lezen" },
-  { key: "users:read", label: "Gebruikers lezen (alleen eigen organisatie)" },
-] as const;
-
-export type ApiScope = (typeof AVAILABLE_SCOPES)[number]["key"];
+// Re-exported from lib/integrations/scopes.ts (zero-dependency — safe for
+// client components) so existing server-side imports from this file keep working.
+export { AVAILABLE_SCOPES, type ApiScope };
 
 export function generateApiKey(): { raw: string; prefix: string; hashedKey: string } {
   const secret = randomBytes(24).toString("base64url");

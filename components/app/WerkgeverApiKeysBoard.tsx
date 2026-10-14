@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AVAILABLE_SCOPES } from "@/lib/integrations/api-keys";
+import { AVAILABLE_SCOPES } from "@/lib/integrations/scopes";
 
 interface KeyRow {
   id: string;

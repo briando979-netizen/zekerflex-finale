@@ -13,6 +13,7 @@ const DESCRIPTIONS: Record<InvoiceType, string> = {
   [InvoiceType.PLATFORM_FEE]: "ZekerFlex platformfee",
   [InvoiceType.SELF_BILL_FREELANCER]: "ZekerFlex dienst (zzp)",
   [InvoiceType.CANCELLATION_PENALTY]: "ZekerFlex annuleringsvergoeding",
+  [InvoiceType.UITZEND_FEE]: "ZekerFlex uitzendkracht (loon + opslag)",
 };
 
 export const runtime = "nodejs";
