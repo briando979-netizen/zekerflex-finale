@@ -405,6 +405,22 @@ export function invoiceIssuedEmail(
   };
 }
 
+export function teamInvitedEmail(tenantName: string, inviterName: string, link: string): MailInput {
+  return {
+    to: "",
+    subject: `${inviterName} nodigt je uit voor het ZekerFlex-team van ${tenantName}`,
+    kind: "team-uitnodiging",
+    text: `Hoi,\n\n${inviterName} nodigt je uit om mee te werken in het ZekerFlex-account van ${tenantName}.\n\nAccepteer de uitnodiging:\n${link}\n\nDeze link is 14 dagen geldig.`,
+    html: shell(
+      "Teamuitnodiging",
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>${inviterName}</strong> nodigt je uit om mee te werken in het ZekerFlex-account van <strong>${tenantName}</strong>.</p>
+       <p style="margin:0 0 20px">${button(link, "Uitnodiging accepteren")}</p>
+       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
+       <p style="margin:16px 0 0;font-size:12px;color:#667469">Deze link is 14 dagen geldig.</p>`,
+    ),
+  };
+}
+
 export function hoursCorrectionProposedEmail(
   fullName: string,
   link: string,
