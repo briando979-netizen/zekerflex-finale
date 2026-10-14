@@ -43,13 +43,13 @@ export default async function InstellingenPage() {
     { title: s.cContactT, sub: s.cContactS, href: "/werkgever/bedrijf", icon: <IMail /> },
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/locaties", icon: <IPin /> },
     { title: s.cCostT, sub: s.cCostS, href: "/werkgever/facturen", icon: <IHash /> },
-    { title: s.cUsersT, sub: s.cUsersS, icon: <IUsers />, soon: true },
+    { title: s.cUsersT, sub: s.cUsersS, href: "/werkgever/team", icon: <IUsers /> },
     { title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> },
     { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/overeenkomsten", icon: <IDoc /> },
   ];
 
   const klussen: Card[] = [
-    { title: s.cTemplatesT, sub: s.cTemplatesS, icon: <IGrid />, soon: true },
+    { title: s.cTemplatesT, sub: s.cTemplatesS, href: "/werkgever/templates", icon: <IGrid /> },
     { title: s.cLabelsT, sub: s.cLabelsS, href: "/werkgever/favorieten", icon: <IHeart /> },
     { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/bedrijf", icon: <IList /> },
   ];

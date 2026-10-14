@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
@@ -9,6 +9,15 @@ import { shiftCategory } from "@/lib/shifts/category";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 
 const initial: NewShiftState = { error: null };
+
+interface OwnTemplate {
+  id: string;
+  label: string;
+  hourlyRateCents: number;
+  breakMinutes: number;
+  description: string | null;
+  dresscode: string | null;
+}
 
 function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
   const { pending } = useFormStatus();
@@ -54,11 +63,28 @@ export function NewShiftForm({
   const [adHocAddress, setAdHocAddress] = useState<PickedAddress | null>(null);
   const [adHocPostalCode, setAdHocPostalCode] = useState("");
   const [adHocCity, setAdHocCity] = useState("");
+  const [ownTemplates, setOwnTemplates] = useState<OwnTemplate[]>([]);
+
+  useEffect(() => {
+    fetch("/api/werkgever/templates", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setOwnTemplates(d.templates ?? []))
+      .catch(() => undefined);
+  }, []);
 
   function applyTemplate(t: ShiftTemplate) {
     setTpl(t.key);
     setTitle(t.label);
     setDescription(t.description);
+    setRateEuro((t.hourlyRateCents / 100).toFixed(2));
+    setBreakMin(String(t.breakMinutes));
+  }
+
+  function applyOwnTemplate(t: OwnTemplate) {
+    setTpl("");
+    setTitle(t.label);
+    setDescription(t.description ?? "");
+    setDresscode(t.dresscode ?? "");
     setRateEuro((t.hourlyRateCents / 100).toFixed(2));
     setBreakMin(String(t.breakMinutes));
   }
@@ -111,6 +137,26 @@ export function NewShiftForm({
             ))}
           </div>
         </div>
+
+        {ownTemplates.length > 0 && (
+          <div>
+            <p className="field-label mb-2">
+              Jouw templates <span className="text-neutralx-400">(beheer je op /werkgever/templates)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ownTemplates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyOwnTemplate(t)}
+                  className="rounded-full border border-hairstrong px-3 py-1.5 text-xs font-medium text-neutralx-600 transition hover:border-brand-500"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <input type="hidden" name="templateKey" value={tpl} />
         <input type="hidden" name="hourlyRateCents" value={Number.isFinite(hourlyRateCents) ? hourlyRateCents : 0} />
