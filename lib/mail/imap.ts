@@ -16,6 +16,10 @@ export interface ImapConfig {
   user: string;
   pass: string;
   timeout?: number;
+  /** Connect to this (pre-vetted) IP instead of resolving `host`; `host` still names the TLS certificate. */
+  address?: string;
+  /** Reject an invalid/self-signed certificate. Required for user-supplied servers. */
+  verifyTls?: boolean;
 }
 
 export interface ImapEnvelope {
@@ -25,6 +29,10 @@ export interface ImapEnvelope {
   subject: string | null;
   fromName: string | null;
   fromAddress: string | null;
+  /** Reply-To when the sender set one that differs from From */
+  replyToAddress: string | null;
+  /** RFC 5322 Message-ID without angle brackets, for In-Reply-To on answers */
+  messageId: string | null;
   seen: boolean;
 }
 
@@ -197,9 +205,10 @@ function addressFromList(list: unknown): { name: string | null; address: string 
 async function connect(cfg: ImapConfig): Promise<{ sock: net.Socket | tls.TLSSocket; bs: ByteStream }> {
   const timeoutMs = (cfg.timeout ?? 20) * 1000;
   const sock = await new Promise<net.Socket | tls.TLSSocket>((resolve, reject) => {
+    const target = cfg.address ?? cfg.host;
     const s = cfg.secure
-      ? tls.connect({ host: cfg.host, port: cfg.port, servername: cfg.host, rejectUnauthorized: false })
-      : net.connect({ host: cfg.host, port: cfg.port });
+      ? tls.connect({ host: target, port: cfg.port, servername: cfg.host, rejectUnauthorized: cfg.verifyTls ?? false })
+      : net.connect({ host: target, port: cfg.port });
     const t = setTimeout(() => {
       s.destroy();
       reject(new ImapError(`IMAP connect timeout (${cfg.host}:${cfg.port})`));
@@ -272,8 +281,12 @@ export async function fetchInboxList(cfg: ImapConfig, limit = 50): Promise<ImapE
       const flagsList = parseParenListAfter(l, "FLAGS ") ?? [];
       const seen = flagsList.some((f) => typeof f === "string" && f.toUpperCase() === "\\SEEN");
       const envList = parseParenListAfter(l, "ENVELOPE ");
-      const [date, subject, from] = (envList ?? []) as unknown[];
+      // ENVELOPE: date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to, message-id
+      const env = (envList ?? []) as unknown[];
+      const [date, subject, from] = env;
       const { name: fromName, address: fromAddress } = addressFromList(from);
+      const replyTo = addressFromList(env[4]).address;
+      const messageId = typeof env[9] === "string" ? env[9].replace(/^<|>$/g, "").trim() || null : null;
       if (!uidMatch) continue;
       out.push({
         uid: Number(uidMatch[1]),
@@ -282,6 +295,8 @@ export async function fetchInboxList(cfg: ImapConfig, limit = 50): Promise<ImapE
         subject: typeof subject === "string" ? decodeMimeWords(subject) : null,
         fromName,
         fromAddress,
+        replyToAddress: replyTo && replyTo !== fromAddress ? replyTo : null,
+        messageId,
         seen,
       });
     }

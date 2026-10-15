@@ -9,7 +9,7 @@ import { getTheme } from "@/lib/theme/server";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IBan, IClock, IDoc, IShield, IGrid } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
+    { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
     { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock />, section: t.nav.beheer },
     { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc />, section: t.nav.beheer },

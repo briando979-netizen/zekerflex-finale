@@ -25,6 +25,12 @@ export interface SmtpConfig {
   timeout?: number;
   /** EHLO hostname */
   clientName?: string;
+  /** Connect to this (pre-vetted) IP instead of resolving `host`; `host` still names the TLS certificate. */
+  address?: string;
+  /** Reject an invalid/self-signed certificate. Required for user-supplied servers. */
+  verifyTls?: boolean;
+  /** Refuse to log in or send over a connection that isn't encrypted (no STARTTLS offered). */
+  requireTls?: boolean;
 }
 
 export interface SmtpEnvelope {
@@ -83,15 +89,18 @@ async function cmd(
   return reply;
 }
 
-export async function sendViaSmtp(cfg: SmtpConfig, envelope: SmtpEnvelope): Promise<void> {
+/** Connects, greets, upgrades to TLS when offered and logs in. The caller must destroy the socket. */
+async function openSession(cfg: SmtpConfig): Promise<{ sock: net.Socket | tls.TLSSocket; timeoutMs: number }> {
   const timeoutMs = (cfg.timeout ?? 20) * 1000;
   const clientName = cfg.clientName || "zekerflex.com";
+  const target = cfg.address ?? cfg.host;
+  const rejectUnauthorized = cfg.verifyTls ?? false;
 
   const connect = (): Promise<net.Socket | tls.TLSSocket> =>
     new Promise((resolve, reject) => {
       const s = cfg.secure
-        ? tls.connect({ host: cfg.host, port: cfg.port, servername: cfg.host, rejectUnauthorized: false })
-        : net.connect({ host: cfg.host, port: cfg.port });
+        ? tls.connect({ host: target, port: cfg.port, servername: cfg.host, rejectUnauthorized })
+        : net.connect({ host: target, port: cfg.port });
       const t = setTimeout(() => {
         s.destroy();
         reject(new SmtpError(`SMTP connect timeout (${cfg.host}:${cfg.port})`));
@@ -118,13 +127,15 @@ export async function sendViaSmtp(cfg: SmtpConfig, envelope: SmtpEnvelope): Prom
       await cmd(sock, "STARTTLS", [220], timeoutMs);
       sock = await new Promise<tls.TLSSocket>((resolve, reject) => {
         const upgraded = tls.connect(
-          { socket: sock as net.Socket, servername: cfg.host, rejectUnauthorized: false },
+          { socket: sock as net.Socket, servername: cfg.host, rejectUnauthorized },
           () => resolve(upgraded),
         );
         upgraded.once("error", reject);
       });
       ehlo = await cmd(sock, `EHLO ${clientName}`, [250], timeoutMs);
       caps = ehlo.lines.join(" ").toUpperCase();
+    } else if (!cfg.secure && cfg.requireTls) {
+      throw new SmtpError("Server biedt geen versleutelde verbinding (STARTTLS) aan");
     }
 
     if (cfg.user && cfg.pass) {
@@ -135,9 +146,32 @@ export async function sendViaSmtp(cfg: SmtpConfig, envelope: SmtpEnvelope): Prom
         await cmd(sock, "AUTH LOGIN", [334], timeoutMs);
         await cmd(sock, Buffer.from(cfg.user, "utf8").toString("base64"), [334], timeoutMs);
         await cmd(sock, Buffer.from(cfg.pass, "utf8").toString("base64"), [235], timeoutMs);
+      } else if (cfg.requireTls) {
+        throw new SmtpError("Server biedt geen inloggen (AUTH) aan");
       }
     }
+    return { sock, timeoutMs };
+  } catch (err) {
+    sock.destroy();
+    throw err;
+  }
+}
 
+/** Checks that the server takes these credentials over an encrypted connection, without sending anything. */
+export async function verifySmtp(cfg: SmtpConfig): Promise<void> {
+  const { sock } = await openSession(cfg);
+  try {
+    await cmd(sock, "QUIT", [221], 5000);
+  } catch {
+    /* logged in fine; the goodbye doesn't matter */
+  } finally {
+    sock.destroy();
+  }
+}
+
+export async function sendViaSmtp(cfg: SmtpConfig, envelope: SmtpEnvelope): Promise<void> {
+  const { sock, timeoutMs } = await openSession(cfg);
+  try {
     await cmd(sock, `MAIL FROM:<${envelope.from}>`, [250], timeoutMs);
     for (const rcpt of envelope.to) {
       await cmd(sock, `RCPT TO:<${rcpt}>`, [250, 251], timeoutMs);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { imapConfig } from "@/lib/mail";
 import { fetchAttachment } from "@/lib/mail/imap";
+import { attachmentResponse } from "@/lib/mail/attachment-response";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
@@ -21,13 +22,7 @@ export const GET = withAdminAccess<{ uid: string; index: string }>(["PLATFORM_AD
   try {
     const attachment = await fetchAttachment(cfg, uid, index);
     if (!attachment) throw AppError.notFound("Bijlage niet gevonden");
-    return new NextResponse(new Uint8Array(attachment.bytes), {
-      headers: {
-        "Content-Type": attachment.contentType,
-        "Content-Disposition": `attachment; filename="${attachment.filename.replace(/"/g, "")}"`,
-        "Content-Length": String(attachment.bytes.length),
-      },
-    });
+    return attachmentResponse(attachment);
   } catch (err) {
     const { status, body } = toErrorBody(
       err instanceof AppError ? err : AppError.upstream(`Kon de bijlage niet laden: ${(err as Error).message}`),
