@@ -17,6 +17,7 @@ import {
   IBriefcase,
   IRocket,
   IWallet,
+  ICalendar,
 } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export const dynamic = "force-dynamic";
 const NAV = [
   { href: "/admin", label: "Controlecentrum", icon: <IGrid />, section: "Hoofd" },
   { href: "/admin/kantoor", label: "Live kantoor", icon: <IActivity />, section: "Hoofd" },
+  { href: "/admin/agenda", label: "Agenda", icon: <ICalendar />, section: "Hoofd" },
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },
   { href: "/admin/bedrijven", label: "Bedrijven", icon: <IBriefcase />, section: "Beheer" },
   { href: "/admin/facturen", label: "Facturen", icon: <IDoc />, section: "Beheer" },
@@ -38,6 +40,7 @@ const NAV = [
   { href: "/admin/berichten", label: "Berichten & Support", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/sollicitaties", label: "Open sollicitaties", icon: <IUsers />, section: "Communicatie" },
   { href: "/admin/mail", label: "Mailbox", icon: <IMail />, section: "Communicatie" },
+  { href: "/admin/mijn-mail", label: "Mijn mailbox", icon: <IMail />, section: "Communicatie" },
   { href: "/admin/whatsapp", label: "WhatsApp-import", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/nieuwsbrief", label: "Nieuwsbrief", icon: <IMail />, section: "Communicatie" },
   { href: "/admin/studio", label: "Studio (beeld)", icon: <IImage />, section: "Communicatie" },

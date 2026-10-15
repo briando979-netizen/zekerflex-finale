@@ -19,6 +19,7 @@ const JOBS = [
   "abu-phase-sweep",
   "no-show-sweep",
   "claim-collections-sweep",
+  "agenda-mail-sweep",
 ] as const;
 
 // GET /api/admin/cron-status — real last-run/success per background job, read

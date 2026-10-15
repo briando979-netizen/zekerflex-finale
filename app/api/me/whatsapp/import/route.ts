@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { importWhatsAppFile } from "@/lib/whatsapp/import";
+import { scanWhatsAppChat } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Bestand is te groot (max. 4 MB). Exporteer het gesprek 'Zonder media'.");
     }
     const result = await importWhatsAppFile(p.userId, file.name || "export.txt", Buffer.from(await file.arrayBuffer()));
+    if (result.kind === "chat") after(() => scanWhatsAppChat(p.userId, result.chat.id));
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     const { status, body } = toErrorBody(err);

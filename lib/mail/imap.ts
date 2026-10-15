@@ -415,7 +415,12 @@ function walkMime(raw: Buffer): MimePart[] {
 }
 
 /** Fetches one message's full raw RFC822 bytes and marks it \Seen (BODY.PEEK[] itself doesn't). */
-async function fetchRawMessage(cfg: ImapConfig, uid: number): Promise<Buffer | null> {
+export interface FetchOptions {
+  /** false when software reads the mail (agenda scan) rather than the person — it stays unread */
+  markSeen?: boolean;
+}
+
+async function fetchRawMessage(cfg: ImapConfig, uid: number, opts: FetchOptions = {}): Promise<Buffer | null> {
   const timeoutMs = (cfg.timeout ?? 20) * 1000;
   const { sock, bs } = await connect(cfg);
   try {
@@ -424,7 +429,9 @@ async function fetchRawMessage(cfg: ImapConfig, uid: number): Promise<Buffer | n
     const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
     // .PEEK means the FETCH itself didn't mark \Seen — opening a message in
     // the admin UI should still mark it read, like any real mail client.
-    await command(sock, bs, `UID STORE ${uid} +FLAGS (\\Seen)`, timeoutMs).catch(() => undefined);
+    if (opts.markSeen !== false) {
+      await command(sock, bs, `UID STORE ${uid} +FLAGS (\\Seen)`, timeoutMs).catch(() => undefined);
+    }
     await command(sock, bs, "LOGOUT", 5000).catch(() => undefined);
 
     // The literal was inlined as a quoted string by readResponseLine() — pull
@@ -441,19 +448,34 @@ async function fetchRawMessage(cfg: ImapConfig, uid: number): Promise<Buffer | n
 }
 
 /** Plain-text rendering of one message's body (prefers text/plain, falls back to stripped text/html) plus its attachments' metadata. */
+function bodyText(bodyParts: ReturnType<typeof walkMime>): string {
+  const plain = bodyParts.find((p) => p.contentType === "text/plain");
+  const html = bodyParts.find((p) => p.contentType === "text/html");
+  return plain
+    ? decodeBody(plain.body, plain.encoding).toString("utf8").trim()
+    : html
+      ? stripTags(decodeBody(html.body, html.encoding).toString("utf8"))
+      : (bodyParts[0] ? decodeBody(bodyParts[0].body, bodyParts[0].encoding).toString("utf8").trim() : "(leeg bericht)");
+}
+
+/** Body text plus any calendar invites (text/calendar parts or .ics files), read without marking the message seen. */
+export async function fetchForScan(cfg: ImapConfig, uid: number): Promise<{ text: string; calendars: string[] } | null> {
+  const raw = await fetchRawMessage(cfg, uid, { markSeen: false });
+  if (!raw) return null;
+  const parts = walkMime(raw);
+  const isCalendar = (p: (typeof parts)[number]) => p.contentType === "text/calendar" || /\.ics$/i.test(p.filename ?? "");
+  return {
+    text: bodyText(parts.filter((p) => !isAttachment(p) && !isCalendar(p))),
+    calendars: parts.filter(isCalendar).map((p) => decodeBody(p.body, p.encoding).toString("utf8")),
+  };
+}
+
 export async function fetchMessageContent(cfg: ImapConfig, uid: number): Promise<MessageContent> {
   const raw = await fetchRawMessage(cfg, uid);
   if (!raw) return { text: "(kon bericht niet laden)", attachments: [] };
 
   const parts = walkMime(raw);
-  const bodyParts = parts.filter((p) => !isAttachment(p));
-  const plain = bodyParts.find((p) => p.contentType === "text/plain");
-  const html = bodyParts.find((p) => p.contentType === "text/html");
-  const text = plain
-    ? decodeBody(plain.body, plain.encoding).toString("utf8").trim()
-    : html
-      ? stripTags(decodeBody(html.body, html.encoding).toString("utf8"))
-      : (bodyParts[0] ? decodeBody(bodyParts[0].body, bodyParts[0].encoding).toString("utf8").trim() : "(leeg bericht)");
+  const text = bodyText(parts.filter((p) => !isAttachment(p)));
 
   const attachments: MessageAttachment[] = parts
     .map((p, index) => ({ p, index }))

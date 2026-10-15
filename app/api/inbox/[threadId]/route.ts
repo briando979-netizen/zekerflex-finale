@@ -19,6 +19,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
+import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,6 +182,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
       if (other) void maybeAutoReply(thread.id, other, from);
     }
     after(() => notifyNewMessage(thread, msg));
+    after(() => scanChatMessage(thread, msg));
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (err) {

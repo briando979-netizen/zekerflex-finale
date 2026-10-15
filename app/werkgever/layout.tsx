@@ -31,6 +31,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
     { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
+    { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
     { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
     { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },

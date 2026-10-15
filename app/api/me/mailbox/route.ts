@@ -7,6 +7,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { fetchInboxList } from "@/lib/mail/imap";
 import { verifySmtp } from "@/lib/mail/smtp";
 import { OAUTH_ONLY_DOMAINS, OAUTH_ONLY_NOTE, domainOf } from "@/lib/mail/presets";
+import { resetMailScanState } from "@/lib/agenda/store";
 import {
   deleteMailboxConnection,
   describeMailError,
@@ -94,6 +95,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       connectedAt: new Date().toISOString(),
     };
     await saveMailboxConnection(conn);
+    await resetMailScanState(p.userId);
     await recordAudit({
       category: "SECURITY",
       action: "mailbox.connected",
@@ -116,6 +118,7 @@ export async function DELETE(): Promise<NextResponse> {
     const conn = await getMailboxConnection(p.userId);
     if (conn) {
       await deleteMailboxConnection(p.userId);
+      await resetMailScanState(p.userId);
       await recordAudit({
         category: "SECURITY",
         action: "mailbox.disconnected",

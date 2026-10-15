@@ -16,6 +16,12 @@ vi.mock("@/lib/whatsapp/store", () => ({
 const requirePrincipal = vi.fn().mockResolvedValue({ userId: "u1" });
 vi.mock("@/lib/auth", () => ({ requirePrincipal: () => requirePrincipal() }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn().mockResolvedValue({ ok: true }) }));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: (task: () => unknown) => void task(),
+}));
+const scanWhatsAppChat = vi.fn().mockResolvedValue(0);
+vi.mock("@/lib/agenda/scan", () => ({ scanWhatsAppChat: (...a: unknown[]) => scanWhatsAppChat(...a) }));
 
 import { parseWhatsAppExport } from "@/lib/whatsapp/export-parser";
 import { normalizePhone, parseVCards } from "@/lib/whatsapp/vcard";
@@ -173,11 +179,12 @@ describe("zip + import routing", () => {
     await expect(importWhatsAppFile("u1", "boodschappen.txt", Buffer.from("melk\nbrood"))).rejects.toThrow(/geen WhatsApp-export/);
   });
 
-  it("upload route: 201 for an export, 422 for a file that's too large", async () => {
+  it("upload route: 201 for an export (and plans its appointments), 422 for a file that's too large", async () => {
     const ok = new FormData();
     ok.append("file", new File(["15-10-2026 09:41 - Jan: Hoi"], "WhatsApp-chat met Jan.txt", { type: "text/plain" }));
     const res = await POST(new Request("http://localhost/api/me/whatsapp/import", { method: "POST", body: ok }));
     expect(res.status).toBe(201);
+    expect(scanWhatsAppChat).toHaveBeenCalledWith("u1", "c1");
 
     const big = new FormData();
     big.append("file", new File([new Uint8Array(4 * 1024 * 1024 + 1)], "groot.zip"));

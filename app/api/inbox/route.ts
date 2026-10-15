@@ -17,6 +17,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
+import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,6 +131,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const msg = await postMessage(thread.id, p.userId, input.text);
     if (otherUserId) void maybeAutoReply(thread.id, otherUserId, p.userId);
     after(() => notifyNewMessage(thread, msg));
+    after(() => scanChatMessage(thread, msg));
     return NextResponse.json({ threadId: thread.id }, { status: 201 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
