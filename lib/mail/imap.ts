@@ -296,6 +296,20 @@ interface MimePart {
   contentType: string;
   encoding: string;
   body: Buffer;
+  filename: string | null;
+  disposition: string | null;
+}
+
+export interface MessageAttachment {
+  index: number;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+export interface MessageContent {
+  text: string;
+  attachments: MessageAttachment[];
 }
 
 function splitHeadersBody(raw: Buffer): { headers: string; body: Buffer } {
@@ -309,6 +323,19 @@ function headerValue(headers: string, name: string): string | null {
   const unfolded = headers.replace(/\r\n[ \t]+/g, " ");
   const m = new RegExp(`^${name}:\\s*(.*)$`, "im").exec(unfolded);
   return m ? m[1]!.trim() : null;
+}
+
+/** Pulls a `name="..."` / `filename="..."` style parameter out of a header value. */
+function headerParam(headerValue: string | null, param: string): string | null {
+  if (!headerValue) return null;
+  const m = new RegExp(`${param}\\*?=\\s*"?([^";]+)"?`, "i").exec(headerValue);
+  return m ? decodeMimeWords(m[1]!.trim()) : null;
+}
+
+/** A part counts as a downloadable attachment when it's explicitly marked so, or carries a filename and isn't the message's own text body. */
+function isAttachment(p: MimePart): boolean {
+  if (p.disposition === "attachment") return true;
+  return Boolean(p.filename) && p.contentType !== "text/plain" && p.contentType !== "text/html";
 }
 
 function decodeBody(body: Buffer, encoding: string | null): Buffer {
@@ -349,7 +376,15 @@ function walkMime(raw: Buffer): MimePart[] {
 
   if (!/^multipart\//i.test(contentType) || !boundaryMatch) {
     const encoding = headerValue(headers, "Content-Transfer-Encoding");
-    return [{ contentType: contentType.split(";")[0]!.trim().toLowerCase(), encoding: encoding ?? "7bit", body }];
+    const disposition = headerValue(headers, "Content-Disposition");
+    const filename = headerParam(disposition, "filename") ?? headerParam(contentType, "name");
+    return [{
+      contentType: contentType.split(";")[0]!.trim().toLowerCase(),
+      encoding: encoding ?? "7bit",
+      body,
+      filename,
+      disposition: disposition ? disposition.split(";")[0]!.trim().toLowerCase() : null,
+    }];
   }
 
   const boundary = boundaryMatch[1]!;
@@ -364,8 +399,8 @@ function walkMime(raw: Buffer): MimePart[] {
   return parts;
 }
 
-/** Plain-text rendering of one message's body (best effort — prefers text/plain, falls back to stripped text/html). */
-export async function fetchMessageText(cfg: ImapConfig, uid: number): Promise<string> {
+/** Fetches one message's full raw RFC822 bytes and marks it \Seen (BODY.PEEK[] itself doesn't). */
+async function fetchRawMessage(cfg: ImapConfig, uid: number): Promise<Buffer | null> {
   const timeoutMs = (cfg.timeout ?? 20) * 1000;
   const { sock, bs } = await connect(cfg);
   try {
@@ -380,23 +415,55 @@ export async function fetchMessageText(cfg: ImapConfig, uid: number): Promise<st
     // The literal was inlined as a quoted string by readResponseLine() — pull
     // it back out of the one `* n FETCH (... BODY[] "...")` line.
     const fetchLine = lines.find((l) => /FETCH/i.test(l) && /BODY\[\]/i.test(l));
-    if (!fetchLine) return "(kon bericht niet laden)";
+    if (!fetchLine) return null;
     const pos = { i: fetchLine.indexOf("BODY[]") + "BODY[]".length };
     while (fetchLine[pos.i] === " ") pos.i++;
     const value = parseSexp(fetchLine, pos);
-    if (typeof value !== "string") return "(leeg bericht)";
-    const raw = Buffer.from(value, "utf8");
-
-    const parts = walkMime(raw);
-    const plain = parts.find((p) => p.contentType === "text/plain");
-    if (plain) return decodeBody(plain.body, plain.encoding).toString("utf8").trim();
-    const html = parts.find((p) => p.contentType === "text/html");
-    if (html) return stripTags(decodeBody(html.body, html.encoding).toString("utf8"));
-    const any = parts[0];
-    return any ? decodeBody(any.body, any.encoding).toString("utf8").trim() : "(leeg bericht)";
+    return typeof value === "string" ? Buffer.from(value, "utf8") : null;
   } finally {
     sock.destroy();
   }
+}
+
+/** Plain-text rendering of one message's body (prefers text/plain, falls back to stripped text/html) plus its attachments' metadata. */
+export async function fetchMessageContent(cfg: ImapConfig, uid: number): Promise<MessageContent> {
+  const raw = await fetchRawMessage(cfg, uid);
+  if (!raw) return { text: "(kon bericht niet laden)", attachments: [] };
+
+  const parts = walkMime(raw);
+  const bodyParts = parts.filter((p) => !isAttachment(p));
+  const plain = bodyParts.find((p) => p.contentType === "text/plain");
+  const html = bodyParts.find((p) => p.contentType === "text/html");
+  const text = plain
+    ? decodeBody(plain.body, plain.encoding).toString("utf8").trim()
+    : html
+      ? stripTags(decodeBody(html.body, html.encoding).toString("utf8"))
+      : (bodyParts[0] ? decodeBody(bodyParts[0].body, bodyParts[0].encoding).toString("utf8").trim() : "(leeg bericht)");
+
+  const attachments: MessageAttachment[] = parts
+    .map((p, index) => ({ p, index }))
+    .filter(({ p }) => isAttachment(p))
+    .map(({ p, index }) => ({
+      index,
+      filename: p.filename ?? `bijlage-${index + 1}`,
+      contentType: p.contentType,
+      size: decodeBody(p.body, p.encoding).length,
+    }));
+
+  return { text, attachments };
+}
+
+/** One attachment's raw, decoded bytes — fetched on demand so the list/body view stays cheap. */
+export async function fetchAttachment(cfg: ImapConfig, uid: number, index: number): Promise<{ filename: string; contentType: string; bytes: Buffer } | null> {
+  const raw = await fetchRawMessage(cfg, uid);
+  if (!raw) return null;
+  const part = walkMime(raw)[index];
+  if (!part) return null;
+  return {
+    filename: part.filename ?? `bijlage-${index + 1}`,
+    contentType: part.contentType || "application/octet-stream",
+    bytes: decodeBody(part.body, part.encoding),
+  };
 }
 
 /** True when IMAP_HOST/USER/PASS (or their SMTP fallbacks) resolve to something usable. */

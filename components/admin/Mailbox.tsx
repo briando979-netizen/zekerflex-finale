@@ -52,6 +52,18 @@ interface InboxPayload {
   host?: string;
   messages: InboxMsg[];
 }
+interface Attachment {
+  index: number;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 type Tab = "inbox" | "sent";
 type Selection = { tab: Tab; id: string } | { tab: "compose" } | null;
@@ -69,6 +81,7 @@ export function Mailbox() {
   const [inboxLoading, setInboxLoading] = useState(true);
 
   const [inboxBody, setInboxBody] = useState<Record<number, string>>({});
+  const [inboxAttachments, setInboxAttachments] = useState<Record<number, Attachment[]>>({});
   const [bodyLoading, setBodyLoading] = useState<number | null>(null);
 
   const [testing, setTesting] = useState(false);
@@ -124,6 +137,7 @@ export function Mailbox() {
       const res = await fetch(`/api/admin/mail/inbox/${uid}`, { cache: "no-store" });
       const d = await res.json();
       setInboxBody((cur) => ({ ...cur, [uid]: res.ok ? d.text : (d?.error?.message ?? "Kon bericht niet laden.") }));
+      setInboxAttachments((cur) => ({ ...cur, [uid]: res.ok && Array.isArray(d.attachments) ? d.attachments : [] }));
       // De server markeert \Seen als bijwerking van het ophalen van de body —
       // dit houdt de ongelezen-stip in de lijst meteen in sync, zonder op de
       // volgende poll te wachten.
@@ -392,9 +406,26 @@ export function Mailbox() {
               {bodyLoading === selectedInbox.uid ? (
                 <p className="text-sm text-neutralx-500">Laden…</p>
               ) : (
-                <pre className="whitespace-pre-wrap break-words rounded-lg border border-hair bg-paper-soft p-4 text-sm text-ink-soft">
-                  {inboxBody[selectedInbox.uid] ?? ""}
-                </pre>
+                <>
+                  <pre className="whitespace-pre-wrap break-words rounded-lg border border-hair bg-paper-soft p-4 text-sm text-ink-soft">
+                    {inboxBody[selectedInbox.uid] ?? ""}
+                  </pre>
+                  {(inboxAttachments[selectedInbox.uid]?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {inboxAttachments[selectedInbox.uid]!.map((a) => (
+                        <a
+                          key={a.index}
+                          href={`/api/admin/mail/inbox/${selectedInbox.uid}/attachment/${a.index}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded-lg border border-hairstrong bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-ink"
+                        >
+                          📎 {a.filename} <span className="font-normal text-neutralx-400">({formatSize(a.size)})</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : selectedSent ? (
