@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { payToken } from "@/lib/billing/pay-link";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
@@ -120,7 +121,7 @@ export default async function AdminFacturenPage(props: { searchParams: Promise<{
                   <th className="px-5 py-2.5 text-right font-medium">Totaal</th>
                   <th className="px-5 py-2.5 font-medium">Datum</th>
                   <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Pdf</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Acties</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hair">
@@ -139,9 +140,22 @@ export default async function AdminFacturenPage(props: { searchParams: Promise<{
                       </StatusPill>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
-                        PDF ↓
-                      </a>
+                      <span className="inline-flex items-center gap-3">
+                        {i.status === "ISSUED" && (i.recipientTenantId || i.recipientFreelancerId) && (
+                          <a
+                            href={`/betaal/${payToken(i.id)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-brand-600 hover:underline"
+                            title="Openbare betaalpagina met QR-code — door te sturen naar de klant"
+                          >
+                            Betaallink / QR
+                          </a>
+                        )}
+                        <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
+                          PDF ↓
+                        </a>
+                      </span>
                     </td>
                   </tr>
                 ))}

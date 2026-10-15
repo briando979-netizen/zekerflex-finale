@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { PayInvoiceButton } from "@/components/app/PayInvoiceButton";
+import { QrCode } from "@/components/billing/QrCode";
+import { Portal } from "@/components/chat/Portal";
 
 export type InvoiceRow = {
   id: string;
@@ -13,6 +15,8 @@ export type InvoiceRow = {
   vatCents: number;
   totalCents: number;
   status: "ISSUED" | "PAID" | string;
+  /** signed public pay link (open invoices only) — encoded in the QR */
+  payUrl?: string;
 };
 
 type Dict = {
@@ -41,6 +45,13 @@ type Dict = {
   statusOpen: string;
   payNow: string;
   payPending: string;
+  qrButton: string;
+  qrTitle: string;
+  qrBody: string;
+  qrCopy: string;
+  qrCopied: string;
+  qrOpen: string;
+  qrClose: string;
 };
 
 const moneyExact = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -50,6 +61,18 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [qrFor, setQrFor] = useState<InvoiceRow | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — the link is visible to copy by hand */
+    }
+  }
 
   const selectedInvoices = outstanding.filter((i) => selected.has(i.id));
   const selSubtotal = selectedInvoices.reduce((s, i) => s + i.subtotalCents, 0);
@@ -140,7 +163,21 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
                   </a>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  {i.status === "ISSUED" && <PayInvoiceButton invoiceId={i.id} label={t.payNow} pendingLabel={t.payPending} />}
+                  {i.status === "ISSUED" && (
+                    <span className="inline-flex items-center gap-2">
+                      {i.payUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setQrFor(i)}
+                          className="rounded-lg border border-hairstrong px-2 py-1 text-xs font-semibold text-ink hover:bg-paper-soft"
+                          aria-label={`${t.qrTitle} — ${i.number}`}
+                        >
+                          {t.qrButton}
+                        </button>
+                      )}
+                      <PayInvoiceButton invoiceId={i.id} label={t.payNow} pendingLabel={t.payPending} />
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -200,6 +237,44 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
           <Table rows={invoices} selectable={false} />
         )}
       </div>
+
+      {qrFor?.payUrl && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4"
+            onClick={() => setQrFor(null)}
+            role="presentation"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.qrTitle}
+              className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-lift"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="font-display text-lg font-bold text-ink">{t.qrTitle}</p>
+              <p className="mt-1 text-sm text-neutralx-500">
+                {qrFor.number} · <span className="num font-semibold text-ink">{moneyExact(qrFor.totalCents)}</span>
+              </p>
+              <div className="mt-4 flex justify-center">
+                <QrCode value={qrFor.payUrl} size={208} label={`${t.qrTitle} — ${qrFor.number}`} />
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-neutralx-500">{t.qrBody}</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <button type="button" onClick={() => copyLink(qrFor.payUrl!)} className="btn-ghost text-sm">
+                  {copied ? t.qrCopied : t.qrCopy}
+                </button>
+                <a href={qrFor.payUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
+                  {t.qrOpen}
+                </a>
+              </div>
+              <button type="button" onClick={() => setQrFor(null)} className="mt-4 text-xs text-neutralx-400 hover:text-ink">
+                {t.qrClose}
+              </button>
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   );
 }

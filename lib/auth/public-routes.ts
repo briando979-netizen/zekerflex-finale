@@ -32,6 +32,7 @@ const PUBLIC_PREFIXES = [
   "/api/nieuwsbrief", // signup + its own /afmelden
   "/api/analytics/track", // anonymous visitor tracking, rate-limited by session id
   "/api/shop", // public storefront reads; writes are admin-gated inside the route
+  "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([

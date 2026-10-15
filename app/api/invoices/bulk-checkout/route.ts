@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { InvoiceType } from "@prisma/client";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { createBulkInvoiceCheckoutSession } from "@/lib/billing/stripe";
+import { INVOICE_CHECKOUT_DESCRIPTION } from "@/lib/billing/invoice-descriptions";
 import { recordAudit } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
-
-const DESCRIPTIONS: Record<InvoiceType, string> = {
-  [InvoiceType.PLATFORM_FEE]: "ZekerFlex platformfee",
-  [InvoiceType.SELF_BILL_FREELANCER]: "ZekerFlex dienst (zzp)",
-  [InvoiceType.CANCELLATION_PENALTY]: "ZekerFlex annuleringsvergoeding",
-  [InvoiceType.UITZEND_FEE]: "ZekerFlex uitzendkracht (loon + opslag)",
-};
 
 const schema = z.object({ invoiceIds: z.array(z.string().min(1)).min(1).max(50) });
 
@@ -71,7 +64,7 @@ export async function POST(request: Request): Promise<Response> {
       invoices: invoices.map((i) => ({
         invoiceId: i.id,
         number: i.number,
-        description: DESCRIPTIONS[i.type],
+        description: INVOICE_CHECKOUT_DESCRIPTION[i.type],
         totalCents: i.totalCents,
       })),
       currency: invoices[0]!.currency,

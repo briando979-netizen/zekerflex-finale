@@ -15,7 +15,7 @@ const BOTTOM = MARGIN + 24;
 type Align = "left" | "right";
 
 interface Op {
-  kind: "text" | "rule" | "gap" | "keep";
+  kind: "text" | "rule" | "gap" | "keep" | "qr";
   text?: string;
   size?: number;
   bold?: boolean;
@@ -24,7 +24,10 @@ interface Op {
   indent?: number;
   color?: [number, number, number];
   height?: number;
+  modules?: boolean[][];
 }
+
+const QR_QUIET_MODULES = 4;
 
 export class SimplePdf {
   private ops: Op[] = [];
@@ -95,6 +98,12 @@ export class SimplePdf {
     return this;
   }
 
+  /** A QR code (module matrix from lib/qr/encode), `size` pt wide, left-aligned, with its quiet zone. */
+  qr(modules: boolean[][], size = 96): this {
+    this.ops.push({ kind: "qr", modules, height: size });
+    return this;
+  }
+
   private buildPages(): string[] {
     const pages: string[] = [];
     let parts: string[] = [];
@@ -111,6 +120,30 @@ export class SimplePdf {
     for (const op of this.ops) {
       if (op.kind === "gap") {
         y -= op.height ?? 10;
+        canPairRight = false;
+        continue;
+      }
+      if (op.kind === "qr" && op.modules) {
+        const size = op.height ?? 96;
+        const unit = size / op.modules.length;
+        const quiet = QR_QUIET_MODULES * unit;
+        if (y - (size + 2 * quiet) < BOTTOM) flush();
+        const top = y - quiet;
+        const rects: string[] = [];
+        op.modules.forEach((row, r) => {
+          for (let c = 0; c < row.length; c++) {
+            if (!row[c]) continue;
+            let end = c;
+            while (end + 1 < row.length && row[end + 1]) end++;
+            // a hair of vertical overlap so viewers don't render seams between rows
+            rects.push(
+              `${(MARGIN + c * unit).toFixed(3)} ${(top - (r + 1) * unit).toFixed(3)} ${((end - c + 1) * unit).toFixed(3)} ${(unit + 0.05).toFixed(3)} re`,
+            );
+            c = end;
+          }
+        });
+        parts.push(`0 0 0 rg\n${rects.join("\n")}\nf`);
+        y = top - size - quiet;
         canPairRight = false;
         continue;
       }

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SimplePdf } from "@/lib/pdf/simple";
+import { qrEncode } from "@/lib/qr/encode";
+import { payUrl } from "@/lib/billing/pay-link";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
@@ -87,6 +89,16 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
       9.5,
       { color: paid ? [0.05, 0.45, 0.2] : [0.45, 0.35, 0.05] },
     );
+  }
+
+  // Open invoice someone owes us: a QR to pay it straight from a phone.
+  if (inv.status === "ISSUED" && inv.totalCents > 0 && (inv.recipientTenantId || inv.recipientFreelancerId)) {
+    const link = payUrl(inv.id);
+    pdf.gap(4);
+    pdf.line("Direct betalen", 10.5, { bold: true });
+    pdf.line("Scan de QR-code met je telefoon en betaal met iDEAL, Apple Pay, Google Pay of kaart.", 9);
+    pdf.qr(qrEncode(link), 92);
+    pdf.line(link, 7.5, { color: [0.4, 0.45, 0.42] });
   }
   pdf.gap(18);
   pdf.line(

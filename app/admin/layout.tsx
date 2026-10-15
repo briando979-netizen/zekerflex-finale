@@ -16,6 +16,7 @@ import {
   IUsers,
   IBriefcase,
   IRocket,
+  IWallet,
 } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },
   { href: "/admin/bedrijven", label: "Bedrijven", icon: <IBriefcase />, section: "Beheer" },
   { href: "/admin/facturen", label: "Facturen", icon: <IDoc />, section: "Beheer" },
+  { href: "/admin/stripe", label: "Stripe live", icon: <IWallet />, section: "Beheer" },
   { href: "/admin/integraties", label: "API & integraties", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/jarvis", label: "Jarvis-assistent", icon: <IChat />, section: "Operatie" },
   { href: "/admin/verloning", label: "Wekelijkse verloning", icon: <IDoc />, section: "Operatie" },

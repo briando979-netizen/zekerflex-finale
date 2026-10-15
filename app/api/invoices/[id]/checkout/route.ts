@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
-import { InvoiceType } from "@prisma/client";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { createInvoiceCheckoutSession } from "@/lib/billing/stripe";
+import { INVOICE_CHECKOUT_DESCRIPTION } from "@/lib/billing/invoice-descriptions";
 import { recordAudit } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
-
-const DESCRIPTIONS: Record<InvoiceType, string> = {
-  [InvoiceType.PLATFORM_FEE]: "ZekerFlex platformfee",
-  [InvoiceType.SELF_BILL_FREELANCER]: "ZekerFlex dienst (zzp)",
-  [InvoiceType.CANCELLATION_PENALTY]: "ZekerFlex annuleringsvergoeding",
-  [InvoiceType.UITZEND_FEE]: "ZekerFlex uitzendkracht (loon + opslag)",
-};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +66,7 @@ export async function POST(_req: Request, props: { params: Promise<{ id: string 
       throw AppError.precondition("Alleen openstaande facturen kunnen betaald worden");
     }
 
-    const description = DESCRIPTIONS[invoice.type];
+    const description = INVOICE_CHECKOUT_DESCRIPTION[invoice.type];
 
     const session = await createInvoiceCheckoutSession({
       invoiceId: invoice.id,

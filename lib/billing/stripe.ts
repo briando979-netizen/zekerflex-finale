@@ -5,7 +5,7 @@ import { AppError } from "@/lib/errors";
 let client: Stripe | null = null;
 
 /** Lazily constructed so a missing key fails at call time, not at import time. */
-function getStripeClient(): Stripe {
+export function getStripeClient(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
     throw AppError.upstream("Stripe is not configured");
   }
@@ -22,6 +22,9 @@ export interface InvoiceCheckoutInput {
   totalCents: number;
   currency: string;
   billingEmail?: string | null;
+  /** Site paths to return to; default the employer invoice page (which needs a login). */
+  successPath?: string;
+  cancelPath?: string;
 }
 
 /**
@@ -57,8 +60,8 @@ export async function createInvoiceCheckoutSession(
     ...(input.billingEmail ? { customer_email: input.billingEmail } : {}),
     metadata: { invoiceId: input.invoiceId },
     payment_intent_data: { metadata: { invoiceId: input.invoiceId } },
-    success_url: `${baseUrl}/werkgever/facturen?paid=${input.invoiceId}`,
-    cancel_url: `${baseUrl}/werkgever/facturen?cancelled=${input.invoiceId}`,
+    success_url: `${baseUrl}${input.successPath ?? `/werkgever/facturen?paid=${input.invoiceId}`}`,
+    cancel_url: `${baseUrl}${input.cancelPath ?? `/werkgever/facturen?cancelled=${input.invoiceId}`}`,
   });
 }
 

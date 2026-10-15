@@ -5,6 +5,7 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { PageHeader, Panel, KpiCard, money } from "@/components/app/ui";
 import { BillingPrefsForm } from "@/components/app/BillingPrefsForm";
 import { InvoicesOverview, type InvoiceRow } from "@/components/app/InvoicesOverview";
+import { payUrl } from "@/lib/billing/pay-link";
 import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,7 @@ export default async function WerkgeverFacturenPage() {
     vatCents: i.vatCents,
     totalCents: i.totalCents,
     status: i.status,
+    ...(i.status === "ISSUED" ? { payUrl: payUrl(i.id) } : {}),
   }));
 
   return (
