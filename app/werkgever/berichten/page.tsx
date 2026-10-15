@@ -10,7 +10,9 @@ export default async function WerkgeverBerichtenPage() {
   const m = (await getDict()).messages;
   return (
     <>
-      <PageHeader title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
+      <div className="hidden md:block">
+        <PageHeader title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
+      </div>
       <InboxPage />
     </>
   );

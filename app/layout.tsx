@@ -105,6 +105,8 @@ export default async function RootLayout({
         <script
           type="application/ld+json"
           nonce={nonce}
+          // browsers blank the nonce attribute after load, so the client always sees ""
+          suppressHydrationWarning
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([organizationJsonLd(), websiteJsonLd()]),

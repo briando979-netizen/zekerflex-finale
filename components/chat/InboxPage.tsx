@@ -24,8 +24,15 @@ interface CommunityRow { id: string; name: string; threadId: string | null; memb
 /** Tells the server this tab is in view, so it doesn't also push the messages it shows. */
 const visibleQuery = () => (document.visibilityState === "visible" ? "?visible=1" : "");
 
-export function InboxPage() {
+export function InboxPage({
+  mobileHeight = "h-[calc(100dvh-12rem)]",
+}: {
+  /** Tailwind height class below md, where the inbox is one pane at a time (the shell's chrome differs per area) */
+  mobileHeight?: string;
+} = {}) {
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
+  // Below md there's room for one pane: the list, or the open conversation (WhatsApp-style).
+  const [pane, setPane] = useState<"list" | "conversation">("list");
   const [threads, setThreads] = useState<ThreadRow[]>([]);
   const [dir, setDir] = useState<Record<string, ChatUser>>({});
   const [presence, setPresence] = useState<Record<string, Presence>>({});
@@ -100,6 +107,16 @@ export function InboxPage() {
     const i = setInterval(loadThreads, 8000);
     return () => clearInterval(i);
   }, [loadThreads, loadCommunities]);
+
+  // opened from a call/message notification: straight into that conversation
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("thread")) setPane("conversation");
+  }, []);
+
+  const openThread = (id: string) => {
+    setActive(id);
+    setPane("conversation");
+  };
 
   useEffect(() => {
     if (!active) return;
@@ -184,7 +201,7 @@ export function InboxPage() {
       const d = await r.json();
       await loadThreads();
       setTab("chats");
-      setActive(d.threadId);
+      openThread(d.threadId);
     }
   };
 
@@ -197,7 +214,7 @@ export function InboxPage() {
     const d = await r.json();
     if (r.ok) {
       await loadThreads();
-      setActive(d.threadId);
+      openThread(d.threadId);
     }
   };
 
@@ -221,9 +238,9 @@ export function InboxPage() {
   return (
     <>
     <PushToggle variant="banner" />
-    <div className="chat-surface grid h-[calc(100vh-15rem)] grid-cols-[minmax(0,20rem)_1fr] overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+    <div className={`chat-surface grid ${mobileHeight} overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:h-[calc(100vh-15rem)] md:grid-cols-[minmax(0,20rem)_1fr]`}>
       {/* ─── left pane ─── */}
-      <div className="flex min-h-0 flex-col border-r border-hair">
+      <div className={`${pane === "conversation" && activeThread ? "hidden md:flex" : "flex"} min-h-0 flex-col border-hair md:border-r`}>
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
           <p className="font-display text-sm font-bold text-ink">Berichten</p>
           <div className="ml-auto flex items-center gap-1">
@@ -262,7 +279,7 @@ export function InboxPage() {
                       <li key={t.id}>
                         <button
                           type="button"
-                          onClick={() => setActive(t.id)}
+                          onClick={() => openThread(t.id)}
                           className={`flex w-full items-center gap-3 px-4 py-3 text-left ${active === t.id ? "bg-brand-50" : "hover:bg-paper-soft"}`}
                         >
                           <Avatar userId={o.userId} name={o.name} role={o.role} avatars={avatars} size={40} support={o.support} online={t.kind === "direct" ? pres?.online ?? false : undefined} />
@@ -317,7 +334,7 @@ export function InboxPage() {
               <ul className="divide-y divide-hair">
                 {communities.map((c) => (
                   <li key={c.id}>
-                    <button type="button" onClick={() => { if (c.threadId) { setTab("chats"); setActive(c.threadId); void loadThreads(); } }} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-paper-soft">
+                    <button type="button" onClick={() => { if (c.threadId) { setTab("chats"); openThread(c.threadId); void loadThreads(); } }} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-paper-soft">
                       <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-brand-500 text-sm font-bold text-white">{c.name.slice(0, 2).toUpperCase()}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-ink">{c.name}</span>
@@ -335,10 +352,18 @@ export function InboxPage() {
 
       {/* ─── conversation ─── */}
       {!activeThread ? (
-        <div className="grid place-items-center text-sm text-neutralx-400">Kies een gesprek</div>
+        <div className="hidden place-items-center text-sm text-neutralx-400 md:grid">Kies een gesprek</div>
       ) : (
-        <div className="flex min-h-0 flex-col">
+        <div className={`${pane === "list" ? "hidden md:flex" : "flex"} min-h-0 flex-col`}>
           <div className="flex items-center gap-3 border-b border-hair px-4 py-2.5">
+            <button
+              type="button"
+              onClick={() => setPane("list")}
+              className="-ml-2 grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-2xl leading-none text-neutralx-500 hover:bg-paper-soft md:hidden"
+              aria-label="Terug naar gesprekken"
+            >
+              ‹
+            </button>
             <Avatar userId={otherOf(activeThread).userId} name={otherOf(activeThread).name} role={otherOf(activeThread).role} avatars={avatars} size={38} support={otherOf(activeThread).support} />
             <button type="button" onClick={() => activeThread.kind === "direct" && setCardUser(otherOf(activeThread).userId)} className="min-w-0 text-left">
               <p className="truncate text-sm font-semibold text-ink">{otherOf(activeThread).name}</p>
@@ -439,7 +464,7 @@ export function InboxPage() {
             setShowCommunityCreate(false);
             void loadCommunities();
             void loadThreads();
-            if (threadId) { setTab("chats"); setActive(threadId); }
+            if (threadId) { setTab("chats"); openThread(threadId); }
           }}
         />
       )}
