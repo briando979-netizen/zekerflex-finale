@@ -26,6 +26,54 @@ interface ShopOrderLine {
   color?: string | null;
 }
 
+/** Marks one invoice PAID (idempotent) and fulfils a cancellation-penalty
+ * claim if applicable. Returns false if the invoice id doesn't resolve, so
+ * callers can tell a real match from a stale/unknown id. */
+async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Session, eventType: string): Promise<boolean> {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      type: true,
+      claimId: true,
+      totalCents: true,
+      currency: true,
+      recipientFreelancerId: true,
+    },
+  });
+  if (!invoice) {
+    logger.warn("stripe webhook: invoice not found", { invoiceId });
+    return false;
+  }
+
+  if (invoice.status !== InvoiceStatus.PAID) {
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        status: InvoiceStatus.PAID,
+        paidAt: new Date(),
+        stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+      },
+    });
+    await recordAudit({
+      category: "BILLING",
+      action: "invoice.paid",
+      actorLabel: "integration:stripe",
+      summary: `Factuur ${invoice.number} betaald via Stripe`,
+      targetType: "invoice",
+      targetId: invoice.id,
+      metadata: { sessionId: session.id, eventType },
+    });
+
+    if (invoice.type === InvoiceType.CANCELLATION_PENALTY && invoice.claimId) {
+      await fulfillPaidClaim(invoice);
+    }
+  }
+  return true;
+}
+
 /** Decrements variant stock for a just-paid order. Best-effort per line: if a
  * variant was oversold in the window between checkout and payment (rare race),
  * the order still gets marked paid — the customer already paid — but the
@@ -192,6 +240,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true });
     }
 
+    // Eén Checkout Session kan meerdere facturen tegelijk afrekenen (bulk
+    // "Direct betalen" vanaf /werkgever/facturen) — metadata draagt dan
+    // invoiceIds (JSON-array) in plaats van één invoiceId.
+    const invoiceIdsRaw = session.metadata?.invoiceIds;
+    if (invoiceIdsRaw) {
+      if (session.payment_status !== "paid") {
+        return NextResponse.json({ ok: true, matched: false, paymentStatus: session.payment_status });
+      }
+      let ids: string[] = [];
+      try {
+        ids = JSON.parse(invoiceIdsRaw);
+      } catch {
+        log.warn("stripe webhook: invoiceIds metadata is not valid JSON", { sessionId: session.id });
+      }
+      let matched = false;
+      for (const id of ids) {
+        if (await markInvoicePaid(id, session, event.type)) matched = true;
+      }
+      return NextResponse.json({ ok: true, matched });
+    }
+
     const invoiceId = session.metadata?.invoiceId;
     if (!invoiceId) {
       log.warn("stripe session without invoiceId metadata", { sessionId: session.id });
@@ -201,48 +270,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, matched: false, paymentStatus: session.payment_status });
     }
 
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      select: {
-        id: true,
-        number: true,
-        status: true,
-        type: true,
-        claimId: true,
-        totalCents: true,
-        currency: true,
-        recipientFreelancerId: true,
-      },
-    });
-    if (!invoice) {
-      log.warn("stripe webhook: invoice not found", { invoiceId });
-      return NextResponse.json({ ok: true, matched: false });
-    }
-
-    if (invoice.status !== InvoiceStatus.PAID) {
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          status: InvoiceStatus.PAID,
-          paidAt: new Date(),
-          stripePaymentIntentId:
-            typeof session.payment_intent === "string" ? session.payment_intent : null,
-        },
-      });
-      await recordAudit({
-        category: "BILLING",
-        action: "invoice.paid",
-        actorLabel: "integration:stripe",
-        summary: `Factuur ${invoice.number} betaald via Stripe`,
-        targetType: "invoice",
-        targetId: invoice.id,
-        metadata: { sessionId: session.id, eventType: event.type },
-      });
-
-      if (invoice.type === InvoiceType.CANCELLATION_PENALTY && invoice.claimId) {
-        await fulfillPaidClaim(invoice);
-      }
-    }
+    const matched = await markInvoicePaid(invoiceId, session, event.type);
+    return NextResponse.json({ ok: true, matched });
   }
 
   if (event.type === "checkout.session.expired") {

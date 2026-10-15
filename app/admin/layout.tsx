@@ -22,8 +22,10 @@ export const dynamic = "force-dynamic";
 
 const NAV = [
   { href: "/admin", label: "Controlecentrum", icon: <IGrid />, section: "Hoofd" },
+  { href: "/admin/kantoor", label: "Live kantoor", icon: <IActivity />, section: "Hoofd" },
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },
   { href: "/admin/bedrijven", label: "Bedrijven", icon: <IBriefcase />, section: "Beheer" },
+  { href: "/admin/facturen", label: "Facturen", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/integraties", label: "API & integraties", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/jarvis", label: "Jarvis-assistent", icon: <IChat />, section: "Operatie" },
   { href: "/admin/verloning", label: "Wekelijkse verloning", icon: <IDoc />, section: "Operatie" },

@@ -62,6 +62,49 @@ export async function createInvoiceCheckoutSession(
   });
 }
 
+export interface BulkInvoiceCheckoutInput {
+  invoices: { invoiceId: string; number: string; description: string; totalCents: number }[];
+  currency: string;
+  billingEmail?: string | null;
+}
+
+/**
+ * One Checkout Session covering several ISSUED invoices at once ("Direct
+ * betalen" op /werkgever/facturen) — one line item per invoice, so the
+ * amount the employer sees always matches the invoice breakdown. The webhook
+ * reads `metadata.invoiceIds` (a JSON array) and marks each one paid.
+ */
+export async function createBulkInvoiceCheckoutSession(
+  input: BulkInvoiceCheckoutInput,
+): Promise<Stripe.Checkout.Session> {
+  if (input.invoices.length === 0) {
+    throw AppError.validation("Geen facturen geselecteerd");
+  }
+  if (input.invoices.some((i) => i.totalCents <= 0)) {
+    throw AppError.validation("Invoice total must be positive to collect payment");
+  }
+  const stripe = getStripeClient();
+  const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
+  const invoiceIds = input.invoices.map((i) => i.invoiceId);
+
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: input.invoices.map((i) => ({
+      price_data: {
+        currency: input.currency.toLowerCase(),
+        product_data: { name: `Factuur ${i.number}`, description: i.description },
+        unit_amount: i.totalCents,
+      },
+      quantity: 1,
+    })),
+    ...(input.billingEmail ? { customer_email: input.billingEmail } : {}),
+    metadata: { invoiceIds: JSON.stringify(invoiceIds) },
+    payment_intent_data: { metadata: { invoiceIds: JSON.stringify(invoiceIds) } },
+    success_url: `${baseUrl}/werkgever/facturen?paid=bulk`,
+    cancel_url: `${baseUrl}/werkgever/facturen?cancelled=bulk`,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Recurring billing — public API subscriptions (lib/api-plans/catalog.ts).
 // Separate from the one-off Checkout above: a subscription needs a
