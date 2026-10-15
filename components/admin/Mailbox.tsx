@@ -236,9 +236,9 @@ export function Mailbox() {
         </div>
       )}
 
-      <div className="card grid overflow-hidden lg:grid-cols-[320px_1fr]" style={{ minHeight: 560 }}>
+      <div className="card grid overflow-hidden sm:grid-cols-[280px_1fr] md:grid-cols-[320px_1fr]" style={{ minHeight: 560 }}>
         {/* lijst-paneel */}
-        <div className="flex flex-col border-b border-hair lg:border-b-0 lg:border-r">
+        <div className="flex flex-col border-b border-hair sm:border-b-0 sm:border-r">
           <div className="flex items-center gap-1 border-b border-hair p-2">
             <button
               type="button"
