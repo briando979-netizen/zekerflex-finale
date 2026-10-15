@@ -124,11 +124,23 @@ export function Mailbox() {
       const res = await fetch(`/api/admin/mail/inbox/${uid}`, { cache: "no-store" });
       const d = await res.json();
       setInboxBody((cur) => ({ ...cur, [uid]: res.ok ? d.text : (d?.error?.message ?? "Kon bericht niet laden.") }));
+      // De server markeert \Seen als bijwerking van het ophalen van de body —
+      // dit houdt de ongelezen-stip in de lijst meteen in sync, zonder op de
+      // volgende poll te wachten.
+      if (res.ok) setInbox((cur) => (cur ? { ...cur, messages: cur.messages.map((m) => (m.uid === uid ? { ...m, seen: true } : m)) } : cur));
     } catch {
       setInboxBody((cur) => ({ ...cur, [uid]: "Kon bericht niet laden." }));
     } finally {
       setBodyLoading(null);
     }
+  }
+
+  function replyTo(m: InboxMsg) {
+    setTo(m.fromAddress ?? "");
+    setSubject(m.subject && /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject ?? ""}`);
+    setComposeBody("");
+    setSendMsg(null);
+    setSelection({ tab: "compose" });
   }
 
   async function sendTest() {
@@ -364,7 +376,14 @@ export function Mailbox() {
             </div>
           ) : selectedInbox ? (
             <div className="space-y-3 p-6">
-              <h2 className="font-display text-lg font-bold">{selectedInbox.subject || "(geen onderwerp)"}</h2>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-display text-lg font-bold">{selectedInbox.subject || "(geen onderwerp)"}</h2>
+                {selectedInbox.fromAddress && (
+                  <button type="button" onClick={() => replyTo(selectedInbox)} className="btn-ghost flex-shrink-0 text-xs">
+                    Beantwoorden
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-neutralx-500">
                 van {selectedInbox.fromName ? `${selectedInbox.fromName} ` : ""}
                 {selectedInbox.fromAddress ? `<${selectedInbox.fromAddress}>` : ""}

@@ -372,6 +372,9 @@ export async function fetchMessageText(cfg: ImapConfig, uid: number): Promise<st
     await command(sock, bs, `LOGIN ${quote(cfg.user)} ${quote(cfg.pass)}`, timeoutMs);
     await command(sock, bs, "SELECT INBOX", timeoutMs);
     const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
+    // .PEEK means the FETCH itself didn't mark \Seen — opening a message in
+    // the admin UI should still mark it read, like any real mail client.
+    await command(sock, bs, `UID STORE ${uid} +FLAGS (\\Seen)`, timeoutMs).catch(() => undefined);
     await command(sock, bs, "LOGOUT", 5000).catch(() => undefined);
 
     // The literal was inlined as a quoted string by readResponseLine() — pull
