@@ -38,6 +38,7 @@ const NAV = [
   { href: "/admin/berichten", label: "Berichten & Support", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/sollicitaties", label: "Open sollicitaties", icon: <IUsers />, section: "Communicatie" },
   { href: "/admin/mail", label: "Mailbox", icon: <IMail />, section: "Communicatie" },
+  { href: "/admin/whatsapp", label: "WhatsApp-import", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/nieuwsbrief", label: "Nieuwsbrief", icon: <IMail />, section: "Communicatie" },
   { href: "/admin/studio", label: "Studio (beeld)", icon: <IImage />, section: "Communicatie" },
   { href: "/admin/shop", label: "Webshopbeheer", icon: <IBriefcase />, section: "Communicatie" },

@@ -34,6 +34,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
     { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
+    { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
     { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock />, section: t.nav.beheer },
     { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc />, section: t.nav.beheer },
