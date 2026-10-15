@@ -6,6 +6,7 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
+import { useT } from "@/components/i18n/I18nProvider";
 
 // De shop-homepage: hero-carrousel, productraster, categorie-/inspiratielijsten
 // en nieuwsbrief. Promo-balk, header en footer zitten in ShopChrome (layout).
@@ -30,7 +31,6 @@ type Product = {
 const oneSize = (id: string, stock = 10): Variant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
 
 type PriceBucket = "Alle" | "onder15" | "15-30" | "vanaf30";
-const PRICE_BUCKET_LABEL: Record<PriceBucket, string> = { Alle: "Alle prijzen", onder15: "Tot € 15", "15-30": "€ 15 – € 30", vanaf30: "Vanaf € 30" };
 const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
   if (bucket === "Alle") return true;
   if (bucket === "onder15") return price < 15;
@@ -39,7 +39,6 @@ const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
 };
 
 type SortOrder = "relevantie" | "prijs-op" | "prijs-af" | "naam";
-const SORT_LABEL: Record<SortOrder, string> = { relevantie: "Relevantie", "prijs-op": "Prijs: laag naar hoog", "prijs-af": "Prijs: hoog naar laag", naam: "Naam A–Z" };
 
 const FALLBACK: Product[] = [
   { id: "shoes-s3", slug: "veiligheidsschoenen-s3", name: "Veiligheidsschoenen S3", description: "Stalen neus, doortreedbescherming en antislipzool.", price: 49.95, category: "Werk & PBM", label: "Verplicht PBM", imageUrl: "/shifts/logistiek.jpg", variants: oneSize("shoes-s3") },
@@ -76,6 +75,19 @@ const HERO_SLIDES = [
 ];
 
 export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category }) {
+  const t = useT();
+  const PRICE_BUCKET_LABEL: Record<PriceBucket, string> = {
+    Alle: t.shop.allPrices,
+    onder15: t.shop.under15,
+    "15-30": t.shop.between1530,
+    vanaf30: t.shop.from30,
+  };
+  const SORT_LABEL: Record<SortOrder, string> = {
+    relevantie: t.shop.sortRelevance,
+    "prijs-op": t.shop.sortPriceAsc,
+    "prijs-af": t.shop.sortPriceDesc,
+    naam: t.shop.sortName,
+  };
   const [category, setCategory] = useState<Category>(initialCat);
   const [gender, setGender] = useState<Gender>("Alle");
   const [query, setQuery] = useState("");
@@ -240,23 +252,23 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
         )}
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="font-display text-2xl font-bold md:text-3xl">{category === "Alles" ? "Alle producten" : category}</h2>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">{category === "Alles" ? t.shop.all : category}</h2>
             <p className="mt-1 text-sm text-neutralx-500">{shown.length} artikelen</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 rounded-full border border-hairstrong px-4 py-1.5">
               <IconSearch />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Zoeken" className="w-28 bg-transparent text-sm outline-none placeholder:text-neutralx-400 focus:w-40" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.shop.search} className="w-28 bg-transparent text-sm outline-none placeholder:text-neutralx-400 focus:w-40" />
             </label>
             {SUB_NAV.map((c) => (
-              <button key={c} type="button" onClick={() => setCategory(c)} className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${category === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}>{c}</button>
+              <button key={c} type="button" onClick={() => setCategory(c)} className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${category === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}>{c === "Alles" ? t.shop.all : c}</button>
             ))}
             <button
               type="button"
               onClick={() => setOnlyWishlist((v) => !v)}
               className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${onlyWishlist ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
             >
-              <IconHeart filled={onlyWishlist} /> Favorieten{wishlist.count > 0 ? ` (${wishlist.count})` : ""}
+              <IconHeart filled={onlyWishlist} /> {t.shop.favorites}{wishlist.count > 0 ? ` (${wishlist.count})` : ""}
             </button>
           </div>
         </div>
@@ -264,30 +276,30 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
         <div className="mb-6 flex flex-wrap items-center gap-3 border-y border-hair py-3">
           {availableSizes.length > 0 && (
             <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-              Maat
+              {t.shop.size}
               <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-                <option value="Alle">Alle</option>
+                <option value="Alle">{t.shop.all}</option>
                 {availableSizes.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </label>
           )}
           {availableColors.length > 0 && (
             <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-              Kleur
+              {t.shop.color}
               <select value={colorFilter} onChange={(e) => setColorFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-                <option value="Alle">Alle</option>
+                <option value="Alle">{t.shop.all}</option>
                 {availableColors.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
           )}
           <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-            Prijs
+            {t.shop.price}
             <select value={priceBucket} onChange={(e) => setPriceBucket(e.target.value as PriceBucket)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
               {(Object.keys(PRICE_BUCKET_LABEL) as PriceBucket[]).map((b) => <option key={b} value={b}>{PRICE_BUCKET_LABEL[b]}</option>)}
             </select>
           </label>
           <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-            Sorteren
+            {t.shop.sort}
             <select value={sort} onChange={(e) => setSort(e.target.value as SortOrder)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
               {(Object.keys(SORT_LABEL) as SortOrder[]).map((s) => <option key={s} value={s}>{SORT_LABEL[s]}</option>)}
             </select>
@@ -296,7 +308,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
 
         {shown.length === 0 ? (
           <p className="py-16 text-center text-sm text-neutralx-500">
-            {onlyWishlist ? "Nog niets aan je favorieten toegevoegd." : "Geen artikelen gevonden."}
+            {onlyWishlist ? t.shop.noFavoritesFound : t.shop.noArticlesFound}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
@@ -314,7 +326,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
                     {p.label && <span className="absolute left-3 top-3 rounded bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">{p.label}</span>}
                     <button
                       type="button"
-                      aria-label={wishlist.has(p.id) ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+                      aria-label={wishlist.has(p.id) ? t.shop.removeFromFavorites : t.shop.addToFavorites}
                       onClick={(e) => { e.preventDefault(); wishlist.toggle(p.id); }}
                       className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
                     >
@@ -330,12 +342,12 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
                         // fade-in-on-hover treatment.
                         className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                       >
-                        In winkelwagen
+                        {t.shop.addToCart}
                       </button>
                     ) : (
                       // Meerdere maten/kleuren — kies eerst op de productpagina.
                       <span className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink/90 py-2 text-center text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
-                        Kies maat/kleur →
+                        {t.shop.chooseOption}
                       </span>
                     )}
                   </div>

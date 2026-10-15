@@ -7,6 +7,8 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { IconHeart } from "@/components/marketing/ShopStorefront";
 import { specFor } from "@/lib/shop/product-specs";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 export type PdpBundleItem = { id: string; name: string; imageUrl: string | null; priceCents: number };
@@ -28,6 +30,7 @@ export type PdpProduct = {
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
 export function ProductDetail({ product, related }: { product: PdpProduct; related: PdpProduct[] }) {
+  const t = useT();
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
   const spec = useMemo(() => specFor(product.slug, product.description), [product]);
@@ -58,7 +61,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
   return (
     <div className="shell py-8 md:py-12">
       <nav className="mb-6 flex items-center gap-2 text-xs text-neutralx-500">
-        <Link href="/shop" className="hover:text-ink">Shop</Link>
+        <Link href="/shop" className="hover:text-ink">{t.shop.shopBreadcrumb}</Link>
         <span>/</span>
         <Link href={`/shop?cat=${encodeURIComponent(product.category)}`} className="hover:text-ink">{product.category}</Link>
         <span>/</span>
@@ -101,7 +104,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
             ) : <span />}
             <button
               type="button"
-              aria-label={wishlist.has(product.id) ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+              aria-label={wishlist.has(product.id) ? t.shop.removeFromFavorites : t.shop.addToFavorites}
               onClick={() => wishlist.toggle(product.id)}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-hairstrong text-ink transition hover:border-ink"
             >
@@ -110,12 +113,12 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
           </div>
           <h1 className="mt-2 font-display text-3xl font-bold leading-tight">{product.name}</h1>
           <p className="mt-3 text-2xl font-bold">{money(variantPriceCents)}</p>
-          <p className="mt-1 text-xs text-neutralx-500">Incl. btw · gratis verzending vanaf € 50</p>
-          {spec.fit && <p className="mt-4 text-sm text-neutralx-600"><span className="font-semibold text-ink">Pasvorm:</span> {spec.fit}</p>}
+          <p className="mt-1 text-xs text-neutralx-500">{t.shop.inclVat}</p>
+          {spec.fit && <p className="mt-4 text-sm text-neutralx-600"><span className="font-semibold text-ink">{t.shop.fit}</span> {spec.fit}</p>}
 
           {sizes.length > 0 && (
             <div className="mt-5">
-              <p className="text-sm font-semibold text-ink">Maat</p>
+              <p className="text-sm font-semibold text-ink">{t.shop.size}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {sizes.map((s) => (
                   <button
@@ -132,7 +135,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
           )}
           {colors.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-semibold text-ink">Kleur</p>
+              <p className="text-sm font-semibold text-ink">{t.shop.color}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {colors.map((c) => (
                   <button
@@ -160,26 +163,26 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
               disabled={!variant || variantStock <= 0}
               className="flex-1 rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-500 disabled:opacity-40"
             >
-              {!variant ? "Kies een optie" : variantStock <= 0 ? "Uitverkocht" : "In winkelwagen"}
+              {!variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart}
             </button>
           </div>
           {added && (
             <p className="mt-3 text-sm font-semibold text-brand-600">
-              Toegevoegd — {count} in je winkelwagen.{" "}
-              <Link href="/shop" className="underline">Verder winkelen</Link>
+              {fmt(t.shop.addedToCart, { n: count })}{" "}
+              <Link href="/shop" className="underline">{t.shop.continueShopping}</Link>
             </p>
           )}
           <p className="mt-2 text-xs text-neutralx-400">
             {variant
               ? variantStock > 0
-                ? `${variantStock} op voorraad · voor 22:00 besteld, morgen in huis`
-                : "Tijdelijk niet leverbaar in deze optie"
-              : "Kies een maat/kleur om de voorraad te zien"}
+                ? fmt(t.shop.inStock, { n: variantStock })
+                : t.shop.outOfStockVariant
+              : t.shop.pickVariantForStock}
           </p>
 
           {product.bundleItems && product.bundleItems.length > 0 && (
             <div className="mt-6 rounded-xl border border-hair p-4">
-              <p className="text-sm font-semibold text-ink">Deze bundel bevat:</p>
+              <p className="text-sm font-semibold text-ink">{t.shop.bundleContains}</p>
               <ul className="mt-2 space-y-1.5 text-sm text-neutralx-600">
                 {product.bundleItems.map((b) => (
                   <li key={b.id} className="flex items-center justify-between">
@@ -193,7 +196,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
 
           {/* productomschrijving */}
           <div className="mt-8 border-t border-hair pt-6">
-            <h2 className="font-display text-lg font-bold">Productomschrijving</h2>
+            <h2 className="font-display text-lg font-bold">{t.shop.productDescription}</h2>
             <ul className="mt-3 space-y-2 text-sm text-neutralx-600">
               {spec.bullets.map((b) => (
                 <li key={b} className="flex gap-2">
@@ -208,7 +211,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
           {hasSize && spec.sizeTable && (
             <div className="mt-4 border-t border-hair pt-6">
               <button type="button" onClick={() => setSizeOpen((o) => !o)} className="flex w-full items-center justify-between font-display text-lg font-bold">
-                Maattabel
+                {t.shop.sizeTable}
                 <span className="text-base font-normal text-neutralx-400">{sizeOpen ? "−" : "+"}</span>
               </button>
               {sizeOpen && (
@@ -251,7 +254,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
       {/* gerelateerd */}
       {related.length > 0 && (
         <div className="mt-16 border-t border-hair pt-10">
-          <h2 className="font-display text-xl font-bold">Anderen bekeken ook</h2>
+          <h2 className="font-display text-xl font-bold">{t.shop.alsoViewed}</h2>
           <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
             {related.map((r) => (
               <Link key={r.id} href={`/shop/${r.slug}`} className="group">

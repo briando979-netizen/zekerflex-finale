@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { logoutAction } from "@/lib/auth/actions";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { LogoGlyph } from "@/components/brand/Logo";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export type ShopAccountOrder = {
   id: string;
@@ -17,15 +18,6 @@ export type ShopAccountOrder = {
 
 type WishlistProduct = { id: string; slug?: string | null; name: string; priceCents: number; imageUrl: string | null };
 
-const STATUS_LABEL: Record<ShopAccountOrder["status"], string> = {
-  PENDING_PAYMENT: "Wacht op betaling",
-  RECEIVED: "Betaald",
-  CONFIRMED: "Bevestigd",
-  SHIPPED: "Onderweg",
-  CANCELLED: "Geannuleerd",
-  PAYMENT_FAILED: "Betaling mislukt",
-};
-
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
 export function ShopAccount({
@@ -35,6 +27,15 @@ export function ShopAccount({
   principal: { fullName: string; email: string } | null;
   orders: ShopAccountOrder[];
 }) {
+  const t = useT();
+  const STATUS_LABEL: Record<ShopAccountOrder["status"], string> = {
+    PENDING_PAYMENT: t.shop.orderStatusPending,
+    RECEIVED: t.shop.orderStatusReceived,
+    CONFIRMED: t.shop.orderStatusConfirmed,
+    SHIPPED: t.shop.orderStatusShipped,
+    CANCELLED: t.shop.orderStatusCancelled,
+    PAYMENT_FAILED: t.shop.orderStatusFailed,
+  };
   const router = useRouter();
   const wishlist = useShopWishlist();
   const [products, setProducts] = useState<WishlistProduct[]>([]);
@@ -50,18 +51,18 @@ export function ShopAccount({
 
   return (
     <div className="shell max-w-3xl py-12 md:py-16">
-      <h1 className="font-display text-3xl font-bold">Mijn account</h1>
+      <h1 className="font-display text-3xl font-bold">{t.shop.myAccount}</h1>
 
       {principal ? (
         <>
           <p className="mt-2 text-sm text-neutralx-600">
-            Hoi <span className="font-semibold text-ink">{principal.fullName}</span> — {principal.email}
+            <span className="font-semibold text-ink">{principal.fullName}</span> — {principal.email}
           </p>
 
           <section className="mt-8 rounded-2xl border border-hair p-6">
-            <h2 className="font-display text-lg font-bold">Je bestellingen</h2>
+            <h2 className="font-display text-lg font-bold">{t.shop.yourOrders}</h2>
             {orders.length === 0 ? (
-              <p className="mt-2 text-sm text-neutralx-500">Je hebt nog niets besteld in de ZekerFlex Shop.</p>
+              <p className="mt-2 text-sm text-neutralx-500">{t.shop.noOrdersYet}</p>
             ) : (
               <ul className="mt-4 divide-y divide-hair">
                 {orders.map((o) => (
@@ -81,22 +82,22 @@ export function ShopAccount({
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/dashboard" className="rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold hover:border-ink">
-              Naar het ZekerFlex-platform
+              {t.shop.toPlatform}
             </Link>
             <form action={logoutAction}>
-              <button type="submit" className="rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold text-crit hover:border-crit">Uitloggen</button>
+              <button type="submit" className="rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold text-crit hover:border-crit">{t.shop.logout}</button>
             </form>
           </div>
         </>
       ) : (
         <>
           <p className="mt-2 text-sm text-neutralx-600">
-            Je bestelt in deze shop als gast — geen account nodig. Log in om je bestelgeschiedenis hier te zien.
+            {t.shop.guestIntro}
           </p>
 
           <section className="mt-8 rounded-2xl border border-hair p-6">
-            <h2 className="font-display text-lg font-bold">Bestelling opzoeken</h2>
-            <p className="mt-1 text-sm text-neutralx-500">Plak de referentie uit je bevestigingsmail.</p>
+            <h2 className="font-display text-lg font-bold">{t.shop.findOrder}</h2>
+            <p className="mt-1 text-sm text-neutralx-500">{t.shop.pasteReference}</p>
             <form
               onSubmit={(e) => { e.preventDefault(); if (lookupId.trim()) router.push(`/shop/bestelling/${lookupId.trim()}`); }}
               className="mt-3 flex gap-2"
@@ -107,24 +108,21 @@ export function ShopAccount({
                 placeholder="bv. cmv8qlly9000013h3cpz63tbi"
                 className="flex-1 rounded-lg border border-hairstrong px-3 py-2 text-sm outline-none focus:border-ink"
               />
-              <button type="submit" className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white">Zoeken</button>
+              <button type="submit" className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white">{t.shop.searchButton}</button>
             </form>
           </section>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/login?callbackUrl=/shop/account" className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white">Inloggen</Link>
-            <Link href="/register?callbackUrl=/shop/account" className="rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold hover:border-ink">Account maken</Link>
+            <Link href="/login?callbackUrl=/shop/account" className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white">{t.shop.login}</Link>
+            <Link href="/register?callbackUrl=/shop/account" className="rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold hover:border-ink">{t.shop.createAccount}</Link>
           </div>
         </>
       )}
 
       <section className="mt-10 rounded-2xl border border-hair p-6">
-        <h2 className="font-display text-lg font-bold">Je favorieten{wishlist.count > 0 ? ` (${wishlist.count})` : ""}</h2>
+        <h2 className="font-display text-lg font-bold">{t.shop.favorites}{wishlist.count > 0 ? ` (${wishlist.count})` : ""}</h2>
         {products.length === 0 ? (
-          <p className="mt-2 text-sm text-neutralx-500">
-            Nog niets aan je favorieten toegevoegd. Klik op het hartje bij een product in de{" "}
-            <Link href="/shop" className="font-semibold text-brand-600 underline">shop</Link>.
-          </p>
+          <p className="mt-2 text-sm text-neutralx-500">{t.shop.noFavoritesInAccount}</p>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
             {products.map((p) => (

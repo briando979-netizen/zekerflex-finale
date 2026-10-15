@@ -11,6 +11,7 @@ type RoomStats = {
   mail: { total: number; delivered: number } | null;
   newsletter: { count: number } | null;
   sales: { count: number; replied: number } | null;
+  invoices: { outstandingCents: number; paidCents: number; count: number } | null;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { maximumFractionDigits: 0 })}`;
@@ -55,19 +56,20 @@ function Room({
 }
 
 export function OfficeFloor() {
-  const [stats, setStats] = useState<RoomStats>({ shop: null, mail: null, newsletter: null, sales: null });
+  const [stats, setStats] = useState<RoomStats>({ shop: null, mail: null, newsletter: null, sales: null, invoices: null });
 
   useEffect(() => {
     let stop = false;
     async function load() {
-      const [shopRes, mailRes, nbRes, salesRes] = await Promise.allSettled([
+      const [shopRes, mailRes, nbRes, salesRes, invoicesRes] = await Promise.allSettled([
         fetch("/api/shop/stats", { cache: "no-store" }),
         fetch("/api/admin/mail", { cache: "no-store" }),
         fetch("/api/admin/nieuwsbrief", { cache: "no-store" }),
         fetch("/api/admin/sales/leads", { cache: "no-store" }),
+        fetch("/api/admin/invoices/stats", { cache: "no-store" }),
       ]);
       if (stop) return;
-      const next: RoomStats = { shop: null, mail: null, newsletter: null, sales: null };
+      const next: RoomStats = { shop: null, mail: null, newsletter: null, sales: null, invoices: null };
       if (shopRes.status === "fulfilled" && shopRes.value.ok) {
         const d = await shopRes.value.json();
         next.shop = { revenueCents: d.revenueCents ?? 0, paidOrders: d.paidOrderCount ?? 0, pendingOrders: d.pendingOrderCount ?? 0 };
@@ -84,6 +86,10 @@ export function OfficeFloor() {
         const d = await salesRes.value.json();
         const leads = Array.isArray(d.leads) ? d.leads : [];
         next.sales = { count: leads.length, replied: leads.filter((l: { status?: string }) => l.status === "REPLIED").length };
+      }
+      if (invoicesRes.status === "fulfilled" && invoicesRes.value.ok) {
+        const d = await invoicesRes.value.json();
+        next.invoices = { outstandingCents: d.outstandingCents ?? 0, paidCents: d.paidCents ?? 0, count: d.count ?? 0 };
       }
       if (!stop) setStats(next);
     }
@@ -144,6 +150,13 @@ export function OfficeFloor() {
             { id: "sa1", emoji: "🤖", dur: 15, delay: 0, path: 1 },
             { id: "sa2", emoji: "🧑‍💼", dur: 10, delay: 3, path: 3 },
           ]}
+        />
+        <Room
+          title="Facturatie"
+          emoji="🧾"
+          tone="border-emerald-200 bg-emerald-50/40"
+          badge={stats.invoices ? `${money(stats.invoices.outstandingCents)} openstaand · ${money(stats.invoices.paidCents)} betaald` : "laden…"}
+          bots={[{ id: "f1", emoji: "🤖", dur: 16, delay: 1.5, path: 2 }]}
         />
       </div>
 

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
+import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 // Gedeelde shop-chrome: promo-balk, brede header met categorie-nav + gecentreerd
 // logo + winkelwagen, en de uitgebreide footer. Zit in app/shop/layout.tsx zodat
@@ -23,15 +26,15 @@ type CartLine = { variantId: string; name: string; priceCents: number; imageUrl:
 
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 
-const MAIN_NAV = [
-  { label: "Werk & PBM", cat: "Werk & PBM" },
-  { label: "Kleding", cat: "Kleding" },
-  { label: "Werkdag", cat: "Werkdag" },
-  { label: "Voor teams", cat: "Cadeaus" },
-  { label: "Aanbiedingen", cat: "Alles", accent: true },
-];
-
 export function ShopChrome({ children }: { children: ReactNode }) {
+  const { locale, t } = useI18n();
+  const MAIN_NAV = [
+    { label: t.shop.navPbm, cat: "Werk & PBM" },
+    { label: t.shop.navKleding, cat: "Kleding" },
+    { label: t.shop.navWerkdag, cat: "Werkdag" },
+    { label: t.shop.navTeams, cat: "Cadeaus" },
+    { label: t.shop.navAanbiedingen, cat: "Alles", accent: true },
+  ];
   const [promo, setPromo] = useState(true);
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
@@ -60,7 +63,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         const hit = byVariantId.get(variantId);
         if (!hit) return null;
         const { product, variant } = hit;
-        const label = [variant.size ? `Maat ${variant.size}` : null, variant.color].filter(Boolean).join(", ");
+        const label = [variant.size ? `${t.shop.size} ${variant.size}` : null, variant.color].filter(Boolean).join(", ");
         return {
           variantId,
           name: label ? `${product.name} — ${label}` : product.name,
@@ -70,7 +73,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         };
       })
       .filter((l): l is CartLine => l !== null);
-  }, [catalog, cart]);
+  }, [catalog, cart, t]);
   const subtotal = items.reduce((s, p) => s + (p.priceCents / 100) * p.qty, 0);
   const shipping = subtotal >= 50 || subtotal === 0 ? 0 : 4.95;
   const total = subtotal + shipping;
@@ -136,9 +139,18 @@ export function ShopChrome({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="flex flex-1 items-center justify-end gap-4">
-            <span className="hidden text-xs font-semibold text-neutralx-500 sm:inline">NL</span>
-            <Link href="/shop/account" aria-label="Mijn account" className="hover:text-brand-600"><IconUser /></Link>
-            <button type="button" onClick={() => setDrawer(true)} aria-label="Winkelwagen" className="relative hover:text-brand-600">
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as Locale)}
+              aria-label={t.shell.language}
+              className="hidden rounded-lg border border-hairstrong bg-transparent px-1.5 py-1 text-xs font-semibold text-neutralx-500 sm:inline"
+            >
+              {LOCALES.map((code) => (
+                <option key={code} value={code}>{LOCALE_LABELS[code]}</option>
+              ))}
+            </select>
+            <Link href="/shop/account" aria-label={t.shop.account} className="hover:text-brand-600"><IconUser /></Link>
+            <button type="button" onClick={() => setDrawer(true)} aria-label={t.shop.cart} className="relative hover:text-brand-600">
               <IconBag />
               {count > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">{count}</span>
@@ -199,17 +211,17 @@ export function ShopChrome({ children }: { children: ReactNode }) {
           <button type="button" aria-label="Sluiten" onClick={() => setDrawer(false)} className="absolute inset-0 bg-ink/45" />
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-hair pb-4">
-              <h2 className="font-display text-xl font-bold">Winkelwagen ({count})</h2>
+              <h2 className="font-display text-xl font-bold">{t.shop.cart} ({count})</h2>
               <button type="button" onClick={() => setDrawer(false)} aria-label="Sluiten" className="grid h-9 w-9 place-items-center rounded-full border border-hair text-xl">×</button>
             </div>
             {items.length > 0 && (
               <div className="border-b border-hair py-3">
                 {subtotal >= 50 ? (
-                  <p className="text-xs font-semibold text-brand-600">✓ Je hebt gratis verzending</p>
+                  <p className="text-xs font-semibold text-brand-600">✓ {t.shop.freeShippingDone}</p>
                 ) : (
                   <>
                     <p className="text-xs text-neutralx-600">
-                      Nog <span className="font-semibold text-ink">{money(50 - subtotal)}</span> voor gratis verzending
+                      {fmt(t.shop.freeShippingLeft, { amount: money(50 - subtotal) })}
                     </p>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-paper-soft">
                       <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${Math.min(100, (subtotal / 50) * 100)}%` }} />
@@ -220,7 +232,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             )}
             <div className="flex-1 overflow-y-auto py-4">
               {items.length === 0 ? (
-                <div className="py-16 text-center"><LogoGlyph size={44} /><p className="mt-4 font-semibold">Je winkelwagen is leeg.</p></div>
+                <div className="py-16 text-center"><LogoGlyph size={44} /><p className="mt-4 font-semibold">{t.shop.cartEmpty}</p></div>
               ) : (
                 <div className="space-y-4">
                   {items.map((l) => (
@@ -250,12 +262,12 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             </div>
             {items.length > 0 && (
               <div className="border-t border-hair pt-4">
-                <div className="flex justify-between text-sm text-neutralx-600"><span>Subtotaal</span><span>{money(subtotal)}</span></div>
-                <div className="mt-1 flex justify-between text-sm text-neutralx-600"><span>Verzending</span><span>{shipping === 0 ? "Gratis" : money(shipping)}</span></div>
-                <div className="mt-3 flex justify-between font-display text-lg font-bold"><span>Totaal</span><span>{money(total)}</span></div>
-                <button type="button" onClick={() => { setDrawer(false); setCheckout(true); }} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white">Afrekenen</button>
+                <div className="flex justify-between text-sm text-neutralx-600"><span>{t.shop.subtotal}</span><span>{money(subtotal)}</span></div>
+                <div className="mt-1 flex justify-between text-sm text-neutralx-600"><span>{t.shop.shipping}</span><span>{shipping === 0 ? t.shop.free : money(shipping)}</span></div>
+                <div className="mt-3 flex justify-between font-display text-lg font-bold"><span>{t.shop.total}</span><span>{money(total)}</span></div>
+                <button type="button" onClick={() => { setDrawer(false); setCheckout(true); }} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white">{t.shop.checkout}</button>
                 <Link href="/shop/account" onClick={() => setDrawer(false)} className="mt-3 block text-center text-xs font-semibold text-neutralx-500 hover:text-ink">
-                  Mijn bestellingen en favorieten →
+                  {t.shop.myOrdersAndFavorites}
                 </Link>
               </div>
             )}
@@ -268,24 +280,24 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/50 px-4 py-8">
           <div className="mx-auto max-w-xl rounded-2xl bg-white p-6 shadow-2xl sm:p-9">
             <div className="flex items-start justify-between">
-              <h2 className="font-display text-2xl font-bold">Bestelling afronden</h2>
+              <h2 className="font-display text-2xl font-bold">{t.shop.checkoutTitle}</h2>
               <button type="button" onClick={() => setCheckout(false)} aria-label="Sluiten" className="grid h-9 w-9 place-items-center rounded-full border border-hair text-xl">×</button>
             </div>
             <form onSubmit={placeOrder} className="mt-6 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="field-label">Voornaam<input required className="field-input" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} /></label>
-                <label className="field-label">Achternaam<input required className="field-input" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></label>
+                <label className="field-label">{t.shop.firstName}<input required className="field-input" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} /></label>
+                <label className="field-label">{t.shop.lastName}<input required className="field-input" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></label>
               </div>
-              <label className="field-label">E-mailadres<input required type="email" className="field-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></label>
-              <label className="field-label">Adres<input required className="field-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} /></label>
+              <label className="field-label">{t.shop.email}<input required type="email" className="field-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></label>
+              <label className="field-label">{t.shop.address}<input required className="field-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} /></label>
               <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-                <label className="field-label">Postcode<input required className="field-input" value={form.postalCode} onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))} /></label>
-                <label className="field-label">Plaats<input required className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} /></label>
+                <label className="field-label">{t.shop.postalCode}<input required className="field-input" value={form.postalCode} onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))} /></label>
+                <label className="field-label">{t.shop.city}<input required className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} /></label>
               </div>
-              <div className="mt-2 flex items-center justify-between border-t border-hair pt-4 font-display text-lg font-bold"><span>Totaal</span><span>{money(total)}</span></div>
+              <div className="mt-2 flex items-center justify-between border-t border-hair pt-4 font-display text-lg font-bold"><span>{t.shop.total}</span><span>{money(total)}</span></div>
               {orderError && <p className="text-sm font-semibold text-crit">{orderError}</p>}
-              <button className="w-full rounded-lg bg-ink py-3 text-sm font-bold text-white disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>{placing ? "Naar betalen…" : "Naar betalen"}</button>
-              <p className="text-center text-[11px] text-neutralx-400">Je wordt doorgestuurd naar een beveiligd Stripe-betaalscherm (iDEAL, kaart, …).</p>
+              <button className="w-full rounded-lg bg-ink py-3 text-sm font-bold text-white disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>{placing ? t.shop.toPaymentPending : t.shop.toPayment}</button>
+              <p className="text-center text-[11px] text-neutralx-400">{t.shop.securePaymentNote}</p>
             </form>
           </div>
         </div>
