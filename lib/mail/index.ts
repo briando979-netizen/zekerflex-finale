@@ -66,6 +66,21 @@ export function smtpConfig(): SmtpConfig | null {
   };
 }
 
+/**
+ * IMAP config for the admin "Postvak in" (lib/mail/imap.ts) — reads the same
+ * real mailbox the SMTP side sends as. Falls back to SMTP_HOST with "smtp."
+ * swapped for "imap." and to SMTP_USER/PASS when the IMAP_* vars are unset,
+ * since one set of mailbox credentials usually covers both (true for TransIP
+ * Mail). Returns null when there's nothing to connect with.
+ */
+export function imapConfig(): { host: string; port: number; secure: boolean; user: string; pass: string } | null {
+  const host = env.IMAP_HOST?.trim() || env.SMTP_HOST?.trim().replace(/^smtp\./i, "imap.") || "";
+  const user = env.IMAP_USER?.trim() || env.SMTP_USER?.trim() || "";
+  const pass = env.IMAP_PASS || env.SMTP_PASS || "";
+  if (!host || !user || !pass) return null;
+  return { host, port: env.IMAP_PORT, secure: env.IMAP_SECURE, user, pass };
+}
+
 function hostFromUrl(u: string): string {
   try {
     return new URL(u).hostname || "zekerflex.com";

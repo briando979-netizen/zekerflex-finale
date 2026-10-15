@@ -107,6 +107,19 @@ const schema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_TIMEOUT_S: z.coerce.number().int().positive().default(20),
+  // Inbound mail (admin Mailbox "Postvak in") — reads the same real mailbox
+  // the SMTP side sends as. Most providers (TransIP included) use one set of
+  // credentials for both, so these fall back to SMTP_HOST/USER/PASS with
+  // "smtp." swapped for "imap." when left unset; only set them explicitly if
+  // the provider's IMAP endpoint actually differs.
+  IMAP_HOST: z.string().optional(),
+  IMAP_PORT: z.coerce.number().int().positive().default(993),
+  IMAP_SECURE: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
+  IMAP_USER: z.string().optional(),
+  IMAP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default("noreply@zekerflex.com"),
   MAIL_FROM_NAME: z.string().default("ZekerFlex"),
   MAIL_ADMIN: z.string().default("info@zekerflex.com"),

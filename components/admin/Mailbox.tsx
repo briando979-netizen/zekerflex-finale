@@ -39,9 +39,29 @@ const KIND_LABEL: Record<string, string> = {
   nieuwsbrief: "Nieuwsbrief",
 };
 
+interface InboxMsg {
+  uid: number;
+  date: string | null;
+  subject: string | null;
+  fromName: string | null;
+  fromAddress: string | null;
+  seen: boolean;
+}
+interface InboxPayload {
+  configured: boolean;
+  host?: string;
+  messages: InboxMsg[];
+}
+
 export function Mailbox() {
   const [data, setData] = useState<Payload | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [inbox, setInbox] = useState<InboxPayload | null>(null);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [inboxLoading, setInboxLoading] = useState(true);
+  const [openUid, setOpenUid] = useState<number | null>(null);
+  const [msgBody, setMsgBody] = useState<Record<number, string>>({});
+  const [bodyLoading, setBodyLoading] = useState<number | null>(null);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [to, setTo] = useState("");
@@ -63,6 +83,44 @@ export function Mailbox() {
     const t = setInterval(refresh, 8000);
     return () => clearInterval(t);
   }, []);
+
+  async function refreshInbox() {
+    try {
+      const res = await fetch("/api/admin/mail/inbox", { cache: "no-store" });
+      const d = await res.json();
+      if (!res.ok) {
+        setInbox(null);
+        setInboxError(d?.error?.message ?? "Postvak in kon niet worden geladen.");
+      } else {
+        setInbox(d);
+        setInboxError(null);
+      }
+    } catch {
+      setInboxError("Postvak in kon niet worden geladen.");
+    } finally {
+      setInboxLoading(false);
+    }
+  }
+  useEffect(() => {
+    void refreshInbox();
+    const t = setInterval(refreshInbox, 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function openMessage(uid: number) {
+    setOpenUid(openUid === uid ? null : uid);
+    if (msgBody[uid] !== undefined || openUid === uid) return;
+    setBodyLoading(uid);
+    try {
+      const res = await fetch(`/api/admin/mail/inbox/${uid}`, { cache: "no-store" });
+      const d = await res.json();
+      setMsgBody((cur) => ({ ...cur, [uid]: res.ok ? d.text : (d?.error?.message ?? "Kon bericht niet laden.") }));
+    } catch {
+      setMsgBody((cur) => ({ ...cur, [uid]: "Kon bericht niet laden." }));
+    } finally {
+      setBodyLoading(null);
+    }
+  }
 
   async function sendTest() {
     setTesting(true);
@@ -129,6 +187,57 @@ export function Mailbox() {
         <p className="mt-1 text-sm text-neutralx-600">
           Elke uitgaande e-mail wordt hier vastgelegd — welkom, verificatie en meldingen.
         </p>
+      </div>
+
+      {/* echte postvak in — live over IMAP uit de echte mailbox */}
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-hair px-5 py-3">
+          <span className="text-sm font-semibold">Postvak in{inbox?.host ? ` — ${inbox.host}` : ""}</span>
+          <button type="button" onClick={() => { setInboxLoading(true); void refreshInbox(); }} className="btn-ghost text-xs">
+            Vernieuwen
+          </button>
+        </div>
+        {inboxLoading ? (
+          <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>
+        ) : inboxError ? (
+          <p className="px-5 py-6 text-sm text-neutralx-600">{inboxError}</p>
+        ) : !inbox || inbox.messages.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-neutralx-400">Geen berichten in de mailbox.</p>
+        ) : (
+          <ul className="divide-y divide-hair">
+            {inbox.messages.map((m) => (
+              <li key={m.uid}>
+                <button
+                  type="button"
+                  onClick={() => void openMessage(m.uid)}
+                  className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-paper-soft"
+                >
+                  {!m.seen && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-brand-500" aria-label="Ongelezen" />}
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate text-sm ${m.seen ? "font-normal text-ink-soft" : "font-semibold text-ink"}`}>
+                      {m.subject || "(geen onderwerp)"}
+                    </span>
+                    <span className="block truncate text-xs text-neutralx-500">
+                      {m.fromName || m.fromAddress || "onbekende afzender"}
+                      {m.date ? ` · ${new Date(m.date).toLocaleString("nl-NL")}` : ""}
+                    </span>
+                  </span>
+                </button>
+                {openUid === m.uid && (
+                  <div className="border-t border-hair bg-paper-soft px-5 py-4">
+                    {bodyLoading === m.uid ? (
+                      <p className="text-sm text-neutralx-500">Laden…</p>
+                    ) : (
+                      <pre className="whitespace-pre-wrap break-words rounded-lg border border-hair bg-white p-3 text-xs text-ink-soft">
+                        {msgBody[m.uid] ?? ""}
+                      </pre>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* transport status */}
