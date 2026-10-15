@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { sendViaSmtp, type SmtpConfig } from "@/lib/mail/smtp";
+import type { ImapConfig } from "@/lib/mail/imap";
 import { saveSentMessage, type SentRecord } from "@/lib/mail/store";
 import { EMAIL_LOGO_PNG_BASE64 } from "@/lib/mail/logo";
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
@@ -53,16 +54,25 @@ export function smtpConfigured(): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_HOST.trim());
 }
 
+const LOOPBACK = /^(localhost|127\.\d+\.\d+\.\d+|::1)$/i;
+
+/** The mailbox password travels inside this TLS session — so the certificate must be real. */
+function verifyTlsFor(host: string): boolean {
+  return env.MAIL_TLS_VERIFY && !LOOPBACK.test(host);
+}
+
 export function smtpConfig(): SmtpConfig | null {
   if (!smtpConfigured()) return null;
+  const host = env.SMTP_HOST!.trim();
   return {
-    host: env.SMTP_HOST!.trim(),
+    host,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
     ...(env.SMTP_USER ? { user: env.SMTP_USER } : {}),
     ...(env.SMTP_PASS ? { pass: env.SMTP_PASS } : {}),
     timeout: env.SMTP_TIMEOUT_S,
     clientName: hostFromUrl(env.APP_BASE_URL),
+    verifyTls: verifyTlsFor(host),
   };
 }
 
@@ -73,12 +83,12 @@ export function smtpConfig(): SmtpConfig | null {
  * since one set of mailbox credentials usually covers both (true for TransIP
  * Mail). Returns null when there's nothing to connect with.
  */
-export function imapConfig(): { host: string; port: number; secure: boolean; user: string; pass: string } | null {
+export function imapConfig(): ImapConfig | null {
   const host = env.IMAP_HOST?.trim() || env.SMTP_HOST?.trim().replace(/^smtp\./i, "imap.") || "";
   const user = env.IMAP_USER?.trim() || env.SMTP_USER?.trim() || "";
   const pass = env.IMAP_PASS || env.SMTP_PASS || "";
   if (!host || !user || !pass) return null;
-  return { host, port: env.IMAP_PORT, secure: env.IMAP_SECURE, user, pass };
+  return { host, port: env.IMAP_PORT, secure: env.IMAP_SECURE, user, pass, verifyTls: verifyTlsFor(host) };
 }
 
 function hostFromUrl(u: string): string {

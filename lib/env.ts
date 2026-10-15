@@ -120,6 +120,13 @@ const schema = z.object({
     .transform((v) => v === "true"),
   IMAP_USER: z.string().optional(),
   IMAP_PASS: z.string().optional(),
+  // Check the mail server's TLS certificate (SMTP + IMAP). Loopback hosts
+  // (Mailpit on localhost) are never checked; "false" only for a relay with
+  // a self-signed certificate.
+  MAIL_TLS_VERIFY: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
   MAIL_FROM: z.string().default("noreply@zekerflex.com"),
   MAIL_FROM_NAME: z.string().default("ZekerFlex"),
   MAIL_ADMIN: z.string().default("info@zekerflex.com"),
