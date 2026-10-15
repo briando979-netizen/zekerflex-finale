@@ -39,6 +39,8 @@ export function Newsletter() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | Sub["status"]>("all");
+  const [query, setQuery] = useState("");
+  const [unsubBusy, setUnsubBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -85,7 +87,23 @@ export function Newsletter() {
   }
 
   const s = data?.stats;
-  const subs = (data?.subscribers ?? []).filter((x) => filter === "all" || x.status === filter);
+  const q = query.trim().toLowerCase();
+  const subs = (data?.subscribers ?? []).filter((x) => (filter === "all" || x.status === filter) && (!q || x.email.toLowerCase().includes(q)));
+
+  async function unsubscribe(email: string) {
+    if (!window.confirm(`${email} afmelden voor de nieuwsbrief?`)) return;
+    setUnsubBusy(email);
+    try {
+      const res = await fetch("/api/admin/nieuwsbrief/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) await refresh();
+    } finally {
+      setUnsubBusy(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -176,7 +194,13 @@ export function Newsletter() {
       {/* subscribers */}
       <div className="card overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 border-b border-hair px-5 py-3">
-          <span className="text-sm font-semibold">Abonnees</span>
+          <span className="text-sm font-semibold">Abonnees ({subs.length})</span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Zoek e-mailadres…"
+            className="w-40 rounded-lg border border-hairstrong bg-white px-2.5 py-1 text-xs"
+          />
           <div className="ml-auto flex gap-1">
             {(["all", "confirmed", "pending", "unsubscribed"] as const).map((f) => (
               <button
@@ -193,7 +217,7 @@ export function Newsletter() {
           </div>
         </div>
         {subs.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen inschrijvingen.</p>
+          <p className="px-5 py-10 text-center text-sm text-neutralx-400">{q || filter !== "all" ? "Niets gevonden." : "Nog geen inschrijvingen."}</p>
         ) : (
           <ul className="max-h-96 divide-y divide-hair overflow-y-auto text-sm">
             {subs.map((x) => (
@@ -211,6 +235,16 @@ export function Newsletter() {
                 >
                   {STATUS_LABEL[x.status]}
                 </span>
+                {x.status !== "unsubscribed" && (
+                  <button
+                    type="button"
+                    onClick={() => unsubscribe(x.email)}
+                    disabled={unsubBusy === x.email}
+                    className="text-xs text-neutralx-400 underline hover:text-crit disabled:opacity-50"
+                  >
+                    {unsubBusy === x.email ? "bezig…" : "afmelden"}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

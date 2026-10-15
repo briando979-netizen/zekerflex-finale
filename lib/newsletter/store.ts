@@ -115,6 +115,16 @@ export async function unsubscribe(token: string): Promise<Subscriber | null> {
   return updated;
 }
 
+/** Admin-triggered unsubscribe by address (no token needed — the public flow uses `unsubscribe(token)`). */
+export async function unsubscribeByEmail(email: string): Promise<Subscriber | null> {
+  const rec = await readSub(subKey(email));
+  if (!rec) return null;
+  if (rec.status === "unsubscribed") return rec;
+  const updated: Subscriber = { ...rec, status: "unsubscribed", unsubscribedAt: new Date().toISOString() };
+  await writeSub(updated);
+  return updated;
+}
+
 export async function listSubscribers(status?: SubscriberStatus): Promise<Subscriber[]> {
   const rows = await kvListValues<Subscriber>(SUB_PREFIX, 50_000);
   const filtered = status ? rows.filter((r) => r.status === status) : rows;

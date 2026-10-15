@@ -83,6 +83,11 @@ export function ShopAdmin() {
   const [variantMessage, setVariantMessage] = useState("");
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [tab, setTab] = useState<"products" | "orders" | "stats">("products");
+  const [showForm, setShowForm] = useState(false);
+  const [productQuery, setProductQuery] = useState("");
+  const [orderQuery, setOrderQuery] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -139,10 +144,11 @@ export function ShopAdmin() {
     const response = await fetch(editing ? `/api/shop/products/${editing}` : "/api/shop/products", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     const data = await response.json();
     if (!response.ok) { setMessage(data?.error?.message ?? "Opslaan mislukt."); return; }
-    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setEditing(null); await load(); void loadStats();
+    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setEditing(null); setShowForm(false); await load(); void loadStats();
   };
 
-  const edit = (product: Product) => { setEditing(product.id); setForm(product); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const edit = (product: Product) => { setEditing(product.id); setForm(product); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const newProduct = () => { setEditing(null); setForm(empty); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); void loadStats(); };
 
   const addVariant = async (productId: string) => {
@@ -167,10 +173,37 @@ export function ShopAdmin() {
     await load(); void loadStats();
   };
 
+  const pq = productQuery.trim().toLowerCase();
+  const shownProducts = products.filter((p) => !pq || p.name.toLowerCase().includes(pq) || p.slug.toLowerCase().includes(pq) || p.category.toLowerCase().includes(pq));
+  const oq = orderQuery.trim().toLowerCase();
+  const shownOrders = orders.filter(
+    (o) =>
+      (!orderStatusFilter || o.status === orderStatusFilter) &&
+      (!oq || `${o.firstName} ${o.lastName}`.toLowerCase().includes(oq) || o.email.toLowerCase().includes(oq) || o.id.toLowerCase().includes(oq)),
+  );
+
   return <div className="mx-auto max-w-7xl space-y-6">
     <header className="a-panel flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="a-kicker">Commerce / catalogus</p><h1 className="a-title mt-2">Webshopbeheer</h1><p className="a-subtitle mt-1">Beheer assortiment, voorraad en alle beeldmaterialen van ZekerFlex.</p></div><div className="flex gap-2"><button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg live preview" : "Live preview"}</button><a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk publieke shop ↗</a></div></header>
 
-    {stats && (
+    <div className="flex gap-1 rounded-xl p-1" style={{ background: "var(--a-panel-2)" }}>
+      {([
+        ["products", `Producten (${products.length})`],
+        ["orders", `Bestellingen (${orders.length})`],
+        ["stats", "Statistieken"],
+      ] as const).map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => setTab(key)}
+          className="flex-1 rounded-lg py-2 text-sm font-semibold transition"
+          style={tab === key ? { background: "var(--a-panel)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+
+    {tab === "stats" && stats && (
       <section className="a-panel p-6">
         <p className="a-kicker">Statistieken</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -236,17 +269,32 @@ export function ShopAdmin() {
       </section>
     )}
 
+    {tab === "products" && (
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={productQuery}
+          onChange={(e) => setProductQuery(e.target.value)}
+          placeholder="Zoek op naam, slug of categorie…"
+          className="a-input max-w-xs flex-1"
+        />
+        {!showForm && <button type="button" className="a-button a-button-primary" onClick={newProduct}>+ Nieuw product</button>}
+      </div>
+    )}
+
+    {tab === "products" && showForm && (
     <form onSubmit={save} className="a-panel grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
-      <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button>{editing && <button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); }}>Annuleren</button>}</div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
+      <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button><button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); setShowForm(false); }}>Annuleren</button></div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
+    )}
+    {tab === "products" && (
     <section className="a-panel overflow-hidden">
       <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
         <p className="a-kicker">Live catalogus</p>
-        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{products.length} producten beheerd</h2>
+        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{shownProducts.length} van {products.length} producten</h2>
       </div>
       <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-        {products.map((product) => (
+        {shownProducts.map((product) => (
           <div key={product.id} className="flex flex-col gap-4 p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="h-20 w-20 overflow-hidden rounded-xl" style={{ background: "var(--a-panel-2)" }}>
@@ -307,16 +355,30 @@ export function ShopAdmin() {
         ))}
       </div>
     </section>
+    )}
 
+    {tab === "orders" && (
     <section className="a-panel overflow-hidden">
       <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
         <p className="a-kicker">Orders</p>
-        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{orders.length} bestellingen</h2>
+        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{shownOrders.length} van {orders.length} bestellingen</h2>
         {orderMessage && <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{orderMessage}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={orderQuery}
+            onChange={(e) => setOrderQuery(e.target.value)}
+            placeholder="Zoek op naam, e-mail of order-id…"
+            className="a-input max-w-xs flex-1"
+          />
+          <select className="a-input w-auto" value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value as OrderStatus | "")}>
+            <option value="">Alle statussen</option>
+            {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </div>
       </div>
       <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-        {orders.length === 0 && <p className="p-5 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen bestellingen binnengekomen.</p>}
-        {orders.map((order) => (
+        {shownOrders.length === 0 && <p className="p-5 text-sm" style={{ color: "var(--a-mute)" }}>{orders.length === 0 ? "Nog geen bestellingen binnengekomen." : "Niets gevonden."}</p>}
+        {shownOrders.map((order) => (
           <div key={order.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -352,6 +414,7 @@ export function ShopAdmin() {
         ))}
       </div>
     </section>
+    )}
   </div>;
 }
 
