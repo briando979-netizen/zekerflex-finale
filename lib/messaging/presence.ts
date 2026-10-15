@@ -8,9 +8,34 @@ import { redis } from "@/lib/redis";
 
 const ONLINE_TTL_SEC = 65; // a bit over the 8s thread-list poll interval
 const LASTSEEN_TTL_SEC = 60 * 60 * 24 * 30;
+// "Online" also covers a tab left open in the background. Chat pushes need to
+// know whether the user is actually looking, so a visible tab refreshes this
+// shorter key on the same poll.
+const VISIBLE_TTL_SEC = 25;
 
 const onlineKey = (userId: string) => `presence:online:${userId}`;
 const seenKey = (userId: string) => `presence:seen:${userId}`;
+const visibleKey = (userId: string) => `presence:visible:${userId}`;
+
+export async function touchVisible(userId: string): Promise<void> {
+  try {
+    await redis.set(visibleKey(userId), "1", "EX", VISIBLE_TTL_SEC);
+  } catch {
+    /* best effort */
+  }
+}
+
+/** Which of these users have a ZekerFlex tab in view right now. */
+export async function visibleUsers(userIds: string[]): Promise<Set<string>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return new Set();
+  try {
+    const flags = await redis.mget(...ids.map(visibleKey));
+    return new Set(ids.filter((_, i) => Boolean(flags[i])));
+  } catch {
+    return new Set();
+  }
+}
 
 export async function touchPresence(userId: string): Promise<void> {
   try {

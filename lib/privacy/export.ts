@@ -209,13 +209,14 @@ export async function exportUserData(userId: string): Promise<DataExport> {
       }),
     );
 
-    sections.webPushSubscriptions = await safe("webPushSubscriptions", () =>
-      prisma.webPushSubscription.findMany({
-        where: { freelancerId: fpId },
-        select: { endpoint: true, userAgent: true, lastSeenAt: true, disabledAt: true },
-      }),
-    );
   }
+
+  sections.webPushSubscriptions = await safe("webPushSubscriptions", () =>
+    prisma.webPushSubscription.findMany({
+      where: { OR: [{ userId }, ...(fpId ? [{ freelancerId: fpId }] : [])] },
+      select: { endpoint: true, userAgent: true, lastSeenAt: true, disabledAt: true },
+    }),
+  );
 
   sections.payslips = await safe("payslips", () =>
     prisma.payslipRecord.findMany({

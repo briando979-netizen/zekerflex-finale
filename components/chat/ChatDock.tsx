@@ -46,7 +46,7 @@ export function ChatDock() {
 
   const loadThreads = useCallback(async () => {
     try {
-      const r = await fetch("/api/inbox", { cache: "no-store" });
+      const r = await fetch(`/api/inbox${document.visibilityState === "visible" ? "?visible=1" : ""}`, { cache: "no-store" });
       if (r.status === 401) return setAvailable(false);
       if (!r.ok) return;
       const d = await r.json();
@@ -134,11 +134,12 @@ export function ChatDock() {
     return () => clearInterval(id);
   }, [active]);
 
-  // incoming call poll (dock is always mounted on dashboards)
+  // Incoming-call poll. The dock is mounted once per dashboard layout and is
+  // the only place calls are handled — InboxPage asks it to start one via the
+  // "zf:call" event, so a call never rings twice on the berichten page.
   useEffect(() => {
-    if (!available || !me) return;
-    const id = setInterval(async () => {
-      if (call) return;
+    if (!available || !me || call) return;
+    const check = async () => {
       try {
         const r = await fetch("/api/calls/incoming", { cache: "no-store" });
         if (r.status === 401) return setAvailable(false);
@@ -146,9 +147,31 @@ export function ChatDock() {
       } catch {
         /* ignore */
       }
-    }, 3500);
+    };
+    void check();
+    const id = setInterval(check, 3000);
     return () => clearInterval(id);
   }, [call, available, me]);
+
+  useEffect(() => {
+    const onCall = (e: Event) => {
+      const d = (e as CustomEvent<{ threadId: string; mode: "audio" | "video" | "screen"; peerName: string; peerUserId: string; peerRole: string }>).detail;
+      if (!d?.threadId) return;
+      setCall((cur) => cur ?? { threadId: d.threadId, callId: randId(), mode: d.mode, role: "caller", peerName: d.peerName, peerUserId: d.peerUserId, peerRole: d.peerRole });
+    };
+    window.addEventListener("zf:call", onCall);
+    return () => window.removeEventListener("zf:call", onCall);
+  }, []);
+
+  // A ringing call also shows in the tab title, for a tab left in the background.
+  useEffect(() => {
+    if (!incoming || call) return;
+    const original = document.title;
+    document.title = `📞 ${incoming.fromName} belt…`;
+    return () => {
+      document.title = original;
+    };
+  }, [incoming, call]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -404,15 +427,30 @@ export function ChatDock() {
           peerUserId={call.peerUserId}
           peerRole={call.peerRole}
           avatars={avatars}
-          onEnd={() => { setCall(null); if (active) void loadThread(active); }}
+          onEnd={() => {
+            const endedThread = call.threadId;
+            setCall(null);
+            if (active) void loadThread(active);
+            window.dispatchEvent(new CustomEvent("zf:call-ended", { detail: { threadId: endedThread } }));
+          }}
         />
       )}
       {incoming && !call && (
+        // Top of the screen, like a phone's call banner — the message composer
+        // sits at the bottom and must stay usable while it rings.
         <Portal>
-          <div className="fixed bottom-6 left-1/2 z-[78] flex -translate-x-1/2 items-center gap-3 rounded-2xl bg-ink px-5 py-3 text-white shadow-lift">
-            <span className="text-sm"><span className="font-semibold">{incoming.fromName}</span> belt je{incoming.mode === "video" ? " (video)" : ""}…</span>
-            <button type="button" onClick={declineIncoming} className="rounded-full bg-white/15 px-3 py-1 text-sm">Weiger</button>
-            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1 text-sm font-semibold text-ink">Opnemen</button>
+          <div
+            role="alertdialog"
+            aria-label={`${incoming.fromName} belt je`}
+            className="fixed left-1/2 top-[calc(0.75rem+env(safe-area-inset-top))] z-[78] flex w-[min(28rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift animate-slide-up-fade"
+          >
+            <Avatar userId={incoming.fromUserId} name={incoming.fromName} role={incoming.fromRole} avatars={avatars} size={36} />
+            <span className="min-w-0 flex-1 text-sm leading-tight">
+              <span className="block truncate font-semibold">{incoming.fromName}</span>
+              <span className="block text-xs text-white/60">belt je{incoming.mode === "video" ? " (video)" : incoming.mode === "screen" ? " (scherm delen)" : ""}…</span>
+            </span>
+            <button type="button" onClick={declineIncoming} className="rounded-full bg-crit px-3 py-1.5 text-sm font-semibold">Weiger</button>
+            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1.5 text-sm font-semibold text-ink">Opnemen</button>
           </div>
         </Portal>
       )}

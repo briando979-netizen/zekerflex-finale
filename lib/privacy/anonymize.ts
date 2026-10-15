@@ -179,13 +179,11 @@ export async function anonymizeUser(
       await tx.passwordResetToken.deleteMany({ where: { userId } })
     ).count;
 
-    if (profileId) {
-      cleared.web_push = (
-        await tx.webPushSubscription.deleteMany({
-          where: { freelancerId: profileId },
-        })
-      ).count;
-    }
+    cleared.web_push = (
+      await tx.webPushSubscription.deleteMany({
+        where: { OR: [{ userId }, ...(profileId ? [{ freelancerId: profileId }] : [])] },
+      })
+    ).count;
 
     cleared.certificates = (
       await tx.certificate.deleteMany({ where: { userId } })

@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { redis } from "@/lib/redis";
+import { claimIdempotency, redis } from "@/lib/redis";
 import { canAccess, getThread, postMessage } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
+import { notifyIncomingCall, notifyMissedCall } from "@/lib/messaging/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,23 +68,28 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     if (body.type === "ring" || body.type === "offer") {
       await redis.set(activeKey(params.threadId), body.callId, "EX", TTL_ACTIVE);
       await redis.set(metaKey(params.threadId, body.callId), JSON.stringify({ mode: body.mode ?? "audio", caller: p.userId }), "EX", TTL_SIG);
+      if (body.type === "ring") {
+        const mode = body.mode ?? "audio";
+        after(() => notifyIncomingCall(thread, p.userId, body.callId, mode));
+      }
     } else if (body.type === "accept") {
       await redis.expire(activeKey(params.threadId), TTL_ACTIVE);
     } else if (body.type === "end" || body.type === "decline") {
       const cur = await redis.get(activeKey(params.threadId));
       if (cur === body.callId) await redis.del(activeKey(params.threadId));
-      // log the call in the transcript (only the caller writes the "ended" line)
+      // One transcript line per call, whichever side hangs up or declines —
+      // both sides may post "end", so the first one claims the log.
       const meta = await redis.get(metaKey(params.threadId, body.callId));
       const parsed = meta ? (JSON.parse(meta) as { mode: string; caller: string }) : null;
-      if (parsed && parsed.caller === p.userId) {
+      if (parsed && (await claimIdempotency(`call-log:${params.threadId}:${body.callId}`, TTL_SIG))) {
+        const byCaller = parsed.caller === p.userId;
+        const mode = (parsed.mode as "audio" | "video" | "screen") ?? "audio";
         const durRaw = (body.data as { durationSec?: number } | null)?.durationSec;
-        await postMessage(thread.id, p.userId, "", "call", {
-          call: {
-            mode: (parsed.mode as "audio" | "video" | "screen") ?? "audio",
-            status: body.type === "decline" ? "declined" : durRaw ? "ended" : "missed",
-            ...(durRaw ? { durationSec: Math.round(durRaw) } : {}),
-          },
+        const status = body.type === "decline" || (!durRaw && !byCaller) ? "declined" : durRaw ? "ended" : "missed";
+        await postMessage(thread.id, parsed.caller, "", "call", {
+          call: { mode, status, ...(durRaw ? { durationSec: Math.round(durRaw) } : {}) },
         });
+        if (status === "missed") after(() => notifyMissedCall(thread, parsed.caller, body.callId, mode));
       }
     }
 

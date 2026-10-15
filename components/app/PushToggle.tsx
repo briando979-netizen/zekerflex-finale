@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type State = "loading" | "unsupported" | "unconfigured" | "off" | "on" | "denied" | "busy";
+type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
+
+const DISMISS_KEY = "zf-push-banner-dismissed";
 
 function urlBase64ToBuffer(base64: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -14,16 +16,31 @@ function urlBase64ToBuffer(base64: string): ArrayBuffer {
   return buf;
 }
 
-export function PushToggle() {
+/** iPhone/iPad Safari only offers Web Push to a site added to the home screen (iOS 16.4+). */
+function needsIosInstall(): boolean {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return ios && !standalone;
+}
+
+export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }) {
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    try {
+      setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
+    } catch {
+      /* storage blocked — show the banner */
+    }
     (async () => {
       if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-        if (!cancelled) setState("unsupported");
+        if (!cancelled) setState(needsIosInstall() ? "ios-install" : "unsupported");
         return;
       }
       try {
@@ -69,7 +86,7 @@ export function PushToggle() {
       });
       if (!res.ok) throw new Error("server");
       setState("on");
-    } catch (e) {
+    } catch {
       setError("Aanzetten lukte niet. Probeer het opnieuw.");
       setState("off");
     }
@@ -95,6 +112,43 @@ export function PushToggle() {
     }
   }, []);
 
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.localStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      /* not remembered — fine */
+    }
+  };
+
+  if (variant === "banner") {
+    if (dismissed || !(state === "off" || state === "busy" || state === "ios-install")) return null;
+    return (
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm">
+        <span aria-hidden className="text-lg">🔔</span>
+        <span className="min-w-0 flex-1 text-neutralx-700">
+          {state === "ios-install"
+            ? "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan."
+            : "Zet meldingen aan, dan krijg je een seintje op je telefoon of laptop bij een oproep of nieuw bericht — ook als ZekerFlex dicht is."}
+          {error && <span className="ml-1 text-crit">{error}</span>}
+        </span>
+        {state !== "ios-install" && (
+          <button
+            type="button"
+            onClick={enable}
+            disabled={state === "busy"}
+            className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {state === "busy" ? "Bezig…" : "Meldingen aanzetten"}
+          </button>
+        )}
+        <button type="button" onClick={dismiss} className="text-neutralx-400 hover:text-ink" aria-label="Niet nu">
+          ✕
+        </button>
+      </div>
+    );
+  }
+
   if (state === "loading" || state === "unsupported") return null;
 
   return (
@@ -103,10 +157,12 @@ export function PushToggle() {
         <div>
           <p className="text-sm font-semibold text-ink">Pushmeldingen</p>
           <p className="mt-0.5 text-xs text-neutralx-500">
-            Krijg een melding zodra er een dienst voor jou klaarstaat — ook als de app dicht is.
+            {state === "ios-install"
+              ? "Op iPhone werkt dit zodra ZekerFlex op je beginscherm staat (Deel → Zet op beginscherm)."
+              : "Krijg een melding bij een oproep, een nieuw bericht of een dienst voor jou — ook als ZekerFlex dicht is."}
           </p>
         </div>
-        {state === "unconfigured" ? (
+        {state === "ios-install" ? null : state === "unconfigured" ? (
           <span className="shrink-0 text-xs text-neutralx-400">Niet beschikbaar</span>
         ) : state === "denied" ? (
           <span className="shrink-0 text-xs text-warn">Geblokkeerd in je browser</span>

@@ -106,6 +106,15 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
   return Boolean(m);
 }
 
+/** Every active PLATFORM_ADMIN — they all answer the shared support inbox. */
+export async function platformAdminIds(): Promise<string[]> {
+  const rows = await prisma.membership.findMany({
+    where: { role: "PLATFORM_ADMIN", user: { disabledAt: null } },
+    select: { userId: true },
+  });
+  return [...new Set(rows.map((r) => r.userId))];
+}
+
 /** One PLATFORM_ADMIN userId to attribute an outgoing support reply to (display only). */
 export async function anyPlatformAdmin(): Promise<string | null> {
   const m = await prisma.membership.findFirst({

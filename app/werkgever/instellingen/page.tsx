@@ -4,6 +4,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { getDict } from "@/lib/i18n/server";
+import { PushToggle } from "@/components/app/PushToggle";
 import {
   IUser,
   IUsers,
@@ -89,6 +90,9 @@ export default async function InstellingenPage() {
       <Section title={s.sectionShifts} cards={klussen} soonLabel={d.common.soon} />
       <Section title={s.sectionInvoicing} cards={facturatie} soonLabel={d.common.soon} />
       <Section title={s.sectionAccount} cards={account} soonLabel={d.common.soon} />
+      <div className="-mt-6 mb-10 max-w-xl">
+        <PushToggle />
+      </div>
     </>
   );
 }

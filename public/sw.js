@@ -32,7 +32,8 @@ self.addEventListener("fetch", (event) => {
 
 // --- Web Push (RFC 8291) — payload is JSON from lib/notifications/push -------
 self.addEventListener("push", (event) => {
-  // Server payload: { title, body, data: { type, shiftId, url?, ... } }
+  // Server payload: { title, body, data: { type, shiftId?, url?, tag?, ... } }
+  // type: SHIFT_OFFER | CALL | CALL_MISSED | CHAT
   let p = {};
   try {
     p = event.data ? event.data.json() : {};
@@ -44,6 +45,7 @@ self.addEventListener("push", (event) => {
     d.url ||
     (d.type === "SHIFT_OFFER" ? "/dashboard/klussen" : "/start");
   const tag = d.shiftId || d.tag || undefined;
+  const ringing = d.type === "CALL";
 
   const options = {
     body: p.body || "",
@@ -52,7 +54,9 @@ self.addEventListener("push", (event) => {
     tag,
     renotify: Boolean(tag),
     data: { url },
-    vibrate: [80, 40, 80],
+    // A ringing call stays on screen until it's handled, like a phone call.
+    requireInteraction: ringing,
+    vibrate: ringing ? [400, 200, 400, 200, 400, 200, 400] : [80, 40, 80],
     timestamp: Date.now(),
   };
   event.waitUntil(self.registration.showNotification(p.title || "ZekerFlex", options));
@@ -62,9 +66,20 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/start";
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
       for (const client of clients) {
         if (client.url.includes(target) && "focus" in client) return client.focus();
+      }
+      // Reuse an open ZekerFlex window rather than stacking new tabs.
+      for (const client of clients) {
+        if ("navigate" in client && "focus" in client) {
+          try {
+            const moved = await client.navigate(target);
+            return (moved || client).focus();
+          } catch (_e) {
+            /* uncontrolled client — fall through to a new window */
+          }
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(target);
       return undefined;

@@ -106,15 +106,16 @@ model User {
   // Null until the e-mail address is confirmed via the verification link.
   emailVerifiedAt DateTime?
 
-  memberships        Membership[]
-  freelancerProfile  FreelancerProfile?
-  deviceFingerprints DeviceFingerprint[]
-  identityChecks     IdentityVerification[]
-  approvedTimesheets Timesheet[]            @relation("TimesheetApprover")
-  raisedDisputes     Dispute[]              @relation("DisputeRaisedBy")
-  resolvedDisputes   Dispute[]              @relation("DisputeResolvedBy")
-  auditLogs          AuditLog[]             @relation("AuditActor")
-  apiKeysCreated     ApiKey[]               @relation("ApiKeyCreatedBy")
+  memberships          Membership[]
+  freelancerProfile    FreelancerProfile?
+  deviceFingerprints   DeviceFingerprint[]
+  identityChecks       IdentityVerification[]
+  approvedTimesheets   Timesheet[]            @relation("TimesheetApprover")
+  raisedDisputes       Dispute[]              @relation("DisputeRaisedBy")
+  resolvedDisputes     Dispute[]              @relation("DisputeResolvedBy")
+  auditLogs            AuditLog[]             @relation("AuditActor")
+  apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
+  webPushSubscriptions WebPushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -522,7 +523,10 @@ model CompanyRegistration {
 // no Firebase / Google service account involved.
 model WebPushSubscription {
   id           String    @id @default(cuid())
-  freelancerId String
+  // Any account (calls, chat). freelancerId is also set for freelancers so the
+  // shift-offer fan-out, which targets a profile, keeps working.
+  userId       String?
+  freelancerId String?
   endpoint     String    @unique // push service URL (opaque, vendor-specific)
   p256dh       String // base64url client public key (ECDH P-256)
   authKey      String // base64url 16-byte client auth secret
@@ -530,10 +534,12 @@ model WebPushSubscription {
   lastSeenAt   DateTime  @default(now())
   disabledAt   DateTime? // set when the push service reports 404/410 Gone
 
-  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  user       User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile? @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
   @@index([freelancerId])
 }
 
@@ -1848,9 +1854,9 @@ model ShopProduct {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  variants    ShopProductVariant[]
-  bundleOf    ShopBundleItem[]     @relation("BundleProduct")
-  includedIn  ShopBundleItem[]     @relation("ItemProduct")
+  variants   ShopProductVariant[]
+  bundleOf   ShopBundleItem[]     @relation("BundleProduct")
+  includedIn ShopBundleItem[]     @relation("ItemProduct")
 
   @@index([active, sortOrder])
   @@index([category, active])
@@ -1862,16 +1868,16 @@ model ShopProduct {
 // (see the seed/migration note) so the cart/checkout pipeline always keys
 // on a variantId, never a bare productId.
 model ShopProductVariant {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   productId  String
   product    ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   size       String?
   color      String?
   priceCents Int? // null = inherit ShopProduct.priceCents
-  stock      Int      @default(0)
-  sku        String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  stock      Int         @default(0)
+  sku        String      @unique
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([productId])
 }
@@ -1904,24 +1910,24 @@ enum ShopOrderStatus {
 // at order time (name/price can change later on ShopProduct; this is what the
 // customer actually agreed to pay).
 model ShopOrder {
-  id                     String          @id @default(cuid())
-  status                 ShopOrderStatus @default(PENDING_PAYMENT)
-  firstName              String
-  lastName               String
-  email                  String
-  address                String
-  postalCode             String
-  city                   String
-  itemsJson              Json
-  subtotalCents          Int
-  shippingCents          Int
-  totalCents             Int
-  stripeSessionId        String?         @unique
-  stripePaymentIntentId  String?         @unique
-  carrier                String? // e.g. "postnl" | "dhl" - free text, shown next to the tracking link
-  trackingNumber         String?
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
+  id                    String          @id @default(cuid())
+  status                ShopOrderStatus @default(PENDING_PAYMENT)
+  firstName             String
+  lastName              String
+  email                 String
+  address               String
+  postalCode            String
+  city                  String
+  itemsJson             Json
+  subtotalCents         Int
+  shippingCents         Int
+  totalCents            Int
+  stripeSessionId       String?         @unique
+  stripePaymentIntentId String?         @unique
+  carrier               String? // e.g. "postnl" | "dhl" - free text, shown next to the tracking link
+  trackingNumber        String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   @@index([status, createdAt])
   @@index([email])

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "./Avatar";
 import { Portal } from "./Portal";
 import type { ChatUser } from "./shared";
+import { PushToggle } from "@/components/app/PushToggle";
 
 function Shell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
@@ -281,6 +282,7 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <Shell title="Chat-instellingen" onClose={onClose}>
       <div className="space-y-5">
+        <PushToggle />
         <div>
           <label className="field-label">Statusbericht</label>
           <input

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
@@ -14,20 +14,22 @@ import {
   type MessageExtra,
 } from "@/lib/messaging/store";
 import { anyPlatformAdmin, isPlatformAdmin, userDirectory } from "@/lib/messaging/contacts";
-import { getPresence, touchPresence } from "@/lib/messaging/presence";
+import { getPresence, touchPresence, touchVisible } from "@/lib/messaging/presence";
 import { getUserAvatars } from "@/lib/profile/store";
 import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
+import { notifyNewMessage } from "@/lib/messaging/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox/:id — full conversation; marks it read for the caller.
-export async function GET(_req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
+export async function GET(req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
   const params = await props.params;
   try {
     const p = await requirePrincipal();
     await touchPresence(p.userId);
+    if (new URL(req.url).searchParams.get("visible") === "1") await touchVisible(p.userId);
     const admin = await isPlatformAdmin(p.userId);
     const thread = await getThread(params.threadId);
     if (!thread || !canAccess(thread, p.userId, admin)) {
@@ -178,6 +180,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
       const other = thread.participants.find((id) => id !== from);
       if (other) void maybeAutoReply(thread.id, other, from);
     }
+    after(() => notifyNewMessage(thread, msg));
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (err) {

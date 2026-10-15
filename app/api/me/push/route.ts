@@ -3,39 +3,25 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
-import { AppError } from "@/lib/errors";
 import { jsonError } from "@/lib/http/errors";
 import { isWebPushEnabled } from "@/lib/notifications/push/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function freelancerId(userId: string): Promise<string> {
-  const fp = await prisma.freelancerProfile.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-  if (!fp) throw AppError.validation("Meldingen zijn nu alleen voor freelancers.");
-  return fp.id;
-}
-
-// GET /api/me/push — what the client needs to (un)subscribe.
+// GET /api/me/push — what the client needs to (un)subscribe. Every account
+// can receive pushes (incoming calls, chat); freelancers also get shift offers.
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const fp = await prisma.freelancerProfile.findUnique({
-      where: { userId: p.userId },
-      select: { id: true },
-    });
-    const subscribed = fp
-      ? (await prisma.webPushSubscription.count({
-          where: { freelancerId: fp.id, disabledAt: null },
-        })) > 0
-      : false;
+    const subscribed =
+      (await prisma.webPushSubscription.count({
+        where: { userId: p.userId, disabledAt: null },
+      })) > 0;
     return NextResponse.json({
       configured: isWebPushEnabled(),
       vapidPublicKey: env.WEBPUSH_VAPID_PUBLIC_KEY ?? null,
-      supported: Boolean(fp),
+      supported: true,
       subscribed,
     });
   } catch (err) {
@@ -55,25 +41,30 @@ const subscribeSchema = z.object({
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const fid = await freelancerId(p.userId);
     const body = subscribeSchema.parse(await request.json().catch(() => ({})));
+    const fp = await prisma.freelancerProfile.findUnique({
+      where: { userId: p.userId },
+      select: { id: true },
+    });
+    const owner = { userId: p.userId, freelancerId: fp?.id ?? null };
+    const userAgent = request.headers.get("user-agent")?.slice(0, 300) ?? null;
 
     await prisma.webPushSubscription.upsert({
       where: { endpoint: body.endpoint },
       create: {
-        freelancerId: fid,
+        ...owner,
         endpoint: body.endpoint,
         p256dh: body.keys.p256dh,
         authKey: body.keys.auth,
-        userAgent: request.headers.get("user-agent")?.slice(0, 300) ?? null,
+        userAgent,
       },
       update: {
-        freelancerId: fid,
+        ...owner,
         p256dh: body.keys.p256dh,
         authKey: body.keys.auth,
         disabledAt: null,
         lastSeenAt: new Date(),
-        userAgent: request.headers.get("user-agent")?.slice(0, 300) ?? null,
+        userAgent,
       },
     });
     return NextResponse.json({ ok: true });
@@ -88,10 +79,9 @@ const unsubSchema = z.object({ endpoint: z.string().url().max(2000) });
 export async function DELETE(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const fid = await freelancerId(p.userId);
     const { endpoint } = unsubSchema.parse(await request.json().catch(() => ({})));
     await prisma.webPushSubscription.deleteMany({
-      where: { endpoint, freelancerId: fid },
+      where: { endpoint, userId: p.userId },
     });
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -5,10 +5,8 @@ import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
-import { CallOverlay } from "./CallOverlay";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
-import { Portal } from "./Portal";
-import { makeRingtone } from "./ringtone";
+import { PushToggle } from "@/components/app/PushToggle";
 import {
   dayLabel,
   fmtTime,
@@ -23,7 +21,8 @@ type Tab = "chats" | "contacts" | "communities";
 interface SavedContact { userId: string; label?: string; favourite: boolean }
 interface CommunityRow { id: string; name: string; threadId: string | null; memberCount: number; myRole: string }
 
-const randId = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+/** Tells the server this tab is in view, so it doesn't also push the messages it shows. */
+const visibleQuery = () => (document.visibilityState === "visible" ? "?visible=1" : "");
 
 export function InboxPage() {
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
@@ -47,16 +46,13 @@ export function InboxPage() {
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const [call, setCall] = useState<null | { threadId: string; callId: string; mode: "audio" | "video" | "screen"; role: "caller" | "callee"; peerName: string; peerUserId: string; peerRole: string }>(null);
-  const [incoming, setIncoming] = useState<null | { threadId: string; callId: string; mode: string; fromUserId: string; fromName: string; fromRole: string }>(null);
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
   const lastPing = useRef(0);
 
   const loadThreads = useCallback(async () => {
-    const r = await fetch("/api/inbox", { cache: "no-store" });
+    const r = await fetch(`/api/inbox${visibleQuery()}`, { cache: "no-store" });
     if (!r.ok) return;
     const d = await r.json();
     setMe(d.me);
@@ -65,7 +61,13 @@ export function InboxPage() {
     setPresence((p) => ({ ...p, ...d.presence }));
     setAvatars((p) => ({ ...p, ...d.avatars }));
     setContacts(d.contacts ?? []);
-    setActive((a) => a ?? d.threads[0]?.id ?? null);
+    setActive((a) => {
+      if (a) return a;
+      // ?thread= comes from a call/message notification
+      const wanted = new URLSearchParams(window.location.search).get("thread");
+      const rows: ThreadRow[] = d.threads;
+      return (wanted && rows.some((t) => t.id === wanted) ? wanted : null) ?? rows[0]?.id ?? null;
+    });
   }, []);
 
   const loadCommunities = useCallback(async () => {
@@ -77,7 +79,7 @@ export function InboxPage() {
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
-    const r = await fetch(`/api/inbox/${id}`, { cache: "no-store" });
+    const r = await fetch(`/api/inbox/${id}${visibleQuery()}`, { cache: "no-store" });
     if (!r.ok) return;
     const d = await r.json();
     setMessages((prev) => {
@@ -120,32 +122,19 @@ export function InboxPage() {
     return () => clearInterval(i);
   }, [active]);
 
-  // incoming call poll
+  // the call log line shows up right away instead of on the next poll
   useEffect(() => {
-    if (!me) return;
-    const i = setInterval(async () => {
-      if (call) return;
-      try {
-        const r = await fetch("/api/calls/incoming", { cache: "no-store" });
-        if (r.ok) setIncoming((await r.json()).incoming);
-      } catch {
-        /* ignore */
-      }
-    }, 3000);
-    return () => clearInterval(i);
-  }, [call, me]);
+    const onEnded = (e: Event) => {
+      const t = (e as CustomEvent<{ threadId: string }>).detail?.threadId;
+      if (t && t === activeRef.current) void loadThread(t);
+    };
+    window.addEventListener("zf:call-ended", onEnded);
+    return () => window.removeEventListener("zf:call-ended", onEnded);
+  }, [loadThread]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, active]);
-
-  // ringtone while an incoming call is waiting on accept/decline
-  useEffect(() => {
-    if (!incoming || call) return;
-    const ringer = makeRingtone();
-    ringer.start();
-    return () => ringer.stop();
-  }, [incoming, call]);
 
   const otherOf = (t: ThreadRow): { userId: string; name: string; role: string; support: boolean } => {
     if (t.kind === "support") return { userId: "support", name: "ZekerFlex Support", role: "support", support: true };
@@ -212,38 +201,15 @@ export function InboxPage() {
     }
   };
 
+  // The layout's ChatDock owns calls (ringing, the call screen); this only asks it to dial.
   const startCall = (mode: "audio" | "video" | "screen") => {
     if (!activeThread || activeThread.kind !== "direct") return;
     const o = otherOf(activeThread);
-    setCall({ threadId: activeThread.id, callId: randId(), mode, role: "caller", peerName: o.name, peerUserId: o.userId, peerRole: o.role });
-  };
-
-  const acceptIncoming = () => {
-    if (!incoming) return;
-    fetch(`/api/inbox/${incoming.threadId}/call`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ callId: incoming.callId, type: "accept", mode: incoming.mode }),
-    }).catch(() => undefined);
-    setCall({
-      threadId: incoming.threadId,
-      callId: incoming.callId,
-      mode: incoming.mode as "audio" | "video" | "screen",
-      role: "callee",
-      peerName: incoming.fromName,
-      peerUserId: incoming.fromUserId,
-      peerRole: incoming.fromRole,
-    });
-    setIncoming(null);
-  };
-  const declineIncoming = () => {
-    if (!incoming) return;
-    fetch(`/api/inbox/${incoming.threadId}/call`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ callId: incoming.callId, type: "decline", mode: incoming.mode }),
-    }).catch(() => undefined);
-    setIncoming(null);
+    window.dispatchEvent(
+      new CustomEvent("zf:call", {
+        detail: { threadId: activeThread.id, mode, peerName: o.name, peerUserId: o.userId, peerRole: o.role },
+      }),
+    );
   };
 
   const headerPresence = activeThread && activeThread.kind === "direct"
@@ -253,6 +219,8 @@ export function InboxPage() {
       : "";
 
   return (
+    <>
+    <PushToggle variant="banner" />
     <div className="chat-surface grid h-[calc(100vh-15rem)] grid-cols-[minmax(0,20rem)_1fr] overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
       {/* ─── left pane ─── */}
       <div className="flex min-h-0 flex-col border-r border-hair">
@@ -483,32 +451,8 @@ export function InboxPage() {
         />
       )}
       {showSettings && <ChatSettingsModal onClose={() => { setShowSettings(false); if (active) void loadThread(active); }} />}
-
-      {call && (
-        <CallOverlay
-          threadId={call.threadId}
-          callId={call.callId}
-          mode={call.mode}
-          role={call.role}
-          peerName={call.peerName}
-          peerUserId={call.peerUserId}
-          peerRole={call.peerRole}
-          avatars={avatars}
-          onEnd={() => { setCall(null); if (active) void loadThread(active); }}
-        />
-      )}
-      {incoming && !call && (
-        <Portal>
-          <div className="fixed bottom-6 left-1/2 z-[78] flex -translate-x-1/2 items-center gap-4 rounded-2xl bg-ink px-5 py-3 text-white shadow-lift">
-            <span className="text-sm">
-              <span className="font-semibold">{incoming.fromName}</span> belt je{incoming.mode === "video" ? " (video)" : ""}…
-            </span>
-            <button type="button" onClick={declineIncoming} className="rounded-full bg-white/15 px-3 py-1 text-sm">Weiger</button>
-            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1 text-sm font-semibold text-ink">Opnemen</button>
-          </div>
-        </Portal>
-      )}
     </div>
+    </>
   );
 }
 

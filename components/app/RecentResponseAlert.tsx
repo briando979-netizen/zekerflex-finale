@@ -21,7 +21,7 @@ const POLL_MS = 6000;
 // (direct accept or a new counter-offer) — previously entirely passive: the
 // only feedback was the notification bell, and even that silently dropped
 // offer responses (lib/notifications/feed.ts's dead offersForUser("__none__")
-// stub). Polls like the existing incoming-call alert in ChatDock/InboxPage.
+// stub). Polls like the existing incoming-call alert in ChatDock.
 export function RecentResponseAlert() {
   const [queue, setQueue] = useState<RecentResponse[]>([]);
   const sinceRef = useRef<string>(new Date().toISOString());

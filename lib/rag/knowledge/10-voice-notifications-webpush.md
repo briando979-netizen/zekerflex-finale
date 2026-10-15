@@ -12,8 +12,15 @@ jose):
   jose. `generateVapidKeys()`.
 - **`web-push.ts`** — `sendWebPush(target, payload, { ttlSeconds })`: kale POST
   naar het endpoint. 404/410 → `gone: true` (caller disablet de subscription).
-- **`index.ts`** — `sendShiftOffer` waaiert uit over alle `WebPushSubscription`s;
-  nooit een throw.
+- **`index.ts`** — `sendShiftOffer` (diensten, per freelancerprofiel) en
+  `sendUserPush` (per account, elke rol) waaieren uit over alle
+  `WebPushSubscription`s; 404/410-abonnementen worden uitgeschakeld.
+- **`lib/messaging/notify.ts`** — chatmeldingen: inkomende oproep (altijd,
+  TTL 45s, tag `call-<id>`), gemiste oproep (zelfde tag, vervangt de
+  belmelding) en nieuw bericht (alleen als de ontvanger geen ZekerFlex-tabblad
+  in beeld heeft: `presence:visible`, 25s, gezet door de inbox-poll met
+  `?visible=1`). De link `/berichten?thread=…` stuurt per rol door naar de
+  juiste inbox. Groepsgesprekken krijgen geen push.
 
 (FCM-ondersteuning is verwijderd — `firebase-admin` bracht een kritieke CVE mee
 via zijn `@google-cloud/*`-keten, voor een kanaal dat nergens geconfigureerd
@@ -21,7 +28,10 @@ stond. Web Push is zelf-gehost en dekt dit al af.)
 
 Setup: `npm run vapid:keys` → `WEBPUSH_VAPID_PUBLIC_KEY` / `_PRIVATE_KEY` in
 `.env`. De browser abonneert met `applicationServerKey = <public key>` en POST
-`{ endpoint, keys: { p256dh, auth } }` naar een opslag-endpoint.
+`{ endpoint, keys: { p256dh, auth } }` naar `/api/me/push` (elk account; de
+aan/uit-knop staat in Chat-instellingen, werkgever-instellingen en het
+freelancer-account). Op iPhone werkt Web Push alleen vanaf het beginscherm
+(iOS 16.4+).
 
 ## Voice / TTS — `lib/voice/`
 

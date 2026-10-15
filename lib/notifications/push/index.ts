@@ -36,6 +36,45 @@ export function pushChannels(): PushChannels {
   return { webPush: isWebPushEnabled() };
 }
 
+interface StoredSubscription {
+  endpoint: string;
+  p256dh: string;
+  authKey: string;
+}
+
+const SEND_FIELDS = { endpoint: true, p256dh: true, authKey: true } as const;
+
+/** Sends one payload to every subscription; disables the ones the push service reports gone. */
+async function fanOut(subs: StoredSubscription[], payload: string, ttlSeconds: number): Promise<number> {
+  let delivered = 0;
+  const gone: string[] = [];
+  await Promise.all(
+    subs.map(async (s) => {
+      try {
+        const r = await sendWebPush(
+          { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.authKey },
+          payload,
+          { ttlSeconds },
+        );
+        if (r.ok) delivered += 1;
+        else if (r.gone) gone.push(s.endpoint);
+      } catch (err) {
+        logger.warn("web push send failed", {
+          endpoint: s.endpoint,
+          error: (err as Error).message,
+        });
+      }
+    }),
+  );
+  if (gone.length > 0) {
+    await prisma.webPushSubscription.updateMany({
+      where: { endpoint: { in: gone } },
+      data: { disabledAt: new Date() },
+    });
+  }
+  return delivered;
+}
+
 export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
   const notification = { title: offer.title, body: offer.body };
   const data = { ...offer.data, type: "SHIFT_OFFER", shiftId: offer.shiftId };
@@ -43,39 +82,12 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
   const subs = isWebPushEnabled()
     ? await prisma.webPushSubscription.findMany({
         where: { freelancerId: offer.freelancerId, disabledAt: null },
+        select: SEND_FIELDS,
       })
     : [];
 
-  let delivered = 0;
-
-  if (subs.length > 0) {
-    const payload = JSON.stringify({ ...notification, data });
-    const gone: string[] = [];
-    await Promise.all(
-      subs.map(async (s) => {
-        try {
-          const r = await sendWebPush(
-            { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.authKey },
-            payload,
-            { ttlSeconds: OFFER_TTL_SECONDS },
-          );
-          if (r.ok) delivered += 1;
-          else if (r.gone) gone.push(s.endpoint);
-        } catch (err) {
-          logger.warn("web push send failed", {
-            endpoint: s.endpoint,
-            error: (err as Error).message,
-          });
-        }
-      }),
-    );
-    if (gone.length > 0) {
-      await prisma.webPushSubscription.updateMany({
-        where: { endpoint: { in: gone } },
-        data: { disabledAt: new Date() },
-      });
-    }
-  }
+  const delivered =
+    subs.length > 0 ? await fanOut(subs, JSON.stringify({ ...notification, data }), OFFER_TTL_SECONDS) : 0;
 
   if (delivered === 0) {
     logger.warn("shift offer not delivered on any channel", {
@@ -86,4 +98,25 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
   }
   recordShiftOffer(delivered > 0);
   return delivered > 0;
+}
+
+export interface UserPush {
+  title: string;
+  body: string;
+  /** Read by public/sw.js: type, url, tag, … (all strings). */
+  data: Record<string, string>;
+  /** How long the push service may hold it for an offline device. */
+  ttlSeconds: number;
+}
+
+/** Pushes to every device of the given accounts. Returns how many devices accepted it. */
+export async function sendUserPush(userIds: string[], push: UserPush): Promise<number> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0 || !isWebPushEnabled()) return 0;
+  const subs = await prisma.webPushSubscription.findMany({
+    where: { userId: { in: ids }, disabledAt: null },
+    select: SEND_FIELDS,
+  });
+  if (subs.length === 0) return 0;
+  return fanOut(subs, JSON.stringify({ title: push.title, body: push.body, data: push.data }), push.ttlSeconds);
 }

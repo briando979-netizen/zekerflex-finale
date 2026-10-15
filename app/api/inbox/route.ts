@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
@@ -9,21 +9,25 @@ import {
   listThreadsForUser,
   postMessage,
   unreadForUser,
+  type ChatThread,
 } from "@/lib/messaging/store";
 import { isPlatformAdmin, resolveShiftContact, userDirectory } from "@/lib/messaging/contacts";
-import { getPresence, touchPresence } from "@/lib/messaging/presence";
+import { getPresence, touchPresence, touchVisible } from "@/lib/messaging/presence";
 import { getUserAvatars } from "@/lib/profile/store";
 import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
+import { notifyNewMessage } from "@/lib/messaging/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox — the signed-in user's threads, unread counts + a name directory.
-export async function GET(): Promise<NextResponse> {
+// ?visible=1 is sent while the polling tab is in view (suppresses chat pushes).
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     await touchPresence(p.userId);
+    if (new URL(request.url).searchParams.get("visible") === "1") await touchVisible(p.userId);
     const admin = await isPlatformAdmin(p.userId);
     const threads = await listThreadsForUser(p.userId, admin);
 
@@ -97,38 +101,36 @@ export async function POST(request: Request): Promise<NextResponse> {
       }),
     );
 
-    let threadId: string;
+    let thread: ChatThread;
     let otherUserId: string | null = null;
 
     if ("support" in input) {
-      const t = await ensureSupportThread(p.userId);
-      threadId = t.id;
+      thread = await ensureSupportThread(p.userId);
     } else if ("shiftId" in input) {
       const contact = await resolveShiftContact(input.shiftId);
       if (!contact) throw AppError.notFound("Geen contactpersoon gevonden voor deze klus.");
       if (contact.userId === p.userId) throw AppError.validation("Je bent zelf de contactpersoon.");
-      const t = await ensureDirectThread(p.userId, contact.userId, {
+      thread = await ensureDirectThread(p.userId, contact.userId, {
         contextKey: `shift:${input.shiftId}`,
         shiftId: input.shiftId,
         shiftTitle: contact.shiftTitle,
         branch: contact.branch,
         subject: contact.shiftTitle,
       });
-      threadId = t.id;
       otherUserId = contact.userId;
     } else {
       if (input.toUserId === p.userId) throw AppError.validation("Je kunt jezelf geen bericht sturen.");
-      const t = await ensureDirectThread(p.userId, input.toUserId, {
+      thread = await ensureDirectThread(p.userId, input.toUserId, {
         ...(input.contextKey ? { contextKey: input.contextKey } : {}),
         ...(input.subject ? { subject: input.subject } : {}),
       });
-      threadId = t.id;
       otherUserId = input.toUserId;
     }
 
-    await postMessage(threadId, p.userId, input.text);
-    if (otherUserId) void maybeAutoReply(threadId, otherUserId, p.userId);
-    return NextResponse.json({ threadId }, { status: 201 });
+    const msg = await postMessage(thread.id, p.userId, input.text);
+    if (otherUserId) void maybeAutoReply(thread.id, otherUserId, p.userId);
+    after(() => notifyNewMessage(thread, msg));
+    return NextResponse.json({ threadId: thread.id }, { status: 201 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
