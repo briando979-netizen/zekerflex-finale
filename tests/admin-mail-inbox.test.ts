@@ -32,7 +32,7 @@ describe("GET /api/admin/mail/inbox", () => {
     imapConfig.mockReturnValue(CFG);
     fetchInboxList.mockResolvedValue([{ uid: 1, seq: 1, date: null, subject: "Test", fromName: "ZekerFlex", fromAddress: "noreply@zekerflex.com", seen: true }]);
 
-    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"));
+    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"), { params: Promise.resolve({}) });
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.host).toBe("imap.transip.email");
@@ -45,7 +45,7 @@ describe("GET /api/admin/mail/inbox", () => {
     requireRole.mockImplementation(() => undefined);
     imapConfig.mockReturnValue(null);
 
-    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"));
+    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"), { params: Promise.resolve({}) });
     const json = await res.json();
     expect(res.status).toBe(412);
     expect(json.error.message).toContain("IMAP");
@@ -58,7 +58,7 @@ describe("GET /api/admin/mail/inbox", () => {
     imapConfig.mockReturnValue(CFG);
     fetchInboxList.mockRejectedValue(new Error("ECONNREFUSED"));
 
-    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"));
+    const res = await getInbox(new Request("http://localhost/api/admin/mail/inbox"), { params: Promise.resolve({}) });
     expect(res.status).toBe(503);
   });
 });
