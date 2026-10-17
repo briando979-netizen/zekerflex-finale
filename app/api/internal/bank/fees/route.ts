@@ -3,20 +3,24 @@ import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { chargeMonthlyFees } from "@/lib/bank/fees";
+import { chargeDuePremiums } from "@/lib/bank/insurance";
+import { matureDeposits } from "@/lib/bank/pots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Cron entrypoint: charges ZekerFlex Bank monthly account fees that are due.
+// Cron entrypoint (daily): ZekerFlex Bank monthly fees, insurance premiums and matured deposits.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) {
     return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   }
   try {
-    const result = await chargeMonthlyFees();
+    const fees = await chargeMonthlyFees();
+    const premiums = await chargeDuePremiums();
+    const deposits = await matureDeposits();
     recordCronRun("bank-monthly-fees", true);
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, fees, premiums, deposits });
   } catch (err) {
     recordCronRun("bank-monthly-fees", false);
     logger.error("bank monthly fees failed", { error: (err as Error).message });

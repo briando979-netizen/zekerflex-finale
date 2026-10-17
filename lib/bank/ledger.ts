@@ -20,7 +20,11 @@ export type BankEntryKind =
   | "INVOICE_PAYMENT"
   | "EARNING"
   | "TRANSFER"
-  | "ADJUSTMENT";
+  | "ADJUSTMENT"
+  | "POT_IN"
+  | "POT_OUT"
+  | "INTEREST"
+  | "INSURANCE_PREMIUM";
 
 export interface Booking {
   amountCents: number;
@@ -43,7 +47,7 @@ export interface BookedEntry {
   created: boolean;
 }
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 interface BookOptions {
   allowFrozen?: boolean;
@@ -92,6 +96,23 @@ export async function book(accountId: string, b: Booking, opts: BookOptions = {}
 }
 
 /**
+ * Books one entry and runs `alongside` in the same transaction — only when
+ * the entry is new, so a replayed key doesn't repeat the side effect (pots).
+ */
+export async function bookWith(
+  accountId: string,
+  b: Booking,
+  alongside: (tx: Tx, entry: BookedEntry) => Promise<void>,
+  opts: BookOptions = {},
+): Promise<BookedEntry> {
+  return prisma.$transaction(async (tx) => {
+    const entry = await bookInTx(tx, accountId, b, opts);
+    if (entry.created) await alongside(tx, entry);
+    return entry;
+  });
+}
+
+/**
  * Moves money between two accounts atomically (fees to the platform, an
  * employer paying a freelancer …): both entries or neither.
  */
@@ -107,6 +128,8 @@ export async function transfer(input: {
   reference?: string | null;
   idempotencyKey: string;
   allowFrozen?: boolean;
+  /** Only for the platform paying out (interest): it may dip below zero. */
+  allowNegative?: boolean;
 }): Promise<{ debit: BookedEntry; credit: BookedEntry }> {
   if (input.amountCents <= 0) throw AppError.validation("Ongeldig bedrag");
   return prisma.$transaction(async (tx) => {
@@ -121,7 +144,7 @@ export async function transfer(input: {
         reference: input.reference ?? null,
         idempotencyKey: `${input.idempotencyKey}:out`,
       },
-      { allowFrozen: input.allowFrozen ?? false },
+      { allowFrozen: input.allowFrozen ?? false, allowNegative: input.allowNegative ?? false },
     );
     const credit = await bookInTx(
       tx,

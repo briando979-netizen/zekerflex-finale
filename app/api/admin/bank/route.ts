@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic";
 // customers vs. what Stripe holds, fees and withdrawals waiting for payout.
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const platform = await platformAccount();
-  const [accounts, sums, fees, withdrawals, stripeBalance] = await Promise.all([
+  const [accounts, sums, potSums, fees, withdrawals, stripeBalance] = await Promise.all([
     prisma.bankAccount.findMany({ orderBy: { balanceCents: "desc" }, take: 300 }),
     prisma.bankAccount.groupBy({ by: ["ownerType"], _sum: { balanceCents: true }, _count: true }),
+    prisma.bankPot.aggregate({ where: { closedAt: null }, _sum: { balanceCents: true } }),
     getFees(),
     listWithdrawals({ status: ["pending", "exported"] }),
     env.STRIPE_SECRET_KEY
@@ -30,7 +31,9 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
       : Promise.resolve(null),
   ]);
   const byType = (t: string) => sums.find((s) => s.ownerType === t);
-  const customerCents = (byType("USER")?._sum.balanceCents ?? 0) + (byType("TENANT")?._sum.balanceCents ?? 0);
+  // Money in pots and deposits is still owed to the customer.
+  const potsCents = potSums._sum.balanceCents ?? 0;
+  const customerCents = (byType("USER")?._sum.balanceCents ?? 0) + (byType("TENANT")?._sum.balanceCents ?? 0) + potsCents;
   return NextResponse.json({
     platform: { id: platform.id, number: formatAccountNumber(platform.number), balanceCents: platform.balanceCents },
     totals: {
@@ -39,6 +42,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
       organisationCents: byType("TENANT")?._sum.balanceCents ?? 0,
       organisationCount: byType("TENANT")?._count ?? 0,
       customerCents,
+      potsCents,
       pendingWithdrawalCents: withdrawals.reduce((s, w) => s + w.amountCents, 0),
     },
     stripe: stripeBalance,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminBankExtras } from "@/components/bank/AdminBankExtras";
 
 interface Fees {
   monthlyPersonalCents: number;
@@ -28,7 +29,7 @@ interface AccountRow {
 }
 interface Payload {
   platform: { number: string; balanceCents: number };
-  totals: { personalCents: number; personalCount: number; organisationCents: number; organisationCount: number; customerCents: number; pendingWithdrawalCents: number };
+  totals: { personalCents: number; personalCount: number; organisationCents: number; organisationCount: number; customerCents: number; potsCents: number; pendingWithdrawalCents: number };
   stripe: { availableCents: number; pendingCents: number } | null;
   sepaConfigured: boolean;
   fees: Fees;
@@ -101,7 +102,7 @@ export function AdminBankView() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Platformrekening (omzet uit kosten/facturen)" value={euro(data.platform.balanceCents)} sub={data.platform.number} />
-        <Kpi label="Tegoed van klanten" value={euro(data.totals.customerCents)} sub={`${data.totals.personalCount} persoonlijk · ${data.totals.organisationCount} bedrijf`} />
+        <Kpi label="Tegoed van klanten" value={euro(data.totals.customerCents)} sub={`${data.totals.personalCount} persoonlijk · ${data.totals.organisationCount} bedrijf · ${euro(data.totals.potsCents)} in potjes/deposito's`} />
         <Kpi label="Stripe-saldo (beschikbaar + onderweg)" value={data.stripe ? euro(data.stripe.availableCents + data.stripe.pendingCents) : "—"} sub={data.stripe ? `beschikbaar ${euro(data.stripe.availableCents)}` : "niet opgehaald"} />
         <Kpi label="Opnames te betalen" value={euro(data.totals.pendingWithdrawalCents)} sub={`${data.withdrawals.length} opname(s)`} />
       </div>
@@ -249,6 +250,8 @@ export function AdminBankView() {
           </table>
         </div>
       </div>
+
+      <AdminBankExtras />
     </div>
   );
 }

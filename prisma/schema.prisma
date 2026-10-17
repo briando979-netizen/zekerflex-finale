@@ -2062,6 +2062,7 @@ model BankAccount {
 
   entries BankEntry[]
   cards   BankCard[]
+  pots    BankPot[]
 }
 
 model BankEntry {
@@ -2099,6 +2100,28 @@ model BankCard {
   status             String
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
+
+  @@index([accountId])
+}
+
+// A pot ("potje") or a fixed-term deposit inside a ZekerFlex Bank account.
+// Money moved in leaves the main balance (POT_IN entry) and sits here; a
+// FIXED pot can't be emptied before lockedUntil and earns interestBps.
+model BankPot {
+  id           String      @id @default(cuid())
+  accountId    String
+  account      BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name         String
+  emoji        String      @default("🎯")
+  kind         String      @default("POT") // POT | FIXED
+  balanceCents Int         @default(0)
+  targetCents  Int?
+  termYears    Int?
+  interestBps  Int         @default(0)
+  lockedUntil  DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([accountId])
 }
