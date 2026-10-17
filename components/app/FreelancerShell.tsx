@@ -4,20 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
-import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch } from "@/components/app/icons";
+import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
-// 5-item bottom navigation (full-width bar on mobile, a floating pill on
+// 6-item bottom navigation (full-width bar on mobile, a floating pill on
 // desktop). No left sidebar.
 // ---------------------------------------------------------------------------
 
 const TABS = [
   { href: "/dashboard/klussen", label: "Ontdekken", icon: <ICompass /> },
   { href: "/dashboard/diensten", label: "Mijn klussen", icon: <IBriefcase /> },
-  { href: "/dashboard/uren", label: "Uren invullen", icon: <IClock /> },
+  { href: "/dashboard/uren", label: "Uren", icon: <IClock /> },
+  { href: "/dashboard/bank", label: "Bank", icon: <IWallet /> },
   { href: "/dashboard/berichten", label: "Chat", icon: <IChat /> },
   { href: "/dashboard/account", label: "Account", icon: <IUser /> },
 ];
@@ -91,7 +92,7 @@ export function FreelancerShell({
                 <Link
                   href={t.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 px-2 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
+                  className={`flex flex-col items-center gap-0.5 px-1 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
                     active
                       ? "text-brand-600 lg:bg-ink lg:text-white"
                       : "text-neutralx-400 hover:text-neutralx-600 lg:hover:bg-paper-soft"
