@@ -5,6 +5,10 @@ import { BankCards, type CardRow } from "@/components/bank/BankCards";
 import { BankPots, type Pot } from "@/components/bank/BankPots";
 import { BankForecast, BankInsights, type InsightsPayload } from "@/components/bank/BankInsights";
 import { BankInsurance, type InsuranceProduct, type Policy } from "@/components/bank/BankInsurance";
+import { BankPayments } from "@/components/bank/BankPayments";
+import { BankAutoSave } from "@/components/bank/BankAutoSave";
+import { BankTax } from "@/components/bank/BankTax";
+import { BankAdvance } from "@/components/bank/BankAdvance";
 
 interface Account {
   id: string;
@@ -51,11 +55,13 @@ interface Payload {
   payoutDestination: "iban" | "bank" | null;
 }
 
-type Tab = "overzicht" | "potjes" | "inzicht" | "passen" | "verzekeren" | "instellingen";
+type Tab = "overzicht" | "betalen" | "potjes" | "inzicht" | "belasting" | "passen" | "verzekeren" | "instellingen";
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "overzicht", label: "Overzicht", icon: "🏦" },
+  { id: "betalen", label: "Betalen", icon: "💸" },
   { id: "potjes", label: "Potjes & sparen", icon: "🐷" },
   { id: "inzicht", label: "Inzicht", icon: "📊" },
+  { id: "belasting", label: "Belasting", icon: "🧾" },
   { id: "passen", label: "Passen", icon: "💳" },
   { id: "verzekeren", label: "Verzekeren", icon: "🛡️" },
   { id: "instellingen", label: "Instellingen", icon: "⚙️" },
@@ -242,7 +248,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
     role !== "platform" && account.nextFeeAt && !data.entries.some((e) => e.kind === "FEE_MONTHLY") && new Date(account.nextFeeAt).getTime() - Date.now() <= 31 * 86_400_000
       ? new Date(account.nextFeeAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long" })
       : null;
-  const tabs = TABS.filter((t) => role !== "platform" || t.id === "overzicht" || t.id === "inzicht");
+  const tabs = TABS.filter((t) => (role !== "platform" || t.id === "overzicht" || t.id === "inzicht") && (t.id !== "belasting" || role === "personal"));
 
   const bookings = (limit?: number) => (
     <div className="card overflow-hidden">
@@ -341,16 +347,17 @@ export function BankView({ returnPath }: { returnPath: string }) {
           {potsTotal > 0 && <span>Totaal vermogen {money(account.balanceCents + potsTotal)}</span>}
         </div>
         {canAct && (
-          <div className="relative mt-6 grid grid-cols-4 gap-2 sm:flex sm:gap-3">
+          <div className="relative mt-6 grid grid-cols-5 gap-1 sm:flex sm:gap-3">
             {[
               { icon: "＋", label: "Opwaarderen", on: () => setPanel(panel === "topup" ? null : "topup") },
+              { icon: "💸", label: "Overmaken", on: () => go("betalen") },
               { icon: "↗", label: "Opnemen", on: () => setPanel(panel === "withdraw" ? null : "withdraw") },
               { icon: "🐷", label: "Potjes", on: () => go("potjes") },
               { icon: "💳", label: "Passen", on: () => go("passen") },
             ].map((a) => (
-              <button key={a.label} type="button" onClick={a.on} className="flex flex-col items-center gap-1.5 sm:flex-row sm:rounded-full sm:bg-white/10 sm:px-4 sm:py-2 sm:hover:bg-white/20">
+              <button key={a.label} type="button" onClick={a.on} className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:rounded-full sm:bg-white/10 sm:px-4 sm:py-2 sm:hover:bg-white/20">
                 <span className="grid h-11 w-11 place-items-center rounded-full bg-white/15 text-lg sm:h-auto sm:w-auto sm:bg-transparent sm:text-base">{a.icon}</span>
-                <span className="text-[11px] font-semibold sm:text-sm">{a.label}</span>
+                <span className="w-full truncate text-center text-[10px] font-semibold sm:w-auto sm:text-sm">{a.label}</span>
               </button>
             ))}
           </div>
@@ -459,6 +466,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
 
       {tab === "overzicht" && (
         <div className="space-y-5">
+          {role === "personal" && data.payoutDestination === "bank" && <BankAdvance onChanged={changed} />}
           {insights && <BankForecast data={insights.forecast} balanceCents={account.balanceCents} />}
 
           {invoices.length > 0 && (
@@ -511,7 +519,16 @@ export function BankView({ returnPath }: { returnPath: string }) {
         </div>
       )}
 
-      {tab === "potjes" && <BankPots pots={pots} rates={rates} balanceCents={account.balanceCents} canManage={canAct} onChanged={changed} />}
+      {tab === "potjes" && (
+        <div className="space-y-5">
+          <BankPots pots={pots} rates={rates} balanceCents={account.balanceCents} canManage={canAct} onChanged={changed} />
+          {canAct && <BankAutoSave pots={pots} earningsHere={data.payoutDestination === "bank"} onChanged={changed} />}
+        </div>
+      )}
+
+      {tab === "betalen" && <BankPayments canManage={canAct} balanceCents={account.balanceCents} onChanged={changed} />}
+
+      {tab === "belasting" && <BankTax canManage={canAct} onChanged={changed} />}
 
       {tab === "inzicht" && (insights ? <BankInsights data={insights.insights} /> : <p className="py-10 text-center text-sm text-neutralx-400">Laden…</p>)}
 

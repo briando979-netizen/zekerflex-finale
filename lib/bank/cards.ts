@@ -8,6 +8,7 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { platformAccount } from "@/lib/bank/accounts";
 import { getFees } from "@/lib/bank/fees";
 import { book, transfer } from "@/lib/bank/ledger";
+import { applyRoundUp } from "@/lib/bank/autosave";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Bank payment cards (Stripe Issuing, on the platform account).
@@ -242,6 +243,7 @@ export async function settleTransaction(tx: Stripe.Issuing.Transaction): Promise
     );
   }
   if (hold && authId && fromHold > 0) await kvSet(holdKey(authId), { ...hold, heldCents: hold.heldCents - fromHold });
+  await applyRoundUp(account.id, captured, tx.id);
 }
 
 /** issuing_authorization.updated: release what's left of the hold once it's closed/reversed. */

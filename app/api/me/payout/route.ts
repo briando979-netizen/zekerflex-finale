@@ -12,6 +12,8 @@ import {
   requestAdvance,
 } from "@/lib/payouts/advances";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
+import { prisma } from "@/lib/prisma";
+import { canAdvanceToBank, payAdvanceToBank } from "@/lib/bank/advance";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +42,7 @@ export async function GET(): Promise<NextResponse> {
       outstandingAdvanceCents: outstanding,
       maxAdvanceCents: maxAdvanceCents(pending, outstanding),
       advanceFeeRatePct: Math.round((advanceFee(10000) / 10000) * 100),
+      advanceToBank: await canAdvanceToBank(p.userId),
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);
@@ -86,6 +89,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const overview = await getFreelancerOverview(p.userId);
     try {
       const advance = await requestAdvance(p.userId, amountCents, overview.kpis.pendingPayoutCents);
+      // Earnings on ZekerFlex Bank → the advance is there right away.
+      if (await canAdvanceToBank(p.userId)) {
+        const user = await prisma.user.findUnique({ where: { id: p.userId }, select: { fullName: true } });
+        await payAdvanceToBank(advance, user?.fullName ?? "ZekerFlex-gebruiker");
+        return NextResponse.json({ advance: { ...advance, status: "approved" }, paidToBank: true }, { status: 201 });
+      }
       return NextResponse.json({ advance }, { status: 201 });
     } catch (e) {
       throw AppError.validation((e as Error).message);

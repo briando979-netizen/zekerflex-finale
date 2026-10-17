@@ -26,6 +26,7 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
 import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
+import { settleBankAdvances } from "@/lib/bank/advance";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -337,7 +338,10 @@ export async function approveTimesheet(
             counterparty: ts.branch.tenant.name,
             reference: persisted.freelancerInvoice.number,
             idempotencyKey: `earning:${persisted.freelancerInvoice.id}`,
-          }).then(({ entry }) => ({
+          }).then(async ({ entry }) => {
+            await settleBankAdvances(ts.freelancer.userId, ts.freelancer.user.fullName);
+            return entry;
+          }).then((entry) => ({
             status: PaymentStatus.SETTLED,
             providerRef: `zfbank:${entry.id}`,
             acceptedAt: new Date().toISOString(),
