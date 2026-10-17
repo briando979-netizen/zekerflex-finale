@@ -9,6 +9,7 @@ import { platformAccount } from "@/lib/bank/accounts";
 import { getFees } from "@/lib/bank/fees";
 import { book, transfer } from "@/lib/bank/ledger";
 import { applyRoundUp } from "@/lib/bank/autosave";
+import { rewardStatus } from "@/lib/rewards/levels";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Bank payment cards (Stripe Issuing, on the platform account).
@@ -46,6 +47,33 @@ interface Hold {
 }
 const holdKey = (authId: string) => `bank-card-hold:${authId}`;
 
+// Team cards (company accounts): who carries the card and its monthly budget.
+//   key "bank-card-meta:<cardId>"            → CardMeta
+//   key "bank-card-spend:<cardId>:<YYYY-MM>" → cents approved this month
+export interface CardMeta {
+  assignee: string | null;
+  monthlyLimitCents: number | null;
+}
+const metaKey = (cardId: string) => `bank-card-meta:${cardId}`;
+const spendKey = (cardId: string, d = new Date()) => `bank-card-spend:${cardId}:${d.toISOString().slice(0, 7)}`;
+
+export async function cardMeta(cardId: string): Promise<CardMeta & { spentThisMonthCents: number }> {
+  const meta = (await kvGet<CardMeta>(metaKey(cardId))) ?? { assignee: null, monthlyLimitCents: null };
+  return { ...meta, spentThisMonthCents: (await kvGet<number>(spendKey(cardId))) ?? 0 };
+}
+
+const spendingControls = (limit: number | null) =>
+  limit ? { spending_limits: [{ amount: limit, interval: "monthly" as const }] } : { spending_limits: [] };
+
+/** Budget or assignee change on a team card — mirrored to Stripe's own spending limit. */
+export async function setCardMeta(cardId: string, accountId: string, meta: CardMeta): Promise<CardMeta> {
+  const card = await prisma.bankCard.findFirst({ where: { id: cardId, accountId } });
+  if (!card) throw AppError.notFound("Pas niet gevonden");
+  await getStripeClient().issuing.cards.update(card.stripeCardId, { spending_controls: spendingControls(meta.monthlyLimitCents) });
+  await kvSet(metaKey(card.id), meta);
+  return meta;
+}
+
 export async function listCards(accountId: string): Promise<BankCard[]> {
   return prisma.bankCard.findMany({ where: { accountId }, orderBy: { createdAt: "desc" } });
 }
@@ -81,6 +109,9 @@ export async function requestCard(input: {
   details: CardholderDetails;
   email: string | null;
   requestKey: string;
+  /** team card for an employee, with an optional monthly budget */
+  assignee?: string | null;
+  monthlyLimitCents?: number | null;
 }): Promise<BankCard> {
   const { account, type, details } = input;
   if (account.ownerType === "PLATFORM") throw AppError.validation("De platformrekening krijgt geen pas");
@@ -88,7 +119,9 @@ export async function requestCard(input: {
   const active = await prisma.bankCard.count({ where: { accountId: account.id, status: { in: ["active", "inactive"] } } });
   if (active >= 5) throw AppError.precondition("Je hebt al 5 passen — zeg er eerst een op");
 
-  const fee = type === "physical" ? (await getFees()).cardPhysicalCents : (await getFees()).cardVirtualCents;
+  let fee = type === "physical" ? (await getFees()).cardPhysicalCents : (await getFees()).cardVirtualCents;
+  // Diamant level: the physical card is on us.
+  if (type === "physical" && account.userId && (await rewardStatus(account.userId).catch(() => null))?.level.id === "diamant") fee = 0;
   const platform = await platformAccount();
   const feeKey = `card-fee:${account.id}:${input.requestKey}`;
   if (fee > 0) {
@@ -114,6 +147,7 @@ export async function requestCard(input: {
         currency: "eur",
         type,
         status: type === "virtual" ? "active" : "inactive",
+        ...(input.monthlyLimitCents ? { spending_controls: spendingControls(input.monthlyLimitCents) } : {}),
         ...(type === "physical"
           ? {
               shipping: {
@@ -127,7 +161,7 @@ export async function requestCard(input: {
       },
       { idempotencyKey: `zf-card:${account.id}:${input.requestKey}` },
     );
-    return await prisma.bankCard.upsert({
+    const saved = await prisma.bankCard.upsert({
       where: { stripeCardId: card.id },
       update: {},
       create: {
@@ -142,6 +176,10 @@ export async function requestCard(input: {
         status: card.status,
       },
     });
+    if (input.assignee || input.monthlyLimitCents) {
+      await kvSet(metaKey(saved.id), { assignee: input.assignee ?? null, monthlyLimitCents: input.monthlyLimitCents ?? null } satisfies CardMeta);
+    }
+    return saved;
   } catch (err) {
     if (fee > 0) {
       await transfer({
@@ -198,6 +236,8 @@ export async function decideAuthorization(auth: Stripe.Issuing.Authorization): P
   if (card.status !== "active") return { approved: false, reason: "card_inactive" };
   if (account.frozenAt) return { approved: false, reason: "account_frozen" };
   if (amount <= 0) return { approved: true, reason: "zero_amount" };
+  const meta = await cardMeta(card.id);
+  if (meta.monthlyLimitCents && meta.spentThisMonthCents + amount > meta.monthlyLimitCents) return { approved: false, reason: "budget_exceeded" };
   const merchant = auth.merchant_data?.name ?? "Kaartbetaling";
   try {
     await book(account.id, {
@@ -212,6 +252,7 @@ export async function decideAuthorization(auth: Stripe.Issuing.Authorization): P
   } catch {
     return { approved: false, reason: "insufficient_funds" };
   }
+  await kvSet(spendKey(card.id), meta.spentThisMonthCents + amount);
   const hold = (await kvGet<Hold>(holdKey(auth.id))) ?? { accountId: account.id, heldCents: 0 };
   await kvSet(holdKey(auth.id), { ...hold, heldCents: hold.heldCents + amount });
   return { approved: true, reason: "ok" };

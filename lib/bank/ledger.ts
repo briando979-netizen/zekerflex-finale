@@ -24,7 +24,8 @@ export type BankEntryKind =
   | "POT_IN"
   | "POT_OUT"
   | "INTEREST"
-  | "INSURANCE_PREMIUM";
+  | "INSURANCE_PREMIUM"
+  | "BONUS";
 
 export interface Booking {
   amountCents: number;

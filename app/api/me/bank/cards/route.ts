@@ -23,6 +23,9 @@ const schema = z.object({
   country: z.string().length(2).default("NL"),
   acceptTerms: z.literal(true),
   requestKey: z.string().regex(/^[\w-]{8,64}$/),
+  // Team card (company account): employee + monthly budget.
+  assignee: z.string().trim().max(60).optional().or(z.literal("")),
+  monthlyLimitCents: z.number().int().min(1_000).max(10_000_000).nullable().optional(),
 });
 
 // POST /api/me/bank/cards — the holder requests a virtual or physical card (one-off fee from the balance).
@@ -31,7 +34,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const p = await requirePrincipal();
     await enforceRateLimit({ name: "bank-card-request", identifier: p.userId, limit: 5, windowSeconds: 86400, message: "Te veel pasaanvragen vandaag." });
     const input = schema.parse(await request.json().catch(() => ({})));
-    const { account, canMoveMoney } = await accountForPrincipal(p);
+    const { account, canMoveMoney, role } = await accountForPrincipal(p);
     if (!canMoveMoney) throw AppError.forbidden("Alleen de hoofdbeheerder kan een pas voor de bedrijfsrekening aanvragen");
     const user = await prisma.user.findUnique({ where: { id: p.userId }, select: { email: true } });
     const card = await requestCard({
@@ -39,6 +42,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       type: input.type,
       email: user?.email ?? null,
       requestKey: input.requestKey,
+      ...(role === "organisation" ? { assignee: input.assignee || null, monthlyLimitCents: input.monthlyLimitCents ?? null } : {}),
       details: {
         firstName: input.firstName,
         lastName: input.lastName,

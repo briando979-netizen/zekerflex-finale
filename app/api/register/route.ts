@@ -3,6 +3,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { registerAccount, registerSchema } from "@/lib/auth/register";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
+import { recordReferral, REF_COOKIE } from "@/lib/rewards/referral";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     const account = await registerAccount(parsed.data);
     await sendVerificationEmail(account.userId, account.email, parsed.data.fullName).catch(() => undefined);
+    // Doorverwijzen: /r/<code> left a cookie — remember who invited this user.
+    const ref = request.headers
+      .get("cookie")
+      ?.split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${REF_COOKIE}=`))
+      ?.slice(REF_COOKIE.length + 1);
+    await recordReferral(account.userId, ref ? decodeURIComponent(ref) : null).catch(() => undefined);
     return NextResponse.json({ ok: true, ...account }, { status: 201 });
   } catch (err) {
     const { status, body } = toErrorBody(err);

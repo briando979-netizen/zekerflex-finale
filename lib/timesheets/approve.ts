@@ -27,6 +27,8 @@ import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
 import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
 import { settleBankAdvances } from "@/lib/bank/advance";
+import { accountForPrincipal } from "@/lib/bank/accounts";
+import { rewardReferral } from "@/lib/rewards/referral";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -417,6 +419,8 @@ export async function approveTimesheet(
       },
     });
 
+    await rewardReferralsAfterApproval(ts.freelancer.userId, ts.freelancer.user.fullName, principal);
+
     // --- DBA compliance re-evaluation (best effort) -----------------
     let dba: ApproveTimesheetResult["dba"] = null;
     try {
@@ -498,6 +502,19 @@ export async function approveTimesheet(
  * APPROVED so the weekly payroll run (`lib/payroll/engine.ts`) picks it up and
  * turns it into a loonstrook with loonheffing, vakantiegeld etc.
  */
+/**
+ * Doorverwijzen: an approved klus is the "first real activity" for both the
+ * freelancer who worked it and the employer who approved it. Best effort.
+ */
+async function rewardReferralsAfterApproval(freelancerUserId: string, freelancerName: string, approver: Principal): Promise<void> {
+  try {
+    await rewardReferral(freelancerUserId, await personalAccount(freelancerUserId, freelancerName));
+    await rewardReferral(approver.userId, (await accountForPrincipal(approver)).account);
+  } catch (err) {
+    logger.warn("referral reward after approval failed", { error: (err as Error).message });
+  }
+}
+
 async function approveViaPayroll(args: {
   ts: {
     id: string;
@@ -659,6 +676,8 @@ async function approveViaPayroll(args: {
     log,
     from: env.MAIL_UITZEND_FROM,
   });
+
+  await rewardReferralsAfterApproval(ts.freelancer.userId, ts.freelancer.user.fullName, principal);
 
   return {
     timesheetId: ts.id,

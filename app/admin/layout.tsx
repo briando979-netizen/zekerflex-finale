@@ -24,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 const NAV = [
   { href: "/admin", label: "Controlecentrum", icon: <IGrid />, section: "Hoofd" },
+  { href: "/admin/cockpit", label: "Cockpit (omzet live)", icon: <IPulse />, section: "Hoofd" },
   { href: "/admin/kantoor", label: "Live kantoor", icon: <IActivity />, section: "Hoofd" },
   { href: "/admin/agenda", label: "Agenda", icon: <ICalendar />, section: "Hoofd" },
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },

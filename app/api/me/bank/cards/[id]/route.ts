@@ -4,21 +4,37 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { accountForPrincipal } from "@/lib/bank/accounts";
-import { setCardStatus } from "@/lib/bank/cards";
+import { setCardMeta, setCardStatus } from "@/lib/bank/cards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ status: z.enum(["active", "inactive", "canceled"]) });
+const schema = z.union([
+  z.object({ status: z.enum(["active", "inactive", "canceled"]) }),
+  z.object({ assignee: z.string().trim().max(60).nullable(), monthlyLimitCents: z.number().int().min(1_000).max(10_000_000).nullable() }),
+]);
 
 // PATCH /api/me/bank/cards/:id — freeze, unfreeze (also: activate a delivered physical card) or cancel.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const { id } = await params;
-    const { status } = schema.parse(await request.json().catch(() => ({})));
+    const input = schema.parse(await request.json().catch(() => ({})));
     const { account, canMoveMoney } = await accountForPrincipal(p);
     if (!canMoveMoney) throw AppError.forbidden("Alleen de hoofdbeheerder beheert de passen van de bedrijfsrekening");
+    if (!("status" in input)) {
+      const meta = await setCardMeta(id, account.id, { assignee: input.assignee || null, monthlyLimitCents: input.monthlyLimitCents });
+      await recordAudit({
+        category: "BILLING",
+        action: "bank.card_budget",
+        actorUserId: p.userId,
+        summary: `Pas ${id}: ${meta.assignee ?? "geen houder"}, budget ${meta.monthlyLimitCents ? `${(meta.monthlyLimitCents / 100).toFixed(0)} EUR/mnd` : "onbeperkt"}`,
+        targetType: "bank-account",
+        targetId: account.id,
+      });
+      return NextResponse.json({ meta });
+    }
+    const { status } = input;
     const card = await setCardStatus(id, account.id, status);
     await recordAudit({
       category: "BILLING",

@@ -9,6 +9,7 @@ import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
+import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +170,11 @@ export default async function AccountPage() {
           <span className="text-neutralx-400">›</span>
         </Link>
       )}
+
+      <div className="mt-4 space-y-4">
+        <LevelCard />
+        <ReferralCard />
+      </div>
 
       <div className="mt-4">
         <PushToggle />

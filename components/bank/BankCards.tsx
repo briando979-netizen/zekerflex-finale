@@ -11,6 +11,9 @@ export interface CardRow {
   expMonth: number;
   expYear: number;
   status: string;
+  assignee?: string | null;
+  monthlyLimitCents?: number | null;
+  spentThisMonthCents?: number;
 }
 
 interface StripeElement {
@@ -59,9 +62,13 @@ export function BankCards(props: {
   balanceCents: number;
   holderName: string;
   publishableKey: string | null;
+  /** company account: cards per employee with a monthly budget */
+  team?: boolean;
   onChanged: (note: { ok: boolean; text: string }) => void | Promise<void>;
 }) {
-  const { cards, fees, canManage, frozen, balanceCents, publishableKey, onChanged } = props;
+  const { cards, fees, canManage, frozen, balanceCents, publishableKey, onChanged, team = false } = props;
+  const [assignee, setAssignee] = useState("");
+  const [budget, setBudget] = useState("");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
@@ -74,12 +81,34 @@ export function BankCards(props: {
   const field = "w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm";
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
 
+  async function editBudget(c: CardRow) {
+    const who = window.prompt("Medewerker op deze pas", c.assignee ?? "");
+    if (who === null) return;
+    const b = window.prompt("Maandbudget in € (leeg = onbeperkt)", c.monthlyLimitCents ? String(c.monthlyLimitCents / 100) : "");
+    if (b === null) return;
+    const cents = b.trim() ? Math.round(Number(b.replace(",", ".")) * 100) : null;
+    setBusy(true);
+    const res = await fetch(`/api/me/bank/cards/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignee: who.trim() || null, monthlyLimitCents: cents }),
+    }).catch(() => null);
+    setBusy(false);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    await onChanged(res?.ok ? { ok: true, text: "Budget bijgewerkt." } : { ok: false, text: d?.error?.message ?? "Wijzigen lukte niet (budget minimaal € 10)." });
+  }
+
   async function request() {
     setBusy(true);
     const res = await fetch("/api/me/bank/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, country: "NL", requestKey: crypto.randomUUID() }),
+      body: JSON.stringify({
+        ...form,
+        country: "NL",
+        requestKey: crypto.randomUUID(),
+        ...(team ? { assignee, monthlyLimitCents: budget ? Math.round(Number(budget.replace(",", ".")) * 100) || null : null } : {}),
+      }),
     }).catch(() => null);
     setBusy(false);
     if (!res?.ok) {
@@ -173,6 +202,18 @@ export function BankCards(props: {
             <input value={form.line1} onChange={set("line1")} placeholder="Straat en huisnummer" className={`${field} sm:col-span-2`} />
             <input value={form.postalCode} onChange={set("postalCode")} placeholder="Postcode" className={field} />
             <input value={form.city} onChange={set("city")} placeholder="Plaats" className={field} />
+            {team && (
+              <>
+                <label className="text-xs text-neutralx-500">
+                  Voor medewerker (komt op je overzicht)
+                  <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="bv. Sanne, filiaal Utrecht" className={field} />
+                </label>
+                <label className="text-xs text-neutralx-500">
+                  Maandbudget in € (leeg = onbeperkt)
+                  <input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="bv. 500" className={field} />
+                </label>
+              </>
+            )}
           </div>
           <label className="flex items-start gap-2 text-xs text-neutralx-600">
             <input type="checkbox" checked={form.acceptTerms} onChange={set("acceptTerms")} className="mt-0.5" />
@@ -229,8 +270,33 @@ export function BankCards(props: {
                     </div>
                   )}
                 </div>
+                {(c.assignee || c.monthlyLimitCents) && (
+                  <div className="text-xs">
+                    {c.assignee && <p className="font-semibold text-ink">👤 {c.assignee}</p>}
+                    {c.monthlyLimitCents ? (
+                      <div className="mt-1">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-paper-soft">
+                          <div
+                            className={`h-full rounded-full ${(c.spentThisMonthCents ?? 0) / c.monthlyLimitCents > 0.9 ? "bg-crit" : "bg-brand-500"}`}
+                            style={{ width: `${Math.min(100, Math.round(((c.spentThisMonthCents ?? 0) / c.monthlyLimitCents) * 100))}%` }}
+                          />
+                        </div>
+                        <p className="mt-0.5 text-neutralx-500">
+                          {euro(c.spentThisMonthCents ?? 0)} van {euro(c.monthlyLimitCents)} deze maand
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-neutralx-500">Geen budgetlimiet</p>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className={`rounded-full px-2 py-0.5 font-semibold ${st.cls}`}>{st.label}</span>
+                  {team && canManage && c.status !== "canceled" && (
+                    <button type="button" disabled={busy} onClick={() => editBudget(c)} className="font-semibold text-ink hover:underline">
+                      Budget
+                    </button>
+                  )}
                   {canManage && c.status !== "canceled" && (
                     <>
                       <button type="button" disabled={busy} onClick={() => reveal(c)} className="font-semibold text-brand-600 hover:underline">

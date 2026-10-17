@@ -4,6 +4,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { platformAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
+import { feeDiscountPct } from "@/lib/rewards/levels";
 
 // ---------------------------------------------------------------------------
 // What ZekerFlex Bank costs. The admin sets the amounts (/admin/bank). Fees
@@ -59,7 +60,9 @@ export async function chargeMonthlyFees(now = new Date()): Promise<{ charged: nu
   let charged = 0;
   let skipped = 0;
   for (const account of due) {
-    const amount = monthlyFeeFor(account, fees);
+    // Freelancer levels give a discount on the monthly fee (Platina+ free).
+    const discount = account.userId ? await feeDiscountPct(account.userId).catch(() => 0) : 0;
+    const amount = Math.round((monthlyFeeFor(account, fees) * (100 - discount)) / 100);
     const period = monthKey(account.nextFeeAt ?? now);
     try {
       if (amount > 0) {

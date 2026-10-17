@@ -9,6 +9,7 @@ import { BankPayments } from "@/components/bank/BankPayments";
 import { BankAutoSave } from "@/components/bank/BankAutoSave";
 import { BankTax } from "@/components/bank/BankTax";
 import { BankAdvance } from "@/components/bank/BankAdvance";
+import { ReferralCard } from "@/components/rewards/RewardsCards";
 
 interface Account {
   id: string;
@@ -92,6 +93,7 @@ const KIND: Record<string, { label: string; icon: string }> = {
   POT_IN: { label: "Naar potje", icon: "🐷" },
   POT_OUT: { label: "Uit potje", icon: "🐷" },
   INTEREST: { label: "Rente", icon: "📈" },
+  BONUS: { label: "Bonus", icon: "🎁" },
   INSURANCE_PREMIUM: { label: "Verzekering", icon: "🛡️" },
 };
 const W_STATUS: Record<Withdrawal["status"], string> = {
@@ -516,6 +518,8 @@ export function BankView({ returnPath }: { returnPath: string }) {
           )}
 
           {bookings(8)}
+
+          {role !== "platform" && <ReferralCard />}
         </div>
       )}
 
@@ -541,6 +545,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
           balanceCents={account.balanceCents}
           holderName={account.holderName}
           publishableKey={data.stripePublishableKey}
+          team={role === "organisation"}
           onChanged={changed}
         />
       )}

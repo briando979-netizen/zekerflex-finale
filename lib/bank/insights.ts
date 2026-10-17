@@ -19,6 +19,7 @@ export const CATEGORY: Record<string, string> = {
   TOPUP: "Opwaarderingen",
   EARNING: "Verdiensten",
   INTEREST: "Rente",
+  BONUS: "Bonussen",
   CARD_REFUND: "Terugbetalingen",
   WITHDRAWAL_REVERSAL: "Terugboekingen",
   TRANSFER: "Overboekingen",
