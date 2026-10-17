@@ -25,6 +25,8 @@ import { evaluatePayoutGate } from "@/lib/billing/payout-gate";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
+import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
+import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
@@ -190,15 +192,21 @@ export async function approveTimesheet(
     }
 
     // --- Payout destination -------------------------------------------
-    const iban = ts.freelancer.payoutIban;
-    if (!iban || !isValidIban(iban)) {
+    // Either the freelancer's own IBAN, or (their choice) their ZekerFlex
+    // Bank account — then no IBAN is needed and the payout is instant.
+    const toBank = (await getPayoutDestination(ts.freelancer.userId)) === "bank";
+    const iban = toBank
+      ? (await personalAccount(ts.freelancer.userId, ts.freelancer.user.fullName)).number
+      : ts.freelancer.payoutIban;
+    if (!toBank && (!iban || !isValidIban(iban))) {
       throw AppError.precondition("Freelancer has no valid payout IBAN on file");
     }
+    if (!iban) throw AppError.precondition("Freelancer has no payout destination");
     // The freelancer recently changed their IBAN and hasn't re-verified it
     // with a fresh bank document yet (lib/compliance/documents.ts) — hold
     // the payout rather than silently sending money to a newly-added,
     // unverified account (e.g. after an account takeover).
-    if (ts.freelancer.payoutIbanPendingVerification) {
+    if (!toBank && ts.freelancer.payoutIbanPendingVerification) {
       throw AppError.precondition(
         "Rekeningnummer is recent gewijzigd en nog niet geverifieerd — freelancer moet een bankafschrift uploaden voordat uitbetaald kan worden.",
       );
@@ -320,7 +328,22 @@ export async function approveTimesheet(
     let payoutStatus = persisted.payment.status;
     let providerRef: string | null = null;
     try {
-      const result = await triggerInstantPayout({
+      const result = toBank
+        ? await creditEarning({
+            userId: ts.freelancer.userId,
+            holderName: ts.freelancer.user.fullName,
+            amountCents: persisted.payment.amountCents,
+            description: `Verdiensten ${persisted.freelancerInvoice.number}`,
+            counterparty: ts.branch.tenant.name,
+            reference: persisted.freelancerInvoice.number,
+            idempotencyKey: `earning:${persisted.freelancerInvoice.id}`,
+          }).then(({ entry }) => ({
+            status: PaymentStatus.SETTLED,
+            providerRef: `zfbank:${entry.id}`,
+            acceptedAt: new Date().toISOString(),
+            failureCode: undefined,
+          }))
+        : await triggerInstantPayout({
         endToEndId: persisted.payment.endToEndId,
         amountCents: persisted.payment.amountCents,
         currency: "EUR",

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { accountForPrincipal, formatAccountNumber } from "@/lib/bank/accounts";
 import { getFees, monthlyFeeFor } from "@/lib/bank/fees";
 import { env } from "@/lib/env";
+import { getPayoutDestination } from "@/lib/bank/earnings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       role,
       canMoveMoney,
       stripePublishableKey: env.STRIPE_PUBLISHABLE_KEY ?? null,
+      payoutDestination: role === "personal" ? await getPayoutDestination(p.userId) : null,
       fees: {
         monthlyCents: monthlyFeeFor(account, fees),
         cardVirtualCents: fees.cardVirtualCents,

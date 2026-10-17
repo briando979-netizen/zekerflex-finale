@@ -45,6 +45,7 @@ interface Payload {
   entries: Entry[];
   cards: CardRow[];
   stripePublishableKey: string | null;
+  payoutDestination: "iban" | "bank" | null;
 }
 
 const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
@@ -244,6 +245,35 @@ export function BankView({ returnPath }: { returnPath: string }) {
           <input value={ibanName} onChange={(e) => setIbanName(e.target.value)} placeholder="Naam rekeninghouder" className={field} />
           <button type="button" disabled={busy} onClick={() => run(() => json("/api/me/bank/iban", "PUT", { iban, name: ibanName }), "IBAN opgeslagen.", "IBAN opslaan lukte niet.")} className="btn-primary text-sm disabled:opacity-50">
             Opslaan
+          </button>
+        </div>
+      )}
+
+      {data.payoutDestination && (
+        <div className="card flex flex-wrap items-center gap-3 p-5">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-ink">Verdiensten op ZekerFlex Bank</span>
+            <span className="block text-xs text-neutralx-500">
+              {data.payoutDestination === "bank"
+                ? "Goedgekeurde uren staan direct op deze rekening — geen wachttijd op een bankoverschrijving."
+                : "Nu gaan goedgekeurde uren naar je eigen IBAN. Zet dit aan om ze direct hier te ontvangen."}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={data.payoutDestination === "bank"}
+            disabled={busy}
+            onClick={() =>
+              run(
+                () => json("/api/me/bank/payout-destination", "PUT", { destination: data.payoutDestination === "bank" ? "iban" : "bank" }),
+                data.payoutDestination === "bank" ? "Verdiensten gaan weer naar je eigen IBAN." : "Verdiensten komen voortaan direct op je ZekerFlex Bank.",
+                "Wijzigen lukte niet.",
+              )
+            }
+            className={`relative h-7 w-12 rounded-full transition ${data.payoutDestination === "bank" ? "bg-brand-500" : "bg-neutralx-300"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${data.payoutDestination === "bank" ? "left-6" : "left-1"}`} />
           </button>
         </div>
       )}
