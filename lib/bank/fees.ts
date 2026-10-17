@@ -23,7 +23,7 @@ export interface BankFees {
 export const DEFAULT_FEES: BankFees = {
   monthlyPersonalCents: 199,
   monthlyOrganisationCents: 995,
-  cardVirtualCents: 250,
+  cardVirtualCents: 0, // the virtual card is free
   cardPhysicalCents: 750,
 };
 

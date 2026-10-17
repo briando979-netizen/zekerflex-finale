@@ -28,6 +28,7 @@ declare global {
 }
 
 const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
+const price = (c: number) => (c === 0 ? "gratis" : `eenmalig ${euro(c)}`);
 const STATUS: Record<string, { label: string; cls: string }> = {
   active: { label: "actief", cls: "bg-ok/10 text-ok" },
   inactive: { label: "bevroren / nog niet geactiveerd", cls: "bg-warn/10 text-warn" },
@@ -153,7 +154,7 @@ export function BankCards(props: {
               <button key={t} type="button" onClick={() => setForm({ ...form, type: t })} className={`rounded-xl border px-4 py-2.5 text-left text-sm ${form.type === t ? "border-brand-500 bg-white" : "border-hairstrong"}`}>
                 <span className="block font-semibold text-ink">{t === "virtual" ? "Virtuele pas" : "Fysieke pas"}</span>
                 <span className="block text-xs text-neutralx-500">
-                  {t === "virtual" ? "Direct klaar, online + Apple/Google Pay" : "Per post, ook voor de kassa"} · eenmalig {euro(t === "virtual" ? fees.cardVirtualCents : fees.cardPhysicalCents)}
+                  {t === "virtual" ? "Direct klaar, online + Apple/Google Pay" : "Per post, ook voor de kassa"} · {price(t === "virtual" ? fees.cardVirtualCents : fees.cardPhysicalCents)}
                 </span>
               </button>
             ))}
@@ -180,7 +181,7 @@ export function BankCards(props: {
               <a href="https://stripe.com/legal/issuing/celtic-authorized-user-terms" target="_blank" rel="noreferrer" className="underline">
                 voorwaarden van de uitgever
               </a>
-              , en dat de paskosten ({euro(fee)}) van mijn saldo worden afgeschreven.
+              {fee > 0 ? `, en dat de paskosten (${euro(fee)}) van mijn saldo worden afgeschreven` : ""}.
             </span>
           </label>
           <button
@@ -189,7 +190,7 @@ export function BankCards(props: {
             disabled={busy || !form.acceptTerms || !form.firstName || !form.lastName || !form.dob || !form.line1 || !form.postalCode || !form.city || balanceCents < fee}
             className="btn-primary text-sm disabled:opacity-50"
           >
-            {busy ? "Bezig…" : balanceCents < fee ? `Waardeer eerst op (paskosten ${euro(fee)})` : `Pas aanvragen voor ${euro(fee)}`}
+            {busy ? "Bezig…" : balanceCents < fee ? `Waardeer eerst op (paskosten ${euro(fee)})` : fee === 0 ? "Gratis pas aanvragen" : `Pas aanvragen voor ${euro(fee)}`}
           </button>
         </div>
       )}

@@ -237,6 +237,11 @@ export function BankView({ returnPath }: { returnPath: string }) {
   const reserved = insights?.forecast.reservedCents ?? 0;
   const money = (c: number) => (hidden ? "€ ••••" : euro(c));
   const canAct = canMoveMoney && role !== "platform" && !account.frozen;
+  // Still in the free first month: no monthly fee has been charged yet.
+  const freeUntil =
+    role !== "platform" && account.nextFeeAt && !data.entries.some((e) => e.kind === "FEE_MONTHLY") && new Date(account.nextFeeAt).getTime() - Date.now() <= 31 * 86_400_000
+      ? new Date(account.nextFeeAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long" })
+      : null;
   const tabs = TABS.filter((t) => role !== "platform" || t.id === "overzicht" || t.id === "inzicht");
 
   const bookings = (limit?: number) => (
@@ -361,6 +366,15 @@ export function BankView({ returnPath }: { returnPath: string }) {
         <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">Je kunt de bedrijfsrekening bekijken; alleen de hoofdbeheerder kan geld verplaatsen.</p>
       )}
       {note && <p className={`rounded-xl px-4 py-3 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
+
+      {freeUntil && (
+        <p className="flex items-center gap-2 rounded-xl border border-ok/30 bg-ok/5 px-4 py-3 text-sm text-ink">
+          <span aria-hidden>🎉</span>
+          <span>
+            Je eerste 30 dagen zijn <strong>gratis</strong> — geen maandkosten tot {freeUntil}. De virtuele betaalpas is altijd gratis.
+          </span>
+        </p>
+      )}
 
       {panel === "topup" && (
         <div className="card space-y-3 p-5">
@@ -579,7 +593,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
             <p className="text-sm font-semibold text-ink">Kosten</p>
             {role !== "platform" && <p>Rekening: {euro(fees.monthlyCents)} per maand (eerste maand gratis){account.nextFeeAt ? `, volgende keer op ${new Date(account.nextFeeAt).toLocaleDateString("nl-NL")}` : ""}.</p>}
             <p>
-              Betaalpas eenmalig: virtueel {euro(fees.cardVirtualCents)}, fysiek {euro(fees.cardPhysicalCents)}.
+              Betaalpas: virtueel {fees.cardVirtualCents === 0 ? "gratis" : `eenmalig ${euro(fees.cardVirtualCents)}`}, fysiek {fees.cardPhysicalCents === 0 ? "gratis" : `eenmalig ${euro(fees.cardPhysicalCents)}`}.
             </p>
             <p className="pt-2 text-neutralx-400">Het geld op ZekerFlex Bank-rekeningen staat op de rekening van ZekerFlex B.V. bij Stripe Payments Europe. Betalingen in en uit lopen via Stripe en SEPA.</p>
           </div>
