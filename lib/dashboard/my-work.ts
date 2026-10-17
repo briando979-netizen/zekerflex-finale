@@ -247,21 +247,20 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   }
 
   // ── accepted assignments ────────────────────────────────────────────
+  // A klus is "Uitgekozen" until it is over (also while it's under way). Once
+  // over, while its hours are still a draft it lives only on "Uren invullen";
+  // after the hours are handed in it moves to "Gearchiveerd".
   for (const a of assignments) {
     const shift = toShift(a.shift as ShiftRow, home);
     const repl = replacementByAssignment.get(a.id);
     const isReplacement = Boolean(repl);
+    const over = a.shift.endsAt.getTime() < now;
+    if (!a.cancelledAt && !isReplacement && over && a.timesheet?.status === "DRAFT") continue;
     const item: MyWorkItem = {
       workKey: `a:${a.id}`,
       shift,
       assignmentId: a.id,
-      status: a.cancelledAt
-        ? "cancelled"
-        : isReplacement
-          ? "replacement"
-          : a.shift.startsAt.getTime() >= now
-            ? "active"
-            : "done",
+      status: a.cancelledAt ? "cancelled" : isReplacement ? "replacement" : over ? "done" : "active",
       confirmedAt: prefs.confirmations[a.id] ?? null,
       replacementRequested: isReplacement,
       replacementRequestId: repl?.id ?? null,

@@ -25,9 +25,9 @@ const MAIL_PER_RUN = 8;
 const WHATSAPP_WINDOW_DAYS = 60;
 const WHATSAPP_AI_TITLES = 15;
 
-interface Origin {
-  source: AgendaSource;
-  sourceRef: string;
+/** Whose agenda an appointment goes into, and how it's labelled for them. */
+interface Target {
+  userId: string;
   sourceLabel: string;
   fallbackTitle: string;
 }
@@ -35,27 +35,36 @@ interface Origin {
 const upcoming = (c: AppointmentCandidate) => c.start.getTime() >= Date.now() - HOUR;
 const defaultEnd = (c: AppointmentCandidate) => (c.end ?? (c.allDay ? null : new Date(c.start.getTime() + HOUR)))?.toISOString() ?? null;
 
-/** Plans what one text says for the given people; returns how many new items were added. */
-async function planFromText(userIds: string[], text: string, writtenAt: Date, origin: Origin, useAi = true): Promise<number> {
+/**
+ * Plans what one text says for the given people; returns how many new items
+ * were added. The model is asked once per appointment, however many people
+ * it is planned for — only the fallback title is per person.
+ */
+async function planFromText(
+  targets: Target[],
+  text: string,
+  writtenAt: Date,
+  source: AgendaSource,
+  refBase: string,
+  useAi = true,
+): Promise<number> {
   const found = extractAppointments(text, writtenAt).filter(upcoming).slice(0, MAX_PER_TEXT);
   let added = 0;
   for (const c of found) {
-    const sourceRef = `${origin.sourceRef}@${c.start.toISOString()}`;
-    const todo = [];
-    for (const u of userIds) if (!(await hasSourceRef(u, sourceRef))) todo.push(u);
+    const sourceRef = `${refBase}@${c.start.toISOString()}`;
+    const todo: Target[] = [];
+    for (const t of targets) if (!(await hasSourceRef(t.userId, sourceRef))) todo.push(t);
     if (todo.length === 0) continue;
-    const { title, location } = useAi
-      ? await describeAppointment(c.phrase, origin.sourceLabel, origin.fallbackTitle)
-      : { title: origin.fallbackTitle, location: null };
-    for (const userId of todo) {
-      const item = await addFoundItem(userId, {
-        title,
+    const ai = useAi ? await describeAppointment(c.phrase, todo[0]!.sourceLabel, "") : null;
+    for (const t of todo) {
+      const item = await addFoundItem(t.userId, {
+        title: ai?.byAi ? ai.title : t.fallbackTitle,
         start: c.start.toISOString(),
         end: defaultEnd(c),
         allDay: c.allDay,
-        location,
-        source: origin.source,
-        sourceLabel: origin.sourceLabel,
+        location: ai?.location ?? null,
+        source,
+        sourceLabel: t.sourceLabel,
         sourceRef,
         phrase: c.phrase,
       });
@@ -70,18 +79,12 @@ export async function scanChatMessage(thread: ChatThread, msg: ChatMessage): Pro
   if (thread.kind !== "direct" || msg.kind !== "text" || msg.auto || !msg.text.trim()) return 0;
   try {
     const dir = await userDirectory(thread.participants);
-    let added = 0;
-    for (const userId of thread.participants) {
+    const targets = thread.participants.map((userId) => {
       const other = thread.participants.find((id) => id !== userId);
       const name = (other && dir.get(other)?.name) || "contact";
-      added += await planFromText([userId], msg.text, new Date(msg.at), {
-        source: "chat",
-        sourceRef: `chat:${thread.id}:${msg.id}`,
-        sourceLabel: `Chat met ${name}`,
-        fallbackTitle: `Afspraak met ${name}`,
-      });
-    }
-    return added;
+      return { userId, sourceLabel: `Chat met ${name}`, fallbackTitle: `Afspraak met ${name}` };
+    });
+    return await planFromText(targets, msg.text, new Date(msg.at), "chat", `chat:${thread.id}:${msg.id}`);
   } catch (err) {
     logger.warn("agenda chat scan failed", { threadId: thread.id, error: (err as Error).message });
     return 0;
@@ -100,15 +103,11 @@ export async function scanWhatsAppChat(userId: string, chatId: string): Promise<
       const m = found.messages[i]!;
       if (!m.author || m.media || new Date(m.at).getTime() < since) continue;
       const n = await planFromText(
-        [userId],
+        [{ userId, sourceLabel: `WhatsApp: ${found.chat.title}`, fallbackTitle: `Afspraak met ${found.chat.title}` }],
         m.text,
         new Date(m.at),
-        {
-          source: "whatsapp",
-          sourceRef: `wa:${chatId}:${i}`,
-          sourceLabel: `WhatsApp: ${found.chat.title}`,
-          fallbackTitle: `Afspraak met ${found.chat.title}`,
-        },
+        "whatsapp",
+        `wa:${chatId}:${i}`,
         aiBudget > 0,
       );
       aiBudget -= n;
@@ -177,12 +176,13 @@ export async function scanMailbox(userId: string): Promise<number> {
 
       const subject = cleanSubject(m.subject);
       const text = `${subject ?? ""}\n${stripQuotedReply(content.text)}`;
-      added += await planFromText([userId], text, m.date ? new Date(m.date) : new Date(), {
-        source: "mail",
-        sourceRef: `mail:${m.uid}`,
-        sourceLabel: `Mail van ${from}`,
-        fallbackTitle: subject ?? `Afspraak met ${from}`,
-      });
+      added += await planFromText(
+        [{ userId, sourceLabel: `Mail van ${from}`, fallbackTitle: subject ?? `Afspraak met ${from}` }],
+        text,
+        m.date ? new Date(m.date) : new Date(),
+        "mail",
+        `mail:${m.uid}`,
+      );
     }
     if (lastUid > (state?.lastUid ?? -1)) await kvSet(stateKey, { lastUid } satisfies MailScanState);
     return added;

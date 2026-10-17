@@ -172,8 +172,9 @@ describe("chat → agenda", () => {
     ...over,
   });
 
-  it("plans it for both people, each titled with the other one's name", async () => {
+  it("plans it for both people, each titled with the other one's name — asking the model once", async () => {
     expect(await scanChatMessage(thread, msg())).toBe(2);
+    expect(describeAppointment).toHaveBeenCalledTimes(1);
     const jan = await listAgendaItems("u_jan");
     const bol = await listAgendaItems("u_bol");
     expect(jan[0]).toMatchObject({ title: "Afspraak met Bakkerij Bol", source: "chat", sourceLabel: "Chat met Bakkerij Bol" });
