@@ -42,6 +42,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         monthlyCents: monthlyFeeFor(account, fees),
         cardVirtualCents: fees.cardVirtualCents,
         cardPhysicalCents: fees.cardPhysicalCents,
+        negativeBalanceCents: fees.negativeBalanceFeeCents,
       },
       entries,
       cards: cards.map((c) => ({ id: c.id, stripeCardId: c.stripeCardId, type: c.type, brand: c.brand, last4: c.last4, expMonth: c.expMonth, expYear: c.expYear, status: c.status })),

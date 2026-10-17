@@ -18,6 +18,8 @@ export interface BankFees {
   monthlyOrganisationCents: number;
   cardVirtualCents: number;
   cardPhysicalCents: number;
+  /** Charged once per week while an account is below zero. */
+  negativeBalanceFeeCents: number;
 }
 
 export const DEFAULT_FEES: BankFees = {
@@ -25,6 +27,7 @@ export const DEFAULT_FEES: BankFees = {
   monthlyOrganisationCents: 995,
   cardVirtualCents: 0, // the virtual card is free
   cardPhysicalCents: 750,
+  negativeBalanceFeeCents: 500,
 };
 
 const KEY = "bank-fees";

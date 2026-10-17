@@ -8,6 +8,7 @@ interface Fees {
   monthlyOrganisationCents: number;
   cardVirtualCents: number;
   cardPhysicalCents: number;
+  negativeBalanceFeeCents: number;
 }
 interface Withdrawal {
   id: string;
@@ -114,13 +115,14 @@ export function AdminBankView() {
 
       <div className="card space-y-3 p-5">
         <p className="text-sm font-semibold text-ink">Kosten</p>
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-5">
           {(
             [
               ["monthlyPersonalCents", "Persoonlijk / maand"],
               ["monthlyOrganisationCents", "Bedrijf / maand"],
               ["cardVirtualCents", "Virtuele pas (eenmalig)"],
               ["cardPhysicalCents", "Fysieke pas (eenmalig)"],
+              ["negativeBalanceFeeCents", "Rood staan (per week)"],
             ] as const
           ).map(([k, label]) => (
             <label key={k} className="text-xs font-semibold text-neutralx-600">

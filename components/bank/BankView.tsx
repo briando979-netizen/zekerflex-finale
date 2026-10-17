@@ -44,7 +44,7 @@ interface Payload {
   account: Account;
   role: "platform" | "organisation" | "personal";
   canMoveMoney: boolean;
-  fees: { monthlyCents: number; cardVirtualCents: number; cardPhysicalCents: number };
+  fees: { monthlyCents: number; cardVirtualCents: number; cardPhysicalCents: number; negativeBalanceCents: number };
   entries: Entry[];
   cards: CardRow[];
   stripePublishableKey: string | null;
@@ -366,6 +366,20 @@ export function BankView({ returnPath }: { returnPath: string }) {
         <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">Je kunt de bedrijfsrekening bekijken; alleen de hoofdbeheerder kan geld verplaatsen.</p>
       )}
       {note && <p className={`rounded-xl px-4 py-3 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
+
+      {account.balanceCents < 0 && role !== "platform" && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-crit/30 bg-crit/5 px-4 py-3 text-sm text-ink">
+          <span className="min-w-0 flex-1">
+            <strong className="text-crit">Je staat {euro(-account.balanceCents)} rood.</strong> Pasbetalingen worden geweigerd tot je saldo weer positief is. We vullen eerst aan uit je potjes; lukt dat niet, dan kost rood staan{" "}
+            {fees.negativeBalanceCents ? euro(fees.negativeBalanceCents) : "extra"} per week.
+          </span>
+          {canAct || (canMoveMoney && account.frozen) ? (
+            <button type="button" onClick={() => setPanel("topup")} className="rounded-full bg-crit px-4 py-2 text-sm font-semibold text-white">
+              Nu aanvullen
+            </button>
+          ) : null}
+        </div>
+      )}
 
       {freeUntil && (
         <p className="flex items-center gap-2 rounded-xl border border-ok/30 bg-ok/5 px-4 py-3 text-sm text-ink">

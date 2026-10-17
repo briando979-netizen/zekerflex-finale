@@ -5,6 +5,7 @@ import { recordCronRun } from "@/lib/metrics";
 import { chargeMonthlyFees } from "@/lib/bank/fees";
 import { chargeDuePremiums } from "@/lib/bank/insurance";
 import { matureDeposits } from "@/lib/bank/pots";
+import { settleNegativeBalances } from "@/lib/bank/overdraft";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,9 @@ async function handle(request: Request): Promise<NextResponse> {
     const fees = await chargeMonthlyFees();
     const premiums = await chargeDuePremiums();
     const deposits = await matureDeposits();
+    const overdraft = await settleNegativeBalances();
     recordCronRun("bank-monthly-fees", true);
-    return NextResponse.json({ ok: true, fees, premiums, deposits });
+    return NextResponse.json({ ok: true, fees, premiums, deposits, overdraft });
   } catch (err) {
     recordCronRun("bank-monthly-fees", false);
     logger.error("bank monthly fees failed", { error: (err as Error).message });

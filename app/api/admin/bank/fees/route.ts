@@ -13,6 +13,7 @@ const schema = z.object({
   monthlyOrganisationCents: cents,
   cardVirtualCents: cents,
   cardPhysicalCents: cents,
+  negativeBalanceFeeCents: cents,
 });
 
 // PUT /api/admin/bank/fees — what an account costs per month and a card once.
@@ -22,7 +23,7 @@ export const PUT = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princip
     category: "ADMIN",
     action: "bank.fees_changed",
     actorUserId: principal.userId,
-    summary: `Bankkosten: persoonlijk ${fees.monthlyPersonalCents}c/mnd, bedrijf ${fees.monthlyOrganisationCents}c/mnd, pas ${fees.cardVirtualCents}/${fees.cardPhysicalCents}c`,
+    summary: `Bankkosten: persoonlijk ${fees.monthlyPersonalCents}c/mnd, bedrijf ${fees.monthlyOrganisationCents}c/mnd, pas ${fees.cardVirtualCents}/${fees.cardPhysicalCents}c, rood staan ${fees.negativeBalanceFeeCents}c/week`,
     targetType: "bank-fees",
     targetId: "bank-fees",
   });
