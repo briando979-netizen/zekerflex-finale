@@ -9,7 +9,7 @@ import { getTheme } from "@/lib/theme/server";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock />, section: t.nav.beheer },
     { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc />, section: t.nav.beheer },
+    { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet />, section: t.nav.beheer },
     { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield />, section: t.nav.beheer },
     { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc />, section: t.nav.beheer },
     { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid />, section: t.nav.beheer },

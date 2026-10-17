@@ -325,6 +325,42 @@ export async function transferToConnectedAccount(
   return { transferId: transfer.id };
 }
 
+/**
+ * Checkout Session that tops up a ZekerFlex Bank account. The webhook books
+ * the credit (metadata.bankAccountId) — never the redirect back.
+ */
+export async function createBankTopupSession(input: {
+  bankAccountId: string;
+  accountNumber: string;
+  amountCents: number;
+  email?: string | null;
+  returnPath: string;
+}): Promise<Stripe.Checkout.Session> {
+  if (input.amountCents < 500 || input.amountCents > 500_000) {
+    throw AppError.validation("Opwaarderen kan van € 5 tot € 5.000");
+  }
+  const stripe = getStripeClient();
+  const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          product_data: { name: "Opwaarderen ZekerFlex Bank", description: `Rekening ${input.accountNumber}` },
+          unit_amount: input.amountCents,
+        },
+        quantity: 1,
+      },
+    ],
+    ...(input.email ? { customer_email: input.email } : {}),
+    metadata: { bankAccountId: input.bankAccountId },
+    payment_intent_data: { metadata: { bankAccountId: input.bankAccountId } },
+    success_url: `${baseUrl}${input.returnPath}?opgewaardeerd=1`,
+    cancel_url: `${baseUrl}${input.returnPath}`,
+  });
+}
+
 /** Verifies the Stripe signature and returns the parsed event. Throws on a bad signature. */
 export function constructWebhookEvent(rawBody: string, signature: string): Stripe.Event {
   if (!env.STRIPE_WEBHOOK_SECRET) {

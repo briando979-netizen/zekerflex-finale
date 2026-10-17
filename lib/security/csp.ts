@@ -41,7 +41,7 @@ export function buildContentSecurityPolicy({ dev, nonce }: CspOptions): string {
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
   const connectSrc = dev
     ? "connect-src 'self' ws: http: https:"
-    : "connect-src 'self'";
+    : "connect-src 'self' https://api.stripe.com";
 
   return [
     "default-src 'self'",
@@ -54,6 +54,8 @@ export function buildContentSecurityPolicy({ dev, nonce }: CspOptions): string {
     // The service worker (/sw.js) — 'strict-dynamic' would otherwise drop the
     // 'self' fallback for worker scripts and block it.
     "worker-src 'self'",
+    // Stripe Issuing Elements (ZekerFlex Bank): the card number lives in an iframe from Stripe.
+    "frame-src https://js.stripe.com",
     "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

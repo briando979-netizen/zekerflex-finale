@@ -2024,3 +2024,81 @@ model AnalyticsEvent {
   @@index([path, createdAt])
   @@index([sessionId, createdAt])
 }
+
+// ===========================================================================
+// ZekerFlex Bank — one account per freelancer (user), per organisation
+// (tenant) and one for the platform. The ledger lives here; money in and out
+// moves through Stripe (top-ups via Checkout, cards via Issuing, payouts via
+// the SEPA batch). The funds themselves are held on the platform's Stripe
+// balance. balanceCents only changes together with a BankEntry, in one
+// transaction (lib/bank/ledger.ts).
+// ===========================================================================
+
+enum BankOwnerType {
+  USER
+  TENANT
+  PLATFORM
+}
+
+model BankAccount {
+  id           String        @id @default(cuid())
+  ownerType    BankOwnerType
+  userId       String?       @unique
+  tenantId     String?       @unique
+  /// human-readable account number shown in the app ("ZF 1234 5678 90")
+  number       String        @unique
+  holderName   String
+  balanceCents Int           @default(0)
+  currency     String        @default("EUR")
+  /// own IBAN for withdrawals
+  payoutIban   String?
+  payoutName   String?
+  frozenAt     DateTime?
+  frozenReason String?
+  /// next time the monthly account fee is due
+  nextFeeAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  entries BankEntry[]
+  cards   BankCard[]
+}
+
+model BankEntry {
+  id                String      @id @default(cuid())
+  accountId         String
+  account           BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// positive = money in, negative = money out
+  amountCents       Int
+  balanceAfterCents Int
+  /// TOPUP | WITHDRAWAL | FEE_MONTHLY | FEE_CARD | CARD_SPEND | CARD_REFUND | INVOICE_PAYMENT | EARNING | TRANSFER | ADJUSTMENT
+  kind              String
+  description       String
+  counterparty      String?
+  /// Stripe id, invoice id, card authorization … whatever this booking came from
+  reference         String?
+  idempotencyKey    String      @unique
+  createdAt         DateTime    @default(now())
+
+  @@index([accountId, createdAt])
+}
+
+model BankCard {
+  id                 String      @id @default(cuid())
+  accountId          String
+  account            BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  stripeCardId       String      @unique
+  stripeCardholderId String
+  /// virtual | physical
+  type               String
+  brand              String
+  last4              String
+  expMonth           Int
+  expYear            Int
+  /// active | inactive | canceled (Stripe's card status)
+  status             String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([accountId])
+}

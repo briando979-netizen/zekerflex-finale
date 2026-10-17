@@ -37,6 +37,10 @@
     {
       "path": "/api/internal/agenda/sweep",
       "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/internal/bank/fees",
+      "schedule": "15 6 * * *"
     }
   ]
 }

@@ -6,6 +6,8 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { constructWebhookEvent } from "@/lib/billing/stripe";
 import { claimIdempotency } from "@/lib/redis";
+import { book } from "@/lib/bank/ledger";
+import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
@@ -196,6 +198,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     log.warn("webhook idempotency store unavailable", { error: (err as Error).message });
   }
 
+  // ZekerFlex Bank cards: every card payment is approved/declined against the
+  // ledger. Stripe reads the decision from this response body (it must carry
+  // the Stripe-Version header) and declines on timeout.
+  if (event.type === "issuing_authorization.request") {
+    const auth = event.data.object as Stripe.Issuing.Authorization;
+    let decision = { approved: false, reason: "error" };
+    try {
+      decision = await decideAuthorization(auth);
+    } catch (err) {
+      log.error("issuing authorization decision failed", { authorization: auth.id, error: (err as Error).message });
+    }
+    log.info("issuing authorization", { authorization: auth.id, ...decision });
+    return NextResponse.json({ approved: decision.approved }, { headers: { "Stripe-Version": event.api_version ?? "" } });
+  }
+  if (event.type === "issuing_authorization.updated") {
+    await releaseHold(event.data.object as Stripe.Issuing.Authorization);
+    return NextResponse.json({ ok: true });
+  }
+  if (event.type === "issuing_transaction.created") {
+    await settleTransaction(event.data.object as Stripe.Issuing.Transaction);
+    return NextResponse.json({ ok: true });
+  }
+  if (event.type === "issuing_card.updated") {
+    await syncCard(event.data.object as Stripe.Issuing.Card);
+    return NextResponse.json({ ok: true });
+  }
+
   if (
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded"
@@ -204,6 +233,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (session.mode === "subscription") {
       await activateApiSubscription(session);
+      return NextResponse.json({ ok: true });
+    }
+
+    const bankAccountId = session.metadata?.bankAccountId;
+    if (bankAccountId) {
+      if (session.payment_status !== "paid" || !session.amount_total) {
+        return NextResponse.json({ ok: true, matched: false, paymentStatus: session.payment_status });
+      }
+      const entry = await book(bankAccountId, {
+        amountCents: session.amount_total,
+        kind: "TOPUP",
+        description: "Opwaardering via iDEAL/kaart",
+        counterparty: session.customer_details?.name ?? session.customer_details?.email ?? null,
+        reference: typeof session.payment_intent === "string" ? session.payment_intent : session.id,
+        idempotencyKey: `topup:${session.id}`,
+      });
+      if (entry.created) {
+        await recordAudit({
+          category: "BILLING",
+          action: "bank.topup",
+          actorLabel: "integration:stripe",
+          summary: `ZekerFlex Bank opgewaardeerd met ${(session.amount_total / 100).toFixed(2)} EUR`,
+          targetType: "bank-account",
+          targetId: bankAccountId,
+          metadata: { sessionId: session.id, eventType: event.type },
+        });
+      }
       return NextResponse.json({ ok: true });
     }
 
