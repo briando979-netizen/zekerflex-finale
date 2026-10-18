@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getMailTools, withSignature } from "@/lib/mail/tools";
 import { z } from "zod";
 import { sendMail, mailShell } from "@/lib/mail";
 import { recordAudit } from "@/lib/audit";
@@ -18,7 +19,9 @@ const bodySchema = z.object({
 // prospective company — whoever). Distinct from the automated mail kinds
 // elsewhere: this is a human writing a message, not a system notification.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
-  const { to, subject, text } = bodySchema.parse(await request.json().catch(() => ({})));
+  const parsed = bodySchema.parse(await request.json().catch(() => ({})));
+  const { to, subject } = parsed;
+  const text = withSignature(parsed.text, await getMailTools(principal.userId).catch(() => ({ signature: "", appendSignature: false })));
 
   const html = mailShell(
     subject,

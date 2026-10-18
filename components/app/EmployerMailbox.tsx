@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MailToolsBar } from "@/components/mail/MailToolsBar";
 import { MAIL_PRESETS, OAUTH_ONLY_DOMAINS, OAUTH_ONLY_NOTE, domainOf, suggestServers, type ServerSettings } from "@/lib/mail/presets";
 
 type Dict = Record<
@@ -339,6 +340,14 @@ export function EmployerMailbox({ t, userEmail }: { t: Dict; userEmail: string }
             <div className="space-y-3 p-6">
               <h2 className="font-display text-lg font-bold">{t.newMessage}</h2>
               {status?.connection && <p className="text-xs text-neutralx-500">{fill(t.sentFromNote, { email: status.connection.email })}</p>}
+              <MailToolsBar
+                onInsert={(tpl) => {
+                  if (tpl.subject && !subject.trim()) setSubject(tpl.subject);
+                  setBody((cur) => (cur.trim() ? `${cur.trimEnd()}
+
+${tpl.body}` : tpl.body));
+                }}
+              />
               <input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder={t.toPlaceholder} className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm" />
               <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t.subjectPlaceholder} className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm" />
               <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={t.bodyPlaceholder} rows={12} className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm leading-relaxed" />

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getMailTools, withSignature } from "@/lib/mail/tools";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
@@ -28,8 +29,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       windowSeconds: 3600,
       message: "Je hebt het maximum aantal berichten per uur bereikt.",
     });
-    const input = sendSchema.parse(await request.json().catch(() => ({})));
-    if (!isPlainAddress(input.to)) throw AppError.validation("Ongeldig e-mailadres");
+    const parsed = sendSchema.parse(await request.json().catch(() => ({})));
+    if (!isPlainAddress(parsed.to)) throw AppError.validation("Ongeldig e-mailadres");
+    // Personal signature (mail tools) appended once.
+    const input = { ...parsed, text: withSignature(parsed.text, await getMailTools(p.userId).catch(() => ({ signature: "", appendSignature: false }))) };
 
     const { conn, password } = await requireMailbox(p.userId);
     const { raw } = buildPlainMessage({
