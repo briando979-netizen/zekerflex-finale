@@ -50,13 +50,13 @@ export function OwnerTodos() {
   return (
     <div className="space-y-6">
       <div className="a-panel flex flex-wrap items-center gap-4 p-5">
-        <div className="flex-1">
+        <div className="min-w-[12rem] flex-1">
           <p className="font-display text-2xl font-bold" style={{ color: "var(--a-text)" }}>
             {left === 0 ? "Alles gedaan 🎉" : `Nog ${left} van ${todos.length} te doen`}
           </p>
           <p className="text-sm" style={{ color: "var(--a-dim)" }}>Taken met ⚙️ vinken zichzelf af zodra ZekerFlex ziet dat ze klaar zijn.</p>
         </div>
-        <div className="h-2 w-48 overflow-hidden rounded-full" style={{ background: "var(--a-panel-2)" }}>
+        <div className="h-2 w-full overflow-hidden rounded-full sm:w-48" style={{ background: "var(--a-panel-2)" }}>
           <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.round(((todos.length - left) / todos.length) * 100)}%` }} />
         </div>
         <button type="button" className="a-button" onClick={() => load()}>

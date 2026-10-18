@@ -13,7 +13,8 @@ function Delta({ pct }: { pct: number | null }) {
 
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: React.ReactNode; accent?: boolean }) {
   return (
-    <div className={`card p-5 ${accent ? "bg-gradient-to-br from-[#0E5C4A] to-[#062a22] text-white" : ""}`}>
+    // no .card on the accent tile: the admin theme forces .card's background with !important
+    <div className={accent ? "rounded-2xl bg-gradient-to-br from-[#0E5C4A] to-[#062a22] p-5 text-white" : "card p-5"}>
       <p className={`text-[11px] font-semibold uppercase tracking-wide ${accent ? "text-white/60" : "text-neutralx-500"}`}>{label}</p>
       <p className={`num mt-2 font-display text-3xl font-bold ${accent ? "text-white" : "text-ink"}`}>{value}</p>
       {sub && <div className={`mt-1 text-xs ${accent ? "text-white/70" : "text-neutralx-500"}`}>{sub}</div>}
@@ -136,7 +137,7 @@ export function Cockpit() {
 
       {rewards && (
         <div className="card flex flex-wrap items-end gap-3 p-5">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[14rem] flex-1">
             <p className="text-sm font-semibold text-ink">🎁 Verwijsbonus</p>
             <p className="text-xs text-neutralx-500">Uitbetaald vanaf de platformrekening zodra de nieuwe gebruiker zijn eerste klus afrondt.</p>
           </div>

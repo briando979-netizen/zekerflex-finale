@@ -124,12 +124,17 @@ export function AdminShell({
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
-            <Link href="/admin/bedrijven" className="a-btn a-btn-primary hidden sm:inline-flex">
-              + Bedrijf beheren
-            </Link>
-            <Link href="/admin/gebruikers" className="a-btn a-btn-ghost hidden md:inline-flex">
-              Gebruikers
-            </Link>
+            {/* wrapped: the unlayered .a-btn display rule would beat Tailwind's `hidden` */}
+            <span className="hidden sm:inline-flex">
+              <Link href="/admin/bedrijven" className="a-btn a-btn-primary">
+                + Bedrijf beheren
+              </Link>
+            </span>
+            <span className="hidden md:inline-flex">
+              <Link href="/admin/gebruikers" className="a-btn a-btn-ghost">
+                Gebruikers
+              </Link>
+            </span>
             <span className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium lg:flex"
               style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
               🇳🇱 NL

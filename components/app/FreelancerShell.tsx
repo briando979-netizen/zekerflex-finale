@@ -42,6 +42,8 @@ export function FreelancerShell({
   // Focused full-screen views (a single klus) hide the tab bar so a page-owned
   // action bar can take its place.
   const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
+  const current = TABS.find((t) => isActive(t.href));
+  const title = !current || current.href === "/dashboard/klussen" ? "Vind jouw klus" : current.label;
 
   return (
     <div data-theme={theme} className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
@@ -49,7 +51,7 @@ export function FreelancerShell({
       {!focused && (
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
           <Link href="/dashboard/klussen" className="font-display text-base font-bold tracking-tight text-ink">
-            Vind jouw klus
+            {title}
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-crit to-crit/40" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
@@ -92,7 +94,7 @@ export function FreelancerShell({
                 <Link
                   href={t.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 px-1 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
+                  className={`flex flex-col items-center gap-0.5 px-0.5 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
                     active
                       ? "text-brand-600 lg:bg-ink lg:text-white"
                       : "text-neutralx-400 hover:text-neutralx-600 lg:hover:bg-paper-soft"
@@ -100,7 +102,7 @@ export function FreelancerShell({
                   title={t.label}
                 >
                   <span className="grid h-5 w-5 place-items-center">{t.icon}</span>
-                  <span className={active ? "" : "lg:hidden"}>{t.label}</span>
+                  <span className={`max-w-full truncate whitespace-nowrap ${active ? "" : "lg:hidden"}`}>{t.label}</span>
                 </Link>
               </li>
             );
