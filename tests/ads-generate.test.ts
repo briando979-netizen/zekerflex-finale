@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const chatJson = vi.fn();
-vi.mock("@/lib/ai/client", () => ({ chatJson: (...a: unknown[]) => chatJson(...a) }));
+const configProblem = vi.fn(() => null as string | null);
+vi.mock("@/lib/ai/client", () => ({ chatJson: (...a: unknown[]) => chatJson(...a), llmConfigProblem: () => configProblem() }));
 
 import { generateAdCopy } from "@/lib/ads/generate";
 
@@ -33,8 +34,18 @@ describe("generateAdCopy", () => {
     expect(userMessage).toContain("zelfde dag uitbetaald");
   });
 
-  it("rejects a malformed model response instead of silently accepting it", async () => {
+  it("never passes a malformed model response through — falls back to a checked template", async () => {
     chatJson.mockResolvedValue({ headline: "x" }); // missing required fields
-    await expect(generateAdCopy({ audience: "freelancer" })).rejects.toBeTruthy();
+    const copy = await generateAdCopy({ audience: "freelancer" });
+    expect(copy.headline).not.toBe("x");
+    expect(copy.body.length).toBeGreaterThan(10);
+    expect(copy.cta).toBeTruthy();
+  });
+
+  it("falls back to fact-checked templates when no model is connected", async () => {
+    configProblem.mockReturnValueOnce("geen model");
+    const copy = await generateAdCopy({ audience: "werkgever", angle: "korting" });
+    expect(copy.headline).toContain("goedkoper");
+    expect(chatJson).not.toHaveBeenCalled();
   });
 });

@@ -48,3 +48,16 @@ Controleren: in de admin bij **Systeemstatus** staat het taalmodel op groen, en 
 - Logs: `journalctl -u ollama -f` en `/var/log/caddy/zekerflex-ai.log`
 - Modellen bijwerken: `ollama pull qwen2.5:7b`
 - Zonder bereikbaar model blijft de site werken: sales valt terug op templates en een eigen score, en Jarvis meldt duidelijk dat het model ontbreekt.
+
+## Beeldstudio en advertenties (optioneel, GPU nodig)
+
+De Studio (admin → Studio) maakt beelden via een eigen Stable Diffusion-server. Draai op dezelfde GPU-server bijvoorbeeld **ComfyUI** of **AUTOMATIC1111** achter Caddy (zelfde sleutelcontrole als hierboven, op een eigen subdomein zoals `beeld.zekerflex.com`) en zet in Vercel:
+
+| Variabele | Waarde |
+|---|---|
+| `IMAGE_ENABLED` | `true` |
+| `IMAGE_BACKEND` | `comfyui` of `a1111` |
+| `IMAGE_BASE_URL` | `https://beeld.zekerflex.com` |
+| `IMAGE_API_KEY` | de sleutel |
+
+De advertentiegenerator werkt ook zonder model: dan kiest hij uit vaste, gecontroleerde teksten. Met het taalmodel schrijft hij nieuwe varianten (alleen met feiten uit de vaste feitenlijst).
