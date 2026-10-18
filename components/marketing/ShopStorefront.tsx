@@ -198,7 +198,7 @@ export function ShopStorefront({
           {HERO_SLIDES.map((s, i) => (
             <div key={s.title} className={`absolute inset-0 transition-opacity duration-700 ${i === slide ? "opacity-100" : "pointer-events-none opacity-0"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.img} alt="" className="h-full w-full object-cover" />
+              <img src={s.img} alt="" loading={i === 0 ? "eager" : "lazy"} {...(i === 0 ? { fetchPriority: "high" as const } : {})} decoding="async" className="h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/45 to-transparent" />
               <div className="shell absolute inset-0 flex flex-col justify-center text-white">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-mint">{s.kicker}</p>
@@ -321,7 +321,7 @@ export function ShopStorefront({
                   <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-paper-soft">
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                      <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="grid h-full w-full place-items-center"><LogoGlyph size={64} tone="dark" /></div>
                     )}

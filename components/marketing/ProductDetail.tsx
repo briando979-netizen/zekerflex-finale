@@ -76,7 +76,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           <div className="overflow-hidden rounded-2xl bg-paper-soft">
             {gallery.length > 0 ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={gallery[active]} alt={product.name} className="aspect-square w-full object-cover" />
+              <img src={gallery[active]} alt={product.name} fetchPriority="high" className="aspect-square w-full object-cover" />
             ) : (
               <div className="grid aspect-square w-full place-items-center"><LogoGlyph size={96} tone="dark" /></div>
             )}
@@ -91,7 +91,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                   className={`h-20 w-20 overflow-hidden rounded-lg border-2 transition ${i === active ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-full w-full object-cover" />
+                  <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -263,7 +263,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                 <div className="aspect-[4/5] overflow-hidden rounded-xl bg-paper-soft">
                   {r.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    <img src={r.imageUrl} alt={r.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                   ) : (
                     <div className="grid h-full place-items-center"><LogoGlyph size={56} tone="dark" /></div>
                   )}

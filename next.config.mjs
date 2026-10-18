@@ -8,6 +8,8 @@ const nextConfig = {
   compress: true,
   images: {
     formats: ["image/avif", "image/webp"],
+    // Local images may carry a cache-busting ?v= (marketing photos) — allow it.
+    localPatterns: [{ pathname: "/**" }],
     minimumCacheTTL: 2678400,
   },
   // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).

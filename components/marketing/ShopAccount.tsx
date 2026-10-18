@@ -130,7 +130,7 @@ export function ShopAccount({
                 <div className="aspect-square overflow-hidden rounded-xl bg-paper-soft">
                   {p.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                    <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition group-hover:scale-105" />
                   ) : (
                     <div className="grid h-full place-items-center"><LogoGlyph size={32} tone="dark" /></div>
                   )}

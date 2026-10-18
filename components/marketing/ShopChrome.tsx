@@ -240,7 +240,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                       <div className="h-20 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-paper-soft">
                         {l.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={l.imageUrl} alt="" className="h-full w-full object-cover" />
+                          <img src={l.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <div className="grid h-full place-items-center"><LogoGlyph size={28} /></div>
                         )}

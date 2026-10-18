@@ -51,6 +51,8 @@ function Card({ b }: { b: Branch }) {
         <img
           src={b.photo}
           alt={b.label}
+          loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <span className="absolute inset-0 bg-gradient-to-t from-ink/55 via-transparent to-transparent" />

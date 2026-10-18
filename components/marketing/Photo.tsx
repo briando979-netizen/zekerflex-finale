@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { MARKETING_PHOTOS, isPhotoReady, photoVersion, type PhotoKey } from "@/lib/marketing/photos";
 
@@ -33,16 +34,16 @@ export function Photo({
 
   if (isPhotoReady(name)) {
     return (
-      <div className={frame}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <div className={`relative ${frame}`}>
+        {/* next/image: served as AVIF/WebP at the rendered width (the raw hero
+            JPEG was ~480 KB — the slowest thing on the homepage on mobile). */}
+        <Image
           src={`/marketing/${spec.file}?v=${photoVersion(name)}`}
           alt={spec.alt}
+          fill
           sizes={sizes}
-          className="h-full w-full object-cover"
-          decoding="async"
-          loading={priority ? "eager" : "lazy"}
-          {...(priority ? { fetchPriority: "high" as const } : {})}
+          className="object-cover"
+          priority={priority}
         />
       </div>
     );
