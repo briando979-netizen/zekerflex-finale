@@ -7,6 +7,7 @@ import { BankForecast, BankInsights, type InsightsPayload } from "@/components/b
 import { BankInsurance, type InsuranceProduct, type Policy } from "@/components/bank/BankInsurance";
 import { BankPayments } from "@/components/bank/BankPayments";
 import { BankStanding } from "@/components/bank/BankStanding";
+import { BankNotifySettings } from "@/components/bank/BankNotifySettings";
 import { BankAutoSave } from "@/components/bank/BankAutoSave";
 import { BankTax } from "@/components/bank/BankTax";
 import { BankAdvance } from "@/components/bank/BankAdvance";
@@ -603,11 +604,16 @@ export function BankView({ returnPath }: { returnPath: string }) {
             </div>
           )}
 
+          {role !== "platform" && <BankNotifySettings onChanged={changed} />}
+
           <div className="card flex flex-wrap items-center gap-2 p-5 text-sm">
             <span className="font-semibold text-ink">Afschrift</span>
             <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-lg border border-hairstrong px-2 py-1 text-xs" />
+            <a href={`/api/me/bank/statement?month=${month}&format=pdf`} className="text-xs font-semibold text-brand-600 hover:underline">
+              PDF
+            </a>
             <a href={`/api/me/bank/statement?month=${month}`} className="text-xs font-semibold text-brand-600 hover:underline">
-              Download (CSV)
+              CSV (Excel)
             </a>
           </div>
 

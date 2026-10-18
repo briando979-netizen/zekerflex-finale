@@ -14,6 +14,7 @@ export interface CardRow {
   assignee?: string | null;
   monthlyLimitCents?: number | null;
   spentThisMonthCents?: number;
+  controls?: { online: boolean; abroad: boolean; gambling: boolean; perPaymentLimitCents: number | null };
 }
 
 interface StripeElement {
@@ -73,6 +74,15 @@ export function BankCards(props: {
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
   const [wallet, setWallet] = useState<string | null>(null);
+  const [settings, setSettings] = useState<string | null>(null);
+
+  async function saveControls(c: CardRow, controls: NonNullable<CardRow["controls"]>) {
+    setBusy(true);
+    const res = await fetch(`/api/me/bank/cards/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ controls }) }).catch(() => null);
+    setBusy(false);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    await onChanged(res?.ok ? { ok: true, text: "Pasinstellingen opgeslagen." } : { ok: false, text: d?.error?.message ?? "Opslaan lukte niet." });
+  }
   const mounted = useRef<StripeElement[]>([]);
   const [form, setForm] = useState(() => {
     const [first = "", ...rest] = props.holderName.split(" ");
@@ -300,6 +310,9 @@ export function BankCards(props: {
                   )}
                   {canManage && c.status !== "canceled" && (
                     <>
+                      <button type="button" onClick={() => setSettings(settings === c.id ? null : c.id)} className="font-semibold text-ink hover:underline">
+                        ⚙️ Instellingen
+                      </button>
                       {c.status === "active" && (
                         <button type="button" onClick={() => setWallet(wallet === c.id ? null : c.id)} className="font-semibold text-ink hover:underline">
                           Apple/Google Pay
@@ -317,6 +330,39 @@ export function BankCards(props: {
                     </>
                   )}
                 </div>
+                {settings === c.id && c.controls && (
+                  <div className="space-y-2 rounded-xl border border-hair bg-paper-soft/60 p-4 text-sm">
+                    <p className="font-semibold text-ink">Instellingen pas …{c.last4}</p>
+                    {(
+                      [
+                        ["online", "Online betalen"],
+                        ["abroad", "Betalen in het buitenland"],
+                        ["gambling", "Gokken en loterijen"],
+                      ] as const
+                    ).map(([k, label]) => (
+                      <label key={k} className="flex items-center justify-between gap-3">
+                        <span>{label}</span>
+                        <input type="checkbox" checked={c.controls![k]} disabled={busy} onChange={(e) => saveControls(c, { ...c.controls!, [k]: e.target.checked })} />
+                      </label>
+                    ))}
+                    <label className="flex items-center justify-between gap-3">
+                      <span>Maximum per betaling</span>
+                      <select
+                        value={c.controls.perPaymentLimitCents ?? 0}
+                        disabled={busy}
+                        onChange={(e) => saveControls(c, { ...c.controls!, perPaymentLimitCents: Number(e.target.value) || null })}
+                        className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-xs"
+                      >
+                        {[0, 2_500, 5_000, 10_000, 25_000, 50_000, 100_000].map((v) => (
+                          <option key={v} value={v}>
+                            {v === 0 ? "geen limiet" : euro(v)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-xs text-neutralx-500">Werkt direct: elke betaling wordt hieraan getoetst.</p>
+                  </div>
+                )}
                 {wallet === c.id && (
                   <div className="space-y-3 rounded-xl border border-hair bg-paper-soft/60 p-4 text-xs text-neutralx-700">
                     <p className="text-sm font-semibold text-ink">Pas …{c.last4} toevoegen aan je telefoon</p>

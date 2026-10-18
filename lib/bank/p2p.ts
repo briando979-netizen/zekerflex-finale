@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { transfer } from "@/lib/bank/ledger";
+import { checkLowBalance, notifyIncoming } from "@/lib/bank/notify";
 
 // ---------------------------------------------------------------------------
 // Money between ZekerFlex Bank accounts: send to an account number (instant,
@@ -68,6 +69,8 @@ export async function sendMoney(input: { from: BankAccount; toNumber: string; am
     toCounterparty: input.from.holderName,
     idempotencyKey: `send:${input.from.id}:${input.requestKey}`,
   });
+  await notifyIncoming(to.id, input.amountCents, input.from.holderName);
+  await checkLowBalance(input.from.id);
   return { toHolder: to.holderName };
 }
 
@@ -117,6 +120,8 @@ export async function payRequest(id: string, payer: BankAccount): Promise<Paymen
   });
   const paid: PaymentRequest = { ...r, status: "paid", paidAt: new Date().toISOString(), paidBy: payer.holderName };
   await kvSet(requestKey(r.id), paid);
+  await notifyIncoming(r.accountId, r.amountCents, `${payer.holderName} (betaalverzoek)`);
+  await checkLowBalance(payer.id);
   return paid;
 }
 

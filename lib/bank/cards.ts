@@ -62,6 +62,39 @@ export async function cardMeta(cardId: string): Promise<CardMeta & { spentThisMo
   return { ...meta, spentThisMonthCents: (await kvGet<number>(spendKey(cardId))) ?? 0 };
 }
 
+// Card controls the holder sets themselves, checked on every authorization.
+//   key "bank-card-controls:<cardId>"
+export interface CardControls {
+  online: boolean;
+  abroad: boolean;
+  gambling: boolean;
+  perPaymentLimitCents: number | null;
+}
+export const DEFAULT_CONTROLS: CardControls = { online: true, abroad: true, gambling: false, perPaymentLimitCents: null };
+const GAMBLING = new Set(["betting_casino_gambling", "government_licensed_online_casions_online_gambling_us_region_only", "government_owned_lotteries_non_us_region", "government_owned_lotteries_us_region_only", "government_licensed_horse_dog_racing_us_region_only"]);
+const controlsKey = (cardId: string) => `bank-card-controls:${cardId}`;
+
+export async function cardControls(cardId: string): Promise<CardControls> {
+  return { ...DEFAULT_CONTROLS, ...((await kvGet<Partial<CardControls>>(controlsKey(cardId))) ?? {}) };
+}
+
+export async function setCardControls(cardId: string, accountId: string, controls: CardControls): Promise<CardControls> {
+  const card = await prisma.bankCard.findFirst({ where: { id: cardId, accountId }, select: { id: true } });
+  if (!card) throw AppError.notFound("Pas niet gevonden");
+  await kvSet(controlsKey(card.id), controls);
+  return controls;
+}
+
+/** Which of the holder's own card controls (if any) this authorization breaks. */
+export function controlViolation(auth: Stripe.Issuing.Authorization, c: CardControls, amount: number): string | null {
+  if (!c.online && auth.authorization_method === "online") return "online_blocked";
+  const country = auth.merchant_data?.country;
+  if (!c.abroad && country && country.toUpperCase() !== "NL") return "abroad_blocked";
+  if (!c.gambling && GAMBLING.has(auth.merchant_data?.category ?? "")) return "gambling_blocked";
+  if (c.perPaymentLimitCents && amount > c.perPaymentLimitCents) return "over_payment_limit";
+  return null;
+}
+
 const spendingControls = (limit: number | null) =>
   limit ? { spending_limits: [{ amount: limit, interval: "monthly" as const }] } : { spending_limits: [] };
 
@@ -236,6 +269,8 @@ export async function decideAuthorization(auth: Stripe.Issuing.Authorization): P
   if (card.status !== "active") return { approved: false, reason: "card_inactive" };
   if (account.frozenAt) return { approved: false, reason: "account_frozen" };
   if (amount <= 0) return { approved: true, reason: "zero_amount" };
+  const violation = controlViolation(auth, await cardControls(card.id), amount);
+  if (violation) return { approved: false, reason: violation };
   const meta = await cardMeta(card.id);
   if (meta.monthlyLimitCents && meta.spentThisMonthCents + amount > meta.monthlyLimitCents) return { approved: false, reason: "budget_exceeded" };
   const merchant = auth.merchant_data?.name ?? "Kaartbetaling";

@@ -4,13 +4,16 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { accountForPrincipal } from "@/lib/bank/accounts";
-import { setCardMeta, setCardStatus } from "@/lib/bank/cards";
+import { setCardControls, setCardMeta, setCardStatus } from "@/lib/bank/cards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.union([
   z.object({ status: z.enum(["active", "inactive", "canceled"]) }),
+  z.object({
+    controls: z.object({ online: z.boolean(), abroad: z.boolean(), gambling: z.boolean(), perPaymentLimitCents: z.number().int().min(100).max(10_000_000).nullable() }),
+  }),
   z.object({ assignee: z.string().trim().max(60).nullable(), monthlyLimitCents: z.number().int().min(1_000).max(10_000_000).nullable() }),
 ]);
 
@@ -22,6 +25,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const input = schema.parse(await request.json().catch(() => ({})));
     const { account, canMoveMoney } = await accountForPrincipal(p);
     if (!canMoveMoney) throw AppError.forbidden("Alleen de hoofdbeheerder beheert de passen van de bedrijfsrekening");
+    if ("controls" in input) {
+      return NextResponse.json({ controls: await setCardControls(id, account.id, input.controls) });
+    }
     if (!("status" in input)) {
       const meta = await setCardMeta(id, account.id, { assignee: input.assignee || null, monthlyLimitCents: input.monthlyLimitCents });
       await recordAudit({

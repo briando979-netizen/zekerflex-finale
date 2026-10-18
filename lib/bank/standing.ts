@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { findByNumber, sendMoney } from "@/lib/bank/p2p";
 import { movePot } from "@/lib/bank/pots";
+import { notifyBank } from "@/lib/bank/notify";
 
 // ---------------------------------------------------------------------------
 // Vaste opdrachten: a recurring transfer to another ZekerFlex account or into
@@ -112,6 +113,11 @@ export async function runStandingOrders(now = new Date()): Promise<{ ran: number
       failed++;
       const reason = (err as Error).message.slice(0, 140);
       await kvSet(key(o.id), { ...o, lastError: reason } satisfies StandingOrder);
+      // Tell the holder once per failure streak, not every daily retry.
+      if (!o.lastError) {
+        const to = o.target.kind === "account" ? o.target.holderName : o.target.potName;
+        await notifyBank(o.accountId, "standing", "Vaste opdracht niet uitgevoerd", `${(o.amountCents / 100).toFixed(2).replace(".", ",")} naar ${to}: ${reason}. We proberen het morgen opnieuw.`);
+      }
       logger.info("standing order not run yet", { orderId: o.id, reason });
     }
   }

@@ -7,6 +7,7 @@ import { listReplacementRequests } from "@/lib/replacements/store";
 import { listThreadsForUser, getMessages, unreadForUser } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { recentNotes } from "@/lib/bank/notify";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -221,6 +222,25 @@ export async function getNotifications(principal: Principal): Promise<Notificati
         });
       }
     }
+  }
+
+  // ── ZekerFlex Bank (only an existing account — never opens one) ──
+  try {
+    const employerGrant = principal.grants.find((g) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(g.role));
+    const account = admin
+      ? null
+      : await prisma.bankAccount.findUnique({
+          where: employerGrant ? { tenantId: employerGrant.organizationId } : { userId: principal.userId },
+          select: { id: true },
+        });
+    if (account) {
+      const href = employerGrant ? "/werkgever/bank" : "/dashboard/bank";
+      for (const n of (await recentNotes(account.id)).filter((n) => now - new Date(n.at).getTime() < 3 * 86_400_000).slice(0, 8)) {
+        out.push({ id: `bank:${n.id}`, kind: "info", title: n.title, body: n.body, href, at: n.at, urgent: n.kind === "lowBalance" || n.title.includes("geweigerd") });
+      }
+    }
+  } catch {
+    /* ignore */
   }
 
   return out

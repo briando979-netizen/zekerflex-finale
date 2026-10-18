@@ -2,6 +2,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { personalAccount } from "@/lib/bank/accounts";
 import { book, type BookedEntry } from "@/lib/bank/ledger";
 import { applyEarningRule } from "@/lib/bank/autosave";
+import { notifyIncoming } from "@/lib/bank/notify";
 
 // ---------------------------------------------------------------------------
 // Earnings straight onto ZekerFlex Bank. A freelancer can choose to receive
@@ -45,6 +46,9 @@ export async function creditEarning(input: {
     },
     { allowFrozen: true },
   );
-  if (entry.created && input.idempotencyKey.startsWith("earning:")) await applyEarningRule(account.id, input.amountCents, entry.id);
+  if (entry.created) {
+    if (input.idempotencyKey.startsWith("earning:")) await applyEarningRule(account.id, input.amountCents, entry.id);
+    await notifyIncoming(account.id, input.amountCents, input.counterparty);
+  }
   return { entry, accountNumber: account.number };
 }

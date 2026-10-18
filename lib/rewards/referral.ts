@@ -5,6 +5,7 @@ import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { platformAccount, personalAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
 import { prisma } from "@/lib/prisma";
+import { notifyBank } from "@/lib/bank/notify";
 
 // ---------------------------------------------------------------------------
 // Doorverwijzen met bonus. Everyone gets a personal code (/r/<code> sets a
@@ -93,6 +94,7 @@ export async function rewardReferral(newUserId: string, newUserAccount: BankAcco
         idempotencyKey: `ref-reward:${newUserId}:referrer`,
         allowNegative: true,
       });
+      await notifyBank(to.id, "incoming", "🎁 Verwijsbonus ontvangen", `${newcomer?.fullName ?? "Je uitnodiging"} heeft de eerste klus afgerond — de bonus staat op je ZekerFlex Bank.`);
     }
     if (rewards.newUserCents > 0 && newUserAccount) {
       await transfer({
@@ -107,6 +109,7 @@ export async function rewardReferral(newUserId: string, newUserAccount: BankAcco
         idempotencyKey: `ref-reward:${newUserId}:newcomer`,
         allowNegative: true,
       });
+      await notifyBank(newUserAccount.id, "incoming", "🎁 Welkomstbonus ontvangen", "Bedankt voor je eerste klus — je welkomstbonus staat op je ZekerFlex Bank.");
     }
     await kvSet(`ref-by:${newUserId}`, { ...ref, rewardedAt: new Date().toISOString() } satisfies Referral);
     return true;

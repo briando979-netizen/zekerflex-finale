@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { InvoiceStatus, InvoiceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +9,7 @@ import { claimIdempotency } from "@/lib/redis";
 import { book } from "@/lib/bank/ledger";
 import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
 import { markRequestPaidExternally } from "@/lib/bank/p2p";
+import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
@@ -169,6 +170,31 @@ async function notifyShopOrderPaid(order: {
   }).catch((e) => logger.warn("shop order confirmation failed", { error: (e as Error).message }));
 }
 
+const DECLINE_TEXT: Record<string, string> = {
+  insufficient_funds: "onvoldoende saldo",
+  budget_exceeded: "maandbudget van de pas bereikt",
+  account_frozen: "rekening geblokkeerd",
+  card_inactive: "pas is bevroren",
+  online_blocked: "online betalen staat uit voor deze pas",
+  abroad_blocked: "betalen in het buitenland staat uit",
+  gambling_blocked: "gokken is geblokkeerd op deze pas",
+  over_payment_limit: "boven je limiet per betaling",
+};
+
+async function notifyCardDecision(auth: Stripe.Issuing.Authorization, decision: { approved: boolean; reason: string }): Promise<void> {
+  const card = await prisma.bankCard.findUnique({ where: { stripeCardId: auth.card.id }, select: { accountId: true, last4: true } });
+  if (!card) return;
+  const amount = ((auth.pending_request?.amount ?? 0) / 100).toFixed(2).replace(".", ",");
+  const merchant = auth.merchant_data?.name ?? "een winkel";
+  if (decision.approved) {
+    if ((auth.pending_request?.amount ?? 0) <= 0) return;
+    await notifyBank(card.accountId, "card", `€ ${amount} betaald`, `Bij ${merchant} met pas …${card.last4}.`);
+    await checkLowBalance(card.accountId);
+  } else if (DECLINE_TEXT[decision.reason]) {
+    await notifyBank(card.accountId, "card", "Pasbetaling geweigerd", `€ ${amount} bij ${merchant}: ${DECLINE_TEXT[decision.reason]}.`);
+  }
+}
+
 /**
  * POST /api/webhooks/stripe
  *
@@ -211,6 +237,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       log.error("issuing authorization decision failed", { authorization: auth.id, error: (err as Error).message });
     }
     log.info("issuing authorization", { authorization: auth.id, ...decision });
+    // Tell the cardholder after answering Stripe (the decision has a ~2s budget).
+    after(() => notifyCardDecision(auth, decision));
     return NextResponse.json({ approved: decision.approved }, { headers: { "Stripe-Version": event.api_version ?? "" } });
   }
   if (event.type === "issuing_authorization.updated") {
@@ -253,6 +281,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         idempotencyKey: `${requestId ? "request-ideal" : "topup"}:${session.id}`,
       });
       if (requestId) await markRequestPaidExternally(requestId, payer ?? "iDEAL");
+      if (entry.created) after(() => notifyIncoming(bankAccountId, session.amount_total!, requestId ? `${payer ?? "iDEAL"} (betaalverzoek)` : "je opwaardering"));
       if (entry.created) {
         await recordAudit({
           category: "BILLING",

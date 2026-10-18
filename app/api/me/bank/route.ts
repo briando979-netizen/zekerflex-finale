@@ -6,7 +6,7 @@ import { accountForPrincipal, formatAccountNumber } from "@/lib/bank/accounts";
 import { getFees, monthlyFeeFor } from "@/lib/bank/fees";
 import { env } from "@/lib/env";
 import { getPayoutDestination } from "@/lib/bank/earnings";
-import { cardMeta } from "@/lib/bank/cards";
+import { cardControls, cardMeta } from "@/lib/bank/cards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +47,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       },
       entries,
       cards: await Promise.all(
-        cards.map(async (c) => ({ id: c.id, stripeCardId: c.stripeCardId, type: c.type, brand: c.brand, last4: c.last4, expMonth: c.expMonth, expYear: c.expYear, status: c.status, ...(await cardMeta(c.id)) })),
+        cards.map(async (c) => ({ id: c.id, stripeCardId: c.stripeCardId, type: c.type, brand: c.brand, last4: c.last4, expMonth: c.expMonth, expYear: c.expYear, status: c.status, ...(await cardMeta(c.id)), controls: await cardControls(c.id) })),
       ),
     });
   } catch (err) {
