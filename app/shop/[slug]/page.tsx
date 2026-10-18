@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canonical, productJsonLd } from "@/lib/seo";
 import { ProductDetail, type PdpProduct } from "@/components/marketing/ProductDetail";
+import { boughtTogether } from "@/lib/shop/recommend";
 
 export const dynamic = "force-dynamic";
 
@@ -44,11 +45,17 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   });
   if (!product || !product.active) notFound();
 
-  const related = await prisma.shopProduct.findMany({
-    where: { active: true, category: product.category, id: { not: product.id } },
+  // "Vaak samen gekocht" from real orders first, topped up from the same category.
+  const togetherIds = await boughtTogether(product.id, 4).catch(() => [] as string[]);
+  const together = togetherIds.length
+    ? (await prisma.shopProduct.findMany({ where: { id: { in: togetherIds }, active: true } })).sort((a, b) => togetherIds.indexOf(a.id) - togetherIds.indexOf(b.id))
+    : [];
+  const fill = await prisma.shopProduct.findMany({
+    where: { active: true, category: product.category, id: { notIn: [product.id, ...together.map((p) => p.id)] } },
     orderBy: { sortOrder: "asc" },
-    take: 4,
+    take: Math.max(0, 4 - together.length),
   });
+  const related = [...together, ...fill];
 
   return (
     <>
@@ -69,7 +76,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
           ),
         }}
       />
-      <ProductDetail product={toDto(product)} related={related.map(toDto)} />
+      <ProductDetail product={toDto(product)} related={related.map(toDto)} boughtTogether={together.length > 0} />
     </>
   );
 }

@@ -29,7 +29,7 @@ export type PdpProduct = {
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
-export function ProductDetail({ product, related }: { product: PdpProduct; related: PdpProduct[] }) {
+export function ProductDetail({ product, related, boughtTogether = false }: { product: PdpProduct; related: PdpProduct[]; boughtTogether?: boolean }) {
   const t = useT();
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
@@ -254,7 +254,7 @@ export function ProductDetail({ product, related }: { product: PdpProduct; relat
       {/* gerelateerd */}
       {related.length > 0 && (
         <div className="mt-16 border-t border-hair pt-10">
-          <h2 className="font-display text-xl font-bold">{t.shop.alsoViewed}</h2>
+          <h2 className="font-display text-xl font-bold">{boughtTogether ? "Vaak samen gekocht" : t.shop.alsoViewed}</h2>
           <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
             {related.map((r) => (
               <Link key={r.id} href={`/shop/${r.slug}`} className="group">
