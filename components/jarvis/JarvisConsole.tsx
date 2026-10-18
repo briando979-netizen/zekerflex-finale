@@ -747,7 +747,7 @@ export function JarvisConsole() {
                 placeholder={
                   busy ? "Jarvis is aan het werk…" : listening ? "Aan het luisteren…" : "Typ of spreek je bericht…"
                 }
-                className="max-h-32 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-white placeholder:text-white/35 focus:outline-none disabled:opacity-60"
+                className="jarvis-input max-h-32 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-white placeholder:text-white/35 focus:outline-none disabled:opacity-60"
               />
               <button
                 type="button"

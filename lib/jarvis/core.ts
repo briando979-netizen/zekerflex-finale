@@ -1,3 +1,4 @@
+import { quickIntent } from "@/lib/admin-console/parser";
 import { z } from "zod";
 import type { JarvisEventKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -309,7 +310,11 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
     // The chat + briefing paths already produce a finished conversational reply;
     // only the tool paths (memory/console/orchestration) get the structuring pass.
     const skipStructure =
-      route.capability === "briefing" || route.capability === "chat" || answer.length < 40;
+      route.capability === "briefing" ||
+      route.capability === "chat" ||
+      answer.length < 40 ||
+      // quick console questions already have a finished, model-free answer
+      (route.capability === "console" && quickIntent(input.prompt) !== null);
     const report = skipStructure
       ? answer
       : await structureAnswer(input.prompt, answer, toolNote);

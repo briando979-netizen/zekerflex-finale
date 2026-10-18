@@ -44,6 +44,40 @@ const rawIntentSchema = z.object({
  * @throws when the LLM is unreachable (AppError upstream from `chatJson`) - the
  *   orchestrator turns that into a "reasoning layer offline" clarification.
  */
+/**
+ * Instant, model-free routing for the most common READ-ONLY questions
+ * ("hoeveel flexwerkers…", "kerncijfers", "actieve diensten"). On a CPU model
+ * the LLM parse alone takes over a minute; these never need it. Mutations are
+ * deliberately never matched here — they always go through the model + the
+ * confirmation flow.
+ */
+export function quickIntent(question: string): ParsedIntent | null {
+  const q = question.toLowerCase();
+  if (/\b(hoeveel|aantal|tel)\b/.test(q) && /\b(flexwerkers?|freelancers?|zzp'?ers?|werkers?)\b/.test(q)) {
+    const dimension = /zwarte lijst|blacklist/.test(q)
+      ? "blacklist"
+      : /geblokkeerd|dba/.test(q)
+        ? "matchingBlocked"
+        : /badge|niveau|brons|zilver|goud|platin/.test(q)
+          ? "badge"
+          : "kyc";
+    return { kind: "query", name: "count_freelancers_by_status", params: { dimension } };
+  }
+  if (/\b(kpi'?s?|kerncijfers|cijfers van het platform|platformcijfers)\b/.test(q)) {
+    return { kind: "query", name: "platform_kpis", params: {} };
+  }
+  if (/\b(actieve|lopende|open|geplande)\s+(diensten|klussen|shifts)\b/.test(q)) {
+    return { kind: "query", name: "active_shifts", params: {} };
+  }
+  if (/\b(compliance|wet dba|dba-?overzicht)\b/.test(q) && !/\b(blokkeer|deblokkeer|zet|wijzig)\b/.test(q)) {
+    return { kind: "query", name: "compliance_overview", params: {} };
+  }
+  if (/\bmatching\b/.test(q) && /\b(status|gezond|werkt|health)\b/.test(q)) {
+    return { kind: "query", name: "matching_engine_health", params: {} };
+  }
+  return null;
+}
+
 export async function parseIntent(question: string): Promise<ParsedIntent> {
   const guard = inspectPrompt(question);
   if (!guard.allowed) {
@@ -52,6 +86,8 @@ export async function parseIntent(question: string): Promise<ParsedIntent> {
       reason: "Deze instructie lijkt de veiligheidsgrenzen van Jarvis te willen omzeilen.",
     };
   }
+  const quick = quickIntent(question);
+  if (quick && quick.kind === "query" && quick.name in QUERIES) return quick;
   const raw = await chatJson<unknown>({
     messages: [
       { role: "system", content: `${SYSTEM_PROMPT}\n\n${buildCatalog()}` },

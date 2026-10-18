@@ -86,8 +86,8 @@ export function Markdown({ text }: { text: string }) {
       const level = h[1]!.length;
       const cls =
         level === 2
-          ? "mt-3 text-[15px] font-semibold text-slate-900"
-          : "mt-2 text-[13px] font-semibold text-slate-800";
+          ? "mt-3 text-[15px] font-semibold"
+          : "mt-2 text-[13px] font-semibold";
       blocks.push(
         <p key={key++} className={cls}>
           {inline(h[2]!, `h${key}`)}
@@ -131,7 +131,7 @@ export function Markdown({ text }: { text: string }) {
   }
 
   return (
-    <div className="space-y-1.5 text-[13px] text-slate-800">
+    <div className="space-y-1.5 text-[13px]">
       {blocks.map((b, i) => (
         <Fragment key={i}>{b}</Fragment>
       ))}

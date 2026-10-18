@@ -533,6 +533,9 @@ body {
 }
 .admin-scope input::placeholder,
 .admin-scope textarea::placeholder { color: var(--a-mute); }
+/* Jarvis is a dark console inside the (light) admin theme — keep its composer dark. */
+.admin-scope textarea.jarvis-input { background: transparent; border-color: transparent; color: #fff; }
+.admin-scope textarea.jarvis-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
 .admin-scope .btn-ghost {
   background: var(--a-elev);

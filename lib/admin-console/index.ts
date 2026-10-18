@@ -6,7 +6,7 @@ import { announce } from "@/lib/voice/announce";
 import type { Principal } from "@/lib/auth";
 import { QUERIES } from "@/lib/admin-console/queries";
 import { MUTATIONS } from "@/lib/admin-console/mutations";
-import { parseIntent } from "@/lib/admin-console/parser";
+import { parseIntent, quickIntent } from "@/lib/admin-console/parser";
 import {
   claimConfirmToken,
   mintConfirmToken,
@@ -27,6 +27,20 @@ export type { ConsoleResponse, ConfirmResponse } from "@/lib/admin-console/types
 const CONFIRM_ENDPOINT = "/api/admin/console/confirm";
 const LLM_OFFLINE_MESSAGE =
   "De reasoning-laag (self-hosted LLM) is niet bereikbaar. Start het model in de box (bijv. `ollama serve` + `ollama pull llama3.1:8b`) of stel LLM_BASE_URL in.";
+
+/** Model-free one-liner for the quick (regex-routed) questions — counts are summed. */
+export function plainSummary(result: QueryResult): string {
+  const nl = (n: number) => n.toLocaleString("nl-NL");
+  const countCol = result.columns.find((c) => c === "count" || c === "aantal");
+  if (countCol && result.rows.length) {
+    const total = result.rows.reduce((s, r) => s + (Number(r[countCol]) || 0), 0);
+    const label = result.columns.find((c) => c !== countCol);
+    const parts = label ? result.rows.map((r) => `${String(r[label])}: ${nl(Number(r[countCol]) || 0)}`) : [];
+    return `Totaal ${nl(total)}${parts.length > 1 ? ` (${parts.join(", ")})` : ""}.${result.note ? ` ${result.note}` : ""}`;
+  }
+  if (result.scalar !== undefined) return `${result.note ? `${result.note}: ` : ""}${typeof result.scalar === "number" ? nl(result.scalar) : result.scalar}.`;
+  return result.rows.length ? `${nl(result.rows.length)} resultaten — zie de tabel.` : (result.note ?? "Geen resultaten.");
+}
 
 async function summarise(
   question: string,
@@ -115,7 +129,7 @@ export async function runAdminConsole(
       };
     }
     const result = await handler.run(parsed.data, ctx);
-    const summary = await summarise(question, handler, result);
+    const summary = quickIntent(question) ? plainSummary(result) : await summarise(question, handler, result);
     return {
       kind: "answer",
       query: intent.name,

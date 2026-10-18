@@ -81,7 +81,7 @@ describe("confirm tokens", () => {
 describe("parseIntent", () => {
   it("passes through a valid query choice", async () => {
     chatJson.mockResolvedValueOnce({ kind: "query", name: "platform_kpis", params: {} });
-    expect(await parseIntent("hoeveel open shifts zijn er?")).toEqual({
+    expect(await parseIntent("welke shifts in Utrecht staan nog zonder bezetting?")).toEqual({
       kind: "query",
       name: "platform_kpis",
       params: {},
@@ -161,5 +161,29 @@ describe("runAdminConsole", () => {
       const claim = await verifyConfirmToken(r.confirmToken);
       expect(claim.actorUserId).toBe("usr_admin");
     }
+  });
+});
+
+describe("quick intents (no model)", () => {
+  it("routes common read-only questions without calling the model", async () => {
+    const { quickIntent } = await import("@/lib/admin-console/parser");
+    expect(quickIntent("Hoeveel flexwerkers zijn er?")).toEqual({ kind: "query", name: "count_freelancers_by_status", params: { dimension: "kyc" } });
+    expect(quickIntent("hoeveel freelancers staan op de zwarte lijst")).toMatchObject({ params: { dimension: "blacklist" } });
+    expect(quickIntent("Geef de kerncijfers")).toMatchObject({ name: "platform_kpis" });
+    expect(quickIntent("toon actieve diensten")).toMatchObject({ name: "active_shifts" });
+    expect(await parseIntent("Hoeveel flexwerkers zijn er?")).toMatchObject({ name: "count_freelancers_by_status" });
+    expect(chatJson).not.toHaveBeenCalled();
+  });
+
+  it("never fast-routes a change (mutations always go through the model + confirmation)", async () => {
+    const { quickIntent } = await import("@/lib/admin-console/parser");
+    expect(quickIntent("blokkeer matching voor Liam")).toBeNull();
+    expect(quickIntent("deactiveer inactieve flexwerkers")).toBeNull();
+    expect(quickIntent("zet compliance van Eva op blok")).toBeNull();
+  });
+
+  it("summarises counts without the model", async () => {
+    const { plainSummary } = await import("@/lib/admin-console");
+    expect(plainSummary({ columns: ["kycStatus", "count"], rows: [{ kycStatus: "VERIFIED", count: 4 }, { kycStatus: "PENDING", count: 1 }] })).toBe("Totaal 5 (VERIFIED: 4, PENDING: 1).");
   });
 });
