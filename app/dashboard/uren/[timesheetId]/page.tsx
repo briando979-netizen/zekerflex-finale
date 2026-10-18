@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requirePrincipal } from "@/lib/auth";
 import { TimesheetSubmitForm } from "@/components/app/TimesheetSubmitForm";
 import { HoursCorrectionPrompt } from "@/components/app/HoursCorrectionPrompt";
+import { CheckInPanel } from "@/components/app/CheckInPanel";
+import { getPayoutDestination } from "@/lib/bank/earnings";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { getPayoutPrefs } from "@/lib/payouts/preferences";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -47,9 +49,10 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
     timesheet.dispute.proposedMinutes !== timesheet.dispute.claimedMinutes
       ? timesheet.dispute
       : null;
-  const [payoutPrefs, fiscal] = await Promise.all([
+  const [payoutPrefs, fiscal, destination] = await Promise.all([
     getPayoutPrefs(principal.userId),
     getFiscal(principal.userId),
+    getPayoutDestination(principal.userId),
   ]);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
 
@@ -84,6 +87,16 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
       )}
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
+          {timesheet.status === "DRAFT" && (
+            <CheckInPanel
+              timesheetId={timesheet.id}
+              scheduledStart={timesheet.scheduledStart.toISOString()}
+              scheduledEnd={timesheet.scheduledEnd.toISOString()}
+              actualStart={timesheet.actualStart?.toISOString() ?? null}
+              actualEnd={timesheet.actualEnd?.toISOString() ?? null}
+              branchName={timesheet.branch.name}
+            />
+          )}
           {cardShift && (
             <ShiftCard shift={cardShift} href={`/dashboard/klussen/${cardShift.id}`} idReminder footerOverride={null} />
           )}
@@ -120,6 +133,9 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
           shiftId={timesheet.assignment?.shiftId}
           payoutSpeed={payoutPrefs.speed}
           payroll={isPayroll}
+          hourlyRateCents={timesheet.hourlyRateCents}
+          gpsBacked={Boolean(timesheet.actualStart && timesheet.actualEnd)}
+          earningsToBank={destination === "bank"}
         />
       </div>
     </div>
