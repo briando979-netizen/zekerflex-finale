@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import NextAuth, { CredentialsSignin, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { recordLoginFailure } from "@/lib/metrics";
+import { hasTwoFactor, openLoginChallenge, verifySecondFactor } from "@/lib/auth/two-factor";
 import {
   checkLoginAllowed,
   clearLoginFailures,
@@ -23,11 +24,19 @@ import {
   type RoleGrant,
 } from "@/lib/auth/session";
 
-const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  remember: z.string().optional(),
-});
+const credentialsSchema = z.union([
+  z.object({ email: z.string().email(), password: z.string().min(1), remember: z.string().optional() }),
+  // second step of a two-step login: the sealed challenge from the password step + the code
+  z.object({ challenge: z.string().min(20), otp: z.string().min(6).max(20), remember: z.string().optional() }),
+]);
+
+/** Password was right, but this account also needs its authenticator code. (Code is URL-safe, reveals nothing secret.) */
+export class SecondFactorRequired extends CredentialsSignin {
+  override code = "2fa_required";
+}
+export class SecondFactorInvalid extends CredentialsSignin {
+  override code = "2fa_invalid";
+}
 
 async function loadGrants(userId: string): Promise<RoleGrant[]> {
   const memberships = await prisma.membership.findMany({
@@ -162,12 +171,17 @@ export const authOptions: NextAuthConfig = {
       credentials: {
         email: { label: "E-mail", type: "email" },
         password: { label: "Wachtwoord", type: "password" },
+        challenge: { type: "text" },
+        otp: { label: "Code", type: "text" },
       },
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
+        const twoStep = "challenge" in parsed.data ? parsed.data : null;
+        const challengeEmail = twoStep ? openLoginChallenge(twoStep.challenge) : null;
+        if (twoStep && !challengeEmail) return null; // expired or forged challenge
 
-        const email = parsed.data.email.toLowerCase().trim();
+        const email = (challengeEmail ?? ("email" in parsed.data ? parsed.data.email : "")).toLowerCase().trim();
 
         const gate = await checkLoginAllowed(email);
         if (!gate.allowed) {
@@ -210,10 +224,20 @@ export const authOptions: NextAuthConfig = {
           return null;
         }
 
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) {
-          await registerFailure(user.id);
-          return null;
+        if (twoStep) {
+          // step 2: the challenge proves the password was right minutes ago
+          const second = await verifySecondFactor(user.id, twoStep.otp);
+          if (!second.ok) {
+            await registerFailure(user.id);
+            throw new SecondFactorInvalid();
+          }
+        } else {
+          const ok = await bcrypt.compare("password" in parsed.data ? parsed.data.password : "", user.passwordHash);
+          if (!ok) {
+            await registerFailure(user.id);
+            return null;
+          }
+          if (await hasTwoFactor(user.id)) throw new SecondFactorRequired();
         }
 
         await clearLoginFailures(email);

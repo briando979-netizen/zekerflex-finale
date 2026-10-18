@@ -54,6 +54,7 @@ const NAV = [
   { href: "/admin/analytics", label: "Verkeer & analytics", icon: <IActivity />, section: "Inzicht" },
   { href: "/admin/audit", label: "Auditspoor", icon: <IDoc />, section: "Inzicht" },
   { href: "/admin/systeem", label: "Systeemstatus", icon: <IPulse />, section: "Inzicht" },
+  { href: "/admin/beveiliging", label: "Beveiliging & 2FA", icon: <IShield />, section: "Inzicht" },
 ];
 
 // Rendering an admin page triggers the one-time sovereign startup self-check

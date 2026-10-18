@@ -5,6 +5,7 @@ import { logoutAction } from "@/lib/auth/actions";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
+import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,12 @@ export default async function WerkgeverAccountPage() {
             <Link href="/wachtwoord-vergeten" className="btn-ghost mt-3 inline-block">
               Wachtwoord resetten
             </Link>
+          </div>
+        </Panel>
+
+        <Panel title="Tweestapsverificatie">
+          <div className="p-5">
+            <TwoFactorSettings recommended />
           </div>
         </Panel>
       </div>

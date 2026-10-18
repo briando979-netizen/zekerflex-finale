@@ -6,6 +6,8 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { llmHealth } from "@/lib/ai/client";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
+import { platformAdminIds } from "@/lib/messaging/contacts";
+import { hasTwoFactor } from "@/lib/auth/two-factor";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -37,6 +39,17 @@ export interface CustomTodo {
 
 const ISSUING_EVENTS = ["issuing_authorization.request", "issuing_authorization.updated", "issuing_transaction.created", "issuing_card.updated"];
 
+/** How many active platform admins have two-step verification on. */
+async function adminTwoFactor(): Promise<{ on: number; total: number }> {
+  try {
+    const ids = await platformAdminIds();
+    const on = (await Promise.all(ids.map((id) => hasTwoFactor(id)))).filter(Boolean).length;
+    return { on, total: ids.length };
+  } catch {
+    return { on: 0, total: 0 };
+  }
+}
+
 async function stripeIssuingActive(): Promise<boolean | null> {
   if (!env.STRIPE_SECRET_KEY) return null;
   try {
@@ -67,7 +80,7 @@ async function stripeIssuingWebhookOk(): Promise<boolean | null> {
 
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products, issuing, llm] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth()]);
+  const [webhookOk, products, issuing, llm, admin2fa] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor()]);
   const base = env.APP_BASE_URL ?? "";
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
@@ -237,6 +250,16 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Meta Business-verificatie afronden en een zakelijk nummer aan de WhatsApp Business Cloud API koppelen.", "Lever aan: phone-number ID, een permanente (system user) token en het app secret — dan bouw en test ik de live koppeling."],
       auto: false,
       ...m("whatsapp-live"),
+    },
+    {
+      id: "admin-2fa",
+      group: "Beheer & veiligheid",
+      title: "Tweestapsverificatie aan voor alle beheerders",
+      why: "Beheerders kunnen bij betalingen, bankgegevens en ID-bewijzen. Met tweestapsverificatie is een gestolen wachtwoord niet genoeg om in te loggen.",
+      how: ["Ga naar Admin → Beveiliging & 2FA en klik 'Tweestapsverificatie aanzetten'.", "Scan de QR-code met een authenticator-app (Google Authenticator, Microsoft Authenticator of 1Password) en vul de code in.", "Bewaar de 10 herstelcodes op een veilige plek (bijv. je wachtwoordmanager). Laat elke andere beheerder hetzelfde doen."],
+      auto: true,
+      done: admin2fa.total > 0 && admin2fa.on === admin2fa.total,
+      doneNote: `${admin2fa.on} van ${admin2fa.total} beheerders hebben het aan`,
     },
     {
       id: "backups",

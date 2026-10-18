@@ -55,6 +55,45 @@ export function LoginForm({
   const [showPw, setShowPw] = useState(false);
   const banner = state.error ?? (errorCode ? (ERROR_COPY[errorCode] ?? "Inloggen mislukt.") : null);
 
+  if (state.needsCode && state.challenge) {
+    return (
+      <div>
+        {state.error && <p className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          <input type="hidden" name="challenge" value={state.challenge} />
+          <input type="hidden" name="email" value={state.email ?? ""} />
+          <input type="hidden" name="remember" value="1" />
+          <div className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">
+            <p className="font-semibold text-ink">Tweestapsverificatie</p>
+            <p className="mt-1">
+              Open je authenticator-app en vul de 6-cijferige code in voor <strong>{state.email}</strong>. Telefoon kwijt? Gebruik een van je herstelcodes.
+            </p>
+          </div>
+          <label className="block">
+            <span className="field-label">Code</span>
+            <input
+              name="otp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+              maxLength={20}
+              placeholder="123 456"
+              className="field-input text-center font-mono text-xl tracking-[0.3em]"
+            />
+          </label>
+          <SubmitButton />
+          {/* full reload on purpose: resets the two-step form state */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/login" className="block text-center text-sm font-medium text-brand-600 hover:underline">
+            Terug — met een ander account inloggen
+          </a>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div>
       {justReset && !banner && (

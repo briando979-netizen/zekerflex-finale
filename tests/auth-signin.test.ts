@@ -21,6 +21,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("next-auth", () => ({
   default: () => ({ handlers: {}, signIn: vi.fn(), signOut: vi.fn(), auth: vi.fn() }),
   AuthError: class AuthError extends Error {},
+  CredentialsSignin: class CredentialsSignin extends Error {
+    code = "credentials";
+  },
 }));
 vi.mock("next-auth/providers/credentials", () => ({
   default: (config: Record<string, unknown>) => ({ id: "credentials", type: "credentials", ...config }),
@@ -65,6 +68,15 @@ vi.mock("@/lib/auth/login-throttle", () => ({
   clearLoginFailures: (...a: unknown[]) => clearLoginFailures(...a),
 }));
 
+const hasTwoFactor = vi.fn();
+const verifySecondFactor = vi.fn();
+const openLoginChallenge = vi.fn();
+vi.mock("@/lib/auth/two-factor", () => ({
+  hasTwoFactor: (...a: unknown[]) => hasTwoFactor(...a),
+  verifySecondFactor: (...a: unknown[]) => verifySecondFactor(...a),
+  openLoginChallenge: (...a: unknown[]) => openLoginChallenge(...a),
+}));
+
 import { authOptions } from "@/lib/auth/nextauth";
 import { decodeSession, encodeSession } from "@/lib/auth/session";
 import type { RoleGrant } from "@/lib/auth/session";
@@ -82,11 +94,56 @@ const GRANT: RoleGrant = { role: "FREELANCER", organizationId: "org_platform", l
 
 beforeEach(() => {
   vi.clearAllMocks();
+  hasTwoFactor.mockResolvedValue(false);
   checkLoginAllowed.mockResolvedValue({ allowed: true });
   registerLoginFailure.mockResolvedValue({ failures: 1, locked: false });
   membershipFindMany.mockResolvedValue([
     { role: "FREELANCER", tenantId: "org_platform", scopedBranches: [] },
   ]);
+});
+
+describe("two-step login", () => {
+  const user = { id: "usr_1", email: "jan@example.nl", fullName: "Jan", passwordHash: "hash" };
+  const challenge = "v1.challenge-token-sealed-xxxxxxxx";
+
+  it("a correct password on a 2FA account asks for the code instead of logging in", async () => {
+    userFindFirst.mockResolvedValue(user);
+    bcryptCompare.mockResolvedValue(true);
+    hasTwoFactor.mockResolvedValue(true);
+    await expect(authorize({ email: "jan@example.nl", password: "hunter2" })).rejects.toMatchObject({ code: "2fa_required" });
+    expect(recordAudit).not.toHaveBeenCalledWith(expect.objectContaining({ action: "auth.login.succeeded" }));
+  });
+
+  it("challenge + correct code logs in (no password needed again)", async () => {
+    openLoginChallenge.mockReturnValue("jan@example.nl");
+    userFindFirst.mockResolvedValue(user);
+    verifySecondFactor.mockResolvedValue({ ok: true });
+    const res = await authorize({ challenge, otp: "123456", remember: "1" });
+    expect(res).toMatchObject({ id: "usr_1", remember: true });
+    expect(bcryptCompare).not.toHaveBeenCalled();
+    expect(clearLoginFailures).toHaveBeenCalledWith("jan@example.nl");
+  });
+
+  it("a wrong code is refused and counts towards the lockout", async () => {
+    openLoginChallenge.mockReturnValue("jan@example.nl");
+    userFindFirst.mockResolvedValue(user);
+    verifySecondFactor.mockResolvedValue({ ok: false });
+    await expect(authorize({ challenge, otp: "000000" })).rejects.toMatchObject({ code: "2fa_invalid" });
+    expect(registerLoginFailure).toHaveBeenCalledWith("jan@example.nl");
+  });
+
+  it("an expired or forged challenge is refused", async () => {
+    openLoginChallenge.mockReturnValue(null);
+    expect(await authorize({ challenge, otp: "123456" })).toBeNull();
+    expect(userFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("a locked-out account can't use the second step either", async () => {
+    openLoginChallenge.mockReturnValue("jan@example.nl");
+    checkLoginAllowed.mockResolvedValue({ allowed: false, retryAfterSeconds: 600 });
+    expect(await authorize({ challenge, otp: "123456" })).toBeNull();
+    expect(verifySecondFactor).not.toHaveBeenCalled();
+  });
 });
 
 describe("credentials authorize", () => {

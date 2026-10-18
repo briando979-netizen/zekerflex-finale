@@ -95,6 +95,7 @@ export default async function AccountPage() {
       items: [
         { label: "E-mailadres wijzigen", href: "/dashboard/profiel" },
         { label: "Wachtwoord wijzigen", href: "/wachtwoord-vergeten" },
+        { label: "Tweestapsverificatie", href: "/dashboard/account/beveiliging" },
         {
           label: "Download mijn gegevens",
           href: "/api/me/gegevens/export",
