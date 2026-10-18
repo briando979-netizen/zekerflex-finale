@@ -77,7 +77,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "AI",
       title: "Eigen AI-server (taalmodel) aanzetten",
       why: "Zet Jarvis, de denkende AI-teams, herschrijven/vertalen in de chat, het volle specialistenadvies en nieuwe advertentievarianten aan.",
-      how: ["Huur een server met GPU (bv. Hetzner GPU) en maak een subdomein ai.zekerflex.com met een A-record naar de server.", "Kopieer deploy/ai-node/setup.sh naar de server en draai: sudo bash setup.sh ai.zekerflex.com", "Zet de waarden die het script laat zien in Vercel → Settings → Environment Variables (Production) en klik Redeploy."],
+      how: ["Huur een server met GPU — hoe meer videogeheugen, hoe slimmer de AI (24 GB of meer aangeraden, 48 GB voor de beste kwaliteit) — en maak een subdomein ai.zekerflex.com met een A-record naar de server.", "Kopieer deploy/ai-node/setup.sh naar de server en draai: sudo bash setup.sh ai.zekerflex.com", "Zet de waarden die het script laat zien in Vercel → Settings → Environment Variables (Production) en klik Redeploy."],
       auto: true,
       done: llm.ok,
       doneNote: llm.ok ? `AI-server antwoordt (model ${llm.model})` : `nog niet: ${llm.detail ?? "niet bereikbaar"}`,

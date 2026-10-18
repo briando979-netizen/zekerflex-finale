@@ -7,7 +7,16 @@ Alle data blijft op jouw server.
 ## Wat heb je nodig
 
 - Een server met **Ubuntu 22.04 of 24.04**:
-  - **Met GPU** (aanbevolen, snel): bv. een GPU-server met een RTX 4000/A4000 (16–20 GB VRAM). `qwen2.5:7b` antwoordt dan binnen een paar seconden.
+  - **Met GPU** (aanbevolen): het script leest het videogeheugen uit en kiest zelf het sterkste model dat past:
+
+    | Videogeheugen | Hoofdmodel | Kwaliteit |
+    |---|---|---|
+    | 48 GB+ (bv. RTX 6000 Ada / A6000 / L40S) | `qwen2.5:72b` | beste: komt het dichtst bij de grote commerciële modellen |
+    | 24 GB+ (bv. RTX 4090 / A5000 / L4×2) | `qwen2.5:32b` | erg goed, aanrader voor prijs/kwaliteit |
+    | 16–20 GB (bv. RTX 4000 Ada / A4000) | `qwen2.5:14b` | goed |
+    | minder | `qwen2.5:7b` | basis |
+
+    Meer videogeheugen = slimmer model = betere antwoorden van Jarvis, de AI-teams en de specialisten.
   - **Alleen CPU** (goedkoper, trager): minimaal 8 vCPU / 32 GB RAM. Reken op 10–40 s per antwoord met `qwen2.5:7b`; kies dan liever `MODEL=qwen2.5:3b`.
 - Een subdomein, bv. `ai.zekerflex.com`, met een **A-record** naar het IP-adres van de server.
 
@@ -28,8 +37,8 @@ Het script eindigt met de waarden voor Vercel. Zet ze bij **Settings → Environ
 | `LLM_BASE_URL` | `https://ai.zekerflex.com/v1` |
 | `LLM_API_KEY` | de sleutel uit het script |
 | `AI_ALLOW_REMOTE` | `true` |
-| `LLM_MODEL` | `qwen2.5:7b` |
-| `LLM_FAST_MODEL` | `llama3.2:3b` |
+| `LLM_MODEL` | wat het script toont (bv. `qwen2.5:32b`) |
+| `LLM_FAST_MODEL` | wat het script toont |
 | `LLM_EMBED_MODEL` | `nomic-embed-text` |
 | `LLM_TIMEOUT_MS` | `60000` |
 

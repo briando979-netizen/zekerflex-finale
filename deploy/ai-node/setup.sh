@@ -21,9 +21,22 @@ set -euo pipefail
 
 DOMAIN="${1:-}"
 ROTATE="${2:-}"
-MODEL="${MODEL:-qwen2.5:7b}"
-FAST_MODEL="${FAST_MODEL:-llama3.2:3b}"
 EMBED_MODEL="${EMBED_MODEL:-nomic-embed-text}"
+
+# Pick the strongest model that fits the GPU (Qwen 2.5: good Dutch, good at
+# following instructions and JSON). Override with MODEL= / FAST_MODEL=.
+VRAM_GB=0
+if command -v nvidia-smi >/dev/null 2>&1; then
+  VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk '{s+=$1} END {print s+0}')
+  VRAM_GB=$(( ${VRAM_MB:-0} / 1024 ))
+fi
+if   (( VRAM_GB >= 48 )); then AUTO_MODEL="qwen2.5:72b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=120000
+elif (( VRAM_GB >= 24 )); then AUTO_MODEL="qwen2.5:32b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=90000
+elif (( VRAM_GB >= 16 )); then AUTO_MODEL="qwen2.5:14b"; AUTO_FAST="llama3.2:3b"; TIMEOUT_MS=60000
+else                           AUTO_MODEL="qwen2.5:7b";  AUTO_FAST="llama3.2:3b"; TIMEOUT_MS=60000
+fi
+MODEL="${MODEL:-$AUTO_MODEL}"
+FAST_MODEL="${FAST_MODEL:-$AUTO_FAST}"
 
 if [[ -z "$DOMAIN" ]]; then
   echo "Gebruik: sudo bash setup.sh <domein, bv. ai.zekerflex.com> [--rotate-key]" >&2
@@ -32,6 +45,11 @@ fi
 if [[ $EUID -ne 0 ]]; then
   echo "Draai dit script met sudo." >&2
   exit 1
+fi
+
+echo "▸ Videokaart: ${VRAM_GB} GB geheugen → hoofdmodel ${MODEL}, snel model ${FAST_MODEL}"
+if (( VRAM_GB == 0 )); then
+  echo "  ⚠ Geen NVIDIA-GPU gevonden: het werkt, maar traag en met een klein model. Neem voor de beste kwaliteit een server met 24-48 GB videogeheugen."
 fi
 
 echo "▸ Pakketten bijwerken"
@@ -132,7 +150,7 @@ cat <<EOF
   LLM_MODEL=${MODEL}
   LLM_FAST_MODEL=${FAST_MODEL}
   LLM_EMBED_MODEL=${EMBED_MODEL}
-  LLM_TIMEOUT_MS=60000
+  LLM_TIMEOUT_MS=${TIMEOUT_MS}
 
   Bewaar de sleutel veilig; hij staat ook in /etc/zekerflex-ai/key.
   Sleutel vervangen: sudo bash setup.sh ${DOMAIN} --rotate-key  (en daarna Vercel bijwerken)
