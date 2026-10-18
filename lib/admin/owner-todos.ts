@@ -8,6 +8,7 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
 import { platformAdminIds } from "@/lib/messaging/contacts";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
+import { prisma } from "@/lib/prisma";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -38,6 +39,16 @@ export interface CustomTodo {
 }
 
 const ISSUING_EVENTS = ["issuing_authorization.request", "issuing_authorization.updated", "issuing_transaction.created", "issuing_card.updated"];
+
+/** Does at least one platform admin receive push notifications (for outage alerts)? */
+async function adminHasPush(): Promise<boolean> {
+  try {
+    const ids = await platformAdminIds();
+    return (await prisma.webPushSubscription.count({ where: { userId: { in: ids }, disabledAt: null } })) > 0;
+  } catch {
+    return false;
+  }
+}
 
 /** How many active platform admins have two-step verification on. */
 async function adminTwoFactor(): Promise<{ on: number; total: number }> {
@@ -80,7 +91,7 @@ async function stripeIssuingWebhookOk(): Promise<boolean | null> {
 
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products, issuing, llm, admin2fa] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor()]);
+  const [webhookOk, products, issuing, llm, admin2fa, adminPush] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor(), adminHasPush()]);
   const base = env.APP_BASE_URL ?? "";
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
@@ -260,6 +271,24 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       auto: true,
       done: admin2fa.total > 0 && admin2fa.on === admin2fa.total,
       doneNote: `${admin2fa.on} van ${admin2fa.total} beheerders hebben het aan`,
+    },
+    {
+      id: "alert-push",
+      group: "Beheer & veiligheid",
+      title: "Storingsmeldingen op je telefoon aanzetten",
+      why: "Mislukte taken, uitbetalingen, Stripe-fouten en bank-risico's komen als pushmelding binnen — maar alleen als je telefoon meldingen van ZekerFlex toestaat. Anders krijg je ze alleen per mail.",
+      how: ["Open www.zekerflex.com/admin op je telefoon (zet hem eventueel op je beginscherm).", "Tik op het belletje bovenin en sta meldingen toe.", "Ga naar Admin → Systeemstatus en klik 'Testmelding sturen' om te controleren dat hij aankomt."],
+      auto: true,
+      done: adminPush,
+    },
+    {
+      id: "uptime",
+      group: "Beheer & veiligheid",
+      title: "Bewaking of de site online is (van buitenaf)",
+      why: "Als de hele site plat ligt, kan hij dat zelf niet meer melden. Een dienst van buitenaf controleert elke minuut of www.zekerflex.com werkt en waarschuwt je anders.",
+      how: ["Eigen beheer (past bij je voorkeur): installeer Uptime Kuma op je AI-server (docker run -d -p 3001:3001 louislam/uptime-kuma) en voeg een monitor toe op https://www.zekerflex.com/api/health.", "Of snel en gratis: een uptime-dienst zoals UptimeRobot of Better Stack met dezelfde URL.", "Laat meldingen naar je telefoon/mail sturen en vink deze taak af."],
+      auto: false,
+      ...m("uptime"),
     },
     {
       id: "backups",

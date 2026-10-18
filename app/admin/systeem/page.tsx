@@ -7,6 +7,7 @@ import { budgetSnapshot } from "@/lib/ai/governor";
 import { env } from "@/lib/env";
 import { smtpConfigured } from "@/lib/mail";
 import { PageHeader, Panel, KpiCard, StatusPill } from "@/components/app/ui";
+import { OpsAlerts } from "@/components/admin/OpsAlerts";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,8 @@ export default async function SysteemPage() {
       {!db.ok && db.detail && (
         <p className="mt-4 rounded-lg bg-crit/10 px-4 py-3 text-sm text-crit">Database: {db.detail}</p>
       )}
+
+      <OpsAlerts />
     </div>
   );
 }

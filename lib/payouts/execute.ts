@@ -1,3 +1,4 @@
+import { alertOwnerLater } from "@/lib/ops/alert";
 import { PaymentStatus, TimesheetStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
@@ -118,6 +119,12 @@ export async function executePayout(paymentId: string, opts: { speed: PayoutSpee
   } catch (err) {
     const message = err instanceof AppError ? err.message : "Payout error";
     await prisma.payment.update({ where: { id: payment.id }, data: { status: PaymentStatus.FAILED, failureCode: message.slice(0, 120) } });
+    alertOwnerLater({
+      key: `payout:${payment.id}`,
+      title: "Uitbetaling mislukt",
+      detail: `Uitbetaling van ${(payment.amountCents / 100).toFixed(2).replace(".", ",")} euro (betaling ${payment.id}) is mislukt: ${message.slice(0, 160)}. De freelancer wacht op zijn geld.`,
+      url: "/admin/facturen",
+    });
     logger.error("payout failed; queued for retry", { paymentId, error: message });
     return { status: PaymentStatus.FAILED, providerRef: null };
   }

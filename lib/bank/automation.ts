@@ -1,3 +1,4 @@
+import { alertOwnerLater } from "@/lib/ops/alert";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -81,6 +82,7 @@ export async function autoRisk(now = new Date()): Promise<{ frozen: number }> {
       text: `${reason}\nBedrag: ${euro(a.amountCents)}\n\nBeoordeel in /admin/bank → Transactiemonitoring en deblokkeer als alles in orde is.`,
       kind: "bank-risk",
     }).catch(() => undefined);
+    alertOwnerLater({ key: `aml:${a.id}`, title: `Rekening automatisch geblokkeerd: ${a.holderName}`, detail: `${a.title} (${a.detail}). Beoordeel en deblokkeer als alles in orde is.`, url: "/admin/bank" });
   }
   return { frozen };
 }
@@ -98,6 +100,7 @@ export async function coverageCheck(): Promise<{ covered: boolean | null; shortf
   const shortfall = Math.max(0, owed - held);
   if (shortfall > 0 && !(await kvGet(`bank-coverage-alert:${today()}`))) {
     await kvSet(`bank-coverage-alert:${today()}`, true);
+    alertOwnerLater({ key: "bank-coverage", title: `Geldtekort op Stripe: ${euro(shortfall)}`, detail: `Klanten hebben samen ${euro(owed)} tegoed, Stripe houdt ${euro(held)} aan. Vul aan of houd opnames tegen.`, url: "/admin/bank" });
     await sendMail({
       to: env.MAIL_ADMIN,
       subject: `ZekerFlex Bank: tekort van ${euro(shortfall)} op Stripe`,

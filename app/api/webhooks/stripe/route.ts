@@ -1,3 +1,4 @@
+import { alertOwnerLater } from "@/lib/ops/alert";
 import { NextResponse, after, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { InvoiceStatus, InvoiceType } from "@prisma/client";
@@ -209,7 +210,19 @@ async function notifyCardDecision(auth: Stripe.Issuing.Authorization, decision: 
  * from Stripe (success_url) is only a UX hint and never flips the invoice
  * itself, since async methods (iDEAL, SEPA Direct Debit) confirm later.
  */
+// Safety net: an unexpected error answers 500 (Stripe retries the event) AND
+// tells the owner — previously such failures were silent.
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    return await handleStripeWebhook(request);
+  } catch (err) {
+    logger.error("stripe webhook failed", { error: (err as Error).message });
+    alertOwnerLater({ key: "stripe-webhook", title: "Fout bij verwerken van een Stripe-betaling", detail: `Een Stripe-gebeurtenis kon niet verwerkt worden: ${(err as Error).message.slice(0, 160)}. Stripe probeert het automatisch opnieuw; controleer betalingen en de serverlogs.`, url: "/admin/stripe" });
+    return NextResponse.json({ error: "webhook processing failed" }, { status: 500 });
+  }
+}
+
+async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> {
   const log = logger.forRequest(request, { route: "POST /api/webhooks/stripe" });
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature");

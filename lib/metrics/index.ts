@@ -14,6 +14,14 @@ export function recordCronRun(job: string, ok: boolean): void {
   } catch {
     /* metrics are best-effort */
   }
+  if (!ok) {
+    // tell the owner (push + mail, deduped per job); lazy so this module stays light
+    void import("@/lib/ops/alert")
+      .then(({ alertOwner }) =>
+        alertOwner({ key: `cron:${job}`, title: `Geplande taak mislukt: ${job}`, detail: `De automatische taak "${job}" is mislukt. Details staan in de serverlogs; de volgende run probeert het opnieuw.`, url: "/admin/systeem" }),
+      )
+      .catch(() => undefined);
+  }
 }
 
 export function recordLoginFailure(): void {
