@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { platformAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
 import { feeDiscountPct } from "@/lib/rewards/levels";
+import { businessFeeDiscountPct } from "@/lib/rewards/business";
 
 // ---------------------------------------------------------------------------
 // What ZekerFlex Bank costs. The admin sets the amounts (/admin/bank). Fees
@@ -60,8 +61,13 @@ export async function chargeMonthlyFees(now = new Date()): Promise<{ charged: nu
   let charged = 0;
   let skipped = 0;
   for (const account of due) {
-    // Freelancer levels give a discount on the monthly fee (Platina+ free).
-    const discount = account.userId ? await feeDiscountPct(account.userId).catch(() => 0) : 0;
+    // Levels give a discount on the monthly fee (freelancer Platina+ and
+    // company Enterprise: free).
+    const discount = account.userId
+      ? await feeDiscountPct(account.userId).catch(() => 0)
+      : account.tenantId
+        ? await businessFeeDiscountPct(account.tenantId).catch(() => 0)
+        : 0;
     const amount = Math.round((monthlyFeeFor(account, fees) * (100 - discount)) / 100);
     const period = monthKey(account.nextFeeAt ?? now);
     try {

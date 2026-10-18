@@ -6,6 +6,7 @@ import { chargeMonthlyFees } from "@/lib/bank/fees";
 import { chargeDuePremiums } from "@/lib/bank/insurance";
 import { matureDeposits } from "@/lib/bank/pots";
 import { settleNegativeBalances } from "@/lib/bank/overdraft";
+import { runStandingOrders } from "@/lib/bank/standing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,9 +21,10 @@ async function handle(request: Request): Promise<NextResponse> {
     const fees = await chargeMonthlyFees();
     const premiums = await chargeDuePremiums();
     const deposits = await matureDeposits();
+    const standing = await runStandingOrders();
     const overdraft = await settleNegativeBalances();
     recordCronRun("bank-monthly-fees", true);
-    return NextResponse.json({ ok: true, fees, premiums, deposits, overdraft });
+    return NextResponse.json({ ok: true, fees, premiums, deposits, standing, overdraft });
   } catch (err) {
     recordCronRun("bank-monthly-fees", false);
     logger.error("bank monthly fees failed", { error: (err as Error).message });

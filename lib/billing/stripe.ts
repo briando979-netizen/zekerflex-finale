@@ -329,6 +329,39 @@ export async function transferToConnectedAccount(
  * Checkout Session that tops up a ZekerFlex Bank account. The webhook books
  * the credit (metadata.bankAccountId) — never the redirect back.
  */
+/** iDEAL/card for someone paying a ZekerFlex Bank betaalverzoek without an account. */
+export async function createBankRequestSession(input: {
+  requestId: string;
+  bankAccountId: string;
+  holderName: string;
+  amountCents: number;
+  description: string;
+}): Promise<Stripe.Checkout.Session> {
+  const stripe = getStripeClient();
+  const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
+  const metadata = { bankAccountId: input.bankAccountId, bankRequestId: input.requestId };
+  return stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: { name: `Betaalverzoek ${input.holderName}`.slice(0, 120), ...(input.description ? { description: input.description.slice(0, 200) } : {}) },
+            unit_amount: input.amountCents,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata,
+      payment_intent_data: { metadata },
+      success_url: `${baseUrl}/betaalverzoek/${input.requestId}?betaald=1`,
+      cancel_url: `${baseUrl}/betaalverzoek/${input.requestId}`,
+    },
+    { idempotencyKey: `zf-request:${input.requestId}:${Math.floor(Date.now() / 600_000)}` },
+  );
+}
+
 export async function createBankTopupSession(input: {
   bankAccountId: string;
   accountNumber: string;

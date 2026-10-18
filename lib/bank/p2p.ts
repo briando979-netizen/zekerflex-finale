@@ -120,6 +120,13 @@ export async function payRequest(id: string, payer: BankAccount): Promise<Paymen
   return paid;
 }
 
+/** Paid outside the bank (iDEAL via the webhook): only the status changes here. */
+export async function markRequestPaidExternally(id: string, payer: string): Promise<void> {
+  const r = await kvGet<PaymentRequest>(requestKey(id));
+  if (!r || r.status === "paid") return;
+  await kvSet(requestKey(id), { ...r, status: "paid", paidAt: new Date().toISOString(), paidBy: payer } satisfies PaymentRequest);
+}
+
 export async function cancelRequest(id: string, accountId: string): Promise<void> {
   const r = await getRequest(id);
   if (!r || r.accountId !== accountId) throw AppError.notFound("Betaalverzoek niet gevonden");

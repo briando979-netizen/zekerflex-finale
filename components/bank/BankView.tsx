@@ -6,10 +6,11 @@ import { BankPots, type Pot } from "@/components/bank/BankPots";
 import { BankForecast, BankInsights, type InsightsPayload } from "@/components/bank/BankInsights";
 import { BankInsurance, type InsuranceProduct, type Policy } from "@/components/bank/BankInsurance";
 import { BankPayments } from "@/components/bank/BankPayments";
+import { BankStanding } from "@/components/bank/BankStanding";
 import { BankAutoSave } from "@/components/bank/BankAutoSave";
 import { BankTax } from "@/components/bank/BankTax";
 import { BankAdvance } from "@/components/bank/BankAdvance";
-import { ReferralCard } from "@/components/rewards/RewardsCards";
+import { BusinessLevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 
 interface Account {
   id: string;
@@ -519,6 +520,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
 
           {bookings(8)}
 
+          {role === "organisation" && <BusinessLevelCard />}
           {role !== "platform" && <ReferralCard />}
         </div>
       )}
@@ -530,7 +532,12 @@ export function BankView({ returnPath }: { returnPath: string }) {
         </div>
       )}
 
-      {tab === "betalen" && <BankPayments canManage={canAct} balanceCents={account.balanceCents} onChanged={changed} />}
+      {tab === "betalen" && (
+        <div className="space-y-5">
+          <BankPayments canManage={canAct} balanceCents={account.balanceCents} onChanged={changed} />
+          <BankStanding pots={pots} canManage={canAct} onChanged={changed} />
+        </div>
+      )}
 
       {tab === "belasting" && <BankTax canManage={canAct} onChanged={changed} />}
 

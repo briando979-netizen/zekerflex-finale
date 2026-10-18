@@ -6,7 +6,7 @@ import { getPrincipal } from "@/lib/auth";
 import { getRequest } from "@/lib/bank/p2p";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { QrCode } from "@/components/billing/QrCode";
-import { PayRequestButton } from "@/components/bank/PayRequestButton";
+import { PayRequestButton, PayRequestIdealButton } from "@/components/bank/PayRequestButton";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Betaalverzoek", robots: { index: false, follow: false } };
@@ -15,8 +15,9 @@ const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", 
 
 // Public page behind a ZekerFlex Bank betaalverzoek link / QR. Paying needs a
 // ZekerFlex account (the money moves between two ZekerFlex Bank accounts).
-export default async function BetaalverzoekPage(props: { params: Promise<{ id: string }> }) {
+export default async function BetaalverzoekPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ betaald?: string }> }) {
   const { id } = await props.params;
+  const { betaald } = await props.searchParams;
   const r = await getRequest(id);
   if (!r) notFound();
   const principal = await getPrincipal();
@@ -37,16 +38,25 @@ export default async function BetaalverzoekPage(props: { params: Promise<{ id: s
             {r.description && <p className="mt-2 text-sm text-white/80">{r.description}</p>}
           </div>
           <div className="space-y-4 p-6">
-            {r.status === "paid" ? (
+            {r.status === "open" && betaald ? (
+              <p className="rounded-xl bg-ok/10 px-4 py-3 text-sm text-ink">
+                <span className="font-semibold text-ok">✓ Betaling ontvangen.</span> Binnen een minuut staat het verzoek op betaald. Bedankt!
+              </p>
+            ) : r.status === "paid" ? (
               <p className="rounded-xl bg-ok/10 px-4 py-3 text-sm font-semibold text-ok">✓ Betaald{r.paidBy ? ` door ${r.paidBy}` : ""}. Bedankt!</p>
             ) : r.status === "cancelled" ? (
               <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">Dit verzoek is verlopen of ingetrokken.</p>
             ) : principal ? (
-              <PayRequestButton id={r.id} label={`Betaal ${euro(r.amountCents)} met ZekerFlex Bank`} />
+              <>
+                <PayRequestButton id={r.id} label={`Betaal ${euro(r.amountCents)} met ZekerFlex Bank`} />
+                <PayRequestIdealButton id={r.id} label="Of betaal met iDEAL / kaart" subtle />
+              </>
             ) : (
               <>
-                <Link href={`/login?callbackUrl=${encodeURIComponent(`/betaalverzoek/${r.id}`)}`} className="btn-primary block w-full py-3 text-center text-base">
-                  Inloggen en betalen
+                <PayRequestIdealButton id={r.id} label={`Betaal ${euro(r.amountCents)} met iDEAL`} />
+                <p className="text-center text-xs text-neutralx-500">iDEAL · Apple Pay · Google Pay · kaart — veilig via Stripe</p>
+                <Link href={`/login?callbackUrl=${encodeURIComponent(`/betaalverzoek/${r.id}`)}`} className="block w-full rounded-xl border border-hairstrong py-2.5 text-center text-sm font-semibold text-ink">
+                  Inloggen en betalen met ZekerFlex Bank
                 </Link>
                 <p className="text-center text-xs text-neutralx-500">
                   Nog geen ZekerFlex?{" "}

@@ -19,6 +19,15 @@ interface Payload {
     stats: { completedShifts: number; reviewAverage: number; reviewCount: number };
   } | null;
   levels: Level[];
+  business: {
+    completedShifts: number;
+    reviewAverage: number;
+    reviewCount: number;
+    level: { id: string; name: string; emoji: string; minShifts: number; perks: string[] };
+    next: { name: string; emoji: string; minShifts: number } | null;
+    progressPct: number;
+  } | null;
+  businessLevels: { id: string; name: string; emoji: string; minShifts: number; perks: string[] }[];
   referral: { code: string; link: string; invited: number; rewarded: number; earnedCents: number; rewards: { referrerCents: number; newUserCents: number } };
 }
 
@@ -105,6 +114,63 @@ export function LevelCard() {
           </ul>
         )}
         <p className="text-[11px] text-neutralx-400">XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld, plus bonussen voor ZekerFlex Bank, potjes en een pas.</p>
+      </div>
+    </div>
+  );
+}
+
+/** Partner level for companies. */
+export function BusinessLevelCard() {
+  const data = useRewards();
+  const [open, setOpen] = useState(false);
+  const b = data?.business;
+  if (!b) return null;
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-4 bg-gradient-to-br from-[#1f1b4d] to-[#0E5C4A] p-5 text-white">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-3xl">{b.level.emoji}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Partnerniveau</span>
+          <span className="block font-display text-2xl font-bold">{b.level.name}</span>
+          <span className="block text-xs text-white/70">
+            {b.completedShifts.toLocaleString("nl-NL")} klussen afgerond{b.reviewCount ? ` · ${b.reviewAverage.toLocaleString("nl-NL")}★ (${b.reviewCount})` : ""}
+          </span>
+        </span>
+        {b.next && (
+          <div className="w-full">
+            <div className="h-2 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-mint to-white" style={{ width: `${b.progressPct}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-white/70">
+              Nog {(b.next.minShifts - b.completedShifts).toLocaleString("nl-NL")} klussen tot {b.next.emoji} {b.next.name}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="space-y-3 p-5 text-sm">
+        <ul className="space-y-1 text-ink">
+          {b.level.perks.map((p) => (
+            <li key={p}>✓ {p}</li>
+          ))}
+        </ul>
+        <button type="button" onClick={() => setOpen(!open)} className="text-xs font-semibold text-brand-600 hover:underline">
+          {open ? "Verberg alle niveaus" : "Bekijk alle niveaus"}
+        </button>
+        {open && (
+          <ul className="divide-y divide-hair rounded-xl border border-hair">
+            {data!.businessLevels.map((l) => (
+              <li key={l.id} className={`flex gap-3 px-4 py-2.5 ${l.id === b.level.id ? "bg-brand-50/60" : ""}`}>
+                <span className="text-xl">{l.emoji}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-ink">
+                    {l.name} <span className="text-xs font-normal text-neutralx-400">vanaf {l.minShifts.toLocaleString("nl-NL")} klussen</span>
+                  </span>
+                  <span className="block text-xs text-neutralx-500">{l.perks.join(" · ")}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

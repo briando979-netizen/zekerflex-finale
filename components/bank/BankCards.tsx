@@ -72,6 +72,7 @@ export function BankCards(props: {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
   const mounted = useRef<StripeElement[]>([]);
   const [form, setForm] = useState(() => {
     const [first = "", ...rest] = props.holderName.split(" ");
@@ -299,6 +300,11 @@ export function BankCards(props: {
                   )}
                   {canManage && c.status !== "canceled" && (
                     <>
+                      {c.status === "active" && (
+                        <button type="button" onClick={() => setWallet(wallet === c.id ? null : c.id)} className="font-semibold text-ink hover:underline">
+                          Apple/Google Pay
+                        </button>
+                      )}
                       <button type="button" disabled={busy} onClick={() => reveal(c)} className="font-semibold text-brand-600 hover:underline">
                         {revealed === c.id ? "Verbergen" : "Toon gegevens"}
                       </button>
@@ -311,6 +317,32 @@ export function BankCards(props: {
                     </>
                   )}
                 </div>
+                {wallet === c.id && (
+                  <div className="space-y-3 rounded-xl border border-hair bg-paper-soft/60 p-4 text-xs text-neutralx-700">
+                    <p className="text-sm font-semibold text-ink">Pas …{c.last4} toevoegen aan je telefoon</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <p className="font-semibold text-ink">📱 Apple Pay (iPhone)</p>
+                        <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                          <li>Tik hierboven op <strong>Toon gegevens</strong>.</li>
+                          <li>Open Wallet → <strong>+</strong> → Debit- of creditcard.</li>
+                          <li>Kies <strong>Voer kaartgegevens handmatig in</strong> en neem nummer, vervaldatum en CVC over.</li>
+                          <li>Bevestig met de code die je per sms of e-mail krijgt.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-ink">🤖 Google Pay (Android)</p>
+                        <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                          <li>Tik hierboven op <strong>Toon gegevens</strong>.</li>
+                          <li>Open Google Wallet → <strong>Toevoegen aan Wallet</strong> → Betaalkaart.</li>
+                          <li>Kies <strong>Handmatig invoeren</strong> en neem de gegevens over.</li>
+                          <li>Bevestig met de verificatiecode.</li>
+                        </ol>
+                      </div>
+                    </div>
+                    <p className="text-neutralx-500">Daarna betaal je contactloos met je telefoon of horloge — elke betaling gaat gewoon van je ZekerFlex Bank-saldo af en wordt aan je saldo getoetst.</p>
+                  </div>
+                )}
               </li>
             );
           })}

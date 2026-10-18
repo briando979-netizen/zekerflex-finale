@@ -8,6 +8,7 @@ import { constructWebhookEvent } from "@/lib/billing/stripe";
 import { claimIdempotency } from "@/lib/redis";
 import { book } from "@/lib/bank/ledger";
 import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
+import { markRequestPaidExternally } from "@/lib/bank/p2p";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
@@ -241,14 +242,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (session.payment_status !== "paid" || !session.amount_total) {
         return NextResponse.json({ ok: true, matched: false, paymentStatus: session.payment_status });
       }
+      const requestId = session.metadata?.bankRequestId;
+      const payer = session.customer_details?.name ?? session.customer_details?.email ?? null;
       const entry = await book(bankAccountId, {
         amountCents: session.amount_total,
-        kind: "TOPUP",
-        description: "Opwaardering via iDEAL/kaart",
-        counterparty: session.customer_details?.name ?? session.customer_details?.email ?? null,
-        reference: typeof session.payment_intent === "string" ? session.payment_intent : session.id,
-        idempotencyKey: `topup:${session.id}`,
+        kind: requestId ? "TRANSFER" : "TOPUP",
+        description: requestId ? `Betaalverzoek betaald via iDEAL${payer ? ` door ${payer}` : ""}` : "Opwaardering via iDEAL/kaart",
+        counterparty: payer,
+        reference: requestId ?? (typeof session.payment_intent === "string" ? session.payment_intent : session.id),
+        idempotencyKey: `${requestId ? "request-ideal" : "topup"}:${session.id}`,
       });
+      if (requestId) await markRequestPaidExternally(requestId, payer ?? "iDEAL");
       if (entry.created) {
         await recordAudit({
           category: "BILLING",
