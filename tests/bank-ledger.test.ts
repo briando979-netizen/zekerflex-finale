@@ -42,8 +42,10 @@ vi.mock("@/lib/prisma", () => {
         return { count: 1 };
       },
       update: async ({ where, data }: { where: { id: string }; data: Partial<Acc> }) => Object.assign(db.accounts.get(where.id)!, data),
-      findMany: async ({ where }: { where: { nextFeeAt: { lte: Date } } }) =>
-        [...db.accounts.values()].filter((a) => a.ownerType !== "PLATFORM" && a.nextFeeAt && a.nextFeeAt <= where.nextFeeAt.lte),
+      findMany: async ({ where }: { where: { nextFeeAt: { lte: Date }; id?: { gt: string } } }) =>
+        [...db.accounts.values()]
+          .filter((a) => a.ownerType !== "PLATFORM" && a.nextFeeAt && a.nextFeeAt <= where.nextFeeAt.lte && (!where.id || a.id > where.id.gt))
+          .sort((x, y) => (x.id < y.id ? -1 : 1)),
     },
     bankEntry: {
       findUnique: async ({ where }: { where: { idempotencyKey: string } }) => db.entries.find((e) => e.idempotencyKey === where.idempotencyKey) ?? null,
@@ -67,6 +69,13 @@ vi.mock("@/lib/prisma", () => {
   return { prisma };
 });
 vi.mock("@/lib/storage/kv", () => ({
+  kvFindByField: async (prefix: string, field: string, eq: string) =>
+    [...kv.entries()].filter(([k, v]) => k.startsWith(prefix) && (v as Record<string, unknown>)?.[field] === eq).map(([, v]) => v),
+  kvFindDue: async (prefix: string, field: string, before: string, after = "") =>
+    [...kv.entries()]
+      .filter(([k, v]) => k.startsWith(prefix) && k > after && String((v as Record<string, unknown>)?.[field] ?? "~") <= before)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([key, value]) => ({ key, value })),
   kvGet: async (k: string) => kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void kv.set(k, v),
   kvListValues: async (prefix: string) => [...kv.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v),

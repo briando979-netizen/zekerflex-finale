@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { BankAccount } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvFindByField, kvGet, kvSet } from "@/lib/storage/kv";
 import { transfer } from "@/lib/bank/ledger";
 import { checkLowBalance, notifyIncoming } from "@/lib/bank/notify";
 
@@ -98,7 +98,7 @@ export async function getRequest(id: string): Promise<PaymentRequest | null> {
 }
 
 export async function listRequests(accountId: string): Promise<PaymentRequest[]> {
-  return (await kvListValues<PaymentRequest>("bank-request:", 5000)).filter((r) => r.accountId === accountId).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return (await kvFindByField<PaymentRequest>("bank-request:", "accountId", accountId, 100)).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 export async function payRequest(id: string, payer: BankAccount): Promise<PaymentRequest> {

@@ -1,4 +1,4 @@
-import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvFindByField, kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
@@ -61,7 +61,10 @@ export async function requestWithdrawal(input: { accountId: string; amountCents:
 }
 
 export async function listWithdrawals(filter?: { accountId?: string; status?: WithdrawalStatus[] }): Promise<Withdrawal[]> {
-  const rows = await kvListValues<Withdrawal>("bank-withdrawal:", 5000);
+  // Per account, or by status for the admin/batch — both filtered in Postgres.
+  const rows = filter?.accountId
+    ? await kvFindByField<Withdrawal>("bank-withdrawal:", "accountId", filter.accountId, 200)
+    : (await Promise.all((filter?.status ?? ["pending", "exported", "paid", "reversed"]).map((s) => kvFindByField<Withdrawal>("bank-withdrawal:", "status", s, 5000)))).flat();
   return rows
     .filter((w) => (!filter?.accountId || w.accountId === filter.accountId) && (!filter?.status || filter.status.includes(w.status)))
     .sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1));

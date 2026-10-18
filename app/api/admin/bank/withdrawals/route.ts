@@ -3,12 +3,24 @@ import { z } from "zod";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { recordAudit } from "@/lib/audit";
 import { exportPendingWithdrawals, markWithdrawalPaid, reverseWithdrawal } from "@/lib/bank/withdrawals";
+import { kvGet } from "@/lib/storage/kv";
+import { AppError } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/admin/bank/withdrawals — download every pending withdrawal as one SEPA batch (pain.001).
-export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal }) => {
+// GET /api/admin/bank/withdrawals — download every pending withdrawal as one SEPA batch (pain.001),
+// or ?batch=<date> — the batch the daily job already prepared (link in the finance mail).
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal }) => {
+  const prepared = new URL(req.url).searchParams.get("batch");
+  if (prepared) {
+    if (!/^[\w-]{10,40}$/.test(prepared)) throw AppError.validation("Ongeldige batch");
+    const b = await kvGet<{ xml: string }>(`bank-sepa-batch:${prepared}`);
+    if (!b) throw AppError.notFound("Batch niet gevonden");
+    return new NextResponse(b.xml, {
+      headers: { "Content-Type": "application/xml; charset=utf-8", "Content-Disposition": `attachment; filename="zekerflex-bank-opnames-${prepared}.xml"` },
+    });
+  }
   const { xml, count, totalCents, skipped } = await exportPendingWithdrawals();
   await recordAudit({
     category: "BILLING",

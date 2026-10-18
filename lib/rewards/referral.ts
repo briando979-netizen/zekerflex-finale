@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { BankAccount } from "@prisma/client";
 import { logger } from "@/lib/logger";
-import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvFindByField, kvGet, kvSet } from "@/lib/storage/kv";
 import { platformAccount, personalAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
 import { prisma } from "@/lib/prisma";
@@ -120,7 +120,7 @@ export async function rewardReferral(newUserId: string, newUserAccount: BankAcco
 }
 
 export async function referralStats(userId: string): Promise<{ invited: number; rewarded: number; earnedCents: number }> {
-  const all = (await kvListValues<Referral>("ref-by:", 10_000)).filter((r) => r.referrerId === userId);
+  const all = await kvFindByField<Referral>("ref-by:", "referrerId", userId, 10_000);
   const rewarded = all.filter((r) => r.rewardedAt).length;
   return { invited: all.length, rewarded, earnedCents: rewarded * (await getRewards()).referrerCents };
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvFindByField, kvFindDue, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { platformAccount } from "@/lib/bank/accounts";
@@ -81,8 +81,8 @@ export function productsFor(products: InsuranceProduct[], role: "personal" | "or
 }
 
 export async function listPolicies(filter?: { accountId?: string }): Promise<Policy[]> {
-  const rows = await kvListValues<Policy>("bank-ins-policy:", 5000);
-  return rows.filter((p) => !filter?.accountId || p.accountId === filter.accountId).sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1));
+  const rows = filter?.accountId ? await kvFindByField<Policy>("bank-ins-policy:", "accountId", filter.accountId, 100) : await kvListValues<Policy>("bank-ins-policy:", 5000);
+  return rows.sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1));
 }
 
 export async function requestPolicy(input: { accountId: string; holderName: string; userId: string; role: "personal" | "organisation"; productId: string }): Promise<Policy> {
@@ -166,8 +166,14 @@ export async function cancelPolicy(id: string, accountId: string | null): Promis
 }
 
 /** Daily: collect premiums that are due. */
-export async function chargeDuePremiums(now = new Date()): Promise<{ charged: number; arrears: number }> {
-  const due = (await listPolicies()).filter((p) => p.status === "active" && p.nextPremiumAt && new Date(p.nextPremiumAt) <= now);
+export async function chargeDuePremiums(now = new Date(), deadline = Date.now() + 240_000): Promise<{ charged: number; arrears: number }> {
+  const due: Policy[] = [];
+  for (let after = ""; Date.now() < deadline; ) {
+    const page = await kvFindDue<Policy>("bank-ins-policy:", "nextPremiumAt", now.toISOString(), after, 500);
+    if (page.length === 0) break;
+    after = page.at(-1)!.key;
+    due.push(...page.map((p) => p.value).filter((p) => p.status === "active"));
+  }
   let charged = 0;
   let arrears = 0;
   for (const p of due) {

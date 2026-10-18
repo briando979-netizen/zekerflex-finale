@@ -58,6 +58,38 @@ export async function kvListEntries<T>(prefix: string, limit = 1000): Promise<{ 
   return rows.map((r) => ({ key: r.key, value: r.value as T }));
 }
 
+const likePrefix = (prefix: string) => `${prefix.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+
+/**
+ * Values under `prefix` whose top-level JSON `field` equals `equals` —
+ * filtered in Postgres, so it stays correct and fast with millions of rows
+ * (unlike kvListValues + a JS filter, which silently misses rows past its
+ * limit). Backed by expression indexes for the hot fields (accountId,
+ * referrerId, status) — see migration 20261018120000_scale_indexes.
+ */
+export async function kvFindByField<T>(prefix: string, field: string, equals: string, limit = 500): Promise<T[]> {
+  const rows = await prisma.$queryRaw<{ value: unknown }[]>`
+    SELECT value FROM "KeyValueStore"
+    WHERE key LIKE ${likePrefix(prefix)} AND value->>${field} = ${equals}
+    ORDER BY "updatedAt" DESC
+    LIMIT ${limit}`;
+  return rows.map((r) => r.value as T);
+}
+
+/**
+ * Values under `prefix` whose ISO-date `field` is due (<= `beforeIso`),
+ * oldest first — for the daily jobs, which page through with `afterKey`.
+ * ISO-8601 strings sort chronologically, so a text comparison is exact.
+ */
+export async function kvFindDue<T>(prefix: string, field: string, beforeIso: string, afterKey = "", limit = 500): Promise<{ key: string; value: T }[]> {
+  const rows = await prisma.$queryRaw<{ key: string; value: unknown }[]>`
+    SELECT key, value FROM "KeyValueStore"
+    WHERE key LIKE ${likePrefix(prefix)} AND key > ${afterKey} AND value->>${field} <= ${beforeIso}
+    ORDER BY key
+    LIMIT ${limit}`;
+  return rows.map((r) => ({ key: r.key, value: r.value as T }));
+}
+
 /**
  * Read-modify-write append to a JSON array stored at `key`. Not a true atomic
  * append under heavy concurrency (same limitation the original appendFile-to-

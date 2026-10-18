@@ -1,6 +1,6 @@
 import type { BankAccount } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { kvListValues } from "@/lib/storage/kv";
+import { kvFindByField } from "@/lib/storage/kv";
 import { getFees, monthlyFeeFor } from "@/lib/bank/fees";
 import { upcomingPremiums } from "@/lib/bank/insurance";
 import { getPayoutDestination } from "@/lib/bank/earnings";
@@ -106,7 +106,7 @@ export async function buildForecast(account: BankAccount, horizonDays = 30, now 
   const items: ForecastItem[] = [];
 
   // Reservations: card holds that haven't settled yet.
-  const holds = (await kvListValues<{ accountId: string; heldCents: number }>("bank-card-hold:", 5000)).filter((h) => h.accountId === account.id && h.heldCents > 0);
+  const holds = (await kvFindByField<{ accountId: string; heldCents: number }>("bank-card-hold:", "accountId", account.id, 1000)).filter((h) => h.heldCents > 0);
   const reservations = holds.length ? [{ label: `Pasbetalingen in behandeling (${holds.length})`, amountCents: holds.reduce((s, h) => s + h.heldCents, 0) }] : [];
 
   // Expected earnings: accepted, upcoming shifts — only when they land here.

@@ -6,6 +6,13 @@ const movePot = vi.hoisted(() => vi.fn());
 const db = vi.hoisted(() => ({ accounts: [] as Record<string, unknown>[], sentToday: 0, pots: [] as Record<string, unknown>[] }));
 
 vi.mock("@/lib/storage/kv", () => ({
+  kvFindByField: async (prefix: string, field: string, eq: string) =>
+    [...kv.entries()].filter(([k, v]) => k.startsWith(prefix) && (v as Record<string, unknown>)?.[field] === eq).map(([, v]) => v),
+  kvFindDue: async (prefix: string, field: string, before: string, after = "") =>
+    [...kv.entries()]
+      .filter(([k, v]) => k.startsWith(prefix) && k > after && String((v as Record<string, unknown>)?.[field] ?? "~") <= before)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([key, value]) => ({ key, value })),
   kvGet: async (k: string) => kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void kv.set(k, v),
   kvListValues: async (prefix: string) => [...kv.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v),

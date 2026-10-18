@@ -51,13 +51,31 @@ export function monthlyFeeFor(account: Pick<BankAccount, "ownerType">, fees: Ban
 const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
 /** Daily: charge every account whose monthly fee is due. */
-export async function chargeMonthlyFees(now = new Date()): Promise<{ charged: number; skipped: number }> {
+export async function chargeMonthlyFees(now = new Date(), deadline = Date.now() + 240_000): Promise<{ charged: number; skipped: number }> {
   const fees = await getFees();
   const platform = await platformAccount();
-  const due = await prisma.bankAccount.findMany({
-    where: { ownerType: { not: "PLATFORM" }, nextFeeAt: { lte: now } },
-    take: 1000,
-  });
+  let charged = 0;
+  let skipped = 0;
+  // Paged by id so every due account is reached (and one that can't pay yet
+  // doesn't make the loop spin); stops at the deadline, the next run resumes.
+  let cursor: string | undefined;
+  for (;;) {
+    if (Date.now() > deadline) break;
+    const due = await prisma.bankAccount.findMany({
+      where: { ownerType: { not: "PLATFORM" }, nextFeeAt: { lte: now }, ...(cursor ? { id: { gt: cursor } } : {}) },
+      orderBy: { id: "asc" },
+      take: 500,
+    });
+    if (due.length === 0) break;
+    cursor = due.at(-1)!.id;
+    const r = await chargeBatch(due, fees, platform.id, now);
+    charged += r.charged;
+    skipped += r.skipped;
+  }
+  return { charged, skipped };
+}
+
+async function chargeBatch(due: BankAccount[], fees: BankFees, platformId: string, now: Date): Promise<{ charged: number; skipped: number }> {
   let charged = 0;
   let skipped = 0;
   for (const account of due) {
@@ -74,7 +92,7 @@ export async function chargeMonthlyFees(now = new Date()): Promise<{ charged: nu
       if (amount > 0) {
         await transfer({
           fromAccountId: account.id,
-          toAccountId: platform.id,
+          toAccountId: platformId,
           amountCents: amount,
           kind: "FEE_MONTHLY",
           description: `Maandkosten ZekerFlex Bank ${period}`,

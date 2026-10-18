@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvFindByField, kvFindDue, kvGet, kvSet } from "@/lib/storage/kv";
 import { findByNumber, sendMoney } from "@/lib/bank/p2p";
 import { movePot } from "@/lib/bank/pots";
 import { notifyBank } from "@/lib/bank/notify";
@@ -43,7 +43,7 @@ function advance(d: Date, interval: Interval): Date {
 }
 
 export async function listStanding(accountId: string): Promise<StandingOrder[]> {
-  return (await kvListValues<StandingOrder>("bank-standing:", 5000)).filter((o) => o.accountId === accountId).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+  return (await kvFindByField<StandingOrder>("bank-standing:", "accountId", accountId, 100)).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
 }
 
 export async function createStanding(input: {
@@ -88,9 +88,23 @@ export async function updateStanding(id: string, accountId: string, patch: { act
   await kvSet(key(id), { ...o, active: patch.delete ? false : (patch.active ?? o.active), ...(patch.delete ? { nextRunAt: "9999-12-31T00:00:00.000Z", lastError: "verwijderd" } : {}) });
 }
 
-/** Daily: run every due, active order. */
-export async function runStandingOrders(now = new Date()): Promise<{ ran: number; failed: number }> {
-  const due = (await kvListValues<StandingOrder>("bank-standing:", 10_000)).filter((o) => o.active && new Date(o.nextRunAt) <= now);
+/** Daily: run every due, active order — paged, so it scales to any number of orders. */
+export async function runStandingOrders(now = new Date(), deadline = Date.now() + 240_000): Promise<{ ran: number; failed: number }> {
+  let ran = 0;
+  let failed = 0;
+  let after = "";
+  for (;;) {
+    const page = await kvFindDue<StandingOrder>("bank-standing:", "nextRunAt", now.toISOString(), after, 500);
+    if (page.length === 0 || Date.now() > deadline) break;
+    after = page.at(-1)!.key;
+    const r = await runOrders(page.map((p) => p.value).filter((o) => o.active), now);
+    ran += r.ran;
+    failed += r.failed;
+  }
+  return { ran, failed };
+}
+
+async function runOrders(due: StandingOrder[], now: Date): Promise<{ ran: number; failed: number }> {
   let ran = 0;
   let failed = 0;
   for (const o of due) {
