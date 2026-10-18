@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import "./globals.css";
+import { fontVariables } from "@/lib/fonts";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
@@ -88,19 +89,7 @@ export default async function RootLayout({
   // bootstrap scripts and the strict CSP would then block them.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="nl">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
-        />
-      </head>
+    <html lang="nl" className={fontVariables}>
       <body>
         <script
           type="application/ld+json"

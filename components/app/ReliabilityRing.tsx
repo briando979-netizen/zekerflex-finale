@@ -41,7 +41,7 @@ export function ReliabilityRing({
           strokeDasharray={`${dash} ${circ}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-        <text x="50%" y="48%" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="18" fontWeight="600" fill="currentColor">
+        <text x="50%" y="48%" textAnchor="middle" fontFamily="var(--font-mono), monospace" fontSize="18" fontWeight="600" fill="currentColor">
           {pct}
         </text>
         <text x="50%" y="64%" textAnchor="middle" fontSize="8" fill="#8A93A0">

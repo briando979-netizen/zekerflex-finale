@@ -35,8 +35,9 @@ describe("buildContentSecurityPolicy — production", () => {
   });
 
   it("still allows the Google Fonts stylesheet + inline style (documented trade-off)", () => {
-    expect(csp).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
-    expect(csp).toContain("font-src 'self' https://fonts.gstatic.com");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("fonts.googleapis.com"); // fonts are self-hosted (lib/fonts.ts)
+    expect(csp).toContain("font-src 'self'");
   });
 });
 
