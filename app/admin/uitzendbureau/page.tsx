@@ -1,5 +1,6 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { APageHeader, APanel, APill, AStat } from "@/components/admin/ui";
+import { APageHeader, APanel, AStat } from "@/components/admin/ui";
+import { UitzendConsole } from "@/components/admin/UitzendConsole";
 import { getUitzendbureauOverview } from "@/lib/uitzendbureau/admin";
 
 export const dynamic = "force-dynamic";
@@ -85,40 +86,7 @@ export default async function UitzendbureauAdminPage() {
       </APanel>
 
       <div className="mt-6">
-        <APanel
-          title="Aanvragen"
-          subtitle="Binnengekomen via het contactformulier op /uitzendbureau."
-          action={<span className="text-xs" style={{ color: "var(--a-mute)" }}>{leads.length}</span>}
-        >
-          {leads.length === 0 ? (
-            <p className="py-6 text-center text-sm" style={{ color: "var(--a-mute)" }}>
-              Nog geen aanvragen binnengekomen.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {leads.map((l) => (
-                <div key={l.id} className="rounded-xl px-4 py-3" style={{ background: "var(--a-elev)" }}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
-                      {l.companyName}
-                    </p>
-                    <APill tone={STATUS_TONE[l.status] ?? "neutral"}>{STATUS_LABEL[l.status] ?? l.status}</APill>
-                  </div>
-                  <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>
-                    {l.contactName ?? "—"}
-                    {l.contactEmail ? ` · ${l.contactEmail}` : ""}
-                    {l.contactPhone ? ` · ${l.contactPhone}` : ""} · {nlDateTime(l.createdAt)}
-                  </p>
-                  {l.notes && (
-                    <p className="mt-1.5 whitespace-pre-wrap text-xs" style={{ color: "var(--a-dim)" }}>
-                      {l.notes}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </APanel>
+        <UitzendConsole />
       </div>
     </div>
   );

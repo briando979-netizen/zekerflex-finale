@@ -192,6 +192,8 @@ export interface UitzendInvoiceInput {
   shiftTitle: string;
   workedOn: Date;
   invoiceNumber: string;
+  /** Opslag agreed with this client (lib/uitzendbureau/insights.ts); default env.UITZEND_MARKUP_RATE. */
+  markupRate?: number;
 }
 
 /**
@@ -212,7 +214,8 @@ export function buildUitzendInvoice(input: UitzendInvoiceInput): ComputedInvoice
   const vat = resolveVat("NL", input.recipientCountry, false);
 
   const wageCents = round(hours * input.hourlyRateCents);
-  const markupCents = round(wageCents * env.UITZEND_MARKUP_RATE);
+  const markupRate = input.markupRate ?? env.UITZEND_MARKUP_RATE;
+  const markupCents = round(wageCents * markupRate);
 
   return assemble(
     {
@@ -231,7 +234,7 @@ export function buildUitzendInvoice(input: UitzendInvoiceInput): ComputedInvoice
         unitPriceCents: input.hourlyRateCents,
       },
       {
-        description: `ZekerFlex uitzendopslag (${Math.round(env.UITZEND_MARKUP_RATE * 100)}% — werkgeverslasten en bemiddeling)`,
+        description: `ZekerFlex uitzendopslag (${Math.round(markupRate * 100)}% — werkgeverslasten en bemiddeling)`,
         quantityHours: 1,
         unitPriceCents: markupCents,
       },

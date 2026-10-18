@@ -31,6 +31,7 @@ import { accountForPrincipal } from "@/lib/bank/accounts";
 import { rewardReferral } from "@/lib/rewards/referral";
 import { getFastPay } from "@/lib/payouts/fastpay";
 import { feePerHourFor, monthHoursFor, tierFor } from "@/lib/pricing/volume";
+import { markupFor } from "@/lib/uitzendbureau/insights";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -559,6 +560,8 @@ async function approveViaPayroll(args: {
     throw AppError.precondition("Platform tenant is not configured");
   }
 
+  // The opslag agreed with this client (falls back to the default rate).
+  const markupRate = await markupFor(ts.branch.tenantId);
   const { uitzendInvoice } = await prisma.$transaction(async (tx) => {
     await tx.timesheet.update({
       where: { id: ts.id },
@@ -600,6 +603,7 @@ async function approveViaPayroll(args: {
       shiftTitle: `Shift @ ${ts.branch.name}`,
       workedOn: ts.scheduledStart,
       invoiceNumber,
+      markupRate,
     });
     const uitzendInvoice = await persistInvoice(tx, computed);
     return { uitzendInvoice };
