@@ -7,6 +7,7 @@ import { chargeDuePremiums } from "@/lib/bank/insurance";
 import { matureDeposits } from "@/lib/bank/pots";
 import { settleNegativeBalances } from "@/lib/bank/overdraft";
 import { runStandingOrders } from "@/lib/bank/standing";
+import { runScheduledPayouts } from "@/lib/payouts/execute";
 import { autoRisk, autoSepaBatch, coverageCheck } from "@/lib/bank/automation";
 
 export const runtime = "nodejs";
@@ -25,6 +26,8 @@ async function handle(request: Request): Promise<NextResponse> {
     const premiums = await chargeDuePremiums();
     const deposits = await matureDeposits();
     const standing = await runStandingOrders();
+    // Freelancers who chose payout "within 3 working days".
+    const scheduledPayouts = await runScheduledPayouts().catch((e) => ({ error: (e as Error).message }));
     const overdraft = await settleNegativeBalances();
     // Self-running: risk first (a frozen account's withdrawal still pays out,
     // but no new money moves), then the SEPA batch, then the coverage check.
@@ -32,7 +35,7 @@ async function handle(request: Request): Promise<NextResponse> {
     const sepa = await autoSepaBatch().catch((e) => ({ error: (e as Error).message }));
     const coverage = await coverageCheck().catch((e) => ({ error: (e as Error).message }));
     recordCronRun("bank-monthly-fees", true);
-    return NextResponse.json({ ok: true, fees, premiums, deposits, standing, overdraft, risk, sepa, coverage });
+    return NextResponse.json({ ok: true, fees, premiums, deposits, standing, scheduledPayouts, overdraft, risk, sepa, coverage });
   } catch (err) {
     recordCronRun("bank-monthly-fees", false);
     logger.error("bank monthly fees failed", { error: (err as Error).message });

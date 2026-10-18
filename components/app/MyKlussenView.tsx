@@ -290,7 +290,7 @@ function HistoryFooter({ item, onHide }: { item: MyWorkItem; onHide: (workKey: s
       return (
         <div>
           <p className="text-sm font-semibold text-ink">Je uren zijn goedgekeurd 🕊️</p>
-          <p className="mt-0.5 text-xs text-neutralx-500">Je krijgt betaald binnen 1 minuut.</p>
+          <p className="mt-0.5 text-xs text-neutralx-500">Je wordt betaald volgens je gekozen uitbetaling (direct, binnen 3 werkdagen of zodra de opdrachtgever betaalt).</p>
         </div>
       );
     case "SUBMITTED":

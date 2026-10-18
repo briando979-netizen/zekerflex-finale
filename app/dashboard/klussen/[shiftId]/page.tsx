@@ -797,7 +797,7 @@ function WorkStatusHeader({
       <>
         <h2 className="font-display text-xl font-bold text-ink">Je uren zijn goedgekeurd 🕊️</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-          {payroll ? advLine : "Je krijgt betaald binnen 1 minuut."}
+          {payroll ? advLine : "Je wordt betaald volgens je gekozen uitbetaling: direct, binnen 3 werkdagen of zodra de opdrachtgever betaalt."}
         </p>
       </>
     );

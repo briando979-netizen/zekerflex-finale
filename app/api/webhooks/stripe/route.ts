@@ -9,6 +9,7 @@ import { claimIdempotency } from "@/lib/redis";
 import { book } from "@/lib/bank/ledger";
 import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
 import { markRequestPaidExternally } from "@/lib/bank/p2p";
+import { payOnClientPayment } from "@/lib/payouts/execute";
 import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
@@ -61,6 +62,11 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
         stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
       },
     });
+    // The client paid the freelancer's (self-billed) invoice: a freelancer
+    // who chose "wait for the client" is paid in full now.
+    if (invoice.type === InvoiceType.SELF_BILL_FREELANCER) {
+      await payOnClientPayment(invoice.id).catch((err) => logger.error("payout on client payment failed", { invoiceId: invoice.id, error: (err as Error).message }));
+    }
     await recordAudit({
       category: "BILLING",
       action: "invoice.paid",

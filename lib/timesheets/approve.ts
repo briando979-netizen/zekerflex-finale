@@ -26,7 +26,7 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isoWeekOf, isoWeekId, isoWeekLabel } from "@/lib/payroll/week";
 import { createPayrollAdvance } from "@/lib/payouts/advances";
 import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
-import { settleBankAdvances } from "@/lib/bank/advance";
+import { dispatchPayout } from "@/lib/payouts/execute";
 import { accountForPrincipal } from "@/lib/bank/accounts";
 import { rewardReferral } from "@/lib/rewards/referral";
 import { getFastPay } from "@/lib/payouts/fastpay";
@@ -335,75 +335,21 @@ export async function approveTimesheet(
       payoutCents: persisted.billing.freelancerPayoutCents,
     });
 
-    // --- Instant SEPA payout (outside the DB transaction) ------------
-    let payoutStatus = persisted.payment.status;
-    let providerRef: string | null = null;
-    try {
-      const result = toBank
-        ? await creditEarning({
-            userId: ts.freelancer.userId,
-            holderName: ts.freelancer.user.fullName,
-            amountCents: persisted.payment.amountCents,
-            description: `Verdiensten ${persisted.freelancerInvoice.number}`,
-            counterparty: ts.branch.tenant.name,
-            reference: persisted.freelancerInvoice.number,
-            idempotencyKey: `earning:${persisted.freelancerInvoice.id}`,
-          }).then(async ({ entry }) => {
-            await settleBankAdvances(ts.freelancer.userId, ts.freelancer.user.fullName);
-            return entry;
-          }).then((entry) => ({
-            status: PaymentStatus.SETTLED,
-            providerRef: `zfbank:${entry.id}`,
-            acceptedAt: new Date().toISOString(),
-            failureCode: undefined,
-          }))
-        : await triggerInstantPayout({
-        endToEndId: persisted.payment.endToEndId,
-        amountCents: persisted.payment.amountCents,
-        currency: "EUR",
-        creditorIban: iban,
-        creditorName: ts.freelancer.user.fullName,
-        remittanceInfo: `ZekerFlex ${persisted.freelancerInvoice.number}`,
-        stripeConnectedAccountId: ts.freelancer.stripePayoutsEnabled
-          ? ts.freelancer.stripeConnectedAccountId
-          : null,
-      });
-      payoutStatus = result.status;
-      providerRef = result.providerRef;
-
-      await prisma.payment.update({
-        where: { id: persisted.payment.id },
-        data: {
-          status: result.status,
-          providerRef: result.providerRef,
-          submittedAt: result.acceptedAt ? new Date(result.acceptedAt) : new Date(),
-          settledAt:
-            result.status === PaymentStatus.SETTLED ? new Date() : null,
-          failureCode: result.failureCode ?? null,
-        },
-      });
-
-      if (result.status === PaymentStatus.SETTLED) {
-        await prisma.$transaction([
-          prisma.invoice.update({
-            where: { id: persisted.freelancerInvoice.id },
-            data: { status: InvoiceStatus.PAID },
-          }),
-          prisma.timesheet.update({
-            where: { id: ts.id },
-            data: { status: TimesheetStatus.PAID },
-          }),
-        ]);
-      }
-    } catch (err) {
-      payoutStatus = PaymentStatus.FAILED;
-      const message = err instanceof AppError ? err.message : "Payout error";
-      await prisma.payment.update({
-        where: { id: persisted.payment.id },
-        data: { status: PaymentStatus.FAILED, failureCode: message.slice(0, 120) },
-      });
-      log.error("instant payout failed; queued for retry", { error: message });
-    }
+    // --- Payout (outside the DB transaction) ---------------------------
+    // Per the money model: instant (4%) / 3 working days (2%) only when this
+    // client offers fast payout and the freelancer accepted the terms;
+    // otherwise paid in full once the client pays. The client's invoice
+    // stays open either way — it's ZekerFlex that gets paid by the client.
+    const dispatched = await dispatchPayout({
+      paymentId: persisted.payment.id,
+      invoiceId: persisted.freelancerInvoice.id,
+      userId: ts.freelancer.userId,
+      tenantId: ts.branch.tenantId,
+      amountCents: persisted.payment.amountCents,
+    });
+    const payoutStatus = dispatched.status;
+    const providerRef = dispatched.providerRef;
+    if (payoutStatus === PaymentStatus.FAILED) log.error("payout failed; queued for retry", { paymentId: persisted.payment.id });
 
     await recordAudit({
       category: "TIMESHEET",

@@ -95,6 +95,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.conflict("Er is al een voorschotaanvraag in verwerking. Probeer het over een paar seconden opnieuw.");
     }
 
+    // An advance is paid out and settled through ZekerFlex Bank (credited now,
+    // booked back from the next earnings). Via a plain IBAN there is no way
+    // to settle it, so don't create a request nothing would ever act on.
+    if (!(await canAdvanceToBank(p.userId))) {
+      throw AppError.precondition("Een voorschot kan als je verdiensten op ZekerFlex Bank ontvangt (Bank → Instellingen). Dan staat het direct op je rekening en wordt het met je volgende uitbetaling verrekend.");
+    }
     const overview = await getFreelancerOverview(p.userId);
     try {
       const advance = await requestAdvance(p.userId, amountCents, overview.kpis.pendingPayoutCents);
