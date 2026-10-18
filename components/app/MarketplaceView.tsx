@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
+import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
 import { ShiftMiniMap } from "@/components/app/ShiftMiniMap";
 import { ShiftCard, ShiftStatusButton } from "@/components/app/ShiftCard";
 import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
@@ -141,7 +142,8 @@ export function MarketplaceView({
   const [q, setQ] = useState(initialQuery);
   const [minRate, setMinRate] = useState<number>(defaultMinRateCents ? Math.round(defaultMinRateCents / 100) : 0);
   const [dayparts, setDayparts] = useState<Set<string>>(new Set());
-  const [skill, setSkill] = useState("");
+  // Branches (sectors) — multi-select over the full list, not just what happens to be on screen.
+  const [branches, setBranches] = useState<Set<ShiftCategoryKey>>(new Set());
   const [quick, setQuick] = useState<Set<string>>(new Set());
   const [dates, setDates] = useState<Set<string>>(new Set());
   const [openChip, setOpenChip] = useState<string | null>(null);
@@ -184,13 +186,13 @@ export function MarketplaceView({
     ...(home ? [{ k: "near" as Sort, l: "Dichtstbij" }] : []),
   ];
   const activeFilters =
-    quick.size + dates.size + dayparts.size + (minRate ? 1 : 0) + (skill ? 1 : 0) + (loc ? 1 : 0);
+    quick.size + dates.size + dayparts.size + (minRate ? 1 : 0) + (branches.size ? 1 : 0) + (loc ? 1 : 0);
   function clearAll() {
     setQuick(new Set());
     setDates(new Set());
     setDayparts(new Set());
     setMinRate(0);
-    setSkill("");
+    setBranches(new Set());
     setLoc(null);
     setQ("");
   }
@@ -204,10 +206,12 @@ export function MarketplaceView({
     }).catch(() => undefined);
   }, []);
 
-  const skills = useMemo(
-    () => [...new Set(shifts.map((s) => s.skill).filter(Boolean))] as string[],
-    [shifts],
-  );
+  const categoryOf = useMemo(() => new Map(shifts.map((s) => [s.id, shiftCategory(s.title, s.skill).key])), [shifts]);
+  const branchCounts = useMemo(() => {
+    const c = new Map<ShiftCategoryKey, number>();
+    for (const k of categoryOf.values()) c.set(k, (c.get(k) ?? 0) + 1);
+    return c;
+  }, [categoryOf]);
 
   const filtered = useMemo(() => {
     let out = shifts.filter((s) => {
@@ -216,7 +220,7 @@ export function MarketplaceView({
       if (minRate && s.hourlyRateCents < minRate * 100) return false;
       if (loc && loc.maxKm < 60 && haversineKm(loc, { lat: s.branchLat, lng: s.branchLng }) > loc.maxKm) return false;
       if (dayparts.size && !dayparts.has(s.daypart)) return false;
-      if (skill && s.skill !== skill) return false;
+      if (branches.size && !branches.has(categoryOf.get(s.id) ?? "algemeen")) return false;
       const d = new Date(s.startsAt);
       if (quick.has("favorites") && s.workedHereBefore <= 0) return false;
       if (quick.has("replacement") && !s.isReplacement) return false;
@@ -232,7 +236,7 @@ export function MarketplaceView({
       return a.startsAt < b.startsAt ? -1 : 1;
     });
     return out;
-  }, [shifts, q, minRate, loc, dayparts, skill, sort, quick, dates, hidden]);
+  }, [shifts, q, minRate, loc, dayparts, branches, categoryOf, sort, quick, dates, hidden]);
 
   const Chip = ({ id, label, count, active }: { id: string; label: string; count?: number; active?: boolean }) => {
     const on = openChip === id || Boolean(count) || active;
@@ -290,7 +294,7 @@ export function MarketplaceView({
             {loc && <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">1</span>}
             <span className="text-[9px]" aria-hidden>▾</span>
           </button>
-          {skills.length > 0 && <Chip id="branch" label="Branches" active={Boolean(skill)} />}
+          <Chip id="branch" label="Branches" count={branches.size} />
           <button
             type="button"
             onClick={() => setView((v) => (v === "map" ? "list" : "map"))}
@@ -373,21 +377,43 @@ export function MarketplaceView({
                 Locatie & afstand{loc ? ` · ${loc.maxKm >= 60 ? "overal" : `${loc.maxKm} km`}` : ""}
               </button>
             )}
-            {skills.length > 0 && (openChip === "branch" || openChip === "all") && (
+            {(openChip === "branch" || openChip === "all") && (
               <div className={openChip === "all" ? "mt-3" : ""}>
-                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">Branches</p>}
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setSkill("")} className={`rounded-full border px-2.5 py-1 text-xs ${!skill ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}>Alle</button>
-                  {skills.map((sk) => (
-                    <button
-                      key={sk}
-                      type="button"
-                      onClick={() => setSkill((v) => (v === sk ? "" : sk))}
-                      className={`rounded-full border px-2.5 py-1 text-xs ${skill === sk ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
-                    >
-                      {sk}
+                <div className="mb-1.5 flex items-center gap-3">
+                  {openChip === "all" && <p className="text-xs font-semibold text-neutralx-500">Branches</p>}
+                  <button type="button" onClick={() => setBranches(new Set(SHIFT_CATEGORIES.map((c) => c.key)))} className="text-xs font-semibold text-brand-600 hover:underline">
+                    Alles selecteren
+                  </button>
+                  {branches.size > 0 && (
+                    <button type="button" onClick={() => setBranches(new Set())} className="text-xs text-neutralx-500 hover:underline">
+                      Wissen
                     </button>
-                  ))}
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {SHIFT_CATEGORIES.map((c) => {
+                    const n = branchCounts.get(c.key) ?? 0;
+                    const on = branches.has(c.key);
+                    return (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() =>
+                          setBranches((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(c.key)) next.delete(c.key);
+                            else next.add(c.key);
+                            return next;
+                          })
+                        }
+                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${on ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"} ${n === 0 && !on ? "opacity-50" : ""}`}
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ background: c.accent }} aria-hidden />
+                        {c.label}
+                        <span className="text-[10px] text-neutralx-400">{n}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

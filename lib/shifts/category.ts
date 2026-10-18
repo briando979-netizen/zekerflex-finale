@@ -49,3 +49,6 @@ export function shiftCategory(title: string, skill: string | null): ShiftCategor
   }
   return { key: "algemeen", ...CAT.algemeen };
 }
+
+/** Every category, in display order — for filters that list all branches. */
+export const SHIFT_CATEGORIES: ShiftCategory[] = (Object.keys(CAT) as ShiftCategoryKey[]).map((key) => ({ key, ...CAT[key], ...(key === "algemeen" ? { label: "Overig" } : {}) }));
