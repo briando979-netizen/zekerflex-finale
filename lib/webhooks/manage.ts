@@ -112,3 +112,27 @@ export async function recentDeliveries(tenantId: string, take = 30) {
     select: { id: true, eventType: true, statusCode: true, attempts: true, deliveredAt: true, lastError: true, createdAt: true, subscription: { select: { url: true } } },
   });
 }
+
+/** Re-send a failed delivery with a fresh signature (same payload). */
+export async function resendDelivery(deliveryId: string): Promise<{ ok: boolean; status: number | null }> {
+  const d = await prisma.webhookDelivery.findUnique({ where: { id: deliveryId }, include: { subscription: true } });
+  if (!d) throw AppError.notFound("Melding niet gevonden");
+  if (!d.subscription.active) throw AppError.precondition("Deze webhook staat op pauze");
+  const body = JSON.stringify(d.payload);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const sig = createHmac("sha256", decryptWebhookSecret(d.subscription.secretCiphertext)).update(`${timestamp}.${body}`).digest("hex");
+  try {
+    const res = await fetch(d.subscription.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "user-agent": "ZekerFlex-Webhooks/1.0", "x-zekerflex-event": d.eventType, "x-zekerflex-timestamp": timestamp, "x-zekerflex-signature": `v1=${sig}` },
+      body,
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    await prisma.webhookDelivery.update({ where: { id: d.id }, data: { attempts: { increment: 1 }, statusCode: res.status, ...(res.ok ? { deliveredAt: new Date(), lastError: null } : { lastError: `HTTP ${res.status}` }) } });
+    return { ok: res.ok, status: res.status };
+  } catch (err) {
+    await prisma.webhookDelivery.update({ where: { id: d.id }, data: { attempts: { increment: 1 }, lastError: (err as Error).message.slice(0, 200) } });
+    return { ok: false, status: null };
+  }
+}
