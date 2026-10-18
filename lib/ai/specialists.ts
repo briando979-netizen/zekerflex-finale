@@ -24,12 +24,14 @@ export interface Specialist {
 const BASE = `Je werkt voor ZekerFlex, een Nederlands platform voor flexwerk (zzp'ers en uitzendkrachten, opdrachtgevers betalen € 3,50 per gewerkt uur met staffelkorting). Antwoord in het Nederlands, concreet en gestructureerd met kopjes en opsommingen. Verzin geen feiten; zeg wat je niet weet. Sluit af met wat een mens nog moet controleren.`;
 
 // ---- Jurist: contract clause check -------------------------------------
-const CLAUSES: { key: string; label: string; re: RegExp; why: string }[] = [
+// `deny`: wording that mentions the topic but says the opposite ("geen vervanging
+// toegestaan") — then the clause counts as missing and becomes a risk.
+const CLAUSES: { key: string; label: string; re: RegExp; why: string; deny?: { re: RegExp; warn: string } }[] = [
   { key: "partijen", label: "Partijen en KVK-nummers", re: /partij|opdrachtgever|opdrachtnemer|kvk/i, why: "Zonder duidelijke partijen is onduidelijk wie aansprakelijk is." },
   { key: "opdracht", label: "Omschrijving van de opdracht", re: /opdracht(omschrijving)?|werkzaamheden|diensten/i, why: "Nodig om resultaat en reikwijdte vast te leggen." },
   { key: "vergoeding", label: "Tarief en betaaltermijn", re: /tarief|vergoeding|uurloon|betaal(termijn)?|factu/i, why: "Zonder betaaltermijn geldt de wettelijke termijn; leg het vast." },
-  { key: "vervanging", label: "Vrije vervanging (Wet DBA)", re: /vervang/i, why: "Vrije vervanging is een belangrijk signaal tegen schijnzelfstandigheid." },
-  { key: "gezag", label: "Geen gezagsverhouding / eigen werkwijze", re: /gezag|instructie|eigen (werkwijze|inzicht)|zelfstandig/i, why: "Bij gezag kan het als dienstbetrekking worden gezien (Wet DBA)." },
+  { key: "vervanging", label: "Vrije vervanging (Wet DBA)", re: /vervang/i, why: "Vrije vervanging is een belangrijk signaal tegen schijnzelfstandigheid.", deny: { re: /(geen|niet)\s+(\w+\s+){0,3}vervang|vervang\w*\s+(\w+\s+){0,3}(niet|uitgesloten|verboden)/i, warn: "Vervanging uitgesloten: zonder vrije vervanging lijkt het eerder op loondienst (Wet DBA-risico)." } },
+  { key: "gezag", label: "Geen gezagsverhouding / eigen werkwijze", re: /gezag|instructie|eigen (werkwijze|inzicht)|zelfstandig/i, why: "Bij gezag kan het als dienstbetrekking worden gezien (Wet DBA).", deny: { re: /onder (leiding|gezag|toezicht)|instructies? (van de opdrachtgever )?(op )?(te )?volgen/i, warn: "Werken onder leiding/gezag van de opdrachtgever: sterk signaal van een dienstbetrekking (Wet DBA)." } },
   { key: "aansprakelijkheid", label: "Aansprakelijkheid en verzekering", re: /aansprakelijk|schade|verzeker/i, why: "Beperk en verdeel het risico op schade." },
   { key: "duur", label: "Duur en opzegging", re: /looptijd|duur|opzeg|beëindig|ontbind/i, why: "Zonder opzegregeling ontstaan discussies bij stoppen." },
   { key: "geheimhouding", label: "Geheimhouding", re: /geheim|vertrouwelijk/i, why: "Bescherm bedrijfs- en persoonsgegevens." },
@@ -48,9 +50,10 @@ const RISKY: { re: RegExp; warn: string }[] = [
 async function jurist(input: string): Promise<string> {
   const text = input.trim();
   if (text.length < 80) return "Plak de (concept)tekst van het contract of de voorwaarden, dan controleer ik welke onderdelen ontbreken en wat riskant is.";
-  const present = CLAUSES.filter((c) => c.re.test(text));
-  const missing = CLAUSES.filter((c) => !c.re.test(text));
-  const risks = RISKY.filter((r) => r.re.test(text)).map((r) => r.warn);
+  const has = (c: (typeof CLAUSES)[number]) => c.re.test(text) && !c.deny?.re.test(text);
+  const present = CLAUSES.filter(has);
+  const missing = CLAUSES.filter((c) => !has(c));
+  const risks = [...CLAUSES.flatMap((c) => (c.deny?.re.test(text) ? [c.deny.warn] : [])), ...RISKY.filter((r) => r.re.test(text)).map((r) => r.warn)];
   const score = Math.round((present.length / CLAUSES.length) * 100);
   return [
     `## Contractcheck — ${score}% van de standaardonderdelen aanwezig`,

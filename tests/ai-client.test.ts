@@ -5,9 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/ai/governor", () => ({
   withGovernor: async <T>(_purpose: string, fn: () => Promise<{ value: T }>) =>
     (await fn()).value,
+  isLocalInference: () => true,
 }));
 
-import { chat, extractJson } from "@/lib/ai/client";
+import { _resetLlmBreaker, chat, extractJson } from "@/lib/ai/client";
 
 function mockFetch(impl: (url: string, init: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn(impl);
@@ -17,6 +18,7 @@ function mockFetch(impl: (url: string, init: RequestInit) => Response | Promise<
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  _resetLlmBreaker();
 });
 
 const okChat = (content: string) =>
@@ -97,6 +99,19 @@ describe("ai chat client", () => {
       chat({ messages: [{ role: "user", content: "hi" }], retry: false }),
     ).rejects.toMatchObject({ status: 503 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("after the server proved unreachable, the next call fails fast (one attempt)", async () => {
+    const fetchMock = mockFetch(() => {
+      throw new TypeError("fetch failed");
+    });
+    await expect(chat({ messages: [{ role: "user", content: "hi" }] })).rejects.toMatchObject({ status: 503 });
+    fetchMock.mockClear();
+    await expect(chat({ messages: [{ role: "user", content: "hi" }] })).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // and it recovers as soon as the server answers again
+    mockFetch(() => okChat("terug"));
+    expect((await chat({ messages: [{ role: "user", content: "hi" }] })).text).toBe("terug");
   });
 });
 

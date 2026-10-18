@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { env } from "@/lib/env";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { llmConfigProblem } from "@/lib/ai/client";
+import { llmHealth } from "@/lib/ai/client";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
 
@@ -67,7 +67,7 @@ async function stripeIssuingWebhookOk(): Promise<boolean | null> {
 
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products, issuing] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive()]);
+  const [webhookOk, products, issuing, llm] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth()]);
   const base = env.APP_BASE_URL ?? "";
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
@@ -79,7 +79,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       why: "Zet Jarvis, de denkende AI-teams, herschrijven/vertalen in de chat, het volle specialistenadvies en nieuwe advertentievarianten aan.",
       how: ["Huur een server met GPU (bv. Hetzner GPU) en maak een subdomein ai.zekerflex.com met een A-record naar de server.", "Kopieer deploy/ai-node/setup.sh naar de server en draai: sudo bash setup.sh ai.zekerflex.com", "Zet de waarden die het script laat zien in Vercel → Settings → Environment Variables (Production) en klik Redeploy."],
       auto: true,
-      done: !llmConfigProblem(),
+      done: llm.ok,
+      doneNote: llm.ok ? `AI-server antwoordt (model ${llm.model})` : `nog niet: ${llm.detail ?? "niet bereikbaar"}`,
     },
     {
       id: "image",

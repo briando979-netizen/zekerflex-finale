@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
-import { withGovernor } from "@/lib/ai/governor";
+import { isLocalInference, withGovernor } from "@/lib/ai/governor";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -100,8 +100,14 @@ export function llmConfigProblem(): string | null {
   if ((process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) && LOCAL_HOST.test(llmHost())) {
     return "Er is nog geen taalmodel gekoppeld aan de live omgeving: LLM_BASE_URL wijst naar localhost, en op de server draait daar niets. Koppel je eigen Ollama/vLLM-server (LLM_BASE_URL, LLM_API_KEY en AI_ALLOW_REMOTE=true) of een OpenAI-compatibele dienst in de Vercel-omgevingsvariabelen.";
   }
+  // Same rule as the sovereignty lock in chatStream: a remote model server
+  // needs an explicit AI_ALLOW_REMOTE=true — say so instead of failing per call.
+  if (!env.AI_ALLOW_REMOTE && !isLocalInference()) {
+    return `LLM_BASE_URL wijst naar ${llmHost()}, maar AI_ALLOW_REMOTE staat niet op true. Zet AI_ALLOW_REMOTE=true in de omgevingsvariabelen om je eigen AI-server te gebruiken.`;
+  }
   return null;
 }
+
 
 function unreachable(err: unknown): AppError {
   return AppError.upstream(`Taalmodel niet bereikbaar op ${llmHost()} (${(err as Error).message}). Controleer of de modelserver draait en LLM_BASE_URL klopt.`);
@@ -157,13 +163,32 @@ async function postOnce(
  * so it never surfaces to the user. A hard failure (bad request, or the retry
  * budget is spent) still throws so callers can degrade gracefully.
  */
+// Circuit breaker: once the model server has been unreachable through a whole
+// retry round, every call for the next minute makes ONE attempt (an instant
+// ECONNREFUSED) instead of another ~40 s backoff — so chat, assist and the
+// specialists fall back to their rule-based answers right away.
+const BREAKER_MS = 60_000;
+let downUntil = 0;
+export function _resetLlmBreaker() {
+  downUntil = 0;
+}
+
 async function post(
   path: string,
   payload: unknown,
   timeoutMs: number,
   retry = true,
 ): Promise<unknown> {
-  if (!retry) return postOnce(path, payload, timeoutMs);
+  if (!retry || Date.now() < downUntil) {
+    try {
+      const out = await postOnce(path, payload, timeoutMs);
+      downUntil = 0;
+      return out;
+    } catch (err) {
+      if (isTransient(err)) downUntil = Date.now() + BREAKER_MS;
+      throw err;
+    }
+  }
   const deadline = Date.now() + env.LLM_RETRY_MAX_WAIT_MS;
   let attempt = 0;
   for (;;) {
@@ -175,7 +200,10 @@ async function post(
         isTransient(err) &&
         attempt <= env.LLM_RETRY_MAX &&
         Date.now() < deadline;
-      if (!canRetry) throw err;
+      if (!canRetry) {
+        if (isTransient(err)) downUntil = Date.now() + BREAKER_MS;
+        throw err;
+      }
       const jitter = Math.random() * env.LLM_RETRY_BASE_MS;
       const wait = Math.min(
         env.LLM_RETRY_BASE_MS * 2 ** (attempt - 1) + jitter,
@@ -280,7 +308,7 @@ export async function* chatStream(
       return env.LLM_BASE_URL;
     }
   })();
-  const local = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(host);
+  const local = isLocalInference();
   if (!env.AI_ALLOW_REMOTE && !local) {
     throw AppError.upstream(`Soevereiniteitsgrendel: LLM_BASE_URL host "${host}" is niet lokaal.`);
   }

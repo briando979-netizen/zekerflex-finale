@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const kv = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
 vi.mock("@/lib/env", () => ({ env: { STRIPE_SECRET_KEY: "", SEPA_CREDITOR_IBAN: "NL91ABNA0417164300", SEPA_CREDITOR_NAME: "ZekerFlex B.V.", STRIPE_PUBLISHABLE_KEY: "", IMAGE_ENABLED: false, APP_BASE_URL: "https://www.zekerflex.com" } }));
-vi.mock("@/lib/ai/client", () => ({ llmConfigProblem: () => "geen model" }));
+vi.mock("@/lib/ai/client", () => ({ llmHealth: async () => ({ ok: false, baseUrl: "", model: "m", detail: "geen model" }) }));
 vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: vi.fn() }));
 vi.mock("@/lib/bank/insurance", () => ({ getProducts: async () => [] }));
 

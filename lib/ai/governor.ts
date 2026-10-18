@@ -26,7 +26,7 @@ const rateKey = (minute: number) => `ai:gov:rate:${minute}`;
 const budgetKey = (day: string) => `ai:gov:tokens:${day}`;
 
 const PRIVATE_HOST =
-  /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|[a-z0-9-]+\.local|host\.docker\.internal)$/i;
+  /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|[a-z0-9-]+\.local|host\.docker\.internal|[a-z0-9-]+)$/i; // last: single-label = docker service name (e.g. "ollama")
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);

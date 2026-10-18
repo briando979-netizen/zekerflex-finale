@@ -4,7 +4,7 @@ import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/c
 describe("public chat assistant without a model", () => {
   it.each(["hoi", "Hoi!", "hallo", "hey", "goedemorgen", "Hi"])("greets back on %s with options", (t) => {
     const r = smallTalk(t);
-    expect(r?.reply).toMatch(/Goede(morgen|middag|avond|nacht)! 👋/);
+    expect(r?.reply).toMatch(/Goede(n?)(morgen|middag|avond|nacht)! 👋/);
     expect(r?.suggestions.length).toBeGreaterThan(2);
   });
 

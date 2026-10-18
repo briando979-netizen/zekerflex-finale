@@ -20,6 +20,24 @@ describe("AI-jurist contract check (no model)", () => {
     expect(out).toContain("geen juridisch advies");
   });
 
+  it("treats 'geen vervanging' and 'onder leiding' as the opposite, not as present", async () => {
+    const out = await jurist(
+      "Overeenkomst van opdracht. De opdrachtnemer werkt onder leiding en toezicht van de opdrachtgever, vaste werktijden van 9 tot 17, geen vervanging toegestaan. Opzegtermijn 2 maanden. Concurrentiebeding van 2 jaar.",
+    );
+    const aanwezig = out.split("**Ontbreekt")[0]!;
+    expect(aanwezig).not.toContain("Vrije vervanging");
+    expect(out).toContain("Vervanging uitgesloten");
+    expect(out).toContain("Werken onder leiding/gezag");
+  });
+
+  it("still counts real free substitution as present", async () => {
+    const out = await jurist(
+      "Overeenkomst van opdracht tussen opdrachtgever en opdrachtnemer. Opdrachtnemer mag zich vrij laten vervangen door een ander met gelijke kwalificaties en bepaalt zijn eigen werkwijze.",
+    );
+    expect(out.split("**Ontbreekt")[0]).toContain("Vrije vervanging");
+    expect(out).not.toContain("Vervanging uitgesloten");
+  });
+
   it("asks for the text when it's too short", async () => {
     expect(await jurist("is dit goed?")).toContain("Plak");
   });
