@@ -212,6 +212,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: hasVideos(),
     },
     {
+      id: "product-photos",
+      group: "Vindbaarheid & app",
+      title: "Echte productfoto's voor de webshop",
+      why: "De shopproducten gebruiken nu algemene sfeerfoto's — bij de 'Everyday Hoodie' staat bijvoorbeeld iemand in een bodywarmer. Echte foto's verkopen beter en voorkomen retouren.",
+      how: ["Maak per product een foto op een lichte achtergrond plus (optioneel) één foto aan iemand.", "Upload ze in Admin → Shop → product bewerken (hoofdfoto en modelfoto), of geef ze aan Claude om ze te plaatsen."],
+      auto: false,
+      ...m("product-photos"),
+    },
+    {
       id: "turn",
       group: "Bellen & koppelingen",
       title: "Eigen TURN-server voor bellen (aanrader)",
