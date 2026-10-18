@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 
 type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; sku: string };
 
@@ -83,7 +84,7 @@ export function ShopAdmin() {
   const [variantMessage, setVariantMessage] = useState("");
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [tab, setTab] = useState<"products" | "orders" | "stats">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "stats" | "tools">("products");
   const [showForm, setShowForm] = useState(false);
   const [productQuery, setProductQuery] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
@@ -190,6 +191,7 @@ export function ShopAdmin() {
         ["products", `Producten (${products.length})`],
         ["orders", `Bestellingen (${orders.length})`],
         ["stats", "Statistieken"],
+        ["tools", "Kortingen & voorraad"],
       ] as const).map(([key, label]) => (
         <button
           key={key}
@@ -202,6 +204,8 @@ export function ShopAdmin() {
         </button>
       ))}
     </div>
+
+    {tab === "tools" && <ShopAdminTools />}
 
     {tab === "stats" && stats && (
       <section className="a-panel p-6">
@@ -390,6 +394,24 @@ export function ShopAdmin() {
               <p className="mt-1 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</p>
             </div>
             <div className="flex flex-col items-start gap-2 sm:items-end">
+              <div className="flex flex-wrap gap-2">
+                <a className="a-button" href={`/api/admin/shop/orders/${order.id}/packing-slip`} target="_blank" rel="noreferrer">Pakbon</a>
+                {["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && (
+                  <button
+                    type="button"
+                    className="a-button"
+                    onClick={async () => {
+                      if (!window.confirm(`Bestelling van ${order.firstName} ${order.lastName} volledig terugbetalen via Stripe? De bestelling wordt geannuleerd en de voorraad teruggeboekt.`)) return;
+                      const r = await fetch(`/api/admin/shop/orders/${order.id}/refund`, { method: "POST" });
+                      const d = await r.json().catch(() => ({}));
+                      setOrderMessage(r.ok ? `Terugbetaald: ${money(d.amountCents / 100)}.` : d?.error?.message ?? "Terugbetalen mislukt.");
+                      void loadOrders();
+                    }}
+                  >
+                    Terugbetalen
+                  </button>
+                )}
+              </div>
               <select
                 className="a-input w-auto"
                 value={order.status}
