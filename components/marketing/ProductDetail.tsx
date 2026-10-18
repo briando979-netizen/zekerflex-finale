@@ -34,7 +34,9 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
   const spec = useMemo(() => specFor(product.slug, product.description), [product]);
-  const gallery = [product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[];
+  // De-duplicated: a product whose model photo is the same file as its main image
+  // would otherwise show the same thumbnail twice (and collide on the React key).
+  const gallery = [...new Set([product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];
   const [active, setActive] = useState(0);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
