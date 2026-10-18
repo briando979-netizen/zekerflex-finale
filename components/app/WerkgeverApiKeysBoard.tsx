@@ -60,6 +60,17 @@ export function WerkgeverApiKeysBoard({ allowedScopes }: { allowedScopes: readon
     }
   }
 
+  async function rotate(id: string) {
+    const h = window.prompt("Nieuwe sleutel maken. Hoeveel uur mag de oude sleutel nog werken, zodat je koppelingen kunt omzetten? (0–168)", "24");
+    if (h === null) return;
+    const res = await fetch(`/api/werkgever/api-keys/${id}/rotate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ graceHours: Math.max(0, Math.min(168, Number(h) || 0)) }) });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setNewKey({ prefix: d.prefix, raw: d.raw });
+      void refresh();
+    } else setMsg(d?.error?.message ?? "Vernieuwen mislukt.");
+  }
+
   async function revoke(id: string) {
     if (!window.confirm("Deze sleutel intrekken? Dit kan niet ongedaan worden gemaakt.")) return;
     const res = await fetch(`/api/werkgever/api-keys/${id}/revoke`, { method: "POST" });
@@ -136,12 +147,19 @@ export function WerkgeverApiKeysBoard({ allowedScopes }: { allowedScopes: readon
                     <code>{k.prefix}…</code> · {k.scopes.join(", ")}
                   </p>
                 </div>
-                {k.revokedAt ? (
+                {k.revokedAt && new Date(k.revokedAt) <= new Date() ? (
                   <span className="pill-neutral flex-shrink-0">ingetrokken</span>
+                ) : k.revokedAt ? (
+                  <span className="flex-shrink-0 text-xs text-warn">vervangen · werkt nog tot {new Date(k.revokedAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                 ) : (
-                  <button type="button" onClick={() => revoke(k.id)} className="btn-ghost flex-shrink-0 text-xs text-crit">
-                    Intrekken
-                  </button>
+                  <span className="flex flex-shrink-0 gap-1">
+                    <button type="button" onClick={() => rotate(k.id)} className="btn-ghost text-xs">
+                      Vernieuwen
+                    </button>
+                    <button type="button" onClick={() => revoke(k.id)} className="btn-ghost text-xs text-crit">
+                      Intrekken
+                    </button>
+                  </span>
                 )}
               </li>
             ))}

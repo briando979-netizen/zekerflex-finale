@@ -67,6 +67,20 @@ export async function revokeApiKey(id: string): Promise<void> {
   await prisma.apiKey.update({ where: { id }, data: { revokedAt: new Date() } });
 }
 
+/**
+ * Rotate: issue a new key with the same name, scopes and organisation, and
+ * let the old one keep working for `graceHours` (revokedAt in the future) so
+ * integrations can switch over without downtime. The new secret is returned once.
+ */
+export async function rotateApiKey(id: string, createdById: string, graceHours = 24): Promise<{ id: string; prefix: string; raw: string; oldValidUntil: Date }> {
+  const old = await prisma.apiKey.findUnique({ where: { id } });
+  if (!old || (old.revokedAt && old.revokedAt <= new Date())) throw new Error("Deze sleutel is al ingetrokken");
+  const fresh = await createApiKey({ name: old.name, tenantId: old.tenantId, scopes: old.scopes, createdById });
+  const oldValidUntil = new Date(Date.now() + Math.max(0, Math.min(168, graceHours)) * 3_600_000);
+  await prisma.apiKey.update({ where: { id }, data: { revokedAt: oldValidUntil } });
+  return { ...fresh, oldValidUntil };
+}
+
 export interface VerifiedApiKey {
   id: string;
   tenantId: string | null;
@@ -80,7 +94,8 @@ export async function verifyApiKey(rawKey: string): Promise<VerifiedApiKey | nul
   const hashedKey = createHash("sha256").update(rawKey).digest("hex");
 
   const row = await prisma.apiKey.findUnique({ where: { prefix } });
-  if (!row || row.revokedAt) return null;
+  // revokedAt in the future = rotated, still inside its grace period.
+  if (!row || (row.revokedAt && row.revokedAt <= new Date())) return null;
   const storedHash = Buffer.from(row.hashedKey, "hex");
   const incomingHash = Buffer.from(hashedKey, "hex");
   if (storedHash.length !== incomingHash.length || !timingSafeEqual(storedHash, incomingHash)) return null;
