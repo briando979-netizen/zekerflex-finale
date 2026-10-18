@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { env } from "@/lib/env";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { llmConfigProblem } from "@/lib/ai/client";
@@ -16,7 +18,7 @@ import { getProducts } from "@/lib/bank/insurance";
 
 export interface OwnerTodo {
   id: string;
-  group: "AI" | "Geld & bank" | "Juridisch" | "Overig";
+  group: "AI" | "Geld & bank" | "Juridisch" | "Vindbaarheid & app" | "Bellen & koppelingen" | "Beheer & veiligheid" | "Overig";
   title: string;
   why: string;
   how: string[];
@@ -35,6 +37,24 @@ export interface CustomTodo {
 
 const ISSUING_EVENTS = ["issuing_authorization.request", "issuing_authorization.updated", "issuing_transaction.created", "issuing_card.updated"];
 
+async function stripeIssuingActive(): Promise<boolean | null> {
+  if (!env.STRIPE_SECRET_KEY) return null;
+  try {
+    const acct = await getStripeClient().accounts.retrieveCurrent();
+    return (acct.capabilities as Record<string, string> | undefined)?.card_issuing === "active";
+  } catch {
+    return null;
+  }
+}
+
+const hasVideos = () => {
+  try {
+    return existsSync(path.join(process.cwd(), "public", "videos", "wat-is-zekerflex.mp4"));
+  } catch {
+    return false;
+  }
+};
+
 async function stripeIssuingWebhookOk(): Promise<boolean | null> {
   if (!env.STRIPE_SECRET_KEY) return null;
   try {
@@ -47,7 +67,8 @@ async function stripeIssuingWebhookOk(): Promise<boolean | null> {
 
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => [])]);
+  const [webhookOk, products, issuing] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive()]);
+  const base = env.APP_BASE_URL ?? "";
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
   return [
@@ -133,6 +154,97 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Laat een jurist of compliance-adviseur kijken naar naam en opzet (gelden op Stripe, geen eigen bankvergunning)."],
       auto: false,
       ...m("bank-name"),
+    },
+    {
+      id: "issuing-active",
+      group: "Geld & bank",
+      title: "Stripe Issuing (betaalpassen) laten activeren",
+      why: "Pas als 'card_issuing' actief is op je Stripe-account kunnen gebruikers echt een pas krijgen.",
+      how: ["Stripe Dashboard → Issuing: rond de aanvraag af (bedrijfsgegevens, gebruik, eventueel extra documenten).", "Wacht op de goedkeuring van Stripe; deze taak vinkt zichzelf af zodra het actief is."],
+      auto: issuing !== null,
+      done: issuing === true,
+      ...(issuing === null ? m("issuing-active") : {}),
+    },
+    {
+      id: "domain",
+      group: "Vindbaarheid & app",
+      title: "Hoofddomein vastleggen (APP_BASE_URL)",
+      why: "Bepaalt alle links in mails, de sitemap en Google. De site draait op www.zekerflex.com, eerder was zekerflex.nl gekozen — kies er één en laat de andere doorverwijzen.",
+      how: ["Kies het hoofddomein (bv. https://www.zekerflex.com).", "Vercel: APP_BASE_URL = dat adres (met https://), en zet het andere domein in Vercel → Domains op doorverwijzen.", "Redeploy."],
+      auto: true,
+      done: /^https:\/\//.test(base) && !/localhost/.test(base),
+    },
+    {
+      id: "search-console",
+      group: "Vindbaarheid & app",
+      title: "Google Search Console en Bing koppelen",
+      why: "Zodat Google en Bing de site goed indexeren en je ziet waarop je gevonden wordt.",
+      how: ["search.google.com/search-console → eigendom toevoegen → kies 'HTML-tag' en kopieer de code achter content=.", "Vercel: GOOGLE_SITE_VERIFICATION = die code (en BING_SITE_VERIFICATION via Bing Webmaster Tools). Redeploy en klik daarna op Verifiëren.", "Dien /sitemap.xml in bij beide."],
+      auto: true,
+      done: Boolean(process.env.GOOGLE_SITE_VERIFICATION),
+    },
+    {
+      id: "socials",
+      group: "Vindbaarheid & app",
+      title: "Social-media-accounts controleren (en LinkedIn toevoegen)",
+      why: "De links naar Instagram, TikTok en YouTube staan in de footer en in de Google-gegevens; een LinkedIn-bedrijfspagina helpt sterk voor zakelijke klanten.",
+      how: ["Controleer dat instagram.com/zekerflex, tiktok.com/@zekerflex en youtube.com/@Zekerflex echt van jullie zijn.", "Maak een LinkedIn-bedrijfspagina en geef de link door, dan zet ik hem erbij."],
+      auto: false,
+      ...m("socials"),
+    },
+    {
+      id: "play-store",
+      group: "Vindbaarheid & app",
+      title: "App publiceren in de Google Play Store",
+      why: "De app (PWA) is klaar om als Android-app te verschijnen; de koppeling (assetlinks) staat al.",
+      how: ["Volg docs/MOBILE-APP.md: bubblewrap build met jullie ondertekeningssleutel.", "Maak een Google Play Console-account (eenmalig 25 dollar) en upload het .aab-bestand met screenshots en beschrijving."],
+      auto: false,
+      ...m("play-store"),
+    },
+    {
+      id: "videos",
+      group: "Vindbaarheid & app",
+      title: "Uitlegvideo's plaatsen",
+      why: "De pagina /uitleg toont nu alleen foto's met 'video komt binnenkort'.",
+      how: ["Maak of lever 5 korte video's: wat is ZekerFlex, klus plaatsen, uitzenden of freelance, uren goedkeuren, kosten en facturen.", "Geef ze aan mij door; ik zet ze online (bij voorkeur via een videodienst of Vercel Blob, niet in git)."],
+      auto: true,
+      done: hasVideos(),
+    },
+    {
+      id: "turn",
+      group: "Bellen & koppelingen",
+      title: "Eigen TURN-server voor bellen (aanrader)",
+      why: "Zonder TURN lukken (video)gesprekken niet altijd achter strenge bedrijfsfirewalls of sommige mobiele netwerken.",
+      how: ["Op je eigen server: TURN_SHARED_SECRET maken (deploy/scripts/gen-secrets.mjs) en poorten 3478 (udp+tcp) en 49160–49200/udp openzetten.", "Start met docker compose --profile turn (zie docker-compose.prod.yml).", "Vercel: TURN_HOST en TURN_SHARED_SECRET invullen en redeploy."],
+      auto: true,
+      done: Boolean(env.TURN_HOST && env.TURN_SHARED_SECRET),
+    },
+    {
+      id: "whatsapp-live",
+      group: "Bellen & koppelingen",
+      title: "WhatsApp Business (live berichten) koppelen",
+      why: "Importeren van WhatsApp-gesprekken werkt al; voor live sturen en ontvangen is een geverifieerd Meta-bedrijfsaccount nodig.",
+      how: ["Meta Business-verificatie afronden en een zakelijk nummer aan de WhatsApp Business Cloud API koppelen.", "Lever aan: phone-number ID, een permanente (system user) token en het app secret — dan bouw en test ik de live koppeling."],
+      auto: false,
+      ...m("whatsapp-live"),
+    },
+    {
+      id: "backups",
+      group: "Beheer & veiligheid",
+      title: "Back-ups en een hersteltest",
+      why: "Zorg dat je bij een storing echt alles terugkrijgt — test het één keer echt.",
+      how: ["Controleer bij je databaseprovider dat dagelijkse back-ups aan staan en hoe lang ze bewaard worden.", "Doe één keer een hersteltest op een testdatabase (zie deploy/scripts/restore.sh)."],
+      auto: false,
+      ...m("backups"),
+    },
+    {
+      id: "git-purge",
+      group: "Beheer & veiligheid",
+      title: "Oude videobestanden uit de git-geschiedenis halen (optioneel)",
+      why: "Ongeveer 42 MB oude video's zitten nog in de geschiedenis van de repository; opruimen maakt hem kleiner en sneller.",
+      how: ["Alleen als er geen open werk-branches zijn: zie de stappen in public/videos/README.md (git filter-repo plus force-push). Dit herschrijft de geschiedenis — doe het bewust."],
+      auto: false,
+      ...m("git-purge"),
     },
     {
       id: "vercel-access",
