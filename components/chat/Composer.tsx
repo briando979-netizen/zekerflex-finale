@@ -235,7 +235,7 @@ export function Composer({
             }}
             rows={1}
             placeholder="Typ een bericht…"
-            className="max-h-28 min-h-[2.5rem] flex-1 resize-none rounded-2xl border border-hairstrong px-3 py-2 text-sm outline-none focus:border-brand-500"
+            className="max-h-28 min-h-[2.5rem] flex-1 resize-none rounded-2xl border border-hairstrong px-3 py-2 text-base outline-none focus:border-brand-500 md:text-sm"
           />
 
           {text.trim() ? (

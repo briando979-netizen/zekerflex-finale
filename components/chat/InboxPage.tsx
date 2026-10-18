@@ -236,9 +236,14 @@ export function InboxPage({
       : "";
 
   return (
-    <>
-    <PushToggle variant="banner" />
-    <div className={`chat-surface grid ${mobileHeight} overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:h-[calc(100vh-15rem)] md:grid-cols-[minmax(0,20rem)_1fr]`}>
+    // One column with a fixed height: the push banner takes what it needs and
+    // the chat gets the rest — so the composer never slides under the bottom
+    // tab bar on a phone (the banner used to come on top of the chat height).
+    <div className={`flex ${mobileHeight} flex-col gap-3 md:h-[calc(100vh-15rem)]`}>
+    <div className="flex-shrink-0 empty:hidden">
+      <PushToggle variant="banner" />
+    </div>
+    <div className="chat-surface grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:grid-cols-[minmax(0,20rem)_1fr]">
       {/* ─── left pane ─── */}
       <div className={`${pane === "conversation" && activeThread ? "hidden md:flex" : "flex"} min-h-0 flex-col border-hair md:border-r`}>
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
@@ -477,7 +482,7 @@ export function InboxPage({
       )}
       {showSettings && <ChatSettingsModal onClose={() => { setShowSettings(false); if (active) void loadThread(active); }} />}
     </div>
-    </>
+    </div>
   );
 }
 
