@@ -442,7 +442,7 @@ export function ChatDock() {
           <div
             role="alertdialog"
             aria-label={`${incoming.fromName} belt je`}
-            className="fixed left-1/2 top-[calc(0.75rem+env(safe-area-inset-top))] z-[78] flex w-[min(28rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift animate-slide-up-fade"
+            className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[78] mx-auto flex max-w-[28rem] items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift animate-slide-up-fade"
           >
             <Avatar userId={incoming.fromUserId} name={incoming.fromName} role={incoming.fromRole} avatars={avatars} size={36} />
             <span className="min-w-0 flex-1 text-sm leading-tight">

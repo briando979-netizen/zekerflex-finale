@@ -402,7 +402,7 @@ export function CallOverlay({
         // Compact bar so the chat underneath stays usable during the call.
         <div
           role="status"
-          className="fixed left-1/2 top-3 z-[80] flex w-[min(26rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
+          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[80] mx-auto flex max-w-[26rem] items-center gap-3 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
         >
           {showVideo ? (
             <video ref={bindRemoteVideo} autoPlay playsInline muted className="h-12 w-16 flex-shrink-0 rounded-lg bg-black object-cover" />
@@ -425,8 +425,8 @@ export function CallOverlay({
           {hangupButton("h-9 w-11 text-base")}
         </div>
       ) : (
-        <div className="fixed inset-0 z-[80] flex flex-col bg-[#0b0f0e] text-white">
-          <div className="flex items-center gap-3 p-4">
+        <div className="fixed inset-0 z-[80] flex flex-col bg-[#0b0f0e] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white">
+          <div className="flex flex-wrap items-center gap-3 p-4">
             <span className="font-display text-lg font-semibold">{peerName}</span>
             <span className="text-sm text-white/60">{status}</span>
             {state !== "failed" && (
