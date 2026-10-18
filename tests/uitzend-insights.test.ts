@@ -4,7 +4,7 @@ const kv = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 vi.mock("@/lib/payroll/store", () => ({ listRuns: async () => [], getRun: async () => null }));
-vi.mock("@/lib/env", () => ({ env: { UITZEND_MARKUP_RATE: 0.35 } }));
+vi.mock("@/lib/env", () => ({ env: { UITZEND_MARKUP_RATE: 0.35, MAIL_ADMIN: "ops@x.nl" } }));
 
 import { markupFor, phaseFor, setMarkup, signalsFor } from "@/lib/uitzendbureau/insights";
 

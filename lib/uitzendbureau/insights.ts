@@ -121,3 +121,25 @@ export async function setMarkup(tenantId: string, rate: number | null): Promise<
   await kvSet(`uitzend-markup:${tenantId}`, rate);
   return rate;
 }
+
+/**
+ * Weekly (Monday) heads-up to the admin with the ABU thresholds coming up —
+ * so a contract or pension is arranged before the deadline, without anyone
+ * having to remember to look. Once per ISO day key; never throws.
+ */
+export async function mailWeeklySignals(now = new Date()): Promise<number> {
+  if (now.getUTCDay() !== 1) return 0;
+  const key = `uitzend-signals-mail:${now.toISOString().slice(0, 10)}`;
+  if (await kvGet(key)) return 0;
+  const { signals } = await workerPool();
+  await kvSet(key, true);
+  if (signals.length === 0) return 0;
+  const { sendMail } = await import("@/lib/mail");
+  await sendMail({
+    to: env.MAIL_ADMIN,
+    subject: `Uitzendbureau: ${signals.length} ABU-drempel(s) in aantocht`,
+    text: `Deze uitzendkrachten naderen een drempel uit de ABU-cao:\n\n${signals.map((s) => `- ${s.name}: ${s.text}`).join("\n")}\n\nBekijk en regel het in /admin/uitzendbureau.`,
+    kind: "uitzend-signals",
+  }).catch(() => undefined);
+  return signals.length;
+}

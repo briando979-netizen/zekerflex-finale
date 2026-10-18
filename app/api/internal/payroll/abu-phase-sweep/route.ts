@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { sweepAbuPhaseTransitions } from "@/lib/payroll/abu-phase-sweep";
+import { mailWeeklySignals } from "@/lib/uitzendbureau/insights";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +21,10 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const result = await sweepAbuPhaseTransitions();
+    // Mondays: heads-up on thresholds coming up (fase B/C, STIPP).
+    const upcomingSignals = await mailWeeklySignals().catch(() => 0);
     recordCronRun("abu-phase-sweep", true);
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, ...result, upcomingSignals });
   } catch (err) {
     recordCronRun("abu-phase-sweep", false);
     logger.error("abu phase sweep failed", { error: (err as Error).message });
