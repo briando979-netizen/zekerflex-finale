@@ -36,9 +36,13 @@ const config: Config = {
         neutralx: {
           // 400 is muted/metadata text — darkened from #8A93A0 to clear WCAG
           // AA (4.5:1) on the paper + white surfaces. See docs/ACCESSIBILITY.md.
+          // 300 = switch tracks/disabled stars, 700 = emphasized body text;
+          // both were used without being defined (rendered colourless).
+          300: "#C9CDD3",
           400: "#6B7280",
           500: "#616B78",
           600: "#4A525E",
+          700: "#353C46",
         },
         hair: "#E6E7E1",
         hairstrong: "#D6D7CF",

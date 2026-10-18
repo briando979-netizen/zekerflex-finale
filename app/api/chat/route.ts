@@ -130,8 +130,9 @@ export async function POST(request: Request): Promise<Response> {
   const ownAnswer = withSuggestions(
     topic ?? (knowledgeHits[0] ? { reply: knowledgeHits[0].a, suggestions: ["Contact met een mens", "Hoe meld ik me aan?"] } : fallbackAnswer()),
   );
-  // No model connected (or a known question at the start): answer ourselves.
-  if (llmConfigProblem() || (topic && parsed.messages.length <= 2)) {
+  // No model connected, or a known question (also mid-conversation): answer
+  // ourselves — curated facts, instantly, without waiting on the model.
+  if (llmConfigProblem() || topic) {
     return textStream(ownAnswer, question, undefined, saveReply);
   }
   const smartFallback = ownAnswer;

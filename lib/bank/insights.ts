@@ -150,6 +150,16 @@ export async function buildForecast(account: BankAccount, horizonDays = 30, now 
   }
 
   items.sort((a, b) => (a.date < b.date ? -1 : 1));
+  // The monthly fee never takes an account below zero — it waits until there
+  // is balance (lib/bank/fees.ts) — so the projection mustn't either.
+  let running = account.balanceCents;
+  for (const i of items) {
+    if (i.kind === "fee" && running + i.amountCents < 0) {
+      i.label += " — pas zodra er saldo is";
+      i.amountCents = 0;
+    }
+    running += i.amountCents;
+  }
   return {
     reservedCents: reservations.reduce((s, r) => s + r.amountCents, 0),
     reservations,
