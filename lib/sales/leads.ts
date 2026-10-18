@@ -215,6 +215,7 @@ export async function scoreLead(id: string, actorUserId: string | null) {
       ],
       temperature: 0,
       maxTokens: 200,
+      retry: false,
     });
     score = Math.max(0, Math.min(100, Math.round(out.score)));
     rationale = String(out.rationale).slice(0, 400);

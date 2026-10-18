@@ -80,6 +80,33 @@ function baseUrl(): string {
   return env.LLM_BASE_URL.replace(/\/+$/, "");
 }
 
+function llmHost(): string {
+  try {
+    return new URL(env.LLM_BASE_URL).host;
+  } catch {
+    return env.LLM_BASE_URL;
+  }
+}
+
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|$)/i;
+
+/**
+ * A deploy that can never reach its model: on Vercel (or any serverless
+ * host) "localhost" has no Ollama behind it. Answer that instantly and in
+ * plain Dutch instead of retrying for two minutes and surfacing
+ * "fetch failed".
+ */
+export function llmConfigProblem(): string | null {
+  if ((process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) && LOCAL_HOST.test(llmHost())) {
+    return "Er is nog geen taalmodel gekoppeld aan de live omgeving: LLM_BASE_URL wijst naar localhost, en op de server draait daar niets. Koppel je eigen Ollama/vLLM-server (LLM_BASE_URL, LLM_API_KEY en AI_ALLOW_REMOTE=true) of een OpenAI-compatibele dienst in de Vercel-omgevingsvariabelen.";
+  }
+  return null;
+}
+
+function unreachable(err: unknown): AppError {
+  return AppError.upstream(`Taalmodel niet bereikbaar op ${llmHost()} (${(err as Error).message}). Controleer of de modelserver draait en LLM_BASE_URL klopt.`);
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -165,6 +192,8 @@ async function post(
 }
 
 export async function chat(opts: ChatOptions): Promise<ChatResult> {
+  const problem = llmConfigProblem();
+  if (problem) throw AppError.upstream(problem);
   const model = opts.model ?? env.LLM_MODEL;
   const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
   return withGovernor(opts.purpose ?? "chat", async () => {
@@ -200,8 +229,8 @@ export async function chat(opts: ChatOptions): Promise<ChatResult> {
       if ((err as Error).name === "TimeoutError") {
         throw AppError.upstream(`LLM request timed out after ${timeoutMs}ms`);
       }
-      logger.error("llm chat failed", { error: (err as Error).message });
-      throw AppError.upstream(`LLM unreachable: ${(err as Error).message}`);
+      logger.error("llm chat failed", { error: (err as Error).message, host: llmHost() });
+      throw unreachable(err);
     }
   });
 }
@@ -239,6 +268,8 @@ export function fastModel(): string {
 export async function* chatStream(
   opts: ChatOptions,
 ): AsyncGenerator<string, { text: string; model: string }, void> {
+  const problem = llmConfigProblem();
+  if (problem) throw AppError.upstream(problem);
   const model = opts.model ?? env.LLM_MODEL;
   const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
 
@@ -273,7 +304,7 @@ export async function* chatStream(
       }),
     });
   } catch (err) {
-    throw AppError.upstream(`LLM unreachable: ${(err as Error).message}`);
+    throw unreachable(err);
   }
   if (!res.ok || !res.body) {
     throw AppError.upstream(`LLM stream HTTP ${res.status}`);
@@ -357,6 +388,8 @@ export interface LlmHealth {
  */
 export async function llmHealth(): Promise<LlmHealth> {
   const base = baseUrl();
+  const problem = llmConfigProblem();
+  if (problem) return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: problem };
   try {
     const res = await fetch(`${base}/models`, {
       signal: AbortSignal.timeout(4000),
