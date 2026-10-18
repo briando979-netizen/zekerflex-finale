@@ -17,10 +17,12 @@ export interface VolumeTier {
 
 export const VOLUME_TIERS: VolumeTier[] = [
   { name: "Basis", fromHours: 0, factor: 1 },
-  { name: "Groei", fromHours: 500, factor: 0.93 }, // ≈ € 3,25
-  { name: "Volume", fromHours: 2_000, factor: 0.86 }, // ≈ € 3,00
-  { name: "Enterprise", fromHours: 10_000, factor: 0.79 }, // ≈ € 2,75
-  { name: "Mega", fromHours: 50_000, factor: 0.71 }, // ≈ € 2,50
+  // Exact fractions of the € 3,50 base so the advertised round prices come out
+  // to the cent (0.93 etc. gave € 3,26 / 3,01 / 2,77 / 2,49).
+  { name: "Groei", fromHours: 500, factor: 325 / 350 }, // € 3,25
+  { name: "Volume", fromHours: 2_000, factor: 300 / 350 }, // € 3,00
+  { name: "Enterprise", fromHours: 10_000, factor: 275 / 350 }, // € 2,75
+  { name: "Mega", fromHours: 50_000, factor: 250 / 350 }, // € 2,50
 ];
 
 export function tierFor(monthHours: number): { tier: VolumeTier; next: VolumeTier | null } {

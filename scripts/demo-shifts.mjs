@@ -498,7 +498,7 @@ async function writeArchivedForTeam(tenantId) {
           shiftId: id,
           freelancerId: fp.id,
           source: "ACCEPTED",
-          acceptedAt: new Date(startsAt.getTime() - 3 * DAY),
+          acceptedAt: new Date(Math.min(Date.now(), startsAt.getTime() - 3 * DAY)),
           cancelledAt: p.cancelled ? new Date(startsAt.getTime() - DAY) : null,
           cancelReason: p.cancelled ? "Afgezegd door flexwerker: ziek" : null,
         },
@@ -736,7 +736,7 @@ async function writeFreelancerJourney(tenantId) {
       where: { shiftId_freelancerId: { shiftId: j.id, freelancerId: fp.id } },
       create: {
         shiftId: j.id, freelancerId: fp.id, source: "ACCEPTED",
-        acceptedAt: new Date(startsAt.getTime() - 3 * DAY),
+        acceptedAt: new Date(Math.min(Date.now(), startsAt.getTime() - 3 * DAY)),
         cancelledAt: j.cancelled ? new Date(startsAt.getTime() - DAY) : null,
         cancelReason: j.cancelled ? "Afgezegd door flexwerker: ziek" : null,
       },

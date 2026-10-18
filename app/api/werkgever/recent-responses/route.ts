@@ -46,7 +46,9 @@ export async function GET(request: Request): Promise<NextResponse> {
         where: {
           source: "ACCEPTED",
           cancelledAt: null,
-          acceptedAt: { gt: since },
+          // lte now: a future-dated acceptance (bad import/demo data) would
+          // otherwise count as "new" on every poll and re-open the alert forever.
+          acceptedAt: { gt: since, lte: new Date() },
           shift: { branch: branchFilter },
         },
         select: {
