@@ -27,6 +27,10 @@ export interface ReverseBillingInput {
   /** "Extra kosten factureren" — VAT-inclusive amount the freelancer entered on submit. */
   extraCostsGrossCents?: number | null;
   extraCostsNote?: string | null;
+  /** Staffelkorting: the client's fee per hour this month (lib/pricing/volume.ts); default = full fee. */
+  platformFeePerHourCents?: number;
+  /** Tier name shown on the invoice line when discounted. */
+  volumeTierName?: string;
 }
 
 const round = (n: number) => Math.round(n);
@@ -146,7 +150,8 @@ export function buildReverseBillingInvoices(
 
   // Employer platform fee: a flat amount per billable hour (e.g. EUR 3,50/uur),
   // billed to the client, never deducted from the freelancer.
-  const feePerHourCents = env.PLATFORM_FEE_PER_HOUR_CENTS;
+  const feePerHourCents = input.platformFeePerHourCents ?? env.PLATFORM_FEE_PER_HOUR_CENTS;
+  const discounted = feePerHourCents < env.PLATFORM_FEE_PER_HOUR_CENTS;
   const feeVat = resolveVat("NL", input.recipientCountry, input.freelancerVatValid);
 
   const platformFeeInvoice = assemble(
@@ -161,7 +166,7 @@ export function buildReverseBillingInvoices(
       {
         description: `ZekerFlex platformkosten (€ ${(feePerHourCents / 100)
           .toFixed(2)
-          .replace(".", ",")} per gewerkt uur) — ${input.shiftTitle}`,
+          .replace(".", ",")} per gewerkt uur${discounted ? `, staffel ${input.volumeTierName ?? "volume"}` : ""}) — ${input.shiftTitle}`,
         quantityHours: Number(hours.toFixed(2)),
         unitPriceCents: feePerHourCents,
       },

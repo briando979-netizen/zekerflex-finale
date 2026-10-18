@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { fastPayAvailableFor } from "@/lib/payouts/fastpay";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { getPrefs, type UserPrefs } from "@/lib/prefs/store";
 import { travelByMode, fastestMode, type ModeEstimate, type TravelModeKey } from "@/lib/geo/travel-modes";
@@ -58,6 +59,8 @@ export interface MarketplaceShift {
   replacementNote: string | null;
   /** the signed-in freelancer's own counter-offer on this shift, if any */
   myOffer: { proposedRateCents: number; status: OfferStatus } | null;
+  /** the client offers 1-minute / 3-day payout (credit-checked) */
+  fastPay: boolean;
   /** only uitzendkrachten (payroll-track) can react to this shift */
   viaUitzendbureau: boolean;
 }
@@ -306,6 +309,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     })),
   );
 
+  const fastPayByTenant = await fastPayAvailableFor(visible.map((s) => s.branch.tenantId));
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
       if (s.createdAt.getTime() > lastSeen) newSinceLastVisit += 1;
@@ -334,6 +338,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         isReplacement: replacementByShift.has(s.id),
         replacementNote: replacementByShift.get(s.id) ?? null,
         myOffer: offerByShift.get(s.id) ?? null,
+        fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
         match: computeMatch(
           home,
@@ -533,6 +538,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       isReplacement: false,
       replacementNote: null,
       myOffer: null,
+      fastPay: (await fastPayAvailableFor([row.branch.tenantId])).get(row.branch.tenantId) ?? false,
       viaUitzendbureau: row.viaUitzendbureau,
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {

@@ -12,6 +12,8 @@ import {
   requestAdvance,
 } from "@/lib/payouts/advances";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
+import { acceptTerms, FACTORING_TERMS_VERSION, hasAcceptedTerms } from "@/lib/payouts/fastpay";
+import { clientIp } from "@/lib/http/request";
 import { prisma } from "@/lib/prisma";
 import { canAdvanceToBank, payAdvanceToBank } from "@/lib/bank/advance";
 
@@ -43,6 +45,7 @@ export async function GET(): Promise<NextResponse> {
       maxAdvanceCents: maxAdvanceCents(pending, outstanding),
       advanceFeeRatePct: Math.round((advanceFee(10000) / 10000) * 100),
       advanceToBank: await canAdvanceToBank(p.userId),
+      factoringTerms: { version: FACTORING_TERMS_VERSION, accepted: await hasAcceptedTerms(p.userId) },
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);
@@ -50,15 +53,21 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-const putSchema = z.object({ speed: z.enum(["instant", "threeDay", "standard"]) });
+const putSchema = z.object({ speed: z.enum(["instant", "threeDay", "standard"]), acceptTerms: z.boolean().optional() });
 
 // PUT /api/me/payout — set the payout speed.
 export async function PUT(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const { speed } = putSchema.parse(await request.json().catch(() => {
+    const { speed, acceptTerms: accepting } = putSchema.parse(await request.json().catch(() => {
       throw AppError.validation("Body must be JSON");
     }));
+    // 1 minuut / 3 dagen = ZekerFlex neemt je vordering over: only with the
+    // overdrachtsvoorwaarden accepted (once per terms version, recorded).
+    if (speed !== "standard") {
+      if (accepting) await acceptTerms(p.userId, clientIp(request), request.headers.get("user-agent") ?? "");
+      else if (!(await hasAcceptedTerms(p.userId))) throw AppError.precondition("Ga eerst akkoord met de voorwaarden voor snelle uitbetaling (overdracht van je vordering).");
+    }
     const prefs = await setPayoutSpeed(p.userId, speed);
     return NextResponse.json({ prefs });
   } catch (err) {

@@ -8,6 +8,8 @@ import { PageHeader, Panel, EmptyState } from "@/components/app/ui";
 import { OrgProfileForm } from "@/components/app/OrgProfileForm";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
+import { FastPaySettings } from "@/components/werkgever/FastPaySettings";
+import { VolumeCard } from "@/components/werkgever/VolumeCard";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -100,6 +102,11 @@ export default async function WerkgeverBedrijfPage() {
             </div>
           )}
         </Panel>
+      </div>
+
+      <div className="mt-6 space-y-6">
+        <VolumeCard />
+        <FastPaySettings />
       </div>
 
       <div className="mt-6">

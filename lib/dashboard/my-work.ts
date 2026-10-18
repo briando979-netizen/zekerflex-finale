@@ -80,6 +80,8 @@ type ShiftRow = {
 export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null): MarketplaceShift {
   const hours = (row.endsAt.getTime() - row.startsAt.getTime()) / 3_600_000 - row.breakMinutes / 60;
   return {
+    // Fast payout is shown on the klus page / at hours-entry, which look it up per client.
+    fastPay: false,
     id: row.id,
     title: row.title,
     description: row.description,

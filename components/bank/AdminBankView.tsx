@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminBankExtras } from "@/components/bank/AdminBankExtras";
 import { AdminBankMonitoring } from "@/components/bank/AdminBankMonitoring";
+import { AdminFastPay } from "@/components/bank/AdminFastPay";
 
 interface Fees {
   monthlyPersonalCents: number;
@@ -255,6 +256,8 @@ export function AdminBankView() {
       </div>
 
       <AdminBankMonitoring />
+
+      <AdminFastPay />
 
       <AdminBankExtras />
     </div>

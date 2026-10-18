@@ -29,6 +29,8 @@ import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
 import { settleBankAdvances } from "@/lib/bank/advance";
 import { accountForPrincipal } from "@/lib/bank/accounts";
 import { rewardReferral } from "@/lib/rewards/referral";
+import { getFastPay } from "@/lib/payouts/fastpay";
+import { feePerHourFor, monthHoursFor, tierFor } from "@/lib/pricing/volume";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -238,6 +240,9 @@ export async function approveTimesheet(
       );
     }
 
+    // Staffelkorting: rate by hours this client already had approved this month.
+    const monthHours = await monthHoursFor(ts.branch.tenantId);
+
     // --- Transaction: approve + invoices + pending payment ------------
     const persisted = await prisma.$transaction(async (tx) => {
       const freelancerNumber = await nextInvoiceNumber(
@@ -262,6 +267,8 @@ export async function approveTimesheet(
         platformInvoiceNumber: platformNumber,
         extraCostsGrossCents: ts.extraCostsCents,
         extraCostsNote: ts.extraCostsNote,
+        platformFeePerHourCents: feePerHourFor(monthHours),
+        volumeTierName: tierFor(monthHours).tier.name,
       });
 
       const updated = await tx.timesheet.update({
@@ -607,6 +614,10 @@ async function approveViaPayroll(args: {
   try {
     if (ts.freelancer.payoutIbanPendingVerification) {
       throw new Error("IBAN recent gewijzigd, nog niet geverifieerd — voorschot aangehouden");
+    }
+    // The client decides whether its uitzendkrachten get an instant advance.
+    if (!(await getFastPay(ts.branch.tenantId)).advancesForUitzend) {
+      throw new Error("Opdrachtgever biedt geen voorschot voor uitzendkrachten — loon volgt via de wekelijkse verloning");
     }
     const a = await createPayrollAdvance({
       userId: ts.freelancer.userId,

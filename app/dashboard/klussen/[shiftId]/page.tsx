@@ -336,6 +336,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
         </div>
 
+        {/* Fast payout — only when the client offers it (credit-checked) */}
+        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
+          {s.fastPay ? (
+            <>
+              <span className="font-semibold">⚡ Snelle uitbetaling mogelijk</span> — kies na goedkeuring van je uren voor uitbetaling binnen 1 minuut of 3 werkdagen (ZekerFlex neemt dan je factuur over, tegen een kleine vergoeding).
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">Standaard uitbetaling</span> — deze opdrachtgever biedt (nog) geen snelle uitbetaling. Je ontvangt je geld zodra de opdrachtgever betaalt.
+            </>
+          )}
+        </div>
+
         {/* Info chips */}
         <div className="mt-4 flex flex-wrap gap-2">
           {INFO_CHIPS.map((c) => (

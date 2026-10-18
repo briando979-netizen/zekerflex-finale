@@ -40,6 +40,13 @@ export function PayoutChoice({ initialSpeed = "standard" }: { initialSpeed?: Spe
 
   async function choose(next: Speed) {
     if (next === speed || saving) return;
+    // Fast payout = assigning the claim to ZekerFlex: explicit consent first.
+    const consent =
+      next === "standard" ||
+      window.confirm(
+        "Bij snelle uitbetaling draag je je vordering op de opdrachtgever over aan ZekerFlex, dat je direct het factuurbedrag min de vergoeding (4% bij 1 minuut, 2% bij 3 werkdagen) uitbetaalt.\n\nGa je akkoord met de voorwaarden voor snelle uitbetaling (zekerflex.com/voorwaarden/snelle-uitbetaling)?",
+      );
+    if (!consent) return;
     const prev = speed;
     setSpeed(next);
     setSaving(true);
@@ -48,12 +55,15 @@ export function PayoutChoice({ initialSpeed = "standard" }: { initialSpeed?: Spe
       const r = await fetch("/api/me/payout", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ speed: next }),
+        body: JSON.stringify({ speed: next, ...(next !== "standard" ? { acceptTerms: true } : {}) }),
       });
-      if (!r.ok) throw new Error();
-    } catch {
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d?.error?.message ?? "Opslaan mislukt — probeer het opnieuw.");
+      }
+    } catch (e) {
       setSpeed(prev);
-      setErr("Opslaan mislukt — probeer het opnieuw.");
+      setErr((e as Error).message || "Opslaan mislukt — probeer het opnieuw.");
     } finally {
       setSaving(false);
     }

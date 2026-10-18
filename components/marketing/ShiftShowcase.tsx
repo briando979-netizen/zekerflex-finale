@@ -23,6 +23,7 @@ function sample(
   const meters = km * 1000;
   const byMode = travelByMode(meters);
   return {
+    fastPay: true,
     id,
     title,
     description: null,

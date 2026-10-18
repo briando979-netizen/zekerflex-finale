@@ -163,6 +163,7 @@ export function ShiftCard({
         {shift.workedHereBefore > 0 && (
           <p className="mt-1 text-[11px] text-neutralx-400">Je werkte hier al {shift.workedHereBefore}×</p>
         )}
+        {shift.fastPay && <p className="mt-1 text-[11px] font-semibold text-brand-600">⚡ Snelle uitbetaling mogelijk (1 minuut / 3 dagen)</p>}
 
         <div className="mt-3 flex items-end justify-between border-t border-hair pt-3">
           <div>

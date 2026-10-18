@@ -6,6 +6,7 @@ import { TimesheetSubmitForm } from "@/components/app/TimesheetSubmitForm";
 import { HoursCorrectionPrompt } from "@/components/app/HoursCorrectionPrompt";
 import { CheckInPanel } from "@/components/app/CheckInPanel";
 import { getPayoutDestination } from "@/lib/bank/earnings";
+import { fastPayAvailable, getFastPay, hasAcceptedTerms } from "@/lib/payouts/fastpay";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { getPayoutPrefs } from "@/lib/payouts/preferences";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -49,10 +50,12 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
     timesheet.dispute.proposedMinutes !== timesheet.dispute.claimedMinutes
       ? timesheet.dispute
       : null;
-  const [payoutPrefs, fiscal, destination] = await Promise.all([
+  const [payoutPrefs, fiscal, destination, fastPaySettings, termsAccepted] = await Promise.all([
     getPayoutPrefs(principal.userId),
     getFiscal(principal.userId),
     getPayoutDestination(principal.userId),
+    getFastPay(timesheet.branch.tenant.id),
+    hasAcceptedTerms(principal.userId),
   ]);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
 
@@ -136,6 +139,8 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
           hourlyRateCents={timesheet.hourlyRateCents}
           gpsBacked={Boolean(timesheet.actualStart && timesheet.actualEnd)}
           earningsToBank={destination === "bank"}
+          fastPay={fastPayAvailable(fastPaySettings)}
+          termsAccepted={termsAccepted}
         />
       </div>
     </div>

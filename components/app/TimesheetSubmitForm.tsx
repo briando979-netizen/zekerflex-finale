@@ -50,6 +50,8 @@ export function TimesheetSubmitForm({
   hourlyRateCents = 0,
   gpsBacked = false,
   earningsToBank = false,
+  fastPay = false,
+  termsAccepted = false,
 }: {
   timesheetId: string;
   scheduledStart: Date;
@@ -65,6 +67,10 @@ export function TimesheetSubmitForm({
   /** start/end come from GPS check-in/out */
   gpsBacked?: boolean;
   earningsToBank?: boolean;
+  /** this client offers 1-minute / 3-day payout (credit-checked) */
+  fastPay?: boolean;
+  /** the worker already accepted the overdrachtsvoorwaarden */
+  termsAccepted?: boolean;
 }) {
   const [step, setStep] = useState<Step>("worked");
   const [start, setStart] = useState(localValue(scheduledStart));
@@ -77,7 +83,8 @@ export function TimesheetSubmitForm({
   const [extraNote, setExtraNote] = useState("");
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
-  const [speed, setSpeed] = useState<Speed>(payoutSpeed);
+  const [speed, setSpeed] = useState<Speed>(fastPay ? payoutSpeed : "standard");
+  const [terms, setTerms] = useState(termsAccepted);
   const [toBank, setToBank] = useState(earningsToBank);
   const [notWorkedReason, setNotWorkedReason] = useState("");
   const [notWorkedNote, setNotWorkedNote] = useState("");
@@ -105,7 +112,11 @@ export function TimesheetSubmitForm({
     setError("");
     try {
       if (!payroll) {
-        await fetch("/api/me/payout", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ speed }) }).catch(() => undefined);
+        const pr = await fetch("/api/me/payout", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ speed, ...(speed !== "standard" && terms && !termsAccepted ? { acceptTerms: true } : {}) }) });
+        if (!pr.ok) {
+          const d = await pr.json().catch(() => ({}));
+          throw new Error(d?.error?.message ?? "Uitbetaalkeuze opslaan lukte niet.");
+        }
         if (toBank !== earningsToBank) {
           await fetch("/api/me/bank/payout-destination", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ destination: toBank ? "bank" : "iban" }) }).catch(() => undefined);
         }
@@ -390,17 +401,36 @@ export function TimesheetSubmitForm({
         <>
           <p className="eyebrow">Stap 5</p>
           <h2 className="mt-2 font-display text-xl font-bold">Hoe snel wil je je geld?</h2>
+          {!fastPay && (
+            <p className="mt-3 rounded-xl bg-paper-soft px-3 py-2 text-xs text-neutralx-600">
+              {clientName} biedt geen snelle uitbetaling aan — bij deze klus ontvang je je geld zodra de opdrachtgever betaalt.
+            </p>
+          )}
           <div className="mt-4 space-y-2">
-            {SPEEDS.map((o) => (
-              <label key={o.speed} className={`flex cursor-pointer gap-3 rounded-xl border px-4 py-3 ${speed === o.speed ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
-                <input type="radio" name="speed" checked={speed === o.speed} onChange={() => setSpeed(o.speed)} className="mt-1 accent-brand-500" />
-                <span>
-                  <span className="block text-sm font-semibold text-ink">{o.title}</span>
-                  <span className="block text-xs leading-relaxed text-neutralx-500">{o.body}</span>
-                </span>
-              </label>
-            ))}
+            {SPEEDS.map((o) => {
+              const locked = o.speed !== "standard" && !fastPay;
+              return (
+                <label key={o.speed} className={`flex gap-3 rounded-xl border px-4 py-3 ${locked ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${speed === o.speed ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
+                  <input type="radio" name="speed" disabled={locked} checked={speed === o.speed} onChange={() => setSpeed(o.speed)} className="mt-1 accent-brand-500" />
+                  <span>
+                    <span className="block text-sm font-semibold text-ink">
+                      {o.title}
+                      {locked && <span className="ml-1 text-xs font-normal text-neutralx-400">— niet bij deze opdrachtgever</span>}
+                    </span>
+                    <span className="block text-xs leading-relaxed text-neutralx-500">{o.body}</span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
+          {speed !== "standard" && !termsAccepted && (
+            <label className="mt-3 flex items-start gap-2 rounded-xl border border-hair bg-paper-soft/60 p-3 text-xs text-neutralx-700">
+              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 accent-brand-500" />
+              <span>
+                Ik ga akkoord met de <a href="/voorwaarden/snelle-uitbetaling" target="_blank" className="font-semibold underline">voorwaarden voor snelle uitbetaling</a>: ik draag mijn vordering op de opdrachtgever over aan ZekerFlex, dat mij het factuurbedrag min de vergoeding uitbetaalt. Dit geldt voor de klussen waarbij ik voor snelle uitbetaling kies.
+              </span>
+            </label>
+          )}
           <p className="mt-4 text-sm font-semibold text-ink">Waarheen?</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setToBank(true)} className={`rounded-xl border px-3 py-3 text-left text-sm ${toBank ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
@@ -416,7 +446,7 @@ export function TimesheetSubmitForm({
             <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
               Terug
             </button>
-            <button type="button" onClick={next} className="btn-primary">
+            <button type="button" disabled={speed !== "standard" && !termsAccepted && !terms} onClick={next} className="btn-primary disabled:opacity-50">
               Verder
             </button>
           </div>

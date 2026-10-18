@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 const FAQ = [
   { q: "Zijn er verborgen kosten?", a: "Nee. Voor freelancers is meedoen gratis. Voor bedrijven zijn er alleen de platformkosten van € 3,50 per gewerkt uur. Btw wordt regulier toegepast." },
   { q: "Wanneer wordt de fee voor bedrijven berekend?", a: "Op het moment dat goedgekeurde uren tot een uitbetaling leiden. Geen werk, geen fee." },
+  { q: "Krijg ik korting bij veel uren?", a: "Ja. De platformkosten dalen met je volume deze maand: vanaf 500 uur € 3,25, vanaf 2.000 uur € 3,00, vanaf 10.000 uur € 2,75 en vanaf 50.000 uur € 2,50 per uur. Je ziet je staffel live in je werkgeversomgeving." },
   { q: "Betaalt een freelancer iets voor de uitbetaling?", a: "Alleen als je sneller wilt dan de reguliere termijn. Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of eerder tegen een fee: bij urengoedkeuring 4% van de factuur, binnen 3 dagen 2%, of direct. Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Kan ik een offerte op maat krijgen?", a: "Voor grotere organisaties met veel vestigingen kijken we naar volumeafspraken. Neem contact op via sales@zekerflex.com." },
   { q: "Wat kost de API?", a: "Los van de klusprijs: de publieke API heeft een gratis tier en betaalde abonnementen voor hogere limieten. Zie /developers voor de prijzen." },
@@ -69,8 +70,22 @@ export default function PrijzenPage() {
               <span className="text-sm text-neutralx-500">per gewerkt uur</span>
             </div>
             <p className="mt-2 text-sm text-neutralx-600">
-              Vaste platformkosten per gewerkt uur. Alleen wanneer er iemand werkt.
+              Platformkosten per gewerkt uur. Alleen wanneer er iemand werkt — met staffelkorting bij veel uren.
             </p>
+            <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[11px]">
+              {[
+                ["€ 3,50", "0+ u"],
+                ["€ 3,25", "500+ u"],
+                ["€ 3,00", "2.000+ u"],
+                ["€ 2,75", "10.000+ u"],
+                ["€ 2,50", "50.000+ u"],
+              ].map(([p, h]) => (
+                <span key={h} className="rounded-lg border border-hair px-1 py-1.5">
+                  <span className="num block font-semibold text-ink">{p}</span>
+                  <span className="block text-neutralx-500">{h}/mnd</span>
+                </span>
+              ))}
+            </div>
             <ul className="mt-6 flex-1 space-y-3 text-[0.95rem] text-neutralx-600">
               {[
                 "Automatische matching en toewijzing per vestiging",
