@@ -18,7 +18,10 @@ export function Composer({
   onClearReply,
   onSend,
   onTyping,
+  lastIncoming = "",
 }: {
+  /** text of the last message from the other side — for ✨ reply suggestions */
+  lastIncoming?: string;
   threadId: string;
   quickReplies: string[];
   replyTo: Msg | null;
@@ -30,6 +33,30 @@ export function Composer({
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showQuick, setShowQuick] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+
+  async function aiSuggest() {
+    setAiBusy(true);
+    setAiNote(null);
+    const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "suggest", lastIncoming }) }).catch(() => null);
+    const d = r?.ok ? await r.json() : null;
+    setAiSuggestions(d?.suggestions ?? []);
+    setAiBusy(false);
+  }
+
+  async function aiRewrite(style: string) {
+    if (!text.trim()) return;
+    setAiBusy(true);
+    setAiNote(null);
+    const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "rewrite", text, style }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setAiBusy(false);
+    if (d?.text) setText(d.text);
+    else setAiNote(d?.error ?? d?.error?.message ?? "Herschrijven lukte niet.");
+  }
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -151,6 +178,40 @@ export function Composer({
         </div>
       )}
 
+      {aiOpen && (
+        <div className="space-y-2 border-b border-hair bg-brand-50/40 p-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-semibold text-brand-700">✨ AI-hulp</span>
+            {aiBusy && <span className="text-neutralx-500">bezig…</span>}
+            {aiSuggestions.map((s) => (
+              <button key={s} type="button" onClick={() => setText(s)} className="rounded-full border border-brand-500/40 bg-white px-2.5 py-1 text-neutralx-700 hover:border-brand-500">
+                {s}
+              </button>
+            ))}
+          </div>
+          {text.trim() && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-neutralx-500">Mijn tekst:</span>
+              {(
+                [
+                  ["vriendelijk", "Vriendelijker"],
+                  ["kort", "Korter"],
+                  ["zakelijk", "Zakelijker"],
+                  ["en", "→ Engels"],
+                  ["pl", "→ Pools"],
+                  ["de", "→ Duits"],
+                ] as const
+              ).map(([k, l]) => (
+                <button key={k} type="button" disabled={aiBusy} onClick={() => aiRewrite(k)} className="rounded-full border border-hairstrong bg-white px-2.5 py-1 hover:bg-paper-soft disabled:opacity-50">
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          {aiNote && <p className="text-neutralx-500">{aiNote}</p>}
+        </div>
+      )}
+
       {showQuick && quickReplies.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-b border-hair p-2">
           {quickReplies.map((q) => (
@@ -219,6 +280,19 @@ export function Composer({
             aria-label="Snelle antwoorden"
           >
             ⚡
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = !aiOpen;
+              setAiOpen(next);
+              if (next) void aiSuggest();
+            }}
+            className={`grid h-9 w-9 place-items-center rounded-full hover:bg-paper-soft ${aiOpen ? "bg-brand-50 text-brand-600" : "text-neutralx-500"}`}
+            aria-label="AI-hulp"
+          >
+            ✨
           </button>
 
           <textarea

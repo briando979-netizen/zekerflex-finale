@@ -445,6 +445,7 @@ export function InboxPage({
             onClearReply={() => setReplyTo(null)}
             onSend={send}
             onTyping={pingTyping}
+            lastIncoming={[...messages].reverse().find((m) => m.from !== me?.userId && m.text)?.text ?? ""}
           />
         </div>
       )}
