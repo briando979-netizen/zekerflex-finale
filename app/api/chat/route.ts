@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chatStream, fastModel, llmConfigProblem } from "@/lib/ai/client";
 import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
+import { appendMessage, isConversationId } from "@/lib/chat/webchat";
 import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
@@ -21,6 +22,9 @@ const bodySchema = z.object({
     )
     .min(1)
     .max(10),
+  /** random token from the widget — makes the conversation a ticket admins can follow */
+  conversationId: z.string().optional(),
+  page: z.string().max(200).optional(),
 });
 
 const SYSTEM = `Je bent de publieke assistent op de website van ZekerFlex, een Nederlands
@@ -46,6 +50,7 @@ function textStream(
   chunks: AsyncIterable<string> | string,
   question?: string,
   fallback?: string,
+  onDone?: (full: string) => Promise<unknown>,
 ): Response {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -74,6 +79,7 @@ function textStream(
         if (question && full.trim()) {
           void logExchange("public", { q: question, a: full.trim() }).catch(() => undefined);
         }
+        if (onDone && full.trim()) await onDone(full.trim()).catch(() => undefined);
       }
     },
   });
@@ -98,6 +104,16 @@ export async function POST(request: Request): Promise<Response> {
 
   const lastUser = [...parsed.messages].reverse().find((m) => m.role === "user");
   const question = lastUser?.content ?? "";
+
+  // Ticket: keep the conversation; once an agent took over, the AI stays quiet.
+  const convId = isConversationId(parsed.conversationId) ? parsed.conversationId : null;
+  if (convId && question) {
+    const conv = await appendMessage(convId, { role: "user", content: question }, parsed.page).catch(() => null);
+    if (conv?.status === "human") {
+      return new Response("", { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-ZF-Human": "1" } });
+    }
+  }
+  const saveReply = convId ? (full: string) => appendMessage(convId, { role: "assistant", content: full }) : undefined;
   const guard = inspectPrompt(question);
   if (!guard.allowed) {
     logger.warn("prompt injection blocked", { reason: guard.reason, ip });
@@ -105,7 +121,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   // Small talk ("hoi", "bedankt", "wie ben jij") — instant, also mid-conversation.
   const chit = smallTalk(question);
-  if (chit) return textStream(withSuggestions(chit), question);
+  if (chit) return textStream(withSuggestions(chit), question, undefined, saveReply);
 
   const topic = topicAnswer(question);
   const knowledgeHits = lastUser ? searchKnowledge(lastUser.content, 4) : [];
@@ -116,7 +132,7 @@ export async function POST(request: Request): Promise<Response> {
   );
   // No model connected (or a known question at the start): answer ourselves.
   if (llmConfigProblem() || (topic && parsed.messages.length <= 2)) {
-    return textStream(ownAnswer, question);
+    return textStream(ownAnswer, question, undefined, saveReply);
   }
   const smartFallback = ownAnswer;
 
@@ -150,9 +166,9 @@ export async function POST(request: Request): Promise<Response> {
       maxTokens: 260,
       messages: [{ role: "system", content: SYSTEM }, ...knowledgeMsgs, ...exampleMsgs, ...parsed.messages],
     });
-    return textStream(gen, question, smartFallback);
+    return textStream(gen, question, smartFallback, saveReply);
   } catch (err) {
     logger.warn("public chat stream failed", { error: (err as Error).message });
-    return textStream(smartFallback, question);
+    return textStream(smartFallback, question, undefined, saveReply);
   }
 }

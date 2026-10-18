@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
 
 interface Msg {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "agent";
   content: string;
+  by?: string;
   q?: string; // the question that produced this answer (for rating)
   rated?: "up" | "down";
 }
@@ -42,7 +43,23 @@ const INTENTS: { re: RegExp; label: string; ask: string }[] = [
   { re: /uren|inchecken|uitchecken/i, label: "Uren & inchecken", ask: "Hoe vul ik mijn uren in?" },
 ];
 
+/** Stable per-browser conversation token — turns the chat into a ticket an agent can follow. */
+function conversationId(): string {
+  try {
+    let id = localStorage.getItem("zf-webchat-id");
+    if (!id) {
+      id = `wc-${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+      localStorage.setItem("zf-webchat-id", id);
+    }
+    return id;
+  } catch {
+    return `wc-${Math.random().toString(36).slice(2, 26)}`;
+  }
+}
+
 export function ChatWidget() {
+  const [agentCount, setAgentCount] = useState(0);
+  const [human, setHuman] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
@@ -56,6 +73,26 @@ export function ChatWidget() {
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 60);
   }, [open]);
+
+  // While open, pick up replies from a ZekerFlex colleague.
+  useEffect(() => {
+    if (!open) return;
+    const id = conversationId();
+    const poll = async () => {
+      const r = await fetch(`/api/chat/conversation/${id}`, { cache: "no-store" }).catch(() => null);
+      if (!r?.ok) return;
+      const d: { status: string; messages: { content: string; by: string }[] } = await r.json();
+      setHuman(d.status === "human");
+      if (d.messages.length > agentCount) {
+        const fresh = d.messages.slice(agentCount);
+        setMessages((m) => [...m, ...fresh.map((x) => ({ role: "agent" as const, content: x.content, by: x.by }))]);
+        setAgentCount(d.messages.length);
+      }
+    };
+    void poll();
+    const t = setInterval(() => void poll(), 5000);
+    return () => clearInterval(t);
+  }, [open, agentCount]);
 
   // live intent as you type
   const liveIntents = useMemo(() => {
@@ -86,8 +123,20 @@ export function ChatWidget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-8).map((m) => ({ role: m.role, content: splitSuggestions(m.content).text || m.content })) }),
+        body: JSON.stringify({
+          conversationId: conversationId(),
+          page: typeof window !== "undefined" ? window.location.pathname : undefined,
+          messages: next
+            .filter((m) => m.role !== "agent")
+            .slice(-8)
+            .map((m) => ({ role: m.role as "user" | "assistant", content: splitSuggestions(m.content).text || m.content })),
+        }),
       });
+      // A colleague has taken over: no AI answer, their reply arrives via polling.
+      if (res.headers.get("X-ZF-Human") === "1") {
+        setHuman(true);
+        return;
+      }
       if (!res.body) throw new Error("no stream");
       setMessages((m) => [...m, { role: "assistant", content: "", q: clean }]);
       const reader = res.body.getReader();
@@ -140,7 +189,7 @@ export function ChatWidget() {
             <LogoGlyph size={30} />
             <div className="leading-tight">
               <p className="text-sm font-semibold">ZekerFlex-assistent</p>
-              <p className="text-xs text-neutralx-500">Lokaal · antwoordt in het Nederlands · leert mee</p>
+              <p className="text-xs text-neutralx-500">{human ? "Een collega van ZekerFlex chat nu met je" : "Antwoordt direct · een collega kan meelezen"}</p>
             </div>
           </div>
 
@@ -149,9 +198,10 @@ export function ChatWidget() {
               <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
                 <div
                   className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                    m.role === "user" ? "bg-brand-500 text-white" : "bg-paper-soft text-ink-soft"
+                    m.role === "user" ? "bg-brand-500 text-white" : m.role === "agent" ? "border border-brand-500/30 bg-brand-50 text-ink" : "bg-paper-soft text-ink-soft"
                   }`}
                 >
+                  {m.role === "agent" && <span className="mb-0.5 block text-[11px] font-semibold text-brand-700">👤 {m.by ?? "ZekerFlex"}</span>}
                   <span className="whitespace-pre-line">{splitSuggestions(m.content).text || <span className="text-neutralx-400">…</span>}</span>
                   {m.role === "assistant" && m.q && m.content && !busy && (
                     <div className="mt-1.5 flex items-center gap-1.5">
