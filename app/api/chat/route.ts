@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { chatStream, fastModel } from "@/lib/ai/client";
+import { chatStream, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
 import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
@@ -33,24 +34,13 @@ Feiten die je mag gebruiken:
 - Aanmelden vereist KVK-inschrijving (zzp) en identiteitsverificatie (KYC).
 - Facturatie verloopt via reverse billing: ZekerFlex maakt de facturen automatisch aan.
 - Het platform draait volledig in Nederland, zonder tussenpartijen.
+- ZekerFlex Bank: eigen rekening in de app; verdiensten direct erop, potjes, sparen met vaste rente, overmaken, betaalverzoeken, gratis virtuele betaalpas. Eerste 30 dagen gratis.
+- Zonder KVK werk je als uitzendkracht via ZekerFlex (loonstrook, voorschot binnen 1 minuut na goedkeuring).
+- Op de dag van de klus check je in en uit op locatie; uren vul je in stappen in.
 
 Regels: antwoord kort (max 4 zinnen), in het Nederlands, vriendelijk en concreet.
 Verzin geen prijzen of functies die hierboven niet staan. Weet je iets niet, verwijs naar
 info@zekerflex.com of de pagina Voor bedrijven / Voor freelancers.`;
-
-const CANNED: { match: RegExp; reply: string }[] = [
-  { match: /uitbetaal|betaald|payout|geld|wanneer.*betaal/i, reply: "Je wordt niet automatisch meteen betaald — je kiest zelf per dienst nadat je uren zijn goedgekeurd: direct bij goedkeuring (4% van de factuur), binnen 3 werkdagen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). Uitbetalen gaat via SEPA en de factuur maakt ZekerFlex automatisch aan." },
-  { match: /prijs|prijzen|kost|tarief|fee|commissie|abonnement/i, reply: "Voor bedrijven rekent ZekerFlex € 3,50 platformkosten per gewerkt uur, en je betaalt alleen als er daadwerkelijk iemand werkt. Geen abonnement of opstartkosten. Voor freelancers is meedoen gratis." },
-  { match: /\bdba\b|schijnzelfstand|modelovereenkomst|wet dba/i, reply: "Elke opdracht loopt via een goedgekeurde modelovereenkomst. ZekerFlex bewaakt automatisch de Wet DBA-signalen — urenconcentratie bij één opdrachtgever, opeenvolgende weken en omzetafhankelijkheid — en grijpt in voordat een samenwerking risicovol wordt." },
-  { match: /aanmeld|registr|account|begin|starten|inschrijv/i, reply: "Aanmelden kan via 'Aan de slag'. Als zzp'er heb je een KVK-inschrijving nodig en doorloop je een korte identiteitsverificatie. Bedrijven registreren hun organisatie en kunnen daarna direct diensten uitzetten." },
-  { match: /match|hoe werkt|vind.*klus|shift|klus/i, reply: "Je geeft je vak, beschikbaarheid en thuisbasis op. Bij een nieuwe dienst rangschikt ZekerFlex kandidaten op reistijd, betrouwbaarheid en vakmatch. Wie de drempel van de vestiging haalt wordt direct toegewezen, de rest krijgt het aanbod in golven." },
-  { match: /veilig|privacy|data|gegevens|avg|gdpr/i, reply: "Het platform draait volledig in Nederland zonder externe tussenpartijen. Gevoelige gegevens worden versleuteld opgeslagen, analytics werkt zonder cookies en elke handeling wordt vastgelegd in een auditspoor." },
-  { match: /contact|bereik|mail|telefoon|hulp/i, reply: "Je kunt ons bereiken via support@zekerflex.com (algemene vragen: info@zekerflex.com). Op de pagina's Voor freelancers en Voor bedrijven vind je ook de meeste antwoorden." },
-];
-
-function pickCanned(text: string): string | null {
-  return CANNED.find((c) => c.match.test(text))?.reply ?? null;
-}
 
 function textStream(
   chunks: AsyncIterable<string> | string,
@@ -113,19 +103,22 @@ export async function POST(request: Request): Promise<Response> {
     logger.warn("prompt injection blocked", { reason: guard.reason, ip });
     return textStream("Daar kan ik niet mee helpen. Stel een vraag over ZekerFlex.");
   }
-  const canned = lastUser ? pickCanned(lastUser.content) : null;
-  if (canned && parsed.messages.length <= 2) {
-    return textStream(canned, question);
-  }
+  // Small talk ("hoi", "bedankt", "wie ben jij") — instant, also mid-conversation.
+  const chit = smallTalk(question);
+  if (chit) return textStream(withSuggestions(chit), question);
 
-  // Ground the model in the same facts the Kennis pages show — and double as
-  // a real, sourced fallback if the local model is unreachable.
+  const topic = topicAnswer(question);
   const knowledgeHits = lastUser ? searchKnowledge(lastUser.content, 4) : [];
-  const smartFallback =
-    canned ??
-    (knowledgeHits[0]
-      ? knowledgeHits[0].a
-      : "Daar kan ik je nu niet direct mee helpen. Kijk op de pagina Voor bedrijven of Voor freelancers, of mail info@zekerflex.com.");
+  // The assistant's own answer: a known topic, else the best knowledge-base
+  // hit, else an honest "ask a colleague" with topics to pick from.
+  const ownAnswer = withSuggestions(
+    topic ?? (knowledgeHits[0] ? { reply: knowledgeHits[0].a, suggestions: ["Contact met een mens", "Hoe meld ik me aan?"] } : fallbackAnswer()),
+  );
+  // No model connected (or a known question at the start): answer ourselves.
+  if (llmConfigProblem() || (topic && parsed.messages.length <= 2)) {
+    return textStream(ownAnswer, question);
+  }
+  const smartFallback = ownAnswer;
 
   const shortConversation = parsed.messages.length <= 4;
   try {

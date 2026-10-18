@@ -13,15 +13,19 @@ interface Msg {
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "Hoi! Ik ben de ZekerFlex-assistent. Vraag me over uitbetaling, de Wet DBA, tarieven, aanmelden of hoe matching werkt — ik leer van elke vraag.",
+    "Hoi! 👋 Ik ben de ZekerFlex-assistent. Zoek je werk of personeel, heb je een vraag over uitbetalen, ZekerFlex Bank of aanmelden? Vraag maar raak — ik antwoord meteen.",
 };
 
-const SUGGESTIONS = [
-  "Hoe snel word ik uitbetaald?",
-  "Wat kost ZekerFlex voor bedrijven?",
-  "Hoe zit het met de Wet DBA?",
-  "Hoe meld ik me aan als flexwerker?",
-];
+const SUGGESTIONS = ["Ik zoek werk", "Ik zoek personeel", "Hoe snel word ik uitbetaald?", "Wat is ZekerFlex Bank?", "Wat kost ZekerFlex voor bedrijven?"];
+
+/** The server appends follow-ups as a final line "[[a|b|c]]" — split it off (also while it streams in). */
+function splitSuggestions(content: string): { text: string; suggestions: string[] } {
+  const i = content.indexOf("\n[[");
+  if (i === -1) return { text: content, suggestions: [] };
+  const tail = content.slice(i + 3);
+  const done = tail.endsWith("]]");
+  return { text: content.slice(0, i), suggestions: done ? tail.slice(0, -2).split("|").map((x) => x.trim()).filter(Boolean) : [] };
+}
 
 // Client-side intent recognition — mirrors the server's canned topics so we can
 // react the instant someone starts typing.
@@ -34,6 +38,8 @@ const INTENTS: { re: RegExp; label: string; ask: string }[] = [
   { re: /btw|kvk|factuur|facturatie|kleineondernemers|kor/i, label: "Btw & facturatie", ask: "Heb ik een btw-nummer nodig?" },
   { re: /veilig|privacy|gegevens|avg|data/i, label: "Privacy & veiligheid", ask: "Is mijn data veilig?" },
   { re: /contact|hulp|bereik|mail|telefoon/i, label: "Contact", ask: "Hoe kan ik contact opnemen?" },
+  { re: /bank|rekening|pas|sparen|potje/i, label: "ZekerFlex Bank", ask: "Wat is ZekerFlex Bank?" },
+  { re: /uren|inchecken|uitchecken/i, label: "Uren & inchecken", ask: "Hoe vul ik mijn uren in?" },
 ];
 
 export function ChatWidget() {
@@ -80,7 +86,7 @@ export function ChatWidget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-8).map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({ messages: next.slice(-8).map((m) => ({ role: m.role, content: splitSuggestions(m.content).text || m.content })) }),
       });
       if (!res.body) throw new Error("no stream");
       setMessages((m) => [...m, { role: "assistant", content: "", q: clean }]);
@@ -146,7 +152,7 @@ export function ChatWidget() {
                     m.role === "user" ? "bg-brand-500 text-white" : "bg-paper-soft text-ink-soft"
                   }`}
                 >
-                  {m.content || <span className="text-neutralx-400">…</span>}
+                  <span className="whitespace-pre-line">{splitSuggestions(m.content).text || <span className="text-neutralx-400">…</span>}</span>
                   {m.role === "assistant" && m.q && m.content && !busy && (
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <button
@@ -176,6 +182,19 @@ export function ChatWidget() {
                 <Dot /> <Dot delay="0.15s" /> <Dot delay="0.3s" />
               </div>
             )}
+            {(() => {
+              const last = messages[messages.length - 1];
+              const follow = last && last.role === "assistant" && messages.length > 1 && !busy ? splitSuggestions(last.content).suggestions : [];
+              return follow.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {follow.map((s) => (
+                    <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-brand-500/40 bg-brand-50 px-3 py-1.5 text-xs text-brand-700 hover:border-brand-500">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
             {messages.length === 1 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {SUGGESTIONS.map((s) => (
