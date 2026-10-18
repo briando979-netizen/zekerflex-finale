@@ -40,16 +40,30 @@ const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
 
 type SortOrder = "relevantie" | "prijs-op" | "prijs-af" | "naam";
 
-const FALLBACK: Product[] = [
-  { id: "shoes-s3", slug: "veiligheidsschoenen-s3", name: "Veiligheidsschoenen S3", description: "Stalen neus, doortreedbescherming en antislipzool.", price: 49.95, category: "Werk & PBM", label: "Verplicht PBM", imageUrl: "/shifts/logistiek.jpg", variants: oneSize("shoes-s3") },
-  { id: "gloves", slug: "werkhandschoenen-grip", name: "Werkhandschoenen met grip (3 paar)", description: "Ademende nitril-coating, sterke grip.", price: 12.95, category: "Werk & PBM", label: "3 paar", imageUrl: "/shifts/bouw.jpg", variants: oneSize("gloves") },
-  { id: "vest", slug: "veiligheidshesje", name: "Reflecterend veiligheidshesje", description: "EN ISO 20471 klasse 2.", price: 6.95, category: "Werk & PBM", label: "Zichtbaarheid", imageUrl: "/shifts/evenement.jpg", variants: oneSize("vest") },
-  { id: "helmet", slug: "veiligheidshelm", name: "Veiligheidshelm wit", description: "EN 397, verstelbaar.", price: 12.95, category: "Werk & PBM", label: "Bouw", imageUrl: "/shifts/bouw.jpg", variants: oneSize("helmet") },
-  { id: "tee", slug: "slim-fit-contrast-tshirt-heren", name: "Slim fit contrast-T-shirt heren", description: "95% biologisch katoen, 5% elastaan.", price: 27.95, category: "Kleding", gender: "heren", label: "Bio-katoen", imageUrl: "/shop/ringer-tee-1.jpg", variants: oneSize("tee") },
-  { id: "meshbag", slug: "biologische-mesh-boodschappentas", name: "Biologische mesh boodschappentas", description: "100% biologisch katoen, tot 6 kg.", price: 12.95, category: "Werkdag", label: "Bio-katoen", imageUrl: "/shop/mesh-boodschappentas-1.jpg", variants: oneSize("meshbag") },
-  { id: "hoodie", name: "ZekerFlex Everyday Hoodie", description: "Zware organic katoenmix, relaxed fit.", price: 69, category: "Kleding", label: "Bestseller", imageUrl: null, variants: oneSize("hoodie") },
-  { id: "bottle", name: "Shift Bottle", description: "Dubbelwandig staal, 600 ml.", price: 29, category: "Werkdag", label: "Elke dag", imageUrl: null, variants: oneSize("bottle") },
-];
+
+/** API/DB product → storefront product (same shape for the server render and the client refresh). */
+function toProduct(it: Record<string, unknown>): Product {
+  return {
+    id: String(it.id),
+    slug: typeof it.slug === "string" ? it.slug : undefined,
+    name: String(it.name),
+    description: String(it.description ?? ""),
+    price: Number(it.priceCents) / 100,
+    category: (it.category as Product["category"]) ?? "Werkdag",
+    gender: typeof it.gender === "string" ? it.gender : null,
+    label: typeof it.badge === "string" ? it.badge : null,
+    imageUrl: typeof it.imageUrl === "string" ? it.imageUrl : null,
+    variants: Array.isArray(it.variants) && it.variants.length > 0
+      ? (it.variants as Record<string, unknown>[]).map((v) => ({
+          id: String(v.id),
+          size: typeof v.size === "string" ? v.size : null,
+          color: typeof v.color === "string" ? v.color : null,
+          priceCents: typeof v.priceCents === "number" ? v.priceCents : null,
+          stock: Number(v.stock ?? 0),
+        }))
+      : oneSize(String(it.id), Number(it.stock ?? 0)),
+  };
+}
 
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 const SUB_NAV: Category[] = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"];
@@ -74,7 +88,14 @@ const HERO_SLIDES = [
   { img: "/shifts/bouw.jpg", kicker: "Bouw", title: "Van helm tot werkbroek", sub: "De complete uitrusting voor op de bouwplaats — morgen in huis." },
 ];
 
-export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category }) {
+export function ShopStorefront({
+  initialCat = "Alles",
+  initialProducts = [],
+}: {
+  initialCat?: Category;
+  /** Active products straight from the DB, so the first HTML (and Google) shows the real catalog. */
+  initialProducts?: Record<string, unknown>[];
+}) {
   const t = useT();
   const PRICE_BUCKET_LABEL: Record<PriceBucket, string> = {
     Alle: t.shop.allPrices,
@@ -96,7 +117,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
   const [colorFilter, setColorFilter] = useState<string>("Alle");
   const [priceBucket, setPriceBucket] = useState<PriceBucket>("Alle");
   const [sort, setSort] = useState<SortOrder>("relevantie");
-  const [catalog, setCatalog] = useState<Product[]>(FALLBACK);
+  const [catalog, setCatalog] = useState<Product[]>(() => initialProducts.map(toProduct));
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(true);
   const { add } = useShopCart();
@@ -111,26 +132,7 @@ export function ShopStorefront({ initialCat = "Alles" }: { initialCat?: Category
       .then((items: Array<Record<string, unknown>>) => {
         if (!items.length) return;
         setCatalog(
-          items.map((it) => ({
-            id: String(it.id),
-            slug: typeof it.slug === "string" ? it.slug : undefined,
-            name: String(it.name),
-            description: String(it.description ?? ""),
-            price: Number(it.priceCents) / 100,
-            category: (it.category as Product["category"]) ?? "Werkdag",
-            gender: typeof it.gender === "string" ? it.gender : null,
-            label: typeof it.badge === "string" ? it.badge : null,
-            imageUrl: typeof it.imageUrl === "string" ? it.imageUrl : null,
-            variants: Array.isArray(it.variants) && it.variants.length > 0
-              ? (it.variants as Record<string, unknown>[]).map((v) => ({
-                  id: String(v.id),
-                  size: typeof v.size === "string" ? v.size : null,
-                  color: typeof v.color === "string" ? v.color : null,
-                  priceCents: typeof v.priceCents === "number" ? v.priceCents : null,
-                  stock: Number(v.stock ?? 0),
-                }))
-              : oneSize(String(it.id), Number(it.stock ?? 0)),
-          })),
+          items.map(toProduct),
         );
       })
       .catch(() => undefined);

@@ -171,7 +171,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             title="ZekerFlex"
             links={[
               { label: "Over ZekerFlex", href: "/over-ons" },
-              { label: "Werken bij", href: "/werken-bij" },
+              { label: "Werken bij", href: "/over-ons#werken-bij" },
               { label: "Uitleg in het kort", href: "/uitleg" },
               { label: "Naar het platform", href: "/dashboard" },
             ]}

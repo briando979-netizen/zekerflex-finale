@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { canonical } from "@/lib/seo";
+import { prisma } from "@/lib/prisma";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
 
 const title = "ZekerFlex Shop — werkkleding, PBM & werkdag-essentials";
@@ -20,5 +21,10 @@ type Cat = (typeof CATS)[number];
 export default async function ShopPage(props: { searchParams: Promise<{ cat?: string }> }) {
   const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
-  return <ShopStorefront initialCat={initialCat} />;
+  // Same query as GET /api/shop/products (public): rendered on the server so the
+  // first HTML has the real, buyable catalog — no placeholder flash, no dead links.
+  const products = await prisma.shopProduct
+    .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } } } })
+    .catch(() => []);
+  return <ShopStorefront initialCat={initialCat} initialProducts={JSON.parse(JSON.stringify(products))} />;
 }
