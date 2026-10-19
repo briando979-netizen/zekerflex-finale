@@ -23,23 +23,54 @@ const DOC_LABEL: Record<string, string> = {
   DRIVERS_LICENSE: "Rijbewijs",
 };
 
-/** One camera/upload capture — front, back, or selfie. Own preview state so a
- * retry (remounted via `key`) starts clean without touching form.reset(). */
+/**
+ * Shrink a phone photo before upload: max 1600 px, JPEG ~0.82. A 4–8 MB camera
+ * photo becomes ~250–400 kB — three of them used to exceed the 4.5 MB request
+ * limit on the hosting platform, so the upload silently failed. Falls back to
+ * the original file if the browser can't decode it.
+ */
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size < 450_000) return file;
+  try {
+    const url = URL.createObjectURL(file);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("decode"));
+      el.src = url;
+    });
+    const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    if (!blob || blob.size === 0) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+/** One photo — front, back, or selfie. Camera OR gallery (no forced camera);
+ * the (compressed) file is handed to the parent, which checks completeness. */
 function CaptureSlot({
-  name,
   label,
   hint,
-  capture,
   round = false,
+  missing = false,
+  onPick,
 }: {
-  name: string;
   label: string;
   hint: string;
-  capture?: "environment" | "user";
   round?: boolean;
+  missing?: boolean;
+  onPick: (file: File) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -53,9 +84,9 @@ function CaptureSlot({
       <button
         type="button"
         onClick={() => ref.current?.click()}
-        className={`mt-1.5 flex w-full items-center gap-3 border border-dashed border-hairstrong px-3 py-3 text-left transition hover:border-brand-500 ${
-          round ? "rounded-full" : "rounded-lg"
-        }`}
+        className={`mt-1.5 flex w-full items-center gap-3 border border-dashed px-3 py-3 text-left transition hover:border-brand-500 ${
+          missing ? "border-crit bg-crit/5" : "border-hairstrong"
+        } ${round ? "rounded-full" : "rounded-lg"}`}
       >
         <span
           className={`grid h-12 w-12 flex-shrink-0 place-items-center overflow-hidden bg-paper-soft ${
@@ -71,7 +102,7 @@ function CaptureSlot({
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-ink">
-            {preview ? "Vervangen" : "Foto maken / kiezen"}
+            {busy ? "Verwerken…" : preview ? "Vervangen" : "Foto maken of kiezen"}
           </span>
           <span className="block truncate text-xs text-neutralx-400">{hint}</span>
         </span>
@@ -79,19 +110,21 @@ function CaptureSlot({
       <input
         ref={ref}
         type="file"
-        name={name}
-        required
-        accept="image/jpeg,image/png,image/webp"
-        capture={capture}
-        onChange={(e) => {
+        accept="image/*"
+        onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
+          setBusy(true);
+          const small = await compressImage(f);
+          setBusy(false);
+          onPick(small);
           setPreview((prev) => {
             if (prev) URL.revokeObjectURL(prev);
-            return URL.createObjectURL(f);
+            return URL.createObjectURL(small);
           });
         }}
         className="sr-only"
+        tabIndex={-1}
       />
     </div>
   );
@@ -111,13 +144,23 @@ function CameraIcon() {
   );
 }
 
+type PhotoKey = "documentFront" | "documentBack" | "selfie";
+const PHOTO_LABEL: Record<PhotoKey, string> = { documentFront: "de voorkant", documentBack: "de achterkant", selfie: "de selfie" };
+
 export function OnboardingForm({
   defaultName,
   requireKvk = true,
+  stripeIdentity = false,
 }: {
   defaultName: string;
   requireKvk?: boolean;
+  /** Stripe Identity is switched on: offer the Stripe camera flow (recommended) */
+  stripeIdentity?: boolean;
 }) {
+  const [biz, setBiz] = useState<"kvk" | "vat">("kvk");
+  const [method, setMethod] = useState<"stripe" | "upload">(stripeIdentity ? "stripe" : "upload");
+  const photos = useRef<Partial<Record<PhotoKey, File>>>({});
+  const [missing, setMissing] = useState<PhotoKey[]>([]);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
@@ -128,16 +171,30 @@ export function OnboardingForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
+    const body = new FormData(e.currentTarget);
+    if (method === "upload") {
+      const absent = (["documentFront", "documentBack", "selfie"] as PhotoKey[]).filter((k) => !photos.current[k]);
+      setMissing(absent);
+      if (absent.length) {
+        setError(`Maak of kies nog een foto van ${absent.map((k) => PHOTO_LABEL[k]).join(", ").replace(/, ([^,]*)$/, " en $1")}.`);
+        return;
+      }
+      for (const k of Object.keys(photos.current) as PhotoKey[]) body.set(k, photos.current[k]!);
+    } else {
+      body.set("identityMethod", "stripe");
+    }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/onboarding", {
-        method: "POST",
-        body: new FormData(e.currentTarget),
-      });
-      const data = await res.json();
-      if (!res.ok) {
+      const res = await fetch("/api/onboarding", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 413) {
+        setError("De foto's zijn te groot om te versturen. Probeer het opnieuw — of kies kleinere foto's.");
+      } else if (!res.ok) {
         setError(data?.error?.message ?? "Er ging iets mis. Probeer het opnieuw.");
+      } else if (data.redirectUrl) {
+        window.location.href = data.redirectUrl as string;
+        return;
       } else {
         setResult(data as Result);
         if (data.outcome === "verified") setTimeout(() => router.refresh(), 1500);
@@ -200,6 +257,8 @@ export function OnboardingForm({
               onClick={() => {
                 setResult(null);
                 formRef.current?.reset();
+                photos.current = {};
+                setMissing([]);
                 setAttempt((a) => a + 1);
               }}
               className="btn-primary"
@@ -229,13 +288,41 @@ export function OnboardingForm({
       {requireKvk && (
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold text-ink">1. Onderneming</legend>
-          <label className="block">
-            <span className="field-label">KVK-nummer</span>
-            <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">
-              We controleren dit live in het Handelsregister.
-            </span>
-          </label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Soort registratie">
+            {(
+              [
+                ["kvk", "KVK-nummer", "Ingeschreven in Nederland"],
+                ["vat", "Btw-nummer (EU)", "Bijv. uit Polen, Roemenië, België"],
+              ] as const
+            ).map(([k, t, sub]) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={biz === k}
+                onClick={() => setBiz(k)}
+                className={`rounded-xl border px-3 py-2.5 text-left ${biz === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
+              >
+                <span className="block text-sm font-semibold text-ink">{t}</span>
+                <span className="block text-xs text-neutralx-500">{sub}</span>
+              </button>
+            ))}
+          </div>
+          {biz === "kvk" ? (
+            <label className="block">
+              <span className="field-label">KVK-nummer</span>
+              <input key="kvk" name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
+              <span className="mt-1 block text-xs text-neutralx-400">We controleren dit live in het Handelsregister.</span>
+            </label>
+          ) : (
+            <label className="block">
+              <span className="field-label">Btw-nummer (met landcode)</span>
+              <input key="vat" name="vatNumber" required placeholder="PL1234567890" autoCapitalize="characters" className="field-input" />
+              <span className="mt-1 block text-xs text-neutralx-400">
+                We controleren dit live in de EU-database (VIES). Werk je in Nederland als zzp&apos;er zonder KVK? Dan factureer je met je eigen btw-nummer.
+              </span>
+            </label>
+          )}
         </fieldset>
       )}
 
@@ -271,6 +358,35 @@ export function OnboardingForm({
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "3." : "2."} Identiteitsbewijs
         </legend>
+        {stripeIdentity && (
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Hoe wil je je identiteit bevestigen?">
+            {(
+              [
+                ["stripe", "Snel via Stripe (aanbevolen)", "Ongeveer 2 minuten met je telefooncamera: ID + selfie, meestal direct goedgekeurd."],
+                ["upload", "Zelf foto's uploaden", "Voorkant, achterkant en een selfie; wij controleren het."],
+              ] as const
+            ).map(([k, t, sub]) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={method === k}
+                onClick={() => setMethod(k)}
+                className={`rounded-xl border px-3 py-2.5 text-left ${method === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
+              >
+                <span className="block text-sm font-semibold text-ink">{t}</span>
+                <span className="block text-xs text-neutralx-500">{sub}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {method === "stripe" ? (
+          <p className="rounded-lg bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-600">
+            Na &ldquo;Verificatie versturen&rdquo; ga je naar de beveiligde pagina van Stripe. Daar maak je met je camera een foto van je
+            ID-kaart, paspoort of rijbewijs en een korte selfie. Daarna kom je automatisch hier terug.
+          </p>
+        ) : (
+        <>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="field-label">Type document</span>
@@ -296,34 +412,25 @@ export function OnboardingForm({
 
         <p className="text-xs leading-relaxed text-neutralx-500">
           Drie foto&apos;s, in één keer — dit vervangt losse uploads verderop: de voorkant en achterkant
-          van je document, en een selfie zodat we kunnen zien dat jij het bent. Zorg voor goed licht en
-          scherpe tekst.
+          van je document, en een selfie zodat we kunnen zien dat jij het bent. Maak ze met je camera of
+          kies ze uit je galerij. Zorg voor goed licht en scherpe tekst.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <CaptureSlot
-            name="documentFront"
-            label="Voorkant"
-            hint="Pasfoto-zijde van je document"
-            capture="environment"
-          />
-          <CaptureSlot
-            name="documentBack"
-            label="Achterkant"
-            hint="De kant zonder foto"
-            capture="environment"
-          />
-          <CaptureSlot name="selfie" label="Selfie" hint="Kijk recht in de camera" capture="user" round />
+          <CaptureSlot label="Voorkant" hint="Pasfoto-zijde van je document" missing={missing.includes("documentFront")} onPick={(f) => { photos.current.documentFront = f; setMissing((m) => m.filter((x) => x !== "documentFront")); }} />
+          <CaptureSlot label="Achterkant" hint="De kant zonder foto" missing={missing.includes("documentBack")} onPick={(f) => { photos.current.documentBack = f; setMissing((m) => m.filter((x) => x !== "documentBack")); }} />
+          <CaptureSlot label="Selfie" hint="Kijk recht in de camera" round missing={missing.includes("selfie")} onPick={(f) => { photos.current.selfie = f; setMissing((m) => m.filter((x) => x !== "selfie")); }} />
         </div>
+        </>
+        )}
       </fieldset>
 
       <button type="submit" disabled={busy} className="btn-primary w-full">
-        {busy ? "Bezig met controleren…" : "Verificatie versturen"}
+        {busy ? (method === "stripe" ? "Doorsturen naar Stripe…" : "Bezig met controleren…") : "Verificatie versturen"}
       </button>
       <p className="text-xs leading-relaxed text-neutralx-400">
-        Je foto&apos;s worden lokaal opgeslagen op de eigen infrastructuur van ZekerFlex en alleen gebruikt
-        voor deze verificatie. Er gaat niets naar externe partijen. Dit voldoet meteen aan de
-        verplichte identiteitsbewijs-upload verderop op deze pagina — dat hoef je dus niet nog een keer
-        te doen.
+        {method === "stripe"
+          ? "De ID-controle gebeurt door Stripe (onze betaalpartner), die je gegevens beveiligd verwerkt. ZekerFlex krijgt alleen de uitslag en je naam zoals op het document."
+          : "Je foto's worden versleuteld bewaard door ZekerFlex en alleen gebruikt voor deze verificatie. Dit voldoet meteen aan de verplichte identiteitsbewijs-upload verderop op deze pagina — dat hoef je dus niet nog een keer te doen."}
       </p>
     </form>
   );

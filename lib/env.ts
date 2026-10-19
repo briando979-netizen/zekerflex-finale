@@ -215,7 +215,7 @@ const schema = z.object({
     .transform((v) => v === "true"),
 
   // Local upload storage root (relative to cwd or absolute).
-  STORAGE_BACKEND: z.enum(["local", "s3"]).default("local"),
+  STORAGE_BACKEND: z.enum(["local", "s3", "db"]).default("local"),
   UPLOADS_DIR: z.string().default("./storage/uploads"),
   UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(25_000_000),
   STORAGE_S3_ENDPOINT: z.string().url().optional(),

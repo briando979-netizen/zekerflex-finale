@@ -8,8 +8,17 @@ import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { BackLink } from "@/components/app/BackLink";
+import { stripeIdentityEnabled } from "@/lib/kyc/stripe-identity";
 
 export const dynamic = "force-dynamic";
+
+const STRIPE_LABEL: Record<string, string> = {
+  started: "Bezig bij Stripe — de uitslag komt binnen een paar minuten",
+  requires_input: "Niet gelukt bij Stripe",
+  canceled: "Afgebroken",
+  name_mismatch: "Naam wijkt af — wij controleren het handmatig",
+  verified: "Geverifieerd",
+};
 
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
@@ -70,6 +79,11 @@ export default async function VerificatiePage() {
       ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
       : [];
 
+  const stripeReason =
+    lastCheck?.decisionStatus === "requires_input"
+      ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
+      : null;
+
   return (
     <div className="mx-auto max-w-2xl">
       <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
@@ -78,7 +92,7 @@ export default async function VerificatiePage() {
         subtitle={
           isUitzend
             ? "Vul je thuisbasis en rekeningnummer in en upload je identiteitsbewijs. Je hoeft geen KVK te koppelen — je werkt als uitzendkracht."
-            : "Koppel je KVK en upload je identiteitsbewijs. De ingebouwde controleur checkt echtheid en consistentie — meestal binnen een minuut."
+            : "Koppel je KVK of EU-btw-nummer en bevestig je identiteit. De ingebouwde controleur checkt echtheid en consistentie — meestal binnen een minuut."
         }
       />
 
@@ -91,9 +105,15 @@ export default async function VerificatiePage() {
                 lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
               }
             >
-              {lastCheck.decisionStatus === "in_review" ? "In behandeling" : lastCheck.status}
+              {STRIPE_LABEL[lastCheck.decisionStatus ?? ""] ??
+                (lastCheck.decisionStatus === "in_review" ? "In behandeling" : lastCheck.status)}
             </StatusPill>
           </div>
+          {stripeReason && (
+            <p className="mt-2 text-neutralx-600">
+              Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies &ldquo;Zelf foto&apos;s uploaden&rdquo;.
+            </p>
+          )}
           {reasons.length > 0 && (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">
               {reasons.map((r, i) => (
@@ -109,7 +129,7 @@ export default async function VerificatiePage() {
       </div>
 
       <div className="card p-6">
-        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} />
+        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeIdentityEnabled()} />
       </div>
 
       <div className="mt-6 card p-6">

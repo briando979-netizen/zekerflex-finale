@@ -3,15 +3,25 @@ import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
+import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
+import { startStripeIdentity, stripeIdentityEnabled } from "@/lib/kyc/stripe-identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const fieldsSchema = z.object({
-  // absent for uitzendkrachten — they don't have a KVK
+const baseSchema = z.object({
   kvkNumber: z.string().trim().max(20).optional(),
+  vatNumber: z.string().trim().max(20).optional(),
+  postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
+  houseNumber: z.string().trim().min(1).max(12),
+  payoutIban: z.string().trim().min(15).max(34),
+});
+
+const fieldsSchema = z.object({
+  // absent for uitzendkrachten — they don't have a KVK (and not when a btw-nummer is used)
+  kvkNumber: z.string().trim().max(20).optional(),
+  vatNumber: z.string().trim().max(20).optional(),
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
   houseNumber: z.string().trim().min(1).max(12),
   payoutIban: z.string().trim().min(15).max(34),
@@ -51,9 +61,36 @@ export async function POST(request: Request): Promise<NextResponse> {
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verstuur het formulier als multipart/form-data");
     });
+    const str = (k: string) => {
+      const v = form.get(k);
+      return typeof v === "string" && v.trim() ? v : undefined;
+    };
+
+    // Route 1: identity via Stripe — save the rest now, then send the user to Stripe.
+    if (form.get("identityMethod") === "stripe" && stripeIdentityEnabled()) {
+      const base = baseSchema.safeParse({
+        kvkNumber: str("kvkNumber"),
+        vatNumber: str("vatNumber"),
+        postalCode: form.get("postalCode"),
+        houseNumber: form.get("houseNumber"),
+        payoutIban: form.get("payoutIban"),
+      });
+      if (!base.success) throw AppError.validation(base.error.issues[0]?.message ?? "Controleer de ingevulde gegevens");
+      const saved = await saveFreelancerBase({
+        userId: principal.userId,
+        kvkNumber: base.data.kvkNumber ?? "",
+        vatNumber: base.data.vatNumber,
+        postalCode: base.data.postalCode,
+        houseNumber: base.data.houseNumber,
+        payoutIban: base.data.payoutIban,
+      });
+      const redirectUrl = await startStripeIdentity(principal.userId, principal.email);
+      return NextResponse.json({ redirectUrl, checks: saved.checks }, { status: 200 });
+    }
 
     const parsed = fieldsSchema.safeParse({
-      kvkNumber: form.get("kvkNumber") ?? undefined,
+      kvkNumber: str("kvkNumber"),
+      vatNumber: str("vatNumber"),
       postalCode: form.get("postalCode"),
       houseNumber: form.get("houseNumber"),
       payoutIban: form.get("payoutIban"),
@@ -82,6 +119,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const result = await submitFreelancerOnboarding({
       userId: principal.userId,
       kvkNumber: parsed.data.kvkNumber ?? "",
+      vatNumber: parsed.data.vatNumber,
       postalCode: parsed.data.postalCode,
       houseNumber: parsed.data.houseNumber,
       payoutIban: parsed.data.payoutIban,

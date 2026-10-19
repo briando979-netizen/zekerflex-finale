@@ -1,3 +1,4 @@
+import { checkVies } from "@/lib/integrations/vies";
 import { createHash } from "node:crypto";
 import { ComplianceDocKind, KycStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -40,6 +41,8 @@ export interface CapturedImage {
 export interface OnboardingInput {
   userId: string;
   kvkNumber: string;
+  /** EU btw-nummer instead of KVK (optional) */
+  vatNumber?: string | undefined;
   postalCode: string;
   houseNumber: string;
   payoutIban: string;
@@ -199,6 +202,8 @@ async function ensureFreelancerBase(input: {
   userId: string;
   existingProfileId?: string | undefined;
   kvkNumber: string;
+  /** EU btw-nummer instead of a KVK number (e.g. a self-employed worker from Poland) */
+  vatNumber?: string | undefined;
   postalCode: string;
   houseNumber: string;
   payoutIban: string;
@@ -215,12 +220,24 @@ async function ensureFreelancerBase(input: {
   });
 
   const cleanKvk = input.kvkNumber.replace(/[^\d]/g, "");
+  const vat = !cleanKvk && input.vatNumber?.trim() ? await checkVies(input.vatNumber) : null;
+  if (vat?.status === "malformed") {
+    throw AppError.validation("Dat btw-nummer klopt niet. Begin met de landcode, bijvoorbeeld PL1234567890 of NL123456789B01.");
+  }
+  if (vat) {
+    const taken = await prisma.freelancerProfile.findFirst({ where: { vatNumber: vat.vatNumber, userId: { not: input.userId } }, select: { id: true } });
+    if (taken) throw AppError.conflict("Dit btw-nummer is al gekoppeld aan een ander account. Neem contact op met support.");
+  }
+  const vatFields = vat
+    ? { vatNumber: vat.vatNumber, vatValid: vat.status === "valid", country: vat.countryCode === "EL" ? "GR" : vat.countryCode === "XI" ? "GB" : vat.countryCode }
+    : {};
   let freelancerProfileId = input.existingProfileId;
   if (!freelancerProfileId) {
     const created = await prisma.freelancerProfile.create({
       data: {
         userId: input.userId,
-        kvkNumber: cleanKvk || `pending-${input.userId.slice(0, 8)}`,
+        ...vatFields,
+        kvkNumber: cleanKvk || (vat ? `vat-${vat.vatNumber}` : `pending-${input.userId.slice(0, 8)}`),
         payoutIban: input.payoutIban.replace(/\s+/g, "").toUpperCase(),
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
@@ -241,6 +258,7 @@ async function ensureFreelancerBase(input: {
     await prisma.freelancerProfile.update({
       where: { id: freelancerProfileId },
       data: {
+        ...vatFields,
         payoutIban: cleanIban,
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
@@ -250,12 +268,28 @@ async function ensureFreelancerBase(input: {
     if (ibanChanged) await flagIbanChanged(input.userId).catch(() => undefined);
   }
 
-  const skipKvk = cleanKvk.length === 0;
+  const skipKvk = cleanKvk.length === 0 && !vat;
   let kvkValid = false;
   let companyName: string | null = null;
   let companyTradeName: string | null = null;
   let companyStatus = "ONBEKEND";
-  if (skipKvk) {
+  if (vat) {
+    // EU btw-nummer: a valid VIES result counts like an active KVK registration.
+    // VIES being down is not a failure — it lands in review, never a rejection.
+    kvkValid = vat.status === "valid";
+    companyName = vat.name;
+    companyStatus = vat.status === "valid" ? "ACTIVE" : "ONBEKEND";
+    checks.push({
+      label: "Btw-nummer (EU, VIES)",
+      ok: vat.status === "valid",
+      detail:
+        vat.status === "valid"
+          ? `${vat.vatNumber} geldig${vat.name ? ` — ${vat.name}` : ""}`
+          : vat.status === "invalid"
+            ? `${vat.vatNumber} is volgens de EU-database (VIES) niet geldig.`
+            : `De EU-btw-controle (VIES) was niet bereikbaar; we controleren ${vat.vatNumber} later handmatig.`,
+    });
+  } else if (skipKvk) {
     checks.push({
       label: "Werkvorm",
       ok: true,
@@ -292,6 +326,23 @@ async function ensureFreelancerBase(input: {
   }
 
   return { freelancerProfileId, checks, skipKvk, kvkValid, companyName, companyTradeName, companyStatus };
+}
+
+/**
+ * Stripe Identity route: save business (KVK or EU btw-nummer), home base and
+ * IBAN now; the identity itself is proven on Stripe's page afterwards.
+ */
+export async function saveFreelancerBase(input: {
+  userId: string;
+  kvkNumber: string;
+  vatNumber?: string | undefined;
+  postalCode: string;
+  houseNumber: string;
+  payoutIban: string;
+}): Promise<FreelancerBaseResult> {
+  const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { freelancerProfile: { select: { id: true } } } });
+  if (!user) throw AppError.notFound("Account niet gevonden");
+  return ensureFreelancerBase({ ...input, existingProfileId: user.freelancerProfile?.id });
 }
 
 export async function submitFreelancerOnboarding(
@@ -334,6 +385,7 @@ export async function submitFreelancerOnboarding(
     userId: user.id,
     existingProfileId: user.freelancerProfile?.id,
     kvkNumber: input.kvkNumber,
+    vatNumber: input.vatNumber,
     postalCode: input.postalCode,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,
@@ -573,6 +625,7 @@ export interface WalletOnboardingInput {
   userId: string;
   attemptId: string;
   kvkNumber: string;
+  vatNumber?: string | undefined;
   postalCode: string;
   houseNumber: string;
   payoutIban: string;
@@ -614,6 +667,7 @@ export async function submitFreelancerOnboardingViaWallet(
     userId: user.id,
     existingProfileId: user.freelancerProfile?.id,
     kvkNumber: input.kvkNumber,
+    vatNumber: input.vatNumber,
     postalCode: input.postalCode,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,

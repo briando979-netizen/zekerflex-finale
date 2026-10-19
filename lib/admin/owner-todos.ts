@@ -283,6 +283,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "stripe-identity",
+      group: "Geld & bank",
+      title: "ID-controle via Stripe Identity aanzetten",
+      why: "Freelancers maken dan op Stripe's eigen pagina een foto van hun ID en een live selfie; Stripe controleert of het document echt is en of het gezicht klopt. Meestal binnen een minuut goedgekeurd, zonder dat jij foto's hoeft na te kijken (±€1,50 per controle).",
+      how: ["Stripe-dashboard → Identity → activeer Identity voor je account.", "Stripe → Developers → Webhooks → je bestaande ZekerFlex-webhook → voeg de events identity.verification_session.verified, identity.verification_session.requires_input en identity.verification_session.canceled toe.", "Vercel → Settings → Environment Variables: zet STRIPE_IDENTITY_ENABLED = true en deploy opnieuw. Vanaf dan krijgen freelancers 'Snel via Stripe' als aanbevolen keuze; zelf foto's uploaden blijft mogelijk."],
+      auto: true,
+      done: process.env.STRIPE_IDENTITY_ENABLED === "true",
+    },
+    {
       id: "alert-push",
       group: "Beheer & veiligheid",
       title: "Storingsmeldingen op je telefoon aanzetten",

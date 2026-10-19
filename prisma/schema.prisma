@@ -1640,6 +1640,14 @@ model AiUsageLog {
 // this row is the metadata. No object storage, no cloud.
 // ===========================================================================
 
+/// Upload bytes kept in Postgres (STORAGE_BACKEND=db, or automatically on
+/// Vercel where the disk is read-only). Keyed by Upload.storageKey ("db:…").
+model UploadBlob {
+  storageKey String   @id
+  bytes      Bytes
+  createdAt  DateTime @default(now())
+}
+
 model Upload {
   id           String   @id @default(cuid())
   filename     String

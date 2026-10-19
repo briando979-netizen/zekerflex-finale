@@ -9,8 +9,34 @@ import { deleteObject, getObjectBytes, putObject } from "@/lib/storage/s3";
 
 // ---------------------------------------------------------------------------
 // Local storage remains the default; S3-compatible storage is selected with
-// STORAGE_BACKEND=s3 for MinIO, AWS S3 or Cloudflare R2.
+// STORAGE_BACKEND=s3 for MinIO, AWS S3 or Cloudflare R2. STORAGE_BACKEND=db
+// keeps the bytes in Postgres ("UploadBlob") — and is used automatically on a
+// serverless host (Vercel) when "local" is configured, because there the disk
+// is read-only: before this, every upload (ID photos, certificates, documents)
+// failed in production unless S3 had been set up.
 // ---------------------------------------------------------------------------
+
+type Backend = "local" | "s3" | "db";
+const serverless = () => Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+/** Where NEW uploads go. */
+export function storageBackend(): Backend {
+  if (env.STORAGE_BACKEND === "local" && serverless()) return "db";
+  return env.STORAGE_BACKEND;
+}
+const DB_PREFIX = "db:";
+/** Where an EXISTING upload lives — from its key, so reads keep working if the backend setting changes. */
+const backendOfKey = (storageKey: string): Backend => (storageKey.startsWith(DB_PREFIX) ? "db" : env.STORAGE_BACKEND === "s3" ? "s3" : "local");
+
+async function dbPut(storageKey: string, bytes: Buffer): Promise<void> {
+  await prisma.$executeRaw`INSERT INTO "UploadBlob" ("storageKey", "bytes") VALUES (${storageKey}, ${bytes})`;
+}
+async function dbGet(storageKey: string): Promise<Buffer | null> {
+  const rows = await prisma.$queryRaw<{ bytes: Uint8Array }[]>`SELECT "bytes" FROM "UploadBlob" WHERE "storageKey" = ${storageKey}`;
+  return rows[0] ? Buffer.from(rows[0].bytes) : null;
+}
+async function dbDelete(storageKey: string): Promise<void> {
+  await prisma.$executeRaw`DELETE FROM "UploadBlob" WHERE "storageKey" = ${storageKey}`;
+}
 
 function uploadsRoot(): string {
   return resolve(process.cwd(), env.UPLOADS_DIR);
@@ -52,9 +78,12 @@ export async function storeUpload(input: {
   const sha256 = createHash("sha256").update(input.bytes).digest("hex");
   const filename = safeName(input.filename);
   const day = new Date().toISOString().slice(0, 10);
-  const storageKey = `${day}/${randomUUID()}-${filename}`;
+  const backend = storageBackend();
+  const storageKey = `${backend === "db" ? DB_PREFIX : ""}${day}/${randomUUID()}-${filename}`;
   try {
-    if (env.STORAGE_BACKEND === "s3") {
+    if (backend === "db") {
+      await dbPut(storageKey, input.bytes);
+    } else if (backend === "s3") {
       await putObject({
         key: storageKey,
         body: input.bytes,
@@ -72,7 +101,7 @@ export async function storeUpload(input: {
     // filesystem: STORAGE_BACKEND=local doesn't work on Vercel, only on a
     // host with a real persistent disk — see docs/ENVIRONMENT.md).
     logger.error("upload storage write failed", {
-      backend: env.STORAGE_BACKEND,
+      backend,
       error: (err as Error).message,
     });
     throw AppError.upstream("Opslaan van het bestand is mislukt. Probeer het later opnieuw.");
@@ -107,6 +136,11 @@ export async function readUpload(
   const row = await prisma.upload.findUnique({ where: { id } });
   if (!row) throw AppError.notFound("Upload niet gevonden");
 
+  if (backendOfKey(row.storageKey) === "db") {
+    const bytes = await dbGet(row.storageKey);
+    if (!bytes) throw AppError.notFound("Bestand ontbreekt in de database");
+    return { bytes, filename: row.filename, mimeType: row.mimeType };
+  }
   if (env.STORAGE_BACKEND === "s3") {
     try {
       return {
@@ -147,7 +181,9 @@ export async function deleteUpload(id: string): Promise<void> {
   if (!row) return;
 
   try {
-    if (env.STORAGE_BACKEND === "s3") {
+    if (backendOfKey(row.storageKey) === "db") {
+      await dbDelete(row.storageKey);
+    } else if (env.STORAGE_BACKEND === "s3") {
       await deleteObject(row.storageKey);
     } else {
       const abs = normalize(join(uploadsRoot(), row.storageKey));
@@ -177,6 +213,18 @@ export async function ensureStorageWritable(): Promise<{
   writable: boolean;
   detail?: string;
 }> {
+  if (storageBackend() === "db") {
+    const key = `${DB_PREFIX}.health/write-test-${randomUUID()}`;
+    try {
+      await dbPut(key, Buffer.from("ok"));
+      const bytes = await dbGet(key);
+      await dbDelete(key);
+      if (bytes?.toString("utf8") !== "ok") throw new Error("Roundtrip mismatch na schrijven");
+      return { dir: "postgres:UploadBlob", writable: true };
+    } catch (err) {
+      return { dir: "postgres:UploadBlob", writable: false, detail: (err as Error).message };
+    }
+  }
   if (env.STORAGE_BACKEND === "s3") {
     const dir = `s3://${env.STORAGE_S3_BUCKET ?? "(STORAGE_S3_BUCKET niet ingesteld)"}`;
     const key = `.health/write-test-${randomUUID()}`;

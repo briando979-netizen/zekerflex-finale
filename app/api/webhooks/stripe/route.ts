@@ -1,3 +1,4 @@
+import { handleStripeIdentityEvent } from "@/lib/kyc/stripe-identity";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { NextResponse, after, type NextRequest } from "next/server";
 import Stripe from "stripe";
@@ -242,6 +243,12 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     }
   } catch (err) {
     log.warn("webhook idempotency store unavailable", { error: (err as Error).message });
+  }
+
+  // ID verification via Stripe Identity (lib/kyc/stripe-identity.ts).
+  if (event.type.startsWith("identity.verification_session.")) {
+    await handleStripeIdentityEvent(event);
+    return NextResponse.json({ ok: true });
   }
 
   // ZekerFlex Bank cards: every card payment is approved/declined against the
