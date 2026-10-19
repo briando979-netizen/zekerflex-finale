@@ -7,16 +7,17 @@ import { ShiftCard } from "@/components/app/ShiftCard";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
 import { CancellationClaimButton } from "@/components/app/CancellationClaimButton";
 import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
+import { useFT } from "@/components/i18n/I18nProvider";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 type TabId = "pending" | "active" | "history";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "pending", label: "In afwachting" },
-  { id: "active", label: "Uitgekozen" },
-  { id: "history", label: "Gearchiveerd" },
+const TABS: { id: TabId; key: "tabPending" | "tabActive" | "tabHistory" }[] = [
+  { id: "pending", key: "tabPending" },
+  { id: "active", key: "tabActive" },
+  { id: "history", key: "tabHistory" },
 ];
-
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+type W = FreelancerDict["work"];
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -25,6 +26,8 @@ export function MyKlussenView({
 }: {
   work: { pending: MyWorkItem[]; active: MyWorkItem[]; history: MyWorkItem[] };
 }) {
+  const ft = useFT();
+  const w = ft.work;
   const [tab, setTab] = useState<TabId>(
     work.pending.length > 0
       ? "pending"
@@ -87,7 +90,7 @@ export function MyKlussenView({
                   : "border-transparent text-neutralx-400 hover:text-neutralx-600"
               }`}
             >
-              {t.label}
+              {w[t.key]}
               {n > 0 && <span className="ml-1.5 text-xs text-neutralx-400">{n}</span>}
             </button>
           );
@@ -99,7 +102,7 @@ export function MyKlussenView({
         <button
           type="button"
           onClick={() => setPanel((v) => !v)}
-          aria-label="Filters"
+          aria-label={w.filters}
           className={`grid h-9 w-9 place-items-center rounded-full border ${
             panel || days.size ? "border-brand-500 bg-brand-mint text-ink" : "border-hairstrong bg-white text-neutralx-600"
           }`}
@@ -111,7 +114,7 @@ export function MyKlussenView({
         <button
           type="button"
           onClick={() => setOrder((o) => (o === "asc" ? "desc" : "asc"))}
-          aria-label="Sorteervolgorde"
+          aria-label={w.sortOrder}
           className="grid h-9 w-9 place-items-center rounded-full border border-hairstrong bg-white text-neutralx-600"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -132,7 +135,7 @@ export function MyKlussenView({
               days.size ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
             }`}
           >
-            Dagen{days.size ? ` (${days.size})` : ""}
+            {w.days}{days.size ? ` (${days.size})` : ""}
             <span className="text-[9px]" aria-hidden>▼</span>
           </button>
         )}
@@ -146,19 +149,19 @@ export function MyKlussenView({
               onClick={() => setOrder("asc")}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${order === "asc" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
             >
-              Datum oplopend
+              {w.dateAsc}
             </button>
             <button
               type="button"
               onClick={() => setOrder("desc")}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${order === "desc" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
             >
-              Datum aflopend
+              {w.dateDesc}
             </button>
           </div>
           {dayOptions.length > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 text-xs font-semibold text-neutralx-500">Welke dagen</p>
+              <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{w.whichDays}</p>
               <div className="flex flex-wrap gap-1.5">
                 {dayOptions.map(([k, d]) => (
                   <button
@@ -173,13 +176,13 @@ export function MyKlussenView({
                     }
                     className={`rounded-lg border px-2 py-1 text-[11px] ${days.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
                   >
-                    {WD[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
+                    {ft.date.wd[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
                   </button>
                 ))}
               </div>
               {days.size > 0 && (
                 <button type="button" onClick={() => setDays(new Set())} className="mt-2 text-xs text-brand-600 hover:underline">
-                  Wis dagen
+                  {w.clearDays}
                 </button>
               )}
             </div>
@@ -188,22 +191,23 @@ export function MyKlussenView({
       )}
 
       {shown.length === 0 ? (
-        <Empty tab={tab} />
+        <Empty tab={tab} w={w} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {shown.map((item) => (
             <ShiftCard
               key={item.workKey}
               shift={item.shift}
+              t={ft}
               href={`/dashboard/klussen/${item.shift.id}`}
               idReminder={tab === "active"}
               dim={tab === "history" && item.status !== "done"}
               footerOverride={
                 tab === "pending" ? null : tab === "active" ? (
-                  <ActiveFooter item={item} />
+                  <ActiveFooter item={item} w={w} />
                 ) : (
                   <div className="space-y-3">
-                    <HistoryFooter item={item} onHide={hideItem} />
+                    <HistoryFooter item={item} onHide={hideItem} w={w} />
                     {item.status === "done" && item.clientTenantId && (
                       <CompanyReviewInline tenantId={item.clientTenantId} shiftId={item.shift.id} />
                     )}
@@ -218,7 +222,7 @@ export function MyKlussenView({
   );
 }
 
-function ActiveFooter({ item }: { item: MyWorkItem }) {
+function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
   if (item.replacementRequested && item.replacementRequestId) {
     return (
       <Link
@@ -226,8 +230,8 @@ function ActiveFooter({ item }: { item: MyWorkItem }) {
         className="flex items-center justify-between text-sm font-semibold text-warn"
       >
         <span>
-          Vervanging gevraagd
-          {item.replacementResponseCount > 0 ? ` · ${item.replacementResponseCount} reacties` : ""}
+          {w.replacementAsked}
+          {item.replacementResponseCount > 0 ? ` · ${w.responses(item.replacementResponseCount)}` : ""}
         </span>
         <span aria-hidden>→</span>
       </Link>
@@ -239,7 +243,7 @@ function ActiveFooter({ item }: { item: MyWorkItem }) {
   if (item.timesheetId && Date.now() >= startMs - 60 * 60_000 && Date.now() <= endMs) {
     return (
       <Link href={`/dashboard/uren/${item.timesheetId}`} className="flex items-center justify-between rounded-xl bg-brand-500 px-3 py-2.5 text-sm font-semibold text-white">
-        <span>📍 Inchecken / uitchecken op locatie</span>
+        <span>{w.checkInOut}</span>
         <span aria-hidden>→</span>
       </Link>
     );
@@ -249,74 +253,69 @@ function ActiveFooter({ item }: { item: MyWorkItem }) {
       href={`/dashboard/klussen/${item.shift.id}`}
       className="flex items-center justify-between text-sm font-semibold text-ink"
     >
-      <span>Dit is jouw klus! 🎉</span>
+      <span>{w.yourJob}</span>
       <span aria-hidden>→</span>
     </Link>
   );
 }
 
-function HistoryFooter({ item, onHide }: { item: MyWorkItem; onHide: (workKey: string) => void }) {
+function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey: string) => void; w: W }) {
   if (item.status === "cancelled") {
     if (item.cancelledByEmployer) {
       return (
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-crit">Geannuleerd door opdrachtgever</p>
+          <p className="text-sm font-semibold text-crit">{w.cancelledByClient}</p>
           <CancellationClaimButton shiftId={item.shift.id} shiftTitle={item.shift.title} />
         </div>
       );
     }
-    return <p className="text-sm font-semibold text-crit">Geannuleerd</p>;
+    return <p className="text-sm font-semibold text-crit">{w.cancelled}</p>;
   }
   if (item.status === "rejected") {
     return (
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-neutralx-500">
-          {item.offerRateCents ? "Tegenbod afgewezen" : "Niet uitgekozen"}
+          {item.offerRateCents ? w.counterDeclined : w.notChosen}
         </p>
         <button
           type="button"
           onClick={() => onHide(item.workKey)}
           className="flex-shrink-0 text-xs font-medium text-neutralx-400 underline-offset-2 hover:text-neutralx-600 hover:underline"
         >
-          Verbergen
+          {w.hide}
         </button>
       </div>
     );
   }
   switch (item.timesheetStatus) {
     case "PAID":
-      return <p className="text-sm font-semibold text-ink">Je bent betaald 💸</p>;
+      return <p className="text-sm font-semibold text-ink">{w.paid}</p>;
     case "APPROVED":
       return (
         <div>
-          <p className="text-sm font-semibold text-ink">Je uren zijn goedgekeurd 🕊️</p>
-          <p className="mt-0.5 text-xs text-neutralx-500">Je wordt betaald volgens je gekozen uitbetaling (direct, binnen 3 werkdagen of zodra de opdrachtgever betaalt).</p>
+          <p className="text-sm font-semibold text-ink">{w.approved}</p>
+          <p className="mt-0.5 text-xs text-neutralx-500">{w.approvedBody}</p>
         </div>
       );
     case "SUBMITTED":
-      return <p className="text-sm font-semibold text-ink">Je uren zijn ingediend ✅</p>;
+      return <p className="text-sm font-semibold text-ink">{w.submitted}</p>;
     case "DISPUTED":
-      return <p className="text-sm font-semibold text-warn">Je uren zijn in dispuut</p>;
+      return <p className="text-sm font-semibold text-warn">{w.disputed}</p>;
     default:
       return (
         <Link
           href={item.timesheetId ? `/dashboard/uren/${item.timesheetId}` : "/dashboard/uren"}
           className="flex items-center justify-between text-sm font-semibold text-brand-600"
         >
-          <span>Vul je uren in</span>
+          <span>{w.fillHours}</span>
           <span aria-hidden>→</span>
         </Link>
       );
   }
 }
 
-function Empty({ tab }: { tab: TabId }) {
-  const text =
-    tab === "pending"
-      ? "Geen openstaande aanmeldingen of tegenbiedingen."
-      : tab === "active"
-        ? "Nog geen bevestigde klussen. Neem er een aan bij Ontdekken."
-        : "Nog geen historie.";
+function Empty({ tab, w }: { tab: TabId; w: W }) {
+  const text = tab === "pending" ? w.emptyPending : tab === "active" ? w.emptyActive : w.emptyHistory;
   return (
     <div className="rounded-2xl border border-dashed border-hairstrong bg-white/60 px-5 py-12 text-center text-sm text-neutralx-500">
       {text}

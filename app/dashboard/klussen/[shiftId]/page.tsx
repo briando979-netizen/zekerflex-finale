@@ -16,7 +16,7 @@ import { MessageEmployerButton } from "@/components/app/MessageEmployerButton";
 import { ShiftMap } from "@/components/app/ShiftMap";
 import { ReageerButton } from "@/components/app/ReageerModal";
 import { shiftCategory } from "@/lib/shifts/category";
-import { MODE_ORDER, formatMinutes } from "@/lib/geo/travel-modes";
+import { MODE_ORDER } from "@/lib/geo/travel-modes";
 import { money, moneyExact } from "@/components/app/ui";
 import { localStamp, type CalendarEvent } from "@/lib/calendar/links";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -24,28 +24,25 @@ import { listAdvances } from "@/lib/payouts/advances";
 import { gearForShift } from "@/lib/shop/klus-gear";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 
 export const dynamic = "force-dynamic";
 
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
-const MON = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 const hhmm = (d: Date | string) => {
   const x = new Date(d);
   return `${String(x.getHours()).padStart(2, "0")}:${String(x.getMinutes()).padStart(2, "0")}`;
 };
 const MODE_EMOJI: Record<string, string> = { driving: "🚗", transit: "🚆", walking: "🚶", bicycling: "🚲" };
 
-const INFO_CHIPS = [
-  "✌️ ZZP bij de opdrachtgever",
-  "🍃 Uitbetaling per klus",
-  "📋 Belasting: zelf",
-  "💰 Tegenbod mogelijk",
-  "🏖️ Vakantiegeld: nee",
-];
 
 export default async function ShiftDetailPage(props: { params: Promise<{ shiftId: string }> }) {
   const params = await props.params;
   const principal = await requirePrincipal();
+  const ft = await getFreelancerDict();
+  const D = ft.detail;
+  const WD = ft.date.wd;
+  const MON = ft.date.mon;
   const s = await getShiftDetail(principal.userId, params.shiftId);
   if (!s) notFound();
 
@@ -111,11 +108,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const uitzendbureauBlocked = s.viaUitzendbureau && !isPayroll;
   const applyDisabled = !s.canApply || Boolean(missingRequiredCert) || uitzendbureauBlocked;
   const applyBlockReason = !s.canApply
-    ? s.blockReason
+    ? s.blockReason && translateBlockReason(s.blockReason, ft)
     : uitzendbureauBlocked
-      ? "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau."
+      ? D.blockAgencyOnly
       : missingRequiredCert
-        ? `Voor deze klus is een geldig ${missingRequiredCert.label} nodig. Voeg het toe bij Certificaten.`
+        ? D.blockCert(missingRequiredCert.label)
         : null;
 
   // Cancellation deadline: 24h before the shift starts.
@@ -251,7 +248,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         <span className="absolute inset-0 bg-gradient-to-b from-ink/40 to-transparent" />
         <Link
           href="/dashboard/klussen"
-          aria-label="Terug"
+          aria-label={D.back}
           className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow-card backdrop-blur"
         >
           ←
@@ -266,25 +263,20 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         <div className="mx-auto max-w-2xl border-b border-hair px-4 py-5">
           {!assigned.replacementRequested && (
             <>
-              <h2 className="font-display text-xl font-bold text-ink">Dit is jouw klus! 🎉</h2>
+              <h2 className="font-display text-xl font-bold text-ink">{D.yourJob}</h2>
               {cancelPassed ? (
-                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-                  Let op: de annuleringstermijn van deze klus is verlopen — je kunt de klus niet meer annuleren zonder
-                  consequenties.
-                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.cancelPassedBody}</p>
               ) : (
-                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-                  Je kunt kosteloos annuleren tot {fmtDay(cancelDeadline)}.
-                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.cancelFreeUntil(fmtDay(cancelDeadline))}</p>
               )}
-              <p className="mt-3 text-sm font-semibold text-ink">Vergeet niet je ID-kaart mee te nemen naar de klus!</p>
+              <p className="mt-3 text-sm font-semibold text-ink">{D.bringId}</p>
               <a
                 href={agreementHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink underline"
               >
-                📄 {s.agreement ? "Bekijk je modelovereenkomst" : "Bekijk concept-modelovereenkomst"}
+                📄 {s.agreement ? D.viewAgreement : D.viewDraftAgreement}
               </a>
             </>
           )}
@@ -313,6 +305,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             timesheetId={ts.id}
             payroll={isPayroll}
             advanceNetCents={payrollAdvance?.netCents ?? null}
+            D={D}
+            W={ft.work}
           />
         </div>
       )}
@@ -331,7 +325,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">
-            Freelance
+            {ft.card.freelance}
           </span>
           <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
         </div>
@@ -340,18 +334,18 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
           {s.fastPay ? (
             <>
-              <span className="font-semibold">⚡ Snelle uitbetaling mogelijk</span> — kies na goedkeuring van je uren voor uitbetaling binnen 1 minuut of 3 werkdagen (ZekerFlex neemt dan je factuur over, tegen een kleine vergoeding).
+              <span className="font-semibold">{D.fastPayTitle}</span>{D.fastPayBody}
             </>
           ) : (
             <>
-              <span className="font-semibold">Standaard uitbetaling</span> — deze opdrachtgever biedt (nog) geen snelle uitbetaling. Je ontvangt je geld zodra de opdrachtgever betaalt.
+              <span className="font-semibold">{D.standardPayTitle}</span>{D.standardPayBody}
             </>
           )}
         </div>
 
         {/* Info chips */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {INFO_CHIPS.map((c) => (
+          {D.chips.map((c) => (
             <span key={c} className="rounded-lg border border-hair bg-white px-2.5 py-1.5 text-xs text-neutralx-600">
               {c}
             </span>
@@ -367,11 +361,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             geocode); show why instead of silently having nothing here. */}
         {!s.travel && (
           <p className="mt-3 rounded-xl border border-dashed border-hair bg-paper-soft px-4 py-3 text-sm text-neutralx-500">
-            Vul je thuisbasis in bij{" "}
+            {D.homeBefore}{" "}
             <Link href="/dashboard/verificatie" className="font-medium text-brand-600 hover:underline">
-              Verificatie
+              {D.verification}
             </Link>{" "}
-            om hier je reistijd en afstand per vervoermiddel te zien.
+            {D.homeAfter}
           </p>
         )}
         {s.travel && (
@@ -379,13 +373,13 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
               <span className="flex items-center gap-3 text-lg">
                 {MODE_ORDER.map((m) => (
-                  <span key={m} className={m === s.travel!.fastest.mode ? "" : "opacity-40"} title={s.travel!.byMode[m].label}>
+                  <span key={m} className={m === s.travel!.fastest.mode ? "" : "opacity-40"} title={D.modes[m] ?? s.travel!.byMode[m].label}>
                     {MODE_EMOJI[m]}
                   </span>
                 ))}
               </span>
               <span className="text-sm font-semibold text-ink underline decoration-crit/50 decoration-2 underline-offset-4">
-                Bekijk reistijden ▾
+                {D.travelTimes}
               </span>
             </summary>
             <ul className="divide-y divide-hair border-t border-hair">
@@ -394,9 +388,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 const fast = m === s.travel!.fastest.mode;
                 return (
                   <li key={m} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className={fast ? "font-semibold text-brand-700" : "text-neutralx-600"}>{e.label}</span>
+                    <span className={fast ? "font-semibold text-brand-700" : "text-neutralx-600"}>{D.modes[m] ?? e.label}</span>
                     <span className="num text-neutralx-500">
-                      {formatMinutes(e.minutes)} · {e.distanceKm} km
+                      {D.minutes(e.minutes)} · {e.distanceKm} km
                     </span>
                   </li>
                 );
@@ -413,19 +407,17 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             {s.postalCode} {s.city}
           </InfoRow>
           <InfoRow icon="☕">
-            {s.breakMinutes > 0 ? `${s.breakMinutes} minuten pauze` : "Je krijgt geen pauze"}
+            {s.breakMinutes > 0 ? D.breakMin(s.breakMinutes) : D.noBreak}
           </InfoRow>
           {s.skill && <InfoRow icon="🏷️">{s.skill}</InfoRow>}
           <InfoRow icon="👤">
-            We zoeken {s.positions} freelancer{s.positions === 1 ? "" : "s"}
+            {D.lookingFor(s.positions)}
           </InfoRow>
           <InfoRow icon="👕">
-            {s.dresscode || "Geen specifieke kledingvoorschriften opgegeven — kom representatief gekleed"}
+            {s.dresscode || D.noDresscode}
           </InfoRow>
           <InfoRow icon="⊘">
-            {cancelPassed
-              ? `De annuleringstermijn is verstreken op: ${fmtDay(cancelDeadline)}`
-              : `Je kunt annuleren tot: ${fmtDay(cancelDeadline)}`}
+            {cancelPassed ? D.cancelPassed(fmtDay(cancelDeadline)) : D.cancelUntil(fmtDay(cancelDeadline))}
           </InfoRow>
           {(s.agreement || s.alreadyApplied) && (
             <div className="flex items-start gap-3 text-sm">
@@ -439,11 +431,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                   rel="noopener noreferrer"
                   className="font-semibold text-ink underline"
                 >
-                  {s.agreement ? "Je modelovereenkomst" : "Bekijk concept-modelovereenkomst"}
+                  {s.agreement ? D.yourAgreement : D.viewDraftAgreement}
                 </a>
                 {!s.agreement && (
                   <p className="mt-0.5 text-xs text-neutralx-500">
-                    Nog niet definitief — zodra je wordt uitgekozen wordt deze automatisch vastgelegd.
+                    {D.draftNote}
                   </p>
                 )}
               </div>
@@ -453,29 +445,29 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {showWorkedFigures && ts && (
           <div className="mt-5 divide-y divide-hair overflow-hidden rounded-xl border border-hair">
-            <SummaryRow label="Gewerkte uren" value={fmtWorked(ts.billableMinutes)} />
-            <SummaryRow label="Betaling" hint="(excl. btw)" value={moneyExact(tsGrossCents)} />
+            <SummaryRow label={D.workedHours} value={D.worked(Math.floor(ts.billableMinutes / 60), ts.billableMinutes % 60)} />
+            <SummaryRow label={D.payment} hint={D.exclVat} value={moneyExact(tsGrossCents)} />
             <SummaryRow
-              label={isPayroll ? "Verloning" : "Betalingstermijn"}
+              label={isPayroll ? D.payroll : D.paymentTerm}
               value={
                 isPayroll
-                  ? "Via loonstrook (payroll)"
+                  ? D.viaPayslip
                   : ts.status === "PAID"
                     ? payoutDays === null
-                      ? "Uitbetaald"
+                      ? D.paidOut
                       : payoutDays === 0
-                        ? "Zelfde dag betaald"
-                        : `${payoutDays} ${payoutDays === 1 ? "dag" : "dagen"}`
+                        ? D.sameDay
+                        : D.nDays(payoutDays)
                     : ts.status === "APPROVED"
-                      ? "Wordt nu uitbetaald"
-                      : "Na goedkeuring van je uren"
+                      ? D.payingNow
+                      : D.afterApproval
               }
             />
           </div>
         )}
 
         <p className="mt-5 text-sm font-semibold text-ink">
-          💼 Functie: <span className="font-normal text-neutralx-600">{s.skill ?? cat.label}</span>
+          💼 {D.role}: <span className="font-normal text-neutralx-600">{s.skill ?? ft.cat[cat.key]}</span>
         </p>
 
         {s.description && (
@@ -484,11 +476,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {(gear.length > 0 || certList.length > 0) && (
           <section className="mt-8 border-t border-hair pt-5">
-            <h2 className="font-display text-base font-bold text-ink">Dit heb je nodig voor deze klus</h2>
-            <p className="mt-1 text-xs text-neutralx-500">
-              Automatisch bepaald op basis van het type klus. Certificaten voeg je toe bij je account;
-              werkkleding bestel je klein in de shop.
-            </p>
+            <h2 className="font-display text-base font-bold text-ink">{D.needTitle}</h2>
+            <p className="mt-1 text-xs text-neutralx-500">{D.needBody}</p>
 
             {certList.length > 0 && (
               <div className="mt-4 space-y-2">
@@ -507,19 +496,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                     <div className="min-w-0">
                       <p className="font-semibold text-ink">
                         {c.label}
-                        {c.required ? " — verplicht" : " — aanbevolen"}
+                        {c.required ? D.required : D.recommended}
                       </p>
                       <p className="text-xs text-neutralx-500">
-                        {c.have ? "Je hebt dit certificaat — komt goed." : c.reason}
+                        {c.have ? D.haveCert : c.reason}
                       </p>
                       {!c.have && (
                         <p className="mt-1 flex flex-wrap gap-3 text-xs font-semibold">
                           <Link href="/dashboard/certificaten" className="text-brand-600 underline">
-                            Certificaat toevoegen
+                            {D.addCert}
                           </Link>
                           {c.shopSlug && (
                             <Link href={`/shop#${c.shopSlug}`} className="text-brand-600 underline">
-                              Lesboek in de shop
+                              {D.shopBook}
                             </Link>
                           )}
                         </p>
@@ -544,7 +533,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                       <p className="line-clamp-2 text-sm font-bold leading-snug text-ink">{g.product.name}</p>
                       {g.required && (
                         <span className="flex-shrink-0 rounded border border-crit/30 px-1 py-0.5 text-[10px] font-semibold text-crit">
-                          Verplicht
+                          {D.requiredBadge}
                         </span>
                       )}
                     </div>
@@ -560,7 +549,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {/* Over de opdrachtgever */}
         <section className="mt-8 border-t border-hair pt-5">
-          <h2 className="font-display text-base font-bold text-ink">Over {s.branch}</h2>
+          <h2 className="font-display text-base font-bold text-ink">{D.about(s.branch)}</h2>
           {orgReviews.count > 0 && (
             <p className="mt-1.5 flex items-center gap-2 text-sm">
               <span className="text-amber-500">
@@ -568,7 +557,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 <span className="text-neutralx-300">{"★★★★★".slice(Math.round(orgReviews.average))}</span>
               </span>
               <span className="text-neutralx-500">
-                {orgReviews.count} beoordeling{orgReviews.count === 1 ? "" : "en"}
+                {D.reviews(orgReviews.count)}
               </span>
             </p>
           )}
@@ -582,28 +571,28 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
             >
-              🌐 Bekijk de website van {s.branch}
+              {D.website(s.branch)}
             </a>
           )}
 
           <div className="mt-4 divide-y divide-hair rounded-xl bg-paper-soft">
-            <StatRow icon="🕐">Reageert of kiest doorgaans binnen enkele dagen.</StatRow>
-            <StatRow icon="🙂">Kiest uit alle reacties de kracht die het beste past.</StatRow>
-            <StatRow icon="🐖">Betaalt na goedkeuring van je uren — jij kiest je uitbetaalsnelheid.</StatRow>
+            <StatRow icon="🕐">{D.stat1}</StatRow>
+            <StatRow icon="🙂">{D.stat2}</StatRow>
+            <StatRow icon="🐖">{D.stat3}</StatRow>
           </div>
 
           <Link
             href={`/dashboard/klussen?employer=${encodeURIComponent(s.branch)}`}
             className="mt-4 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
           >
-            Alle klussen van {s.branch}
+            {D.allJobsOf(s.branch)}
           </Link>
         </section>
 
         {otherShifts.length > 0 && (
           <section className="mt-8">
             <h2 className="mb-3 font-display text-base font-bold text-ink">
-              Misschien zijn deze klussen ook iets voor jou
+              {D.alsoForYou}
             </h2>
             <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
               {otherShifts.map((o) => {
@@ -628,7 +617,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                         {WD[od.getDay()]} {od.getDate()} {MON[od.getMonth()]}. · {hhmm(o.startsAt)} · {o.branch.city}
                       </p>
                       <p className="mt-1.5 text-sm font-bold text-ink">
-                        {moneyExact(o.hourlyRateCents)} <span className="text-[11px] font-normal text-neutralx-400">· {oh} u</span>
+                        {moneyExact(o.hourlyRateCents)} <span className="text-[11px] font-normal text-neutralx-400">· {ft.card.hours(oh)}</span>
                       </p>
                     </div>
                   </Link>
@@ -639,9 +628,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         )}
 
         <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">
-          Zodra je wordt uitgekozen maakt ZekerFlex automatisch een Wet DBA-proof modelovereenkomst aan. Na
-          goedkeuring van je uren kies je zelf hoe snel je wordt uitbetaald. Kun je onverhoopt niet? Regel op tijd
-          een vervanger via Mijn klussen — last-minute afzeggen telt mee in je betrouwbaarheidsscore.
+          {D.footer}
         </div>
 
         <div className="mt-4">
@@ -659,24 +646,24 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               <div className="mt-2">
                 <MessageEmployerButton shiftId={s.id} />
               </div>
-              <p className="mt-1.5 text-center text-xs text-neutralx-400">Voor vragen over deze klus</p>
+              <p className="mt-1.5 text-center text-xs text-neutralx-400">{D.forQuestions}</p>
             </div>
           ) : s.myOffer && s.myOffer.status !== "withdrawn" ? (
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="num font-display text-lg font-bold text-ink">{moneyExact(s.hourlyRateCents)}</p>
-                <p className="text-[11px] text-neutralx-400">Verdien ~ {money(s.grossCents)}</p>
+                <p className="text-[11px] text-neutralx-400">{ft.card.earn(money(s.grossCents))}</p>
               </div>
               <span className="pill-warn">
-                Reactie verstuurd ·{" "}
-                {s.myOffer.status === "accepted" ? "geaccepteerd" : s.myOffer.status === "declined" ? "afgewezen" : "in afwachting"}
+                {D.responseSent} ·{" "}
+                {ft.card.offer[s.myOffer.status === "accepted" || s.myOffer.status === "declined" ? s.myOffer.status : "pending"]}
               </span>
             </div>
           ) : s.isReplacement && upcoming ? (
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="num font-display text-lg font-bold text-ink">{moneyExact(s.hourlyRateCents)}</p>
-                <p className="text-[11px] text-neutralx-400">Verdien ~ {money(s.grossCents)}</p>
+                <p className="text-[11px] text-neutralx-400">{ft.card.earn(money(s.grossCents))}</p>
               </div>
               <ReplacementTakeoverButton
                 shiftId={s.id}
@@ -688,7 +675,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             <div className="flex items-center justify-between gap-3">
               <div className="flex-shrink-0">
                 <p className="num font-display text-lg font-bold text-ink">{moneyExact(s.hourlyRateCents)}</p>
-                <p className="text-[11px] text-neutralx-400">Verdien ~ {money(s.grossCents)}</p>
+                <p className="text-[11px] text-neutralx-400">{ft.card.earn(money(s.grossCents))}</p>
               </div>
               <ReageerButton
                 shiftId={s.id}
@@ -712,7 +699,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             </div>
           )}
           <p className="mt-2 text-center text-xs text-neutralx-400">
-            Er {reactionCount === 1 ? "is" : "zijn"} {reactionCount} reactie{reactionCount === 1 ? "" : "s"} op deze klus
+            {D.reactions(reactionCount)}
           </p>
         </div>
       </div>
@@ -752,39 +739,33 @@ function SummaryRow({ label, hint, value }: { label: string; hint?: string; valu
   );
 }
 
-/** minutes → "1 min" / "6 uur" / "7 uur 30 min" */
-function fmtWorked(minutes: number): string {
-  if (minutes <= 0) return "0 min";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} uur`;
-  return `${h} uur ${m} min`;
-}
-
 function WorkStatusHeader({
   status,
   timesheetId,
   payroll = false,
   advanceNetCents = null,
+  D,
+  W,
 }: {
   status: string;
   timesheetId: string;
   payroll?: boolean;
   advanceNetCents?: number | null;
+  D: FreelancerDict["detail"];
+  W: FreelancerDict["work"];
 }) {
   const advLine =
     payroll && advanceNetCents && advanceNetCents > 0
-      ? `Je voorschot van ${moneyExact(advanceNetCents)} staat op je rekening. De rest volgt op je loonstrook.`
+      ? D.advanceLine(moneyExact(advanceNetCents))
       : payroll
-        ? "Ze worden verloond via de payroll en komen op je eerstvolgende loonstrook."
+        ? D.payrollLine
         : null;
 
   if (status === "PAID") {
     return (
       <>
         <h2 className="font-display text-xl font-bold text-ink">
-          {payroll ? "Je uren zijn verloond 💸" : "Je bent betaald 💸"}
+          {payroll ? D.paidPayroll : W.paid}
         </h2>
         {payroll && advLine && (
           <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{advLine}</p>
@@ -795,9 +776,9 @@ function WorkStatusHeader({
   if (status === "APPROVED") {
     return (
       <>
-        <h2 className="font-display text-xl font-bold text-ink">Je uren zijn goedgekeurd 🕊️</h2>
+        <h2 className="font-display text-xl font-bold text-ink">{W.approved}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-          {payroll ? advLine : "Je wordt betaald volgens je gekozen uitbetaling: direct, binnen 3 werkdagen of zodra de opdrachtgever betaalt."}
+          {payroll ? advLine : D.approvedFreelance}
         </p>
       </>
     );
@@ -805,11 +786,9 @@ function WorkStatusHeader({
   if (status === "SUBMITTED") {
     return (
       <>
-        <h2 className="font-display text-xl font-bold text-ink">Je uren zijn ingediend ✅</h2>
+        <h2 className="font-display text-xl font-bold text-ink">{W.submitted}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-          {payroll
-            ? "De opdrachtgever controleert je uren. Daarna worden ze verloond via de payroll."
-            : "De opdrachtgever controleert je uren. Zodra ze zijn goedgekeurd word je uitbetaald."}
+          {payroll ? D.submittedPayroll : D.submittedFreelance}
         </p>
       </>
     );
@@ -817,24 +796,20 @@ function WorkStatusHeader({
   if (status === "DISPUTED") {
     return (
       <>
-        <h2 className="font-display text-xl font-bold text-warn">Je uren zijn in dispuut</h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-          Er loopt een controle op je ingevulde uren. Je hoort snel meer.
-        </p>
+        <h2 className="font-display text-xl font-bold text-warn">{W.disputed}</h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.disputedBody}</p>
       </>
     );
   }
   return (
     <>
-      <h2 className="font-display text-xl font-bold text-ink">Vul je gewerkte uren in</h2>
-      <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
-        Deze klus is afgelopen. Vul je uren in zodat de opdrachtgever ze kan goedkeuren.
-      </p>
+      <h2 className="font-display text-xl font-bold text-ink">{D.fillTitle}</h2>
+      <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.fillBody}</p>
       <Link
         href={`/dashboard/uren/${timesheetId}`}
         className="btn-primary mt-3 inline-flex px-4 py-2 text-sm"
       >
-        Uren invullen
+        {D.fillButton}
       </Link>
     </>
   );

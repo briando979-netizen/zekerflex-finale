@@ -6,6 +6,7 @@ import { Portal } from "@/components/chat/Portal";
 import { useToast } from "@/components/ui/Toast";
 import { counterOfferAction } from "@/app/dashboard/klussen/actions";
 import { moneyExact } from "@/components/app/ui";
+import { useFT } from "@/components/i18n/I18nProvider";
 
 export interface OtherShiftOption {
   id: string;
@@ -32,7 +33,7 @@ export function ReageerButton({
   otherShifts = [],
   disabled = false,
   notReadyReason,
-  label = "Reageer op deze klus",
+  label,
   full = false,
 }: {
   shiftId: string;
@@ -50,6 +51,7 @@ export function ReageerButton({
   full?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const ft = useFT();
 
   return (
     <>
@@ -60,7 +62,7 @@ export function ReageerButton({
           onClick={() => setOpen(true)}
           className={`btn-primary text-sm disabled:opacity-50 ${full ? "w-full py-2.5" : "px-4 py-2"}`}
         >
-          {label}
+          {label ?? ft.apply.button}
         </button>
         {notReadyReason && (
           <span className="max-w-[240px] text-right text-[11px] leading-snug text-neutralx-400">{notReadyReason}</span>
@@ -109,6 +111,8 @@ function Modal({
 }) {
   const toast = useToast();
   const router = useRouter();
+  const ft = useFT();
+  const a = ft.apply;
   const [pending, start] = useTransition();
 
   const [mode, setMode] = useState<"full" | "flex">("full");
@@ -143,19 +147,19 @@ function Modal({
 
   function submit() {
     setErr(null);
-    if (!okAgreement || !okDresscode) return setErr("Ga akkoord met de overeenkomst en de voorschriften.");
+    if (!okAgreement || !okDresscode) return setErr(a.errAgree);
     if (!Number.isFinite(rateCents) || rateCents < 1000 || rateCents > 25000) {
-      return setErr("Voer een uurtarief tussen € 10 en € 250 in.");
+      return setErr(a.errRate);
     }
     if (mode === "flex") {
-      if (from < startTime) return setErr(`Je starttijd kan niet eerder zijn dan ${startTime}, de werkelijke starttijd van de dienst.`);
-      if (to <= from) return setErr("De eindtijd moet na de starttijd liggen.");
+      if (from < startTime) return setErr(a.errEarly(startTime));
+      if (to <= from) return setErr(a.errEndAfterStart);
     }
     const extraRateCents: Record<string, number> = {};
     for (const id of extraIds) {
       const cents = Math.round(parseFloat((extraRates[id] ?? "").replace(",", ".")) * 100);
       if (!Number.isFinite(cents) || cents < 1000 || cents > 25000) {
-        return setErr("Voer voor elke geselecteerde extra klus een uurtarief tussen € 10 en € 250 in.");
+        return setErr(a.errExtraRate);
       }
       extraRateCents[id] = cents;
     }
@@ -183,14 +187,7 @@ function Modal({
         }
 
         const extraOk = extras.length - extraFailed;
-        toast.success(
-          "Je reactie staat bij Mijn klussen",
-          extraOk > 0
-            ? `${clientName} bekijkt je reacties (${1 + extraOk} klussen) en kiest wie ze doet.${
-                extraFailed > 0 ? ` ${extraFailed} extra klus(sen) lukten niet — probeer die apart.` : ""
-              }`
-            : `${clientName} bekijkt je reactie en kiest wie de klus doet.`,
-        );
+        toast.success(a.toastTitle, extraOk > 0 ? a.toastMany(clientName, 1 + extraOk, extraFailed) : a.toastOne(clientName));
         onClose();
         router.push("/dashboard/diensten");
         router.refresh();
@@ -208,18 +205,17 @@ function Modal({
           onClick={(e) => e.stopPropagation()}
         >
           <h2 className="border-b border-hair px-5 py-4 text-center font-display text-lg font-bold uppercase tracking-tight text-ink">
-            Reageer op deze klus
+            {a.title}
           </h2>
 
           <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
             <p className="rounded-lg border border-warn/40 bg-warn/5 px-3 py-2.5 text-sm text-neutralx-700">
-              <span className="font-semibold">Let op!</span> Als je wordt uitgekozen verwacht {clientName} dat je komt
-              werken.
+              <span className="font-semibold">{a.heads}</span> {a.headsBody(clientName)}
             </p>
 
             {/* Beschikbaarheid */}
             <div>
-              <p className="text-sm font-semibold text-ink">Jouw beschikbaarheid</p>
+              <p className="text-sm font-semibold text-ink">{a.availability}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -228,7 +224,7 @@ function Modal({
                     mode === "full" ? "border-brand-500 bg-brand-50" : "border-hairstrong"
                   }`}
                 >
-                  <span className="block text-sm font-bold text-ink">Volledige dienst</span>
+                  <span className="block text-sm font-bold text-ink">{a.fullShift}</span>
                   <span className="block text-xs text-neutralx-500">
                     {startTime} - {endTime}
                   </span>
@@ -240,14 +236,14 @@ function Modal({
                     mode === "flex" ? "border-brand-500 bg-brand-50" : "border-hairstrong"
                   }`}
                 >
-                  <span className="block text-sm font-bold text-ink">Flexibel</span>
-                  <span className="block text-xs text-neutralx-500">Stel je tijden voor</span>
+                  <span className="block text-sm font-bold text-ink">{a.flexible}</span>
+                  <span className="block text-xs text-neutralx-500">{a.proposeTimes}</span>
                 </button>
               </div>
               {mode === "flex" ? (
                 <div className="mt-2 flex items-center gap-3 rounded-lg bg-paper-soft p-3">
                   <label className="flex-1 text-xs text-neutralx-600">
-                    Van
+                    {a.from}
                     <input
                       type="time"
                       value={from}
@@ -258,7 +254,7 @@ function Modal({
                     />
                   </label>
                   <label className="flex-1 text-xs text-neutralx-600">
-                    Tot
+                    {a.to}
                     <input
                       type="time"
                       value={to}
@@ -271,8 +267,7 @@ function Modal({
                 </div>
               ) : (
                 <p className="mt-2 rounded-lg bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-                  <span className="font-semibold text-ink">Kun je niet de volledige dienst werken?</span> Schakel over
-                  naar flexibel om je eigen start- of eindtijd voor te stellen.
+                  <span className="font-semibold text-ink">{a.notFullQ}</span> {a.notFullBody}
                 </p>
               )}
             </div>
@@ -280,10 +275,10 @@ function Modal({
             {/* Uurtarief */}
             <div>
               <label className="flex items-center justify-between text-sm font-semibold text-ink">
-                Uurtarief
+                {a.rate}
                 <span
                   className="grid h-4 w-4 place-items-center rounded-full border border-neutralx-400 text-[9px] text-neutralx-400"
-                  title="Je mag een ander tarief voorstellen. De opdrachtgever ziet dit als tegenbod."
+                  title={a.rateInfo}
                 >
                   i
                 </span>
@@ -298,17 +293,15 @@ function Modal({
                 />
               </div>
               {isCounter && (
-                <p className="mt-1 text-[11px] text-warn">Tegenbod — aangeboden tarief is {moneyExact(listedRateCents)}/u.</p>
+                <p className="mt-1 text-[11px] text-warn">{a.counterHint(moneyExact(listedRateCents))}</p>
               )}
             </div>
 
             {/* Ook reageren op andere dagen van dezelfde werkgever */}
             {otherShifts.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-ink">Ook reageren op andere klussen van {clientName}?</p>
-                <p className="mt-0.5 text-xs text-neutralx-500">
-                  Elke geselecteerde klus wordt apart ingediend — je mag voor elke klus je eigen tarief voorstellen.
-                </p>
+                <p className="text-sm font-semibold text-ink">{a.otherJobsQ(clientName)}</p>
+                <p className="mt-0.5 text-xs text-neutralx-500">{a.otherJobsBody}</p>
                 <div className="mt-2 space-y-2">
                   {otherShifts.map((o) => {
                     const od = new Date(o.startsAt);
@@ -328,8 +321,8 @@ function Modal({
                           <span className="min-w-0">
                             <span className="block truncate font-medium text-ink">{o.title}</span>
                             <span className="block text-[11px] text-neutralx-400">
-                              {od.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })} ·{" "}
-                              {od.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
+                              {od.toLocaleDateString(ft.intl, { weekday: "short", day: "numeric", month: "short" })} ·{" "}
+                              {od.toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </span>
                         </label>
@@ -342,10 +335,10 @@ function Modal({
                               onChange={(e) => setExtraRates((prev) => ({ ...prev, [o.id]: e.target.value }))}
                               className="w-14 rounded border border-hairstrong bg-white px-1.5 py-1 text-right text-sm"
                             />
-                            /u
+                            {ft.card.perHourShort}
                           </span>
                         ) : (
-                          <span className="flex-shrink-0 font-semibold text-ink">{moneyExact(o.hourlyRateCents)}/u</span>
+                          <span className="flex-shrink-0 font-semibold text-ink">{moneyExact(o.hourlyRateCents)}{ft.card.perHourShort}</span>
                         )}
                       </div>
                     );
@@ -356,13 +349,13 @@ function Modal({
 
             {/* Motivatie */}
             <div>
-              <p className="text-sm font-semibold text-ink">Waarom moet {clientName} jou uitkiezen?</p>
+              <p className="text-sm font-semibold text-ink">{a.whyYouQ(clientName)}</p>
               <textarea
                 value={motivation}
                 onChange={(e) => setMotivation(e.target.value)}
                 rows={3}
                 maxLength={500}
-                placeholder="Je motivatie (optioneel)"
+                placeholder={a.motivation}
                 className="mt-1.5 w-full rounded-lg border border-hairstrong bg-paper-soft px-3 py-2 text-sm outline-none focus:border-brand-500"
               />
             </div>
@@ -377,13 +370,13 @@ function Modal({
                   className="mt-0.5 h-4 w-4 accent-brand-500"
                 />
                 <span>
-                  Ik ga akkoord met de{" "}
+                  {a.agreeTo}{" "}
                   {agreementHref ? (
                     <a href={agreementHref} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
-                      overeenkomst
+                      {a.agreement}
                     </a>
                   ) : (
-                    <span className="font-semibold underline">overeenkomst</span>
+                    <span className="font-semibold underline">{a.agreement}</span>
                   )}
                 </span>
               </label>
@@ -395,20 +388,20 @@ function Modal({
                   className="mt-0.5 h-4 w-4 accent-brand-500"
                 />
                 <span>
-                  Ik ga akkoord met de{" "}
+                  {a.agreeTo}{" "}
                   <button
                     type="button"
                     onClick={() => setShowDresscode((v) => !v)}
                     className="font-semibold underline"
                   >
-                    kledingvoorschriften
+                    {a.dresscode}
                   </button>{" "}
-                  voor deze klus
+                  {a.forThisJob}
                 </span>
               </label>
               {showDresscode && (
                 <p className="rounded-lg bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-                  {dresscode || "Geen specifieke kledingvoorschriften opgegeven — kom representatief gekleed."}
+                  {dresscode || a.noDresscode}
                 </p>
               )}
             </div>
@@ -416,17 +409,17 @@ function Modal({
             {/* Automatisch intrekken */}
             <div>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-ink">Automatisch reactie intrekken</p>
+                <p className="text-sm font-semibold text-ink">{a.autoWithdraw}</p>
                 <span
                   className="grid h-4 w-4 place-items-center rounded-full border border-neutralx-400 text-[9px] text-neutralx-400"
-                  title="Handig als je niet meer wilt reageren zodra de klus dichtbij is en je nog niet gekozen bent."
+                  title={a.autoWithdrawInfo}
                 >
                   i
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-hair p-3">
                 <p className="text-sm text-neutralx-600">
-                  Trek mijn reactie{" "}
+                  {a.withdrawBefore}{" "}
                   {autoWithdraw ? (
                     <span className="inline-flex items-center gap-1">
                       <button
@@ -448,7 +441,7 @@ function Modal({
                   ) : (
                     <span className="font-bold text-ink">0</span>
                   )}{" "}
-                  uur voor aanvang klus automatisch in
+                  {a.withdrawAfter}
                 </p>
                 <button
                   type="button"
@@ -470,8 +463,7 @@ function Modal({
           <div className="border-t border-hair p-4">
             {conflict && (
               <p className="mb-2 text-center text-xs leading-relaxed text-crit">
-                Controleer je planning. Deze klus kan conflicteren met een andere match. Kijk of je planning haalbaar
-                is.
+                {a.conflict}
               </p>
             )}
             <button
@@ -480,7 +472,7 @@ function Modal({
               disabled={!canConfirm}
               className="btn-primary w-full py-3 text-sm disabled:opacity-50"
             >
-              {pending ? "Versturen…" : "Bevestig je reactie"}
+              {pending ? a.sending : a.confirm}
             </button>
             <button
               type="button"
@@ -488,7 +480,7 @@ function Modal({
               disabled={pending}
               className="mt-2 block w-full text-center text-sm font-medium text-neutralx-500 underline hover:text-ink"
             >
-              Annuleren
+              {a.cancel}
             </button>
           </div>
         </div>
