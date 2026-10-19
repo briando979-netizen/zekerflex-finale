@@ -9,6 +9,7 @@ import { getProducts } from "@/lib/bank/insurance";
 import { platformAdminIds } from "@/lib/messaging/contacts";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { prisma } from "@/lib/prisma";
+import { getReminderSettings } from "@/lib/billing/reminders";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -91,7 +92,7 @@ async function stripeIssuingWebhookOk(): Promise<boolean | null> {
 
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products, issuing, llm, admin2fa, adminPush] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor(), adminHasPush()]);
+  const [webhookOk, products, issuing, llm, admin2fa, adminPush, reminders] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor(), adminHasPush(), getReminderSettings().catch(() => ({ enabled: false }))]);
   const base = env.APP_BASE_URL ?? "";
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
@@ -271,6 +272,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       auto: true,
       done: admin2fa.total > 0 && admin2fa.on === admin2fa.total,
       doneNote: `${admin2fa.on} van ${admin2fa.total} beheerders hebben het aan`,
+    },
+    {
+      id: "invoice-reminders",
+      group: "Geld & bank",
+      title: "Automatische betaalherinneringen aanzetten",
+      why: "Freelancers met standaard uitbetaling krijgen hun loon pas als de opdrachtgever betaalt. Automatische herinneringen (na 3 en 10 dagen, daarna een melding bij jou) zorgen dat facturen op tijd betaald worden.",
+      how: ["Ga naar Admin → Facturen en bekijk het blok 'Achterstallig' (staan er oude testfacturen tussen? Annuleer die eerst).", "Zet 'Automatische herinneringen' aan. Vanaf de volgende ochtend 09:00 gaat het vanzelf."],
+      auto: true,
+      done: reminders.enabled,
     },
     {
       id: "alert-push",

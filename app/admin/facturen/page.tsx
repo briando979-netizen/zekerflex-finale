@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { payToken } from "@/lib/billing/pay-link";
+import { OverdueInvoices } from "@/components/admin/OverdueInvoices";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,8 @@ export default async function AdminFacturenPage(props: { searchParams: Promise<{
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader title="Facturen" subtitle="Alle facturen op het platform, over alle organisaties heen — omzet, openstaand en status." />
+
+      <OverdueInvoices />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label="Openstaand" value={money(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "default"} />

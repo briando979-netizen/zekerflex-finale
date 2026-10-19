@@ -103,6 +103,7 @@ export function mailCategoryForKind(kind?: string): string {
 // is an automated message: replies are not read, and we say so in the mail.
 const REPLIABLE_KINDS = new Set([
   "support",
+  "invoice-reminder", // clients reply with questions about an invoice
   "replacement",
   "demo-aanvraag",
   "demo-aanvraag-bevestiging",
