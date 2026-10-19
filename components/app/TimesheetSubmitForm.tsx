@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useFT } from "@/components/i18n/I18nProvider";
 
 // ---------------------------------------------------------------------------
 // "Uren invullen" as a short guided flow instead of one long form:
@@ -20,21 +21,8 @@ function localValue(date: Date | string) {
   const d = new Date(date);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
-const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
-const hhmm = (v: string) => new Date(v).toLocaleString("nl-NL", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-
-const SPEEDS: { speed: Speed; title: string; body: string }[] = [
-  { speed: "instant", title: "Binnen 1 minuut 🚀", body: "Direct na goedkeuring. ZekerFlex neemt je vordering over voor 4% minder dan je factuurbedrag." },
-  { speed: "threeDay", title: "Binnen 3 werkdagen", body: "ZekerFlex neemt je vordering over voor 2% minder dan je factuurbedrag." },
-  { speed: "standard", title: "Gratis — als de opdrachtgever betaalt", body: "Je ontvangt het volledige bedrag zodra de opdrachtgever betaalt." },
-];
-
-const NOT_WORKED: { id: string; label: string }[] = [
-  { id: "client_cancelled", label: "De opdrachtgever heeft afgezegd" },
-  { id: "no_show_client", label: "Ter plekke was er geen werk / niemand aanwezig" },
-  { id: "sick", label: "Ik was ziek of kon niet" },
-  { id: "other", label: "Andere reden" },
-];
+const SPEED_ORDER: Speed[] = ["instant", "threeDay", "standard"];
+const NOT_WORKED_IDS = ["client_cancelled", "no_show_client", "sick", "other"] as const;
 
 export function TimesheetSubmitForm({
   timesheetId,
@@ -72,6 +60,12 @@ export function TimesheetSubmitForm({
   /** the worker already accepted the overdrachtsvoorwaarden */
   termsAccepted?: boolean;
 }) {
+  const ft = useFT();
+  const T = ft.ts;
+  const euro = (c: number) => new Intl.NumberFormat(ft.intl, { style: "currency", currency: "EUR" }).format(c / 100);
+  const hhmm = (v: string) => new Date(v).toLocaleString(ft.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const SPEEDS = SPEED_ORDER.map((speed) => ({ speed, ...T.speeds[speed] }));
+  const NOT_WORKED = NOT_WORKED_IDS.map((id) => ({ id, label: T.notWorked[id] ?? id }));
   const [step, setStep] = useState<Step>("worked");
   const [start, setStart] = useState(localValue(scheduledStart));
   const [end, setEnd] = useState(localValue(scheduledEnd));
@@ -101,9 +95,9 @@ export function TimesheetSubmitForm({
   const back = () => setStep(order[Math.max(0, idx - 1)]!);
 
   function validHours(): string | null {
-    if (new Date(end) <= new Date(start)) return "De eindtijd moet na de begintijd liggen.";
-    if (minutes <= 0) return "Na aftrek van de pauze blijft er geen werktijd over.";
-    if (minutes > 16 * 60) return "Meer dan 16 uur op één dag — controleer je tijden.";
+    if (new Date(end) <= new Date(start)) return T.errEndBeforeStart;
+    if (minutes <= 0) return T.errNoTime;
+    if (minutes > 16 * 60) return T.errTooLong;
     return null;
   }
 
@@ -115,7 +109,7 @@ export function TimesheetSubmitForm({
         const pr = await fetch("/api/me/payout", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ speed, ...(speed !== "standard" && terms && !termsAccepted ? { acceptTerms: true } : {}) }) });
         if (!pr.ok) {
           const d = await pr.json().catch(() => ({}));
-          throw new Error(d?.error?.message ?? "Uitbetaalkeuze opslaan lukte niet.");
+          throw new Error(d?.error?.message ?? T.errSavePayout);
         }
         if (toBank !== earningsToBank) {
           await fetch("/api/me/bank/payout-destination", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ destination: toBank ? "bank" : "iban" }) }).catch(() => undefined);
@@ -133,7 +127,7 @@ export function TimesheetSubmitForm({
         }),
       });
       const d = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(d?.error?.message ?? "Indienen lukte niet.");
+      if (!response.ok) throw new Error(d?.error?.message ?? T.errSubmit);
       if (rating > 0) {
         await fetch("/api/reviews", {
           method: "POST",
@@ -155,18 +149,18 @@ export function TimesheetSubmitForm({
     const res = await fetch(`/api/timesheets/${timesheetId}/not-worked`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: notWorkedReason, note: notWorkedNote }) }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
-    if (!res?.ok) return setError(d?.error?.message ?? "Doorgeven lukte niet.");
+    if (!res?.ok) return setError(d?.error?.message ?? T.errReport);
     setDone("notWorked");
   }
 
   if (done === "notWorked") {
     return (
       <section className="surface p-5">
-        <p className="eyebrow">Doorgegeven</p>
-        <h2 className="mt-2 font-display text-xl font-bold">Bedankt, we pakken het op</h2>
-        <p className="mt-2 text-sm leading-relaxed text-neutralx-600">ZekerFlex handelt dit af met {clientName}. Je hoort van ons als er iets geregeld moet worden (bijvoorbeeld een annuleringsvergoeding).</p>
+        <p className="eyebrow">{T.reportedEyebrow}</p>
+        <h2 className="mt-2 font-display text-xl font-bold">{T.reportedTitle}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{T.reportedBody(clientName)}</p>
         <Link href="/dashboard/diensten" className="btn-primary mt-5 w-full">
-          Naar mijn klussen
+          {T.toMyJobs}
         </Link>
       </section>
     );
@@ -175,19 +169,19 @@ export function TimesheetSubmitForm({
   if (done === "submitted") {
     return (
       <section className="surface p-5">
-        <p className="eyebrow">Ingediend ✓</p>
-        <h2 className="mt-2 font-display text-xl font-bold">Je uren zijn verstuurd</h2>
+        <p className="eyebrow">{T.submittedEyebrow}</p>
+        <h2 className="mt-2 font-display text-xl font-bold">{T.submittedTitle}</h2>
         <p className="mt-2 text-sm leading-relaxed text-neutralx-600">
           {payroll
-            ? `${clientName} keurt je uren goed; daarna krijg je binnen 1 minuut een voorschot en volgt de rest op je loonstrook.`
-            : `${clientName} keurt je uren goed. Daarna betalen we uit ${speed === "instant" ? "binnen 1 minuut" : speed === "threeDay" ? "binnen 3 werkdagen" : "zodra de opdrachtgever betaalt"}${toBank ? " op je ZekerFlex Bank" : " op je IBAN"}.`}
+            ? T.submittedPayroll(clientName)
+            : T.submittedFreelance(clientName, speed === "instant" ? T.whenInstant : speed === "threeDay" ? T.whenThreeDay : T.whenClient, toBank ? T.whereBank : T.whereIban)}
         </p>
         <div className="mt-6 space-y-2">
           <Link href={payroll ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="btn-ghost w-full">
-            {payroll ? "Bekijk je loonstroken" : "Uitbetalingen & voorschot"}
+            {payroll ? T.viewPayslips : T.payoutsAndAdvance}
           </Link>
           <Link href="/dashboard/diensten" className="btn-primary w-full">
-            Naar mijn klussen
+            {T.toMyJobs}
           </Link>
         </div>
       </section>
@@ -195,7 +189,7 @@ export function TimesheetSubmitForm({
   }
 
   const field = "field-input";
-  const yesNo = (yes: () => void, no: () => void, yesLabel = "Ja", noLabel = "Nee") => (
+  const yesNo = (yes: () => void, no: () => void, yesLabel = T.yes, noLabel = T.no) => (
     <div className="mt-5 grid grid-cols-2 gap-3">
       <button type="button" onClick={no} className="rounded-xl border border-hairstrong py-3 text-base font-semibold text-ink hover:bg-paper-soft">
         {noLabel}
@@ -219,17 +213,17 @@ export function TimesheetSubmitForm({
 
       {step === "worked" && (
         <>
-          <p className="eyebrow">Stap 1</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Heb je deze klus gewerkt?</h2>
-          <p className="mt-2 text-sm text-neutralx-600">Bij {clientName}.</p>
-          {yesNo(next, () => setStep("notWorked"), "Ja, gewerkt", "Nee")}
+          <p className="eyebrow">{T.step(1)}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.workedQ}</h2>
+          <p className="mt-2 text-sm text-neutralx-600">{T.at(clientName)}</p>
+          {yesNo(next, () => setStep("notWorked"), T.yesWorked, T.no)}
         </>
       )}
 
       {step === "notWorked" && (
         <>
-          <p className="eyebrow">Niet gewerkt</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Wat is er gebeurd?</h2>
+          <p className="eyebrow">{T.notWorkedEyebrow}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.whatHappened}</h2>
           <div className="mt-4 space-y-2">
             {NOT_WORKED.map((r) => (
               <label key={r.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm ${notWorkedReason === r.id ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
@@ -238,14 +232,14 @@ export function TimesheetSubmitForm({
               </label>
             ))}
           </div>
-          <textarea className={`${field} mt-3`} rows={3} maxLength={500} value={notWorkedNote} onChange={(e) => setNotWorkedNote(e.target.value)} placeholder="Toelichting (optioneel)" />
+          <textarea className={`${field} mt-3`} rows={3} maxLength={500} value={notWorkedNote} onChange={(e) => setNotWorkedNote(e.target.value)} placeholder={T.notePlaceholder} />
           {error && <p className="mt-2 text-sm text-crit">{error}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={() => setStep("worked")} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              Terug
+              {T.back}
             </button>
             <button type="button" disabled={!notWorkedReason || busy} onClick={reportNotWorked} className="btn-primary disabled:opacity-50">
-              {busy ? "Versturen…" : "Doorgeven"}
+              {busy ? T.sending : T.report}
             </button>
           </div>
         </>
@@ -253,28 +247,28 @@ export function TimesheetSubmitForm({
 
       {step === "hours" && (
         <>
-          <p className="eyebrow">Stap 2</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Kloppen deze uren?</h2>
+          <p className="eyebrow">{T.step(2)}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.hoursQ}</h2>
           <div className="mt-4 rounded-xl bg-paper-soft p-4 text-sm">
             <p className="flex justify-between gap-3">
-              <span className="text-neutralx-500">Begin</span>
+              <span className="text-neutralx-500">{T.start}</span>
               <span className="font-semibold">{hhmm(start)}</span>
             </p>
             <p className="mt-1 flex justify-between gap-3">
-              <span className="text-neutralx-500">Einde</span>
+              <span className="text-neutralx-500">{T.end}</span>
               <span className="font-semibold">{hhmm(end)}</span>
             </p>
             <p className="mt-1 flex justify-between gap-3">
-              <span className="text-neutralx-500">Pauze</span>
-              <span className="font-semibold">{breaks || 0} min</span>
+              <span className="text-neutralx-500">{T.pause}</span>
+              <span className="font-semibold">{breaks || 0} {T.min}</span>
             </p>
             <p className="mt-2 flex justify-between gap-3 border-t border-hair pt-2">
-              <span className="text-neutralx-500">Gewerkt</span>
+              <span className="text-neutralx-500">{T.worked}</span>
               <span className="font-semibold">
-                {Math.floor(minutes / 60)}u {minutes % 60}m{hourlyRateCents ? ` · ${euro(grossCents)} bruto` : ""}
+                {T.hm(Math.floor(minutes / 60), minutes % 60)}{hourlyRateCents ? ` · ${euro(grossCents)} ${T.gross}` : ""}
               </span>
             </p>
-            {gpsBacked && <p className="mt-2 text-xs text-ok">📍 Onderbouwd met je in- en uitcheck op locatie.</p>}
+            {gpsBacked && <p className="mt-2 text-xs text-ok">{T.gpsBacked}</p>}
           </div>
           {!editHours ? (
             yesNo(
@@ -285,26 +279,26 @@ export function TimesheetSubmitForm({
                 next();
               },
               () => setEditHours(true),
-              "Ja, klopt",
-              "Nee, aanpassen",
+              T.yesCorrect,
+              T.noAdjust,
             )
           ) : (
             <div className="mt-4 space-y-3">
               <label className="field-label">
-                Begintijd
+                {T.startTime}
                 <input type="datetime-local" className={field} value={start} onChange={(e) => setStart(e.target.value)} />
               </label>
               <label className="field-label">
-                Eindtijd
+                {T.endTime}
                 <input type="datetime-local" className={field} value={end} onChange={(e) => setEnd(e.target.value)} />
               </label>
               <label className="field-label">
-                Pauze in minuten
+                {T.breakMinutes}
                 <input type="number" min="0" max="240" className={field} value={breaks} onChange={(e) => setBreaks(e.target.value)} />
               </label>
               <label className="field-label">
-                Waarom wijkt het af? <span className="font-normal text-neutralx-400">(voor de opdrachtgever)</span>
-                <textarea className={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Bijvoorbeeld: een half uur langer gebleven op verzoek van de teamleider" />
+                {T.whyDifferent} <span className="font-normal text-neutralx-400">{T.forClient}</span>
+                <textarea className={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={T.whyPlaceholder} />
               </label>
               {error && <p className="text-sm text-crit">{error}</p>}
               <button
@@ -317,7 +311,7 @@ export function TimesheetSubmitForm({
                 }}
                 className="btn-primary w-full"
               >
-                Verder
+                {T.next}
               </button>
             </div>
           )}
@@ -327,20 +321,20 @@ export function TimesheetSubmitForm({
 
       {step === "extra" && (
         <>
-          <p className="eyebrow">Stap 3</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Extra kosten declareren?</h2>
-          <p className="mt-2 text-sm text-neutralx-600">Bijvoorbeeld parkeren, reiskosten of materiaal — alleen als je dit vooraf met {clientName} hebt afgesproken.</p>
+          <p className="eyebrow">{T.step(3)}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.extraQ}</h2>
+          <p className="mt-2 text-sm text-neutralx-600">{T.extraBody(clientName)}</p>
           {!extraOn ? (
-            yesNo(() => setExtraOn(true), next, "Ja, declareren", "Nee")
+            yesNo(() => setExtraOn(true), next, T.yesDeclare, T.no)
           ) : (
             <div className="mt-4 space-y-3">
               <label className="field-label">
-                Bedrag incl. btw
+                {T.amountInclVat}
                 <input inputMode="decimal" className={field} value={extraAmount} onChange={(e) => setExtraAmount(e.target.value)} placeholder="0,00" />
               </label>
               <label className="field-label">
-                Waarvoor?
-                <textarea className={field} rows={2} maxLength={300} value={extraNote} onChange={(e) => setExtraNote(e.target.value)} placeholder="Bijvoorbeeld: parkeerkosten" />
+                {T.whatFor}
+                <textarea className={field} rows={2} maxLength={300} value={extraNote} onChange={(e) => setExtraNote(e.target.value)} placeholder={T.whatForPlaceholder} />
               </label>
               {error && <p className="text-sm text-crit">{error}</p>}
               <div className="grid grid-cols-2 gap-3">
@@ -353,19 +347,19 @@ export function TimesheetSubmitForm({
                   }}
                   className="rounded-xl border border-hairstrong py-3 font-semibold"
                 >
-                  Toch niet
+                  {T.notAfterAll}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    if (extraCents <= 0) return setError("Vul een geldig bedrag in.");
-                    if (!extraNote.trim()) return setError("Beschrijf waar de kosten voor zijn.");
+                    if (extraCents <= 0) return setError(T.errAmount);
+                    if (!extraNote.trim()) return setError(T.errDescribe);
                     setError("");
                     next();
                   }}
                   className="btn-primary"
                 >
-                  Verder
+                  {T.next}
                 </button>
               </div>
             </div>
@@ -375,23 +369,23 @@ export function TimesheetSubmitForm({
 
       {step === "review" && (
         <>
-          <p className="eyebrow">Stap 4</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Hoe was het bij {clientName}?</h2>
+          <p className="eyebrow">{T.step(4)}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.reviewQ(clientName)}</h2>
           <div className="mt-4 flex justify-center gap-2 text-4xl">
             {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setRating(n)} className={n <= rating ? "text-amber-500" : "text-neutralx-300"} aria-label={`${n} sterren`}>
+              <button key={n} type="button" onClick={() => setRating(n)} className={n <= rating ? "text-amber-500" : "text-neutralx-300"} aria-label={T.stars(n)}>
                 ★
               </button>
             ))}
           </div>
-          {rating > 0 && <textarea className={`${field} mt-3`} rows={2} maxLength={500} value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="Wat ging goed of kan beter? (optioneel)" />}
-          <p className="mt-2 text-center text-xs text-neutralx-500">Je beoordeling helpt andere freelancers. Daarna kan het niet meer voor deze klus.</p>
+          {rating > 0 && <textarea className={`${field} mt-3`} rows={2} maxLength={500} value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder={T.reviewPlaceholder} />}
+          <p className="mt-2 text-center text-xs text-neutralx-500">{T.reviewHint}</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={next} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              Overslaan
+              {T.skip}
             </button>
             <button type="button" disabled={rating === 0} onClick={next} className="btn-primary disabled:opacity-50">
-              Verder
+              {T.next}
             </button>
           </div>
         </>
@@ -399,11 +393,11 @@ export function TimesheetSubmitForm({
 
       {step === "payout" && (
         <>
-          <p className="eyebrow">Stap 5</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Hoe snel wil je je geld?</h2>
+          <p className="eyebrow">{T.step(5)}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.payoutQ}</h2>
           {!fastPay && (
             <p className="mt-3 rounded-xl bg-paper-soft px-3 py-2 text-xs text-neutralx-600">
-              {clientName} biedt geen snelle uitbetaling aan — bij deze klus ontvang je je geld zodra de opdrachtgever betaalt.
+              {T.noFastPay(clientName)}
             </p>
           )}
           <div className="mt-4 space-y-2">
@@ -415,7 +409,7 @@ export function TimesheetSubmitForm({
                   <span>
                     <span className="block text-sm font-semibold text-ink">
                       {o.title}
-                      {locked && <span className="ml-1 text-xs font-normal text-neutralx-400">— niet bij deze opdrachtgever</span>}
+                      {locked && <span className="ml-1 text-xs font-normal text-neutralx-400">{T.notThisClient}</span>}
                     </span>
                     <span className="block text-xs leading-relaxed text-neutralx-500">{o.body}</span>
                   </span>
@@ -427,27 +421,27 @@ export function TimesheetSubmitForm({
             <label className="mt-3 flex items-start gap-2 rounded-xl border border-hair bg-paper-soft/60 p-3 text-xs text-neutralx-700">
               <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 accent-brand-500" />
               <span>
-                Ik ga akkoord met de <a href="/voorwaarden/snelle-uitbetaling" target="_blank" className="font-semibold underline">voorwaarden voor snelle uitbetaling</a>: ik draag mijn vordering op de opdrachtgever over aan ZekerFlex, dat mij het factuurbedrag min de vergoeding uitbetaalt. Dit geldt voor de klussen waarbij ik voor snelle uitbetaling kies.
+                {T.termsBefore} <a href="/voorwaarden/snelle-uitbetaling" target="_blank" className="font-semibold underline">{T.termsLink}</a>{T.termsAfter}
               </span>
             </label>
           )}
-          <p className="mt-4 text-sm font-semibold text-ink">Waarheen?</p>
+          <p className="mt-4 text-sm font-semibold text-ink">{T.whereTo}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setToBank(true)} className={`rounded-xl border px-3 py-3 text-left text-sm ${toBank ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
-              <span className="block font-semibold">🏦 ZekerFlex Bank</span>
-              <span className="block text-xs text-neutralx-500">Direct op je rekening</span>
+              <span className="block font-semibold">{T.bankTitle}</span>
+              <span className="block text-xs text-neutralx-500">{T.bankBody}</span>
             </button>
             <button type="button" onClick={() => setToBank(false)} className={`rounded-xl border px-3 py-3 text-left text-sm ${!toBank ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
-              <span className="block font-semibold">Eigen IBAN</span>
-              <span className="block text-xs text-neutralx-500">Via een bankoverschrijving</span>
+              <span className="block font-semibold">{T.ibanTitle}</span>
+              <span className="block text-xs text-neutralx-500">{T.ibanBody}</span>
             </button>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              Terug
+              {T.back}
             </button>
             <button type="button" disabled={speed !== "standard" && !termsAccepted && !terms} onClick={next} className="btn-primary disabled:opacity-50">
-              Verder
+              {T.next}
             </button>
           </div>
         </>
@@ -455,22 +449,22 @@ export function TimesheetSubmitForm({
 
       {step === "confirm" && (
         <>
-          <p className="eyebrow">Laatste stap</p>
-          <h2 className="mt-2 font-display text-xl font-bold">Controleer en dien in</h2>
+          <p className="eyebrow">{T.lastStep}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{T.checkSubmit}</h2>
           <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
-            <Row label="Gewerkt" value={`${hhmm(start)} – ${new Date(end).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}, ${breaks || 0} min pauze`} />
-            <Row label="Uren" value={`${Math.floor(minutes / 60)}u ${minutes % 60}m${hourlyRateCents ? ` · ${euro(grossCents)} bruto` : ""}`} />
-            {extraCents > 0 && <Row label="Extra kosten" value={`${euro(extraCents)} — ${extraNote}`} />}
-            <Row label="Beoordeling" value={rating ? "★".repeat(rating) : "overgeslagen"} />
-            {!payroll && <Row label="Uitbetaling" value={`${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : "eigen IBAN"}`} />}
+            <Row label={T.worked} value={T.workedValue(hhmm(start), new Date(end).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" }), String(breaks || 0))} />
+            <Row label={T.rowHours} value={`${T.hm(Math.floor(minutes / 60), minutes % 60)}${hourlyRateCents ? ` · ${euro(grossCents)} ${T.gross}` : ""}`} />
+            {extraCents > 0 && <Row label={T.rowExtra} value={`${euro(extraCents)} — ${extraNote}`} />}
+            <Row label={T.rowReview} value={rating ? "★".repeat(rating) : T.skipped} />
+            {!payroll && <Row label={T.rowPayout} value={`${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : T.ownIban}`} />}
           </dl>
           {error && <p className="mt-3 text-sm text-crit">{error}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              Terug
+              {T.back}
             </button>
             <button type="button" disabled={busy} onClick={submit} className="btn-primary disabled:opacity-60">
-              {busy ? "Indienen…" : "Uren indienen"}
+              {busy ? T.submitting : T.submit}
             </button>
           </div>
         </>

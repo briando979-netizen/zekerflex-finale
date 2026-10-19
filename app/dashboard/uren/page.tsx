@@ -2,11 +2,15 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader, EmptyState, dateTime, moneyExact } from "@/components/app/ui";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 export const dynamic = "force-dynamic";
 
 export default async function UrenInvullenPage() {
   const principal = await requirePrincipal();
+  const ft = await getFreelancerDict();
+  const H = ft.hoursPage;
   const profile = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },
     select: { id: true },
@@ -39,21 +43,18 @@ export default async function UrenInvullenPage() {
   return (
     <>
       <PageHeader
-        title="Uren invullen"
-        eyebrow="Afronden"
-        subtitle="Vul je uren in na afloop van een klus. Na indienen vind je de klus terug bij Mijn klussen."
+        title={H.title}
+        eyebrow={H.eyebrow}
+        subtitle={H.subtitle}
       />
 
-      <Section title={`In te vullen${todo.length ? ` (${todo.length})` : ""}`}>
+      <Section title={H.toFill(todo.length)}>
         {todo.length === 0 ? (
-          <EmptyState
-            title="Niets in te vullen"
-            body="Zodra een klus is afgelopen verschijnt hier je urenbriefje. Ingediende uren staan bij Mijn klussen → Gearchiveerd."
-          />
+          <EmptyState title={H.emptyTitle} body={H.emptyBody} />
         ) : (
           <ul className="space-y-3">
             {todo.map((t) => (
-              <Row key={t.id} t={t} />
+              <Row key={t.id} t={t} H={H} />
             ))}
           </ul>
         )}
@@ -73,7 +74,7 @@ type TS = {
   assignment: { shift: { title: string } } | null;
 };
 
-function Row({ t }: { t: TS }) {
+function Row({ t, H }: { t: TS; H: FreelancerDict["hoursPage"] }) {
   const hours = t.billableMinutes > 0 ? (t.billableMinutes / 60).toFixed(1) : null;
   const gross = hours ? moneyExact(Math.round((t.billableMinutes / 60) * t.hourlyRateCents)) : null;
   return (
@@ -84,15 +85,15 @@ function Row({ t }: { t: TS }) {
       >
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">
-            {t.assignment?.shift.title ?? "Klus"}
+            {t.assignment?.shift.title ?? H.job}
           </p>
           <p className="text-xs text-neutralx-500">
             {t.branch.name} · {t.branch.city} · {dateTime(t.scheduledStart)}
-            {hours ? ` · ${hours} u` : ""}
+            {hours ? ` · ${hours} ${H.hShort}` : ""}
             {gross ? ` · ${gross}` : ""}
           </p>
         </div>
-        <span className="btn-primary flex-shrink-0 px-3 py-1.5 text-xs">Invullen</span>
+        <span className="btn-primary flex-shrink-0 px-3 py-1.5 text-xs">{H.fill}</span>
       </Link>
     </li>
   );

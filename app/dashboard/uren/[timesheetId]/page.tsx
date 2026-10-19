@@ -12,12 +12,15 @@ import { getPayoutPrefs } from "@/lib/payouts/preferences";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { SHIFT_SELECT, toShift } from "@/lib/dashboard/my-work";
 import { PageHeader, Panel, dateTime, moneyExact } from "@/components/app/ui";
+import { getFreelancerDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TimesheetPage(props: { params: Promise<{ timesheetId: string }> }) {
   const params = await props.params;
   const principal = await requirePrincipal();
+  const ft = await getFreelancerDict();
+  const H = ft.hoursPage;
   const profile = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },
     select: { id: true, homeLatitude: true, homeLongitude: true },
@@ -70,11 +73,11 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
         href="/dashboard/diensten"
         className="text-sm font-medium text-neutralx-500 hover:text-brand-600"
       >
-        ← Terug naar mijn diensten
+        {H.back}
       </Link>
       <PageHeader
-        eyebrow="Afronden"
-        title="Uren invullen"
+        eyebrow={H.eyebrow}
+        title={H.title}
         subtitle={`${timesheet.branch.name} · ${dateTime(timesheet.scheduledStart)}`}
       />
       {correctionProposal && (
@@ -101,26 +104,26 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
             />
           )}
           {cardShift && (
-            <ShiftCard shift={cardShift} href={`/dashboard/klussen/${cardShift.id}`} idReminder footerOverride={null} />
+            <ShiftCard shift={cardShift} t={ft} href={`/dashboard/klussen/${cardShift.id}`} idReminder footerOverride={null} />
           )}
-          <Panel title="Jouw registratie">
+          <Panel title={H.registration}>
             <dl className="divide-y divide-hair text-sm">
               <Row
-                label="Gepland"
+                label={H.planned}
                 value={`${dateTime(timesheet.scheduledStart)} – ${dateTime(timesheet.scheduledEnd)}`}
               />
-              <Row label="Uurtarief" value={`${moneyExact(timesheet.hourlyRateCents)} bruto`} />
+              <Row label={H.rate} value={`${moneyExact(timesheet.hourlyRateCents)} ${ft.ts.gross}`} />
               <Row
-                label="GPS-uren"
+                label={H.gpsHours}
                 value={
                   timesheet.actualStart && timesheet.actualEnd
                     ? `${dateTime(timesheet.actualStart)} – ${dateTime(timesheet.actualEnd)}`
-                    : "Nog niet geregistreerd"
+                    : H.notYet
                 }
               />
               <Row
-                label="Status"
-                value={timesheet.status === "DRAFT" ? "Nog in te dienen" : timesheet.status}
+                label={H.status}
+                value={timesheet.status === "DRAFT" ? H.toSubmit : timesheet.status}
               />
             </dl>
           </Panel>

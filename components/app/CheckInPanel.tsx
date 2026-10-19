@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useFT } from "@/components/i18n/I18nProvider";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / check-out on the klus location. Posts to the existing
@@ -25,10 +27,10 @@ function deviceHash(): string {
   }
 }
 
-function position(): Promise<GeolocationPosition> {
+function position(c: FreelancerDict["checkin"]): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("Je telefoon of browser deelt geen locatie."));
-    navigator.geolocation.getCurrentPosition(resolve, (e) => reject(new Error(e.code === 1 ? "Geef ZekerFlex toestemming voor je locatie (instellingen van je browser)." : "Locatie bepalen lukte niet — ga even naar buiten of naar een raam.")), {
+    if (!navigator.geolocation) return reject(new Error(c.noGeo));
+    navigator.geolocation.getCurrentPosition(resolve, (e) => reject(new Error(e.code === 1 ? c.permission : c.failedGeo)), {
       enableHighAccuracy: true,
       timeout: 20_000,
       maximumAge: 0,
@@ -36,10 +38,11 @@ function position(): Promise<GeolocationPosition> {
   });
 }
 
-const time = (d: string) => new Date(d).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
-
 export function CheckInPanel(props: { timesheetId: string; scheduledStart: string; scheduledEnd: string; actualStart: string | null; actualEnd: string | null; branchName: string }) {
   const router = useRouter();
+  const ft = useFT();
+  const c = ft.checkin;
+  const time = (d: string) => new Date(d).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" });
   const [busy, setBusy] = useState<Ev | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [inAt, setInAt] = useState(props.actualStart);
@@ -57,7 +60,7 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
       setMsg(null);
     }
     try {
-      const pos = await position();
+      const pos = await position(c);
       const res = await fetch(`/api/timesheets/${props.timesheetId}/gps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,12 +74,12 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
         }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error?.message ?? "Registreren lukte niet.");
+      if (!res.ok) throw new Error(d?.error?.message ?? c.failed);
       if (quiet) return;
-      const where = d.withinGeofence ? `op locatie (${Math.round(d.distanceToBranchMeters)} m)` : `${Math.round(d.distanceToBranchMeters)} m van ${props.branchName} — buiten de locatie, dit wordt gecontroleerd`;
+      const where = d.withinGeofence ? c.onSite(Math.round(d.distanceToBranchMeters)) : c.offSite(Math.round(d.distanceToBranchMeters), props.branchName);
       if (type === "CHECK_IN") setInAt(d.actualStart ?? d.recordedAt);
       if (type === "CHECK_OUT") setOutAt(d.actualEnd ?? d.recordedAt);
-      setMsg({ ok: d.withinGeofence, text: `${type === "CHECK_IN" ? "Ingecheckt" : "Uitgecheckt"} om ${time(d.recordedAt)}, ${where}.` });
+      setMsg({ ok: d.withinGeofence, text: (type === "CHECK_IN" ? c.checkedIn : c.checkedOut)(time(d.recordedAt), where) });
       router.refresh();
     } catch (err) {
       if (!quiet) setMsg({ ok: false, text: (err as Error).message });
@@ -103,10 +106,10 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
       <div className="flex items-center gap-3">
         <span className={`grid h-11 w-11 place-items-center rounded-full text-xl ${inAt && !outAt ? "animate-pulse bg-ok/15" : "bg-paper-soft"}`}>📍</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">{outAt ? "Klaar voor vandaag" : inAt ? "Je bent ingecheckt" : "Inchecken op locatie"}</span>
+          <span className="block text-sm font-semibold text-ink">{outAt ? c.doneToday : inAt ? c.youAreIn : c.title}</span>
           <span className="block text-xs text-neutralx-500">
-            {inAt ? `In: ${time(inAt)}` : `Gepland ${time(props.scheduledStart)} – ${time(props.scheduledEnd)}`}
-            {outAt ? ` · Uit: ${time(outAt)}` : ""}
+            {inAt ? c.inAt(time(inAt)) : c.planned(time(props.scheduledStart), time(props.scheduledEnd))}
+            {outAt ? c.outAt(time(outAt)) : ""}
           </span>
         </span>
       </div>
@@ -117,11 +120,11 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
           onClick={() => send(inAt ? "CHECK_OUT" : "CHECK_IN")}
           className={`w-full rounded-xl py-3 text-base font-semibold text-white disabled:opacity-60 ${inAt ? "bg-ink" : "bg-brand-500"}`}
         >
-          {busy ? "Locatie bepalen…" : inAt ? "Uitchecken" : "Inchecken"}
+          {busy ? c.locating : inAt ? c.checkOut : c.checkIn}
         </button>
       )}
       {msg && <p className={`text-sm ${msg.ok ? "text-ok" : "text-warn"}`}>{msg.text}</p>}
-      <p className="text-xs text-neutralx-400">Je locatie wordt alleen bij in- en uitchecken (en elke 10 minuten terwijl je ingecheckt bent en deze pagina open staat) vastgelegd, om je uren te onderbouwen.</p>
+      <p className="text-xs text-neutralx-400">{c.privacy}</p>
     </div>
   );
 }
