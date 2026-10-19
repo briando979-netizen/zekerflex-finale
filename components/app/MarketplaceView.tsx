@@ -7,6 +7,7 @@ import { ShiftMiniMap } from "@/components/app/ShiftMiniMap";
 import { ShiftCard, ShiftStatusButton } from "@/components/app/ShiftCard";
 import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
 import { hiddenEmployers } from "@/components/app/ShiftMenu";
+import { useFT } from "@/components/i18n/I18nProvider";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -19,32 +20,12 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
     Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const DAYPARTS = [
-  { k: "morning", l: "Ochtend" },
-  { k: "afternoon", l: "Middag" },
-  { k: "evening", l: "Avond" },
-] as const;
-
-const WD_SHORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
-
-const KLUS_TYPES = {
-  freelance: [
-    ["✌️", "ZZP'er bij de opdrachtgever"],
-    ["💰", "Eigen tarief bepalen"],
-    ["🧾", "Zelf belasting regelen"],
-    ["🏖️", "Vakantie/pensioen: nee"],
-    ["💸", "Uitbetaling per klus"],
-  ],
-  uitzenden: [
-    ["📝", "Op contract bij ZekerFlex"],
-    ["💰", "Vast uurloon"],
-    ["🧾", "Belasting wordt geregeld"],
-    ["🏖️", "Vakantie/pensioen: ja"],
-    ["💸", "Wekelijks betaald"],
-  ],
-} as const;
+const DAYPARTS = ["morning", "afternoon", "evening"] as const;
+const TYPE_EMOJI = { freelance: ["✌️", "💰", "🧾", "🏖️", "💸"], uitzenden: ["📝", "💰", "🧾", "🏖️", "💸"] } as const;
 
 function KlusTypeExplainer() {
+  const t = useFT();
+  const zip = (emoji: readonly string[], texts: readonly string[]) => texts.map((text, i) => [emoji[i] ?? "•", text] as const);
   const Column = ({
     label,
     rows,
@@ -79,7 +60,7 @@ function KlusTypeExplainer() {
     <details className="group mb-5 rounded-xl border border-hair bg-white px-4 py-3">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-bold text-ink">
         <span className="underline decoration-crit/50 decoration-2 underline-offset-4">
-          Ontdek welk type klus het beste bij je past
+          {t.market.typeTitle}
         </span>
         <svg
           className="flex-shrink-0 text-neutralx-400 transition group-open:rotate-180"
@@ -93,8 +74,8 @@ function KlusTypeExplainer() {
         </svg>
       </summary>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Column label="Freelance" rows={KLUS_TYPES.freelance} tone="freelance" />
-        <Column label="Uitzenden" rows={KLUS_TYPES.uitzenden} tone="uitzenden" />
+        <Column label={t.market.freelanceLabel} rows={zip(TYPE_EMOJI.freelance, t.market.typeFreelance)} tone="freelance" />
+        <Column label={t.market.uitzendLabel} rows={zip(TYPE_EMOJI.uitzenden, t.market.typeUitzend)} tone="uitzenden" />
       </div>
     </details>
   );
@@ -137,6 +118,8 @@ export function MarketplaceView({
   void canApply;
   void blockReason;
   void defaultMaxTravel;
+  const t = useFT();
+  const mk = t.market;
   const [view, setView] = useState<"list" | "map">("list");
   const [sort, setSort] = useState<Sort>(home ? "match" : "soonest");
   const [q, setQ] = useState(initialQuery);
@@ -173,17 +156,17 @@ export function MarketplaceView({
   }, [shifts]);
 
   const QUICK = [
-    { k: "favorites", l: "❤️ Favoriete opdrachtgevers" },
-    { k: "replacement", l: "🔥 Invalklussen" },
-    { k: "tomorrow", l: "📅 Klussen voor morgen" },
-    { k: "weekend", l: "📅 Aankomend weekend" },
+    { k: "favorites", l: mk.qFavorites },
+    { k: "replacement", l: mk.qReplacement },
+    { k: "tomorrow", l: mk.qTomorrow },
+    { k: "weekend", l: mk.qWeekend },
   ] as const;
 
   const SORTS: { k: Sort; l: string }[] = [
-    ...(home ? [{ k: "match" as Sort, l: "Beste match" }] : []),
-    { k: "soonest", l: "Eerst" },
-    { k: "pay", l: "Best betaald" },
-    ...(home ? [{ k: "near" as Sort, l: "Dichtstbij" }] : []),
+    ...(home ? [{ k: "match" as Sort, l: mk.sortMatch }] : []),
+    { k: "soonest", l: mk.sortSoonest },
+    { k: "pay", l: mk.sortPay },
+    ...(home ? [{ k: "near" as Sort, l: mk.sortNear }] : []),
   ];
   const activeFilters =
     quick.size + dates.size + dayparts.size + (minRate ? 1 : 0) + (branches.size ? 1 : 0) + (loc ? 1 : 0);
@@ -262,14 +245,14 @@ export function MarketplaceView({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Zoek op titel, opdrachtgever of plaats"
+          placeholder={mk.search}
           className="mb-2.5 w-full rounded-full border border-hairstrong bg-white px-4 py-2 text-sm outline-none focus:border-brand-500"
         />
         <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             type="button"
             onClick={() => setOpenChip((v) => (v === "all" ? null : "all"))}
-            aria-label="Alle filters"
+            aria-label={mk.allFilters}
             className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border ${
               activeFilters ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong bg-white text-neutralx-600"
             }`}
@@ -278,11 +261,11 @@ export function MarketplaceView({
               <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Chip id="sort" label="Sorteer" active={sort !== (home ? "match" : "soonest")} />
-          <Chip id="quick" label="Snelle filters" count={quick.size} />
-          <Chip id="times" label="Tijden" count={dayparts.size} />
-          <Chip id="rate" label="Uurtarief" active={minRate > 0} />
-          <Chip id="days" label="Dagen" count={dates.size} />
+          <Chip id="sort" label={mk.sort} active={sort !== (home ? "match" : "soonest")} />
+          <Chip id="quick" label={mk.quick} count={quick.size} />
+          <Chip id="times" label={mk.times} count={dayparts.size} />
+          <Chip id="rate" label={mk.rate} active={minRate > 0} />
+          <Chip id="days" label={mk.days} count={dates.size} />
           <button
             type="button"
             onClick={() => setLocOpen(true)}
@@ -290,11 +273,11 @@ export function MarketplaceView({
               loc ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
             }`}
           >
-            Locatie
+            {mk.location}
             {loc && <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">1</span>}
             <span className="text-[9px]" aria-hidden>▾</span>
           </button>
-          <Chip id="branch" label="Branches" count={branches.size} />
+          <Chip id="branch" label={mk.branches} count={branches.size} />
           <button
             type="button"
             onClick={() => setView((v) => (v === "map" ? "list" : "map"))}
@@ -303,7 +286,7 @@ export function MarketplaceView({
               view === "map" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
             }`}
           >
-            {view === "map" ? "Lijst" : "Kaart"}
+            {view === "map" ? mk.list : mk.map}
           </button>
         </div>
 
@@ -339,16 +322,16 @@ export function MarketplaceView({
             )}
             {(openChip === "times" || openChip === "all") && (
               <div className={openChip === "all" ? "mt-3" : ""}>
-                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">Tijden</p>}
+                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.times}</p>}
                 <div className="flex flex-wrap gap-2">
                   {DAYPARTS.map((d) => (
                     <button
-                      key={d.k}
+                      key={d}
                       type="button"
-                      onClick={() => toggle(setDayparts)(d.k)}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${dayparts.has(d.k) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
+                      onClick={() => toggle(setDayparts)(d)}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${dayparts.has(d) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
                     >
-                      {d.l}
+                      {mk[d]}
                     </button>
                   ))}
                 </div>
@@ -356,7 +339,7 @@ export function MarketplaceView({
             )}
             {(openChip === "rate" || openChip === "all") && (
               <label className={`flex items-center gap-2 text-xs ${openChip === "all" ? "mt-3" : ""}`}>
-                Min. uurtarief
+                {mk.minRate}
                 <input
                   type="number"
                   min={0}
@@ -365,7 +348,7 @@ export function MarketplaceView({
                   onChange={(e) => setMinRate(Number(e.target.value))}
                   className="w-20 rounded-lg border border-hairstrong px-2 py-1"
                 />
-                €/u
+                {mk.perHourUnit}
               </label>
             )}
             {openChip === "all" && (
@@ -374,19 +357,19 @@ export function MarketplaceView({
                 onClick={() => setLocOpen(true)}
                 className="mt-3 rounded-full border border-hairstrong px-2.5 py-1 text-xs font-medium"
               >
-                Locatie & afstand{loc ? ` · ${loc.maxKm >= 60 ? "overal" : `${loc.maxKm} km`}` : ""}
+                {mk.locationDistance}{loc ? ` · ${loc.maxKm >= 60 ? mk.everywhere : `${loc.maxKm} km`}` : ""}
               </button>
             )}
             {(openChip === "branch" || openChip === "all") && (
               <div className={openChip === "all" ? "mt-3" : ""}>
                 <div className="mb-1.5 flex items-center gap-3">
-                  {openChip === "all" && <p className="text-xs font-semibold text-neutralx-500">Branches</p>}
+                  {openChip === "all" && <p className="text-xs font-semibold text-neutralx-500">{mk.branches}</p>}
                   <button type="button" onClick={() => setBranches(new Set(SHIFT_CATEGORIES.map((c) => c.key)))} className="text-xs font-semibold text-brand-600 hover:underline">
-                    Alles selecteren
+                    {mk.selectAll}
                   </button>
                   {branches.size > 0 && (
                     <button type="button" onClick={() => setBranches(new Set())} className="text-xs text-neutralx-500 hover:underline">
-                      Wissen
+                      {mk.clear}
                     </button>
                   )}
                 </div>
@@ -409,7 +392,7 @@ export function MarketplaceView({
                         className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${on ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"} ${n === 0 && !on ? "opacity-50" : ""}`}
                       >
                         <span className="h-2 w-2 rounded-full" style={{ background: c.accent }} aria-hidden />
-                        {c.label}
+                        {c.key === "algemeen" ? t.cat.overig : t.cat[c.key]}
                         <span className="text-[10px] text-neutralx-400">{n}</span>
                       </button>
                     );
@@ -419,7 +402,7 @@ export function MarketplaceView({
             )}
             {(openChip === "days" || openChip === "all") && dayOptions.length > 0 && (
               <div className={openChip === "all" ? "mt-3" : ""}>
-                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">Dagen</p>}
+                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.days}</p>}
                 <div className="flex flex-wrap gap-1.5">
                   {dayOptions.map(([k, d]) => (
                     <button
@@ -428,17 +411,17 @@ export function MarketplaceView({
                       onClick={() => toggle(setDates)(k)}
                       className={`rounded-lg border px-2 py-1 text-[11px] ${dates.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
                     >
-                      {WD_SHORT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
+                      {t.date.wd[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
                     </button>
                   ))}
                 </div>
               </div>
             )}
             <div className="mt-3 flex items-center justify-between border-t border-hair pt-2 text-xs text-neutralx-400">
-              <span>{filtered.length} van {shifts.length} klussen</span>
+              <span>{mk.nOfM(filtered.length, shifts.length)}</span>
               {activeFilters > 0 && (
                 <button type="button" onClick={clearAll} className="font-medium text-brand-600 hover:underline">
-                  Wis alle filters
+                  {mk.clearAll}
                 </button>
               )}
             </div>
@@ -456,13 +439,13 @@ export function MarketplaceView({
             height={380}
             points={filtered.map((s) => ({ id: s.id, lat: s.branchLat, lng: s.branchLng, score: s.match?.score ?? 0.5, label: s.title, km: s.match?.distanceKm ?? 0 }))}
           />
-          <p className="text-center text-xs text-neutralx-400">Tik op een stip voor de dienst. Kleur = matchkwaliteit.</p>
+          <p className="text-center text-xs text-neutralx-400">{mk.mapHint}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="card">
           <div className="px-5 py-14 text-center">
-            <p className="font-medium text-ink">Geen klussen die aan je filters voldoen</p>
-            <p className="mt-1 text-sm text-neutralx-500">Verruim je filters of stel een job-alert in bij Beschikbaarheid.</p>
+            <p className="font-medium text-ink">{mk.emptyTitle}</p>
+            <p className="mt-1 text-sm text-neutralx-500">{mk.emptyBody}</p>
           </div>
         </div>
       ) : (
@@ -473,18 +456,19 @@ export function MarketplaceView({
               <ShiftCard
                 key={s.id}
                 shift={s}
+                t={t}
                 href={`/dashboard/klussen/${s.id}`}
-                {...(s.isReplacement ? { ribbon: { label: "Vervanging", tone: "amber" as const } } : {})}
+                {...(s.isReplacement ? { ribbon: { label: mk.replacement, tone: "amber" as const } } : {})}
                 {...(pendingOffer
                   ? {
                       footerOverride: (
                         <ShiftStatusButton
                           label={
                             s.myOffer && s.myOffer.proposedRateCents === s.hourlyRateCents
-                              ? "Reactie verstuurd"
-                              : "Tegenbod loopt"
+                              ? t.card.responseSent
+                              : mk.counterRunning
                           }
-                          hint="in afwachting"
+                          hint={mk.waiting}
                           tone="warn"
                         />
                       ),

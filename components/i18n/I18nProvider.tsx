@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { DICTS, type Dict } from "@/lib/i18n/dictionaries";
+import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_MAX_AGE, type Locale } from "@/lib/i18n/config";
 
 interface I18nValue {
@@ -29,6 +30,11 @@ export function useI18n(): I18nValue {
 /** Just the dictionary. */
 export function useT(): Dict {
   return useContext(Ctx).t;
+}
+
+/** Freelancer-app dictionary (NL/EN/PL/RO/UK) for the current locale. */
+export function useFT(): FreelancerDict {
+  return FREELANCER_DICTS[useContext(Ctx).locale];
 }
 
 /** Set the locale cookie and reload so server components re-render. */

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import "./globals.css";
 import { fontVariables } from "@/lib/fonts";
+import { getLocale } from "@/lib/i18n/server";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
@@ -89,7 +90,7 @@ export default async function RootLayout({
   // bootstrap scripts and the strict CSP would then block them.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="nl" className={fontVariables}>
+    <html lang={await getLocale()} className={fontVariables}>
       <body>
         <script
           type="application/ld+json"

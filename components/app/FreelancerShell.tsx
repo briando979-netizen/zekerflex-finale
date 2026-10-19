@@ -7,6 +7,8 @@ import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
+import { useI18n, useFT, setLocale } from "@/components/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -15,13 +17,36 @@ import type { Theme } from "@/lib/theme/config";
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  { href: "/dashboard/klussen", label: "Ontdekken", icon: <ICompass /> },
-  { href: "/dashboard/diensten", label: "Mijn klussen", icon: <IBriefcase /> },
-  { href: "/dashboard/uren", label: "Uren", icon: <IClock /> },
-  { href: "/dashboard/bank", label: "Bank", icon: <IWallet /> },
-  { href: "/dashboard/berichten", label: "Chat", icon: <IChat /> },
-  { href: "/dashboard/account", label: "Account", icon: <IUser /> },
-];
+  { href: "/dashboard/klussen", key: "discover", icon: <ICompass /> },
+  { href: "/dashboard/diensten", key: "myJobs", icon: <IBriefcase /> },
+  { href: "/dashboard/uren", key: "hours", icon: <IClock /> },
+  { href: "/dashboard/bank", key: "bank", icon: <IWallet /> },
+  { href: "/dashboard/berichten", key: "chat", icon: <IChat /> },
+  { href: "/dashboard/account", key: "account", icon: <IUser /> },
+] as const;
+
+/** Compact language picker (flexworkers: NL/EN/PL/RO/UK). */
+function LanguageButton() {
+  const { locale } = useI18n();
+  const t = useFT();
+  return (
+    <label className="relative grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink" title={t.lang.label}>
+      <span aria-hidden className="text-[11px] font-bold uppercase">{locale}</span>
+      <select
+        aria-label={t.lang.label}
+        value={locale}
+        onChange={(e) => setLocale(e.target.value as Locale)}
+        className="absolute inset-0 cursor-pointer opacity-0"
+      >
+        {LOCALES.map((code) => (
+          <option key={code} value={code}>
+            {LOCALE_LABELS[code]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export function FreelancerShell({
   userName,
@@ -33,6 +58,7 @@ export function FreelancerShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const ft = useFT();
   const isActive = (href: string) =>
     pathname === href ||
     pathname.startsWith(href + "/") ||
@@ -43,7 +69,7 @@ export function FreelancerShell({
   // action bar can take its place.
   const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
   const current = TABS.find((t) => isActive(t.href));
-  const title = !current || current.href === "/dashboard/klussen" ? "Vind jouw klus" : current.label;
+  const title = !current || current.href === "/dashboard/klussen" ? ft.nav.findJob : ft.nav[current.key];
 
   return (
     <div data-theme={theme} className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
@@ -55,13 +81,14 @@ export function FreelancerShell({
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-crit to-crit/40" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            <LanguageButton />
             <ThemeToggle
               theme={theme}
               className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             />
             <Link
               href="/dashboard/klussen"
-              aria-label="Zoeken"
+              aria-label={ft.nav.search}
               className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             >
               <ISearch />
@@ -99,10 +126,10 @@ export function FreelancerShell({
                       ? "text-brand-600 lg:bg-ink lg:text-white"
                       : "text-neutralx-400 hover:text-neutralx-600 lg:hover:bg-paper-soft"
                   }`}
-                  title={t.label}
+                  title={ft.nav[t.key]}
                 >
                   <span className="grid h-5 w-5 place-items-center">{t.icon}</span>
-                  <span className={`max-w-full truncate whitespace-nowrap ${active ? "" : "lg:hidden"}`}>{t.label}</span>
+                  <span className={`max-w-full truncate whitespace-nowrap ${active ? "" : "lg:hidden"}`}>{ft.nav[t.key]}</span>
                 </Link>
               </li>
             );

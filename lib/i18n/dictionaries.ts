@@ -1383,7 +1383,8 @@ const en: Dict = {
   },
 };
 
-export const DICTS: Record<Locale, Dict> = { nl, en };
+// Employer/shop pages have no PL/RO/UK translation — those readers get English.
+export const DICTS: Record<Locale, Dict> = { nl, en, pl: en, ro: en, uk: en };
 
 /** Replace {token} placeholders. */
 export function fmt(template: string, params: Record<string, string | number> = {}): string {

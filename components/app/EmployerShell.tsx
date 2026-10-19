@@ -9,7 +9,7 @@ import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { RecentResponseAlert } from "@/components/app/RecentResponseAlert";
 import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
-import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
+import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
@@ -264,7 +264,7 @@ export function EmployerShell({
                 className="bg-transparent pr-1 outline-none"
                 aria-label={t.shell.language}
               >
-                {LOCALES.map((code) => (
+                {EMPLOYER_LOCALES.map((code) => (
                   <option key={code} value={code}>
                     {LOCALE_LABELS[code]}
                   </option>

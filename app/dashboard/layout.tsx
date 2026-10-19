@@ -4,6 +4,8 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +16,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!principal.emailVerifiedAt) redirect("/verifieer-email");
 
   const theme = await getTheme();
+  const locale = await getLocale();
 
   return (
-    <FreelancerShell userName={principal.fullName} theme={theme}>
-      {children}
-      <ChatDock />
-    </FreelancerShell>
+    <I18nProvider locale={locale}>
+      <FreelancerShell userName={principal.fullName} theme={theme}>
+        {children}
+        <ChatDock />
+      </FreelancerShell>
+    </I18nProvider>
   );
 }

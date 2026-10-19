@@ -6,7 +6,7 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
-import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
+import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt } from "@/lib/i18n/dictionaries";
 
 // Gedeelde shop-chrome: promo-balk, brede header met categorie-nav + gecentreerd
@@ -145,7 +145,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
               aria-label={t.shell.language}
               className="hidden rounded-lg border border-hairstrong bg-transparent px-1.5 py-1 text-xs font-semibold text-neutralx-500 sm:inline"
             >
-              {LOCALES.map((code) => (
+              {EMPLOYER_LOCALES.map((code) => (
                 <option key={code} value={code}>{LOCALE_LABELS[code]}</option>
               ))}
             </select>

@@ -4,6 +4,7 @@ import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { shiftCategory } from "@/lib/shifts/category";
 import { money, moneyExact } from "@/components/app/ui";
 import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
+import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 
 // ---------------------------------------------------------------------------
 // Shift card — YoungOnes-style: photo header with the category + a save heart,
@@ -11,22 +12,12 @@ import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
 // Presentational; `action` / `footerOverride` drive the apply control.
 // ---------------------------------------------------------------------------
 
-const OFFER_LABEL: Record<string, string> = {
-  pending: "in afwachting",
-  accepted: "geaccepteerd",
-  declined: "afgewezen",
-  withdrawn: "ingetrokken",
-};
-
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
-const MON = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-
-function whenLabel(start: Date, end: Date): string {
+function whenLabel(start: Date, end: Date, t: FreelancerDict): string {
   const s = new Date(start);
   const e = new Date(end);
-  const day = `${WD[s.getDay()]} ${s.getDate()} ${MON[s.getMonth()]}.`;
-  const t = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${day} · ${t(s)}–${t(e)}`;
+  const day = `${t.date.wd[s.getDay()]} ${s.getDate()} ${t.date.mon[s.getMonth()]}.`;
+  const hm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${day} · ${hm(s)}–${hm(e)}`;
 }
 
 export function ShiftCard({
@@ -38,6 +29,7 @@ export function ShiftCard({
   footerOverride,
   idReminder = false,
   dim = false,
+  t = FREELANCER_DICTS.nl,
 }: {
   shift: MarketplaceShift;
   href: string;
@@ -49,8 +41,11 @@ export function ShiftCard({
   /** show a "Neem je ID mee" badge (used on confirmed klussen) */
   idReminder?: boolean;
   dim?: boolean;
+  /** freelancer-app dictionary; Dutch by default (server pages pass getFreelancerDict()) */
+  t?: FreelancerDict;
 }) {
   const cat = shiftCategory(shift.title, shift.skill);
+  const c = t.card;
   const score = shift.match ? Math.round(shift.match.score * 100) : null;
   const special = score !== null && score >= 78;
   const ribbonBg =
@@ -87,7 +82,7 @@ export function ShiftCard({
           className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white backdrop-blur"
           style={{ background: `${cat.accent}cc` }}
         >
-          {cat.label}
+          {t.cat[cat.key]}
         </span>
         <div className="absolute right-3 top-3">
           <SaveShiftHeart shiftId={shift.id} />
@@ -101,7 +96,7 @@ export function ShiftCard({
           </span>
         )}
         <span className="num absolute bottom-3 right-3 rounded-lg bg-white/15 px-2 py-1 text-sm font-bold text-white backdrop-blur">
-          {moneyExact(shift.hourlyRateCents)}/u
+          {moneyExact(shift.hourlyRateCents)}{c.perHourShort}
         </span>
       </div>
 
@@ -113,7 +108,7 @@ export function ShiftCard({
         </Link>
 
         <p className="mt-2 text-xs text-neutralx-500">
-          {whenLabel(shift.startsAt, shift.endsAt)}
+          {whenLabel(shift.startsAt, shift.endsAt, t)}
           {" · "}
           {shift.city}
           {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
@@ -122,34 +117,34 @@ export function ShiftCard({
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {special && (
             <span className="rounded border border-crit/30 px-1.5 py-0.5 text-[11px] font-semibold text-crit">
-              Speciaal voor jou
+              {c.specialForYou}
             </span>
           )}
           {shift.viaUitzendbureau ? (
             <span className="rounded border border-amber-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">
-              Via uitzendbureau
+              {c.viaAgency}
             </span>
           ) : (
             <span className="rounded border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">
-              Freelance
+              {c.freelance}
             </span>
           )}
           {idReminder && (
             <span className="rounded border border-hairstrong px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600">
-              Neem je ID mee
+              {c.bringId}
             </span>
           )}
           {shift.series && shift.series.total > 1 && (
             <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
-              +{shift.series.total} dagen
+              {c.plusDays(shift.series.total)}
             </span>
           )}
           {shift.myOffer && (
             <span className="rounded-full bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
               {shift.myOffer.proposedRateCents === shift.hourlyRateCents
-                ? "Reactie verstuurd"
-                : `Tegenbod ${moneyExact(shift.myOffer.proposedRateCents)}/u`}{" "}
-              · {OFFER_LABEL[shift.myOffer.status] ?? shift.myOffer.status}
+                ? c.responseSent
+                : c.counterOffer(moneyExact(shift.myOffer.proposedRateCents))}{" "}
+              · {c.offer[shift.myOffer.status] ?? shift.myOffer.status}
             </span>
           )}
           {shift.replacementNote && !ribbon && (
@@ -158,20 +153,20 @@ export function ShiftCard({
         </div>
 
         {shift.match?.belowDesiredRate && (
-          <p className="mt-2 text-[11px] font-medium text-warn">Onder je richttarief</p>
+          <p className="mt-2 text-[11px] font-medium text-warn">{c.belowRate}</p>
         )}
         {shift.workedHereBefore > 0 && (
-          <p className="mt-1 text-[11px] text-neutralx-400">Je werkte hier al {shift.workedHereBefore}×</p>
+          <p className="mt-1 text-[11px] text-neutralx-400">{c.workedHere(shift.workedHereBefore)}</p>
         )}
-        {shift.fastPay && <p className="mt-1 text-[11px] font-semibold text-brand-600">⚡ Snelle uitbetaling mogelijk (1 minuut / 3 dagen)</p>}
+        {shift.fastPay && <p className="mt-1 text-[11px] font-semibold text-brand-600">{c.fastPay}</p>}
 
         <div className="mt-3 flex items-end justify-between border-t border-hair pt-3">
           <div>
-            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} / uur</p>
-            {!compact && <p className="text-[11px] text-neutralx-400">Verdien ~ {money(shift.grossCents)}</p>}
+            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} {c.perHour}</p>
+            {!compact && <p className="text-[11px] text-neutralx-400">{c.earn(money(shift.grossCents))}</p>}
           </div>
           <span className="num rounded-lg bg-paper-soft px-2 py-1 text-xs font-semibold text-neutralx-600">
-            {shift.hours} uur
+            {c.hours(shift.hours)}
           </span>
         </div>
 
