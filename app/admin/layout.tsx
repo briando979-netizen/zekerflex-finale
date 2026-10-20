@@ -36,6 +36,7 @@ const NAV = [
   { href: "/admin/integraties", label: "API & integraties", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/jarvis", label: "Jarvis-assistent", icon: <IChat />, section: "Operatie" },
   { href: "/admin/specialisten", label: "AI-specialisten", icon: <IChat />, section: "Operatie" },
+  { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis", icon: <IChat />, section: "Operatie" },
   { href: "/admin/ai-teams", label: "AI-teams (live)", icon: <IActivity />, section: "Operatie" },
   { href: "/admin/verloning", label: "Wekelijkse verloning", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/fiscaal", label: "Werkvormen & btw", icon: <IDoc />, section: "Operatie" },

@@ -32,6 +32,7 @@ const PUBLIC_PREFIXES = [
   "/api/nieuwsbrief", // signup + its own /afmelden
   "/api/analytics/track", // anonymous visitor tracking, rate-limited by session id
   "/api/analytics/ping", // anonymous attention signals (time on page, tab away, leave), rate-limited
+  "/api/companion", // owner's desktop Jarvis — its own personal-token auth (lib/companion)
   "/api/shop", // public storefront reads; writes are admin-gated inside the route
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
 ] as const;
