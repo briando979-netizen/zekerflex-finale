@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { sendMail, welcomeEmail } from "@/lib/mail";
 import { setFiscal } from "@/lib/fiscal/store";
 
 const PLATFORM_TENANT_ID = "org_platform";
@@ -114,14 +113,9 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
     void setFiscal(userId, { workerKind: input.workerKind }).catch(() => undefined);
   }
 
-  // Welcome mail — best-effort, captured in the local mailbox regardless.
-  const tpl = welcomeEmail(
-    input.fullName,
-    input.type,
-    env.APP_BASE_URL,
-    input.type === "freelancer" ? input.workerKind : undefined,
-  );
-  void sendMail({ ...tpl, to: email }).catch(() => undefined);
+  // The welcome mail is NOT sent here: it goes out once the e-mail address is
+  // confirmed with the code/link (lib/auth/email-verify.ts), so new users don't
+  // get two mails at once.
 
   return { userId, type: input.type, email };
 }

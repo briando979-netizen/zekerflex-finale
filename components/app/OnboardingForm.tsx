@@ -411,8 +411,8 @@ export function OnboardingForm({
         </div>
 
         <p className="text-xs leading-relaxed text-neutralx-500">
-          Drie foto&apos;s, in één keer — dit vervangt losse uploads verderop: de voorkant en achterkant
-          van je document, en een selfie zodat we kunnen zien dat jij het bent. Maak ze met je camera of
+          Drie foto&apos;s: de voorkant en achterkant van je document, en een selfie zodat we kunnen
+          zien dat jij het bent. Maak ze met je camera of
           kies ze uit je galerij. Zorg voor goed licht en scherpe tekst.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -430,7 +430,7 @@ export function OnboardingForm({
       <p className="text-xs leading-relaxed text-neutralx-400">
         {method === "stripe"
           ? "De ID-controle gebeurt door Stripe (onze betaalpartner), die je gegevens beveiligd verwerkt. ZekerFlex krijgt alleen de uitslag en je naam zoals op het document."
-          : "Je foto's worden versleuteld bewaard door ZekerFlex en alleen gebruikt voor deze verificatie. Dit voldoet meteen aan de verplichte identiteitsbewijs-upload verderop op deze pagina — dat hoef je dus niet nog een keer te doen."}
+          : "Je foto's worden versleuteld bewaard door ZekerFlex en alleen gebruikt voor deze verificatie. Je hoeft je ID nergens anders nog een keer te uploaden."}
       </p>
     </form>
   );

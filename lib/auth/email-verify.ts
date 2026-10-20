@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, verificationEmail } from "@/lib/mail";
+import { sendMail, verificationEmail, welcomeEmail } from "@/lib/mail";
+import { getFiscal } from "@/lib/fiscal/store";
 import { mintToken, consumeToken, consumeCode, latestVerification } from "@/lib/mail/store";
 
 // ---------------------------------------------------------------------------
@@ -61,14 +62,28 @@ export interface VerifyResult {
 async function markVerified(userId: string): Promise<VerifyResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, emailVerifiedAt: true },
+    select: { id: true, email: true, fullName: true, emailVerifiedAt: true, memberships: { select: { role: true } } },
   });
   if (!user) return { ok: false, reason: "Account niet gevonden." };
   if (!user.emailVerifiedAt) {
-    await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+    // Only the first confirmation flips the flag — guards against a double welcome mail.
+    const flipped = await prisma.user.updateMany({ where: { id: user.id, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
     logger.info("email verified", { userId: user.id });
+    if (flipped.count === 1) await sendWelcome(user);
   }
   return { ok: true };
+}
+
+/** Welcome mail — sent once, right after the address is confirmed (not at sign-up). Best-effort. */
+async function sendWelcome(user: { id: string; email: string; fullName: string; memberships: { role: string }[] }): Promise<void> {
+  try {
+    const freelancer = user.memberships.some((m) => m.role === "FREELANCER");
+    const workerKind = freelancer ? ((await getFiscal(user.id).catch(() => null))?.workerKind ?? undefined) : undefined;
+    const tpl = welcomeEmail(user.fullName, freelancer ? "freelancer" : "bedrijf", env.APP_BASE_URL, workerKind);
+    await sendMail({ ...tpl, to: user.email });
+  } catch (err) {
+    logger.warn("welcome mail failed", { userId: user.id, error: (err as Error).message });
+  }
 }
 
 /** Confirm the account with the 6-digit code from the verification e-mail. */
@@ -85,21 +100,7 @@ export async function confirmVerificationToken(token: string): Promise<VerifyRes
   if (!userId) {
     return { ok: false, reason: "Deze verificatielink is verlopen of al gebruikt." };
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, emailVerifiedAt: true },
-  });
-  if (!user) return { ok: false, reason: "Account niet gevonden." };
-
-  if (!user.emailVerifiedAt) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerifiedAt: new Date() },
-    });
-    logger.info("email verified", { userId: user.id });
-  }
-  return { ok: true };
+  return markVerified(userId);
 }
 
 /** The most recent still-valid link + code for a user (shown on the verify page locally). */

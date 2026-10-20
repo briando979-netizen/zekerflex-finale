@@ -359,15 +359,15 @@ export function welcomeEmail(
       ? "Rond de onboarding van je organisatie af (KVK + eerste vestiging) en zet je eerste dienst uit."
       : workerKind === "uitzendkracht"
         ? "Rond je verificatie af (identiteit + rekeningnummer — geen KVK nodig) en bekijk de eerste klussen die bij je passen."
-        : "Rond je verificatie af (KVK + identiteit) en bekijk de eerste klussen die bij je passen.";
+        : "Rond je verificatie af (KVK of btw-nummer + identiteit) en bekijk de eerste klussen die bij je passen.";
   return {
     to: "",
     subject: "Welkom bij ZekerFlex",
     kind: "welcome",
-    text: `Hoi ${first},\n\nJe ZekerFlex-account is aangemaakt.\n\nVolgende stap: ${next}\n\nInloggen: ${appUrl}/login`,
+    text: `Hoi ${first},\n\nJe e-mailadres is bevestigd en je ZekerFlex-account is klaar.\n\nVolgende stap: ${next}\n\nInloggen: ${appUrl}/login`,
     html: shell(
       "Welkom bij ZekerFlex",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je account is aangemaakt. Fijn dat je er bent.</p>
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je e-mailadres is bevestigd en je account is klaar. Fijn dat je er bent.</p>
        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>Volgende stap:</strong> ${next}</p>
        <p style="margin:0">${button(`${appUrl}/login`, "Naar ZekerFlex")}</p>`,
     ),

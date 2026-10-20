@@ -79,6 +79,7 @@ export default async function VerificatiePage() {
       ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
       : [];
 
+  const stripeId = stripeIdentityEnabled();
   const stripeReason =
     lastCheck?.decisionStatus === "requires_input"
       ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
@@ -92,7 +93,7 @@ export default async function VerificatiePage() {
         subtitle={
           isUitzend
             ? "Vul je thuisbasis en rekeningnummer in en upload je identiteitsbewijs. Je hoeft geen KVK te koppelen — je werkt als uitzendkracht."
-            : "Koppel je KVK of EU-btw-nummer en bevestig je identiteit. De ingebouwde controleur checkt echtheid en consistentie — meestal binnen een minuut."
+            : "Koppel je KVK of EU-btw-nummer en bevestig je identiteit — meestal binnen een minuut geregeld."
         }
       />
 
@@ -124,21 +125,23 @@ export default async function VerificatiePage() {
         </div>
       )}
 
-      <div className="mb-6">
-        <WalletVerifyButton requireKvk={!isUitzend} />
+      <div className="card p-6">
+        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeId} />
       </div>
 
-      <div className="card p-6">
-        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeIdentityEnabled()} />
-      </div>
+      {!stripeId && (
+        <div className="mt-4">
+          <WalletVerifyButton requireKvk={!isUitzend} />
+        </div>
+      )}
 
       <div className="mt-6 card p-6">
-        <h2 className="font-display text-base font-bold text-ink">Verplichte documenten</h2>
+        <h2 className="font-display text-base font-bold text-ink">Bankafschrift</h2>
         <p className="mt-1 text-sm text-neutralx-500">
           Nodig voordat je uitbetaald kunt worden — je IBAN wordt hiermee gecontroleerd.
         </p>
         <div className="mt-4">
-          <ComplianceDocsPanel />
+          <ComplianceDocsPanel idInForm />
         </div>
       </div>
 

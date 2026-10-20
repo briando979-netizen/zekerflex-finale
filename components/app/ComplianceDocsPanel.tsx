@@ -100,7 +100,7 @@ function DocSlot({
   );
 }
 
-export function ComplianceDocsPanel() {
+export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean } = {}) {
   const [d, setD] = useState<Data | null>(null);
   const load = () =>
     fetch("/api/me/documents", { cache: "no-store" })
@@ -119,7 +119,7 @@ export function ComplianceDocsPanel() {
   // second "mandatory" upload here reads as a duplicate ask. Only surface it
   // again if it's actually still missing or got rejected — e.g. an older
   // account from before that auto-fill existed.
-  const showId = !d.status.idOk;
+  const showId = !d.status.idOk && !idInForm;
 
   return (
     <div className="space-y-4">
@@ -131,7 +131,9 @@ export function ComplianceDocsPanel() {
         <p className="rounded-lg bg-warn/10 px-3 py-2 text-sm text-neutralx-700">
           {showId
             ? "Upload je identiteitsbewijs en een bankafschrift. Beide zijn verplicht voordat je uitbetaald kunt worden."
-            : "Upload een bankafschrift. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie."}
+            : idInForm && !d.status.idOk
+              ? "Upload nog een bankafschrift — daarmee controleren we je IBAN. Je identiteitsbewijs regel je hierboven."
+              : "Upload een bankafschrift. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie."}
         </p>
       )}
       <div className="space-y-3">
