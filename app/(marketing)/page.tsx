@@ -10,12 +10,8 @@ import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
 import { ShiftShowcase } from "@/components/marketing/ShiftShowcase";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
-import { HeroMap } from "@/components/marketing/HeroMap";
-import { HomeTabs } from "@/components/marketing/HomeTabs";
-import { publicOpenShifts } from "@/lib/public-shifts";
+import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
-
-export const revalidate = 600;
 
 const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
 const DESCRIPTION =
@@ -28,8 +24,7 @@ export const metadata: Metadata = {
   ...canonical("/", { title: TITLE, description: DESCRIPTION }),
 };
 
-export default async function HomePage() {
-  const openCount = (await publicOpenShifts().catch(() => [])).length;
+export default function HomePage() {
   return (
     <>
       <script
@@ -41,8 +36,6 @@ export default async function HomePage() {
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}
       <HeroStage
-        map={<HeroMap className="h-full w-full" />}
-        openCount={openCount}
         photo={
           <Photo
             name="hero"
@@ -84,27 +77,142 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ──────────────────────────────────────────────── KIES JE PAD (tabs) */}
-      <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
-        <div className="shell-4k py-24 lg:py-32">
-          <Reveal>
-            <p className="eyebrow">Hoe het werkt</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">Kies hoe jij ZekerFlex gebruikt</h2>
-            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">Drie stappen, geen mailwisselingen, geen losse facturen.</p>
-          </Reveal>
-          <div className="mt-10">
-            <HomeTabs
-              tabs={PATHS.map((path) => ({ id: path.id, label: path.label, content: <PathPanel path={path} /> }))}
-            />
-          </div>
-        </div>
-      </section>
-
       {/* ──────────────────────────────────────────────────── BRANCHES */}
       <BranchShowcase />
 
+      {/* ─────────────────────────────────────────────────── HOE HET WERKT */}
+      <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
+        <div className="shell-4k py-28 lg:py-36">
+          <Reveal>
+            <p className="eyebrow">Hoe het werkt</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+              Van aanmelding tot uitbetaling in drie stappen
+            </h2>
+            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
+              Geen mailwisselingen, geen losse facturen, geen wachten op je geld.
+            </p>
+          </Reveal>
+
+          <ol className="mt-16 grid gap-6 md:grid-cols-3 lg:gap-8">
+            {STEPS.map((s, i) => (
+              <Reveal key={s.title} as="li" delay={i * 120} className="relative">
+                <div className="glass-light group h-full rounded-3xl p-8 transition-transform duration-500 hover:-translate-y-1.5">
+                  <div className="flex items-center gap-4">
+                    <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-display text-lg font-bold text-white shadow-glow">
+                      {i + 1}
+                    </span>
+                    {i < STEPS.length - 1 && (
+                      <span className="hidden h-px flex-1 bg-gradient-to-r from-brand-300/70 to-transparent md:block" />
+                    )}
+                  </div>
+                  <h3 className="mt-6 font-display text-2xl font-semibold">{s.title}</h3>
+                  <p className="mt-3 text-[1.02rem] leading-relaxed text-neutralx-600">{s.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       {/* ────────────────────────────────────────────── SHIFT SHOWCASE */}
       <ShiftShowcase />
+
+      {/* ───────────────────────────────────────────── SPLIT · FREELANCERS */}
+      <ShowcaseSplit
+        eyebrow="Voor freelancers"
+        title="Werk dat bij je past. Geld dat op tijd komt."
+        body="Jij levert vakmanschap. Wij regelen de match, de overeenkomst, de factuur en de uitbetaling."
+        points={[
+          "Aanbod afgestemd op je reistijd, skills en beschikbaarheid",
+          "Zelf kiezen hoe snel je uitbetaald wordt — geen facturen sturen",
+          "Één modelovereenkomst, altijd Wet DBA-proof",
+          "Bouw badges op van Brons tot Platina",
+        ]}
+        href="/voor-freelancers"
+        cta="Voor freelancers"
+        photo={<Photo name="freelancer" fallback={<SceneWork />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
+      />
+
+      {/* ───────────────────────────────────────────────── SPLIT · BEDRIJVEN */}
+      <ShowcaseSplit
+        reverse
+        tone="ink"
+        eyebrow="Voor bedrijven"
+        title="Betrouwbare mensen, precies wanneer je ze nodig hebt."
+        body="Zet een dienst uit en ZekerFlex regelt de rest: match, overeenkomst, check-in, facturatie en compliance."
+        points={[
+          "Automatische matching en toewijzing per vestiging",
+          "Uren goedkeuren met GPS check-in — facturen volgen vanzelf",
+          "Wet DBA-risico's zichtbaar vóór ze een probleem worden",
+          "Alleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur",
+        ]}
+        href="/voor-bedrijven"
+        cta="Voor bedrijven"
+        photo={<Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
+      />
+
+      {/* ──────────────────────────────────────────── DRIE WERKVORMEN */}
+      <section className="relative bg-paper-soft">
+        <div className="shell-4k py-28 lg:py-36">
+          <Reveal>
+            <p className="eyebrow">Drie manieren om te werken</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+              Zzp&apos;er, flexwerker — of via ons uitzendbureau
+            </h2>
+            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
+              Geen eigen bedrijf? Werk als uitzendkracht via ZekerFlex. Wij zijn dan je
+              werkgever, verlonen je <strong>elke week</strong> met een echte loonstrook, en
+              regelen vakantiegeld, pensioen en het ABU-fasensysteem.
+            </p>
+          </Reveal>
+
+          <div className="mt-14 grid gap-5 lg:grid-cols-3">
+            {WORKFORMS.map((w, i) => (
+              <Reveal key={w.kind} delay={i * 110}>
+                <div
+                  className={`flex h-full flex-col rounded-2xl p-7 ${
+                    w.highlight ? "bg-brand-500 text-white shadow-lift" : "glass-light"
+                  }`}
+                >
+                  <h3 className="font-display text-xl font-bold">{w.kind}</h3>
+                  <p className={`mt-2 text-sm ${w.highlight ? "text-white/75" : "text-neutralx-500"}`}>
+                    {w.who}
+                  </p>
+                  <ul className="mt-5 space-y-2.5">
+                    {w.points.map((p) => (
+                      <li
+                        key={p}
+                        className={`flex gap-2.5 text-sm ${w.highlight ? "text-white/90" : "text-neutralx-600"}`}
+                      >
+                        <span className="mt-1 flex-shrink-0">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path
+                              d="M5 13l4 4L19 7"
+                              stroke={w.highlight ? "#FFFFFF" : "#0E5C4A"}
+                              strokeWidth="2.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={w.href}
+                    className={`mt-7 self-start text-sm font-semibold ${
+                      w.highlight ? "text-white underline" : "text-brand-600 hover:underline"
+                    }`}
+                  >
+                    {w.cta} →
+                  </Link>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ────────────────────────────────────────────────────── STATS BAND */}
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
@@ -126,10 +234,59 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ─────────────────────────────────────────────────────── FEATURES */}
+      <section className="relative bg-paper-soft">
+        <div className="shell-4k py-28 lg:py-36">
+          <Reveal>
+            <p className="eyebrow">Het platform</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+              Alles wat flexibel werk betrouwbaar maakt, in één systeem
+            </h2>
+          </Reveal>
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 3) * 90}>
+                <div className="glass-light h-full rounded-2xl p-7">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-500">{f.icon}</div>
+                  <h3 className="mt-5 font-display text-lg font-semibold">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{f.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────── COMPLIANCE */}
+      <section className="relative bg-paper">
+        <div className="shell-4k grid gap-16 py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
+          <Reveal>
+            <p className="eyebrow">Zeker zit het goed</p>
+            <h2 className="fluid-h2 mt-4 text-balance font-display font-bold">
+              Compliance is geen bijzaak — het zit in de kern
+            </h2>
+            <p className="fluid-lead mt-5 text-neutralx-600">
+              ZekerFlex controleert doorlopend of een samenwerking binnen de regels blijft, en
+              grijpt in vóór het misgaat.
+            </p>
+          </Reveal>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {COMPLIANCE.map((c, i) => (
+              <Reveal key={c.title} delay={i * 90}>
+                <div className="card h-full p-6">
+                  <h3 className="font-display text-base font-semibold">{c.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{c.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ──────────────────────────────────────────────────── TESTIMONIAL */}
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-60" aria-hidden />
-        <div className="shell-4k relative py-24 lg:py-32">
+        <div className="shell-4k relative py-28 lg:py-36">
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
@@ -145,51 +302,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────── MEER WETEN (tabs) */}
+      {/* ────────────────────────────────────────────────────────── FAQ */}
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-24 lg:py-32">
+        <div className="shell-4k grid gap-14 py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
           <Reveal>
-            <p className="eyebrow">Meer weten</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">Alles wat flexwerk betrouwbaar maakt</h2>
+            <p className="eyebrow">Veelgestelde vragen</p>
+            <h2 className="fluid-h2 mt-4 font-display font-bold">Goed om te weten</h2>
           </Reveal>
-          <div className="mt-10">
-            <HomeTabs
-              tabs={[
-                {
-                  id: "platform",
-                  label: "Het platform",
-                  content: (
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                      {FEATURES.map((f) => (
-                        <div key={f.title} className="glass-light h-full rounded-2xl p-7">
-                          <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-500">{f.icon}</div>
-                          <h3 className="mt-5 font-display text-lg font-semibold">{f.title}</h3>
-                          <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{f.body}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  id: "zekerheid",
-                  label: "Zekerheid & regels",
-                  content: (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {COMPLIANCE.map((c) => (
-                        <div key={c.title} className="card h-full p-6">
-                          <h3 className="font-display text-base font-semibold">{c.title}</h3>
-                          <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{c.body}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ),
-                },
-                { id: "faq", label: "Veelgestelde vragen", content: <div className="max-w-3xl"><FaqList items={FAQ} /></div> },
-              ]}
-            />
-          </div>
+          <Reveal delay={120}>
+            <FaqList items={FAQ} />
+          </Reveal>
         </div>
       </section>
+
+      {/* ────────────────────────────────────────────────────────── APP */}
+      <AppDownload />
 
       {/* ────────────────────────────────────────────────────────── CTA */}
       <section className="relative isolate overflow-hidden hero-ink text-white">
@@ -218,111 +345,123 @@ export default async function HomePage() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────── path panel */
+/* ─────────────────────────────────────────────────────── showcase split */
 
-interface Path {
-  id: string;
-  label: string;
+function ShowcaseSplit({
+  eyebrow,
+  title,
+  body,
+  points,
+  href,
+  cta,
+  photo,
+  reverse = false,
+  tone = "paper",
+}: {
+  eyebrow: string;
   title: string;
   body: string;
-  steps: [string, string][];
   points: string[];
   href: string;
   cta: string;
-  more: { href: string; label: string };
   photo: ReactNode;
-}
-
-function PathPanel({ path }: { path: Path }) {
+  reverse?: boolean;
+  tone?: "paper" | "ink";
+}) {
+  const dark = tone === "ink";
   return (
-    <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20">
-      <div>
-        <h3 className="font-display text-[clamp(1.6rem,1.2rem+1.2vw,2.3rem)] font-bold leading-tight">{path.title}</h3>
-        <p className="mt-4 max-w-xl text-[1.05rem] leading-relaxed text-neutralx-600">{path.body}</p>
-        <ol className="mt-8 space-y-4">
-          {path.steps.map(([t, b], i) => (
-            <li key={t} className="flex gap-4">
-              <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-display text-sm font-bold text-white shadow-glow">
-                {i + 1}
-              </span>
-              <span>
-                <span className="block font-semibold text-ink">{t}</span>
-                <span className="block text-sm leading-relaxed text-neutralx-600">{b}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-        <ul className="mt-7 flex flex-wrap gap-2">
-          {path.points.map((pt) => (
-            <li key={pt} className="rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700">
-              ✓ {pt}
-            </li>
-          ))}
-        </ul>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href={path.href} className="btn-primary text-base">
-            {path.cta}
+    <section className={`relative isolate overflow-hidden ${dark ? "hero-ink text-white" : "bg-paper"}`}>
+      {dark && <div className="aurora opacity-50" aria-hidden />}
+      <div
+        className={`shell-4k relative grid items-center gap-14 py-28 lg:py-36 lg:gap-24 ${
+          reverse ? "lg:grid-cols-[0.95fr_1.05fr]" : "lg:grid-cols-[1.05fr_0.95fr]"
+        }`}
+      >
+        <Reveal className={reverse ? "lg:order-2" : ""}>
+          <p className={`eyebrow ${dark ? "text-brand-mint" : ""}`}>{eyebrow}</p>
+          <h2 className="fluid-h2 mt-4 text-balance font-display font-bold">{title}</h2>
+          <p className={`fluid-lead mt-5 max-w-xl ${dark ? "text-white/65" : "text-neutralx-600"}`}>{body}</p>
+          <ul className="mt-8 space-y-3.5">
+            {points.map((p) => (
+              <li key={p} className={`flex gap-3 text-[1.02rem] ${dark ? "text-white/75" : "text-neutralx-600"}`}>
+                <span className="mt-1 flex-shrink-0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M5 13l4 4L19 7" stroke={dark ? "#4FE0A0" : "#0E5C4A"} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                {p}
+              </li>
+            ))}
+          </ul>
+          <Link href={href} className={`${dark ? "btn-ghost-invert" : "btn-ghost"} mt-9 self-start text-base`}>
+            {cta} →
           </Link>
-          <Link href={path.more.href} className="btn-ghost text-base">
-            {path.more.label}
-          </Link>
-        </div>
+        </Reveal>
+
+        <Reveal delay={120} className={`${reverse ? "lg:order-1" : ""} relative`}>
+          <div className={`overflow-hidden rounded-3xl ${dark ? "ring-1 ring-white/10" : "shadow-lift"}`}>{photo}</div>
+        </Reveal>
       </div>
-      <div className="overflow-hidden rounded-3xl shadow-lift">{path.photo}</div>
-    </div>
+    </section>
   );
 }
 
 /* ───────────────────────────────────────────────────────────── content */
 
-const PATHS: Path[] = [
+const STEPS = [
   {
-    id: "werk",
-    label: "Ik zoek werk",
-    title: "Werk dat bij je past. Geld dat op tijd komt.",
-    body: "Als zzp'er of flexwerker kies je zelf je klussen en je tarief. Jij levert vakmanschap; wij regelen de match, de overeenkomst, de factuur en de uitbetaling.",
-    steps: [
-      ["Meld je aan en verifieer", "KVK- of EU-btw-nummer koppelen en een korte ID-check — meestal binnen een paar minuten klaar."],
-      ["Reageer op klussen in de buurt", "Aanbod afgestemd op je reistijd, vak en beschikbaarheid."],
-      ["Werk en kies je uitbetaling", "Na goedkeuring van je uren: direct, binnen 3 dagen of gratis binnen 30 dagen."],
-    ],
-    points: ["Geen facturen sturen", "Modelovereenkomst, Wet DBA-proof", "Badges van Brons tot Platina"],
-    href: "/register?type=freelancer",
-    cta: "Gratis account maken",
-    more: { href: "/klussen", label: "Bekijk open klussen" },
-    photo: <Photo name="freelancer" fallback={<SceneWork />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 46vw" />,
+    title: "Meld je aan en verifieer",
+    body: "Werknemers koppelen hun KVK en doorlopen een korte identiteitscheck. Bedrijven registreren hun organisatie en vestigingen.",
   },
   {
-    id: "uitzend",
-    label: "Zonder KVK",
-    title: "Geen eigen bedrijf? Werk via ons uitzendbureau.",
-    body: "ZekerFlex is dan je werkgever. Je kiest zelf je uren en krijgt elke week loon met een echte loonstrook.",
-    steps: [
-      ["Maak een account als uitzendkracht", "Geen KVK nodig — alleen je ID en rekeningnummer."],
-      ["Kies je klussen", "Zelfde app, zelfde klussen in de buurt."],
-      ["Elke week loon", "Met vakantiegeld (8,33%), pensioen via StiPP en het ABU-fasensysteem."],
-    ],
-    points: ["Wekelijkse loonstrook", "Pensioen vanaf week 9", "Papierwerk geregeld"],
-    href: "/register?type=uitzendkracht",
-    cta: "Werken als uitzendkracht",
-    more: { href: "/uitzendbureau", label: "Meer over het uitzendbureau" },
-    photo: <Photo name="hero" fallback={<SceneMatch />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 46vw" />,
+    title: "Word slim gematcht",
+    body: "Bij een nieuwe dienst rangschikt ZekerFlex kandidaten op reistijd, betrouwbaarheid en vakmatch. De beste match wordt direct toegewezen.",
   },
   {
-    id: "mensen",
-    label: "Ik zoek mensen",
-    title: "Betrouwbare mensen, precies wanneer je ze nodig hebt.",
-    body: "Zet een klus uit en ZekerFlex regelt de rest: match, overeenkomst, check-in, facturatie en compliance.",
-    steps: [
-      ["Registreer je bedrijf", "We controleren je KVK; ondertussen kun je al een testklus plaatsen."],
-      ["Plaats een klus", "Geverifieerde krachten in de buurt krijgen hem direct — gematcht op reistijd en betrouwbaarheid."],
-      ["Keur uren goed", "GPS check-in, uren goedkeuren met één tik, de factuur volgt vanzelf."],
+    title: "Werk en word betaald",
+    body: "Check in op locatie en werk je dienst. Zodra de uren zijn goedgekeurd kies je zelf hoe snel je uitbetaald wilt worden — gratis wachten of sneller tegen een fee.",
+  },
+];
+
+const WORKFORMS = [
+  {
+    kind: "Via ons uitzendbureau",
+    who: "Geen KVK nodig. ZekerFlex is je werkgever.",
+    points: [
+      "Wekelijkse verloning met loonstrook",
+      "Vakantiegeld (8,33%) en vakantie-uren",
+      "Pensioen via StiPP vanaf week 9",
+      "ABU-fasensysteem: zekerheid die meegroeit",
     ],
-    points: ["€ 3,50 per gewerkt uur", "Geen abonnement", "Wet DBA-risico's zichtbaar"],
-    href: "/register?type=bedrijf",
-    cta: "Gratis klus plaatsen",
-    more: { href: "/voor-bedrijven", label: "Alles voor bedrijven" },
-    photo: <Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 46vw" />,
+    href: "/uitzendbureau",
+    cta: "Werken via het uitzendbureau",
+    highlight: true,
+  },
+  {
+    kind: "Als flexwerker",
+    who: "Af en toe zelfstandig, soms met de KOR.",
+    points: [
+      "Btw optioneel of kleineondernemersregeling",
+      "Self-invoice of reverse billing",
+      "Je eigen tarief en ritme",
+      "Lichte fiscale administratie",
+    ],
+    href: "/voor-freelancers",
+    cta: "Meer over flexwerk",
+    highlight: false,
+  },
+  {
+    kind: "Als zzp'er",
+    who: "Eigen bedrijf met KVK en btw-nummer.",
+    points: [
+      "Reverse billing — geen facturen sturen",
+      "Zelf je uitbetaalsnelheid kiezen",
+      "Modelovereenkomst per opdrachtgever",
+      "Wet DBA-monitor bewaakt je risico",
+    ],
+    href: "/voor-freelancers",
+    cta: "Meer voor zzp'ers",
+    highlight: false,
   },
 ];
 

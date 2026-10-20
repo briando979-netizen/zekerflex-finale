@@ -348,35 +348,6 @@ body {
   .aurora::before, .aurora::after { animation: none; }
 }
 
-/* Hero map: city after city softly lights up (components/marketing/HeroMap.tsx) */
-.map-pulse .map-dot {
-  fill: #4fe0a0;
-  opacity: 0.35;
-  animation: map-dot 9s ease-in-out infinite;
-}
-.map-pulse .map-ring {
-  fill: none;
-  stroke: #4fe0a0;
-  stroke-width: 0.25;
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: map-ring 9s ease-out infinite;
-}
-@keyframes map-dot {
-  0%, 100% { opacity: 0.3; }
-  6% { opacity: 1; }
-  20% { opacity: 0.45; }
-}
-@keyframes map-ring {
-  0% { opacity: 0.8; transform: scale(1); }
-  18% { opacity: 0; transform: scale(5); }
-  100% { opacity: 0; transform: scale(5); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .map-pulse .map-dot, .map-pulse .map-ring { animation: none; }
-}
-
 /* Verification stands out: violet = identity & safety */
 .btn-trust {
   display: inline-flex;
