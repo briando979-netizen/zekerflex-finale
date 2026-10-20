@@ -35,6 +35,19 @@ export default function PrivacyPage() {
         ]}
       />
       <LegalSection
+        heading="De ZekerFlex-app voor Android"
+        body="De app (Google Play, pakket com.zekerflex.app) opent het ZekerFlex-platform; het verzamelt dezelfde gegevens als de website en niets extra's op de achtergrond. De app vraagt alleen om toestemming op het moment dat je een functie gebruikt, en je kunt elke toestemming weigeren of later intrekken in de instellingen van je telefoon:"
+        list={[
+          "Camera — om je identiteitsbewijs, selfie of certificaat te fotograferen tijdens verificatie. Foto's worden alleen geüpload als jij ze verstuurt.",
+          "Locatie — om in en uit te checken op een klus (GPS-check) en klussen bij jou in de buurt te tonen. Alleen tijdens gebruik, nooit op de achtergrond.",
+          "Meldingen — voor nieuwe klussen, chatberichten, oproepen en goedgekeurde uren.",
+          "Microfoon — alleen als je een spraak- of video-oproep start in de chat.",
+        ]}
+      />
+      <LegalSection
+        body="De app bevat geen advertenties en geen tracking-SDK's van derden, en we verkopen geen gegevens. Je account verwijderen kan in de app of via www.zekerflex.com/account-verwijderen; losse gegevens laten verwijderen zonder je account op te heffen via www.zekerflex.com/gegevens-verwijderen."
+      />
+      <LegalSection
         body="We verwerken deze gegevens om de diensten uit te voeren, op grond van ons gerechtvaardigd belang, omdat we een overeenkomst met je aangaan, omdat je toestemming hebt gegeven, of omdat het onze wettelijke verplichting is."
       />
       <LegalSection
