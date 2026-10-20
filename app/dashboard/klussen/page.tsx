@@ -34,12 +34,19 @@ export default async function KlussenPage(
       </div>
 
       {!m.canApply && m.blockReason && (
-        <div className="card mb-6 flex flex-wrap items-center justify-between gap-3 border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
-          <span>
+        <div className={`card mb-6 flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-neutralx-700 ${/verificatie|geverifieerd/i.test(m.blockReason) ? "trust-card" : "border-warn/30 bg-warn/5"}`}>
+          <span className="flex items-start gap-3">
+            {/verificatie|geverifieerd/i.test(m.blockReason) && (
+              <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-trust text-white shadow-[0_8px_20px_-8px_rgba(124,58,237,0.7)]" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </span>
+            )}
+            <span>
             {t.page.browseFirst} {translateBlockReason(m.blockReason, t)} {t.page.applyWhenDone}
+            </span>
           </span>
           {/verificatie|geverifieerd/i.test(m.blockReason) && (
-            <Link href="/dashboard/verificatie" className="btn-primary">
+            <Link href="/dashboard/verificatie" className="btn-trust">
               {t.page.toVerification}
             </Link>
           )}

@@ -95,7 +95,7 @@ export function ShiftCard({
             {ribbon.label}
           </span>
         )}
-        <span className="num absolute bottom-3 right-3 rounded-lg bg-white/15 px-2 py-1 text-sm font-bold text-white backdrop-blur">
+        <span className="num absolute bottom-3 right-3 rounded-lg bg-money-bright px-2 py-1 text-sm font-bold text-ink shadow-sm">
           {moneyExact(shift.hourlyRateCents)}{c.perHourShort}
         </span>
       </div>
@@ -130,7 +130,7 @@ export function ShiftCard({
             </span>
           )}
           {idReminder && (
-            <span className="rounded border border-hairstrong px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600">
+            <span className="rounded border border-trust/40 bg-trust-soft px-1.5 py-0.5 text-[11px] font-semibold text-trust-ink">
               {c.bringId}
             </span>
           )}

@@ -416,7 +416,7 @@ export function OnboardingForm({
         )}
       </fieldset>
 
-      <button type="submit" disabled={busy} className="btn-primary w-full">
+      <button type="submit" disabled={busy} className="btn-trust w-full">
         {busy ? (method === "stripe" ? t.toStripe : t.checkingBusy) : t.submit}
       </button>
       <p className="text-xs leading-relaxed text-neutralx-400">

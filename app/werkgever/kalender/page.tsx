@@ -2,14 +2,15 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { getEmployerCalendarMonth } from "@/lib/dashboard/employer-calendar";
 import { PageHeader } from "@/components/app/ui";
+import { ColorLegend } from "@/components/app/ColorLegend";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_TONE: Record<string, string> = {
-  FILLED: "bg-ok/10 text-ok",
-  IN_PROGRESS: "bg-ok/10 text-ok",
+  FILLED: "bg-plan-soft text-plan-ink",
+  IN_PROGRESS: "bg-plan-soft text-plan-ink",
   COMPLETED: "bg-paper-soft text-neutralx-500",
   PARTIALLY_FILLED: "bg-warn/10 text-warn",
   OPEN: "bg-warn/10 text-warn",
@@ -123,9 +124,10 @@ export default async function KalenderPage(
 
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-neutralx-500">
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-warn/40" /> {t.calendar.legendOpen}</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-ok/40" /> {t.calendar.legendFilled}</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-plan/50" /> {t.calendar.legendFilled}</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-hairstrong" /> {t.calendar.legendDone}</span>
       </div>
+      <ColorLegend only={["plan", "wait", "do", "money", "trust", "problem"]} className="mt-4" />
     </>
   );
 }

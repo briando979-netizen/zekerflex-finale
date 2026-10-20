@@ -1,5 +1,6 @@
 "use client";
 
+import { ColorLegend } from "@/components/app/ColorLegend";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { MyWorkItem } from "@/lib/dashboard/my-work";
@@ -218,6 +219,7 @@ export function MyKlussenView({
           ))}
         </div>
       )}
+      <ColorLegend className="mt-6" />
     </div>
   );
 }
@@ -251,9 +253,15 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
   return (
     <Link
       href={`/dashboard/klussen/${item.shift.id}`}
-      className="flex items-center justify-between text-sm font-semibold text-ink"
+      className="flex items-center justify-between rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink"
     >
-      <span>{w.yourJob}</span>
+      <span className="flex items-center gap-2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+        {w.yourJob}
+      </span>
       <span aria-hidden>→</span>
     </Link>
   );
@@ -289,23 +297,23 @@ function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey
   }
   switch (item.timesheetStatus) {
     case "PAID":
-      return <p className="text-sm font-semibold text-ink">{w.paid}</p>;
+      return <p className="text-sm font-semibold text-money">{w.paid}</p>;
     case "APPROVED":
       return (
         <div>
-          <p className="text-sm font-semibold text-ink">{w.approved}</p>
+          <p className="text-sm font-semibold text-money">{w.approved}</p>
           <p className="mt-0.5 text-xs text-neutralx-500">{w.approvedBody}</p>
         </div>
       );
     case "SUBMITTED":
-      return <p className="text-sm font-semibold text-ink">{w.submitted}</p>;
+      return <p className="text-sm font-semibold text-plan-ink">{w.submitted}</p>;
     case "DISPUTED":
       return <p className="text-sm font-semibold text-warn">{w.disputed}</p>;
     default:
       return (
         <Link
           href={item.timesheetId ? `/dashboard/uren/${item.timesheetId}` : "/dashboard/uren"}
-          className="flex items-center justify-between text-sm font-semibold text-brand-600"
+          className="flex items-center justify-between rounded-xl bg-warn/10 px-3 py-2.5 text-sm font-semibold text-warn"
         >
           <span>{w.fillHours}</span>
           <span aria-hidden>→</span>

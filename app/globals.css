@@ -377,6 +377,32 @@ body {
   .map-pulse .map-dot, .map-pulse .map-ring { animation: none; }
 }
 
+/* Verification stands out: violet = identity & safety */
+.btn-trust {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.7rem 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(120deg, #7c3aed, #5b21b6 55%, #7c3aed);
+  background-size: 200% 100%;
+  box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.65);
+  transition: background-position 0.6s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-trust:hover {
+  background-position: 100% 0;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px -10px rgba(124, 58, 237, 0.75);
+}
+.btn-trust:disabled { opacity: 0.6; transform: none; }
+.trust-card {
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0.02) 60%);
+}
+
 /* Live indicator dot */
 .live-dot {
   position: relative;

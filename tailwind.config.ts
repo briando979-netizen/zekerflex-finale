@@ -50,6 +50,10 @@ const config: Config = {
         ok: "#15803D",
         warn: "#B45309",
         crit: "#B91C1C",
+        // one colour = one meaning (components/app/ColorLegend.tsx)
+        plan: { DEFAULT: "#2563EB", soft: "#EAF1FE", ink: "#1E40AF" },
+        trust: { DEFAULT: "#7C3AED", soft: "#F3EDFE", ink: "#5B21B6" },
+        money: { DEFAULT: "#B7791F", soft: "#FDF3DC", ink: "#7C4A03", bright: "#F5C451" },
         risk: {
           low: "#15803D",
           medium: "#B45309",

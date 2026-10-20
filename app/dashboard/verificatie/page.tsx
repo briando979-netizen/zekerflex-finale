@@ -130,7 +130,8 @@ export default async function VerificatiePage() {
         </div>
       )}
 
-      <div className="card p-6">
+      <div className="card trust-card relative overflow-hidden p-6">
+        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-trust via-[#A78BFA] to-trust" aria-hidden />
         <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeId} />
       </div>
 
