@@ -4,6 +4,7 @@ import { sendMail } from "@/lib/mail";
 import { resendDelivery } from "@/lib/webhooks/manage";
 import type { ProposalAction } from "@/lib/ai-teams";
 import { notifyPendingReactions, setTenantApproval } from "@/lib/company/verified";
+import { commitInvestment } from "@/lib/ai-teams/invest";
 
 async function hqAdmins(tenantId: string): Promise<{ email: string; name: string }[]> {
   const rows = await prisma.membership.findMany({ where: { tenantId, role: "HQ_ADMIN" }, select: { user: { select: { email: true, fullName: true } } } });
@@ -21,6 +22,9 @@ export async function executeProposal(action: ProposalAction, by = "ai-team"): P
     const { dispatchNextWave } = await import("@/lib/notifications/dispatcher");
     const n = await dispatchNextWave(action.shiftId);
     return n > 0 ? `${n} extra flexkracht(en) benaderd` : "geen nieuwe passende flexkrachten gevonden";
+  }
+  if (action.type === "investment") {
+    return commitInvestment(action.title, action.budgetCents, action.firstStep);
   }
   if (action.type === "approve-company") {
     await setTenantApproval(action.tenantId, true, by);

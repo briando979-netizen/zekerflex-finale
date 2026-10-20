@@ -4,6 +4,7 @@ import { kvAppend, kvGet, kvSet } from "@/lib/storage/kv";
 import { chat, llmConfigProblem } from "@/lib/ai/client";
 import { shiftCategory } from "@/lib/shifts/category";
 import { planning, onboarding, prijs, kwaliteit, klantenservice, veiligheid } from "@/lib/ai-teams/extra-teams";
+import { investeren } from "@/lib/ai-teams/invest";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex AI-teams. Each team runs on its own every day, works from real
@@ -32,7 +33,8 @@ export type ProposalAction =
   | { type: "resend-webhook"; deliveryId: string }
   | { type: "rematch-shift"; shiftId: string }
   | { type: "approve-company"; tenantId: string }
-  | { type: "rate-advice"; shiftId: string; tenantId: string; suggestedCents: number };
+  | { type: "rate-advice"; shiftId: string; tenantId: string; suggestedCents: number }
+  | { type: "investment"; title: string; budgetCents: number; firstStep: string };
 
 export interface Proposal {
   id: string;
@@ -65,6 +67,7 @@ export const TEAMS: Team[] = [
   { id: "kwaliteit", name: "Kwaliteit", emoji: "⭐", mission: "Bewaakt beoordelingen en afzeggingen van freelancers en bedrijven.", members: ["Kwaliteitsbewaker"], needsModel: false },
   { id: "klantenservice", name: "Klantenservice", emoji: "💬", mission: "Let op vragen in de websitechat die te lang onbeantwoord blijven.", members: ["Servicedesk"], needsModel: false },
   { id: "veiligheid", name: "Veiligheid", emoji: "🔐", mission: "Controleert tweestapsverificatie van beheerders en zoekt verdachte uren.", members: ["Beveiliger", "Fraudespeurder"], needsModel: false },
+  { id: "investeren", name: "Investeringen", emoji: "💶", mission: "Kijkt waar geld het meeste oplevert en zet investeringen klaar binnen jouw maandbudget — uitgeven doe jij, na goedkeuring.", members: ["Investeerder", "Rekenmeester"], needsModel: false },
   { id: "updates", name: "Updates & rapportage", emoji: "📰", mission: "Dagelijks een verslag van de cijfers en wat er veranderde.", members: ["Verslaggever"], needsModel: false },
   { id: "denken", name: "Denken & strategie", emoji: "🧠", mission: "Denkt na over de koers op basis van de cijfers en signalen van de andere teams.", members: ["Strateeg"], needsModel: true },
   { id: "voorstellen", name: "Voorstellen & ideeën", emoji: "💡", mission: "Bedenkt nieuwe producten, functies en campagnes.", members: ["Bedenker", "Productmanager"], needsModel: true },
@@ -165,7 +168,7 @@ async function updates(now: Date) {
 // ---- language teams (need the model) --------------------------------------
 
 async function languageTeam(team: Team) {
-  const feed = ((await kvGet<FeedItem[]>("ai-teams-feed")) ?? []).slice(-40).map((f) => `[${f.team}] ${f.text}`).join("\n");
+  const feed = ((await kvGet<FeedItem[]>("ai-teams-feed")) ?? []).slice(-60).map((f) => `[${f.team}] ${f.text}`).join("\n");
   const task =
     team.id === "denken"
       ? "Schrijf 3 strategische inzichten voor deze week, met de cijfers als onderbouwing."
@@ -203,6 +206,7 @@ export async function runTeams(now = new Date()): Promise<{ teams: number; skipp
     kwaliteit: () => kwaliteit(now, { log, propose }),
     klantenservice: () => klantenservice(now, { log, propose }),
     veiligheid: () => veiligheid(now, { log, propose }),
+    investeren: () => investeren(now, { log, propose }),
   };
   for (const team of TEAMS) {
     try {

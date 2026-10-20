@@ -33,6 +33,7 @@ interface Data {
   done: Proposal[];
   lastRun: string | null;
   modelConnected: boolean;
+  budget?: { monthlyCents: number; committedCents: number };
 }
 
 const KIND: Record<FeedItem["kind"], string> = { done: "✓", finding: "🔎", proposal: "📝", idea: "💡", error: "⚠️" };
@@ -42,6 +43,7 @@ export function AiTeamsConsole() {
   const [d, setD] = useState<Data | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("alle");
+  const [budgetEur, setBudgetEur] = useState<string>("");
 
   const load = useCallback(async () => {
     const r = await fetch("/api/admin/ai-teams", { cache: "no-store" }).catch(() => null);
@@ -76,6 +78,38 @@ export function AiTeamsConsole() {
         <button type="button" className="a-button a-button-primary ml-auto" disabled={busy === "run"} onClick={() => post({ action: "run" }, "run")}>
           {busy === "run" ? "Teams aan het werk…" : "Nu een ronde draaien"}
         </button>
+      </div>
+
+      <div className="a-panel flex flex-wrap items-center gap-3 p-4">
+        <span className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>💶 Investeringsbudget</span>
+        <span className="text-xs" style={{ color: "var(--a-dim)" }}>
+          {d.budget && d.budget.monthlyCents > 0
+            ? `€ ${Math.round(d.budget.monthlyCents / 100)} per maand · nog € ${Math.round((d.budget.monthlyCents - d.budget.committedCents) / 100)} vrij deze maand`
+            : "nog niet ingesteld — het investeringsteam doet pas voorstellen als er budget is"}
+        </span>
+        <span className="ml-auto flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            step={50}
+            placeholder="€ per maand"
+            value={budgetEur}
+            onChange={(e) => setBudgetEur(e.target.value)}
+            className="w-32 rounded-lg px-3 py-1.5 text-sm"
+            style={{ background: "var(--a-elev)", color: "var(--a-text)", border: "1px solid var(--a-border)" }}
+          />
+          <button
+            type="button"
+            className="a-button"
+            disabled={busy === "budget" || budgetEur === ""}
+            onClick={() => post({ action: "budget", monthlyEur: Number(budgetEur) }, "budget").then(() => setBudgetEur(""))}
+          >
+            Opslaan
+          </button>
+        </span>
+        <p className="w-full text-[11px]" style={{ color: "var(--a-mute)" }}>
+          De teams geven zelf nooit geld uit: een goedgekeurde investering komt op je takenlijst en wordt van dit budget afgeboekt.
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
