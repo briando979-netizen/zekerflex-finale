@@ -55,7 +55,6 @@ test("nieuwe freelancer: aanmelden → e-mail bevestigen → verificatie verstur
   await page.goto("/dashboard/verificatie");
   await page.locator('input[name="kvkNumber"]').fill("12345678");
   await page.locator('input[name="postalCode"]').fill("1012 AB");
-  await page.locator('input[name="houseNumber"]').fill("1");
   await page.locator('input[name="payoutIban"]').fill("NL91ABNA0417164300");
   // Photo route (Stripe Identity isn't configured in CI).
   const upload = page.getByRole("radio", { name: /zelf foto/i });

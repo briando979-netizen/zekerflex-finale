@@ -90,7 +90,6 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           attemptId,
           kvkNumber: form.get("kvkNumber") || undefined,
           postalCode: form.get("postalCode"),
-          houseNumber: form.get("houseNumber"),
           payoutIban: form.get("payoutIban"),
         }),
       });
@@ -186,16 +185,10 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
             <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
           </label>
         )}
-        <div className="grid grid-cols-[1fr_100px] gap-3">
-          <label className="block">
-            <span className="field-label">Postcode</span>
-            <input name="postalCode" required placeholder="1012 AB" className="field-input" />
-          </label>
-          <label className="block">
-            <span className="field-label">Huisnr.</span>
-            <input name="houseNumber" required placeholder="10" className="field-input" />
-          </label>
-        </div>
+        <label className="block">
+          <span className="field-label">Postcode</span>
+          <input name="postalCode" required placeholder="1012 AB" autoComplete="postal-code" className="field-input" />
+        </label>
         <label className="block">
           <span className="field-label">IBAN voor uitbetalingen</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />

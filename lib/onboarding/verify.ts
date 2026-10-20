@@ -44,7 +44,7 @@ export interface OnboardingInput {
   /** EU btw-nummer instead of KVK (optional) */
   vatNumber?: string | undefined;
   postalCode: string;
-  houseNumber: string;
+  houseNumber?: string | undefined;
   payoutIban: string;
   documentType: DocKind;
   documentNumber: string;
@@ -205,7 +205,7 @@ async function ensureFreelancerBase(input: {
   /** EU btw-nummer instead of a KVK number (e.g. a self-employed worker from Poland) */
   vatNumber?: string | undefined;
   postalCode: string;
-  houseNumber: string;
+  houseNumber?: string | undefined;
   payoutIban: string;
 }): Promise<FreelancerBaseResult> {
   const checks: OnboardingResult["checks"] = [];
@@ -216,7 +216,7 @@ async function ensureFreelancerBase(input: {
     ok: !geo.approximate,
     detail: geo.approximate
       ? "Postcode kon niet exact worden gelokaliseerd; je kunt dit later bijwerken."
-      : `${geo.street ?? ""} ${input.houseNumber}, ${geo.city ?? ""}`.trim(),
+      : [[geo.street, input.houseNumber].filter(Boolean).join(" "), geo.city].filter(Boolean).join(", ") || geo.postalCode,
   });
 
   const cleanKvk = input.kvkNumber.replace(/[^\d]/g, "");
@@ -337,7 +337,7 @@ export async function saveFreelancerBase(input: {
   kvkNumber: string;
   vatNumber?: string | undefined;
   postalCode: string;
-  houseNumber: string;
+  houseNumber?: string | undefined;
   payoutIban: string;
 }): Promise<FreelancerBaseResult> {
   const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { freelancerProfile: { select: { id: true } } } });
@@ -627,7 +627,7 @@ export interface WalletOnboardingInput {
   kvkNumber: string;
   vatNumber?: string | undefined;
   postalCode: string;
-  houseNumber: string;
+  houseNumber?: string | undefined;
   payoutIban: string;
 }
 

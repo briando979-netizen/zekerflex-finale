@@ -14,7 +14,7 @@ const baseSchema = z.object({
   kvkNumber: z.string().trim().max(20).optional(),
   vatNumber: z.string().trim().max(20).optional(),
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
-  houseNumber: z.string().trim().min(1).max(12),
+  houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
 });
 
@@ -23,7 +23,7 @@ const fieldsSchema = z.object({
   kvkNumber: z.string().trim().max(20).optional(),
   vatNumber: z.string().trim().max(20).optional(),
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
-  houseNumber: z.string().trim().min(1).max(12),
+  houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
   documentType: z.enum(["PASSPORT", "ID_CARD", "DRIVERS_LICENSE"]),
   documentNumber: z.string().trim().min(4).max(20),
@@ -72,7 +72,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         kvkNumber: str("kvkNumber"),
         vatNumber: str("vatNumber"),
         postalCode: form.get("postalCode"),
-        houseNumber: form.get("houseNumber"),
+        houseNumber: str("houseNumber"),
         payoutIban: form.get("payoutIban"),
       });
       if (!base.success) throw AppError.validation(base.error.issues[0]?.message ?? "Controleer de ingevulde gegevens");
@@ -92,7 +92,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       kvkNumber: str("kvkNumber"),
       vatNumber: str("vatNumber"),
       postalCode: form.get("postalCode"),
-      houseNumber: form.get("houseNumber"),
+      houseNumber: str("houseNumber"),
       payoutIban: form.get("payoutIban"),
       documentType: form.get("documentType"),
       documentNumber: form.get("documentNumber"),

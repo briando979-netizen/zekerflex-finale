@@ -265,7 +265,8 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
 
   return (
     <div className="space-y-4">
-      {d.status.complete ? (
+      {/* Under the verification form the bank block explains itself — no second warning box. */}
+      {idInForm && !showId ? null : d.status.complete ? (
         <p className="rounded-lg bg-ok/10 px-3 py-2 text-sm text-neutralx-700">
           {t.allDone}
         </p>

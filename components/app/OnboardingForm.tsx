@@ -333,16 +333,11 @@ export function OnboardingForm({
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "2." : "1."} {t.home}
         </legend>
-        <div className="grid grid-cols-[1fr_100px] gap-3">
-          <label className="block">
-            <span className="field-label">{t.postal}</span>
-            <input name="postalCode" required placeholder="1012 AB" className="field-input" />
-          </label>
-          <label className="block">
-            <span className="field-label">{t.house}</span>
-            <input name="houseNumber" required placeholder="10" className="field-input" />
-          </label>
-        </div>
+        {/* Postcode alone places you for travel-distance matching — no house number needed. */}
+        <label className="block">
+          <span className="field-label">{t.postal}</span>
+          <input name="postalCode" required placeholder="1012 AB" autoComplete="postal-code" className="field-input" />
+        </label>
         <label className="block">
           <span className="field-label">{t.iban}</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />

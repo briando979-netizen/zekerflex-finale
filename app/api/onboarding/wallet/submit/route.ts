@@ -11,7 +11,7 @@ const bodySchema = z.object({
   attemptId: z.string().min(1),
   kvkNumber: z.string().trim().max(20).optional(),
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
-  houseNumber: z.string().trim().min(1).max(12),
+  houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
 });
 
