@@ -1,3 +1,4 @@
+import { isTenantVerified } from "@/lib/company/verified";
 import {
   MatchStatus,
   ShiftStatus,
@@ -292,7 +293,8 @@ export async function runMatchingForShift(
     // ---- Auto-assignment -------------------------------------------------
     const autoAssignedIds = new Set<string>();
     const aa = config.autoAcceptance;
-    if (aa?.enabled) {
+    // never auto-schedule anyone on a not-yet-verified company's test klus
+    if (aa?.enabled && (await isTenantVerified(shift.branch.tenantId))) {
       const limit = Math.min(seatsRemaining, aa.maxSeatsToAutoFill);
       for (const c of ranked) {
         if (autoAssignedIds.size >= limit) break;

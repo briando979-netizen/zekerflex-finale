@@ -1,3 +1,4 @@
+import { assertMayPlaceShift } from "@/lib/company/verified";
 import { z } from "zod";
 import type { Principal } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -89,6 +90,7 @@ export async function createShift(
     // staff are checking in somewhere unfamiliar.
     const tenantId = scope.tenantIds[0];
     if (!tenantId) throw AppError.forbidden("Geen organisatie gekoppeld aan je account.");
+    await assertMayPlaceShift(tenantId);
     branch = await prisma.branch.create({
       data: {
         tenantId,
@@ -113,6 +115,7 @@ export async function createShift(
       select: { id: true, name: true, matchingConfig: true, tenantId: true },
     });
     if (!found) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
+    await assertMayPlaceShift(found.tenantId);
     branch = found;
   }
 

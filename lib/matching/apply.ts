@@ -1,3 +1,4 @@
+import { isTenantVerified } from "@/lib/company/verified";
 import { MatchStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
@@ -22,6 +23,8 @@ const LATE_ACCEPT_GRACE_MS = 2 * 60 * 60 * 1000;
 export interface ApplyResult {
   status: MatchStatus;
   shiftFilled: boolean;
+  /** the company isn't verified yet: the reaction is noted, nobody is scheduled */
+  pendingCompanyVerification?: boolean;
 }
 
 export async function applyToShift(
@@ -125,6 +128,16 @@ export async function applyToShift(
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
+
+  if (!(await isTenantVerified(shift.branch.tenantId))) {
+    // Test klus of a not-yet-verified company: keep the reaction (VIEWED =
+    // interested, no expiry) so the company sees it, but schedule nobody.
+    await prisma.shiftMatch.update({
+      where: { shiftId_freelancerId: { shiftId, freelancerId: profile.id } },
+      data: { status: MatchStatus.VIEWED, expiresAt: null },
+    });
+    return { status: MatchStatus.VIEWED, shiftFilled: false, pendingCompanyVerification: true };
+  }
 
   return recordOfferResponse(shiftId, profile.id, "ACCEPTED");
 }

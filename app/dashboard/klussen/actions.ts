@@ -35,7 +35,11 @@ export async function applyToShiftAction(shiftId: string): Promise<ApplyResult> 
     bust();
     return {
       ok: true,
-      message: res.shiftFilled ? "Aangenomen — de dienst is nu vol." : "Aangenomen! Je vindt hem bij Mijn klussen.",
+      message: res.pendingCompanyVerification
+        ? "Je reactie is verstuurd. Dit bedrijf wordt nog geverifieerd — je wordt pas ingepland zodra dat rond is."
+        : res.shiftFilled
+          ? "Aangenomen — de dienst is nu vol."
+          : "Aangenomen! Je vindt hem bij Mijn klussen.",
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };

@@ -8,10 +8,13 @@ export function CompanyActions({
   tenantId,
   contactUserId,
   blocked,
+  verifiedVia = null,
 }: {
   tenantId: string;
   contactUserId: string;
   blocked: boolean;
+  /** how the company counts as verified (null = not verified → test klus only) */
+  verifiedVia?: "platform" | "kvk" | "admin" | "history" | null;
 }) {
   const router = useRouter();
   const [emailOpen, setEmailOpen] = useState(false);
@@ -36,6 +39,22 @@ export function CompanyActions({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blocked: !blocked }),
+      });
+      if (res.ok) router.refresh();
+      else setMsg("Actie mislukt.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setApproval(approved: boolean) {
+    if (!window.confirm(approved ? "Bedrijf goedkeuren? Het kan dan klussen plaatsen en mensen inplannen." : "Goedkeuring intrekken?")) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/bedrijven/${tenantId}/verifieer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approved }),
       });
       if (res.ok) router.refresh();
       else setMsg("Actie mislukt.");
@@ -73,6 +92,11 @@ export function CompanyActions({
         <button type="button" onClick={() => setEmailOpen((v) => !v)} className="btn-ghost text-xs">
           Stuur e-mail
         </button>
+        {(verifiedVia === null || verifiedVia === "admin") && (
+          <button type="button" onClick={() => setApproval(verifiedVia === null)} disabled={busy} className="btn-ghost text-xs disabled:opacity-50">
+            {verifiedVia === null ? "Bedrijf goedkeuren" : "Goedkeuring intrekken"}
+          </button>
+        )}
         <button type="button" onClick={toggleBlock} disabled={busy} className="btn-ghost text-xs text-crit disabled:opacity-50">
           {blocked ? "Deblokkeer" : "Blokkeer"}
         </button>

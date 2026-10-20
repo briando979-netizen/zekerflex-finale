@@ -94,6 +94,7 @@ const h = vi.hoisted(() => {
   return { seat, prisma, redis, acquire };
 });
 
+vi.mock("@/lib/company/verified", () => ({ isTenantVerified: async () => true, assertMayPlaceShift: async () => ({ test: false }), UNVERIFIED_ASSIGN_MESSAGE: "x" }));
 vi.mock("@/lib/prisma", () => ({ prisma: h.prisma }));
 vi.mock("@/lib/redis", () => ({ redis: h.redis }));
 vi.mock("@/lib/engagement/events", () => ({ recordEngagement: () => undefined }));

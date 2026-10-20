@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
+import { isTenantVerified } from "@/lib/company/verified";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { recentThreads } from "@/lib/messaging/recent";
 import {
@@ -28,11 +29,12 @@ export default async function WerkgeverStartPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
-  const [kvkDone, extra, o, threads] = await Promise.all([
+  const [kvkDone, extra, o, threads, companyVerified] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
+    tenantId ? isTenantVerified(tenantId) : Promise.resolve(true),
   ]);
 
   const ob = extra.onboarding ?? {};
@@ -48,6 +50,16 @@ export default async function WerkgeverStartPage() {
 
   return (
     <>
+      {!companyVerified && (
+        <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
+          <p className="font-semibold text-ink">Je bedrijf is nog niet geverifieerd</p>
+          <p className="mt-1">
+            Je kunt alvast één <strong>testklus</strong> plaatsen: die is zichtbaar en freelancers kunnen erop reageren. Iemand
+            inplannen kan pas zodra je KVK is goedgekeurd — vul daarvoor je KVK-nummer in bij &ldquo;Jouw organisatie&rdquo;. Lukt
+            het niet automatisch? Dan keurt ZekerFlex je bedrijf handmatig goed, meestal binnen een werkdag.
+          </p>
+        </div>
+      )}
       {showWizard ? (
         <section className="mb-12">
           <p className="eyebrow mb-2">{t.start.eyebrow}</p>

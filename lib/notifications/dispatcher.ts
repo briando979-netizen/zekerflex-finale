@@ -1,3 +1,4 @@
+import { isTenantVerified, UNVERIFIED_ASSIGN_MESSAGE } from "@/lib/company/verified";
 import {
   MatchStatus,
   ShiftStatus,
@@ -407,6 +408,9 @@ export async function recordOfferResponse(
       where: { id: shiftId },
       include: { branch: { select: { tenantId: true } } },
     });
+    if (!(await isTenantVerified(shift.branch.tenantId))) {
+      throw AppError.precondition(UNVERIFIED_ASSIGN_MESSAGE);
+    }
     const taken = await tx.shiftAssignment.count({
       where: { shiftId, cancelledAt: null },
     });

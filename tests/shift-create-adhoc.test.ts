@@ -34,6 +34,7 @@ const txRunner = vi.fn(async (fn: (tx: unknown) => unknown) =>
   fn({ shift: { create: (...a: unknown[]) => shiftCreate(...a) }, shiftPoolInvite: { createMany: vi.fn() } }),
 );
 
+vi.mock("@/lib/company/verified", () => ({ isTenantVerified: async () => true, assertMayPlaceShift: async () => ({ test: false }), UNVERIFIED_ASSIGN_MESSAGE: "x" }));
 vi.mock("@/lib/dashboard/employer", () => ({ resolveEmployerScope: (...a: unknown[]) => resolveEmployerScope(...a) }));
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/matching/engine", () => ({ runMatchingForShift: vi.fn().mockResolvedValue({ rankedCount: 0 }) }));

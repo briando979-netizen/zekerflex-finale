@@ -1,3 +1,4 @@
+import { assertMayPlaceShift } from "@/lib/company/verified";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, toErrorBody } from "@/lib/errors";
@@ -71,6 +72,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const startsAt = new Date(body.startsAt);
     const endsAt = new Date(body.endsAt);
     if (endsAt <= startsAt) throw AppError.validation("De eindtijd moet na de starttijd liggen");
+    await assertMayPlaceShift(key.tenantId);
     const shift = await prisma.shift.create({ data: { branchId: branch.id, title: body.title, ...(body.description ? { description: body.description } : {}), startsAt, endsAt, breakMinutes: body.breakMinutes, hourlyRateCents: body.hourlyRateCents, positions: body.positions, status: "OPEN" }, select: { id: true, title: true, startsAt: true, endsAt: true, status: true } });
     void runMatchingForShift(shift.id).catch(() => undefined);
     await recordAudit({ category: "MATCHING", action: "api.shift.created", actorLabel: `api-key:${key.id}`, summary: `Dienst via API aangemaakt: ${shift.title}`, targetType: "shift", targetId: shift.id, metadata: { tenantId: key.tenantId } });

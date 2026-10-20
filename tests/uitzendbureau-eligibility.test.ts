@@ -9,6 +9,7 @@ const freelancerProfileFindUnique = vi.fn();
 const shiftFindUnique = vi.fn();
 const shiftMatchUpsert = vi.fn();
 const shiftAssignmentFindUnique = vi.fn();
+vi.mock("@/lib/company/verified", () => ({ isTenantVerified: async () => true, assertMayPlaceShift: async () => ({ test: false }), UNVERIFIED_ASSIGN_MESSAGE: "x" }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     freelancerProfile: { findUnique: (...a: unknown[]) => freelancerProfileFindUnique(...a) },

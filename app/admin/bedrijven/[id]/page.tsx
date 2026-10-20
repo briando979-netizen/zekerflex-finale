@@ -3,6 +3,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/components/app/ui";
 import { CompanyActions } from "@/components/admin/CompanyActions";
+import { tenantVerification } from "@/lib/company/verified";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     );
   }
 
-  const [invoiceAgg, auditEntries] = await Promise.all([
+  const [invoiceAgg, auditEntries, verification] = await Promise.all([
     prisma.invoice.aggregate({
       where: { recipientTenantId: tenant.id, status: "PAID" },
       _sum: { totalCents: true },
@@ -56,6 +57,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
       take: 30,
       select: { id: true, category: true, action: true, summary: true, createdAt: true },
     }),
+    tenantVerification(tenant.id),
   ]);
 
   const hqAdmin = tenant.memberships.find((m) => m.role === "HQ_ADMIN")?.user;
@@ -73,11 +75,23 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
             {tenant.kvkNumber ? `KVK ${tenant.kvkNumber}` : "Geen KVK-nummer"} · {tenant.branches.length} vestiging
             {tenant.branches.length === 1 ? "" : "en"}
           </p>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <StatusPill tone={blocked ? "crit" : "ok"}>{blocked ? "geblokkeerd" : "actief"}</StatusPill>
+            <StatusPill tone={verification.verified ? "ok" : "warn"}>
+              {verification.verified
+                ? `geverifieerd (${{ platform: "platform", kvk: "KVK actief", admin: "handmatig goedgekeurd", history: "bestaande klant" }[verification.via!]})`
+                : "niet geverifieerd — alleen testklus"}
+            </StatusPill>
           </div>
         </div>
-        {hqAdmin && <CompanyActions tenantId={tenant.id} contactUserId={hqAdmin.id} blocked={blocked} />}
+        {hqAdmin && (
+          <CompanyActions
+            tenantId={tenant.id}
+            contactUserId={hqAdmin.id}
+            blocked={blocked}
+            verifiedVia={verification.via}
+          />
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
