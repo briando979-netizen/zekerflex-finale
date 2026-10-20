@@ -348,6 +348,59 @@ body {
   .aurora::before, .aurora::after { animation: none; }
 }
 
+/* Hero map: city after city softly lights up (components/marketing/HeroMap.tsx) */
+.map-pulse .map-dot {
+  fill: #4fe0a0;
+  opacity: 0.35;
+  animation: map-dot 9s ease-in-out infinite;
+}
+.map-pulse .map-ring {
+  fill: none;
+  stroke: #4fe0a0;
+  stroke-width: 0.25;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-ring 9s ease-out infinite;
+}
+@keyframes map-dot {
+  0%, 100% { opacity: 0.3; }
+  6% { opacity: 1; }
+  20% { opacity: 0.45; }
+}
+@keyframes map-ring {
+  0% { opacity: 0.8; transform: scale(1); }
+  18% { opacity: 0; transform: scale(5); }
+  100% { opacity: 0; transform: scale(5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-pulse .map-dot, .map-pulse .map-ring { animation: none; }
+}
+
+/* Live indicator dot */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #4fe0a0;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: live-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes live-ping {
+  75%, 100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after { animation: none; }
+}
+
 /* ============================================================ ADMIN (dark)
    Aniq-style admin surface. Scoped to .admin-scope so it never leaks into the
    marketing site or the freelancer/employer dashboards. Dark by default; a

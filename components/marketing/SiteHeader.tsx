@@ -273,7 +273,7 @@ export function SiteHeader() {
           <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
-        <nav ref={navRef} className="ml-6 hidden items-center gap-6 lg:flex">
+        <nav ref={navRef} className="ml-4 hidden items-center gap-5 lg:flex">
           {NAV.map((n) => {
             const active =
               n.match.startsWith("/") &&
@@ -290,7 +290,7 @@ export function SiteHeader() {
                 <Link
                   href={n.href}
                   onFocus={() => hasMenu && showMenu(n.key)}
-                  className={`flex items-center py-2 text-sm font-semibold transition-colors ${
+                  className={`flex items-center whitespace-nowrap py-2 text-sm font-semibold transition-colors ${
                     active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
@@ -370,7 +370,7 @@ export function SiteHeader() {
         </nav>
 
         {/* audience toggle */}
-        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 lg:flex">
+        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 2xl:flex">
           <Link
             href="/voor-freelancers"
             onClick={() => pick("werknemers")}
@@ -391,7 +391,7 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="ml-auto hidden items-center gap-3 lg:flex 2xl:ml-0">
           <Link
             href="/login"
             className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-white/90"
@@ -400,7 +400,7 @@ export function SiteHeader() {
           </Link>
           <Link
             href={startHref}
-            className="rounded-full bg-brand-mint px-4 py-2 text-sm font-bold text-ink transition hover:brightness-105"
+            className="whitespace-nowrap rounded-full bg-brand-mint px-4 py-2 text-sm font-bold text-ink transition hover:brightness-105"
           >
             Start vandaag
           </Link>

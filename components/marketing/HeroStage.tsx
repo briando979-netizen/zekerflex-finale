@@ -4,11 +4,22 @@ import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * Immersive homepage hero. Dark aurora backdrop, fluid headline, a real photo
- * with a light scroll-parallax and a floating glass "live match" card. Purely
- * presentational — no data, no side effects beyond a passive scroll listener.
+ * Homepage hero. In one look: what ZekerFlex is, and two doors — work or people
+ * (two choices decide faster than five). A live count of real open klussen
+ * proves it's alive; behind it the Netherlands quietly lights up city by city.
+ * Light scroll-parallax on the photo and the glass "live match" card.
  */
-export function HeroStage({ photo }: { photo: ReactNode }) {
+export function HeroStage({
+  photo,
+  map,
+  openCount,
+}: {
+  photo: ReactNode;
+  /** calm animated background (HeroMap) */
+  map?: ReactNode;
+  /** real number of open klussen right now */
+  openCount?: number;
+}) {
   const artRef = useRef<HTMLDivElement | null>(null);
   const glassRef = useRef<HTMLDivElement | null>(null);
   const cueRef = useRef<HTMLDivElement | null>(null);
@@ -37,34 +48,62 @@ export function HeroStage({ photo }: { photo: ReactNode }) {
   return (
     <section className="relative isolate overflow-hidden hero-ink text-white">
       <div className="aurora" aria-hidden />
-      <div className="shell-4k relative grid min-h-[92vh] items-center gap-16 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-28 2xl:min-h-[88vh]">
+      {map && (
+        <div className="pointer-events-none absolute -left-[12%] top-[2%] h-[96%] w-[min(48rem,110vw)] text-white opacity-30 [mask-image:radial-gradient(ellipse_at_30%_55%,black_35%,transparent_75%)] sm:-left-[4%] lg:opacity-45" aria-hidden>
+          {map}
+        </div>
+      )}
+      <div className="shell-4k relative grid items-center gap-14 pb-14 pt-8 sm:py-14 lg:min-h-[86vh] lg:grid-cols-[1.1fr_0.9fr] lg:py-16 2xl:min-h-[82vh]">
         <div className="reveal" data-shown="true">
-          <p className="eyebrow text-brand-mint">Nederlands · onafhankelijk · lokaal gehost</p>
-          <h1 className="fluid-hero mt-5 text-balance font-display font-bold">
-            Zeker van je werk.
-            <br />
+          <p className="eyebrow hidden text-brand-mint sm:block">Zeker van je werk · zeker van je mensen</p>
+          <h1 className="text-balance font-display text-[clamp(2.1rem,1.2rem+2.9vw,4rem)] font-bold leading-[1.04] tracking-tight sm:mt-5">
+            Klussen vinden of mensen inplannen.{" "}
             <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">
-              Zeker van je mensen.
+              In heel Nederland, zeker geregeld.
             </span>
           </h1>
-          <p className="fluid-lead mt-7 max-w-xl text-white/70">
-            Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op
-            reistijd en vakmanschap, met de optie om dezelfde dag uitbetaald te worden, en
-            volledig Wet DBA-proof — zonder tussenpartijen.
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
+            Freelancers, flexwerkers en uitzendkrachten vinden werk in de buurt en kiezen zelf hoe snel ze betaald worden.
+            <span className="hidden sm:inline"> Bedrijven plannen geverifieerde mensen in voor € 3,50 per gewerkt uur — Wet DBA-proof, zonder abonnement.</span>
           </p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/register" className="btn-mint text-base">
-              Ik zoek werk
+
+          {typeof openCount === "number" && openCount > 0 && (
+            <Link href="/klussen" className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-white/[0.06] px-3.5 py-1.5 text-sm text-white/80 ring-1 ring-white/10 transition hover:bg-white/10">
+              <span className="live-dot" aria-hidden />
+              <span>
+                <strong className="font-semibold text-white">{openCount}</strong> open klus{openCount === 1 ? "" : "sen"} — nu live
+              </span>
+              <span aria-hidden className="text-brand-mint">→</span>
             </Link>
-            <Link href="/voor-bedrijven" className="btn-ghost-invert text-base">
-              Ik zoek mensen
+          )}
+
+          <div className="mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
+            <Link
+              href="/register?type=freelancer"
+              className="group rounded-2xl bg-brand-mint p-5 text-ink shadow-glow transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_-12px_rgba(79,224,160,0.6)]"
+            >
+              <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-ink/60">Ik zoek werk</span>
+              <span className="mt-1.5 block font-display text-lg font-bold leading-snug">Vind een klus in de buurt</span>
+              <span className="mt-1 block text-sm text-ink/70">Gratis · ook zonder KVK</span>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold">
+                Start gratis <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </span>
             </Link>
-            <Link href="/shop" className="btn-ghost-invert text-base">
-              Naar de shop
+            <Link
+              href="/register?type=bedrijf"
+              className="group rounded-2xl bg-white/[0.07] p-5 text-white ring-1 ring-white/15 backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.11]"
+            >
+              <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Ik zoek mensen</span>
+              <span className="mt-1.5 block font-display text-lg font-bold leading-snug">Plaats een klus</span>
+              <span className="mt-1 block text-sm text-white/65">€ 3,50 per gewerkt uur</span>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-mint">
+                Mensen inplannen <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </span>
             </Link>
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65">
-            {["Bepaal je eigen uurtarief", "Kies je eigen klussen", "Bouw aan jouw toekomst"].map((t) => (
+
+          <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/60">
+            {["Geverifieerd (KVK + ID)", "Zelf je uitbetaling kiezen", "Geen facturen sturen"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
               </span>
