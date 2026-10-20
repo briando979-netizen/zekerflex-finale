@@ -1,0 +1,46 @@
+# Outside-in uptime check, every 10 minutes, from GitHub's servers (so it
+# still works when the whole site — and its own alerting — is down).
+# On failure:
+#   - GitHub e-mails the repo owner that the workflow failed;
+#   - if the repository secret NTFY_TOPIC is set, a push goes to the ntfy app
+#     on your phone (free: install "ntfy", subscribe to that same topic name).
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: https://www.zekerflex.com
+    steps:
+      - name: Check site
+        id: check
+        run: |
+          fail=""
+          for path in /api/health /login /klussen; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 -L "$SITE$path" || echo 000)
+            echo "$path → $code"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+              # one retry after 20s to avoid alerting on a single blip
+              sleep 20
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 -L "$SITE$path" || echo 000)
+              echo "$path (retry) → $code"
+              if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then fail="$fail $path=$code"; fi
+            fi
+          done
+          echo "fail=$fail" >> "$GITHUB_OUTPUT"
+          if [ -n "$fail" ]; then echo "::error::ZekerFlex niet bereikbaar:$fail"; exit 1; fi
+      - name: Push alert (ntfy)
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -s -H "Title: ZekerFlex is niet bereikbaar" -H "Priority: urgent" -H "Tags: rotating_light" \
+              -d "Uptime-check mislukt:${{ steps.check.outputs.fail }} — kijk op Vercel." "https://ntfy.sh/$NTFY_TOPIC"
+          fi

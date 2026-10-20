@@ -18,6 +18,7 @@ export function credentialsForm(page: Page) {
  */
 export async function login(page: Page, email: string): Promise<void> {
   await page.goto("/login");
+  await dismissCookieBanner(page);
   const form = credentialsForm(page);
   await form.locator('input[name="email"]').fill(email);
   await form.locator('input[name="password"]').fill(CREDS.password);
@@ -51,4 +52,12 @@ export async function expectNoConsoleErrors(errors: string[]): Promise<void> {
       !e.includes("[Fast Refresh]"),
   );
   expect(real, `console errors:\n${real.join("\n")}`).toEqual([]);
+}
+
+/** The cookie banner sits over the bottom of the page — accept it so it never intercepts clicks. */
+export async function dismissCookieBanner(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: /^(accepteren|accept|akceptuję|прийняти)$/i })
+    .click({ timeout: 5_000 })
+    .catch(() => undefined);
 }
