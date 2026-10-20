@@ -3,6 +3,8 @@ import { SITE } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
+import { CITIES } from "@/lib/seo-cities";
+import { publicOpenShifts } from "@/lib/public-shifts";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -26,6 +28,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/voor-freelancers", 0.9, "monthly"),
     entry("/uitzendbureau", 0.9, "weekly"),
     entry("/voor-bedrijven", 0.9, "monthly"),
+
+    // Open klussen (Google for Jobs) + per-city landing pages
+    entry("/klussen", 0.9, "hourly"),
+    entry("/freelance-werk", 0.9, "daily"),
+    entry("/personeel-inhuren", 0.8, "weekly"),
+    ...CITIES.map((c) => entry(`/freelance-werk/${c.slug}`, 0.8, "daily")),
+    ...CITIES.map((c) => entry(`/personeel-inhuren/${c.slug}`, 0.7, "weekly")),
+    ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),

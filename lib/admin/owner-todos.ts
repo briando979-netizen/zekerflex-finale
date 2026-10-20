@@ -283,6 +283,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "google-business",
+      group: "Vindbaarheid & app",
+      title: "Google Bedrijfsprofiel aanmaken (vindbaarheid 'uitzendbureau in de buurt')",
+      why: "Voor zoekopdrachten als 'uitzendbureau' of 'uitzendbureau Amsterdam' laat Google eerst bedrijven op de kaart zien. Zonder Bedrijfsprofiel sta je daar niet tussen, hoe goed de website ook is. Reviews op dat profiel tellen zwaar mee.",
+      how: ["Ga naar business.google.com en maak een profiel voor ZekerFlex (categorie 'Uitzendbureau', tweede categorie 'Arbeidsbemiddelingsbureau').", "Vul het adres van je kantoor in (of kies 'servicegebied: Nederland' als je geen bezoekadres hebt), je telefoonnummer en www.zekerflex.com.", "Verifieer het profiel (Google stuurt een code) en vraag je eerste opdrachtgevers en flexkrachten om een review."],
+      auto: false,
+      done: false,
+    },
+    {
       id: "smtp",
       group: "Beheer & veiligheid",
       title: "Mail echt laten versturen (SMTP)",

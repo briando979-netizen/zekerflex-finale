@@ -41,6 +41,11 @@ export const SITE = {
   shortDescription: "Slim gematcht, zelf je uitbetaling kiezen, volledig Wet DBA-proof.",
   keywords: [
     // wat we zijn
+    "freelance werk",
+    "klussen in heel Nederland",
+    "uitzendbureau",
+    "klus plaatsen",
+    "personeel inhuren",
     "zzp platform",
     "flexwerk platform",
     "uitzendbureau alternatief",
