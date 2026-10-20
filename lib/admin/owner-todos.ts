@@ -283,6 +283,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "vacaturefeed",
+      group: "Vindbaarheid & app",
+      title: "Vacaturefeed aanmelden bij Indeed, Jooble en Adzuna (gratis bereik)",
+      why: "Elke open klus staat automatisch in www.zekerflex.com/vacatures.xml. Vacaturesites halen die feed elke paar uur op en tonen je klussen gratis aan iedereen die daar zoekt.",
+      how: [
+        "Indeed: ga naar indeed.com/hire/xml-feed-guidelines (of mail je accountmanager) en geef de feed-URL www.zekerflex.com/vacatures.xml op als 'organische XML-feed'.",
+        "Jooble: jooble.org/info/partners → 'Add your vacancies via XML' → feed-URL invullen.",
+        "Adzuna en Careerjet: via hun partnerpagina hetzelfde (beide lezen het Indeed-formaat).",
+        "Werk.nl (UWV) neemt alleen vacatures van erkende koppelpartners op; vraag dat aan via werk.nl → werkgevers → 'vacatures koppelen', of plaats grote klussen daar los.",
+      ],
+      auto: false,
+      done: false,
+    },
+    {
       id: "google-business",
       group: "Vindbaarheid & app",
       title: "Google Bedrijfsprofiel aanmaken (vindbaarheid 'uitzendbureau in de buurt')",
