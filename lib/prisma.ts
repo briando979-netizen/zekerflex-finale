@@ -6,6 +6,12 @@ import { env } from "@/lib/env";
  * change, so we cache the instance on `globalThis` to avoid exhausting the
  * database connection pool.
  */
+// schema.prisma's directUrl reads DATABASE_URL_UNPOOLED; if the host stops
+// providing it (Neon integration change), fall back instead of failing.
+if (!process.env.DATABASE_URL_UNPOOLED && process.env.DATABASE_URL) {
+  process.env.DATABASE_URL_UNPOOLED = process.env.DATABASE_URL;
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };

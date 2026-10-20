@@ -32,7 +32,7 @@
     "gen:secrets": "node deploy/scripts/gen-secrets.mjs",
     "deploy": "bash deploy/scripts/deploy.sh",
     "backup": "bash deploy/scripts/backup.sh",
-    "build:with-migrate": "prisma generate && prisma migrate deploy && next build"
+    "build:with-migrate": "node scripts/build-with-migrate.mjs"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
