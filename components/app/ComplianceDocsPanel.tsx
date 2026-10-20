@@ -103,6 +103,140 @@ function DocSlot({
   );
 }
 
+interface BankLogin {
+  status: "verified" | "mismatch";
+  verifiedName: string;
+  ibanLast4: string;
+  problems: ("name" | "iban")[];
+}
+
+/**
+ * Bank account check by logging in at your own bank (iDEAL via Stripe,
+ * lib/kyc/bank-login.ts) — replaces the bank-statement upload. The upload
+ * stays behind a link for people without a Dutch bank.
+ */
+function BankLoginSlot({
+  t,
+  bankDoc,
+  bankOk,
+  onChanged,
+}: {
+  t: AuthDict["page"];
+  bankDoc: Doc | undefined;
+  bankOk: boolean;
+  onChanged: () => void;
+}) {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [result, setResult] = useState<BankLogin | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(Boolean(bankDoc));
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sessionId = url.searchParams.get("bank_session");
+    const load = () =>
+      fetch("/api/me/bank-verify", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => {
+          setEnabled(Boolean(d.enabled));
+          setResult(d.result ?? null);
+        })
+        .catch(() => setEnabled(false));
+    if (sessionId) {
+      url.searchParams.delete("bank_session");
+      window.history.replaceState(null, "", url.toString());
+      if (sessionId === "geannuleerd") {
+        setNote(t.bankLoginCancelled);
+        void load();
+      } else {
+        setChecking(true);
+        fetch("/api/me/bank-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "sync", sessionId }),
+        })
+          .then(() => load())
+          .then(() => onChanged())
+          .finally(() => setChecking(false));
+        return;
+      }
+    }
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function start() {
+    setBusy(true);
+    setNote(null);
+    try {
+      const r = await fetch("/api/me/bank-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start" }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.url) {
+        window.location.href = d.url;
+        return;
+      }
+      setNote(d?.error?.message ?? t.uploadFailed);
+    } catch {
+      setNote(t.uploadFailed);
+    }
+    setBusy(false);
+  }
+
+  const fill = (s: string) => s.replace("{name}", result?.verifiedName ?? "").replace("{last4}", result?.ibanLast4 ?? "");
+  const verified = result?.status === "verified" && bankOk;
+
+  if (enabled === false) {
+    return <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />;
+  }
+
+  return (
+    <div className={`rounded-xl border p-4 ${bankOk ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
+      <p className="text-sm font-semibold text-ink">
+        {t.bankLoginTitle} <span className="text-crit">*</span>
+      </p>
+      <p className="mt-1 text-xs text-neutralx-500">{t.bankLoginHint}</p>
+
+      {checking ? (
+        <p className="mt-3 text-sm text-neutralx-600">{t.bankLoginChecking}</p>
+      ) : verified ? (
+        <p className="mt-3 text-sm font-medium text-ok">{fill(t.bankLoginOk)}</p>
+      ) : (
+        <>
+          {result?.status === "mismatch" && (
+            <p className="mt-3 rounded-lg bg-warn/10 px-3 py-2 text-xs text-neutralx-700">
+              {result.problems.includes("iban") ? fill(t.bankLoginNoIban) : fill(t.bankLoginNoName)}
+            </p>
+          )}
+          {!bankOk && (
+            <button type="button" onClick={() => void start()} disabled={busy || enabled === null} className="btn-primary mt-3 w-full text-sm disabled:opacity-50">
+              {busy ? t.bankLoginBusy : t.bankLoginButton}
+            </button>
+          )}
+        </>
+      )}
+      {note && <p className="mt-2 text-xs text-neutralx-600">{note}</p>}
+
+      {!verified && (
+        <div className="mt-3 border-t border-hair pt-3">
+          {showUpload ? (
+            <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />
+          ) : (
+            <button type="button" onClick={() => setShowUpload(true)} className="text-xs font-medium text-neutralx-500 underline hover:text-ink">
+              {t.bankLoginFallback}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean } = {}) {
   const t = AUTH_DICTS[useI18n().locale].page;
   const [d, setD] = useState<Data | null>(null);
@@ -147,14 +281,7 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
             onUploaded={load}
           />
         )}
-        <DocSlot
-          t={t}
-          kind="bank"
-          label={t.bankLabel}
-          hint={t.bankHint}
-          doc={bankDoc}
-          onUploaded={load}
-        />
+        <BankLoginSlot t={t} bankDoc={bankDoc} bankOk={d.status.bankOk} onChanged={load} />
       </div>
       <p className="text-xs text-neutralx-400">
         {t.other}

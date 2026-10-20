@@ -4,6 +4,7 @@ import { storeUpload, readUpload } from "@/lib/storage/local";
 import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { AppError } from "@/lib/errors";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
+import { bankLoginProvesIban, clearBankLogin } from "@/lib/kyc/bank-login";
 
 // ---------------------------------------------------------------------------
 // Verplichte verificatiedocumenten per account: identiteitsbewijs +
@@ -75,7 +76,7 @@ export async function listDocs(userId: string): Promise<ComplianceDoc[]> {
 }
 
 export async function docStatus(userId: string): Promise<{ idOk: boolean; bankOk: boolean; complete: boolean }> {
-  const [docs, walletVerified] = await Promise.all([
+  const [docs, walletVerified, bankLogin] = await Promise.all([
     listDocs(userId),
     // A verified digital-wallet (lib/kyc/wallet.ts) or Stripe Identity
     // (lib/kyc/stripe-identity.ts) check has no file to upload — it satisfies
@@ -84,9 +85,11 @@ export async function docStatus(userId: string): Promise<{ idOk: boolean; bankOk
       where: { userId, provider: { in: ["DIGITAL_WALLET", "STRIPE_IDENTITY"] }, status: "VERIFIED" },
       select: { id: true },
     }),
+    // Logging in at your bank (lib/kyc/bank-login.ts) replaces the statement.
+    bankLoginProvesIban(userId).catch(() => false),
   ]);
   const idOk = docs.some((d) => d.kind === "id" && d.status !== "rejected") || Boolean(walletVerified);
-  const bankOk = docs.some((d) => d.kind === "bank" && d.status !== "rejected");
+  const bankOk = bankLogin || docs.some((d) => d.kind === "bank" && d.status !== "rejected");
   return { idOk, bankOk, complete: idOk && bankOk };
 }
 
@@ -136,6 +139,7 @@ export async function storeDoc(
  */
 export async function invalidateBankDoc(userId: string): Promise<void> {
   await prisma.complianceDocument.deleteMany({ where: { userId, kind: ComplianceDocKind.BANK } });
+  await clearBankLogin(userId);
 }
 
 /**

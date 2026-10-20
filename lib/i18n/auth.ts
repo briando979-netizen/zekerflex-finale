@@ -111,6 +111,16 @@ export interface AuthDict {
     walletTitle: string;
     walletBody: string;
     walletButton: string;
+    bankLoginTitle: string;
+    bankLoginHint: string;
+    bankLoginButton: string;
+    bankLoginBusy: string;
+    bankLoginChecking: string;
+    bankLoginOk: string;
+    bankLoginNoName: string;
+    bankLoginNoIban: string;
+    bankLoginCancelled: string;
+    bankLoginFallback: string;
   };
   onb: {
     business: string;
@@ -259,8 +269,8 @@ const nl: AuthDict = {
     bankSub: "Nodig voordat je uitbetaald kunt worden — je IBAN wordt hiermee gecontroleerd.",
     allDone: "✓ Je verplichte documenten staan klaar. Je IBAN wordt hiermee gecontroleerd.",
     needBoth: "Upload je identiteitsbewijs en een bankafschrift. Beide zijn verplicht voordat je uitbetaald kunt worden.",
-    needBankHere: "Upload nog een bankafschrift — daarmee controleren we je IBAN. Je identiteitsbewijs regel je hierboven.",
-    needBank: "Upload een bankafschrift. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie.",
+    needBankHere: "Verifieer nog je bankrekening — log in bij je bank, dan controleren we je IBAN direct. Je identiteitsbewijs regel je hierboven.",
+    needBank: "Verifieer je bankrekening. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie.",
     idLabel: "Identiteitsbewijs",
     idHint: "Vul eerst de verificatie hierboven in — die vult dit automatisch. Los uploaden kan ook.",
     bankLabel: "Bankafschrift",
@@ -277,6 +287,16 @@ const nl: AuthDict = {
     walletTitle: "Digitale ID-wallet",
     walletBody: "Heb je een ID in een wallet op dit apparaat staan? Dan hoef je geen foto's te maken.",
     walletButton: "Verifieer met wallet",
+    bankLoginTitle: "Bankrekening verifiëren",
+    bankLoginHint: "Log in bij je eigen bank via iDEAL. Je bank deelt alleen de naam van de rekeninghouder en je rekeningnummer met ons — er wordt niets afgeschreven.",
+    bankLoginButton: "Inloggen bij mijn bank",
+    bankLoginBusy: "Je bank openen…",
+    bankLoginChecking: "We controleren de gegevens van je bank…",
+    bankLoginOk: "✓ Geverifieerd via je bank: {name} · rekening eindigend op {last4}",
+    bankLoginNoName: "Je bank gaf de naam \"{name}\", die niet overeenkomt met je account. Gebruik een rekening op je eigen naam, of upload een bankafschrift.",
+    bankLoginNoIban: "Je bank gaf een rekening eindigend op {last4}, maar in je profiel staat een ander IBAN. Pas je IBAN aan of log in met de juiste rekening.",
+    bankLoginCancelled: "Inloggen bij je bank is afgebroken. Probeer het opnieuw wanneer je wilt.",
+    bankLoginFallback: "Geen Nederlandse bank? Upload een bankafschrift",
   },
   onb: {
     business: "Onderneming",
@@ -425,8 +445,8 @@ const en: AuthDict = {
     bankSub: "Needed before you can be paid — it's how we check your IBAN.",
     allDone: "✓ Your required documents are in place. Your IBAN is checked with them.",
     needBoth: "Upload your ID and a bank statement. Both are required before you can be paid.",
-    needBankHere: "Still upload a bank statement — we use it to check your IBAN. Your ID is handled above.",
-    needBank: "Upload a bank statement. It's required before you can be paid — your ID is already covered by your verification.",
+    needBankHere: "Still verify your bank account — log in at your bank and we check your IBAN instantly. Your ID is handled above.",
+    needBank: "Verify your bank account. It's required before you can be paid — your ID is already covered by your verification.",
     idLabel: "Proof of identity",
     idHint: "Fill in the verification above first — it fills this in automatically. Uploading separately also works.",
     bankLabel: "Bank statement",
@@ -443,6 +463,16 @@ const en: AuthDict = {
     walletTitle: "Digital ID wallet",
     walletBody: "Have an ID in a wallet on this device? Then you don't need to take photos.",
     walletButton: "Verify with wallet",
+    bankLoginTitle: "Verify bank account",
+    bankLoginHint: "Log in at your own bank via iDEAL. Your bank only shares the account holder's name and your account number with us — nothing is charged.",
+    bankLoginButton: "Log in at my bank",
+    bankLoginBusy: "Opening your bank…",
+    bankLoginChecking: "Checking the details from your bank…",
+    bankLoginOk: "✓ Verified via your bank: {name} · account ending in {last4}",
+    bankLoginNoName: "Your bank returned the name \"{name}\", which doesn't match your account. Use an account in your own name, or upload a bank statement.",
+    bankLoginNoIban: "Your bank returned an account ending in {last4}, but your profile has a different IBAN. Update your IBAN or log in with the right account.",
+    bankLoginCancelled: "Logging in at your bank was cancelled. Try again whenever you like.",
+    bankLoginFallback: "No Dutch bank? Upload a bank statement",
   },
   onb: {
     business: "Business",
@@ -591,8 +621,8 @@ const pl: AuthDict = {
     bankSub: "Potrzebny przed pierwszą wypłatą — dzięki niemu sprawdzamy Twój IBAN.",
     allDone: "✓ Wymagane dokumenty są gotowe. Na ich podstawie sprawdzamy Twój IBAN.",
     needBoth: "Prześlij dokument tożsamości i wyciąg bankowy. Oba są wymagane przed wypłatą.",
-    needBankHere: "Prześlij jeszcze wyciąg bankowy — sprawdzamy nim Twój IBAN. Dokument tożsamości załatwiasz powyżej.",
-    needBank: "Prześlij wyciąg bankowy. Jest wymagany przed wypłatą — dokument tożsamości masz już potwierdzony w weryfikacji.",
+    needBankHere: "Zweryfikuj jeszcze konto bankowe — zaloguj się w banku, a od razu sprawdzimy Twój IBAN. Dokument tożsamości załatwiasz powyżej.",
+    needBank: "Zweryfikuj konto bankowe. Jest to wymagane przed wypłatą — dokument tożsamości masz już potwierdzony w weryfikacji.",
     idLabel: "Dokument tożsamości",
     idHint: "Najpierw wypełnij weryfikację powyżej — uzupełni to automatycznie. Możesz też przesłać osobno.",
     bankLabel: "Wyciąg bankowy",
@@ -609,6 +639,16 @@ const pl: AuthDict = {
     walletTitle: "Cyfrowy portfel ID",
     walletBody: "Masz dokument w portfelu cyfrowym na tym urządzeniu? Wtedy nie musisz robić zdjęć.",
     walletButton: "Zweryfikuj portfelem",
+    bankLoginTitle: "Weryfikacja konta bankowego",
+    bankLoginHint: "Zaloguj się w swoim banku przez iDEAL. Bank przekazuje nam tylko imię i nazwisko posiadacza oraz numer konta — nic nie jest pobierane.",
+    bankLoginButton: "Zaloguj się w moim banku",
+    bankLoginBusy: "Otwieranie banku…",
+    bankLoginChecking: "Sprawdzamy dane z Twojego banku…",
+    bankLoginOk: "✓ Zweryfikowano przez bank: {name} · konto kończące się na {last4}",
+    bankLoginNoName: "Bank podał nazwisko \"{name}\", które nie pasuje do Twojego konta. Użyj rachunku na swoje nazwisko lub prześlij wyciąg bankowy.",
+    bankLoginNoIban: "Bank podał konto kończące się na {last4}, ale w profilu masz inny IBAN. Zmień IBAN albo zaloguj się na właściwe konto.",
+    bankLoginCancelled: "Logowanie w banku zostało przerwane. Spróbuj ponownie, kiedy chcesz.",
+    bankLoginFallback: "Nie masz holenderskiego banku? Prześlij wyciąg bankowy",
   },
   onb: {
     business: "Działalność",
@@ -757,8 +797,8 @@ const ro: AuthDict = {
     bankSub: "Necesar înainte de a fi plătit — cu el verificăm IBAN-ul tău.",
     allDone: "✓ Documentele obligatorii sunt în regulă. Cu ele verificăm IBAN-ul tău.",
     needBoth: "Încarcă actul de identitate și un extras de cont. Ambele sunt obligatorii înainte de plată.",
-    needBankHere: "Mai încarcă un extras de cont — cu el verificăm IBAN-ul. Actul de identitate îl rezolvi mai sus.",
-    needBank: "Încarcă un extras de cont. Este obligatoriu înainte de plată — actul de identitate e deja acoperit de verificare.",
+    needBankHere: "Mai verifică-ți contul bancar — autentifică-te la bancă și îți verificăm IBAN-ul imediat. Actul de identitate îl rezolvi mai sus.",
+    needBank: "Verifică-ți contul bancar. Este obligatoriu înainte de plată — actul de identitate e deja acoperit de verificare.",
     idLabel: "Act de identitate",
     idHint: "Completează mai întâi verificarea de mai sus — o completează automat. Poți încărca și separat.",
     bankLabel: "Extras de cont",
@@ -775,6 +815,16 @@ const ro: AuthDict = {
     walletTitle: "Portofel digital ID",
     walletBody: "Ai un act într-un portofel digital pe acest dispozitiv? Atunci nu trebuie să faci fotografii.",
     walletButton: "Verifică prin portofel",
+    bankLoginTitle: "Verifică contul bancar",
+    bankLoginHint: "Autentifică-te la banca ta prin iDEAL. Banca ne transmite doar numele titularului și numărul contului — nu se debitează nimic.",
+    bankLoginButton: "Autentificare la banca mea",
+    bankLoginBusy: "Se deschide banca…",
+    bankLoginChecking: "Verificăm datele de la banca ta…",
+    bankLoginOk: "✓ Verificat prin bancă: {name} · cont care se termină în {last4}",
+    bankLoginNoName: "Banca a transmis numele \"{name}\", care nu corespunde contului tău. Folosește un cont pe numele tău sau încarcă un extras de cont.",
+    bankLoginNoIban: "Banca a transmis un cont care se termină în {last4}, dar în profil ai alt IBAN. Actualizează IBAN-ul sau autentifică-te cu contul corect.",
+    bankLoginCancelled: "Autentificarea la bancă a fost anulată. Încearcă din nou oricând.",
+    bankLoginFallback: "Nu ai bancă olandeză? Încarcă un extras de cont",
   },
   onb: {
     business: "Firmă",
@@ -923,8 +973,8 @@ const uk: AuthDict = {
     bankSub: "Потрібна перед першою виплатою — так ми перевіряємо твій IBAN.",
     allDone: "✓ Обов'язкові документи готові. За ними ми перевіряємо твій IBAN.",
     needBoth: "Завантаж документ і банківську виписку. Обидва потрібні перед виплатою.",
-    needBankHere: "Ще завантаж банківську виписку — нею ми перевіряємо IBAN. Документ ти вже оформлюєш вище.",
-    needBank: "Завантаж банківську виписку. Вона потрібна перед виплатою — документ уже підтверджено перевіркою.",
+    needBankHere: "Ще підтвердь банківський рахунок — увійди у свій банк, і ми одразу перевіримо IBAN. Документ ти вже оформлюєш вище.",
+    needBank: "Підтвердь банківський рахунок. Це потрібно перед виплатою — документ уже підтверджено перевіркою.",
     idLabel: "Документ, що посвідчує особу",
     idHint: "Спершу заповни перевірку вище — це заповниться автоматично. Можна також завантажити окремо.",
     bankLabel: "Банківська виписка",
@@ -941,6 +991,16 @@ const uk: AuthDict = {
     walletTitle: "Цифровий гаманець ID",
     walletBody: "Маєш документ у цифровому гаманці на цьому пристрої? Тоді фото не потрібні.",
     walletButton: "Підтвердити гаманцем",
+    bankLoginTitle: "Підтвердження рахунку",
+    bankLoginHint: "Увійди у свій банк через iDEAL. Банк передає нам лише ім'я власника та номер рахунку — нічого не списується.",
+    bankLoginButton: "Увійти в мій банк",
+    bankLoginBusy: "Відкриваємо банк…",
+    bankLoginChecking: "Перевіряємо дані від твого банку…",
+    bankLoginOk: "✓ Підтверджено через банк: {name} · рахунок, що закінчується на {last4}",
+    bankLoginNoName: "Банк передав ім'я \"{name}\", яке не збігається з твоїм акаунтом. Використай рахунок на своє ім'я або завантаж виписку.",
+    bankLoginNoIban: "Банк передав рахунок, що закінчується на {last4}, але в профілі інший IBAN. Зміни IBAN або увійди з правильним рахунком.",
+    bankLoginCancelled: "Вхід у банк скасовано. Спробуй ще раз, коли захочеш.",
+    bankLoginFallback: "Немає нідерландського банку? Завантаж виписку",
   },
   onb: {
     business: "Підприємство",
