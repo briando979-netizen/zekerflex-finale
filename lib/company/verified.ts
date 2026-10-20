@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Is this company (tenant) verified enough to actually staff people?
@@ -54,3 +55,36 @@ export async function assertMayPlaceShift(tenantId: string): Promise<{ test: boo
 
 export const UNVERIFIED_ASSIGN_MESSAGE =
   "Dit bedrijf is nog niet geverifieerd. Je reactie is genoteerd — je wordt pas ingepland zodra hun KVK is goedgekeurd.";
+
+/**
+ * The company just became verified: tell every freelancer who reacted to its
+ * test klus that they can now confirm (re-tapping "aannemen" schedules them).
+ * Best-effort push; returns how many people were told.
+ */
+export async function notifyPendingReactions(tenantId: string): Promise<number> {
+  try {
+    const matches = await prisma.shiftMatch.findMany({
+      where: {
+        status: "VIEWED",
+        shift: { branch: { tenantId }, startsAt: { gt: new Date() }, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } },
+      },
+      select: { shift: { select: { id: true, title: true, branch: { select: { tenant: { select: { name: true } } } } } }, freelancer: { select: { userId: true } } },
+      take: 200,
+    });
+    if (matches.length === 0) return 0;
+    const { sendUserPush } = await import("@/lib/notifications/push");
+    let told = 0;
+    for (const m of matches) {
+      told += (await sendUserPush([m.freelancer.userId], {
+        title: "Bedrijf geverifieerd — bevestig je klus",
+        body: `${m.shift.branch.tenant.name} is goedgekeurd. Tik op "Aannemen" bij "${m.shift.title}" om ingepland te worden.`,
+        data: { type: "shift", url: `/dashboard/klussen/${m.shift.id}`, tag: `verified-${m.shift.id}` },
+        ttlSeconds: 6 * 60 * 60,
+      }).catch(() => 0)) > 0 ? 1 : 0;
+    }
+    return told;
+  } catch (err) {
+    logger.warn("notify pending reactions failed", { tenantId, error: (err as Error).message });
+    return 0;
+  }
+}

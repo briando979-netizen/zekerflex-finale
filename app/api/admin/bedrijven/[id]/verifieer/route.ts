@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
-import { setTenantApproval } from "@/lib/company/verified";
+import { notifyPendingReactions, setTenantApproval } from "@/lib/company/verified";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,5 +29,6 @@ export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (r
     targetType: "tenant",
     targetId: tenant.id,
   });
-  return NextResponse.json({ ok: true, approved });
+  const notified = approved ? await notifyPendingReactions(tenant.id) : 0;
+  return NextResponse.json({ ok: true, approved, notified });
 });

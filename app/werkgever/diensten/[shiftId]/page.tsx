@@ -15,6 +15,7 @@ import { FreelancerRelationButton } from "@/components/app/FreelancerRelationBut
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { isTenantVerified } from "@/lib/company/verified";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
   const rel = scope.tenantIds[0]
     ? await getEmployerRelations(scope.tenantIds[0])
     : { favorites: [], blocked: [] };
+  const verified = scope.tenantIds[0] ? await isTenantVerified(scope.tenantIds[0]) : true;
+  if (!verified) QUEUE_LABEL.VIEWED = "Heeft gereageerd";
   const favSet = new Set(rel.favorites.map((f) => f.userId));
   const blockSet = new Set(rel.blocked.map((b) => b.userId));
 
@@ -95,6 +98,16 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
           />
         }
       />
+
+      {!verified && (
+        <div className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
+          <p className="font-semibold text-ink">Dit is een testklus</p>
+          <p className="mt-1">
+            Freelancers kunnen reageren — je ziet ze hieronder bij &ldquo;Heeft gereageerd&rdquo; en kunt ze al een bericht sturen.
+            Inplannen kan pas zodra je KVK is goedgekeurd; wie gereageerd heeft krijgt dan automatisch een melding om te bevestigen.
+          </p>
+        </div>
+      )}
 
       {s.invitedPool && (
         <div className="mb-6">

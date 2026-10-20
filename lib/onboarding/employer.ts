@@ -1,3 +1,4 @@
+import { notifyPendingReactions } from "@/lib/company/verified";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,8 @@ export async function submitEmployerOnboarding(
     targetId: tenantId,
     metadata: { kvkValid, branchId: branch.id },
   });
+
+  if (kvkValid) void notifyPendingReactions(tenantId);
 
   return { kvkValid, companyName, branchId: branch.id, reasons: [...new Set(reasons)] };
 }
