@@ -232,7 +232,18 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             )}
             <div className="flex-1 overflow-y-auto py-4">
               {items.length === 0 ? (
-                <div className="py-16 text-center"><LogoGlyph size={44} /><p className="mt-4 font-semibold">{t.shop.cartEmpty}</p></div>
+                <div className="flex flex-col items-center py-16 text-center">
+                  <span className="grid h-16 w-16 place-items-center rounded-full bg-paper-soft text-neutralx-400" aria-hidden>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 7h12l-1 13H7L6 7Z" />
+                      <path d="M9 7a3 3 0 0 1 6 0" />
+                    </svg>
+                  </span>
+                  <p className="mt-4 font-semibold">{t.shop.cartEmpty}</p>
+                  <button type="button" onClick={() => setDrawer(false)} className="mt-5 rounded-full border border-hairstrong px-5 py-2 text-sm font-semibold hover:border-ink">
+                    {t.shop.continueShopping}
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {items.map((l) => (

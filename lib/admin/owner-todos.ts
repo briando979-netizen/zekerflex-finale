@@ -283,6 +283,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "smtp",
+      group: "Beheer & veiligheid",
+      title: "Mail echt laten versturen (SMTP)",
+      why: "Zonder SMTP-instellingen worden mails (codes, welkomstmails, facturen, herinneringen) alleen in Admin → Mail bewaard en komen ze nooit bij gebruikers aan.",
+      how: ["Pak de SMTP-gegevens van je mailprovider (bijv. TransIP, Mailgun, Postmark of je eigen mailserver): host, poort, gebruikersnaam, wachtwoord.", "Vercel → Settings → Environment Variables: zet SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS en MAIL_FROM (bijv. no-reply@zekerflex.com) en deploy opnieuw.", "Controleer in Admin → Mail dat nieuwe mails als 'verstuurd' staan in plaats van alleen 'opgeslagen'."],
+      auto: true,
+      done: Boolean(process.env.SMTP_HOST?.trim()),
+    },
+    {
       id: "stripe-identity",
       group: "Geld & bank",
       title: "ID-controle via Stripe Identity aanzetten",

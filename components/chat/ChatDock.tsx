@@ -221,6 +221,8 @@ export function ChatDock() {
   };
 
   const startSupport = async () => {
+    const existing = threads.find((t) => t.kind === "support");
+    if (existing) return setActive(existing.id);
     const r = await fetch("/api/inbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ support: true, text: "Hoi, ik heb een vraag." }) });
     const d = await r.json();
     if (r.ok && d.threadId) {

@@ -78,7 +78,8 @@ export async function overdueInvoices(now = new Date()): Promise<OverdueInvoice[
   return out.sort((a, b) => b.daysLate - a.daysLate);
 }
 
-async function recipientsFor(tenantId: string): Promise<string[]> {
+/** Billing contact, or else the company's admins (most employers never fill in a separate billing address). */
+export async function recipientsFor(tenantId: string): Promise<string[]> {
   const extra = await getOrgProfileExtra(tenantId);
   if (extra.billingEmail) return [extra.billingEmail];
   const admins = await prisma.membership.findMany({ where: { tenantId, role: "HQ_ADMIN", user: { disabledAt: null } }, select: { user: { select: { email: true } } }, take: 3 });

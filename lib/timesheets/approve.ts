@@ -37,6 +37,7 @@ import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
+import { recipientsFor } from "@/lib/billing/reminders";
 import type { ComputedInvoice } from "@/types/billing";
 
 export interface ApproveTimesheetInput {
@@ -677,8 +678,10 @@ async function notifyInvoiceIssued(args: {
   from?: string;
 }): Promise<void> {
   try {
-    const extra = await getOrgProfileExtra(args.tenantId);
-    if (!extra.billingEmail) return;
+    // Billing address if set, otherwise the company's admins — before this, no
+    // billing address meant no invoice mail at all.
+    const to = await recipientsFor(args.tenantId);
+    if (to.length === 0) return;
     const mail = invoiceIssuedEmail(
       args.orgName,
       `${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/facturen`,
@@ -686,7 +689,7 @@ async function notifyInvoiceIssued(args: {
       args.totalCents,
       args.description,
     );
-    await sendMail({ ...mail, to: extra.billingEmail, ...(args.from ? { from: args.from } : {}) });
+    for (const addr of to) await sendMail({ ...mail, to: addr, ...(args.from ? { from: args.from } : {}) });
   } catch (err) {
     args.log.warn("invoice-issued mail failed", { error: (err as Error).message, invoiceNumber: args.invoiceNumber });
   }

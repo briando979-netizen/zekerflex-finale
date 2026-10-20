@@ -26,9 +26,12 @@ const visibleQuery = () => (document.visibilityState === "visible" ? "?visible=1
 
 export function InboxPage({
   mobileHeight = "h-[calc(100dvh-12rem)]",
+  desktopHeight = "md:h-[calc(100vh-15rem)]",
 }: {
   /** Tailwind height class below md, where the inbox is one pane at a time (the shell's chrome differs per area) */
   mobileHeight?: string;
+  /** Tailwind md: height class — the employer shell has more chrome above the chat than the freelancer app */
+  desktopHeight?: string;
 } = {}) {
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
   // Below md there's room for one pane: the list, or the open conversation (WhatsApp-style).
@@ -206,6 +209,14 @@ export function InboxPage({
   };
 
   const startSupport = async () => {
+    // Already talking to Support → just open that conversation (this used to post
+    // "Hoi, ik heb een vraag." again on every click).
+    const existing = threads.find((t) => t.kind === "support");
+    if (existing) {
+      setTab("chats");
+      openThread(existing.id);
+      return;
+    }
     const r = await fetch("/api/inbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -239,11 +250,11 @@ export function InboxPage({
     // One column with a fixed height: the push banner takes what it needs and
     // the chat gets the rest — so the composer never slides under the bottom
     // tab bar on a phone (the banner used to come on top of the chat height).
-    <div className={`flex ${mobileHeight} flex-col gap-3 md:h-[calc(100vh-15rem)]`}>
+    <div className={`flex ${mobileHeight} min-h-[26rem] flex-col gap-3 ${desktopHeight}`}>
     <div className="flex-shrink-0 empty:hidden">
       <PushToggle variant="banner" />
     </div>
-    <div className="chat-surface grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:grid-cols-[minmax(0,20rem)_1fr]">
+    <div className="chat-surface grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
       {/* ─── left pane ─── */}
       <div className={`${pane === "conversation" && activeThread ? "hidden md:flex" : "flex"} min-h-0 flex-col border-hair md:border-r`}>
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
