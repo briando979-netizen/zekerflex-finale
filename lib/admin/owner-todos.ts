@@ -301,9 +301,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Android-app bouwen en in de Play Store zetten",
       why: "Een echte app in de Play Store geeft betrouwbare pushmeldingen en een icoon op het beginscherm. Het project, het icoon en de ondertekeningssleutel staan klaar in de map android-twa (niet in Git).",
       how: [
-        "Open Android Studio → Open → kies de map 'android-twa' in de ZekerFlex-map. Laat Android Studio de ontbrekende SDK-onderdelen installeren als hij daarom vraagt.",
+        "Open Android Studio → Open → kies de map 'android-twa' in de ZekerFlex-map. Klik bij de melding over de SDK op 'Install missing platform' / 'Sync' — het project is al bijgewerkt naar de nieuwste Android-plugin.",
         "Build → Generate Signed App Bundle / APK → Android App Bundle → kies android-release.keystore, alias 'zekerflex' en het wachtwoord uit KEYSTORE-CREDENTIALS.txt → release.",
-        "Maak een Google Play-ontwikkelaarsaccount (eenmalig $25) op play.google.com/console, maak de app 'ZekerFlex' aan (pakketnaam com.zekerflex) en upload het .aab-bestand uit app/release.",
+        "Ga naar play.google.com/console (je ontwikkelaarsaccount is al betaald) → App maken → 'ZekerFlex', pakketnaam com.zekerflex → Productie of Interne test → upload het .aab-bestand uit app/release.",
+        "Play Console → Instellingen → App-integriteit: kopieer de SHA-256 van de 'App-ondertekeningssleutel' en stuur hem door; die moet in /.well-known/assetlinks.json zodat de app zonder adresbalk opent.",
         "Zet KEYSTORE-CREDENTIALS.txt en android-release.keystore ook in je wachtwoordmanager: zonder die sleutel kun je de app nooit meer bijwerken.",
       ],
       auto: false,
