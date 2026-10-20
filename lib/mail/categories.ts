@@ -104,6 +104,7 @@ export function mailCategoryForKind(kind?: string): string {
 const REPLIABLE_KINDS = new Set([
   "support",
   "invoice-reminder", // clients reply with questions about an invoice
+  "onboarding-reminder", // new users reply when they're stuck finishing their account
   "replacement",
   "demo-aanvraag",
   "demo-aanvraag-bevestiging",

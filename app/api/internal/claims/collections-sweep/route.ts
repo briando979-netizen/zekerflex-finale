@@ -4,6 +4,7 @@ import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { sweepClaimCollections } from "@/lib/claims/collections-sweep";
 import { runInvoiceReminders } from "@/lib/billing/reminders";
+import { runOnboardingReminders } from "@/lib/onboarding/reminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,10 +31,20 @@ async function handle(request: Request): Promise<NextResponse> {
     logger.error("invoice reminders failed", { error: (err as Error).message });
     reminders = { error: "failed" };
   }
+  // "Maak je account af"-mails for sign-ups that never finished; same 09:00 run.
+  let onboarding: Awaited<ReturnType<typeof runOnboardingReminders>> | { error: string };
+  try {
+    onboarding = await runOnboardingReminders();
+    recordCronRun("onboarding-reminders", true);
+  } catch (err) {
+    recordCronRun("onboarding-reminders", false);
+    logger.error("onboarding reminders failed", { error: (err as Error).message });
+    onboarding = { error: "failed" };
+  }
   try {
     const result = await sweepClaimCollections();
     recordCronRun("claim-collections-sweep", true);
-    return NextResponse.json({ ok: true, ...result, reminders });
+    return NextResponse.json({ ok: true, ...result, reminders, onboarding });
   } catch (err) {
     recordCronRun("claim-collections-sweep", false);
     logger.error("claim collections sweep failed", { error: (err as Error).message });

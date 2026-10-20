@@ -374,6 +374,49 @@ export function welcomeEmail(
   };
 }
 
+/** Reminder for an account that was created but not finished (data / verification). */
+export function onboardingReminderEmail(
+  fullName: string,
+  kind: "freelancer" | "uitzendkracht" | "bedrijf",
+  appUrl: string,
+  step: number,
+): MailInput {
+  const first = fullName.split(" ")[0] || fullName;
+  const base = appUrl.replace(/\/+$/, "");
+  const { href, todo, why } =
+    kind === "bedrijf"
+      ? {
+          href: `${base}/werkgever`,
+          todo: "vul je KVK-nummer en eerste vestiging in",
+          why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één testklus uitzetten.",
+        }
+      : kind === "uitzendkracht"
+        ? {
+            href: `${base}/dashboard/verificatie`,
+            todo: "vul je thuisbasis en rekeningnummer in en bevestig je identiteit",
+            why: "Daarna kun je direct op klussen reageren en word je uitbetaald via ZekerFlex.",
+          }
+        : {
+            href: `${base}/dashboard/verificatie`,
+            todo: "koppel je KVK- of btw-nummer en bevestig je identiteit",
+            why: "Daarna kun je direct klussen aannemen bij bedrijven in heel Nederland en word je snel uitbetaald.",
+          };
+  const subject = step >= 3 ? "Laatste herinnering: maak je ZekerFlex-account af" : "Je ZekerFlex-account is bijna klaar";
+  return {
+    to: "",
+    subject,
+    kind: "onboarding-reminder",
+    text: `Hoi ${first},\n\nJe ZekerFlex-account is nog niet af: ${todo}. ${why}\n\nHet duurt een paar minuten: ${href}\n\nVragen? Antwoord gewoon op deze mail.`,
+    html: shell(
+      subject,
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je account is nog niet af: <strong>${todo}</strong>.</p>
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${why} Het kost een paar minuten.</p>
+       <p style="margin:0">${button(href, "Account afmaken")}</p>
+       <p style="margin:20px 0 0;font-size:12px;color:#667469">Vragen? Antwoord gewoon op deze mail.</p>`,
+    ),
+  };
+}
+
 export function passwordResetEmail(fullName: string, link: string): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   return {
