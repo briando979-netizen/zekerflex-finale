@@ -112,8 +112,58 @@ function next(
   return decorate(NextResponse.next({ request: { headers } }), ctx);
 }
 
+// ---------------------------------------------------------------------------
+// Android app (TWA) mode: the app always launches /start?utm_source=twa, which
+// sets APP_COOKIE. With it, the public marketing site is off-limits — any page
+// outside APP_ALLOWED bounces to /start (→ login or your own dashboard). Legal
+// pages Google Play requires, the shop and the kennisbank (linked from the
+// dashboards) stay reachable. /?app=0 leaves app mode.
+// ---------------------------------------------------------------------------
+const APP_COOKIE = "zf_app";
+const APP_ALLOWED = [
+  "/start", "/login", "/register", "/wachtwoord-vergeten", "/wachtwoord-herstellen", "/verifieer-email",
+  "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
+  "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
+  "/shop", "/kennis", "/offline",
+];
+
+function isAppLaunch(req: NextRequest): boolean {
+  return (
+    (req.nextUrl.pathname === "/start" && req.nextUrl.searchParams.get("utm_source") === "twa") ||
+    (req.headers.get("referer") ?? "").startsWith("android-app://com.zekerflex")
+  );
+}
+
+function appAllowed(pathname: string): boolean {
+  return APP_ALLOWED.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  const res = await handle(req);
   const pathname = req.nextUrl.pathname;
+  if (pathname.startsWith("/api/")) return res;
+  if (req.nextUrl.searchParams.get("app") === "0") {
+    res.cookies.delete(APP_COOKIE);
+  } else if (isAppLaunch(req) && !req.cookies.get(APP_COOKIE)) {
+    res.cookies.set(APP_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: !IS_DEV });
+  }
+  return res;
+}
+
+async function handle(req: NextRequest): Promise<NextResponse> {
+  const pathname = req.nextUrl.pathname;
+
+  if (
+    !pathname.startsWith("/api/") &&
+    req.cookies.get(APP_COOKIE)?.value === "1" &&
+    req.nextUrl.searchParams.get("app") !== "0" &&
+    !appAllowed(pathname)
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/start";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   // Markdown content negotiation: an agent sending `Accept: text/markdown`
   // gets the real Markdown rendering for the handful of pages that have one
