@@ -85,12 +85,50 @@ export function trackEvent(
   });
 }
 
+// ---- attention: how long a page is really looked at -----------------------
+// Visible time only (a tab in the background doesn't count), tab switched
+// away/back, page left. Same anonymous session id; see lib/analytics/live.ts.
+
+let visibleSince: number | null = null;
+let currentPath = "/";
+
+function ping(e: string, extra: Record<string, unknown> = {}) {
+  try {
+    const body = JSON.stringify({ id: sessionId(), e, p: currentPath, w: window.innerWidth, ...extra });
+    if (navigator.sendBeacon) navigator.sendBeacon("/api/analytics/ping", body);
+    else void fetch("/api/analytics/ping", { method: "POST", body, keepalive: true }).catch(() => undefined);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Visible milliseconds since the last report, and restart the clock. */
+function takeVisible(): number {
+  if (visibleSince === null) return 0;
+  const now = performance.now();
+  const ms = now - visibleSince;
+  visibleSince = document.visibilityState === "visible" ? now : null;
+  return Math.round(ms);
+}
+
+/** For nudges and other on-page prompts: shown / clicked. */
+export function pingNudge(id: string, what: "shown" | "click") {
+  ping(what === "shown" ? "nudge-shown" : "nudge-click", { n: id });
+}
+
 export function AnalyticsBeacon() {
   const pathname = usePathname();
   const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
     if (lastPath.current === pathname) return;
+    if (lastPath.current !== null) {
+      const ms = takeVisible();
+      if (ms > 0) ping("beat", { ms }); // credit the page we're leaving
+    }
+    currentPath = pathname;
+    visibleSince = document.visibilityState === "visible" ? performance.now() : null;
+    ping("view", lastPath.current === null && document.referrer ? { r: document.referrer } : {});
     lastPath.current = pathname;
     enqueue({
       type: "PAGEVIEW",
@@ -113,14 +151,30 @@ export function AnalyticsBeacon() {
       enqueue({ type: "CLICK", path: location.pathname, label });
     };
     const onHide = () => flush(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        onHide();
+        ping("hide", { ms: takeVisible() });
+      } else {
+        visibleSince = performance.now();
+        ping("show");
+      }
+    };
+    const onLeave = () => {
+      onHide();
+      ping("leave", { ms: takeVisible() });
+    };
+    const beat = setInterval(() => {
+      if (document.visibilityState === "visible") ping("beat", { ms: takeVisible() });
+    }, 15_000);
     document.addEventListener("click", onClick, { capture: true });
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") onHide();
-    });
-    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onLeave);
     return () => {
+      clearInterval(beat);
       document.removeEventListener("click", onClick, { capture: true });
-      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onLeave);
     };
   }, []);
 

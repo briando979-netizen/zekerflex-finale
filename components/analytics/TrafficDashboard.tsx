@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { APageHeader, APanel, AStat } from "@/components/admin/ui";
+import { LiveAttention } from "@/components/analytics/LiveAttention";
 
 interface Live {
   activeVisitors: number;
@@ -85,6 +86,8 @@ export function TrafficDashboard() {
           </span>
         }
       />
+
+      <LiveAttention />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <AStat label="Actieve bezoekers" value={live?.activeVisitors ?? "–"} sub="laatste 5 min" watermark={<Glyph />} />

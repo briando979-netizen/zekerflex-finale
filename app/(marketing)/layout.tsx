@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { ChatWidgetLazy } from "@/components/marketing/ChatWidgetLazy";
 import { ScrollProgress } from "@/components/marketing/ScrollProgress";
+import { VisitorNudge } from "@/components/marketing/VisitorNudge";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <ChatWidgetLazy />
+      <VisitorNudge />
     </div>
   );
 }
