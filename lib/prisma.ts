@@ -9,7 +9,8 @@ import { env } from "@/lib/env";
 // schema.prisma's directUrl reads DATABASE_URL_UNPOOLED; if the host stops
 // providing it (Neon integration change), fall back instead of failing.
 if (!process.env.DATABASE_URL_UNPOOLED && process.env.DATABASE_URL) {
-  process.env.DATABASE_URL_UNPOOLED = process.env.DATABASE_URL;
+  // Neon's direct host is the pooled host without "-pooler".
+  process.env.DATABASE_URL_UNPOOLED = process.env.DATABASE_URL.replace("-pooler.", ".");
 }
 
 const globalForPrisma = globalThis as unknown as {
