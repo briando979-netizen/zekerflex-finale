@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/components/app/ui";
 import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
+import { KycOverride } from "@/components/admin/KycOverride";
 import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
@@ -25,6 +26,7 @@ const CHECK_PROVIDER_LABEL: Record<string, string> = {
   AI_LOCAL: "Zelf-verificatie (foto's)",
   DIGITAL_WALLET: "Digitale ID-wallet",
   DIDIT: "Didit (extern)",
+  ADMIN_MANUAL: "Handmatig door beheerder",
 };
 
 const DOC_KIND_LABEL: Record<DocKind, string> = {
@@ -214,6 +216,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
           )}
 
           <Panel title="Identiteitscontroles">
+            {!isDeleted && <KycOverride userId={user.id} status={user.kycStatus} />}
             {user.identityChecks.length === 0 ? (
               <EmptyState title="Geen controles" body="Er is nog geen identiteitscheck gestart." />
             ) : (
