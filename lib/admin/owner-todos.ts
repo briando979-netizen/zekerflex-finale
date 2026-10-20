@@ -283,6 +283,33 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "github-billing",
+      group: "Beheer & veiligheid",
+      title: "GitHub-account ontgrendelen (betaalprobleem) — anders draaien de automatische tests en de uptime-bewaking niet",
+      why: "Bij elke push test GitHub nu automatisch aanmelden, verificatie, reageren en facturen, en elke 10 minuten wordt gecontroleerd of de site bereikbaar is. GitHub weigert die taken te starten: 'your account is locked due to a billing issue'.",
+      how: [
+        "Ga naar github.com → Settings → Billing and plans en los de betaalmelding op (vaak een verlopen kaart of een openstaande factuur).",
+        "Kijk daarna bij de repository onder Actions: de run 'CI' moet groen worden.",
+        "Optioneel, push op je telefoon bij storing: installeer de app 'ntfy', abonneer je op een eigen geheime naam (bijv. zekerflex-alarm-8k2q) en zet die naam als repository-secret NTFY_TOPIC (Settings → Secrets and variables → Actions).",
+      ],
+      auto: false,
+      done: false,
+    },
+    {
+      id: "play-store-app",
+      group: "Vindbaarheid & app",
+      title: "Android-app bouwen en in de Play Store zetten",
+      why: "Een echte app in de Play Store geeft betrouwbare pushmeldingen en een icoon op het beginscherm. Het project, het icoon en de ondertekeningssleutel staan klaar in de map android-twa (niet in Git).",
+      how: [
+        "Open Android Studio → Open → kies de map 'android-twa' in de ZekerFlex-map. Laat Android Studio de ontbrekende SDK-onderdelen installeren als hij daarom vraagt.",
+        "Build → Generate Signed App Bundle / APK → Android App Bundle → kies android-release.keystore, alias 'zekerflex' en het wachtwoord uit KEYSTORE-CREDENTIALS.txt → release.",
+        "Maak een Google Play-ontwikkelaarsaccount (eenmalig $25) op play.google.com/console, maak de app 'ZekerFlex' aan (pakketnaam com.zekerflex) en upload het .aab-bestand uit app/release.",
+        "Zet KEYSTORE-CREDENTIALS.txt en android-release.keystore ook in je wachtwoordmanager: zonder die sleutel kun je de app nooit meer bijwerken.",
+      ],
+      auto: false,
+      done: false,
+    },
+    {
       id: "vacaturefeed",
       group: "Vindbaarheid & app",
       title: "Vacaturefeed aanmelden bij Indeed, Jooble en Adzuna (gratis bereik)",
