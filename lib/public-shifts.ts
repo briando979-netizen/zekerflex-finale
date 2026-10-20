@@ -89,6 +89,10 @@ export async function publicOpenShifts(opts: { near?: { lat: number; lng: number
   return opts.take ? out.slice(0, opts.take) : out;
 }
 
+export async function publicShiftTenant(id: string): Promise<string | null> {
+  return (await prisma.shift.findUnique({ where: { id }, select: { branch: { select: { tenantId: true } } } }))?.branch.tenantId ?? null;
+}
+
 export async function publicShift(id: string): Promise<PublicShift | null> {
   const s = (await prisma.shift.findFirst({
     where: { id, status: { in: [...OPEN] }, visibility: "PUBLIC", startsAt: { gt: new Date() } },

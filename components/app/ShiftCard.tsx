@@ -103,7 +103,15 @@ export function ShiftCard({
       {/* body */}
       <div className="flex flex-1 flex-col p-4">
         <Link href={href} className="block">
-          <p className="text-xs font-semibold text-brand-600">{shift.branch}</p>
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-600">
+            <span className="truncate">{shift.branch}</span>
+            {shift.companyRating && (
+              <span className="flex flex-shrink-0 items-center gap-0.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink" title={`${shift.companyRating.count}`}>
+                ★ {shift.companyRating.average.toFixed(1).replace(".", ",")}
+                <span className="font-medium text-money-ink/70">({shift.companyRating.count})</span>
+              </span>
+            )}
+          </p>
           <p className="mt-0.5 font-display text-base font-bold leading-snug text-ink">{shift.title}</p>
         </Link>
 

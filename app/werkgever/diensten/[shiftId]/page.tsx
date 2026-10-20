@@ -16,6 +16,7 @@ import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton"
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
+import { freelancerRatings } from "@/lib/reviews/ratings";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,15 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
     : { favorites: [], blocked: [] };
   const verified = scope.tenantIds[0] ? await isTenantVerified(scope.tenantIds[0]) : true;
   if (!verified) QUEUE_LABEL.VIEWED = "Heeft gereageerd";
+  const ratings = await freelancerRatings([...s.assigned.map((a) => a.userId), ...s.queue.slice(0, 10).map((q) => q.userId)]);
+  const stars = (userId: string) => {
+    const r = ratings.get(userId);
+    return r ? (
+      <span className="ml-1.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink">
+        ★ {r.average.toFixed(1).replace(".", ",")} ({r.count})
+      </span>
+    ) : null;
+  };
   const favSet = new Set(rel.favorites.map((f) => f.userId));
   const blockSet = new Set(rel.blocked.map((b) => b.userId));
 
@@ -180,7 +190,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar url={a.avatarUrl} name={a.name} />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">{a.name}</p>
+                      <p className="text-sm font-medium text-ink">
+                        {a.name}
+                        {stars(a.userId)}
+                      </p>
                       <p className="text-xs text-neutralx-500">
                         {fmt(d.reliability, { n: Math.round(a.reliability * 100) })} · {a.badge} · {fmt(d.acceptedOn, { date: dateTime(a.acceptedAt) })}
                       </p>
@@ -213,7 +226,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar url={q.avatarUrl} name={q.name} />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">{q.name}</p>
+                      <p className="text-sm font-medium text-ink">
+                        {q.name}
+                        {stars(q.userId)}
+                      </p>
                       <p className="text-xs text-neutralx-500">
                         {fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes })}
                       </p>

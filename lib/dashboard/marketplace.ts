@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { companyRatings } from "@/lib/reviews/ratings";
 import { fastPayAvailableFor } from "@/lib/payouts/fastpay";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { getPrefs, type UserPrefs } from "@/lib/prefs/store";
@@ -63,6 +64,8 @@ export interface MarketplaceShift {
   fastPay: boolean;
   /** only uitzendkrachten (payroll-track) can react to this shift */
   viaUitzendbureau: boolean;
+  /** what other freelancers rated this company (null = no reviews yet) */
+  companyRating?: { average: number; count: number } | null;
 }
 
 export interface MarketplaceData {
@@ -310,6 +313,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   );
 
   const fastPayByTenant = await fastPayAvailableFor(visible.map((s) => s.branch.tenantId));
+  const ratingByTenant = await companyRatings(visible.map((s) => s.branch.tenantId));
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
       if (s.createdAt.getTime() > lastSeen) newSinceLastVisit += 1;
@@ -340,6 +344,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         myOffer: offerByShift.get(s.id) ?? null,
         fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
+        companyRating: ratingByTenant.get(s.branch.tenantId) ?? null,
         match: computeMatch(
           home,
           profile?.reliabilityScore ?? 0.7,
