@@ -1,12 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
-
-const POINTS = [
-  "Zelf kiezen hoe snel je uitbetaald wordt",
-  "Modelovereenkomst en Wet DBA-bewaking inbegrepen",
-  "Volledig lokaal gehost — jouw data blijft van jou",
-];
+import { AuthLanguage } from "@/components/auth/AuthLanguage";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
+import type { Locale } from "@/lib/i18n/config";
 
 export function AuthShell({
   title,
@@ -14,6 +11,7 @@ export function AuthShell({
   children,
   footer,
   image,
+  locale,
 }: {
   title: string;
   subtitle: string;
@@ -22,7 +20,11 @@ export function AuthShell({
   /** optional photo for the left brand panel (path under /public); falls back
    *  to the plain dark panel if the file is missing */
   image?: string;
+  /** shows the language picker and translates the side panel (sign-up / log-in / confirm) */
+  locale?: Locale;
 }) {
+  const a = AUTH_DICTS[locale ?? "nl"];
+  const POINTS = a.shell.points;
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
       {/* Brand panel */}
@@ -46,7 +48,7 @@ export function AuthShell({
 
           <div className="relative z-10">
             <h2 className="max-w-sm text-balance font-display text-3xl font-bold leading-tight">
-              Zeker van je werk, zeker van je mensen.
+              {a.shell.tagline}
             </h2>
             <ul className="mt-8 space-y-3">
               {POINTS.map((p) => (
@@ -71,10 +73,13 @@ export function AuthShell({
       {/* Form panel */}
       <div className="flex flex-col justify-center bg-paper px-6 py-12 sm:px-12">
         <div className="mx-auto w-full max-w-sm">
-          <Link href="/" className="flex items-center gap-2.5">
-            <LogoGlyph size={28} />
-            <span className="font-display text-lg font-bold">ZekerFlex</span>
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href="/" className="flex items-center gap-2.5">
+              <LogoGlyph size={28} />
+              <span className="font-display text-lg font-bold">ZekerFlex</span>
+            </Link>
+            {locale && <AuthLanguage locale={locale} label={a.lang} />}
+          </div>
           <hr className="mt-4 border-t border-hair" />
 
           <h1 className="mt-7 font-display text-2xl font-bold text-ink">{title}</h1>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { env } from "@/lib/env";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { getLocale } from "@/lib/i18n/server";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
@@ -27,22 +29,26 @@ export default async function RegisterPage(
         }
       : undefined;
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  const locale = await getLocale();
+  const t = AUTH_DICTS[locale].register;
 
   return (
     <AuthShell
       image="/marketing/auth-login.jpg"
-      title="Maak je account aan"
-      subtitle="Vul je gegevens in."
+      locale={locale}
+      title={t.title}
+      subtitle={t.subtitle}
       footer={
         <>
-          Heb je al een account?{" "}
+          {t.haveAccount}{" "}
           <Link href="/login" className="font-semibold text-brand-600 hover:underline">
-            Inloggen
+            {t.login}
           </Link>
         </>
       }
     >
       <RegisterForm
+        locale={locale}
         defaultType={defaultType}
         {...(defaultWorkerKind ? { defaultWorkerKind } : {})}
         {...(prefill ? { prefill } : {})}

@@ -8,24 +8,30 @@ import {
   type CodeState,
 } from "@/app/verifieer-email/actions";
 
+import { AUTH_DICTS } from "@/lib/i18n/auth";
+import type { Locale } from "@/lib/i18n/config";
+
 const initialCode: CodeState = { error: null };
 
-function SubmitCode() {
+function SubmitCode({ label, busy }: { label: string; busy: string }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="btn-primary w-full">
-      {pending ? "Bevestigen…" : "Bevestig mijn account"}
+      {pending ? busy : label}
     </button>
   );
 }
 
 export function ResendVerification({
+  locale = "nl",
   devLink,
   devCode,
 }: {
+  locale?: Locale;
   devLink: string | null;
   devCode?: string | null;
 }) {
+  const t = AUTH_DICTS[locale].verify;
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(devLink);
@@ -36,7 +42,7 @@ export function ResendVerification({
     <div className="space-y-4">
       <form action={formAction} className="space-y-2">
         <label htmlFor="code" className="block text-sm font-medium text-ink">
-          Vul de 6-cijferige code uit de e-mail in
+          {t.codeLabel}
         </label>
         <input
           id="code"
@@ -48,7 +54,7 @@ export function ResendVerification({
           className="w-full rounded-lg border border-hairstrong px-4 py-3 text-center font-mono text-2xl tracking-[0.4em] outline-none focus:border-brand-500"
         />
         {state.error && <p className="text-sm text-crit">{state.error}</p>}
-        <SubmitCode />
+        <SubmitCode label={t.confirm} busy={t.confirming} />
       </form>
 
       <div className="border-t border-hair pt-3">
@@ -65,15 +71,14 @@ export function ResendVerification({
           }
           className="btn-ghost"
         >
-          {pending ? "Bezig…" : "Stuur de code opnieuw"}
+          {pending ? t.busy : t.resend}
         </button>
         {msg && <p className="mt-2 text-sm text-neutralx-600">{msg}</p>}
       </div>
 
       {(code || link) && (
         <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs text-neutralx-600">
-          <span className="font-semibold text-ink">Lokale omgeving:</span> er is nog geen
-          externe e-mailserver ingesteld, dus hier is je verificatie direct.
+          {t.local}
           {code && (
             <p className="mt-2 font-mono text-lg tracking-[0.3em] text-brand-600">{code}</p>
           )}

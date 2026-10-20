@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 interface WalletCheck {
   label: string;
@@ -39,6 +41,7 @@ type Stage =
  */
 export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean }) {
   const router = useRouter();
+  const pt = AUTH_DICTS[useI18n().locale].page;
   const [stage, setStage] = useState<Stage>({ kind: "checking" });
 
   useEffect(() => {
@@ -109,10 +112,8 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
     return (
       <div className="card flex items-center justify-between gap-4 p-5">
         <div>
-          <p className="text-sm font-semibold text-ink">Digitale ID-wallet</p>
-          <p className="mt-0.5 text-xs text-neutralx-500">
-            Heb je een ID in een wallet op dit apparaat staan? Dan hoef je geen foto&apos;s te maken.
-          </p>
+          <p className="text-sm font-semibold text-ink">{pt.walletTitle}</p>
+          <p className="mt-0.5 text-xs text-neutralx-500">{pt.walletBody}</p>
         </div>
         <button
           type="button"
@@ -120,7 +121,7 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           disabled={stage.kind === "busy"}
           className="btn-ghost flex-shrink-0 whitespace-nowrap text-sm"
         >
-          {stage.kind === "busy" ? stage.label : "Verifieer met wallet"}
+          {stage.kind === "busy" ? stage.label : pt.walletButton}
         </button>
       </div>
     );

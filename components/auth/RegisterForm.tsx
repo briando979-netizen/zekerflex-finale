@@ -6,14 +6,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { registerAction, type RegisterState } from "@/app/register/actions";
 import { googleLoginAction } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
+import type { Locale } from "@/lib/i18n/config";
 
 const initial: RegisterState = { error: null };
 
-const WORKER_KINDS = [
-  { k: "zzp", l: "ZZP'er", d: "Eigen KVK + btw" },
-  { k: "flexwerker", l: "Flexwerker", d: "Btw optioneel / KOR" },
-  { k: "uitzendkracht", l: "Uitzendkracht", d: "Verloning via payroll" },
-] as const;
+const WORKER_KINDS = ["zzp", "flexwerker", "uitzendkracht"] as const;
 
 const STRENGTH_COLOR = ["bg-crit", "bg-crit", "bg-warn", "bg-brand-500", "bg-ok"];
 
@@ -27,26 +25,30 @@ function EyeIcon({ off }: { off: boolean }) {
   );
 }
 
-function SubmitButton({ type, disabled }: { type: "freelancer" | "bedrijf"; disabled: boolean }) {
+function SubmitButton({ type, disabled, t }: { type: "freelancer" | "bedrijf"; disabled: boolean; t: (typeof AUTH_DICTS)["nl"]["register"] }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending || disabled} className="btn-primary w-full disabled:opacity-50">
-      {pending ? "Bezig…" : type === "bedrijf" ? "Organisatie aanmelden" : "Account aanmaken"}
+      {pending ? t.busy : type === "bedrijf" ? t.submitCompany : t.submitWorker}
     </button>
   );
 }
 
 export function RegisterForm({
+  locale = "nl",
   defaultType,
   defaultWorkerKind,
   prefill,
   googleEnabled,
 }: {
+  locale?: Locale;
   defaultType: "freelancer" | "bedrijf";
   defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
   prefill?: { company?: string; kvk?: string; email?: string };
   googleEnabled: boolean;
 }) {
+  const t = AUTH_DICTS[locale].register;
+  const or = AUTH_DICTS[locale].shell.or;
   const [type, setType] = useState<"freelancer" | "bedrijf">(defaultType);
   const [workerKind, setWorkerKind] = useState<"zzp" | "flexwerker" | "uitzendkracht">(
     defaultWorkerKind ?? "flexwerker",
@@ -163,16 +165,16 @@ export function RegisterForm({
   return (
     <div>
       <div className="mb-6 grid grid-cols-2 gap-1 rounded-full border border-hairstrong p-1">
-        {(["freelancer", "bedrijf"] as const).map((t) => (
+        {(["freelancer", "bedrijf"] as const).map((k) => (
           <button
-            key={t}
+            key={k}
             type="button"
-            onClick={() => setType(t)}
+            onClick={() => setType(k)}
             className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
-              type === t ? "bg-brand-500 text-white" : "text-neutralx-600 hover:text-ink"
+              type === k ? "bg-brand-500 text-white" : "text-neutralx-600 hover:text-ink"
             }`}
           >
-            {t === "freelancer" ? "Ik zoek werk" : "Ik zoek mensen"}
+            {k === "freelancer" ? t.seekWork : t.seekPeople}
           </button>
         ))}
       </div>
@@ -183,9 +185,9 @@ export function RegisterForm({
         <>
           <form action={googleLoginAction}>
             <input type="hidden" name="callbackUrl" value="/start" />
-            <GoogleButton label="Maak account met Google" />
+            <GoogleButton label={t.google} />
           </form>
-          <AuthDivider />
+          <AuthDivider label={or} />
         </>
       )}
 
@@ -196,19 +198,19 @@ export function RegisterForm({
 
         {type === "freelancer" && (
           <div>
-            <span className="field-label" id="werkvorm-label">Je werkvorm</span>
+            <span className="field-label" id="werkvorm-label">{t.workForm}</span>
             <div className="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-labelledby="werkvorm-label">
-              {WORKER_KINDS.map((w) => (
+              {WORKER_KINDS.map((k) => (
                 <button
-                  key={w.k}
+                  key={k}
                   type="button"
-                  onClick={() => setWorkerKind(w.k)}
+                  onClick={() => setWorkerKind(k)}
                   className={`rounded-lg border px-2 py-2 text-center transition ${
-                    workerKind === w.k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
+                    workerKind === k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
                   }`}
                 >
-                  <span className="block text-xs font-semibold text-ink">{w.l}</span>
-                  <span className="block text-[10px] leading-tight text-neutralx-500">{w.d}</span>
+                  <span className="block text-xs font-semibold text-ink">{t.kinds[k][0]}</span>
+                  <span className="block text-[10px] leading-tight text-neutralx-500">{t.kinds[k][1]}</span>
                 </button>
               ))}
             </div>
@@ -262,12 +264,12 @@ export function RegisterForm({
         )}
 
         <label className="block">
-          <span className="field-label">{type === "bedrijf" ? "Jouw naam" : "Volledige naam"}</span>
+          <span className="field-label">{type === "bedrijf" ? t.yourName : t.fullName}</span>
           <input name="fullName" required autoComplete="name" className="field-input" />
         </label>
 
         <label className="block">
-          <span className="field-label">E-mailadres</span>
+          <span className="field-label">{t.email}</span>
           <input
             type="email"
             name="email"
@@ -277,31 +279,29 @@ export function RegisterForm({
             onChange={(e) => setEmail(e.target.value)}
             className="field-input"
           />
-          {emailState === "checking" && <span className="mt-1 block text-xs text-neutralx-400">Controleren…</span>}
-          {emailState === "free" && <span className="mt-1 block text-xs text-ok">✓ Dit e-mailadres is beschikbaar</span>}
-          {emailState === "taken" && (
-            <span className="mt-1 block text-xs text-crit">Er bestaat al een account met dit e-mailadres.</span>
-          )}
-          {emailState === "invalid" && <span className="mt-1 block text-xs text-crit">Vul een geldig e-mailadres in.</span>}
+          {emailState === "checking" && <span className="mt-1 block text-xs text-neutralx-400">{t.checking}</span>}
+          {emailState === "free" && <span className="mt-1 block text-xs text-ok">{t.emailFree}</span>}
+          {emailState === "taken" && <span className="mt-1 block text-xs text-crit">{t.emailTaken}</span>}
+          {emailState === "invalid" && <span className="mt-1 block text-xs text-crit">{t.emailInvalid}</span>}
         </label>
 
         <label className="block">
-          <span className="field-label">Telefoon <span className="text-neutralx-400">(optioneel)</span></span>
+          <span className="field-label">{t.phone} <span className="text-neutralx-400">{t.optional}</span></span>
           <input name="phone" autoComplete="tel" className="field-input" />
         </label>
 
         <div>
           <div className="flex items-center justify-between">
-            <span className="field-label">Wachtwoord</span>
+            <span className="field-label">{t.password}</span>
             <button type="button" onClick={suggest} className="text-xs font-medium text-brand-600 hover:underline">
-              Genereer sterk wachtwoord
+              {t.generate}
             </button>
           </div>
           <span className="relative mt-1.5 block">
             <input
               type={showPw ? "text" : "password"}
               name="password"
-              aria-label="Wachtwoord"
+              aria-label={t.password}
               required
               minLength={8}
               autoComplete="new-password"
@@ -312,7 +312,7 @@ export function RegisterForm({
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              aria-label={showPw ? "Verbergen" : "Tonen"}
+              aria-label={showPw ? t.hide : t.show}
               className="absolute inset-y-0 right-0 grid w-10 place-items-center text-neutralx-400 hover:text-ink"
             >
               <EyeIcon off={showPw} />
@@ -332,11 +332,11 @@ export function RegisterForm({
                 ))}
               </div>
               <p className="mt-1 text-xs text-neutralx-500">
-                {pwChecking ? "Controleren…" : `Sterkte: ${pwInfo?.label ?? "…"}`}
+                {pwChecking ? t.checking : `${t.strength}: ${pwInfo?.label ?? "…"}`}
               </p>
               {pwInfo?.breached && (
                 <p className="mt-1 text-xs font-medium text-crit">
-                  Dit wachtwoord staat in bekende datalekken — kies een ander.
+                  {t.breached}
                 </p>
               )}
               {!pwInfo?.breached &&
@@ -350,7 +350,7 @@ export function RegisterForm({
         </div>
 
         <label className="block">
-          <span className="field-label">Herhaal wachtwoord</span>
+          <span className="field-label">{t.repeat}</span>
           <input
             type={showPw ? "text" : "password"}
             name="passwordConfirm"
@@ -363,19 +363,19 @@ export function RegisterForm({
           />
           {pw2 && (
             <span className={`mt-1 block text-xs ${match ? "text-ok" : "text-crit"}`}>
-              {match ? "✓ Wachtwoorden komen overeen" : "De wachtwoorden komen niet overeen."}
+              {match ? t.match : t.noMatch}
             </span>
           )}
         </label>
 
-        <SubmitButton type={type} disabled={!canSubmit} />
+        <SubmitButton type={type} disabled={!canSubmit} t={t} />
       </form>
 
       <p className="mt-4 text-xs leading-relaxed text-neutralx-400">
-        Door een account aan te maken ga je akkoord met de{" "}
-        <Link href="/voorwaarden" className="underline">voorwaarden</Link> en de{" "}
-        <Link href="/privacy" className="underline">privacyverklaring</Link>.
-        {type === "freelancer" && " Na aanmelding rond je je profiel af met je KVK en identiteitsverificatie."}
+        {t.agree1}{" "}
+        <Link href="/voorwaarden" className="underline">{t.terms}</Link> {t.and}{" "}
+        <Link href="/privacy" className="underline">{t.privacy}</Link>.
+        {type === "freelancer" && ` ${t.afterWorker}`}
       </p>
     </div>
   );

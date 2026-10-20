@@ -4,6 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const COOKIE_NAME = "zf_cookie_consent";
+
+// The first thing a new visitor sees — in their chosen language (zf_locale cookie).
+const COPY = {
+  nl: { body: "We gebruiken alleen functionele cookies — nodig om in te loggen en je voorkeuren te onthouden. Geen advertentie- of trackingcookies.", policy: "Lees het volledige cookiebeleid", details: "Er is niets uit te zetten: we plaatsen geen cookies waarvoor toestemming nodig is. De enige cookies zijn je sessie, je taal-/weergavevoorkeur en deze cookiekeuze zelf.", accept: "Accepteren", settings: "Instellingen", close: "Sluiten" },
+  en: { body: "We only use functional cookies — needed to log in and remember your preferences. No advertising or tracking cookies.", policy: "Read the full cookie policy", details: "There is nothing to switch off: we set no cookies that require consent. The only cookies are your session, your language/display preference and this cookie choice itself.", accept: "Accept", settings: "Settings", close: "Close" },
+  pl: { body: "Używamy wyłącznie funkcjonalnych plików cookie — potrzebnych do logowania i zapamiętania ustawień. Żadnych reklamowych ani śledzących.", policy: "Przeczytaj pełną politykę cookies", details: "Nie ma nic do wyłączenia: nie używamy plików cookie wymagających zgody. Jedyne pliki cookie to Twoja sesja, preferencja języka/wyglądu i ten wybór.", accept: "Akceptuję", settings: "Ustawienia", close: "Zamknij" },
+  ro: { body: "Folosim doar cookie-uri funcționale — necesare pentru conectare și pentru a-ți reține preferințele. Fără cookie-uri de publicitate sau urmărire.", policy: "Citește politica completă de cookie-uri", details: "Nu e nimic de dezactivat: nu folosim cookie-uri care necesită consimțământ. Singurele cookie-uri sunt sesiunea, preferința de limbă/afișare și această alegere.", accept: "Accept", settings: "Setări", close: "Închide" },
+  uk: { body: "Ми використовуємо лише функціональні cookie — потрібні для входу та збереження налаштувань. Жодних рекламних чи відстежувальних.", policy: "Прочитати повну політику cookie", details: "Тут нічого вимикати: ми не встановлюємо cookie, що потребують згоди. Єдині cookie — твоя сесія, мова/вигляд і цей вибір.", accept: "Прийняти", settings: "Налаштування", close: "Закрити" },
+} as const;
+type CopyLocale = keyof typeof COPY;
+
+function readLocale(): CopyLocale {
+  if (typeof document === "undefined") return "nl";
+  const v = document.cookie.split("; ").find((c) => c.startsWith("zf_locale="))?.split("=")[1];
+  return v && v in COPY ? (v as CopyLocale) : "nl";
+}
 const REOPEN_EVENT = "zf:open-cookie-settings";
 
 function readConsentCookie(): boolean {
@@ -29,8 +45,11 @@ function writeConsentCookie() {
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [locale, setLocale] = useState<CopyLocale>("nl");
+  const c = COPY[locale];
 
   useEffect(() => {
+    setLocale(readLocale());
     if (!readConsentCookie()) setVisible(true);
     const reopen = () => {
       setShowDetails(true);
@@ -52,39 +71,35 @@ export function CookieConsent() {
     <div className="fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
       <div className="mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-5 shadow-lift">
         <p className="text-sm leading-relaxed text-ink">
-          We gebruiken alleen functionele cookies — nodig om in te loggen en je voorkeuren te onthouden. Geen
-          advertentie- of trackingcookies.{" "}
+          {c.body}{" "}
           <Link href="/cookiebeleid" className="font-semibold underline">
-            Lees het volledige cookiebeleid
+            {c.policy}
           </Link>
           .
         </p>
 
         {showDetails && (
           <div className="mt-3 rounded-xl bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-            <p>
-              Er is niets uit te zetten: we plaatsen geen cookies waarvoor toestemming nodig is. De enige cookies
-              zijn je sessie, je taal-/weergavevoorkeur en deze cookiekeuze zelf.
-            </p>
+            <p>{c.details}</p>
           </div>
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button type="button" onClick={dismiss} className="btn-primary text-sm">
-            Accepteren
+            {c.accept}
           </button>
           {!showDetails ? (
             <button type="button" onClick={() => setShowDetails(true)} className="btn-ghost text-sm">
-              Instellingen
+              {c.settings}
             </button>
           ) : null}
           <button
             type="button"
             onClick={dismiss}
-            aria-label="Sluiten"
+            aria-label={c.close}
             className="ml-auto text-sm text-neutralx-500 hover:text-ink"
           >
-            Sluiten ✕
+            {c.close} ✕
           </button>
         </div>
       </div>

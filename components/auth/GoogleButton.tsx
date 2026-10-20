@@ -15,11 +15,11 @@ export function GoogleButton({ label }: { label: string }) {
   );
 }
 
-export function AuthDivider() {
+export function AuthDivider({ label = "of" }: { label?: string } = {}) {
   return (
     <div className="my-5 flex items-center gap-3 text-xs text-neutralx-400">
       <span className="h-px flex-1 bg-hairstrong" />
-      of
+      {label}
       <span className="h-px flex-1 bg-hairstrong" />
     </div>
   );

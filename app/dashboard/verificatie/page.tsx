@@ -9,6 +9,8 @@ import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
+import { getLocale } from "@/lib/i18n/server";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ const STRIPE_LABEL: Record<string, string> = {
 
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
+  const pt = AUTH_DICTS[await getLocale()].page;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal] = await Promise.all([
@@ -37,8 +40,8 @@ export default async function VerificatiePage() {
   if (o.profileComplete) {
     return (
       <div className="mx-auto max-w-2xl">
-        <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
-        <PageHeader title="Verificatie" subtitle="Je account is volledig geverifieerd." />
+        <BackLink fallbackHref="/dashboard/account" label={pt.back} />
+        <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
         <Panel title="Status">
           <div className="px-5 py-6">
             <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
@@ -89,13 +92,13 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
+      <BackLink fallbackHref="/dashboard/account" label={pt.back} />
       <PageHeader
-        title="Rond je verificatie af"
+        title={pt.title}
         subtitle={
           isUitzend
-            ? "Vul je thuisbasis en rekeningnummer in en upload je identiteitsbewijs. Je hoeft geen KVK te koppelen — je werkt als uitzendkracht."
-            : "Koppel je KVK of EU-btw-nummer en bevestig je identiteit — meestal binnen een minuut geregeld."
+            ? pt.subUitzend
+            : pt.subWorker
         }
       />
 
@@ -138,10 +141,8 @@ export default async function VerificatiePage() {
       )}
 
       <div className="mt-6 card p-6">
-        <h2 className="font-display text-base font-bold text-ink">Bankafschrift</h2>
-        <p className="mt-1 text-sm text-neutralx-500">
-          Nodig voordat je uitbetaald kunt worden — je IBAN wordt hiermee gecontroleerd.
-        </p>
+        <h2 className="font-display text-base font-bold text-ink">{pt.bankTitle}</h2>
+        <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
         <div className="mt-4">
           <ComplianceDocsPanel idInForm />
         </div>

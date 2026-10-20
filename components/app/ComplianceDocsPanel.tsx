@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
 import { useEffect, useRef, useState } from "react";
 
 interface Doc {
@@ -14,7 +16,6 @@ interface Data {
   status: { idOk: boolean; bankOk: boolean; complete: boolean };
 }
 
-const KIND_LABEL: Record<string, string> = { id: "Identiteitsbewijs", bank: "Bankafschrift / tenaamstelling", other: "Overig" };
 
 function DocSlot({
   kind,
@@ -22,7 +23,9 @@ function DocSlot({
   hint,
   doc,
   onUploaded,
+  t,
 }: {
+  t: AuthDict["page"];
   kind: "id" | "bank";
   label: string;
   hint: string;
@@ -43,7 +46,7 @@ function DocSlot({
       const r = await fetch("/api/me/documents", { method: "POST", body: fd });
       if (!r.ok) {
         const j = await r.json().catch(() => null);
-        throw new Error(j?.error?.message ?? "Upload mislukt");
+        throw new Error(j?.error?.message ?? t.uploadFailed);
       }
       onUploaded();
     } catch (e) {
@@ -63,12 +66,12 @@ function DocSlot({
         </p>
         {ok ? (
           <span className="text-xs font-medium text-ok">
-            {doc!.status === "approved" ? "goedgekeurd ✓" : "geüpload ✓"}
+            {doc!.status === "approved" ? t.approved : t.uploaded}
           </span>
         ) : doc?.status === "rejected" ? (
-          <span className="text-xs font-medium text-crit">afgewezen — upload opnieuw</span>
+          <span className="text-xs font-medium text-crit">{t.rejectedUpload}</span>
         ) : (
-          <span className="text-xs text-neutralx-400">nog niet geüpload</span>
+          <span className="text-xs text-neutralx-400">{t.notUploaded}</span>
         )}
       </div>
       <p className="mt-1 text-xs text-neutralx-500">{hint}</p>
@@ -83,7 +86,7 @@ function DocSlot({
         </a>
       )}
       <button type="button" onClick={() => ref.current?.click()} disabled={busy} className="btn-ghost mt-3 text-sm">
-        {busy ? "Uploaden…" : doc ? "Vervangen" : "Uploaden"}
+        {busy ? t.uploading : doc ? t.replace : t.upload}
       </button>
       {err && <p className="mt-1 text-xs text-crit">{err}</p>}
       <input
@@ -101,6 +104,7 @@ function DocSlot({
 }
 
 export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean } = {}) {
+  const t = AUTH_DICTS[useI18n().locale].page;
   const [d, setD] = useState<Data | null>(null);
   const load = () =>
     fetch("/api/me/documents", { cache: "no-store" })
@@ -125,37 +129,35 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
     <div className="space-y-4">
       {d.status.complete ? (
         <p className="rounded-lg bg-ok/10 px-3 py-2 text-sm text-neutralx-700">
-          ✓ Je verplichte documenten staan klaar. Je IBAN wordt hiermee gecontroleerd.
+          {t.allDone}
         </p>
       ) : (
         <p className="rounded-lg bg-warn/10 px-3 py-2 text-sm text-neutralx-700">
-          {showId
-            ? "Upload je identiteitsbewijs en een bankafschrift. Beide zijn verplicht voordat je uitbetaald kunt worden."
-            : idInForm && !d.status.idOk
-              ? "Upload nog een bankafschrift — daarmee controleren we je IBAN. Je identiteitsbewijs regel je hierboven."
-              : "Upload een bankafschrift. Dit is verplicht voordat je uitbetaald kunt worden — je identiteitsbewijs staat al goed via je verificatie."}
+          {showId ? t.needBoth : idInForm && !d.status.idOk ? t.needBankHere : t.needBank}
         </p>
       )}
       <div className="space-y-3">
         {showId && (
           <DocSlot
+            t={t}
             kind="id"
-            label="Identiteitsbewijs"
-            hint="Vul eerst de verificatie hierboven in — die vult dit automatisch. Los uploaden kan ook."
+            label={t.idLabel}
+            hint={t.idHint}
             doc={idDoc}
             onUploaded={load}
           />
         )}
         <DocSlot
+          t={t}
           kind="bank"
-          label="Bankafschrift"
-          hint="Recent afschrift of schermafbeelding waarop je naam én IBAN staan. Bedragen mag je wegstrepen."
+          label={t.bankLabel}
+          hint={t.bankHint}
           doc={bankDoc}
           onUploaded={load}
         />
       </div>
       <p className="text-xs text-neutralx-400">
-        {KIND_LABEL.other}: extra documenten kun je via ZekerFlex Support toevoegen.
+        {t.other}
       </p>
     </div>
   );
