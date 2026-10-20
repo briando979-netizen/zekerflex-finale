@@ -10,6 +10,7 @@ import { PushToggle } from "@/components/app/PushToggle";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
+import { hasTwoFactor } from "@/lib/auth/two-factor";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function AccountPage() {
   ]);
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
+  const secured = await hasTwoFactor(principal.userId).catch(() => true);
   // Only a request that actually found a substitute counts as "arranged" — an
   // "open" (still pending) or "cancelled" (withdrawn, worked it yourself)
   // request never resulted in a real replacement.
@@ -173,6 +175,18 @@ export default async function AccountPage() {
       )}
 
       <div className="mt-4 space-y-4">
+        {!secured && (
+          <Link href="/dashboard/account/beveiliging" className="trust-card flex items-center gap-3 rounded-2xl p-4">
+            <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-trust text-white" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-trust-ink">Beveilig je account en je uitbetalingen</span>
+              <span className="block text-xs text-neutralx-600">Zet tweestapsverificatie aan — 1 minuut, met een app op je telefoon.</span>
+            </span>
+            <span className="text-trust" aria-hidden>→</span>
+          </Link>
+        )}
         <LevelCard />
         <ReferralCard />
       </div>
