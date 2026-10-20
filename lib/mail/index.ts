@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { sendViaSmtp, type SmtpConfig } from "@/lib/mail/smtp";
 import type { ImapConfig } from "@/lib/mail/imap";
-import { saveSentMessage, type SentRecord } from "@/lib/mail/store";
+import { readSentMessage, saveSentMessage, type SentRecord } from "@/lib/mail/store";
 import { EMAIL_LOGO_PNG_BASE64 } from "@/lib/mail/logo";
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
 import { getMailPrefs, mailAllowed } from "@/lib/mail/prefs";
@@ -187,6 +187,58 @@ function wrap64(s: string): string {
   return (Buffer.from(s, "utf8").toString("base64").match(/.{1,76}/g) ?? []).join("\r\n");
 }
 
+/** 4xx SMTP replies and network hiccups are worth a retry; 5xx are not. */
+export function isTransientSmtpError(message: string): boolean {
+  return /->\s*4\d\d\b|\b4\.\d\.\d\b|timeout|timed out|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|socket|closed/i.test(message);
+}
+
+// TransIP answers bursts of logins with temporary 4xx replies ("451 4.3.2
+// Internal server error") or drops the connection — retry those twice with a
+// short back-off; permanent 5xx errors fail straight away.
+async function deliverWithRetry(
+  cfg: SmtpConfig,
+  from: string,
+  to: string,
+  raw: string,
+): Promise<{ delivered: boolean; error: string | undefined }> {
+  let error: string | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, attempt === 1 ? 2000 : 6000));
+    try {
+      await sendViaSmtp(cfg, { from, to: [to], raw });
+      return { delivered: true, error: undefined };
+    } catch (err) {
+      error = (err as Error).message;
+      if (!isTransientSmtpError(error)) break;
+    }
+  }
+  return { delivered: false, error };
+}
+
+/**
+ * Re-send a mail from the admin mailbox that failed over SMTP, exactly as it
+ * was stored (its text already carries any footer). Updates the record.
+ */
+export async function resendStoredMail(id: string): Promise<{ delivered: boolean; error?: string }> {
+  const rec = await readSentMessage(id);
+  if (!rec) return { delivered: false, error: "Bericht niet gevonden." };
+  if (rec.delivered) return { delivered: true };
+  if (rec.suppressed) return { delivered: false, error: `Ontvanger is ${rec.suppressed}.` };
+  const cfg = smtpConfig();
+  if (!cfg) return { delivered: false, error: "Geen mailserver ingesteld." };
+  const to = rec.to[0]!;
+  const { header } = fromHeader(rec.from);
+  const raw = buildRaw(
+    { to, subject: rec.subject, text: rec.text, ...(rec.html ? { html: rec.html } : {}), kind: rec.kind },
+    header,
+    `${rec.id}-r${Date.now().toString(36)}@${hostFromUrl(env.APP_BASE_URL)}`,
+  );
+  const { delivered, error } = await deliverWithRetry(cfg, rec.from, to, raw);
+  const { error: _old, ...rest } = rec;
+  await saveSentMessage({ ...rest, delivered, transport: "smtp", ...(error ? { error } : {}) });
+  return { delivered, ...(error ? { error } : {}) };
+}
+
 export async function sendMail(input: MailInput): Promise<MailResult> {
   const id = randomUUID().slice(0, 12);
 
@@ -260,13 +312,8 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   const cfg = smtpConfig();
   if (cfg && !suppressed) {
     transport = "smtp";
-    try {
-      await sendViaSmtp(cfg, { from: addr, to: [input.to], raw });
-      delivered = true;
-    } catch (err) {
-      error = (err as Error).message;
-      logger.warn("smtp delivery failed - mail kept in local mailbox", { to: input.to, error });
-    }
+    ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
+    if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { to: input.to, error });
   }
 
   const rec: SentRecord = {

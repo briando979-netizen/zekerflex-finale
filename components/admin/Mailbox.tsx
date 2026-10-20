@@ -92,6 +92,30 @@ export function Mailbox() {
   const [composeBody, setComposeBody] = useState("");
   const [sending, setSending] = useState(false);
   const [sendMsg, setSendMsg] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
+
+  async function resend(payload: { id: string } | { allFailed: true }) {
+    if (resending) return;
+    setResending(true);
+    setResendMsg("allFailed" in payload ? "Mislukte mails worden opnieuw verstuurd…" : "Opnieuw versturen…");
+    try {
+      const res = await fetch("/api/admin/mail/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) setResendMsg(d?.error?.message ?? "Opnieuw versturen mislukt.");
+      else if (d.count === 0) setResendMsg("Geen mislukte mails om opnieuw te versturen.");
+      else setResendMsg(`${d.delivered} van ${d.count} alsnog afgeleverd${d.failed ? ` · ${d.failed} nog steeds mislukt${d.error ? ` (${d.error})` : ""}` : ""}.`);
+      await refreshSent();
+    } catch {
+      setResendMsg("Opnieuw versturen mislukt — geen verbinding.");
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function refreshSent() {
     try {
@@ -356,7 +380,20 @@ export function Mailbox() {
             {sent ? (
               <span>
                 {money(sent.stats.total)} verstuurd · <span className="text-ok">{money(sent.stats.delivered)} afgeleverd</span>
-                {sent.stats.failed > 0 && <span className="text-crit"> · {money(sent.stats.failed)} mislukt</span>}
+                {sent.stats.failed > 0 && (
+                  <>
+                    <span className="text-crit"> · {money(sent.stats.failed)} mislukt</span>{" "}
+                    <button
+                      type="button"
+                      disabled={resending}
+                      onClick={() => void resend({ allFailed: true })}
+                      className="font-semibold text-crit underline hover:text-ink disabled:opacity-50"
+                    >
+                      {resending ? "bezig…" : "opnieuw versturen"}
+                    </button>
+                  </>
+                )}
+                {resendMsg && <span className="block text-neutralx-600">{resendMsg}</span>}
               </span>
             ) : <span />}
             <button type="button" onClick={() => void refreshInbox()} className="font-semibold hover:text-ink">Ververs</button>
@@ -450,7 +487,19 @@ ${tpl.body}` : tpl.body));
               <p className="text-xs text-neutralx-500">
                 van {selectedSent.from} · aan {selectedSent.to.join(", ")} · {new Date(selectedSent.at).toLocaleString("nl-NL")}
               </p>
-              {selectedSent.error && <p className="rounded bg-crit/10 px-2 py-1 text-xs text-crit">SMTP-fout: {selectedSent.error}</p>}
+              {selectedSent.error && !selectedSent.delivered && (
+                <div className="flex flex-wrap items-center gap-2 rounded bg-crit/10 px-2 py-1 text-xs text-crit">
+                  <span className="min-w-0 flex-1">SMTP-fout: {selectedSent.error}</span>
+                  <button
+                    type="button"
+                    disabled={resending}
+                    onClick={() => void resend({ id: selectedSent.id })}
+                    className="rounded bg-crit px-2 py-0.5 font-semibold text-white disabled:opacity-50"
+                  >
+                    {resending ? "Bezig…" : "Opnieuw versturen"}
+                  </button>
+                </div>
+              )}
               {selectedSent.suppressed && <p className="rounded bg-warn/10 px-2 py-1 text-xs text-warn">Niet verzonden — ontvanger is {selectedSent.suppressed}.</p>}
               <pre className="whitespace-pre-wrap break-words rounded-lg border border-hair bg-paper-soft p-4 text-sm text-ink-soft">{selectedSent.text}</pre>
             </div>

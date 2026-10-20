@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const MAX_RECIPIENTS = 5000;
-const PARALLEL = 5;
+// Kept low: every mail is its own SMTP login and TransIP throttles bursts.
+const PARALLEL = 2;
 
 const schema = z.object({
   subject: z.string().trim().min(3).max(160),
