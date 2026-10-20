@@ -13,6 +13,7 @@ import { EmployerShiftControls } from "@/components/app/EmployerShiftControls";
 import { ClaimReviewPanel } from "@/components/app/ClaimReviewPanel";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
+import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
@@ -122,6 +123,12 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
       {s.invitedPool && (
         <div className="mb-6">
           <PublishPoolShiftButton shiftId={s.id} poolName={s.invitedPool.name} />
+        </div>
+      )}
+
+      {s.status !== "CANCELLED" && verified && (
+        <div className="mb-6">
+          <RepeatTeamButton shiftId={s.id} teamSize={s.assigned.length} />
         </div>
       )}
 

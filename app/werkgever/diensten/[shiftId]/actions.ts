@@ -12,6 +12,7 @@ import { applyToShift } from "@/lib/matching/apply";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 
 export interface OfferResponse {
   ok: boolean;
@@ -224,6 +225,26 @@ export async function publishShiftAction(shiftId: string): Promise<OfferResponse
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     return { ok: false, message: "Publiceren mislukt." };
+  }
+}
+
+/** "Zelfde team volgende week": repeat this klus N weeks later, offered privately to the same people first. */
+export async function repeatShiftAction(shiftId: string, weeks = 1): Promise<OfferResponse & { shiftId?: string }> {
+  try {
+    const principal = await requirePrincipal();
+    requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
+    const res = await repeatWithSameTeam(principal, shiftId, weeks);
+    revalidatePath("/werkgever/diensten");
+    return {
+      ok: true,
+      shiftId: res.shiftId,
+      message: res.invited
+        ? `Klus herhaald — eerst privé aangeboden aan hetzelfde team (${res.invited} ${res.invited === 1 ? "persoon" : "personen"}).`
+        : "Klus herhaald en op de open markt gezet (er was nog niemand ingepland om eerst te vragen).",
+    };
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: err.message };
+    return { ok: false, message: "Herhalen mislukt." };
   }
 }
 
