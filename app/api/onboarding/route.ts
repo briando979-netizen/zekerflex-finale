@@ -4,7 +4,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
-import { startStripeIdentity, stripeIdentityEnabled } from "@/lib/kyc/stripe-identity";
+import { startStripeIdentity, stripeIdentityAvailable } from "@/lib/kyc/stripe-identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,7 +67,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     };
 
     // Route 1: identity via Stripe — save the rest now, then send the user to Stripe.
-    if (form.get("identityMethod") === "stripe" && stripeIdentityEnabled()) {
+    if (form.get("identityMethod") === "stripe" && (await stripeIdentityAvailable())) {
       const base = baseSchema.safeParse({
         kvkNumber: str("kvkNumber"),
         vatNumber: str("vatNumber"),

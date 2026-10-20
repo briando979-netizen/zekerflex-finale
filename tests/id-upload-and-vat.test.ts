@@ -16,6 +16,11 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/lib/env", () => ({ env: { STORAGE_BACKEND: "local", UPLOADS_DIR: "uploads", UPLOAD_MAX_BYTES: 10_000_000, STRIPE_SECRET_KEY: "sk_test_x", APP_BASE_URL: "https://zf.test" } }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+const kvStore = vi.hoisted(() => new Map<string, unknown>());
+vi.mock("@/lib/storage/kv", () => ({
+  kvGet: async (k: string) => kvStore.get(k) ?? null,
+  kvSet: async (k: string, v: unknown) => void kvStore.set(k, v),
+}));
 vi.mock("@/lib/storage/s3", () => ({ putObject: vi.fn(), getObjectBytes: vi.fn(), deleteObject: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => db.audit(...a) }));
 vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: () => ({ identity: { verificationSessions: { retrieve: db.retrieve } } }) }));
@@ -40,6 +45,9 @@ vi.mock("@/lib/prisma", () => ({
     },
     identityVerification: {
       findUnique: async ({ where }: { where: { sessionId: string } }) => db.idv.find((r) => r.sessionId === where.sessionId) ?? null,
+      findFirst: async ({ where }: { where: { userId: string; decisionStatus: { in: string[] } } }) =>
+        db.idv.find((r) => r.userId === where.userId && where.decisionStatus.in.includes(r.decisionStatus as string)) ?? null,
+      updateMany: async () => ({ count: 1 }),
       update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => Object.assign(db.idv.find((r) => r.id === where.id)!, data),
     },
     user: {
@@ -51,7 +59,7 @@ vi.mock("@/lib/prisma", () => ({
 
 import { readUpload, storageBackend, storeUpload } from "@/lib/storage/local";
 import { checkVies, normaliseVat } from "@/lib/integrations/vies";
-import { handleStripeIdentityEvent } from "@/lib/kyc/stripe-identity";
+import { handleStripeIdentityEvent, stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 
 describe("upload storage on a serverless host", () => {
   beforeEach(() => vi.stubEnv("VERCEL", "1"));
@@ -107,7 +115,7 @@ describe("Stripe Identity webhook", () => {
     db.idv.length = 0;
     db.users.clear();
     db.audit.mockReset();
-    db.idv.push({ id: "iv1", sessionId: "vs_1", userId: "user1", status: "PENDING" });
+    db.idv.push({ id: "iv1", sessionId: "vs_1", userId: "user1", status: "PENDING", decisionStatus: "started" });
     db.users.set("user1", { id: "user1", fullName: "Anna de Vries", kycStatus: "PENDING" });
   });
   const ev = (type: string, extra: Record<string, unknown> = {}) =>
@@ -138,6 +146,42 @@ describe("Stripe Identity webhook", () => {
 
   it("ignores sessions it did not start", async () => {
     await handleStripeIdentityEvent({ type: "identity.verification_session.verified", data: { object: { id: "vs_other" } } } as never);
+    expect(db.audit).not.toHaveBeenCalled();
+  });
+});
+
+describe("Stripe Identity without extra setup", () => {
+  beforeEach(() => {
+    db.idv.length = 0;
+    db.users.clear();
+    kvStore.clear();
+    db.idv.push({ id: "iv1", sessionId: "vs_1", userId: "user1", status: "PENDING", decisionStatus: "started" });
+    db.users.set("user1", { id: "user1", fullName: "Anna de Vries", kycStatus: "PENDING" });
+  });
+
+  it("is offered as soon as Stripe is connected — no extra env flag needed", async () => {
+    expect(await stripeIdentityAvailable()).toBe(true);
+  });
+
+  it("hides itself for a while after Stripe refused (Identity not activated)", async () => {
+    kvStore.set("stripe-identity:unavailable-until", new Date(Date.now() + 3_600_000).toISOString());
+    expect(await stripeIdentityAvailable()).toBe(false);
+    kvStore.set("stripe-identity:unavailable-until", new Date(Date.now() - 1000).toISOString());
+    expect(await stripeIdentityAvailable()).toBe(true);
+  });
+
+  it("coming back to the page pulls the result from Stripe (works without webhook)", async () => {
+    db.retrieve.mockResolvedValue({
+      id: "vs_1",
+      status: "verified",
+      verified_outputs: { first_name: "Anna", last_name: "de Vries" },
+      last_verification_report: null,
+    });
+    await syncStripeIdentity("user1");
+    expect(db.users.get("user1")!.kycStatus).toBe("VERIFIED");
+    // a later webhook for the same session doesn't apply it twice
+    db.audit.mockClear();
+    await handleStripeIdentityEvent({ type: "identity.verification_session.verified", data: { object: { id: "vs_1" } } } as never);
     expect(db.audit).not.toHaveBeenCalled();
   });
 });

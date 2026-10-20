@@ -303,11 +303,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "stripe-identity",
       group: "Geld & bank",
-      title: "ID-controle via Stripe Identity aanzetten",
+      title: "Stripe Identity activeren (ID-controle via Stripe)",
       why: "Freelancers maken dan op Stripe's eigen pagina een foto van hun ID en een live selfie; Stripe controleert of het document echt is en of het gezicht klopt. Meestal binnen een minuut goedgekeurd, zonder dat jij foto's hoeft na te kijken (±€1,50 per controle).",
-      how: ["Stripe-dashboard → Identity → activeer Identity voor je account.", "Stripe → Developers → Webhooks → je bestaande ZekerFlex-webhook → voeg de events identity.verification_session.verified, identity.verification_session.requires_input en identity.verification_session.canceled toe.", "Vercel → Settings → Environment Variables: zet STRIPE_IDENTITY_ENABLED = true en deploy opnieuw. Vanaf dan krijgen freelancers 'Snel via Stripe' als aanbevolen keuze; zelf foto's uploaden blijft mogelijk."],
-      auto: true,
-      done: process.env.STRIPE_IDENTITY_ENABLED === "true",
+      how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan met STRIPE_IDENTITY_ENABLED = false in Vercel."],
+      auto: false,
+      done: false,
     },
     {
       id: "alert-push",

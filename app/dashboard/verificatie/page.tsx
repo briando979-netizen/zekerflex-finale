@@ -8,7 +8,7 @@ import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { BackLink } from "@/components/app/BackLink";
-import { stripeIdentityEnabled } from "@/lib/kyc/stripe-identity";
+import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,8 @@ const STRIPE_LABEL: Record<string, string> = {
 
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
+  // back from Stripe (or webhook not configured): fetch the result before rendering
+  await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.identityVerification.findFirst({
@@ -79,7 +81,7 @@ export default async function VerificatiePage() {
       ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
       : [];
 
-  const stripeId = stripeIdentityEnabled();
+  const stripeId = await stripeIdentityAvailable();
   const stripeReason =
     lastCheck?.decisionStatus === "requires_input"
       ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
