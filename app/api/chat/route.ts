@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { z } from "zod";
 import { chatStream, fastModel, llmConfigProblem } from "@/lib/ai/client";
 import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
@@ -88,7 +89,7 @@ function textStream(
   });
 }
 
-export async function POST(request: Request): Promise<Response> {
+async function handlePOST(request: Request): Promise<Response> {
   const ip = clientIp(request);
   const gate = await fixedWindow(`rl:chat:${ip}`, 15, 60);
   if (!gate.ok) {
@@ -173,3 +174,5 @@ export async function POST(request: Request): Promise<Response> {
     return textStream(smartFallback, question, undefined, saveReply);
   }
 }
+
+export const POST = withUsage("website-chat", handlePOST);

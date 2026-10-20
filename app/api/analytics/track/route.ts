@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AnalyticsEventType } from "@prisma/client";
@@ -22,7 +23,7 @@ const bodySchema = z.object({
   events: z.array(eventSchema).min(1).max(20),
 });
 
-export async function POST(request: Request): Promise<NextResponse> {
+async function handlePOST(request: Request): Promise<NextResponse> {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
@@ -38,3 +39,5 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   return NextResponse.json({ ok: true, accepted: result.accepted });
 }
+
+export const POST = withUsage("analytics-track", handlePOST);

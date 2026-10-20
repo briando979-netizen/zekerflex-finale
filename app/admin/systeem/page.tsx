@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { smtpConfigured } from "@/lib/mail";
 import { PageHeader, Panel, KpiCard, StatusPill } from "@/components/app/ui";
 import { OpsAlerts } from "@/components/admin/OpsAlerts";
+import { UsagePanel } from "@/components/admin/UsagePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,8 @@ export default async function SysteemPage() {
       )}
 
       <OpsAlerts />
+
+      <UsagePanel />
     </div>
   );
 }

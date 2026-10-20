@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrincipal } from "@/lib/auth";
@@ -30,10 +31,16 @@ function roleOf(roles: string[]): Role | null {
   return "anoniem";
 }
 
-export async function POST(request: Request): Promise<NextResponse> {
+async function handlePOST(request: Request): Promise<NextResponse> {
   const ua = request.headers.get("user-agent") ?? "";
   if (BOT.test(ua)) return NextResponse.json({ ok: true });
-  const parsed = schema.safeParse(JSON.parse((await request.text().catch(() => "")) || "null"));
+  let raw: unknown = null;
+  try {
+    raw = JSON.parse((await request.text().catch(() => "")) || "null");
+  } catch {
+    return NextResponse.json({ ok: false }, { status: 400 });
+  }
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
   const b = parsed.data;
   if (b.p.startsWith("/admin") || b.p.startsWith("/api")) return NextResponse.json({ ok: true });
@@ -65,3 +72,5 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withUsage("analytics-ping", handlePOST);

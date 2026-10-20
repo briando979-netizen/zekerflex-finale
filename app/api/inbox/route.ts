@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/inbox — the signed-in user's threads, unread counts + a name directory.
 // ?visible=1 is sent while the polling tab is in view (suppresses chat pushes).
-export async function GET(request: Request): Promise<NextResponse> {
+async function handleGET(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     await touchPresence(p.userId);
@@ -93,7 +94,7 @@ const startSchema = z.union([
 ]);
 
 // POST /api/inbox — start (or continue) a conversation and send the first message.
-export async function POST(request: Request): Promise<NextResponse> {
+async function handlePOST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const input = startSchema.parse(
@@ -138,3 +139,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(body, { status });
   }
 }
+
+export const GET = withUsage("inbox-lijst (polling)", handleGET);
+
+export const POST = withUsage("inbox-bericht", handlePOST);

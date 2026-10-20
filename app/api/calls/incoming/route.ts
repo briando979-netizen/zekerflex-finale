@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/calls/incoming — is someone ringing me in any 1-on-1 thread?
-export async function GET(): Promise<NextResponse> {
+async function handleGET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const admin = await isPlatformAdmin(p.userId);
@@ -40,3 +41,5 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json(body, { status });
   }
 }
+
+export const GET = withUsage("bellen-check (polling)", handleGET);

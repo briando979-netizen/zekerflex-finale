@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
@@ -6,7 +7,7 @@ import { getNotifications } from "@/lib/notifications/feed";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<NextResponse> {
+async function handleGET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const items = await getNotifications(p);
@@ -16,3 +17,5 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json(body, { status });
   }
 }
+
+export const GET = withUsage("meldingen (polling)", handleGET);

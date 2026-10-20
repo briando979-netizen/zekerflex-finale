@@ -1,3 +1,4 @@
+import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { answer, verifyCompanion } from "@/lib/companion";
@@ -12,7 +13,7 @@ const schema = z.object({ text: z.string().trim().min(1).max(1000) });
 
 // POST /api/companion/ask — the owner's desktop Jarvis (deploy/jarvis-desktop).
 // Auth: personal token "Bearer zfj_…" (Admin → Jarvis → Laptop-Jarvis koppelen).
-export async function POST(request: Request): Promise<NextResponse> {
+async function handlePOST(request: Request): Promise<NextResponse> {
   const owner = await verifyCompanion(request);
   if (!owner) return NextResponse.json({ error: { message: "Ongeldige of ingetrokken Jarvis-sleutel" } }, { status: 401 });
   try {
@@ -25,3 +26,5 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!body.success) return NextResponse.json({ error: { message: "Stuur { text }" } }, { status: 400 });
   return NextResponse.json(await answer(body.data.text, owner));
 }
+
+export const POST = withUsage("laptop-jarvis", handlePOST);
