@@ -19,7 +19,10 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-const schema = z.union([z.object({ action: z.literal("start") }), z.object({ action: z.literal("sync"), sessionId: z.string().max(300) })]);
+const schema = z.union([
+  z.object({ action: z.literal("start"), iban: z.string().max(64).optional() }),
+  z.object({ action: z.literal("sync"), sessionId: z.string().max(300) }),
+]);
 
 // POST /api/me/bank-verify — { action: "start" } → { url } to the bank's iDEAL
 // screen; { action: "sync", sessionId } after coming back → the outcome.
@@ -31,11 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       await enforceRateLimit({
         name: "bank-verify",
         identifier: p.userId,
-        limit: 6,
+        limit: 20,
         windowSeconds: 3600,
-        message: "Te veel pogingen — probeer het over een uur opnieuw.",
+        message: "Te veel pogingen — probeer het over een uur opnieuw, of upload een bankafschrift.",
       });
-      return NextResponse.json({ url: await startBankLogin(p.userId) });
+      return NextResponse.json({ url: await startBankLogin(p.userId, body.iban) });
     }
     return NextResponse.json({ result: await syncBankLogin(p.userId, body.sessionId) });
   } catch (err) {

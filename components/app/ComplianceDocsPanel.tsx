@@ -174,7 +174,11 @@ function BankLoginSlot({
       const r = await fetch("/api/me/bank-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start" }),
+        // The IBAN typed in the verification form on this page, if it isn't saved yet.
+        body: JSON.stringify({
+          action: "start",
+          iban: document.querySelector<HTMLInputElement>('input[name="payoutIban"]')?.value || undefined,
+        }),
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.url) {

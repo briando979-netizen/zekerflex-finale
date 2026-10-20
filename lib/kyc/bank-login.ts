@@ -6,6 +6,7 @@ import { recordAudit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
+import { isValidIban } from "@/lib/billing/sepa";
 import { nameSimilarity } from "@/lib/onboarding/verify";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 
@@ -34,6 +35,8 @@ export interface BankLoginResult {
 
 const key = (userId: string) => `bank-login:${userId}`;
 const customerKey = (userId: string) => `bank-login-customer:${userId}`;
+/** the IBAN a not-yet-submitted form had when the bank login started */
+const pendingKey = (userId: string) => `bank-login-iban:${userId}`;
 
 export function bankLoginEnabled(): boolean {
   return Boolean(env.STRIPE_SECRET_KEY) && process.env.BANK_LOGIN_ENABLED !== "false";
@@ -63,7 +66,10 @@ export async function currentPayoutIban(userId: string): Promise<string | null> 
 
 /** A verified bank login still proves the CURRENT IBAN (same last 4 digits). */
 export async function bankLoginProvesIban(userId: string): Promise<boolean> {
-  const [rec, iban] = await Promise.all([getBankLogin(userId), currentPayoutIban(userId)]);
+  const [rec, saved] = await Promise.all([getBankLogin(userId), currentPayoutIban(userId)]);
+  // Before the verification form is submitted there's no saved IBAN yet —
+  // the one typed when the bank login started counts until then.
+  const iban = saved ?? (await kvGet<string>(pendingKey(userId)).catch(() => null));
   return Boolean(rec && rec.status === "verified" && iban && iban.endsWith(rec.ibanLast4));
 }
 
@@ -89,14 +95,23 @@ async function customerFor(userId: string, email: string, name: string): Promise
   return c.id;
 }
 
-/** Start the iDEAL bank login; returns the Stripe-hosted URL. */
-export async function startBankLogin(userId: string): Promise<string> {
+/**
+ * Start the iDEAL bank login; returns the Stripe-hosted URL. `ibanHint` is
+ * what the freelancer typed in the (not yet submitted) verification form —
+ * used to compare against only when no IBAN is saved yet.
+ */
+export async function startBankLogin(userId: string, ibanHint?: string): Promise<string> {
   if (!bankLoginEnabled()) throw AppError.validation("Inloggen bij je bank staat nog niet aan.");
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, fullName: true } });
   if (!user) throw AppError.notFound("Account niet gevonden");
-  if (!(await currentPayoutIban(userId))) {
-    throw AppError.validation("Vul eerst je IBAN in, dan controleren we die via je bank.");
+  const typed = ibanHint?.replace(/\s+/g, "").toUpperCase() ?? "";
+  const candidate = (await currentPayoutIban(userId)) ?? (typed && isValidIban(typed) ? typed : null);
+  if (!candidate) {
+    throw AppError.validation(
+      typed ? "Dit IBAN klopt niet — controleer het nummer." : "Vul eerst je IBAN in, dan controleren we die via je bank.",
+    );
   }
+  await kvSet(pendingKey(userId), candidate);
   const base = env.APP_BASE_URL.replace(/\/+$/, "");
   try {
     const session = await getStripeClient().checkout.sessions.create({
@@ -129,10 +144,12 @@ export async function syncBankLogin(userId: string, sessionId: string): Promise<
   const ideal = attempt?.payment_method_details?.ideal;
   if (si?.status !== "succeeded" || !ideal?.iban_last4 || !ideal.verified_name) return null;
 
-  const [user, iban] = await Promise.all([
+  const [user, saved, pending] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } }),
     currentPayoutIban(userId),
+    kvGet<string>(pendingKey(userId)).catch(() => null),
   ]);
+  const iban = saved ?? pending;
   const problems: BankLoginResult["problems"] = [];
   if (!user || !namesMatch(user.fullName, ideal.verified_name)) problems.push("name");
   if (!iban || !iban.endsWith(ideal.iban_last4)) problems.push("iban");
