@@ -35,6 +35,8 @@ export interface Campaign {
   recipients: number;
   delivered: number;
   failed: number;
+  /** who it went to (lib/newsletter/audience); absent on older campaigns = subscribers */
+  audience?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

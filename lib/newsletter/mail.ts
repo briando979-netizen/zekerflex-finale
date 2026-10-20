@@ -40,18 +40,34 @@ export function newsletterConfirmEmail(email: string, token: string): MailInput 
   };
 }
 
-/** One issue of the newsletter to one confirmed subscriber. */
+/** Escape, then turn bare http(s) URLs into links (the body is plain text). */
+function linkify(s: string): string {
+  return esc(s).replace(
+    /https?:\/\/[^\s<]+[^\s<.,;:!?)]/g,
+    (url) => `<a href="${url}" style="color:#0F6B4A;font-weight:600;word-break:break-all">${url}</a>`,
+  );
+}
+
+/**
+ * One admin broadcast to one recipient. `reason` picks the footer: a
+ * newsletter subscriber, or an account holder mailed as an existing customer.
+ */
 export function newsletterBroadcastEmail(
   email: string,
   token: string,
   subject: string,
   bodyText: string,
+  reason: "subscriber" | "account" = "subscriber",
 ): MailInput {
   const unsub = unsubscribeUrl(token);
   const unsubApi = unsubscribeApiUrl(token);
+  const why =
+    reason === "account"
+      ? "Je ontvangt deze mail omdat je een ZekerFlex-account hebt."
+      : "Je ontvangt deze mail omdat je je hebt ingeschreven voor de ZekerFlex-nieuwsbrief.";
   const paragraphs = bodyText
     .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#3C4A42">${esc(p).replace(/\n/g, "<br>")}</p>`)
+    .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#3C4A42">${linkify(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
   return {
     to: email,
@@ -60,12 +76,12 @@ export function newsletterBroadcastEmail(
     kind: "nieuwsbrief",
     listUnsubscribe: unsubApi,
     subject,
-    text: `${bodyText}\n\n—\nJe ontvangt deze mail omdat je je hebt ingeschreven voor de ZekerFlex-nieuwsbrief.\nAfmelden: ${unsub}`,
+    text: `${bodyText}\n\n—\n${why}\nAfmelden: ${unsub}`,
     html: mailShell(
       subject,
       `${paragraphs}
        <p style="margin:22px 0 0;border-top:1px solid #E6E7E1;padding-top:14px;font-size:12px;color:#667469">
-       Je ontvangt deze mail omdat je je hebt ingeschreven voor de ZekerFlex-nieuwsbrief.
+       ${why}
        <a href="${unsub}" style="color:#667469">Afmelden</a>.
        </p>`,
     ),

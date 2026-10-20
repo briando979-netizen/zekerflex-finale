@@ -17,14 +17,52 @@ interface Campaign {
   delivered: number;
   failed: number;
   sentByEmail: string;
+  audience?: Audience;
 }
+type Audience = "subscribers" | "users" | "freelancers" | "employers" | "everyone";
+// Mirrors AUDIENCE_LABEL in lib/newsletter/audience (server-only module).
+const AUDIENCE_LABEL: Record<Audience, string> = {
+  subscribers: "Nieuwsbrief-abonnees",
+  users: "Alle gebruikers",
+  freelancers: "Freelancers",
+  employers: "Werkgevers",
+  everyone: "Iedereen (abonnees + gebruikers)",
+};
 interface Payload {
   stats: { total: number; confirmed: number; pending: number; unsubscribed: number };
+  audiences?: Record<Audience, number>;
   smtp: boolean;
   from: string;
   subscribers: Sub[];
   campaigns: Campaign[];
 }
+
+const TEMPLATES: { label: string; subject: string; body: string }[] = [
+  {
+    label: "App-testers werven",
+    subject: "Test jij als eerste de ZekerFlex-app? 📱",
+    body: `Hoi,
+
+De ZekerFlex-app voor Android is klaar om getest te worden, en we zoeken mensen die hem als eerste willen uitproberen.
+
+In de app kun je klussen bij jou in de buurt vinden en erop reageren, je uren schrijven en je verdiensten bijhouden, direct chatten met opdrachtgevers of freelancers, en meldingen krijgen zodra er iets voor je klaarstaat.
+
+Zo doe je mee:
+1. Stuur ons je Gmail-adres: antwoord op deze mail met het Gmail-adres dat je in de Play Store op je telefoon gebruikt. We zetten je dan op de testerslijst.
+2. Open deze link op je Android-telefoon: https://play.google.com/apps/internaltest/4701613631596790883
+3. Tik op "Word tester" en installeer de app via Google Play.
+
+Zie je "app niet beschikbaar"? Dan staat je adres nog niet op de lijst. Probeer het een paar uur later nog eens.
+
+Onze vraag aan jou: houd de app minstens 14 dagen geïnstalleerd en gebruik hem af en toe. Zie je iets wat niet werkt of beter kan? Antwoord gewoon op deze mail.
+
+Heb je een iPhone? De iOS-versie volgt later. Tot die tijd werkt alles via www.zekerflex.com.
+
+Bedankt dat je ons helpt!
+
+Team ZekerFlex`,
+  },
+];
 
 const STATUS_LABEL: Record<Sub["status"], string> = {
   pending: "wacht op bevestiging",
@@ -36,6 +74,7 @@ export function Newsletter() {
   const [data, setData] = useState<Payload | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [audience, setAudience] = useState<Audience>("everyone");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | Sub["status"]>("all");
@@ -57,7 +96,7 @@ export function Newsletter() {
 
   async function send(test: boolean) {
     if (busy) return;
-    if (!test && !window.confirm(`Nieuwsbrief versturen naar ${data?.stats.confirmed ?? 0} bevestigde abonnees?`)) {
+    if (!test && !window.confirm(`Mail versturen naar ${count} ontvangers (${AUDIENCE_LABEL[audience]})?`)) {
       return;
     }
     setBusy(true);
@@ -66,7 +105,7 @@ export function Newsletter() {
       const res = await fetch("/api/admin/nieuwsbrief/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body, test }),
+        body: JSON.stringify({ subject, body, audience, test }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -87,6 +126,7 @@ export function Newsletter() {
   }
 
   const s = data?.stats;
+  const count = data?.audiences?.[audience] ?? (audience === "subscribers" ? (s?.confirmed ?? 0) : 0);
   const q = query.trim().toLowerCase();
   const subs = (data?.subscribers ?? []).filter((x) => (filter === "all" || x.status === filter) && (!q || x.email.toLowerCase().includes(q)));
 
@@ -108,9 +148,9 @@ export function Newsletter() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold text-ink">Nieuwsbrief</h1>
+        <h1 className="font-display text-2xl font-bold text-ink">Nieuwsbrief &amp; mail aan gebruikers</h1>
         <p className="mt-1 text-sm text-neutralx-600">
-          Inschrijvingen van de website (dubbele opt-in) en het versturen van een uitgave.
+          Schrijf één mail en stuur hem in één keer naar abonnees, alle gebruikers, alleen freelancers of alleen werkgevers.
         </p>
       </div>
 
@@ -137,7 +177,45 @@ export function Newsletter() {
 
       {/* compose */}
       <div className="card space-y-3 p-5">
-        <div className="text-sm font-semibold">Nieuwe uitgave</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">Nieuwe mail</span>
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => {
+                if ((subject || body) && !window.confirm("Huidige tekst vervangen door het sjabloon?")) return;
+                setSubject(t.subject);
+                setBody(t.body);
+              }}
+              className="ml-auto rounded-full border border-hairstrong px-2.5 py-1 text-xs text-neutralx-600 hover:bg-paper-soft"
+            >
+              Sjabloon: {t.label}
+            </button>
+          ))}
+        </div>
+        <div>
+          <div className="mb-1.5 text-xs text-neutralx-500">Naar wie?</div>
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(AUDIENCE_LABEL) as Audience[]).map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setAudience(a)}
+                className={`rounded-full px-3 py-1.5 text-xs ${
+                  audience === a ? "bg-ink text-white" : "bg-paper-soft text-neutralx-600 hover:bg-hair"
+                }`}
+              >
+                {AUDIENCE_LABEL[a]} <span className="num opacity-70">({data?.audiences?.[a] ?? "…"})</span>
+              </button>
+            ))}
+          </div>
+          {audience !== "subscribers" && (
+            <p className="mt-1.5 text-xs text-neutralx-500">
+              Alleen gebruikers met een bevestigd e-mailadres. Wie zich ooit heeft afgemeld, krijgt niets. Elke mail heeft een afmeldlink.
+            </p>
+          )}
+        </div>
         <input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -147,7 +225,7 @@ export function Newsletter() {
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Bericht. Lege regel = nieuwe alinea."
+          placeholder="Bericht. Lege regel = nieuwe alinea. Links (https://…) worden vanzelf klikbaar."
           rows={9}
           className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm leading-relaxed"
         />
@@ -155,10 +233,10 @@ export function Newsletter() {
           <button
             type="button"
             onClick={() => send(false)}
-            disabled={busy || subject.length < 3 || body.length < 10}
+            disabled={busy || subject.length < 3 || body.length < 10 || count === 0}
             className="btn-primary text-sm disabled:opacity-50"
           >
-            {busy ? "Bezig…" : `Versturen naar ${s?.confirmed ?? 0} abonnees`}
+            {busy ? "Bezig… (laat dit venster open)" : `Versturen naar ${count} ontvangers`}
           </button>
           <button
             type="button"
@@ -176,13 +254,14 @@ export function Newsletter() {
       {/* campaign history */}
       {data && data.campaigns.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="border-b border-hair px-5 py-3 text-sm font-semibold">Verstuurde uitgaven</div>
+          <div className="border-b border-hair px-5 py-3 text-sm font-semibold">Verstuurde mails</div>
           <ul className="divide-y divide-hair text-sm">
             {data.campaigns.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
                 <span className="min-w-0 flex-1 truncate font-medium text-ink">{c.subject}</span>
                 <span className="text-xs text-neutralx-500">
-                  {new Date(c.at).toLocaleString("nl-NL")} · {c.delivered}/{c.recipients} afgeleverd
+                  {new Date(c.at).toLocaleString("nl-NL")} · {AUDIENCE_LABEL[c.audience ?? "subscribers"] ?? c.audience} ·{" "}
+                  {c.delivered}/{c.recipients} afgeleverd
                   {c.failed > 0 ? ` · ${c.failed} mislukt` : ""}
                 </span>
               </li>

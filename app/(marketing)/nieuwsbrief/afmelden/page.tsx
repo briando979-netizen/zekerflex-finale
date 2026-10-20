@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { unsubscribe } from "@/lib/newsletter/store";
+import { unsubscribeAny } from "@/lib/newsletter/unsubscribe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nieuwsbrief afmelden", robots: { index: false } };
@@ -14,7 +14,7 @@ export default async function AfmeldenPage(
   // Reached directly from a mail link with ?token= → unsubscribe now.
   // Reached via the one-click API redirect → ?done=1, already unsubscribed.
   if (searchParams.token && !searchParams.done) {
-    await unsubscribe(searchParams.token).catch(() => null);
+    await unsubscribeAny(searchParams.token).catch(() => null);
   }
 
   return (
@@ -25,8 +25,9 @@ export default async function AfmeldenPage(
           Je bent afgemeld
         </h1>
         <p className="mt-5 max-w-xl text-lg text-white/70">
-          Je ontvangt de ZekerFlex-nieuwsbrief niet meer. Van gedachten veranderd? Je kunt je
-          onderaan de homepage opnieuw inschrijven.
+          Je ontvangt geen nieuwsbrieven en aankondigingen van ZekerFlex meer. Berichten over je
+          eigen klussen, uren en betalingen blijf je wel krijgen. Van gedachten veranderd? Je kunt
+          je onderaan de homepage opnieuw inschrijven.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/" className="btn-mint">
