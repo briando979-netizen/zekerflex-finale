@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { sendMail } from "@/lib/mail";
 import { resendDelivery } from "@/lib/webhooks/manage";
 import type { ProposalAction } from "@/lib/ai-teams";
+import { notifyPendingReactions, setTenantApproval } from "@/lib/company/verified";
 
 async function hqAdmins(tenantId: string): Promise<{ email: string; name: string }[]> {
   const rows = await prisma.membership.findMany({ where: { tenantId, role: "HQ_ADMIN" }, select: { user: { select: { email: true, fullName: true } } } });
@@ -10,17 +11,37 @@ async function hqAdmins(tenantId: string): Promise<{ email: string; name: string
 }
 
 /** Executes an approved team proposal. Returns a short result line for the report. */
-export async function executeProposal(action: ProposalAction): Promise<string> {
+export async function executeProposal(action: ProposalAction, by = "ai-team"): Promise<string> {
   const base = env.APP_BASE_URL.replace(/\/$/, "");
   if (action.type === "resend-webhook") {
     const r = await resendDelivery(action.deliveryId);
     return r.ok ? `opnieuw verstuurd (HTTP ${r.status})` : `nog steeds mislukt${r.status ? ` (HTTP ${r.status})` : ""}`;
   }
+  if (action.type === "rematch-shift") {
+    const { dispatchNextWave } = await import("@/lib/notifications/dispatcher");
+    const n = await dispatchNextWave(action.shiftId);
+    return n > 0 ? `${n} extra flexkracht(en) benaderd` : "geen nieuwe passende flexkrachten gevonden";
+  }
+  if (action.type === "approve-company") {
+    await setTenantApproval(action.tenantId, true, by);
+    const told = await notifyPendingReactions(action.tenantId);
+    return `bedrijf goedgekeurd, ${told} freelancer(s) een melding gestuurd`;
+  }
   const admins = await hqAdmins(action.tenantId);
   if (!admins.length) return "geen hoofdbeheerder met e-mailadres gevonden";
   for (const a of admins) {
     const first = a.name.split(" ")[0] ?? "";
-    if (action.type === "timesheet-reminder") {
+    if (action.type === "rate-advice") {
+      const shift = await prisma.shift.findUnique({ where: { id: action.shiftId }, select: { title: true, hourlyRateCents: true } });
+      if (!shift) return "klus bestaat niet meer";
+      const eur = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
+      await sendMail({
+        to: a.email,
+        subject: `Tip: "${shift.title}" sneller gevuld`,
+        text: `Hoi ${first},\n\nJe klus "${shift.title}" staat op ${eur(shift.hourlyRateCents)} per uur. Vergelijkbare klussen op ZekerFlex betalen meestal rond ${eur(action.suggestedCents)} per uur — daardoor reageren er minder flexkrachten op jouw klus.\n\nMet een tarief rond het marktgemiddelde is je klus doorgaans veel sneller gevuld. Je past het tarief aan via:\n${base}/werkgever/diensten/${action.shiftId}\n\nGroet,\nTeam ZekerFlex`,
+        kind: "rate-advice",
+      });
+    } else if (action.type === "timesheet-reminder") {
       await sendMail({
         to: a.email,
         subject: "Er wachten uren op je goedkeuring",

@@ -31,7 +31,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const p = (await proposals()).find((x) => x.id === input.id && x.status === "open");
   if (!p) throw AppError.notFound("Voorstel niet gevonden of al afgehandeld");
   if (input.action === "dismiss") return NextResponse.json({ proposal: await setProposalStatus(p.id, "dismissed") });
-  const result = p.action ? await executeProposal(p.action) : "geen actie nodig";
+  const result = p.action ? await executeProposal(p.action, principal.email) : "geen actie nodig";
   await recordAudit({ category: "ORCHESTRATION", action: "ai_team.proposal_executed", actorUserId: principal.userId, summary: `AI-team ${p.team}: ${p.title} — ${result}`, targetType: "ai-proposal", targetId: p.id });
   return NextResponse.json({ proposal: await setProposalStatus(p.id, "done", result) });
 });

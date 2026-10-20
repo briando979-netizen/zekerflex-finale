@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { kvAppend, kvGet, kvSet } from "@/lib/storage/kv";
 import { chat, llmConfigProblem } from "@/lib/ai/client";
 import { shiftCategory } from "@/lib/shifts/category";
+import { planning, onboarding, prijs, kwaliteit, klantenservice, veiligheid } from "@/lib/ai-teams/extra-teams";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex AI-teams. Each team runs on its own every day, works from real
@@ -28,7 +29,10 @@ export interface FeedItem {
 export type ProposalAction =
   | { type: "timesheet-reminder"; timesheetId: string; tenantId: string }
   | { type: "reactivation-mail"; tenantId: string }
-  | { type: "resend-webhook"; deliveryId: string };
+  | { type: "resend-webhook"; deliveryId: string }
+  | { type: "rematch-shift"; shiftId: string }
+  | { type: "approve-company"; tenantId: string }
+  | { type: "rate-advice"; shiftId: string; tenantId: string; suggestedCents: number };
 
 export interface Proposal {
   id: string;
@@ -55,6 +59,12 @@ export const TEAMS: Team[] = [
   { id: "oplossingen", name: "Oplossingen", emoji: "🛠️", mission: "Vindt wat misgaat (mislukte webhooks, betalingen, vaste opdrachten) en zet de oplossing klaar.", members: ["Storingzoeker", "Hersteller"], needsModel: false },
   { id: "automatisering", name: "Automatisering", emoji: "⚙️", mission: "Ziet waar werk blijft liggen (uren die niet worden goedgekeurd) en zet herinneringen klaar.", members: ["Opvolger", "Herinneraar"], needsModel: false },
   { id: "stijl", name: "Stijl & ontwerp", emoji: "🎨", mission: "Bewaakt de uitstraling: producten zonder foto of goede tekst, onvolledige profielen.", members: ["Art director", "Tekstcontroleur"], needsModel: false },
+  { id: "planning", name: "Planning & bezetting", emoji: "🗓️", mission: "Ziet klussen die binnen 48 uur starten en nog niet vol zijn, en mensen die niet zijn komen opdagen.", members: ["Planner", "No-show-wachter"], needsModel: false },
+  { id: "onboarding", name: "Onboarding", emoji: "🚪", mission: "Helpt nieuwe bedrijven en freelancers door de verificatie; zet bedrijven met wachtende reacties klaar voor goedkeuring.", members: ["Welkomstcoach", "Verificatie-opvolger"], needsModel: false },
+  { id: "prijs", name: "Prijs & tarieven", emoji: "💶", mission: "Vergelijkt open klussen met de markt en adviseert opdrachtgevers die te laag betalen.", members: ["Tariefanalist"], needsModel: false },
+  { id: "kwaliteit", name: "Kwaliteit", emoji: "⭐", mission: "Bewaakt beoordelingen en afzeggingen van freelancers en bedrijven.", members: ["Kwaliteitsbewaker"], needsModel: false },
+  { id: "klantenservice", name: "Klantenservice", emoji: "💬", mission: "Let op vragen in de websitechat die te lang onbeantwoord blijven.", members: ["Servicedesk"], needsModel: false },
+  { id: "veiligheid", name: "Veiligheid", emoji: "🔐", mission: "Controleert tweestapsverificatie van beheerders en zoekt verdachte uren.", members: ["Beveiliger", "Fraudespeurder"], needsModel: false },
   { id: "updates", name: "Updates & rapportage", emoji: "📰", mission: "Dagelijks een verslag van de cijfers en wat er veranderde.", members: ["Verslaggever"], needsModel: false },
   { id: "denken", name: "Denken & strategie", emoji: "🧠", mission: "Denkt na over de koers op basis van de cijfers en signalen van de andere teams.", members: ["Strateeg"], needsModel: true },
   { id: "voorstellen", name: "Voorstellen & ideeën", emoji: "💡", mission: "Bedenkt nieuwe producten, functies en campagnes.", members: ["Bedenker", "Productmanager"], needsModel: true },
@@ -187,6 +197,12 @@ export async function runTeams(now = new Date()): Promise<{ teams: number; skipp
     automatisering: () => automatisering(now),
     stijl: () => stijl(),
     updates: () => updates(now),
+    planning: () => planning(now, { log, propose }),
+    onboarding: () => onboarding(now, { log, propose }),
+    prijs: () => prijs(now, { log, propose }),
+    kwaliteit: () => kwaliteit(now, { log, propose }),
+    klantenservice: () => klantenservice(now, { log, propose }),
+    veiligheid: () => veiligheid(now, { log, propose }),
   };
   for (const team of TEAMS) {
     try {
