@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { kvAppend, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvAppend, kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // In-platform messaging ("de chat") — Postgres-backed (KeyValueStore) — was
@@ -125,19 +125,43 @@ async function writeThread(t: ChatThread): Promise<void> {
   await kvSet(threadKey(t.id), t);
 }
 
+const mergedKey = (id: string) => `chat-thread-merged:${id}`;
+
+/** A merged duplicate's id resolves to its main thread's id (see mergeDuplicateDirectThreads). */
+async function resolveThreadId(id: string): Promise<string> {
+  if (await kvGet<ChatThread>(threadKey(id))) return id;
+  return (await kvGet<string>(mergedKey(id))) ?? id;
+}
+
 export async function getThread(id: string): Promise<ChatThread | null> {
-  return kvGet<ChatThread>(threadKey(id));
+  const t = await kvGet<ChatThread>(threadKey(id));
+  if (t) return t;
+  // A duplicate merged into its pair's main thread — old links keep working.
+  const mainId = await kvGet<string>(mergedKey(id));
+  return mainId ? kvGet<ChatThread>(threadKey(mainId)) : null;
 }
 
 async function allThreads(): Promise<ChatThread[]> {
   return kvListValues<ChatThread>("chat-thread:", 20_000);
 }
 
-function pairKey(a: string, b: string, contextKey?: string): string {
-  return [a, b].sort().join("~") + (contextKey ? `~${contextKey}` : "");
+/** Context keys that keep their own thread; everything else shares the pair's one thread. */
+const SEPARATE_CONTEXTS = new Set(["admin-broadcast"]);
+
+function separateContext(contextKey?: string): string | null {
+  return contextKey && SEPARATE_CONTEXTS.has(contextKey) ? contextKey : null;
 }
 
-/** Find or create a 1-on-1 thread between two users (deduped by pair + context). */
+function pairKey(a: string, b: string, contextKey?: string): string {
+  const own = separateContext(contextKey);
+  return [a, b].sort().join("~") + (own ? `~${own}` : "");
+}
+
+/**
+ * Find or create THE 1-on-1 thread between two users. One thread per pair,
+ * like WhatsApp — a new klus doesn't start a new conversation, it only
+ * updates the thread's subject to the latest klus.
+ */
 export async function ensureDirectThread(
   userA: string,
   userB: string,
@@ -145,12 +169,20 @@ export async function ensureDirectThread(
 ): Promise<ChatThread> {
   if (userA === userB) throw new Error("cannot start a thread with yourself");
   const dedupeKey = pairKey(userA, userB, meta.contextKey);
-  const existing = (await allThreads()).find(
-    (t) =>
-      t.kind === "direct" &&
-      pairKey(t.participants[0] ?? "", t.participants[1] ?? "", t.meta.contextKey) === dedupeKey,
-  );
-  if (existing) return existing;
+  const existing = (await allThreads())
+    .filter(
+      (t) =>
+        t.kind === "direct" &&
+        pairKey(t.participants[0] ?? "", t.participants[1] ?? "", t.meta.contextKey) === dedupeKey,
+    )
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))[0];
+  if (existing) {
+    if (meta.shiftId && meta.shiftId !== existing.meta.shiftId) {
+      existing.meta = { ...existing.meta, ...meta };
+      await writeThread(existing);
+    }
+    return existing;
+  }
 
   const now = new Date().toISOString();
   const t: ChatThread = {
@@ -261,6 +293,7 @@ export async function getMessageById(threadId: string, messageId: string): Promi
 }
 
 export async function getMessages(threadId: string, limit = 200): Promise<ChatMessage[]> {
+  threadId = await resolveThreadId(threadId);
   const rows = (await kvGet<ChatMessage[]>(messagesKey(threadId))) ?? [];
   return rows.slice(-limit);
 }
@@ -272,6 +305,7 @@ export async function postMessage(
   kind: MessageKind = "text",
   extra: MessageExtra = {},
 ): Promise<ChatMessage> {
+  threadId = await resolveThreadId(threadId);
   const clean = text.trim().slice(0, 4000);
   // text/system need words; attachment/location/call kinds may carry no text
   const needsText = kind === "text" || kind === "system";
@@ -301,8 +335,69 @@ export async function postMessage(
   return msg;
 }
 
+/**
+ * One-off clean-up: merge duplicate direct threads (same two people, from the
+ * old one-thread-per-klus behaviour) into one main thread per pair. The main
+ * thread is the one with the most messages (oldest on a tie); the others'
+ * messages are moved into it in time order, then the duplicates are deleted
+ * and remembered as aliases so old links still open the main thread.
+ */
+export async function mergeDuplicateDirectThreads(): Promise<{ pairs: number; merged: number; messagesMoved: number }> {
+  const groups = new Map<string, ChatThread[]>();
+  for (const t of await allThreads()) {
+    if (t.kind !== "direct" || t.participants.length !== 2) continue;
+    const k = pairKey(t.participants[0]!, t.participants[1]!, t.meta.contextKey);
+    groups.set(k, [...(groups.get(k) ?? []), t]);
+  }
+  let pairs = 0;
+  let merged = 0;
+  let messagesMoved = 0;
+  for (const threads of groups.values()) {
+    if (threads.length < 2) continue;
+    pairs += 1;
+    const withMsgs = await Promise.all(
+      threads.map(async (t) => ({ t, msgs: (await kvGet<ChatMessage[]>(messagesKey(t.id))) ?? [] })),
+    );
+    withMsgs.sort((a, b) => b.msgs.length - a.msgs.length || (a.t.createdAt < b.t.createdAt ? -1 : 1));
+    const main = withMsgs[0]!;
+    const all = [...main.msgs];
+    const seen = new Set(all.map((m) => m.id));
+    for (const dup of withMsgs.slice(1)) {
+      for (const m of dup.msgs) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        all.push({ ...m, threadId: main.t.id });
+        messagesMoved += 1;
+      }
+      for (const [u, at] of Object.entries(dup.t.reads)) {
+        if (!main.t.reads[u] || main.t.reads[u]! < at) main.t.reads[u] = at;
+      }
+    }
+    all.sort((a, b) => (a.at < b.at ? -1 : 1));
+    await kvSet(messagesKey(main.t.id), all.slice(-5000));
+    const last = all.at(-1);
+    if (last) {
+      main.t.lastMessageAt = last.at;
+      main.t.lastMessage = { from: last.from, text: previewText(last), at: last.at };
+    }
+    // keep the most recent klus as the thread's subject
+    const newest = [...threads].sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1))[0]!;
+    main.t.meta = { ...main.t.meta, ...newest.meta };
+    main.t.createdAt = [...threads].map((t) => t.createdAt).sort()[0]!;
+    await writeThread(main.t);
+    for (const dup of withMsgs.slice(1)) {
+      await kvSet(mergedKey(dup.t.id), main.t.id);
+      await kvDelete(messagesKey(dup.t.id));
+      await kvDelete(threadKey(dup.t.id));
+      merged += 1;
+    }
+  }
+  return { pairs, merged, messagesMoved };
+}
+
 export async function markThreadRead(threadId: string, userId: string): Promise<void> {
   const t = await getThread(threadId);
+  // (getThread resolves a merged duplicate to its main thread)
   if (!t) return;
   t.reads[userId] = new Date().toISOString();
   await writeThread(t);

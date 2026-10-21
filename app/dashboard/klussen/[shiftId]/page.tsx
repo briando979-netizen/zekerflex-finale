@@ -177,6 +177,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     }
   }
 
+  // Selected for this klus, or it is over (archived): nothing to react to any
+  // more — the bottom bar only offers a message to the client.
+  const settled = Boolean(assigned) || s.alreadyApplied || s.myOffer?.status === "accepted" || !upcoming;
+
   // Worked / archived state: the timesheet + payout for this engagement.
   const worked =
     myProfile && s.alreadyApplied
@@ -639,22 +643,22 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           {D.footer}
         </div>
 
-        <div className="mt-4">
-          <MessageEmployerButton shiftId={s.id} />
-        </div>
+        {!settled && (
+          <div className="mt-4">
+            <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} />
+          </div>
+        )}
       </div>
 
       {/* Sticky action bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hair bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-2xl px-4 py-3">
-          {assigned || s.alreadyApplied ? (
+          {settled ? (
             <div>
-              <p className="text-xs font-semibold text-brand-600">{s.branch}</p>
-              <p className="line-clamp-1 text-sm font-bold text-ink">{s.title}</p>
+              <p className="text-center text-xs text-neutralx-500">{D.forQuestions}</p>
               <div className="mt-2">
-                <MessageEmployerButton shiftId={s.id} />
+                <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} className="btn-primary w-full py-2.5 text-sm" />
               </div>
-              <p className="mt-1.5 text-center text-xs text-neutralx-400">{D.forQuestions}</p>
             </div>
           ) : s.myOffer && s.myOffer.status !== "withdrawn" ? (
             <div className="flex items-center justify-between gap-3">
@@ -707,9 +711,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               />
             </div>
           )}
-          <p className="mt-2 text-center text-xs text-neutralx-400">
-            {D.reactions(reactionCount)}
-          </p>
+          {!settled && (
+            <p className="mt-2 text-center text-xs text-neutralx-400">
+              {D.reactions(reactionCount)}
+            </p>
+          )}
         </div>
       </div>
     </div>

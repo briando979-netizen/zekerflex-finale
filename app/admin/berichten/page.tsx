@@ -1,6 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { APageHeader } from "@/components/admin/ui";
 import { InboxPage } from "@/components/chat/InboxPage";
+import { MergeDuplicateChats } from "@/components/admin/MergeDuplicateChats";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ export default async function AdminBerichtenPage() {
         title="Berichten & Support"
         subtitle="Alle support-gesprekken van gebruikers. Reageer als ZekerFlex Support."
       />
+      <div className="mt-4">
+        <MergeDuplicateChats />
+      </div>
       <div className="mt-4">
         <InboxPage />
       </div>
