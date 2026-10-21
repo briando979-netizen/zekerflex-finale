@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 
 interface Level {
   id: string;
@@ -177,19 +178,10 @@ export function BusinessLevelCard() {
 }
 
 /**
- * Inside the Android app (cookie set by middleware on the TWA launch URL).
- * The referral cash bonus is web-only: offering cash rewards in the app gives
- * it an 18+ Play/IARC rating, and freelancers can be 16–17.
+ * Personal invite link with bonus — for every role, on the website only:
+ * offering cash rewards in the Android app gives it an 18+ Play/IARC rating,
+ * and freelancers can be 16–17 (lib/app-mode.ts).
  */
-function useInAndroidApp(): boolean | null {
-  const [inApp, setInApp] = useState<boolean | null>(null);
-  useEffect(() => {
-    setInApp(/(?:^|;\s*)zf_app=1(?:;|$)/.test(document.cookie));
-  }, []);
-  return inApp;
-}
-
-/** Personal invite link with bonus — for every role, on the website only. */
 export function ReferralCard() {
   const data = useRewards();
   const inApp = useInAndroidApp();

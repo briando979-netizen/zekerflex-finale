@@ -51,12 +51,16 @@ function LanguageButton() {
 export function FreelancerShell({
   userName,
   theme,
+  inApp = false,
   children,
 }: {
   userName: string;
   theme: Theme;
+  /** Android app: no Bank tab (lib/app-mode.ts) */
+  inApp?: boolean;
   children: ReactNode;
 }) {
+  const tabs = inApp ? TABS.filter((t) => t.key !== "bank") : TABS;
   const pathname = usePathname();
   const ft = useFT();
   const isActive = (href: string) =>
@@ -68,7 +72,7 @@ export function FreelancerShell({
   // Focused full-screen views (a single klus) hide the tab bar so a page-owned
   // action bar can take its place.
   const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
-  const current = TABS.find((t) => isActive(t.href));
+  const current = tabs.find((t) => isActive(t.href));
   const title = !current || current.href === "/dashboard/klussen" ? ft.nav.findJob : ft.nav[current.key];
 
   return (
@@ -114,7 +118,7 @@ export function FreelancerShell({
         className="fixed inset-x-0 bottom-0 z-40 border-t border-hair bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:inset-x-auto lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 lg:rounded-full lg:border lg:border-hair lg:px-2 lg:pb-0 lg:shadow-lift"
       >
         <ul className="mx-auto flex max-w-lg items-stretch justify-between lg:max-w-none lg:gap-1">
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = isActive(t.href);
             return (
               <li key={t.href} className="flex-1 lg:flex-none">

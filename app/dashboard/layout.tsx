@@ -6,6 +6,7 @@ import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { getLocale } from "@/lib/i18n/server";
+import { inAndroidApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <I18nProvider locale={locale}>
-      <FreelancerShell userName={principal.fullName} theme={theme}>
+      <FreelancerShell userName={principal.fullName} theme={theme} inApp={await inAndroidApp()}>
         {children}
         <ChatDock />
       </FreelancerShell>

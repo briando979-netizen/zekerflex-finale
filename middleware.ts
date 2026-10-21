@@ -5,6 +5,7 @@ import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
+import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
 
 export const config = {
   matcher: [
@@ -117,9 +118,9 @@ function next(
 // sets APP_COOKIE. With it, the public marketing site is off-limits — any page
 // outside APP_ALLOWED bounces to /start (→ login or your own dashboard). Legal
 // pages Google Play requires, the shop and the kennisbank (linked from the
-// dashboards) stay reachable. /?app=0 leaves app mode.
+// dashboards) stay reachable; the bank pages are blocked (lib/app-mode.ts).
+// /?app=0 leaves app mode.
 // ---------------------------------------------------------------------------
-const APP_COOKIE = "zf_app";
 const APP_ALLOWED = [
   "/start", "/login", "/register", "/wachtwoord-vergeten", "/wachtwoord-herstellen", "/verifieer-email",
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
@@ -157,7 +158,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     !pathname.startsWith("/api/") &&
     req.cookies.get(APP_COOKIE)?.value === "1" &&
     req.nextUrl.searchParams.get("app") !== "0" &&
-    !appAllowed(pathname)
+    (!appAllowed(pathname) || isAppBlockedPath(pathname))
   ) {
     const url = req.nextUrl.clone();
     url.pathname = "/start";

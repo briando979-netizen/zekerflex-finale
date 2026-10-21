@@ -6,6 +6,7 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { prisma } from "@/lib/prisma";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme/server";
+import { inAndroidApp } from "@/lib/app-mode-server";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
@@ -27,12 +28,14 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const locale = await getLocale();
   const theme = await getTheme();
   const t = await getDict();
+  // Android app: no ZekerFlex Bank (lib/app-mode.ts)
+  const inApp = await inAndroidApp();
   const nav = [
     { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
     { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
-    { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
+    ...(inApp ? [] : [{ href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> }]),
     { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
     { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },

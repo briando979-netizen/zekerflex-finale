@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 
 type Speed = "instant" | "threeDay" | "standard";
 
@@ -37,6 +38,7 @@ export function PayoutSpeedPanel() {
   const [amount, setAmount] = useState("");
   const [advErr, setAdvErr] = useState<string | null>(null);
   const [advBusy, setAdvBusy] = useState(false);
+  const inApp = useInAndroidApp();
 
   const load = () =>
     fetch("/api/me/payout", { cache: "no-store" })
@@ -86,7 +88,8 @@ export function PayoutSpeedPanel() {
     }
   };
 
-  if (!d) return null;
+  // Payout speed + voorschot are web-only financial features (lib/app-mode.ts).
+  if (!d || inApp !== false) return null;
   const order: Speed[] = ["instant", "threeDay", "standard"];
 
   return (

@@ -38,6 +38,14 @@ describe("middleware — app mode", () => {
     }
   });
 
+  it("blocks the bank pages inside the app (web-only financial features)", async () => {
+    for (const p of ["/dashboard/bank", "/werkgever/bank", "/betaalverzoek/abc"]) {
+      const res = await middleware(req(p, true));
+      expect(res.status).toBe(307);
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/start");
+    }
+  });
+
   it("leaves the website alone in a normal browser", async () => {
     const res = await middleware(req("/"));
     expect(res.status).toBe(200);

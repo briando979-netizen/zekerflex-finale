@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { useFT } from "@/components/i18n/I18nProvider";
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,10 @@ export function TimesheetSubmitForm({
   const T = ft.ts;
   const euro = (c: number) => new Intl.NumberFormat(ft.intl, { style: "currency", currency: "EUR" }).format(c / 100);
   const hhmm = (v: string) => new Date(v).toLocaleString(ft.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  const SPEEDS = SPEED_ORDER.map((speed) => ({ speed, ...T.speeds[speed] }));
+  // Android app: only the standard payout — fast payout and ZekerFlex Bank are
+  // web-only financial features (lib/app-mode.ts).
+  const inApp = useInAndroidApp() === true;
+  const SPEEDS = SPEED_ORDER.filter((s) => !inApp || s === "standard").map((speed) => ({ speed, ...T.speeds[speed] }));
   const NOT_WORKED = NOT_WORKED_IDS.map((id) => ({ id, label: T.notWorked[id] ?? id }));
   const [step, setStep] = useState<Step>("worked");
   const [start, setStart] = useState(localValue(scheduledStart));
@@ -80,6 +84,9 @@ export function TimesheetSubmitForm({
   const [speed, setSpeed] = useState<Speed>(fastPay ? payoutSpeed : "standard");
   const [terms, setTerms] = useState(termsAccepted);
   const [toBank, setToBank] = useState(earningsToBank);
+  useEffect(() => {
+    if (inApp) setSpeed("standard");
+  }, [inApp]);
   const [notWorkedReason, setNotWorkedReason] = useState("");
   const [notWorkedNote, setNotWorkedNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -395,7 +402,7 @@ export function TimesheetSubmitForm({
         <>
           <p className="eyebrow">{T.step(5)}</p>
           <h2 className="mt-2 font-display text-xl font-bold">{T.payoutQ}</h2>
-          {!fastPay && (
+          {!fastPay && !inApp && (
             <p className="mt-3 rounded-xl bg-paper-soft px-3 py-2 text-xs text-neutralx-600">
               {T.noFastPay(clientName)}
             </p>
@@ -425,8 +432,8 @@ export function TimesheetSubmitForm({
               </span>
             </label>
           )}
-          <p className="mt-4 text-sm font-semibold text-ink">{T.whereTo}</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          {!inApp && <p className="mt-4 text-sm font-semibold text-ink">{T.whereTo}</p>}
+          <div className={`mt-2 grid grid-cols-2 gap-2 ${inApp ? "hidden" : ""}`}>
             <button type="button" onClick={() => setToBank(true)} className={`rounded-xl border px-3 py-3 text-left text-sm ${toBank ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
               <span className="block font-semibold">{T.bankTitle}</span>
               <span className="block text-xs text-neutralx-500">{T.bankBody}</span>
@@ -456,7 +463,7 @@ export function TimesheetSubmitForm({
             <Row label={T.rowHours} value={`${T.hm(Math.floor(minutes / 60), minutes % 60)}${hourlyRateCents ? ` · ${euro(grossCents)} ${T.gross}` : ""}`} />
             {extraCents > 0 && <Row label={T.rowExtra} value={`${euro(extraCents)} — ${extraNote}`} />}
             <Row label={T.rowReview} value={rating ? "★".repeat(rating) : T.skipped} />
-            {!payroll && <Row label={T.rowPayout} value={`${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : T.ownIban}`} />}
+            {!payroll && <Row label={T.rowPayout} value={inApp ? SPEEDS[0]!.title : `${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : T.ownIban}`} />}
           </dl>
           {error && <p className="mt-3 text-sm text-crit">{error}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">

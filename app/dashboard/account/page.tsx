@@ -11,6 +11,7 @@ import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
+import { inAndroidApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export default async function AccountPage() {
   const since = new Date();
   since.setMonth(since.getMonth() - 6);
 
+  // Android app: no ZekerFlex Bank (lib/app-mode.ts)
+  const inApp = await inAndroidApp();
   const [card, overview, fiscal, myReplacements, matched, notCompleted, theme] = await Promise.all([
     getUserCard(principal.userId),
     getFreelancerOverview(principal.userId),
@@ -60,7 +63,7 @@ export default async function AccountPage() {
   const GROUPS: { items: Item[] }[] = [
     {
       items: [
-        { label: "ZekerFlex Bank", href: "/dashboard/bank" },
+        ...(inApp ? [] : [{ label: "ZekerFlex Bank", href: "/dashboard/bank" }]),
         { label: "Ik heb een vraag", href: "/kennis" },
         {
           label: "Feedback verzenden",
