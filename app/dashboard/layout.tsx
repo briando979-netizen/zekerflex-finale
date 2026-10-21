@@ -7,6 +7,7 @@ import { ChatDock } from "@/components/chat/ChatDock";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
+import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <I18nProvider locale={locale}>
       <FreelancerShell userName={principal.fullName} theme={theme} inApp={await inAndroidApp()}>
+        <IbanHoldBanner userId={principal.userId} />
         {children}
         <ChatDock />
       </FreelancerShell>

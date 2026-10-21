@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { isValidIban } from "@/lib/billing/sepa";
 import { accountForPrincipal } from "@/lib/bank/accounts";
+import { currentPayoutIban } from "@/lib/kyc/bank-login";
+import { docStatus } from "@/lib/compliance/documents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,20 @@ export async function PUT(request: Request): Promise<NextResponse> {
     if (!isValidIban(iban)) throw AppError.validation("Dit IBAN klopt niet — controleer het nummer");
     const { account, canMoveMoney } = await accountForPrincipal(p);
     if (!canMoveMoney) throw AppError.forbidden("Alleen de hoofdbeheerder kan het uitbetaal-IBAN wijzigen");
+    // Freelancers may only withdraw to their own CONFIRMED rekening (bank login
+    // or statement) — otherwise a taken-over account could drain to any IBAN.
+    const verifiedIban = await currentPayoutIban(p.userId);
+    if (verifiedIban) {
+      const [docs, hold] = await Promise.all([
+        docStatus(p.userId),
+        prisma.freelancerProfile.findUnique({ where: { userId: p.userId }, select: { payoutIbanPendingVerification: true } }),
+      ]);
+      if (iban !== verifiedIban || !docs.bankOk || hold?.payoutIbanPendingVerification) {
+        throw AppError.validation(
+          "Je kunt alleen opnemen naar je eigen, bevestigde rekening. Wijzig je rekeningnummer bij Verificatie en bevestig het daar via je bank.",
+        );
+      }
+    }
     await prisma.bankAccount.update({ where: { id: account.id }, data: { payoutIban: iban, payoutName: input.name } });
     await recordAudit({
       category: "SECURITY",

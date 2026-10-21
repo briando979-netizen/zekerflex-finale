@@ -5,6 +5,7 @@ import { toErrorBody, AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { validateVat } from "@/lib/integrations/kvkbase";
 import { isValidIban } from "@/lib/billing/sepa";
+import { flagIbanChanged } from "@/lib/compliance/documents";
 import {
   getFiscal,
   setFiscal,
@@ -100,7 +101,13 @@ export async function PUT(request: Request): Promise<NextResponse> {
       patch.bsnLast4 = last4;
     }
 
+    // A new rekeningnummer must be confirmed again (bank login / statement)
+    // before payouts go to it — the old check proves nothing about it.
+    const before = await getFiscal(principal.userId);
     const saved = await setFiscal(principal.userId, patch);
+    if (patch.iban && before.iban && before.iban !== patch.iban) {
+      await flagIbanChanged(principal.userId).catch(() => undefined);
+    }
     return NextResponse.json({ ...saved, resolvedInvoiceMode: invoiceModeFor(saved) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
