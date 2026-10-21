@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
+import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact, dateShort } from "@/components/app/ui";
 import { PayoutSpeedPanel } from "@/components/app/PayoutSpeedPanel";
@@ -18,6 +20,8 @@ const TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
 
 export default async function UitbetalingenPage() {
   const principal = await requirePrincipal();
+  // Uitzendkrachten have no invoices: they are paid through payroll.
+  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect("/dashboard/verloning");
   const o = await getFreelancerOverview(principal.userId);
 
   return (

@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
+import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { BackLink } from "@/components/app/BackLink";
 
@@ -16,7 +18,9 @@ const NOT_COVERED = [
 ];
 
 export default async function VerzekeringPage() {
-  await requirePrincipal();
+  const principal = await requirePrincipal();
+  // zzp-verzekeringen — an uitzendkracht is insured through ZekerFlex as employer.
+  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect("/dashboard/verloning");
   return (
     <>
       <BackLink fallbackHref="/dashboard/account" label="Instellingen" />

@@ -110,6 +110,8 @@ export async function counterOfferAction(
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
+    // Uitzendkrachten work for the listed wage (CAO) — no counter-offers.
+    if (eligible.track === "payroll") proposedRateCents = shift.hourlyRateCents;
     if (shift.viaUitzendbureau && eligible.track !== "payroll") {
       return { ok: false, message: "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau." };
     }

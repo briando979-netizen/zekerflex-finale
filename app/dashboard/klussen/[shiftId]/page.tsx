@@ -335,8 +335,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         </div>
 
         {/* Fast payout — only when the client offers it (credit-checked) */}
-        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
-          {s.fastPay && !inApp ? (
+        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !isPayroll ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
+          {isPayroll ? (
+            <>
+              <span className="font-semibold">{D.payroll}</span> — {ft.market.typeUitzend.filter((_, i) => i !== 1).join(" · ")}
+            </>
+          ) : s.fastPay && !inApp ? (
             <>
               <span className="font-semibold">{D.fastPayTitle}</span>{D.fastPayBody}
             </>
@@ -349,7 +353,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {/* Info chips */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {D.chips.map((c) => (
+          {(isPayroll ? ft.market.typeUitzend : D.chips).map((c) => (
             <span key={c} className="rounded-lg border border-hair bg-white px-2.5 py-1.5 text-xs text-neutralx-600">
               {c}
             </span>
@@ -699,6 +703,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 disabled={applyDisabled}
                 notReadyReason={applyBlockReason}
                 full
+                fixedRate={isPayroll}
               />
             </div>
           )}

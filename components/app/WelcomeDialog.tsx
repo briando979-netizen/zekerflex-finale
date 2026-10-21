@@ -70,7 +70,7 @@ export function WelcomeDialog({ firstName }: { firstName: string }) {
             <span className="mt-0.5 text-brand-mint">1.</span>
             <span>
               Rond je <Link href="/dashboard/verificatie" className="font-semibold text-brand-600 hover:underline">verificatie</Link> af
-              (KVK, identiteit en je documenten) zodat je diensten kunt aannemen.
+              (identiteit, bankrekening en — als zzp&apos;er — je KVK) zodat je diensten kunt aannemen.
             </span>
           </li>
           <li className="flex gap-2.5">

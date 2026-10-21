@@ -35,6 +35,7 @@ export function ReageerButton({
   notReadyReason,
   label,
   full = false,
+  fixedRate = false,
 }: {
   shiftId: string;
   listedRateCents: number;
@@ -49,6 +50,8 @@ export function ReageerButton({
   notReadyReason?: string | null;
   label?: string;
   full?: boolean;
+  /** uitzendkracht: works for the listed (CAO) wage — no counter-offer */
+  fixedRate?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ft = useFT();
@@ -79,6 +82,7 @@ export function ReageerButton({
           agreementHref={agreementHref}
           dresscode={dresscode}
           otherShifts={otherShifts}
+          fixedRate={fixedRate}
           onClose={() => setOpen(false)}
         />
       )}
@@ -96,6 +100,7 @@ function Modal({
   agreementHref,
   dresscode,
   otherShifts,
+  fixedRate,
   onClose,
 }: {
   shiftId: string;
@@ -107,6 +112,7 @@ function Modal({
   agreementHref: string | null;
   dresscode: string | null;
   otherShifts: OtherShiftOption[];
+  fixedRate: boolean;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -289,6 +295,7 @@ function Modal({
                   value={rate}
                   inputMode="decimal"
                   onChange={(e) => setRate(e.target.value)}
+                  readOnly={fixedRate}
                   className="w-full bg-transparent outline-none"
                 />
               </div>
@@ -333,6 +340,7 @@ function Modal({
                               value={extraRates[o.id] ?? ""}
                               inputMode="decimal"
                               onChange={(e) => setExtraRates((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                              readOnly={fixedRate}
                               className="w-14 rounded border border-hairstrong bg-white px-1.5 py-1 text-right text-sm"
                             />
                             {ft.card.perHourShort}
