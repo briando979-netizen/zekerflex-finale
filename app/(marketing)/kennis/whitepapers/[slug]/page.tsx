@@ -8,13 +8,48 @@ export function generateStaticParams() {
   return WHITEPAPERS.map((w) => ({ slug: w.slug }));
 }
 
+// Search-result titles/descriptions per whitepaper, written for what people
+// actually search (Search Console: "inkomstenbelasting freelancer", "belasting
+// freelance", …). The on-page title stays as is.
+const SEO: Record<string, { title: string; description: string }> = {
+  "werken-via-zekerflex": {
+    title: "Freelancen via ZekerFlex: zo werkt het",
+    description: "Alles wat je moet weten als freelancer: klussen vinden, uren schrijven, factureren en uitbetaling. Gratis gids.",
+  },
+  omzetbelasting: {
+    title: "Btw voor freelancers: zo doe je aangifte",
+    description: "Btw (omzetbelasting) als freelancer: wanneer je btw rekent, hoe je aangifte doet en wat je terugkrijgt. Gratis gids met voorbeelden.",
+  },
+  inkomstenbelasting: {
+    title: "Inkomstenbelasting als freelancer: uitleg & tips",
+    description: "Belasting als freelancer: hoe je inkomstenbelasting over je winst aangeeft, welke aftrekposten je hebt en hoe je reserveert. Gratis gids.",
+  },
+  kleineondernemersregeling: {
+    title: "KOR voor freelancers: wanneer is het slim?",
+    description: "De kleineondernemersregeling (KOR) uitgelegd voor freelancers: voorwaarden, voordelen, nadelen en wanneer je je aanmeldt.",
+  },
+  aftrekposten: {
+    title: "Aftrekposten voor freelancers: wat mag je aftrekken?",
+    description: "Welke kosten mag je als freelancer aftrekken en hoe vraag je btw terug? Overzicht van aftrekposten met voorbeelden.",
+  },
+  administratie: {
+    title: "Administratie als freelancer: zo houd je het op orde",
+    description: "Je administratie als freelancer op orde: facturen, bonnetjes, bewaarplicht en handige gewoontes. Gratis gids.",
+  },
+  verzekering: {
+    title: "Verzekeringen voor freelancers: wat heb je nodig?",
+    description: "Welke verzekeringen heb je als freelancer nodig? Aansprakelijkheid, arbeidsongeschiktheid en meer, helder uitgelegd.",
+  },
+};
+
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const w = whitepaperBySlug(params.slug);
   if (!w) return { title: "Whitepaper" };
+  const seo = SEO[w.slug];
   return {
-    title: `${w.title} — whitepaper`,
-    description: w.intro,
+    title: seo?.title ?? `${w.title} — whitepaper`,
+    description: seo?.description ?? w.intro,
     ...canonical(`/kennis/whitepapers/${w.slug}`),
   };
 }
