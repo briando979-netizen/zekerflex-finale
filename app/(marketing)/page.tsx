@@ -8,8 +8,8 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { CountUp } from "@/components/marketing/CountUp";
 import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
-import { ShiftShowcase } from "@/components/marketing/ShiftShowcase";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
+import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
 
@@ -78,7 +78,7 @@ export default function HomePage() {
       </section>
 
       {/* ──────────────────────────────────────────────────── BRANCHES */}
-      <BranchShowcase />
+      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
 
       {/* ─────────────────────────────────────────────────── HOE HET WERKT */}
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
@@ -115,7 +115,6 @@ export default function HomePage() {
       </section>
 
       {/* ────────────────────────────────────────────── SHIFT SHOWCASE */}
-      <ShiftShowcase />
 
       {/* ───────────────────────────────────────────── SPLIT · FREELANCERS */}
       <ShowcaseSplit
