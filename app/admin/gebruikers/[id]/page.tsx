@@ -5,6 +5,7 @@ import { PageHeader, Panel, EmptyState, StatusPill, dateTime, money } from "@/co
 import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
 import { KycOverride } from "@/components/admin/KycOverride";
+import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
 import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
@@ -212,6 +213,12 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                   </dd>
                 </div>
               </dl>
+            </Panel>
+          )}
+
+          {!isDeleted && !user.memberships.some((m) => m.role === "PLATFORM_ADMIN" || m.role === "SALES") && (
+            <Panel title="AI-inspectie (alleen-lezen)">
+              <InspectLinkPanel userId={user.id} />
             </Panel>
           )}
 

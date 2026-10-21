@@ -23,6 +23,7 @@ import {
   REMEMBER_MAX_AGE_SECONDS,
   type RoleGrant,
 } from "@/lib/auth/session";
+import { INSPECT_SESSION_SECONDS } from "@/lib/auth/inspect";
 
 const credentialsSchema = z.union([
   z.object({ email: z.string().email(), password: z.string().min(1), remember: z.string().optional() }),
@@ -143,15 +144,19 @@ export const authOptions: NextAuthConfig = {
     async encode({ token }) {
       if (!token?.sub) return "";
       const remember = token.remember === true;
+      // A read-only inspection session must stay read-only and short when
+      // NextAuth rolls the cookie (lib/auth/inspect.ts).
+      const inspect = token.inspect === true;
       return encodeSession(
         {
           sub: token.sub,
           email: typeof token.email === "string" ? token.email : "",
           name: typeof token.name === "string" ? token.name : "",
           roles: Array.isArray(token.roles) ? (token.roles as RoleGrant[]) : [],
-          remember,
+          remember: remember && !inspect,
+          inspect,
         },
-        remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS,
+        inspect ? INSPECT_SESSION_SECONDS : remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS,
       );
     },
     async decode({ token }) {
@@ -163,6 +168,7 @@ export const authOptions: NextAuthConfig = {
         name: claims.name,
         roles: claims.roles,
         remember: claims.remember === true,
+        inspect: claims.inspect === true,
       };
     },
   },

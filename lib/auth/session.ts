@@ -67,6 +67,8 @@ export interface SessionClaims extends JWTPayload {
   roles: RoleGrant[];
   /** true when the user chose "ingelogd blijven" — drives the token lifetime */
   remember?: boolean;
+  /** read-only inspection session (lib/auth/inspect.ts) — writes are refused */
+  inspect?: boolean;
 }
 
 function secretKey(secret: string = AUTH_SECRET): Uint8Array {
@@ -79,6 +81,7 @@ export interface SessionInput {
   name: string;
   roles: RoleGrant[];
   remember?: boolean;
+  inspect?: boolean;
 }
 
 export async function encodeSession(
@@ -91,6 +94,7 @@ export async function encodeSession(
     name: input.name,
     roles: input.roles,
     ...(input.remember ? { remember: true } : {}),
+    ...(input.inspect ? { inspect: true } : {}),
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(input.sub)
@@ -147,5 +151,5 @@ export async function decodeSession(
   ) {
     return null;
   }
-  return { ...payload, remember: payload.remember === true } as SessionClaims;
+  return { ...payload, remember: payload.remember === true, inspect: payload.inspect === true } as SessionClaims;
 }

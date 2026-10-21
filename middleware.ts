@@ -6,6 +6,7 @@ import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
+import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink } from "@/lib/auth/inspect";
 
 export const config = {
   matcher: [
@@ -139,9 +140,50 @@ function appAllowed(pathname: string): boolean {
   return APP_ALLOWED.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  // Read-only inspection sessions (lib/auth/inspect.ts) may never write.
+  if (!READ_METHODS.has(req.method)) {
+    const claims = await decodeSession(sessionToken(req));
+    if (claims?.inspect) {
+      return NextResponse.json(
+        { error: { code: "READ_ONLY", message: "Inspectiemodus is alleen-lezen — hier kan niets worden opgeslagen." } },
+        { status: 403 },
+      );
+    }
+  }
+
+  // ?zf_inspect=<link> — serve this request as the link's test account, read-only.
+  let inspectSession: string | null = null;
+  const inspectApp = req.nextUrl.searchParams.get("app");
+  const link = req.nextUrl.searchParams.get(INSPECT_PARAM);
+  if (link && READ_METHODS.has(req.method)) {
+    const target = await verifyInspectLink(link);
+    if (target) {
+      inspectSession = await inspectSessionFor(target);
+      // Replace whatever session the browser carries, so an admin opening
+      // the link never sees their own account by accident.
+      req.cookies.set(SESSION_COOKIE, inspectSession);
+      req.headers.delete("authorization");
+      if (inspectApp === "1") req.cookies.set(APP_COOKIE, "1");
+    }
+  }
+
   const res = await handle(req);
   const pathname = req.nextUrl.pathname;
+  if (inspectSession) {
+    res.cookies.set(SESSION_COOKIE, inspectSession, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: !IS_DEV,
+      maxAge: INSPECT_SESSION_SECONDS,
+    });
+    if (inspectApp === "1") {
+      res.cookies.set(APP_COOKIE, "1", { path: "/", maxAge: INSPECT_SESSION_SECONDS, sameSite: "lax", secure: !IS_DEV });
+    }
+  }
   if (pathname.startsWith("/api/")) return res;
   if (req.nextUrl.searchParams.get("app") === "0") {
     res.cookies.delete(APP_COOKIE);
