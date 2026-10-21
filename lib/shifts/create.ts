@@ -9,6 +9,7 @@ import { recordAudit } from "@/lib/audit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { listPools } from "@/lib/pools/store";
+import { dedupePlaceParts } from "@/lib/shifts/place-label";
 
 export interface ShiftTemplate {
   key: string;
@@ -95,8 +96,8 @@ export async function createShift(
       data: {
         tenantId,
         kind: "AD_HOC",
-        name: `Eenmalige locatie — ${input.adHocAddress.label}`,
-        addressLine: input.adHocAddress.label,
+        name: `Eenmalige locatie — ${dedupePlaceParts(input.adHocAddress.label)}`,
+        addressLine: dedupePlaceParts(input.adHocAddress.label),
         postalCode: input.adHocAddress.postalCode,
         city: input.adHocAddress.city,
         latitude: input.adHocAddress.latitude,

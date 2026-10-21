@@ -4,6 +4,8 @@ import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { shiftCategory } from "@/lib/shifts/category";
 import { money, moneyExact } from "@/components/app/ui";
 import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
+import { WebOnly } from "@/components/app/WebOnly";
+import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 
 // ---------------------------------------------------------------------------
@@ -104,7 +106,7 @@ export function ShiftCard({
       <div className="flex flex-1 flex-col p-4">
         <Link href={href} className="block">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-600">
-            <span className="truncate">{shift.branch}</span>
+            <span className="truncate">{cleanBranchLabel(shift.branch)}</span>
             {shift.companyRating && (
               <span className="flex flex-shrink-0 items-center gap-0.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink" title={`${shift.companyRating.count}`}>
                 ★ {shift.companyRating.average.toFixed(1).replace(".", ",")}
@@ -166,7 +168,11 @@ export function ShiftCard({
         {shift.workedHereBefore > 0 && (
           <p className="mt-1 text-[11px] text-neutralx-400">{c.workedHere(shift.workedHereBefore)}</p>
         )}
-        {shift.fastPay && <p className="mt-1 text-[11px] font-semibold text-brand-600">{c.fastPay}</p>}
+        {shift.fastPay && (
+          <WebOnly>
+            <p className="mt-1 text-[11px] font-semibold text-brand-600">{c.fastPay}</p>
+          </WebOnly>
+        )}
 
         <div className="mt-3 flex items-end justify-between border-t border-hair pt-3">
           <div>

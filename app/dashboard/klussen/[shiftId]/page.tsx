@@ -26,6 +26,8 @@ import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
+import { inAndroidApp } from "@/lib/app-mode-server";
+import { cleanBranchLabel } from "@/lib/shifts/place-label";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const principal = await requirePrincipal();
   const ft = await getFreelancerDict();
   const D = ft.detail;
+  // Android app: no fast payout (a web-only financial feature, lib/app-mode.ts)
+  const inApp = await inAndroidApp();
   const WD = ft.date.wd;
   const MON = ft.date.mon;
   const s = await getShiftDetail(principal.userId, params.shiftId);
@@ -312,7 +316,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       )}
 
       <div className="mx-auto max-w-2xl px-4 py-5">
-        <p className="text-sm font-semibold text-brand-600">{s.branch}</p>
+        <p className="text-sm font-semibold text-brand-600">{cleanBranchLabel(s.branch)}</p>
         <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink">{s.title}</h1>
 
         <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
@@ -331,8 +335,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         </div>
 
         {/* Fast payout — only when the client offers it (credit-checked) */}
-        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
-          {s.fastPay ? (
+        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
+          {s.fastPay && !inApp ? (
             <>
               <span className="font-semibold">{D.fastPayTitle}</span>{D.fastPayBody}
             </>
@@ -611,7 +615,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={oc.photo} alt="" className="h-28 w-full object-cover" />
                     <div className="p-3">
-                      <p className="text-xs font-semibold text-brand-600">{o.branch.name}</p>
+                      <p className="text-xs font-semibold text-brand-600">{cleanBranchLabel(o.branch.name)}</p>
                       <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-ink">{o.title}</p>
                       <p className="mt-1 text-[11px] text-neutralx-400">
                         {WD[od.getDay()]} {od.getDate()} {MON[od.getMonth()]}. · {hhmm(o.startsAt)} · {o.branch.city}
