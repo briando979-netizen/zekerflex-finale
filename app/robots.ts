@@ -4,7 +4,21 @@ import { SITE } from "@/lib/seo";
 // Search engines AND AI assistants (ChatGPT, Claude, Perplexity, Gemini,
 // Copilot, Apple) may read every public page — being quoted by them is how
 // people who ask an AI "where do I find freelance work" end up here.
-const PRIVATE = ["/admin", "/dashboard", "/werkgever", "/api", "/kyc", "/verifieer-email", "/start"];
+const PRIVATE = [
+  "/admin",
+  "/dashboard",
+  "/werkgever",
+  "/sales",
+  "/berichten",
+  "/api",
+  "/kyc",
+  "/verifieer-email",
+  "/start",
+  // personal links: referral codes and payment links
+  "/r/",
+  "/betaal/",
+  "/betaalverzoek/",
+];
 const AI_AGENTS = [
   "GPTBot",
   "OAI-SearchBot",

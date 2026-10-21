@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Wachtwoord vergeten" };
+export const metadata: Metadata = { title: "Wachtwoord vergeten", robots: { index: false, follow: true } };
 
 export default function WachtwoordVergetenPage() {
   return (
