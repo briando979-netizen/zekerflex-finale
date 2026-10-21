@@ -46,12 +46,20 @@ function useRewards() {
   return data;
 }
 
+// Inside the Android app ZekerFlex Bank is hidden (lib/app-mode.ts), so the
+// bank-related perks and badges go too.
+const BANK_PERK = /bank|betaalpas|virtuele pas|fysieke pas/i;
+const BANK_BADGES = new Set(["banker", "saver", "card"]);
+const appPerks = (perks: string[], inApp: boolean) => (inApp ? perks.filter((p) => !BANK_PERK.test(p)) : perks);
+
 /** Level, progress to the next one, perks and badges (freelancers). */
 export function LevelCard() {
   const data = useRewards();
+  const inApp = useInAndroidApp() !== false;
   const [open, setOpen] = useState(false);
   const s = data?.status;
   if (!s) return null;
+  const badges = inApp ? s.badges.filter((b) => !BANK_BADGES.has(b.id)) : s.badges;
   return (
     <div className="card overflow-hidden">
       <div className="bg-gradient-to-br from-[#1f1b4d] via-[#2d2470] to-[#0E5C4A] p-5 text-white">
@@ -78,17 +86,17 @@ export function LevelCard() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">Jouw voordelen</p>
           <ul className="mt-2 space-y-1 text-sm text-ink">
-            {s.level.perks.map((p) => (
+            {appPerks(s.level.perks, inApp).map((p) => (
               <li key={p}>✓ {p}</li>
             ))}
           </ul>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">
-            Badges ({s.badges.filter((b) => b.earned).length}/{s.badges.length})
+            Badges ({badges.filter((b) => b.earned).length}/{badges.length})
           </p>
           <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
-            {s.badges.map((b) => (
+            {badges.map((b) => (
               <span key={b.id} title={`${b.name} — ${b.description}`} className={`flex flex-col items-center gap-1 rounded-xl p-2 text-center ${b.earned ? "bg-brand-50" : "bg-paper-soft opacity-40 grayscale"}`}>
                 <span className="text-2xl">{b.emoji}</span>
                 <span className="text-[10px] font-semibold leading-tight text-ink">{b.name}</span>
@@ -108,13 +116,15 @@ export function LevelCard() {
                   <span className="block font-semibold text-ink">
                     {l.name} <span className="text-xs font-normal text-neutralx-400">vanaf {l.minXp.toLocaleString("nl-NL")} XP</span>
                   </span>
-                  <span className="block text-xs text-neutralx-500">{l.perks.join(" · ")}</span>
+                  <span className="block text-xs text-neutralx-500">{appPerks(l.perks, inApp).join(" · ")}</span>
                 </span>
               </li>
             ))}
           </ul>
         )}
-        <p className="text-[11px] text-neutralx-400">XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld, plus bonussen voor ZekerFlex Bank, potjes en een pas.</p>
+        <p className="text-[11px] text-neutralx-400">
+          XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld{inApp ? "." : ", plus bonussen voor ZekerFlex Bank, potjes en een pas."}
+        </p>
       </div>
     </div>
   );
@@ -123,6 +133,7 @@ export function LevelCard() {
 /** Partner level for companies. */
 export function BusinessLevelCard() {
   const data = useRewards();
+  const inApp = useInAndroidApp() !== false;
   const [open, setOpen] = useState(false);
   const b = data?.business;
   if (!b) return null;
@@ -150,7 +161,7 @@ export function BusinessLevelCard() {
       </div>
       <div className="space-y-3 p-5 text-sm">
         <ul className="space-y-1 text-ink">
-          {b.level.perks.map((p) => (
+          {appPerks(b.level.perks, inApp).map((p) => (
             <li key={p}>✓ {p}</li>
           ))}
         </ul>
@@ -166,7 +177,7 @@ export function BusinessLevelCard() {
                   <span className="block font-semibold text-ink">
                     {l.name} <span className="text-xs font-normal text-neutralx-400">vanaf {l.minShifts.toLocaleString("nl-NL")} klussen</span>
                   </span>
-                  <span className="block text-xs text-neutralx-500">{l.perks.join(" · ")}</span>
+                  <span className="block text-xs text-neutralx-500">{appPerks(l.perks, inApp).join(" · ")}</span>
                 </span>
               </li>
             ))}
