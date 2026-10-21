@@ -49,7 +49,7 @@ In de app kun je klussen bij jou in de buurt vinden en erop reageren, je uren sc
 
 Zo doe je mee:
 1. Stuur ons je Gmail-adres: antwoord op deze mail met het Gmail-adres dat je in de Play Store op je telefoon gebruikt. We zetten je dan op de testerslijst.
-2. Open deze link op je Android-telefoon: https://play.google.com/apps/internaltest/4701613631596790883
+2. Open deze link op je Android-telefoon: https://play.google.com/apps/testing/com.zekerflex.app
 3. Tik op "Word tester" en installeer de app via Google Play.
 
 Zie je "app niet beschikbaar"? Dan staat je adres nog niet op de lijst. Probeer het een paar uur later nog eens.

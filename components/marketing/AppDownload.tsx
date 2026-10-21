@@ -5,7 +5,7 @@ import { CONTACTS } from "@/lib/seo";
 // The Android app (com.zekerflex.app) is in Google Play testing, not yet
 // public. The test link only works for Gmail addresses on the tester list, so
 // the badge says "testversie" and the block below explains how to get on it.
-const PLAY_TEST_URL = "https://play.google.com/apps/internaltest/4701613631596790883";
+const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 const TESTER_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app testen")}&body=${encodeURIComponent("Mijn Gmail-adres (zoals in de Play Store op mijn telefoon):\n\n")}`;
 
 function PlayBadgeTest() {
