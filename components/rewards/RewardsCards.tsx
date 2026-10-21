@@ -176,11 +176,25 @@ export function BusinessLevelCard() {
   );
 }
 
-/** Personal invite link with bonus — for every role. */
+/**
+ * Inside the Android app (cookie set by middleware on the TWA launch URL).
+ * The referral cash bonus is web-only: offering cash rewards in the app gives
+ * it an 18+ Play/IARC rating, and freelancers can be 16–17.
+ */
+function useInAndroidApp(): boolean | null {
+  const [inApp, setInApp] = useState<boolean | null>(null);
+  useEffect(() => {
+    setInApp(/(?:^|;\s*)zf_app=1(?:;|$)/.test(document.cookie));
+  }, []);
+  return inApp;
+}
+
+/** Personal invite link with bonus — for every role, on the website only. */
 export function ReferralCard() {
   const data = useRewards();
+  const inApp = useInAndroidApp();
   const [copied, setCopied] = useState(false);
-  if (!data) return null;
+  if (!data || inApp !== false) return null;
   const r = data.referral;
   async function share() {
     const text = `Werk en verdien via ZekerFlex — met je eigen gratis bankrekening. Meld je aan met mijn link en krijg ${euro(r.rewards.newUserCents)} welkomstbonus: ${r.link}`;
