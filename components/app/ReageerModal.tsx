@@ -126,6 +126,7 @@ function Modal({
   const [to, setTo] = useState(endTime);
   const [rate, setRate] = useState((listedRateCents / 100).toFixed(2).replace(".", ","));
   const [motivation, setMotivation] = useState("");
+  const [writing, setWriting] = useState(false);
   const [okAgreement, setOkAgreement] = useState(false);
   const [okDresscode, setOkDresscode] = useState(false);
   const [autoWithdraw, setAutoWithdraw] = useState(false);
@@ -357,7 +358,33 @@ function Modal({
 
             {/* Motivatie */}
             <div>
-              <p className="text-sm font-semibold text-ink">{a.whyYouQ(clientName)}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-ink">{a.whyYouQ(clientName)}</p>
+                <button
+                  type="button"
+                  disabled={writing}
+                  onClick={async () => {
+                    setWriting(true);
+                    try {
+                      const r = await fetch("/api/me/ai/motivation", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ shiftId, draft: motivation || undefined }),
+                      });
+                      const d = await r.json();
+                      if (r.ok && d.text) setMotivation(d.text);
+                      else setErr(d?.error?.message ?? null);
+                    } catch {
+                      /* the field just stays as it was */
+                    } finally {
+                      setWriting(false);
+                    }
+                  }}
+                  className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+                >
+                  {writing ? "…" : "✨ Help me"}
+                </button>
+              </div>
               <textarea
                 value={motivation}
                 onChange={(e) => setMotivation(e.target.value)}

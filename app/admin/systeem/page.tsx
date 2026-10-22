@@ -1,7 +1,9 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
-import { llmHealth } from "@/lib/ai/client";
+import { llmConfigProblem, llmHealth } from "@/lib/ai/client";
+import { AI_FEATURES } from "@/lib/ai/features";
+import { AiFeaturesPanel } from "@/components/admin/AiFeaturesPanel";
 import { pushChannels } from "@/lib/notifications/push";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { env } from "@/lib/env";
@@ -134,6 +136,8 @@ export default async function SysteemPage() {
       {!db.ok && db.detail && (
         <p className="mt-4 rounded-lg bg-crit/10 px-4 py-3 text-sm text-crit">Database: {db.detail}</p>
       )}
+
+      <AiFeaturesPanel features={AI_FEATURES} connected={llm.ok} problem={llm.ok ? null : (llmConfigProblem() ?? (("detail" in llm && llm.detail) || "Taalmodel niet bereikbaar"))} />
 
       <OpsAlerts />
 

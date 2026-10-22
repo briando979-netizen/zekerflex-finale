@@ -51,6 +51,8 @@ export function NewShiftForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dresscode, setDresscode] = useState("");
+  const [writing, setWriting] = useState(false);
+  const [writeNote, setWriteNote] = useState<string | null>(null);
   const [rateEuro, setRateEuro] = useState(minRateEuro.toFixed(2));
   const [breakMin, setBreakMin] = useState("30");
   const [positions, setPositions] = useState("1");
@@ -226,12 +228,54 @@ export function NewShiftForm({
           <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Bijv. Vakkenvuller avonddienst" className="field-input" />
         </label>
 
-        <label className="block">
-          <span className="field-label">
-            Omschrijving <span className="text-neutralx-400">(optioneel)</span>
-          </span>
-          <textarea name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
-        </label>
+        <div>
+          <div className="flex items-end justify-between gap-2">
+            <label htmlFor="shift-description" className="field-label">
+              Omschrijving <span className="text-neutralx-400">(optioneel)</span>
+            </label>
+            <button
+              type="button"
+              disabled={writing || title.trim().length < 3}
+              title={title.trim().length < 3 ? "Vul eerst een titel in" : undefined}
+              onClick={async (e) => {
+                const fd = new FormData(e.currentTarget.form ?? undefined);
+                setWriting(true);
+                setWriteNote(null);
+                try {
+                  const r = await fetch("/api/werkgever/ai/shift-text", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      title,
+                      description,
+                      dresscode,
+                      branchId: oneOff ? undefined : String(fd.get("branchId") ?? "") || undefined,
+                      city: oneOff ? adHocCity || undefined : undefined,
+                      startsAt: startsAt || undefined,
+                      endsAt: endsAt || undefined,
+                      breakMinutes: Number(breakMin) || 0,
+                      viaUitzendbureau: fd.get("viaUitzendbureau") === "on",
+                    }),
+                  });
+                  const d = await r.json();
+                  if (!r.ok) throw new Error(d?.error?.message ?? d?.message ?? "Schrijven mislukt");
+                  setDescription(d.description);
+                  if (!dresscode.trim()) setDresscode(d.dresscode);
+                  setWriteNote(d.mode === "model" ? "Geschreven door de AI — pas aan waar nodig." : "Concept op basis van je titel — pas aan waar nodig.");
+                } catch (err) {
+                  setWriteNote((err as Error).message);
+                } finally {
+                  setWriting(false);
+                }
+              }}
+              className="mb-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+            >
+              {writing ? "Schrijven…" : description.trim() ? "✨ Verbeter tekst" : "✨ Schrijf voor mij"}
+            </button>
+          </div>
+          <textarea id="shift-description" name="description" rows={description.length > 160 ? 7 : 3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
+          {writeNote && <p className="mt-1 text-xs text-neutralx-500">{writeNote}</p>}
+        </div>
 
         <label className="block">
           <span className="field-label">
