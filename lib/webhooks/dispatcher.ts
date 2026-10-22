@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { decryptWebhookSecret } from "@/lib/webhooks/crypto";
+import { postToChatHook } from "@/lib/integrations/employer-links";
 
 export type WebhookEventType = "shift.matched" | "freelancer.checked_in" | "timesheet.approved" | "dispute.opened" | "invoice.issued";
 
@@ -9,6 +10,8 @@ function signature(secret: string, timestamp: string, body: string): string {
 }
 
 export async function dispatchWebhook(eventType: WebhookEventType, tenantId: string, payload: Record<string, unknown>): Promise<void> {
+  // Slack/Teams channel message for the same event (no-code integration).
+  void postToChatHook(eventType, tenantId, payload);
   const subscriptions = await prisma.webhookSubscription.findMany({ where: { tenantId, active: true } });
   for (const subscription of subscriptions) {
     const body = JSON.stringify({ id: randomBytes(12).toString("hex"), type: eventType, createdAt: new Date().toISOString(), data: payload });

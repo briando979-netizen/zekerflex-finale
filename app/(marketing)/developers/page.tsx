@@ -155,6 +155,32 @@ x-api-key: zf_live_...`}</Code>
           </div>
 
           <div>
+            <h3 className="font-display text-lg font-bold text-ink">GET /api/public/v1/shifts/&#123;id&#125;</h3>
+            <p className="mt-1.5 text-sm text-neutralx-600">
+              One shift of your organization, including who is scheduled (first name + initial). Requires <code>shifts:read</code>.
+            </p>
+            <Code>{`curl ${SITE.url}/api/public/v1/shifts/SHIFT_ID \\
+  -H "Authorization: Bearer zf_live_..."`}</Code>
+          </div>
+
+          <div>
+            <h3 className="font-display text-lg font-bold text-ink">GET /api/public/v1/invoices</h3>
+            <p className="mt-1.5 text-sm text-neutralx-600">
+              Invoices addressed to your organization, newest first. Optional <code>?since=2026-10-01</code>. Requires <code>invoices:read</code>.
+            </p>
+            <Code>{`curl "${SITE.url}/api/public/v1/invoices?since=2026-10-01" \\
+  -H "Authorization: Bearer zf_live_..."`}</Code>
+          </div>
+
+          <div>
+            <h3 className="font-display text-lg font-bold text-ink">Calendar feed (iCal)</h3>
+            <p className="mt-1.5 text-sm text-neutralx-600">
+              A secret, subscribable <code>.ics</code> URL with all your shifts and who is coming — for Google Calendar, Outlook and
+              Apple Calendar. Get it (and rotate it) in Werkgever → Koppelingen. No API key needed; the token in the URL is the credential.
+            </p>
+          </div>
+
+          <div>
             <h3 className="font-display text-lg font-bold text-ink">POST /api/public/v1/webhooks</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
               Register a URL for shift/timesheet/dispute events. Requires <code>webhooks:manage</code>. The
