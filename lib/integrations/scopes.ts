@@ -9,6 +9,7 @@ export const AVAILABLE_SCOPES = [
   { key: "webhooks:manage", label: "Webhooks beheren" },
   { key: "invoices:read", label: "Facturen lezen" },
   { key: "users:read", label: "Gebruikers lezen (alleen eigen organisatie)" },
+  { key: "brain:ask", label: "AI-brein vragen (n8n, Zapier, Make, eigen automatiseringen)" },
 ] as const;
 
 export type ApiScope = (typeof AVAILABLE_SCOPES)[number]["key"];

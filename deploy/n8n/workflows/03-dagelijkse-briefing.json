@@ -1,0 +1,51 @@
+{
+  "name": "ZekerFlex dagelijkse brein-briefing (mail)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1-5" }] }
+      },
+      "name": "Elke werkdag 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZEKERFLEX_BASE_URL }}/api/public/v1/brain",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.ZEKERFLEX_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: 'Geef mijn overzicht van vandaag: wat staat er open en wat vraagt aandacht?' }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "Vraag het brein",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.BRIEFING_FROM }}",
+        "toEmail": "={{ $env.BRIEFING_TO }}",
+        "subject": "=ZekerFlex-briefing {{ $now.toFormat('dd-MM-yyyy') }}",
+        "emailFormat": "text",
+        "text": "={{ $json.answer }}\n\n{{ ($json.links || []).map(l => l.label + ': ' + l.url).join('\\n') }}",
+        "options": {}
+      },
+      "name": "Mail de briefing",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [520, 0]
+    }
+  ],
+  "connections": {
+    "Elke werkdag 08:00": { "main": [[{ "node": "Vraag het brein", "type": "main", "index": 0 }]] },
+    "Vraag het brein": { "main": [[{ "node": "Mail de briefing", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

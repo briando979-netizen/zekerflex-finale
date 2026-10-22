@@ -1,0 +1,53 @@
+# Self-hosted n8n for ZekerFlex automations ("brein n8n").
+# Runs next to (or on the same box as) the AI node. Caddy gives HTTPS.
+#
+#   cp .env.example .env   # fill N8N_HOST, N8N_ENCRYPTION_KEY, ZEKERFLEX_API_KEY
+#   docker compose up -d
+#
+# Then import the workflows in ./workflows (n8n → Workflows → Import from file).
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.64.3
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=Europe/Amsterdam
+      - TZ=Europe/Amsterdam
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_SECURE_COOKIE=true
+      # available to workflows as {{$env.ZEKERFLEX_API_KEY}} / {{$env.ZEKERFLEX_BASE_URL}}
+      - ZEKERFLEX_API_KEY=${ZEKERFLEX_API_KEY}
+      - ZEKERFLEX_BASE_URL=${ZEKERFLEX_BASE_URL:-https://zekerflex.com}
+      - ZEKERFLEX_WEBHOOK_SECRET=${ZEKERFLEX_WEBHOOK_SECRET:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - BRIEFING_FROM=${BRIEFING_FROM:-}
+      - BRIEFING_TO=${BRIEFING_TO:-}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # the webhook-signature check in workflow 02 uses node:crypto
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+    volumes:
+      - n8n_data:/home/node/.n8n
+    expose:
+      - "5678"
+
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from ${N8N_HOST} --to n8n:5678
+    volumes:
+      - caddy_data:/data
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
+  caddy_data:

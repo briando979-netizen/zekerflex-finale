@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { chat, llmConfigProblem } from "@/lib/ai/client";
 import { isRagEnabled } from "@/lib/rag/embed";
 import type { SearchHit } from "@/lib/rag/store";
-import { recall } from "@/lib/rag/recall";
+import { advancedRecall } from "@/lib/rag/advanced";
 
 // ---------------------------------------------------------------------------
 // Retrieval-augmented answers over the local total-memory index. Used by the
@@ -36,7 +36,8 @@ export async function retrieveContext(
 ): Promise<RetrievedContext> {
   try {
     const wantsCorpus = !opts.sourceTypes || opts.sourceTypes.length === 0 || opts.sourceTypes.includes("LEGAL");
-    const rec = await recall(query, {
+    const rec = await advancedRecall(query, {
+      useModel: false,
       role: "admin",
       k: opts.limit ?? 6,
       corpus: wantsCorpus,

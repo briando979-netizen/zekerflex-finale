@@ -28,6 +28,7 @@ export interface BrainTool {
 }
 
 export function roleOf(p: Principal): Audience {
+  if (!p.grants.length) return "public"; // e.g. an API key without a user behind it
   if (hasRole(p, "PLATFORM_ADMIN")) return "admin";
   if (hasRole(p, "FREELANCER")) return "werknemer";
   return "opdrachtgever";

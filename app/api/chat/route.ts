@@ -7,7 +7,7 @@ import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { logExchange, topExamples } from "@/lib/learn/store";
-import { recall } from "@/lib/rag/recall";
+import { advancedRecall } from "@/lib/rag/advanced";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 export const runtime = "nodejs";
@@ -126,7 +126,8 @@ async function handlePOST(request: Request): Promise<Response> {
 
   const topic = topicAnswer(question);
   // RAG brain: public knowledge only (never in-app or internal passages)
-  const rec = lastUser ? await recall(lastUser.content, { role: "public", k: 4 }) : null;
+  // advanced RAG (synonyms + hybrid/RRF + rerank + compression), no extra model round-trips on the public widget
+  const rec = lastUser ? await advancedRecall(lastUser.content, { role: "public", k: 4, useModel: false, history: parsed.messages.slice(0, -1) }) : null;
   const knowledgeHits = rec?.hits ?? [];
   const confident = Boolean(rec?.confident);
   // The assistant's own answer: a known topic, else the best knowledge-base
@@ -160,7 +161,7 @@ async function handlePOST(request: Request): Promise<Response> {
             role: "system" as const,
             content:
               "Relevante info uit de ZekerFlex-kennisbank voor deze vraag (gebruik dit, verzin niets extra's):\n" +
-              knowledgeHits.map((h) => `[${h.source}] ${h.title}\n${h.text}`).join("\n\n"),
+              knowledgeHits.map((h) => `[${h.source}] ${h.title}\n${h.excerpt}`).join("\n\n"),
           },
         ]
       : [];

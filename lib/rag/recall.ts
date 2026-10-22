@@ -148,3 +148,8 @@ export function contextBlock(hits: RecallHit[], maxChars = 4500): string {
   });
   return out.trim();
 }
+
+/** The brain-vector index over the corpus (shared with the reranker and CAG cache). */
+export function brainVectorIndex(): VectorIndex {
+  return vec();
+}

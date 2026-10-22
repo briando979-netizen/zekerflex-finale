@@ -1,0 +1,64 @@
+{
+  "name": "ZekerFlex gebeurtenis → brein-samenvatting → Slack/Teams",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zekerflex-events",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "ZekerFlex-webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify x-zekerflex-signature: v1=HMAC_SHA256(secret, `${timestamp}.${body}`)\nconst crypto = require('crypto');\nconst secret = $env.ZEKERFLEX_WEBHOOK_SECRET;\nconst out = [];\nfor (const item of $input.all()) {\n  const h = item.json.headers || {};\n  const body = JSON.stringify(item.json.body);\n  if (secret) {\n    const expected = 'v1=' + crypto.createHmac('sha256', secret).update(`${h['x-zekerflex-timestamp']}.${body}`).digest('hex');\n    if (expected !== h['x-zekerflex-signature']) throw new Error('Ongeldige ZekerFlex-handtekening');\n  }\n  out.push({ json: { type: item.json.body.type, data: item.json.body.data } });\n}\nreturn out;"
+      },
+      "name": "Controleer handtekening",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZEKERFLEX_BASE_URL }}/api/public/v1/brain",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.ZEKERFLEX_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: 'Vat deze ZekerFlex-gebeurtenis (' + $json.type + ') in 2 zinnen samen voor het team en zeg of er actie nodig is.', context: $json.data }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "Brein vat samen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '🔔 ' + $('Controleer handtekening').item.json.type + '\\n' + $json.answer }) }}",
+        "options": {}
+      },
+      "name": "Naar Slack/Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "ZekerFlex-webhook": { "main": [[{ "node": "Controleer handtekening", "type": "main", "index": 0 }]] },
+    "Controleer handtekening": { "main": [[{ "node": "Brein vat samen", "type": "main", "index": 0 }]] },
+    "Brein vat samen": { "main": [[{ "node": "Naar Slack/Teams", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

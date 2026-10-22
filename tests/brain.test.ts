@@ -99,8 +99,10 @@ describe("think", () => {
     chat.mockResolvedValue({ text: "Zaterdag om 08:00 vul je vakken bij AH Centrum.", model: "m" });
     const a = await think(worker, "Wanneer is mijn volgende klus?");
     expect(a.mode).toBe("model");
-    const sys = chat.mock.calls[0]![0].messages[1].content as string;
-    expect(sys).toContain("Vakkenvuller bij AH Centrum");
+    const msgs = chat.mock.calls[0]![0].messages as { content: string }[];
+    // CAG: the stable knowledge pack is the very first message (prefix cache)
+    expect(msgs[0]!.content.startsWith("KENNISPAKKET ZekerFlex")).toBe(true);
+    expect(msgs[2]!.content).toContain("Vakkenvuller bij AH Centrum");
   });
 
   it("remembers the conversation so short follow-ups are routed", async () => {

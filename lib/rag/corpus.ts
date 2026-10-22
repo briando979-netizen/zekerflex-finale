@@ -4,7 +4,7 @@ import { FULL_FAQ, GUIDES, POSTS } from "@/lib/kennis/content";
 import { dbaFaqFlat } from "@/lib/kennis/dba";
 import { werkgeverHelpFlat } from "@/lib/kennis/werkgevers-help";
 import { WHITEPAPERS, whitepaperPlainText } from "@/lib/kennis/whitepapers";
-import { chunkText } from "@/lib/rag/chunk";
+import { smartChunk } from "@/lib/rag/smart-chunk";
 import { HOWTOS, type Audience } from "@/lib/rag/howto";
 
 // ---------------------------------------------------------------------------
@@ -47,11 +47,12 @@ function internalDocs(): Passage[] {
     } catch {
       continue;
     }
-    const title = raw.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? f.replace(/\.md$/, "");
+    const docTitle = raw.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? f.replace(/\.md$/, "");
     // wet-dba.md is public law knowledge; the numbered docs are platform internals
     const audience: Audience[] = f === "wet-dba.md" ? ["public"] : ["admin"];
-    chunkText(raw, { maxChars: 900 }).forEach((text, i) =>
-      out.push({ id: `kb:${f}#${i}`, title, text, source: audience[0] === "admin" ? `Intern · ${f}` : "Wet DBA", audience }),
+    // smartChunk carries the heading path (H1 › H2 …) on every chunk
+    smartChunk(raw, { maxChars: 900 }).forEach((c, i) =>
+      out.push({ id: `kb:${f}#${i}`, title: c.heading || docTitle, text: c.body, source: audience[0] === "admin" ? `Intern · ${f}` : "Wet DBA", audience }),
     );
   }
   return out;
@@ -81,11 +82,14 @@ export function corpus(): Passage[] {
     );
   }
   for (const p of POSTS) {
-    out.push({ id: `blog:${p.slug}`, title: p.title, text: [p.excerpt, ...p.body.flatMap((b) => b.paragraphs)].join("\n\n").slice(0, 1800), source: "Blog", audience: ["public"], href: `/kennis/blog/${p.slug}` });
+    const md = [p.excerpt, ...p.body.flatMap((b) => [b.heading ? `## ${b.heading}` : "", ...b.paragraphs])].join("\n\n");
+    smartChunk(md, { title: p.title, maxChars: 1000 }).forEach((c, i) =>
+      out.push({ id: `blog:${p.slug}#${i}`, title: c.heading || p.title, text: c.body, source: "Blog", audience: ["public"], href: `/kennis/blog/${p.slug}` }),
+    );
   }
   for (const w of WHITEPAPERS) {
-    chunkText(whitepaperPlainText(w), { maxChars: 1000 }).forEach((text, i) =>
-      out.push({ id: `wp:${w.slug}#${i}`, title: `Whitepaper: ${w.title}`, text, source: "Whitepaper", audience: ["public"], href: `/kennis/whitepapers/${w.slug}` }),
+    smartChunk(whitepaperPlainText(w), { title: `Whitepaper: ${w.title}`, maxChars: 1000 }).forEach((c, i) =>
+      out.push({ id: `wp:${w.slug}#${i}`, title: c.heading, text: c.body, source: "Whitepaper", audience: ["public"], href: `/kennis/whitepapers/${w.slug}` }),
     );
   }
 

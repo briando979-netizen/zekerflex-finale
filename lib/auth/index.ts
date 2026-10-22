@@ -39,9 +39,13 @@ async function readSessionToken(): Promise<string | undefined> {
 export async function getPrincipal(): Promise<Principal | null> {
   const claims = await decodeSession(await readSessionToken());
   if (!claims) return null;
+  return principalForUser(claims.sub);
+}
 
+/** The principal of an active user by id — for server-to-server callers acting as a known user (e.g. an API key's creator). */
+export async function principalForUser(userId: string): Promise<Principal | null> {
   const user = await prisma.user.findFirst({
-    where: { id: claims.sub, disabledAt: null },
+    where: { id: userId, disabledAt: null },
     include: {
       memberships: {
         include: { scopedBranches: { select: { branchId: true } } },

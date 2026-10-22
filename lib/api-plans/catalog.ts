@@ -38,7 +38,7 @@ export const API_PLANS: Record<PlanKey, ApiPlan> = {
     priceCentsPerMonth: 49_00,
     rateLimitPerMinute: 300,
     monthlyRequestCap: 100_000,
-    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage"],
+    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage", "brain:ask"],
     selfService: true,
   },
   pro: {
@@ -47,7 +47,7 @@ export const API_PLANS: Record<PlanKey, ApiPlan> = {
     priceCentsPerMonth: 199_00,
     rateLimitPerMinute: 1200,
     monthlyRequestCap: 1_000_000,
-    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage", "invoices:read", "users:read"],
+    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage", "invoices:read", "users:read", "brain:ask"],
     selfService: true,
   },
   scale: {
@@ -56,7 +56,7 @@ export const API_PLANS: Record<PlanKey, ApiPlan> = {
     priceCentsPerMonth: null,
     rateLimitPerMinute: 1200,
     monthlyRequestCap: null,
-    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage", "invoices:read", "users:read"],
+    scopes: ["shifts:read", "shifts:write", "timesheets:read", "webhooks:manage", "invoices:read", "users:read", "brain:ask"],
     selfService: false,
   },
 };

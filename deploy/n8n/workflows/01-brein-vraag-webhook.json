@@ -1,0 +1,51 @@
+{
+  "name": "ZekerFlex brein — vraag via webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zekerflex-brein",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Vraag binnen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZEKERFLEX_BASE_URL }}/api/public/v1/brain",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.ZEKERFLEX_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.body.question, context: $json.body.context }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "Vraag het ZekerFlex-brein",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ answer: $json.answer, sources: $json.sources, links: $json.links }) }}",
+        "options": {}
+      },
+      "name": "Antwoord terug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 0]
+    }
+  ],
+  "connections": {
+    "Vraag binnen": { "main": [[{ "node": "Vraag het ZekerFlex-brein", "type": "main", "index": 0 }]] },
+    "Vraag het ZekerFlex-brein": { "main": [[{ "node": "Antwoord terug", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

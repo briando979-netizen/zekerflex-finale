@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { chunkText } from "@/lib/rag/chunk";
+import { smartChunk } from "@/lib/rag/smart-chunk";
 import { embedMany, isRagEnabled } from "@/lib/rag/embed";
 import { replaceSource, type UpsertChunkInput } from "@/lib/rag/store";
 import { corpus } from "@/lib/rag/corpus";
@@ -31,7 +32,8 @@ async function indexEntries(
 ): Promise<number> {
   const pending: Array<Omit<UpsertChunkInput, "embedding">> = [];
   for (const e of entries) {
-    const chunks = chunkText(e.text);
+    // code keeps line-based chunks; prose gets heading/sentence-aware chunks with a context header
+    const chunks = sourceType === "CODE" ? chunkText(e.text) : smartChunk(e.text, { title: e.title }).map((c) => c.text);
     chunks.forEach((content, chunkIndex) => {
       pending.push({ sourceType, sourceRef: e.sourceRef, title: e.title, chunkIndex, content });
     });
