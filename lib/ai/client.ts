@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { isLocalInference, withGovernor } from "@/lib/ai/governor";
 import { modelForPurpose } from "@/lib/ai/models";
+import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -77,11 +78,9 @@ export interface ChatResult {
   raw: unknown;
 }
 
-function baseUrl(): string {
-  return env.LLM_BASE_URL.replace(/\/+$/, "");
-}
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|$)/i;
 
-function llmHost(): string {
+function envHost(): string {
   try {
     return new URL(env.LLM_BASE_URL).host;
   } catch {
@@ -89,7 +88,37 @@ function llmHost(): string {
   }
 }
 
-const LOCAL_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|$)/i;
+/**
+ * Serverless deploy whose LLM_BASE_URL still says localhost: the model lives
+ * on a registered AI node without a fixed address (the owner's laptop via a
+ * Cloudflare tunnel, lib/ai/node-registry.ts).
+ */
+function usesNodeRegistry(): boolean {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) && LOCAL_HOST.test(envHost());
+}
+
+/** True while requests go to a registered tunnel node (which can't stream SSE reliably). */
+export function viaRegisteredNode(): boolean {
+  return usesNodeRegistry() && Boolean(registeredNodeUrl());
+}
+
+function baseUrl(): string {
+  const node = usesNodeRegistry() ? registeredNodeUrl() : null;
+  return node ? `${node}/v1` : env.LLM_BASE_URL.replace(/\/+$/, "");
+}
+
+function llmHost(): string {
+  try {
+    return new URL(baseUrl()).host;
+  } catch {
+    return env.LLM_BASE_URL;
+  }
+}
+
+/** Make sure this instance knows the registered AI node (cheap, cached ~20 s). */
+export async function ensureAiNode(): Promise<void> {
+  if (usesNodeRegistry()) await primeNode();
+}
 
 /**
  * A deploy that can never reach its model: on Vercel (or any serverless
@@ -98,8 +127,13 @@ const LOCAL_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|$)/i;
  * "fetch failed".
  */
 export function llmConfigProblem(): string | null {
-  if ((process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) && LOCAL_HOST.test(llmHost())) {
-    return "Er is nog geen taalmodel gekoppeld aan de live omgeving: LLM_BASE_URL wijst naar localhost, en op de server draait daar niets. Koppel je eigen Ollama/vLLM-server (LLM_BASE_URL, LLM_API_KEY en AI_ALLOW_REMOTE=true) of een OpenAI-compatibele dienst in de Vercel-omgevingsvariabelen.";
+  if (usesNodeRegistry()) {
+    if (registeredNodeUrl()) return null; // the owner's AI node checked in recently
+    void primeNode(); // refresh in the background so the next call sees a node that just came online
+    const last = registeredNode();
+    return last
+      ? `De AI-laptop is offline (laatst gezien ${new Date(last.at).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}). Start deploy/ai-node/windows/start-ai-node.ps1 op de laptop, of zet LLM_BASE_URL naar een vaste AI-server.`
+      : "Er is nog geen taalmodel gekoppeld aan de live omgeving: LLM_BASE_URL wijst naar localhost en er heeft zich nog geen AI-laptop/-server aangemeld. Start deploy/ai-node/windows/start-ai-node.ps1 op je laptop, of zet LLM_BASE_URL naar een vaste AI-server.";
   }
   // Same rule as the sovereignty lock in chatStream: a remote model server
   // needs an explicit AI_ALLOW_REMOTE=true — say so instead of failing per call.
@@ -221,6 +255,7 @@ async function post(
 }
 
 export async function chat(opts: ChatOptions): Promise<ChatResult> {
+  await ensureAiNode();
   try {
     return await chatOnce(opts);
   } catch (err) {
@@ -312,8 +347,16 @@ export function fastModel(): string {
 export async function* chatStream(
   opts: ChatOptions,
 ): AsyncGenerator<string, { text: string; model: string }, void> {
+  await ensureAiNode();
   const problem = llmConfigProblem();
   if (problem) throw AppError.upstream(problem);
+  // A quick tunnel to the owner's laptop doesn't carry server-sent events
+  // reliably: ask for the whole answer and hand it over as one chunk.
+  if (viaRegisteredNode()) {
+    const whole = await chat({ ...opts, retry: false });
+    if (whole.text) yield whole.text;
+    return { text: whole.text, model: whole.model };
+  }
   const model = opts.model ?? modelForPurpose(opts.purpose);
   const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
 
@@ -389,6 +432,9 @@ export async function* chatStream(
 }
 
 export async function embed(input: string | string[]): Promise<number[][]> {
+  await ensureAiNode();
+  const problem = llmConfigProblem();
+  if (problem) throw AppError.upstream(problem);
   if (!env.LLM_EMBED_MODEL) {
     throw AppError.upstream("No embedding model configured (LLM_EMBED_MODEL)");
   }
@@ -431,6 +477,7 @@ export interface LlmHealth {
  * NO governor, NO retry.
  */
 export async function llmHealth(): Promise<LlmHealth> {
+  await ensureAiNode();
   const base = baseUrl();
   const problem = llmConfigProblem();
   if (problem) return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: problem };
@@ -463,6 +510,7 @@ export async function llmHealth(): Promise<LlmHealth> {
 
 /** Model ids the AI node actually serves (empty when unreachable / not configured). */
 export async function servedModels(): Promise<string[]> {
+  await ensureAiNode();
   if (llmConfigProblem()) return [];
   try {
     const res = await fetch(`${baseUrl()}/models`, {

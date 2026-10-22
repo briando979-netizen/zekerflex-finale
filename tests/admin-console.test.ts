@@ -5,6 +5,7 @@ const chatJson = vi.fn();
 const chat = vi.fn();
 const redisSet = vi.fn().mockResolvedValue("OK");
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chatJson: (...a: unknown[]) => chatJson(...a),
   chat: (...a: unknown[]) => chat(...a),
 }));

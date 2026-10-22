@@ -13,6 +13,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chat: vi.fn().mockResolvedValue({ text: "Herschreven zin.", model: "x", raw: {} }),
 }));
 

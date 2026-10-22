@@ -28,7 +28,8 @@ vi.mock("@/lib/ai-teams/execute", () => ({ executeProposal: m.exec }));
 vi.mock("@/lib/admin/owner-todos", () => ({ ownerTodos: async () => [] }));
 vi.mock("@/lib/ops/alert", () => ({ recentAlerts: async () => [] }));
 vi.mock("@/lib/analytics/live", () => ({ liveSnapshot: async () => ({ active: [], today: { visitors: 0, who: {} } }) }));
-vi.mock("@/lib/ai/client", () => ({ chat: vi.fn(), llmConfigProblem: () => "geen model" }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, chat: vi.fn(), llmConfigProblem: () => "geen model" }));
 vi.mock("@/lib/jarvis/persona", () => ({ JARVIS_PERSONA: "" }));
 
 import { answer, createCompanionToken, revokeCompanionToken, verifyCompanion } from "@/lib/companion";

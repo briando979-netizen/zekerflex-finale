@@ -17,7 +17,8 @@ vi.mock("@/lib/storage/kv", () => ({
 vi.mock("@/lib/redis", () => ({ acquireLock: async () => async () => undefined }));
 const sendUserPush = vi.fn(async () => 1);
 vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...(a as [])) }));
-vi.mock("@/lib/ai/client", () => ({ chat: vi.fn(), llmConfigProblem: () => "geen model" }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, chat: vi.fn(), llmConfigProblem: () => "geen model" }));
 vi.mock("@/lib/rag/cag", () => ({ knowledgePack: () => ({ passages: 10 }) }));
 vi.mock("@/lib/matching/engine", () => ({ runMatchingForShift: vi.fn(async () => ({ eligible: 3, notified: 2, autoAssigned: 0 })) }));
 const approveTimesheet = vi.fn(async () => ({}));

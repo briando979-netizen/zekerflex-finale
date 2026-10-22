@@ -69,6 +69,7 @@ const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: 
 vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
 
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chatJson: vi.fn().mockResolvedValue({
     verdict: "approved",
     confidence: 0.9,

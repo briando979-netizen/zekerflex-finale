@@ -1,6 +1,6 @@
 import { withUsage } from "@/lib/ops/usage";
 import { z } from "zod";
-import { chatStream, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
 import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
 import { appendMessage, isConversationId } from "@/lib/chat/webchat";
 import { fixedWindow } from "@/lib/rate-limit";
@@ -137,6 +137,7 @@ async function handlePOST(request: Request): Promise<Response> {
   );
   // No model connected, or a known question (also mid-conversation): answer
   // ourselves — curated facts, instantly, without waiting on the model.
+  await ensureAiNode();
   if (llmConfigProblem() || topic) {
     return textStream(ownAnswer, question, undefined, saveReply);
   }

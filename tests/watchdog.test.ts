@@ -18,7 +18,8 @@ const { mockStore, mockRedis, mockAnnounce, mockHealth } = vi.hoisted(() => {
 
 vi.mock("@/lib/redis", () => ({ redis: mockRedis }));
 vi.mock("@/lib/voice/announce", () => ({ announce: mockAnnounce }));
-vi.mock("@/lib/ai/client", () => ({ llmHealth: mockHealth }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, llmHealth: mockHealth }));
 
 import { checkLlm } from "@/lib/ai/watchdog";
 

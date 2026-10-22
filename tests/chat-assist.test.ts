@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/ai/client", () => ({ llmConfigProblem: () => "geen model", chat: vi.fn() }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, llmConfigProblem: () => "geen model", chat: vi.fn() }));
 
 import { rewrite, ruleSuggestions, suggestReplies } from "@/lib/chat/assist";
 

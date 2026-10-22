@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const chat = vi.fn();
 const llmConfigProblem = vi.fn<() => string | null>(() => "geen model");
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chat: (...a: unknown[]) => chat(...a),
   chatJson: vi.fn(async () => ({ tools: [] })),
   fastModel: () => "fast",

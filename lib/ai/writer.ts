@@ -1,4 +1,4 @@
-import { chatJson, llmConfigProblem } from "@/lib/ai/client";
+import { chatJson, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 
 // ---------------------------------------------------------------------------
 // ✨ Writing help in forms that used to be a blank textarea:
@@ -94,6 +94,7 @@ export function ruleShiftText(input: ShiftTextInput): Omit<ShiftText, "mode"> {
 }
 
 export async function draftShiftText(input: ShiftTextInput): Promise<ShiftText> {
+  await ensureAiNode();
   const base = ruleShiftText(input);
   if (llmConfigProblem()) return { ...base, mode: "rules" };
   try {
@@ -172,6 +173,7 @@ export function ruleMotivation(i: MotivationInput): string {
 }
 
 export async function draftMotivation(i: MotivationInput): Promise<{ text: string; mode: WriterMode }> {
+  await ensureAiNode();
   const base = ruleMotivation(i);
   if (llmConfigProblem()) return { text: base, mode: "rules" };
   try {

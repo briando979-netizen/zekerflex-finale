@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const chatJson = vi.fn();
 const configProblem = vi.fn(() => null as string | null);
-vi.mock("@/lib/ai/client", () => ({ chatJson: (...a: unknown[]) => chatJson(...a), llmConfigProblem: () => configProblem() }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, chatJson: (...a: unknown[]) => chatJson(...a), llmConfigProblem: () => configProblem() }));
 
 import { generateAdCopy } from "@/lib/ads/generate";
 

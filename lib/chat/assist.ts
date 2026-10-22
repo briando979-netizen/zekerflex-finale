@@ -1,4 +1,4 @@
-import { chat, llmConfigProblem } from "@/lib/ai/client";
+import { chat, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 
 // ---------------------------------------------------------------------------
 // ✨ AI help in the in-app chat (workers, employers, admin):
@@ -41,6 +41,7 @@ export function ruleSuggestions(lastIncoming: string): string[] {
 }
 
 export async function suggestReplies(lastIncoming: string, role: string): Promise<{ suggestions: string[]; mode: "model" | "rules" }> {
+  await ensureAiNode();
   if (!lastIncoming.trim() || llmConfigProblem()) return { suggestions: ruleSuggestions(lastIncoming), mode: "rules" };
   try {
     const res = await chat({
@@ -62,6 +63,7 @@ export async function suggestReplies(lastIncoming: string, role: string): Promis
 }
 
 export async function rewrite(text: string, style: RewriteStyle): Promise<{ text: string } | { error: string }> {
+  await ensureAiNode();
   const problem = llmConfigProblem();
   if (problem) return { error: "Herschrijven en vertalen werken zodra het taalmodel gekoppeld is." };
   try {

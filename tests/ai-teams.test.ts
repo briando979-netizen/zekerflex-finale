@@ -12,7 +12,8 @@ vi.mock("@/lib/storage/kv", () => ({
     kv.set(k, arr.slice(-keep));
   },
 }));
-vi.mock("@/lib/ai/client", () => ({ llmConfigProblem: () => "geen model", chat: vi.fn() }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, llmConfigProblem: () => "geen model", chat: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shift: {

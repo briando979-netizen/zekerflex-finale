@@ -67,11 +67,20 @@ export function AiFeaturesPanel({ features, connected, problem }: { features: Ai
 
       {!connected && problem && (
         <div className="mx-5 mt-4 rounded-lg bg-paper-soft px-4 py-3 text-xs text-neutralx-700">
-          <p className="font-semibold text-ink">Zo zet je de AI aan (eigen server, geen externe dienst):</p>
-          <ol className="mt-1 list-decimal space-y-0.5 pl-4">
-            <li>Draai op je eigen server: <code>deploy/ai-node/setup.sh</code> (installeert Ollama + Caddy met HTTPS en een sleutel).</li>
-            <li>Zet in Vercel → Environment Variables: <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code> en <code>AI_ALLOW_REMOTE=true</code>.</li>
-            <li>Redeploy en klik hierboven op “Test taalmodel”.</li>
+          <p className="font-semibold text-ink">Zo zet je de AI aan (eigen laptop of server, geen externe dienst):</p>
+          <p className="mt-1 font-medium text-ink">Laptop (Windows):</p>
+          <ol className="list-decimal space-y-0.5 pl-4">
+            <li>
+              PowerShell in de projectmap: <code>powershell -ExecutionPolicy Bypass -File deploy\ai-node\windows\start-ai-node.ps1 -Install -NoSleep</code>
+            </li>
+            <li>Eerste keer: plak de regels van je klembord in Vercel → Environment Variables (Production) en klik Redeploy.</li>
+            <li>De laptop meldt zich elke minuut aan; staat hij uit, dan werkt alles op regels.</li>
+          </ol>
+          <p className="mt-2 font-medium text-ink">Vaste server (later):</p>
+          <ol className="list-decimal space-y-0.5 pl-4">
+            <li>
+              Op Ubuntu: <code>sudo bash deploy/ai-node/setup.sh ai.jouwdomein.nl</code>, en zet <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code> en <code>AI_ALLOW_REMOTE=true</code> in Vercel.
+            </li>
           </ol>
           <p className="mt-2 text-neutralx-500">Nu: {problem}</p>
         </div>

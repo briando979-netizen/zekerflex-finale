@@ -1,5 +1,5 @@
 import type { Principal } from "@/lib/auth";
-import { chat, chatJson, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { chat, chatJson, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { logExchange } from "@/lib/learn/store";
 import { logger } from "@/lib/logger";
@@ -140,6 +140,7 @@ export interface ThinkOptions {
 }
 
 export async function think(p: Principal, question: string, opts: ThinkOptions = {}): Promise<BrainAnswer> {
+  await ensureAiNode();
   const role = roleOf(p);
   const q = question.trim().slice(0, 1500);
   const guard = inspectPrompt(q);

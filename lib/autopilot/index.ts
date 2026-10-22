@@ -1,3 +1,4 @@
+import { ensureAiNode } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 import { acquireLock } from "@/lib/redis";
 import { ACTIONS, type AutopilotAction } from "@/lib/autopilot/actions";
@@ -17,6 +18,7 @@ export interface RunReport {
 }
 
 export async function runAutopilot(trigger: "cron" | "handmatig", only?: string[]): Promise<RunReport> {
+  await ensureAiNode();
   const settings = await getSettings();
   const report: RunReport = { ran: [], skipped: [] };
   if (!settings.enabled && trigger === "cron") {

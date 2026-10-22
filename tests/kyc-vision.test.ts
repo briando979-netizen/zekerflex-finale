@@ -13,6 +13,7 @@ vi.mock("@/lib/env", () => ({ env: envMock }));
 
 const chatJson = vi.fn();
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chatJson: (...a: unknown[]) => chatJson(...a),
   imageDataUrl: (bytes: Buffer, mime: string) => `data:${mime};base64,${bytes.toString("base64")}`,
 }));

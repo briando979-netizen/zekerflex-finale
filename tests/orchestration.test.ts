@@ -9,6 +9,7 @@ const jarvisTurnCreate = vi.fn();
 const jarvisEventCreate = vi.fn();
 
 vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined,
   chatJson: (...a: unknown[]) => chatJson(...a),
   chat: vi.fn(),
 }));

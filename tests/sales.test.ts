@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const chatJson = vi.fn();
-vi.mock("@/lib/ai/client", () => ({ chatJson: (...a: unknown[]) => chatJson(...a) }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, chatJson: (...a: unknown[]) => chatJson(...a) }));
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
 
 const outreachFindUnique = vi.fn();

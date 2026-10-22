@@ -7,7 +7,8 @@ vi.mock("@/lib/storage/kv", () => ({
   kvSet: async (k: string, v: unknown) => void m.kv.set(k, structuredClone(v)),
 }));
 vi.mock("@/lib/admin/owner-todos", () => ({ addCustom: async (t: string) => void m.todos.push(t) }));
-vi.mock("@/lib/ai/client", () => ({ chat: vi.fn(), llmConfigProblem: () => "geen model" }));
+vi.mock("@/lib/ai/client", () => ({
+  ensureAiNode: async () => undefined, chat: vi.fn(), llmConfigProblem: () => "geen model" }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     invoice: { aggregate: async () => ({ _sum: { totalCents: 123_400 }, _count: 40 }) },
