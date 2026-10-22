@@ -14,6 +14,11 @@ export function recordCronRun(job: string, ok: boolean): void {
   } catch {
     /* metrics are best-effort */
   }
+  // Durable heartbeat (survives serverless invocations) so a job that silently
+  // STOPS running can be detected — prom-client gauges above are in-memory only.
+  void import("@/lib/ops/heartbeat")
+    .then(({ recordCronHeartbeat }) => recordCronHeartbeat(job, ok))
+    .catch(() => undefined);
   if (!ok) {
     // tell the owner (push + mail, deduped per job); lazy so this module stays light
     void import("@/lib/ops/alert")
