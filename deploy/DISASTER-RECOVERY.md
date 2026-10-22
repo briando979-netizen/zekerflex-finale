@@ -28,7 +28,7 @@ cp /veilige-plek/.env.production .env.production     # de geëxporteerde Vercel-
 # Omdat DATABASE_URL naar Neon wijst, gebruikt de app die DB. De lokale
 # postgres/redis uit de compose worden dan genegeerd — start alleen de app:
 docker compose -f docker-compose.prod.yml up -d --build app
-
+```
 - De build draait automatisch de migraties (`build:with-migrate`). Omdat de DB al
   op de laatste migratie staat (die liep bij de laatste Vercel-deploy) is dit een no-op.
 - Check: `curl -sI http://localhost:3000/api/health` → 200.
