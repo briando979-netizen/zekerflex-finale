@@ -9,6 +9,8 @@ import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsM
 import { PushToggle } from "@/components/app/PushToggle";
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
+import { Portal } from "./Portal";
+import { BrainChat } from "@/components/brain/BrainChat";
 import {
   dayLabel,
   fmtTime,
@@ -57,6 +59,7 @@ export function InboxPage({
   const [showCommunityCreate, setShowCommunityCreate] = useState(false);
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBrain, setShowBrain] = useState(false);
   // per-user chat settings: archive, mute, lock (PIN), favourites, lists, block
   const [chatPrefs, setChatPrefs] = useState<{ lists: string[]; hasPin: boolean; lockedCount: number; pinOk: boolean; blocked: string[] }>({
     lists: [],
@@ -445,6 +448,13 @@ export function InboxPage({
           {tab === "tools" && (
             <div className="border-b border-hair">
               <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-neutralx-400">Tools</p>
+              <button type="button" onClick={() => setShowBrain(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">✨</span>
+                <span>
+                  ZekerFlex-assistent
+                  <span className="block text-xs text-neutralx-500">Vraag naar je klussen, uren, uitbetalingen of hoe iets werkt</span>
+                </span>
+              </button>
               <button type="button" onClick={() => setShowSettings(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
                 <span className="w-8 text-center text-lg">⚡</span>
                 <span>
@@ -785,6 +795,15 @@ export function InboxPage({
           onClose={() => setManageCommunity(null)}
           onChanged={() => { void loadCommunities(); void loadThreads(); if (active) void loadThread(active); }}
         />
+      )}
+      {showBrain && (
+        <Portal>
+          <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setShowBrain(false)}>
+            <div className="h-[90vh] w-full overflow-hidden rounded-t-2xl shadow-lift sm:h-[80vh] sm:max-w-lg sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+              <BrainChat onClose={() => setShowBrain(false)} />
+            </div>
+          </div>
+        </Portal>
       )}
       {showSettings && <ChatSettingsModal onClose={() => { setShowSettings(false); if (active) void loadThread(active); }} />}
     </div>

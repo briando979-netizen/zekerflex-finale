@@ -18,6 +18,8 @@ export interface AiFeature {
 }
 
 export const AI_FEATURES: AiFeature[] = [
+  { key: "brain", name: "ZekerFlex-assistent (brein)", audience: ["werknemer", "opdrachtgever", "admin"], where: "Chat → Tools → ✨ assistent, /dashboard/assistent, /werkgever/assistent", withModel: "beantwoordt vrije vragen uit je eigen gegevens (tools) + kennis, met geheugen", withoutModel: "regel-router haalt je gegevens op (planning, uren, geld, bezetting) + beste kennisbank-antwoord" },
+  { key: "rag-hybrid", name: "Hybride zoeken (RAG-brein)", audience: ["bezoeker", "werknemer", "opdrachtgever", "admin"], where: "assistent, website-chat, Jarvis, orchestrator, Admin RAG", withModel: "BM25 + brein-vector + embedding-vectoren, samengevoegd met Reciprocal Rank Fusion", withoutModel: "BM25 + brein-vector (lokale n-gram-vectoren) met RRF — werkt altijd" },
   { key: "webchat", name: "Website-chat", audience: ["bezoeker"], where: "chatknop op de website", withModel: "beantwoordt vrije vragen in gewone taal", withoutModel: "vaste antwoorden + kennisbank-zoeken" },
   { key: "chat-assist", name: "Antwoordsuggesties in de chat", audience: ["werknemer", "opdrachtgever", "admin"], where: "Berichten → ✨", withModel: "3 passende antwoorden op het laatste bericht", withoutModel: "suggesties op basis van trefwoorden" },
   { key: "chat-rewrite", name: "Herschrijven & vertalen in de chat", audience: ["werknemer", "opdrachtgever", "admin"], where: "Berichten → ✨ herschrijf", withModel: "vriendelijker / korter / zakelijk, of vertalen (EN/PL/DE/RO/AR)", withoutModel: "uit" },

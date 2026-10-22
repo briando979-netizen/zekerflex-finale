@@ -13,7 +13,7 @@ import { kvAppend, kvGet } from "@/lib/storage/kv";
 //   • keeping a per-user conversation memory   (jarvis, without a JarvisTurn row)
 // ---------------------------------------------------------------------------
 
-export type Scope = "public" | "jarvis";
+export type Scope = "public" | "jarvis" | "brain";
 
 interface Exchange {
   id: string;

@@ -1,8 +1,9 @@
 import type { RagSourceType } from "@prisma/client";
 import { logger } from "@/lib/logger";
-import { chat } from "@/lib/ai/client";
-import { embedOne, isRagEnabled } from "@/lib/rag/embed";
-import { search, type SearchHit } from "@/lib/rag/store";
+import { chat, llmConfigProblem } from "@/lib/ai/client";
+import { isRagEnabled } from "@/lib/rag/embed";
+import type { SearchHit } from "@/lib/rag/store";
+import { recall } from "@/lib/rag/recall";
 
 // ---------------------------------------------------------------------------
 // Retrieval-augmented answers over the local total-memory index. Used by the
@@ -22,23 +23,36 @@ export interface RetrievedContext {
   hits: SearchHit[];
 }
 
+/**
+ * Hybrid retrieval for every internal consumer (Jarvis, orchestrator, Hermes,
+ * admin RAG search/ask): BM25 + brain vector over the knowledge corpus and the
+ * embedding-model vectors over the RagChunk index, fused with Reciprocal Rank
+ * Fusion (lib/rag/recall.ts). Works without an embedding model — the corpus
+ * lists still answer; code/audit/sales memory needs the model.
+ */
 export async function retrieveContext(
   query: string,
   opts: RetrieveOptions = {},
 ): Promise<RetrievedContext> {
-  if (!isRagEnabled()) return { context: "", hits: [] };
   try {
-    const vec = await embedOne(query);
-    const hits = await search(vec, {
-      limit: opts.limit ?? 6,
-      ...(opts.sourceTypes ? { sourceTypes: opts.sourceTypes } : {}),
+    const wantsCorpus = !opts.sourceTypes || opts.sourceTypes.length === 0 || opts.sourceTypes.includes("LEGAL");
+    const rec = await recall(query, {
+      role: "admin",
+      k: opts.limit ?? 6,
+      corpus: wantsCorpus,
+      ...(opts.sourceTypes && opts.sourceTypes.length > 0 ? { sourceTypes: opts.sourceTypes } : {}),
       ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
     });
+    const hits: SearchHit[] = rec.hits.map((h) => ({
+      id: h.id,
+      sourceType: h.sourceType ?? "LEGAL",
+      sourceRef: h.sourceRef ?? `corpus:${h.id}`,
+      title: h.title,
+      content: h.text,
+      score: h.score,
+    }));
     const context = hits
-      .map(
-        (h, i) =>
-          `[${i + 1}] (${h.sourceType} · ${h.sourceRef} · score ${h.score.toFixed(2)})\n${h.content}`,
-      )
+      .map((h, i) => `[${i + 1}] (${h.sourceType} · ${h.sourceRef} · via ${rec.hits[i]!.via.join("+")})\n${h.content}`)
       .join("\n\n---\n\n");
     return { context, hits };
   } catch (err) {
@@ -72,14 +86,21 @@ export async function askWithMemory(
 
   if (hits.length === 0) {
     return {
-      answer: isRagEnabled()
-        ? "Ik vond hierover niets in het geheugen."
-        : "Het geheugen (RAG) is niet geconfigureerd — stel LLM_EMBED_MODEL in en herbouw de index.",
+      answer: "Ik vond hierover niets in het geheugen.",
       sources: [],
     };
   }
 
+  if (llmConfigProblem()) {
+    // no model: the fused passages themselves are the answer
+    return {
+      answer: hits.slice(0, 3).map((h, i) => `[${i + 1}] ${h.title}\n${h.content.slice(0, 600)}`).join("\n\n"),
+      sources: hits.map((h) => ({ sourceType: h.sourceType, sourceRef: h.sourceRef, title: h.title, score: h.score })),
+    };
+  }
+
   const { text } = await chat({
+    purpose: "rag-ask",
     messages: [
       { role: "system", content: ASK_SYSTEM },
       { role: "user", content: `VRAAG: ${question}\n\nCONTEXT:\n${context}` },

@@ -14,6 +14,11 @@ const nextConfig = {
   },
   // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).
   serverExternalPackages: ["ioredis"],
+  // The RAG brain reads lib/rag/knowledge/*.md at runtime (lib/rag/corpus.ts) —
+  // ship them with every server function, not only the routes that import them.
+  outputFileTracingIncludes: {
+    "/**": ["./lib/rag/knowledge/**/*.md"],
+  },
   experimental: {
     optimizePackageImports: ["date-fns"],
     serverActions: {

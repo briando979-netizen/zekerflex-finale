@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { chunkText } from "@/lib/rag/chunk";
 import { embedMany, isRagEnabled } from "@/lib/rag/embed";
 import { replaceSource, type UpsertChunkInput } from "@/lib/rag/store";
+import { corpus } from "@/lib/rag/corpus";
 
 // ---------------------------------------------------------------------------
 // Indexers - everything the sovereign box knows becomes searchable memory:
@@ -132,18 +133,14 @@ export async function indexAudit(): Promise<number> {
 
 // --- LEGAL ------------------------------------------------------------
 
+/**
+ * The knowledge corpus (lib/rag/corpus.ts): website knowledge, in-app how-tos
+ * and the internal docs. sourceRef "corpus:<passage id>" lets the hybrid
+ * retriever map a vector hit back to its passage and its audience, so a
+ * worker never gets an internal doc through the vector side either.
+ */
 export async function indexLegal(): Promise<number> {
-  const dir = join(ROOT, "lib", "rag", "knowledge");
-  const entries: RawEntry[] = [];
-  try {
-    for (const name of await readdir(dir)) {
-      if (!name.endsWith(".md")) continue;
-      const text = await readFile(join(dir, name), "utf8");
-      entries.push({ sourceRef: `legal:${name}`, title: name.replace(/\.md$/, ""), text });
-    }
-  } catch {
-    /* no knowledge dir */
-  }
+  const entries: RawEntry[] = corpus().map((p) => ({ sourceRef: `corpus:${p.id}`, title: p.title, text: p.text }));
   return indexEntries("LEGAL", entries);
 }
 

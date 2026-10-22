@@ -7,7 +7,7 @@ import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { logExchange, topExamples } from "@/lib/learn/store";
-import { searchKnowledge } from "@/lib/jarvis/public-knowledge";
+import { recall } from "@/lib/rag/recall";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 
 export const runtime = "nodejs";
@@ -125,11 +125,14 @@ async function handlePOST(request: Request): Promise<Response> {
   if (chit) return textStream(withSuggestions(chit), question, undefined, saveReply);
 
   const topic = topicAnswer(question);
-  const knowledgeHits = lastUser ? searchKnowledge(lastUser.content, 4) : [];
+  // RAG brain: public knowledge only (never in-app or internal passages)
+  const rec = lastUser ? await recall(lastUser.content, { role: "public", k: 4 }) : null;
+  const knowledgeHits = rec?.hits ?? [];
+  const confident = Boolean(rec?.confident);
   // The assistant's own answer: a known topic, else the best knowledge-base
   // hit, else an honest "ask a colleague" with topics to pick from.
   const ownAnswer = withSuggestions(
-    topic ?? (knowledgeHits[0] ? { reply: knowledgeHits[0].a, suggestions: ["Contact met een mens", "Hoe meld ik me aan?"] } : fallbackAnswer()),
+    topic ?? (knowledgeHits[0] && confident ? { reply: knowledgeHits[0].text, suggestions: ["Contact met een mens", "Hoe meld ik me aan?"] } : fallbackAnswer()),
   );
   // No model connected, or a known question (also mid-conversation): answer
   // ourselves — curated facts, instantly, without waiting on the model.
@@ -157,7 +160,7 @@ async function handlePOST(request: Request): Promise<Response> {
             role: "system" as const,
             content:
               "Relevante info uit de ZekerFlex-kennisbank voor deze vraag (gebruik dit, verzin niets extra's):\n" +
-              knowledgeHits.map((h) => `[${h.source}] V: ${h.q}\nA: ${h.a}`).join("\n\n"),
+              knowledgeHits.map((h) => `[${h.source}] ${h.title}\n${h.text}`).join("\n\n"),
           },
         ]
       : [];
