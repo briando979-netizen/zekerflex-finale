@@ -19,6 +19,8 @@ import { encodeSession, type RoleGrant } from "@/lib/auth/session";
 // ---------------------------------------------------------------------------
 
 export const INSPECT_PARAM = "zf_inspect";
+/** Admin "Bekijk als" (lib/auth/view-as.ts): read-only session used outside /admin. */
+export const VIEW_AS_COOKIE = "zf_view_as";
 export const INSPECT_MAX_HOURS = 72;
 const ISSUER = "zekerflex";
 const AUDIENCE = "zekerflex.inspect";

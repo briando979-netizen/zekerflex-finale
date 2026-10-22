@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "../middleware";
-import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
-import { inspectSessionFor, mintInspectLink, verifyInspectLink } from "@/lib/auth/inspect";
+import { decodeSession, encodeSession, SESSION_COOKIE } from "@/lib/auth/session";
+import { inspectSessionFor, mintInspectLink, verifyInspectLink, VIEW_AS_COOKIE } from "@/lib/auth/inspect";
 
 const tester = {
   sub: "usr_test",
@@ -29,6 +29,26 @@ describe("read-only inspection links", () => {
     expect(claims?.sub).toBe("usr_test");
     expect(claims?.inspect).toBe(true);
     expect(res.cookies.get("zf_app")?.value).toBe("1");
+  });
+
+  it("'Bekijk als': view-as session applies outside /admin (read-only) but the admin area keeps the admin session", async () => {
+    const viewAs = await inspectSessionFor(tester);
+    const admin = await encodeSession({
+      sub: "usr_admin",
+      email: "admin@zekerflex.com",
+      name: "Admin",
+      roles: [{ role: "PLATFORM_ADMIN", organizationId: "t1", locationIds: [] }],
+    });
+    // a write in the dashboard while viewing as → refused
+    const w = new NextRequest(new URL("https://www.zekerflex.com/api/me/bank-verify"), { method: "POST" });
+    w.cookies.set(SESSION_COOKIE, admin);
+    w.cookies.set(VIEW_AS_COOKIE, viewAs);
+    expect((await middleware(w)).status).toBe(403);
+    // the admin's own API (e.g. to stop viewing) still works as the admin
+    const a = new NextRequest(new URL("https://www.zekerflex.com/api/admin/view-as"), { method: "POST" });
+    a.cookies.set(SESSION_COOKIE, admin);
+    a.cookies.set(VIEW_AS_COOKIE, viewAs);
+    expect((await middleware(a)).status).not.toBe(403);
   });
 
   it("refuses every write from an inspection session", async () => {

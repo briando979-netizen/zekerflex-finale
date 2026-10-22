@@ -6,6 +6,7 @@ import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
 import { KycOverride } from "@/components/admin/KycOverride";
 import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
+import { ChooseViewAsAccount } from "@/components/admin/ViewAsControls";
 import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
 
@@ -217,7 +218,14 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
           )}
 
           {!isDeleted && !user.memberships.some((m) => m.role === "PLATFORM_ADMIN" || m.role === "SALES") && (
-            <Panel title="AI-inspectie (alleen-lezen)">
+            <Panel title="Bekijk als & AI-inspectie (alleen-lezen)">
+              <ChooseViewAsAccount
+                userId={user.id}
+                roles={[
+                  ...(user.memberships.some((m) => m.role === "FREELANCER") ? (["freelancer"] as const) : []),
+                  ...(user.memberships.some((m) => m.role === "HQ_ADMIN" || m.role === "LOCAL_MANAGER") ? (["employer"] as const) : []),
+                ]}
+              />
               <InspectLinkPanel userId={user.id} />
             </Panel>
           )}

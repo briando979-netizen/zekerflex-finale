@@ -6,7 +6,7 @@ import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
-import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink } from "@/lib/auth/inspect";
+import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink, VIEW_AS_COOKIE } from "@/lib/auth/inspect";
 
 export const config = {
   matcher: [
@@ -143,6 +143,18 @@ function appAllowed(pathname: string): boolean {
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  // Admin "Bekijk als": outside the admin area, serve as the chosen example
+  // account (read-only). /admin and /api/admin keep the admin's own session.
+  const viewAs = req.cookies.get(VIEW_AS_COOKIE)?.value;
+  const p = req.nextUrl.pathname;
+  if (viewAs && !p.startsWith("/admin") && !p.startsWith("/api/admin")) {
+    const claims = await decodeSession(viewAs);
+    if (claims?.inspect) {
+      req.cookies.set(SESSION_COOKIE, viewAs);
+      req.headers.delete("authorization");
+    }
+  }
+
   // Read-only inspection sessions (lib/auth/inspect.ts) may never write.
   if (!READ_METHODS.has(req.method)) {
     const claims = await decodeSession(sessionToken(req));

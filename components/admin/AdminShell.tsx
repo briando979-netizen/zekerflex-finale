@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
+import { ViewAsSwitcher } from "@/components/admin/ViewAsControls";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 
 export interface AdminNavItem {
@@ -124,6 +125,7 @@ export function AdminShell({
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <ViewAsSwitcher />
             {/* wrapped: the unlayered .a-btn display rule would beat Tailwind's `hidden` */}
             <span className="hidden sm:inline-flex">
               <Link href="/admin/bedrijven" className="a-btn a-btn-primary">

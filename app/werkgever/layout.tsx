@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
+import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
@@ -59,6 +60,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   return (
     <I18nProvider locale={locale}>
+      <ViewAsBanner role="employer" />
       <EmployerShell
         nav={nav}
         locale={locale}
