@@ -13,6 +13,8 @@ import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
+import { runAfter } from "@/lib/run-after";
+import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
 
 export interface OfferResponse {
   ok: boolean;
@@ -323,7 +325,10 @@ export async function respondToOfferAction(
       });
     } else {
       await setOfferStatus(offerId, decision);
+      runAfter(() => pushOfferDeclined(offer.userId, { id: shift.id, title: shift.title }));
     }
+    // "uitgekozen" push right away (the sweep would also catch it)
+    if (decision === "accepted") runAfter(() => maybeSweepWorkerPushes());
 
     // let the freelancer know in chat
     try {

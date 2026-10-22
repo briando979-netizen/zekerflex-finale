@@ -41,6 +41,10 @@
     {
       "path": "/api/internal/bank/fees",
       "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/internal/notifications/tick",
+      "schedule": "0 17 * * *"
     }
   ]
 }

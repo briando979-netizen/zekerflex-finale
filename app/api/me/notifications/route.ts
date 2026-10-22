@@ -1,5 +1,6 @@
 import { withUsage } from "@/lib/ops/usage";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { maybeSweepWorkerPushes } from "@/lib/notifications/worker-push";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { getNotifications } from "@/lib/notifications/feed";
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 async function handleGET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
+    // piggyback: the throttled werknemer-push sweep (reminders, uitgekozen, …)
+    after(() => maybeSweepWorkerPushes());
     const items = await getNotifications(p);
     return NextResponse.json({ items, count: items.length, urgent: items.filter((i) => i.urgent).length });
   } catch (err) {
