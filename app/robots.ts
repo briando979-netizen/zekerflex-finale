@@ -14,6 +14,7 @@ const PRIVATE = [
   "/kyc",
   "/verifieer-email",
   "/start",
+  "/voorbeeld",
   // personal links: referral codes and payment links
   "/r/",
   "/betaal/",
