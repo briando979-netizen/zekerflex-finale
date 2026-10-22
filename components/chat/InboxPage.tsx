@@ -7,6 +7,7 @@ import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
 import { PushToggle } from "@/components/app/PushToggle";
+import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import {
   dayLabel,
   fmtTime,
@@ -55,6 +56,20 @@ export function InboxPage({
   const [showCommunityCreate, setShowCommunityCreate] = useState(false);
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  // per-user chat settings: archive, mute, lock (PIN), favourites, lists, block
+  const [chatPrefs, setChatPrefs] = useState<{ lists: string[]; hasPin: boolean; lockedCount: number; pinOk: boolean; blocked: string[] }>({
+    lists: [],
+    hasPin: false,
+    lockedCount: 0,
+    pinOk: false,
+    blocked: [],
+  });
+  const [view, setView] = useState<"main" | "archived" | "locked">("main");
+  const [filter, setFilter] = useState<string>("all");
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [pinAsk, setPinAsk] = useState<null | { mode: "set" | "unlock"; then?: () => void }>(null);
+  const pinRef = useRef<string | null>(null);
+  const pinHeaders = (): Record<string, string> => (pinRef.current ? { "x-chat-pin": pinRef.current } : {});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
@@ -62,11 +77,12 @@ export function InboxPage({
   const lastPing = useRef(0);
 
   const loadThreads = useCallback(async () => {
-    const r = await fetch(`/api/inbox${visibleQuery()}`, { cache: "no-store" });
+    const r = await fetch(`/api/inbox${visibleQuery()}`, { cache: "no-store", headers: pinHeaders() });
     if (!r.ok) return;
     const d = await r.json();
     setMe(d.me);
     setThreads(d.threads);
+    if (d.chatPrefs) setChatPrefs(d.chatPrefs);
     setDir((p) => ({ ...p, ...d.directory }));
     setPresence((p) => ({ ...p, ...d.presence }));
     setAvatars((p) => ({ ...p, ...d.avatars }));
@@ -89,7 +105,7 @@ export function InboxPage({
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
-    const r = await fetch(`/api/inbox/${id}${visibleQuery()}`, { cache: "no-store" });
+    const r = await fetch(`/api/inbox/${id}${visibleQuery()}`, { cache: "no-store", headers: pinHeaders() });
     if (!r.ok) return;
     const d = await r.json();
     setMessages((prev) => {
@@ -164,6 +180,37 @@ export function InboxPage({
     return { userId: id, name: u?.name ?? "…", role: u?.role ?? "employer", support: false };
   };
   const activeThread = threads.find((t) => t.id === active) ?? null;
+
+  const doAction = async (threadId: string, a: MenuAction): Promise<void> => {
+    if (a.action === "lock" && !chatPrefs.hasPin) {
+      setPinAsk({ mode: "set", then: () => void doAction(threadId, a) });
+      return;
+    }
+    const r = await fetch(`/api/inbox/${threadId}/prefs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      window.alert(d?.error?.message ?? "Dat lukte niet.");
+      return;
+    }
+    if ((a.action === "delete" || a.action === "lock" || a.action === "archive") && active === threadId) {
+      setActive(null);
+      setPane("list");
+    }
+    await loadThreads();
+    if (active === threadId && a.action !== "delete") void loadThread(threadId);
+  };
+
+  const listed = threads
+    .filter((t) => (view === "locked" ? t.locked : view === "archived" ? t.archived && !t.locked : !t.archived && !t.locked))
+    .filter(
+      (t) =>
+        filter === "all" ||
+        (filter === "unread" && t.unread > 0) ||
+        (filter === "fav" && t.favorite) ||
+        (filter.startsWith("list:") && t.lists?.includes(filter.slice(5))),
+    );
+  const archivedCount = threads.filter((t) => t.archived && !t.locked).length;
+  const menuThread = menuFor ? (threads.find((t) => t.id === menuFor) ?? null) : null;
 
   const pingTyping = () => {
     const n = Date.now();
@@ -284,15 +331,57 @@ export function InboxPage({
               <button type="button" onClick={startSupport} className="w-full px-4 py-2 text-left text-xs font-semibold text-brand-600 hover:bg-paper-soft">
                 + ZekerFlex Support
               </button>
-              {threads.length === 0 ? (
-                <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen gesprekken.</p>
+              {view !== "main" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (view === "locked") {
+                      pinRef.current = null;
+                      void loadThreads();
+                    }
+                    setView("main");
+                  }}
+                  className="flex w-full items-center gap-2 border-b border-hair px-4 py-2.5 text-left text-sm font-semibold text-ink hover:bg-paper-soft"
+                >
+                  ‹ {view === "archived" ? "Gearchiveerd" : "Vergrendelde chats"}
+                </button>
+              ) : (
+                <>
+                  {chatPrefs.lockedCount > 0 && (
+                    <button type="button" onClick={() => setPinAsk({ mode: "unlock" })} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-ink hover:bg-paper-soft">
+                      <span className="w-10 text-center">🔒</span>Vergrendelde chats <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>
+                    </button>
+                  )}
+                  {archivedCount > 0 && (
+                    <button type="button" onClick={() => setView("archived")} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-ink hover:bg-paper-soft">
+                      <span className="w-10 text-center">🗄</span>Gearchiveerd <span className="ml-auto text-xs text-neutralx-400">{archivedCount}</span>
+                    </button>
+                  )}
+                  <div className="flex gap-1.5 overflow-x-auto px-3 py-2">
+                    {[["all", "Alle"], ["unread", "Ongelezen"], ["fav", "Favorieten"], ...chatPrefs.lists.map((l) => [`list:${l}`, l])].map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setFilter(k!)}
+                        className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ${filter === k ? "bg-brand-500 text-white" : "bg-paper-soft text-neutralx-600"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {listed.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-neutralx-400">{threads.length === 0 ? "Nog geen gesprekken." : "Geen gesprekken hier."}</p>
               ) : (
                 <ul className="divide-y divide-hair">
-                  {threads.map((t) => {
+                  {listed.map((t) => {
                     const o = otherOf(t);
                     const pres = presence[o.userId];
                     return (
                       <li key={t.id}>
+                        <SwipeRow archived={Boolean(t.archived)} onArchive={() => void doAction(t.id, { action: t.archived ? "unarchive" : "archive" })} onMore={() => setMenuFor(t.id)}>
+                        <div className="group relative">
                         <button
                           type="button"
                           onClick={() => openThread(t.id)}
@@ -308,12 +397,26 @@ export function InboxPage({
                               <span className="truncate text-xs text-neutralx-500">
                                 {t.lastMessage ? (t.lastMessage.from === me?.userId ? "Jij: " : "") + t.lastMessage.text : t.shiftTitle ?? "—"}
                               </span>
-                              {t.unread > 0 && (
-                                <span className="grid h-4 min-w-4 flex-shrink-0 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">{t.unread}</span>
-                              )}
+                              <span className="flex flex-shrink-0 items-center gap-1">
+                                {t.favorite && <span className="text-[10px] text-amber-500">★</span>}
+                                {t.muted && <span className="text-[10px]" title="Gedempt">🔕</span>}
+                                {t.unread > 0 && (
+                                  <span className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-brand-500"}`}>{t.unread}</span>
+                                )}
+                              </span>
                             </span>
                           </span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setMenuFor(t.id)}
+                          className="absolute right-2 top-1/2 hidden h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-neutralx-500 shadow-sm hover:text-ink md:group-hover:grid"
+                          aria-label="Meer opties"
+                        >
+                          ⋯
+                        </button>
+                        </div>
+                        </SwipeRow>
                       </li>
                     );
                   })}
@@ -393,6 +496,14 @@ export function InboxPage({
                 <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Profiel">ⓘ</button>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => setMenuFor(activeThread.id)}
+              className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft ${activeThread.kind === "support" ? "ml-auto" : ""}`}
+              aria-label="Meer opties"
+            >
+              ⋮
+            </button>
             {activeThread.kind === "group" && activeThread.communityId && (
               <button
                 type="button"
@@ -448,6 +559,14 @@ export function InboxPage({
             )}
           </div>
 
+          {activeThread.kind === "direct" && chatPrefs.blocked.includes(otherOf(activeThread).userId) ? (
+            <div className="flex items-center justify-center gap-3 border-t border-hair px-4 py-3 text-sm text-neutralx-600">
+              Je hebt {otherOf(activeThread).name} geblokkeerd.
+              <button type="button" onClick={() => void doAction(activeThread.id, { action: "unblock" })} className="font-semibold text-brand-600 underline">
+                Deblokkeer
+              </button>
+            </div>
+          ) : (
           <Composer
             key={activeThread.id}
             threadId={activeThread.id}
@@ -458,10 +577,47 @@ export function InboxPage({
             onTyping={pingTyping}
             lastIncoming={[...messages].reverse().find((m) => m.from !== me?.userId && m.text)?.text ?? ""}
           />
+          )}
         </div>
       )}
 
       {/* ─── overlays ─── */}
+      {menuThread && (
+        <ThreadMenuSheet
+          name={otherOf(menuThread).name}
+          flags={menuThread}
+          direct={menuThread.kind === "direct"}
+          blocked={chatPrefs.blocked.includes(otherOf(menuThread).userId)}
+          lists={chatPrefs.lists}
+          onAction={(a) => void doAction(menuThread.id, a)}
+          onClose={() => setMenuFor(null)}
+        />
+      )}
+      {pinAsk && (
+        <PinModal
+          mode={pinAsk.mode}
+          onClose={() => setPinAsk(null)}
+          onDone={async (pin) => {
+            const r = await fetch("/api/inbox/pin", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: pinAsk.mode === "set" ? "set" : "check", pin }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) return d?.error?.message ?? "Dat lukte niet.";
+            if (pinAsk.mode === "unlock" && !d.ok) return "Onjuiste pincode.";
+            pinRef.current = pin;
+            const then = pinAsk.then;
+            const unlocking = pinAsk.mode === "unlock";
+            setPinAsk(null);
+            setChatPrefs((c) => ({ ...c, hasPin: true }));
+            if (unlocking) setView("locked");
+            then?.();
+            await loadThreads();
+            return null;
+          }}
+        />
+      )}
       {cardUser && (
         <UserCard
           userId={cardUser}

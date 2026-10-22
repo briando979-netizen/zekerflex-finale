@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import { sendUserPush } from "@/lib/notifications/push";
 import { platformAdminIds, userDirectory } from "@/lib/messaging/contacts";
 import { visibleUsers } from "@/lib/messaging/presence";
+import { getChatPrefs, isMuted } from "@/lib/messaging/thread-prefs";
 import { previewText, type ChatMessage, type ChatThread } from "@/lib/messaging/store";
 
 // ---------------------------------------------------------------------------
@@ -91,7 +92,11 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
     const recipients = await recipientsFor(thread, msg);
     if (recipients.length === 0) return;
     const inView = await visibleUsers(recipients);
-    const targets = recipients.filter((id) => !inView.has(id));
+    // "Dempen" (lib/messaging/thread-prefs.ts): no push for a muted conversation
+    const muted = new Set(
+      (await Promise.all(recipients.map(async (id) => (isMuted(await getChatPrefs(id), thread.id) ? id : null)))).filter(Boolean),
+    );
+    const targets = recipients.filter((id) => !inView.has(id) && !muted.has(id));
     if (targets.length === 0) return;
 
     const supportAnswer = thread.kind === "support" && !thread.participants.includes(msg.from);

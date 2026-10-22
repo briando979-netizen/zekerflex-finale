@@ -53,6 +53,12 @@ export interface ThreadRow {
   lastMessage: { from: string; text: string; at: string } | null;
   lastMessageAt: string;
   unread: number;
+  /** per-user chat settings (lib/messaging/thread-prefs.ts) */
+  archived?: boolean;
+  muted?: boolean;
+  locked?: boolean;
+  favorite?: boolean;
+  lists?: string[];
 }
 
 export const ROLE_COLOR: Record<string, string> = {

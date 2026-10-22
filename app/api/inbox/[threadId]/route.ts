@@ -19,6 +19,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
+import { blockedBetween, checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
@@ -37,8 +38,15 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Gesprek niet gevonden" } }, { status: 404 });
     }
 
-    const messages = await getMessages(thread.id, 400);
+    const prefs = await getChatPrefs(p.userId);
+    if (prefs.locked.includes(thread.id) && !(await checkChatPin(p.userId, req.headers.get("x-chat-pin")))) {
+      return NextResponse.json({ error: { code: "LOCKED", message: "Deze chat is vergrendeld." } }, { status: 423 });
+    }
+    const from = visibleFrom(prefs, thread.id);
+    const messages = (await getMessages(thread.id, 400)).filter((m) => !from || m.at > from);
     await markThreadRead(thread.id, p.userId);
+    const other = thread.kind === "direct" ? thread.participants.find((u) => u !== p.userId) ?? null : null;
+    const blocked = other ? await blockedBetween(p.userId, other) : null;
 
     const ids = new Set<string>(thread.participants);
     messages.forEach((m) => ids.add(m.from));
@@ -67,6 +75,14 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
       presence,
       avatars,
       settings: { quickReplies: settings.quickReplies },
+      prefs: {
+        archived: prefs.archived.includes(thread.id),
+        muted: isMuted(prefs, thread.id),
+        locked: prefs.locked.includes(thread.id),
+        favorite: prefs.favorites.includes(thread.id),
+        lists: Object.entries(prefs.lists).filter(([, ids]) => ids.includes(thread.id)).map(([n]) => n),
+        blocked,
+      },
       messages: messages.map((m) => ({
         ...m,
         readByOthers: isReadByOthers(thread, m),
@@ -123,6 +139,12 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
       }),
     );
 
+    if (thread.kind === "direct") {
+      const other = thread.participants.find((u) => u !== p.userId);
+      const blocked = other ? await blockedBetween(p.userId, other) : null;
+      if (blocked === "me") throw AppError.forbidden("Je hebt deze persoon geblokkeerd. Deblokkeer om berichten te sturen.");
+      if (blocked === "them") throw AppError.forbidden("Je kunt deze persoon geen berichten sturen.");
+    }
     if (input.kind === "text" && !input.text.trim()) {
       throw AppError.validation("Leeg bericht");
     }

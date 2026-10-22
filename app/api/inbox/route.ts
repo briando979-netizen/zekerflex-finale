@@ -18,6 +18,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
+import { checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
@@ -31,12 +32,23 @@ async function handleGET(request: Request): Promise<NextResponse> {
     await touchPresence(p.userId);
     if (new URL(request.url).searchParams.get("visible") === "1") await touchVisible(p.userId);
     const admin = await isPlatformAdmin(p.userId);
-    const threads = await listThreadsForUser(p.userId, admin);
+    const allThreads = await listThreadsForUser(p.userId, admin);
+    // per-user chat settings (lib/messaging/thread-prefs.ts)
+    const prefs = await getChatPrefs(p.userId);
+    const pinOk = await checkChatPin(p.userId, request.headers.get("x-chat-pin"));
+    const threads = allThreads.filter((t) => {
+      const gone = prefs.deletedAt[t.id];
+      if (gone && t.lastMessageAt <= gone) return false; // deleted, nothing new since
+      if (prefs.locked.includes(t.id) && !pinOk) return false;
+      return true;
+    });
+    const lockedCount = allThreads.filter((t) => prefs.locked.includes(t.id)).length;
 
     const dirIds = new Set<string>();
     const rows = await Promise.all(
       threads.map(async (t) => {
-        const msgs = await getMessages(t.id, 300);
+        const from = visibleFrom(prefs, t.id);
+        const msgs = (await getMessages(t.id, 300)).filter((m) => !from || m.at > from);
         const unread = unreadForUser(t, msgs, p.userId);
         t.participants.forEach((id) => dirIds.add(id));
         if (t.lastMessage) dirIds.add(t.lastMessage.from);
@@ -50,9 +62,14 @@ async function handleGET(request: Request): Promise<NextResponse> {
           shiftId: t.meta.shiftId ?? null,
           shiftTitle: t.meta.shiftTitle ?? null,
           branch: t.meta.branch ?? null,
-          lastMessage: t.lastMessage,
+          lastMessage: t.lastMessage && (!from || t.lastMessage.at > from) ? t.lastMessage : null,
           lastMessageAt: t.lastMessageAt,
           unread,
+          archived: prefs.archived.includes(t.id),
+          muted: isMuted(prefs, t.id),
+          locked: prefs.locked.includes(t.id),
+          favorite: prefs.favorites.includes(t.id),
+          lists: Object.entries(prefs.lists).filter(([, ids]) => ids.includes(t.id)).map(([n]) => n),
         };
       }),
     );
@@ -74,7 +91,9 @@ async function handleGET(request: Request): Promise<NextResponse> {
       presence,
       avatars,
       contacts,
-      totalUnread: rows.reduce((s, r) => s + r.unread, 0),
+      chatPrefs: { lists: Object.keys(prefs.lists), hasPin: Boolean(prefs.pinHash), lockedCount, pinOk, blocked: prefs.blocked },
+      // muted and archived chats don't count towards the badge
+      totalUnread: rows.filter((r) => !r.muted && !r.archived).reduce((s, r) => s + r.unread, 0),
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);

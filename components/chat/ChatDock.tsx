@@ -302,7 +302,7 @@ export function ChatDock() {
                   </div>
                 ) : (
                   <ul className="divide-y divide-hair">
-                    {threads.map((t) => {
+                    {threads.filter((t) => !t.archived).map((t) => {
                       const o = otherOf(t);
                       return (
                         <li key={t.id}>
