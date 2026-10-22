@@ -18,7 +18,7 @@ import {
   type ThreadRow,
 } from "./shared";
 
-type Tab = "chats" | "contacts" | "communities";
+type Tab = "chats" | "updates" | "calls" | "tools" | "settings";
 interface SavedContact { userId: string; label?: string; favourite: boolean }
 interface CommunityRow { id: string; name: string; threadId: string | null; memberCount: number; myRole: string }
 
@@ -70,6 +70,26 @@ export function InboxPage({
   const [pinAsk, setPinAsk] = useState<null | { mode: "set" | "unlock"; then?: () => void }>(null);
   const pinRef = useRef<string | null>(null);
   const pinHeaders = (): Record<string, string> => (pinRef.current ? { "x-chat-pin": pinRef.current } : {});
+  // WhatsApp-style tabs: updates (ZekerFlex meldingen) and call history
+  const [updates, setUpdates] = useState<{ id: string; kind: string; title: string; body: string; href: string; at: string; urgent: boolean }[] | null>(null);
+  const [calls, setCalls] = useState<{ threadId: string; peerUserId: string; at: string; mode: string; status: string; outgoing: boolean; durationSec: number | null }[] | null>(null);
+  useEffect(() => {
+    if (tab === "updates") {
+      fetch("/api/me/notifications", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => setUpdates(d.items ?? []))
+        .catch(() => setUpdates([]));
+    }
+    if (tab === "calls") {
+      fetch("/api/inbox/calls", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => {
+          setCalls(d.calls ?? []);
+          setDir((p) => ({ ...p, ...d.directory }));
+        })
+        .catch(() => setCalls([]));
+    }
+  }, [tab]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
@@ -305,25 +325,13 @@ export function InboxPage({
       {/* ─── left pane ─── */}
       <div className={`${pane === "conversation" && activeThread ? "hidden md:flex" : "flex"} min-h-0 flex-col border-hair md:border-r`}>
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
-          <p className="font-display text-sm font-bold text-ink">Berichten</p>
+          <p className="font-display text-base font-bold text-ink">{{ chats: "Chats", updates: "Updates", calls: "Oproepen", tools: "Tools", settings: "Instellingen" }[tab]}</p>
           <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={() => setPicker("chat")} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Nieuw gesprek">✎</button>
             <button type="button" onClick={() => setShowSettings(true)} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Instellingen">⚙</button>
           </div>
         </div>
 
-        <div className="flex border-b border-hair text-xs font-medium">
-          {(["chats", "contacts", "communities"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2 ${tab === t ? "border-b-2 border-brand-500 text-brand-700" : "text-neutralx-500"}`}
-            >
-              {t === "chats" ? "Gesprekken" : t === "contacts" ? "Contacten" : "Communities"}
-            </button>
-          ))}
-        </div>
 
         <div className="flex-1 overflow-y-auto">
           {tab === "chats" && (
@@ -425,7 +433,26 @@ export function InboxPage({
             </>
           )}
 
-          {tab === "contacts" && (
+          {tab === "tools" && (
+            <div className="border-b border-hair">
+              <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-neutralx-400">Tools</p>
+              <button type="button" onClick={() => setShowSettings(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">⚡</span>
+                <span>
+                  Snelle antwoorden &amp; afwezig-bericht
+                  <span className="block text-xs text-neutralx-500">Vaste antwoorden en een automatisch bericht als je niet bereikbaar bent</span>
+                </span>
+              </button>
+              <button type="button" onClick={() => setPicker("chat")} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">✎</span>Nieuw gesprek
+              </button>
+              <button type="button" onClick={() => { setTab("chats"); void startSupport(); }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">🛟</span>Chat met ZekerFlex Support
+              </button>
+              <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-neutralx-400">Contacten</p>
+            </div>
+          )}
+          {tab === "tools" && (
             <ul className="divide-y divide-hair">
               {contacts.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen opgeslagen contacten. Klik op iemand in een gesprek om ze op te slaan.</p>}
               {contacts.map((c) => {
@@ -445,8 +472,9 @@ export function InboxPage({
             </ul>
           )}
 
-          {tab === "communities" && (
+          {tab === "tools" && (
             <>
+              <p className="border-t border-hair px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-neutralx-400">Communities</p>
               <button type="button" onClick={() => setShowCommunityCreate(true)} className="w-full px-4 py-2.5 text-left text-xs font-semibold text-brand-600 hover:bg-paper-soft">
                 + Nieuwe community
               </button>
@@ -466,7 +494,121 @@ export function InboxPage({
               </ul>
             </>
           )}
+          {tab === "updates" && (
+            <ul className="divide-y divide-hair">
+              {updates === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>}
+              {updates?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Geen nieuwe updates. Hier zie je nieuws over je klussen, uren en account.</p>}
+              {updates?.map((u) => (
+                <li key={u.id}>
+                  <a href={u.href} className="flex gap-3 px-4 py-3 hover:bg-paper-soft">
+                    <span className={`mt-0.5 grid h-10 w-10 flex-shrink-0 place-items-center rounded-full text-lg ${u.urgent ? "bg-warn/20" : "bg-brand-50"}`}>
+                      {{ chat: "💬", shift: "📋", offer: "🤝", action: "⚡", verification: "🛡", info: "ℹ️" }[u.kind] ?? "ℹ️"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-ink">{u.title}</span>
+                        <span className="flex-shrink-0 text-[10px] text-neutralx-400">{fmtTime(u.at)}</span>
+                      </span>
+                      <span className="line-clamp-2 text-xs text-neutralx-500">{u.body}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {tab === "calls" && (
+            <ul className="divide-y divide-hair">
+              {calls === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>}
+              {calls?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen oproepen. Bel iemand vanuit een chat met 📞 of 📹.</p>}
+              {calls?.map((c, i) => {
+                const u = dir[c.peerUserId];
+                const missed = c.status === "missed" || c.status === "declined";
+                const ring = (mode: "audio" | "video") =>
+                  window.dispatchEvent(
+                    new CustomEvent("zf:call", { detail: { threadId: c.threadId, mode, peerName: u?.name ?? "", peerUserId: c.peerUserId, peerRole: u?.role ?? "employer" } }),
+                  );
+                return (
+                  <li key={c.threadId + c.at + i} className="flex items-center gap-3 px-4 py-3">
+                    <Avatar userId={c.peerUserId} name={u?.name ?? "…"} role={u?.role ?? "employer"} avatars={avatars} size={40} />
+                    <button type="button" onClick={() => { setTab("chats"); openThread(c.threadId); }} className="min-w-0 flex-1 text-left">
+                      <span className={`block truncate text-sm font-semibold ${missed && !c.outgoing ? "text-crit" : "text-ink"}`}>{u?.name ?? "Onbekend"}</span>
+                      <span className="block text-xs text-neutralx-500">
+                        {c.outgoing ? "↗" : "↙"} {missed ? (c.outgoing ? "Niet opgenomen" : "Gemist") : c.durationSec ? `${Math.floor(c.durationSec / 60)}:${String(c.durationSec % 60).padStart(2, "0")}` : "Beëindigd"} · {dayLabel(c.at)} {fmtTime(c.at)}
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => ring(c.mode === "video" ? "video" : "audio")} className="grid h-9 w-9 place-items-center rounded-full text-lg text-brand-600 hover:bg-paper-soft" aria-label="Terugbellen">
+                      {c.mode === "video" ? "📹" : "📞"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {tab === "settings" && (
+            <div className="divide-y divide-hair">
+              <div className="px-4 py-3">
+                <p className="text-sm font-semibold text-ink">Meldingen</p>
+                <div className="mt-2">
+                  <PushToggle />
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowSettings(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">💬</span>Chat-instellingen
+              </button>
+              <button type="button" onClick={() => setPinAsk({ mode: "set" })} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
+                <span className="w-8 text-center text-lg">🔒</span>
+                {chatPrefs.hasPin ? "Chat-pincode wijzigen" : "Chat-pincode instellen"}
+              </button>
+              <div className="px-4 py-3">
+                <p className="text-sm font-semibold text-ink">Geblokkeerd ({chatPrefs.blocked.length})</p>
+                {chatPrefs.blocked.length === 0 ? (
+                  <p className="mt-1 text-xs text-neutralx-500">Je hebt niemand geblokkeerd.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1">
+                    {chatPrefs.blocked.map((uid) => {
+                      const t = threads.find((x) => x.kind === "direct" && x.participants.includes(uid));
+                      return (
+                        <li key={uid} className="flex items-center justify-between text-sm">
+                          <span>{dir[uid]?.name ?? "Onbekend"}</span>
+                          {t && (
+                            <button type="button" onClick={() => void doAction(t.id, { action: "unblock" })} className="text-xs font-semibold text-brand-600 underline">
+                              Deblokkeer
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+              <p className="px-4 py-3 text-xs text-neutralx-400">Tip: veeg een chat naar links om te archiveren, of tik op ⋯ voor dempen, vergrendelen, favorieten en meer.</p>
+            </div>
+          )}
         </div>
+
+        {/* WhatsApp-style bottom bar */}
+        <nav className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
+          {(
+            [
+              ["chats", "💬", "Chats"],
+              ["updates", "🔔", "Updates"],
+              ["calls", "📞", "Oproepen"],
+              ["tools", "🧰", "Tools"],
+              ["settings", "⚙️", "Instellingen"],
+            ] as const
+          ).map(([k, icon, label]) => {
+            const unread = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && t.unread > 0).length : 0;
+            return (
+              <button key={k} type="button" onClick={() => setTab(k)} className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${tab === k ? "text-brand-700" : "text-neutralx-500"}`}>
+                <span className={`grid h-7 w-12 place-items-center rounded-full text-base ${tab === k ? "bg-brand-50" : ""}`}>{icon}</span>
+                {label}
+                {unread > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[9px] font-bold text-white">{unread}</span>}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       {/* ─── conversation ─── */}
