@@ -95,6 +95,6 @@ export async function googleLoginAction(formData: FormData): Promise<void> {
 /** Only allow same-origin relative callback paths. */
 function safeCallback(raw: string | undefined): string {
   if (!raw) return "/start";
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  if (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") && !raw.includes("\\")) return raw;
   return "/start";
 }

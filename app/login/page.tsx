@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Inloggen" };
 
 function safePath(raw: string | undefined): string {
   if (!raw) return "/start";
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  if (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") && !raw.includes("\\")) return raw;
   return "/start";
 }
 
