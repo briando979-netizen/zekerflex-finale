@@ -122,8 +122,7 @@ Say "Tunnel openen"
 $t = Start-Tunnel
 Say "Tunnel: $($t.Url)"
 
-if ($firstRun) {
-  $envText = @"
+$envText = @"
 LLM_API_KEY=$key
 AI_ALLOW_REMOTE=true
 LLM_MODEL=$Model
@@ -131,6 +130,7 @@ LLM_FAST_MODEL=$FastModel
 LLM_EMBED_MODEL=$EmbedModel
 LLM_TIMEOUT_MS=90000
 "@
+if ($firstRun) {
   Set-Clipboard -Value $envText
   Write-Host ""
   Write-Host "EENMALIG: zet deze 6 regels in Vercel → Project → Settings → Environment Variables (Production)" -ForegroundColor Yellow
@@ -156,7 +156,7 @@ while ($true) {
   } catch {
     $code = $_.Exception.Response.StatusCode.value__
     if (-not $warned) {
-      if ($code -eq 401) { Write-Host "  ✗ ZekerFlex kent de sleutel nog niet: zet de regels op je klembord in Vercel en redeploy." -ForegroundColor Red }
+      if ($code -eq 401) { Set-Clipboard -Value $envText; Write-Host "  ✗ ZekerFlex kent de sleutel nog niet. De 6 Vercel-regels staan (opnieuw) op je klembord: plak ze in Vercel → Environment Variables (Production) en klik Redeploy." -ForegroundColor Red }
       else { Write-Host "  ✗ Aanmelden mislukt ($code): $($_.Exception.Message)" -ForegroundColor Red }
       $warned = $true
     }
