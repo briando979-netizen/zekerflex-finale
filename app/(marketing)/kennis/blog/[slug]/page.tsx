@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { POSTS, postBySlug, nlDate } from "@/lib/kennis/content";
@@ -43,7 +44,7 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             postLd,
             breadcrumbJsonLd([
               ["Blog", "/kennis/blog"],

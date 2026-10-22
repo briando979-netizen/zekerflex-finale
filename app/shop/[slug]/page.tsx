@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canonical, productJsonLd } from "@/lib/seo";
@@ -63,7 +64,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
+          __html: ldJson(
             productJsonLd({
               name: product.name,
               description: product.description,

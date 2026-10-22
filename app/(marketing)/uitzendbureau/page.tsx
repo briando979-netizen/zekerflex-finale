@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import { prisma } from "@/lib/prisma";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { UitzendJobBoard } from "@/components/marketing/UitzendJobBoard";
@@ -180,7 +181,7 @@ export default async function UitzendbureauPage() {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             "@context": "https://schema.org",
             "@type": "FAQPage",
             mainEntity: FAQ.map((f) => ({

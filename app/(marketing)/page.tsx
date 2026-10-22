@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ldJson } from "@/lib/seo/json-ld";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
@@ -31,7 +32,7 @@ export default function HomePage() {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([faqJsonLd(), serviceJsonLd()]),
+          __html: ldJson([faqJsonLd(), serviceJsonLd()]),
         }}
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}

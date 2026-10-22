@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GUIDES, guideBySlug, nlDate } from "@/lib/kennis/content";
@@ -43,7 +44,7 @@ export default async function GuidePage(props: { params: Promise<{ slug: string 
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             articleLd,
             breadcrumbJsonLd([
               ["Kennisbank", "/kennis"],

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
 import { DbaAccordion } from "@/components/marketing/DbaAccordion";
@@ -19,7 +20,7 @@ export default function WetDbaPage() {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             "@context": "https://schema.org",
             "@type": "FAQPage",
             mainEntity: faq.map((f) => ({

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
@@ -56,7 +57,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             breadcrumbJsonLd([["Home", "/"], ["Klussen", "/klussen"], [`Freelance werk ${c.name}`, `/freelance-werk/${c.slug}`]]),
             {
               "@context": "https://schema.org",

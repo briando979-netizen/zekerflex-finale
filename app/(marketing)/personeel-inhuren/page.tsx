@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
 import { CITIES } from "@/lib/seo-cities";
@@ -21,7 +22,7 @@ export default function PersoneelInhurenPage() {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([["Home", "/"], ["Personeel inhuren", "/personeel-inhuren"]])) }}
+        dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([["Home", "/"], ["Personeel inhuren", "/personeel-inhuren"]])) }}
       />
       <Section>
         <SectionHead

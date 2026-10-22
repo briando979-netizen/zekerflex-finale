@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
@@ -27,7 +28,7 @@ export default async function KlussenPage() {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             breadcrumbJsonLd([["Home", "/"], ["Klussen", "/klussen"]]),
             {
               "@context": "https://schema.org",

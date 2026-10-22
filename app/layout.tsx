@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import "./globals.css";
@@ -99,7 +100,7 @@ export default async function RootLayout({
           suppressHydrationWarning
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([organizationJsonLd(), websiteJsonLd()]),
+            __html: ldJson([organizationJsonLd(), websiteJsonLd()]),
           }}
         />
         <Providers>{children}</Providers>

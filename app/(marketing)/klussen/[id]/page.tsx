@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section } from "@/components/marketing/primitives";
@@ -37,7 +38,7 @@ export default async function KlusPublicPage({ params }: { params: Promise<{ id:
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             jobPostingJsonLd(s, SITE.url),
             breadcrumbJsonLd([["Home", "/"], ["Klussen", "/klussen"], [s.title, `/klussen/${s.id}`]]),
           ]),

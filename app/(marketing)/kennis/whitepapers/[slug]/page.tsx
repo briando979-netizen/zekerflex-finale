@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WHITEPAPERS, whitepaperBySlug } from "@/lib/kennis/whitepapers";
@@ -82,7 +83,7 @@ export default async function WhitepaperReaderPage(props: { params: Promise<{ sl
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             wpLd,
             breadcrumbJsonLd([
               ["Whitepapers", "/kennis/whitepapers"],

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, FaqList, CtaBand } from "@/components/marketing/primitives";
 import { FULL_FAQ } from "@/lib/kennis/content";
@@ -30,7 +31,7 @@ export default function FaqPage() {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageLd) }}
+        dangerouslySetInnerHTML={{ __html: ldJson(faqPageLd) }}
       />
       <div className="hero-ink text-white">
         <div className="shell py-20 md:py-24">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
@@ -56,7 +57,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: ldJson([
             breadcrumbJsonLd([["Home", "/"], ["Voor bedrijven", "/voor-bedrijven"], [`Personeel inhuren ${c.name}`, `/personeel-inhuren/${c.slug}`]]),
             {
               "@context": "https://schema.org",
