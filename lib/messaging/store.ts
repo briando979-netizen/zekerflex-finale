@@ -87,6 +87,8 @@ export interface ChatThread {
     /** group threads: display name + who may post */
     title?: string;
     ownerId?: string;
+    /** verdwijnende berichten: messages older than this many days are hidden for everyone */
+    disappearDays?: number;
   };
   /** per-user last-read timestamp (ISO) */
   reads: Record<string, string>;
@@ -393,6 +395,21 @@ export async function mergeDuplicateDirectThreads(): Promise<{ pairs: number; me
     }
   }
   return { pairs, merged, messagesMoved };
+}
+
+/** Update a thread's metadata (e.g. verdwijnende berichten). */
+export async function setThreadMeta(threadId: string, patch: ChatThread["meta"]): Promise<ChatThread | null> {
+  const t = await getThread(threadId);
+  if (!t) return null;
+  t.meta = { ...t.meta, ...patch };
+  await writeThread(t);
+  return t;
+}
+
+/** Cut-off for verdwijnende berichten (ISO) or null. */
+export function disappearCutoff(thread: ChatThread, now = Date.now()): string | null {
+  const d = thread.meta.disappearDays;
+  return d && d > 0 ? new Date(now - d * 86_400_000).toISOString() : null;
 }
 
 export async function markThreadRead(threadId: string, userId: string): Promise<void> {

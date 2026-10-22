@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
-import { canAccess, getThread } from "@/lib/messaging/store";
+import { canAccess, getThread, postMessage, setThreadMeta } from "@/lib/messaging/store";
 import { applyThreadAction, setBlocked, type ThreadAction } from "@/lib/messaging/thread-prefs";
 
 export const runtime = "nodejs";
@@ -14,6 +14,7 @@ const schema = z.union([
   z.object({ action: z.literal("mute"), hours: z.number().int().positive().max(24 * 365).nullable() }),
   z.object({ action: z.enum(["list-add", "list-remove"]), list: z.string().trim().min(1).max(30) }),
   z.object({ action: z.enum(["block", "unblock"]) }),
+  z.object({ action: z.literal("disappear"), days: z.union([z.literal(0), z.literal(1), z.literal(7), z.literal(90)]) }),
 ]);
 
 // POST /api/inbox/<threadId>/prefs — archiveren, dempen, vergrendelen,
@@ -25,6 +26,13 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     const thread = await getThread(threadId);
     if (!thread || !canAccess(thread, p.userId, await isPlatformAdmin(p.userId))) throw AppError.notFound("Gesprek niet gevonden");
     const body = schema.parse(await request.json().catch(() => ({})));
+    if (body.action === "disappear") {
+      // verdwijnende berichten: for the whole conversation, both sides see it
+      await setThreadMeta(thread.id, { disappearDays: body.days });
+      const label = body.days === 0 ? "uitgezet" : body.days === 1 ? "ingesteld op 24 uur" : `ingesteld op ${body.days} dagen`;
+      await postMessage(thread.id, "system", `${p.fullName} heeft verdwijnende berichten ${label}.`, "system");
+      return NextResponse.json({ ok: true });
+    }
     if (body.action === "block" || body.action === "unblock") {
       if (thread.kind !== "direct") throw AppError.validation("Blokkeren kan alleen in een gesprek met één persoon.");
       const other = thread.participants.find((u) => u !== p.userId);

@@ -30,6 +30,7 @@ const putSchema = z.object({
   showReadReceipts: z.boolean().optional(),
   showOnlineStatus: z.boolean().optional(),
   statusNote: z.string().max(140).optional(),
+  notificationPreview: z.boolean().optional(),
 });
 
 export async function PUT(request: Request): Promise<NextResponse> {

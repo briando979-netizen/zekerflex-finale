@@ -86,7 +86,8 @@ export function SwipeRow({
 export type MenuAction =
   | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" }
   | { action: "mute"; hours: number | null }
-  | { action: "list-add" | "list-remove"; list: string };
+  | { action: "list-add" | "list-remove"; list: string }
+  | { action: "disappear"; days: 0 | 1 | 7 | 90 };
 
 export function ThreadMenuSheet({
   name,
@@ -105,7 +106,7 @@ export function ThreadMenuSheet({
   onAction: (a: MenuAction) => void;
   onClose: () => void;
 }) {
-  const [sub, setSub] = useState<null | "mute" | "list">(null);
+  const [sub, setSub] = useState<null | "mute" | "list" | "disappear">(null);
   const [newList, setNewList] = useState("");
   const Item = ({ icon, label, danger, onClick }: { icon: string; label: string; danger?: boolean; onClick: () => void }) => (
     <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 px-5 py-3 text-left text-sm hover:bg-paper-soft ${danger ? "text-crit" : "text-ink"}`}>
@@ -131,6 +132,15 @@ export function ThreadMenuSheet({
               <Item icon="🔕" label="Altijd" onClick={() => done({ action: "mute", hours: null })} />
               <Item icon="←" label="Terug" onClick={() => setSub(null)} />
             </>
+          ) : sub === "disappear" ? (
+            <>
+              <p className="px-5 pt-3 text-xs text-neutralx-500">Nieuwe en oude berichten verdwijnen na de gekozen tijd — voor iedereen in deze chat.</p>
+              <Item icon="⏱" label="24 uur" onClick={() => done({ action: "disappear", days: 1 })} />
+              <Item icon="⏱" label="7 dagen" onClick={() => done({ action: "disappear", days: 7 })} />
+              <Item icon="⏱" label="90 dagen" onClick={() => done({ action: "disappear", days: 90 })} />
+              <Item icon="✕" label="Uit" onClick={() => done({ action: "disappear", days: 0 })} />
+              <Item icon="←" label="Terug" onClick={() => setSub(null)} />
+            </>
           ) : sub === "list" ? (
             <>
               {lists.map((l) =>
@@ -154,6 +164,7 @@ export function ThreadMenuSheet({
               {flags.locked ? <Item icon="🔓" label="Ontgrendel chat" onClick={() => done({ action: "unlock" })} /> : <Item icon="🔒" label="Vergrendel chat" onClick={() => done({ action: "lock" })} />}
               {flags.favorite ? <Item icon="☆" label="Verwijder uit favorieten" onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label="Voeg toe aan favorieten" onClick={() => done({ action: "favorite" })} />}
               <Item icon="☰" label="Voeg toe aan lijst" onClick={() => setSub("list")} />
+              <Item icon="⏱" label="Verdwijnende berichten" onClick={() => setSub("disappear")} />
               {flags.archived ? <Item icon="🗄" label="Uit archief halen" onClick={() => done({ action: "unarchive" })} /> : <Item icon="🗄" label="Archiveer chat" onClick={() => done({ action: "archive" })} />}
               <Item
                 icon="🧹"

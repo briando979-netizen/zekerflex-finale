@@ -20,6 +20,8 @@ export interface ChatSettings {
   showOnlineStatus: boolean;
   /** message shown on your profile card */
   statusNote: string;
+  /** show the message text in push notifications (off = "Nieuw bericht") */
+  notificationPreview: boolean;
 }
 
 export const DEFAULT_SETTINGS: ChatSettings = {
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   showReadReceipts: true,
   showOnlineStatus: true,
   statusNote: "",
+  notificationPreview: true,
 };
 
 const key = (userId: string) => `chat-settings:${userId}`;
@@ -56,6 +59,7 @@ export interface ChatSettingsPatch {
   showReadReceipts?: boolean | undefined;
   showOnlineStatus?: boolean | undefined;
   statusNote?: string | undefined;
+  notificationPreview?: boolean | undefined;
 }
 
 export async function saveChatSettings(
@@ -77,7 +81,22 @@ export async function saveChatSettings(
     showReadReceipts: patch.showReadReceipts ?? current.showReadReceipts,
     showOnlineStatus: patch.showOnlineStatus ?? current.showOnlineStatus,
     statusNote: (patch.statusNote ?? current.statusNote).slice(0, 140),
+    notificationPreview: patch.notificationPreview ?? current.notificationPreview ?? true,
   };
   await kvSet(key(userId), next);
   return next;
+}
+
+/**
+ * Privacy as WhatsApp does it: whoever hides their online status shows
+ * nobody theirs; whoever turns read receipts off neither sends nor sees them.
+ */
+export async function chatPrivacy(userIds: string[]): Promise<{ hideOnline: Set<string>; noReceipts: Set<string>; noPreview: Set<string> }> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  const all = await Promise.all(ids.map(async (id) => [id, await getChatSettings(id)] as const));
+  return {
+    hideOnline: new Set(all.filter(([, s]) => !s.showOnlineStatus).map(([id]) => id)),
+    noReceipts: new Set(all.filter(([, s]) => !s.showReadReceipts).map(([id]) => id)),
+    noPreview: new Set(all.filter(([, s]) => s.notificationPreview === false).map(([id]) => id)),
+  };
 }

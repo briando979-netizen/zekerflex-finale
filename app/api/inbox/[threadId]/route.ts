@@ -20,6 +20,8 @@ import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
 import { blockedBetween, checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
+import { chatPrivacy } from "@/lib/messaging/settings";
+import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
@@ -42,7 +44,9 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     if (prefs.locked.includes(thread.id) && !(await checkChatPin(p.userId, req.headers.get("x-chat-pin")))) {
       return NextResponse.json({ error: { code: "LOCKED", message: "Deze chat is vergrendeld." } }, { status: 423 });
     }
-    const from = visibleFrom(prefs, thread.id);
+    const cut = disappearCutoff(thread);
+    const own = visibleFrom(prefs, thread.id);
+    const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
     const messages = (await getMessages(thread.id, 400)).filter((m) => !from || m.at > from);
     await markThreadRead(thread.id, p.userId);
     const other = thread.kind === "direct" ? thread.participants.find((u) => u !== p.userId) ?? null : null;
@@ -56,6 +60,9 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
       getUserAvatars([...ids]),
       getChatSettings(p.userId),
     ]);
+
+    const privacy = await chatPrivacy([...ids, p.userId]);
+    for (const id of privacy.hideOnline) if (id !== p.userId && presence[id]) presence[id] = { online: false, lastSeen: null };
 
     return NextResponse.json({
       thread: {
@@ -85,8 +92,14 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
       },
       messages: messages.map((m) => ({
         ...m,
-        readByOthers: isReadByOthers(thread, m),
+        // leesbevestigingen: off for me → I see none; others with them off don't count
+        readByOthers:
+          !privacy.noReceipts.has(p.userId) &&
+          Object.entries(thread.reads).some(
+            ([uid, ts]) => uid !== m.from && !privacy.noReceipts.has(uid) && new Date(ts).getTime() >= new Date(m.at).getTime(),
+          ),
       })),
+      disappearDays: thread.meta.disappearDays ?? 0,
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);

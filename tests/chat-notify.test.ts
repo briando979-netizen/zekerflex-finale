@@ -13,6 +13,15 @@ vi.mock("@/lib/messaging/contacts", () => ({
   platformAdminIds: (...a: unknown[]) => platformAdminIds(...a),
 }));
 
+// per-user chat settings: defaults (not muted, message preview on)
+vi.mock("@/lib/messaging/thread-prefs", () => ({
+  getChatPrefs: async () => ({ archived: [], muted: {}, locked: [], favorites: [], lists: {}, clearedAt: {}, deletedAt: {}, blocked: [] }),
+  isMuted: () => false,
+}));
+vi.mock("@/lib/messaging/settings", () => ({
+  chatPrivacy: async () => ({ hideOnline: new Set(), noReceipts: new Set(), noPreview: new Set() }),
+}));
+
 import { notifyIncomingCall, notifyMissedCall, notifyNewMessage } from "@/lib/messaging/notify";
 import type { ChatMessage, ChatThread } from "@/lib/messaging/store";
 

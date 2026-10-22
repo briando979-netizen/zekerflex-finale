@@ -157,3 +157,37 @@ export function visibleFrom(p: ChatPrefs, threadId: string): string | null {
   if (!b) return a;
   return a > b ? a : b;
 }
+
+/* ─────────────── bulk + label management (Instellingen) ─────────────── */
+
+export async function bulkChatAction(
+  userId: string,
+  threadIds: string[],
+  a: { action: "archive-all" | "clear-all" | "unmute-all" } | { action: "list-rename"; from: string; to: string } | { action: "list-delete"; list: string },
+): Promise<ChatPrefs> {
+  const p = await getChatPrefs(userId);
+  const now = new Date().toISOString();
+  switch (a.action) {
+    case "archive-all":
+      for (const id of threadIds) if (!p.locked.includes(id)) p.archived = add(p.archived, id);
+      break;
+    case "clear-all":
+      for (const id of threadIds) p.clearedAt[id] = now;
+      break;
+    case "unmute-all":
+      p.muted = {};
+      break;
+    case "list-rename": {
+      const to = a.to.trim().slice(0, 30);
+      if (!to) throw new Error("Geef het label een naam.");
+      if (!p.lists[a.from]) throw new Error("Label niet gevonden.");
+      p.lists[to] = [...new Set([...(p.lists[to] ?? []), ...p.lists[a.from]!])];
+      if (to !== a.from) delete p.lists[a.from];
+      break;
+    }
+    case "list-delete":
+      delete p.lists[a.list];
+      break;
+  }
+  return save(userId, p);
+}

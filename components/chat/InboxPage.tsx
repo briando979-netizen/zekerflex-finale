@@ -8,6 +8,7 @@ import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
 import { PushToggle } from "@/components/app/PushToggle";
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
+import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import {
   dayLabel,
   fmtTime,
@@ -69,6 +70,14 @@ export function InboxPage({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pinAsk, setPinAsk] = useState<null | { mode: "set" | "unlock"; then?: () => void }>(null);
   const pinRef = useRef<string | null>(null);
+  // look & feel chosen in Instellingen → Chats (this browser only)
+  const [look, setLook] = useState<ChatLook>({ font: "m", wallpaper: "dots" });
+  useEffect(() => {
+    setLook(readLook());
+    const on = (e: Event) => setLook((e as CustomEvent<ChatLook>).detail);
+    window.addEventListener("zf:chat-look", on);
+    return () => window.removeEventListener("zf:chat-look", on);
+  }, []);
   const pinHeaders = (): Record<string, string> => (pinRef.current ? { "x-chat-pin": pinRef.current } : {});
   // WhatsApp-style tabs: updates (ZekerFlex meldingen) and call history
   const [updates, setUpdates] = useState<{ id: string; kind: string; title: string; body: string; href: string; at: string; urgent: boolean }[] | null>(null);
@@ -547,44 +556,23 @@ export function InboxPage({
           )}
 
           {tab === "settings" && (
-            <div className="divide-y divide-hair">
-              <div className="px-4 py-3">
-                <p className="text-sm font-semibold text-ink">Meldingen</p>
-                <div className="mt-2">
-                  <PushToggle />
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowSettings(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
-                <span className="w-8 text-center text-lg">💬</span>Chat-instellingen
-              </button>
-              <button type="button" onClick={() => setPinAsk({ mode: "set" })} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft">
-                <span className="w-8 text-center text-lg">🔒</span>
-                {chatPrefs.hasPin ? "Chat-pincode wijzigen" : "Chat-pincode instellen"}
-              </button>
-              <div className="px-4 py-3">
-                <p className="text-sm font-semibold text-ink">Geblokkeerd ({chatPrefs.blocked.length})</p>
-                {chatPrefs.blocked.length === 0 ? (
-                  <p className="mt-1 text-xs text-neutralx-500">Je hebt niemand geblokkeerd.</p>
-                ) : (
-                  <ul className="mt-2 space-y-1">
-                    {chatPrefs.blocked.map((uid) => {
-                      const t = threads.find((x) => x.kind === "direct" && x.participants.includes(uid));
-                      return (
-                        <li key={uid} className="flex items-center justify-between text-sm">
-                          <span>{dir[uid]?.name ?? "Onbekend"}</span>
-                          {t && (
-                            <button type="button" onClick={() => void doAction(t.id, { action: "unblock" })} className="text-xs font-semibold text-brand-600 underline">
-                              Deblokkeer
-                            </button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-              <p className="px-4 py-3 text-xs text-neutralx-400">Tip: veeg een chat naar links om te archiveren, of tik op ⋯ voor dempen, vergrendelen, favorieten en meer.</p>
-            </div>
+            <ChatSettingsPanel
+              me={{ name: me?.name ?? "" }}
+              blocked={chatPrefs.blocked}
+              names={Object.fromEntries(Object.entries(dir).map(([id, u]) => [id, u.name]))}
+              hasPin={chatPrefs.hasPin}
+              employer={Boolean(me && dir[me.userId]?.role === "employer")}
+              onUnblock={(uid) => {
+                const t = threads.find((x) => x.kind === "direct" && x.participants.includes(uid));
+                if (t) void doAction(t.id, { action: "unblock" });
+              }}
+              onSetPin={() => setPinAsk({ mode: "set" })}
+              onSupport={() => {
+                setTab("chats");
+                void startSupport();
+              }}
+              onChanged={() => void loadThreads()}
+            />
           )}
         </div>
 
@@ -659,8 +647,16 @@ export function InboxPage({
 
           <div
             ref={scrollRef}
-            className="flex-1 space-y-1.5 overflow-y-auto bg-paper-soft px-5 py-4"
-            style={{ backgroundImage: "radial-gradient(rgba(12,14,18,0.03) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+            className={`flex-1 space-y-1.5 overflow-y-auto px-5 py-4 ${look.font === "s" ? "text-[14px]" : look.font === "l" ? "text-[19px]" : "text-[16px]"}`}
+            style={
+              look.wallpaper === "plain"
+                ? { background: "#FFFFFF" }
+                : look.wallpaper === "mint"
+                  ? { background: "#E4F8EF" }
+                  : look.wallpaper === "dark"
+                    ? { background: "#14161A" }
+                    : { background: "#F4F4F0", backgroundImage: "radial-gradient(rgba(12,14,18,0.03) 1px, transparent 1px)", backgroundSize: "18px 18px" }
+            }
           >
             {messages.map((m, i) => {
               const mine = Boolean(me && m.from === me.userId);

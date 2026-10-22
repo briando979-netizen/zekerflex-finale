@@ -121,7 +121,7 @@ export function MessageBubble({
         </button>
       )}
       <div
-        className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+        className={`max-w-[78%] rounded-2xl px-3 py-2 text-[0.875em] shadow-sm ${
           mine ? "rounded-br-sm bg-[#DCF8C6]" : "rounded-bl-sm bg-white"
         }`}
       >

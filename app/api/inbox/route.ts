@@ -19,6 +19,8 @@ import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
 import { checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
+import { chatPrivacy } from "@/lib/messaging/settings";
+import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
 
 export const runtime = "nodejs";
@@ -47,7 +49,9 @@ async function handleGET(request: Request): Promise<NextResponse> {
     const dirIds = new Set<string>();
     const rows = await Promise.all(
       threads.map(async (t) => {
-        const from = visibleFrom(prefs, t.id);
+        const cut = disappearCutoff(t);
+        const own = visibleFrom(prefs, t.id);
+        const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
         const msgs = (await getMessages(t.id, 300)).filter((m) => !from || m.at > from);
         const unread = unreadForUser(t, msgs, p.userId);
         t.participants.forEach((id) => dirIds.add(id));
@@ -83,6 +87,10 @@ async function handleGET(request: Request): Promise<NextResponse> {
       getPresence(ids),
       getUserAvatars(ids),
     ]);
+
+    // "Laatst gezien & online" off → nobody sees it (lib/messaging/settings.ts)
+    const privacy = await chatPrivacy(ids);
+    for (const id of privacy.hideOnline) if (id !== p.userId && presence[id]) presence[id] = { online: false, lastSeen: null };
 
     return NextResponse.json({
       me: { userId: p.userId, name: p.fullName, isAdmin: admin },

@@ -3,6 +3,7 @@ import { sendUserPush } from "@/lib/notifications/push";
 import { platformAdminIds, userDirectory } from "@/lib/messaging/contacts";
 import { visibleUsers } from "@/lib/messaging/presence";
 import { getChatPrefs, isMuted } from "@/lib/messaging/thread-prefs";
+import { chatPrivacy } from "@/lib/messaging/settings";
 import { previewText, type ChatMessage, type ChatThread } from "@/lib/messaging/store";
 
 // ---------------------------------------------------------------------------
@@ -101,12 +102,12 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
 
     const supportAnswer = thread.kind === "support" && !thread.participants.includes(msg.from);
     const title = supportAnswer ? "ZekerFlex Support" : await nameOf(msg.from);
-    await sendUserPush(targets, {
-      title,
-      body: previewText(msg).slice(0, 140) || "Nieuw bericht",
-      data: { type: "CHAT", url: chatUrl(thread.id), tag: `thread-${thread.id}` },
-      ttlSeconds: CHAT_TTL_SEC,
-    });
+    const { noPreview } = await chatPrivacy(targets);
+    const withPreview = targets.filter((id) => !noPreview.has(id));
+    const withoutPreview = targets.filter((id) => noPreview.has(id));
+    const data = { type: "CHAT", url: chatUrl(thread.id), tag: `thread-${thread.id}` };
+    if (withPreview.length) await sendUserPush(withPreview, { title, body: previewText(msg).slice(0, 140) || "Nieuw bericht", data, ttlSeconds: CHAT_TTL_SEC });
+    if (withoutPreview.length) await sendUserPush(withoutPreview, { title, body: "Nieuw bericht", data, ttlSeconds: CHAT_TTL_SEC });
   } catch (err) {
     logger.warn("chat push failed", { threadId: thread.id, error: (err as Error).message });
   }
