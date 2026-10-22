@@ -1,4 +1,4 @@
-import { chatJson, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { chatJson, llmConfigProblem } from "@/lib/ai/client";
 import { tokenize } from "@/lib/rag/lexical";
 import { reciprocalRankFusion } from "@/lib/rag/fusion";
 import { advancedRecall, expandQuery, type AdvancedHit, type AdvancedTrace } from "@/lib/rag/advanced";
@@ -48,7 +48,6 @@ async function modelPlan(q: string): Promise<string[] | null> {
   try {
     const out = await chatJson<{ questions?: string[] }>({
       purpose: "rag-plan",
-      model: fastModel(),
       temperature: 0,
       maxTokens: 150,
       retry: false,
@@ -70,7 +69,6 @@ async function modelJudge(q: string, hits: AdvancedHit[]): Promise<{ enough: boo
   try {
     return await chatJson<{ enough: boolean; better?: string }>({
       purpose: "rag-judge",
-      model: fastModel(),
       temperature: 0,
       maxTokens: 80,
       retry: false,

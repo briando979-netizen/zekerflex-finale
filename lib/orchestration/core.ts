@@ -198,6 +198,7 @@ export async function runOrchestrationCycle(
 
     const parsed = responseSchema.parse(
       await chatJson<unknown>({
+    purpose: "orchestration",
         messages: [
           { role: "system", content: `${SYSTEM_PROMPT}\n\n${catalogue()}` },
           ...memoryMsg,

@@ -63,6 +63,10 @@ const schema = z.object({
   // LLM_MODEL when unset. Tool work (RAG, console, orchestration) always uses
   // the full LLM_MODEL.
   LLM_FAST_MODEL: z.string().optional(),
+  // More specialised models (lib/ai/models.ts) — each falls back to LLM_MODEL.
+  LLM_REASONING_MODEL: z.string().optional(),
+  LLM_CODE_MODEL: z.string().optional(),
+  LLM_TRANSLATE_MODEL: z.string().optional(),
   LLM_API_KEY: z.string().optional(),
   LLM_EMBED_MODEL: z.string().optional(),
   // A vision-capable (multimodal) model for the KYC document/selfie review

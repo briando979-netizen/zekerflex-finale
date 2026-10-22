@@ -66,7 +66,7 @@ export async function rewrite(text: string, style: RewriteStyle): Promise<{ text
   if (problem) return { error: "Herschrijven en vertalen werken zodra het taalmodel gekoppeld is." };
   try {
     const res = await chat({
-      purpose: "chat-assist",
+      purpose: style === "vriendelijk" || style === "kort" || style === "zakelijk" ? "chat-assist" : "translate",
       temperature: 0.3,
       maxTokens: 400,
       retry: false,

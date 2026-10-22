@@ -68,6 +68,7 @@ export async function proposePatch(
   }
 
   const result = await chat({
+    purpose: "dev-advisor",
     messages: [
       {
         role: "system",

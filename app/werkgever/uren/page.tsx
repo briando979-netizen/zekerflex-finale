@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel, EmptyState, StatusPill, KpiCard, money, moneyExact, dateTime } from "@/components/app/ui";
 import { ApproveButton } from "@/components/app/ApproveButton";
+import { AutoApproveToggle } from "@/components/werkgever/AutoApproveToggle";
 import { ProposeCorrectionButton } from "@/components/app/ProposeCorrectionButton";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
 import { getDict } from "@/lib/i18n/server";
@@ -57,6 +58,8 @@ export default async function UrenGoedkeurenPage() {
   return (
     <>
       <PageHeader title={h.title} subtitle={h.subtitle} />
+
+      <AutoApproveToggle />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label={h.kpiOpen} value={String(timesheets.length)} tone="brand" hint={h.kpiOpenHint} />

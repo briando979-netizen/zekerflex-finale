@@ -89,6 +89,7 @@ export async function parseIntent(question: string): Promise<ParsedIntent> {
   const quick = quickIntent(question);
   if (quick && quick.kind === "query" && quick.name in QUERIES) return quick;
   const raw = await chatJson<unknown>({
+    purpose: "admin-console",
     messages: [
       { role: "system", content: `${SYSTEM_PROMPT}\n\n${buildCatalog()}` },
       { role: "user", content: question },

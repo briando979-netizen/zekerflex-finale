@@ -45,6 +45,14 @@
     {
       "path": "/api/internal/notifications/tick",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/internal/autopilot/tick",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/internal/autopilot/tick",
+      "schedule": "0 15 * * *"
     }
   ]
 }

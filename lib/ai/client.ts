@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { isLocalInference, withGovernor } from "@/lib/ai/governor";
+import { modelForPurpose } from "@/lib/ai/models";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -220,9 +221,24 @@ async function post(
 }
 
 export async function chat(opts: ChatOptions): Promise<ChatResult> {
+  try {
+    return await chatOnce(opts);
+  } catch (err) {
+    // a specialised model (reasoning/code/translate/fast) that isn't pulled on
+    // the AI node yet → answer with the main model instead of failing
+    const model = opts.model ?? modelForPurpose(opts.purpose);
+    if (err instanceof AppError && /niet gedownload/.test(err.message) && model !== env.LLM_MODEL) {
+      logger.warn("llm model missing — falling back to main model", { model, purpose: opts.purpose });
+      return chatOnce({ ...opts, model: env.LLM_MODEL });
+    }
+    throw err;
+  }
+}
+
+async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
   const problem = llmConfigProblem();
   if (problem) throw AppError.upstream(problem);
-  const model = opts.model ?? env.LLM_MODEL;
+  const model = opts.model ?? modelForPurpose(opts.purpose);
   const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
   return withGovernor(opts.purpose ?? "chat", async () => {
     try {
@@ -284,7 +300,7 @@ export async function chatJson<T>(opts: Omit<ChatOptions, "json">): Promise<T> {
 
 /** The small/fast model for greetings + short chat; falls back to the main model. */
 export function fastModel(): string {
-  return env.LLM_FAST_MODEL || env.LLM_MODEL;
+  return modelForPurpose("public-chat");
 }
 
 /**
@@ -298,7 +314,7 @@ export async function* chatStream(
 ): AsyncGenerator<string, { text: string; model: string }, void> {
   const problem = llmConfigProblem();
   if (problem) throw AppError.upstream(problem);
-  const model = opts.model ?? env.LLM_MODEL;
+  const model = opts.model ?? modelForPurpose(opts.purpose);
   const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
 
   const host = (() => {
@@ -442,5 +458,21 @@ export async function llmHealth(): Promise<LlmHealth> {
     return { ok: true, baseUrl: base, model: data.model ?? env.LLM_MODEL };
   } catch (err) {
     return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: (err as Error).message };
+  }
+}
+
+/** Model ids the AI node actually serves (empty when unreachable / not configured). */
+export async function servedModels(): Promise<string[]> {
+  if (llmConfigProblem()) return [];
+  try {
+    const res = await fetch(`${baseUrl()}/models`, {
+      signal: AbortSignal.timeout(4000),
+      ...(env.LLM_API_KEY ? { headers: { Authorization: `Bearer ${env.LLM_API_KEY}` } } : {}),
+    });
+    if (!res.ok) return [];
+    const body = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;
+    return (body?.data ?? []).map((m) => m.id).filter((x): x is string => Boolean(x));
+  } catch {
+    return [];
   }
 }

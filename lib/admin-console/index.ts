@@ -49,6 +49,7 @@ async function summarise(
 ): Promise<string | null> {
   try {
     const r = await chat({
+    purpose: "admin-console",
       messages: [
         {
           role: "system",
