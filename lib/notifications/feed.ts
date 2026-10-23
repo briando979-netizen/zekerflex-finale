@@ -25,6 +25,16 @@ export interface NotificationItem {
   urgent: boolean;
   /** optionele directe actie vanuit de melding, bv. komst bevestigen */
   action?: { type: "confirm"; id: string; label: string };
+  /** thematische categorie voor de tabbladen in de meldingen-weergave */
+  group?: "klussen" | "geld" | "berichten" | "account";
+}
+
+function groupOf(it: NotificationItem): NonNullable<NotificationItem["group"]> {
+  if (it.kind === "chat") return "berichten";
+  if (it.kind === "verification") return "account";
+  if (it.kind === "info") return "geld";
+  if (it.id.startsWith("ts:") || it.id.startsWith("emp:approve")) return "geld";
+  return "klussen"; // shift, offer, en klus-acties (confirm, emp:shift)
 }
 
 export async function getNotifications(principal: Principal): Promise<NotificationItem[]> {
@@ -253,5 +263,6 @@ export async function getNotifications(principal: Principal): Promise<Notificati
   return out
     .filter((i) => !dismissed.has(notifSignature(i.id, i.body)))
     .sort((a, b) => (a.urgent === b.urgent ? (a.at < b.at ? 1 : -1) : a.urgent ? -1 : 1))
-    .slice(0, 25);
+    .slice(0, 25)
+    .map((i) => ({ ...i, group: groupOf(i) }));
 }

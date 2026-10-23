@@ -12,9 +12,19 @@ interface Item {
   at: string;
   urgent: boolean;
   action?: { type: string; id: string; label: string };
+  group?: string;
 }
 
 const SEEN_KEY = "zf-notif-seen";
+
+// Thematische tabbladen (zoals de YoungOnes-meldingenweergave).
+const GROUPS: { id: string; label: string }[] = [
+  { id: "klussen", label: "Over je klussen" },
+  { id: "geld", label: "Uren & uitbetaling" },
+  { id: "berichten", label: "Berichten" },
+  { id: "account", label: "Account" },
+];
+const GROUP_ORDER = GROUPS.map((g) => g.id);
 
 const ICON: Record<string, string> = {
   chat: "💬",
@@ -24,30 +34,27 @@ const ICON: Record<string, string> = {
   verification: "🪪",
   info: "ℹ️",
 };
-const LABEL: Record<string, string> = {
-  chat: "Chat",
-  shift: "Klussen",
-  offer: "Aanbod",
-  action: "Acties",
-  verification: "Verificatie",
-  info: "Info",
-};
-// preferred chip order; only kinds actually present are shown
-const KIND_ORDER = ["action", "offer", "shift", "chat", "verification", "info"];
 
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(ms)) return "";
-  const m = Math.floor(ms / 60_000);
-  if (m < 1) return "zojuist";
-  if (m < 60) return `${m} min geleden`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} uur geleden`;
-  const d = Math.floor(h / 24);
-  return `${d} dag${d === 1 ? "" : "en"} geleden`;
+function dateLabel(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
 }
 
-/** Bell + dropdown. `dark` styles it for the admin surface. */
+type Section = "today" | "yesterday" | "earlier";
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: "today", label: "Vandaag" },
+  { id: "yesterday", label: "Gisteren" },
+  { id: "earlier", label: "Eerder" },
+];
+function sectionOf(iso: string, now = new Date()): Section {
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const t = new Date(iso).getTime();
+  if (t >= startToday) return "today";
+  if (t >= startToday - 86_400_000) return "yesterday";
+  return "earlier";
+}
+
+/** Bell + meldingen-weergave. `dark` styles it for the admin surface. */
 export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -85,14 +92,17 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   }, []);
 
   const visible = useMemo(() => items.filter((i) => !hidden.has(i.id)), [items, hidden]);
-  const kinds = useMemo(() => {
-    const present = new Set(visible.map((i) => i.kind));
-    return KIND_ORDER.filter((k) => present.has(k));
+  const groups = useMemo(() => {
+    const present = new Set(visible.map((i) => i.group ?? "klussen"));
+    return GROUP_ORDER.filter((g) => present.has(g));
   }, [visible]);
-  const shown = useMemo(() => (filter === "all" ? visible : visible.filter((i) => i.kind === filter)), [visible, filter]);
-  const countByKind = useMemo(() => {
+  const shown = useMemo(() => {
+    const list = filter === "all" ? visible : visible.filter((i) => (i.group ?? "klussen") === filter);
+    return [...list].sort((a, b) => (a.at < b.at ? 1 : -1)); // nieuwste eerst, voor de datumgroepen
+  }, [visible, filter]);
+  const countByGroup = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const i of visible) m[i.kind] = (m[i.kind] ?? 0) + 1;
+    for (const i of visible) m[i.group ?? "klussen"] = (m[i.group ?? "klussen"] ?? 0) + 1;
     return m;
   }, [visible]);
 
@@ -108,8 +118,6 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     }
   };
 
-  // Weggeklikte meldingen meteen verbergen (optimistisch) én server-side
-  // "gelezen" markeren, zodat ze ook op andere apparaten weg blijven.
   const hide = (ids: string[]) => setHidden((prev) => new Set([...prev, ...ids]));
   const postDismiss = (list: { id: string; body: string }[]) => {
     if (list.length === 0) return;
@@ -149,11 +157,61 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const readBtnStyle = dark
     ? { background: "transparent", border: "1px solid var(--a-border)", color: "var(--a-mute)" }
     : { background: "transparent", border: "1px solid #E6E7E1", color: "#616B78" };
+  const linkColor = dark ? "var(--a-text)" : "#0E5C4A";
 
-  const chip = (active: boolean) =>
-    `flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition ${
-      active ? "bg-brand-600 text-white" : dark ? "" : "bg-black/[0.04] text-neutralx-600 hover:bg-black/[0.07]"
+  const tabClass = (active: boolean) =>
+    `flex-shrink-0 whitespace-nowrap border-b-2 px-0.5 pb-2 pt-1 text-sm font-semibold transition ${
+      active ? "border-brand-mint text-ink" : "border-transparent text-neutralx-400 hover:text-neutralx-600"
     }`;
+
+  function ItemRow({ it }: { it: Item }) {
+    return (
+      <li className="py-3.5" style={{ borderBottom: rowBorder }}>
+        <div className="flex items-start gap-2">
+          <span className="text-base leading-none">{ICON[it.kind] ?? "•"}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <span className="flex items-center gap-2 text-sm font-semibold" style={dark ? { color: "var(--a-text)" } : { color: "#1A1F27" }}>
+                <span className="min-w-0">{it.title}</span>
+                {it.urgent && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#f87171]" />}
+              </span>
+              <span className="flex-shrink-0 text-xs" style={mute}>
+                {dateLabel(it.at)}
+              </span>
+            </div>
+            <p className="mt-1 text-sm leading-relaxed" style={dark ? { color: "var(--a-mute)" } : { color: "#616B78" }}>
+              {it.body}
+            </p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {it.action?.type === "confirm" && (
+                <button
+                  type="button"
+                  onClick={() => confirmShift(it)}
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                  {it.action.label}
+                </button>
+              )}
+              <Link
+                href={it.href}
+                onClick={() => {
+                  markSeen();
+                  setOpen(false);
+                }}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                style={openBtnStyle}
+              >
+                Openen
+              </Link>
+              <button type="button" onClick={() => dismiss(it)} className="rounded-lg px-3 py-1.5 text-xs font-medium" style={readBtnStyle}>
+                Gelezen
+              </button>
+            </div>
+          </div>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -184,103 +242,78 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
+          className="fixed inset-0 z-[70] flex flex-col bg-white md:absolute md:inset-auto md:right-0 md:top-full md:z-[60] md:mt-2 md:max-h-[min(34rem,calc(100dvh-5rem))] md:w-[min(26rem,calc(100vw-1.5rem))] md:overflow-hidden md:rounded-xl md:shadow-lift"
           style={panelStyle}
         >
-          {/* header */}
-          <div
-            className="flex items-center justify-between border-b px-4 py-2.5 text-sm font-semibold"
-            style={{ borderColor: borderCol }}
-          >
-            <span>Meldingen{visible.length > 0 ? <span className="ml-1 font-normal" style={mute}>({visible.length})</span> : null}</span>
-            {visible.length > 0 && (
-              <button type="button" onClick={dismissAll} className="text-xs font-medium hover:underline" style={{ color: dark ? "var(--a-text)" : "#0E5C4A" }}>
-                Alles gelezen
-              </button>
-            )}
+          {/* Koptekst */}
+          <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Sluiten"
+              className="-ml-1 grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:text-ink md:hidden"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <span className="text-base font-bold tracking-tight">Meldingen</span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Sluiten"
+              className="ml-auto hidden h-8 w-8 place-items-center rounded-lg text-neutralx-400 hover:text-ink md:grid"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
 
-          {/* scroll-selectie: categorie-chips */}
-          {kinds.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto border-b px-3 py-2" style={{ borderColor: borderCol }}>
-              <button type="button" onClick={() => setFilter("all")} className={chip(filter === "all")} style={dark && filter !== "all" ? { background: "var(--a-elev)", color: "var(--a-text)" } : {}}>
-                Alles {visible.length}
+          {/* Tabbladen (horizontaal scrollbaar) */}
+          <div className="flex gap-5 overflow-x-auto border-b px-4" style={{ borderColor: borderCol }}>
+            <button type="button" onClick={() => setFilter("all")} className={tabClass(filter === "all")}>
+              Alles{visible.length > 0 ? ` ${visible.length}` : ""}
+            </button>
+            {groups.map((g) => (
+              <button key={g} type="button" onClick={() => setFilter(g)} className={tabClass(filter === g)}>
+                {GROUPS.find((x) => x.id === g)?.label ?? g} {countByGroup[g] ?? 0}
               </button>
-              {kinds.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setFilter(k)}
-                  className={chip(filter === k)}
-                  style={dark && filter !== k ? { background: "var(--a-elev)", color: "var(--a-text)" } : {}}
-                >
-                  {ICON[k] ?? "•"} {LABEL[k] ?? k} {countByKind[k] ?? 0}
-                </button>
-              ))}
+            ))}
+          </div>
+
+          {/* Alles als gelezen markeren */}
+          {visible.length > 0 && (
+            <div className="flex justify-end border-b px-4 py-2" style={{ borderColor: borderCol }}>
+              <button type="button" onClick={dismissAll} className="text-xs font-semibold hover:underline" style={{ color: linkColor }}>
+                Alles als gelezen markeren
+              </button>
             </div>
           )}
 
-          {/* scrollbare lijst */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Lijst, gegroepeerd per dag */}
+          <div className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)]">
             {shown.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm" style={mute}>
-                {visible.length === 0 ? "Niets nieuws — je bent bij." : "Geen meldingen in deze categorie."}
+              <p className="px-1 py-12 text-center text-sm" style={mute}>
+                {visible.length === 0 ? "Niets nieuws — je bent bij." : "Geen meldingen in dit tabblad."}
               </p>
             ) : (
-              <ul>
-                {shown.map((it) => (
-                  <li key={it.id} className="px-4 py-3" style={{ borderBottom: rowBorder }}>
-                    <div className="flex gap-3">
-                      <span className="text-base leading-none">{ICON[it.kind] ?? "•"}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium" style={dark ? { color: "var(--a-text)" } : { color: "#1A1F27" }}>
-                            {it.title}
-                          </span>
-                          {it.urgent && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#f87171]" />}
-                        </div>
-                        <p className="mt-0.5 text-xs" style={dark ? { color: "var(--a-mute)" } : { color: "#616B78" }}>
-                          {it.body}
-                        </p>
-                        <p className="mt-0.5 text-[11px]" style={mute}>
-                          {timeAgo(it.at)}
-                        </p>
-                        {/* geschijden knopjes per melding */}
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {it.action?.type === "confirm" && (
-                            <button
-                              type="button"
-                              onClick={() => confirmShift(it)}
-                              className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white"
-                            >
-                              {it.action.label}
-                            </button>
-                          )}
-                          <Link
-                            href={it.href}
-                            onClick={() => {
-                              markSeen();
-                              setOpen(false);
-                            }}
-                            className="rounded-md px-3 py-1.5 text-xs font-semibold"
-                            style={openBtnStyle}
-                          >
-                            Openen
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => dismiss(it)}
-                            className="rounded-md px-3 py-1.5 text-xs font-medium"
-                            style={readBtnStyle}
-                          >
-                            Gelezen
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              SECTIONS.map((sec) => {
+                const its = shown.filter((i) => sectionOf(i.at) === sec.id);
+                if (its.length === 0) return null;
+                return (
+                  <div key={sec.id}>
+                    <p className="pb-1 pt-4 text-xs font-semibold uppercase tracking-wide" style={mute}>
+                      {sec.label}
+                    </p>
+                    <ul>
+                      {its.map((it) => (
+                        <ItemRow key={it.id} it={it} />
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
