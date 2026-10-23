@@ -20,11 +20,14 @@ export function AdminShell({
   nav,
   userName,
   userMeta,
+  avatarUrl,
   children,
 }: {
   nav: AdminNavItem[];
   userName: string;
   userMeta: string;
+  /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
+  avatarUrl?: string | null;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -159,9 +162,14 @@ export function AdminShell({
                 className="flex items-center gap-2 rounded-xl px-1.5 py-1.5"
                 style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}
               >
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-[11px] font-bold text-white">
-                  {initials(userName)}
-                </span>
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-7 w-7 rounded-lg object-cover" />
+                ) : (
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-[11px] font-bold text-white">
+                    {initials(userName)}
+                  </span>
+                )}
                 <span className="hidden text-sm font-medium sm:inline" style={{ color: "var(--a-text)" }}>
                   {userName.split(" ")[0]}
                 </span>

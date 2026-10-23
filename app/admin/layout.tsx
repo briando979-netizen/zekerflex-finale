@@ -4,6 +4,8 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { ensureBootChecked } from "@/lib/config/startup";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { getUserAvatars } from "@/lib/profile/store";
+import { avatarUrlFor } from "@/lib/profile/card";
 import {
   IGrid,
   IChat,
@@ -73,8 +75,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/dashboard");
   }
 
+  const avatars = await getUserAvatars([principal.userId]);
+  const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
+
   return (
-    <AdminShell nav={NAV} userName={principal.fullName} userMeta={principal.email}>
+    <AdminShell nav={NAV} userName={principal.fullName} userMeta={principal.email} avatarUrl={avatarUrl}>
       {children}
       <ChatDock />
     </AdminShell>

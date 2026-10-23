@@ -43,6 +43,7 @@ export function EmployerShell({
   rating,
   userName,
   userMeta,
+  avatarUrl,
   helpHref = "/kennis/werkgevers",
   settingsHref = "/werkgever/instellingen",
   children,
@@ -54,6 +55,8 @@ export function EmployerShell({
   rating: { average: number; count: number } | null;
   userName: string;
   userMeta: string;
+  /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
+  avatarUrl?: string | null;
   helpHref?: string;
   settingsHref?: string;
   children: ReactNode;
@@ -294,9 +297,14 @@ export function EmployerShell({
                 onClick={() => setUserMenu((v) => !v)}
                 className="flex min-h-11 items-center gap-2 rounded-lg border border-hairstrong bg-white px-2.5 py-1.5 text-sm font-medium text-ink"
               >
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-semibold text-white">
-                  {initials(userName)}
-                </span>
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                ) : (
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-semibold text-white">
+                    {initials(userName)}
+                  </span>
+                )}
                 <span className="hidden max-w-[9rem] truncate sm:inline">{userName}</span>
                 <span className="text-neutralx-400" aria-hidden>
                   ▾

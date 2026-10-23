@@ -9,6 +9,8 @@ import { getTheme } from "@/lib/theme/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { EmployerShell } from "@/components/app/EmployerShell";
+import { getUserAvatars } from "@/lib/profile/store";
+import { avatarUrlFor } from "@/lib/profile/card";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet } from "@/components/app/icons";
@@ -51,12 +53,14 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating] = await Promise.all([
+  const [tenant, rating, avatars] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
+    getUserAvatars([principal.userId]),
   ]);
+  const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
     <I18nProvider locale={locale}>
@@ -69,6 +73,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         rating={rating ? { average: rating.average, count: rating.count } : null}
         userName={principal.fullName}
         userMeta={principal.email}
+        avatarUrl={avatarUrl}
       >
         {children}
         <ChatDock />
