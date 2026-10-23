@@ -13,6 +13,7 @@ import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@
 import { markRequestPaidExternally } from "@/lib/bank/p2p";
 import { payOnClientPayment } from "@/lib/payouts/execute";
 import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
+import { reverseByPaymentIntent } from "@/lib/billing/clawback";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
@@ -414,6 +415,16 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
 
   if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
     await syncApiSubscription(event.data.object as Stripe.Subscription, event.type);
+  }
+
+  // Storno: een betaalde factuur wordt teruggeboekt/gedisputeerd → terugvordering.
+  if (event.type === "charge.refunded" || event.type === "charge.dispute.created" || event.type === "charge.dispute.funds_withdrawn") {
+    const obj = event.data.object as { payment_intent?: string | { id: string } | null };
+    const pi = typeof obj.payment_intent === "string" ? obj.payment_intent : (obj.payment_intent?.id ?? null);
+    if (pi) {
+      const reason = event.type === "charge.refunded" ? "Stripe-terugbetaling (refund)" : "Stripe-geschil (chargeback)";
+      await reverseByPaymentIntent(pi, reason, event.id).catch((err) => logger.error("clawback from webhook failed", { error: (err as Error).message }));
+    }
   }
 
   return NextResponse.json({ ok: true });

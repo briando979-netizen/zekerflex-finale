@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "test-secret-at-least-32-chars-long!!", CAPTCHA_PROVIDER: undefined as string | undefined, CAPTCHA_SECRET: undefined, CAPTCHA_SITE_KEY: undefined } }));
+vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "test-secret-at-least-32-chars-long!!", CAPTCHA_PROVIDER: undefined as string | undefined, CAPTCHA_SECRET: undefined, CAPTCHA_SITE_KEY: undefined, CAPTCHA_POW_BITS: "8" } }));
 
 import { env } from "@/lib/env";
 import { createHash } from "node:crypto";

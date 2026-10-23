@@ -1,6 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHeader } from "@/components/app/ui";
 import { CollusionBoard } from "@/components/admin/CollusionBoard";
+import { ClawbacksPanel } from "@/components/admin/ClawbacksPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function FraudePage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Fraude & signalen" subtitle="Collusie-/witwasdetectie op opdrachtgever↔werknemer-paren. Urenfraude-signalen staan per urenbriefje bij Verloning/Uren." />
       <CollusionBoard />
+      <ClawbacksPanel />
     </div>
   );
 }

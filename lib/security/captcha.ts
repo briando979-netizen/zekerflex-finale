@@ -24,10 +24,13 @@ export function captchaEnabled(): boolean {
 
 /* ---------------------------- proof of work ---------------------------- */
 // The server issues a signed challenge; the client finds a nonce so that
-// sha256(challenge + "." + nonce) starts with POW_BITS zero bits. Verifying is
+// sha256(challenge + "." + nonce) starts with powBits() zero bits. Verifying is
 // one hash. Signing binds the challenge to a short TTL so it can't be reused.
 
-const POW_BITS = 20; // ~1s of work in a browser; trivial to verify
+function powBits(): number {
+  const n = Number(env.CAPTCHA_POW_BITS);
+  return Number.isFinite(n) && n >= 8 && n <= 24 ? Math.floor(n) : 18;
+}
 const POW_TTL_MS = 10 * 60_000;
 
 function powSecret(): Buffer {
@@ -39,7 +42,7 @@ export function issuePowChallenge(): { challenge: string; bits: number } {
   const rand = randomBytes(12).toString("hex");
   const body = `${ts}.${rand}`;
   const sig = createHmac("sha256", powSecret()).update(body).digest("hex").slice(0, 16);
-  return { challenge: `${body}.${sig}`, bits: POW_BITS };
+  return { challenge: `${body}.${sig}`, bits: powBits() };
 }
 
 function leadingZeroBits(hex: string): number {
@@ -72,7 +75,7 @@ export function verifyPow(token: string | undefined): boolean {
   const [challenge, nonce] = token.split("#");
   if (!challenge || !nonce || !validChallenge(challenge)) return false;
   const hash = createHash("sha256").update(`${challenge}.${nonce}`).digest("hex");
-  return leadingZeroBits(hash) >= POW_BITS;
+  return leadingZeroBits(hash) >= powBits();
 }
 
 /* --------------------------- external providers --------------------------- */

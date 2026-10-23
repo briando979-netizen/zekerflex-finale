@@ -5,7 +5,7 @@ vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => kv[k] ?? null,
   kvSet: async (k: string, v: unknown) => void (kv[k] = v),
 }));
-const sendUserPush = vi.fn(async () => 1);
+const sendUserPush = vi.fn(async (..._a: unknown[]) => 1);
 vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...(a as [])) }));
 const isMatchEligibleWorker = vi.fn(async () => true);
 vi.mock("@/lib/matching/engine", () => ({ isMatchEligibleWorker: (...a: unknown[]) => isMatchEligibleWorker(...(a as [])) }));

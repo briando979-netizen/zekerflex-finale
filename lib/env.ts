@@ -203,6 +203,7 @@ const schema = z.object({
   CAPTCHA_PROVIDER: z.string().optional(), // "pow" | "turnstile" | "hcaptcha"
   CAPTCHA_SECRET: z.string().optional(),
   CAPTCHA_SITE_KEY: z.string().optional(),
+  CAPTCHA_POW_BITS: z.string().optional(),
 
   // Local RAG / total memory (Float[] embeddings + JS cosine; no pgvector).
   RAG_ENABLED: z
