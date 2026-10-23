@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface Item {
   id: string;
@@ -14,6 +14,8 @@ interface Item {
 }
 
 const SEEN_KEY = "zf-notif-seen";
+const DISMISS_KEY = "zf-notif-dismissed";
+
 const ICON: Record<string, string> = {
   chat: "💬",
   shift: "📅",
@@ -22,12 +24,36 @@ const ICON: Record<string, string> = {
   verification: "🪪",
   info: "ℹ️",
 };
+const LABEL: Record<string, string> = {
+  chat: "Chat",
+  shift: "Klussen",
+  offer: "Aanbod",
+  action: "Acties",
+  verification: "Verificatie",
+  info: "Info",
+};
+// preferred chip order; only kinds actually present are shown
+const KIND_ORDER = ["action", "offer", "shift", "chat", "verification", "info"];
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return "";
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return "zojuist";
+  if (m < 60) return `${m} min geleden`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} uur geleden`;
+  const d = Math.floor(h / 24);
+  return `${d} dag${d === 1 ? "" : "en"} geleden`;
+}
 
 /** Bell + dropdown. `dark` styles it for the admin surface. */
 export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
+  const [dismissed, setDismissed] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [seenAt, setSeenAt] = useState(0);
+  const [filter, setFilter] = useState<string>("all");
   const ref = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -42,6 +68,8 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   useEffect(() => {
     try {
       setSeenAt(Number(localStorage.getItem(SEEN_KEY) ?? 0));
+      const d = JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "[]");
+      if (Array.isArray(d)) setDismissed(d.filter((x) => typeof x === "string"));
     } catch {
       /* ignore */
     }
@@ -58,7 +86,19 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const unseen = items.filter((i) => new Date(i.at).getTime() > seenAt).length;
+  const visible = useMemo(() => items.filter((i) => !dismissed.includes(i.id)), [items, dismissed]);
+  const kinds = useMemo(() => {
+    const present = new Set(visible.map((i) => i.kind));
+    return KIND_ORDER.filter((k) => present.has(k));
+  }, [visible]);
+  const shown = useMemo(() => (filter === "all" ? visible : visible.filter((i) => i.kind === filter)), [visible, filter]);
+  const countByKind = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const i of visible) m[i.kind] = (m[i.kind] ?? 0) + 1;
+    return m;
+  }, [visible]);
+
+  const unseen = visible.filter((i) => new Date(i.at).getTime() > seenAt).length;
 
   const markSeen = () => {
     const now = Date.now();
@@ -70,9 +110,35 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     }
   };
 
+  const persistDismissed = (next: string[]) => {
+    const capped = [...new Set(next)].slice(-300);
+    setDismissed(capped);
+    try {
+      localStorage.setItem(DISMISS_KEY, JSON.stringify(capped));
+    } catch {
+      /* ignore */
+    }
+  };
+  const dismiss = (id: string) => persistDismissed([...dismissed, id]);
+  const dismissAll = () => persistDismissed([...dismissed, ...visible.map((i) => i.id)]);
+
   const panelStyle = dark
     ? { background: "var(--a-panel)", border: "1px solid var(--a-border-strong)", color: "var(--a-text)" }
     : {};
+  const mute = dark ? { color: "var(--a-mute)" } : { color: "#8A93A0" };
+  const borderCol = dark ? "var(--a-border)" : "#E6E7E1";
+  const rowBorder = dark ? "1px solid var(--a-border)" : "1px solid #F0F0EC";
+  const openBtnStyle = dark
+    ? { background: "var(--a-elev)", border: "1px solid var(--a-border)", color: "var(--a-text)" }
+    : { background: "#EAF7F1", color: "#0E5C4A" };
+  const readBtnStyle = dark
+    ? { background: "transparent", border: "1px solid var(--a-border)", color: "var(--a-mute)" }
+    : { background: "transparent", border: "1px solid #E6E7E1", color: "#616B78" };
+
+  const chip = (active: boolean) =>
+    `flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition ${
+      active ? "bg-brand-600 text-white" : dark ? "" : "bg-black/[0.04] text-neutralx-600 hover:bg-black/[0.07]"
+    }`;
 
   return (
     <div ref={ref} className="relative">
@@ -103,48 +169,91 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-[60] mt-2 max-h-[28rem] w-[22rem] overflow-hidden rounded-xl bg-white shadow-lift"
+          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[32rem] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
           style={panelStyle}
         >
+          {/* header */}
           <div
             className="flex items-center justify-between border-b px-4 py-2.5 text-sm font-semibold"
-            style={dark ? { borderColor: "var(--a-border)" } : { borderColor: "#E6E7E1" }}
+            style={{ borderColor: borderCol }}
           >
-            <span>Meldingen</span>
-            {items.length > 0 && (
-              <span className="text-xs font-normal" style={dark ? { color: "var(--a-mute)" } : { color: "#8A93A0" }}>
-                {items.length}
-              </span>
+            <span>Meldingen{visible.length > 0 ? <span className="ml-1 font-normal" style={mute}>({visible.length})</span> : null}</span>
+            {visible.length > 0 && (
+              <button type="button" onClick={dismissAll} className="text-xs font-medium hover:underline" style={{ color: dark ? "var(--a-text)" : "#0E5C4A" }}>
+                Alles gelezen
+              </button>
             )}
           </div>
-          <div className="max-h-[24rem] overflow-y-auto">
-            {items.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm" style={dark ? { color: "var(--a-mute)" } : { color: "#8A93A0" }}>
-                Niets nieuws — je bent bij.
+
+          {/* scroll-selectie: categorie-chips */}
+          {kinds.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto border-b px-3 py-2" style={{ borderColor: borderCol }}>
+              <button type="button" onClick={() => setFilter("all")} className={chip(filter === "all")} style={dark && filter !== "all" ? { background: "var(--a-elev)", color: "var(--a-text)" } : {}}>
+                Alles {visible.length}
+              </button>
+              {kinds.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilter(k)}
+                  className={chip(filter === k)}
+                  style={dark && filter !== k ? { background: "var(--a-elev)", color: "var(--a-text)" } : {}}
+                >
+                  {ICON[k] ?? "•"} {LABEL[k] ?? k} {countByKind[k] ?? 0}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* scrollbare lijst */}
+          <div className="flex-1 overflow-y-auto">
+            {shown.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm" style={mute}>
+                {visible.length === 0 ? "Niets nieuws — je bent bij." : "Geen meldingen in deze categorie."}
               </p>
             ) : (
               <ul>
-                {items.map((it) => (
-                  <li key={it.id}>
-                    <Link
-                      href={it.href}
-                      onClick={() => setOpen(false)}
-                      className="flex gap-3 px-4 py-3 text-sm transition hover:bg-black/[0.03]"
-                      style={dark ? { borderBottom: "1px solid var(--a-border)" } : { borderBottom: "1px solid #F0F0EC" }}
-                    >
+                {shown.map((it) => (
+                  <li key={it.id} className="px-4 py-3" style={{ borderBottom: rowBorder }}>
+                    <div className="flex gap-3">
                       <span className="text-base leading-none">{ICON[it.kind] ?? "•"}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate font-medium" style={dark ? { color: "var(--a-text)" } : { color: "#1A1F27" }}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium" style={dark ? { color: "var(--a-text)" } : { color: "#1A1F27" }}>
                             {it.title}
                           </span>
                           {it.urgent && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#f87171]" />}
-                        </span>
-                        <span className="mt-0.5 block text-xs" style={dark ? { color: "var(--a-mute)" } : { color: "#616B78" }}>
+                        </div>
+                        <p className="mt-0.5 text-xs" style={dark ? { color: "var(--a-mute)" } : { color: "#616B78" }}>
                           {it.body}
-                        </span>
-                      </span>
-                    </Link>
+                        </p>
+                        <p className="mt-0.5 text-[11px]" style={mute}>
+                          {timeAgo(it.at)}
+                        </p>
+                        {/* geschijden knopjes per melding */}
+                        <div className="mt-2 flex items-center gap-2">
+                          <Link
+                            href={it.href}
+                            onClick={() => {
+                              markSeen();
+                              setOpen(false);
+                            }}
+                            className="rounded-md px-2.5 py-1 text-xs font-semibold"
+                            style={openBtnStyle}
+                          >
+                            Openen
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => dismiss(it.id)}
+                            className="rounded-md px-2.5 py-1 text-xs font-medium"
+                            style={readBtnStyle}
+                          >
+                            Gelezen
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
