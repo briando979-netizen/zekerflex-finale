@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TriageBoard } from "@/components/admin/TriageBoard";
+import { DashboardHero } from "@/components/admin/DashboardHero";
 import { AStat, APanel } from "@/components/admin/ui";
 import { money } from "@/components/app/ui";
 import { RingGauge, AreaChart } from "@/components/admin/charts";
@@ -100,6 +101,9 @@ export function ControlCenter() {
 
   return (
     <div className="space-y-4">
+      {/* Shopify-stijl KPI-hero: omzet, uren, plaatsingsratio, DBA + 30-daagse grafiek + live feed */}
+      <DashboardHero />
+
       {/* Greeting hero */}
       <div
         className="relative overflow-hidden rounded-2xl p-6 lg:p-7"
