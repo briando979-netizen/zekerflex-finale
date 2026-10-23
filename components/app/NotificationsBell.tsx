@@ -184,7 +184,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[32rem] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
+          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
           style={panelStyle}
         >
           {/* header */}
@@ -251,7 +251,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                             <button
                               type="button"
                               onClick={() => confirmShift(it)}
-                              className="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white"
+                              className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white"
                             >
                               {it.action.label}
                             </button>
@@ -262,7 +262,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                               markSeen();
                               setOpen(false);
                             }}
-                            className="rounded-md px-2.5 py-1 text-xs font-semibold"
+                            className="rounded-md px-3 py-1.5 text-xs font-semibold"
                             style={openBtnStyle}
                           >
                             Openen
@@ -270,7 +270,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                           <button
                             type="button"
                             onClick={() => dismiss(it)}
-                            className="rounded-md px-2.5 py-1 text-xs font-medium"
+                            className="rounded-md px-3 py-1.5 text-xs font-medium"
                             style={readBtnStyle}
                           >
                             Gelezen
