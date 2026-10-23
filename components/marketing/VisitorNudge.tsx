@@ -21,31 +21,35 @@ const DONE_KEY = "zf_nudge_done";
 
 const COMPANY = /^\/(voor-bedrijven|prijzen|personeel-inhuren|demo)(\/|$)/;
 const WORK = /^\/($|klussen|freelance-werk|voor-freelancers|uitzendbureau)/;
+// Pagina's die sowieso over werk gaan — daar blijft het de "werk"-nudge,
+// ongeacht de schakelaar. Op de homepage bepaalt de schakelaar het.
+const WORK_EXPLICIT = /^\/(klussen|freelance-werk|voor-freelancers|uitzendbureau)/;
+const AUDIENCE_KEY = "zf-audience"; // gedeeld met de koptekst-schakelaar (SiteHeader)
 
 type Copy = { title: string; body: string; cta: string; href: string };
 const COPY: Record<string, Record<Kind, Copy>> = {
   nl: {
-    bedrijf: { title: "Vandaag nog iemand nodig?", body: "Plaats gratis een klus — geverifieerde flexkrachten in de buurt zien hem direct. Je betaalt alleen € 3,50 per gewerkt uur.", cta: "Gratis klus plaatsen", href: "/register?type=bedrijf" },
+    bedrijf: { title: "Zet je eerste klussen uit", body: "Vul de gaten in je werkrooster: plaats een dienst en geverifieerde flexkrachten in de buurt reageren direct. Je betaalt alleen € 3,50 per gewerkt uur.", cta: "Gratis klus plaatsen", href: "/register?type=bedrijf" },
     werk: { title: "Er wachten klussen op je", body: "Maak in 2 minuten een gratis account en reageer direct. Je kiest zelf hoe snel je wordt uitbetaald.", cta: "Gratis account maken", href: "/register?type=freelancer" },
     exit: { title: "Nog even, voor je gaat…", body: "Werken via ZekerFlex is gratis — ook zonder KVK, via ons uitzendbureau met wekelijks loon.", cta: "Bekijk open klussen", href: "/klussen" },
   },
   en: {
-    bedrijf: { title: "Need someone today?", body: "Post a job for free — verified flex workers nearby see it right away. You only pay € 3.50 per hour worked.", cta: "Post a job for free", href: "/register?type=bedrijf" },
+    bedrijf: { title: "Post your first shifts", body: "Fill the gaps in your schedule: post a shift and verified flex workers nearby react right away. You only pay € 3.50 per hour worked.", cta: "Post a job for free", href: "/register?type=bedrijf" },
     werk: { title: "Jobs are waiting for you", body: "Create a free account in 2 minutes and react right away. You choose how fast you get paid.", cta: "Create free account", href: "/register?type=freelancer" },
     exit: { title: "One moment before you go…", body: "Working through ZekerFlex is free — even without a KVK, via our agency with weekly pay.", cta: "See open jobs", href: "/klussen" },
   },
   pl: {
-    bedrijf: { title: "Potrzebujesz kogoś dziś?", body: "Dodaj zlecenie za darmo — zweryfikowani pracownicy w okolicy zobaczą je od razu. Płacisz tylko € 3,50 za przepracowaną godzinę.", cta: "Dodaj zlecenie", href: "/register?type=bedrijf" },
+    bedrijf: { title: "Dodaj pierwsze zlecenia", body: "Wypełnij luki w grafiku: dodaj zmianę, a zweryfikowani pracownicy w okolicy zgłoszą się od razu. Płacisz tylko € 3,50 za przepracowaną godzinę.", cta: "Dodaj zlecenie", href: "/register?type=bedrijf" },
     werk: { title: "Czekają na ciebie zlecenia", body: "Załóż darmowe konto w 2 minuty i od razu się zgłoś. Sam wybierasz, jak szybko dostajesz wypłatę.", cta: "Załóż darmowe konto", href: "/register?type=freelancer" },
     exit: { title: "Chwilka, zanim wyjdziesz…", body: "Praca przez ZekerFlex jest darmowa — także bez KVK, przez naszą agencję z cotygodniową wypłatą.", cta: "Zobacz zlecenia", href: "/klussen" },
   },
   ro: {
-    bedrijf: { title: "Ai nevoie de cineva azi?", body: "Publică gratuit un job — lucrătorii verificați din zonă îl văd imediat. Plătești doar € 3,50 pe oră lucrată.", cta: "Publică un job", href: "/register?type=bedrijf" },
+    bedrijf: { title: "Publică primele ture", body: "Acoperă golurile din program: publică o tură și lucrătorii verificați din zonă aplică imediat. Plătești doar € 3,50 pe oră lucrată.", cta: "Publică un job", href: "/register?type=bedrijf" },
     werk: { title: "Te așteaptă joburi", body: "Creează un cont gratuit în 2 minute și aplică imediat. Tu alegi cât de repede ești plătit.", cta: "Creează cont gratuit", href: "/register?type=freelancer" },
     exit: { title: "O clipă, înainte să pleci…", body: "Munca prin ZekerFlex este gratuită — și fără KVK, prin agenția noastră, cu plată săptămânală.", cta: "Vezi joburile", href: "/klussen" },
   },
   uk: {
-    bedrijf: { title: "Потрібна людина вже сьогодні?", body: "Розмісти роботу безкоштовно — перевірені працівники поруч побачать її одразу. Платиш лише € 3,50 за відпрацьовану годину.", cta: "Розмістити роботу", href: "/register?type=bedrijf" },
+    bedrijf: { title: "Розмісти перші зміни", body: "Заповни прогалини у графіку: розмісти зміну, і перевірені працівники поруч відгукнуться одразу. Платиш лише € 3,50 за відпрацьовану годину.", cta: "Розмістити роботу", href: "/register?type=bedrijf" },
     werk: { title: "На тебе чекає робота", body: "Створи безкоштовний акаунт за 2 хвилини й одразу відгукуйся. Ти сам обираєш, як швидко отримати виплату.", cta: "Створити акаунт", href: "/register?type=freelancer" },
     exit: { title: "Хвилинку, перш ніж піти…", body: "Робота через ZekerFlex безкоштовна — навіть без KVK, через нашу агенцію з щотижневою оплатою.", cta: "Переглянути роботи", href: "/klussen" },
   },
@@ -72,7 +76,23 @@ export function VisitorNudge() {
     }
     armedAt.current = Date.now();
     visibleMs.current = 0;
-    const page: Kind | null = COMPANY.test(pathname) ? "bedrijf" : WORK.test(pathname) ? "werk" : null;
+    // Welke nudge hoort hier? Bedrijfspagina's → "bedrijf", expliciete
+    // werkpagina's → "werk", en op de homepage volgt het de werknemers/
+    // bedrijven-schakelaar uit de koptekst (localStorage "zf-audience").
+    const kindForPage = (): Kind | null => {
+      if (COMPANY.test(pathname)) return "bedrijf";
+      if (WORK_EXPLICIT.test(pathname)) return "werk";
+      if (WORK.test(pathname)) {
+        let aud: string | null = null;
+        try {
+          aud = localStorage.getItem(AUDIENCE_KEY);
+        } catch {
+          /* storage niet beschikbaar */
+        }
+        return aud === "bedrijven" ? "bedrijf" : "werk";
+      }
+      return null;
+    };
 
     const show = async (k: Kind) => {
       if (stopped || Date.now() - armedAt.current < 10_000) return;
@@ -94,11 +114,12 @@ export function VisitorNudge() {
     const tick = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       visibleMs.current += 1000;
-      if (page === "bedrijf" && visibleMs.current >= 35_000) void show("bedrijf");
-      if (page === "werk" && visibleMs.current >= 40_000) void show("werk");
+      const k = kindForPage();
+      if (k === "bedrijf" && visibleMs.current >= 35_000) void show("bedrijf");
+      if (k === "werk" && visibleMs.current >= 40_000) void show("werk");
     }, 1000);
     const onScroll = () => {
-      if (page !== "werk") return;
+      if (kindForPage() !== "werk") return;
       const doc = document.documentElement;
       if ((window.scrollY + window.innerHeight) / doc.scrollHeight >= 0.65) void show("werk");
     };
