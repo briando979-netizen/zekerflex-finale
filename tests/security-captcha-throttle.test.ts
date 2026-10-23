@@ -24,7 +24,7 @@ function solve(challenge: string, bits: number): string {
 }
 
 afterEach(() => {
-  (env as { CAPTCHA_PROVIDER?: string }).CAPTCHA_PROVIDER = undefined;
+  (env as { CAPTCHA_PROVIDER?: string | undefined }).CAPTCHA_PROVIDER = undefined;
 });
 
 describe("proof-of-work captcha", () => {
@@ -51,7 +51,7 @@ describe("verifyCaptcha", () => {
   });
 
   it("enforces PoW when the provider is pow", async () => {
-    (env as { CAPTCHA_PROVIDER?: string }).CAPTCHA_PROVIDER = "pow";
+    (env as { CAPTCHA_PROVIDER?: string | undefined }).CAPTCHA_PROVIDER = "pow";
     expect(await verifyCaptcha(undefined)).toBe(false);
     const { challenge, bits } = issuePowChallenge();
     expect(await verifyCaptcha(solve(challenge, bits))).toBe(true);

@@ -77,6 +77,32 @@ async function aiLine(purposeText: string, fallback: string): Promise<string> {
 
 export const ACTIONS: AutopilotAction[] = [
   {
+    key: "collusie-signalen",
+    label: "Collusie-/witwassignalen",
+    description: "Zoekt opdrachtgever↔werknemer-paren die samen geld kunnen rondpompen (nepdiensten, direct goedkeuren, uitbetalen) en waarschuwt de beheerders per nieuw hoog-risicopaar.",
+    tier: "auto",
+    cap: 20,
+    run: async () => {
+      const { analyseCollusion } = await import("@/lib/fraud/collusion");
+      const { alertOwner } = await import("@/lib/ops/alert");
+      const pairs = (await analyseCollusion({ sinceDays: 90, minScore: 60 })).slice(0, 20);
+      const ids = pairs.map((p) => `${p.tenantId}:${p.freelancerId}`);
+      const done = await alreadyDone("collusie-signalen", ids);
+      const fresh = pairs.filter((p) => !done.has(`${p.tenantId}:${p.freelancerId}`));
+      for (const p of fresh) {
+        await alertOwner({
+          key: `collusie:${p.tenantId}:${p.freelancerId}`,
+          title: `Mogelijk collusie: ${p.bedrijf} ↔ ${p.werknemer}`,
+          detail: `Risicoscore ${p.score}. ${p.signalen.map((s) => s.label).join("; ")}. Bekijk in Admin → Fraude.`,
+          severity: "warning",
+          url: "/admin/fraude",
+        }).catch(() => undefined);
+      }
+      await markDone("collusie-signalen", fresh.map((p) => `${p.tenantId}:${p.freelancerId}`));
+      return { count: fresh.length, summary: `${pairs.length} verdacht(e) paar/paren, ${fresh.length} nieuw gemeld`, details: pairs.slice(0, 10).map((p) => `${p.bedrijf} ↔ ${p.werknemer} (score ${p.score})`) };
+    },
+  },
+  {
     key: "uren-invullen",
     label: "Werknemers herinneren aan uren invullen",
     description: "Klus 6–72 uur geleden afgelopen en nog geen uren ingediend → pushmelding aan de werknemer (één keer per klus).",

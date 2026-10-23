@@ -44,6 +44,7 @@ const NAV = [
   { href: "/admin/uitzendbureau", label: "Uitzendbureau", icon: <IBriefcase />, section: "Operatie" },
   { href: "/admin/sales", label: "Sales-pijplijn", icon: <IRocket />, section: "Operatie" },
   { href: "/admin/disputes", label: "Disputen", icon: <IShield />, section: "Operatie" },
+  { href: "/admin/fraude", label: "Fraude & signalen", icon: <IShield />, section: "Operatie" },
   { href: "/admin/berichten", label: "Berichten & Support", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/webchat", label: "Website-chat (tickets)", icon: <IChat />, section: "Communicatie" },
   { href: "/admin/sollicitaties", label: "Open sollicitaties", icon: <IUsers />, section: "Communicatie" },
