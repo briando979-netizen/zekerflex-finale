@@ -207,6 +207,10 @@ const schema = z.object({
   TSA_URL: z.string().url().optional(),
   TSA_TOKEN: z.string().optional(),
 
+  // ICP-opgave levering (SBR/Digipoort) voor grensoverschrijdende btw. Optioneel.
+  ICP_ENDPOINT: z.string().url().optional(),
+  ICP_TOKEN: z.string().optional(),
+
   // Captcha op gevoelige endpoints (lib/security/captcha). Uit = standaard.
   CAPTCHA_PROVIDER: z.string().optional(), // "pow" | "turnstile" | "hcaptcha"
   CAPTCHA_SECRET: z.string().optional(),
