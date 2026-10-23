@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
+import { TodayStrip } from "@/components/app/TodayStrip";
+import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
+import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
+import { getFiscal } from "@/lib/fiscal/store";
+import { isBirthdayToday } from "@/lib/birthday";
 import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
 import { getFreelancerDict } from "@/lib/i18n/server";
@@ -20,19 +25,36 @@ export default async function KlussenPage(
   const t = await getFreelancerDict();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
 
+  const [fiscal, today, completed] = await Promise.all([
+    getFiscal(principal.userId),
+    todaysShifts(principal.userId),
+    completedKlussenCount(principal.userId),
+  ]);
+  const birthday = isBirthdayToday(fiscal.birthDate);
+  const greetLabels = {
+    morning: t.greet.morning,
+    afternoon: t.greet.afternoon,
+    evening: t.greet.evening,
+    firstVisit: t.greet.firstVisit,
+    back: t.greet.back,
+    birthday: t.greet.birthday,
+  };
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
-  const greetSub =
-    m.newSinceLastVisit > 0
-      ? m.newSinceLastVisit === 1
-        ? "Er staat 1 nieuwe klus voor je klaar."
-        : `Er staan ${m.newSinceLastVisit} nieuwe klussen voor je klaar.`
-      : m.shifts.length > 0
-        ? "Ontdek de klussen die bij je passen."
-        : undefined;
+  const greetSub = m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 ? t.greet.subDiscover : undefined;
 
   return (
     <>
-      <WelcomeBack name={principal.fullName} {...(greetSub ? { subtitle: greetSub } : {})} />
+      <WelcomeBack
+        name={principal.fullName}
+        labels={greetLabels}
+        {...(birthday ? { occasion: "birthday" as const } : {})}
+        {...(greetSub ? { subtitle: greetSub } : {})}
+      />
+      <MilestoneCelebration count={completed} firstText={t.greet.milestoneFirst} nText={t.greet.milestoneN} />
+      <TodayStrip
+        shifts={today}
+        labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
+      />
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

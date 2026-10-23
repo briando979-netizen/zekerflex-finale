@@ -374,6 +374,22 @@ const nl = {
     fillBody: "Deze klus is afgelopen. Vul je uren in zodat de opdrachtgever ze kan goedkeuren.",
     fillButton: "Uren invullen",
   },
+
+  greet: {
+    morning: "Goedemorgen",
+    afternoon: "Goedemiddag",
+    evening: "Goedenavond",
+    firstVisit: "Welkom bij ZekerFlex",
+    back: "Welkom terug",
+    birthday: "Gefeliciteerd",
+    subNew: "Er staan nieuwe klussen voor je klaar.",
+    subDiscover: "Ontdek de klussen die bij je passen.",
+    todayLabel: "Vandaag",
+    todayAt: "om",
+    todayAtPlace: "bij",
+    milestoneFirst: "Je eerste klus is voltooid! 🎉",
+    milestoneN: "klussen voltooid! 🎉",
+  },
 };
 
 export type FreelancerDict = typeof nl;
@@ -744,6 +760,22 @@ const en: FreelancerDict = {
     fillBody: "This job has ended. Fill in your hours so the client can approve them.",
     fillButton: "Fill in hours",
   },
+
+  greet: {
+    morning: "Good morning",
+    afternoon: "Good afternoon",
+    evening: "Good evening",
+    firstVisit: "Welcome to ZekerFlex",
+    back: "Welcome back",
+    birthday: "Happy birthday",
+    subNew: "New shifts are waiting for you.",
+    subDiscover: "Discover shifts that fit you.",
+    todayLabel: "Today",
+    todayAt: "at",
+    todayAtPlace: "at",
+    milestoneFirst: "You completed your first shift! 🎉",
+    milestoneN: "shifts completed! 🎉",
+  },
 };
 
 const pl: FreelancerDict = {
@@ -1111,6 +1143,22 @@ const pl: FreelancerDict = {
     fillTitle: "Wpisz przepracowane godziny",
     fillBody: "To zlecenie się zakończyło. Wpisz godziny, aby zleceniodawca mógł je zatwierdzić.",
     fillButton: "Wpisz godziny",
+  },
+
+  greet: {
+    morning: "Dzień dobry",
+    afternoon: "Dzień dobry",
+    evening: "Dobry wieczór",
+    firstVisit: "Witamy w ZekerFlex",
+    back: "Witaj ponownie",
+    birthday: "Wszystkiego najlepszego",
+    subNew: "Czekają na Ciebie nowe zlecenia.",
+    subDiscover: "Odkryj zlecenia dopasowane do Ciebie.",
+    todayLabel: "Dzisiaj",
+    todayAt: "o",
+    todayAtPlace: "w",
+    milestoneFirst: "Ukończono pierwsze zlecenie! 🎉",
+    milestoneN: "ukończonych zleceń! 🎉",
   },
 };
 
@@ -1480,6 +1528,22 @@ const ro: FreelancerDict = {
     fillBody: "Acest job s-a încheiat. Completează orele ca angajatorul să le poată aproba.",
     fillButton: "Completează orele",
   },
+
+  greet: {
+    morning: "Bună dimineața",
+    afternoon: "Bună ziua",
+    evening: "Bună seara",
+    firstVisit: "Bun venit la ZekerFlex",
+    back: "Bine ai revenit",
+    birthday: "La mulți ani",
+    subNew: "Te așteaptă joburi noi.",
+    subDiscover: "Descoperă joburi pe măsura ta.",
+    todayLabel: "Astăzi",
+    todayAt: "la",
+    todayAtPlace: "la",
+    milestoneFirst: "Ai finalizat primul job! 🎉",
+    milestoneN: "joburi finalizate! 🎉",
+  },
 };
 
 const uk: FreelancerDict = {
@@ -1847,6 +1911,22 @@ const uk: FreelancerDict = {
     fillTitle: "Заповніть відпрацьовані години",
     fillBody: "Ця робота завершилася. Заповніть години, щоб роботодавець міг їх затвердити.",
     fillButton: "Заповнити години",
+  },
+
+  greet: {
+    morning: "Доброго ранку",
+    afternoon: "Доброго дня",
+    evening: "Добрий вечір",
+    firstVisit: "Ласкаво просимо до ZekerFlex",
+    back: "З поверненням",
+    birthday: "З днем народження",
+    subNew: "На вас чекають нові зміни.",
+    subDiscover: "Знайдіть зміни, що вам підходять.",
+    todayLabel: "Сьогодні",
+    todayAt: "о",
+    todayAtPlace: "в",
+    milestoneFirst: "Ви виконали першу зміну! 🎉",
+    milestoneN: "виконаних змін! 🎉",
   },
 };
 
