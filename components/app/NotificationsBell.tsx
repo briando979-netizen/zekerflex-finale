@@ -11,10 +11,10 @@ interface Item {
   href: string;
   at: string;
   urgent: boolean;
+  action?: { type: string; id: string; label: string };
 }
 
 const SEEN_KEY = "zf-notif-seen";
-const DISMISS_KEY = "zf-notif-dismissed";
 
 const ICON: Record<string, string> = {
   chat: "💬",
@@ -50,7 +50,7 @@ function timeAgo(iso: string): string {
 /** Bell + dropdown. `dark` styles it for the admin surface. */
 export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
-  const [dismissed, setDismissed] = useState<string[]>([]);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [seenAt, setSeenAt] = useState(0);
   const [filter, setFilter] = useState<string>("all");
@@ -68,8 +68,6 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   useEffect(() => {
     try {
       setSeenAt(Number(localStorage.getItem(SEEN_KEY) ?? 0));
-      const d = JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "[]");
-      if (Array.isArray(d)) setDismissed(d.filter((x) => typeof x === "string"));
     } catch {
       /* ignore */
     }
@@ -86,7 +84,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const visible = useMemo(() => items.filter((i) => !dismissed.includes(i.id)), [items, dismissed]);
+  const visible = useMemo(() => items.filter((i) => !hidden.has(i.id)), [items, hidden]);
   const kinds = useMemo(() => {
     const present = new Set(visible.map((i) => i.kind));
     return KIND_ORDER.filter((k) => present.has(k));
@@ -110,17 +108,34 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     }
   };
 
-  const persistDismissed = (next: string[]) => {
-    const capped = [...new Set(next)].slice(-300);
-    setDismissed(capped);
-    try {
-      localStorage.setItem(DISMISS_KEY, JSON.stringify(capped));
-    } catch {
-      /* ignore */
-    }
+  // Weggeklikte meldingen meteen verbergen (optimistisch) én server-side
+  // "gelezen" markeren, zodat ze ook op andere apparaten weg blijven.
+  const hide = (ids: string[]) => setHidden((prev) => new Set([...prev, ...ids]));
+  const postDismiss = (list: { id: string; body: string }[]) => {
+    if (list.length === 0) return;
+    void fetch("/api/me/notifications/dismiss", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: list.slice(0, 50) }),
+    }).catch(() => undefined);
   };
-  const dismiss = (id: string) => persistDismissed([...dismissed, id]);
-  const dismissAll = () => persistDismissed([...dismissed, ...visible.map((i) => i.id)]);
+  const dismiss = (it: Item) => {
+    hide([it.id]);
+    postDismiss([{ id: it.id, body: it.body }]);
+  };
+  const dismissAll = () => {
+    hide(visible.map((i) => i.id));
+    postDismiss(visible.map((i) => ({ id: i.id, body: i.body })));
+  };
+  const confirmShift = (it: Item) => {
+    if (!it.action) return;
+    hide([it.id]);
+    void fetch("/api/me/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignmentId: it.action.id }),
+    }).catch(() => undefined);
+  };
 
   const panelStyle = dark
     ? { background: "var(--a-panel)", border: "1px solid var(--a-border-strong)", color: "var(--a-text)" }
@@ -231,7 +246,16 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                           {timeAgo(it.at)}
                         </p>
                         {/* geschijden knopjes per melding */}
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {it.action?.type === "confirm" && (
+                            <button
+                              type="button"
+                              onClick={() => confirmShift(it)}
+                              className="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white"
+                            >
+                              {it.action.label}
+                            </button>
+                          )}
                           <Link
                             href={it.href}
                             onClick={() => {
@@ -245,7 +269,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => dismiss(it.id)}
+                            onClick={() => dismiss(it)}
                             className="rounded-md px-2.5 py-1 text-xs font-medium"
                             style={readBtnStyle}
                           >

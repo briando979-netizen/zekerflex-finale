@@ -8,6 +8,7 @@ import { listThreadsForUser, getMessages, unreadForUser } from "@/lib/messaging/
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { recentNotes } from "@/lib/bank/notify";
+import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -22,6 +23,8 @@ export interface NotificationItem {
   href: string;
   at: string;
   urgent: boolean;
+  /** optionele directe actie vanuit de melding, bv. komst bevestigen */
+  action?: { type: "confirm"; id: string; label: string };
 }
 
 export async function getNotifications(principal: Principal): Promise<NotificationItem[]> {
@@ -95,6 +98,7 @@ export async function getNotifications(principal: Principal): Promise<Notificati
             href: "/dashboard/diensten",
             at: new Date(now).toISOString(),
             urgent: inH <= 24,
+            action: { type: "confirm", id: a.id, label: "Bevestig komst" },
           });
         }
       }
@@ -243,7 +247,11 @@ export async function getNotifications(principal: Principal): Promise<Notificati
     /* ignore */
   }
 
+  // Server-side "gelezen": filter weggeklikte meldingen vóór het afkappen op 25,
+  // zodat de bel echt 25 zichtbare items kan tonen.
+  const dismissed = await getDismissed(principal.userId).catch(() => new Set<string>());
   return out
+    .filter((i) => !dismissed.has(notifSignature(i.id, i.body)))
     .sort((a, b) => (a.urgent === b.urgent ? (a.at < b.at ? 1 : -1) : a.urgent ? -1 : 1))
     .slice(0, 25);
 }
