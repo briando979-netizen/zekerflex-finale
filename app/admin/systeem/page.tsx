@@ -8,6 +8,7 @@ import { RagLab } from "@/components/admin/RagLab";
 import { ModelFleet } from "@/components/admin/ModelFleet";
 import { CronHealthPanel } from "@/components/admin/CronHealthPanel";
 import { FeatureFlagsPanel } from "@/components/admin/FeatureFlagsPanel";
+import { FunnelPanel } from "@/components/admin/FunnelPanel";
 import { pushChannels } from "@/lib/notifications/push";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { env } from "@/lib/env";
@@ -144,6 +145,8 @@ export default async function SysteemPage() {
       <AiFeaturesPanel features={AI_FEATURES} connected={llm.ok} problem={llm.ok ? null : (llmConfigProblem() ?? (("detail" in llm && llm.detail) || "Taalmodel niet bereikbaar"))} />
 
       <CronHealthPanel />
+
+      <FunnelPanel />
 
       <FeatureFlagsPanel />
 

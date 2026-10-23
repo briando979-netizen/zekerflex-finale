@@ -122,6 +122,9 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
     }
     const nameOk = docName ? nameSimilarity(user.fullName, docName) >= 0.5 : false;
     const status = nameOk ? KycStatus.VERIFIED : KycStatus.PENDING;
+    if (status === KycStatus.VERIFIED) {
+      void import("@/lib/analytics/funnel").then(({ recordFunnel }) => recordFunnel("onboarding-werknemer", "verificatie-klaar")).catch(() => undefined);
+    }
     await prisma.identityVerification.update({
       where: { id: row.id },
       data: {

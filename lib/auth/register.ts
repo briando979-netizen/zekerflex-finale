@@ -117,5 +117,9 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
   // confirmed with the code/link (lib/auth/email-verify.ts), so new users don't
   // get two mails at once.
 
+  void import("@/lib/analytics/funnel")
+    .then(({ recordFunnel }) => recordFunnel(input.type === "freelancer" ? "onboarding-werknemer" : "onboarding-opdrachtgever", "aangemeld"))
+    .catch(() => undefined);
+
   return { userId, type: input.type, email };
 }
