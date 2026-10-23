@@ -20,9 +20,19 @@ export default async function KlussenPage(
   const t = await getFreelancerDict();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
 
+  // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
+  const greetSub =
+    m.newSinceLastVisit > 0
+      ? m.newSinceLastVisit === 1
+        ? "Er staat 1 nieuwe klus voor je klaar."
+        : `Er staan ${m.newSinceLastVisit} nieuwe klussen voor je klaar.`
+      : m.shifts.length > 0
+        ? "Ontdek de klussen die bij je passen."
+        : undefined;
+
   return (
     <>
-      <WelcomeBack name={principal.fullName} />
+      <WelcomeBack name={principal.fullName} {...(greetSub ? { subtitle: greetSub } : {})} />
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

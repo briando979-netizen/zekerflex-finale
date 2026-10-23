@@ -50,9 +50,21 @@ export default async function WerkgeverStartPage() {
   const canOnboard = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   const showWizard = canOnboard && !wizardComplete;
 
+  // Warme, contextuele subregel bij de groet — wat vraagt nu om aandacht?
+  const greetSub =
+    o.kpis.toApprove > 0
+      ? o.kpis.toApprove === 1
+        ? "1 urenregistratie wacht op je goedkeuring."
+        : `${o.kpis.toApprove} urenregistraties wachten op je goedkeuring.`
+      : o.kpis.openShifts > 0
+        ? o.kpis.openShifts === 1
+          ? "1 openstaande dienst wacht op invulling."
+          : `${o.kpis.openShifts} openstaande diensten wachten op invulling.`
+        : undefined;
+
   return (
     <>
-      <WelcomeBack name={principal.fullName} />
+      <WelcomeBack name={principal.fullName} {...(greetSub ? { subtitle: greetSub } : {})} />
       <EmployerDashboardHero />
       {!companyVerified && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
