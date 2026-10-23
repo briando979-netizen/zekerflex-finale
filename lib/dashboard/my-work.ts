@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getPrefs } from "@/lib/prefs/store";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser } from "@/lib/offers/store";
+import { healAcceptedOffer } from "@/lib/matching/heal";
 import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplace";
 
 // ---------------------------------------------------------------------------
@@ -144,23 +145,25 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
     : null;
 
-  const [prefs, replacements, offers, assignments, agreements] = await Promise.all([
+  const assignmentQuery = {
+    where: { freelancerId: profile.id },
+    select: {
+      id: true,
+      acceptedAt: true,
+      cancelledAt: true,
+      cancelReason: true,
+      shift: { select: SHIFT_SELECT },
+      timesheet: { select: { id: true, status: true } },
+    },
+    orderBy: { shift: { startsAt: "desc" } },
+    take: 60,
+  } as const;
+
+  const [prefs, replacements, offers, assignments0, agreements] = await Promise.all([
     getPrefs(userId),
     listReplacementRequests(300),
     offersForUser(userId),
-    prisma.shiftAssignment.findMany({
-      where: { freelancerId: profile.id },
-      select: {
-        id: true,
-        acceptedAt: true,
-        cancelledAt: true,
-        cancelReason: true,
-        shift: { select: SHIFT_SELECT },
-        timesheet: { select: { id: true, status: true } },
-      },
-      orderBy: { shift: { startsAt: "desc" } },
-      take: 60,
-    }),
+    prisma.shiftAssignment.findMany(assignmentQuery),
     prisma.modelAgreement.findMany({
       where: { freelancerId: profile.id },
       select: {
@@ -174,6 +177,19 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       },
     }),
   ]);
+
+  // Heal: een geaccepteerde reactie bij een geverifieerd bedrijf hoort een echte
+  // toewijzing te hebben. Zo niet, maken we 'm alsnog (idempotent) zodat de klus
+  // volledig te beheren is — daarna verschijnen de actieknoppen op de kaart.
+  let assignments = assignments0;
+  {
+    const assignedIds = new Set(assignments.filter((a) => !a.cancelledAt).map((a) => a.shift.id));
+    const orphans = offers.filter((o) => o.status === "accepted" && !assignedIds.has(o.shiftId));
+    if (orphans.length) {
+      const results = await Promise.all(orphans.map((o) => healAcceptedOffer(userId, profile.id, o.shiftId).catch(() => null)));
+      if (results.some(Boolean)) assignments = await prisma.shiftAssignment.findMany(assignmentQuery);
+    }
+  }
 
   const agreementByShift = new Map<string, AgreementLite>();
   for (const a of agreements) {
