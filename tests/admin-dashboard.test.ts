@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const invoiceAggregate = vi.fn();
-const invoiceFindMany = vi.fn(async () => []);
-const timesheetFindMany = vi.fn(async () => []);
-const shiftCount = vi.fn(async () => 0);
-const assignmentFindMany = vi.fn(async () => []);
-const freelancerCount = vi.fn(async () => 0);
-const auditFindMany = vi.fn(async () => []);
+const invoiceFindMany = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
+const timesheetFindMany = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
+const shiftCount = vi.fn(async (..._a: unknown[]) => 0);
+const assignmentFindMany = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
+const freelancerCount = vi.fn(async (..._a: unknown[]) => 0);
+const auditFindMany = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     invoice: { aggregate: (...a: unknown[]) => invoiceAggregate(...a), findMany: (...a: unknown[]) => invoiceFindMany(...a) },
