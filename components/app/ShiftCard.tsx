@@ -139,6 +139,11 @@ export function ShiftCard({
               {c.freelance}
             </span>
           )}
+          {shift.isReplacement && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-plan-soft px-2 py-0.5 text-[11px] font-bold text-plan-ink">
+              ⚡ {c.invalklus}
+            </span>
+          )}
           {idReminder && (
             <span className="rounded border border-trust/40 bg-trust-soft px-1.5 py-0.5 text-[11px] font-semibold text-trust-ink">
               {c.bringId}

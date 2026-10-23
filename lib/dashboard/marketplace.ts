@@ -224,7 +224,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   ]);
   const replacementByShift = new Map<string, string>();
   for (const r of openReplacements) {
-    if (r.status === "open") replacementByShift.set(r.shiftId, r.note || `Vervanging voor ${r.freelancerName}`);
+    if (r.status === "open") replacementByShift.set(r.shiftId, r.note || `Invalklus voor ${r.freelancerName}`);
   }
   const offerByShift = new Map<string, { proposedRateCents: number; status: OfferStatus }>();
   for (const o of myOffers) {
