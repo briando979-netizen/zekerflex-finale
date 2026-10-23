@@ -53,6 +53,7 @@ export function NewShiftForm({
   const [dresscode, setDresscode] = useState("");
   const [writing, setWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<string | null>(null);
+  const [forecast, setForecast] = useState<{ fillChance: number; suggestedRateCents: number; reasons: string[]; sample: number } | null>(null);
   const [rateEuro, setRateEuro] = useState(minRateEuro.toFixed(2));
   const [breakMin, setBreakMin] = useState("30");
   const [positions, setPositions] = useState("1");
@@ -73,6 +74,22 @@ export function NewShiftForm({
       .then((d) => setOwnTemplates(d.templates ?? []))
       .catch(() => undefined);
   }, []);
+
+  // live tarief-advies / vervullingskans (debounced) zodra titel, tijd en tarief er zijn
+  useEffect(() => {
+    const rateCents = Math.round(parseFloat(rateEuro.replace(",", ".")) * 100);
+    if (title.trim().length < 2 || !startsAt || !Number.isFinite(rateCents) || rateCents <= 0) {
+      setForecast(null);
+      return;
+    }
+    const id = setTimeout(() => {
+      fetch("/api/werkgever/pricing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, startsAt, rateCents }) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => setForecast(d))
+        .catch(() => undefined);
+    }, 600);
+    return () => clearTimeout(id);
+  }, [title, startsAt, rateEuro]);
 
   function applyTemplate(t: ShiftTemplate) {
     setTpl(t.key);
@@ -343,6 +360,23 @@ export function NewShiftForm({
               </span>
             )}
           </label>
+          {forecast && forecast.sample >= 15 && (
+            <div className="rounded-xl border border-hair bg-paper-soft px-4 py-3 text-xs sm:col-span-2">
+              <p className="font-semibold text-ink">
+                📊 Vervullingskans: <span className={forecast.fillChance >= 0.8 ? "text-brand-700" : forecast.fillChance >= 0.5 ? "text-warn" : "text-crit"}>{Math.round(forecast.fillChance * 100)}%</span>
+              </p>
+              <ul className="mt-1 space-y-0.5 text-neutralx-600">
+                {forecast.reasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+              {forecast.suggestedRateCents > hourlyRateCents && (
+                <button type="button" onClick={() => setRateEuro((forecast.suggestedRateCents / 100).toFixed(2))} className="mt-1.5 font-semibold text-brand-700 hover:underline">
+                  Zet tarief op € {(forecast.suggestedRateCents / 100).toFixed(2).replace(".", ",")} →
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* multi-day */}
