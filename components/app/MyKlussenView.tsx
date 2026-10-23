@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { MyWorkItem } from "@/lib/dashboard/my-work";
 import { ShiftCard } from "@/components/app/ShiftCard";
+import { ShiftActions } from "@/components/app/ShiftActions";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
 import { CancellationClaimButton } from "@/components/app/CancellationClaimButton";
 import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
@@ -225,23 +226,10 @@ export function MyKlussenView({
 }
 
 function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
-  if (item.replacementRequested && item.replacementRequestId) {
-    return (
-      <Link
-        href={`/dashboard/diensten/vervanging/${item.replacementRequestId}`}
-        className="flex items-center justify-between text-sm font-semibold text-warn"
-      >
-        <span>
-          {w.replacementAsked}
-          {item.replacementResponseCount > 0 ? ` · ${w.responses(item.replacementResponseCount)}` : ""}
-        </span>
-        <span aria-hidden>→</span>
-      </Link>
-    );
-  }
-  // On the day: from an hour before the start until the end, check in on location.
   const startMs = new Date(item.shift.startsAt).getTime();
   const endMs = new Date(item.shift.endsAt).getTime();
+
+  // Op de dag van de klus: inchecken/uitchecken heeft voorrang boven de rest.
   if (item.timesheetId && Date.now() >= startMs - 60 * 60_000 && Date.now() <= endMs) {
     return (
       <Link href={`/dashboard/uren/${item.timesheetId}`} className="flex items-center justify-between rounded-xl bg-brand-500 px-3 py-2.5 text-sm font-semibold text-white">
@@ -250,20 +238,50 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
       </Link>
     );
   }
+
+  // Zonder geldige assignment valt alleen de detaillink terug (zou niet moeten
+  // gebeuren voor een actieve klus).
+  if (!item.assignmentId) {
+    return (
+      <Link
+        href={`/dashboard/klussen/${item.shift.id}`}
+        className="flex items-center justify-between rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink"
+      >
+        <span className="flex items-center gap-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          {w.yourJob}
+        </span>
+        <span aria-hidden>→</span>
+      </Link>
+    );
+  }
+
+  // Alle acties direct op de kaart: bevestigen, in je agenda zetten, vervanging
+  // regelen, afzeggen — plus de annuleertermijn en extra info. ShiftActions
+  // regelt ook de "je zoekt vervanging"-staat zelf.
   return (
-    <Link
-      href={`/dashboard/klussen/${item.shift.id}`}
-      className="flex items-center justify-between rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink"
-    >
-      <span className="flex items-center gap-2">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-        {w.yourJob}
-      </span>
-      <span aria-hidden>→</span>
-    </Link>
+    <div className="space-y-3">
+      <ShiftActions
+        assignmentId={item.assignmentId}
+        shiftId={item.shift.id}
+        shiftTitle={item.shift.title}
+        startsAtISO={new Date(item.shift.startsAt).toISOString()}
+        confirmedAt={item.confirmedAt}
+        replacementRequested={item.replacementRequested}
+        replacementRequestId={item.replacementRequestId}
+        replacementResponseCount={item.replacementResponseCount}
+        variant="card"
+      />
+      <Link
+        href={`/dashboard/klussen/${item.shift.id}`}
+        className="block text-center text-xs font-medium text-neutralx-400 hover:text-brand-700"
+      >
+        {w.yourJob} ›
+      </Link>
+    </div>
   );
 }
 

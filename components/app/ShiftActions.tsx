@@ -60,6 +60,18 @@ export function ShiftActions({
   const started = new Date(startsAtISO).getTime() < Date.now();
   const icsHref = `/api/me/assignments/${assignmentId}/ics`;
 
+  // Annuleertermijn: tot NOTICE_HOURS vóór aanvang kun je kosteloos afzeggen.
+  const freeUntilMs = new Date(startsAtISO).getTime() - NOTICE_HOURS * 3_600_000;
+  const stillFree = Date.now() < freeUntilMs;
+  const deadlineLabel = new Date(freeUntilMs).toLocaleString("nl-NL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
+  });
+
   function confirmAttendance() {
     start(async () => {
       const res = await fetch("/api/me/confirm", {
@@ -228,7 +240,7 @@ export function ShiftActions({
             onClick={() => setFlowOpen(true)}
             className="font-medium text-neutralx-500 hover:text-brand-700"
           >
-            Regel vervanging
+            Regel vervanging via ZekerFlex
           </button>
           <button
             type="button"
@@ -238,6 +250,44 @@ export function ShiftActions({
             Zeg deze klus af
           </button>
         </div>
+      )}
+
+      {!started && (
+        <div
+          className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
+            stillFree ? "border-hair bg-paper-soft text-neutralx-600" : "border-warn/30 bg-warn/5 text-neutralx-700"
+          }`}
+        >
+          {stillFree ? (
+            <>
+              🕒 Gratis afzeggen kan nog tot <span className="font-semibold text-ink">{deadlineLabel}</span>. Daarna kan de
+              opdrachtgever tot 50% in rekening brengen.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-warn">Binnen de opzegtermijn.</span> Afzeggen kan nog, maar de opdrachtgever
+              kan tot 50% van de dienst in rekening brengen. Kun je niet?{" "}
+              <span className="font-semibold text-ink">Regel kosteloos een vervanger</span> — dan heeft het geen gevolgen voor
+              je betrouwbaarheidsscore.
+            </>
+          )}
+        </div>
+      )}
+
+      {!started && (
+        <details className="text-xs">
+          <summary className="cursor-pointer select-none font-medium text-neutralx-500 hover:text-brand-700">
+            Meer info voor jou
+          </summary>
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-neutralx-600">
+            <li>Neem een geldig ID mee; je checkt op locatie in en uit via de app.</li>
+            <li>
+              Kun je niet? <span className="font-medium text-ink">Regel een vervanger via ZekerFlex</span> — kosteloos en zonder
+              gevolgen voor je score.
+            </li>
+            <li>Afzeggen binnen {NOTICE_HOURS} uur voor aanvang kan 50% kosten en telt mee in je betrouwbaarheidsscore.</li>
+          </ul>
+        </details>
       )}
 
       {flowOpen && (
