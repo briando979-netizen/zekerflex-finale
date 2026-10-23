@@ -72,6 +72,100 @@ export const PROMPT_PRESETS: PromptPreset[] = [
       "three Dutch colleagues of different ages working together during a busy shift in a warehouse, " +
       "coordinated and energetic, warm industrial light, motion in the scene",
   },
+
+  // --- YoungOnes-genre marketing set: the same bright, candid, energetic
+  // lifestyle-at-work look, but an original diverse cast and our own workwear
+  // styling (deep green + mint accents, never a competitor's brand or colours).
+  {
+    key: "bar-night",
+    label: "Horeca — bartender in de avond",
+    slot: "team",
+    aspect: "wide",
+    base:
+      "a young bartender with short curly hair and tattoos mixing a drink behind a busy cocktail bar at night, " +
+      "candid mid-pour, warm amber light, wearing a dark green apron over a plain tee",
+  },
+  {
+    key: "festival-crew",
+    label: "Events — festivalcrew",
+    slot: "team",
+    aspect: "wide",
+    base:
+      "two event crew members in their early 20s setting up an outdoor festival stage, high-visibility vests over " +
+      "casual streetwear, energetic teamwork, golden-hour light, motion in the scene",
+  },
+  {
+    key: "bike-courier",
+    label: "Bezorging — fietskoerier",
+    slot: "freelancer",
+    aspect: "portrait",
+    base:
+      "a bike courier in their late 20s with a large square delivery backpack waiting at a city crossing, " +
+      "catching their breath, determined expression, practical cycling clothes, urban dusk behind them",
+  },
+  {
+    key: "cleaning-morning",
+    label: "Schoonmaak — vroege ochtend",
+    slot: "freelancer",
+    aspect: "landscape",
+    base:
+      "a cleaning professional in their 40s wiping down a bright modern office in the early morning, calm and thorough, " +
+      "plain work polo, soft daylight through large glass windows",
+  },
+  {
+    key: "retail-fashion",
+    label: "Retail — modewinkel",
+    slot: "freelancer",
+    aspect: "landscape",
+    base:
+      "a retail worker in their 20s folding clothes on a table in a bright fashion store, relaxed and stylish casual outfit, " +
+      "natural unposed movement, warm store lighting",
+  },
+  {
+    key: "care-home",
+    label: "Zorg — warme ontmoeting",
+    slot: "freelancer",
+    aspect: "landscape",
+    base:
+      "a healthcare support worker in their 30s sharing a warm genuine moment with an elderly resident in a sunlit care-home " +
+      "common room, plain care tunic, soft and real, not posed",
+  },
+  {
+    key: "construction-plans",
+    label: "Bouw — bouwplaats",
+    slot: "freelancer",
+    aspect: "portrait",
+    base:
+      "a construction worker in their 30s reading building plans on site, hard hat and hi-vis vest, confident and focused, " +
+      "overcast daylight, scaffolding softly out of focus behind",
+  },
+  {
+    key: "break-group",
+    label: "Team — pauze buiten",
+    slot: "team",
+    aspect: "wide",
+    base:
+      "four young colleagues of different backgrounds laughing together on a short break outside a warehouse, " +
+      "a mix of casual workwear, candid group energy, bright daylight",
+  },
+  {
+    key: "hero-logistics-driver",
+    label: "Hero — magazijn in beweging",
+    slot: "hero",
+    aspect: "portrait",
+    base:
+      "a woman in her late 20s steering a pallet jack down a bright distribution-centre aisle, focused and capable, " +
+      "plain workwear, motion blur in the racking around her",
+  },
+  {
+    key: "student-flex",
+    label: "Freelancer — student tussen colleges",
+    slot: "freelancer",
+    aspect: "portrait",
+    base:
+      "a university student in their early 20s checking shift details on their phone between lectures in a campus courtyard, " +
+      "backpack over one shoulder, relaxed everyday clothes, natural daylight",
+  },
 ];
 
 export function aspectToSize(aspect: PromptPreset["aspect"]): { width: number; height: number } {
