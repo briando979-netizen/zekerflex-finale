@@ -89,7 +89,10 @@ export async function userDirectory(userIds: string[]): Promise<Map<string, Chat
     } else if (roles.some((r) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(r))) {
       role = "employer";
       meta = u.memberships[0]?.tenant.name ?? "Werkgever";
-    } else if (!u.freelancerProfile) {
+    } else if (!u.freelancerProfile && !roles.includes("FREELANCER")) {
+      // No freelancer profile and no freelancer membership → an employer-side
+      // account. A brand-new freelancer whose profile isn't created yet keeps
+      // the default "Freelancer" label instead of being mislabelled.
       role = "employer";
       meta = u.memberships[0]?.tenant.name ?? "Werkgever";
     }

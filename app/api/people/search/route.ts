@@ -30,7 +30,20 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const nameWhere = q.length >= 2 ? { fullName: { contains: q, mode: "insensitive" as const } } : {};
 
-    if (isEmployer || isAdmin) {
+    if (isAdmin) {
+      // A platform admin runs support — they can reach ANY active user by name,
+      // including brand-new signups who don't have a freelancer profile yet
+      // (the profile is only created later in onboarding) and employer-side
+      // accounts. With no query, show the newest signups first so someone who
+      // just registered is immediately in the list.
+      const users = await prisma.user.findMany({
+        where: { ...nameWhere, disabledAt: null },
+        select: { id: true },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      });
+      users.forEach((u) => allowed.add(u.id));
+    } else if (isEmployer) {
       const freelancers = await prisma.user.findMany({
         where: { ...nameWhere, freelancerProfile: { isNot: null }, disabledAt: null },
         select: { id: true },
