@@ -242,27 +242,17 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
 
       {open && (
         <div
-          className="fixed inset-0 z-[70] flex flex-col bg-white md:absolute md:inset-auto md:right-0 md:top-full md:z-[60] md:mt-2 md:max-h-[min(34rem,calc(100dvh-5rem))] md:w-[min(26rem,calc(100vw-1.5rem))] md:overflow-hidden md:rounded-xl md:shadow-lift"
+          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[min(36rem,calc(100dvh-5rem))] w-[min(26rem,calc(100vw-1.25rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
           style={panelStyle}
         >
           {/* Koptekst */}
           <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Sluiten"
-              className="-ml-1 grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:text-ink md:hidden"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
             <span className="text-base font-bold tracking-tight">Meldingen</span>
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Sluiten"
-              className="ml-auto hidden h-8 w-8 place-items-center rounded-lg text-neutralx-400 hover:text-ink md:grid"
+              className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-neutralx-400 hover:text-ink"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
