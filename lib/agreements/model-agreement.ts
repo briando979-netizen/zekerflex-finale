@@ -292,5 +292,10 @@ export async function signModelAgreement(
     metadata: { party, status: result.status },
   });
 
+  // Both parties signed → seal the agreement (eIDAS advanced seal + trusted timestamp).
+  if (result.status === ModelAgreementStatus.ACTIVE) {
+    void import("@/lib/agreements/esign").then(({ sealAgreement }) => sealAgreement(agreementId)).catch(() => undefined);
+  }
+
   return result;
 }

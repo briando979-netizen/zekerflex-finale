@@ -203,6 +203,10 @@ const schema = z.object({
   ZW_REPORT_ENDPOINT: z.string().url().optional(),
   ZW_REPORT_TOKEN: z.string().optional(),
 
+  // Vertrouwde tijdstempel (RFC-3161 / eIDAS QTSA) voor modelovereenkomst-zegels. Optioneel.
+  TSA_URL: z.string().url().optional(),
+  TSA_TOKEN: z.string().optional(),
+
   // Captcha op gevoelige endpoints (lib/security/captcha). Uit = standaard.
   CAPTCHA_PROVIDER: z.string().optional(), // "pow" | "turnstile" | "hcaptcha"
   CAPTCHA_SECRET: z.string().optional(),
