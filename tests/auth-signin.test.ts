@@ -141,7 +141,7 @@ describe("two-step login", () => {
   it("a locked-out account can't use the second step either", async () => {
     openLoginChallenge.mockReturnValue("jan@example.nl");
     checkLoginAllowed.mockResolvedValue({ allowed: false, retryAfterSeconds: 600 });
-    expect(await authorize({ challenge, otp: "123456" })).toBeNull();
+    await expect(authorize({ challenge, otp: "123456" })).rejects.toMatchObject({ code: "locked" });
     expect(verifySecondFactor).not.toHaveBeenCalled();
   });
 });
@@ -186,7 +186,7 @@ describe("credentials authorize", () => {
   it("refuses outright when the account is locked out, without touching bcrypt", async () => {
     checkLoginAllowed.mockResolvedValue({ allowed: false, retryAfterSeconds: 900 });
 
-    expect(await authorize(creds)).toBeNull();
+    await expect(authorize(creds)).rejects.toMatchObject({ code: "locked" });
     expect(userFindFirst).not.toHaveBeenCalled();
     expect(bcryptCompare).not.toHaveBeenCalled();
     expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.login.locked" }));
