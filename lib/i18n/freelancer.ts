@@ -209,10 +209,10 @@ const nl = {
   hoursPage: {
     title: "Uren invullen",
     eyebrow: "Afronden",
-    subtitle: "Vul je uren in na afloop van een klus. Na indienen vind je de klus terug bij Mijn klussen.",
-    toFill: (n: number) => `In te vullen${n ? ` (${n})` : ""}`,
+    subtitle: "Vul je uren in na afloop van een klus. Ingediende uren blijven hier staan tot de opdrachtgever ze goedkeurt — daarna verhuist de klus naar Mijn klussen → Gearchiveerd.",
+    toFill: (n: number) => `Nog in te vullen${n ? ` (${n})` : ""}`,
     emptyTitle: "Niets in te vullen",
-    emptyBody: "Zodra een klus is afgelopen verschijnt hier je urenbriefje. Ingediende uren staan bij Mijn klussen → Gearchiveerd.",
+    emptyBody: "Zodra een klus is afgelopen verschijnt hier je urenbriefje. Na goedkeuring verhuist de klus naar Mijn klussen → Gearchiveerd.",
     job: "Klus",
     fill: "Invullen",
     hShort: "u",

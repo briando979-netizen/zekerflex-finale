@@ -52,20 +52,23 @@ beforeEach(() => shiftAssignmentFindMany.mockReset());
 afterEach(() => vi.clearAllMocks());
 
 describe("Mijn klussen — hours to fill in", () => {
-  it("keeps an ended klus with draft hours out of Mijn klussen (it's on Uren invullen)", async () => {
+  it("puts an ended klus with draft hours on the 'Uren' bucket, not in the other tabs", async () => {
     shiftAssignmentFindMany.mockResolvedValue([assignment("draft", -10, -2, "DRAFT")]);
     const work = await getMyWork("u1");
     expect([...ids(work.pending), ...ids(work.active), ...ids(work.history)]).not.toContain("shift-draft");
+    expect(ids(work.hours)).toContain("shift-draft");
   });
 
-  it("archives it once the hours are handed in, approved or paid", async () => {
+  it("keeps submitted hours on 'Uren' and archives only once approved or paid", async () => {
     shiftAssignmentFindMany.mockResolvedValue([
       assignment("sub", -30, -22, "SUBMITTED"),
       assignment("ok", -50, -42, "APPROVED"),
       assignment("paid", -80, -72, "PAID"),
     ]);
     const work = await getMyWork("u1");
-    expect(ids(work.history).sort()).toEqual(["shift-ok", "shift-paid", "shift-sub"]);
+    expect(ids(work.hours)).toContain("shift-sub"); // ingediend, blijft op "Uren"
+    expect(ids(work.hours)).not.toContain("shift-ok"); // goedgekeurd → weg van "Uren"
+    expect(ids(work.history).sort()).toEqual(["shift-ok", "shift-paid"]);
   });
 
   it("keeps a klus that is under way under Uitgekozen, not in the archive", async () => {

@@ -1,109 +1,76 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { PageHeader, EmptyState, dateTime, moneyExact } from "@/components/app/ui";
+import { getMyWork, type MyWorkItem } from "@/lib/dashboard/my-work";
+import { PageHeader, EmptyState } from "@/components/app/ui";
+import { ShiftCard } from "@/components/app/ShiftCard";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 export const dynamic = "force-dynamic";
 
+// De "Uren"-pagina toont de afgelopen klussen als volledige shiftkaart — net als
+// bij Mijn klussen, maar met een eigen actie: vul je uren in. Zodra je indient
+// blijft de kaart hier staan met status "ingediend"; pas na goedkeuring verhuist
+// de klus naar Mijn klussen → Gearchiveerd (lib/dashboard/my-work.ts).
 export default async function UrenInvullenPage() {
   const principal = await requirePrincipal();
   const ft = await getFreelancerDict();
   const H = ft.hoursPage;
-  const profile = await prisma.freelancerProfile.findUnique({
-    where: { userId: principal.userId },
-    select: { id: true },
-  });
+  const { hours } = await getMyWork(principal.userId);
 
-  const rows = profile
-    ? await prisma.timesheet.findMany({
-        where: { freelancerId: profile.id },
-        select: {
-          id: true,
-          status: true,
-          scheduledStart: true,
-          scheduledEnd: true,
-          billableMinutes: true,
-          hourlyRateCents: true,
-          branch: { select: { name: true, city: true } },
-          assignment: { select: { shift: { select: { title: true } } } },
-        },
-        orderBy: { scheduledStart: "desc" },
-        take: 60,
-      })
-    : [];
-
-  // Only klussen that have actually ended and are not yet submitted. Once you
-  // hand in your hours the klus moves to "Mijn klussen → Gearchiveerd" — there
-  // is no history list here.
-  const ended = (r: (typeof rows)[number]) => r.scheduledEnd.getTime() < Date.now();
-  const todo = rows.filter((r) => r.status === "DRAFT" && ended(r));
+  const toFill = hours.filter((h) => h.timesheetStatus === "DRAFT").length;
 
   return (
     <>
-      <PageHeader
-        title={H.title}
-        eyebrow={H.eyebrow}
-        subtitle={H.subtitle}
-      />
+      <PageHeader title={H.title} eyebrow={H.eyebrow} subtitle={H.subtitle} />
 
-      <Section title={H.toFill(todo.length)}>
-        {todo.length === 0 ? (
-          <EmptyState title={H.emptyTitle} body={H.emptyBody} />
-        ) : (
-          <ul className="space-y-3">
-            {todo.map((t) => (
-              <Row key={t.id} t={t} H={H} />
+      {hours.length === 0 ? (
+        <EmptyState title={H.emptyTitle} body={H.emptyBody} />
+      ) : (
+        <>
+          <p className="mb-4 text-sm font-semibold text-neutralx-600">{H.toFill(toFill)}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {hours.map((item) => (
+              <ShiftCard
+                key={item.workKey}
+                shift={item.shift}
+                t={ft}
+                href={item.timesheetId ? `/dashboard/uren/${item.timesheetId}` : "/dashboard/uren"}
+                footerOverride={<HoursFooter item={item} w={ft.work} />}
+              />
             ))}
-          </ul>
-        )}
-      </Section>
+          </div>
+        </>
+      )}
     </>
   );
 }
 
-type TS = {
-  id: string;
-  status: string;
-  scheduledStart: Date;
-  scheduledEnd: Date;
-  billableMinutes: number;
-  hourlyRateCents: number;
-  branch: { name: string; city: string };
-  assignment: { shift: { title: string } } | null;
-};
-
-function Row({ t, H }: { t: TS; H: FreelancerDict["hoursPage"] }) {
-  const hours = t.billableMinutes > 0 ? (t.billableMinutes / 60).toFixed(1) : null;
-  const gross = hours ? moneyExact(Math.round((t.billableMinutes / 60) * t.hourlyRateCents)) : null;
-  return (
-    <li>
+function HoursFooter({ item, w }: { item: MyWorkItem; w: FreelancerDict["work"] }) {
+  if (item.timesheetStatus === "SUBMITTED") {
+    return (
+      <div className="rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink">{w.submitted}</div>
+    );
+  }
+  if (item.timesheetStatus === "DISPUTED") {
+    return (
       <Link
-        href={`/dashboard/uren/${t.id}`}
-        className="flex items-center justify-between gap-3 rounded-2xl border border-hair bg-white px-4 py-3.5 shadow-card transition hover:border-brand-300"
+        href={item.timesheetId ? `/dashboard/uren/${item.timesheetId}` : "/dashboard/uren"}
+        className="flex items-center justify-between rounded-xl bg-warn/10 px-3 py-2.5 text-sm font-semibold text-warn"
       >
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-ink">
-            {t.assignment?.shift.title ?? H.job}
-          </p>
-          <p className="text-xs text-neutralx-500">
-            {t.branch.name} · {t.branch.city} · {dateTime(t.scheduledStart)}
-            {hours ? ` · ${hours} ${H.hShort}` : ""}
-            {gross ? ` · ${gross}` : ""}
-          </p>
-        </div>
-        <span className="btn-primary flex-shrink-0 px-3 py-1.5 text-xs">{H.fill}</span>
+        <span>{w.disputed}</span>
+        <span aria-hidden>→</span>
       </Link>
-    </li>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+    );
+  }
+  // DRAFT → vul je uren in
   return (
-    <section className="mb-8">
-      <h2 className="mb-3 font-display text-lg font-bold text-ink">{title}</h2>
-      {children}
-    </section>
+    <Link
+      href={item.timesheetId ? `/dashboard/uren/${item.timesheetId}` : "/dashboard/uren"}
+      className="flex items-center justify-between rounded-xl bg-warn/10 px-3 py-2.5 text-sm font-semibold text-warn"
+    >
+      <span>{w.fillHours}</span>
+      <span aria-hidden>→</span>
+    </Link>
   );
 }

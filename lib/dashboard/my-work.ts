@@ -18,6 +18,7 @@ export type WorkStatus =
   | "pending" // counter-offer or offer awaiting a reply
   | "active" // accepted, upcoming
   | "replacement" // you asked for a substitute
+  | "hours" // afgelopen: urenbriefje in te vullen of ingediend, nog niet goedgekeurd
   | "done"
   | "cancelled"
   | "rejected"; // offer declined / not chosen
@@ -54,6 +55,8 @@ export interface MyWorkItem {
 export interface MyWork {
   pending: MyWorkItem[];
   active: MyWorkItem[];
+  /** afgelopen klussen waarvan de uren nog ingevuld/goedgekeurd moeten worden */
+  hours: MyWorkItem[];
   history: MyWorkItem[];
 }
 
@@ -139,7 +142,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     where: { userId },
     select: { id: true, homeLatitude: true, homeLongitude: true },
   });
-  if (!profile) return { pending: [], active: [], history: [] };
+  if (!profile) return { pending: [], active: [], hours: [], history: [] };
 
   const home = Number.isFinite(profile.homeLatitude)
     ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
@@ -211,6 +214,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   const now = Date.now();
   const pending: MyWorkItem[] = [];
   const active: MyWorkItem[] = [];
+  const hours: MyWorkItem[] = [];
   const history: MyWorkItem[] = [];
 
   // ── counter-offers ──────────────────────────────────────────────────
@@ -275,12 +279,16 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     const repl = replacementByAssignment.get(a.id);
     const isReplacement = Boolean(repl);
     const over = a.shift.endsAt.getTime() < now;
-    if (!a.cancelledAt && !isReplacement && over && a.timesheet?.status === "DRAFT") continue;
+    const ts = a.timesheet?.status ?? null;
+    // Afgelopen klus met nog in te vullen of ingediende (nog niet goedgekeurde)
+    // uren → "Uren"-bucket. Die blijft daar (ook met status "ingediend") tot de
+    // opdrachtgever goedkeurt; dan valt het in "done" en gaat naar het archief.
+    const needsHours = over && !a.cancelledAt && !isReplacement && (ts === "DRAFT" || ts === "SUBMITTED" || ts === "DISPUTED");
     const item: MyWorkItem = {
       workKey: `a:${a.id}`,
       shift,
       assignmentId: a.id,
-      status: a.cancelledAt ? "cancelled" : isReplacement ? "replacement" : over ? "done" : "active",
+      status: a.cancelledAt ? "cancelled" : isReplacement ? "replacement" : !over ? "active" : needsHours ? "hours" : "done",
       confirmedAt: prefs.confirmations[a.id] ?? null,
       replacementRequested: isReplacement,
       replacementRequestId: repl?.id ?? null,
@@ -297,6 +305,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       ),
     };
     if (item.status === "active" || item.status === "replacement") active.push(item);
+    else if (item.status === "hours") hours.push(item);
     else history.push(item);
   }
 
@@ -377,10 +386,16 @@ export async function getMyWork(userId: string): Promise<MyWork> {
 
   active.sort((a, b) => a.shift.startsAt.getTime() - b.shift.startsAt.getTime());
 
+  // Uren-bucket: nog in te vullen (DRAFT) bovenaan, daarna ingediend/in dispuut.
+  hours.sort((a, b) => {
+    const rank = (x: MyWorkItem) => (x.timesheetStatus === "DRAFT" ? 0 : 1);
+    return rank(a) - rank(b) || b.shift.startsAt.getTime() - a.shift.startsAt.getTime();
+  });
   const prefsDismissed = new Set(prefs.dismissedWorkItemIds);
   return {
     pending,
     active,
+    hours,
     history: history.filter((item) => !prefsDismissed.has(item.workKey)),
   };
 }
