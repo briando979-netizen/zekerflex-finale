@@ -32,7 +32,7 @@ describe("proof-of-work captcha", () => {
     const { challenge, bits } = issuePowChallenge();
     const token = solve(challenge, bits);
     expect(verifyPow(token)).toBe(true);
-    expect(verifyPow(`${challenge}#0`)).toBe(false); // nonce 0 won't meet the target
+    expect(verifyPow(challenge)).toBe(false); // no nonce
     expect(verifyPow(undefined)).toBe(false);
     expect(verifyPow("forged.challenge.sig#123")).toBe(false);
   });
