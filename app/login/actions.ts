@@ -44,6 +44,10 @@ export async function loginAction(
       return { error: null };
     } catch (err) {
       if (err instanceof AuthError) {
+        // Temporarily locked after too many failures — say so, don't blame the code.
+        if (codeOf(err) === "locked") {
+          return { error: "Te veel pogingen — je account is ongeveer 15 minuten geblokkeerd. Wacht even en probeer daarna opnieuw.", needsCode: true, challenge, email };
+        }
         // Decide wrong-code vs expired from the challenge itself, not from the
         // NextAuth error code (which doesn't always survive the wrapping). As
         // long as the challenge is still valid we keep the 2FA form open so a

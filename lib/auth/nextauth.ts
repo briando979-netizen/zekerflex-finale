@@ -38,6 +38,10 @@ export class SecondFactorRequired extends CredentialsSignin {
 export class SecondFactorInvalid extends CredentialsSignin {
   override code = "2fa_invalid";
 }
+/** Too many recent failures — the account is temporarily locked. */
+export class LoginLocked extends CredentialsSignin {
+  override code = "locked";
+}
 
 async function loadGrants(userId: string): Promise<RoleGrant[]> {
   const memberships = await prisma.membership.findMany({
@@ -201,7 +205,9 @@ export const authOptions: NextAuthConfig = {
             targetId: email,
             metadata: { retryAfterSeconds: gate.retryAfterSeconds },
           });
-          return null;
+          // Distinct from a wrong password/code, so the UI can say "temporarily
+          // locked" instead of "invalid credentials" / "wrong code".
+          throw new LoginLocked();
         }
 
         const registerFailure = async (userId: string | null) => {
