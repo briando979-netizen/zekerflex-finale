@@ -237,13 +237,15 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     if (o.status === "withdrawn" || assignedShiftIds.has(o.shiftId)) continue;
     const row = offerShiftById.get(o.shiftId);
     if (!row) continue;
+    const over = row.endsAt.getTime() < now;
     const shift = toShift(row, home);
     shift.myOffer = { proposedRateCents: o.proposedRateCents, status: o.status };
     const item: MyWorkItem = {
       workKey: `o:${o.id}`,
       shift,
       assignmentId: null,
-      status: o.status === "pending" ? "pending" : o.status === "accepted" ? "active" : "rejected",
+      // Voorbije geaccepteerde reactie → archief, niet meer onder "Uitgekozen".
+      status: o.status === "pending" ? "pending" : o.status === "accepted" ? (over ? "done" : "active") : "rejected",
       confirmedAt: null,
       replacementRequested: false,
       replacementRequestId: null,
@@ -260,8 +262,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     // Each item lands in exactly the one bucket that matches its own status —
     // an "active" (accepted) item belongs under Uitgekozen, never Pending.
     if (item.status === "pending") pending.push(item);
-    else if (item.status === "rejected") history.push(item);
     else if (item.status === "active") active.push(item);
+    else history.push(item); // "rejected" of voorbij ("done")
   }
 
   // ── accepted assignments ────────────────────────────────────────────
