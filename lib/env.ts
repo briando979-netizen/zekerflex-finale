@@ -199,6 +199,11 @@ const schema = z.object({
   STIPP_UPA_ENDPOINT: z.string().url().optional(),
   STIPP_UPA_TOKEN: z.string().optional(),
 
+  // Captcha op gevoelige endpoints (lib/security/captcha). Uit = standaard.
+  CAPTCHA_PROVIDER: z.string().optional(), // "pow" | "turnstile" | "hcaptcha"
+  CAPTCHA_SECRET: z.string().optional(),
+  CAPTCHA_SITE_KEY: z.string().optional(),
+
   // Local RAG / total memory (Float[] embeddings + JS cosine; no pgvector).
   RAG_ENABLED: z
     .enum(["true", "false"])
