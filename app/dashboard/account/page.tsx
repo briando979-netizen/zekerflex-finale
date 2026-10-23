@@ -7,6 +7,7 @@ import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
+import { ZiekMelden } from "@/components/app/ZiekMelden";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
@@ -131,6 +132,12 @@ export default async function AccountPage() {
         </h1>
         <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
       </div>
+
+      {isUitzend && (
+        <div className="mb-4">
+          <ZiekMelden />
+        </div>
+      )}
 
       {/* Profile header */}
       <div className="rounded-2xl border border-hair bg-white p-5 text-center shadow-card">

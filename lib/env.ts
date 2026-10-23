@@ -199,6 +199,10 @@ const schema = z.object({
   STIPP_UPA_ENDPOINT: z.string().url().optional(),
   STIPP_UPA_TOKEN: z.string().optional(),
 
+  // Ziektewet/UWV/SFBO-melding voor de uitzendtak (lib/uitzend/ziekmelding). Optioneel.
+  ZW_REPORT_ENDPOINT: z.string().url().optional(),
+  ZW_REPORT_TOKEN: z.string().optional(),
+
   // Captcha op gevoelige endpoints (lib/security/captcha). Uit = standaard.
   CAPTCHA_PROVIDER: z.string().optional(), // "pow" | "turnstile" | "hcaptcha"
   CAPTCHA_SECRET: z.string().optional(),
