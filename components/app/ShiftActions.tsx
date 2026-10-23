@@ -234,60 +234,62 @@ export function ShiftActions({
       </div>
 
       {!started && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setFlowOpen(true)}
-            className="font-medium text-neutralx-500 hover:text-brand-700"
+        <div className="space-y-3">
+          {/* Annuleringstermijn */}
+          <div
+            className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
+              stillFree ? "border-hair bg-paper-soft text-neutralx-600" : "border-warn/30 bg-warn/5 text-neutralx-700"
+            }`}
           >
-            Regel vervanging via ZekerFlex
-          </button>
-          <button
-            type="button"
-            onClick={() => setCancelOpen(true)}
-            className="font-medium text-neutralx-400 hover:text-crit"
-          >
-            Zeg deze klus af
-          </button>
-        </div>
-      )}
+            {stillFree ? (
+              <>
+                🕒 Gratis afzeggen kan nog tot <span className="font-semibold text-ink">{deadlineLabel}</span>. Daarna kan de
+                opdrachtgever tot 50% in rekening brengen.
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-warn">Binnen de opzegtermijn.</span> Afzeggen kan nog, maar de
+                opdrachtgever kan tot 50% van de dienst in rekening brengen. Kun je niet?{" "}
+                <span className="font-semibold text-ink">Regel kosteloos een vervanger</span> — dan heeft het geen gevolgen
+                voor je betrouwbaarheidsscore.
+              </>
+            )}
+          </div>
 
-      {!started && (
-        <div
-          className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-            stillFree ? "border-hair bg-paper-soft text-neutralx-600" : "border-warn/30 bg-warn/5 text-neutralx-700"
-          }`}
-        >
-          {stillFree ? (
-            <>
-              🕒 Gratis afzeggen kan nog tot <span className="font-semibold text-ink">{deadlineLabel}</span>. Daarna kan de
-              opdrachtgever tot 50% in rekening brengen.
-            </>
-          ) : (
-            <>
-              <span className="font-semibold text-warn">Binnen de opzegtermijn.</span> Afzeggen kan nog, maar de opdrachtgever
-              kan tot 50% van de dienst in rekening brengen. Kun je niet?{" "}
-              <span className="font-semibold text-ink">Regel kosteloos een vervanger</span> — dan heeft het geen gevolgen voor
-              je betrouwbaarheidsscore.
-            </>
-          )}
-        </div>
-      )}
+          {/* Extra info voor jou */}
+          <div className="rounded-lg border border-hairstrong bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
+            <p className="mb-1.5 text-sm font-semibold text-ink">Extra info voor jou</p>
+            <p>
+              <span className="font-semibold text-ink">Vergeet je ID-kaart niet</span> — je checkt op locatie in en uit via de
+              app.
+            </p>
+            <p className="mt-1.5">
+              De eindtijd is <span className="font-semibold text-ink">indicatief</span>: de klus kan eerder of later eindigen.
+              Alleen je <span className="font-semibold text-ink">daadwerkelijk gewerkte uren</span> worden uitbetaald, dus houd
+              hier rekening mee in je planning.
+            </p>
+          </div>
 
-      {!started && (
-        <details className="text-xs">
-          <summary className="cursor-pointer select-none font-medium text-neutralx-500 hover:text-brand-700">
-            Meer info voor jou
-          </summary>
-          <ul className="mt-2 list-disc space-y-1 pl-4 text-neutralx-600">
-            <li>Neem een geldig ID mee; je checkt op locatie in en uit via de app.</li>
-            <li>
-              Kun je niet? <span className="font-medium text-ink">Regel een vervanger via ZekerFlex</span> — kosteloos en zonder
-              gevolgen voor je score.
-            </li>
-            <li>Afzeggen binnen {NOTICE_HOURS} uur voor aanvang kan 50% kosten en telt mee in je betrouwbaarheidsscore.</li>
-          </ul>
-        </details>
+          {/* Acties — volle-breedte rijen */}
+          <div className="divide-y divide-hair border-y border-hair">
+            <button
+              type="button"
+              onClick={() => setFlowOpen(true)}
+              className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-brand-700"
+            >
+              Regel vervanging via ZekerFlex
+              <span className="text-neutralx-400" aria-hidden>›</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCancelOpen(true)}
+              className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-crit"
+            >
+              Zeg deze klus af
+              <span className="text-neutralx-400" aria-hidden>›</span>
+            </button>
+          </div>
+        </div>
       )}
 
       {flowOpen && (
