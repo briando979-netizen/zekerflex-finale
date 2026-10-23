@@ -2,8 +2,10 @@ import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
+import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
+import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
 import { getFiscal } from "@/lib/fiscal/store";
 import { isBirthdayToday } from "@/lib/birthday";
@@ -25,12 +27,14 @@ export default async function KlussenPage(
   const t = await getFreelancerDict();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
 
-  const [fiscal, today, completed] = await Promise.all([
+  const [fiscal, today, completed, overview] = await Promise.all([
     getFiscal(principal.userId),
     todaysShifts(principal.userId),
     completedKlussenCount(principal.userId),
+    getFreelancerOverview(principal.userId),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
+  const obDone = overview.onboarding.filter((s) => s.done).length;
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -55,6 +59,15 @@ export default async function KlussenPage(
         shifts={today}
         labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
       />
+      {!overview.profileComplete && (
+        <OnboardingProgress
+          done={obDone}
+          total={overview.onboarding.length}
+          title={t.greet.profileLabel}
+          cta={t.page.toVerification}
+          href="/dashboard/verificatie"
+        />
+      )}
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

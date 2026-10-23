@@ -3,6 +3,7 @@ import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { EmployerDashboardHero } from "@/components/app/EmployerDashboardHero";
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
+import { pendingEmployerReviews } from "@/lib/reviews/pending";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
 import { isTenantVerified } from "@/lib/company/verified";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
@@ -31,12 +32,13 @@ export default async function WerkgeverStartPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
-  const [kvkDone, extra, o, threads, companyVerified] = await Promise.all([
+  const [kvkDone, extra, o, threads, companyVerified, pendingReviews] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
     tenantId ? isTenantVerified(tenantId) : Promise.resolve(true),
+    pendingEmployerReviews(principal).catch(() => []),
   ]);
 
   const ob = extra.onboarding ?? {};
@@ -64,7 +66,7 @@ export default async function WerkgeverStartPage() {
 
   return (
     <>
-      <WelcomeBack name={principal.fullName} {...(greetSub ? { subtitle: greetSub } : {})} />
+      <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       <EmployerDashboardHero />
       {!companyVerified && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
@@ -121,6 +123,32 @@ export default async function WerkgeverStartPage() {
         <KpiCard label={t.start.kpiSpent} value={money(o.kpis.spentThisMonthCents)} tone="brand" />
         <KpiCard label={t.start.kpiActive} value={String(o.kpis.activeFreelancers)} hint={t.start.kpiActiveHint} />
       </div>
+
+      {pendingReviews.length > 0 && (
+        <div className="mt-8">
+          <Panel title={t.reviewPrompt.title}>
+            <p className="px-5 pt-4 text-sm text-neutralx-600">{t.reviewPrompt.body}</p>
+            <ul className="mt-2 divide-y divide-hair">
+              {pendingReviews.map((r) => (
+                <li key={`${r.shiftId}-${r.freelancerName}`}>
+                  <Link
+                    href={`/werkgever/diensten/${r.shiftId}`}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper-soft"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-ink">{r.freelancerName}</span>
+                      <span className="block truncate text-xs text-neutralx-500">{r.shiftTitle}</span>
+                    </span>
+                    <span className="flex-shrink-0 text-neutralx-400" aria-hidden>
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <Panel

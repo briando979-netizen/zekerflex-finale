@@ -691,6 +691,19 @@ const nl = {
     orderStatusCancelled: "Geannuleerd",
     orderStatusFailed: "Betaling mislukt",
   },
+
+  greet: {
+    morning: "Goedemorgen",
+    afternoon: "Goedemiddag",
+    evening: "Goedenavond",
+    firstVisit: "Welkom bij ZekerFlex",
+    back: "Welkom terug",
+    birthday: "Gefeliciteerd",
+  },
+  reviewPrompt: {
+    title: "Beoordeel je flexwerkers",
+    body: "Deze afgeronde klussen wachten nog op jouw beoordeling.",
+  },
 };
 
 export type Dict = typeof nl;
@@ -1380,6 +1393,19 @@ const en: Dict = {
     orderStatusShipped: "On its way",
     orderStatusCancelled: "Cancelled",
     orderStatusFailed: "Payment failed",
+  },
+
+  greet: {
+    morning: "Good morning",
+    afternoon: "Good afternoon",
+    evening: "Good evening",
+    firstVisit: "Welcome to ZekerFlex",
+    back: "Welcome back",
+    birthday: "Happy birthday",
+  },
+  reviewPrompt: {
+    title: "Rate your flex workers",
+    body: "These completed shifts are still waiting for your review.",
   },
 };
 

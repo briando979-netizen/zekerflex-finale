@@ -1,6 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { ControlCenter } from "@/components/admin/ControlCenter";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
+import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function AdminHomePage() {
       </main>
     );
   }
+  const t = await getDict();
   return (
     <>
-      <WelcomeBack name={principal.fullName} />
+      <WelcomeBack name={principal.fullName} labels={t.greet} />
       <ControlCenter />
     </>
   );

@@ -389,6 +389,7 @@ const nl = {
     todayAtPlace: "bij",
     milestoneFirst: "Je eerste klus is voltooid! 🎉",
     milestoneN: "klussen voltooid! 🎉",
+    profileLabel: "Rond je profiel af",
   },
 };
 
@@ -775,6 +776,7 @@ const en: FreelancerDict = {
     todayAtPlace: "at",
     milestoneFirst: "You completed your first shift! 🎉",
     milestoneN: "shifts completed! 🎉",
+    profileLabel: "Complete your profile",
   },
 };
 
@@ -1159,6 +1161,7 @@ const pl: FreelancerDict = {
     todayAtPlace: "w",
     milestoneFirst: "Ukończono pierwsze zlecenie! 🎉",
     milestoneN: "ukończonych zleceń! 🎉",
+    profileLabel: "Dokończ swój profil",
   },
 };
 
@@ -1543,6 +1546,7 @@ const ro: FreelancerDict = {
     todayAtPlace: "la",
     milestoneFirst: "Ai finalizat primul job! 🎉",
     milestoneN: "joburi finalizate! 🎉",
+    profileLabel: "Finalizează-ți profilul",
   },
 };
 
@@ -1927,6 +1931,7 @@ const uk: FreelancerDict = {
     todayAtPlace: "в",
     milestoneFirst: "Ви виконали першу зміну! 🎉",
     milestoneN: "виконаних змін! 🎉",
+    profileLabel: "Завершіть свій профіль",
   },
 };
 
