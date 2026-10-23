@@ -239,23 +239,27 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
     );
   }
 
-  // Zonder geldige assignment valt alleen de detaillink terug (zou niet moeten
-  // gebeuren voor een actieve klus).
+  // Geaccepteerde reactie zónder echte toewijzing: dit gebeurt wanneer het
+  // bedrijf nog niet geverifieerd is (reactie wordt bewaard, maar niemand wordt
+  // ingepland). De actieknoppen horen bij een toewijzing, dus die tonen we hier
+  // niet — wel een eerlijke status i.p.v. "Dit is jouw klus!".
   if (!item.assignmentId) {
+    const over = endMs < Date.now();
     return (
-      <Link
-        href={`/dashboard/klussen/${item.shift.id}`}
-        className="flex items-center justify-between rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink"
-      >
-        <span className="flex items-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          {w.yourJob}
-        </span>
-        <span aria-hidden>→</span>
-      </Link>
+      <div className="rounded-xl border border-hair bg-paper-soft px-4 py-3">
+        <p className="text-sm font-semibold text-ink">Je reactie is geaccepteerd 🎉</p>
+        <p className="mt-1 text-xs leading-relaxed text-neutralx-600">
+          {over
+            ? "Deze klus is inmiddels voorbij."
+            : "Je wordt ingepland zodra alles rond is (o.a. verificatie van de opdrachtgever). Daarna kun je hier je komst bevestigen, de klus in je agenda zetten of een vervanger regelen."}
+        </p>
+        <Link
+          href={`/dashboard/klussen/${item.shift.id}`}
+          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline"
+        >
+          Bekijk klus <span aria-hidden>›</span>
+        </Link>
+      </div>
     );
   }
 
