@@ -98,11 +98,11 @@ describe("two-step verification per user", () => {
     expect(await hasTwoFactor("u1")).toBe(false);
   });
 
-  it("login challenge expires after 5 minutes and can't be forged", () => {
+  it("login challenge expires after 10 minutes and can't be forged", () => {
     const t = Date.now();
     const c = mintLoginChallenge("Liam@Freelancer.nl", t);
-    expect(openLoginChallenge(c, t + 60_000)).toBe("liam@freelancer.nl");
-    expect(openLoginChallenge(c, t + 6 * 60_000)).toBeNull();
+    expect(openLoginChallenge(c, t + 6 * 60_000)).toBe("liam@freelancer.nl"); // still valid within 10 min
+    expect(openLoginChallenge(c, t + 11 * 60_000)).toBeNull();
     expect(openLoginChallenge(c.slice(0, -4) + "AAAA", t)).toBeNull();
     expect(openLoginChallenge("v1.nope.nope.nope", t)).toBeNull();
   });

@@ -111,7 +111,7 @@ export async function adminResetTwoFactor(targetUserId: string, adminUserId: str
 
 // ---- login challenge: proves the password step for 5 minutes ----------------
 const CHALLENGE = "2fa-login-challenge";
-const CHALLENGE_TTL_MS = 5 * 60_000;
+const CHALLENGE_TTL_MS = 10 * 60_000;
 
 export function mintLoginChallenge(email: string, now = Date.now()): string {
   return sealSecret(JSON.stringify({ email: email.toLowerCase(), exp: now + CHALLENGE_TTL_MS }), CHALLENGE);

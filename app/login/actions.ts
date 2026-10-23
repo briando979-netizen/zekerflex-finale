@@ -5,7 +5,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { signIn } from "@/lib/auth/nextauth";
-import { mintLoginChallenge } from "@/lib/auth/two-factor";
+import { mintLoginChallenge, openLoginChallenge } from "@/lib/auth/two-factor";
 
 const schema = z.object({
   email: z.string().email(),
@@ -22,7 +22,12 @@ export interface LoginState {
   email?: string;
 }
 
-const codeOf = (err: unknown) => (err as { code?: string }).code;
+// NextAuth v5 sometimes wraps the thrown CredentialsSignin; read the code from
+// the error itself or its cause so 2FA detection never silently fails.
+const codeOf = (err: unknown): string | undefined => {
+  const e = err as { code?: string; cause?: { err?: { code?: string } } };
+  return e?.code ?? e?.cause?.err?.code;
+};
 
 export async function loginAction(
   _prev: LoginState,
@@ -39,7 +44,12 @@ export async function loginAction(
       return { error: null };
     } catch (err) {
       if (err instanceof AuthError) {
-        return codeOf(err) === "2fa_invalid"
+        // Decide wrong-code vs expired from the challenge itself, not from the
+        // NextAuth error code (which doesn't always survive the wrapping). As
+        // long as the challenge is still valid we keep the 2FA form open so a
+        // mistyped code never bounces the user back to the password step.
+        const stillValid = openLoginChallenge(challenge) !== null;
+        return stillValid
           ? { error: "Die code klopt niet (of is al gebruikt). Probeer de nieuwste code uit je app.", needsCode: true, challenge, email }
           : { error: "Je inlogpoging is verlopen. Log opnieuw in." };
       }
