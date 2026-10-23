@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { sendUserPush } from "@/lib/notifications/push";
+import { notifyNearbyOpenShifts } from "@/lib/notifications/geo-push";
 
 // ---------------------------------------------------------------------------
 // Push notifications for werknemers (app + web). Each one is sent at most
@@ -122,12 +123,14 @@ async function profilePushes(now: Date): Promise<number> {
   return n;
 }
 
-export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number }> {
+export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number; geo: number }> {
   const [selected, reminders] = [await selectedPushes(now), await reminderPushes(now)];
   // the profile nudge only in daytime (09–20h Amsterdam)
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: TZ }).format(now));
   const profile = hour >= 9 && hour < 20 ? await profilePushes(now) : 0;
-  return { selected, reminders, profile };
+  // geo-targeted push for soon-starting, still-open shifts (daytime only)
+  const geo = hour >= 8 && hour < 21 ? await notifyNearbyOpenShifts(now).catch(() => 0) : 0;
+  return { selected, reminders, profile, geo };
 }
 
 /** Called from frequently-hit endpoints: runs the sweep at most once per 4 minutes. */
@@ -138,7 +141,7 @@ export async function maybeSweepWorkerPushes(): Promise<void> {
   await kvSet(key, new Date().toISOString());
   try {
     const r = await sweepWorkerPushes();
-    if (r.selected + r.reminders + r.profile > 0) logger.info("worker pushes sent", r);
+    if (r.selected + r.reminders + r.profile + r.geo > 0) logger.info("worker pushes sent", r);
   } catch (err) {
     logger.warn("worker push sweep failed", { error: (err as Error).message });
   }
