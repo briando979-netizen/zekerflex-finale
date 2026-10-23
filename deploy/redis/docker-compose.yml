@@ -1,0 +1,51 @@
+# Soevereine Redis voor ZekerFlex — vervangt Upstash (geen maandlimiet meer).
+#
+# Gebruikt Redis' eigen TLS: de live site (Vercel) verbindt via rediss:// met
+# een wachtwoord. Je hebt een domein (bv. redis.zekerflex.com) en een
+# Let's Encrypt-certificaat nodig (zie README: één certbot-commando).
+#
+#   cp .env.example .env            # vul REDIS_PASSWORD + REDIS_DOMAIN
+#   # haal certificaat op (README stap 2), dan:
+#   docker compose up -d
+#   # zet in Vercel: REDIS_URL=rediss://default:<wachtwoord>@<REDIS_DOMAIN>:6380
+
+services:
+  redis:
+    image: redis:7-bookworm
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --save
+      - "60"
+      - "1"
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 384mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --port
+      - "0"              # geen plain-text poort
+      - --tls-port
+      - "6380"
+      - --tls-cert-file
+      - /certs/fullchain.pem
+      - --tls-key-file
+      - /certs/privkey.pem
+      - --tls-auth-clients
+      - "no"             # client-auth via wachtwoord, niet via client-cert
+    ports:
+      - "6380:6380"
+    volumes:
+      - redis-data:/data
+      - ./certs:/certs:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "--tls", "--insecure", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis-data:
