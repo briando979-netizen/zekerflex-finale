@@ -50,11 +50,14 @@ function LanguageButton() {
 
 export function FreelancerShell({
   userName,
+  avatarUrl,
   theme,
   inApp = false,
   children,
 }: {
   userName: string;
+  /** Eigen profielfoto — toont in de Account-tab i.p.v. het poppetje-icoon. */
+  avatarUrl?: string | null;
   theme: Theme;
   /** Android app: no Bank tab (lib/app-mode.ts) */
   inApp?: boolean;
@@ -132,7 +135,18 @@ export function FreelancerShell({
                   }`}
                   title={ft.nav[t.key]}
                 >
-                  <span className="grid h-5 w-5 place-items-center">{t.icon}</span>
+                  <span className="grid h-5 w-5 place-items-center">
+                    {t.key === "account" && avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className={`h-5 w-5 rounded-full object-cover ${active ? "ring-2 ring-brand-500 ring-offset-1" : ""}`}
+                      />
+                    ) : (
+                      t.icon
+                    )}
+                  </span>
                   <span className={`max-w-full truncate whitespace-nowrap ${active ? "" : "lg:hidden"}`}>{ft.nav[t.key]}</span>
                 </Link>
               </li>

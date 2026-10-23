@@ -9,6 +9,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
+import { getUserAvatars } from "@/lib/profile/store";
+import { avatarUrlFor } from "@/lib/profile/card";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +22,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   const theme = await getTheme();
   const locale = await getLocale();
+  const avatars = await getUserAvatars([principal.userId]);
+  const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
     <I18nProvider locale={locale}>
       <ViewAsBanner role="freelancer" />
-      <FreelancerShell userName={principal.fullName} theme={theme} inApp={await inAndroidApp()}>
+      <FreelancerShell userName={principal.fullName} avatarUrl={avatarUrl} theme={theme} inApp={await inAndroidApp()}>
         <IbanHoldBanner userId={principal.userId} />
         {children}
         <ChatDock />
