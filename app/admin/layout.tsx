@@ -39,6 +39,7 @@ const NAV = [
   { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis", icon: <IChat />, section: "Operatie" },
   { href: "/admin/ai-teams", label: "AI-teams (live)", icon: <IActivity />, section: "Operatie" },
   { href: "/admin/verloning", label: "Wekelijkse verloning", icon: <IDoc />, section: "Operatie" },
+  { href: "/admin/pensioen", label: "Pensioenaangifte (StiPP)", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/fiscaal", label: "Werkvormen & btw", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/uitzendbureau", label: "Uitzendbureau", icon: <IBriefcase />, section: "Operatie" },
   { href: "/admin/sales", label: "Sales-pijplijn", icon: <IRocket />, section: "Operatie" },

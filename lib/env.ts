@@ -193,6 +193,12 @@ const schema = z.object({
   PIPER_BIN: z.string().optional(),
   PIPER_MODEL: z.string().optional(),
 
+  // StiPP-pensioenaangifte (UPA) voor de uitzendtak (lib/pensioen). Optioneel:
+  // zonder leverkanaal blijft de aangifte een downloadbare export.
+  STIPP_AANSLUITNUMMER: z.string().optional(),
+  STIPP_UPA_ENDPOINT: z.string().url().optional(),
+  STIPP_UPA_TOKEN: z.string().optional(),
+
   // Local RAG / total memory (Float[] embeddings + JS cosine; no pgvector).
   RAG_ENABLED: z
     .enum(["true", "false"])

@@ -5,7 +5,7 @@ vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => kv[k] ?? null,
   kvSet: async (k: string, v: unknown) => void (kv[k] = v),
 }));
-const alertOwner = vi.fn(async () => "sent" as const);
+const alertOwner = vi.fn(async (..._a: unknown[]) => "sent" as const);
 vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(...a) }));
 
 import { checkCronHeartbeats, cronHeartbeats, recordCronHeartbeat, WATCHED_CRONS } from "@/lib/ops/heartbeat";

@@ -53,6 +53,10 @@
     {
       "path": "/api/internal/autopilot/tick",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/internal/pensioen/aangifte",
+      "schedule": "0 7 1 * *"
     }
   ]
 }

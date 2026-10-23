@@ -38,6 +38,7 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bank-monthly-fees", label: "Bankkosten", maxAgeHours: 26 },
   { job: "worker-push-sweep", label: "Meldingen werknemers", maxAgeHours: 26 },
   { job: "autopilot", label: "Autopilot", maxAgeHours: 26 },
+  { job: "pensioen-aangifte", label: "StiPP-pensioenaangifte", maxAgeHours: 24 * 35 },
 ];
 
 interface Beat {
