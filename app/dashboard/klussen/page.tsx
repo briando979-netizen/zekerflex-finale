@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { StatusPill } from "@/components/app/ui";
@@ -21,6 +22,7 @@ export default async function KlussenPage(
 
   return (
     <>
+      <WelcomeBack name={principal.fullName} />
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

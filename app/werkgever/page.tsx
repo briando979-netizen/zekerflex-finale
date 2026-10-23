@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
@@ -50,6 +51,7 @@ export default async function WerkgeverStartPage() {
 
   return (
     <>
+      <WelcomeBack name={principal.fullName} />
       {!companyVerified && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">Je bedrijf is nog niet geverifieerd</p>

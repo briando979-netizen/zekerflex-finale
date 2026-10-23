@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { LeadWorkspace } from "@/components/sales/LeadWorkspace";
+import { getPrincipal } from "@/lib/auth";
+import { WelcomeBack } from "@/components/app/WelcomeBack";
 
 export const dynamic = "force-dynamic";
 
-export default function SalesPage() {
+export default async function SalesPage() {
+  const principal = await getPrincipal();
   return (
     <>
+      <WelcomeBack name={principal?.fullName} />
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-ink">Buitendienst</h1>
         <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
