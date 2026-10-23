@@ -92,18 +92,27 @@ export async function PUT(request: Request): Promise<NextResponse> {
       patch.vatValid = false;
     }
 
-    // Payroll worker → BSN (hashed only, never stored raw).
+    // Load the current profile first — needed both for the BSN-reuse check
+    // here and the IBAN-changed flag further down.
+    const before = await getFiscal(principal.userId);
+
+    // Payroll worker → BSN (hashed only, never stored raw). Switching TO
+    // uitzendkracht requires a BSN; someone who already has one on file
+    // (bsnHash) may re-save other fields — or switch away and back — without
+    // retyping it.
     if (input.workerKind === "uitzendkracht") {
-      if (!input.bsn) throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.");
-      if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet (elfproef mislukt).");
-      const { hash, last4 } = hashBsn(input.bsn);
-      patch.bsnHash = hash;
-      patch.bsnLast4 = last4;
+      if (input.bsn) {
+        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet (elfproef mislukt).");
+        const { hash, last4 } = hashBsn(input.bsn);
+        patch.bsnHash = hash;
+        patch.bsnLast4 = last4;
+      } else if (!before.bsnHash) {
+        throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.");
+      }
     }
 
     // A new rekeningnummer must be confirmed again (bank login / statement)
     // before payouts go to it — the old check proves nothing about it.
-    const before = await getFiscal(principal.userId);
     const saved = await setFiscal(principal.userId, patch);
     if (patch.iban && before.iban && before.iban !== patch.iban) {
       await flagIbanChanged(principal.userId).catch(() => undefined);

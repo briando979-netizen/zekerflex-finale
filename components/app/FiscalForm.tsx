@@ -64,10 +64,35 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
     }
   }
 
+  // Werkvorm wisselen: vergelijk de gekozen werkvorm met de opgeslagen werkvorm
+  // en bereken precies wat er nog ontbreekt voor de nieuwe keuze — zodat iemand
+  // die overstapt alléén de dingen hoeft in te vullen die écht nodig zijn.
+  const savedKind = initial.workerKind;
+  const kindLabel = KINDS.find((x) => x.k === kind)?.label ?? kind;
+  const savedLabel = KINDS.find((x) => x.k === savedKind)?.label ?? savedKind;
+  const switching = Boolean(savedKind) && kind !== savedKind;
+  const hasBsnOnFile = Boolean(initial.bsnHash);
+
+  const missing: string[] = [];
+  if (!iban.trim()) missing.push("een IBAN voor uitbetaling / verloning");
+  if (kind === "zzp" && !(vatNumber.trim() || (vatRequested && kvkNumber.trim()))) {
+    missing.push("je btw-nummer (of je KVK-nummer plus ‘btw aangevraagd’)");
+  }
+  if (kind === "flexwerker" && !(vatNumber.trim() || kor || vatRequested)) {
+    missing.push("een btw-nummer, óf vink de kleineondernemersregeling of ‘btw aangevraagd’ aan");
+  }
+  if (kind === "uitzendkracht" && !(hasBsnOnFile || bsn.trim())) {
+    missing.push("je BSN");
+  }
+
   return (
     <div className="space-y-6">
       <section className="card p-6">
         <h2 className="font-display text-lg font-semibold">1 · Wat is jouw werkvorm?</h2>
+        <p className="mt-1 text-sm text-neutralx-500">
+          Van gedachten veranderd? Kies gewoon een andere werkvorm — je kunt direct overstappen. Je andere gegevens blijven
+          bewaard; je vult alleen aan wat de nieuwe werkvorm nog nodig heeft.
+        </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {KINDS.map((o) => (
             <button
@@ -83,6 +108,30 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
             </button>
           ))}
         </div>
+        {switching && (
+          <div className="mt-4 rounded-xl border border-brand-300 bg-brand-50 p-4 text-sm">
+            <p className="font-semibold text-ink">
+              Je stapt over van {savedLabel} naar {kindLabel}.
+            </p>
+            {missing.length > 0 ? (
+              <>
+                <p className="mt-1 text-neutralx-700">Vul hieronder nog in:</p>
+                <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-neutralx-700">
+                  {missing.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-1 text-neutralx-700">
+                Je gegevens zijn al compleet voor deze werkvorm — klik op “Overstappen &amp; opslaan”.
+              </p>
+            )}
+            <p className="mt-2 text-xs text-neutralx-500">
+              Je oude gegevens worden niet gewist; je kunt later net zo makkelijk weer terug wisselen.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="card space-y-4 p-6">
@@ -133,8 +182,21 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
               Je hebt geen btw-nummer nodig. Je uren worden verloond via de payroll: je krijgt een loonstrook, er wordt
               loonheffing ingehouden en je bouwt vakantiegeld op. Je BSN wordt alleen versleuteld opgeslagen.
             </div>
-            <Field label="BSN" hint="9 cijfers — wordt gehasht opgeslagen, nooit als leesbaar nummer.">
-              <input value={bsn} onChange={(e) => setBsn(e.target.value)} inputMode="numeric" placeholder="123456782" className="field-input" />
+            <Field
+              label="BSN"
+              hint={
+                hasBsnOnFile
+                  ? `Al op bestand (••••${initial.bsnLast4}). Laat leeg om te behouden, of vul een nieuw BSN in.`
+                  : "9 cijfers — wordt gehasht opgeslagen, nooit als leesbaar nummer."
+              }
+            >
+              <input
+                value={bsn}
+                onChange={(e) => setBsn(e.target.value)}
+                inputMode="numeric"
+                placeholder={hasBsnOnFile ? "••••••••• (ongewijzigd)" : "123456782"}
+                className="field-input"
+              />
             </Field>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={lhk} onChange={(e) => setLhk(e.target.checked)} />
@@ -148,8 +210,12 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
         </Field>
       </section>
 
+      {!switching && missing.length > 0 && (
+        <p className="text-xs text-neutralx-500">Nog nodig om compleet te zijn: {missing.join(" · ")}</p>
+      )}
+
       <button type="button" onClick={submit} disabled={busy} className="btn-primary">
-        {busy ? "Opslaan & valideren…" : "Opslaan"}
+        {busy ? "Opslaan & valideren…" : switching ? "Overstappen & opslaan" : "Opslaan"}
       </button>
 
       {result && result.workerKind && (
