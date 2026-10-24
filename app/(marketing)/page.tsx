@@ -63,7 +63,7 @@ export default async function HomePage() {
       {/* ──────────────────────────────────────────────────────── TRUST BAND */}
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
         <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60">{t("trust.label")}</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60" data-cms-key="trust.label">{t("trust.label")}</span>
           {["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"].map(
             (t, i) => (
               <Reveal key={t} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75">
@@ -96,11 +96,11 @@ export default async function HomePage() {
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">{t("how.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+            <p className="eyebrow" data-cms-key="how.eyebrow">{t("how.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="how.title">
               {t("how.title")}
             </h2>
-            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
+            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600" data-cms-key="how.lead" data-cms-ml="1">
               {t("how.lead")}
             </p>
           </Reveal>
@@ -130,6 +130,7 @@ export default async function HomePage() {
 
       {/* ───────────────────────────────────────────── SPLIT · FREELANCERS */}
       <ShowcaseSplit
+        keys={{ eyebrow: "fl.eyebrow", title: "fl.title", body: "fl.body" }}
         eyebrow={t("fl.eyebrow")}
         title={t("fl.title")}
         body={t("fl.body")}
@@ -148,6 +149,7 @@ export default async function HomePage() {
       <ShowcaseSplit
         reverse
         tone="ink"
+        keys={{ eyebrow: "emp.eyebrow", title: "emp.title", body: "emp.body" }}
         eyebrow={t("emp.eyebrow")}
         title={t("emp.title")}
         body={t("emp.body")}
@@ -166,8 +168,8 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">{t("work.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+            <p className="eyebrow" data-cms-key="work.eyebrow">{t("work.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="work.title">
               {t("work.title")}
             </h2>
             <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
@@ -249,8 +251,8 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">{t("feat.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
+            <p className="eyebrow" data-cms-key="feat.eyebrow">{t("feat.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="feat.title">
               {t("feat.title")}
             </h2>
           </Reveal>
@@ -272,11 +274,11 @@ export default async function HomePage() {
       <section className="relative bg-paper">
         <div className="shell-4k grid gap-16 py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
           <Reveal>
-            <p className="eyebrow">{t("comp.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 text-balance font-display font-bold">
+            <p className="eyebrow" data-cms-key="comp.eyebrow">{t("comp.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 text-balance font-display font-bold" data-cms-key="comp.title">
               {t("comp.title")}
             </h2>
-            <p className="fluid-lead mt-5 text-neutralx-600">
+            <p className="fluid-lead mt-5 text-neutralx-600" data-cms-key="comp.lead" data-cms-ml="1">
               {t("comp.lead")}
             </p>
           </Reveal>
@@ -300,9 +302,9 @@ export default async function HomePage() {
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
-                &ldquo;{t("quote.text")}&rdquo;
+                &ldquo;<span data-cms-key="quote.text" data-cms-ml="1">{t("quote.text")}</span>&rdquo;
               </blockquote>
-              <figcaption className="mt-8 text-sm text-white/50">
+              <figcaption className="mt-8 text-sm text-white/50" data-cms-key="quote.author">
                 {t("quote.author")}
               </figcaption>
             </figure>
@@ -314,8 +316,8 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k grid gap-14 py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
           <Reveal>
-            <p className="eyebrow">{t("faq.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 font-display font-bold">{t("faq.title")}</h2>
+            <p className="eyebrow" data-cms-key="faq.eyebrow">{t("faq.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 font-display font-bold" data-cms-key="faq.title">{t("faq.title")}</h2>
           </Reveal>
           <Reveal delay={120}>
             <FaqList items={FAQ} />
@@ -332,16 +334,16 @@ export default async function HomePage() {
         <div className="shell-4k relative py-28 lg:py-36">
           <Reveal className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <h2 className="fluid-h2 text-balance font-display font-bold">{t("cta.title")}</h2>
-              <p className="fluid-lead mt-4 text-white/65">
+              <h2 className="fluid-h2 text-balance font-display font-bold" data-cms-key="cta.title">{t("cta.title")}</h2>
+              <p className="fluid-lead mt-4 text-white/65" data-cms-key="cta.lead" data-cms-ml="1">
                 {t("cta.lead")}
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
-              <Link href="/register" className="btn-mint text-base">
+              <Link href="/register" className="btn-mint text-base" data-cms-key="cta.primary">
                 {t("cta.primary")}
               </Link>
-              <Link href="/prijzen" className="btn-ghost-invert text-base">
+              <Link href="/prijzen" className="btn-ghost-invert text-base" data-cms-key="cta.secondary">
                 {t("cta.secondary")}
               </Link>
             </div>
@@ -364,6 +366,7 @@ function ShowcaseSplit({
   photo,
   reverse = false,
   tone = "paper",
+  keys,
 }: {
   eyebrow: string;
   title: string;
@@ -374,6 +377,7 @@ function ShowcaseSplit({
   photo: ReactNode;
   reverse?: boolean;
   tone?: "paper" | "ink";
+  keys?: { eyebrow: string; title: string; body: string };
 }) {
   const dark = tone === "ink";
   return (
@@ -385,9 +389,9 @@ function ShowcaseSplit({
         }`}
       >
         <Reveal className={reverse ? "lg:order-2" : ""}>
-          <p className={`eyebrow ${dark ? "text-brand-mint" : ""}`}>{eyebrow}</p>
-          <h2 className="fluid-h2 mt-4 text-balance font-display font-bold">{title}</h2>
-          <p className={`fluid-lead mt-5 max-w-xl ${dark ? "text-white/65" : "text-neutralx-600"}`}>{body}</p>
+          <p className={`eyebrow ${dark ? "text-brand-mint" : ""}`} data-cms-key={keys?.eyebrow}>{eyebrow}</p>
+          <h2 className="fluid-h2 mt-4 text-balance font-display font-bold" data-cms-key={keys?.title}>{title}</h2>
+          <p className={`fluid-lead mt-5 max-w-xl ${dark ? "text-white/65" : "text-neutralx-600"}`} data-cms-key={keys?.body} data-cms-ml="1">{body}</p>
           <ul className="mt-8 space-y-3.5">
             {points.map((p) => (
               <li key={p} className={`flex gap-3 text-[1.02rem] ${dark ? "text-white/75" : "text-neutralx-600"}`}>

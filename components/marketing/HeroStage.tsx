@@ -70,20 +70,20 @@ export function HeroStage({
       <div className="aurora" aria-hidden />
       <div className="shell-4k relative grid min-h-[92vh] items-center gap-16 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-28 2xl:min-h-[88vh]">
         <div className="reveal" data-shown="true">
-          <p className="eyebrow text-brand-mint">{c.eyebrow}</p>
+          <p className="eyebrow text-brand-mint" data-cms-key="hero.eyebrow">{c.eyebrow}</p>
           <h1 className="fluid-hero mt-5 text-balance font-display font-bold">
-            {c.titleLine1}
+            <span data-cms-key="hero.titleLine1">{c.titleLine1}</span>
             <br />
-            <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent" data-cms-key="hero.titleLine2">
               {c.titleLine2}
             </span>
           </h1>
-          <p className="fluid-lead mt-7 max-w-xl text-white/70">{c.lead}</p>
+          <p className="fluid-lead mt-7 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/register" className="btn-mint text-base">
+            <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
               {c.ctaPrimary}
             </Link>
-            <Link href="/voor-bedrijven" className="btn-ghost-invert text-base">
+            <Link href="/voor-bedrijven" className="btn-ghost-invert text-base" data-cms-key="hero.ctaSecondary">
               {c.ctaSecondary}
             </Link>
             <Link href="/shop" className="btn-ghost-invert text-base">
