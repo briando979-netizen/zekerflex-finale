@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { APageHeader } from "@/components/admin/ui";
 import { BrandingEditor } from "@/components/admin/BrandingEditor";
+import { ContentEditor } from "@/components/admin/ContentEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function AdminHuisstijlPage() {
 
       <div className="mt-4 space-y-6">
         <BrandingEditor />
+
+        <ContentEditor />
 
         <div className="rounded-xl p-4" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
           <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Foto&apos;s &amp; beeld</p>

@@ -13,6 +13,7 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
+import { getContentMap } from "@/lib/content/store";
 
 const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
 const DESCRIPTION =
@@ -25,7 +26,15 @@ export const metadata: Metadata = {
   ...canonical("/", { title: TITLE, description: DESCRIPTION }),
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const h = await getContentMap([
+    "hero.eyebrow",
+    "hero.titleLine1",
+    "hero.titleLine2",
+    "hero.lead",
+    "hero.ctaPrimary",
+    "hero.ctaSecondary",
+  ]);
   return (
     <>
       <script
@@ -37,6 +46,14 @@ export default function HomePage() {
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}
       <HeroStage
+        content={{
+          eyebrow: h["hero.eyebrow"],
+          titleLine1: h["hero.titleLine1"],
+          titleLine2: h["hero.titleLine2"],
+          lead: h["hero.lead"],
+          ctaPrimary: h["hero.ctaPrimary"],
+          ctaSecondary: h["hero.ctaSecondary"],
+        }}
         photo={
           <Photo
             name="hero"
