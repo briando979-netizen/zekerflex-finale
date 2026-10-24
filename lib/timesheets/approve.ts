@@ -36,6 +36,7 @@ import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
+import { sendUserPush } from "@/lib/notifications/push";
 import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
 import { recipientsFor } from "@/lib/billing/reminders";
 import type { ComputedInvoice } from "@/types/billing";
@@ -82,6 +83,25 @@ export interface ApproveTimesheetResult {
 }
 
 const MINUTE_MS = 60_000;
+
+/**
+ * Een goedkeuring/uitbetaling kan geblokkeerd worden doordat het profiel van de
+ * freelancer niet compleet is (geen/ongeldig/onbevestigd rekeningnummer). De
+ * werkgever ziet de melding al; dit laat de freelancer zélf weten dat hij z'n
+ * profiel moet aanvullen. Best effort — nooit blokkerend.
+ */
+async function notifyFreelancerProfileIncomplete(userId: string, detail: string): Promise<void> {
+  try {
+    await sendUserPush([userId], {
+      title: "Vul je gegevens aan om uitbetaald te worden",
+      body: `Je uren kunnen nog niet goedgekeurd en uitbetaald worden: ${detail} Vul je profiel 100% in (o.a. je bankrekening/IBAN).`.slice(0, 180),
+      data: { type: "PROFILE", url: "/dashboard/profiel", tag: "payout-incomplete" },
+      ttlSeconds: 7 * 24 * 3600,
+    });
+  } catch {
+    /* best effort */
+  }
+}
 
 function computeBillableMinutes(t: {
   actualStart: Date | null;
@@ -206,16 +226,23 @@ export async function approveTimesheet(
       ? (await personalAccount(ts.freelancer.userId, ts.freelancer.user.fullName)).number
       : ts.freelancer.payoutIban;
     if (!toBank && (!iban || !isValidIban(iban))) {
-      throw AppError.precondition("Freelancer has no valid payout IBAN on file");
+      await notifyFreelancerProfileIncomplete(ts.freelancer.userId, "er staat nog geen geldig rekeningnummer (IBAN) op je profiel.");
+      throw AppError.precondition(
+        "De freelancer heeft nog geen geldig rekeningnummer (IBAN) ingevuld — de uren kunnen pas goedgekeurd en uitbetaald worden zodra het profiel 100% compleet is. De freelancer heeft hierover een melding gekregen.",
+      );
     }
-    if (!iban) throw AppError.precondition("Freelancer has no payout destination");
+    if (!iban) {
+      await notifyFreelancerProfileIncomplete(ts.freelancer.userId, "er is nog geen uitbetaalbestemming op je profiel ingesteld.");
+      throw AppError.precondition("De freelancer heeft nog geen uitbetaalbestemming ingesteld. De freelancer heeft hierover een melding gekregen.");
+    }
     // The freelancer recently changed their IBAN and hasn't re-verified it
     // with a fresh bank document yet (lib/compliance/documents.ts) — hold
     // the payout rather than silently sending money to a newly-added,
     // unverified account (e.g. after an account takeover).
     if (!toBank && ts.freelancer.payoutIbanPendingVerification) {
+      await notifyFreelancerProfileIncomplete(ts.freelancer.userId, "je rekeningnummer is recent gewijzigd en nog niet geverifieerd.");
       throw AppError.precondition(
-        "Rekeningnummer is recent gewijzigd en nog niet geverifieerd — freelancer moet een bankafschrift uploaden voordat uitbetaald kan worden.",
+        "Rekeningnummer is recent gewijzigd en nog niet geverifieerd — de freelancer moet een bankafschrift uploaden voordat uitbetaald kan worden. De freelancer heeft hierover een melding gekregen.",
       );
     }
 
