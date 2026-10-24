@@ -37,6 +37,15 @@ export function AdminShell({
   const [clock, setClock] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("zf-admin-sections") || "{}");
+      if (saved && typeof saved === "object") setOpenSections(saved as Record<string, boolean>);
+    } catch {
+      /* geen opgeslagen voorkeur */
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -70,6 +79,14 @@ export function AdminShell({
   const isActive = (href: string) =>
     pathname === href || (href !== "/admin" && pathname.startsWith(href + "/"));
   const current = nav.find((n) => isActive(n.href));
+  const defaultOpen = (s: string) => s === "Hoofd" || s === current?.section;
+  const sectionOpen = (s: string | null) => !s || collapsed || (openSections[s] ?? defaultOpen(s));
+  const toggleSection = (s: string) =>
+    setOpenSections((prev) => {
+      const next = { ...prev, [s]: !(prev[s] ?? defaultOpen(s)) };
+      try { localStorage.setItem("zf-admin-sections", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
 
   const groups: { section: string | null; items: AdminNavItem[] }[] = [];
   for (const item of nav) {
@@ -210,11 +227,18 @@ export function AdminShell({
               {groups.map((g, gi) => (
                 <div key={gi} className="space-y-1">
                   {g.section && !collapsed && (
-                    <p className="px-3 pb-1 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--a-mute)" }}>
-                      {g.section}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(g.section!)}
+                      className="flex w-full items-center justify-between px-3 pb-1 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em]"
+                      style={{ color: "var(--a-mute)" }}
+                      aria-expanded={sectionOpen(g.section)}
+                    >
+                      <span>{g.section}</span>
+                      <span className={`transition-transform ${sectionOpen(g.section) ? "" : "-rotate-90"}`} aria-hidden>▾</span>
+                    </button>
                   )}
-                  {g.items.map((n) => {
+                  {sectionOpen(g.section) && g.items.map((n) => {
                     const active = isActive(n.href);
                     return (
                       <Link
