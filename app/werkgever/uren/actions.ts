@@ -43,7 +43,11 @@ export async function approveTimesheetAction(
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Goedkeuren mislukt. Probeer het opnieuw." };
+    // Toon de echte oorzaak i.p.v. een generieke tekst, zodat een
+    // onverwachte fout (bv. een wegvallende dienst) meteen zichtbaar is.
+    console.error("approveTimesheetAction failed", err);
+    const reason = err instanceof Error ? err.message : "onbekende fout";
+    return { ok: false, message: `Goedkeuren mislukt: ${reason}`.slice(0, 180) };
   }
 }
 
