@@ -29,14 +29,29 @@ export async function acquireLock(
   ttlMs: number,
 ): Promise<(() => Promise<void>) | null> {
   const token = crypto.randomUUID();
-  const ok = await redis.set(`lock:${key}`, token, "PX", ttlMs, "NX");
+  let ok: string | null;
+  try {
+    ok = await redis.set(`lock:${key}`, token, "PX", ttlMs, "NX");
+  } catch (err) {
+    // Redis onbereikbaar of over quota: faal OPEN. Deze lock is een extra
+    // waarborg tegen gelijktijdig dubbel uitvoeren; de aanroepers hebben zelf
+    // een status-guard (bijv. timesheet SUBMITTED→APPROVED), dus een kapotte
+    // Redis mag een goedkeuring/uitbetaling niet volledig blokkeren — net als
+    // bij de login-lockout die open faalt wanneer Redis wegvalt.
+    console.warn(`acquireLock: Redis niet beschikbaar voor "${key}", ga door zonder lock:`, (err as Error).message);
+    return async () => {};
+  }
   if (ok !== "OK") return null;
 
   return async () => {
     // Only release the lock if we still own it (compare-and-delete).
     const script =
       "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-    await redis.eval(script, 1, `lock:${key}`, token);
+    try {
+      await redis.eval(script, 1, `lock:${key}`, token);
+    } catch {
+      // Lock verloopt vanzelf via TTL; een fout bij vrijgeven mag niets breken.
+    }
   };
 }
 
