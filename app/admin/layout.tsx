@@ -28,6 +28,7 @@ const NAV = [
   { href: "/admin", label: "Controlecentrum", icon: <IGrid />, section: "Hoofd" },
   { href: "/admin/te-doen", label: "✅ Te doen voor jou", icon: <IGrid />, section: "Hoofd" },
   { href: "/admin/beheer", label: "⚙️ Beheer (alles instellen)", icon: <IGrid />, section: "Hoofd" },
+  { href: "/admin/huisstijl", label: "🎨 Huisstijl", icon: <IImage />, section: "Hoofd" },
   { href: "/admin/cockpit", label: "Cockpit (omzet live)", icon: <IPulse />, section: "Hoofd" },
   { href: "/admin/kantoor", label: "Live kantoor", icon: <IActivity />, section: "Hoofd" },
   { href: "/admin/agenda", label: "Agenda", icon: <ICalendar />, section: "Hoofd" },

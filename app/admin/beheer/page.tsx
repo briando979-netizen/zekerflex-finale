@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 // Eén centrale plek om alle instelbare knoppen van ZekerFlex te beheren zonder
 // code: verwijzingen naar elk control-paneel + de Issuing-regels inline.
 const CARDS: { title: string; desc: string; href: string }[] = [
+  { title: "Huisstijl (kleuren & beeld)", desc: "Pas de merkkleuren (primair + accent) live aan en beheer de foto's/het logo via de Studio — zonder code.", href: "/admin/huisstijl" },
   { title: "Financiën & tarieven", desc: "Je marge, btw-positie, reserveringen + instelbare tarieven (Stripe %, btw, belasting, maandlasten, uitzendopslag).", href: "/admin/financien" },
   { title: "Functies aan/uit (feature-flags)", desc: "Zet functies live of uit zonder redeploy, met gefaseerde uitrol.", href: "/admin/systeem" },
   { title: "Systeem & geplande taken", desc: "Status van de crons (heartbeat), achtergrondtaken en systeemchecks.", href: "/admin/systeem" },

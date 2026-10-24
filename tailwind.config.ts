@@ -25,13 +25,16 @@ const config: Config = {
           200: "#E9EAE3",
         },
         brand: {
-          50: "#E7F5F0",
-          100: "#C6E9DE",
-          300: "#5FC7A8",
-          500: "#0E5C4A",
-          600: "#0A4B3C",
-          700: "#083A2F",
-          mint: "#4FE0A0",
+          // CSS-variabelen i.p.v. vaste hex, zodat de huisstijl runtime
+          // instelbaar is (Admin → Huisstijl). Standaarden in globals.css
+          // zijn identiek aan de oude hex, dus de look verandert niet.
+          50: "rgb(var(--brand-50-rgb) / <alpha-value>)",
+          100: "rgb(var(--brand-100-rgb) / <alpha-value>)",
+          300: "rgb(var(--brand-300-rgb) / <alpha-value>)",
+          500: "rgb(var(--brand-500-rgb) / <alpha-value>)",
+          600: "rgb(var(--brand-600-rgb) / <alpha-value>)",
+          700: "rgb(var(--brand-700-rgb) / <alpha-value>)",
+          mint: "rgb(var(--brand-mint-rgb) / <alpha-value>)",
         },
         neutralx: {
           // 400 is muted/metadata text — darkened from #8A93A0 to clear WCAG

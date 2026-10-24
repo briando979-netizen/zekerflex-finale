@@ -10,6 +10,7 @@ import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { Providers } from "@/components/ui/Providers";
 import { CookieConsent } from "@/components/marketing/CookieConsent";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
+import { getBranding, brandingCssVars } from "@/lib/branding/settings";
 
 const TITLE = `${SITE.name} — ${SITE.tagline}`;
 
@@ -90,9 +91,17 @@ export default async function RootLayout({
   // statically prerendered page can't carry a fresh nonce on its inline
   // bootstrap scripts and the strict CSP would then block them.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  // Runtime huisstijl: overschrijf de merkkleur-variabelen als de eigenaar ze
+  // heeft aangepast (Admin → Huisstijl). Staat alles op standaard → null → geen
+  // injectie, dus identieke look.
+  const brandingCss = brandingCssVars(await getBranding().catch(() => ({ primaryHex: "#0E5C4A", mintHex: "#4FE0A0" })));
   return (
     <html lang={await getLocale()} className={fontVariables}>
       <body>
+        {brandingCss && (
+          // eslint-disable-next-line react/no-danger
+          <style nonce={nonce} dangerouslySetInnerHTML={{ __html: brandingCss }} />
+        )}
         <script
           type="application/ld+json"
           nonce={nonce}
