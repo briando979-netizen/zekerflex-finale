@@ -43,6 +43,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [app, setApp] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +127,23 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
     }
   }, []);
 
+  const sendTest = useCallback(async () => {
+    setTestMsg("Versturen…");
+    try {
+      const r = await fetch("/api/me/push/test", { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      setTestMsg(
+        r.ok
+          ? d.delivered > 0
+            ? `Verstuurd naar ${d.delivered} apparaat/apparaten — zet de app op de achtergrond om 'm te zien.`
+            : "Geen aangemelde apparaten gevonden. Zet meldingen op dit apparaat eerst aan."
+          : "Versturen mislukt.",
+      );
+    } catch {
+      setTestMsg("Versturen mislukt.");
+    }
+  }, []);
+
   const dismiss = () => {
     setDismissed(true);
     try {
@@ -195,6 +213,18 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
           </button>
         )}
       </div>
+      {state === "on" && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-hair pt-3">
+          <button
+            type="button"
+            onClick={sendTest}
+            className="rounded-lg border border-hairstrong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-paper-soft"
+          >
+            Stuur test-melding
+          </button>
+          {testMsg && <span className="text-xs text-neutralx-500">{testMsg}</span>}
+        </div>
+      )}
       {state === "denied" && (
         <p className="mt-2 text-xs text-neutralx-500">
           {app
