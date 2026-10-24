@@ -10,9 +10,7 @@ export const dynamic = "force-dynamic";
 const CARDS: { title: string; desc: string; href: string }[] = [
   { title: "Huisstijl (kleuren & beeld)", desc: "Pas de merkkleuren (primair + accent) live aan en beheer de foto's/het logo via de Studio — zonder code.", href: "/admin/huisstijl" },
   { title: "Financiën & tarieven", desc: "Je marge, btw-positie, reserveringen + instelbare tarieven (Stripe %, btw, belasting, maandlasten, uitzendopslag).", href: "/admin/financien" },
-  { title: "Functies aan/uit (feature-flags)", desc: "Zet functies live of uit zonder redeploy, met gefaseerde uitrol.", href: "/admin/systeem" },
-  { title: "Systeem & geplande taken", desc: "Status van de crons (heartbeat), achtergrondtaken en systeemchecks.", href: "/admin/systeem" },
-  { title: "AI-functies & brein", desc: "AI-features, taalmodel/node-status en RAG.", href: "/admin/systeem" },
+  { title: "Systeem, functies & AI", desc: "Functies aan/uit (feature-flags) zonder redeploy, crons/achtergrondtaken, systeemchecks én de AI-/brein- en node-status — alles op één plek.", href: "/admin/systeem" },
   { title: "Autopilot", desc: "Laat de AI zelf reminders, rematch en rapportage doen — binnen harde grenzen.", href: "/admin/autopilot" },
   { title: "ZekerFlex Bank — maandkosten", desc: "Maandelijkse bankkosten voor personen en organisaties.", href: "/admin/bank" },
   { title: "Werkvormen & btw", desc: "ZZP / flexwerker / uitzendkracht en btw-afhandeling per gebruiker.", href: "/admin/fiscaal" },
