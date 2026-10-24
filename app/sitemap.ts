@@ -31,6 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Open klussen (Google for Jobs) + per-city landing pages
     entry("/klussen", 0.9, "hourly"),
+    entry("/open-diensten", 0.8, "hourly"),
     entry("/freelance-werk", 0.9, "daily"),
     entry("/personeel-inhuren", 0.8, "weekly"),
     ...CITIES.map((c) => entry(`/freelance-werk/${c.slug}`, 0.8, "daily")),
