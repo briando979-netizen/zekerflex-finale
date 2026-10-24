@@ -226,9 +226,12 @@ export async function requestCard(input: {
         allowFrozen: true,
       }).catch((e) => logger.error("card fee refund failed", { accountId: account.id, error: (e as Error).message }));
     }
-    const message = (err as { message?: string }).message ?? "onbekende fout";
-    logger.warn("issuing card creation failed", { accountId: account.id, error: message });
-    throw AppError.upstream(`Stripe kon de pas niet aanmaken: ${message}`);
+    const raw = (err as { message?: string }).message ?? "onbekende fout";
+    logger.warn("issuing card creation failed", { accountId: account.id, error: raw });
+    const friendly = /test ?mode/i.test(raw)
+      ? "Betaalpassen kunnen nog niet live worden uitgegeven: Stripe Issuing staat voor dit account alleen in testmodus aan. Activeer live Issuing in je Stripe-dashboard (Issuing → activeren) en probeer het daarna opnieuw."
+      : `Stripe kon de pas niet aanmaken: ${raw}`;
+    throw AppError.upstream(friendly);
   }
 }
 
