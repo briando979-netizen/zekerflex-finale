@@ -6,6 +6,7 @@ interface Item {
   key: string;
   label: string;
   default: string;
+  group?: string;
   multiline?: boolean;
 }
 
@@ -63,8 +64,19 @@ export function ContentEditor() {
         oorspronkelijke tekst terug. Wijzigingen zijn direct live na opslaan.
       </p>
 
-      <div className="space-y-5">
-        {registry.map((item) => {
+      <div className="space-y-6">
+        {groupBy(registry).map(([group, items]) => (
+          <details key={group} open className="rounded-lg" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)" }}>
+            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold" style={{ color: "var(--a-text)" }}>
+              {group}
+              {items.some((i) => (values[i.key] ?? i.default) !== i.default) && (
+                <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(52,211,153,0.15)", color: "#34d399" }}>
+                  aangepast
+                </span>
+              )}
+            </summary>
+            <div className="space-y-5 px-3 pb-4 pt-1">
+              {items.map((item) => {
           const current = draft[item.key] ?? "";
           const isOverridden = (values[item.key] ?? item.default) !== item.default;
           const dirty = current !== (values[item.key] ?? item.default);
@@ -126,8 +138,25 @@ export function ContentEditor() {
               </div>
             </div>
           );
-        })}
+              })}
+            </div>
+          </details>
+        ))}
       </div>
     </div>
   );
+}
+
+function groupBy(items: Item[]): [string, Item[]][] {
+  const order: string[] = [];
+  const map = new Map<string, Item[]>();
+  for (const it of items) {
+    const g = it.group ?? "Overig";
+    if (!map.has(g)) {
+      map.set(g, []);
+      order.push(g);
+    }
+    map.get(g)!.push(it);
+  }
+  return order.map((g) => [g, map.get(g)!]);
 }

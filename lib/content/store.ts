@@ -11,22 +11,77 @@ export interface ContentItem {
   key: string;
   label: string;
   default: string;
+  group?: string;
   multiline?: boolean;
 }
 
 export const CONTENT_REGISTRY: ContentItem[] = [
-  { key: "hero.eyebrow", label: "Homepage hero — bovenregel", default: "Nederlands · onafhankelijk · lokaal gehost" },
-  { key: "hero.titleLine1", label: "Homepage hero — titel regel 1", default: "Zeker van je werk." },
-  { key: "hero.titleLine2", label: "Homepage hero — titel regel 2 (accent)", default: "Zeker van je mensen." },
+  // ─────────────────────────────────────────────────────────── Hero
+  { key: "hero.eyebrow", group: "Homepage — hero", label: "Bovenregel", default: "Nederlands · onafhankelijk · lokaal gehost" },
+  { key: "hero.titleLine1", group: "Homepage — hero", label: "Titel regel 1", default: "Zeker van je werk." },
+  { key: "hero.titleLine2", group: "Homepage — hero", label: "Titel regel 2 (accent)", default: "Zeker van je mensen." },
   {
     key: "hero.lead",
-    label: "Homepage hero — introtekst",
+    group: "Homepage — hero",
+    label: "Introtekst",
     default:
       "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met de optie om dezelfde dag uitbetaald te worden, en volledig Wet DBA-proof — zonder tussenpartijen.",
     multiline: true,
   },
-  { key: "hero.ctaPrimary", label: "Homepage hero — knop 1 (werk zoeken)", default: "Ik zoek werk" },
-  { key: "hero.ctaSecondary", label: "Homepage hero — knop 2 (mensen zoeken)", default: "Ik zoek mensen" },
+  { key: "hero.ctaPrimary", group: "Homepage — hero", label: "Knop 1 (werk zoeken)", default: "Ik zoek werk" },
+  { key: "hero.ctaSecondary", group: "Homepage — hero", label: "Knop 2 (mensen zoeken)", default: "Ik zoek mensen" },
+
+  // ─────────────────────────────────────────────────────────── Trust band
+  { key: "trust.label", group: "Homepage — vertrouwensbalk", label: "Label", default: "Gebouwd op" },
+
+  // ─────────────────────────────────────────────────────────── Hoe het werkt
+  { key: "how.eyebrow", group: "Homepage — hoe het werkt", label: "Bovenregel", default: "Hoe het werkt" },
+  { key: "how.title", group: "Homepage — hoe het werkt", label: "Titel", default: "Van aanmelding tot uitbetaling in drie stappen" },
+  { key: "how.lead", group: "Homepage — hoe het werkt", label: "Introtekst", default: "Geen mailwisselingen, geen losse facturen, geen wachten op je geld.", multiline: true },
+
+  // ─────────────────────────────────────────────────────────── Split: freelancers
+  { key: "fl.eyebrow", group: "Homepage — blok freelancers", label: "Bovenregel", default: "Voor freelancers" },
+  { key: "fl.title", group: "Homepage — blok freelancers", label: "Titel", default: "Werk dat bij je past. Geld dat op tijd komt." },
+  { key: "fl.body", group: "Homepage — blok freelancers", label: "Introtekst", default: "Jij levert vakmanschap. Wij regelen de match, de overeenkomst, de factuur en de uitbetaling.", multiline: true },
+
+  // ─────────────────────────────────────────────────────────── Split: bedrijven
+  { key: "emp.eyebrow", group: "Homepage — blok bedrijven", label: "Bovenregel", default: "Voor bedrijven" },
+  { key: "emp.title", group: "Homepage — blok bedrijven", label: "Titel", default: "Betrouwbare mensen, precies wanneer je ze nodig hebt." },
+  { key: "emp.body", group: "Homepage — blok bedrijven", label: "Introtekst", default: "Zet een dienst uit en ZekerFlex regelt de rest: match, overeenkomst, check-in, facturatie en compliance.", multiline: true },
+
+  // ─────────────────────────────────────────────────────────── Drie werkvormen
+  { key: "work.eyebrow", group: "Homepage — drie werkvormen", label: "Bovenregel", default: "Drie manieren om te werken" },
+  { key: "work.title", group: "Homepage — drie werkvormen", label: "Titel", default: "Zzp'er, flexwerker — of via ons uitzendbureau" },
+
+  // ─────────────────────────────────────────────────────────── Features
+  { key: "feat.eyebrow", group: "Homepage — het platform", label: "Bovenregel", default: "Het platform" },
+  { key: "feat.title", group: "Homepage — het platform", label: "Titel", default: "Alles wat flexibel werk betrouwbaar maakt, in één systeem" },
+
+  // ─────────────────────────────────────────────────────────── Compliance
+  { key: "comp.eyebrow", group: "Homepage — compliance", label: "Bovenregel", default: "Zeker zit het goed" },
+  { key: "comp.title", group: "Homepage — compliance", label: "Titel", default: "Compliance is geen bijzaak — het zit in de kern" },
+  { key: "comp.lead", group: "Homepage — compliance", label: "Introtekst", default: "ZekerFlex controleert doorlopend of een samenwerking binnen de regels blijft, en grijpt in vóór het misgaat.", multiline: true },
+
+  // ─────────────────────────────────────────────────────────── Testimonial
+  {
+    key: "quote.text",
+    group: "Homepage — quote",
+    label: "Citaat",
+    default:
+      "Ik plaats 's ochtends een dienst en heb binnen tien minuten een bekende kracht die komt. De uren keur ik 's avonds goed, de factuur staat er automatisch. Zo hoort het.",
+    multiline: true,
+  },
+  { key: "quote.author", group: "Homepage — quote", label: "Naam / functie", default: "Merel — vestigingsmanager, supermarktketen Amsterdam" },
+
+  // ─────────────────────────────────────────────────────────── FAQ
+  { key: "faq.eyebrow", group: "Homepage — veelgestelde vragen", label: "Bovenregel", default: "Veelgestelde vragen" },
+  { key: "faq.title", group: "Homepage — veelgestelde vragen", label: "Titel", default: "Goed om te weten" },
+
+  // ─────────────────────────────────────────────────────────── Slot-CTA
+  { key: "cta.title", group: "Homepage — slot-oproep", label: "Titel", default: "Klaar om zeker te werken?" },
+  { key: "cta.lead", group: "Homepage — slot-oproep", label: "Introtekst", default: "Maak in een paar minuten een account aan. Gratis voor freelancers, geen opstartkosten voor bedrijven.", multiline: true },
+  { key: "cta.primary", group: "Homepage — slot-oproep", label: "Knop 1", default: "Account aanmaken" },
+  { key: "cta.secondary", group: "Homepage — slot-oproep", label: "Knop 2", default: "Bekijk de prijzen" },
 ];
 
 const KEY = "content:overrides";

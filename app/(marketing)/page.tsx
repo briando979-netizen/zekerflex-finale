@@ -13,7 +13,7 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
-import { getContentMap } from "@/lib/content/store";
+import { getContentValues } from "@/lib/content/store";
 
 const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
 const DESCRIPTION =
@@ -27,14 +27,8 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const h = await getContentMap([
-    "hero.eyebrow",
-    "hero.titleLine1",
-    "hero.titleLine2",
-    "hero.lead",
-    "hero.ctaPrimary",
-    "hero.ctaSecondary",
-  ]);
+  const v = await getContentValues();
+  const t = (k: string) => v[k] ?? "";
   return (
     <>
       <script
@@ -47,12 +41,12 @@ export default async function HomePage() {
       {/* ───────────────────────────────────────────────────────────── HERO */}
       <HeroStage
         content={{
-          eyebrow: h["hero.eyebrow"],
-          titleLine1: h["hero.titleLine1"],
-          titleLine2: h["hero.titleLine2"],
-          lead: h["hero.lead"],
-          ctaPrimary: h["hero.ctaPrimary"],
-          ctaSecondary: h["hero.ctaSecondary"],
+          eyebrow: t("hero.eyebrow"),
+          titleLine1: t("hero.titleLine1"),
+          titleLine2: t("hero.titleLine2"),
+          lead: t("hero.lead"),
+          ctaPrimary: t("hero.ctaPrimary"),
+          ctaSecondary: t("hero.ctaSecondary"),
         }}
         photo={
           <Photo
@@ -69,7 +63,7 @@ export default async function HomePage() {
       {/* ──────────────────────────────────────────────────────── TRUST BAND */}
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
         <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60">Gebouwd op</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60">{t("trust.label")}</span>
           {["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"].map(
             (t, i) => (
               <Reveal key={t} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75">
@@ -102,12 +96,12 @@ export default async function HomePage() {
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">Hoe het werkt</p>
+            <p className="eyebrow">{t("how.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
-              Van aanmelding tot uitbetaling in drie stappen
+              {t("how.title")}
             </h2>
             <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
-              Geen mailwisselingen, geen losse facturen, geen wachten op je geld.
+              {t("how.lead")}
             </p>
           </Reveal>
 
@@ -136,9 +130,9 @@ export default async function HomePage() {
 
       {/* ───────────────────────────────────────────── SPLIT · FREELANCERS */}
       <ShowcaseSplit
-        eyebrow="Voor freelancers"
-        title="Werk dat bij je past. Geld dat op tijd komt."
-        body="Jij levert vakmanschap. Wij regelen de match, de overeenkomst, de factuur en de uitbetaling."
+        eyebrow={t("fl.eyebrow")}
+        title={t("fl.title")}
+        body={t("fl.body")}
         points={[
           "Aanbod afgestemd op je reistijd, skills en beschikbaarheid",
           "Zelf kiezen hoe snel je uitbetaald wordt — geen facturen sturen",
@@ -154,9 +148,9 @@ export default async function HomePage() {
       <ShowcaseSplit
         reverse
         tone="ink"
-        eyebrow="Voor bedrijven"
-        title="Betrouwbare mensen, precies wanneer je ze nodig hebt."
-        body="Zet een dienst uit en ZekerFlex regelt de rest: match, overeenkomst, check-in, facturatie en compliance."
+        eyebrow={t("emp.eyebrow")}
+        title={t("emp.title")}
+        body={t("emp.body")}
         points={[
           "Automatische matching en toewijzing per vestiging",
           "Uren goedkeuren met GPS check-in — facturen volgen vanzelf",
@@ -172,9 +166,9 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">Drie manieren om te werken</p>
+            <p className="eyebrow">{t("work.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
-              Zzp&apos;er, flexwerker — of via ons uitzendbureau
+              {t("work.title")}
             </h2>
             <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
               Geen eigen bedrijf? Werk als uitzendkracht via ZekerFlex. Wij zijn dan je
@@ -255,9 +249,9 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
-            <p className="eyebrow">Het platform</p>
+            <p className="eyebrow">{t("feat.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
-              Alles wat flexibel werk betrouwbaar maakt, in één systeem
+              {t("feat.title")}
             </h2>
           </Reveal>
           <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -278,13 +272,12 @@ export default async function HomePage() {
       <section className="relative bg-paper">
         <div className="shell-4k grid gap-16 py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
           <Reveal>
-            <p className="eyebrow">Zeker zit het goed</p>
+            <p className="eyebrow">{t("comp.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 text-balance font-display font-bold">
-              Compliance is geen bijzaak — het zit in de kern
+              {t("comp.title")}
             </h2>
             <p className="fluid-lead mt-5 text-neutralx-600">
-              ZekerFlex controleert doorlopend of een samenwerking binnen de regels blijft, en
-              grijpt in vóór het misgaat.
+              {t("comp.lead")}
             </p>
           </Reveal>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -307,12 +300,10 @@ export default async function HomePage() {
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
-                &ldquo;Ik plaats &apos;s ochtends een dienst en heb binnen tien minuten een bekende
-                kracht die komt. De uren keur ik &apos;s avonds goed, de factuur staat er
-                automatisch. Zo hoort het.&rdquo;
+                &ldquo;{t("quote.text")}&rdquo;
               </blockquote>
               <figcaption className="mt-8 text-sm text-white/50">
-                Merel — vestigingsmanager, supermarktketen Amsterdam
+                {t("quote.author")}
               </figcaption>
             </figure>
           </Reveal>
@@ -323,8 +314,8 @@ export default async function HomePage() {
       <section className="relative bg-paper-soft">
         <div className="shell-4k grid gap-14 py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
           <Reveal>
-            <p className="eyebrow">Veelgestelde vragen</p>
-            <h2 className="fluid-h2 mt-4 font-display font-bold">Goed om te weten</h2>
+            <p className="eyebrow">{t("faq.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 font-display font-bold">{t("faq.title")}</h2>
           </Reveal>
           <Reveal delay={120}>
             <FaqList items={FAQ} />
@@ -341,18 +332,17 @@ export default async function HomePage() {
         <div className="shell-4k relative py-28 lg:py-36">
           <Reveal className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <h2 className="fluid-h2 text-balance font-display font-bold">Klaar om zeker te werken?</h2>
+              <h2 className="fluid-h2 text-balance font-display font-bold">{t("cta.title")}</h2>
               <p className="fluid-lead mt-4 text-white/65">
-                Maak in een paar minuten een account aan. Gratis voor freelancers, geen
-                opstartkosten voor bedrijven.
+                {t("cta.lead")}
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
               <Link href="/register" className="btn-mint text-base">
-                Account aanmaken
+                {t("cta.primary")}
               </Link>
               <Link href="/prijzen" className="btn-ghost-invert text-base">
-                Bekijk de prijzen
+                {t("cta.secondary")}
               </Link>
             </div>
           </Reveal>
