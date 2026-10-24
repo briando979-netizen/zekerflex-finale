@@ -113,7 +113,10 @@ export async function executePayout(paymentId: string, opts: { speed: PayoutSpee
         failureCode: result.failureCode ?? null,
       },
     });
-    if (fee) await kvSet(`payout-fee:${payment.id}`, { speed: opts.speed, feeCents: fee, grossCents: payment.amountCents });
+    if (fee) {
+      await kvSet(`payout-fee:${payment.id}`, { speed: opts.speed, feeCents: fee, grossCents: payment.amountCents });
+      await (await import("@/lib/admin/revenue-events")).recordRevenueEvent("fastpay", fee).catch(() => undefined);
+    }
     if (result.status === PaymentStatus.SETTLED) await prisma.timesheet.update({ where: { id: ts.id }, data: { status: TimesheetStatus.PAID } });
     return { status: result.status, providerRef: result.providerRef };
   } catch (err) {

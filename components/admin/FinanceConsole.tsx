@@ -11,7 +11,7 @@ interface Settings {
 }
 interface Overview {
   months: number;
-  revenue: { platformFee: number; uitzendMargin: number; shop: number; total: number };
+  revenue: { platformFee: number; uitzendMargin: number; shop: number; fastPay: number; total: number };
   passthrough: { uitzendWages: number; freelancerInvoices: number; penalties: number; total: number };
   grossInvoiced: number;
   vat: { output: number; inputEstimate: number; due: number };
@@ -103,6 +103,7 @@ export function FinanceConsole() {
               <Row k="Platformkosten (€/uur)" v={eur(data.revenue.platformFee)} />
               <Row k="Uitzendopslag (bemiddeling + lasten)" v={eur(data.revenue.uitzendMargin)} />
               <Row k="Webshop" v={eur(data.revenue.shop)} />
+              <Row k="Snelle uitbetaling / voorschot (fees)" v={eur(data.revenue.fastPay)} />
               <Row k="Totaal eigen omzet" v={eur(data.revenue.total)} strong />
             </Block>
 

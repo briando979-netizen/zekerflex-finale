@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { getFinanceSettings, type FinanceSettings } from "@/lib/admin/finance-settings";
+import { sumRevenueEvents } from "@/lib/admin/revenue-events";
 
 // ---------------------------------------------------------------------------
 // Financieel overzicht voor de eigenaar: eigen omzet (marge) losgetrokken van
@@ -23,6 +24,7 @@ export interface FinanceOverview {
     platformFee: number; // volledige platformkosten (€/uur)
     uitzendMargin: number; // alleen de opslag (loon is doorloop)
     shop: number; // webshop-omzet (ex btw)
+    fastPay: number; // snelle-uitbetaling-/voorschot-fees (vanaf nu geteld)
     total: number; // jouw omzet (marge)
   };
   passthrough: {
@@ -90,7 +92,10 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
   const shopTotal = shopAgg._sum.totalCents ?? 0;
   const shopVat = Math.max(0, shopTotal - shopRevenue);
 
-  const revenueTotal = platformFee + uitzendMargin + shopRevenue;
+  // Snelle-uitbetaling-/voorschot-fees (periode-telbaar vanaf nu, maandbuckets).
+  const fastPayFees = await sumRevenueEvents("fastpay", from, to).catch(() => 0);
+
+  const revenueTotal = platformFee + uitzendMargin + shopRevenue + fastPayFees;
   const grossInvoiced = Object.values(tot).reduce((s, v) => s + v, 0) + shopTotal;
 
   const months = Math.max(1, Math.round((to.getTime() - from.getTime()) / (30 * DAY)));
@@ -111,7 +116,7 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
     from: from.toISOString(),
     to: to.toISOString(),
     months,
-    revenue: { platformFee, uitzendMargin, shop: shopRevenue, total: revenueTotal },
+    revenue: { platformFee, uitzendMargin, shop: shopRevenue, fastPay: fastPayFees, total: revenueTotal },
     passthrough: { uitzendWages, freelancerInvoices, penalties, total: uitzendWages + freelancerInvoices + penalties },
     grossInvoiced,
     vat: { output: vatOutput, inputEstimate: vatInput, due: vatDue },
