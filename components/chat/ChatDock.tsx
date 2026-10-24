@@ -342,7 +342,6 @@ export function ChatDock() {
                 {activeThread.kind === "direct" && (
                   <>
                     <button type="button" onClick={() => startCall("audio")} aria-label="Bellen" className="text-base">📞</button>
-                    <button type="button" onClick={() => startCall("video")} aria-label="Videobellen" className="text-base">📹</button>
                   </>
                 )}
               </div>

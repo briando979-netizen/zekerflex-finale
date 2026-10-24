@@ -185,9 +185,6 @@ export function UserCard({
                       <button type="button" onClick={() => onCall(c.userId, "audio")} className="btn-ghost text-sm" aria-label="Bellen">
                         📞
                       </button>
-                      <button type="button" onClick={() => onCall(c.userId, "video")} className="btn-ghost text-sm" aria-label="Videobellen">
-                        📹
-                      </button>
                     </>
                   )}
                   <button type="button" onClick={toggleSave} className="btn-ghost text-sm">

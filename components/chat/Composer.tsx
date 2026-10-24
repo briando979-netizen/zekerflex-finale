@@ -266,7 +266,6 @@ export function Composer({
             </button>
             {menuOpen && (
               <div className="absolute bottom-11 left-0 z-10 w-44 rounded-xl border border-hairstrong bg-white p-1 shadow-lift">
-                <MenuItem icon="🖼️" label="Foto" onClick={() => imgRef.current?.click()} />
                 <MenuItem icon="📄" label="Document" onClick={() => fileRef.current?.click()} />
                 <MenuItem icon="📍" label="Locatie delen" onClick={shareLocation} />
               </div>

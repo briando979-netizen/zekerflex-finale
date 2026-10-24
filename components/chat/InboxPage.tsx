@@ -631,8 +631,6 @@ export function InboxPage({
             {activeThread.kind === "direct" && (
               <div className="ml-auto flex items-center gap-1">
                 <button type="button" onClick={() => startCall("audio")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Bellen">📞</button>
-                <button type="button" onClick={() => startCall("video")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Videobellen">📹</button>
-                <button type="button" onClick={() => startCall("screen")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Scherm delen">🖥️</button>
                 <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Profiel">ⓘ</button>
               </div>
             )}
