@@ -12,6 +12,7 @@ import { ReviewButton } from "@/components/app/ReviewButton";
 import { EmployerShiftControls } from "@/components/app/EmployerShiftControls";
 import { ClaimReviewPanel } from "@/components/app/ClaimReviewPanel";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
+import { CandidateCardButton } from "@/components/app/CandidateCardButton";
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
 import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
 import { getDict } from "@/lib/i18n/server";
@@ -176,6 +177,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} />
                     <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
                     <OfferResponseButtons offerId={o.id} />
                   </div>
@@ -211,6 +213,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                     {a.timesheetStatus && (
                       <StatusPill tone={a.timesheetStatus === "PAID" ? "ok" : "neutral"}>{a.timesheetStatus}</StatusPill>
                     )}
+                    <CandidateCardButton userId={a.userId} shiftId={s.id} name={a.name} />
                     <ChatUserButton toUserId={a.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
                     <FreelancerRelationButton userId={a.userId} name={a.name} kind="favorite" active={favSet.has(a.userId)} />
                     {shiftEnded && (
