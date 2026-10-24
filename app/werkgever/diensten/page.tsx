@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, EmptyState } from "@/components/app/ui";
 import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
+import { CollapsibleArchive } from "@/components/app/CollapsibleArchive";
 import { listCounterOffers } from "@/lib/offers/store";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -69,7 +70,9 @@ export default async function WerkgeverDienstenPage() {
         <div className="space-y-10">
           <Group title={sh.groupRecruiting} note={sh.groupRecruitingNote} shifts={open} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} />
           <Group title={sh.groupPlanned} note={sh.groupPlannedNote} shifts={planned} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} />
-          <Group title={sh.groupHistory} note={sh.groupHistoryNote} shifts={past} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} dim />
+          <CollapsibleArchive count={past.length} label={sh.groupHistory}>
+            <Group title={sh.groupHistory} note={sh.groupHistoryNote} shifts={past} offerCounts={offerCountByShift} offerBadge={sh.offerBadge} dim />
+          </CollapsibleArchive>
         </div>
       )}
     </>
