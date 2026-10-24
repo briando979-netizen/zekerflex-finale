@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { PushToggle } from "@/components/app/PushToggle";
 import { RecentResponseAlert } from "@/components/app/RecentResponseAlert";
 import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
@@ -334,7 +335,10 @@ export function EmployerShell({
         </header>
 
         <main key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 lg:px-8 lg:py-10">
-          <div className="mx-auto max-w-6xl 2xl:max-w-7xl">{children}</div>
+          <div className="mx-auto max-w-6xl 2xl:max-w-7xl">
+            {!pathname.startsWith("/werkgever/berichten") && <PushToggle variant="banner" />}
+            {children}
+          </div>
         </main>
       </div>
 

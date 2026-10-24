@@ -25,14 +25,28 @@ function needsIosInstall(): boolean {
   return ios && !standalone;
 }
 
+/** Draait dit in de geïnstalleerde app (Play Store-TWA of op het beginscherm)? */
+function inStandaloneApp(): boolean {
+  try {
+    return (
+      /(?:^|;\s*)zf_app=1(?:;|$)/.test(document.cookie) ||
+      window.matchMedia("(display-mode: standalone)").matches
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }) {
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [app, setApp] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setApp(inStandaloneApp());
     try {
       setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
     } catch {
@@ -129,7 +143,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
         <span className="min-w-0 flex-1 text-neutralx-700">
           {state === "ios-install"
             ? "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan."
-            : "Zet meldingen aan, dan krijg je een seintje op je telefoon of laptop bij een oproep of nieuw bericht — ook als ZekerFlex dicht is."}
+            : "Zet meldingen aan, dan krijg je een seintje bij een dienst die begint, een oproep of een nieuw bericht — ook als ZekerFlex dicht is."}
           {error && <span className="ml-1 text-crit">{error}</span>}
         </span>
         {state !== "ios-install" && (
@@ -183,7 +197,9 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
       </div>
       {state === "denied" && (
         <p className="mt-2 text-xs text-neutralx-500">
-          Je hebt meldingen eerder geweigerd. Zet ze weer aan via het slotje in de adresbalk.
+          {app
+            ? "Meldingen staan uit voor de app. Zet ze aan op je telefoon: Instellingen → Apps → ZekerFlex → Meldingen → toestaan, en open de app opnieuw."
+            : "Je hebt meldingen eerder geweigerd. Zet ze weer aan via het slotje in de adresbalk."}
         </p>
       )}
       {error && <p className="mt-2 text-xs text-crit">{error}</p>}
