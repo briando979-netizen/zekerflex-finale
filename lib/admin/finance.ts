@@ -22,6 +22,7 @@ export interface FinanceOverview {
   revenue: {
     platformFee: number; // volledige platformkosten (€/uur)
     uitzendMargin: number; // alleen de opslag (loon is doorloop)
+    shop: number; // webshop-omzet (ex btw)
     total: number; // jouw omzet (marge)
   };
   passthrough: {
@@ -78,8 +79,19 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
   const freelancerInvoices = sub["SELF_BILL_FREELANCER"] ?? 0;
   const penalties = sub["CANCELLATION_PENALTY"] ?? 0;
 
-  const revenueTotal = platformFee + uitzendMargin;
-  const grossInvoiced = Object.values(tot).reduce((s, v) => s + v, 0);
+  // Webshop-omzet (betaalde orders) — eigen omzet, los van de facturen.
+  const shopAgg = await prisma.shopOrder
+    .aggregate({
+      where: { status: { in: ["RECEIVED", "CONFIRMED", "SHIPPED"] }, createdAt: { gte: from, lt: to } },
+      _sum: { subtotalCents: true, totalCents: true },
+    })
+    .catch(() => ({ _sum: { subtotalCents: null, totalCents: null } }));
+  const shopRevenue = shopAgg._sum.subtotalCents ?? 0;
+  const shopTotal = shopAgg._sum.totalCents ?? 0;
+  const shopVat = Math.max(0, shopTotal - shopRevenue);
+
+  const revenueTotal = platformFee + uitzendMargin + shopRevenue;
+  const grossInvoiced = Object.values(tot).reduce((s, v) => s + v, 0) + shopTotal;
 
   const months = Math.max(1, Math.round((to.getTime() - from.getTime()) / (30 * DAY)));
 
@@ -87,7 +99,7 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
   const operational = settings.operationalMonthlyCents * months;
   const costsTotal = stripe + operational;
 
-  const vatOutput = SALES_TYPES.reduce((s, t) => s + (vat[t] ?? 0), 0);
+  const vatOutput = SALES_TYPES.reduce((s, t) => s + (vat[t] ?? 0), 0) + shopVat;
   const vatInput = Math.round(costsTotal * settings.vatInputPct);
   const vatDue = vatOutput - vatInput;
 
@@ -99,7 +111,7 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
     from: from.toISOString(),
     to: to.toISOString(),
     months,
-    revenue: { platformFee, uitzendMargin, total: revenueTotal },
+    revenue: { platformFee, uitzendMargin, shop: shopRevenue, total: revenueTotal },
     passthrough: { uitzendWages, freelancerInvoices, penalties, total: uitzendWages + freelancerInvoices + penalties },
     grossInvoiced,
     vat: { output: vatOutput, inputEstimate: vatInput, due: vatDue },
