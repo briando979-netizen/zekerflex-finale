@@ -139,13 +139,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         },
       })) > 0
     : false;
-  // Before a freelancer is actually selected, no ModelAgreement row exists
-  // yet (ensureModelAgreement() only provisions one at that point) — link to
-  // a preview of what would be created instead of nothing.
-  const agreementHref = s.agreement
-    ? `/api/model-agreements/${s.agreement.id}/pdf`
-    : `/api/model-agreements/preview?shiftId=${s.id}`;
-
   let assigned: {
     assignmentId: string;
     confirmedAt: string | null;
@@ -180,6 +173,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   // Selected for this klus, or it is over (archived): nothing to react to any
   // more — the bottom bar only offers a message to the client.
   const settled = Boolean(assigned) || s.alreadyApplied || s.myOffer?.status === "accepted" || !upcoming;
+
+  // Modelovereenkomst-zichtbaarheid. Bij ontdekken (nog niet gereageerd op DEZE
+  // klus) tonen we de overeenkomst niet — ook niet als er al een overeenkomst
+  // met dezelfde opdrachtgever bestaat uit een eerdere klus. Pas na reageren
+  // verschijnt een concept; de ECHTE overeenkomst mét de handtekening van de
+  // opdrachtgever pas als je voor deze klus bent uitgekozen.
+  const reactedThisShift = s.alreadyApplied || Boolean(s.myOffer && s.myOffer.status !== "withdrawn");
+  const selectedThisShift = Boolean(assigned);
+  const showAgreement = reactedThisShift || selectedThisShift;
+  const showRealAgreement = selectedThisShift && Boolean(s.agreement);
+  const agreementHref = showRealAgreement
+    ? `/api/model-agreements/${s.agreement!.id}/pdf`
+    : `/api/model-agreements/preview?shiftId=${s.id}`;
 
   // Worked / archived state: the timesheet + payout for this engagement.
   const worked =
@@ -431,7 +437,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="⊘">
             {cancelPassed ? D.cancelPassed(fmtDay(cancelDeadline)) : D.cancelUntil(fmtDay(cancelDeadline))}
           </InfoRow>
-          {(s.agreement || s.alreadyApplied) && (
+          {showAgreement && (
             <div className="flex items-start gap-3 text-sm">
               <span className="mt-0.5 grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-hairstrong text-xs text-neutralx-400">
                 📄
@@ -443,9 +449,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                   rel="noopener noreferrer"
                   className="font-semibold text-ink underline"
                 >
-                  {s.agreement ? D.yourAgreement : D.viewDraftAgreement}
+                  {showRealAgreement ? D.yourAgreement : D.viewDraftAgreement}
                 </a>
-                {!s.agreement && (
+                {!showRealAgreement && (
                   <p className="mt-0.5 text-xs text-neutralx-500">
                     {D.draftNote}
                   </p>
