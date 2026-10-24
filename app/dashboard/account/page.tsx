@@ -64,6 +64,7 @@ export default async function AccountPage() {
   const GROUPS: { items: Item[] }[] = [
     {
       items: [
+        { label: "Je administratie, zonder gedoe", href: "/dashboard/administratie" },
         { label: "Loon-vooruitblik", href: "/dashboard/vooruitblik" },
         ...(inApp ? [] : [{ label: "ZekerFlex Bank", href: "/dashboard/bank" }]),
         { label: "Ik heb een vraag", href: "/kennis" },
