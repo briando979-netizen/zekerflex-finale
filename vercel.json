@@ -51,6 +51,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/internal/seo/indexnow",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/internal/autopilot/tick",
       "schedule": "0 6 * * *"
     },
