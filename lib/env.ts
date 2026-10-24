@@ -272,6 +272,8 @@ const schema = z.object({
   // Without a secret key, "Betaal nu" reports the provider as unconfigured.
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  /** Aparte signing-secret voor het Issuing-autorisatie-webhook (whsec_…). Valt terug op STRIPE_WEBHOOK_SECRET. */
+  STRIPE_ISSUING_WEBHOOK_SECRET: z.string().optional(),
   /** pk_live_/pk_test_ key: lets Stripe Issuing Elements show a ZekerFlex Bank card number in the browser. */
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
