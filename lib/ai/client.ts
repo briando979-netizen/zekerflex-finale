@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { isLocalInference, withGovernor } from "@/lib/ai/governor";
 import { modelForPurpose } from "@/lib/ai/models";
 import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
+import { getLlmApiKey } from "@/lib/ai/llm-key";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -168,11 +169,12 @@ async function postOnce(
   payload: unknown,
   timeoutMs: number,
 ): Promise<unknown> {
+  const llmKey = await getLlmApiKey();
   const res = await fetch(`${baseUrl()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(env.LLM_API_KEY ? { Authorization: `Bearer ${env.LLM_API_KEY}` } : {}),
+      ...(llmKey ? { Authorization: `Bearer ${llmKey}` } : {}),
     },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeoutMs),
@@ -373,12 +375,13 @@ export async function* chatStream(
   }
 
   let res: Response;
+  const llmKey = await getLlmApiKey();
   try {
     res = await fetch(`${baseUrl()}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(env.LLM_API_KEY ? { Authorization: `Bearer ${env.LLM_API_KEY}` } : {}),
+        ...(llmKey ? { Authorization: `Bearer ${llmKey}` } : {}),
       },
       signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
@@ -481,10 +484,11 @@ export async function llmHealth(): Promise<LlmHealth> {
   const base = baseUrl();
   const problem = llmConfigProblem();
   if (problem) return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: problem };
+  const llmKey = await getLlmApiKey();
   try {
     const res = await fetch(`${base}/models`, {
       signal: AbortSignal.timeout(4000),
-      ...(env.LLM_API_KEY ? { headers: { Authorization: `Bearer ${env.LLM_API_KEY}` } } : {}),
+      ...(llmKey ? { headers: { Authorization: `Bearer ${llmKey}` } } : {}),
     });
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;
@@ -512,10 +516,11 @@ export async function llmHealth(): Promise<LlmHealth> {
 export async function servedModels(): Promise<string[]> {
   await ensureAiNode();
   if (llmConfigProblem()) return [];
+  const llmKey = await getLlmApiKey();
   try {
     const res = await fetch(`${baseUrl()}/models`, {
       signal: AbortSignal.timeout(4000),
-      ...(env.LLM_API_KEY ? { headers: { Authorization: `Bearer ${env.LLM_API_KEY}` } } : {}),
+      ...(llmKey ? { headers: { Authorization: `Bearer ${llmKey}` } } : {}),
     });
     if (!res.ok) return [];
     const body = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;

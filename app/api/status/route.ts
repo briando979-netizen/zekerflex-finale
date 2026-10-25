@@ -4,14 +4,16 @@ import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
 import { pushChannels } from "@/lib/notifications/push";
 import { deploymentTarget, isDemoDeployment } from "@/lib/config/deployment";
+import { getLlmApiKey } from "@/lib/ai/llm-key";
 
 /** Is the local inference server reachable at all (not: is a model warm). */
 async function llmReachable(): Promise<boolean> {
   try {
     const base = env.LLM_BASE_URL.replace(/\/+$/, "");
+    const llmKey = await getLlmApiKey();
     const res = await fetch(`${base}/models`, {
       signal: AbortSignal.timeout(3000),
-      ...(env.LLM_API_KEY ? { headers: { Authorization: `Bearer ${env.LLM_API_KEY}` } } : {}),
+      ...(llmKey ? { headers: { Authorization: `Bearer ${llmKey}` } } : {}),
     });
     return res.ok || res.status === 404; // 404 = server up, route differs
   } catch {

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { allowedNodeUrl, registeredNode, primeNode, saveNode } from "@/lib/ai/node-registry";
+import { getLlmApiKey } from "@/lib/ai/llm-key";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +18,7 @@ export const dynamic = "force-dynamic";
 // GET (same auth) — what is registered right now.
 // ---------------------------------------------------------------------------
 
-function authorized(request: Request): boolean {
-  const key = env.LLM_API_KEY;
+function authorized(request: Request, key: string | null): boolean {
   if (!key) return false;
   const h = request.headers.get("authorization") ?? "";
   const given = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -35,8 +34,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request): Promise<NextResponse> {
-  if (!authorized(request)) {
-    return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: env.LLM_API_KEY ? "Verkeerde sleutel" : "LLM_API_KEY is nog niet ingesteld in Vercel" } }, { status: 401 });
+  const key = await getLlmApiKey();
+  if (!authorized(request, key)) {
+    return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: key ? "Verkeerde sleutel" : "AI-sleutel is nog niet ingesteld (Admin → Jarvis, of env LLM_API_KEY)" } }, { status: 401 });
   }
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: { code: "VALIDATION", message: "url ontbreekt" } }, { status: 400 });
@@ -49,7 +49,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const sameAsBefore = prev?.url === url && Date.now() - new Date(prev.at).getTime() < 10 * 60_000;
   if (!sameAsBefore) {
     try {
-      const res = await fetch(`${url}/v1/models`, { headers: { Authorization: `Bearer ${env.LLM_API_KEY}` }, signal: AbortSignal.timeout(15_000) });
+      const res = await fetch(`${url}/v1/models`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(15_000) });
       if (!res.ok) return NextResponse.json({ error: { code: "UPSTREAM", message: `Node antwoordt met HTTP ${res.status}` } }, { status: 502 });
     } catch (err) {
       return NextResponse.json({ error: { code: "UPSTREAM", message: `Node niet bereikbaar: ${(err as Error).message}` } }, { status: 502 });
@@ -62,7 +62,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
-  if (!authorized(request)) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Verkeerde sleutel" } }, { status: 401 });
+  if (!authorized(request, await getLlmApiKey())) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Verkeerde sleutel" } }, { status: 401 });
   await primeNode(true);
   return NextResponse.json({ node: registeredNode() });
 }

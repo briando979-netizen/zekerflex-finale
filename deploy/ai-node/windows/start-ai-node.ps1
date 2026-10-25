@@ -131,11 +131,14 @@ LLM_EMBED_MODEL=$EmbedModel
 LLM_TIMEOUT_MS=90000
 "@
 if ($firstRun) {
-  Set-Clipboard -Value $envText
+  Set-Clipboard -Value $key
   Write-Host ""
-  Write-Host "EENMALIG: zet deze 6 regels in Vercel → Project → Settings → Environment Variables (Production)" -ForegroundColor Yellow
-  Write-Host "en klik daarna op Redeploy. Ze staan al op je klembord (Ctrl+V)." -ForegroundColor Yellow
-  if ($ShowKey) { Write-Host $envText } else { Write-Host "(de sleutel zelf toon ik niet; gebruik -ShowKey om hem te zien)" }
+  Write-Host "SNELSTE WEG (geen redeploy): plak de sleutel in ZekerFlex -> Admin -> Jarvis -> 'AI-node-sleutel' en klik Opslaan." -ForegroundColor Green
+  Write-Host "De sleutel staat al op je klembord (Ctrl+V)." -ForegroundColor Green
+  if ($ShowKey) { Write-Host "Sleutel: $key" }
+  Write-Host ""
+  Write-Host "ALTERNATIEF (env): zet deze 6 regels in Vercel -> Settings -> Environment Variables (Production) en Redeploy:" -ForegroundColor Yellow
+  if ($ShowKey) { Write-Host $envText } else { Write-Host "(gebruik -ShowKey om de regels te tonen)" }
   Write-Host "LLM_BASE_URL laat je leeg/ongewijzigd: de site vindt de laptop zelf." -ForegroundColor Yellow
   Write-Host ""
 }
@@ -156,7 +159,7 @@ while ($true) {
   } catch {
     $code = $_.Exception.Response.StatusCode.value__
     if (-not $warned) {
-      if ($code -eq 401) { Set-Clipboard -Value $envText; Write-Host "  ✗ ZekerFlex kent de sleutel nog niet. De 6 Vercel-regels staan (opnieuw) op je klembord: plak ze in Vercel → Environment Variables (Production) en klik Redeploy." -ForegroundColor Red }
+      if ($code -eq 401) { Set-Clipboard -Value $key; Write-Host "  X ZekerFlex kent de sleutel nog niet. De sleutel staat op je klembord: plak 'm in Admin -> Jarvis -> 'AI-node-sleutel' en klik Opslaan (geen redeploy). Of zet LLM_API_KEY in Vercel en Redeploy." -ForegroundColor Red }
       else { Write-Host "  ✗ Aanmelden mislukt ($code): $($_.Exception.Message)" -ForegroundColor Red }
       $warned = $true
     }

@@ -1,5 +1,6 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { JarvisConsole } from "@/components/jarvis/JarvisConsole";
+import { AiNodeKey } from "@/components/admin/AiNodeKey";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,10 @@ export default async function JarvisPage() {
       </main>
     );
   }
-  return <JarvisConsole />;
+  return (
+    <div className="space-y-4">
+      <AiNodeKey />
+      <JarvisConsole />
+    </div>
+  );
 }
