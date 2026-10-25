@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 
 type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; sku: string };
@@ -54,15 +54,14 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELLED: "Geannuleerd",
   PAYMENT_FAILED: "Betaling mislukt",
 };
-
-type ShopStats = {
-  revenueCents: number;
-  revenue30dCents: number;
-  paidOrderCount: number;
-  pendingOrderCount: number;
-  totalOrderCount: number;
-  topProducts: { name: string; qty: number; revenueCents: number }[];
-  lowStock: { variantId: string; productName: string; slug: string; size: string | null; color: string | null; stock: number }[];
+// Shopify-achtige status-tint per orderstatus.
+const ORDER_STATUS_TONE: Record<OrderStatus, { fg: string; bg: string }> = {
+  PENDING_PAYMENT: { fg: "#9a6b00", bg: "rgba(234,179,8,0.16)" },
+  RECEIVED: { fg: "#15803d", bg: "rgba(22,163,74,0.14)" },
+  CONFIRMED: { fg: "#15803d", bg: "rgba(22,163,74,0.14)" },
+  SHIPPED: { fg: "#1d4ed8", bg: "rgba(37,99,235,0.14)" },
+  CANCELLED: { fg: "#b91c1c", bg: "rgba(220,38,38,0.14)" },
+  PAYMENT_FAILED: { fg: "#b91c1c", bg: "rgba(220,38,38,0.14)" },
 };
 
 const money = (euros: number) => `€ ${euros.toFixed(2).replace(".", ",")}`;
@@ -89,6 +88,8 @@ export function ShopAdmin() {
   const [productQuery, setProductQuery] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
+  const [openOrder, setOpenOrder] = useState<string | null>(null);
+  const [pStatus, setPStatus] = useState<"all" | "live" | "hidden">("all");
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -175,7 +176,11 @@ export function ShopAdmin() {
   };
 
   const pq = productQuery.trim().toLowerCase();
-  const shownProducts = products.filter((p) => !pq || p.name.toLowerCase().includes(pq) || p.slug.toLowerCase().includes(pq) || p.category.toLowerCase().includes(pq));
+  const shownProducts = products.filter(
+    (p) =>
+      (pStatus === "all" || (pStatus === "live" ? p.active : !p.active)) &&
+      (!pq || p.name.toLowerCase().includes(pq) || p.slug.toLowerCase().includes(pq) || p.category.toLowerCase().includes(pq)),
+  );
   const oq = orderQuery.trim().toLowerCase();
   const shownOrders = orders.filter(
     (o) =>
@@ -183,13 +188,25 @@ export function ShopAdmin() {
       (!oq || `${o.firstName} ${o.lastName}`.toLowerCase().includes(oq) || o.email.toLowerCase().includes(oq) || o.id.toLowerCase().includes(oq)),
   );
 
-  return <div className="mx-auto max-w-7xl space-y-6">
-    <header className="a-panel flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="a-kicker">Commerce / catalogus</p><h1 className="a-title mt-2">Webshopbeheer</h1><p className="a-subtitle mt-1">Beheer assortiment, voorraad en alle beeldmaterialen van ZekerFlex.</p></div><div className="flex gap-2"><button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg live preview" : "Live preview"}</button><a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk publieke shop ↗</a></div></header>
+  const liveCount = products.filter((p) => p.active).length;
 
-    <div className="flex gap-1 rounded-xl p-1" style={{ background: "var(--a-panel-2)" }}>
+  return <div className="mx-auto max-w-7xl space-y-5">
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-semibold" style={{ color: "var(--a-text)" }}>Webshop</h1>
+        <p className="mt-0.5 text-sm" style={{ color: "var(--a-mute)" }}>Producten, bestellingen, voorraad en statistieken.</p>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg preview" : "Live preview"}</button>
+        <a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk shop ↗</a>
+        <button type="button" className="a-button a-button-primary" onClick={newProduct}>Product toevoegen</button>
+      </div>
+    </header>
+
+    <div className="flex gap-6 border-b" style={{ borderColor: "var(--a-border)" }}>
       {([
-        ["products", `Producten (${products.length})`],
-        ["orders", `Bestellingen (${orders.length})`],
+        ["products", "Producten"],
+        ["orders", "Bestellingen"],
         ["stats", "Statistieken"],
         ["tools", "Kortingen & voorraad"],
       ] as const).map(([key, label]) => (
@@ -197,10 +214,16 @@ export function ShopAdmin() {
           key={key}
           type="button"
           onClick={() => setTab(key)}
-          className="flex-1 rounded-lg py-2 text-sm font-semibold transition"
-          style={tab === key ? { background: "var(--a-panel)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
+          className="relative pb-3 text-sm font-medium transition"
+          style={{ color: tab === key ? "var(--a-text)" : "var(--a-mute)" }}
         >
           {label}
+          {["products", "orders"].includes(key) && (
+            <span className="ml-1.5 rounded-full px-1.5 py-0.5 text-xs" style={{ background: "var(--a-panel-2)", color: "var(--a-mute)" }}>
+              {key === "products" ? products.length : orders.length}
+            </span>
+          )}
+          {tab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: "var(--a-accent)" }} />}
         </button>
       ))}
     </div>
@@ -208,28 +231,22 @@ export function ShopAdmin() {
     {tab === "tools" && <ShopAdminTools />}
 
     {tab === "stats" && stats && (
-      <section className="a-panel p-6">
-        <p className="a-kicker">Statistieken</p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
-            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Omzet (betaald, totaal)</p>
-            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{moneyCents(stats.revenueCents)}</p>
-          </div>
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
-            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Omzet laatste 30 dagen</p>
-            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{moneyCents(stats.revenue30dCents)}</p>
-          </div>
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
-            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Betaalde bestellingen</p>
-            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{stats.paidOrderCount}<span className="ml-2 text-sm font-normal" style={{ color: "var(--a-mute)" }}>/ {stats.totalOrderCount} totaal</span></p>
-          </div>
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)" }}>
-            <p className="text-xs" style={{ color: "var(--a-mute)" }}>Wacht op betaling</p>
-            <p className="mt-1 text-2xl font-bold" style={{ color: "var(--a-text)" }}>{stats.pendingOrderCount}</p>
-          </div>
+      <div className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Omzet (betaald, totaal)", moneyCents(stats.revenueCents)],
+            ["Omzet laatste 30 dagen", moneyCents(stats.revenue30dCents)],
+            ["Betaalde bestellingen", `${stats.paidOrderCount}`],
+            ["Wacht op betaling", `${stats.pendingOrderCount}`],
+          ].map(([label, value]) => (
+            <div key={label} className="a-panel p-4">
+              <p className="text-xs" style={{ color: "var(--a-mute)" }}>{label}</p>
+              <p className="mt-1 text-2xl font-semibold" style={{ color: "var(--a-text)" }}>{value}</p>
+            </div>
+          ))}
         </div>
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          <div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <section className="a-panel p-5">
             <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Bestverkocht</p>
             {stats.topProducts.length === 0 ? (
               <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen betaalde bestellingen.</p>
@@ -243,8 +260,8 @@ export function ShopAdmin() {
                 ))}
               </ul>
             )}
-          </div>
-          <div>
+          </section>
+          <section className="a-panel p-5">
             <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Lage voorraad (≤ 5)</p>
             {stats.lowStock.length === 0 ? (
               <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Niets kritiek — alle varianten hebben genoeg voorraad.</p>
@@ -258,9 +275,9 @@ export function ShopAdmin() {
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </div>
-      </section>
+      </div>
     )}
 
     {showPreview && (
@@ -273,171 +290,224 @@ export function ShopAdmin() {
       </section>
     )}
 
-    {tab === "products" && (
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={productQuery}
-          onChange={(e) => setProductQuery(e.target.value)}
-          placeholder="Zoek op naam, slug of categorie…"
-          className="a-input max-w-xs flex-1"
-        />
-        {!showForm && <button type="button" className="a-button a-button-primary" onClick={newProduct}>+ Nieuw product</button>}
-      </div>
-    )}
-
     {tab === "products" && showForm && (
     <form onSubmit={save} className="a-panel grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} /><div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button><button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); setShowForm(false); }}>Annuleren</button></div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
     )}
+
     {tab === "products" && (
-    <section className="a-panel overflow-hidden">
-      <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
-        <p className="a-kicker">Live catalogus</p>
-        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{shownProducts.length} van {products.length} producten</h2>
+    <section className="a-panel overflow-hidden p-0">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5" style={{ borderColor: "var(--a-border)" }}>
+        <div className="flex gap-1">
+          {([["all", `Alle (${products.length})`], ["live", `Live (${liveCount})`], ["hidden", `Verborgen (${products.length - liveCount})`]] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setPStatus(k)} className="rounded-lg px-3 py-1.5 text-sm font-medium transition" style={pStatus === k ? { background: "var(--a-panel-2)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}>{l}</button>
+          ))}
+        </div>
+        <input value={productQuery} onChange={(e) => setProductQuery(e.target.value)} placeholder="Zoeken…" className="a-input ml-auto max-w-xs flex-1" />
       </div>
-      <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-        {shownProducts.map((product) => (
-          <div key={product.id} className="flex flex-col gap-4 p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="h-20 w-20 overflow-hidden rounded-xl" style={{ background: "var(--a-panel-2)" }}>
-                {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-xs" style={{ color: "var(--a-mute)" }}>ZF</div>}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{product.name}</h3>
-                  <span className="a-tag">{product.category}</span>
-                  {product.gender && <span className="a-tag">{product.gender}</span>}
-                  {product.collection && <span className="a-tag">{product.collection}</span>}
-                  {product.isBundle && <span className="a-tag">Bundel</span>}
-                  <span className={`a-tag ${product.active ? "a-tag-ok" : ""}`}>{product.active ? "Live" : "Verborgen"}</span>
-                </div>
-                <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{product.stock} op voorraad · € {(product.priceCents / 100).toFixed(2).replace(".", ",")}{product.costCents ? ` · inkoop € ${(product.costCents / 100).toFixed(2).replace(".", ",")} (marge ${marge(product.priceCents, product.costCents)})` : ""} · {product.modelPhotoUrl ? "model-foto gekoppeld" : "zonder model-foto"} · {product.variants.length} variant(en)</p>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" className="a-button" onClick={() => setVariantsOpen(variantsOpen === product.id ? null : product.id)}>Varianten</button>
-                <button type="button" className="a-button" onClick={() => edit(product)}>Bewerken</button>
-                {product.active && <button type="button" className="a-button" onClick={() => archive(product.id)}>Verbergen</button>}
-              </div>
-            </div>
-            {variantsOpen === product.id && (
-              <div className="rounded-xl border p-4" style={{ borderColor: "var(--a-border)", background: "var(--a-panel-2)" }}>
-                {product.variants.length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen varianten — dit product toont één keuze (eigen voorraad = productvoorraad).</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead><tr style={{ color: "var(--a-mute)" }}><th className="pb-2 text-left">Maat</th><th className="pb-2 text-left">Kleur</th><th className="pb-2 text-left">Prijs</th><th className="pb-2 text-left">Voorraad</th><th className="pb-2 text-left">SKU</th><th /></tr></thead>
-                    <tbody>
-                      {product.variants.map((v) => (
-                        <tr key={v.id} style={{ color: "var(--a-text)" }}>
-                          <td className="py-1 pr-3">{v.size ?? "—"}</td>
-                          <td className="py-1 pr-3">{v.color ?? "—"}</td>
-                          <td className="py-1 pr-3">{v.priceCents != null ? money(v.priceCents / 100) : "erft van product"}</td>
-                          <td className="py-1 pr-3">{v.stock}</td>
-                          <td className="py-1 pr-3 font-mono text-xs" style={{ color: "var(--a-mute)" }}>{v.sku}</td>
-                          <td className="py-1"><button type="button" className="a-button text-xs" onClick={() => removeVariant(product.id, v.id)}>Verwijderen</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                <form
-                  className="mt-3 flex flex-wrap items-end gap-2"
-                  onSubmit={(e) => { e.preventDefault(); void addVariant(product.id); }}
-                >
-                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Maat<input className="a-input w-20" value={variantForm.size} onChange={(e) => setVariantForm((f) => ({ ...f, size: e.target.value }))} placeholder="M" /></label>
-                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Kleur<input className="a-input w-28" value={variantForm.color} onChange={(e) => setVariantForm((f) => ({ ...f, color: e.target.value }))} placeholder="Zwart" /></label>
-                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Prijs (centen)<input className="a-input w-28" value={variantForm.priceCents} onChange={(e) => setVariantForm((f) => ({ ...f, priceCents: e.target.value }))} placeholder="optioneel" /></label>
-                  <label className="text-xs" style={{ color: "var(--a-mute)" }}>Voorraad<input className="a-input w-20" type="number" min="0" value={variantForm.stock} onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))} /></label>
-                  <button type="submit" className="a-button a-button-primary text-xs">Variant toevoegen</button>
-                </form>
-                {variantMessage && <p className="mt-2 text-xs" style={{ color: "var(--a-dim)" }}>{variantMessage}</p>}
-              </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wide" style={{ borderColor: "var(--a-border)", color: "var(--a-mute)" }}>
+              <th className="px-4 py-2.5 font-semibold">Product</th>
+              <th className="px-4 py-2.5 font-semibold">Status</th>
+              <th className="px-4 py-2.5 font-semibold">Voorraad</th>
+              <th className="px-4 py-2.5 font-semibold">Categorie</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Prijs</th>
+              <th className="px-4 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {shownProducts.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: "var(--a-mute)" }}>Geen producten gevonden.</td></tr>
             )}
-          </div>
-        ))}
+            {shownProducts.map((product) => (
+              <Fragment key={product.id}>
+                <tr className="group border-b" style={{ borderColor: "var(--a-border)" }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg" style={{ background: "var(--a-panel-2)" }}>
+                        {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-[10px]" style={{ color: "var(--a-mute)" }}>ZF</div>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium" style={{ color: "var(--a-text)" }}>{product.name}</p>
+                        <p className="truncate text-xs" style={{ color: "var(--a-mute)" }}>{[product.gender, product.collection, product.isBundle ? "bundel" : null, product.badge].filter(Boolean).join(" · ") || product.slug}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><StatusPill active={product.active} /></td>
+                  <td className="px-4 py-3" style={{ color: "var(--a-text)" }}>
+                    {product.stock} op voorraad{product.variants.length ? <span style={{ color: "var(--a-mute)" }}> · {product.variants.length} var.</span> : null}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: "var(--a-dim)" }}>{product.category}</td>
+                  <td className="px-4 py-3 text-right font-medium" style={{ color: "var(--a-text)" }}>
+                    {moneyCents(product.priceCents)}
+                    {product.costCents ? <span className="block text-xs font-normal" style={{ color: "var(--a-mute)" }}>marge {marge(product.priceCents, product.costCents)}</span> : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1.5">
+                      <button type="button" className="a-button text-xs" onClick={() => setVariantsOpen(variantsOpen === product.id ? null : product.id)}>Varianten</button>
+                      <button type="button" className="a-button text-xs" onClick={() => edit(product)}>Bewerken</button>
+                      {product.active && <button type="button" className="a-button text-xs" onClick={() => archive(product.id)}>Verbergen</button>}
+                    </div>
+                  </td>
+                </tr>
+                {variantsOpen === product.id && (
+                  <tr style={{ borderColor: "var(--a-border)" }} className="border-b">
+                    <td colSpan={6} className="px-4 py-4" style={{ background: "var(--a-panel-2)" }}>
+                      {product.variants.length === 0 ? (
+                        <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen varianten — dit product toont één keuze (eigen voorraad = productvoorraad).</p>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead><tr style={{ color: "var(--a-mute)" }}><th className="pb-2 text-left">Maat</th><th className="pb-2 text-left">Kleur</th><th className="pb-2 text-left">Prijs</th><th className="pb-2 text-left">Voorraad</th><th className="pb-2 text-left">SKU</th><th /></tr></thead>
+                          <tbody>
+                            {product.variants.map((v) => (
+                              <tr key={v.id} style={{ color: "var(--a-text)" }}>
+                                <td className="py-1 pr-3">{v.size ?? "—"}</td>
+                                <td className="py-1 pr-3">{v.color ?? "—"}</td>
+                                <td className="py-1 pr-3">{v.priceCents != null ? money(v.priceCents / 100) : "erft van product"}</td>
+                                <td className="py-1 pr-3">{v.stock}</td>
+                                <td className="py-1 pr-3 font-mono text-xs" style={{ color: "var(--a-mute)" }}>{v.sku}</td>
+                                <td className="py-1"><button type="button" className="a-button text-xs" onClick={() => removeVariant(product.id, v.id)}>Verwijderen</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                      <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); void addVariant(product.id); }}>
+                        <label className="text-xs" style={{ color: "var(--a-mute)" }}>Maat<input className="a-input w-20" value={variantForm.size} onChange={(e) => setVariantForm((f) => ({ ...f, size: e.target.value }))} placeholder="M" /></label>
+                        <label className="text-xs" style={{ color: "var(--a-mute)" }}>Kleur<input className="a-input w-28" value={variantForm.color} onChange={(e) => setVariantForm((f) => ({ ...f, color: e.target.value }))} placeholder="Zwart" /></label>
+                        <label className="text-xs" style={{ color: "var(--a-mute)" }}>Prijs (centen)<input className="a-input w-28" value={variantForm.priceCents} onChange={(e) => setVariantForm((f) => ({ ...f, priceCents: e.target.value }))} placeholder="optioneel" /></label>
+                        <label className="text-xs" style={{ color: "var(--a-mute)" }}>Voorraad<input className="a-input w-20" type="number" min="0" value={variantForm.stock} onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))} /></label>
+                        <button type="submit" className="a-button a-button-primary text-xs">Variant toevoegen</button>
+                      </form>
+                      {variantMessage && <p className="mt-2 text-xs" style={{ color: "var(--a-dim)" }}>{variantMessage}</p>}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
     )}
 
     {tab === "orders" && (
-    <section className="a-panel overflow-hidden">
-      <div className="border-b p-6" style={{ borderColor: "var(--a-border)" }}>
-        <p className="a-kicker">Orders</p>
-        <h2 className="mt-2 font-display text-xl font-semibold" style={{ color: "var(--a-text)" }}>{shownOrders.length} van {orders.length} bestellingen</h2>
-        {orderMessage && <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{orderMessage}</p>}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            value={orderQuery}
-            onChange={(e) => setOrderQuery(e.target.value)}
-            placeholder="Zoek op naam, e-mail of order-id…"
-            className="a-input max-w-xs flex-1"
-          />
-          <select className="a-input w-auto" value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value as OrderStatus | "")}>
-            <option value="">Alle statussen</option>
-            {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </div>
+    <section className="a-panel overflow-hidden p-0">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5" style={{ borderColor: "var(--a-border)" }}>
+        <input value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)} placeholder="Zoek op naam, e-mail of order-id…" className="a-input max-w-xs flex-1" />
+        <select className="a-input w-auto" value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value as OrderStatus | "")}>
+          <option value="">Alle statussen</option>
+          {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        {orderMessage && <p className="w-full text-sm" style={{ color: "var(--a-dim)" }}>{orderMessage}</p>}
       </div>
-      <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-        {shownOrders.length === 0 && <p className="p-5 text-sm" style={{ color: "var(--a-mute)" }}>{orders.length === 0 ? "Nog geen bestellingen binnengekomen." : "Niets gevonden."}</p>}
-        {shownOrders.map((order) => (
-          <div key={order.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold" style={{ color: "var(--a-text)" }}>{order.firstName} {order.lastName}</h3>
-                <span className="a-tag">{new Date(order.createdAt).toLocaleString("nl-NL")}</span>
-              </div>
-              <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{order.email} · {order.address}, {order.postalCode} {order.city}</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--a-dim)" }}>{order.itemsJson.map((l) => `${l.qty}x ${l.name}`).join(", ")}</p>
-              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</p>
-            </div>
-            <div className="flex flex-col items-start gap-2 sm:items-end">
-              <div className="flex flex-wrap gap-2">
-                <a className="a-button" href={`/api/admin/shop/orders/${order.id}/packing-slip`} target="_blank" rel="noreferrer">Pakbon</a>
-                {["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && (
-                  <button
-                    type="button"
-                    className="a-button"
-                    onClick={async () => {
-                      if (!window.confirm(`Bestelling van ${order.firstName} ${order.lastName} volledig terugbetalen via Stripe? De bestelling wordt geannuleerd en de voorraad teruggeboekt.`)) return;
-                      const r = await fetch(`/api/admin/shop/orders/${order.id}/refund`, { method: "POST" });
-                      const d = await r.json().catch(() => ({}));
-                      setOrderMessage(r.ok ? `Terugbetaald: ${money(d.amountCents / 100)}.` : d?.error?.message ?? "Terugbetalen mislukt.");
-                      void loadOrders();
-                    }}
-                  >
-                    Terugbetalen
-                  </button>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wide" style={{ borderColor: "var(--a-border)", color: "var(--a-mute)" }}>
+              <th className="px-4 py-2.5 font-semibold">Klant</th>
+              <th className="px-4 py-2.5 font-semibold">Datum</th>
+              <th className="px-4 py-2.5 font-semibold">Producten</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Totaal</th>
+              <th className="px-4 py-2.5 font-semibold">Status</th>
+              <th className="px-4 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {shownOrders.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: "var(--a-mute)" }}>{orders.length === 0 ? "Nog geen bestellingen binnengekomen." : "Niets gevonden."}</td></tr>
+            )}
+            {shownOrders.map((order) => (
+              <Fragment key={order.id}>
+                <tr className="border-b" style={{ borderColor: "var(--a-border)" }}>
+                  <td className="px-4 py-3">
+                    <p className="font-medium" style={{ color: "var(--a-text)" }}>{order.firstName} {order.lastName}</p>
+                    <p className="text-xs" style={{ color: "var(--a-mute)" }}>{order.email}</p>
+                  </td>
+                  <td className="px-4 py-3" style={{ color: "var(--a-dim)" }}>{new Date(order.createdAt).toLocaleDateString("nl-NL")}</td>
+                  <td className="max-w-[18rem] truncate px-4 py-3" style={{ color: "var(--a-dim)" }}>{order.itemsJson.map((l) => `${l.qty}x ${l.name}`).join(", ")}</td>
+                  <td className="px-4 py-3 text-right font-medium" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</td>
+                  <td className="px-4 py-3"><OrderPill status={order.status} /></td>
+                  <td className="px-4 py-3 text-right">
+                    <button type="button" className="a-button text-xs" onClick={() => setOpenOrder(openOrder === order.id ? null : order.id)}>{openOrder === order.id ? "Sluiten" : "Beheren"}</button>
+                  </td>
+                </tr>
+                {openOrder === order.id && (
+                  <tr className="border-b" style={{ borderColor: "var(--a-border)" }}>
+                    <td colSpan={6} className="px-4 py-4" style={{ background: "var(--a-panel-2)" }}>
+                      <p className="text-sm" style={{ color: "var(--a-dim)" }}>{order.address}, {order.postalCode} {order.city}</p>
+                      <div className="mt-3 flex flex-wrap items-end gap-2">
+                        <label className="text-xs" style={{ color: "var(--a-mute)" }}>Status
+                          <select className="a-input mt-1 w-auto" value={order.status} onChange={(e) => setOrderStatus(order.id, e.target.value as OrderStatus)}>
+                            {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                          </select>
+                        </label>
+                        <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); void setOrderTracking(order.id, String(fd.get("carrier") ?? ""), String(fd.get("trackingNumber") ?? "")); }}>
+                          <label className="text-xs" style={{ color: "var(--a-mute)" }}>Vervoerder<input name="carrier" defaultValue={order.carrier ?? ""} placeholder="postnl / dhl" className="a-input mt-1 w-24" /></label>
+                          <label className="text-xs" style={{ color: "var(--a-mute)" }}>Track & trace<input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="code" className="a-input mt-1 w-32" /></label>
+                          <button type="submit" className="a-button text-xs">Opslaan</button>
+                        </form>
+                        <a className="a-button text-xs" href={`/api/admin/shop/orders/${order.id}/packing-slip`} target="_blank" rel="noreferrer">Pakbon</a>
+                        {["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && (
+                          <button
+                            type="button"
+                            className="a-button text-xs"
+                            onClick={async () => {
+                              if (!window.confirm(`Bestelling van ${order.firstName} ${order.lastName} volledig terugbetalen via Stripe? De bestelling wordt geannuleerd en de voorraad teruggeboekt.`)) return;
+                              const r = await fetch(`/api/admin/shop/orders/${order.id}/refund`, { method: "POST" });
+                              const d = await r.json().catch(() => ({}));
+                              setOrderMessage(r.ok ? `Terugbetaald: ${money(d.amountCents / 100)}.` : d?.error?.message ?? "Terugbetalen mislukt.");
+                              void loadOrders();
+                            }}
+                          >
+                            Terugbetalen
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </div>
-              <select
-                className="a-input w-auto"
-                value={order.status}
-                onChange={(e) => setOrderStatus(order.id, e.target.value as OrderStatus)}
-              >
-                {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const fd = new FormData(e.currentTarget);
-                  void setOrderTracking(order.id, String(fd.get("carrier") ?? ""), String(fd.get("trackingNumber") ?? ""));
-                }}
-              >
-                <input name="carrier" defaultValue={order.carrier ?? ""} placeholder="postnl / dhl" className="a-input w-24 text-xs" />
-                <input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="Track & trace" className="a-input w-32 text-xs" />
-                <button type="submit" className="a-button text-xs">Opslaan</button>
-              </form>
-            </div>
-          </div>
-        ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
     )}
   </div>;
+}
+
+type ShopStats = {
+  revenueCents: number;
+  revenue30dCents: number;
+  paidOrderCount: number;
+  pendingOrderCount: number;
+  totalOrderCount: number;
+  topProducts: { name: string; qty: number; revenueCents: number }[];
+  lowStock: { variantId: string; productName: string; slug: string; size: string | null; color: string | null; stock: number }[];
+};
+
+function StatusPill({ active }: { active: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium" style={active ? { background: "rgba(22,163,74,0.14)", color: "#15803d" } : { background: "var(--a-panel-2)", color: "var(--a-mute)" }}>
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: active ? "#16a34a" : "var(--a-mute)" }} />
+      {active ? "Live" : "Verborgen"}
+    </span>
+  );
+}
+
+function OrderPill({ status }: { status: OrderStatus }) {
+  const tone = ORDER_STATUS_TONE[status];
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: tone.bg, color: tone.fg }}>
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone.fg }} />
+      {ORDER_STATUS_LABEL[status]}
+    </span>
+  );
 }
 
 function ImageUpload({ label, value, busy, onUpload }: { label: string; value: string | null | undefined; busy: boolean; onUpload: (file: File) => void }) {
