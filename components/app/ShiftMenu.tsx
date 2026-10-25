@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
@@ -58,7 +60,7 @@ export function ShiftMenu({
         await navigator.share({ title: shiftTitle, url });
         return;
       }
-      await navigator.clipboard.writeText(url);
+      await copyText(url);
       toast.success("Link gekopieerd");
     } catch {
       /* user cancelled share */

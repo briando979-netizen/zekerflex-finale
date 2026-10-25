@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useCallback, useEffect, useState } from "react";
 
 interface PayRequest {
@@ -69,7 +71,7 @@ export function BankPayments(props: { canManage: boolean; balanceCents: number; 
     try {
       if (navigator.share) await navigator.share({ title: "Betaalverzoek", text, url });
       else {
-        await navigator.clipboard.writeText(url);
+        await copyText(url);
         setCopied(r.id);
         setTimeout(() => setCopied(null), 2000);
       }

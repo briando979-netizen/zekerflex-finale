@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useMemo, useState } from "react";
 import { PayInvoiceButton } from "@/components/app/PayInvoiceButton";
 import { QrCode } from "@/components/billing/QrCode";
@@ -66,7 +68,7 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
 
   async function copyLink(url: string) {
     try {
-      await navigator.clipboard.writeText(url);
+      await copyText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

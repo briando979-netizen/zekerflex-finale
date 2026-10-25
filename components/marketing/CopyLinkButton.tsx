@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useState } from "react";
 
 export function CopyLinkButton({
@@ -13,7 +15,7 @@ export function CopyLinkButton({
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      await copyText(`${window.location.origin}${path}`);
       setDone(true);
       setTimeout(() => setDone(false), 2000);
     } catch {

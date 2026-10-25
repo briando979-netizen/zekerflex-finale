@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Lead {
@@ -245,7 +247,7 @@ function LeadCard({ lead, onChange }: { lead: Lead; onChange: () => void }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error?.message ?? "Versturen mislukt");
       setNote(d.inviteUrl ? "Verstuurd. Link ook gekopieerd." : "Uitnodiging verstuurd.");
-      if (d.inviteUrl) navigator.clipboard?.writeText(d.inviteUrl).catch(() => undefined);
+      if (d.inviteUrl) void copyText(d.inviteUrl);
       onChange();
     } catch (e) {
       setNote((e as Error).message);

@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useEffect, useState } from "react";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 
@@ -204,7 +206,7 @@ export function ReferralCard() {
     try {
       if (navigator.share) await navigator.share({ title: "ZekerFlex", text, url: r.link });
       else {
-        await navigator.clipboard.writeText(r.link);
+        await copyText(r.link);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }

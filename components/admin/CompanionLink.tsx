@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 /** Link / unlink the owner's desktop Jarvis (deploy/jarvis-desktop). The token is shown once. */
 export function CompanionLink({ baseUrl }: { baseUrl: string }) {
   const [status, setStatus] = useState<{ linked: boolean; createdAt?: string; lastUsedAt?: string } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const load = () =>
     fetch("/api/admin/companion", { cache: "no-store" })
       .then((r) => r.json())
@@ -61,8 +63,8 @@ export function CompanionLink({ baseUrl }: { baseUrl: string }) {
             Zet deze twee regels in het bestand <code>.env</code> in de map <code>jarvis-desktop</code> op je laptop:
           </p>
           <pre className="mt-3 overflow-x-auto rounded-lg bg-ink p-3 font-mono text-xs text-white">{envText}</pre>
-          <button type="button" onClick={() => void navigator.clipboard.writeText(envText)} className="btn-ghost mt-3 text-sm">
-            Kopiëren
+          <button type="button" onClick={async () => setCopied(await copyText(envText))} className="btn-ghost mt-3 text-sm">
+            {copied ? "Gekopieerd ✓" : "Kopiëren"}
           </button>
         </div>
       )}

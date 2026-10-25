@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useEffect, useState } from "react";
 
 interface ChatEvent {
@@ -84,7 +86,7 @@ export function IntegrationsHub() {
             type="button"
             className="btn-ghost text-xs"
             onClick={async () => {
-              await navigator.clipboard.writeText(d.calendarUrl).catch(() => undefined);
+              await copyText(d.calendarUrl);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}

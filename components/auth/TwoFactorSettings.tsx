@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useCallback, useEffect, useState } from "react";
 
 interface Status {
@@ -58,7 +60,7 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
           ))}
         </ul>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-ghost text-sm" onClick={() => void navigator.clipboard?.writeText(text)}>
+          <button type="button" className="btn-ghost text-sm" onClick={() => void copyText(text)}>
             Kopiëren
           </button>
           <a className="btn-ghost text-sm" href={`data:text/plain;charset=utf-8,${encodeURIComponent(text)}`} download="zekerflex-herstelcodes.txt">

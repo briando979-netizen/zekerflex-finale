@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useState } from "react";
 
 interface Link {
@@ -39,7 +41,7 @@ export function InspectLinkPanel({ userId }: { userId: string }) {
   }
 
   async function copy(label: string, text: string) {
-    await navigator.clipboard.writeText(text).catch(() => undefined);
+    await copyText(text);
     setCopied(label);
     setTimeout(() => setCopied(null), 1500);
   }

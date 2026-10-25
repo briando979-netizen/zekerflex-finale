@@ -1,5 +1,7 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
+
 import { useState, type ReactNode } from "react";
 
 export function PassportShare({
@@ -33,7 +35,7 @@ export function PassportShare({
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await copyText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
