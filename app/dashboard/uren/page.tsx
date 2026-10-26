@@ -25,7 +25,7 @@ export default async function UrenInvullenPage() {
       <PageHeader title={H.title} eyebrow={H.eyebrow} subtitle={H.subtitle} />
 
       {hours.length === 0 ? (
-        <EmptyState title={H.emptyTitle} body={H.emptyBody} />
+        <EmptyState icon="⏱️" title={H.emptyTitle} body={H.emptyBody} />
       ) : (
         <>
           <p className="mb-4 text-sm font-semibold text-neutralx-600">{H.toFill(toFill)}</p>

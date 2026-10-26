@@ -19,7 +19,7 @@ export default async function VooruitblikPage() {
       <>
         <Back />
         <PageHeader title="Loon-vooruitblik" subtitle="Wat je deze maand verdient en wat je opzij kunt zetten." />
-        <EmptyState title="Nog geen profiel" body="De vooruitblik verschijnt zodra je als professional diensten hebt." />
+        <EmptyState icon="🔮" title="Nog geen profiel" body="De vooruitblik verschijnt zodra je als professional diensten hebt." />
       </>
     );
   }

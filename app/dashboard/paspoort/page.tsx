@@ -34,7 +34,7 @@ export default async function MyPassportPage() {
           </Link>
         </div>
         <PageHeader title="Werkpaspoort" subtitle="Je verifieerbare werkprofiel om overal te laten zien." />
-        <EmptyState title="Nog geen profiel" body="Een werkpaspoort is er zodra je als professional (zzp/flex/uitzend) bent geregistreerd." />
+        <EmptyState icon="🪪" title="Nog geen profiel" body="Een werkpaspoort is er zodra je als professional (zzp/flex/uitzend) bent geregistreerd." />
       </>
     );
   }

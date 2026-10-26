@@ -64,7 +64,7 @@ export default async function AdministratiePage() {
       <>
         <Back />
         <PageHeader title="Je administratie" subtitle="Herinneringen en mijlpalen, zodat jij nergens aan hoeft te denken." />
-        <EmptyState title="Nog geen profiel" body="Deze pagina verschijnt zodra je als professional bent geregistreerd." />
+        <EmptyState icon="📋" title="Nog geen profiel" body="Deze pagina verschijnt zodra je als professional bent geregistreerd." />
       </>
     );
   }

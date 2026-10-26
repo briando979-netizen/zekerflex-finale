@@ -1,13 +1,20 @@
 // Lichtgewicht confetti-explosie zonder dependencies, via de Web Animations API.
 // Respecteert prefers-reduced-motion en ruimt zichzelf op. Puur decoratief.
-export function fireConfetti(count = 90): void {
+const DEFAULT_COLORS = ["#4FE0A0", "#0E5C4A", "#F5C451", "#2563EB", "#B91C1C", "#7C3AED"];
+const COIN_COLORS = ["#F5C451", "#E0A82E", "#FFD873", "#B7791F", "#FBE38E"];
+
+/** Gouden munt-confetti — voor een geslaagde uitbetaling/voorschot. */
+export function fireCoins(count = 70): void {
+  fireConfetti(count, COIN_COLORS);
+}
+
+export function fireConfetti(count = 90, colors: string[] = DEFAULT_COLORS): void {
   if (typeof document === "undefined") return;
   try {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
   } catch {
     /* geen matchMedia — dan gewoon tonen */
   }
-  const colors = ["#4FE0A0", "#0E5C4A", "#F5C451", "#2563EB", "#B91C1C", "#7C3AED"];
   const root = document.createElement("div");
   root.setAttribute("aria-hidden", "true");
   root.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";

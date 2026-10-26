@@ -42,7 +42,7 @@ export default async function MyReviewsPage() {
       <PageHeader title={rv.title} subtitle={rv.subtitle} />
 
       {summary.count === 0 ? (
-        <EmptyState title={rv.emptyTitle} body={rv.emptyBody} />
+        <EmptyState icon="⭐" title={rv.emptyTitle} body={rv.emptyBody} />
       ) : (
         <>
           <div className="mb-8 grid gap-6 rounded-2xl border border-hair bg-white p-6 shadow-card sm:grid-cols-[auto_1fr]">

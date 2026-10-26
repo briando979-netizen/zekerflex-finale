@@ -7,6 +7,7 @@ import { fontVariables } from "@/lib/fonts";
 import { getLocale } from "@/lib/i18n/server";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
+import { KonamiEasterEgg } from "@/components/ui/KonamiEasterEgg";
 import { Providers } from "@/components/ui/Providers";
 import { CookieConsent } from "@/components/marketing/CookieConsent";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -118,6 +119,7 @@ export default async function RootLayout({
           <AnalyticsBeacon />
         </Suspense>
         <ServiceWorkerRegister />
+        <KonamiEasterEgg />
       </body>
     </html>
   );

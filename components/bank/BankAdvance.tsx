@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fireCoins } from "@/components/ui/confetti";
 
 interface PayoutInfo {
   pendingPayoutCents: number;
@@ -53,6 +54,7 @@ export function BankAdvance({ onChanged }: { onChanged: (n: { ok: boolean; text:
               const d = res ? await res.json().catch(() => ({})) : {};
               setBusy(false);
               setAmount("");
+              if (res?.ok) fireCoins();
               await onChanged(res?.ok ? { ok: true, text: `${euro(cents - fee)} staat op je rekening. Wordt verrekend met je volgende uitbetaling.` } : { ok: false, text: d?.error?.message ?? "Voorschot lukte niet." });
               await load();
             }}
