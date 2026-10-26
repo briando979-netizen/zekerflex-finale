@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
+import { useMessageSearch } from "./useMessageSearch";
+import { ChatSearchBar } from "./ChatSearchBar";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -106,6 +108,10 @@ export function InboxPage({
   }, [tab]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const search = useMessageSearch(messages);
+  useEffect(() => {
+    if (search.activeId) document.getElementById(`ip-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [search.activeId]);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
   const lastPing = useRef(0);
@@ -670,8 +676,16 @@ export function InboxPage({
             )}
             <button
               type="button"
-              onClick={() => setMenuFor(activeThread.id)}
+              onClick={search.openSearch}
               className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft ${activeThread.kind === "support" ? "ml-auto" : ""}`}
+              aria-label="Zoek in gesprek"
+            >
+              🔍
+            </button>
+            <button
+              type="button"
+              onClick={() => setMenuFor(activeThread.id)}
+              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft"
               aria-label="Meer opties"
             >
               ⋮
@@ -686,6 +700,18 @@ export function InboxPage({
               </button>
             )}
           </div>
+
+          {search.open && (
+            <ChatSearchBar
+              query={search.query}
+              onQuery={search.setQuery}
+              count={search.count}
+              position={search.position}
+              onPrev={search.prev}
+              onNext={search.next}
+              onClose={search.close}
+            />
+          )}
 
           <div
             ref={scrollRef}
@@ -707,7 +733,7 @@ export function InboxPage({
               const next = messages[i + 1];
               const lastOfRun = !next || next.from !== m.from || next.kind === "system";
               return (
-                <div key={m.id}>
+                <div key={m.id} id={`ip-msg-${m.id}`} className={search.activeId === m.id ? "rounded-xl ring-2 ring-brand-400/70" : undefined}>
                   {showDay && (
                     <div className="my-2 flex justify-center">
                       <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[10px] font-medium text-neutralx-500">{dayLabel(m.at)}</span>

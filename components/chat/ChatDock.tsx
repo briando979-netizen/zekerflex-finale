@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
+import { useMessageSearch } from "./useMessageSearch";
+import { ChatSearchBar } from "./ChatSearchBar";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
@@ -42,6 +44,10 @@ export function ChatDock() {
   const [incoming, setIncoming] = useState<null | { threadId: string; callId: string; mode: string; fromUserId: string; fromName: string; fromRole: string }>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const search = useMessageSearch(messages);
+  useEffect(() => {
+    if (search.activeId) document.getElementById(`cd-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [search.activeId]);
   const lastTypingPing = useRef(0);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
@@ -379,12 +385,24 @@ export function ChatDock() {
                     {theirTyping ? "aan het typen…" : activeThread.kind === "direct" ? lastSeenLabel(presence[otherOf(activeThread).userId]) : activeThread.shiftTitle ?? ""}
                   </p>
                 </button>
+                <button type="button" onClick={search.openSearch} aria-label="Zoek in gesprek" className="text-base">🔍</button>
                 {activeThread.kind === "direct" && (
                   <>
                     <button type="button" onClick={() => startCall("audio")} aria-label="Bellen" className="text-base">📞</button>
                   </>
                 )}
               </div>
+              {search.open && (
+                <ChatSearchBar
+                  query={search.query}
+                  onQuery={search.setQuery}
+                  count={search.count}
+                  position={search.position}
+                  onPrev={search.prev}
+                  onNext={search.next}
+                  onClose={search.close}
+                />
+              )}
 
               <div
                 ref={scrollRef}
@@ -398,7 +416,7 @@ export function ChatDock() {
                   const next = messages[i + 1];
                   const lastOfRun = !next || next.from !== m.from || next.kind === "system";
                   return (
-                    <div key={m.id}>
+                    <div key={m.id} id={`cd-msg-${m.id}`} className={search.activeId === m.id ? "rounded-xl ring-2 ring-brand-400/70" : undefined}>
                       {showDay && (
                         <div className="my-2 flex justify-center">
                           <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[10px] font-medium text-neutralx-500">{dayLabel(m.at)}</span>
