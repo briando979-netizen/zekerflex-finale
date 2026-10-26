@@ -28,7 +28,7 @@ export function PayRequestIdealButton({ id, label, subtle = false }: { id: strin
       >
         {busy ? "Even geduld…" : label}
       </button>
-      {error && <p className="mt-2 text-sm text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-crit">{error}</p>}
     </div>
   );
 }
@@ -56,7 +56,7 @@ export function PayRequestButton({ id, label }: { id: string; label: string }) {
       <button type="button" onClick={pay} disabled={busy} className="btn-primary w-full py-3 text-base disabled:opacity-60">
         {busy ? "Even geduld…" : label}
       </button>
-      {error && <p className="mt-2 text-sm text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-crit">{error}</p>}
     </div>
   );
 }

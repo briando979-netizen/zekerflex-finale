@@ -121,7 +121,7 @@ export function WerkgeverApiKeysBoard({ allowedScopes }: { allowedScopes: readon
         {scopeOptions.length === 0 && (
           <p className="text-xs text-neutralx-500">Je huidige abonnement biedt geen scopes — upgrade hierboven.</p>
         )}
-        {msg && <p className="text-sm text-crit">{msg}</p>}
+        {msg && <p role="alert" className="text-sm text-crit">{msg}</p>}
         <button
           type="button"
           onClick={create}

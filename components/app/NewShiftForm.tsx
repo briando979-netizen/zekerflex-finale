@@ -145,7 +145,7 @@ export function NewShiftForm({
   return (
     <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
       <form action={formAction} className="space-y-7">
-        {state.error && <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+        {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
 
         <div>
           <p className="field-label mb-2">Kies een sjabloon (optioneel)</p>

@@ -45,7 +45,7 @@ export function EmployerOnboardingForm() {
   return (
     <form action={formAction} className="space-y-6">
       {state.error && (
-        <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>
+        <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>
       )}
 
       <label className="block">

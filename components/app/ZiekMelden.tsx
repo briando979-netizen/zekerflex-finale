@@ -60,7 +60,7 @@ export function ZiekMelden() {
               <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="field-input" />
             </label>
           </div>
-          {err && <p className="text-xs text-crit">{err}</p>}
+          {err && <p role="alert" className="text-xs text-crit">{err}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={busy} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
               {busy ? "Bezig…" : "Bevestig ziekmelding"}

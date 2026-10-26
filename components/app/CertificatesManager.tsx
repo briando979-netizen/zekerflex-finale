@@ -217,7 +217,7 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
           </p>
         </div>
       </label>
-      {msg && <p className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
+      {msg && <p role="status" className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
       <button type="submit" disabled={busy} className="btn-primary mt-4 w-full disabled:opacity-50">
         {busy ? "Toevoegen…" : "Toevoegen"}
       </button>

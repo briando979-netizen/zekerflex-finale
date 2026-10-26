@@ -85,7 +85,7 @@ export function FastPaySettings() {
         </span>
         <input type="checkbox" checked={s.advancesForUitzend} disabled={busy} onChange={(e) => save({ advancesForUitzend: e.target.checked })} className="mt-1" />
       </label>
-      {err && <p className="text-sm text-crit">{err}</p>}
+      {err && <p role="alert" className="text-sm text-crit">{err}</p>}
     </div>
   );
 }

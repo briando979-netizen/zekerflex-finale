@@ -206,7 +206,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                     </div>
                   </div>
                 )}
-                {err && <p className="text-sm text-crit">{err}</p>}
+                {err && <p role="alert" className="text-sm text-crit">{err}</p>}
                 <div className="flex gap-2">
                   <button
                     type="button"

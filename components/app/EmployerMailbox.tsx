@@ -563,7 +563,7 @@ function ConnectForm({ t, onConnected }: { t: Dict; onConnected: () => void }) {
       >
         {busy ? t.connecting : t.connect}
       </button>
-      {error && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
+      {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
     </div>
   );
 }

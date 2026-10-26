@@ -73,7 +73,7 @@ export function CancellationClaimButton({ shiftId, shiftTitle }: { shiftId: stri
                 className="field-input mt-3"
                 placeholder="Toelichting (optioneel) — bijv. dat je andere klussen hebt afgezegd."
               />
-              {err && <p className="mt-1 text-xs text-crit">{err}</p>}
+              {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
               <div className="mt-4 flex gap-2">
                 <button type="button" onClick={submit} disabled={busy} className="btn-primary flex-1">
                   {busy ? "Indienen…" : "Claim indienen"}

@@ -162,7 +162,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
           {state === "ios-install"
             ? "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan."
             : "Zet meldingen aan, dan krijg je een seintje bij een dienst die begint, een oproep of een nieuw bericht — ook als ZekerFlex dicht is."}
-          {error && <span className="ml-1 text-crit">{error}</span>}
+          {error && <span role="alert" className="ml-1 text-crit">{error}</span>}
         </span>
         {state !== "ios-install" && (
           <button
@@ -232,7 +232,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
             : "Je hebt meldingen eerder geweigerd. Zet ze weer aan via het slotje in de adresbalk."}
         </p>
       )}
-      {error && <p className="mt-2 text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-crit">{error}</p>}
     </div>
   );
 }

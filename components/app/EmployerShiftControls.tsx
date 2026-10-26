@@ -164,7 +164,7 @@ function EditModal({ shift, onClose, onDone }: { shift: ShiftInit; onClose: () =
             <input type="number" value={positions} onChange={(e) => setPositions(e.target.value)} className="field-input" />
           </label>
         </div>
-        {err && <p className="text-xs text-crit">{err}</p>}
+        {err && <p role="alert" className="text-xs text-crit">{err}</p>}
         <button type="button" onClick={save} disabled={busy} className="btn-primary w-full">
           {busy ? c.savingShort : c.saveChanges}
         </button>
@@ -215,7 +215,7 @@ function CancelModal({ shift, onClose, onDone }: { shift: ShiftInit; onClose: ()
           <span className="field-label">{c.reason}</span>
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="field-input" placeholder={c.reasonPh} />
         </label>
-        {err && <p className="text-xs text-crit">{err}</p>}
+        {err && <p role="alert" className="text-xs text-crit">{err}</p>}
         <button type="button" onClick={submit} disabled={busy} className="w-full rounded-full bg-crit px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
           {busy ? c.cancelling : c.cancelDefinitive}
         </button>

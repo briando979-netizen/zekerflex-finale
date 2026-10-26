@@ -85,7 +85,7 @@ export function ReviewButton({
               placeholder="Hoe ging de samenwerking?"
               maxLength={1500}
             />
-            {err && <p className="mt-1 text-xs text-crit">{err}</p>}
+            {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
             <div className="mt-4 flex gap-2">
               <button type="button" onClick={submit} disabled={busy} className="btn-primary flex-1">
                 {busy ? "Versturen…" : "Review plaatsen"}

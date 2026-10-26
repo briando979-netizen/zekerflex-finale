@@ -48,7 +48,7 @@ export function AutoApproveToggle() {
             geschreven dan gepland, de GPS-check-in klopt en er geen fraudesignalen zijn. Al het andere blijft voor jou. Je kunt het altijd
             weer uitzetten.
           </span>
-          {err && <span className="mt-1 block text-xs text-crit">{err}</span>}
+          {err && <span role="alert" className="mt-1 block text-xs text-crit">{err}</span>}
         </span>
       </label>
     </div>

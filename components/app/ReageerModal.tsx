@@ -492,7 +492,7 @@ function Modal({
               </div>
             </div>
 
-            {err && <p className="text-xs text-crit">{err}</p>}
+            {err && <p role="alert" className="text-xs text-crit">{err}</p>}
           </div>
 
           <div className="border-t border-hair p-4">

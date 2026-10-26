@@ -68,7 +68,7 @@ export function StripeConnectPayout({
       <p className="mt-1.5 text-xs leading-relaxed text-neutralx-500">
         Via Stripe, veilig en binnen enkele minuten — nodig voor snelle uitbetaling na goedkeuring van je uren.
       </p>
-      {error && <p className="mt-1.5 text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-1.5 text-xs text-crit">{error}</p>}
     </div>
   );
 }

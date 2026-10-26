@@ -88,7 +88,7 @@ function DocSlot({
       <button type="button" onClick={() => ref.current?.click()} disabled={busy} className="btn-ghost mt-3 text-sm">
         {busy ? t.uploading : doc ? t.replace : t.upload}
       </button>
-      {err && <p className="mt-1 text-xs text-crit">{err}</p>}
+      {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
       <input
         ref={ref}
         type="file"

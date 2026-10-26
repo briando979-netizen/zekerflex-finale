@@ -63,7 +63,7 @@ export function UitzendContractCard() {
           die periode kun je alle uitzendklussen doen. Je moet hem ondertekenen voordat je kunt
           reageren op klussen.
         </p>
-        {err && <p className="mt-2 text-xs text-crit">{err}</p>}
+        {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
         <button
           type="button"
           onClick={sign}
@@ -119,7 +119,7 @@ export function UitzendContractCard() {
           <p className="text-xs text-neutralx-600">
             Je overeenkomst is verlopen. Onderteken een nieuwe om door te werken.
           </p>
-          {err && <p className="mt-1 text-xs text-crit">{err}</p>}
+          {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
           <button
             type="button"
             onClick={sign}

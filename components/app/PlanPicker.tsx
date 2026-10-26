@@ -93,7 +93,7 @@ export function PlanPicker({
           );
         })}
       </div>
-      {err && <p className="mt-3 text-sm text-crit">{err}</p>}
+      {err && <p role="alert" className="mt-3 text-sm text-crit">{err}</p>}
       {currentPlanKey !== "free" && (
         <button type="button" onClick={manage} disabled={busy === "portal"} className="btn-ghost mt-4 text-xs disabled:opacity-50">
           {busy === "portal" ? "Bezig…" : "Abonnement beheren / opzeggen"}

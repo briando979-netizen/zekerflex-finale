@@ -69,7 +69,7 @@ export function AvatarUpload({
           )}
         </div>
         <p className="mt-1 text-xs text-neutralx-400">JPG, PNG of WebP · max 8 MB. Je foto verschijnt in de chat en bij je profiel.</p>
-        {err && <p className="mt-1 text-xs text-crit">{err}</p>}
+        {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
       </div>
       <input
         ref={inputRef}

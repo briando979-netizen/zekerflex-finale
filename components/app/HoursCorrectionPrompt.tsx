@@ -39,7 +39,7 @@ export function HoursCorrectionPrompt({
       <p className="mt-2 text-xs text-neutralx-500">
         Ga je niet akkoord? Dan beoordeelt ZekerFlex dit onafhankelijk.
       </p>
-      {error && <p className="mt-2 text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-crit">{error}</p>}
       <div className="mt-4 flex gap-2">
         <button
           type="button"

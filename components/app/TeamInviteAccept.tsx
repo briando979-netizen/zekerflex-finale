@@ -33,7 +33,7 @@ function AcceptButton({ token }: { token: string }) {
 
   return (
     <>
-      {error && <p className="mb-3 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>}
+      {error && <p role="alert" className="mb-3 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>}
       <button type="button" onClick={accept} disabled={busy} className="btn-primary w-full disabled:opacity-50">
         {busy ? "Bezig…" : "Uitnodiging accepteren"}
       </button>
@@ -46,7 +46,7 @@ function RegisterForm({ token, email }: { token: string; email: string }) {
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="token" value={token} />
-      {state.error && <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+      {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
       <label className="block">
         <span className="field-label">E-mailadres</span>
         <input value={email} disabled className="field-input opacity-60" />

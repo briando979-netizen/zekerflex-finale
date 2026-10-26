@@ -281,7 +281,7 @@ export function OnboardingForm({
   return (
     <form ref={formRef} onSubmit={onSubmit} className="space-y-8">
       {error && (
-        <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
+        <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
       )}
 
       {requireKvk && (

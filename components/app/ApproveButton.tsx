@@ -50,7 +50,7 @@ export function ApproveButton({ timesheetId, hasFlags = false, hasCriticalFlag =
         >
           {pending ? c.approving : c.requestReview}
         </button>
-        {error && <span className="text-xs text-crit">{error}</span>}
+        {error && <span role="alert" className="text-xs text-crit">{error}</span>}
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function ApproveButton({ timesheetId, hasFlags = false, hasCriticalFlag =
       >
         {pending ? c.approving : hasFlags ? c.approveWithFlags : c.approve}
       </button>
-      {error && <span className="text-xs text-crit">{error}</span>}
+      {error && <span role="alert" className="text-xs text-crit">{error}</span>}
     </div>
   );
 }

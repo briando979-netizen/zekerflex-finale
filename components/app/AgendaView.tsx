@@ -294,7 +294,7 @@ function AddForm({ t, onDone, onCancel }: { t: Dict; onDone: () => void; onCance
         <button type="button" onClick={onCancel} className="btn-ghost text-sm">
           {t.cancel}
         </button>
-        {error && <span className="text-sm text-crit">{error}</span>}
+        {error && <span role="alert" className="text-sm text-crit">{error}</span>}
       </div>
     </div>
   );

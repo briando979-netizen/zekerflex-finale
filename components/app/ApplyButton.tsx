@@ -48,7 +48,7 @@ export function ApplyButton({
           )}
         </span>
       )}
-      {msg && !msg.ok && <span className="max-w-[220px] text-right text-xs text-crit">{msg.text}</span>}
+      {msg && !msg.ok && <span role="alert" className="max-w-[220px] text-right text-xs text-crit">{msg.text}</span>}
     </div>
   );
 }

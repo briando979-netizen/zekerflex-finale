@@ -161,7 +161,7 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
                   placeholder="Kostenplaats (optioneel)"
                   className="field-input w-full"
                 />
-                {err && <p className="text-sm text-crit">{err}</p>}
+                {err && <p role="alert" className="text-sm text-crit">{err}</p>}
                 <div className="flex gap-2">
                   <button
                     type="button"

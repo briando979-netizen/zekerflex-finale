@@ -38,7 +38,7 @@ export function PayInvoiceButton({
       >
         {pending ? pendingLabel : label}
       </button>
-      {error && <span className="max-w-[180px] text-right text-[11px] text-crit">{error}</span>}
+      {error && <span role="alert" className="max-w-[180px] text-right text-[11px] text-crit">{error}</span>}
     </div>
   );
 }

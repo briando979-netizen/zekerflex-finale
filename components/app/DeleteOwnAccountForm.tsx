@@ -21,7 +21,7 @@ export function DeleteOwnAccountForm() {
 
   return (
     <form action={action} className="space-y-4">
-      {state.error && <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+      {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
 
       <label className="block">
         <span className="field-label">

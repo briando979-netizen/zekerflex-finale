@@ -114,7 +114,7 @@ export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number 
               </label>
             </div>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Omschrijving (optioneel)" rows={2} className="field-input w-full" />
-            {err && <p className="text-sm text-crit">{err}</p>}
+            {err && <p role="alert" className="text-sm text-crit">{err}</p>}
             <div className="flex gap-2">
               <button type="button" onClick={create} disabled={busy || !label} className="btn-primary text-sm disabled:opacity-50">
                 {busy ? "Bezig…" : "Opslaan"}

@@ -131,7 +131,7 @@ export function PayoutChoice({ initialSpeed = "standard" }: { initialSpeed?: Spe
       </div>
 
       {err ? (
-        <p className="mt-2 text-xs text-crit">{err}</p>
+        <p role="alert" className="mt-2 text-xs text-crit">{err}</p>
       ) : saving ? (
         <p className="mt-2 text-xs text-neutralx-400">Opslaan…</p>
       ) : (
