@@ -318,9 +318,9 @@ export async function reactToMessage(
   for (const [e, users] of Object.entries(m.reactions ?? {})) reactions[e] = [...users];
   const had = (reactions[emoji] ?? []).includes(userId);
   // verwijder de gebruiker overal (max één reactie per persoon)
-  for (const e of Object.keys(reactions)) reactions[e] = reactions[e].filter((u) => u !== userId);
+  for (const e of Object.keys(reactions)) reactions[e] = (reactions[e] ?? []).filter((u) => u !== userId);
   if (!had) reactions[emoji] = [...(reactions[emoji] ?? []), userId];
-  for (const e of Object.keys(reactions)) if (reactions[e].length === 0) delete reactions[e];
+  for (const e of Object.keys(reactions)) if ((reactions[e] ?? []).length === 0) delete reactions[e];
   const updated: ChatMessage = { ...m };
   if (Object.keys(reactions).length) updated.reactions = reactions;
   else delete updated.reactions;
