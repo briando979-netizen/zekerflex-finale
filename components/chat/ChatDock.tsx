@@ -104,6 +104,23 @@ export function ChatDock() {
     [active, me],
   );
 
+  const del = useCallback(
+    async (msg: Msg) => {
+      if (!active) return;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, deleted: true } : m)));
+      try {
+        await fetch(`/api/inbox/${active}/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: msg.id }),
+        });
+      } catch {
+        /* optimistische staat blijft staan */
+      }
+    },
+    [active],
+  );
+
   // open via global event
   useEffect(() => {
     const handler = async (e: Event) => {
@@ -399,6 +416,7 @@ export function ChatDock() {
                         onReply={setReplyTo}
                         onAvatarClick={setCardUser}
                         onReact={react}
+                        onDelete={del}
                         {...(me ? { myUserId: me.userId } : {})}
                       />
                     </div>

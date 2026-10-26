@@ -65,6 +65,8 @@ export interface ChatMessage {
   auto?: boolean;
   /** emoji → userIds die die reactie gaven (max één emoji per gebruiker) */
   reactions?: Record<string, string[]>;
+  /** door de afzender ingetrokken ("verwijderd voor iedereen"); inhoud is gewist */
+  deleted?: boolean;
 }
 
 export type MessageExtra = Partial<
@@ -324,6 +326,19 @@ export async function reactToMessage(
   const updated: ChatMessage = { ...m };
   if (Object.keys(reactions).length) updated.reactions = reactions;
   else delete updated.reactions;
+  list[idx] = updated;
+  await kvSet(key, list.slice(-5000));
+  return updated;
+}
+
+/** Trek een bericht in: wis de inhoud en markeer als verwijderd (de afzender-check doet de route). */
+export async function deleteMessage(threadId: string, messageId: string): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  if (idx === -1) return null;
+  const m = list[idx]!;
+  const updated: ChatMessage = { id: m.id, threadId: m.threadId, from: m.from, at: m.at, text: "", kind: m.kind, deleted: true };
   list[idx] = updated;
   await kvSet(key, list.slice(-5000));
   return updated;

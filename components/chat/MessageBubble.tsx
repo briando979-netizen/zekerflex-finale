@@ -56,6 +56,7 @@ export function MessageBubble({
   onReply,
   onAvatarClick,
   onReact,
+  onDelete,
   myUserId,
 }: {
   m: Msg;
@@ -70,10 +71,19 @@ export function MessageBubble({
   onReply?: (m: Msg) => void;
   onAvatarClick?: (userId: string) => void;
   onReact?: (m: Msg, emoji: string) => void;
+  onDelete?: (m: Msg) => void;
   myUserId?: string;
 }) {
   const [pickOpen, setPickOpen] = useState(false);
   const mediaUrl = m.attachment ? `/api/inbox/${threadId}/media/${m.attachment.mediaId}` : null;
+
+  if (m.deleted) {
+    return (
+      <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+        <div className="my-1 rounded-2xl bg-black/[0.04] px-3 py-2 text-[0.8em] italic text-neutralx-400">🚫 Dit bericht is verwijderd</div>
+      </div>
+    );
+  }
 
   if (m.kind === "system") {
     return (
@@ -257,6 +267,18 @@ export function MessageBubble({
           className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
           🙂
+        </button>
+      )}
+      {mine && onDelete && (
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm("Dit bericht voor iedereen verwijderen?")) onDelete(m);
+          }}
+          aria-label="Verwijder bericht"
+          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-crit [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+        >
+          🗑
         </button>
       )}
       {mine && onReply && (
