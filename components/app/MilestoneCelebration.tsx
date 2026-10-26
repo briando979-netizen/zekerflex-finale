@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/Toast";
+import { fireConfetti } from "@/components/ui/confetti";
 
 /**
  * Subtiele mijlpaal-felicitatie: bij het bereiken van een drempel (1e, 5e, 10e…
@@ -30,6 +31,7 @@ export function MilestoneCelebration({ count, firstText, nText }: { count: numbe
       return;
     }
     toast.success(top === 1 ? firstText : `${top} ${nText}`);
+    fireConfetti();
   }, [count, firstText, nText, toast]);
   return null;
 }
