@@ -28,7 +28,7 @@ export default function NotFound() {
           </Link>
         </div>
         <p className="mt-10 text-xs text-neutralx-400">
-          Typefout in het adres? Check 'm nog even — of zoek via het menu op de homepage.
+          Typefout in het adres? Check &apos;m nog even — of zoek via het menu op de homepage.
         </p>
       </div>
     </main>
