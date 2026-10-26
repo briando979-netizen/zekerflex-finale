@@ -240,7 +240,7 @@ export function TimesheetSubmitForm({
             ))}
           </div>
           <textarea className={`${field} mt-3`} rows={3} maxLength={500} value={notWorkedNote} onChange={(e) => setNotWorkedNote(e.target.value)} placeholder={T.notePlaceholder} />
-          {error && <p className="mt-2 text-sm text-crit">{error}</p>}
+          {error && <p role="alert" className="mt-2 text-sm text-crit">{error}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={() => setStep("worked")} className="rounded-xl border border-hairstrong py-3 font-semibold">
               {T.back}
@@ -307,7 +307,7 @@ export function TimesheetSubmitForm({
                 {T.whyDifferent} <span className="font-normal text-neutralx-400">{T.forClient}</span>
                 <textarea className={field} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={T.whyPlaceholder} />
               </label>
-              {error && <p className="text-sm text-crit">{error}</p>}
+              {error && <p role="alert" className="text-sm text-crit">{error}</p>}
               <button
                 type="button"
                 onClick={() => {
@@ -322,7 +322,7 @@ export function TimesheetSubmitForm({
               </button>
             </div>
           )}
-          {error && !editHours && <p className="mt-2 text-sm text-crit">{error}</p>}
+          {error && !editHours && <p role="alert" className="mt-2 text-sm text-crit">{error}</p>}
         </>
       )}
 
@@ -343,7 +343,7 @@ export function TimesheetSubmitForm({
                 {T.whatFor}
                 <textarea className={field} rows={2} maxLength={300} value={extraNote} onChange={(e) => setExtraNote(e.target.value)} placeholder={T.whatForPlaceholder} />
               </label>
-              {error && <p className="text-sm text-crit">{error}</p>}
+              {error && <p role="alert" className="text-sm text-crit">{error}</p>}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -465,7 +465,7 @@ export function TimesheetSubmitForm({
             <Row label={T.rowReview} value={rating ? "★".repeat(rating) : T.skipped} />
             {!payroll && <Row label={T.rowPayout} value={inApp ? SPEEDS[0]!.title : `${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : T.ownIban}`} />}
           </dl>
-          {error && <p className="mt-3 text-sm text-crit">{error}</p>}
+          {error && <p role="alert" className="mt-3 text-sm text-crit">{error}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
               {T.back}

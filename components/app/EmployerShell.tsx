@@ -334,7 +334,7 @@ export function EmployerShell({
           </div>
         </header>
 
-        <main key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 lg:px-8 lg:py-10">
+        <main id="main" tabIndex={-1} key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 outline-none lg:px-8 lg:py-10">
           <div className="mx-auto max-w-6xl 2xl:max-w-7xl">
             {!pathname.startsWith("/werkgever/berichten") && <PushToggle variant="banner" />}
             {children}

@@ -107,8 +107,10 @@ export function FreelancerShell({
       )}
 
       <main
+        id="main"
+        tabIndex={-1}
         key={pathname}
-        className={`relative flex-1 animate-slide-up-fade ${
+        className={`relative flex-1 animate-slide-up-fade outline-none ${
           focused ? "" : "px-4 pb-28 pt-6 lg:px-8"
         }`}
       >
