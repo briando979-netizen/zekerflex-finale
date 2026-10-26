@@ -5,6 +5,7 @@ import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
+import { ForwardPicker } from "./ForwardPicker";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
@@ -48,6 +49,7 @@ export function ChatDock() {
   useEffect(() => {
     if (search.activeId) document.getElementById(`cd-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [search.activeId]);
+  const [forwarding, setForwarding] = useState<Msg | null>(null);
   const lastTypingPing = useRef(0);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
@@ -125,6 +127,24 @@ export function ChatDock() {
       }
     },
     [active],
+  );
+
+  const doForward = useCallback(
+    async (toThreadId: string) => {
+      const msg = forwarding;
+      setForwarding(null);
+      if (!msg || !active) return;
+      try {
+        await fetch("/api/inbox/forward", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
+        });
+      } catch {
+        /* genegeerd */
+      }
+    },
+    [forwarding, active],
   );
 
   // open via global event
@@ -435,6 +455,7 @@ export function ChatDock() {
                         onAvatarClick={setCardUser}
                         onReact={react}
                         onDelete={del}
+                        onForward={setForwarding}
                         {...(me ? { myUserId: me.userId } : {})}
                       />
                     </div>
@@ -479,6 +500,15 @@ export function ChatDock() {
         />
       )}
 
+      {forwarding && (
+        <Portal>
+          <ForwardPicker
+            items={threads.filter((t) => t.id !== active).map((t) => ({ id: t.id, label: otherOf(t).name }))}
+            onPick={doForward}
+            onClose={() => setForwarding(null)}
+          />
+        </Portal>
+      )}
       {call && (
         <CallOverlay
           threadId={call.threadId}

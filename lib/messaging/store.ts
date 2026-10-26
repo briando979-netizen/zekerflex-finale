@@ -67,10 +67,12 @@ export interface ChatMessage {
   reactions?: Record<string, string[]>;
   /** door de afzender ingetrokken ("verwijderd voor iedereen"); inhoud is gewist */
   deleted?: boolean;
+  /** doorgestuurd vanuit een ander gesprek */
+  forwarded?: boolean;
 }
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded">
 >;
 
 export interface ChatThread {
@@ -368,6 +370,7 @@ export async function postMessage(
     ...(extra.call ? { call: extra.call } : {}),
     ...(extra.replyTo ? { replyTo: extra.replyTo } : {}),
     ...(extra.auto ? { auto: true } : {}),
+    ...(extra.forwarded ? { forwarded: true } : {}),
   };
   await kvAppend(messagesKey(threadId), msg, 5000);
 

@@ -57,6 +57,7 @@ export function MessageBubble({
   onAvatarClick,
   onReact,
   onDelete,
+  onForward,
   myUserId,
 }: {
   m: Msg;
@@ -72,6 +73,7 @@ export function MessageBubble({
   onAvatarClick?: (userId: string) => void;
   onReact?: (m: Msg, emoji: string) => void;
   onDelete?: (m: Msg) => void;
+  onForward?: (m: Msg) => void;
   myUserId?: string;
 }) {
   const [pickOpen, setPickOpen] = useState(false);
@@ -165,11 +167,22 @@ export function MessageBubble({
           🙂
         </button>
       )}
+      {!mine && onForward && (
+        <button
+          type="button"
+          onClick={() => onForward(m)}
+          aria-label="Doorsturen"
+          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+        >
+          ↪
+        </button>
+      )}
       <div
         className={`max-w-[78%] rounded-2xl px-3 py-2 text-[0.875em] shadow-sm ${
           mine ? "rounded-br-sm bg-[#DCF8C6]" : "rounded-bl-sm bg-white"
         }`}
       >
+        {m.forwarded && <p className="mb-0.5 flex items-center gap-1 text-[11px] italic text-neutralx-400">↪ Doorgestuurd</p>}
         {showSender && !mine && senderName && (
           <button
             type="button"
@@ -267,6 +280,16 @@ export function MessageBubble({
           className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
           🙂
+        </button>
+      )}
+      {mine && onForward && (
+        <button
+          type="button"
+          onClick={() => onForward(m)}
+          aria-label="Doorsturen"
+          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+        >
+          ↪
         </button>
       )}
       {mine && onDelete && (

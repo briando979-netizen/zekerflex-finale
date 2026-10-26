@@ -5,6 +5,7 @@ import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
+import { ForwardPicker } from "./ForwardPicker";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -112,6 +113,7 @@ export function InboxPage({
   useEffect(() => {
     if (search.activeId) document.getElementById(`ip-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [search.activeId]);
+  const [forwarding, setForwarding] = useState<Msg | null>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
   const lastPing = useRef(0);
@@ -309,6 +311,21 @@ export function InboxPage({
       });
     } catch {
       /* optimistische staat blijft staan */
+    }
+  };
+
+  const doForward = async (toThreadId: string) => {
+    const msg = forwarding;
+    setForwarding(null);
+    if (!msg || !active) return;
+    try {
+      await fetch("/api/inbox/forward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
+      });
+    } catch {
+      /* genegeerd */
     }
   };
 
@@ -752,6 +769,7 @@ export function InboxPage({
                     onAvatarClick={setCardUser}
                     onReact={react}
                     onDelete={del}
+                    onForward={setForwarding}
                     {...(me ? { myUserId: me.userId } : {})}
                   />
                 </div>
@@ -826,6 +844,15 @@ export function InboxPage({
             return null;
           }}
         />
+      )}
+      {forwarding && (
+        <Portal>
+          <ForwardPicker
+            items={threads.filter((t) => t.id !== active).map((t) => ({ id: t.id, label: otherOf(t).name }))}
+            onPick={doForward}
+            onClose={() => setForwarding(null)}
+          />
+        </Portal>
       )}
       {cardUser && (
         <UserCard

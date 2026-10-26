@@ -41,6 +41,7 @@ export interface Msg {
   pending?: boolean;
   reactions?: Record<string, string[]>;
   deleted?: boolean;
+  forwarded?: boolean;
 }
 
 /** Zet reacties op een bericht (of haalt het veld weg als er geen zijn). */
