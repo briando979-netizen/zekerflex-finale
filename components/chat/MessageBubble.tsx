@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { fmtBytes, fmtDuration, fmtTime, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
 
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "😢"];
+
 function Ticks({ m }: { m: Msg }) {
   if (m.pending) return <span>🕓</span>;
   return <span className={m.readByOthers ? "text-[#34B7F1]" : ""}>{m.readByOthers ? "✓✓" : "✓"}</span>;
@@ -53,6 +55,8 @@ export function MessageBubble({
   avatars,
   onReply,
   onAvatarClick,
+  onReact,
+  myUserId,
 }: {
   m: Msg;
   mine: boolean;
@@ -65,7 +69,10 @@ export function MessageBubble({
   avatars?: Record<string, string>;
   onReply?: (m: Msg) => void;
   onAvatarClick?: (userId: string) => void;
+  onReact?: (m: Msg, emoji: string) => void;
+  myUserId?: string;
 }) {
+  const [pickOpen, setPickOpen] = useState(false);
   const mediaUrl = m.attachment ? `/api/inbox/${threadId}/media/${m.attachment.mediaId}` : null;
 
   if (m.kind === "system") {
@@ -96,7 +103,25 @@ export function MessageBubble({
   }
 
   return (
-    <div className={`group flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
+    <div className={`group relative flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
+      {onReact && pickOpen && (
+        <div className={`absolute -top-8 z-20 flex gap-1 rounded-full bg-white px-2 py-1 shadow-lg ring-1 ring-black/5 ${mine ? "right-2" : "left-9"}`}>
+          {QUICK_REACTIONS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => {
+                onReact(m, e);
+                setPickOpen(false);
+              }}
+              className="text-lg leading-none transition-transform hover:scale-125"
+              aria-label={`Reageer met ${e}`}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
       {!mine && (
         <button
           type="button"
@@ -118,6 +143,16 @@ export function MessageBubble({
           aria-label="Beantwoord"
         >
           ↩
+        </button>
+      )}
+      {!mine && onReact && (
+        <button
+          type="button"
+          onClick={() => setPickOpen((v) => !v)}
+          aria-label="Reageer"
+          className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+        >
+          🙂
         </button>
       )}
       <div
@@ -193,7 +228,37 @@ export function MessageBubble({
           {fmtTime(m.at)}
           {mine && <Ticks m={m} />}
         </span>
+
+        {m.reactions && Object.keys(m.reactions).length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {Object.entries(m.reactions).map(([emoji, users]) => {
+              const reacted = myUserId ? users.includes(myUserId) : false;
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onReact?.(m, emoji)}
+                  className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] leading-none ${reacted ? "bg-brand-100 text-brand-700" : "bg-black/[0.06] text-neutralx-600"}`}
+                  aria-label={`${users.length}× ${emoji}${reacted ? " (jij reageerde)" : ""}`}
+                >
+                  <span>{emoji}</span>
+                  {users.length > 1 && <span>{users.length}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
+      {mine && onReact && (
+        <button
+          type="button"
+          onClick={() => setPickOpen((v) => !v)}
+          aria-label="Reageer"
+          className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+        >
+          🙂
+        </button>
+      )}
       {mine && onReply && (
         <button
           type="button"

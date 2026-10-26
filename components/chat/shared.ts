@@ -39,6 +39,26 @@ export interface Msg {
   auto?: boolean;
   readByOthers?: boolean;
   pending?: boolean;
+  reactions?: Record<string, string[]>;
+}
+
+/** Zet reacties op een bericht (of haalt het veld weg als er geen zijn). */
+export function withReactions(m: Msg, reactions: Record<string, string[]>): Msg {
+  const next: Msg = { ...m };
+  const cleaned: Record<string, string[]> = {};
+  for (const [e, u] of Object.entries(reactions)) if (u.length) cleaned[e] = u;
+  if (Object.keys(cleaned).length) next.reactions = cleaned;
+  else delete next.reactions;
+  return next;
+}
+
+/** Toggle één emoji-reactie van een gebruiker (max één emoji per persoon). */
+export function toggleReaction(m: Msg, userId: string, emoji: string): Msg {
+  const reactions: Record<string, string[]> = {};
+  for (const [e, u] of Object.entries(m.reactions ?? {})) reactions[e] = u.filter((x) => x !== userId);
+  const had = (m.reactions?.[emoji] ?? []).includes(userId);
+  if (!had) reactions[emoji] = [...(reactions[emoji] ?? []), userId];
+  return withReactions(m, reactions);
 }
 
 export interface ThreadRow {

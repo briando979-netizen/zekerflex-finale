@@ -63,6 +63,8 @@ export interface ChatMessage {
   replyTo?: ReplyRef;
   /** posted by the recipient's automatic-reply rule, not typed by a human */
   auto?: boolean;
+  /** emoji → userIds die die reactie gaven (max één emoji per gebruiker) */
+  reactions?: Record<string, string[]>;
 }
 
 export type MessageExtra = Partial<
@@ -298,6 +300,33 @@ export async function getMessages(threadId: string, limit = 200): Promise<ChatMe
   threadId = await resolveThreadId(threadId);
   const rows = (await kvGet<ChatMessage[]>(messagesKey(threadId))) ?? [];
   return rows.slice(-limit);
+}
+
+/** Toggle één emoji-reactie van een gebruiker op een bericht (één emoji per persoon). */
+export async function reactToMessage(
+  threadId: string,
+  messageId: string,
+  userId: string,
+  emoji: string,
+): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  if (idx === -1) return null;
+  const m = list[idx]!;
+  const reactions: Record<string, string[]> = {};
+  for (const [e, users] of Object.entries(m.reactions ?? {})) reactions[e] = [...users];
+  const had = (reactions[emoji] ?? []).includes(userId);
+  // verwijder de gebruiker overal (max één reactie per persoon)
+  for (const e of Object.keys(reactions)) reactions[e] = reactions[e].filter((u) => u !== userId);
+  if (!had) reactions[emoji] = [...(reactions[emoji] ?? []), userId];
+  for (const e of Object.keys(reactions)) if (reactions[e].length === 0) delete reactions[e];
+  const updated: ChatMessage = { ...m };
+  if (Object.keys(reactions).length) updated.reactions = reactions;
+  else delete updated.reactions;
+  list[idx] = updated;
+  await kvSet(key, list.slice(-5000));
+  return updated;
 }
 
 export async function postMessage(

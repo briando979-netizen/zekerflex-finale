@@ -12,6 +12,8 @@ import {
   dayLabel,
   fmtTime,
   lastSeenLabel,
+  toggleReaction,
+  withReactions,
   type ChatUser,
   type Msg,
   type Presence,
@@ -80,6 +82,27 @@ export function ChatDock() {
       /* ignore */
     }
   }, [loadThreads]);
+
+  const react = useCallback(
+    async (msg: Msg, emoji: string) => {
+      if (!active || !me) return;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? toggleReaction(m, me.userId, emoji) : m)));
+      try {
+        const r = await fetch(`/api/inbox/${active}/react`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: msg.id, emoji }),
+        });
+        if (r.ok) {
+          const reactions = ((await r.json()).reactions ?? {}) as Record<string, string[]>;
+          setMessages((prev) => prev.map((m) => (m.id === msg.id ? withReactions(m, reactions) : m)));
+        }
+      } catch {
+        /* optimistische staat blijft staan */
+      }
+    },
+    [active, me],
+  );
 
   // open via global event
   useEffect(() => {
@@ -375,6 +398,8 @@ export function ChatDock() {
                         avatars={avatars}
                         onReply={setReplyTo}
                         onAvatarClick={setCardUser}
+                        onReact={react}
+                        {...(me ? { myUserId: me.userId } : {})}
                       />
                     </div>
                   );
