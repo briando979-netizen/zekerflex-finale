@@ -104,7 +104,7 @@ export function OrderTracking({ orderId }: { orderId: string }) {
         </div>
       )}
       {failed && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {order.status === "PAYMENT_FAILED" ? "De betaling is niet gelukt." : "Deze bestelling is geannuleerd."}{" "}
           <Link href="/shop" className="font-semibold underline">Probeer opnieuw</Link>
         </div>

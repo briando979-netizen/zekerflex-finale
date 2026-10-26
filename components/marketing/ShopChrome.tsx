@@ -306,7 +306,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                 <label className="field-label">{t.shop.city}<input required className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} /></label>
               </div>
               <div className="mt-2 flex items-center justify-between border-t border-hair pt-4 font-display text-lg font-bold"><span>{t.shop.total}</span><span>{money(total)}</span></div>
-              {orderError && <p className="text-sm font-semibold text-crit">{orderError}</p>}
+              {orderError && <p role="alert" className="text-sm font-semibold text-crit">{orderError}</p>}
               <button className="w-full rounded-lg bg-ink py-3 text-sm font-bold text-white disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>{placing ? t.shop.toPaymentPending : t.shop.toPayment}</button>
               <p className="text-center text-[11px] text-neutralx-400">{t.shop.securePaymentNote}</p>
             </form>

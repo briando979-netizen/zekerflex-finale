@@ -212,7 +212,7 @@ export function OpenApplicationForm() {
         </span>
       </label>
 
-      {msg && state === "error" && <p className="mt-3 text-sm text-red-600">{msg}</p>}
+      {msg && state === "error" && <p role="alert" className="mt-3 text-sm text-red-600">{msg}</p>}
 
       <button
         type="submit"

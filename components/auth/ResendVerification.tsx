@@ -53,7 +53,7 @@ export function ResendVerification({
           placeholder="123456"
           className="w-full rounded-lg border border-hairstrong px-4 py-3 text-center font-mono text-2xl tracking-[0.4em] outline-none focus:border-brand-500"
         />
-        {state.error && <p className="text-sm text-crit">{state.error}</p>}
+        {state.error && <p role="alert" className="text-sm text-crit">{state.error}</p>}
         <SubmitCode label={t.confirm} busy={t.confirming} />
       </form>
 

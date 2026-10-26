@@ -127,7 +127,7 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
             Annuleren
           </button>
         </form>
-        {error && <p className="text-sm text-crit">{error}</p>}
+        {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
     );
   }
@@ -142,7 +142,7 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
         <button type="button" disabled={busy} className="btn-primary text-sm disabled:opacity-50" onClick={() => void run({ action: "begin" }, (d) => setSetup(d as { secret: string; otpauth: string; qrSvg: string }))}>
           {busy ? "Bezig…" : "Tweestapsverificatie aanzetten"}
         </button>
-        {error && <p className="text-sm text-crit">{error}</p>}
+        {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
     );
   }
@@ -189,7 +189,7 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
           </button>
         </form>
       )}
-      {error && <p className="text-sm text-crit">{error}</p>}
+      {error && <p role="alert" className="text-sm text-crit">{error}</p>}
     </div>
   );
 }

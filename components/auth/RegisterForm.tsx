@@ -179,7 +179,7 @@ export function RegisterForm({
         ))}
       </div>
 
-      {state.error && <p className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+      {state.error && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
 
       {googleEnabled && (
         <>

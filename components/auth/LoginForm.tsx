@@ -64,7 +64,7 @@ export function LoginForm({
   if (state.needsCode && state.challenge) {
     return (
       <div>
-        {state.error && <p className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+        {state.error && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
           <input type="hidden" name="challenge" value={state.challenge} />
@@ -105,7 +105,7 @@ export function LoginForm({
           {t.resetDone}
         </p>
       )}
-      {banner && <p className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{banner}</p>}
+      {banner && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{banner}</p>}
 
       {googleEnabled && (
         <>

@@ -138,7 +138,7 @@ export function UitzendbureauContactForm() {
             .
           </span>
         </label>
-        {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+        {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
         <button
           type="button"
           onClick={submit}

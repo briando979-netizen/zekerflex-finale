@@ -90,7 +90,7 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
           .
         </span>
       </label>
-      {msg && state === "error" && <p className="text-xs text-red-300">{msg}</p>}
+      {msg && state === "error" && <p role="alert" className="text-xs text-red-300">{msg}</p>}
     </form>
   );
 }
