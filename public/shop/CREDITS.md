@@ -10,7 +10,17 @@ Deze productfoto's komen van het vrije web. CC BY-SA 4.0 vereist naamsvermelding
 | gehoorbescherming-oordoppen.jpg | Day 94: Earplugs | quinn.anya | CC BY-SA | https://www.flickr.com/photos/53326337@N00/2388120713 |
 | veiligheidsbril-helder.jpg | safety glasses goggles | SSC-Aviation | CC BY-SA | https://www.flickr.com/photos/116745893@N02/12640556424 |
 
-> De overige PBM-producten gebruiken voorlopig nog hun oorspronkelijke foto.
-> Vervang deze het liefst door eigen productfoto's via Admin → Shop, of lever een
-> Pexels/Unsplash API-sleutel aan zodat alle 14 automatisch nette, vrij-van-
-> bronvermelding foto's krijgen.
+Pixabay-foto's (royalty-vrij, commercieel toegestaan, geen bronvermelding vereist):
+
+| Bestand | Bron |
+|---|---|
+| antislip-werkschoenen-ob.jpg | Pixabay |
+| werkhandschoenen-grip.jpg | Pixabay |
+| werk-tshirt-2pack.jpg | Pixabay |
+| werkbroek-kniezakken.jpg | Pixabay |
+
+> Nog zonder eigen foto (nog op oorspronkelijke /shifts-afbeelding): veiligheids-
+> sneakers S1P, reflecterend hesje, kniebeschermers, softshell werkjas, veiligheids-
+> helm, VCA-lesboek. Stock-zoeken gaf voor deze items vooral merklogo's (Nike/
+> Merrell/CAT) of onzin — upload deze het beste zelf via Admin → Shop (zoek op
+> pixabay.com, download een schone productfoto, upload 'm bij het product).
