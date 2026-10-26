@@ -6,6 +6,7 @@ import { MessageBubble } from "./MessageBubble";
 import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
+import { ChatPinnedBanner } from "./ChatPinnedBanner";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -114,6 +115,7 @@ export function InboxPage({
     if (search.activeId) document.getElementById(`ip-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [search.activeId]);
   const [forwarding, setForwarding] = useState<Msg | null>(null);
+  const [pinned, setPinned] = useState<{ id: string; excerpt: string } | null>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
   const lastPing = useRef(0);
@@ -159,6 +161,7 @@ export function InboxPage({
     setPresence((p) => ({ ...p, ...d.presence }));
     setAvatars((p) => ({ ...p, ...d.avatars }));
     setQuickReplies(d.settings?.quickReplies ?? []);
+    setPinned(d.pinned ?? null);
     void loadThreads();
   }, [loadThreads]);
 
@@ -324,6 +327,22 @@ export function InboxPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
       });
+    } catch {
+      /* genegeerd */
+    }
+  };
+
+  const togglePin = async (msg: Msg) => {
+    if (!active) return;
+    const toPin = pinned?.id === msg.id ? null : msg.id;
+    setPinned(toPin ? { id: msg.id, excerpt: msg.text || "bericht" } : null);
+    try {
+      await fetch(`/api/inbox/${active}/pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: toPin }),
+      });
+      void loadThread(active);
     } catch {
       /* genegeerd */
     }
@@ -729,6 +748,16 @@ export function InboxPage({
               onClose={search.close}
             />
           )}
+          {pinned && (
+            <ChatPinnedBanner
+              excerpt={pinned.excerpt}
+              onJump={() => document.getElementById(`ip-msg-${pinned.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              onUnpin={() => {
+                setPinned(null);
+                if (active) void fetch(`/api/inbox/${active}/pin`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messageId: null }) });
+              }}
+            />
+          )}
 
           <div
             ref={scrollRef}
@@ -770,7 +799,9 @@ export function InboxPage({
                     onReact={react}
                     onDelete={del}
                     onForward={setForwarding}
+                    onPin={togglePin}
                     {...(me ? { myUserId: me.userId } : {})}
+                    {...(pinned ? { pinnedId: pinned.id } : {})}
                   />
                 </div>
               );

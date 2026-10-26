@@ -58,7 +58,9 @@ export function MessageBubble({
   onReact,
   onDelete,
   onForward,
+  onPin,
   myUserId,
+  pinnedId,
 }: {
   m: Msg;
   mine: boolean;
@@ -74,9 +76,12 @@ export function MessageBubble({
   onReact?: (m: Msg, emoji: string) => void;
   onDelete?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
+  onPin?: (m: Msg) => void;
   myUserId?: string;
+  pinnedId?: string;
 }) {
   const [pickOpen, setPickOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const mediaUrl = m.attachment ? `/api/inbox/${threadId}/media/${m.attachment.mediaId}` : null;
 
   if (m.deleted) {
@@ -134,6 +139,30 @@ export function MessageBubble({
           ))}
         </div>
       )}
+      {menuOpen && (
+        <div className={`absolute bottom-6 z-20 flex flex-col overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 ${mine ? "right-2" : "left-9"}`}>
+          {onForward && (
+            <button type="button" onClick={() => { onForward(m); setMenuOpen(false); }} className="whitespace-nowrap px-4 py-1.5 text-left text-ink hover:bg-paper-soft">↪ Doorsturen</button>
+          )}
+          {onPin && (
+            <button type="button" onClick={() => { onPin(m); setMenuOpen(false); }} className="whitespace-nowrap px-4 py-1.5 text-left text-ink hover:bg-paper-soft">
+              {pinnedId === m.id ? "📌 Losmaken" : "📌 Vastzetten"}
+            </button>
+          )}
+          {mine && onDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                if (window.confirm("Dit bericht voor iedereen verwijderen?")) onDelete(m);
+              }}
+              className="whitespace-nowrap px-4 py-1.5 text-left text-crit hover:bg-paper-soft"
+            >
+              🗑 Verwijderen
+            </button>
+          )}
+        </div>
+      )}
       {!mine && (
         <button
           type="button"
@@ -167,14 +196,14 @@ export function MessageBubble({
           🙂
         </button>
       )}
-      {!mine && onForward && (
+      {!mine && (onForward || onPin) && (
         <button
           type="button"
-          onClick={() => onForward(m)}
-          aria-label="Doorsturen"
-          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Meer acties"
+          className="mb-1 block text-sm leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          ↪
+          ⋯
         </button>
       )}
       <div
@@ -282,26 +311,14 @@ export function MessageBubble({
           🙂
         </button>
       )}
-      {mine && onForward && (
+      {mine && (onForward || onPin || onDelete) && (
         <button
           type="button"
-          onClick={() => onForward(m)}
-          aria-label="Doorsturen"
-          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Meer acties"
+          className="mb-1 block text-sm leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          ↪
-        </button>
-      )}
-      {mine && onDelete && (
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Dit bericht voor iedereen verwijderen?")) onDelete(m);
-          }}
-          aria-label="Verwijder bericht"
-          className="mb-1 block text-xs leading-none text-neutralx-400 hover:text-crit [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
-        >
-          🗑
+          ⋯
         </button>
       )}
       {mine && onReply && (

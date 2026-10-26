@@ -95,6 +95,8 @@ export interface ChatThread {
     ownerId?: string;
     /** verdwijnende berichten: messages older than this many days are hidden for everyone */
     disappearDays?: number;
+    /** vastgezet bericht bovenaan de thread (voor iedereen zichtbaar) */
+    pinnedMessageId?: string;
   };
   /** per-user last-read timestamp (ISO) */
   reads: Record<string, string>;
@@ -449,6 +451,16 @@ export async function setThreadMeta(threadId: string, patch: ChatThread["meta"])
   const t = await getThread(threadId);
   if (!t) return null;
   t.meta = { ...t.meta, ...patch };
+  await writeThread(t);
+  return t;
+}
+
+/** Zet (of verwijder met null) het vastgezette bericht van een thread. */
+export async function setPinnedMessage(threadId: string, messageId: string | null): Promise<ChatThread | null> {
+  const t = await getThread(await resolveThreadId(threadId));
+  if (!t) return null;
+  if (messageId) t.meta.pinnedMessageId = messageId;
+  else delete t.meta.pinnedMessageId;
   await writeThread(t);
   return t;
 }

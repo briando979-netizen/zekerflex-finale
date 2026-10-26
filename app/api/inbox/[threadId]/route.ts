@@ -100,6 +100,12 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
           ),
       })),
       disappearDays: thread.meta.disappearDays ?? 0,
+      pinned: (() => {
+        const pid = thread.meta.pinnedMessageId;
+        if (!pid) return null;
+        const pm = messages.find((mm) => mm.id === pid);
+        return pm && !pm.deleted ? { id: pm.id, excerpt: previewText(pm).slice(0, 80) } : null;
+      })(),
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);
