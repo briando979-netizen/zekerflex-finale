@@ -277,12 +277,16 @@ export function RegisterForm({
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={emailState === "taken" || emailState === "invalid"}
+            aria-describedby="register-email-hint"
             className="field-input"
           />
-          {emailState === "checking" && <span className="mt-1 block text-xs text-neutralx-400">{t.checking}</span>}
-          {emailState === "free" && <span className="mt-1 block text-xs text-ok">{t.emailFree}</span>}
-          {emailState === "taken" && <span className="mt-1 block text-xs text-crit">{t.emailTaken}</span>}
-          {emailState === "invalid" && <span className="mt-1 block text-xs text-crit">{t.emailInvalid}</span>}
+          <span id="register-email-hint" role="status" aria-live="polite">
+            {emailState === "checking" && <span className="mt-1 block text-xs text-neutralx-400">{t.checking}</span>}
+            {emailState === "free" && <span className="mt-1 block text-xs text-ok">{t.emailFree}</span>}
+            {emailState === "taken" && <span className="mt-1 block text-xs text-crit">{t.emailTaken}</span>}
+            {emailState === "invalid" && <span className="mt-1 block text-xs text-crit">{t.emailInvalid}</span>}
+          </span>
         </label>
 
         <label className="block">
@@ -320,7 +324,7 @@ export function RegisterForm({
           </span>
 
           {pw && (
-            <div className="mt-2">
+            <div className="mt-2" aria-live="polite">
               <div className="flex gap-1">
                 {[0, 1, 2, 3].map((i) => (
                   <span
@@ -359,10 +363,11 @@ export function RegisterForm({
             autoComplete="new-password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
+            aria-invalid={Boolean(pw2) && !match}
             className="field-input"
           />
           {pw2 && (
-            <span className={`mt-1 block text-xs ${match ? "text-ok" : "text-crit"}`}>
+            <span aria-live="polite" className={`mt-1 block text-xs ${match ? "text-ok" : "text-crit"}`}>
               {match ? t.match : t.noMatch}
             </span>
           )}
