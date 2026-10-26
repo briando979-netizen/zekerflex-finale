@@ -68,3 +68,8 @@ studio/projects/*/clips/
 studio/projects/*/voice/
 studio/projects/*/out/
 .env*
+
+# Python bytecode (Video Studio) — gegenereerd, hoort niet in git
+__pycache__/
+*.pyc
+*.pyo
