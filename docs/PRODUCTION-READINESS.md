@@ -1,6 +1,6 @@
 # ZekerFlex Sovereign Box — productie-gereedheid & zelf-evaluatie
 
-_Bijgewerkt: 2026-09-09 · autonome code-inspectie_
+_Bijgewerkt: 2026-10-27 · deploymentpad gecontroleerd_
 
 ## Framework
 
@@ -14,22 +14,25 @@ de promise-params op, `lib/i18n/server.ts` `getLocale()`/`getDict()` zijn nu
 ENOTEMPTY / `.nft.json` ENOENT bij `output: "standalone"`); de **Docker-build
 draait op Linux** en heeft dit niet.
 
-**Openstaand build-issue:** `package.json` `"build"` bevat
-`prisma migrate deploy` — dat breekt de Docker-image-build (geen DB bereikbaar
-tijdens build) en botst met `deploy/README` waar migraties een losse stap zijn.
-`migrate deploy` uit dat script halen.
+**Build en migraties zijn bewust gescheiden per deploymentpad.** `npm run build`
+doet alleen `prisma generate` en `next build`; de Docker-imagebuild heeft dus
+geen database nodig en past geen migraties toe. `vercel.json` kiest voor
+productiedeploys expliciet `npm run build:with-migrate`, dat `prisma generate`,
+`prisma migrate deploy` en daarna `next build` uitvoert. Een Vercel-productiedeploy
+kan dus productiemigraties toepassen; de afzonderlijke Docker/VPS-route gebruikt
+de handmatige migratiestap uit `deploy/README.md`.
 
 Dit document is de kritische zelf-analyse die de gebruiker vroeg: wat ontbreekt
 er nog, wat rammelt, en welke stappen zijn in deze ronde autonoom gezet.
 
 ## Architectuurbesluit
 
-**Sovereign Box is de primaire productiearchitectuur.** De applicatie gebruikt
-een always-on daemon, lokale inference/TTS en persistente filesystem-opslag;
-die onderdelen passen niet betrouwbaar binnen Vercel Serverless Functions.
-Vercel is daarom uitsluitend een preview/demo-pad. Een echte Vercel-productie-
-variant vereist een afzonderlijk ontwerp met externe LLM, object storage,
-managed PostgreSQL/Redis en een externe scheduler.
+**Vercel is het actieve productie-deploypad.** Pushes naar `main` starten de
+Vercel-build; `vercel.json` koppelt daaraan de productiemigraties. De AI-node
+blijft self-hosted via `deploy/ai-node/` en is vanuit de live site bereikbaar via
+de geconfigureerde Cloudflare-tunnel. De Docker/Sovereign Box-configuratie is een
+afzonderlijk VPS- en herstelpad; die voert migraties alleen uit wanneer de
+operator de gedocumenteerde migratiestap start.
 
 Dit voorkomt een gevaarlijke schijnzekerheid: een geslaagde `next build` bewijst
 alleen dat de webbundel bouwt, niet dat achtergrondjobs, uploads, mail,

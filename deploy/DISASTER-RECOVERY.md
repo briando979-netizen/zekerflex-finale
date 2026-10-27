@@ -26,11 +26,17 @@ dezelfde database, zodat er niets gesplitst raakt.
 git clone <repo> zekerflex && cd zekerflex
 cp /veilige-plek/.env.production .env.production     # de geëxporteerde Vercel-env
 # Omdat DATABASE_URL naar Neon wijst, gebruikt de app die DB. De lokale
-# postgres/redis uit de compose worden dan genegeerd — start alleen de app:
-docker compose -f docker-compose.prod.yml up -d --build app
+# postgres/redis uit de compose worden niet gestart. --env-file is nodig voor
+# Compose-interpolatie; service env_file alleen is daarvoor niet voldoende.
+docker compose --env-file .env.production -f docker-compose.prod.yml build app
 ```
-- De build draait automatisch de migraties (`build:with-migrate`). Omdat de DB al
-  op de laatste migratie staat (die liep bij de laatste Vercel-deploy) is dit een no-op.
+- De Docker-build past **geen** migraties toe. Normaal staat Neon al op de
+  migratie van de laatste Vercel-productiedeploy. Als deze checkout nieuwere,
+  nog niet toegepaste migraties bevat, voer die dan bewust uit vóór je de app
+  start:
+  `docker compose --env-file .env.production -f docker-compose.prod.yml run --rm --no-deps app npx prisma migrate deploy`.
+- Start daarna alleen de app:
+  `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-deps app`.
 - Check: `curl -sI http://localhost:3000/api/health` → 200.
 
 ## 3. Verkeer omzetten (DNS bij TransIP)
