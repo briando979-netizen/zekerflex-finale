@@ -122,6 +122,7 @@ export function EmployerShell({
     >
       {/* Sidebar */}
       <aside
+        id="employer-sidebar"
         className={`fixed inset-y-0 left-0 z-40 flex transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-all duration-300 ease-spring lg:static lg:translate-x-0 ${
           collapsed ? "w-[76px]" : "w-[276px]"
         } ${open ? "translate-x-0 shadow-e3" : "-translate-x-full"}`}
@@ -231,7 +232,9 @@ export function EmployerShell({
             type="button"
             onClick={() => setOpen((v) => !v)}
             className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong lg:hidden"
-            aria-label="Menu"
+            aria-label={open ? "Sluit navigatiemenu" : "Open navigatiemenu"}
+            aria-expanded={open}
+            aria-controls="employer-sidebar"
           >
             ☰
           </button>
