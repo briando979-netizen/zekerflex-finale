@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { chat, chatJson, fastModel } from "@/lib/ai/client";
+import { chatModelFor, stripReasoning } from "@/lib/ai/escalate";
 import type { Principal } from "@/lib/auth";
 import { askWithMemory } from "@/lib/rag/query";
 import { runAdminConsole } from "@/lib/admin-console";
@@ -278,13 +279,19 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         durationMs: Date.now() - stepStart,
       });
     } else {
+      // Slim schakelen: eenvoudige chat → snel model; moeilijke/redeneer-/code-
+      // vraag → het grote model. Zichtbaar als stap in de console.
+      const picked = chatModelFor(input.prompt);
+      await emit(turnId, "THINKING", AGENTS.jarvis, `Slim geschakeld → ${picked.label}`, {
+        detail: picked.model,
+      });
       const [stateLine, history] = await Promise.all([
         jarvisStateLine().catch(() => ""),
         recentDialogue(input.principal.userId, turnId),
       ]);
       const res = await chat({
         purpose: "jarvis-chat",
-        model: fastModel(),
+        model: picked.model,
         messages: [
           { role: "system", content: JARVIS_PERSONA },
           ...(stateLine ? [{ role: "system" as const, content: `LIVE PLATFORMSTATUS: ${stateLine}` }] : []),
@@ -292,9 +299,9 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
           { role: "user", content: input.prompt },
         ],
         temperature: 0.5,
-        maxTokens: 500,
+        maxTokens: picked.role === "reasoning" || picked.role === "code" ? 900 : 500,
       });
-      answer = res.text.trim();
+      answer = stripReasoning(res.text);
     }
 
     const toolNote = (

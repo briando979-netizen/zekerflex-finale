@@ -722,6 +722,9 @@ export function JarvisConsole() {
               {brain ? (brain.model || "node offline") : "—"}
             </div>
           )}
+          <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-white/40">
+            <span className="text-brand-mint">⚡</span> slim schakelen: simpel → snel, complex → groot
+          </div>
           <details className="mt-2">
             <summary className="cursor-pointer select-none text-[10px] uppercase tracking-[0.14em] text-white/30 hover:text-white/50 [&::-webkit-details-marker]:hidden">
               groter dan Claude?
