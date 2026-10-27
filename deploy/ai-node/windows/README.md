@@ -44,6 +44,10 @@ De laptop heeft geen videokaart en 8 GB geheugen, dus het script gebruikt kleine
 
 Reken op een paar seconden tot een halve minuut per antwoord.
 
+## Tunnel verbindt niet? (QUIC/UDP geblokkeerd)
+
+Zie je in `%USERPROFILE%\.zekerflex-ai\tunnel.log` fouten als *"failed to run the datagram handler"* of *"control stream encountered a failure"*, en blijft de node op `node:null`? Dan blokkeert je netwerk/ISP de standaard QUIC-verbinding (UDP 7844). Het script dwingt daarom `--protocol http2` af (TCP 443), wat door vrijwel elke firewall komt. Draait er nog een oude instantie met QUIC, stop dan eerst alles (`Get-Process cloudflared,ollama | Stop-Process -Force` + de `node.exe` met `auth-proxy`) en start opnieuw.
+
 ## Later naar een vaste server
 
 Draai `deploy/ai-node/setup.sh` op een Ubuntu-server en zet `LLM_BASE_URL` in Vercel. Zodra `LLM_BASE_URL` geen localhost meer is, negeert de site de laptop. Daarna kun je `start-ai-node.ps1 -Uninstall` draaien.

@@ -107,7 +107,11 @@ if (-not (Test-Path $cloudflared)) { throw "cloudflared ontbreekt. Installeer: w
 function Start-Tunnel {
   Get-Process cloudflared -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $cloudflared } | Stop-Process -Force -ErrorAction SilentlyContinue
   if (Test-Path $logFile) { Remove-Item $logFile -Force }
-  $p = Start-Process -FilePath $cloudflared -ArgumentList "tunnel --no-autoupdate --url http://127.0.0.1:11500 --logfile `"$logFile`"" -WindowStyle Hidden -PassThru
+  # --protocol http2: dwing HTTP/2 over TCP 443 af i.p.v. QUIC/UDP (poort 7844).
+  # Veel netwerken/ISP's blokkeren UDP, waardoor de QUIC-tunnel blijft falen met
+  # "failed to run the datagram handler / control stream failure". HTTP/2 komt
+  # door vrijwel elke firewall.
+  $p = Start-Process -FilePath $cloudflared -ArgumentList "tunnel --no-autoupdate --protocol http2 --url http://127.0.0.1:11500 --logfile `"$logFile`"" -WindowStyle Hidden -PassThru
   for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep 1
     if (Test-Path $logFile) {
