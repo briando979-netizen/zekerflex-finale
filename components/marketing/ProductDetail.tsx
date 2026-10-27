@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { LogoGlyph } from "@/components/brand/Logo";
+import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { IconHeart } from "@/components/marketing/ShopStorefront";
@@ -88,7 +88,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               // eslint-disable-next-line @next/next/no-img-element
               <img src={gallery[active]} alt={product.name} fetchPriority="high" className="aspect-square w-full object-cover" />
             ) : (
-              <div className="grid aspect-square w-full place-items-center"><LogoGlyph size={96} tone="dark" /></div>
+              <div className="aspect-square w-full bg-paper-soft"><ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} /></div>
             )}
           </div>
           {gallery.length > 1 && (
@@ -275,7 +275,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.imageUrl} alt={r.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                   ) : (
-                    <div className="grid h-full place-items-center"><LogoGlyph size={56} tone="dark" /></div>
+                    <ProductPlaceholder name={r.name} slug={r.slug} category={r.category} glyphSize={56} />
                   )}
                 </div>
                 <h3 className="mt-2 text-sm font-semibold leading-snug">{r.name}</h3>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { LogoGlyph } from "@/components/brand/Logo";
+import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
@@ -323,7 +323,7 @@ export function ShopStorefront({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                     ) : (
-                      <div className="grid h-full w-full place-items-center"><LogoGlyph size={64} tone="dark" /></div>
+                      <ProductPlaceholder name={p.name} slug={p.slug} category={p.category} glyphSize={64} />
                     )}
                     {p.label && <span className="absolute left-3 top-3 rounded bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">{p.label}</span>}
                     <button

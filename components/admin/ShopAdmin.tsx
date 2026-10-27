@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
+import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 
 type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; sku: string };
 
@@ -329,7 +330,7 @@ export function ShopAdmin() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg" style={{ background: "var(--a-panel-2)" }}>
-                        {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-mono text-[10px]" style={{ color: "var(--a-mute)" }}>ZF</div>}
+                        {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={24} className="text-[color:var(--a-mute)]" />}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-medium" style={{ color: "var(--a-text)" }}>{product.name}</p>
