@@ -66,6 +66,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Status + legal
     entry("/status", 0.4, "daily"),
+    entry("/dsa", 0.3, "yearly"),
     entry("/privacy", 0.3, "yearly"),
     entry("/voorwaarden", 0.3, "yearly"),
     entry("/cookiebeleid", 0.3, "yearly"),
