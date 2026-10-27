@@ -12,6 +12,12 @@ export default async function SalesLayout({ children }: { children: React.ReactN
 
   return (
     <div className="sales-scope min-h-screen bg-paper-soft">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg"
+      >
+        Naar hoofdinhoud
+      </a>
       <header className="border-b border-hair bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:py-4">
           <div className="flex items-center gap-5">
@@ -33,7 +39,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-4 py-8 outline-none">{children}</main>
     </div>
   );
 }
