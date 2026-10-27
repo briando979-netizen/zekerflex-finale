@@ -8,8 +8,10 @@
 // ---------------------------------------------------------------------------
 
 export interface Sector {
-  /** route-segment, bv. "horeca-personeel-inhuren" → /horeca-personeel-inhuren */
+  /** route-segment werkgever-kant, bv. "horeca-personeel-inhuren" */
   slug: string;
+  /** route-segment werker-kant, bv. "horeca-vacatures" → /horeca-vacatures */
+  workerSlug: string;
   /** korte sleutel, bv. "horeca" */
   key: string;
   /** label met hoofdletter, bv. "Horeca" */
@@ -29,6 +31,7 @@ export interface Sector {
 export const SECTORS: Sector[] = [
   {
     slug: "horeca-personeel-inhuren",
+    workerSlug: "horeca-vacatures",
     key: "horeca",
     label: "Horeca",
     worker: "horecakracht",
@@ -39,6 +42,7 @@ export const SECTORS: Sector[] = [
   },
   {
     slug: "logistiek-personeel-inhuren",
+    workerSlug: "logistiek-vacatures",
     key: "logistiek",
     label: "Logistiek",
     worker: "magazijnkracht",
@@ -49,6 +53,7 @@ export const SECTORS: Sector[] = [
   },
   {
     slug: "schoonmaak-personeel-inhuren",
+    workerSlug: "schoonmaak-vacatures",
     key: "schoonmaak",
     label: "Schoonmaak",
     worker: "schoonmaker",
@@ -59,6 +64,7 @@ export const SECTORS: Sector[] = [
   },
   {
     slug: "evenementen-personeel-inhuren",
+    workerSlug: "evenementen-vacatures",
     key: "evenementen",
     label: "Evenementen",
     worker: "eventmedewerker",
@@ -69,6 +75,7 @@ export const SECTORS: Sector[] = [
   },
   {
     slug: "retail-personeel-inhuren",
+    workerSlug: "retail-vacatures",
     key: "retail",
     label: "Retail",
     worker: "winkelmedewerker",

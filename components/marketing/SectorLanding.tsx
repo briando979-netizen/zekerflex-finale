@@ -249,3 +249,201 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
     </>
   );
 }
+
+// ===========================================================================
+// Werker-kant: vacature-/flexwerk-pagina's om de aanbodkant organisch te vullen.
+// ===========================================================================
+
+export function sectorWorkerHubMetadata(s: Sector): Metadata {
+  const title = `Werken in de ${low(s)} — flexibele diensten & bijbanen door heel Nederland`;
+  const description = `Zelf je diensten kiezen in de ${low(s)}: ${s.roles}. Werk wanneer jij wil, snel uitbetaald, met of zonder KVK. Vind flexwerk in de ${low(s)} bij jou in de buurt.`;
+  return {
+    title: { absolute: `${title} | ZekerFlex` },
+    description,
+    keywords: [`${low(s)} vacatures`, `werken in de ${low(s)}`, `${low(s)} bijbaan`, `${low(s)} flexwerk`, `${low(s)} uitzendwerk`],
+    ...canonical(`/${s.workerSlug}`, { title, description }),
+  };
+}
+
+export function sectorWorkerCityMetadata(s: Sector, c: City): Metadata {
+  const title = `Werken in de ${low(s)} in ${c.name} — vacatures, bijbanen & flexwerk`;
+  const description = `Flexibel werken in de ${low(s)} in ${c.name}: ${s.roles}. Kies je eigen diensten, snel uitbetaald, met of zonder KVK. Zie het werk bij jou in de buurt.`;
+  return {
+    title: { absolute: `${title} | ZekerFlex` },
+    description,
+    keywords: [
+      `${low(s)} vacatures ${c.name}`,
+      `werken in de ${low(s)} ${c.name}`,
+      `${low(s)} bijbaan ${c.name}`,
+      `${low(s)} flexwerk ${c.name}`,
+      `${s.worker} worden ${c.name}`,
+    ],
+    ...canonical(`/${s.workerSlug}/${c.slug}`, { title, description }),
+  };
+}
+
+const workerFaq = (s: Sector) => [
+  {
+    q: "Heb ik een KVK nodig?",
+    a: `Nee — je werkt als zelfstandige (met KVK) óf als uitzendkracht via het ZekerFlex-uitzendbureau; dan regelen wij loonadministratie, StiPP en de ABU-cao voor je.`,
+  },
+  {
+    q: "Wanneer word ik betaald?",
+    a: "Snel: afhankelijk van de opdracht direct of binnen enkele dagen na goedgekeurde uren. Je uren en uitbetaling zie je live in de app.",
+  },
+  {
+    q: "Kan ik zelf kiezen wanneer ik werk?",
+    a: `Ja. Je ziet open ${s.label.toLowerCase()}-diensten in de buurt en pakt alleen wat jou uitkomt — avonden, weekenden of structureel.`,
+  },
+];
+
+function workerBenefits(s: Sector, where: string): [string, string][] {
+  return [
+    ["Kies je eigen diensten", `Je ziet open ${low(s)}-diensten in de buurt${where} en pakt alleen wat jou uitkomt.`],
+    ["Snel uitbetaald", "Na goedgekeurde uren volgt je geld snel — vaak direct of binnen enkele dagen. Alles live in de app."],
+    ["Met of zonder KVK", "Werk als zzp'er, of als uitzendkracht via het ZekerFlex-uitzendbureau — loon, StiPP en cao geregeld."],
+  ];
+}
+
+export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
+  const faq = workerFaq(s);
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: ldJson([
+            breadcrumbJsonLd([["Home", "/"], [`Werken in de ${low(s)}`, `/${s.workerSlug}`]]),
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+            },
+          ]),
+        }}
+      />
+      <Section>
+        <SectionHead
+          eyebrow={`Werken in de ${low(s)}`}
+          title={`Flexibel werken in de ${low(s)}`}
+          intro={`Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK. Door heel Nederland.`}
+        />
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link href="/register?type=freelancer" className="btn-primary">
+            Gratis aanmelden
+          </Link>
+          <Link href="/freelance-werk" className="btn-ghost">
+            Bekijk alle diensten
+          </Link>
+        </div>
+        <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+          {workerBenefits(s, "").map(([t, b]) => (
+            <li key={t} className="rounded-2xl border border-hair bg-white p-5">
+              <p className="font-display font-bold text-ink">{t}</p>
+              <p className="mt-2 text-sm text-neutralx-600">{b}</p>
+            </li>
+          ))}
+        </ul>
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">Werken in de {low(s)} per stad</h2>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {CITIES.map((c) => (
+            <li key={c.slug}>
+              <Link href={`/${s.workerSlug}/${c.slug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
+                <span className="font-semibold text-ink">{s.label} werk {c.name}</span>
+                <span className="block text-xs text-neutralx-500">{s.rolesShort}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Section>
+      <Section tone="soft">
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in de ${low(s)}`} />
+        <div className="mt-8 max-w-3xl">
+          <FaqList items={faq} />
+        </div>
+      </Section>
+      <CtaBand
+        title="Klaar om te beginnen?"
+        body="Meld je gratis aan en pak vandaag nog je eerste dienst."
+        primaryHref="/register?type=freelancer"
+        primaryLabel="Gratis aanmelden"
+        secondaryHref={`/${s.slug}`}
+        secondaryLabel={`Werkgever? ${s.label} personeel inhuren`}
+      />
+    </>
+  );
+}
+
+export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city: City }) {
+  const faq = workerFaq(s);
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: ldJson([
+            breadcrumbJsonLd([
+              ["Home", "/"],
+              [`Werken in de ${low(s)}`, `/${s.workerSlug}`],
+              [`${s.label} ${c.name}`, `/${s.workerSlug}/${c.slug}`],
+            ]),
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+            },
+          ]),
+        }}
+      />
+      <Section>
+        <SectionHead
+          eyebrow={`Werken in de ${low(s)} · ${c.name}`}
+          title={`Werken in de ${low(s)} in ${c.name}`}
+          intro={`Flexibel werken in de ${low(s)} in ${c.name}? Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK.`}
+        />
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link href="/register?type=freelancer" className="btn-primary">
+            Gratis aanmelden
+          </Link>
+          <Link href={`/freelance-werk/${c.slug}`} className="btn-ghost">
+            Diensten in {c.name}
+          </Link>
+        </div>
+        <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+          {workerBenefits(s, ` van ${c.name}`).map(([t, b]) => (
+            <li key={t} className="rounded-2xl border border-hair bg-white p-5">
+              <p className="font-display font-bold text-ink">{t}</p>
+              <p className="mt-2 text-sm text-neutralx-600">{b}</p>
+            </li>
+          ))}
+        </ul>
+      </Section>
+      <Section tone="soft">
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in de ${low(s)} in ${c.name}`} />
+        <div className="mt-8 max-w-3xl">
+          <FaqList items={faq} />
+        </div>
+        <h2 className="mt-14 font-display text-lg font-bold text-ink">Werken in de {low(s)} in andere steden</h2>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {CITIES.filter((x) => x.slug !== c.slug).map((x) => (
+            <li key={x.slug}>
+              <Link href={`/${s.workerSlug}/${x.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+                {x.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Section>
+      <CtaBand
+        title={`Aan de slag in ${c.name}?`}
+        body="Meld je gratis aan en pak vandaag nog je eerste dienst."
+        primaryHref="/register?type=freelancer"
+        primaryLabel="Gratis aanmelden"
+        secondaryHref={`/${s.slug}/${c.slug}`}
+        secondaryLabel={`Werkgever in ${c.name}?`}
+      />
+    </>
+  );
+}
