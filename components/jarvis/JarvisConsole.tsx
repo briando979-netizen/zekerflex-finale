@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/jarvis/Markdown";
-import { HoloOrb, type OrbState } from "@/components/jarvis/HoloOrb";
 
 // ---------------------------------------------------------------------------
-// JARVIS — immersive local-assistant console with a full voice loop.
+// JARVIS — VS-Code / Claude-Code-style workbench for the local (or cloud)
+// assistant. One editor pane with the conversation; the model's thinking and
+// tool steps render INLINE as collapsible blocks (like Claude Code), a left
+// rail holds the session history, and a brein badge shows which model is live.
+//
+// All the working logic below (voice loop, streaming, turn polling, uploads)
+// is unchanged from the previous console — only the presentation moved to an
+// IDE layout.
 //
 // Speech in:  Web Speech API (Chrome/Edge) → falls back to MediaRecorder +
 //             the local Whisper endpoint (/api/admin/voice/transcribe) so it
 //             also works in Firefox/Safari and stays sovereign.
-// Speech out: browser SpeechSynthesis (nl-NL), with the Chrome "resume" fix
-//             and proper async voice loading.
-// The recognised text is handed straight to send() — no state race.
+// Speech out: browser SpeechSynthesis (nl-NL), with the Chrome "resume" fix.
 // ---------------------------------------------------------------------------
 
 type EventKind = "THINKING" | "TOOL_CALL" | "TOOL_RESULT" | "AGENT_DELEGATION" | "MESSAGE" | "ERROR";
@@ -37,6 +41,7 @@ interface TurnState {
 interface ChatMessage {
   role: "user" | "assistant" | "error";
   text: string;
+  events?: TurnEvent[];
 }
 
 const AGENT_LABEL: Record<string, string> = {
@@ -91,14 +96,17 @@ export function JarvisConsole() {
   const [speaking, setSpeaking] = useState(false);
   const [speak, setSpeak] = useState(true);
   const [handsFree, setHandsFree] = useState(false);
-  const [showStream, setShowStream] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [interim, setInterim] = useState("");
+  // VS-Code workbench state: session history, a read-only view of a past turn,
+  // and which brain (local / cloud) is currently answering.
+  const [history, setHistory] = useState<{ id: string; prompt: string; status: string; startedAt: string }[]>([]);
+  const [viewTurn, setViewTurn] = useState<TurnState | null>(null);
+  const [brain, setBrain] = useState<{ ok: boolean; model: string; cloud: boolean } | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
-  const streamRef = useRef<HTMLDivElement | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recRef = useRef<unknown>(null);
   const mediaRef = useRef<{ recorder: MediaRecorder; stream: MediaStream; chunks: Blob[] } | null>(null);
@@ -217,12 +225,55 @@ export function JarvisConsole() {
     synth.speak(u);
   }, []);
 
+  // ---- sessions + brein status ------------------------------------
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/jarvis/turns", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { turns?: { id: string; prompt: string; status: string; startedAt: string }[] };
+      setHistory(data.turns ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const loadBrain = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/jarvis/brain", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { ok: boolean; model: string; cloud: boolean };
+      setBrain({ ok: data.ok, model: data.model, cloud: data.cloud });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const openTurn = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/jarvis/turns/${id}?since=0`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as TurnState;
+      setViewTurn(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const newChat = useCallback(() => {
+    setViewTurn(null);
+    setMessages([]);
+    setTurn(null);
+    setInput("");
+  }, []);
+  useEffect(() => {
+    void loadHistory();
+    void loadBrain();
+  }, [loadHistory, loadBrain]);
+
   // ---- turn polling --------------------------------------------------
   const poll = useCallback(
     (turnId: string) => {
       if (pollRef.current) clearInterval(pollRef.current);
       let since = 0;
       let inFlight = false;
+      let acc: TurnEvent[] = [];
       pollRef.current = setInterval(async () => {
         if (inFlight) return;
         inFlight = true;
@@ -230,22 +281,22 @@ export function JarvisConsole() {
           const res = await fetch(`/api/admin/jarvis/turns/${turnId}?since=${since}`, { cache: "no-store" });
           if (!res.ok) return;
           const data = (await res.json()) as TurnState;
+          const fresh = data.events.filter((e) => !acc.some((a) => a.seq === e.seq));
+          acc = [...acc, ...fresh];
           for (const e of data.events) since = Math.max(since, e.seq);
-          setTurn((prev) => {
-            if (!prev || prev.id !== data.id) return data;
-            const seen = new Set(prev.events.map((e) => e.seq));
-            return { ...data, events: [...prev.events, ...data.events.filter((e) => !seen.has(e.seq))] };
-          });
+          setTurn({ ...data, events: acc });
           if (data.status !== "RUNNING") {
             if (pollRef.current) clearInterval(pollRef.current);
             pollRef.current = null;
             setBusy(false);
             if (data.status === "COMPLETED" && data.answer) {
-              setMessages((m) => [...m, { role: "assistant", text: data.answer! }]);
+              setMessages((m) => [...m, { role: "assistant", text: data.answer!, events: acc }]);
               if (speakRef.current) sayAloud(data.answer);
             } else if (data.error) {
-              setMessages((m) => [...m, { role: "error", text: data.error! }]);
+              setMessages((m) => [...m, { role: "error", text: data.error!, events: acc }]);
             }
+            setTurn(null);
+            void loadHistory();
           }
         } catch {
           /* keep polling */
@@ -254,7 +305,7 @@ export function JarvisConsole() {
         }
       }, 900);
     },
-    [sayAloud],
+    [sayAloud, loadHistory],
   );
 
   // ---- full (audited) turn engine — for tool tasks -------------------
@@ -284,6 +335,7 @@ export function JarvisConsole() {
       const prompt = (explicit ?? input).trim();
       if (!prompt || busyRef.current) return;
       setBusy(true);
+      setViewTurn(null);
       setInput("");
       setInterim("");
       setVoiceError(null);
@@ -328,6 +380,7 @@ export function JarvisConsole() {
           });
         }
         setBusy(false);
+        void loadHistory();
         if (acc.trim() && speakRef.current) sayAloud(acc);
         else if (!acc.trim()) {
           setMessages((m) => {
@@ -341,7 +394,7 @@ export function JarvisConsole() {
         setMessages((m) => [...m, { role: "error", text: (err as Error).message }]);
       }
     },
-    [input, uploads, runFullTurn, sayAloud],
+    [input, uploads, runFullTurn, sayAloud, loadHistory],
   );
   useEffect(() => {
     sendRef.current = (t?: string) => void send(t);
@@ -570,10 +623,7 @@ export function JarvisConsole() {
   // ---- view helpers ---------------------------------------------
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, busy]);
-  useEffect(() => {
-    streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight });
-  }, [turn?.events.length]);
+  }, [messages.length, busy, turn?.events.length]);
 
   const persistToggle = (key: string, val: boolean) => {
     try {
@@ -582,16 +632,6 @@ export function JarvisConsole() {
       /* ignore */
     }
   };
-
-  const orbState: OrbState = listening
-    ? "listening"
-    : turn?.status === "FAILED"
-      ? "error"
-      : speaking
-        ? "speaking"
-        : busy || transcribing
-          ? "thinking"
-          : "idle";
 
   const statusLine = voiceError
     ? voiceError
@@ -602,23 +642,71 @@ export function JarvisConsole() {
         : speaking
           ? "Aan het woord…"
           : busy
-            ? (() => {
-                const last = turn?.events[turn.events.length - 1];
-                return last ? `${last.title} · ${agentLabel(last.agent)}` : "Bezig…";
-              })()
-            : turn?.status === "FAILED"
-              ? "Er ging iets mis — probeer het opnieuw."
-              : "Klaar voor je vraag.";
+            ? (turn?.events[turn.events.length - 1]?.title ?? "Bezig…")
+            : "Klaar voor je vraag.";
 
-  const streamEvents = turn?.events.filter((e) => e.kind !== "MESSAGE") ?? [];
+  const viewing = viewTurn !== null;
+  const micLevelPct = Math.round((listening ? micLevel : 0) * 100);
 
   return (
-    <div className="hero-ink -m-4 flex min-h-[calc(100vh-4rem)] flex-col text-white lg:-m-8">
-      {/* top bar */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
-        <span className="font-display text-sm font-bold tracking-[0.2em]">JARVIS</span>
-        <span className="pill bg-[rgba(79,224,160,0.12)] text-brand-mint">lokale inferentie · geen tokenkosten</span>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+    <div className="-m-4 flex h-[calc(100vh-4rem)] overflow-hidden bg-[#0b0e13] text-white lg:-m-8">
+      {/* sessions rail */}
+      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-white/10 bg-[#0e1116] md:flex">
+        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+          <span className="font-display text-sm font-bold tracking-[0.18em]">JARVIS</span>
+          <button
+            type="button"
+            onClick={newChat}
+            className="ml-auto rounded-md border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+          >
+            + nieuw
+          </button>
+        </div>
+        {/* brein badge */}
+        <div className="border-b border-white/10 px-4 py-2.5 text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 flex-shrink-0 rounded-full ${brain?.ok ? "bg-brand-mint" : "bg-[#F07C6B]"}`} />
+            <span className="text-white/70">{brain ? (brain.cloud ? "cloud-brein" : "lokaal brein") : "brein laden…"}</span>
+          </div>
+          <div className="truncate pl-4 pt-0.5 font-mono text-white/35">{brain?.model ?? "—"}</div>
+        </div>
+        <div className="border-b border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] text-white/30">
+          Sessies
+        </div>
+        <div className="flex-1 space-y-0.5 overflow-y-auto p-2">
+          {history.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-white/30">Nog geen sessies.</p>
+          ) : (
+            history.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => void openTurn(h.id)}
+                title={h.prompt}
+                className={`block w-full truncate rounded-md px-2 py-1.5 text-left text-xs hover:bg-white/10 ${
+                  viewTurn?.id === h.id ? "bg-white/10 text-white" : "text-white/60"
+                }`}
+              >
+                <span
+                  className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle ${
+                    h.status === "FAILED" ? "bg-[#F07C6B]" : h.status === "RUNNING" ? "bg-[#FFC46B]" : "bg-white/25"
+                  }`}
+                />
+                {h.prompt}
+              </button>
+            ))
+          )}
+        </div>
+      </aside>
+
+      {/* editor pane */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* top bar */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
+          <span className="pill bg-[rgba(79,224,160,0.12)] text-brand-mint">
+            {brain?.cloud ? "cloud · Claude-niveau" : "lokale inferentie · €0 per vraag"}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs text-white/40">{statusLine}</span>
           <Toggle
             label="voorlezen"
             on={speak}
@@ -629,7 +717,7 @@ export function JarvisConsole() {
             }}
           />
           <Toggle
-            label="continu gesprek"
+            label="continu"
             on={handsFree}
             onChange={(v) => {
               setHandsFree(v);
@@ -637,42 +725,39 @@ export function JarvisConsole() {
               if (v && !listening && !busy && !speaking) startListening();
             }}
           />
-          <button
-            type="button"
-            onClick={() => setShowStream((v) => !v)}
-            className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
-          >
-            {showStream ? "verberg activiteit" : "toon activiteit"}
-          </button>
         </div>
-      </div>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* stage */}
-        <div className="flex min-h-0 flex-1 flex-col items-center">
-          <div className="relative flex flex-shrink-0 items-center justify-center pt-6">
-            <HoloOrb
-              state={orbState}
-              level={listening ? micLevel : busy || transcribing ? 0.5 : 0}
-              size={300}
-            />
-          </div>
-          <p
-            className={`mt-1 min-h-[1.5rem] max-w-md text-center text-sm ${
-              voiceError ? "text-[#F5B9AE]" : "text-white/60"
-            }`}
-          >
-            {statusLine}
-          </p>
-
-          {/* conversation */}
-          <div ref={chatRef} className="mt-4 w-full max-w-2xl flex-1 space-y-4 overflow-y-auto px-5 pb-4">
-            {messages.length === 0 && !busy ? (
-              <div className="mt-8 space-y-3 text-center">
-                <p className="text-white/50">
-                  Zeg &ldquo;hallo&rdquo;, vraag om een <em>briefing</em>, of geef een opdracht — typen of spreken.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
+        {/* transcript */}
+        <div ref={chatRef} className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl space-y-4 px-5 py-6">
+            {viewing ? (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-white/40">Eerdere sessie</span>
+                  <button type="button" onClick={newChat} className="text-xs text-brand-mint hover:underline">
+                    ← terug naar gesprek
+                  </button>
+                </div>
+                <div className="flex justify-end">
+                  <span className="max-w-[85%] rounded-2xl bg-white/10 px-4 py-2 text-sm">{viewTurn!.prompt}</span>
+                </div>
+                <div>
+                  <StepBlock events={viewTurn!.events} />
+                  {viewTurn!.answer ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-relaxed text-white/85">
+                      <Markdown text={viewTurn!.answer} />
+                    </div>
+                  ) : viewTurn!.error ? (
+                    <div className="rounded-xl border border-[rgba(240,124,107,0.4)] bg-[rgba(240,124,107,0.12)] px-4 py-3 text-sm text-[#F5B9AE]">
+                      {viewTurn!.error}
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : messages.length === 0 && !busy ? (
+              <div className="pt-10 text-center">
+                <p className="text-white/50">Stel een vraag of geef een opdracht — typen of spreken.</p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
                   {["Hallo Jarvis", "Geef me een briefing", "Hoeveel flexwerkers zijn er?", "Controleer het platform"].map(
                     (s) => (
                       <button
@@ -688,32 +773,43 @@ export function JarvisConsole() {
                 </div>
               </div>
             ) : (
-              messages.map((m, i) =>
-                m.role === "user" ? (
-                  <div key={i} className="flex justify-end">
-                    <span className="max-w-[85%] rounded-2xl bg-white/10 px-4 py-2 text-sm">{m.text}</span>
+              <>
+                {messages.map((m, i) =>
+                  m.role === "user" ? (
+                    <div key={i} className="flex justify-end">
+                      <span className="max-w-[85%] rounded-2xl bg-white/10 px-4 py-2 text-sm">{m.text}</span>
+                    </div>
+                  ) : m.role === "error" ? (
+                    <div
+                      key={i}
+                      className="rounded-xl border border-[rgba(240,124,107,0.4)] bg-[rgba(240,124,107,0.12)] px-4 py-3 text-sm text-[#F5B9AE]"
+                    >
+                      {m.text}
+                    </div>
+                  ) : (
+                    <div key={i}>
+                      {m.events && m.events.length > 0 && <StepBlock events={m.events} />}
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-relaxed text-white/85">
+                        <Markdown text={m.text} />
+                      </div>
+                    </div>
+                  ),
+                )}
+                {busy && turn && turn.events.length > 0 && <StepBlock events={turn.events} running />}
+                {busy && (
+                  <div className="flex items-center gap-2 text-sm text-white/40">
+                    <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-brand-mint" />
+                    {turn ? "Jarvis werkt… (lokaal model kan even duren)" : "Jarvis denkt na…"}
                   </div>
-                ) : m.role === "error" ? (
-                  <div key={i} className="rounded-xl border border-[rgba(240,124,107,0.4)] bg-[rgba(240,124,107,0.12)] px-4 py-3 text-sm text-[#F5B9AE]">
-                    {m.text}
-                  </div>
-                ) : (
-                  <div key={i} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-relaxed text-white/85">
-                    <Markdown text={m.text} />
-                  </div>
-                ),
-              )
-            )}
-            {busy && (
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-brand-mint" />
-                Jarvis denkt na… (lokaal model, dit kan even duren)
-              </div>
+                )}
+              </>
             )}
           </div>
+        </div>
 
-          {/* composer */}
-          <div className="w-full max-w-2xl px-5 pb-6">
+        {/* composer */}
+        <div className="border-t border-white/10 px-5 py-3">
+          <div className="mx-auto max-w-3xl">
             {uploads.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {uploads.map((u) => (
@@ -755,6 +851,7 @@ export function JarvisConsole() {
                 disabled={busy || transcribing}
                 title={listening ? "Stop met luisteren" : "Spreek tegen Jarvis"}
                 aria-pressed={listening}
+                style={listening ? { boxShadow: `0 0 0 ${2 + micLevelPct / 20}px rgba(255,196,107,0.18)` } : undefined}
                 className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl border transition disabled:opacity-40 ${
                   listening
                     ? "animate-pulse border-[#FFC46B] bg-[rgba(255,196,107,0.18)] text-[#FFC46B]"
@@ -783,60 +880,62 @@ export function JarvisConsole() {
               </button>
             </div>
             <p className="mt-1.5 px-1 text-[11px] text-white/30">
-              Microfoon: Chrome/Edge werkt direct. Andere browsers: zet <span className="font-mono">WHISPER_ENABLED=true</span> voor lokale spraakherkenning.
+              Microfoon: Chrome/Edge werkt direct. Andere browsers: zet{" "}
+              <span className="font-mono">WHISPER_ENABLED=true</span> voor lokale spraakherkenning.
             </p>
           </div>
         </div>
-
-        {/* activity drawer */}
-        {showStream && (
-          <aside className="flex min-h-0 w-full flex-shrink-0 flex-col border-t border-white/10 lg:w-[380px] lg:border-l lg:border-t-0">
-            <div className="border-b border-white/10 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/40">
-              Activiteit
-            </div>
-            <div ref={streamRef} className="flex-1 space-y-2 overflow-y-auto p-4 font-mono text-[11.5px] text-white/70">
-              {!turn ? (
-                <p className="text-white/30">Alles wat de lokale AI doet verschijnt hier live.</p>
-              ) : (
-                <>
-                  <div className="text-white/30">$ jarvis run &quot;{turn.prompt}&quot;</div>
-                  {streamEvents.map((e) => (
-                    <div key={e.seq} className="leading-relaxed">
-                      <div
-                        className={
-                          e.kind === "ERROR"
-                            ? "text-[#F5B9AE]"
-                            : e.kind === "TOOL_CALL"
-                              ? "text-brand-mint"
-                              : e.kind === "AGENT_DELEGATION"
-                                ? "text-[#7CC5FF]"
-                                : "text-white/75"
-                        }
-                      >
-                        <span className="text-white/25">{KIND_PREFIX[e.kind]} </span>
-                        {e.title}
-                        <span className="text-white/25">
-                          {" "}· {agentLabel(e.agent)}
-                          {e.durationMs ? ` (${(e.durationMs / 1000).toFixed(1)}s)` : ""}
-                        </span>
-                      </div>
-                      {e.detail && (
-                        <div className="whitespace-pre-wrap pl-4 text-white/40">
-                          {e.detail.length > 400 ? `${e.detail.slice(0, 400)}…` : e.detail}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <div className="text-white/25">
-                    {turn.status === "RUNNING" ? "▌" : turn.status === "COMPLETED" ? "── klaar ──" : "── afgebroken ──"}
-                  </div>
-                </>
-              )}
-            </div>
-          </aside>
-        )}
       </div>
     </div>
+  );
+}
+
+/** A Claude-Code-style collapsible block of the model's thinking + tool steps.
+ *  Stays open while the turn is running; tucks itself away once it's done. */
+function StepBlock({ events, running }: { events: TurnEvent[]; running?: boolean }) {
+  if (!events.length && !running) return null;
+  const last = events[events.length - 1];
+  return (
+    <details
+      {...(running ? { open: true } : {})}
+      className="mb-2 rounded-lg border border-white/10 bg-white/[0.03]"
+    >
+      <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-1.5 text-[11px] text-white/55 [&::-webkit-details-marker]:hidden">
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${running ? "animate-pulse bg-brand-mint" : "bg-white/30"}`} />
+        <span className="font-medium">{running ? (last?.title ?? "Bezig…") : `${events.length} stappen`}</span>
+        {!running && last && <span className="text-white/30">· {agentLabel(last.agent)}</span>}
+      </summary>
+      <div className="space-y-1 border-t border-white/5 px-3 py-2 font-mono text-[11px] text-white/70">
+        {events.map((e) => (
+          <div key={e.seq} className="leading-relaxed">
+            <div
+              className={
+                e.kind === "ERROR"
+                  ? "text-[#F5B9AE]"
+                  : e.kind === "TOOL_CALL"
+                    ? "text-brand-mint"
+                    : e.kind === "AGENT_DELEGATION"
+                      ? "text-[#7CC5FF]"
+                      : "text-white/75"
+              }
+            >
+              <span className="text-white/25">{KIND_PREFIX[e.kind]} </span>
+              {e.title}
+              <span className="text-white/25">
+                {" "}
+                · {agentLabel(e.agent)}
+                {e.durationMs ? ` (${(e.durationMs / 1000).toFixed(1)}s)` : ""}
+              </span>
+            </div>
+            {e.detail && (
+              <div className="whitespace-pre-wrap pl-4 text-white/40">
+                {e.detail.length > 500 ? `${e.detail.slice(0, 500)}…` : e.detail}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 
