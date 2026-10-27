@@ -173,6 +173,7 @@ export function ChatWidget() {
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105"
         aria-label={open ? "Chat sluiten" : "Chat openen"}
+        aria-expanded={open}
       >
         {open ? (
           <span className="text-xl">✕</span>
@@ -193,7 +194,7 @@ export function ChatWidget() {
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div ref={scrollRef} role="log" aria-label="Chatberichten" className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
                 <div
