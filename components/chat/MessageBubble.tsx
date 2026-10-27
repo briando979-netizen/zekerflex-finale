@@ -207,10 +207,15 @@ export function MessageBubble({
         </button>
       )}
       <div
-        className={`max-w-[78%] rounded-2xl px-3 py-2 text-[0.875em] shadow-sm ${
-          mine ? "rounded-br-sm bg-[#D9FDD3]" : "rounded-bl-sm bg-white"
+        className={`relative max-w-[78%] rounded-2xl px-3 py-2 text-[0.875em] shadow-sm ${
+          mine ? "rounded-tr-none bg-[#D9FDD3]" : "rounded-tl-none bg-white"
         }`}
       >
+        {mine ? (
+          <span className="absolute right-[-8px] top-0 h-[13px] w-2 bg-[#D9FDD3] [clip-path:polygon(0_0,0_100%,100%_0)]" aria-hidden />
+        ) : (
+          <span className="absolute left-[-8px] top-0 h-[13px] w-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]" aria-hidden />
+        )}
         {m.forwarded && <p className="mb-0.5 flex items-center gap-1 text-[11px] italic text-neutralx-400">↪ Doorgestuurd</p>}
         {showSender && !mine && senderName && (
           <button

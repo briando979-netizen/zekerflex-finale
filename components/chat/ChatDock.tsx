@@ -395,7 +395,7 @@ export function ChatDock() {
                       return (
                         <li key={t.id}>
                           <button type="button" onClick={() => setActive(t.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-paper-soft">
-                            <Avatar userId={o.userId} name={o.name} role={o.role} avatars={avatars} size={40} support={o.support} online={t.kind === "direct" ? presence[o.userId]?.online ?? false : undefined} />
+                            <Avatar userId={o.userId} name={o.name} role={o.role} avatars={avatars} size={48} support={o.support} online={t.kind === "direct" ? presence[o.userId]?.online ?? false : undefined} />
                             <span className="min-w-0 flex-1">
                               <span className="flex items-center justify-between gap-2">
                                 <span className="truncate text-sm font-semibold text-ink">{o.name}</span>
@@ -405,7 +405,7 @@ export function ChatDock() {
                                 <span className="truncate text-xs text-neutralx-500">
                                   {t.lastMessage ? (t.lastMessage.from === me?.userId ? "Jij: " : "") + t.lastMessage.text : t.shiftTitle ?? "Nieuw gesprek"}
                                 </span>
-                                {t.unread > 0 && <span className="grid h-4 min-w-4 flex-shrink-0 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">{t.unread}</span>}
+                                {t.unread > 0 && <span className="grid h-5 min-w-5 flex-shrink-0 place-items-center rounded-full bg-[#25D366] px-1.5 text-[11px] font-bold text-white">{t.unread}</span>}
                               </span>
                             </span>
                           </button>

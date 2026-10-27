@@ -497,7 +497,7 @@ export function InboxPage({
                                 {t.favorite && <span className="text-[10px] text-amber-500">★</span>}
                                 {t.muted && <span className="text-[10px]" title="Gedempt">🔕</span>}
                                 {t.unread > 0 && (
-                                  <span className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-brand-500"}`}>{t.unread}</span>
+                                  <span className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-[#25D366]"}`}>{t.unread}</span>
                                 )}
                               </span>
                             </span>
@@ -678,7 +678,7 @@ export function InboxPage({
               <button key={k} type="button" onClick={() => setTab(k)} className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${tab === k ? "text-brand-700" : "text-neutralx-500"}`}>
                 <span className={`grid h-7 w-12 place-items-center rounded-full text-base ${tab === k ? "bg-brand-50" : ""}`}>{icon}</span>
                 {label}
-                {unread > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[9px] font-bold text-white">{unread}</span>}
+                {unread > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#25D366] px-1 text-[9px] font-bold text-white">{unread}</span>}
               </button>
             );
           })}

@@ -254,7 +254,7 @@ export function Composer({
           <button
             type="button"
             onClick={() => stopRecording(false)}
-            className="grid h-9 w-9 place-items-center rounded-full bg-brand-500 text-white"
+            className="grid h-9 w-9 place-items-center rounded-full bg-[#008069] text-white"
             aria-label="Verstuur spraak"
           >
             ➤
@@ -266,8 +266,9 @@ export function Composer({
             e.preventDefault();
             void sendText();
           }}
-          className="flex items-end gap-1.5 p-2"
+          className="flex items-end gap-1.5 bg-[#F0F2F5] p-2"
         >
+          <div className="flex flex-1 items-end gap-0.5 rounded-[1.4rem] bg-white px-1.5 py-0.5 shadow-sm">
           <div className="relative">
             <button
               type="button"
@@ -321,14 +322,15 @@ export function Composer({
             }}
             rows={1}
             placeholder="Typ een bericht…"
-            className="max-h-28 min-h-[2.5rem] min-w-0 flex-1 resize-none rounded-2xl border border-hairstrong px-3 py-2 text-base outline-none focus:border-brand-500 md:text-sm"
+            className="max-h-28 min-h-[2.5rem] min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-base outline-none md:text-sm"
           />
+          </div>
 
           {text.trim() ? (
             <button
               type="submit"
               disabled={busy}
-              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-500 text-white disabled:opacity-40"
+              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white disabled:opacity-40"
               aria-label="Verstuur"
             >
               ➤
@@ -337,7 +339,7 @@ export function Composer({
             <button
               type="button"
               onClick={startRecording}
-              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-500 text-white"
+              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white"
               aria-label="Spraakbericht opnemen"
             >
               🎤
