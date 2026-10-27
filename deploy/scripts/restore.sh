@@ -32,6 +32,6 @@ if [ "${RESTORE_DB_ONLY:-0}" != "1" ] && [ -f "$SRC/storage.tar.gz" ]; then
 fi
 
 echo "▸ Re-applying any migrations newer than the dump…"
-$COMPOSE exec -T app npx prisma migrate deploy || true
+$COMPOSE run --rm --no-deps app npx prisma migrate deploy
 
 echo "✓ Restore complete. Check: curl -fsS localhost:3000/api/ready"
