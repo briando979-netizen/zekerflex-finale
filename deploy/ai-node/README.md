@@ -11,8 +11,8 @@ Alle data blijft op jouw server.
 
     | Videogeheugen | Hoofdmodel | Kwaliteit |
     |---|---|---|
-    | 420 GB+ (bv. 8× H100/H200 80GB) | `deepseek-r1:671b` of `deepseek-v3` (671B) | **frontier: in omvang groter dan Claude**, evenaart de beste commerciële modellen |
-    | 240 GB+ (bv. 4× H100 80GB of 8× A100 40GB) | `llama3.1:405b` (405B) | **frontier-klasse, groter dan Claude** |
+    | 420 GB+ (bv. 8× H100/H200 80GB) | `deepseek-r1:671b` | Zeer groot open model; multi-GPU server vereist |
+    | 240 GB+ (bv. 4× H100 80GB of 8× A100 40GB) | `llama3.1:405b` | Zeer groot open model; multi-GPU server vereist |
     | 48 GB+ (bv. RTX 6000 Ada / A6000 / L40S) | `qwen2.5:72b` | beste dat op één kaart past; dicht bij de grote commerciële modellen |
     | 24 GB+ (bv. RTX 4090 / A5000 / L4×2) | `qwen2.5:32b` | erg goed, aanrader voor prijs/kwaliteit |
     | 16–20 GB (bv. RTX 4000 Ada / A4000) | `qwen2.5:14b` | goed |
@@ -20,24 +20,23 @@ Alle data blijft op jouw server.
 
     Meer videogeheugen = groter/slimmer model = betere antwoorden van Jarvis, de AI-teams en de specialisten. De console (**Admin → Jarvis**, brein-badge) toont welke modellen de node serveert en laat je er direct een kiezen — token-vrij, zonder redeploy.
 
-    **Groter dan Claude, zonder dure GPU's?** De 671B-modellen (`deepseek-v3` / `deepseek-r1:671b`) zijn Mixture-of-Experts: ze activeren maar ~37B parameters per token, dus ze draaien óók op een server met veel **systeem-RAM** (~512 GB) op CPU. Dat is traag (reken op tientallen seconden per antwoord) maar volledig token-vrij en privé. Zet dan zelf het model: `MODEL=deepseek-v3 sudo -E bash setup.sh ai.zekerflex.com`.
-  - **Alleen CPU** (goedkoper, trager): minimaal 8 vCPU / 32 GB RAM. Reken op 10–40 s per antwoord met `qwen2.5:7b`; kies dan liever `MODEL=qwen2.5:3b`.
+  - **Alleen CPU**: het installatiescript leest RAM en CPU-threads uit en kiest een klein profiel. Het begrenst tegelijk Ollama op één aanvraag per model en een context van 4096 tokens om piekgeheugen te beperken. Zie de CPU-tabel hieronder.
 - Een subdomein, bv. `ai.zekerflex.com`, met een **A-record** naar het IP-adres van de server.
 
-## Wereldklasse brein — wat moet je kopen?
+## CPU-only: nuttige profielen voor een VPS
 
-Eerst eerlijk: **laptops en opslag zijn niet de bottleneck.** Wat telt is **geheugen waar het model in past** — GPU-VRAM (snel) of unified/systeem-RAM (goedkoper, trager). Eén losse laptop (max ~128 GB) draait tot ~70–100B; een frontier-model van 400B–2,8T past daar niet in. De echte opties, van haalbaar naar datacenter:
+Het script kiest automatisch op basis van het beschikbare RAM en aantal CPU-threads. De modelgroottes hieronder zijn de Q4-downloads uit de Ollama-library; Ollama heeft daarnaast RAM nodig voor het besturingssysteem, context en modelruntime.
 
-1. **Eén stille machine die een 671B-model draait — de slimste "thuis"-optie.**
-   **Apple Mac Studio, M3 Ultra, 512 GB unified memory** (± €10.000–11.000). Draait **DeepSeek-R1/V3 671B** (4-bit, ~404 GB) volledig in geheugen op ~17–18 tokens/sec bij <200 W — aangetoond in reviews. Installeer Ollama (de **Mac-app**, niet dit Ubuntu-script) en `ollama pull deepseek-r1:671b`. ⚠️ De 512 GB-optie zou door een DRAM-tekort tijdelijk uit Apple's configurator zijn — check Apple, of neem 256 GB (draait 405B) of tweedehands 512 GB.
+| Servercapaciteit | Hoofdmodel | Snel model | Geschikt voor |
+|---|---|---|---|
+| Minder dan 16 GB of minder dan 4 threads | `qwen2.5:0.5b` | `qwen2.5:0.5b` | Korte classificatie en eenvoudige herschrijvingen |
+| Vanaf 16 GB én 4 threads | `qwen2.5:1.5b` | `qwen2.5:0.5b` | Korte antwoorden, samenvatten en lichte schrijftaken |
+| Vanaf 32 GB én 8 threads | `qwen2.5:7b` | `qwen2.5:1.5b` | Bruikbaardere drafts, samenvattingen en JSON-uitvoer |
+| Vanaf 64 GB én 16 threads | `qwen2.5:14b` | `qwen2.5:1.5b` | Betere kwaliteit voor complexere taken, met meer wachttijd |
 
-2. **Snelste, datacenter-klasse.** Een GPU-server met **8× NVIDIA H100/H200 (80–141 GB)** = ~0,6–1,1 TB VRAM (± €200.000+ nieuw, of per uur huren). Draait 405B/671B vlot en meerdere modellen tegelijk; hier mikken de 240/420 GB-tiers van `setup.sh` op.
+De Q4-gewichten nemen ongeveer 398 MB (0.5B), 986 MB (1.5B), 4.7 GB (7B) en 9 GB (14B) in. De CPU-profielen gebruiken één gelijktijdige aanvraag en maximaal twee geladen modellen. Dat voorkomt dat meerdere lange contexten tegelijk het beperkte RAM opsouperen; extra aanvragen wachten in de Ollama-queue.
 
-3. **Budget, token-vrij, traag.** Een server met **512 GB–1,5 TB systeem-RAM** (dual-socket EPYC/Xeon, ± €4.000–8.000). MoE-modellen activeren maar ~37B params per token, dus die draaien op CPU — enkele tokens/sec, maar €0 per vraag.
-
-4. **Het állergrootste open model ("werelds grootste").** Vendors claimen nu **Kimi K3 (~2,8 biljoen params)**, **DeepSeek V4 (~1,6T)** en **Kimi K2.6 (~1T)** als grootste open-weights. Die passen niet op één machine: je hebt een **cluster** nodig (bijv. 2–4× Mac Studio 512 GB gekoppeld via EXO/MLX, of meerdere 8×H200-nodes; ~1,6 TB+ geheugen totaal) — een serverrack en €-tonnen, of uurhuur. ⚠️ Deze cijfers komen van vendor-blogs van ná mijn kennisdatum — **controleer parameters, licentie en de exacte Ollama/Hugging-Face-tag op de officiële model-card** vóór aanschaf.
-
-**Advies als je nú één ding koopt:** de **Mac Studio M3 Ultra 512 GB** — draait een echt frontier-model (671B) lokaal, stil, zuinig, volledig token-vrij, en is verreweg de goedkoopste weg naar "groter dan Claude op je eigen bureau". De console (Admin → Jarvis) ziet het model zodra je het pullt; kiezen gaat met één klik.
+De automatische profielen kiezen Qwen2.5-tags die als Apache 2.0 zijn gepubliceerd. De 3B-tag heeft een aparte Qwen-licentie en wordt daarom niet automatisch gekozen; controleer de licentie van een model voordat je een andere tag commercieel inzet.
 
 ## Installeren
 
@@ -47,7 +46,7 @@ ssh root@<server-ip>
 sudo bash setup.sh ai.zekerflex.com
 ```
 
-Andere modellen: `MODEL=qwen2.5:14b FAST_MODEL=llama3.2:3b sudo -E bash setup.sh ai.zekerflex.com`
+Andere modellen: `MODEL=qwen2.5:7b FAST_MODEL=qwen2.5:1.5b sudo -E bash setup.sh ai.zekerflex.com`
 
 Het script eindigt met de waarden voor Vercel. Zet ze bij **Settings → Environment Variables (Production)** en deploy opnieuw:
 

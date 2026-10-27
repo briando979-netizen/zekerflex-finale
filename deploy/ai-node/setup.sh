@@ -11,7 +11,7 @@
 #     required "Authorization: Bearer <key>" — Ollama has no auth of its own
 #   - generates that key (or reuses the one in /etc/zekerflex-ai/key)
 #   - firewall: only SSH, HTTP (certificate challenge) and HTTPS open
-#   - pulls the model fleet sized to the GPU: main, fast, embed + reasoning,
+#   - pulls the model fleet sized to the available GPU or CPU: main, fast, embed + reasoning,
 #     code, translate, vision (override with MODEL= FAST_MODEL= EMBED_MODEL=
 #     REASONING_MODEL= CODE_MODEL= TRANSLATE_MODEL= VISION_MODEL=, "-" skips)
 #   - prints the exact values to paste into Vercel
@@ -24,24 +24,31 @@ set -euo pipefail
 DOMAIN="${1:-}"
 ROTATE="${2:-}"
 EMBED_MODEL="${EMBED_MODEL:-nomic-embed-text}"
+CPU_RAM_GB=0
+CPU_THREADS="$(nproc 2>/dev/null || echo 1)"
+if [[ -r /proc/meminfo ]]; then
+  CPU_RAM_GB="$(awk '/^MemTotal:/ { print int($2 / 1048576) }' /proc/meminfo)"
+fi
 
-# Pick the strongest model that fits the GPU (Qwen 2.5: good Dutch, good at
-# following instructions and JSON). Override with MODEL= / FAST_MODEL=.
+# Pick a model profile for the available GPU or CPU (Qwen 2.5: good Dutch,
+# instruction following and JSON). Override with MODEL= / FAST_MODEL=.
 VRAM_GB=0
 if command -v nvidia-smi >/dev/null 2>&1; then
   VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | awk '{s+=$1} END {print s+0}')
   VRAM_GB=$(( ${VRAM_MB:-0} / 1024 ))
 fi
+OLLAMA_NUM_PARALLEL=4
+OLLAMA_MAX_LOADED_MODELS=4
+OLLAMA_CONTEXT_LENGTH=""
 # Specialised models (lib/ai/models.ts): reasoning, code, translation, vision.
 # Each one that is left empty falls back to the main model in the app, so a
 # small server simply runs fewer models. Override with REASONING_MODEL= CODE_MODEL=
 # TRANSLATE_MODEL= VISION_MODEL= (set to "-" to skip one).
 if   (( VRAM_GB >= 420 )); then AUTO_MODEL="deepseek-r1:671b"; AUTO_FAST="qwen2.5:7b"; TIMEOUT_MS=300000
-  # Frontier open model (671B, MoE) — in omvang groter dan Claude. Alles draait
-  # op dit ene hoofdmodel; specialisten vallen erop terug (geen OOM).
+  # Keep only the selected main model on very large multi-GPU servers.
   AUTO_REASONING=""; AUTO_CODE=""; AUTO_TRANSLATE=""; AUTO_VISION=""
 elif (( VRAM_GB >= 240 )); then AUTO_MODEL="llama3.1:405b"; AUTO_FAST="qwen2.5:7b"; TIMEOUT_MS=240000
-  # 405B — frontier-klasse, groter dan Claude. Specialisten → hoofdmodel.
+  # Keep only the selected main model on very large multi-GPU servers.
   AUTO_REASONING=""; AUTO_CODE=""; AUTO_TRANSLATE=""; AUTO_VISION=""
 elif (( VRAM_GB >= 48 )); then AUTO_MODEL="qwen2.5:72b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=120000
   AUTO_REASONING="deepseek-r1:32b"; AUTO_CODE="qwen2.5-coder:32b"; AUTO_TRANSLATE="aya-expanse:32b"; AUTO_VISION="qwen2.5vl:32b"
@@ -49,7 +56,20 @@ elif (( VRAM_GB >= 24 )); then AUTO_MODEL="qwen2.5:32b"; AUTO_FAST="qwen2.5:7b";
   AUTO_REASONING="deepseek-r1:14b"; AUTO_CODE="qwen2.5-coder:14b"; AUTO_TRANSLATE="aya-expanse:8b"; AUTO_VISION="qwen2.5vl:7b"
 elif (( VRAM_GB >= 16 )); then AUTO_MODEL="qwen2.5:14b"; AUTO_FAST="llama3.2:3b"; TIMEOUT_MS=60000
   AUTO_REASONING="deepseek-r1:8b"; AUTO_CODE="qwen2.5-coder:7b"; AUTO_TRANSLATE="aya-expanse:8b"; AUTO_VISION="qwen2.5vl:7b"
-else                           AUTO_MODEL="qwen2.5:7b";  AUTO_FAST="llama3.2:3b"; TIMEOUT_MS=60000
+else
+  # CPU-only VPS: bound concurrent memory use and size models from RAM + cores.
+  OLLAMA_NUM_PARALLEL=1
+  OLLAMA_MAX_LOADED_MODELS=2
+  OLLAMA_CONTEXT_LENGTH=4096
+  if (( CPU_RAM_GB >= 64 && CPU_THREADS >= 16 )); then
+    AUTO_MODEL="qwen2.5:14b"; AUTO_FAST="qwen2.5:1.5b"; TIMEOUT_MS=180000
+  elif (( CPU_RAM_GB >= 32 && CPU_THREADS >= 8 )); then
+    AUTO_MODEL="qwen2.5:7b"; AUTO_FAST="qwen2.5:1.5b"; TIMEOUT_MS=120000
+  elif (( CPU_RAM_GB >= 16 && CPU_THREADS >= 4 )); then
+    AUTO_MODEL="qwen2.5:1.5b"; AUTO_FAST="qwen2.5:0.5b"; TIMEOUT_MS=90000
+  else
+    AUTO_MODEL="qwen2.5:0.5b"; AUTO_FAST="qwen2.5:0.5b"; TIMEOUT_MS=60000
+  fi
   AUTO_REASONING=""; AUTO_CODE=""; AUTO_TRANSLATE=""; AUTO_VISION=""
 fi
 MODEL="${MODEL:-$AUTO_MODEL}"
@@ -69,9 +89,14 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-echo "▸ Videokaart: ${VRAM_GB} GB geheugen → hoofdmodel ${MODEL}, snel model ${FAST_MODEL}"
-if (( VRAM_GB == 0 )); then
-  echo "  ⚠ Geen NVIDIA-GPU gevonden: het werkt, maar traag en met een klein model. Neem voor de beste kwaliteit een server met 24-48 GB videogeheugen."
+if (( VRAM_GB > 0 )); then
+  echo "▸ Videokaart: ${VRAM_GB} GB geheugen → hoofdmodel ${MODEL}, snel model ${FAST_MODEL}"
+else
+  echo "▸ CPU-profiel: ${CPU_THREADS} threads / ${CPU_RAM_GB} GB RAM → hoofdmodel ${MODEL}, snel model ${FAST_MODEL}"
+  echo "  Parallel: ${OLLAMA_NUM_PARALLEL} aanvraag per model · context: ${OLLAMA_CONTEXT_LENGTH} tokens"
+  if (( CPU_RAM_GB < 8 || CPU_THREADS < 2 )); then
+    echo "  ⚠ Deze server is krap voor productie-AI; het 0.5B-profiel is alleen bedoeld voor korte, eenvoudige taken."
+  fi
 fi
 
 echo "▸ Pakketten bijwerken"
@@ -83,14 +108,17 @@ if ! command -v ollama >/dev/null; then
   curl -fsSL https://ollama.com/install.sh | sh
 fi
 mkdir -p /etc/systemd/system/ollama.service.d
-cat >/etc/systemd/system/ollama.service.d/zekerflex.conf <<'EOF'
+cat >/etc/systemd/system/ollama.service.d/zekerflex.conf <<EOF
 [Service]
 # Only reachable through Caddy on this machine.
 Environment="OLLAMA_HOST=127.0.0.1:11434"
 Environment="OLLAMA_KEEP_ALIVE=30m"
-Environment="OLLAMA_NUM_PARALLEL=4"
-Environment="OLLAMA_MAX_LOADED_MODELS=4"
+Environment="OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}"
+Environment="OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}"
 EOF
+if [[ -n "$OLLAMA_CONTEXT_LENGTH" ]]; then
+  printf 'Environment="OLLAMA_CONTEXT_LENGTH=%s"\n' "$OLLAMA_CONTEXT_LENGTH" >>/etc/systemd/system/ollama.service.d/zekerflex.conf
+fi
 systemctl daemon-reload
 systemctl enable --now ollama
 systemctl restart ollama
