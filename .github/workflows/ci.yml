@@ -22,7 +22,7 @@ jobs:
       DATABASE_URL: postgresql://zekerflex:zekerflex@localhost:5432/zekerflex?schema=public
       AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret-0000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -61,7 +61,7 @@ jobs:
       AUTH_TRUST_HOST: "true"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 24
