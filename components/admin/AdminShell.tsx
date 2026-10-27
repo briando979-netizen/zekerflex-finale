@@ -104,6 +104,12 @@ export function AdminShell({
       data-theme={theme}
       style={{ background: "var(--a-page)" }}
     >
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg"
+      >
+        Naar hoofdinhoud
+      </a>
       <div className="flex min-h-screen flex-col gap-3 p-3 pt-4 lg:p-4 lg:pt-5">
         {/* Topbar */}
         <header className="a-panel flex h-14 flex-shrink-0 items-center gap-3 px-3 lg:h-16 lg:px-4">
@@ -289,7 +295,7 @@ export function AdminShell({
           )}
 
           {/* Content */}
-          <main className="min-w-0 flex-1">
+          <main id="main" tabIndex={-1} className="min-w-0 flex-1 outline-none">
             <div className="mb-4 flex items-center gap-2 text-sm" style={{ color: "var(--a-mute)" }}>
               <HomeIcon />
               <span>›</span>

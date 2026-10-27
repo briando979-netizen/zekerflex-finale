@@ -56,6 +56,12 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-paper-soft lg:grid lg:grid-cols-[288px_1fr]">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg"
+      >
+        Naar hoofdinhoud
+      </a>
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-[288px] transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-transform duration-300 ease-spring lg:static lg:translate-x-0 ${
@@ -181,7 +187,7 @@ export function AppShell({
             </Link>
           </div>
         </header>
-        <main key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 lg:px-8 lg:py-10">
+        <main id="main" tabIndex={-1} key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 outline-none lg:px-8 lg:py-10">
           <div className="mx-auto max-w-6xl 2xl:max-w-7xl">{children}</div>
         </main>
       </div>
