@@ -418,7 +418,7 @@ export function ChatDock() {
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2.5 border-b border-hair bg-brand-500 px-3 py-2 text-white">
+              <div className="flex items-center gap-2.5 border-b border-black/10 bg-[#008069] px-3 py-2 text-white">
                 <button type="button" onClick={() => { setActive(null); setReplyTo(null); }} aria-label="Terug" className="text-lg leading-none">‹</button>
                 <Avatar userId={otherOf(activeThread).userId} name={otherOf(activeThread).name} role={otherOf(activeThread).role} avatars={avatars} size={30} support={otherOf(activeThread).support} />
                 <button type="button" onClick={() => activeThread.kind === "direct" && setCardUser(otherOf(activeThread).userId)} className="min-w-0 flex-1 text-left leading-tight">
@@ -458,8 +458,8 @@ export function ChatDock() {
 
               <div
                 ref={scrollRef}
-                className="flex-1 space-y-1.5 overflow-y-auto bg-paper-soft px-3 py-3"
-                style={{ backgroundImage: "radial-gradient(rgba(12,14,18,0.03) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+                className="flex-1 space-y-1.5 overflow-y-auto px-3 py-3"
+                style={{ background: "#EFEAE2", backgroundImage: "radial-gradient(rgba(12,14,18,0.04) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
               >
                 {messages.map((m, i) => {
                   const mine = Boolean(me && m.from === me.userId);

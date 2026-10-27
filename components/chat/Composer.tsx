@@ -109,7 +109,10 @@ export function Composer({
 
   const shareLocation = () => {
     setMenuOpen(false);
-    if (!navigator.geolocation) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      alert("Je toestel of browser ondersteunt het delen van locatie niet.");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         setBusy(true);
@@ -123,8 +126,18 @@ export function Composer({
           setBusy(false);
         }
       },
-      () => alert("Locatie niet beschikbaar"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Geef deze site toegang tot je locatie (tik op het slotje in de adresbalk → Locatie toestaan) en probeer opnieuw."
+            : err.code === err.TIMEOUT
+              ? "Het bepalen van je locatie duurde te lang — probeer het opnieuw."
+              : "Je locatie kon niet worden bepaald. Zet locatie/GPS aan en probeer opnieuw.";
+        alert(msg);
+      },
+      // lagere nauwkeurigheid + een recente gecachete positie is prima voor delen
+      // en lukt veel vaker/sneller dan high-accuracy GPS.
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );
   };
 

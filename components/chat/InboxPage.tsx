@@ -769,7 +769,7 @@ export function InboxPage({
                   ? { background: "#E4F8EF" }
                   : look.wallpaper === "dark"
                     ? { background: "#14161A" }
-                    : { background: "#F4F4F0", backgroundImage: "radial-gradient(rgba(12,14,18,0.03) 1px, transparent 1px)", backgroundSize: "18px 18px" }
+                    : { background: "#EFEAE2", backgroundImage: "radial-gradient(rgba(12,14,18,0.04) 1px, transparent 1px)", backgroundSize: "20px 20px" }
             }
           >
             {messages.map((m, i) => {

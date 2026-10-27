@@ -8,7 +8,7 @@ const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "😢"];
 
 function Ticks({ m }: { m: Msg }) {
   if (m.pending) return <span>🕓</span>;
-  return <span className={m.readByOthers ? "text-[#34B7F1]" : ""}>{m.readByOthers ? "✓✓" : "✓"}</span>;
+  return <span className={m.readByOthers ? "text-[#53BDEB]" : ""}>{m.readByOthers ? "✓✓" : "✓"}</span>;
 }
 
 function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) {
@@ -208,7 +208,7 @@ export function MessageBubble({
       )}
       <div
         className={`max-w-[78%] rounded-2xl px-3 py-2 text-[0.875em] shadow-sm ${
-          mine ? "rounded-br-sm bg-[#DCF8C6]" : "rounded-bl-sm bg-white"
+          mine ? "rounded-br-sm bg-[#D9FDD3]" : "rounded-bl-sm bg-white"
         }`}
       >
         {m.forwarded && <p className="mb-0.5 flex items-center gap-1 text-[11px] italic text-neutralx-400">↪ Doorgestuurd</p>}
