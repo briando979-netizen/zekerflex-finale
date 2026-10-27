@@ -24,11 +24,12 @@ set -euo pipefail
 DOMAIN="${1:-}"
 ROTATE="${2:-}"
 EMBED_MODEL="${EMBED_MODEL:-nomic-embed-text}"
-CPU_RAM_GB=0
+CPU_RAM_MB=0
 CPU_THREADS="$(nproc 2>/dev/null || echo 1)"
 if [[ -r /proc/meminfo ]]; then
-  CPU_RAM_GB="$(awk '/^MemTotal:/ { print int($2 / 1048576) }' /proc/meminfo)"
+  CPU_RAM_MB="$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo)"
 fi
+CPU_RAM_GB="$(awk -v mb="$CPU_RAM_MB" 'BEGIN { printf "%.1f", mb / 1024 }')"
 
 # Pick a model profile for the available GPU or CPU (Qwen 2.5: good Dutch,
 # instruction following and JSON). Override with MODEL= / FAST_MODEL=.
@@ -40,6 +41,7 @@ fi
 OLLAMA_NUM_PARALLEL=4
 OLLAMA_MAX_LOADED_MODELS=4
 OLLAMA_CONTEXT_LENGTH=""
+OLLAMA_KEEP_ALIVE=30m
 # Specialised models (lib/ai/models.ts): reasoning, code, translation, vision.
 # Each one that is left empty falls back to the main model in the app, so a
 # small server simply runs fewer models. Override with REASONING_MODEL= CODE_MODEL=
@@ -61,11 +63,17 @@ else
   OLLAMA_NUM_PARALLEL=1
   OLLAMA_MAX_LOADED_MODELS=2
   OLLAMA_CONTEXT_LENGTH=4096
-  if (( CPU_RAM_GB >= 64 && CPU_THREADS >= 16 )); then
+  if (( CPU_RAM_MB < 4096 || CPU_THREADS < 2 )); then
+    # Tiny VPS: keep one small model loaded at a time and unload it after each call.
+    OLLAMA_MAX_LOADED_MODELS=1
+    OLLAMA_CONTEXT_LENGTH=2048
+    OLLAMA_KEEP_ALIVE=0
+    AUTO_MODEL="qwen2.5:0.5b"; AUTO_FAST=""; TIMEOUT_MS=120000
+  elif (( CPU_RAM_MB >= 65536 && CPU_THREADS >= 16 )); then
     AUTO_MODEL="qwen2.5:14b"; AUTO_FAST="qwen2.5:1.5b"; TIMEOUT_MS=180000
-  elif (( CPU_RAM_GB >= 32 && CPU_THREADS >= 8 )); then
+  elif (( CPU_RAM_MB >= 32768 && CPU_THREADS >= 8 )); then
     AUTO_MODEL="qwen2.5:7b"; AUTO_FAST="qwen2.5:1.5b"; TIMEOUT_MS=120000
-  elif (( CPU_RAM_GB >= 16 && CPU_THREADS >= 4 )); then
+  elif (( CPU_RAM_MB >= 16384 && CPU_THREADS >= 4 )); then
     AUTO_MODEL="qwen2.5:1.5b"; AUTO_FAST="qwen2.5:0.5b"; TIMEOUT_MS=90000
   else
     AUTO_MODEL="qwen2.5:0.5b"; AUTO_FAST="qwen2.5:0.5b"; TIMEOUT_MS=60000
@@ -94,8 +102,8 @@ if (( VRAM_GB > 0 )); then
 else
   echo "▸ CPU-profiel: ${CPU_THREADS} threads / ${CPU_RAM_GB} GB RAM → hoofdmodel ${MODEL}, snel model ${FAST_MODEL}"
   echo "  Parallel: ${OLLAMA_NUM_PARALLEL} aanvraag per model · context: ${OLLAMA_CONTEXT_LENGTH} tokens"
-  if (( CPU_RAM_GB < 8 || CPU_THREADS < 2 )); then
-    echo "  ⚠ Deze server is krap voor productie-AI; het 0.5B-profiel is alleen bedoeld voor korte, eenvoudige taken."
+  if (( CPU_RAM_MB < 4096 || CPU_THREADS < 2 )); then
+    echo "  ⚠ Minimale testnode: één klein model, 2048 context en automatisch uitladen; niet geschikt voor betrouwbare productiebelasting."
   fi
 fi
 
@@ -112,7 +120,7 @@ cat >/etc/systemd/system/ollama.service.d/zekerflex.conf <<EOF
 [Service]
 # Only reachable through Caddy on this machine.
 Environment="OLLAMA_HOST=127.0.0.1:11434"
-Environment="OLLAMA_KEEP_ALIVE=30m"
+Environment="OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}"
 Environment="OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}"
 Environment="OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}"
 EOF

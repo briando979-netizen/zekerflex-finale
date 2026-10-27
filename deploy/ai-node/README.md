@@ -29,12 +29,15 @@ Het script kiest automatisch op basis van het beschikbare RAM en aantal CPU-thre
 
 | Servercapaciteit | Hoofdmodel | Snel model | Geschikt voor |
 |---|---|---|---|
-| Minder dan 16 GB of minder dan 4 threads | `qwen2.5:0.5b` | `qwen2.5:0.5b` | Korte classificatie en eenvoudige herschrijvingen |
+| Minder dan 4 GB of minder dan 2 threads | `qwen2.5:0.5b` | Zelfde model | Alleen testen en korte, eenvoudige taken; één model tegelijk, 2048 context |
+| Onder de 16 GB / 4-thread drempel | `qwen2.5:0.5b` | `qwen2.5:0.5b` | Korte classificatie en eenvoudige herschrijvingen |
 | Vanaf 16 GB én 4 threads | `qwen2.5:1.5b` | `qwen2.5:0.5b` | Korte antwoorden, samenvatten en lichte schrijftaken |
 | Vanaf 32 GB én 8 threads | `qwen2.5:7b` | `qwen2.5:1.5b` | Bruikbaardere drafts, samenvattingen en JSON-uitvoer |
 | Vanaf 64 GB én 16 threads | `qwen2.5:14b` | `qwen2.5:1.5b` | Betere kwaliteit voor complexere taken, met meer wachttijd |
 
-De Q4-gewichten nemen ongeveer 398 MB (0.5B), 986 MB (1.5B), 4.7 GB (7B) en 9 GB (14B) in. De CPU-profielen gebruiken één gelijktijdige aanvraag en maximaal twee geladen modellen. Dat voorkomt dat meerdere lange contexten tegelijk het beperkte RAM opsouperen; extra aanvragen wachten in de Ollama-queue.
+De Q4-gewichten nemen ongeveer 398 MB (0.5B), 986 MB (1.5B), 4.7 GB (7B) en 9 GB (14B) in. CPU-profielen gebruiken één aanvraag tegelijk. Onder 4 GB RAM of met minder dan 2 threads wordt het model na een aanvraag uitgeladen en is de context 2048 tokens om geheugen vrij te houden; de eerste aanvraag kan daardoor extra traag zijn.
+
+Een VPS van **1 core en 2 GB RAM** valt in dat minimale profiel. Geschikt om lokaal te proberen, maar te krap voor een betrouwbare AI-productiedienst. Voor productie is een upgrade naar minimaal 4 vCPU en 8 GB RAM verstandig.
 
 De automatische profielen kiezen Qwen2.5-tags die als Apache 2.0 zijn gepubliceerd. De 3B-tag heeft een aparte Qwen-licentie en wordt daarom niet automatisch gekozen; controleer de licentie van een model voordat je een andere tag commercieel inzet.
 
