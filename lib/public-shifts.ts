@@ -75,15 +75,28 @@ const toPublic = (s: Row): PublicShift => ({
 });
 
 export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number } = {}): Promise<PublicShift[]> {
+  const near = opts.near;
+  const latDelta = near ? near.km / 111.32 : 0;
+  const lngDelta = near ? near.km / (111.32 * Math.max(Math.cos((near.lat * Math.PI) / 180), 0.01)) : 0;
   const rows = (await prisma.shift.findMany({
-    where: { status: { in: [...OPEN] }, visibility: "PUBLIC", startsAt: { gt: new Date() } },
+    where: {
+      status: { in: [...OPEN] },
+      visibility: "PUBLIC",
+      startsAt: { gt: new Date() },
+      ...(near ? {
+        branch: {
+          latitude: { gte: near.lat - latDelta, lte: near.lat + latDelta },
+          longitude: { gte: near.lng - lngDelta, lte: near.lng + lngDelta },
+        },
+      } : {}),
+    },
     orderBy: { startsAt: "asc" },
     take: 500,
     select,
   })) as Row[];
   let out = rows.map(toPublic);
-  if (opts.near) {
-    const { lat, lng, km } = opts.near;
+  if (near) {
+    const { lat, lng, km } = near;
     out = out.filter((s) => haversineMeters({ latitude: lat, longitude: lng }, { latitude: s.latitude, longitude: s.longitude }) <= km * 1000);
   }
   return opts.take ? out.slice(0, opts.take) : out;
