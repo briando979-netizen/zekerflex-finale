@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, accountDeletionEmail } from "@/lib/mail";
-import { fixedWindow } from "@/lib/rate-limit";
+import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { anonymizeUser, type ErasureReport } from "@/lib/privacy/anonymize";
 
 // ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ const TTL_SECONDS = 60 * 60;
 export async function requestAccountDeletion(rawEmail: string): Promise<void> {
   const email = rawEmail.toLowerCase().trim();
 
-  const gate = await fixedWindow(`account-deletion:rl:${email}`, 1, 60);
+  const gate = await fixedWindow(`account-deletion:rl:${privateRateLimitIdentifier(email)}`, 1, 60);
   if (!gate.ok) return;
 
   const user = await prisma.user.findFirst({

@@ -1,4 +1,6 @@
+import { createHmac } from "node:crypto";
 import { redis } from "@/lib/redis";
+import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordRateLimited } from "@/lib/metrics";
 
@@ -27,6 +29,11 @@ export interface RateResult {
   retryAfterSeconds: number;
   /** real seconds left on the window's Redis TTL — for RateLimit-Reset, on success or failure alike. */
   resetSeconds: number;
+}
+
+/** Stable, non-reversible bucket component for identifiers such as email addresses. */
+export function privateRateLimitIdentifier(identifier: string): string {
+  return createHmac("sha256", env.AUTH_SECRET).update(identifier).digest("hex");
 }
 
 /**

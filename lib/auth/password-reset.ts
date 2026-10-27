@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, passwordResetEmail } from "@/lib/mail";
-import { fixedWindow } from "@/lib/rate-limit";
+import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { clearLoginFailures } from "@/lib/auth/login-throttle";
 
 // ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ export async function requestPasswordReset(rawEmail: string): Promise<void> {
 
   // Redis-backed cooldown so the endpoint can't be used to blast mail — works
   // across every serverless instance, unlike an in-process Map.
-  const gate = await fixedWindow(`password-reset:rl:${email}`, 1, 60);
+  const gate = await fixedWindow(`password-reset:rl:${privateRateLimitIdentifier(email)}`, 1, 60);
   if (!gate.ok) return;
 
   const user = await prisma.user.findFirst({
