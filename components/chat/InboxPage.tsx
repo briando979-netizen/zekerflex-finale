@@ -7,6 +7,7 @@ import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
+import { IconSearch, IconDots, IconPhone } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -706,7 +707,7 @@ export function InboxPage({
             </button>
             {activeThread.kind === "direct" && (
               <div className="ml-auto flex items-center gap-1">
-                <button type="button" onClick={() => startCall("audio")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Bellen">📞</button>
+                <button type="button" onClick={() => startCall("audio")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Bellen"><IconPhone className="h-5 w-5" /></button>
                 <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Profiel">ⓘ</button>
               </div>
             )}
@@ -716,7 +717,7 @@ export function InboxPage({
               className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft ${activeThread.kind === "support" ? "ml-auto" : ""}`}
               aria-label="Zoek in gesprek"
             >
-              🔍
+              <IconSearch className="h-5 w-5" />
             </button>
             <button
               type="button"
@@ -724,7 +725,7 @@ export function InboxPage({
               className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft"
               aria-label="Meer opties"
             >
-              ⋮
+              <IconDots className="h-5 w-5" />
             </button>
             {activeThread.kind === "group" && activeThread.communityId && (
               <button

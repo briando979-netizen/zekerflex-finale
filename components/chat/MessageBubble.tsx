@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { fmtBytes, fmtDuration, fmtTime, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
+import { IconReply, IconSmiley, IconDots } from "./icons";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "😢"];
 
@@ -183,7 +184,7 @@ export function MessageBubble({
           className="mb-1 block text-xs text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
           aria-label="Beantwoord"
         >
-          ↩
+          <IconReply className="h-4 w-4" />
         </button>
       )}
       {!mine && onReact && (
@@ -193,7 +194,7 @@ export function MessageBubble({
           aria-label="Reageer"
           className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          🙂
+          <IconSmiley className="h-5 w-5" />
         </button>
       )}
       {!mine && (onForward || onPin) && (
@@ -203,7 +204,7 @@ export function MessageBubble({
           aria-label="Meer acties"
           className="mb-1 block text-sm leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          ⋯
+          <IconDots className="h-4 w-4" />
         </button>
       )}
       <div
@@ -313,7 +314,7 @@ export function MessageBubble({
           aria-label="Reageer"
           className="mb-1 block text-base leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          🙂
+          <IconSmiley className="h-5 w-5" />
         </button>
       )}
       {mine && (onForward || onPin || onDelete) && (
@@ -323,7 +324,7 @@ export function MessageBubble({
           aria-label="Meer acties"
           className="mb-1 block text-sm leading-none text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
         >
-          ⋯
+          <IconDots className="h-4 w-4" />
         </button>
       )}
       {mine && onReply && (
@@ -333,7 +334,7 @@ export function MessageBubble({
           className="mb-1 block text-xs text-neutralx-400 hover:text-brand-600 [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:block"
           aria-label="Beantwoord"
         >
-          ↩
+          <IconReply className="h-4 w-4" />
         </button>
       )}
     </div>

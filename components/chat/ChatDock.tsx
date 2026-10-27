@@ -7,6 +7,7 @@ import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
+import { IconBack, IconPhone, IconSearch } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
@@ -419,7 +420,7 @@ export function ChatDock() {
           ) : (
             <>
               <div className="flex items-center gap-2.5 border-b border-black/10 bg-[#008069] px-3 py-2 text-white">
-                <button type="button" onClick={() => { setActive(null); setReplyTo(null); }} aria-label="Terug" className="text-lg leading-none">‹</button>
+                <button type="button" onClick={() => { setActive(null); setReplyTo(null); }} aria-label="Terug" className="leading-none"><IconBack className="h-5 w-5" /></button>
                 <Avatar userId={otherOf(activeThread).userId} name={otherOf(activeThread).name} role={otherOf(activeThread).role} avatars={avatars} size={30} support={otherOf(activeThread).support} />
                 <button type="button" onClick={() => activeThread.kind === "direct" && setCardUser(otherOf(activeThread).userId)} className="min-w-0 flex-1 text-left leading-tight">
                   <p className="truncate text-sm font-semibold">{otherOf(activeThread).name}</p>
@@ -427,10 +428,10 @@ export function ChatDock() {
                     {theirTyping ? "aan het typen…" : activeThread.kind === "direct" ? lastSeenLabel(presence[otherOf(activeThread).userId]) : activeThread.shiftTitle ?? ""}
                   </p>
                 </button>
-                <button type="button" onClick={search.openSearch} aria-label="Zoek in gesprek" className="text-base">🔍</button>
+                <button type="button" onClick={search.openSearch} aria-label="Zoek in gesprek"><IconSearch className="h-5 w-5" /></button>
                 {activeThread.kind === "direct" && (
                   <>
-                    <button type="button" onClick={() => startCall("audio")} aria-label="Bellen" className="text-base">📞</button>
+                    <button type="button" onClick={() => startCall("audio")} aria-label="Bellen"><IconPhone className="h-5 w-5" /></button>
                   </>
                 )}
               </div>

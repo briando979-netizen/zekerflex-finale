@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fmtDuration, type Msg } from "./shared";
+import { IconPaperclip, IconMic, IconSend } from "./icons";
 
 export interface OutgoingMessage {
   text: string;
@@ -276,7 +277,7 @@ export function Composer({
               className="grid h-9 w-9 place-items-center rounded-full text-xl text-neutralx-500 hover:bg-paper-soft"
               aria-label="Bijlage"
             >
-              +
+              <IconPaperclip className="h-6 w-6" />
             </button>
             {menuOpen && (
               <div className="absolute bottom-11 left-0 z-10 w-44 rounded-xl border border-hairstrong bg-white p-1 shadow-lift">
@@ -333,7 +334,7 @@ export function Composer({
               className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white disabled:opacity-40"
               aria-label="Verstuur"
             >
-              ➤
+              <IconSend className="h-5 w-5" />
             </button>
           ) : (
             <button
@@ -342,7 +343,7 @@ export function Composer({
               className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white"
               aria-label="Spraakbericht opnemen"
             >
-              🎤
+              <IconMic className="h-6 w-6" />
             </button>
           )}
 
