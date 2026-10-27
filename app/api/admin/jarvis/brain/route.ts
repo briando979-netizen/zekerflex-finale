@@ -12,8 +12,10 @@ export const dynamic = "force-dynamic";
 // the node serves (picker), and the per-role assignment ("slim schakelen"). A
 // non-local/private host = a hosted gateway ("cloud"); otherwise the sovereign
 // local node (token-free). Never throws.
+// A tunnelled home node (*.trycloudflare.com) is still the owner's own sovereign
+// laptop/server (token-free), not a paid cloud API — so it counts as local.
 const PRIVATE_HOST =
-  /^(localhost|127\.|0\.0\.0\.0|\[::1\]|.*\.local|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/i;
+  /^(localhost|127\.|0\.0\.0\.0|\[::1\]|.*\.local|.*\.trycloudflare\.com|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/i;
 
 // The roles that matter for the chat/switcher, in display order.
 const PICKABLE = ["main", "reasoning", "fast", "code"] as const;

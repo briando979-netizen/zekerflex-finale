@@ -104,6 +104,17 @@ export function viaRegisteredNode(): boolean {
   return usesNodeRegistry() && Boolean(registeredNodeUrl());
 }
 
+/**
+ * A home/laptop node behind a tunnel does CPU inference and cold model loads,
+ * so a first answer can take far longer than a datacenter model. Give those
+ * calls a generous timeout floor (≥120s) so they don't hit a short env cap
+ * (e.g. 30s) and fail before the model has even finished loading.
+ */
+function timeoutFor(opts: ChatOptions): number {
+  const base = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
+  return viaRegisteredNode() ? Math.max(base, 120_000) : base;
+}
+
 function baseUrl(): string {
   const node = usesNodeRegistry() ? registeredNodeUrl() : null;
   return node ? `${node}/v1` : env.LLM_BASE_URL.replace(/\/+$/, "");
@@ -279,7 +290,7 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
   const problem = llmConfigProblem();
   if (problem) throw AppError.upstream(problem);
   const model = opts.model ?? modelForPurpose(opts.purpose);
-  const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
+  const timeoutMs = timeoutFor(opts);
   return withGovernor(opts.purpose ?? "chat", async () => {
     try {
       const data = (await post(
@@ -363,7 +374,7 @@ export async function* chatStream(
     return { text: whole.text, model: whole.model };
   }
   const model = opts.model ?? modelForPurpose(opts.purpose);
-  const timeoutMs = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
+  const timeoutMs = timeoutFor(opts);
 
   const host = (() => {
     try {
