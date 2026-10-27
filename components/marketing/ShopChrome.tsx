@@ -119,7 +119,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-40 border-b border-hair bg-white">
         <div className="shell flex items-center justify-between gap-6 py-3.5">
-          <nav className="hidden flex-1 items-center gap-5 text-sm font-semibold lg:flex">
+          <nav aria-label="Winkelnavigatie" className="hidden flex-1 items-center gap-5 text-sm font-semibold lg:flex">
             {MAIN_NAV.map((n) => (
               <Link
                 key={n.label}

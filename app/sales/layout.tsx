@@ -18,7 +18,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
             <Link href="/sales" className="font-display text-lg font-bold text-ink">
               ZekerFlex <span className="text-brand-600">Sales</span>
             </Link>
-            <nav className="hidden gap-5 text-sm font-medium text-neutralx-500 sm:flex">
+            <nav aria-label="Verkoopnavigatie" className="hidden gap-5 text-sm font-medium text-neutralx-500 sm:flex">
               <Link href="/sales" className="min-h-11 py-2 hover:text-ink">Bezoeken</Link>
               <Link href="/uitleg" target="_blank" className="min-h-11 py-2 hover:text-ink">Uitlegfilmpjes</Link>
             </nav>

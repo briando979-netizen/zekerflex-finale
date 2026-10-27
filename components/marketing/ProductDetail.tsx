@@ -72,7 +72,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
 
   return (
     <div className="shell py-8 md:py-12">
-      <nav className="mb-6 flex items-center gap-2 text-xs text-neutralx-500">
+      <nav aria-label="Broodkruimel" className="mb-6 flex items-center gap-2 text-xs text-neutralx-500">
         <Link href="/shop" className="hover:text-ink">{t.shop.shopBreadcrumb}</Link>
         <span>/</span>
         <Link href={`/shop?cat=${encodeURIComponent(product.category)}`} className="hover:text-ink">{product.category}</Link>

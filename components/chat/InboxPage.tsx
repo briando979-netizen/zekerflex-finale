@@ -664,7 +664,7 @@ export function InboxPage({
         </div>
 
         {/* WhatsApp-style bottom bar */}
-        <nav className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
+        <nav aria-label="Inboxnavigatie" className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
           {(
             [
               ["chats", IconChatBubble, "Chats"],

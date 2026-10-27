@@ -146,7 +146,7 @@ export function EmployerShell({
           {!collapsed && t.shell.collapse}
         </button>
 
-        <nav className="flex-1 space-y-3 overflow-y-auto p-3">
+        <nav aria-label="Hoofdnavigatie" className="flex-1 space-y-3 overflow-y-auto p-3">
           {groups.map((g, gi) => (
             <div key={gi} className="space-y-0.5">
               {g.section && !collapsed && (

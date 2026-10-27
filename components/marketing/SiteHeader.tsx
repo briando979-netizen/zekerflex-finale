@@ -273,7 +273,7 @@ export function SiteHeader() {
           <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
-        <nav ref={navRef} className="ml-6 hidden items-center gap-6 lg:flex">
+        <nav aria-label="Hoofdnavigatie" ref={navRef} className="ml-6 hidden items-center gap-6 lg:flex">
           {NAV.map((n) => {
             const active =
               n.match.startsWith("/") &&
