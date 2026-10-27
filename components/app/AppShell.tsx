@@ -64,6 +64,7 @@ export function AppShell({
       </a>
       {/* Sidebar */}
       <aside
+        id="workspace-sidebar"
         className={`fixed inset-y-0 left-0 z-40 flex w-[288px] transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-transform duration-300 ease-spring lg:static lg:translate-x-0 ${
           open ? "translate-x-0 shadow-e3" : "-translate-x-full"
         }`}
@@ -170,7 +171,9 @@ export function AppShell({
             type="button"
             onClick={() => setOpen((v) => !v)}
             className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong lg:hidden"
-            aria-label="Menu"
+            aria-label={open ? "Sluit navigatiemenu" : "Open navigatiemenu"}
+            aria-expanded={open}
+            aria-controls="workspace-sidebar"
           >
             ☰
           </button>
