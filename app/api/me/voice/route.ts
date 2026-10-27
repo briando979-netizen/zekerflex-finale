@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getPrincipal } from "@/lib/auth";
 import { transcribeAudio } from "@/lib/asr/transcribe";
 
+const MAX_AUDIO_BYTES = 20_000_000;
+
 // POST /api/me/voice
 // Accepts a multipart audio upload, returns transcript.
 // Used by the voice interface in the freelancer/employer dashboard.
@@ -14,6 +16,9 @@ export async function POST(req: Request) {
   const file = form?.get("audio");
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "Geen audio-bestand aangeleverd (veld: audio)" }, { status: 400 });
+  }
+  if (file.size > MAX_AUDIO_BYTES) {
+    return NextResponse.json({ error: "Audiofragment te groot (max 20 MB)" }, { status: 413 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
