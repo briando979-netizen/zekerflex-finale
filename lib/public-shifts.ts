@@ -76,8 +76,9 @@ const toPublic = (s: Row): PublicShift => ({
 
 export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number } = {}): Promise<PublicShift[]> {
   const near = opts.near;
-  const latDelta = near ? near.km / 111.32 : 0;
-  const lngDelta = near ? near.km / (111.32 * Math.max(Math.cos((near.lat * Math.PI) / 180), 0.01)) : 0;
+  const latDelta = near ? near.km / 110.5 : 0;
+  const maxAbsLat = near ? Math.min(89.9, Math.abs(near.lat) + latDelta) : 0;
+  const lngDelta = near ? near.km / (111.32 * Math.max(Math.cos((maxAbsLat * Math.PI) / 180), 0.01)) : 0;
   const rows = (await prisma.shift.findMany({
     where: {
       status: { in: [...OPEN] },
