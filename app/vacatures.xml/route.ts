@@ -37,11 +37,17 @@ export async function GET(): Promise<Response> {
     (await prisma.shift.findMany({ where: { id: { in: shifts.map((s) => s.id) } }, select: { id: true, branch: { select: { tenantId: true } } } })).map((r) => [r.id, r.branch.tenantId]),
   );
   const verified = new Map<string, boolean>();
+  const tenantIds = [...new Set(tenantOf.values())];
+  for (let start = 0; start < tenantIds.length; start += 20) {
+    const batch = tenantIds.slice(start, start + 20);
+    const results = await Promise.all(batch.map(async (tenantId) => ({ tenantId, ok: await isTenantVerified(tenantId) })));
+    for (const result of results) verified.set(result.tenantId, result.ok);
+  }
+
   const rows: string[] = [];
   for (const s of shifts) {
     const t = tenantOf.get(s.id);
     if (!t) continue;
-    if (!verified.has(t)) verified.set(t, await isTenantVerified(t));
     if (!verified.get(t)) continue;
     const url = `${SITE.url}/klussen/${s.id}`;
     rows.push(`  <job>
