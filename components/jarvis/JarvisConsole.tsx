@@ -103,7 +103,7 @@ export function JarvisConsole() {
   // and which brain (local / cloud) is currently answering.
   const [history, setHistory] = useState<{ id: string; prompt: string; status: string; startedAt: string }[]>([]);
   const [viewTurn, setViewTurn] = useState<TurnState | null>(null);
-  const [brain, setBrain] = useState<{ ok: boolean; model: string; cloud: boolean } | null>(null);
+  const [brain, setBrain] = useState<{ ok: boolean; model: string; cloud: boolean; models: string[]; selected: string } | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
@@ -240,12 +240,39 @@ export function JarvisConsole() {
     try {
       const res = await fetch("/api/admin/jarvis/brain", { cache: "no-store" });
       if (!res.ok) return;
-      const data = (await res.json()) as { ok: boolean; model: string; cloud: boolean };
-      setBrain({ ok: data.ok, model: data.model, cloud: data.cloud });
+      const data = (await res.json()) as {
+        ok: boolean;
+        model: string;
+        cloud: boolean;
+        models?: string[];
+        selected?: string;
+      };
+      setBrain({
+        ok: data.ok,
+        model: data.model,
+        cloud: data.cloud,
+        models: data.models ?? [],
+        selected: data.selected ?? data.model,
+      });
     } catch {
       /* ignore */
     }
   }, []);
+  const chooseModel = useCallback(
+    async (model: string) => {
+      try {
+        await fetch("/api/admin/jarvis/brain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        await loadBrain();
+      } catch {
+        /* ignore */
+      }
+    },
+    [loadBrain],
+  );
   const openTurn = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/admin/jarvis/turns/${id}?since=0`, { cache: "no-store" });
@@ -666,9 +693,26 @@ export function JarvisConsole() {
         <div className="border-b border-white/10 px-4 py-2.5 text-[11px]">
           <div className="flex items-center gap-2">
             <span className={`h-2 w-2 flex-shrink-0 rounded-full ${brain?.ok ? "bg-brand-mint" : "bg-[#F07C6B]"}`} />
-            <span className="text-white/70">{brain ? (brain.cloud ? "cloud-brein" : "lokaal brein") : "brein laden…"}</span>
+            <span className="text-white/70">{brain ? (brain.cloud ? "cloud-brein" : "lokaal brein · €0") : "brein laden…"}</span>
           </div>
-          <div className="truncate pl-4 pt-0.5 font-mono text-white/35">{brain?.model ?? "—"}</div>
+          {brain && brain.models.length > 0 ? (
+            <select
+              value={brain.selected}
+              onChange={(e) => void chooseModel(e.target.value)}
+              aria-label="Kies lokaal model"
+              className="mt-1.5 w-full rounded-md border border-white/15 bg-[#0b0e13] px-2 py-1 font-mono text-[11px] text-white/80 focus:outline-none"
+            >
+              {brain.models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="truncate pl-4 pt-0.5 font-mono text-white/35">
+              {brain ? (brain.model || "node offline") : "—"}
+            </div>
+          )}
         </div>
         <div className="border-b border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] text-white/30">
           Sessies

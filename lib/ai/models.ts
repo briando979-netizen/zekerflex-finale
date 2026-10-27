@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { getMainModelOverrideCached } from "@/lib/ai/llm-model";
 
 // ---------------------------------------------------------------------------
 // Model fleet — one self-hosted model per kind of work, picked by `purpose`.
@@ -66,11 +67,16 @@ function configured(role: ModelRole): string | undefined {
   }
 }
 
-/** The model for a role, falling back to the main model for text roles. */
+/** The model for a role. The main model honours a runtime override (set in
+ *  Admin → Jarvis, token-free, no redeploy); text roles without their own model
+ *  fall back to that same main model, so picking one big model drives them all. */
 export function modelFor(role: ModelRole): string {
+  // Main role: the runtime override wins over env.LLM_MODEL.
+  if (role === "main") return getMainModelOverrideCached() ?? env.LLM_MODEL;
   const own = configured(role);
   if (own) return own;
-  return role === "vision" || role === "embed" ? "" : env.LLM_MODEL;
+  if (role === "vision" || role === "embed") return "";
+  return getMainModelOverrideCached() ?? env.LLM_MODEL;
 }
 
 export function roleForPurpose(purpose?: string): ModelRole {

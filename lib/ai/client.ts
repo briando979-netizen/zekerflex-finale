@@ -5,6 +5,7 @@ import { isLocalInference, withGovernor } from "@/lib/ai/governor";
 import { modelForPurpose } from "@/lib/ai/models";
 import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
 import { getLlmApiKey } from "@/lib/ai/llm-key";
+import { primeMainModel, effectiveMainModel } from "@/lib/ai/llm-model";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -119,6 +120,7 @@ function llmHost(): string {
 /** Make sure this instance knows the registered AI node (cheap, cached ~20 s). */
 export async function ensureAiNode(): Promise<void> {
   if (usesNodeRegistry()) await primeNode();
+  await primeMainModel();
 }
 
 /**
@@ -263,10 +265,11 @@ export async function chat(opts: ChatOptions): Promise<ChatResult> {
   } catch (err) {
     // a specialised model (reasoning/code/translate/fast) that isn't pulled on
     // the AI node yet → answer with the main model instead of failing
+    const main = effectiveMainModel();
     const model = opts.model ?? modelForPurpose(opts.purpose);
-    if (err instanceof AppError && /niet gedownload/.test(err.message) && model !== env.LLM_MODEL) {
+    if (err instanceof AppError && /niet gedownload/.test(err.message) && model !== main) {
       logger.warn("llm model missing — falling back to main model", { model, purpose: opts.purpose });
-      return chatOnce({ ...opts, model: env.LLM_MODEL });
+      return chatOnce({ ...opts, model: main });
     }
     throw err;
   }
