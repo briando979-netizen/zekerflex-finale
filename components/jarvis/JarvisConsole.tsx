@@ -61,6 +61,15 @@ const KIND_PREFIX: Record<EventKind, string> = {
   ERROR: "✖",
 };
 
+// Zwaarste open modellen om lokaal, token-vrij een brein "groter dan Claude" te
+// draaien. Getoond als hint onder de kiezer; pull ze op je AI-node, kies ze
+// daarna hierboven. Zie deploy/ai-node/README.md.
+const HEAVY_MODELS: { name: string; params: string; needs: string }[] = [
+  { name: "qwen2.5:72b", params: "72B", needs: "~48 GB VRAM — sterkste op één kaart" },
+  { name: "llama3.1:405b", params: "405B", needs: "~240 GB VRAM — groter dan Claude" },
+  { name: "deepseek-r1:671b", params: "671B", needs: "~420 GB VRAM óf ~512 GB RAM (MoE)" },
+];
+
 function speechToText(): boolean {
   if (typeof window === "undefined") return false;
   const w = window as unknown as Record<string, unknown>;
@@ -713,6 +722,24 @@ export function JarvisConsole() {
               {brain ? (brain.model || "node offline") : "—"}
             </div>
           )}
+          <details className="mt-2">
+            <summary className="cursor-pointer select-none text-[10px] uppercase tracking-[0.14em] text-white/30 hover:text-white/50 [&::-webkit-details-marker]:hidden">
+              groter dan Claude?
+            </summary>
+            <div className="mt-1 space-y-1.5">
+              {HEAVY_MODELS.map((h) => (
+                <div key={h.name} className="rounded-md bg-white/[0.03] px-2 py-1">
+                  <code className="text-[10.5px] text-brand-mint">ollama pull {h.name}</code>
+                  <div className="text-[10px] text-white/35">
+                    {h.params} · {h.needs}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] leading-snug text-white/30">
+              Lokaal = €0 per vraag. Groter model = slimmer; kies het daarna hierboven.
+            </p>
+          </details>
         </div>
         <div className="border-b border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] text-white/30">
           Sessies

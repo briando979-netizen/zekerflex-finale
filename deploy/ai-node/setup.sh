@@ -36,7 +36,14 @@ fi
 # Each one that is left empty falls back to the main model in the app, so a
 # small server simply runs fewer models. Override with REASONING_MODEL= CODE_MODEL=
 # TRANSLATE_MODEL= VISION_MODEL= (set to "-" to skip one).
-if   (( VRAM_GB >= 48 )); then AUTO_MODEL="qwen2.5:72b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=120000
+if   (( VRAM_GB >= 420 )); then AUTO_MODEL="deepseek-r1:671b"; AUTO_FAST="qwen2.5:7b"; TIMEOUT_MS=300000
+  # Frontier open model (671B, MoE) — in omvang groter dan Claude. Alles draait
+  # op dit ene hoofdmodel; specialisten vallen erop terug (geen OOM).
+  AUTO_REASONING=""; AUTO_CODE=""; AUTO_TRANSLATE=""; AUTO_VISION=""
+elif (( VRAM_GB >= 240 )); then AUTO_MODEL="llama3.1:405b"; AUTO_FAST="qwen2.5:7b"; TIMEOUT_MS=240000
+  # 405B — frontier-klasse, groter dan Claude. Specialisten → hoofdmodel.
+  AUTO_REASONING=""; AUTO_CODE=""; AUTO_TRANSLATE=""; AUTO_VISION=""
+elif (( VRAM_GB >= 48 )); then AUTO_MODEL="qwen2.5:72b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=120000
   AUTO_REASONING="deepseek-r1:32b"; AUTO_CODE="qwen2.5-coder:32b"; AUTO_TRANSLATE="aya-expanse:32b"; AUTO_VISION="qwen2.5vl:32b"
 elif (( VRAM_GB >= 24 )); then AUTO_MODEL="qwen2.5:32b"; AUTO_FAST="qwen2.5:7b";  TIMEOUT_MS=90000
   AUTO_REASONING="deepseek-r1:14b"; AUTO_CODE="qwen2.5-coder:14b"; AUTO_TRANSLATE="aya-expanse:8b"; AUTO_VISION="qwen2.5vl:7b"

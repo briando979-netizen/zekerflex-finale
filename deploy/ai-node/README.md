@@ -11,12 +11,16 @@ Alle data blijft op jouw server.
 
     | Videogeheugen | Hoofdmodel | Kwaliteit |
     |---|---|---|
-    | 48 GB+ (bv. RTX 6000 Ada / A6000 / L40S) | `qwen2.5:72b` | beste: komt het dichtst bij de grote commerciële modellen |
+    | 420 GB+ (bv. 8× H100/H200 80GB) | `deepseek-r1:671b` of `deepseek-v3` (671B) | **frontier: in omvang groter dan Claude**, evenaart de beste commerciële modellen |
+    | 240 GB+ (bv. 4× H100 80GB of 8× A100 40GB) | `llama3.1:405b` (405B) | **frontier-klasse, groter dan Claude** |
+    | 48 GB+ (bv. RTX 6000 Ada / A6000 / L40S) | `qwen2.5:72b` | beste dat op één kaart past; dicht bij de grote commerciële modellen |
     | 24 GB+ (bv. RTX 4090 / A5000 / L4×2) | `qwen2.5:32b` | erg goed, aanrader voor prijs/kwaliteit |
     | 16–20 GB (bv. RTX 4000 Ada / A4000) | `qwen2.5:14b` | goed |
     | minder | `qwen2.5:7b` | basis |
 
-    Meer videogeheugen = slimmer model = betere antwoorden van Jarvis, de AI-teams en de specialisten.
+    Meer videogeheugen = groter/slimmer model = betere antwoorden van Jarvis, de AI-teams en de specialisten. De console (**Admin → Jarvis**, brein-badge) toont welke modellen de node serveert en laat je er direct een kiezen — token-vrij, zonder redeploy.
+
+    **Groter dan Claude, zonder dure GPU's?** De 671B-modellen (`deepseek-v3` / `deepseek-r1:671b`) zijn Mixture-of-Experts: ze activeren maar ~37B parameters per token, dus ze draaien óók op een server met veel **systeem-RAM** (~512 GB) op CPU. Dat is traag (reken op tientallen seconden per antwoord) maar volledig token-vrij en privé. Zet dan zelf het model: `MODEL=deepseek-v3 sudo -E bash setup.sh ai.zekerflex.com`.
   - **Alleen CPU** (goedkoper, trager): minimaal 8 vCPU / 32 GB RAM. Reken op 10–40 s per antwoord met `qwen2.5:7b`; kies dan liever `MODEL=qwen2.5:3b`.
 - Een subdomein, bv. `ai.zekerflex.com`, met een **A-record** naar het IP-adres van de server.
 
