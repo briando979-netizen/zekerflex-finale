@@ -737,7 +737,9 @@ export function JarvisConsole() {
               ))}
             </div>
             <p className="mt-1 text-[10px] leading-snug text-white/30">
-              Lokaal = €0 per vraag. Groter model = slimmer; kies het daarna hierboven.
+              Lokaal = €0 per vraag. Groter model = slimmer; kies het daarna hierboven. Werelds grootste
+              (±1–2,8T, Kimi/DeepSeek) = cluster; haalbaar thuis: Mac Studio 512 GB → 671B. Zie{" "}
+              <code>deploy/ai-node/README.md</code>.
             </p>
           </details>
         </div>

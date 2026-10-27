@@ -24,6 +24,21 @@ Alle data blijft op jouw server.
   - **Alleen CPU** (goedkoper, trager): minimaal 8 vCPU / 32 GB RAM. Reken op 10–40 s per antwoord met `qwen2.5:7b`; kies dan liever `MODEL=qwen2.5:3b`.
 - Een subdomein, bv. `ai.zekerflex.com`, met een **A-record** naar het IP-adres van de server.
 
+## Wereldklasse brein — wat moet je kopen?
+
+Eerst eerlijk: **laptops en opslag zijn niet de bottleneck.** Wat telt is **geheugen waar het model in past** — GPU-VRAM (snel) of unified/systeem-RAM (goedkoper, trager). Eén losse laptop (max ~128 GB) draait tot ~70–100B; een frontier-model van 400B–2,8T past daar niet in. De echte opties, van haalbaar naar datacenter:
+
+1. **Eén stille machine die een 671B-model draait — de slimste "thuis"-optie.**
+   **Apple Mac Studio, M3 Ultra, 512 GB unified memory** (± €10.000–11.000). Draait **DeepSeek-R1/V3 671B** (4-bit, ~404 GB) volledig in geheugen op ~17–18 tokens/sec bij <200 W — aangetoond in reviews. Installeer Ollama (de **Mac-app**, niet dit Ubuntu-script) en `ollama pull deepseek-r1:671b`. ⚠️ De 512 GB-optie zou door een DRAM-tekort tijdelijk uit Apple's configurator zijn — check Apple, of neem 256 GB (draait 405B) of tweedehands 512 GB.
+
+2. **Snelste, datacenter-klasse.** Een GPU-server met **8× NVIDIA H100/H200 (80–141 GB)** = ~0,6–1,1 TB VRAM (± €200.000+ nieuw, of per uur huren). Draait 405B/671B vlot en meerdere modellen tegelijk; hier mikken de 240/420 GB-tiers van `setup.sh` op.
+
+3. **Budget, token-vrij, traag.** Een server met **512 GB–1,5 TB systeem-RAM** (dual-socket EPYC/Xeon, ± €4.000–8.000). MoE-modellen activeren maar ~37B params per token, dus die draaien op CPU — enkele tokens/sec, maar €0 per vraag.
+
+4. **Het állergrootste open model ("werelds grootste").** Vendors claimen nu **Kimi K3 (~2,8 biljoen params)**, **DeepSeek V4 (~1,6T)** en **Kimi K2.6 (~1T)** als grootste open-weights. Die passen niet op één machine: je hebt een **cluster** nodig (bijv. 2–4× Mac Studio 512 GB gekoppeld via EXO/MLX, of meerdere 8×H200-nodes; ~1,6 TB+ geheugen totaal) — een serverrack en €-tonnen, of uurhuur. ⚠️ Deze cijfers komen van vendor-blogs van ná mijn kennisdatum — **controleer parameters, licentie en de exacte Ollama/Hugging-Face-tag op de officiële model-card** vóór aanschaf.
+
+**Advies als je nú één ding koopt:** de **Mac Studio M3 Ultra 512 GB** — draait een echt frontier-model (671B) lokaal, stil, zuinig, volledig token-vrij, en is verreweg de goedkoopste weg naar "groter dan Claude op je eigen bureau". De console (Admin → Jarvis) ziet het model zodra je het pullt; kiezen gaat met één klik.
+
 ## Installeren
 
 ```bash
