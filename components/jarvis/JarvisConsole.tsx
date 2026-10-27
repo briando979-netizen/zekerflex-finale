@@ -112,7 +112,14 @@ export function JarvisConsole() {
   // and which brain (local / cloud) is currently answering.
   const [history, setHistory] = useState<{ id: string; prompt: string; status: string; startedAt: string }[]>([]);
   const [viewTurn, setViewTurn] = useState<TurnState | null>(null);
-  const [brain, setBrain] = useState<{ ok: boolean; model: string; cloud: boolean; models: string[]; selected: string } | null>(null);
+  const [brain, setBrain] = useState<{
+    ok: boolean;
+    model: string;
+    cloud: boolean;
+    models: string[];
+    fleet: Record<string, string>;
+    roles: { role: string; label: string; model: string; recommended: string }[];
+  } | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
@@ -254,26 +261,28 @@ export function JarvisConsole() {
         model: string;
         cloud: boolean;
         models?: string[];
-        selected?: string;
+        fleet?: Record<string, string>;
+        roles?: { role: string; label: string; model: string; recommended: string }[];
       };
       setBrain({
         ok: data.ok,
         model: data.model,
         cloud: data.cloud,
         models: data.models ?? [],
-        selected: data.selected ?? data.model,
+        fleet: data.fleet ?? {},
+        roles: data.roles ?? [],
       });
     } catch {
       /* ignore */
     }
   }, []);
   const chooseModel = useCallback(
-    async (model: string) => {
+    async (role: string, model: string) => {
       try {
         await fetch("/api/admin/jarvis/brain", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model }),
+          body: JSON.stringify({ role, model }),
         });
         await loadBrain();
       } catch {
@@ -705,18 +714,26 @@ export function JarvisConsole() {
             <span className="text-white/70">{brain ? (brain.cloud ? "cloud-brein" : "lokaal brein · €0") : "brein laden…"}</span>
           </div>
           {brain && brain.models.length > 0 ? (
-            <select
-              value={brain.selected}
-              onChange={(e) => void chooseModel(e.target.value)}
-              aria-label="Kies lokaal model"
-              className="mt-1.5 w-full rounded-md border border-white/15 bg-[#0b0e13] px-2 py-1 font-mono text-[11px] text-white/80 focus:outline-none"
-            >
-              {brain.models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
+            <div className="mt-1.5 space-y-1">
+              {brain.roles.map((r) => (
+                <label key={r.role} className="flex items-center gap-1.5 text-[10px] text-white/45">
+                  <span className="w-16 flex-shrink-0">{r.label}</span>
+                  <select
+                    value={brain.fleet[r.role] ?? ""}
+                    onChange={(e) => void chooseModel(r.role, e.target.value)}
+                    aria-label={`Model voor ${r.label}`}
+                    className="min-w-0 flex-1 rounded border border-white/15 bg-[#0b0e13] px-1.5 py-1 font-mono text-[10.5px] text-white/80 focus:outline-none"
+                  >
+                    <option value="">auto</option>
+                    {brain.models.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               ))}
-            </select>
+            </div>
           ) : (
             <div className="truncate pl-4 pt-0.5 font-mono text-white/35">
               {brain ? (brain.model || "node offline") : "—"}
