@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ---------------------------------------------------------------------------
-// ZekerFlex load-test harness — zero-install (Node 20+ fetch).
+// ZekerFlex load-test harness — zero-install (Node 22+ fetch).
 //
 // Simuleert piekbelasting (bijv. vrijdag 17:00: duizenden gelijktijdige
 // acties) tegen de PUBLIEKE, read-only endpoints en rapporteert latency

@@ -8,7 +8,7 @@ onder piekbelasting?
 > gebruikers. De harnas raakt alleen publieke, alleen-lezen endpoints — geen
 > login, geen schrijfacties — zodat er niets muteert en geen account op slot gaat.
 
-## Snel (zonder installatie, Node 20+)
+## Snel (zonder installatie, Node 22+)
 
 ```bash
 BASE_URL=https://staging.zekerflex.com CONCURRENCY=200 DURATION=30 \
