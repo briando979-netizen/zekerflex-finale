@@ -36,6 +36,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/personeel-inhuren", 0.8, "weekly"),
     ...CITIES.map((c) => entry(`/freelance-werk/${c.slug}`, 0.8, "daily")),
     ...CITIES.map((c) => entry(`/personeel-inhuren/${c.slug}`, 0.7, "weekly")),
+    entry("/horeca-personeel-inhuren", 0.8, "weekly"),
+    ...CITIES.map((c) => entry(`/horeca-personeel-inhuren/${c.slug}`, 0.7, "weekly")),
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
     entry("/app", 0.6, "monthly"),
