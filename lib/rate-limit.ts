@@ -46,7 +46,13 @@ export async function fixedWindow(
     const count = await redis.incr(key);
     if (count === 1) await redis.expire(key, windowSeconds);
     const ok = count <= limit;
-    const ttl = await redis.ttl(key);
+    let ttl = await redis.ttl(key);
+    // Recover a counter left without expiry if the first request's EXPIRE
+    // failed after INCR succeeded. Otherwise that bucket could block forever.
+    if (ttl === -1) {
+      await redis.expire(key, windowSeconds);
+      ttl = await redis.ttl(key);
+    }
     const resetSeconds = ttl > 0 ? ttl : windowSeconds;
     return {
       ok,
