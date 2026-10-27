@@ -7,7 +7,7 @@ import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
-import { IconSearch, IconDots, IconPhone } from "./icons";
+import { IconSearch, IconDots, IconPhone, IconChatBubble, IconBell, IconBriefcase, IconGear, IconPencil } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -416,8 +416,8 @@ export function InboxPage({
         <div className="flex items-center gap-2 border-b border-hair px-3 py-2.5">
           <p className="font-display text-base font-bold text-ink">{{ chats: "Chats", updates: "Updates", calls: "Oproepen", tools: "Tools", settings: "Instellingen" }[tab]}</p>
           <div className="ml-auto flex items-center gap-1">
-            <button type="button" onClick={() => setPicker("chat")} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Nieuw gesprek">✎</button>
-            <button type="button" onClick={() => setShowSettings(true)} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Instellingen">⚙</button>
+            <button type="button" onClick={() => setPicker("chat")} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Nieuw gesprek"><IconPencil className="h-5 w-5" /></button>
+            <button type="button" onClick={() => setShowSettings(true)} className="grid h-8 w-8 place-items-center rounded-lg text-neutralx-500 hover:bg-paper-soft" aria-label="Instellingen"><IconGear className="h-5 w-5" /></button>
           </div>
         </div>
 
@@ -667,17 +667,17 @@ export function InboxPage({
         <nav className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
           {(
             [
-              ["chats", "💬", "Chats"],
-              ["updates", "🔔", "Updates"],
-              ["calls", "📞", "Oproepen"],
-              ["tools", "🧰", "Tools"],
-              ["settings", "⚙️", "Instellingen"],
+              ["chats", IconChatBubble, "Chats"],
+              ["updates", IconBell, "Updates"],
+              ["calls", IconPhone, "Oproepen"],
+              ["tools", IconBriefcase, "Tools"],
+              ["settings", IconGear, "Instellingen"],
             ] as const
-          ).map(([k, icon, label]) => {
+          ).map(([k, Ico, label]) => {
             const unread = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && t.unread > 0).length : 0;
             return (
               <button key={k} type="button" onClick={() => setTab(k)} className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${tab === k ? "text-brand-700" : "text-neutralx-500"}`}>
-                <span className={`grid h-7 w-12 place-items-center rounded-full text-base ${tab === k ? "bg-brand-50" : ""}`}>{icon}</span>
+                <span className={`grid h-7 w-12 place-items-center rounded-full ${tab === k ? "bg-brand-50" : ""}`}><Ico className="h-5 w-5" /></span>
                 {label}
                 {unread > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#25D366] px-1 text-[9px] font-bold text-white">{unread}</span>}
               </button>

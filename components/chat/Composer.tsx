@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fmtDuration, type Msg } from "./shared";
-import { IconPaperclip, IconMic, IconSend } from "./icons";
+import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle } from "./icons";
 
 export interface OutgoingMessage {
   text: string;
@@ -293,7 +293,7 @@ export function Composer({
             className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft"
             aria-label="Snelle antwoorden"
           >
-            ⚡
+            <IconBolt className="h-5 w-5" />
           </button>
 
           <button
@@ -306,7 +306,7 @@ export function Composer({
             className={`grid h-9 w-9 place-items-center rounded-full hover:bg-paper-soft ${aiOpen ? "bg-brand-50 text-brand-600" : "text-neutralx-500"}`}
             aria-label="AI-hulp"
           >
-            ✨
+            <IconSparkle className="h-5 w-5" />
           </button>
 
           <textarea

@@ -84,3 +84,49 @@ export const IconCamera = (p: P) => (
     <circle cx="12" cy="13" r="3.2" />
   </svg>
 );
+
+export const IconChatBubble = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H9l-4 4v-4H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
+  </svg>
+);
+
+export const IconBell = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z" />
+    <path d="M10 20a2 2 0 004 0" />
+  </svg>
+);
+
+export const IconBriefcase = (p: P) => (
+  <svg {...stroke(p)}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 12h18" />
+  </svg>
+);
+
+export const IconGear = (p: P) => (
+  <svg {...stroke(p)}>
+    <circle cx="12" cy="12" r="3.2" />
+    <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" />
+  </svg>
+);
+
+export const IconPencil = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
+);
+
+export const IconBolt = (p: P) => (
+  <svg {...fill(p)}>
+    <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+  </svg>
+);
+
+export const IconSparkle = (p: P) => (
+  <svg {...fill(p)}>
+    <path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9L12 3z" />
+  </svg>
+);
