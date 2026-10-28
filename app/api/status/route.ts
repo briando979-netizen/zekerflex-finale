@@ -27,9 +27,10 @@ export const dynamic = "force-dynamic";
 // Public, sanitised system status. No error details, no internal hostnames —
 // just component health so visitors (and the /status page) can see uptime.
 
-type State = "operational" | "degraded" | "down";
+type State = "operational" | "degraded" | "down" | "unknown";
+type ProbeState = Exclude<State, "unknown">;
 
-async function probe(fn: () => Promise<unknown>): Promise<{ state: State; latencyMs: number }> {
+async function probe(fn: () => Promise<unknown>): Promise<{ state: ProbeState; latencyMs: number }> {
   const started = Date.now();
   try {
     await fn();
@@ -49,14 +50,15 @@ export async function GET(): Promise<NextResponse> {
 
   const channels = pushChannels();
 
-  const components = [
+  const components: { key: string; label: string; state: State; latencyMs: number }[] = [
     { key: "web", label: "Website & app", ...operationalIf(true) },
     { key: "database", label: "Database", ...database },
     { key: "cache", label: "Realtime & wachtrijen", ...cache },
     {
       key: "payments",
-      label: "Uitbetalingen (SEPA)",
-      ...operationalIf(database.state !== "down"),
+      label: "Uitbetalingen (SEPA, niet automatisch gecontroleerd)",
+      state: "unknown",
+      latencyMs: 0,
     },
     { key: "assistant", label: "AI-assistent", ...operationalIf(llmUp) },
     {
@@ -79,7 +81,7 @@ export async function GET(): Promise<NextResponse> {
   );
 }
 
-function operationalIf(ok: boolean): { state: State; latencyMs: number } {
+function operationalIf(ok: boolean): { state: ProbeState; latencyMs: number } {
   return { state: ok ? "operational" : "degraded", latencyMs: 0 };
 }
 function rank(s: State): number {

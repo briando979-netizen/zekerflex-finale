@@ -122,7 +122,7 @@ const PLACEHOLDER: StatusPayload["components"] = [
   { key: "web", label: "Website & app", state: "unknown", latencyMs: 0 },
   { key: "database", label: "Database", state: "unknown", latencyMs: 0 },
   { key: "cache", label: "Realtime & wachtrijen", state: "unknown", latencyMs: 0 },
-  { key: "payments", label: "Uitbetalingen (SEPA)", state: "unknown", latencyMs: 0 },
+  { key: "payments", label: "Uitbetalingen (SEPA, niet automatisch gecontroleerd)", state: "unknown", latencyMs: 0 },
   { key: "assistant", label: "AI-assistent", state: "unknown", latencyMs: 0 },
   { key: "notifications", label: "Meldingen (push)", state: "unknown", latencyMs: 0 },
 ];
