@@ -44,6 +44,12 @@ export const PURPOSE_ROLE: Record<string, ModelRole> = {
   autopilot: "reasoning",
   "dev-advisor": "code",
   "admin-console": "code",
+  "specialist-jurist": "reasoning",
+  "specialist-boekhouder": "reasoning",
+  "specialist-marketeer": "main",
+  "specialist-recruiter": "main",
+  "specialist-analist": "reasoning",
+  "specialist-compliance": "reasoning",
   translate: "translate",
   "kyc-vision": "vision",
 };
