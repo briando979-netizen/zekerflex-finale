@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { sendMail, passwordResetEmail } from "@/lib/mail";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { clearLoginFailures } from "@/lib/auth/login-throttle";
+import { isBreached, scorePassword } from "@/lib/auth/password";
 
 // ---------------------------------------------------------------------------
 // Password reset. Tokens live in Postgres (PasswordResetToken), isolated from
@@ -90,6 +91,14 @@ export async function completePasswordReset(token: string, newPassword: string):
   if (newPassword.length < 8) {
     return { ok: false, reason: "Kies een wachtwoord van minstens 8 tekens." };
   }
+  const strength = scorePassword(newPassword);
+  if (strength.score < 2) {
+    return { ok: false, reason: strength.warnings[0] ?? "Kies een sterker wachtwoord." };
+  }
+  if (await isBreached(newPassword)) {
+    return { ok: false, reason: "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord." };
+  }
+
   const userId = await consume(token);
   if (!userId) {
     return { ok: false, reason: "Deze herstellink is verlopen of al gebruikt. Vraag een nieuwe aan." };

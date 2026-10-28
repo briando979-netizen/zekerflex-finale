@@ -21,7 +21,7 @@ export default async function WachtwoordHerstellenPage(
       title={valid ? "Nieuw wachtwoord instellen" : "Link werkt niet meer"}
       subtitle={
         valid
-          ? "Kies een wachtwoord van minstens 8 tekens."
+          ? "Kies een sterk wachtwoord van minstens 8 tekens dat je niet eerder hebt gebruikt."
           : "Deze herstellink is verlopen of al gebruikt."
       }
       footer={
