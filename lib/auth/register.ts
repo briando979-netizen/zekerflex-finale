@@ -108,9 +108,9 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
     metadata: { type: input.type },
   });
 
-  // Stash the chosen worker form for the fiscal onboarding (filesystem only).
+  // Save the chosen worker form before registration returns so onboarding can read it.
   if (input.type === "freelancer" && input.workerKind) {
-    void setFiscal(userId, { workerKind: input.workerKind }).catch(() => undefined);
+    await setFiscal(userId, { workerKind: input.workerKind }).catch(() => undefined);
   }
 
   // The welcome mail is NOT sent here: it goes out once the e-mail address is
