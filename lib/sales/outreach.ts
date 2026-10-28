@@ -40,7 +40,7 @@ export function templateDraft(
   if (step === 1) {
     return {
       subject: `Nog even over flexibele krachten voor ${lead.companyName}`,
-      body: `${hi}\n\nVorige week stuurde ik je een bericht over ZekerFlex. Misschien is het ondergesneeuwd, dus kort: je plaatst een dienst en binnen minuten reageren gecontroleerde zzp'ers en uitzendkrachten — zonder inschrijfkosten, je betaalt alleen per gewerkt uur.\n\nZal ik je een proefaccount klaarzetten? Dan kun je deze week nog je eerste dienst plaatsen.${sign}`,
+      body: `${hi}\n\nVorige week stuurde ik je een bericht over ZekerFlex. Misschien is het ondergesneeuwd, dus kort: je plaatst een dienst en passende zzp'ers en uitzendkrachten uit de buurt kunnen reageren — zonder inschrijfkosten, je betaalt alleen per gewerkt uur.\n\nZal ik je een proefaccount klaarzetten? Dan kun je deze week nog je eerste dienst plaatsen.${sign}`,
     };
   }
   if (step >= 2) {
@@ -51,7 +51,7 @@ export function templateDraft(
   }
   return {
     subject: `Snel personeel voor ${lead.companyName}${where}`,
-    body: `${hi}\n\n${hook}\n\nMet ZekerFlex plaats je een dienst en reageren binnen minuten gecontroleerde zzp'ers en uitzendkrachten uit de buurt. Contracten, uren en facturen regelen we automatisch, en je betaalt alleen per gewerkt uur — geen abonnement, geen inschrijfkosten.\n\nZin om het te proberen? Ik zet graag een gratis account voor je klaar.${sign}`,
+    body: `${hi}\n\n${hook}\n\nMet ZekerFlex plaats je een dienst en kunnen passende zzp'ers en uitzendkrachten uit de buurt reageren als ze beschikbaar zijn. Contracten, uren en facturen regelen we automatisch, en je betaalt alleen per gewerkt uur — geen abonnement, geen inschrijfkosten.\n\nZin om het te proberen? Ik zet graag een gratis account voor je klaar.${sign}`,
   };
 }
 

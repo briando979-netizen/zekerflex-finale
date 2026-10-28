@@ -31,7 +31,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
   const faq = [
     {
       q: `Hoe snel heb ik personeel in ${c.name}?`,
-      a: `Je plaatst een klus in een paar minuten. ZekerFlex stuurt hem direct naar geverifieerde flexkrachten binnen reisafstand van je locatie in ${c.name}; vaak is een klus dezelfde dag gevuld.`,
+      a: `Je plaatst een klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde flexkrachten binnen reisafstand in ${c.name}. Hoe snel je reacties krijgt, hangt af van wie beschikbaar is.`,
     },
     {
       q: "Wat kost het?",

@@ -52,7 +52,7 @@ function cityFaq(s: Sector, c: City) {
   return [
     {
       q: `Hoe snel heb ik een ${s.worker} in ${c.name}?`,
-      a: `Je plaatst je klus in een paar minuten. ZekerFlex stuurt hem direct naar geverifieerde krachten binnen reisafstand van je locatie in ${c.name} — bij uitval of ${s.peak} is een gat vaak dezelfde dag gevuld.`,
+      a: `Je plaatst je klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde krachten binnen reisafstand van je locatie in ${c.name}. Hoe snel je reacties krijgt, hangt af van wie op dat moment beschikbaar is.`,
     },
     {
       q: `Wat kost een flexkracht in de ${low(s)}?`,
@@ -77,7 +77,7 @@ function hubFaq(s: Sector) {
   return [
     {
       q: `Hoe snel heb ik ${low(s)}personeel?`,
-      a: `Je plaatst je klus in een paar minuten. ZekerFlex stuurt hem direct naar geverifieerde krachten binnen reisafstand van je locatie — bij uitval of ${s.peak} is een gat vaak dezelfde dag gevuld.`,
+      a: `Je plaatst je klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde krachten binnen reisafstand van je locatie. Hoe snel je reacties krijgt, hangt af van wie beschikbaar is.`,
     },
     {
       q: "Wat kost het?",

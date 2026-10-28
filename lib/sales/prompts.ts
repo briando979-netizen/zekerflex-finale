@@ -3,7 +3,7 @@
 
 export const ZEKERFLEX_PITCH = `ZekerFlex is een Nederlands platform voor flexibele arbeid in de gig-economy.
 Kernpunten:
-- Slimme matching op reistijd, betrouwbaarheid en skills; shifts vaak binnen minuten gevuld.
+- Slimme matching op reistijd, betrouwbaarheid en skills; reacties hangen af van de beschikbaarheid van passende krachten.
 - Afspraken per relatie en Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend en er is geen garantie over de arbeidsrelatie.
 - Self-billing met twee btw-facturen en directe SEPA-uitbetaling (binnen 1 minuut).
 - Multi-vestiging / franchise-hierarchie met geaggregeerde facturatie per kostenplaats.

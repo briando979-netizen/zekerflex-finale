@@ -61,7 +61,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /ik zoek (personeel|mensen|krachten|medewerkers)|personeel (nodig|inhuren)|mensen inhuren|tekort aan personeel/i,
-    answer: { reply: "Daar helpen we je graag mee. Registreer je bedrijf, plaats een dienst en binnen minuten reageren gecontroleerde krachten uit de buurt. Je betaalt € 3,50 platformkosten per gewerkt uur — geen abonnement of opstartkosten.", suggestions: ["Plan een demo", "Hoe werkt matching?", "Wat kost ZekerFlex voor bedrijven?"] },
+    answer: { reply: "Daar helpen we je graag mee. Registreer je bedrijf en plaats een dienst; passende krachten uit de buurt kunnen reageren als ze beschikbaar zijn. Je betaalt € 3,50 platformkosten per gewerkt uur — geen abonnement of opstartkosten.", suggestions: ["Plan een demo", "Hoe werkt matching?", "Wat kost ZekerFlex voor bedrijven?"] },
   },
   {
     re: /uitbetaal|betaald|payout|wanneer.*(betaal|geld)|hoe snel.*geld/i,

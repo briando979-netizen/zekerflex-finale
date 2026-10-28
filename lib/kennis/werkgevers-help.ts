@@ -63,10 +63,10 @@ export const WERKGEVER_HELP_GROUPS: DbaGroup[] = [
     items: [
       {
         q: "Hoe werkt ZekerFlex, in het kort?",
-        a: "Je plaatst een dienst en krachten reageren. Zo heb je altijd genoeg flexibele handen aan dek.",
+        a: "Je plaatst een dienst en geïnteresseerde krachten kunnen reageren. Hoeveel reacties je krijgt, hangt af van wie beschikbaar is voor je locatie, vak en tijdstip.",
         points: [
           "Plaats een dienst: datum, uurtarief en een korte beschrijving. Publiceren en klaar.",
-          "Krachten reageren: meestal binnen enkele minuten.",
+          "Krachten in de buurt kunnen reageren als de dienst past bij hun profiel en beschikbaarheid.",
           "Kies de beste kracht: bekijk motivatie, reviews en ervaring — één klik.",
           "Aan het werk: de kracht komt opdagen; kan die niet, dan regelt die zelf een vervanger.",
           "Keur de uren goed: na de dienst dient de kracht de uren in, jij controleert en beoordeelt elkaar.",
@@ -95,7 +95,7 @@ export const WERKGEVER_HELP_GROUPS: DbaGroup[] = [
       },
       {
         q: "Waar is ZekerFlex actief?",
-        a: "In heel Nederland. We zorgen dat er in elke regio en sector genoeg geverifieerde krachten beschikbaar zijn, zodat je altijd de juiste persoon voor je dienst vindt.",
+        a: "Je kunt in heel Nederland diensten plaatsen. Het aantal beschikbare krachten en reacties verschilt per regio, sector en tijdstip.",
       },
     ],
   },
