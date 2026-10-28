@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { registerAction, type RegisterState } from "@/app/register/actions";
@@ -131,32 +131,67 @@ export function RegisterForm({
     null,
   );
   const [pwChecking, setPwChecking] = useState(false);
-  const abort = useRef<AbortController | null>(null);
+  const [pwCheckUnavailable, setPwCheckUnavailable] = useState(false);
 
   useEffect(() => {
     if (!pw) {
       setPwInfo(null);
+      setPwCheckUnavailable(false);
+      setPwChecking(false);
       return;
     }
+    setPwInfo(null);
+    setPwCheckUnavailable(false);
     setPwChecking(true);
+    const controller = new AbortController();
     const t = setTimeout(async () => {
-      abort.current?.abort();
-      abort.current = new AbortController();
       try {
         const res = await fetch("/api/auth/check-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ password: pw, context: [email, company].filter(Boolean) }),
-          signal: abort.current.signal,
+          signal: controller.signal,
         });
-        setPwInfo(await res.json());
+        if (!res.ok) {
+          setPwCheckUnavailable(true);
+          return;
+        }
+        const result: unknown = await res.json();
+        if (
+          !result ||
+          typeof result !== "object" ||
+          !("score" in result) ||
+          typeof result.score !== "number" ||
+          !Number.isInteger(result.score) ||
+          result.score < 0 ||
+          result.score > 4 ||
+          !("label" in result) ||
+          typeof result.label !== "string" ||
+          !("warnings" in result) ||
+          !Array.isArray(result.warnings) ||
+          !result.warnings.every((warning: unknown) => typeof warning === "string") ||
+          !("breached" in result) ||
+          typeof result.breached !== "boolean"
+        ) {
+          setPwCheckUnavailable(true);
+          return;
+        }
+        setPwInfo({
+          score: result.score,
+          label: result.label,
+          warnings: result.warnings,
+          breached: result.breached,
+        });
       } catch {
-        /* ignore */
+        if (!controller.signal.aborted) setPwCheckUnavailable(true);
       } finally {
-        setPwChecking(false);
+        if (!controller.signal.aborted) setPwChecking(false);
       }
     }, 450);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
   }, [pw, email, company]);
 
   async function suggest() {
@@ -175,7 +210,7 @@ export function RegisterForm({
   const canSubmit =
     (emailState === "free" || emailState === "unavailable") &&
     match &&
-    (pwInfo?.score ?? 0) >= 2 &&
+    ((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable) &&
     !(pwInfo?.breached ?? false) &&
     (type === "freelancer" || company.trim().length >= 2);
 
@@ -358,6 +393,9 @@ export function RegisterForm({
               <p className="mt-1 text-xs text-neutralx-500">
                 {pwChecking ? t.checking : `${t.strength}: ${pwInfo?.label ?? "…"}`}
               </p>
+              {pwCheckUnavailable && !pwChecking && (
+                <p className="mt-1 text-xs text-neutralx-500">{t.passwordCheckUnavailable}</p>
+              )}
               {pwInfo?.breached && (
                 <p className="mt-1 text-xs font-medium text-crit">
                   {t.breached}

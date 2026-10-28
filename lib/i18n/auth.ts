@@ -53,6 +53,7 @@ export interface AuthDict {
     phone: string;
     optional: string;
     password: string;
+    passwordCheckUnavailable: string;
     generate: string;
     show: string;
     hide: string;
@@ -230,6 +231,7 @@ const nl: AuthDict = {
     phone: "Telefoon",
     optional: "(optioneel)",
     password: "Wachtwoord",
+    passwordCheckUnavailable: "De wachtwoordcontrole is tijdelijk niet beschikbaar. Je wachtwoord wordt bij aanmelding alsnog gecontroleerd.",
     generate: "Genereer sterk wachtwoord",
     show: "Tonen",
     hide: "Verbergen",
@@ -407,6 +409,7 @@ const en: AuthDict = {
     phone: "Phone",
     optional: "(optional)",
     password: "Password",
+    passwordCheckUnavailable: "Password checking is temporarily unavailable. Your password will still be checked during sign-up.",
     generate: "Generate a strong password",
     show: "Show",
     hide: "Hide",
@@ -584,6 +587,7 @@ const pl: AuthDict = {
     phone: "Telefon",
     optional: "(opcjonalnie)",
     password: "Hasło",
+    passwordCheckUnavailable: "Sprawdzenie hasła jest chwilowo niedostępne. Hasło zostanie sprawdzone podczas rejestracji.",
     generate: "Wygeneruj silne hasło",
     show: "Pokaż",
     hide: "Ukryj",
@@ -761,6 +765,7 @@ const ro: AuthDict = {
     phone: "Telefon",
     optional: "(opțional)",
     password: "Parolă",
+    passwordCheckUnavailable: "Verificarea parolei nu este disponibilă momentan. Parola va fi verificată la înregistrare.",
     generate: "Generează o parolă puternică",
     show: "Arată",
     hide: "Ascunde",
@@ -938,6 +943,7 @@ const uk: AuthDict = {
     phone: "Телефон",
     optional: "(необов'язково)",
     password: "Пароль",
+    passwordCheckUnavailable: "Перевірка пароля тимчасово недоступна. Пароль усе одно буде перевірено під час реєстрації.",
     generate: "Згенерувати надійний пароль",
     show: "Показати",
     hide: "Сховати",
