@@ -31,8 +31,8 @@ export default function PrijzenPage() {
             Eerlijk en voorspelbaar
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            Geen abonnementen, geen staffels om te doorgronden. Je betaalt voor
-            resultaat — een ingevulde dienst en een tevreden kracht.
+            Geen abonnement. Je betaalt alleen voor daadwerkelijk gewerkte uren;
+            bij meer uren daalt je platformfee volgens een vaste, vooraf zichtbare staffel.
           </p>
         </div>
       </div>
