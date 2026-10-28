@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type State = "operational" | "degraded" | "down";
+type State = "operational" | "degraded" | "down" | "unknown";
 
 interface StatusPayload {
   checkedAt: string;
@@ -14,16 +14,8 @@ const TONE: Record<State, { dot: string; text: string; label: string }> = {
   operational: { dot: "bg-ok", text: "text-ok", label: "Operationeel" },
   degraded: { dot: "bg-warn", text: "text-warn", label: "Verminderd" },
   down: { dot: "bg-crit", text: "text-crit", label: "Storing" },
+  unknown: { dot: "bg-neutralx-300", text: "text-neutralx-500", label: "Onbekend" },
 };
-
-const VERIFICATIONS = [
-  { label: "TypeScript strict typecheck", detail: "tsc --noEmit — 0 fouten", ok: true },
-  { label: "Geautomatiseerde tests", detail: "vitest — 124 / 124 geslaagd", ok: true },
-  { label: "Productie-build", detail: "next build — succesvol", ok: true },
-  { label: "Databasemigraties", detail: "13 migraties toegepast", ok: true },
-  { label: "Lokale AI-inferentie", detail: "Ollama bereikbaar · model geladen", ok: true },
-  { label: "Soevereiniteitscheck", detail: "geen externe LLM-host toegestaan", ok: true },
-];
 
 export default function StatusPage() {
   const [data, setData] = useState<StatusPayload | null>(null);
@@ -52,7 +44,7 @@ export default function StatusPage() {
     };
   }, []);
 
-  const overall = data?.overall ?? "operational";
+  const overall = data?.overall ?? "unknown";
   const tone = TONE[overall];
 
   return (
@@ -67,13 +59,17 @@ export default function StatusPage() {
                 ? "Alle systemen operationeel"
                 : overall === "degraded"
                   ? "Sommige systemen verminderd"
-                  : "We werken aan een storing"}
+                  : overall === "unknown"
+                    ? "Status wordt gecontroleerd"
+                    : "We werken aan een storing"}
           </h1>
-          <div className="mt-5 flex items-center gap-2.5 text-sm text-white/60">
+          <div className="mt-5 flex items-center gap-2.5 text-sm text-white/60" aria-live="polite">
             <span className={`h-2.5 w-2.5 rounded-full ${err ? "bg-warn" : tone.dot} animate-pulse-dot`} />
             {data
-              ? `Laatst gecontroleerd ${new Date(data.checkedAt).toLocaleTimeString("nl-NL")}`
-              : "Bezig met controleren…"}
+              ? `${err ? "Laatst succesvol gecontroleerd" : "Laatst gecontroleerd"} ${new Date(data.checkedAt).toLocaleTimeString("nl-NL")}`
+              : err
+                ? "Statuscontrole mislukt"
+                : "Status controleren..."}
           </div>
         </div>
       </div>
@@ -110,26 +106,12 @@ export default function StatusPage() {
 
       <section id="verificaties" className="scroll-mt-24 bg-paper-soft">
         <div className="shell py-16">
-          <h2 className="font-display text-xl font-semibold">Laatste verificaties</h2>
-          <p className="mt-2 max-w-xl text-sm text-neutralx-600">
-            Elke release doorloopt dezelfde geautomatiseerde controles voordat
-            hij live gaat. Dit is de uitkomst van de laatste run.
+          <h2 className="font-display text-xl font-semibold">Over deze status</h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutralx-600">
+            De componenten hierboven worden bij het openen en daarna elke 15 seconden gecontroleerd.
+            Als de statusdienst niet bereikbaar is, tonen we de laatste succesvolle meting of geven
+            we de status als onbekend weer.
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {VERIFICATIONS.map((v) => (
-              <div key={v.label} className="card flex items-start gap-3 p-4">
-                <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-ok/10 text-ok">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-ink">{v.label}</p>
-                  <p className="font-mono text-xs text-neutralx-500">{v.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
     </>
@@ -137,10 +119,10 @@ export default function StatusPage() {
 }
 
 const PLACEHOLDER: StatusPayload["components"] = [
-  { key: "web", label: "Website & app", state: "operational", latencyMs: 0 },
-  { key: "database", label: "Database", state: "operational", latencyMs: 0 },
-  { key: "cache", label: "Realtime & wachtrijen", state: "operational", latencyMs: 0 },
-  { key: "payments", label: "Uitbetalingen (SEPA)", state: "operational", latencyMs: 0 },
-  { key: "assistant", label: "AI-assistent", state: "operational", latencyMs: 0 },
-  { key: "notifications", label: "Meldingen (push)", state: "operational", latencyMs: 0 },
+  { key: "web", label: "Website & app", state: "unknown", latencyMs: 0 },
+  { key: "database", label: "Database", state: "unknown", latencyMs: 0 },
+  { key: "cache", label: "Realtime & wachtrijen", state: "unknown", latencyMs: 0 },
+  { key: "payments", label: "Uitbetalingen (SEPA)", state: "unknown", latencyMs: 0 },
+  { key: "assistant", label: "AI-assistent", state: "unknown", latencyMs: 0 },
+  { key: "notifications", label: "Meldingen (push)", state: "unknown", latencyMs: 0 },
 ];
