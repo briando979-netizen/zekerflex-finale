@@ -1,8 +1,18 @@
 # The Sovereign Box — architectuuroverzicht
 
-ZekerFlex draait als een **soevereine, self-hosted eenheid** ("The Sovereign
-Box"). Doel: 0,01% handwerk, geen enkele Big-Tech-afhankelijkheid in het
-kritieke pad, alles binnen de eigen infrastructuur.
+> **Status:** dit document beschrijft een eerder ontwerp en is geen juiste
+> beschrijving van de huidige productieomgeving. Volgens de actuele
+> projectinstructies draait de productie-app op Vercel met Neon Postgres. De
+> eigen AI-node draait Ollama en is via een Cloudflare-tunnel bereikbaar.
+> Voor onder meer betalingen, e-mail, identiteitscontroles en
+> handelsregistervalidatie gebruikt ZekerFlex externe dienstverleners. Leid uit
+> dit document daarom niet af dat alle data of infrastructuur in Nederland
+> blijft; controleer actuele configuratie en verwerkersinformatie.
+
+Het oorspronkelijke ontwerp beschreef ZekerFlex als een **soevereine,
+self-hosted eenheid** ("The Sovereign Box"). De doelen waren 0,01% handwerk en
+zo min mogelijk afhankelijkheden in het kritieke pad. Deze ontwerpdoelen zijn
+geen garantie over de huidige hosting, leveranciers of gegevenslocaties.
 
 ## Stack
 

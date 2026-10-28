@@ -21,7 +21,7 @@ export default function CookiebeleidPage() {
     >
       <LegalSection
         heading="1. Introductie"
-        body="Op het platform gebruiken we cookies en vergelijkbare technieken (voor het gemak noemen we alles hierna 'cookies'). Hieronder leggen we uit welke we gebruiken en waarom. ZekerFlex is een zelf-gehost, onafhankelijk platform: we gebruiken geen advertentie- of trackingcookies en geen externe analytics- of marketingdiensten."
+        body="Op het platform gebruiken we cookies en vergelijkbare technieken (voor het gemak noemen we alles hierna 'cookies'). Hieronder leggen we uit welke we gebruiken en waarom. We gebruiken geen advertentie- of trackingcookies en geen externe analytics- of marketingdiensten. Voor hosting en andere platformfuncties gebruiken we gespecialiseerde dienstverleners; zie ons privacybeleid voor meer informatie."
       />
       <LegalSection
         heading="2. Wat is een cookie?"
