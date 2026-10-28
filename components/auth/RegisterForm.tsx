@@ -169,8 +169,9 @@ export function RegisterForm({
           <button
             key={k}
             type="button"
+            aria-pressed={type === k}
             onClick={() => setType(k)}
-            className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
+            className={`rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
               type === k ? "bg-brand-500 text-white" : "text-neutralx-600 hover:text-ink"
             }`}
           >
@@ -204,8 +205,9 @@ export function RegisterForm({
                 <button
                   key={k}
                   type="button"
+                  aria-pressed={workerKind === k}
                   onClick={() => setWorkerKind(k)}
-                  className={`rounded-lg border px-2 py-2 text-center transition ${
+                  className={`rounded-lg border px-2 py-2 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                     workerKind === k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
                   }`}
                 >
