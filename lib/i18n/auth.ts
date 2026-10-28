@@ -49,6 +49,7 @@ export interface AuthDict {
     emailFree: string;
     emailTaken: string;
     emailInvalid: string;
+    emailCheckUnavailable: string;
     phone: string;
     optional: string;
     password: string;
@@ -225,6 +226,7 @@ const nl: AuthDict = {
     emailFree: "✓ Dit e-mailadres is beschikbaar",
     emailTaken: "Er bestaat al een account met dit e-mailadres.",
     emailInvalid: "Vul een geldig e-mailadres in.",
+    emailCheckUnavailable: "Beschikbaarheidscontrole lukt niet. Je kunt doorgaan; we controleren dit bij aanmelding.",
     phone: "Telefoon",
     optional: "(optioneel)",
     password: "Wachtwoord",
@@ -401,6 +403,7 @@ const en: AuthDict = {
     emailFree: "✓ This email address is available",
     emailTaken: "An account with this email address already exists.",
     emailInvalid: "Enter a valid email address.",
+    emailCheckUnavailable: "We couldn't check availability. You can continue; we'll check during sign-up.",
     phone: "Phone",
     optional: "(optional)",
     password: "Password",
@@ -577,6 +580,7 @@ const pl: AuthDict = {
     emailFree: "✓ Ten adres e-mail jest dostępny",
     emailTaken: "Konto z tym adresem e-mail już istnieje.",
     emailInvalid: "Podaj prawidłowy adres e-mail.",
+    emailCheckUnavailable: "Nie udało się sprawdzić dostępności. Możesz kontynuować; sprawdzimy to przy rejestracji.",
     phone: "Telefon",
     optional: "(opcjonalnie)",
     password: "Hasło",
@@ -753,6 +757,7 @@ const ro: AuthDict = {
     emailFree: "✓ Această adresă de e-mail este disponibilă",
     emailTaken: "Există deja un cont cu această adresă de e-mail.",
     emailInvalid: "Introdu o adresă de e-mail validă.",
+    emailCheckUnavailable: "Nu am putut verifica disponibilitatea. Poți continua; vom verifica la înregistrare.",
     phone: "Telefon",
     optional: "(opțional)",
     password: "Parolă",
@@ -929,6 +934,7 @@ const uk: AuthDict = {
     emailFree: "✓ Ця адреса доступна",
     emailTaken: "Акаунт з цією адресою вже існує.",
     emailInvalid: "Введи правильну адресу електронної пошти.",
+    emailCheckUnavailable: "Не вдалося перевірити доступність. Можна продовжити; перевіримо під час реєстрації.",
     phone: "Телефон",
     optional: "(необов'язково)",
     password: "Пароль",

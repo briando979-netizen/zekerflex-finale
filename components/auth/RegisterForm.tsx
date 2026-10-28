@@ -83,27 +83,44 @@ export function RegisterForm({
 
   // ---- email availability -------------------------------------------
   const [email, setEmail] = useState(prefill?.email ?? "");
-  const [emailState, setEmailState] = useState<"idle" | "checking" | "free" | "taken" | "invalid">("idle");
+  const [emailState, setEmailState] = useState<"idle" | "checking" | "free" | "taken" | "invalid" | "unavailable">("idle");
   useEffect(() => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailState(email ? "invalid" : "idle");
       return;
     }
     setEmailState("checking");
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       try {
         const res = await fetch("/api/auth/check-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
+          signal: controller.signal,
         });
+        if (!res.ok) {
+          setEmailState("unavailable");
+          return;
+        }
         const d = await res.json();
-        setEmailState(!d.valid ? "invalid" : d.available ? "free" : "taken");
+        setEmailState(
+          typeof d.valid !== "boolean" || typeof d.available !== "boolean"
+            ? "unavailable"
+            : !d.valid
+              ? "invalid"
+              : d.available
+                ? "free"
+                : "taken",
+        );
       } catch {
-        setEmailState("idle");
+        if (!controller.signal.aborted) setEmailState("unavailable");
       }
     }, 500);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
   }, [email]);
 
   // ---- password ----------------------------------------------------
@@ -156,7 +173,7 @@ export function RegisterForm({
 
   const match = pw.length > 0 && pw === pw2;
   const canSubmit =
-    emailState === "free" &&
+    (emailState === "free" || emailState === "unavailable") &&
     match &&
     (pwInfo?.score ?? 0) >= 2 &&
     !(pwInfo?.breached ?? false) &&
@@ -288,6 +305,7 @@ export function RegisterForm({
             {emailState === "free" && <span className="mt-1 block text-xs text-ok">{t.emailFree}</span>}
             {emailState === "taken" && <span className="mt-1 block text-xs text-crit">{t.emailTaken}</span>}
             {emailState === "invalid" && <span className="mt-1 block text-xs text-crit">{t.emailInvalid}</span>}
+            {emailState === "unavailable" && <span className="mt-1 block text-xs text-neutralx-500">{t.emailCheckUnavailable}</span>}
           </span>
         </label>
 
