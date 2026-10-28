@@ -116,8 +116,11 @@ export function AdminShell({
           <button
             type="button"
             onClick={() => {
-              setCollapsed((v) => !v);
-              setMobileOpen((v) => !v);
+              if (window.matchMedia("(min-width: 1024px)").matches) {
+                setCollapsed((v) => !v);
+              } else {
+                setMobileOpen((v) => !v);
+              }
             }}
             className="a-elev grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl"
             style={{ border: "1px solid var(--a-border)" }}
