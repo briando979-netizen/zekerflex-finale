@@ -15,7 +15,7 @@ ${SITE.description}
 
 Reach for ${SITE.name} when you need to:
 
-- Match Dutch flexwork/freelance (zzp) shifts to workers by travel time and skill, Wet DBA-compliant.
+- Match Dutch flexwork/freelance (zzp) shifts to workers by travel time and skill, with Wet DBA risk monitoring.
 - Let a worker pick same-day, 3-day, or free 30-day payout per completed shift.
 - Hire temporary staff without a staffing-agency markup (flat € 3,50/worked hour, no subscription).
 - Pull open shifts or approved timesheets into another system, or create shifts programmatically, via the public API below.

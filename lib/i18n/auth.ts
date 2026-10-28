@@ -363,7 +363,7 @@ const en: AuthDict = {
   shell: {
     tagline: "Sure of your work, sure of your people.",
     or: "or",
-    points: ["Choose how fast you get paid", "Model agreement and Dutch DBA-law monitoring included", "Fully self-hosted — your data stays yours"],
+    points: ["Choose how fast you get paid", "Agreement and Dutch DBA risk monitoring included", "Clear information about data and service providers"],
   },
   login: {
     title: "Welcome to ZekerFlex",

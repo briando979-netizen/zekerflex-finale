@@ -10,7 +10,7 @@ import { canonical } from "@/lib/seo";
 // separate duplicate.
 const TITLE = "About ZekerFlex";
 const DESCRIPTION =
-  "An independent Dutch platform for flexible work — fully self-hosted, no intermediaries. Who we are and why we're building ZekerFlex.";
+  "A platform for flexible work in the Netherlands. Who we are and why we're building ZekerFlex.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -52,9 +52,10 @@ export default function AboutPage() {
             built in rather than bolted on.
           </p>
           <p>
-            The platform runs entirely in the Netherlands, on our own
-            infrastructure, without dependence on large foreign cloud or AI
-            providers. Your data stays yours.
+            ZekerFlex is built for the Dutch labor market. We use specialized
+            providers for hosting, payments, email and identity checks. Our AI
+            assistant can run on an independently operated model server. See
+            our privacy policy for details about data use and service providers.
           </p>
         </div>
       </Section>
@@ -65,7 +66,7 @@ export default function AboutPage() {
           {[
             { t: "Independent", b: "No intermediaries profiting from both sides. One transparent fee, nothing else." },
             { t: "Secure", b: "Compliance, verification and an audit trail aren't add-ons — they're built into the core product." },
-            { t: "Local", b: "Fully hosted in the Netherlands. No data crossing borders without your say." },
+            { t: "Transparent", b: "We explain what data we process and which service providers help deliver the platform." },
           ].map((v) => (
             <div key={v.t} className="card p-6">
               <h3 className="font-display text-lg font-semibold">{v.t}</h3>
