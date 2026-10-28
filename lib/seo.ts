@@ -323,7 +323,7 @@ export function faqJsonLd(): Record<string, unknown> {
   const qa: [string, string][] = [
     [
       "Hoe snel word ik uitbetaald via ZekerFlex?",
-      "Dat kies je zelf per dienst nadat je uren zijn goedgekeurd: direct bij goedkeuring (4% van de factuur), binnen 3 werkdagen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). Uitbetalen gaat via een directe SEPA-overboeking; je hoeft zelf geen factuur te sturen.",
+      "Dat kies je zelf per dienst nadat je uren zijn goedgekeurd: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). De bijschrijving bij een externe bank kan langer duren; je hoeft zelf geen factuur te sturen.",
     ],
     [
       "Wat kost ZekerFlex voor bedrijven?",

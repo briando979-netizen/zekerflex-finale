@@ -4,8 +4,7 @@ import { useState } from "react";
 
 // ---------------------------------------------------------------------------
 // "Voorkeur voor uitbetaling" — the factoring speed choice, shown inline in the
-// "uren indienen" flow right after the hours are submitted. Radio cards, the
-// top one carrying the "1 minuut betaling" badge. Persists via PUT /api/me/payout.
+// "uren indienen" flow right after the hours are submitted. Persists via PUT /api/me/payout.
 // ---------------------------------------------------------------------------
 
 type Speed = "instant" | "threeDay" | "standard";
@@ -13,17 +12,17 @@ type Speed = "instant" | "threeDay" | "standard";
 const OPTIONS: { speed: Speed; badge?: string; body: string; factoring: boolean }[] = [
   {
     speed: "instant",
-    badge: "1 minuut betaling 🚀",
+    badge: "Directe betaalopdracht 🚀",
     body:
-      "Binnen 1 minuut, na goedkeuring door de opdrachtgever, doordat ZekerFlex jouw vordering overneemt " +
-      "(let op: de prijs die ZekerFlex voor jouw vordering betaalt, bedraagt 4% lager dan je factuurbedrag).",
+      "ZekerFlex dient na goedkeuring direct een betaalopdracht in en neemt jouw vordering over " +
+      "(4% vergoeding). Bij ZekerFlex Bank wordt het bedrag direct geboekt; bij een externe bank kan bijschrijving langer duren.",
     factoring: true,
   },
   {
     speed: "threeDay",
     body:
-      "Binnen 3 werkdagen, na goedkeuring door de opdrachtgever, doordat ZekerFlex jouw vordering overneemt " +
-      "(let op: de prijs die ZekerFlex voor jouw vordering betaalt, bedraagt 2% lager dan je factuurbedrag).",
+      "ZekerFlex neemt jouw vordering over en dient de betaalopdracht binnen 3 werkdagen na goedkeuring in " +
+      "(2% vergoeding). De ontvangende bank kan daarna extra verwerkingstijd nodig hebben.",
     factoring: true,
   },
   {
@@ -44,7 +43,7 @@ export function PayoutChoice({ initialSpeed = "standard" }: { initialSpeed?: Spe
     const consent =
       next === "standard" ||
       window.confirm(
-        "Bij snelle uitbetaling draag je je vordering op de opdrachtgever over aan ZekerFlex, dat je direct het factuurbedrag min de vergoeding (4% bij 1 minuut, 2% bij 3 werkdagen) uitbetaalt.\n\nGa je akkoord met de voorwaarden voor snelle uitbetaling (zekerflex.com/voorwaarden/snelle-uitbetaling)?",
+        "Bij snelle uitbetaling draag je je vordering op de opdrachtgever over aan ZekerFlex. ZekerFlex dient de betaalopdracht direct in (4% vergoeding) of binnen 3 werkdagen (2% vergoeding). De bankverwerking kan daarna langer duren.\n\nGa je akkoord met de voorwaarden voor snelle uitbetaling (zekerflex.com/voorwaarden/snelle-uitbetaling)?",
       );
     if (!consent) return;
     const prev = speed;

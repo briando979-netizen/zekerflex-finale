@@ -77,7 +77,7 @@ export interface ApproveTimesheetResult {
     providerRef: string | null;
   } | null;
   payroll: { isoWeekId: string; weekLabel: string } | null;
-  /** payroll track only: the instant advance paid out within ~1 min */
+  /** payroll track only: the advance payout instruction status */
   advance: { amountCents: number; netCents: number; feeCents: number; payoutStatus: string } | null;
   dba: { riskLevel: string; action: string } | null;
 }

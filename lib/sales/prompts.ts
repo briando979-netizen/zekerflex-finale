@@ -5,7 +5,7 @@ export const ZEKERFLEX_PITCH = `ZekerFlex is een Nederlands platform voor flexib
 Kernpunten:
 - Slimme matching op reistijd, betrouwbaarheid en skills; reacties hangen af van de beschikbaarheid van passende krachten.
 - Afspraken per relatie en Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend en er is geen garantie over de arbeidsrelatie.
-- Self-billing met twee btw-facturen en directe SEPA-uitbetaling (binnen 1 minuut).
+- Self-billing met twee btw-facturen en de mogelijkheid om na goedkeuring direct een SEPA-betaalopdracht in te dienen; bankverwerking kan langer duren.
 - Multi-vestiging / franchise-hierarchie met geaggregeerde facturatie per kostenplaats.
 - Voor hosting en andere platformfuncties gebruikt ZekerFlex gespecialiseerde dienstverleners.`;
 

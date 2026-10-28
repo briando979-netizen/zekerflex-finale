@@ -156,7 +156,7 @@ export const GUIDES: Article[] = [
         heading: "Wanneer krijg je je geld?",
         paragraphs: [
           "Je wordt niet automatisch meteen uitbetaald — je kiest zelf, per dienst, hoe snel je je geld wilt.",
-          "De opties: direct bij uren-goedkeuring (4% van de factuur), binnen 3 werkdagen (2%), of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). De uitbetaling zelf gaat altijd via een directe SEPA-overboeking.",
+          "De opties: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%), of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). De bijschrijving bij een externe bank kan langer duren.",
           "De fee wordt ingehouden op de totale factuur, zodat je vooraf precies weet wat er netto overblijft.",
         ],
       },
@@ -260,7 +260,7 @@ export const POSTS: Post[] = [
       {
         paragraphs: [
           "Wachten op je geld is een van de grootste frustraties van flexwerk. Daarom laten we bij ZekerFlex de keuze bij jou: zodra je uren zijn goedgekeurd, kies je zelf hoe snel je uitbetaald wilt worden.",
-          "Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent kan altijd. Wil je eerder je geld, dan zet je een snellere uitbetaling aan: direct bij urengoedkeuring (4% van de factuur) of binnen 3 werkdagen (2%). De fee wordt ingehouden op de factuur, dus je weet vooraf wat er netto overblijft.",
+          "Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent kan altijd. Wil je eerder je geld, dan zet je een snellere uitbetaling aan: de betaalopdracht wordt direct na goedkeuring ingediend (4% van de factuur) of binnen 3 werkdagen (2%). De bank kan daarna extra verwerkingstijd nodig hebben. De fee wordt ingehouden op de factuur, dus je weet vooraf wat er netto overblijft.",
           "Achter de schermen wordt de factuur automatisch aangemaakt en een directe SEPA-overboeking klaargezet — geen voorschotconstructie, geen externe partij ertussen.",
         ],
       },
@@ -289,7 +289,7 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
     category: "Geld & facturen",
     items: [
       { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformkosten, met de juiste btw-behandeling." },
-      { q: "Wanneer krijg ik mijn geld?", a: "Dat kies je zelf per dienst, nadat je uren zijn goedgekeurd: direct bij goedkeuring (4% van de factuur), binnen 3 werkdagen (2%) of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). Uitbetalen gaat altijd via een directe SEPA-overboeking." },
+      { q: "Wanneer krijg ik mijn geld?", a: "Dat kies je zelf per dienst, nadat je uren zijn goedgekeurd: de betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). De bijschrijving bij een externe bank kan daarna langer duren." },
       { q: "Kan ik een voorschot krijgen?", a: "Ja, op je eerstvolgende betaling. Kosten: 3% over het voorschot, automatisch verrekend met je volgende uitbetaling." },
     ],
   },

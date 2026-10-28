@@ -23,14 +23,14 @@ export const PAYOUT_SPEEDS: Record<
   { label: string; sub: string; feeRate: number; withinDays: number }
 > = {
   instant: {
-    label: "Direct bij uren-goedkeuring",
-    sub: "Zelfde werkdag op je rekening",
+    label: "Betaalopdracht direct indienen",
+    sub: "Bij ZekerFlex Bank direct geboekt; externe bankverwerking kan langer duren",
     feeRate: env.PAYOUT_INSTANT_FEE_RATE, // 4%
     withinDays: 0,
   },
   threeDay: {
-    label: "Binnen 3 werkdagen",
-    sub: "Iets goedkoper dan direct",
+    label: "Betaalopdracht binnen 3 werkdagen",
+    sub: "Externe bankverwerking kan daarna langer duren",
     feeRate: env.PAYOUT_3DAY_FEE_RATE, // 2%
     withinDays: 3,
   },

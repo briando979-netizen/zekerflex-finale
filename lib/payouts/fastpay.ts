@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
-// Snelle uitbetaling (1 minuut / 3 werkdagen) is factoring: ZekerFlex buys the
+// Snelle uitbetaling (direct indienen / binnen 3 werkdagen) is factoring: ZekerFlex buys the
 // worker's invoice and carries the risk that the client pays. So:
 //   - a client only offers it after a credit check (payment record on
 //     ZekerFlex + Handelsregister status). Clear cases are decided
@@ -15,7 +15,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 //   key "factoring-terms:<userId>"    → TermsAcceptance
 // ---------------------------------------------------------------------------
 
-export const FACTORING_TERMS_VERSION = "2026-10";
+export const FACTORING_TERMS_VERSION = "2026-11";
 
 export type CreditStatus = "none" | "approved" | "review" | "rejected";
 

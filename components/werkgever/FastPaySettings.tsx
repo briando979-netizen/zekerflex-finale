@@ -46,7 +46,7 @@ export function FastPaySettings() {
       <div>
         <p className="text-sm font-semibold text-ink">⚡ Snelle uitbetaling voor je krachten</p>
         <p className="mt-1 text-xs leading-relaxed text-neutralx-500">
-          Bied freelancers aan om binnen 1 minuut of 3 werkdagen na jouw goedkeuring betaald te worden. ZekerFlex neemt hun factuur over en jij betaalt gewoon op je eigen termijn. Klussen met snelle uitbetaling trekken sneller reacties. Hiervoor doen we eerst een kredietcheck (Handelsregister + je betaalgedrag bij ZekerFlex).
+          Bied freelancers aan om hun betaalopdracht direct of binnen 3 werkdagen na jouw goedkeuring te laten indienen. ZekerFlex neemt hun factuur over en jij betaalt gewoon op je eigen termijn. De bijschrijving hangt ook af van de betaalprovider en ontvangende bank. Hiervoor doen we eerst een kredietcheck (Handelsregister + je betaalgedrag bij ZekerFlex).
         </p>
       </div>
       <label className="flex items-center justify-between gap-3 text-sm">
@@ -81,7 +81,7 @@ export function FastPaySettings() {
       <label className="flex items-start justify-between gap-3 border-t border-hair pt-4 text-sm">
         <span>
           <span className="block">Voorschot voor uitzendkrachten</span>
-          <span className="block text-xs text-neutralx-500">Uitzendkrachten krijgen binnen 1 minuut na jouw goedkeuring ongeveer de helft van hun bruto loon als voorschot; de rest volgt op hun loonstrook.</span>
+          <span className="block text-xs text-neutralx-500">Na jouw goedkeuring probeert ZekerFlex ongeveer de helft van het verwachte bruto loon als voorschot over te maken. Bijschrijving hangt af van de betaalprovider en ontvangende bank; de rest volgt op de loonstrook.</span>
         </span>
         <input type="checkbox" checked={s.advancesForUitzend} disabled={busy} onChange={(e) => save({ advancesForUitzend: e.target.checked })} className="mt-1" />
       </label>

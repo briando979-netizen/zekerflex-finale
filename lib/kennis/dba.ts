@@ -254,7 +254,7 @@ export const DBA_GROUPS: DbaGroup[] = [
       },
       {
         q: "Wat is factoring (directe betaling)?",
-        a: "Dat betekent dat ZekerFlex het geld voorschiet. De freelancer kan kiezen om direct bij goedkeuring van de uren of binnen 3 werkdagen uitbetaald te worden, tegen een fee, in plaats van te wachten tot jij betaalt.",
+        a: "Dat betekent dat ZekerFlex het geld voorschiet. De freelancer kan kiezen om de betaalopdracht direct na goedkeuring of binnen 3 werkdagen te laten indienen, tegen een fee, in plaats van te wachten tot jij betaalt. De bank kan daarna extra verwerkingstijd nodig hebben.",
         points: [
           "Voor jou: je betaalt gewoon binnen de afgesproken termijn (bijvoorbeeld 14 of 30 dagen) aan ZekerFlex. Je merkt er niets van, maar je freelancer is extra blij.",
         ],

@@ -160,8 +160,8 @@ export async function settleAdvances(userId: string): Promise<void> {
 
 /**
  * Pay an instant advance on the expected wage of a just-approved uitzend
- * timesheet. Records the advance and fires a best-effort instant SEPA payout;
- * a payout failure leaves the record for retry rather than throwing.
+ * timesheet. Records the advance and fires a best-effort instant SEPA payout.
+ * Failed payouts remain visible, but are not deducted from payroll.
  */
 export async function createPayrollAdvance(input: {
   userId: string;
@@ -208,14 +208,15 @@ export async function createPayrollAdvance(input: {
       if (res.status === "SETTLED" || res.status === "SUBMITTED") paidAt = new Date();
     } catch (err) {
       payoutStatus = "FAILED";
-      logger.warn("payroll instant advance payout failed; queued for retry", {
+      note = "De betaalopdracht is mislukt. Dit voorschot wordt niet op je loon ingehouden.";
+      logger.warn("payroll instant advance payout failed", {
         advanceId: id,
         error: (err as Error).message,
       });
     }
   } else {
     payoutStatus = "FAILED";
-    note = "Geen geldig IBAN of gekoppelde Stripe-rekening — voorschot in wachtrij.";
+    note = "Geen geldig IBAN of gekoppelde Stripe-rekening. Dit voorschot wordt niet op je loon ingehouden.";
   }
 
   const row = await prisma.advanceRecord.create({
@@ -225,7 +226,7 @@ export async function createPayrollAdvance(input: {
       amountCents,
       feeCents,
       netCents,
-      status: "approved",
+      status: paidAt ? "approved" : "requested",
       kind: "payroll",
       isoWeek: input.isoWeek,
       timesheetId: input.timesheetId,
@@ -239,9 +240,11 @@ export async function createPayrollAdvance(input: {
   return toAdvance(row);
 }
 
-/** All payroll advances (any status) tied to a given week. */
+/** Only advances with a submitted or settled payout are offset against payroll. */
 export async function payrollAdvancesForWeek(userId: string, isoWeek: string): Promise<Advance[]> {
-  const rows = await prisma.advanceRecord.findMany({ where: { userId, kind: "payroll", isoWeek } });
+  const rows = await prisma.advanceRecord.findMany({
+    where: { userId, kind: "payroll", isoWeek, payoutStatus: { in: ["SUBMITTED", "SETTLED"] }, paidAt: { not: null } },
+  });
   return rows.map(toAdvance);
 }
 
@@ -254,7 +257,9 @@ export async function reconcilePayrollAdvances(
   isoWeek: string,
   netWageCents: number,
 ): Promise<{ grossCents: number; netPaidCents: number; feeCents: number; count: number }> {
-  const rows = await prisma.advanceRecord.findMany({ where: { userId, kind: "payroll", isoWeek } });
+  const rows = await prisma.advanceRecord.findMany({
+    where: { userId, kind: "payroll", isoWeek, payoutStatus: { in: ["SUBMITTED", "SETTLED"] }, paidAt: { not: null } },
+  });
   const grossCents = rows.reduce((s, a) => s + a.amountCents, 0);
   const netPaidCents = rows.reduce((s, a) => s + a.netCents, 0);
   const feeCents = rows.reduce((s, a) => s + a.feeCents, 0);

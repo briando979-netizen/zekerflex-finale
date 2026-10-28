@@ -65,7 +65,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /uitbetaal|betaald|payout|wanneer.*(betaal|geld)|hoe snel.*geld/i,
-    answer: { reply: "Na goedkeuring van je uren kies je per klus: binnen 1 minuut (4% van de factuur), binnen 3 werkdagen (2%) of gratis wachten tot de opdrachtgever betaalt. Met ZekerFlex Bank staat je geld zelfs direct op je eigen rekening.", suggestions: ["Wat is ZekerFlex Bank?", "Kan ik een voorschot krijgen?", "Hoe vul ik mijn uren in?"] },
+    answer: { reply: "Na goedkeuring van je uren kies je per klus: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever betaalt. Bij externe banken kan de bijschrijving daarna langer duren; een boeking via ZekerFlex Bank is direct zichtbaar.", suggestions: ["Wat is ZekerFlex Bank?", "Kan ik een voorschot krijgen?", "Hoe vul ik mijn uren in?"] },
   },
   {
     re: /voorschot/i,

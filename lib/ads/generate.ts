@@ -18,7 +18,7 @@ export type AdAudience = "freelancer" | "werkgever";
 const FACTS = `
 - ${SITE.name}: Nederlands platform voor flexwerk/zzp-opdrachten.
 - Freelancers: gratis meedoen, gratis matching.
-- Freelancers kiezen zelf hoe snel ze worden uitbetaald: direct na goedkeuring (4% van de factuur), binnen 3 werkdagen (2%), of gratis binnen 30 dagen.
+- Freelancers kiezen zelf hoe snel de betaalopdracht wordt ingediend: direct na goedkeuring (4% van de factuur), binnen 3 werkdagen (2%), of gratis wachten tot de opdrachtgever betaalt. Externe bankverwerking kan langer duren.
 - Werkgevers betalen € 3,50 platformkosten per gewerkt uur. Alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.
 - ZekerFlex legt afspraken per relatie vast en biedt Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.
 - Werken zonder KVK is mogelijk als uitzendkracht via het ZekerFlex-uitzendbureau (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).

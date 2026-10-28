@@ -31,7 +31,7 @@ const BENEFITS = [
   {
     id: "uitbetaling",
     title: "Jij kiest je uitbetaling",
-    body: "Je krijgt niet automatisch meteen betaald — je kiest per dienst. Gratis wachten tot de opdrachtgever afrekent binnen 30 dagen, of sneller tegen een fee: bij goedkeuring van je uren (4%), binnen 3 dagen (2%) of direct. Een voorschot op openstaande diensten kan ook (3%).",
+    body: "Je krijgt niet automatisch meteen betaald — je kiest per dienst. Gratis wachten tot de opdrachtgever afrekent binnen 30 dagen, of sneller tegen een fee: betaalopdracht direct indienen (4%) of binnen 3 werkdagen indienen (2%). Een voorschot op openstaande diensten kan ook (3%).",
   },
   {
     id: "facturen",
@@ -63,7 +63,7 @@ const BENEFITS = [
 const FAQ = [
   { q: "Wat heb ik nodig om te beginnen?", a: "Een geldige KVK-inschrijving als zzp'er en een identiteitsbewijs voor de verificatie. Verder een rekeningnummer voor de uitbetalingen." },
   { q: "Kost het mij iets?", a: "Nee. Meedoen als freelancer is volledig gratis. De platformfee wordt bij de opdrachtgever in rekening gebracht." },
-  { q: "Wanneer krijg ik precies betaald?", a: "Dat bepaal je zelf per dienst. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder je geld, dan kies je een snellere uitbetaling tegen een fee: bij urengoedkeuring (4% van de factuur), binnen 3 dagen (2%) of direct. Een voorschot van maximaal 80% op openstaande diensten kan tegen 3%." },
+  { q: "Wanneer krijg ik precies betaald?", a: "Dat bepaal je zelf per dienst. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder je geld, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%). Een voorschot van maximaal 80% op openstaande diensten kan tegen 3%." },
   { q: "Wat als er een geschil is over mijn uren?", a: "Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je GPS check-in en de goedgekeurde planning wegen daarin mee." },
 ];
 

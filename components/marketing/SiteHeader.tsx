@@ -113,7 +113,7 @@ const NAV: NavEntry[] = [
         cta: CTA_WN,
         items: [
           { title: "Gratis voor werknemers", desc: "Voor altijd. Meedoen kost je niets.", href: "/prijzen#freelancers" },
-          { title: "Sneller uitbetalen", desc: "Direct, binnen 3 dagen of gratis wachten — jij kiest per keer.", href: "/kennis/uitbetaling-en-facturen" },
+          { title: "Sneller uitbetalen", desc: "Direct indienen, binnen 3 werkdagen indienen of gratis wachten — jij kiest per keer.", href: "/kennis/uitbetaling-en-facturen" },
           { title: "Veelgestelde vragen", desc: "Verborgen kosten, wanneer de fee telt, en meer.", href: "/prijzen#faq" },
         ],
       },

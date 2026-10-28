@@ -3,15 +3,15 @@ import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 
 export const metadata: Metadata = { title: "Voorwaarden snelle uitbetaling" };
 
-// Versie 2026-10 — dezelfde versie als FACTORING_TERMS_VERSION in
+// Versie 2026-11 — dezelfde versie als FACTORING_TERMS_VERSION in
 // lib/payouts/fastpay.ts. Wijzig je deze tekst inhoudelijk, verhoog dan de
 // versie daar: dan moet iedereen opnieuw akkoord geven.
 export default function SnelleUitbetalingPage() {
   return (
     <LegalPage
       title="Voorwaarden snelle uitbetaling"
-      updated="18 oktober 2026 (versie 2026-10)"
-      intro="Deze voorwaarden gelden als je als Opdrachtnemer kiest voor uitbetaling binnen 1 minuut of binnen 3 werkdagen na goedkeuring van je uren. Ze vullen de Gebruiksvoorwaarden van ZekerFlex aan."
+      updated="28 oktober 2026 (versie 2026-11)"
+      intro="Deze voorwaarden gelden als je als Opdrachtnemer kiest voor het direct indienen van een betaalopdracht of het indienen daarvan binnen 3 werkdagen na goedkeuring van je uren. Ze vullen de Gebruiksvoorwaarden van ZekerFlex aan."
       note={
         <>
           Vragen? Mail{" "}
@@ -24,13 +24,13 @@ export default function SnelleUitbetalingPage() {
     >
       <LegalSection
         heading="1. Wat snelle uitbetaling is"
-        body="Normaal ontvang je je factuurbedrag zodra de Opdrachtgever betaalt. Kies je voor snelle uitbetaling, dan draag je je vordering op de Opdrachtgever voor die klus over aan ZekerFlex (cessie, art. 3:94 BW). ZekerFlex betaalt jou daarvoor direct het factuurbedrag minus de vergoeding, en int het volledige bedrag zelf bij de Opdrachtgever."
+        body="Normaal ontvang je je factuurbedrag zodra de Opdrachtgever betaalt. Kies je voor snelle uitbetaling, dan draag je je vordering op de Opdrachtgever voor die klus over aan ZekerFlex (cessie, art. 3:94 BW). ZekerFlex dient een betaalopdracht in voor het factuurbedrag minus de vergoeding en int het volledige bedrag zelf bij de Opdrachtgever. Een betaalopdracht is geen garantie op bijschrijving binnen die termijn: verwerking en bijschrijving zijn mede afhankelijk van de betaalprovider en ontvangende bank. Een boeking binnen ZekerFlex Bank is direct zichtbaar in je ZekerFlex Bank-rekening."
       />
       <LegalSection
         heading="2. Vergoeding"
         list={[
-          "Uitbetaling binnen 1 minuut na goedkeuring van je uren: 4% van het factuurbedrag.",
-          "Uitbetaling binnen 3 werkdagen na goedkeuring: 2% van het factuurbedrag.",
+          "Direct indienen van de betaalopdracht na goedkeuring van je uren: 4% van het factuurbedrag.",
+          "Indienen van de betaalopdracht binnen 3 werkdagen na goedkeuring: 2% van het factuurbedrag.",
           "Standaard (wachten tot de Opdrachtgever betaalt): geen vergoeding.",
         ]}
       />

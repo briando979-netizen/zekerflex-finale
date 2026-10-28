@@ -12,8 +12,8 @@ import { fastPayAvailable, getFastPay, hasAcceptedTerms } from "@/lib/payouts/fa
 
 // ---------------------------------------------------------------------------
 // When and how a freelancer is paid for an approved klus — the money model:
-//   instant  → paid now, 4% factoring fee withheld
-//   threeDay → paid within 3 working days, 2% fee
+//   instant  → payout is initiated now, 4% factoring fee withheld
+//   threeDay → payout is initiated by the third working day, 2% fee
 //   standard → paid in full as soon as the client pays the invoice
 // Fast speeds only when the client offers them (credit-checked) AND the
 // freelancer accepted the factoring terms; otherwise "standard".
@@ -31,7 +31,7 @@ export async function effectiveSpeed(userId: string, tenantId: string): Promise<
   return fastPayAvailable(fp) && terms ? pref : "standard";
 }
 
-/** Working days from `from` (Mon–Fri), for the 3-day promise. */
+/** Working days from `from` (Mon–Fri), for scheduling a payment instruction. */
 export function addWorkingDays(from: Date, days: number): Date {
   const d = new Date(from);
   let left = days;
@@ -144,7 +144,11 @@ export async function dispatchPayout(input: { paymentId: string; invoiceId: stri
     return { speed, ...r };
   }
   if (speed === "threeDay") {
-    const dueAt = addWorkingDays(input.now ?? new Date(), 3).toISOString();
+    // The daily cron must submit by working day three; running a day early
+    // avoids missing the deadline between daily runs. Bank settlement may follow later.
+    const dueDate = addWorkingDays(input.now ?? new Date(), 2);
+    dueDate.setUTCHours(0, 0, 0, 0);
+    const dueAt = dueDate.toISOString();
     await kvSet(`payout-scheduled:${input.paymentId}`, { dueAt, speed, feeCents: payoutFee(input.amountCents, "threeDay") });
     return { speed, status: PaymentStatus.PENDING, providerRef: null, dueAt };
   }
@@ -152,7 +156,7 @@ export async function dispatchPayout(input: { paymentId: string; invoiceId: stri
   return { speed, status: PaymentStatus.PENDING, providerRef: null };
 }
 
-/** Daily: pay the 3-working-day payouts that are due. */
+/** Daily: submit the 3-working-day payout instructions by their deadline. */
 export async function runScheduledPayouts(now = new Date(), deadline = Date.now() + 200_000): Promise<{ paid: number; failed: number }> {
   let paid = 0;
   let failed = 0;

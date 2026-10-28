@@ -43,7 +43,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
     },
     {
       q: "Hoe snel word ik uitbetaald?",
-      a: "Dat kies je zelf per klus: direct na goedkeuring van je uren, binnen 3 werkdagen of gratis binnen 30 dagen. Je hoeft zelf geen facturen te sturen.",
+      a: "Dat kies je zelf per klus: direct na goedkeuring van je uren, binnen 3 werkdagen ingediend of gratis na betaling door de opdrachtgever. Je hoeft zelf geen facturen te sturen.",
     },
     {
       q: `Welk werk is er veel in ${c.name}?`,
