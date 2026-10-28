@@ -694,7 +694,7 @@ export function JarvisConsole() {
   const micLevelPct = Math.round((listening ? micLevel : 0) * 100);
 
   return (
-    <div className="-m-4 flex h-[calc(100vh-4rem)] overflow-hidden bg-[#0b0e13] text-white lg:-m-8">
+    <div className="-m-4 flex h-[calc(100dvh-9.5rem)] min-h-0 overflow-hidden bg-[#0b0e13] text-white lg:-m-8">
       {/* sessions rail */}
       <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-white/10 bg-[#0e1116] md:flex">
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
@@ -793,9 +793,16 @@ export function JarvisConsole() {
       </aside>
 
       {/* editor pane */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* top bar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
+          <button
+            type="button"
+            onClick={newChat}
+            className="rounded-md border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10 md:hidden"
+          >
+            + nieuw
+          </button>
           <span className="pill bg-[rgba(79,224,160,0.12)] text-brand-mint">
             {brain?.cloud ? "cloud · Claude-niveau" : "lokale inferentie · €0 per vraag"}
           </span>
@@ -821,7 +828,7 @@ export function JarvisConsole() {
         </div>
 
         {/* transcript */}
-        <div ref={chatRef} className="flex-1 overflow-y-auto">
+        <div ref={chatRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-3xl space-y-4 px-5 py-6">
             {viewing ? (
               <>
@@ -936,7 +943,7 @@ export function JarvisConsole() {
                 placeholder={
                   busy ? "Jarvis is aan het werk…" : listening ? "Aan het luisteren…" : "Typ of spreek je bericht…"
                 }
-                className="jarvis-input max-h-32 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-white placeholder:text-white/35 focus:outline-none disabled:opacity-60"
+                className="jarvis-input max-h-32 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-base text-white placeholder:text-white/35 focus:outline-none disabled:opacity-60 sm:text-sm"
               />
               <button
                 type="button"

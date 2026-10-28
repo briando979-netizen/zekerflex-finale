@@ -18,7 +18,14 @@ export default async function JarvisPage() {
   }
   return (
     <div className="space-y-4">
-      <AiNodeKey />
+      <details className="rounded-xl border border-hair bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+          AI-node-instellingen (laptop)
+        </summary>
+        <div className="px-3 pb-3">
+          <AiNodeKey />
+        </div>
+      </details>
       <JarvisConsole />
     </div>
   );
