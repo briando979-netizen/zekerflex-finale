@@ -54,6 +54,7 @@ export function FreelancerShell({
   avatarUrl,
   theme,
   inApp = false,
+  canSwitchToEmployer = false,
   children,
 }: {
   userName: string;
@@ -62,6 +63,7 @@ export function FreelancerShell({
   theme: Theme;
   /** Android app: no Bank tab (lib/app-mode.ts) */
   inApp?: boolean;
+  canSwitchToEmployer?: boolean;
   children: ReactNode;
 }) {
   const tabs = inApp ? TABS.filter((t) => t.key !== "bank") : TABS;
@@ -89,6 +91,16 @@ export function FreelancerShell({
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-crit to-crit/40" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            {canSwitchToEmployer && (
+              <Link
+                href="/werkgever"
+                aria-label={ft.nav.employerWorkspace}
+                title={ft.nav.employerWorkspace}
+                className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-brand-600"
+              >
+                <IBriefcase />
+              </Link>
+            )}
             <LanguageButton />
             <ThemeToggle
               theme={theme}

@@ -45,6 +45,7 @@ export function EmployerShell({
   userName,
   userMeta,
   avatarUrl,
+  canSwitchToFreelancer = false,
   helpHref = "/kennis/werkgevers",
   settingsHref = "/werkgever/instellingen",
   children,
@@ -56,6 +57,7 @@ export function EmployerShell({
   rating: { average: number; count: number } | null;
   userName: string;
   userMeta: string;
+  canSwitchToFreelancer?: boolean;
   /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
   avatarUrl?: string | null;
   helpHref?: string;
@@ -320,6 +322,11 @@ export function EmployerShell({
                   <Link href={settingsHref} className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
                     {t.shell.menuSettings}
                   </Link>
+                  {canSwitchToFreelancer && (
+                    <Link href="/dashboard/klussen" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
+                      {t.shell.menuWorkerWorkspace}
+                    </Link>
+                  )}
                   <Link href="/werkgever/bedrijf" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
                     {t.shell.menuCompany}
                   </Link>

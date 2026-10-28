@@ -9,7 +9,7 @@ import type { Locale } from "@/lib/i18n/config";
 // ---------------------------------------------------------------------------
 
 const nl = {
-  nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken" },
+  nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
   lang: { label: "Taal", hint: "Kies de taal van de app." },
   date: { wd: ["zo", "ma", "di", "wo", "do", "vr", "za"], mon: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"] },
   cat: { retail: "Retail", horeca: "Horeca", logistiek: "Logistiek", schoonmaak: "Schoonmaak", evenement: "Evenement", zorg: "Zorg", kantoor: "Kantoor", bouw: "Bouw & techniek", algemeen: "Algemeen", overig: "Overig" },
@@ -397,7 +397,7 @@ const nl = {
 export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
-  nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search" },
+  nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
   lang: { label: "Language", hint: "Choose the app language." },
   date: { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], mon: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] },
   cat: { retail: "Retail", horeca: "Hospitality", logistiek: "Logistics", schoonmaak: "Cleaning", evenement: "Events", zorg: "Care", kantoor: "Office", bouw: "Construction & technical", algemeen: "General", overig: "Other" },
@@ -783,7 +783,7 @@ const en: FreelancerDict = {
 };
 
 const pl: FreelancerDict = {
-  nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj" },
+  nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
   lang: { label: "Język", hint: "Wybierz język aplikacji." },
   date: { wd: ["nd", "pn", "wt", "śr", "cz", "pt", "sb"], mon: ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"] },
   cat: { retail: "Handel", horeca: "Gastronomia", logistiek: "Logistyka", schoonmaak: "Sprzątanie", evenement: "Wydarzenia", zorg: "Opieka", kantoor: "Biuro", bouw: "Budowa i technika", algemeen: "Ogólne", overig: "Inne" },
@@ -1169,7 +1169,7 @@ const pl: FreelancerDict = {
 };
 
 const ro: FreelancerDict = {
-  nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută" },
+  nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
   lang: { label: "Limbă", hint: "Alege limba aplicației." },
   date: { wd: ["dum", "lun", "mar", "mie", "joi", "vin", "sâm"], mon: ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"] },
   cat: { retail: "Comerț", horeca: "Horeca", logistiek: "Logistică", schoonmaak: "Curățenie", evenement: "Evenimente", zorg: "Îngrijire", kantoor: "Birou", bouw: "Construcții și tehnică", algemeen: "General", overig: "Altele" },
@@ -1555,7 +1555,7 @@ const ro: FreelancerDict = {
 };
 
 const uk: FreelancerDict = {
-  nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук" },
+  nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
   lang: { label: "Мова", hint: "Оберіть мову застосунку." },
   date: { wd: ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], mon: ["січ", "лют", "бер", "квіт", "трав", "черв", "лип", "серп", "вер", "жовт", "лист", "груд"] },
   cat: { retail: "Торгівля", horeca: "Ресторани й готелі", logistiek: "Логістика", schoonmaak: "Прибирання", evenement: "Події", zorg: "Догляд", kantoor: "Офіс", bouw: "Будівництво й техніка", algemeen: "Загальне", overig: "Інше" },

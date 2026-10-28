@@ -77,6 +77,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         userName={principal.fullName}
         userMeta={principal.email}
         avatarUrl={avatarUrl}
+        canSwitchToFreelancer={hasRole(principal, "FREELANCER")}
       >
         {children}
         <ChatDock />

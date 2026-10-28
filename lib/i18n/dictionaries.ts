@@ -47,6 +47,7 @@ const nl = {
     reviewsTitle: "Bekijk reviews van freelancers",
     menuSettings: "Instellingen",
     menuCompany: "Bedrijfsprofiel",
+    menuWorkerWorkspace: "Werkersomgeving",
     orgFallback: "Je organisatie",
   },
   start: {
@@ -751,6 +752,7 @@ const en: Dict = {
     reviewsTitle: "See reviews from freelancers",
     menuSettings: "Settings",
     menuCompany: "Company profile",
+    menuWorkerWorkspace: "Worker workspace",
     orgFallback: "Your organisation",
   },
   start: {
