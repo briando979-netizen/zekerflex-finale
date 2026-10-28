@@ -91,6 +91,10 @@ export async function completePasswordReset(token: string, newPassword: string):
   if (newPassword.length < 8) {
     return { ok: false, reason: "Kies een wachtwoord van minstens 8 tekens." };
   }
+  if (!(await isResetTokenValid(token))) {
+    return { ok: false, reason: "Deze herstellink is verlopen of al gebruikt. Vraag een nieuwe aan." };
+  }
+
   const strength = scorePassword(newPassword);
   if (strength.score < 2) {
     return { ok: false, reason: strength.warnings[0] ?? "Kies een sterker wachtwoord." };
