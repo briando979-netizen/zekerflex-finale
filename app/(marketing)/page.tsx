@@ -16,7 +16,7 @@ import { getContentValues } from "@/lib/content/store";
 
 const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
 const DESCRIPTION =
-  "Hét Nederlandse platform voor freelance werk, flexwerk en uitzendwerk in heel Nederland. Freelancers en flexkrachten vinden klussen dat past bij hun vak en reistijd en kiezen zelf hoe snel ze worden uitbetaald. Bedrijven huren betrouwbaar personeel in voor € 3,50 per gewerkt uur — Wet DBA-proof, geen abonnement.";
+  "Het Nederlandse platform voor freelance werk, flexwerk en uitzendwerk. Vind klussen op basis van vak en reistijd, kies je uitbetaalsnelheid en werk met afspraken en Wet DBA-risicosignalering. Bedrijven betalen € 3,50 per gewerkt uur, zonder abonnement.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -79,7 +79,7 @@ export default async function HomePage() {
               "Geen abonnement",
               "Gebouwd voor flexibel werk in Nederland",
               "Modelovereenkomst inbegrepen",
-              "Wet DBA-proof",
+              "Wet DBA-risicosignalering",
               "Reverse billing",
               "Geen tussenpartijen",
               "Wekelijkse verloning",
@@ -136,7 +136,7 @@ export default async function HomePage() {
         points={[
           "Aanbod afgestemd op je reistijd, skills en beschikbaarheid",
           "Zelf kiezen hoe snel je uitbetaald wordt — geen facturen sturen",
-          "Één modelovereenkomst, altijd Wet DBA-proof",
+          "Afspraken vastgelegd, risico's gesignaleerd",
           "Bouw badges op van Brons tot Platina",
         ]}
         href="/voor-freelancers"
@@ -485,7 +485,7 @@ const FEATURES = [
 ];
 
 const COMPLIANCE = [
-  { title: "Modelovereenkomst", body: "Elke opdracht loopt onder een goedgekeurde modelovereenkomst die per relatie klaarstaat." },
+  { title: "Opdrachtsovereenkomst", body: "ZekerFlex zet afspraken per relatie klaar. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie." },
   { title: "KVK-validatie", body: "Inschrijving en btw-nummer worden bij aanmelding gecontroleerd tegen het Handelsregister." },
   { title: "Identiteitsverificatie", body: "Een geverifieerde identiteit (KYC) is verplicht voordat je een dienst kunt aannemen." },
   { title: "Auditspoor", body: "Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders." },
@@ -496,7 +496,7 @@ const FAQ = [
   { q: "Wat kost ZekerFlex?", a: "Meedoen als freelancer is gratis. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, en alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten." },
   { q: "Hoe snel word ik als zzp'er betaald?", a: "Dat kies je zelf. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder, dan kies je een snellere uitbetaling tegen een fee: bij urengoedkeuring (4% van de factuur), binnen 3 dagen (2%) of direct. Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformfee, met de juiste btw-behandeling." },
-  { q: "Hoe blijft dit binnen de Wet DBA?", a: "Elke samenwerking loopt onder een modelovereenkomst. Daarnaast bewaakt het platform doorlopend risicosignalen zoals urenconcentratie bij één opdrachtgever en te veel opeenvolgende weken, en beperkt het de matching als het spannend wordt." },
+  { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },
   { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
 ];
 

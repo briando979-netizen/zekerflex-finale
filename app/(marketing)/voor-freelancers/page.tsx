@@ -9,7 +9,7 @@ import { canonical } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Flexwerk & zzp-opdrachten vinden",
   description:
-    "Vind flexwerk en zzp-opdrachten die passen bij je vak en je reistijd. Kies zelf per klus hoe snel je wordt uitbetaald — tot dezelfde werkdag — zonder facturen te sturen, altijd Wet DBA-proof. Meedoen is gratis.",
+    "Vind flexwerk en zzp-opdrachten die passen bij je vak en reistijd. Kies je uitbetaalsnelheid, verstuur geen facturen en bekijk Wet DBA-risicosignalen. Meedoen is gratis.",
   keywords: [
     "zzp klus vinden",
     "flexwerk vinden",
@@ -50,8 +50,8 @@ const BENEFITS = [
   },
   {
     id: "dba",
-    title: "Altijd Wet DBA-proof",
-    body: "Elke opdracht loopt onder een goedgekeurde modelovereenkomst. Het platform bewaakt je urenverdeling zodat je nooit onbedoeld te afhankelijk wordt van één opdrachtgever.",
+    title: "Afspraken en risicosignalen",
+    body: "ZekerFlex legt afspraken per opdrachtgever vast en signaleert onder meer urenconcentratie. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie.",
   },
   {
     id: "badges",

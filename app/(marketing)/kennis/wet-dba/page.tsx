@@ -104,6 +104,17 @@ export default function WetDbaPage() {
           Algemene informatie, geen juridisch of fiscaal advies. Regels en bedragen kunnen wijzigen — raadpleeg
           bij twijfel de Belastingdienst of een adviseur.
         </p>
+        <p className="mt-3 text-sm text-neutralx-500">
+          Lees de actuele uitleg over{" "}
+          <a
+            href="https://www.belastingdienst.nl/wps/wcm/connect/nl/arbeidsrelaties/content/handhaving"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-ink"
+          >
+            handhaving van arbeidsrelaties bij de Belastingdienst
+          </a>.
+        </p>
       </Section>
 
       <CtaBand

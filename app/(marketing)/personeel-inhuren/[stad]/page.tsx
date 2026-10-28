@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
   const c = cityBySlug((await params).stad);
   if (!c) return {};
   const title = `Personeel inhuren in ${c.name} — klus plaatsen, flexkrachten & uitzendkrachten`;
-  const description = `Snel flexpersoneel in ${c.name} voor ${c.sectors.join(", ")}. Plaats een klus, wij matchen op reistijd en vakmanschap. € 3,50 per gewerkt uur, geen abonnement, Wet DBA-proof — een voordelig alternatief voor het uitzendbureau.`;
+  const description = `Flexpersoneel in ${c.name} voor ${c.sectors.join(", ")}. Plaats een klus en match op reistijd en vakmanschap. € 3,50 per gewerkt uur, zonder abonnement, met Wet DBA-risicosignalering.`;
   return {
     title: { absolute: `${title} | ZekerFlex` },
     description,
@@ -42,8 +42,8 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
       a: "Je kiest zelf: zzp'ers en flexwerkers via het platform, of uitzendkrachten via het ZekerFlex-uitzendbureau (zonder KVK, met loonadministratie, StiPP en ABU-cao geregeld). Alles in één omgeving, met uren, facturen en betalingen automatisch.",
     },
     {
-      q: "Is het Wet DBA-proof?",
-      a: "Ja. Elke zzp-opdracht loopt onder een goedgekeurde modelovereenkomst en het platform bewaakt de urenverdeling per opdrachtgever, zodat er geen schijnzelfstandigheid ontstaat.",
+      q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?",
+      a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie per opdrachtgever. Dit geeft geen garantie over de arbeidsrelatie: de feitelijke werkwijze blijft bepalend.",
     },
     {
       q: "Moet mijn bedrijf geverifieerd zijn?",

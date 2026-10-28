@@ -77,8 +77,8 @@ export function TrafficDashboard() {
     <div className="mx-auto max-w-6xl">
       <APageHeader
         title="Verkeer & Analytics"
-        badge="100% lokaal · geen cookies"
-        subtitle="Realtime bezoek, kliks en historie — volledig zelf-gehost, zonder externe trackers."
+        badge="First-party · geen cookies"
+        subtitle="Realtime bezoek, kliks en historie via de cookie-vrije analytics van ZekerFlex."
         action={
           <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
             <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#4ade80" }} />

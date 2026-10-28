@@ -541,7 +541,7 @@ const pl: AuthDict = {
   shell: {
     tagline: "Pewna praca, pewni ludzie.",
     or: "lub",
-    points: ["Sam wybierasz, jak szybko dostajesz wypłatę", "Umowa wzorcowa i kontrola zgodności z prawem (Wet DBA) w cenie", "Własne serwery — Twoje dane należą do Ciebie"],
+    points: ["Sam wybierasz, jak szybko dostajesz wypłatę", "Umowa i sygnały ryzyka Wet DBA w cenie", "Przejrzyste informacje o danych i usługodawcach"],
   },
   login: {
     title: "Witaj w ZekerFlex",

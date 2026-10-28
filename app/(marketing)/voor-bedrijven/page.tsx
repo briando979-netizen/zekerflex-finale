@@ -48,7 +48,7 @@ const BLOCKS = [
 const FAQ = [
   { q: "Wat kost het?", a: "€ 3,50 platformkosten per gewerkt uur. Je betaalt alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstart- of plaatsingskosten." },
   { q: "Hoe snel kan ik iemand hebben?", a: "Voor bekende functies op een vestiging met auto-toewijzing is dat vaak binnen enkele minuten. Anders gaat het aanbod in golven uit en zie je de reacties live binnenkomen." },
-  { q: "Hoe zit het met de Wet DBA?", a: "Elke opdracht loopt onder een goedgekeurde modelovereenkomst. Daarnaast monitort ZekerFlex doorlopend de bekende risicosignalen en grijpt het in voordat een samenwerking als schijnzelfstandigheid kan worden gezien." },
+  { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast, signaleert onder meer urenconcentratie en kan matching bij verhoogde risico's beperken. Dit geeft geen garantie over de arbeidsrelatie: de beoordeling hangt ook af van hoe er in de praktijk wordt gewerkt." },
   { q: "Kan ik meerdere vestigingen beheren?", a: "Ja. Je richt een organisatie in met vestigingen, wijst lokale managers toe met of zonder locatiebeperking, en houdt op hoofdkantoorniveau overzicht over alles." },
 ];
 

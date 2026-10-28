@@ -68,7 +68,7 @@ export const WHITEPAPERS: Whitepaper[] = [
         blocks: [
           {
             t: "p",
-            text: "Voor je eerste drie klussen via het platform heb je nog geen btw-id nodig. Zo kun je rustig kijken of flexibel werken bij je past. Daarna is een btw-id verplicht om te blijven klussen.",
+            text: "Of je een btw-id nodig hebt, hangt af van je activiteiten en fiscale situatie. Controleer dit bij de Belastingdienst of een boekhouder; het aantal klussen bepaalt op zichzelf niet of je btw moet berekenen.",
           },
           {
             t: "h3",
@@ -76,7 +76,7 @@ export const WHITEPAPERS: Whitepaper[] = [
           },
           {
             t: "p",
-            text: "Een btw-id vraag je aan bij de Kamer van Koophandel (samen met een KVK-nummer, handig als je fulltime wilt freelancen) of rechtstreeks bij de Belastingdienst (gratis, geschikt voor parttime, duurt ongeveer twee weken). Vraag het op tijd aan: zonder btw-id kun je na drie klussen niet verder.",
+            text: "Een btw-id aanvragen en je inschrijven bij de Kamer van Koophandel zijn verschillende stappen. Welke registratie en btw-verplichtingen voor je gelden, hangt af van je situatie. Controleer de actuele uitleg bij de Belastingdienst en de Kamer van Koophandel.",
           },
           {
             t: "ul",
@@ -259,7 +259,7 @@ export const WHITEPAPERS: Whitepaper[] = [
             t: "ul",
             items: [
               "Geen klussen gedaan dit kwartaal maar wel een btw-id? Dan moet je alsnog aangifte doen, anders riskeer je een boete",
-              "Bij je eerste drie klussen (nog zonder btw-id) draag je geen omzetbelasting af",
+              "Een btw-id of het aantal opdrachten bepaalt niet op zichzelf of je btw moet berekenen; volg de regels die voor jouw situatie gelden",
               "Je kunt je facturen in je dashboard downloaden en naar jezelf mailen",
             ],
           },

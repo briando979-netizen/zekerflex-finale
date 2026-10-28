@@ -41,7 +41,7 @@ export const HOWTOS: HowTo[] = [
   { audience: E, href: "/werkgever/locaties", q: "Hoe voeg ik een vestiging toe?", a: "Onder Locaties (alleen voor beheerders van de organisatie)." },
   { audience: E, href: "/werkgever/team", q: "Hoe voeg ik collega's toe?", a: "Onder Team nodig je collega's uit en kies je hun rol." },
   { audience: E, href: "/werkgever/integraties", q: "Kan ik ZekerFlex koppelen aan mijn eigen systemen?", a: "Ja, onder Integraties: een agenda-feed (iCal), CSV-exports van uren en facturen, meldingen naar Slack of Teams, webhooks en een API-sleutel." },
-  { audience: E, href: "/werkgever/overeenkomsten", q: "Hoe zit het met de Wet DBA?", a: "Elke opdracht met een zzp'er loopt via een goedgekeurde modelovereenkomst die je onder Overeenkomsten terugvindt; ZekerFlex bewaakt de signalen automatisch. Voor een vaste rol zonder zelfstandigheid kies je Via het ZekerFlex-uitzendbureau." },
+  { audience: E, href: "/werkgever/overeenkomsten", q: "Hoe zit het met de Wet DBA?", a: "ZekerFlex legt afspraken per relatie vast en bewaakt risicosignalen. Dit is geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend. Voor een vaste rol zonder zelfstandigheid kies je Via het ZekerFlex-uitzendbureau." },
   // ── allebei ──
   { audience: ["werknemer", "opdrachtgever"], q: "Hoe zet ik meldingen aan?", a: "In Chat → Instellingen → Meldingen zet je pushmeldingen aan op dit apparaat. Per gesprek kun je ook dempen." },
   { audience: ["werknemer", "opdrachtgever", "public"], q: "Hoe neem ik contact op met ZekerFlex?", a: "Via Chat → Tools → Support, of mail info@zekerflex.com." },

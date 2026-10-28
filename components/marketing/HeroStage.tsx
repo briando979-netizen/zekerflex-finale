@@ -20,7 +20,7 @@ const HERO_DEFAULTS: HeroContent = {
   eyebrow: "Flexwerk in Nederland · helder geregeld",
   titleLine1: "Zeker van je werk.",
   titleLine2: "Zeker van je mensen.",
-  lead: "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met de optie om dezelfde dag uitbetaald te worden, en volledig Wet DBA-proof — zonder tussenpartijen.",
+  lead: "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met flexibele uitbetaling en Wet DBA-risicosignalering.",
   ctaPrimary: "Ik zoek werk",
   ctaSecondary: "Ik zoek mensen",
 };

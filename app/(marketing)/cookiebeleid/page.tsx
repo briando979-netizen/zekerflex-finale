@@ -29,7 +29,7 @@ export default function CookiebeleidPage() {
       />
       <LegalSection
         heading="3. Wat is een script?"
-        body="Een script is een stukje programmacode dat het platform laat functioneren en interactief maakt. Deze code draait op onze eigen servers of op je apparaat."
+        body="Een script is een stukje programmacode dat het platform laat functioneren en interactief maakt. Deze code wordt vanaf de hosting van het platform geladen of draait op je apparaat."
       />
       <LegalSection
         heading="4. Wat is een web beacon?"

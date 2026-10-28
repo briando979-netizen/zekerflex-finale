@@ -44,8 +44,8 @@ export const GUIDES: Article[] = [
       {
         heading: "Hoe ZekerFlex dit oplost",
         paragraphs: [
-          "Elke opdracht loopt onder een door de Belastingdienst beoordeelde modelovereenkomst. Bij je eerste match met een opdrachtgever wordt automatisch een exemplaar klaargezet — beide partijen tekenen digitaal.",
-          "Daarnaast bewaakt het platform doorlopend je urenverdeling: het aantal weken achter elkaar bij dezelfde opdrachtgever, het aandeel van je omzet dat van één klant komt, en het totaal aantal uren. Loopt een samenwerking tegen een risicogrens aan, dan beperkt ZekerFlex nieuwe matches bij die opdrachtgever automatisch — vóórdat het een probleem wordt.",
+          "Bij een match zet ZekerFlex de afspraken voor de opdracht klaar en kunnen beide partijen die digitaal ondertekenen. De templates van ZekerFlex zijn niet als door de Belastingdienst goedgekeurde modelovereenkomsten geregistreerd.",
+          "Daarnaast signaleert het platform factoren zoals opeenvolgende weken en omzetconcentratie en kan het bij verhoogd risico nieuwe matches beperken. Dit is geen garantie of juridisch oordeel: de Belastingdienst beoordeelt de arbeidsrelatie aan de hand van alle omstandigheden en de manier waarop er feitelijk wordt gewerkt.",
         ],
       },
       {
@@ -188,7 +188,7 @@ export const GUIDES: Article[] = [
         heading: "Identiteit en documenten",
         paragraphs: [
           "De identiteitscontrole gaat via een korte digitale check. Daarnaast upload je een identiteitsbewijs (paspoort of ID-kaart) en een recent bankafschrift waarop je naam en IBAN staan — die IBAN wordt gecontroleerd voordat er uitbetaald kan worden.",
-          "Je gegevens blijven op de Nederlandse infrastructuur van ZekerFlex; je BSN wordt alleen versleuteld opgeslagen, nooit als leesbaar nummer.",
+          "ZekerFlex gebruikt dienstverleners voor onderdelen van het platform. Je BSN wordt versleuteld opgeslagen; in de app wordt het niet als volledig nummer getoond.",
         ],
       },
     ],
@@ -296,9 +296,9 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
   {
     category: "Compliance & verzekering",
     items: [
-      { q: "Is werken via ZekerFlex Wet DBA-proof?", a: "Elke opdracht loopt onder een goedgekeurde modelovereenkomst en het platform bewaakt automatisch de risicosignalen — urenconcentratie, opeenvolgende weken en omzetafhankelijkheid." },
+      { q: "Is werken via ZekerFlex Wet DBA-proof?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie, opeenvolgende weken en omzetafhankelijkheid. Dat geeft geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend." },
       { q: "Ben ik verzekerd tijdens een dienst?", a: "Ja. Zodra je een dienst accepteert val je onder de collectieve dekking van ZekerFlex: bedrijfsaansprakelijkheid, ongevallen tijdens werk en woon-werkverkeer, en rechtsbijstand bij een geschil uit de opdracht." },
-      { q: "Wat gebeurt er met mijn gegevens?", a: "Alles draait op Nederlandse infrastructuur van ZekerFlex. Je BSN wordt alleen versleuteld opgeslagen. Elke gevoelige handeling staat in een auditspoor." },
+      { q: "Wat gebeurt er met mijn gegevens?", a: "ZekerFlex gebruikt dienstverleners voor onderdelen van het platform. Je BSN wordt versleuteld opgeslagen en is alleen toegankelijk voor bevoegde medewerkers wanneer dat nodig is." },
     ],
   },
 ];

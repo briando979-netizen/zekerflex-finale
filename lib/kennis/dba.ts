@@ -28,11 +28,11 @@ export const BELASTINGDIENST_CHECKLIST = {
   points: [
     {
       label: "Modelovereenkomst",
-      text: "Werk met de modelovereenkomsten van ZekerFlex. Die leggen vast dat je samenwerkt op basis van zelfstandigheid.",
+      text: "Leg de afspraken over de opdracht schriftelijk vast. Een modelovereenkomst op zichzelf bepaalt niet hoe de arbeidsrelatie wordt beoordeeld; de praktijk telt mee.",
     },
     {
       label: "Bewijs",
-      text: "Bewaar de facturen en zorg dat je kunt laten zien dat de freelancer als ondernemer werkt — bijvoorbeeld via vervanging, meerdere opdrachtgevers of een eigen btw-nummer.",
+      text: "Bewaar de afspraken en leg vast hoe het werk daadwerkelijk wordt uitgevoerd. Een KvK- of btw-nummer en afspraken over vervanging zijn op zichzelf geen bewijs dat de arbeidsrelatie zelfstandigheid is.",
     },
     {
       label: "Checklist",
@@ -70,14 +70,14 @@ export const DBA_GROUPS: DbaGroup[] = [
         q: "Geldt de VAR (Verklaring Arbeidsrelatie) nog?",
         a: "Nee. De VAR is in 2016 afgeschaft. Je kunt geen VAR-verklaring meer opvragen bij een freelancer.",
         points: [
-          "Wat er nu is: de Wet DBA en modelovereenkomsten. Elke opdracht via ZekerFlex loopt onder een goedgekeurde modelovereenkomst.",
+          "Wat er nu is: de Wet DBA en bestaande modelovereenkomsten. De Belastingdienst beoordeelt sinds 6 september 2024 geen nieuwe modelovereenkomsten meer. Bestaande goedgekeurde overeenkomsten kunnen tot en met 31 december 2029 worden gebruikt, mits partijen in de praktijk volgens de afspraken werken.",
         ],
       },
       {
         q: "Waarom zijn een btw-id en KvK-nummer belangrijk?",
         a: "Dat zijn de bewijsstukken dat iemand voor de Belastingdienst een ondernemer is: een btw-id laat zien dat iemand belasting afdraagt over de omzet, een KvK-inschrijving dat iemand officieel als bedrijf staat geregistreerd.",
         points: [
-          "ZekerFlex-check: nieuwe freelancers mogen maximaal 3 klussen doen om te proeven (via de UBD-regeling). Daarna is een btw-id of KvK-nummer verplicht om via ons te werken.",
+          "ZekerFlex kan gegevens vragen die nodig zijn voor betalingen en wettelijke rapportages. De UBD-regeling is geen algemene vrijstelling van btw-verplichtingen en kent geen vaste 'eerste drie klussen'-regel.",
         ],
       },
       {
@@ -174,25 +174,24 @@ export const DBA_GROUPS: DbaGroup[] = [
       },
       {
         q: "Wat zijn de risico's als het wél schijnzelfstandigheid is?",
-        a: "Vindt de Belastingdienst dat iemand eigenlijk in loondienst is (geweest), dan kun je een naheffing krijgen: je betaalt alsnog de loonbelasting en premies die niet zijn afgedragen.",
+        a: "Stelt de Belastingdienst vast dat sprake is van loondienst, dan kan de opdrachtgever correctieverplichtingen en naheffingsaanslagen voor loonheffingen krijgen.",
         points: [
-          "In 2026 komt daar nog geen extra boete bovenop, tenzij de Belastingdienst kan bewijzen dat het met opzet ging.",
+          "In 2026 legt de Belastingdienst geen verzuimboetes op voor schijnzelfstandigheid. Vergrijpboetes zijn sinds 1 januari 2026 wel mogelijk als aan de voorwaarden daarvoor is voldaan.",
         ],
       },
       {
         q: "Wat is een verzuimboete, en wat is het verschil met een vergrijpboete?",
-        a: "Een verzuimboete is de tik op de vingers voor administratieve slordigheid, zonder kwade wil. Een vergrijpboete is de zware hamer: die krijg je bij opzet of grove schuld — dat is fraude.",
+        a: "Een verzuimboete is een boete voor een bepaalde overtreding zonder dat opzet hoeft te worden bewezen. Een vergrijpboete kan worden opgelegd bij opzet of grove schuld; dat is niet hetzelfde als alleen fraude.",
         points: [
           "De bewijslast voor een vergrijpboete ligt hoger, maar de bedragen ook.",
         ],
       },
       {
         q: "Gaan er in 2026 dingen veranderen in de handhaving?",
-        a: "De Belastingdienst controleert weer volop — de 'pauze' is voorbij. Maar we zitten nog in een overgangsfase.",
+        a: "Sinds 1 januari 2025 geldt het handhavingsmoratorium niet meer. In 2026 legt de Belastingdienst nog geen verzuimboetes op, maar vergrijpboetes zijn wel mogelijk.",
         points: [
-          "Maak je per ongeluk een fout in de inhuur, dan volgt in 2026 nog geen verzuimboete maar een corrigerend gesprek.",
-          "Alleen bij kwaadwillendheid (bewust de regels negeren) kan de Belastingdienst wél ingrijpen.",
-          "Conclusie: doe je je best om het goed te regelen en leg je inspanningen vast, dan hoef je je geen zorgen te maken.",
+          "Bij vastgestelde schijnzelfstandigheid kan de Belastingdienst correctieverplichtingen en naheffingsaanslagen opleggen.",
+          "De beoordeling hangt af van de feiten en omstandigheden en van hoe partijen in de praktijk samenwerken.",
         ],
       },
     ],
@@ -236,8 +235,8 @@ export const DBA_GROUPS: DbaGroup[] = [
           "Aanmelden: account aanmaken in de app.",
           "ID-check: paspoort of ID-kaart scannen (geen rijbewijs). Onze partner checkt de identiteit én of iemand in Nederland mag werken.",
           "Profiel vullen: foto, ervaring en skills.",
-          "Eerste klus: direct reageren mogelijk; de eerste 3 klussen zonder btw-id (via de UBD-regeling).",
-          "Ondernemer worden: na 3 klussen is een btw-id verplicht om verder te kunnen.",
+          "Starten: controleer in je account welke registratie- en belastinggegevens voor jouw werkvorm nodig zijn.",
+          "Btw: of je een btw-id nodig hebt en btw moet berekenen hangt af van je situatie, niet van een algemeen aantal klussen.",
         ],
       },
       {

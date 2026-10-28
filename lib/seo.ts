@@ -37,8 +37,8 @@ export const SITE = {
   url: APP_BASE_URL,
   locale: "nl_NL",
   description:
-    "Het Nederlandse platform waar werknemers, flexwerkers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmatch, met de optie om dezelfde werkdag uitbetaald te worden, volledig Wet DBA-proof — en 100% zelf gehost.",
-  shortDescription: "Slim gematcht, zelf je uitbetaling kiezen, volledig Wet DBA-proof.",
+    "Het Nederlandse platform waar werknemers, flexwerkers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmatch, met flexibele uitbetaling en Wet DBA-risicosignalering.",
+  shortDescription: "Slim gematcht, zelf je uitbetaling kiezen, met Wet DBA-risicosignalering.",
   keywords: [
     // wat we zijn
     "freelance werk",
@@ -331,7 +331,7 @@ export function faqJsonLd(): Record<string, unknown> {
     ],
     [
       "Hoe zit het met de Wet DBA?",
-      "Elke opdracht loopt via een goedgekeurde modelovereenkomst. ZekerFlex bewaakt automatisch de Wet DBA-signalen zoals urenconcentratie, opeenvolgende weken en omzetafhankelijkheid.",
+      "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie, opeenvolgende weken en omzetafhankelijkheid. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie.",
     ],
     [
       "Wie kan zich aanmelden?",

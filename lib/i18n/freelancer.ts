@@ -354,7 +354,7 @@ const nl = {
     stat3: "Betaalt na goedkeuring van je uren — jij kiest je uitbetaalsnelheid.",
     allJobsOf: (name: string) => `Alle klussen van ${name}`,
     alsoForYou: "Misschien zijn deze klussen ook iets voor jou",
-    footer: "Zodra je wordt uitgekozen maakt ZekerFlex automatisch een Wet DBA-proof modelovereenkomst aan. Na goedkeuring van je uren kies je zelf hoe snel je wordt uitbetaald. Kun je onverhoopt niet? Regel op tijd een vervanger via Mijn klussen — last-minute afzeggen telt mee in je betrouwbaarheidsscore.",
+    footer: "Zodra je wordt uitgekozen legt ZekerFlex de afspraken per opdrachtgever vast en signaleert het mogelijke Wet DBA-risico's. De feitelijke werkwijze blijft bepalend voor de arbeidsrelatie. Na goedkeuring van je uren kies je zelf hoe snel je wordt uitbetaald. Kun je onverhoopt niet? Regel op tijd een vervanger via Mijn klussen — last-minute afzeggen telt mee in je betrouwbaarheidsscore.",
     forQuestions: "Voor vragen over deze klus",
     messageEmployer: "Stuur de opdrachtgever een bericht",
     ibanHoldTitle: "Bevestig je nieuwe rekeningnummer",

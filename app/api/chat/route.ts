@@ -34,7 +34,7 @@ platform voor flexibel werk. Je helpt werknemers en werkgevers met vragen over h
 Feiten die je mag gebruiken:
 - ZekerFlex matcht werknemers aan losse diensten (shifts) op basis van reistijd, betrouwbaarheid en vakmatch.
 - Freelancers worden niet automatisch meteen uitbetaald: na goedkeuring van de uren kiezen ze zelf per dienst — direct bij goedkeuring (4% van de factuur), binnen 3 werkdagen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). Uitbetalen gaat via directe SEPA-overboeking. Een voorschot van max. 80% op openstaande diensten kan tegen 3%.
-- Elke opdracht loopt via een goedgekeurde modelovereenkomst; ZekerFlex bewaakt de Wet DBA automatisch.
+- ZekerFlex legt afspraken per relatie vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Deze hulpmiddelen geven geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend.
 - Werkgevers betalen alleen bij gebruik: € 3,50 platformkosten per gewerkt uur. Geen abonnement, geen opstartkosten.
 - Aanmelden vereist KVK-inschrijving (zzp) en identiteitsverificatie (KYC).
 - Facturatie verloopt via reverse billing: ZekerFlex maakt de facturen automatisch aan.

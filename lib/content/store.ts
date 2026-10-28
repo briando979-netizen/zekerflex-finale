@@ -25,7 +25,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
     group: "Homepage — hero",
     label: "Introtekst",
     default:
-      "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met de optie om dezelfde dag uitbetaald te worden, en volledig Wet DBA-proof — zonder tussenpartijen.",
+      "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met flexibele uitbetaling en Wet DBA-risicosignalering.",
     multiline: true,
   },
   { key: "hero.ctaPrimary", group: "Homepage — hero", label: "Knop 1 (werk zoeken)", default: "Ik zoek werk" },

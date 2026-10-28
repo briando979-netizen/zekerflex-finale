@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 // space when it loads. The edge build doesn't, and this route needs no Node APIs.
 export const runtime = "edge";
 
-const SHORT = "Slim gematcht, zelf je uitbetaling kiezen, volledig Wet DBA-proof. 100% zelf gehost.";
+const SHORT = "Slim gematcht, zelf je uitbetaling kiezen, met Wet DBA-risicosignalering.";
 
 export const alt = "ZekerFlex — zeker van je werk";
 export const size = { width: 1200, height: 630 };

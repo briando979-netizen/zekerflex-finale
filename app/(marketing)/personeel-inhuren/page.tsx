@@ -8,7 +8,7 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 
 const TITLE = "Personeel inhuren in heel Nederland — klus plaatsen voor flex- en uitzendkrachten";
 const DESCRIPTION =
-  "Plaats een klus en huur flexkrachten, zzp'ers of uitzendkrachten in, door heel Nederland. Gematcht op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement en Wet DBA-proof — het voordelige alternatief voor het uitzendbureau.";
+  "Plaats een klus en huur flexkrachten, zzp'ers of uitzendkrachten in heel Nederland in. Matching op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement en Wet DBA-risicosignalering.";
 
 export const metadata: Metadata = {
   title: { absolute: `${TITLE} | ZekerFlex` },

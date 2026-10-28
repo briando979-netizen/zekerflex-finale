@@ -117,7 +117,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /\bdba\b|schijnzelfstand|modelovereenkomst|wet dba/i,
-    answer: { reply: "Elke opdracht loopt via een goedgekeurde modelovereenkomst. ZekerFlex bewaakt automatisch de Wet DBA-signalen — urenconcentratie bij één opdrachtgever, opeenvolgende weken en omzetafhankelijkheid — en grijpt in voordat een samenwerking risicovol wordt.", suggestions: ["Kan ik als uitzendkracht werken?", "Wat kost ZekerFlex voor bedrijven?"] },
+    answer: { reply: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie, opeenvolgende weken en omzetafhankelijkheid. Dat geeft geen garantie over de arbeidsrelatie: de feitelijke werkwijze blijft bepalend.", suggestions: ["Kan ik als uitzendkracht werken?", "Wat kost ZekerFlex voor bedrijven?"] },
   },
   {
     re: /aanmeld|registr|account|beginnen|starten|inschrijv|hoe meld/i,

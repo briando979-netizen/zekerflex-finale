@@ -20,7 +20,7 @@ const FACTS = `
 - Freelancers: gratis meedoen, gratis matching.
 - Freelancers kiezen zelf hoe snel ze worden uitbetaald: direct na goedkeuring (4% van de factuur), binnen 3 werkdagen (2%), of gratis binnen 30 dagen.
 - Werkgevers betalen € 3,50 platformkosten per gewerkt uur. Alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.
-- Elke opdracht loopt via een goedgekeurde modelovereenkomst (Wet DBA-proof).
+- ZekerFlex legt afspraken per relatie vast en biedt Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.
 - Werken zonder KVK is mogelijk als uitzendkracht via het ZekerFlex-uitzendbureau (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).
 - Werkgevers krijgen staffelkorting bij veel uren: van € 3,50 tot € 2,50 per uur.
 - Werkgevers die snelle uitbetaling aanbieden (na kredietcheck) krijgen sneller reacties op hun klussen.
@@ -50,13 +50,13 @@ const adCopySchema = z.object({
 // language model isn't reachable, so the generator always delivers.
 const TEMPLATES: Record<AdAudience, AdCopy[]> = {
   freelancer: [
-    { headline: "Werk dat past bij jou", subheadline: "Kies zelf je klussen, dichtbij huis en op jouw tijden.", body: "Meedoen is gratis. Je kiest zelf hoe snel je betaald wordt — zelfs direct na goedkeuring van je uren. Elke opdracht loopt via een goedgekeurde modelovereenkomst.", cta: "Meld je gratis aan" },
+    { headline: "Werk dat past bij jou", subheadline: "Kies zelf je klussen, dichtbij huis en op jouw tijden.", body: "Meedoen is gratis. Je kiest zelf hoe snel je betaald wordt — zelfs direct na goedkeuring van je uren. Afspraken worden per opdrachtgever vastgelegd.", cta: "Meld je gratis aan" },
     { headline: "Vandaag gewerkt, vandaag betaald", subheadline: "Je verdiensten direct op je eigen ZekerFlex Bank.", body: "Ontvang je loon direct op je ZekerFlex Bank-rekening met gratis virtuele betaalpas. De eerste 30 dagen zijn gratis.", cta: "Start gratis" },
     { headline: "Geen KVK? Toch flexibel werken", subheadline: "Werk als uitzendkracht via het ZekerFlex-uitzendbureau.", body: "Zonder KVK werk je als uitzendkracht: wekelijkse verloning, StiPP-pensioen en het ABU-fasensysteem geregeld.", cta: "Bekijk klussen" },
   ],
   werkgever: [
     { headline: "Personeel nodig? Binnen minuten geregeld", subheadline: "Plaats een dienst, betrouwbare krachten reageren direct.", body: "Je betaalt € 3,50 per gewerkt uur, alleen als er echt iemand werkt. Geen abonnement, geen opstartkosten.", cta: "Plaats je eerste dienst" },
-    { headline: "Hoe meer uren, hoe goedkoper", subheadline: "Staffelkorting tot € 2,50 per uur.", body: "Bij meer uren per maand daalt je tarief automatisch van € 3,50 naar € 2,50 per uur. Elke opdracht Wet DBA-proof via een modelovereenkomst.", cta: "Bekijk de prijzen" },
+    { headline: "Hoe meer uren, hoe goedkoper", subheadline: "Staffelkorting tot € 2,50 per uur.", body: "Bij meer uren per maand daalt je tarief automatisch van € 3,50 naar € 2,50 per uur. ZekerFlex legt afspraken vast en signaleert Wet DBA-risico's.", cta: "Bekijk de prijzen" },
     { headline: "Sneller je klussen gevuld", subheadline: "Bied je krachten snelle uitbetaling aan.", body: "Werkgevers die snelle uitbetaling aanbieden krijgen sneller reacties. Je betaalt alleen platformkosten als er daadwerkelijk iemand werkt.", cta: "Meld je bedrijf aan" },
   ],
 };
