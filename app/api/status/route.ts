@@ -77,7 +77,14 @@ export async function GET(): Promise<NextResponse> {
       deployment: { target: deploymentTarget(), demo: isDemoDeployment() },
       components,
     },
-    { headers: { "cache-control": "no-store" } },
+    {
+      headers: {
+        // Public status is identical for all visitors. Let the CDN reuse a
+        // probe result briefly instead of fanning every page poll out to the
+        // database, Redis and AI node; keep browsers on fresh requests.
+        "cache-control": "public, max-age=0, s-maxage=10, stale-while-revalidate=20",
+      },
+    },
   );
 }
 
