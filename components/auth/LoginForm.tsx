@@ -69,7 +69,7 @@ export function LoginForm({
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
           <input type="hidden" name="challenge" value={state.challenge} />
           <input type="hidden" name="email" value={state.email ?? ""} />
-          <input type="hidden" name="remember" value="1" />
+          <input type="hidden" name="remember" value={state.remember ? "1" : ""} />
           <div className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">
             <p className="font-semibold text-ink">{t.twoFaTitle}</p>
             <p className="mt-1">{fill(t.twoFaBody, { email: state.email ?? "" })}</p>

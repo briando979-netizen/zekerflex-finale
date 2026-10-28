@@ -20,6 +20,7 @@ export interface LoginState {
   needsCode?: boolean;
   challenge?: string;
   email?: string;
+  remember?: boolean;
 }
 
 // NextAuth v5 sometimes wraps the thrown CredentialsSignin; read the code from
@@ -46,7 +47,7 @@ export async function loginAction(
       if (err instanceof AuthError) {
         // Temporarily locked after too many failures — say so, don't blame the code.
         if (codeOf(err) === "locked") {
-          return { error: "Te veel pogingen — je account is ongeveer 15 minuten geblokkeerd. Wacht even en probeer daarna opnieuw.", needsCode: true, challenge, email };
+          return { error: "Te veel pogingen — je account is ongeveer 15 minuten geblokkeerd. Wacht even en probeer daarna opnieuw.", needsCode: true, challenge, email, remember: remember === "1" };
         }
         // Decide wrong-code vs expired from the challenge itself, not from the
         // NextAuth error code (which doesn't always survive the wrapping). As
@@ -54,7 +55,7 @@ export async function loginAction(
         // mistyped code never bounces the user back to the password step.
         const stillValid = openLoginChallenge(challenge) !== null;
         return stillValid
-          ? { error: "Die code klopt niet (of is al gebruikt). Probeer de nieuwste code uit je app.", needsCode: true, challenge, email }
+          ? { error: "Die code klopt niet (of is al gebruikt). Probeer de nieuwste code uit je app.", needsCode: true, challenge, email, remember: remember === "1" }
           : { error: "Je inlogpoging is verlopen. Log opnieuw in." };
       }
       throw err;
@@ -84,7 +85,13 @@ export async function loginAction(
     // it so Next performs the redirect. Only auth failures are handled here.
     if (err instanceof AuthError) {
       if (codeOf(err) === "2fa_required") {
-        return { error: null, needsCode: true, challenge: mintLoginChallenge(parsed.data.email), email: parsed.data.email };
+        return {
+          error: null,
+          needsCode: true,
+          challenge: mintLoginChallenge(parsed.data.email),
+          email: parsed.data.email,
+          remember: parsed.data.remember === "1",
+        };
       }
       return { error: "Ongeldige inloggegevens." };
     }
