@@ -25,8 +25,11 @@ param(
   [switch]$NoSleep,
   [switch]$ShowKey,
   [string]$Site = "https://www.zekerflex.com",
-  [string]$Model = "llama3.2:3b",
-  [string]$FastModel = "llama3.2:1b",
+  [string]$Model = "qwen3:4b",
+  [string]$FastModel = "qwen3:1.7b",
+  [string]$ReasoningModel = "qwen3:4b",
+  [string]$CodeModel = "qwen2.5-coder:3b",
+  [string]$TranslateModel = "qwen3:4b",
   [string]$EmbedModel = "nomic-embed-text"
 )
 
@@ -85,7 +88,8 @@ if (-not (OllamaUp)) {
   if (-not (OllamaUp)) { throw "Ollama start niet. Open de Ollama-app één keer handmatig en probeer opnieuw." }
 }
 $have = (& $ollama list) -join "`n"
-foreach ($m in @($Model, $FastModel, $EmbedModel)) {
+$models = @($Model, $FastModel, $ReasoningModel, $CodeModel, $TranslateModel, $EmbedModel) | Where-Object { $_ } | Select-Object -Unique
+foreach ($m in $models) {
   $name = if ($m.Contains(":")) { $m } else { "$m`:latest" }
   if ($have -notmatch [regex]::Escape($name)) { Say "Model downloaden: $m"; & $ollama pull $m }
 }
@@ -131,6 +135,9 @@ LLM_API_KEY=$key
 AI_ALLOW_REMOTE=true
 LLM_MODEL=$Model
 LLM_FAST_MODEL=$FastModel
+LLM_REASONING_MODEL=$ReasoningModel
+LLM_CODE_MODEL=$CodeModel
+LLM_TRANSLATE_MODEL=$TranslateModel
 LLM_EMBED_MODEL=$EmbedModel
 LLM_TIMEOUT_MS=90000
 "@
@@ -148,7 +155,6 @@ if ($firstRun) {
 }
 
 # ── 5. aanmelden + bewaken ─────────────────────────────────────────────────────
-$models = @($Model, $FastModel, $EmbedModel)
 $warned = $false
 Say "AI-node draait. Laat dit venster open (minimaliseren mag). Ctrl+C stopt."
 while ($true) {

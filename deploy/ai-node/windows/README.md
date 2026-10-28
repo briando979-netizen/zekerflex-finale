@@ -15,7 +15,7 @@ powershell -ExecutionPolicy Bypass -File deploy\ai-node\windows\start-ai-node.ps
 - `-Install` laat de AI-node voortaan vanzelf starten als je inlogt op Windows.
 - `-NoSleep` voorkomt dat de laptop aan de lader in slaap valt.
 
-**De eerste keer** maakt het script een geheime sleutel aan. Daarnaast zet het 6 regels op je klembord.
+**De eerste keer** maakt het script een geheime sleutel aan. Daarnaast toont het script de waarden die je in Vercel moet zetten.
 
 1. Plak die regels in Vercel → Project → Settings → Environment Variables (Production). `LLM_BASE_URL` blijft zoals het is.
 2. Klik daarna op **Redeploy**.
@@ -37,10 +37,13 @@ live site (Vercel) ──https──► Cloudflare-tunnel ──► auth-proxy.m
 
 ## Snelheid
 
-De laptop heeft geen videokaart en 8 GB geheugen, dus het script gebruikt kleine modellen:
-- `llama3.2:3b` als hoofdmodel;
-- `llama3.2:1b` als snel model;
-- `nomic-embed-text` voor de vectoren.
+De laptop heeft geen videokaart en 8 GB geheugen, dus het script gebruikt compacte modellen:
+- `qwen3:4b` voor hoofdvragen, redeneren en vertalen;
+- `qwen3:1.7b` voor snelle taken;
+- `qwen2.5-coder:3b` voor code-agents;
+- `nomic-embed-text` voor kennisbank-vectoren.
+
+Het script downloadt en registreert de modellen voor elke rol. Je kunt een rolmodel overslaan door de betreffende parameter leeg mee te geven; die rol valt dan terug op het hoofdmodel.
 
 Reken op een paar seconden tot een halve minuut per antwoord.
 

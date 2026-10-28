@@ -20,11 +20,11 @@ import { getRoleOverrideCached } from "@/lib/ai/llm-model";
 export type ModelRole = "main" | "fast" | "reasoning" | "code" | "translate" | "vision" | "embed";
 
 export const MODEL_ROLES: { role: ModelRole; label: string; env: string; recommended: string }[] = [
-  { role: "main", label: "Hoofdmodel — antwoorden en schrijven", env: "LLM_MODEL", recommended: "qwen2.5:14b" },
-  { role: "fast", label: "Snel — routeren, rerank, korte antwoorden", env: "LLM_FAST_MODEL", recommended: "llama3.2:3b" },
-  { role: "reasoning", label: "Redeneren — plannen, beoordelen, analyses", env: "LLM_REASONING_MODEL", recommended: "deepseek-r1:14b" },
-  { role: "code", label: "Code — dev-advies en orchestratie", env: "LLM_CODE_MODEL", recommended: "qwen2.5-coder:14b" },
-  { role: "translate", label: "Vertalen — meertalige chat", env: "LLM_TRANSLATE_MODEL", recommended: "aya-expanse:8b" },
+  { role: "main", label: "Hoofdmodel — antwoorden en schrijven", env: "LLM_MODEL", recommended: "qwen3:4b" },
+  { role: "fast", label: "Snel — routeren, rerank, korte antwoorden", env: "LLM_FAST_MODEL", recommended: "qwen3:1.7b" },
+  { role: "reasoning", label: "Redeneren — plannen, beoordelen, analyses", env: "LLM_REASONING_MODEL", recommended: "qwen3:4b" },
+  { role: "code", label: "Code — dev-advies en orchestratie", env: "LLM_CODE_MODEL", recommended: "qwen2.5-coder:3b" },
+  { role: "translate", label: "Vertalen — meertalige chat", env: "LLM_TRANSLATE_MODEL", recommended: "qwen3:4b" },
   { role: "vision", label: "Beeld — ID/selfie en foto's", env: "LLM_VISION_MODEL", recommended: "qwen2.5vl:7b" },
   { role: "embed", label: "Vectoren — RAG-embeddings", env: "LLM_EMBED_MODEL", recommended: "nomic-embed-text" },
 ];
