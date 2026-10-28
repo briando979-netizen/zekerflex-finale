@@ -79,10 +79,8 @@ export function SiteFooter() {
             voor informatie over gegevensverwerking en betrokken dienstverleners.
           </p>
           <div className="mt-5 flex items-center gap-2 text-xs text-white/50">
-            <span className="h-2 w-2 rounded-full bg-brand-mint animate-pulse-dot" />
-            Alle systemen operationeel ·{" "}
             <Link href="/status" className="underline hover:text-white">
-              status
+              Bekijk de systeemstatus
             </Link>
           </div>
           <SocialLinks className="mt-6" />
