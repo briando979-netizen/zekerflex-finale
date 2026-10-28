@@ -4,17 +4,17 @@ import { env } from "@/lib/env";
 import { sendMail, verificationEmail, welcomeEmail } from "@/lib/mail";
 import { getFiscal } from "@/lib/fiscal/store";
 import { mintToken, consumeToken, consumeCode, latestVerification } from "@/lib/mail/store";
+import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // E-mail address verification.
 //
-// Tokens live on disk (storage/mail/tokens) — no Redis, no database schema
-// change. The verification e-mail goes through lib/mail (real SMTP when
-// configured, always captured in the local mailbox at /admin/mail).
+// Tokens live in the Postgres-backed mail store, and resend cooldowns use
+// shared Redis so they apply across serverless instances. Verification mail
+// goes through lib/mail (real SMTP when configured, captured in /admin/mail).
 // ---------------------------------------------------------------------------
 
 const TOKEN_TTL_SECONDS = 24 * 60 * 60;
-const cooldown = new Map<string, number>(); // userId -> earliest next send (ms), in-process only
 
 export async function isEmailVerified(userId: string): Promise<boolean> {
   const u = await prisma.user.findUnique({
@@ -38,12 +38,20 @@ export async function sendVerificationEmail(
   email: string,
   fullName: string,
 ): Promise<SendVerificationResult> {
-  const now = Date.now();
-  const until = cooldown.get(userId) ?? 0;
-  if (until > now) {
-    return { sent: false, link: "", delivered: false, transport: "mailbox", cooldownSeconds: Math.ceil((until - now) / 1000) };
+  const gate = await fixedWindow(
+    `email-verification:rl:${privateRateLimitIdentifier(userId)}`,
+    1,
+    45,
+  );
+  if (!gate.ok) {
+    return {
+      sent: false,
+      link: "",
+      delivered: false,
+      transport: "mailbox",
+      cooldownSeconds: gate.retryAfterSeconds || 45,
+    };
   }
-  cooldown.set(userId, now + 45_000);
 
   const { token, code } = await mintToken(userId, TOKEN_TTL_SECONDS);
   const link = `${env.APP_BASE_URL}/verifieer-email?token=${token}`;
