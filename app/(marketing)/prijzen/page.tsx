@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
+import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate";
 
 export const metadata: Metadata = {
   title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
@@ -111,6 +112,7 @@ export default function PrijzenPage() {
           reguliere termijn is gratis; sneller uitbetalen kan tegen een fee (4% bij
           urengoedkeuring, 2% binnen 3 dagen, of direct).
         </p>
+        <PlatformFeeEstimate />
       </Section>
 
       <Section tone="soft">
