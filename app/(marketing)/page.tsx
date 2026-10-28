@@ -6,7 +6,6 @@ import { Photo } from "@/components/marketing/Photo";
 import { SceneMatch, SceneWork, SceneApprove } from "@/components/marketing/Scene";
 import { HeroStage } from "@/components/marketing/HeroStage";
 import { Reveal } from "@/components/marketing/Reveal";
-import { CountUp } from "@/components/marketing/CountUp";
 import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
@@ -233,10 +232,10 @@ export default async function HomePage() {
         <div className="shell-4k relative py-24 lg:py-32">
           <div className="grid gap-14 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { v: <>&lt; <CountUp value={4} /> uur</>, l: "gemiddeld tot uitbetaling" },
-              { v: <CountUp value={98.6} decimals={1} suffix="%" />, l: "diensten volledig ingevuld" },
-              { v: <CountUp value={0} />, l: "externe tussenpartijen" },
-              { v: "24/7", l: "platform & assistent bereikbaar" },
+              { v: "€ 3,50", l: "standaard platformkosten per gewerkt uur, lager bij volume" },
+              { v: "€ 0", l: "abonnement en opstartkosten" },
+              { v: "GPS", l: "check-in en urengoedkeuring op locatie" },
+              { v: "Na uren", l: "automatische factuur na goedkeuring" },
             ].map((s, i) => (
               <Reveal key={i} delay={i * 100}>
                 <div className="fluid-stat font-display font-bold text-brand-mint">{s.v}</div>
@@ -498,7 +497,7 @@ const FAQ = [
   { q: "Hoe snel word ik als zzp'er betaald?", a: "Dat kies je zelf. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder, dan kies je een snellere uitbetaling tegen een fee: bij urengoedkeuring (4% van de factuur), binnen 3 dagen (2%) of direct. Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformfee, met de juiste btw-behandeling." },
   { q: "Hoe blijft dit binnen de Wet DBA?", a: "Elke samenwerking loopt onder een modelovereenkomst. Daarnaast bewaakt het platform doorlopend risicosignalen zoals urenconcentratie bij één opdrachtgever en te veel opeenvolgende weken, en beperkt het de matching als het spannend wordt." },
-  { q: "Is mijn data veilig?", a: "Het platform draait volledig in Nederland zonder externe tussenpartijen. Gevoelige gegevens worden versleuteld opgeslagen en elke handeling wordt vastgelegd in een auditspoor." },
+  { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
 ];
 
 /* icons */
