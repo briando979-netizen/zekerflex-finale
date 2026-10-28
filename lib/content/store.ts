@@ -87,6 +87,22 @@ export const CONTENT_REGISTRY: ContentItem[] = [
 const KEY = "content:overrides";
 type Overrides = Record<string, string>;
 
+function publicValue(key: string, value: string | undefined): string {
+  const fallback = defaultFor(key);
+  if (!value) return fallback;
+
+  // Older CMS overrides can outlive a copy correction in the registry. Avoid
+  // continuing to publish the specific hosting and DBA guarantees we removed.
+  if (
+    (key === "hero.eyebrow" && /lokaal gehost|100%.*nederland/i.test(value)) ||
+    (key === "hero.lead" && /wet dba.?proof|goedgekeurde modelovereenkomst|volledig in nederland gehost/i.test(value))
+  ) {
+    return fallback;
+  }
+
+  return value;
+}
+
 export async function getContentOverrides(): Promise<Overrides> {
   return (await kvGet<Overrides>(KEY).catch(() => null)) ?? {};
 }
@@ -97,7 +113,7 @@ const defaultFor = (key: string) => CONTENT_REGISTRY.find((c) => c.key === key)?
 export async function getContentValues(): Promise<Record<string, string>> {
   const o = await getContentOverrides();
   const out: Record<string, string> = {};
-  for (const c of CONTENT_REGISTRY) out[c.key] = o[c.key] ?? c.default;
+  for (const c of CONTENT_REGISTRY) out[c.key] = publicValue(c.key, o[c.key]);
   return out;
 }
 
@@ -105,7 +121,7 @@ export async function getContentValues(): Promise<Record<string, string>> {
 export async function getContentMap(keys: string[]): Promise<Record<string, string>> {
   const o = await getContentOverrides();
   const out: Record<string, string> = {};
-  for (const k of keys) out[k] = o[k] ?? defaultFor(k);
+  for (const k of keys) out[k] = publicValue(k, o[k]);
   return out;
 }
 
