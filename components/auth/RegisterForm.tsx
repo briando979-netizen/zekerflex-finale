@@ -65,12 +65,20 @@ export function RegisterForm({
   useEffect(() => {
     if (type !== "bedrijf" || kvk || company.trim().length < 2) {
       setKvkResults([]);
+      setKvkOpen(false);
       return;
     }
+    setKvkResults([]);
+    setKvkOpen(false);
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/company/search?q=${encodeURIComponent(company.trim())}`);
+        const res = await fetch(`/api/company/search?q=${encodeURIComponent(company.trim())}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
         const d = await res.json();
+        if (controller.signal.aborted) return;
         setKvkConfigured(d.configured !== false);
         setKvkResults(Array.isArray(d.results) ? d.results : []);
         setKvkOpen(true);
@@ -78,7 +86,10 @@ export function RegisterForm({
         /* ignore */
       }
     }, 350);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
   }, [company, type, kvk]);
 
   // ---- email availability -------------------------------------------
