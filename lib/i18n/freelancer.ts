@@ -742,7 +742,7 @@ const en: FreelancerDict = {
     stat3: "Pays after your hours are approved — you choose your payout speed.",
     allJobsOf: (name) => `All jobs from ${name}`,
     alsoForYou: "These jobs might suit you too",
-    footer: "As soon as you're selected, ZekerFlex automatically creates a model agreement that complies with Dutch DBA law. After your hours are approved you choose how fast you're paid. Can't make it after all? Arrange a replacement in time via My jobs — last-minute cancellations count towards your reliability score.",
+    footer: "As soon as you're selected, ZekerFlex records the agreements for the client relationship and flags possible Dutch DBA risks. The actual working arrangement determines the employment classification. After your hours are approved you choose how fast you're paid. Can't make it after all? Arrange a replacement in time via My jobs — last-minute cancellations count towards your reliability score.",
     forQuestions: "For questions about this job",
     messageEmployer: "Send the client a message",
     ibanHoldTitle: "Confirm your new account number",

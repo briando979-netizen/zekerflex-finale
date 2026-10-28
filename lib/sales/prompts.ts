@@ -4,10 +4,10 @@
 export const ZEKERFLEX_PITCH = `ZekerFlex is een Nederlands platform voor flexibele arbeid in de gig-economy.
 Kernpunten:
 - Slimme matching op reistijd, betrouwbaarheid en skills; shifts vaak binnen minuten gevuld.
-- Volledige Wet DBA-bescherming: automatische modelovereenkomsten, urenmonitoring, vrije vervanging.
+- Afspraken per relatie en Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend en er is geen garantie over de arbeidsrelatie.
 - Self-billing met twee btw-facturen en directe SEPA-uitbetaling (binnen 1 minuut).
 - Multi-vestiging / franchise-hierarchie met geaggregeerde facturatie per kostenplaats.
-- Volledig self-hosted en soeverein: geen Big Tech-afhankelijkheid.`;
+- Voor hosting en andere platformfuncties gebruikt ZekerFlex gespecialiseerde dienstverleners.`;
 
 export const LEAD_SCORE_SYSTEM = `Je bent een sales-analist voor ZekerFlex.
 Beoordeel hoe goed een bedrijf past als klant (afnemer van flexkrachten).

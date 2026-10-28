@@ -202,7 +202,9 @@ function renderAgreementPdf(a: AgreementPdfData): Buffer {
   const opdrachtTitel = a.scopeDescription || a.shift?.title || "de klus";
   const uitvoerDatum = a.shift ? ddmmyyyy(a.shift.startsAt) + " " + new Date(a.shift.startsAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }) : "de overeengekomen datum";
   const rate = a.hourlyRateCents ? euro(a.hourlyRateCents) : "het overeengekomen tarief";
-  const regNr = a.belastingdienstNr || `${a.templateKey} (${a.templateVersion})`;
+  const modelAssessmentNote = a.belastingdienstNr
+    ? `Deze Overeenkomst is gebaseerd op de door de Belastingdienst beoordeelde modelovereenkomst met kenmerk ${a.belastingdienstNr};`
+    : "Deze ZekerFlex-template is niet als door de Belastingdienst beoordeelde modelovereenkomst geregistreerd; de feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.";
   const cancelDeadline = a.shift ? new Date(a.shift.startsAt.getTime() - CANCEL_HOURS * 3_600_000) : null;
 
   const pdf = new SimplePdf();
@@ -228,7 +230,7 @@ function renderAgreementPdf(a: AgreementPdfData): Buffer {
     "Opdrachtnemer vrij is in het al dan niet sluiten van overeenkomsten van opdracht met andere opdrachtgevers;",
     "De Overeenkomst door Opdrachtgever en Opdrachtnemer wordt gekwalificeerd als een overeenkomst van opdracht in de zin van artikel 7:400 BW, waarbij Opdrachtnemer de werkzaamheden uitvoert in de zelfstandige uitoefening van zijn beroep/bedrijf en de bepalingen van Titel 7 van Boek 7 BW op de Overeenkomst van toepassing zijn behoudens indien en voor zover daarvan door Partijen in de Overeenkomst is afgeweken;",
     "Partijen ervoor kiezen om in voorkomende gevallen de fictieve dienstbetrekking van thuiswerkers of gelijkgestelden zoals bedoeld in de artikelen 2b en 2c Uitvoeringsbesluit Loonbelasting 1965 buiten toepassing te laten en daartoe deze Overeenkomst opstellen en ondertekenen voordat uitbetaling plaatsvindt;",
-    `Deze Overeenkomst gebaseerd is op de door de Belastingdienst beoordeelde modelovereenkomst met kenmerk ${regNr};`,
+    modelAssessmentNote,
     "Opdrachtnemer zich ervan bewust is dat hij op grond van de Overeenkomst geen aanspraken kan maken op pensioen en/of andere oudedagsvoorzieningen en/of uitkeringen ter zake van arbeidsongeschiktheid jegens Opdrachtgever en daarvan, voor zover nodig, hierbij uitdrukkelijk afstand doet;",
     "Opdrachtgever en Opdrachtnemer verklaren hierbij dat de Gebruiksvoorwaarden van ZekerFlex en de daarin opgenomen definities van toepassing zijn op de Overeenkomst.",
   ].forEach((t, i) => pdf.item(`${i + 1}.`, t));
@@ -501,7 +503,7 @@ export function blankAgreementPdf(personName: string): { bytes: Buffer; filename
   pdf.rule();
 
   pdf.line(
-    "Deze overeenkomst is gebaseerd op een door de Belastingdienst beoordeelde modelovereenkomst.",
+    "Dit ZekerFlex-sjabloon is niet als modelovereenkomst door de Belastingdienst beoordeeld. De feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.",
     9.5,
   );
   pdf.line(

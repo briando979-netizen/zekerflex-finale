@@ -340,10 +340,10 @@ const nl = {
     emptyBody: "Er zijn nog geen Wet DBA-risico's vastgesteld voor jouw vestigingen.",
   },
   agreements: {
-    title: "Modelovereenkomsten",
+    title: "Overeenkomsten",
     eyebrow: "Wet DBA",
     subtitle:
-      "Elke samenwerking met een freelancer loopt via een door de Belastingdienst beoordeelde modelovereenkomst. Je ziet ze hier automatisch — ook voordat er getekend is — en kunt de pdf openen.",
+      "Bekijk hier de overeenkomsten van opdracht per samenwerking. De ZekerFlex-sjablonen zijn niet door de Belastingdienst beoordeeld; de feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.",
     allPanel: "Alle overeenkomsten",
   },
   messages: {
@@ -1044,10 +1044,10 @@ const en: Dict = {
     emptyBody: "No DBA-law risks have been identified for your locations yet.",
   },
   agreements: {
-    title: "Model agreements",
+    title: "Agreements",
     eyebrow: "DBA law",
     subtitle:
-      "Every engagement with a freelancer runs via a model agreement reviewed by the Dutch tax authority. You see them here automatically — even before signing — and can open the PDF.",
+      "View the agreements for each engagement here. ZekerFlex templates are not reviewed by the Dutch tax authority; the actual working arrangement determines the employment classification.",
     allPanel: "All agreements",
   },
   messages: {
