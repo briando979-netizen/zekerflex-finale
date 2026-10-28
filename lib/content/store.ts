@@ -17,7 +17,7 @@ export interface ContentItem {
 
 export const CONTENT_REGISTRY: ContentItem[] = [
   // ─────────────────────────────────────────────────────────── Hero
-  { key: "hero.eyebrow", group: "Homepage — hero", label: "Bovenregel", default: "Nederlands · onafhankelijk · lokaal gehost" },
+  { key: "hero.eyebrow", group: "Homepage — hero", label: "Bovenregel", default: "Flexwerk in Nederland · helder geregeld" },
   { key: "hero.titleLine1", group: "Homepage — hero", label: "Titel regel 1", default: "Zeker van je werk." },
   { key: "hero.titleLine2", group: "Homepage — hero", label: "Titel regel 2 (accent)", default: "Zeker van je mensen." },
   {

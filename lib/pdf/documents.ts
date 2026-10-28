@@ -106,7 +106,7 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
     8.5,
     { color: [0.4, 0.45, 0.42] },
   );
-  pdf.line("ZekerFlex Sovereign Box — 100% in Nederland gehost.", 8.5, { color: [0.4, 0.45, 0.42] });
+  pdf.line("ZekerFlex — zeker van je werk.", 8.5, { color: [0.4, 0.45, 0.42] });
 
   return { bytes: pdf.toBuffer(), filename: `${inv.number}.pdf` };
 }
@@ -156,7 +156,7 @@ export async function shopOrderReceiptPdf(orderId: string): Promise<{ bytes: Buf
     { color: order.status === "RECEIVED" ? [0.05, 0.45, 0.2] : [0.45, 0.35, 0.05] },
   );
   pdf.gap(10);
-  pdf.line("ZekerFlex Sovereign Box — 100% in Nederland gehost.", 8.5, { color: [0.4, 0.45, 0.42] });
+  pdf.line("ZekerFlex — zeker van je werk.", 8.5, { color: [0.4, 0.45, 0.42] });
 
   return { bytes: pdf.toBuffer(), filename: `bestelling-${order.id}.pdf` };
 }

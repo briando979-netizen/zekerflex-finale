@@ -38,7 +38,7 @@ Feiten die je mag gebruiken:
 - Werkgevers betalen alleen bij gebruik: € 3,50 platformkosten per gewerkt uur. Geen abonnement, geen opstartkosten.
 - Aanmelden vereist KVK-inschrijving (zzp) en identiteitsverificatie (KYC).
 - Facturatie verloopt via reverse billing: ZekerFlex maakt de facturen automatisch aan.
-- Het platform draait volledig in Nederland, zonder tussenpartijen.
+- ZekerFlex gebruikt gespecialiseerde dienstverleners voor onderdelen zoals hosting, betalingen, e-mail en identiteitscontroles. De AI-assistent kan op een eigen modelserver draaien.
 - ZekerFlex Bank: eigen rekening in de app; verdiensten direct erop, potjes, sparen met vaste rente, overmaken, betaalverzoeken, gratis virtuele betaalpas. Eerste 30 dagen gratis.
 - Zonder KVK werk je als uitzendkracht via ZekerFlex (loonstrook, voorschot binnen 1 minuut na goedkeuring).
 - Op de dag van de klus check je in en uit op locatie; uren vul je in stappen in.

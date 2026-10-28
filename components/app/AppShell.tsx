@@ -134,7 +134,7 @@ export function AppShell({
         <div className="border-t border-hair p-3">
           <div className="mb-1 flex items-center gap-2 px-3 text-[11px] text-neutralx-400">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-mint animate-pulse-dot" />
-            Sovereign · lokaal gehost
+            ZekerFlex-platform
           </div>
           <Link href="/dashboard/profiel" className="mb-2 block rounded-xl px-3 py-2 text-xs font-medium text-neutralx-500 transition hover:bg-white hover:text-brand-600">
             Profiel en voorkeuren →

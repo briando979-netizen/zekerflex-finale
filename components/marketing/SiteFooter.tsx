@@ -75,8 +75,8 @@ export function SiteFooter() {
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
             Zeker van je werk, zeker van je mensen. Het onafhankelijke
-            Nederlandse platform voor flexibel werk — volledig lokaal gehost,
-            zonder tussenpartijen.
+            Nederlandse platform voor flexibel werk. Bekijk ons privacybeleid
+            voor informatie over gegevensverwerking en betrokken dienstverleners.
           </p>
           <div className="mt-5 flex items-center gap-2 text-xs text-white/50">
             <span className="h-2 w-2 rounded-full bg-brand-mint animate-pulse-dot" />

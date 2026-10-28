@@ -17,7 +17,7 @@ const INFO = [
   { t: "Voor wie?", b: "Freelancers (zzp of flexwerker), uitzendkrachten via ons uitzendbureau, en bedrijven die flexibele bezetting nodig hebben." },
   { t: "Wat kost het?", b: "Gratis voor freelancers. Bedrijven betalen € 3,50 platformkosten per gewerkt uur — alleen bij gebruik." },
   { t: "Hoe zit het met de Wet DBA?", b: "Elke opdracht loopt onder een goedgekeurde modelovereenkomst; het platform bewaakt doorlopend de risicosignalen." },
-  { t: "Waar draait het?", b: "Volledig op eigen Nederlandse infrastructuur. Geen data die ongevraagd de grens over gaat." },
+  { t: "Welke diensten gebruiken jullie?", b: "Voor onderdelen zoals hosting, betalingen, e-mail en identiteitscontroles gebruiken we gespecialiseerde dienstverleners. Bekijk ons privacybeleid voor meer informatie." },
   { t: "En mijn geld?", b: "Je kiest zelf: gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of sneller uitbetaald worden tegen een fee (4% bij urengoedkeuring, 2% binnen 3 dagen, of direct)." },
 ];
 

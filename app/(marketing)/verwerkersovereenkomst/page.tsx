@@ -28,11 +28,11 @@ export default function VerwerkersovereenkomstPage() {
       />
       <LegalSection
         heading="Beveiliging"
-        body="Gegevens worden versleuteld opgeslagen op infrastructuur die volledig in Nederland draait. Toegang is rolgebaseerd en elke gevoelige handeling wordt vastgelegd in een onwisbaar auditspoor."
+        body="ZekerFlex treft passende technische en organisatorische maatregelen om persoonsgegevens te beveiligen. Toegang is beperkt tot bevoegde personen voor zover dat nodig is voor hun werkzaamheden. Hosting en andere technische diensten kunnen door subverwerkers worden geleverd."
       />
       <LegalSection
         heading="Subverwerkers"
-        body="ZekerFlex maakt voor de kernfuncties van het platform geen gebruik van externe cloud- of AI-subverwerkers. Voor identiteitsverificatie en handelsregistervalidatie worden gespecialiseerde Nederlandse/EU-partijen ingezet; een actueel overzicht is op verzoek beschikbaar."
+        body="ZekerFlex kan subverwerkers inzetten voor hosting, betalingen, e-mail, identiteitsverificatie, handelsregistervalidatie en andere platformfuncties. Op verzoek verstrekt ZekerFlex een actueel overzicht van de betrokken subverwerkers."
       />
       <LegalSection
         heading="Datalekken"

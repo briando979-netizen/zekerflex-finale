@@ -77,7 +77,7 @@ export default async function HomePage() {
             items={[
               "Sneller uitbetalen als optie",
               "Geen abonnement",
-              "100% in Nederland gehost",
+              "Gebouwd voor flexibel werk in Nederland",
               "Modelovereenkomst inbegrepen",
               "Wet DBA-proof",
               "Reverse billing",

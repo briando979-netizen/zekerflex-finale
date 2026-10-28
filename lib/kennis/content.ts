@@ -227,23 +227,23 @@ export const POSTS: Post[] = [
   },
   {
     slug: "sovereign-box",
-    title: "Waarom ZekerFlex volledig in Nederland draait",
+    title: "Hoe ZekerFlex met gegevens en dienstverleners omgaat",
     excerpt:
-      "Geen afhankelijkheid van grote buitenlandse cloud- of AI-diensten. Wat 'sovereign' voor ons betekent en waarom het jouw data beschermt.",
+      "Welke diensten ZekerFlex gebruikt voor hosting, betalingen, e-mail, AI en identiteitscontroles — en waar je leest hoe we met gegevens omgaan.",
     author: "Team ZekerFlex",
     date: "2026-07-30",
     readMinutes: 4,
     body: [
       {
         paragraphs: [
-          "Veel platforms draaien op infrastructuur van een handvol grote Amerikaanse aanbieders. Handig, maar het betekent ook dat jouw gegevens — en die van je opdrachtgevers — buiten je zicht en buiten de EU verwerkt kunnen worden.",
+          "Een online platform gebruikt vaak verschillende technische diensten. Bij ZekerFlex gaat het onder meer om hosting, betalingen, e-mail en identiteitscontroles. Welke dienst bij een verwerking betrokken is, hangt af van de functie die je gebruikt.",
         ],
       },
       {
         heading: "Onze aanpak",
         paragraphs: [
-          "ZekerFlex draait op eigen infrastructuur in Nederland. De database, de matching, de facturatie en zelfs de taalmodellen voor de assistent staan lokaal. Geen data die ongevraagd de grens over gaat.",
-          "Dat betekent ook: een auditspoor van elke gevoelige handeling, en volledige inzage in wat er met je gegevens gebeurt.",
+          "De AI-assistent kan gebruikmaken van een eigen modelserver. Voor andere onderdelen gebruiken we gespecialiseerde dienstverleners, zoals hosting- en betaaldiensten. Raadpleeg het privacybeleid voor de soorten gegevens die we verwerken, de doelen en de betrokken partijen.",
+          "We beperken toegang tot gegevens tot wat nodig is voor de dienst. Je kunt bij ons terecht met vragen over inzage, correctie of verwijdering; wettelijke bewaarplichten kunnen daarbij gelden.",
         ],
       },
     ],

@@ -185,7 +185,7 @@ const nl: AuthDict = {
   shell: {
     tagline: "Zeker van je werk, zeker van je mensen.",
     or: "of",
-    points: ["Zelf kiezen hoe snel je uitbetaald wordt", "Modelovereenkomst en Wet DBA-bewaking inbegrepen", "Volledig lokaal gehost — jouw data blijft van jou"],
+    points: ["Zelf kiezen hoe snel je uitbetaald wordt", "Modelovereenkomst en Wet DBA-bewaking inbegrepen", "Transparant over gegevens en dienstverleners"],
   },
   login: {
     title: "Welkom bij ZekerFlex",

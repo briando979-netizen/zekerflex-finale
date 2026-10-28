@@ -8,7 +8,7 @@ import { canonical } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Over ZekerFlex",
   description:
-    "Een onafhankelijk Nederlands platform voor flexibel werk — volledig lokaal gehost, zonder tussenpartijen. Dit is wie we zijn en waarom we ZekerFlex bouwen.",
+    "Een platform voor flexibel werk in Nederland. Dit is wie we zijn en waarom we ZekerFlex bouwen.",
   ...canonical("/over-ons"),
 };
 
@@ -43,9 +43,10 @@ export default function OverOnsPage() {
             uitbetaling laat kiezen — met compliance ingebouwd in plaats van erbij bedacht.
           </p>
           <p>
-            Het platform draait volledig in Nederland, op eigen infrastructuur,
-            zonder afhankelijkheid van grote buitenlandse cloud- of AI-diensten.
-            Jouw gegevens blijven van jou.
+            We bouwen ZekerFlex voor de Nederlandse arbeidsmarkt. Voor hosting,
+            betalingen, e-mail en identiteitscontroles werken we met gespecialiseerde
+            dienstverleners. Onze AI-assistent kan draaien op een eigen modelserver.
+            We leggen in ons privacybeleid uit welke gegevens we gebruiken en met wie we die delen.
           </p>
         </div>
       </Section>
@@ -57,7 +58,7 @@ export default function OverOnsPage() {
           {[
             { t: "Onafhankelijk", b: "Geen tussenpartijen die aan beide kanten verdienen. Eén transparante fee, verder niets." },
             { t: "Zeker", b: "Compliance, verificatie en een auditspoor zijn geen extra's — ze zitten in de kern van het product." },
-            { t: "Lokaal", b: "Volledig in Nederland gehost. Geen data die ongevraagd de grens over gaat." },
+            { t: "Transparant", b: "We leggen uit welke gegevens we verwerken en welke dienstverleners daarbij betrokken zijn." },
           ].map((v) => (
             <div key={v.t} className="card p-6">
               <h3 className="font-display text-lg font-semibold">{v.t}</h3>

@@ -17,7 +17,7 @@ export interface HeroContent {
   ctaSecondary: string;
 }
 const HERO_DEFAULTS: HeroContent = {
-  eyebrow: "Nederlands · onafhankelijk · lokaal gehost",
+  eyebrow: "Flexwerk in Nederland · helder geregeld",
   titleLine1: "Zeker van je werk.",
   titleLine2: "Zeker van je mensen.",
   lead: "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met de optie om dezelfde dag uitbetaald te worden, en volledig Wet DBA-proof — zonder tussenpartijen.",

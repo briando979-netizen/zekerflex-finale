@@ -30,7 +30,7 @@ const CTA_BV = { label: "Organisatie aanmelden", href: "/register?type=bedrijf" 
 
 const OVER_ITEMS: MenuItem[] = [
   { title: "Ons verhaal", desc: "Waarom ZekerFlex bestaat en wat we anders doen.", href: "/over-ons#verhaal" },
-  { title: "Drie uitgangspunten", desc: "Onafhankelijk, zeker en lokaal gehost.", href: "/over-ons#uitgangspunten" },
+  { title: "Drie uitgangspunten", desc: "Onafhankelijk, zeker en transparant.", href: "/over-ons#uitgangspunten" },
   { title: "Werken bij ons", desc: "Stuur een open sollicitatie — goede mensen zijn altijd welkom.", href: "/over-ons#werken-bij" },
   { title: "Contact", desc: "Vragen of samenwerken? Mail info@zekerflex.com.", href: "mailto:info@zekerflex.com" },
 ];

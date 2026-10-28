@@ -138,7 +138,7 @@ export function ControlCenter() {
               {stale ? "Verbinding traag…" : "Alle systemen operationeel"}
             </span>
             <p className="mt-3 text-sm capitalize" style={{ color: "var(--a-dim)" }}>{dateStr}</p>
-            <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>100% lokaal gehost · geen tussenpartijen</p>
+            <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>Platformstatus en operationele metrics</p>
           </div>
         </div>
       </div>

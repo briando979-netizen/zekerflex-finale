@@ -71,7 +71,7 @@ export default function DsaPage() {
       />
       <LegalSection
         heading=""
-        body="Je hebt hier zelf invloed op: pas je adres of je voorkeuren voor functies en sectoren aan om ander aanbod te zien. Wil je geen aanbevelingen? Kies dan een andere sortering, zoals 'laatst toegevoegd' in plaats van 'aanbevolen'. De rangschikking draait volledig op onze eigen infrastructuur in Nederland; er wordt geen externe advertentie- of profileringsdienst gebruikt."
+        body="Je hebt hier zelf invloed op: pas je adres of je voorkeuren voor functies en sectoren aan om ander aanbod te zien. Wil je geen aanbevelingen? Kies dan een andere sortering, zoals 'laatst toegevoegd' in plaats van 'aanbevolen'. De rangschikking gebruikt de hierboven genoemde gegevens en factoren; we gebruiken hiervoor geen externe advertentie- of profileringsdienst."
       />
     </LegalPage>
   );

@@ -22,7 +22,6 @@ const FACTS = `
 - Werkgevers betalen € 3,50 platformkosten per gewerkt uur. Alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.
 - Elke opdracht loopt via een goedgekeurde modelovereenkomst (Wet DBA-proof).
 - Werken zonder KVK is mogelijk als uitzendkracht via het ZekerFlex-uitzendbureau (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).
-- 100% in Nederland gehost, geen tussenpartijen.
 - Werkgevers krijgen staffelkorting bij veel uren: van € 3,50 tot € 2,50 per uur.
 - Werkgevers die snelle uitbetaling aanbieden (na kredietcheck) krijgen sneller reacties op hun klussen.
 - ZekerFlex Bank: eigen rekening in de app, verdiensten direct erop, gratis virtuele betaalpas, eerste 30 dagen gratis.
@@ -58,7 +57,7 @@ const TEMPLATES: Record<AdAudience, AdCopy[]> = {
   werkgever: [
     { headline: "Personeel nodig? Binnen minuten geregeld", subheadline: "Plaats een dienst, betrouwbare krachten reageren direct.", body: "Je betaalt € 3,50 per gewerkt uur, alleen als er echt iemand werkt. Geen abonnement, geen opstartkosten.", cta: "Plaats je eerste dienst" },
     { headline: "Hoe meer uren, hoe goedkoper", subheadline: "Staffelkorting tot € 2,50 per uur.", body: "Bij meer uren per maand daalt je tarief automatisch van € 3,50 naar € 2,50 per uur. Elke opdracht Wet DBA-proof via een modelovereenkomst.", cta: "Bekijk de prijzen" },
-    { headline: "Sneller je klussen gevuld", subheadline: "Bied je krachten snelle uitbetaling aan.", body: "Werkgevers die snelle uitbetaling aanbieden krijgen sneller reacties. 100% in Nederland gehost, zonder tussenpartijen.", cta: "Meld je bedrijf aan" },
+    { headline: "Sneller je klussen gevuld", subheadline: "Bied je krachten snelle uitbetaling aan.", body: "Werkgevers die snelle uitbetaling aanbieden krijgen sneller reacties. Je betaalt alleen platformkosten als er daadwerkelijk iemand werkt.", cta: "Meld je bedrijf aan" },
   ],
 };
 
