@@ -34,6 +34,7 @@ const schema = z.object({
   vps: z.object({ provider: z.string().max(100), host: z.string().max(200), ipv4: z.string().max(60), sshKey: z.string().max(4000), note: z.string().max(2000) }),
   api: z.object({ provider: z.string().max(100), endpoint: z.string().max(300), token: z.string().max(400) }),
   bimi: z.object({ enabled: z.boolean(), selector: z.string().max(60), logoUrl: z.string().max(500), vmcUrl: z.string().max(500) }),
+  custom: z.array(z.object({ key: z.string().max(100), value: z.string().max(1000) })).max(50),
 });
 
 // PUT — opslaan. Lege api.token = bestaande token behouden (niet overschrijven).

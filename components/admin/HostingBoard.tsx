@@ -20,6 +20,7 @@ interface Cfg {
   vps: { provider: string; host: string; ipv4: string; sshKey: string; note: string };
   api: { provider: string; endpoint: string; token: string };
   bimi: { enabled: boolean; selector: string; logoUrl: string; vmcUrl: string };
+  custom: { key: string; value: string }[];
 }
 
 const inp = "w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm";
@@ -296,6 +297,19 @@ export function HostingBoard() {
             <p className="border-t border-hairstrong pt-3 text-xs text-neutralx-400">Automatisch toepassen is nog niet beschikbaar voor &ldquo;{cfg.api.provider}&rdquo;. Ondersteund: Cloudflare, Hetzner DNS. Je config exporteren kan altijd via &ldquo;Exporteer config&rdquo;.</p>
           )
         )}
+      </Section>
+
+      <Section title="Aangepaste velden" hint="Vrije sleutel/waarde-velden voor alles wat niet in een vaste sectie past — licentiesleutel, backup-locatie, interne notitie, …">
+        <div className="space-y-2">
+          {cfg.custom.map((f, i) => (
+            <div key={i} className="flex gap-2">
+              <input className={inp} value={f.key} onChange={(e) => setCfg((c) => (c ? { ...c, custom: c.custom.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)) } : c))} placeholder="naam, bv. Backup-locatie" />
+              <input className={inp} value={f.value} onChange={(e) => setCfg((c) => (c ? { ...c, custom: c.custom.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) } : c))} placeholder="waarde" />
+              <button type="button" onClick={() => setCfg((c) => (c ? { ...c, custom: c.custom.filter((_, j) => j !== i) } : c))} className="btn-ghost flex-shrink-0 text-xs text-crit">×</button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setCfg((c) => (c ? { ...c, custom: [...c.custom, { key: "", value: "" }] } : c))} className="btn-ghost mt-2 text-xs">+ veld</button>
       </Section>
 
       <div className="flex flex-wrap items-center gap-3">

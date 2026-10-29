@@ -63,6 +63,9 @@ export interface HostingConfig {
     logoUrl: string; // HTTPS-URL naar je SVG P/S-logo (bv. /bimi-logo.svg)
     vmcUrl: string; // HTTPS-URL naar je VMC/CMC (.pem) — nodig voor het Gmail-vinkje
   };
+  // Vrije sleutel/waarde-velden: alles wat niet in de vaste secties past
+  // (licentiesleutel, backup-locatie, interne notitie, …).
+  custom: { key: string; value: string }[];
   updatedAt?: string;
 }
 
@@ -74,6 +77,7 @@ export const DEFAULT_HOSTING: HostingConfig = {
   vps: { provider: "", host: "", ipv4: "", sshKey: "", note: "" },
   api: { provider: "", endpoint: "", token: "" },
   bimi: { enabled: false, selector: "default", logoUrl: "", vmcUrl: "" },
+  custom: [],
 };
 
 export async function getHostingConfig(): Promise<HostingConfig> {
@@ -93,6 +97,7 @@ export async function getHostingConfig(): Promise<HostingConfig> {
         vps: { ...DEFAULT_HOSTING.vps, ...v.vps },
         api: { ...DEFAULT_HOSTING.api, ...v.api },
         bimi: { ...DEFAULT_HOSTING.bimi, ...v.bimi },
+        custom: Array.isArray(v.custom) ? v.custom : [],
         ...(v.updatedAt ? { updatedAt: v.updatedAt } : {}),
       };
     }
