@@ -44,13 +44,16 @@ export function Studio() {
   const [slots, setSlots] = useState<SlotInfo[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
 
-  const [mode, setMode] = useState<"preset" | "idea">("preset");
+  const [mode, setMode] = useState<"preset" | "idea" | "edit">("preset");
   const [presetKey, setPresetKey] = useState("");
   const [idea, setIdea] = useState("");
   const [enhance, setEnhance] = useState(true);
   const [extra, setExtra] = useState("");
   const [aspect, setAspect] = useState<"portrait" | "landscape" | "wide">("landscape");
   const [steps, setSteps] = useState(28);
+  const [editSrc, setEditSrc] = useState<string | null>(null); // base64 bron-foto om te bewerken
+  const [instruction, setInstruction] = useState("");
+  const [denoise, setDenoise] = useState(0.6);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +102,27 @@ export function Studio() {
       const data = await res.json();
       if (!res.ok) setError(data?.error?.message ?? "Genereren mislukt.");
       else setResult(data as GenResult);
+    } catch {
+      setError("De studio is niet bereikbaar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function editPhoto() {
+    if (busy || !editSrc || !instruction.trim()) return;
+    setBusy(true);
+    setError(null);
+    setSaved(null);
+    try {
+      const res = await fetch("/api/admin/studio/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageB64: editSrc, instruction, aspect, steps, denoise }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data?.error?.message ?? "Bewerken mislukt.");
+      else setResult({ ...data, prompt: data.instruction ?? instruction } as GenResult);
     } catch {
       setError("De studio is niet bereikbaar.");
     } finally {
@@ -232,8 +256,8 @@ export function Studio() {
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         {/* controls */}
         <div className="studio-panel space-y-5 p-5 sm:p-6">
-          <div className="grid grid-cols-2 gap-1 rounded-full border border-hairstrong p-1">
-            {(["preset", "idea"] as const).map((m) => (
+          <div className="grid grid-cols-3 gap-1 rounded-full border border-hairstrong p-1">
+            {(["preset", "idea", "edit"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -242,7 +266,7 @@ export function Studio() {
                   mode === m ? "bg-brand-500 text-white" : "text-neutralx-600"
                 }`}
               >
-                {m === "preset" ? "Sjabloon" : "Eigen idee"}
+                {m === "preset" ? "Sjabloon" : m === "idea" ? "Eigen idee" : "Bewerk foto"}
               </button>
             ))}
           </div>
@@ -258,7 +282,7 @@ export function Studio() {
                 ))}
               </select>
             </label>
-          ) : (
+          ) : mode === "idea" ? (
             <div className="space-y-2">
               <label className="block">
                 <span className="field-label">Beschrijf het beeld</span>
@@ -275,17 +299,65 @@ export function Studio() {
                 Laat de lokale AI de prompt aanscherpen
               </label>
             </div>
+          ) : (
+            <div className="space-y-3">
+              <label className="block">
+                <span className="field-label">Foto om te bewerken</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setEditSrc(typeof reader.result === "string" ? reader.result : null);
+                    reader.readAsDataURL(file);
+                  }}
+                  className="field-input"
+                />
+              </label>
+              {editSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editSrc} alt="Bron-foto" className="max-h-40 rounded-lg border border-hair" />
+              )}
+              <label className="block">
+                <span className="field-label">Wat moet er veranderen?</span>
+                <textarea
+                  value={instruction}
+                  onChange={(e) => setInstruction(e.target.value)}
+                  rows={2}
+                  placeholder="Bijv. maak de achtergrond wit, voeg een bouwhelm toe, verwijder het logo"
+                  className="field-input"
+                />
+              </label>
+              <label className="block">
+                <span className="field-label">Hoeveel mag veranderen: {Math.round(denoise * 100)}%</span>
+                <input
+                  type="range"
+                  min={10}
+                  max={90}
+                  value={Math.round(denoise * 100)}
+                  onChange={(e) => setDenoise(Number(e.target.value) / 100)}
+                  className="mt-3 w-full accent-brand-500"
+                />
+              </label>
+              <p className="text-xs text-neutralx-400">
+                Eigen beeldgenerator — geen credits, geen cloud. Laag % = dicht bij het origineel, hoog % = meer vrijheid.
+              </p>
+            </div>
           )}
 
-          <label className="block">
-            <span className="field-label">Extra details <span className="text-neutralx-400">(optioneel)</span></span>
-            <input
-              value={extra}
-              onChange={(e) => setExtra(e.target.value)}
-              placeholder="regen, blauw uur, van opzij gefotografeerd…"
-              className="field-input"
-            />
-          </label>
+          {mode !== "edit" && (
+            <label className="block">
+              <span className="field-label">Extra details <span className="text-neutralx-400">(optioneel)</span></span>
+              <input
+                value={extra}
+                onChange={(e) => setExtra(e.target.value)}
+                placeholder="regen, blauw uur, van opzij gefotografeerd…"
+                className="field-input"
+              />
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
@@ -315,11 +387,16 @@ export function Studio() {
 
           <button
             type="button"
-            onClick={generate}
-            disabled={busy || !ok || (mode === "idea" && !idea.trim())}
+            onClick={mode === "edit" ? editPhoto : generate}
+            disabled={
+              busy ||
+              !ok ||
+              (mode === "idea" && !idea.trim()) ||
+              (mode === "edit" && (!editSrc || !instruction.trim()))
+            }
             className="btn-primary w-full"
           >
-            {busy ? "Bezig met renderen…" : "Genereer"}
+            {busy ? "Bezig met renderen…" : mode === "edit" ? "Bewerk foto" : "Genereer"}
           </button>
           {busy && (
             <p className="text-xs text-neutralx-400">

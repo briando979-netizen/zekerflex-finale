@@ -102,19 +102,19 @@ export interface GeneratedImage {
 const CONC_KEY = "img:gen:concurrency";
 const MAX_CONCURRENCY = 1; // a CPU render pins the box; serialise hard
 
-export async function generateImage(input: GenerateImageInput): Promise<GeneratedImage> {
+// Gedeelde render-wrapper: sovereiniteitsgrendel (alleen lokaal), één render
+// tegelijk (een CPU-render legt de box plat), en nette foutafhandeling. Zowel
+// genereren (txt2img) als bewerken (img2img) lopen hier doorheen.
+async function runRender<T>(purpose: string, fn: () => Promise<T>): Promise<T> {
   if (!env.IMAGE_ENABLED) {
     throw AppError.precondition(
       "De beeldgenerator is niet ingeschakeld. Zet IMAGE_ENABLED=true en start een lokale Stable Diffusion-server.",
     );
   }
   if (!isLocalImageBackend()) {
-    throw AppError.upstream(
-      `Soevereiniteitsgrendel: IMAGE_BASE_URL host "${imageHost()}" is niet lokaal.`,
-    );
+    throw AppError.upstream(`Soevereiniteitsgrendel: IMAGE_BASE_URL host "${imageHost()}" is niet lokaal.`);
   }
 
-  // Serialise — one render at a time.
   let held = false;
   try {
     const n = await redis.incr(CONC_KEY);
@@ -123,19 +123,9 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
     if (n > MAX_CONCURRENCY) {
       throw AppError.precondition("Er loopt al een render. Wacht tot die klaar is.");
     }
-
     const started = Date.now();
-    const out =
-      env.IMAGE_BACKEND === "a1111"
-        ? await genA1111(input)
-        : env.IMAGE_BACKEND === "openai"
-          ? await genOpenAI(input)
-          : await genComfy(input);
-    logger.info("image generated", {
-      backend: env.IMAGE_BACKEND,
-      ms: Date.now() - started,
-      purpose: input.purpose ?? "studio",
-    });
+    const out = await fn();
+    logger.info("image render", { backend: env.IMAGE_BACKEND, ms: Date.now() - started, purpose });
     return out;
   } catch (err) {
     if (err instanceof AppError) throw err;
@@ -144,11 +134,48 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
         `De render duurde te lang (> ${Math.round(env.IMAGE_TIMEOUT_MS / 1000)}s). Op een CPU kan dit gebeuren — verlaag de resolutie of het aantal stappen.`,
       );
     }
-    logger.error("image generation failed", { error: (err as Error).message });
+    logger.error("image render failed", { error: (err as Error).message });
     throw AppError.upstream(`Beeldgenerator niet bereikbaar: ${(err as Error).message}`);
   } finally {
     if (held) await redis.decr(CONC_KEY).catch(() => undefined);
   }
+}
+
+export async function generateImage(input: GenerateImageInput): Promise<GeneratedImage> {
+  return runRender(input.purpose ?? "studio", () =>
+    env.IMAGE_BACKEND === "a1111"
+      ? genA1111(input)
+      : env.IMAGE_BACKEND === "openai"
+        ? genOpenAI(input)
+        : genComfy(input),
+  );
+}
+
+export interface EditImageInput {
+  /** Bron-afbeelding als base64 (met of zonder data:-prefix). */
+  imageB64: string;
+  /** Instructie, bv. "maak de achtergrond wit" of "voeg een helm toe". */
+  prompt: string;
+  negativePrompt?: string;
+  width: number;
+  height: number;
+  /** 0..1: hoeveel er mag veranderen (laag = dicht bij het origineel). */
+  denoise?: number;
+  steps?: number;
+  seed?: number;
+  purpose?: string;
+}
+
+// Beeld-bewerking (img2img): bestaande foto + instructie → bewerkte foto. De
+// self-hosted tegenhanger van "Nano Banana", zonder credits. A1111 ondersteunt
+// dit via /sdapi/v1/img2img; voor andere backends volgt een duidelijke melding.
+export async function editImage(input: EditImageInput): Promise<GeneratedImage> {
+  if (env.IMAGE_BACKEND !== "a1111") {
+    throw AppError.precondition(
+      `Beeld-bewerken wordt nu alleen ondersteund op de a1111-backend (IMAGE_BACKEND=a1111). Huidige backend: ${env.IMAGE_BACKEND}.`,
+    );
+  }
+  return runRender(input.purpose ?? "studio:edit", () => editA1111(input));
 }
 
 async function genA1111(input: GenerateImageInput): Promise<GeneratedImage> {
@@ -176,6 +203,51 @@ async function genA1111(input: GenerateImageInput): Promise<GeneratedImage> {
   const body = (await res.json()) as { images?: string[]; info?: string };
   const b64 = body.images?.[0];
   if (!b64) throw new Error("A1111 gaf geen afbeelding terug");
+  let seed: number | undefined;
+  try {
+    seed = JSON.parse(body.info ?? "{}").seed;
+  } catch {
+    /* ignore */
+  }
+  return {
+    b64: b64.replace(/^data:image\/\w+;base64,/, ""),
+    mimeType: "image/png",
+    width: input.width,
+    height: input.height,
+    backend: "a1111",
+    ...(seed !== undefined ? { seed } : {}),
+  };
+}
+
+async function editA1111(input: EditImageInput): Promise<GeneratedImage> {
+  const base = env.IMAGE_BASE_URL.replace(/\/+$/, "");
+  const initImage = input.imageB64.replace(/^data:image\/\w+;base64,/, "");
+  const denoise = Math.min(1, Math.max(0.05, input.denoise ?? 0.6));
+  const res = await fetch(`${base}/sdapi/v1/img2img`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(env.IMAGE_API_KEY ? { Authorization: `Bearer ${env.IMAGE_API_KEY}` } : {}),
+    },
+    signal: AbortSignal.timeout(env.IMAGE_TIMEOUT_MS),
+    body: JSON.stringify({
+      init_images: [initImage],
+      prompt: input.prompt,
+      negative_prompt: input.negativePrompt ?? "",
+      denoising_strength: denoise,
+      width: input.width,
+      height: input.height,
+      steps: input.steps ?? env.IMAGE_STEPS,
+      cfg_scale: env.IMAGE_CFG,
+      sampler_name: env.IMAGE_SAMPLER,
+      ...(input.seed !== undefined ? { seed: input.seed } : {}),
+      ...(env.IMAGE_MODEL ? { override_settings: { sd_model_checkpoint: env.IMAGE_MODEL } } : {}),
+    }),
+  });
+  if (!res.ok) throw new Error(`A1111 img2img HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const body = (await res.json()) as { images?: string[]; info?: string };
+  const b64 = body.images?.[0];
+  if (!b64) throw new Error("A1111 gaf geen bewerkte afbeelding terug");
   let seed: number | undefined;
   try {
     seed = JSON.parse(body.info ?? "{}").seed;
