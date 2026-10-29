@@ -1,0 +1,8 @@
+[Unit]
+Description=ZekerFlex health-watchdog
+After=zekerflex.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__REPO__
+ExecStart=__REPO__/deploy/scripts/watchdog.sh

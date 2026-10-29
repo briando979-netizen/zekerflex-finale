@@ -19,6 +19,39 @@ uitgaande verbinding.
 
 ---
 
+## Altijd live, zonder Vercel (één commando)
+
+Wil je volledig van Vercel af en zelf de baas — een site die na een crash of
+reboot vanzelf terugkomt? Op een verse VPS (Debian/Ubuntu), na clonen + een
+ingevulde `.env.production`:
+
+```bash
+sudo bash deploy/scripts/bootstrap.sh
+```
+
+Dat doet in één keer: Docker + firewall (alleen SSH), bouwen + migreren + starten,
+en het installeert **systemd-units** zodat ZekerFlex:
+
+- **na elke reboot vanzelf opstart** (`zekerflex.service`),
+- **na een crash vanzelf herstart** (`restart: unless-stopped` op alle containers),
+- **na een vastloper vanzelf herstelt** — een **health-watchdog**
+  (`zekerflex-watchdog.timer`, elke 3 min) checkt `/api/health` en herstart alleen
+  de app-container als die echt hangt, zónder de database te raken.
+
+Beheer: `systemctl status zekerflex` · `docker compose -f docker-compose.prod.yml logs -f app`
+· `systemctl list-timers zekerflex-watchdog.timer`.
+
+**Web zonder Vercel:** het verkeer loopt via de uitgaande **Cloudflare-tunnel**
+(§2), of volledig self-hosted via je eigen **frp-tunnel** (`deploy/tunnel/`). Zet
+de DNS van je domein naar de tunnel; Vercel komt er nergens meer aan te pas.
+
+**Je data meenemen:** draait je `DATABASE_URL` nu naar een managed database
+(Neon/Vercel Postgres), dan kun je die blijven gebruiken, óf volledig soeverein
+gaan — de stack draait zijn eigen Postgres: zet `DATABASE_URL` naar de interne
+`postgres`-service en importeer je dump (`pg_dump` → `deploy/scripts/restore.sh`).
+
+---
+
 ## Losse soevereine bouwstenen
 
 Naast de all-in-one prod-stack hieronder kun je elk onderdeel **los** self-hosten —

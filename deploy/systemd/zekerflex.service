@@ -1,0 +1,18 @@
+[Unit]
+Description=ZekerFlex (self-hosted, altijd live)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__REPO__
+# Start de hele stack (app + postgres + redis + ollama + cloudflared + …).
+# Geen migraties hier — die zijn forward-only en bewust handmatig (deploy.sh).
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml stop
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

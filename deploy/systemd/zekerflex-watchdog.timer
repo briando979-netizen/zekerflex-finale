@@ -1,0 +1,10 @@
+[Unit]
+Description=ZekerFlex health-watchdog elke 3 minuten
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=3min
+Unit=zekerflex-watchdog.service
+
+[Install]
+WantedBy=timers.target
