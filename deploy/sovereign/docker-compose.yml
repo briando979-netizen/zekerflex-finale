@@ -1,0 +1,37 @@
+# Soevereine mail + DNS — draait op je EIGEN VPS, zonder TransIP/Google/Cloudflare.
+#   mailserver = Postfix + Dovecot (SMTP 25/465/587, IMAP 993, POP3 995)
+#   coredns    = je eigen authoritative nameserver (poort 53)
+# Zie README.md voor de volledige, eerlijke stappen (registrar, PTR, DKIM, SSL).
+services:
+  mailserver:
+    image: mailserver/docker-mailserver:14
+    container_name: zf-mailserver
+    hostname: mail.jouwdomein.nl # pas aan naar je eigen domein
+    env_file: mailserver.env
+    ports:
+      - "25:25" # SMTP (MX, server-naar-server)
+      - "465:465" # SMTPS (verzenden, SSL)
+      - "587:587" # submission (verzenden, STARTTLS)
+      - "993:993" # IMAPS (ophalen, SSL)
+      - "995:995" # POP3S (ophalen, SSL)
+    volumes:
+      - ./mail-data/:/var/mail/
+      - ./mail-state/:/var/mail-state/
+      - ./mail-logs/:/var/log/mail/
+      - ./config/:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    stop_grace_period: 1m
+    cap_add:
+      - NET_ADMIN # voor Fail2ban
+
+  coredns:
+    image: coredns/coredns:1.11.3
+    container_name: zf-coredns
+    command: -conf /etc/coredns/Corefile
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    volumes:
+      - ./dns/:/etc/coredns/ # Corefile + jouw-zone (geexporteerd uit Admin → Hosting & domein)
+    restart: always

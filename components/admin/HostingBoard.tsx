@@ -174,9 +174,13 @@ export function HostingBoard() {
         </div>
       </Section>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? "Opslaan…" : "Opslaan"}</button>
+        <button type="button" onClick={() => window.open("/api/admin/hosting/export", "_blank")} className="btn-ghost text-sm" title="Download DNS-zone + mail-aliassen voor je eigen CoreDNS/BIND/Postfix">
+          Exporteer config (DNS + mail)
+        </button>
         {msg && <span className="text-sm text-neutralx-600">{msg}</span>}
+        <span className="w-full text-xs text-neutralx-400">Sla eerst op; de export gebruikt de opgeslagen waarden. Volledige zelf-gehoste stack: <code>deploy/sovereign/</code>.</span>
       </div>
     </div>
   );
