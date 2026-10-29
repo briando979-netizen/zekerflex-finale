@@ -5,6 +5,7 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
+import { SECTORS } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 
 export const revalidate = 600;
@@ -75,6 +76,17 @@ export default async function FreelanceWerkPage() {
               <Link href={`/freelance-werk/${c.slug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
                 <span className="font-semibold text-ink">Freelance werk {c.name}</span>
                 <span className="block text-xs text-neutralx-500">{c.sectors.slice(0, 3).join(", ")}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">Freelance werk per sector</h2>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {SECTORS.map((s) => (
+            <li key={s.workerSlug}>
+              <Link href={`/${s.workerSlug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
+                <span className="font-semibold text-ink">Werken in de {s.label.toLowerCase()}</span>
+                <span className="block text-xs text-neutralx-500">{s.rolesShort}</span>
               </Link>
             </li>
           ))}
