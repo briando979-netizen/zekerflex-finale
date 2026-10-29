@@ -30,6 +30,7 @@ const NAV = [
   { href: "/admin/beheer", label: "⚙️ Beheer (alles instellen)", icon: <IGrid />, section: "Hoofd" },
   { href: "/admin/huisstijl", label: "🎨 Huisstijl", icon: <IImage />, section: "Hoofd" },
   { href: "/admin/cockpit", label: "Cockpit (omzet live)", icon: <IPulse />, section: "Hoofd" },
+  { href: "/admin/vooruitblik", label: "Vooruitblik (drukte)", icon: <IActivity />, section: "Hoofd" },
   { href: "/admin/kantoor", label: "Live kantoor", icon: <IActivity />, section: "Hoofd" },
   { href: "/admin/agenda", label: "Agenda", icon: <ICalendar />, section: "Hoofd" },
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },
