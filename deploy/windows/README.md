@@ -4,6 +4,20 @@ Je eigen pc als server. Gratis (geen hosting-abonnement), publiek bereikbaar via
 een Cloudflare-tunnel, en zo ingesteld dat het **blijft draaien als je de laptop
 dichtklapt** (aan de stroom).
 
+## Snelste: draait ZekerFlex al lokaal? (geen Docker nodig)
+
+Heb je de app al draaien op je pc (bv. `npm run start` op poort 3000)? Dan ben je
+in één commando online — alleen een gratis tunnel ervoor:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\windows\tunnel.ps1
+```
+
+Dit zet ook meteen de stroominstellingen (dichtklappen = blijft draaien) en print
+een gratis publieke URL. Laat het venster open. Draait je app op een andere poort?
+Geef `-Port 3100` mee. Voor de volledige stack-in-Docker (met eigen database),
+zie hieronder.
+
 ## Eerlijk eerst (natuurwet)
 
 Een laptop die **slaapt of uit staat, rekent niet** — dan kan ZekerFlex niet
