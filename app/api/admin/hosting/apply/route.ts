@@ -3,22 +3,24 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { getHostingConfig } from "@/lib/hosting/config";
-import { applyDnsToCloudflare } from "@/lib/hosting/cloudflare";
+import { dnsProviderLabels, resolveDnsProvider } from "@/lib/hosting/dns/providers";
 import { SITE } from "@/lib/seo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/admin/hosting/apply — past de OPGESLAGEN DNS-records (incl. BIMI) toe
-// op Cloudflare via het opgeslagen provider-API-token. Niet-destructief: alleen
-// aanmaken/bijwerken, nooit verwijderen. Het token blijft server-side.
+// op de ingestelde DNS-provider (Provider-API → "Provider" bepaalt welke adapter).
+// Niet-destructief: alleen aanmaken/bijwerken, nooit verwijderen. Het token
+// blijft server-side.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal }) => {
   const cfg = await getHostingConfig();
-  if (!/cloudflare/i.test(cfg.api.provider)) {
-    throw AppError.validation("Zet bij Provider-API 'Cloudflare' als provider en sla op.");
+  const provider = resolveDnsProvider(cfg.api.provider);
+  if (!provider) {
+    throw AppError.validation(`Onbekende of lege provider. Ondersteund: ${dnsProviderLabels().join(", ")}. Vul er één in bij Provider-API en sla op.`);
   }
   if (!cfg.api.token.trim()) {
-    throw AppError.validation("Geen Cloudflare API-token ingesteld (nodig: Zone:Read + DNS:Edit).");
+    throw AppError.validation(`Geen API-token ingesteld (nodig: ${provider.tokenHint}).`);
   }
 
   let host = "jouwdomein.nl";
@@ -30,18 +32,18 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal
 
   let result;
   try {
-    result = await applyDnsToCloudflare(cfg, host);
+    result = await provider.apply(cfg, host);
   } catch (e) {
-    throw AppError.validation(`Toepassen op Cloudflare mislukt: ${e instanceof Error ? e.message : "onbekende fout"}`);
+    throw AppError.validation(`Toepassen op ${provider.label} mislukt: ${e instanceof Error ? e.message : "onbekende fout"}`);
   }
 
   await recordAudit({
     category: "ADMIN",
-    action: "admin.hosting.cloudflare_apply",
+    action: "admin.hosting.dns_apply",
     severity: "info",
     actorUserId: principal.userId,
     actorLabel: "user",
-    summary: `${principal.email} paste DNS toe op Cloudflare-zone ${result.zone} (${result.created.length} nieuw, ${result.updated.length} bijgewerkt, ${result.errors.length} fouten)`,
+    summary: `${principal.email} paste DNS toe via ${result.provider} op zone ${result.zone} (${result.created.length} nieuw, ${result.updated.length} bijgewerkt, ${result.errors.length} fouten)`,
   });
 
   return NextResponse.json(result);

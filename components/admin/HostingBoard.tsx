@@ -104,7 +104,7 @@ export function HostingBoard() {
     }
   }
 
-  async function applyCloudflare() {
+  async function applyDns() {
     setApplying(true);
     setApplyResult(null);
     setMsg(null);
@@ -113,9 +113,9 @@ export function HostingBoard() {
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
         setApplyResult(d as ApplyResult);
-        setMsg(`Toegepast op Cloudflare-zone ${d.zone}.`);
+        setMsg(`Toegepast via ${d.provider} op zone ${d.zone}.`);
       } else {
-        setMsg(d?.error?.message ?? "Toepassen op Cloudflare mislukt.");
+        setMsg(d?.error?.message ?? "Toepassen mislukt.");
       }
     } finally {
       setApplying(false);
@@ -126,6 +126,12 @@ export function HostingBoard() {
 
   const host = typeof window !== "undefined" ? window.location.hostname.replace(/^www\./, "") : "jouwdomein.nl";
   const checks = hostingChecks(cfg, host);
+  const applyProvider = (() => {
+    const p = cfg.api.provider.toLowerCase();
+    if (p.includes("cloudflare")) return "Cloudflare";
+    if (p.includes("hetzner")) return "Hetzner DNS";
+    return null;
+  })();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -245,32 +251,43 @@ export function HostingBoard() {
         <div><label className={lbl}>Publieke SSH-sleutel</label><textarea className={`${inp} font-mono text-xs`} rows={3} value={cfg.vps.sshKey} onChange={(e) => set("vps", { sshKey: e.target.value })} placeholder="ssh-ed25519 AAAA… naam" /></div>
       </Section>
 
-      <Section title="Provider-API (voor automatisch toepassen)" hint="Koppel een DNS-/hostingprovider-API zodat wijzigingen later automatisch worden toegepast.">
+      <Section title="Provider-API (DNS automatisch wegschrijven)" hint="Kies je DNS-provider; de knop schrijft je DNS-records (incl. BIMI) rechtstreeks naar die provider. Cloudflare en Hetzner worden ondersteund; een nieuwe provider is één adapter.">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><label className={lbl}>Provider</label><input className={inp} value={cfg.api.provider} onChange={(e) => set("api", { provider: e.target.value })} placeholder="bv. Cloudflare" /></div>
-          <div><label className={lbl}>API-endpoint</label><input className={inp} value={cfg.api.endpoint} onChange={(e) => set("api", { endpoint: e.target.value })} placeholder="https://api.provider.com" /></div>
+          <div>
+            <label className={lbl}>Provider</label>
+            <input className={inp} list="dns-providers" value={cfg.api.provider} onChange={(e) => set("api", { provider: e.target.value })} placeholder="bv. Cloudflare" />
+            <datalist id="dns-providers">
+              <option value="Cloudflare" />
+              <option value="Hetzner DNS" />
+            </datalist>
+          </div>
+          <div><label className={lbl}>API-endpoint (optioneel)</label><input className={inp} value={cfg.api.endpoint} onChange={(e) => set("api", { endpoint: e.target.value })} placeholder="https://api.provider.com" /></div>
         </div>
         <div>
           <label className={lbl}>API-token {apiTokenSet && <span className="text-brand-600">· ingesteld</span>}</label>
           <input className={inp} type="password" value={cfg.api.token} onChange={(e) => set("api", { token: e.target.value })} placeholder={apiTokenSet ? "laat leeg om ongewijzigd te laten" : "plak hier je token"} />
         </div>
-        {cfg.api.provider.toLowerCase().includes("cloudflare") && (
+        {applyProvider ? (
           <div className="space-y-2 border-t border-hairstrong pt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={applyCloudflare} disabled={applying} className="btn-primary text-sm disabled:opacity-50">
-                {applying ? "Toepassen…" : "Pas DNS toe op Cloudflare"}
+              <button type="button" onClick={applyDns} disabled={applying} className="btn-primary text-sm disabled:opacity-50">
+                {applying ? "Toepassen…" : `Pas DNS toe op ${applyProvider}`}
               </button>
-              <span className="text-xs text-neutralx-400">Sla eerst op. Niet-destructief: records worden aangemaakt/bijgewerkt, nooit verwijderd. Token nodig met Zone:Read + DNS:Edit.</span>
+              <span className="text-xs text-neutralx-400">Sla eerst op. Niet-destructief: records worden aangemaakt/bijgewerkt, nooit verwijderd.</span>
             </div>
             {applyResult && (
               <div className="space-y-1 rounded-lg bg-paper-soft p-3 text-xs text-neutralx-600">
-                <p>Zone <span className="font-medium text-ink">{applyResult.zone}</span> — {applyResult.created.length} nieuw, {applyResult.updated.length} bijgewerkt, {applyResult.unchanged.length} ongewijzigd{applyResult.errors.length > 0 ? `, ${applyResult.errors.length} fouten` : ""}.</p>
+                <p>Zone <span className="font-medium text-ink">{applyResult.zone}</span> via {applyResult.provider} — {applyResult.created.length} nieuw, {applyResult.updated.length} bijgewerkt, {applyResult.unchanged.length} ongewijzigd{applyResult.errors.length > 0 ? `, ${applyResult.errors.length} fouten` : ""}.</p>
                 {applyResult.created.length > 0 && <p>+ {applyResult.created.join(", ")}</p>}
                 {applyResult.updated.length > 0 && <p>~ {applyResult.updated.join(", ")}</p>}
                 {applyResult.errors.length > 0 && <p className="text-crit">! {applyResult.errors.join(" · ")}</p>}
               </div>
             )}
           </div>
+        ) : (
+          cfg.api.provider.trim() && (
+            <p className="border-t border-hairstrong pt-3 text-xs text-neutralx-400">Automatisch toepassen is nog niet beschikbaar voor &ldquo;{cfg.api.provider}&rdquo;. Ondersteund: Cloudflare, Hetzner DNS. Je config exporteren kan altijd via &ldquo;Exporteer config&rdquo;.</p>
+          )
         )}
       </Section>
 

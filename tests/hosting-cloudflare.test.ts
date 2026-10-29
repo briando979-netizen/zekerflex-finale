@@ -63,8 +63,9 @@ describe("applyDnsToCloudflare", () => {
     const result = await applyDnsToCloudflare(c, "zekerflex.nl");
 
     expect(result.zone).toBe("zekerflex.nl");
-    expect(result.unchanged).toContain("A zekerflex.nl");
-    expect(result.created).toEqual(expect.arrayContaining(["TXT zekerflex.nl", "MX zekerflex.nl"]));
+    expect(result.provider).toBe("Cloudflare");
+    expect(result.unchanged).toContain("A @");
+    expect(result.created).toEqual(expect.arrayContaining(["TXT @", "MX @"]));
     expect(result.errors).toHaveLength(0);
 
     // Niet-destructief: nooit een DELETE, en de Google-verificatie-TXT (g1) nooit aangeraakt.
@@ -90,7 +91,7 @@ describe("applyDnsToCloudflare", () => {
       x.dns.records = [{ type: "A", name: "@", value: "1.2.3.4", ttl: "3600" }];
     });
     const result = await applyDnsToCloudflare(c, "zekerflex.nl");
-    expect(result.updated).toContain("A zekerflex.nl");
+    expect(result.updated).toContain("A @");
     expect(calls.some((k) => k.method === "PUT" && k.url.includes("/dns_records/a1"))).toBe(true);
   });
 
@@ -101,7 +102,7 @@ describe("applyDnsToCloudflare", () => {
       x.bimi.logoUrl = "https://zekerflex.nl/bimi-logo.svg";
     });
     const result = await applyDnsToCloudflare(c, "zekerflex.nl");
-    expect(result.created).toContain("TXT default._bimi.zekerflex.nl");
+    expect(result.created).toContain("TXT default._bimi");
     const bimi = calls.find((k) => k.method === "POST" && k.body?.name === "default._bimi.zekerflex.nl");
     expect(String(bimi?.body?.content)).toContain("v=BIMI1; l=https://zekerflex.nl/bimi-logo.svg");
   });
