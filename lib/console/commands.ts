@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { StartupReport } from "@/lib/config/startup";
 
 // ---------------------------------------------------------------------------
 // In-app "console": GEEN shell. Alleen een vaste, veilige set read-only
@@ -30,6 +31,24 @@ function renderVersion(): string {
   return [`Node:     ${process.version}`, `Env:      ${process.env.NODE_ENV ?? "?"}`, `Platform: ZekerFlex admin-console`].join("\n");
 }
 
+function renderHealth(r: StartupReport): string {
+  const yn = (b: boolean) => (b ? "ok" : "FOUT");
+  const lines = [
+    `Systeemstatus: ${r.ok ? "OK" : "AANDACHT NODIG"}  (${r.checkedAt})`,
+    `  DB:      ${yn(r.database.ok)}  ${r.database.latencyMs}ms, ${r.database.appliedMigrations} migraties${r.database.pendingMigrations.length ? `, ${r.database.pendingMigrations.length} openstaand` : ""}`,
+    `  Redis:   ${yn(r.redis.ok)}  ${r.redis.latencyMs}ms`,
+    `  LLM:     ${yn(r.llm.ok)}${r.llm.localInference ? " (lokaal)" : ""}`,
+    `  RAG:     ${r.rag.enabled ? "aan" : "uit"}  ${r.rag.chunks} chunks`,
+    `  Opslag:  ${r.storage.writable ? "schrijfbaar" : "NIET schrijfbaar"}  ${r.storage.dir}`,
+    `  Deploy:  ${r.deployment.target}${r.deployment.demo ? " (demo)" : ""}`,
+  ];
+  if (r.database.pendingMigrations.length) {
+    lines.push(`  ! openstaande migraties: ${r.database.pendingMigrations.join(", ")} — fix: npm run prisma:deploy`);
+  }
+  if (!r.llm.ok && r.llm.detail) lines.push(`  ! LLM: ${r.llm.detail}`);
+  return lines.join("\n");
+}
+
 export const COMMANDS: ConsoleCommand[] = [
   { name: "help", summary: "Toon alle commando's", run: () => renderHelp() },
   { name: "whoami", summary: "Wie ben ik (ingelogde admin)", run: (_a, ctx) => `${ctx.fullName} <${ctx.email}>\nuserId: ${ctx.userId}` },
@@ -37,6 +56,14 @@ export const COMMANDS: ConsoleCommand[] = [
   { name: "time", summary: "Servertijd (UTC + Europe/Amsterdam)", run: () => renderTime() },
   { name: "version", summary: "Runtime-info", run: () => renderVersion() },
   { name: "users", summary: "Aantal gebruikers (read-only)", run: async () => `Gebruikers: ${await prisma.user.count()}` },
+  {
+    name: "health",
+    summary: "Live systeemstatus (DB/Redis/LLM/RAG/opslag)",
+    run: async () => {
+      const { runStartupChecks } = await import("@/lib/config/startup");
+      return renderHealth(await runStartupChecks());
+    },
+  },
   { name: "ping", summary: "Antwoordt pong", run: () => "pong" },
 ];
 
