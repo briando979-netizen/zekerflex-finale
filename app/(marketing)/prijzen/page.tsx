@@ -18,6 +18,7 @@ const FAQ = [
   { q: "Krijg ik korting bij veel uren?", a: "Ja. De platformkosten dalen met je volume deze maand: vanaf 500 uur € 3,25, vanaf 2.000 uur € 3,00, vanaf 10.000 uur € 2,75 en vanaf 50.000 uur € 2,50 per uur. Je ziet je staffel live in je werkgeversomgeving." },
   { q: "Betaalt een freelancer iets voor de uitbetaling?", a: "Alleen als je sneller wilt dan de reguliere termijn. Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of eerder tegen een fee: betaalopdracht direct indienen 4% van de factuur of binnen 3 werkdagen indienen 2%. Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Kan ik een offerte op maat krijgen?", a: "Voor grotere organisaties met veel vestigingen kijken we naar volumeafspraken. Neem contact op via sales@zekerflex.com." },
+  { q: "Kan ik ZekerFlex zelf aanbieden als bureau?", a: "Ja — als losse plugin via de API, als white-label platform onder je eigen merk, of volledig self-hosted op je eigen infrastructuur. Zie de pagina /voor-bureaus." },
   { q: "Wat kost de API?", a: "Los van de klusprijs: de publieke API heeft een gratis tier en betaalde abonnementen voor hogere limieten. Zie /developers voor de prijzen." },
 ];
 
