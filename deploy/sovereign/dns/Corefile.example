@@ -1,0 +1,10 @@
+# CoreDNS Corefile — kopieer naar `Corefile` (zonder .example) in deze dns/-map:
+#   cp Corefile.example Corefile
+# Vervang 'jouwdomein.nl' door je eigen domein. Het zonebestand
+# 'db.jouwdomein.nl' haal je uit Admin → Hosting & domein → "Exporteer config"
+# en zet je naast dit bestand (de hele dns/-map wordt in de container gemount).
+jouwdomein.nl {
+    file /etc/coredns/db.jouwdomein.nl
+    log
+    errors
+}

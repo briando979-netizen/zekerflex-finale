@@ -25,8 +25,8 @@ scp -r deploy/sovereign root@<vps-ip>:/opt/zf-sovereign && ssh root@<vps-ip>
 cd /opt/zf-sovereign
 
 # 2. DNS: plaats je zone-bestand (uit Admin → Hosting & domein → Exporteer config)
-mkdir -p dns && cp <jouwdomein>-sovereign-config.txt dns/db.jouwdomein.nl
-#   maak dns/Corefile (voorbeeld onderaan deze README)
+cp <jouwdomein>-sovereign-config.txt dns/db.jouwdomein.nl
+cp dns/Corefile.example dns/Corefile   # pas 'jouwdomein.nl' erin aan
 
 # 3. Mail: env + hostname aanpassen
 cp mailserver.env.example mailserver.env   # vul domein/instellingen in
@@ -57,9 +57,11 @@ Zelf-gehoste mail **werkt**, maar aflevering is het lastigste deel: zonder corre
 
 Zet een reverse proxy met automatische certificaten vóór je app, bv. **Caddy** (zoals in `deploy/ai-node/setup.sh`): die haalt en vernieuwt Let's Encrypt-certificaten zelf. Geen betaalde CA nodig.
 
-## Voorbeeld `dns/Corefile`
+## `dns/Corefile`
 
-```
+Meegeleverd als `dns/Corefile.example` — kopieer naar `dns/Corefile` en pas je domein aan:
+
+```text
 jouwdomein.nl {
     file /etc/coredns/db.jouwdomein.nl
     log
