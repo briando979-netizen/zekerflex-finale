@@ -80,6 +80,37 @@ describe("reconcile — niet-destructief", () => {
     expect(result.errors[0]).toContain("A bad: boom");
     expect(updated).toEqual([]);
   });
+
+  it("dryRun classificeert zonder create/update aan te roepen", async () => {
+    const desired: DesiredRecord[] = [
+      { type: "A", name: "@", value: "1.1.1.1", ttl: 3600, label: "A @" }, // nieuw
+      { type: "A", name: "www", value: "3.3.3.3", ttl: 3600, label: "A www" }, // gewijzigd
+    ];
+    const existing = [{ key: "Awww", value: "2.2.2.2" }];
+    let writes = 0;
+
+    const result = await reconcile(
+      emptyResult("Test", "zone"),
+      desired,
+      existing,
+      {
+        findMatch: (d, ex) => ex.find((e) => e.key === `${d.type}${d.name}`),
+        isUnchanged: (d, m) => m.value === d.value,
+        create: async () => {
+          writes++;
+        },
+        update: async () => {
+          writes++;
+        },
+      },
+      { dryRun: true },
+    );
+
+    expect(result.dryRun).toBe(true);
+    expect(result.created).toEqual(["A @"]);
+    expect(result.updated).toEqual(["A www"]);
+    expect(writes).toBe(0);
+  });
 });
 
 describe("resolveDnsProvider", () => {

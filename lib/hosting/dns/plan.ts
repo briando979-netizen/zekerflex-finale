@@ -23,6 +23,7 @@ export interface DesiredRecord {
 export interface ApplyResult {
   provider: string;
   zone: string;
+  dryRun: boolean;
   created: string[];
   updated: string[];
   unchanged: string[];
@@ -30,7 +31,7 @@ export interface ApplyResult {
 }
 
 export function emptyResult(provider: string, zone: string): ApplyResult {
-  return { provider, zone, created: [], updated: [], unchanged: [], errors: [] };
+  return { provider, zone, dryRun: false, created: [], updated: [], unchanged: [], errors: [] };
 }
 
 // De gewenste records uit de opgeslagen config, plus het BIMI-record als er een
@@ -86,22 +87,27 @@ export interface Reconciler<E> {
 
 // Niet-destructieve upsert: per record aanmaken of bijwerken, nooit verwijderen.
 // Fouten worden per record geïsoleerd zodat één mislukking de rest niet stopt.
+// Bij dryRun wordt niets geschreven — records worden alleen geclassificeerd
+// (nieuw/bijgewerkt/ongewijzigd) zodat je vooraf ziet wat er zou gebeuren.
 export async function reconcile<E>(
   result: ApplyResult,
   desired: DesiredRecord[],
   existing: E[],
   r: Reconciler<E>,
+  opts: { dryRun?: boolean } = {},
 ): Promise<ApplyResult> {
+  const dryRun = opts.dryRun ?? false;
+  result.dryRun = dryRun;
   for (const d of desired) {
     try {
       const match = r.findMatch(d, existing);
       if (!match) {
-        await r.create(d);
+        if (!dryRun) await r.create(d);
         result.created.push(d.label);
       } else if (r.isUnchanged(d, match)) {
         result.unchanged.push(d.label);
       } else {
-        await r.update(d, match);
+        if (!dryRun) await r.update(d, match);
         result.updated.push(d.label);
       }
     } catch (e) {

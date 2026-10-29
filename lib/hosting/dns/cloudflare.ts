@@ -72,7 +72,7 @@ function cfWrite(domain: string, d: DesiredRecord): CfWrite {
   return w;
 }
 
-export async function applyDnsToCloudflare(cfg: HostingConfig, domain: string): Promise<ApplyResult> {
+export async function applyDnsToCloudflare(cfg: HostingConfig, domain: string, opts: { dryRun?: boolean } = {}): Promise<ApplyResult> {
   const token = cfg.api.token.trim();
   if (!token) throw new Error("Geen Cloudflare API-token ingesteld.");
 
@@ -84,7 +84,11 @@ export async function applyDnsToCloudflare(cfg: HostingConfig, domain: string): 
 
   const existing = (await cf<CfRecord[]>(token, `/zones/${zone.id}/dns_records?per_page=1000`)) ?? [];
 
-  return reconcile<CfRecord>(emptyResult("Cloudflare", zone.name), desiredRecords(cfg), existing, {
+  return reconcile<CfRecord>(
+    emptyResult("Cloudflare", zone.name),
+    desiredRecords(cfg),
+    existing,
+    {
     findMatch: (d, ex) => {
       const name = fqdn(domain, d.name).toLowerCase();
       const same = ex.filter((e) => e.type === d.type && e.name.toLowerCase() === name);
@@ -109,5 +113,7 @@ export async function applyDnsToCloudflare(cfg: HostingConfig, domain: string): 
     update: async (d, m) => {
       await cf(token, `/zones/${zone.id}/dns_records/${m.id}`, { method: "PUT", body: JSON.stringify(cfWrite(domain, d)) });
     },
-  });
+    },
+    opts,
+  );
 }

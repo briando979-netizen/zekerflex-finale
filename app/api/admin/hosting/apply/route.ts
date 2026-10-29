@@ -13,7 +13,10 @@ export const dynamic = "force-dynamic";
 // op de ingestelde DNS-provider (Provider-API → "Provider" bepaalt welke adapter).
 // Niet-destructief: alleen aanmaken/bijwerken, nooit verwijderen. Het token
 // blijft server-side.
-export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal }) => {
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
+  const body = (await request.json().catch(() => ({}))) as { dryRun?: unknown };
+  const dryRun = body.dryRun === true;
+
   const cfg = await getHostingConfig();
   const provider = resolveDnsProvider(cfg.api.provider);
   if (!provider) {
@@ -32,19 +35,22 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal
 
   let result;
   try {
-    result = await provider.apply(cfg, host);
+    result = await provider.apply(cfg, host, { dryRun });
   } catch (e) {
     throw AppError.validation(`Toepassen op ${provider.label} mislukt: ${e instanceof Error ? e.message : "onbekende fout"}`);
   }
 
-  await recordAudit({
-    category: "ADMIN",
-    action: "admin.hosting.dns_apply",
-    severity: "info",
-    actorUserId: principal.userId,
-    actorLabel: "user",
-    summary: `${principal.email} paste DNS toe via ${result.provider} op zone ${result.zone} (${result.created.length} nieuw, ${result.updated.length} bijgewerkt, ${result.errors.length} fouten)`,
-  });
+  // Een dry-run wijzigt niets → geen audit.
+  if (!dryRun) {
+    await recordAudit({
+      category: "ADMIN",
+      action: "admin.hosting.dns_apply",
+      severity: "info",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `${principal.email} paste DNS toe via ${result.provider} op zone ${result.zone} (${result.created.length} nieuw, ${result.updated.length} bijgewerkt, ${result.errors.length} fouten)`,
+    });
+  }
 
   return NextResponse.json(result);
 });

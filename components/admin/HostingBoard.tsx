@@ -104,16 +104,20 @@ export function HostingBoard() {
     }
   }
 
-  async function applyDns() {
+  async function applyDns(dryRun: boolean) {
     setApplying(true);
     setApplyResult(null);
     setMsg(null);
     try {
-      const res = await fetch("/api/admin/hosting/apply", { method: "POST" });
+      const res = await fetch("/api/admin/hosting/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun }),
+      });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
         setApplyResult(d as ApplyResult);
-        setMsg(`Toegepast via ${d.provider} op zone ${d.zone}.`);
+        setMsg(dryRun ? `Voorbeeld via ${d.provider} op zone ${d.zone} — niets gewijzigd.` : `Toegepast via ${d.provider} op zone ${d.zone}.`);
       } else {
         setMsg(d?.error?.message ?? "Toepassen mislukt.");
       }
@@ -270,14 +274,17 @@ export function HostingBoard() {
         {applyProvider ? (
           <div className="space-y-2 border-t border-hairstrong pt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={applyDns} disabled={applying} className="btn-primary text-sm disabled:opacity-50">
+              <button type="button" onClick={() => applyDns(true)} disabled={applying} className="btn-ghost text-sm disabled:opacity-50">
+                {applying ? "Bezig…" : "Voorbeeld (dry-run)"}
+              </button>
+              <button type="button" onClick={() => applyDns(false)} disabled={applying} className="btn-primary text-sm disabled:opacity-50">
                 {applying ? "Toepassen…" : `Pas DNS toe op ${applyProvider}`}
               </button>
-              <span className="text-xs text-neutralx-400">Sla eerst op. Niet-destructief: records worden aangemaakt/bijgewerkt, nooit verwijderd.</span>
+              <span className="text-xs text-neutralx-400">Dry-run laat zien wat er zou veranderen zónder te schrijven. Toepassen is niet-destructief: aanmaken/bijwerken, nooit verwijderen.</span>
             </div>
             {applyResult && (
               <div className="space-y-1 rounded-lg bg-paper-soft p-3 text-xs text-neutralx-600">
-                <p>Zone <span className="font-medium text-ink">{applyResult.zone}</span> via {applyResult.provider} — {applyResult.created.length} nieuw, {applyResult.updated.length} bijgewerkt, {applyResult.unchanged.length} ongewijzigd{applyResult.errors.length > 0 ? `, ${applyResult.errors.length} fouten` : ""}.</p>
+                <p>{applyResult.dryRun && <span className="mr-1 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">Voorbeeld</span>}Zone <span className="font-medium text-ink">{applyResult.zone}</span> via {applyResult.provider} — {applyResult.created.length} nieuw, {applyResult.updated.length} bijgewerkt, {applyResult.unchanged.length} ongewijzigd{applyResult.errors.length > 0 ? `, ${applyResult.errors.length} fouten` : ""}.</p>
                 {applyResult.created.length > 0 && <p>+ {applyResult.created.join(", ")}</p>}
                 {applyResult.updated.length > 0 && <p>~ {applyResult.updated.join(", ")}</p>}
                 {applyResult.errors.length > 0 && <p className="text-crit">! {applyResult.errors.join(" · ")}</p>}

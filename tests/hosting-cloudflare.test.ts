@@ -107,6 +107,21 @@ describe("applyDnsToCloudflare", () => {
     expect(String(bimi?.body?.content)).toContain("v=BIMI1; l=https://zekerflex.nl/bimi-logo.svg");
   });
 
+  it("dry-run schrijft niets maar classificeert wel", async () => {
+    const calls = mockCloudflare([{ id: "a1", type: "A", name: "zekerflex.nl", content: "9.9.9.9", ttl: 3600 }]);
+    const c = cfg((x) => {
+      x.dns.records = [
+        { type: "A", name: "@", value: "1.2.3.4", ttl: "3600" }, // gewijzigd → updated (voorbeeld)
+        { type: "TXT", name: "@", value: "v=spf1 -all", ttl: "3600" }, // nieuw → created (voorbeeld)
+      ];
+    });
+    const result = await applyDnsToCloudflare(c, "zekerflex.nl", { dryRun: true });
+    expect(result.dryRun).toBe(true);
+    expect(result.updated).toContain("A @");
+    expect(result.created).toContain("TXT @");
+    expect(calls.some((k) => k.method === "POST" || k.method === "PUT")).toBe(false);
+  });
+
   it("geeft een duidelijke fout als de zone niet bestaat", async () => {
     const fetchMock = vi.fn(async (): Promise<Response> => jsonRes({ success: true, result: [] }));
     vi.stubGlobal("fetch", fetchMock);

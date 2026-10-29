@@ -50,7 +50,7 @@ function hzWrite(zoneId: string, d: DesiredRecord): HzWrite {
   return { zone_id: zoneId, type: d.type, name: d.name || "@", value, ttl: d.ttl };
 }
 
-export async function applyDnsToHetzner(cfg: HostingConfig, domain: string): Promise<ApplyResult> {
+export async function applyDnsToHetzner(cfg: HostingConfig, domain: string, opts: { dryRun?: boolean } = {}): Promise<ApplyResult> {
   const token = cfg.api.token.trim();
   if (!token) throw new Error("Geen Hetzner DNS API-token ingesteld.");
 
@@ -82,5 +82,5 @@ export async function applyDnsToHetzner(cfg: HostingConfig, domain: string): Pro
     update: async (d, m) => {
       await hz(token, `/records/${m.id}`, { method: "PUT", body: JSON.stringify(hzWrite(zone.id, d)) });
     },
-  });
+  }, opts);
 }

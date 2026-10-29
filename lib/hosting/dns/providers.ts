@@ -13,7 +13,7 @@ export interface DnsProvider {
   label: string;
   match: RegExp; // matcht de provider-naam uit de config
   tokenHint: string; // wat voor token nodig is (voor foutmeldingen/UI)
-  apply(cfg: HostingConfig, domain: string): Promise<ApplyResult>;
+  apply(cfg: HostingConfig, domain: string, opts?: { dryRun?: boolean }): Promise<ApplyResult>;
 }
 
 export const DNS_PROVIDERS: DnsProvider[] = [
