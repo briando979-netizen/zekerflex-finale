@@ -37,6 +37,7 @@ const NAV = [
   { href: "/admin/bedrijven", label: "Bedrijven", icon: <IBriefcase />, section: "Beheer" },
   { href: "/admin/facturen", label: "Facturen", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/financien", label: "Financiën & winst", icon: <IWallet />, section: "Beheer" },
+  { href: "/admin/betalingen", label: "AI-betalingen", icon: <IWallet />, section: "Beheer" },
   { href: "/admin/icp", label: "ICP-opgave (btw)", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/stripe", label: "Stripe live", icon: <IWallet />, section: "Beheer" },
   { href: "/admin/bank", label: "ZekerFlex Bank", icon: <IWallet />, section: "Beheer" },

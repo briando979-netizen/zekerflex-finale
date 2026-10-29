@@ -287,6 +287,12 @@ const schema = z.object({
    *  alerts óók naartoe gaan, naast push + MAIL_ADMIN. Leeg = alleen push/mail. */
   OPS_ALERT_WEBHOOK: z.string().optional(),
 
+  /** Betaalrail voor de agentische betaalmotor. "off"/leeg = geen echt geld:
+   *  betalingen worden goedgekeurd maar handmatig uitgevoerd. Pas zodra de
+   *  eigenaar een echte rail aansluit (en de aansprakelijkheid accepteert)
+   *  verplaatst een GOEDGEKEURDE betaling echt geld. */
+  AGENT_PAY_RAIL: z.string().optional(),
+
   // Self-hosted TURN relay (coturn, docker-compose.prod.yml --profile turn) for
   // chat calls. Without it, calls fall back to STUN-only, which fails to
   // connect for peers behind symmetric NAT / strict corporate firewalls.
