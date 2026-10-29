@@ -40,4 +40,33 @@ describe("forecastDemand", () => {
     const f = forecastDemand([{ startsAt: daysAgo(400), positions: 9 }], { from: FROM, windowWeeks: 8 });
     expect(f.sampleShifts).toBe(0);
   });
+
+  it("trend: null zonder data, up bij groei, down bij krimp", () => {
+    expect(forecastDemand([], { from: FROM }).trend).toBeNull();
+
+    // Afgelopen 7 dagen (bv. 2 terug) 10 plekken; de 7 dagen daarvoor (bv. 9 terug) 5.
+    const grew = forecastDemand(
+      [
+        { startsAt: daysAgo(2), positions: 10 },
+        { startsAt: daysAgo(9), positions: 5 },
+      ],
+      { from: FROM },
+    );
+    expect(grew.trend).toEqual({ direction: "up", pct: 100 });
+
+    const shrank = forecastDemand(
+      [
+        { startsAt: daysAgo(2), positions: 4 },
+        { startsAt: daysAgo(9), positions: 10 },
+      ],
+      { from: FROM },
+    );
+    expect(shrank.trend?.direction).toBe("down");
+    expect(shrank.trend?.pct).toBe(-60);
+  });
+
+  it("trend: alleen recente week gevuld → up met pct null", () => {
+    const f = forecastDemand([{ startsAt: daysAgo(1), positions: 3 }], { from: FROM });
+    expect(f.trend).toEqual({ direction: "up", pct: null });
+  });
 });

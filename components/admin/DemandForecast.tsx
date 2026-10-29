@@ -8,10 +8,15 @@ interface DemandDay {
   expectedShifts: number;
   expectedPositions: number;
 }
+interface Trend {
+  direction: "up" | "down" | "flat";
+  pct: number | null;
+}
 interface Forecast {
   windowWeeks: number;
   sampleShifts: number;
   busiestWeekday: string | null;
+  trend: Trend | null;
   days: DemandDay[];
 }
 
@@ -35,7 +40,25 @@ export function DemandForecast() {
   return (
     <div className="card space-y-4 p-5">
       <div>
-        <p className="text-sm font-semibold text-ink">Verwachte drukte — komende 7 dagen</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-ink">Verwachte drukte — komende 7 dagen</p>
+          {f.trend && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                f.trend.direction === "up"
+                  ? "bg-brand-600 text-white"
+                  : f.trend.direction === "down"
+                    ? "bg-crit text-white"
+                    : "bg-paper-soft text-neutralx-600"
+              }`}
+            >
+              {f.trend.direction === "up" ? "↑" : f.trend.direction === "down" ? "↓" : "~"}{" "}
+              {f.trend.pct === null
+                ? "nieuwe vraag deze week"
+                : `${Math.abs(f.trend.pct)}% ${f.trend.direction === "flat" ? "gelijk t.o.v." : f.trend.direction === "up" ? "drukker dan" : "rustiger dan"} vorige week`}
+            </span>
+          )}
+        </div>
         <p className="mt-0.5 text-xs text-neutralx-500">
           {f.sampleShifts > 0
             ? `Op basis van ${f.sampleShifts} shifts uit de afgelopen ${f.windowWeeks} ${f.windowWeeks === 1 ? "week" : "weken"}.${f.busiestWeekday ? ` Drukste dag: ${f.busiestWeekday}.` : ""}`

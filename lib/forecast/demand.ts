@@ -12,10 +12,16 @@ export interface DemandDay {
   expectedPositions: number; // verwacht aantal in te vullen plekken
 }
 
+export interface DemandTrend {
+  direction: "up" | "down" | "flat";
+  pct: number | null; // % verschil t.o.v. vorige week; null als vorige week leeg was
+}
+
 export interface DemandForecast {
   windowWeeks: number; // aantal weken historie waarop dit gebaseerd is
   sampleShifts: number; // aantal shifts in het venster
   busiestWeekday: string | null; // drukste weekdag (null bij geen data)
+  trend: DemandTrend | null; // afgelopen 7 dagen t.o.v. de 7 dagen daarvoor
   days: DemandDay[]; // de komende dagen
 }
 
@@ -51,6 +57,24 @@ export function forecastDemand(
 
   const windowStart = new Date(from.getTime() - maxWeeks * 7 * 86_400_000);
   const inWindow = history.filter((h) => h.startsAt >= windowStart && h.startsAt <= from);
+
+  // Week-op-week trend: posities in de afgelopen 7 dagen t.o.v. de 7 dagen ervoor.
+  const weekMs = 7 * 86_400_000;
+  const since7 = new Date(from.getTime() - weekMs);
+  const since14 = new Date(from.getTime() - 2 * weekMs);
+  const sumPos = (lo: Date, hi: Date) =>
+    inWindow.filter((h) => h.startsAt >= lo && h.startsAt < hi).reduce((n, h) => n + Math.max(0, h.positions), 0);
+  const recent = sumPos(since7, from);
+  const prior = sumPos(since14, since7);
+  let trend: DemandTrend | null;
+  if (recent === 0 && prior === 0) {
+    trend = null;
+  } else if (prior === 0) {
+    trend = { direction: "up", pct: null };
+  } else {
+    const pct = Math.round(((recent - prior) / prior) * 100);
+    trend = { direction: pct > 5 ? "up" : pct < -5 ? "down" : "flat", pct };
+  }
 
   // Som per weekdag (0=zondag .. 6=zaterdag) + het aantal distinct weken in de data,
   // zodat we door het juiste aantal weken delen (ook als er weinig historie is).
@@ -88,5 +112,5 @@ export function forecastDemand(
     }
   }
 
-  return { windowWeeks: effectiveWeeks, sampleShifts: inWindow.length, busiestWeekday, days };
+  return { windowWeeks: effectiveWeeks, sampleShifts: inWindow.length, busiestWeekday, trend, days };
 }
