@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { hostingChecks } from "@/lib/hosting/check";
 import { buildBimiRecord } from "@/lib/hosting/bimi";
+import type { ApplyResult } from "@/lib/hosting/cloudflare";
 
 // Beheercentrum voor hosting/domein/mail. Bewaart de config via /api/admin/hosting
 // (KV, runtime). De provider-API-token komt leeg binnen en wordt alleen
@@ -41,6 +42,8 @@ export function HostingBoard() {
   const [apiTokenSet, setApiTokenSet] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -98,6 +101,24 @@ export function HostingBoard() {
     } else {
       set("dns", { records: [...cfg.dns.records, { type: "TXT", name: rec.name, value: rec.value, ttl: "3600" }] });
       setMsg("BIMI-record toegevoegd onder DNS-records — sla op om te bewaren.");
+    }
+  }
+
+  async function applyCloudflare() {
+    setApplying(true);
+    setApplyResult(null);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/hosting/apply", { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setApplyResult(d as ApplyResult);
+        setMsg(`Toegepast op Cloudflare-zone ${d.zone}.`);
+      } else {
+        setMsg(d?.error?.message ?? "Toepassen op Cloudflare mislukt.");
+      }
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -233,6 +254,24 @@ export function HostingBoard() {
           <label className={lbl}>API-token {apiTokenSet && <span className="text-brand-600">· ingesteld</span>}</label>
           <input className={inp} type="password" value={cfg.api.token} onChange={(e) => set("api", { token: e.target.value })} placeholder={apiTokenSet ? "laat leeg om ongewijzigd te laten" : "plak hier je token"} />
         </div>
+        {cfg.api.provider.toLowerCase().includes("cloudflare") && (
+          <div className="space-y-2 border-t border-hairstrong pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={applyCloudflare} disabled={applying} className="btn-primary text-sm disabled:opacity-50">
+                {applying ? "Toepassen…" : "Pas DNS toe op Cloudflare"}
+              </button>
+              <span className="text-xs text-neutralx-400">Sla eerst op. Niet-destructief: records worden aangemaakt/bijgewerkt, nooit verwijderd. Token nodig met Zone:Read + DNS:Edit.</span>
+            </div>
+            {applyResult && (
+              <div className="space-y-1 rounded-lg bg-paper-soft p-3 text-xs text-neutralx-600">
+                <p>Zone <span className="font-medium text-ink">{applyResult.zone}</span> — {applyResult.created.length} nieuw, {applyResult.updated.length} bijgewerkt, {applyResult.unchanged.length} ongewijzigd{applyResult.errors.length > 0 ? `, ${applyResult.errors.length} fouten` : ""}.</p>
+                {applyResult.created.length > 0 && <p>+ {applyResult.created.join(", ")}</p>}
+                {applyResult.updated.length > 0 && <p>~ {applyResult.updated.join(", ")}</p>}
+                {applyResult.errors.length > 0 && <p className="text-crit">! {applyResult.errors.join(" · ")}</p>}
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
       <div className="flex flex-wrap items-center gap-3">
