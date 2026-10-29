@@ -1,0 +1,43 @@
+# Web-based VS Code (code-server) + web-terminal (ttyd) op je EIGEN VPS.
+# Draait NIET op Vercel (serverless) — dit is bewust self-hosted, net als
+# deploy/ai-node en deploy/sovereign. Alleen Caddy staat aan het internet;
+# code-server en ttyd zijn intern en worden door Caddy geproxyed (met TLS + auth).
+# Zie README.md voor de volledige, eerlijke stappen (DNS, wachtwoord, beveiliging).
+services:
+  code-server:
+    image: codercom/code-server:4.96.4
+    container_name: zf-code-server
+    environment:
+      - PASSWORD=${PASSWORD} # login-wachtwoord voor VS Code (zet een sterk wachtwoord)
+    volumes:
+      - ./workspace:/home/coder/project # jouw code/werkmap (blijft bewaard)
+      - ./code-config:/home/coder/.config # VS Code-instellingen + extensies
+    working_dir: /home/coder/project
+    restart: always
+    # Geen poorten gepubliceerd: alleen bereikbaar via Caddy (intern netwerk).
+
+  ttyd:
+    image: tsl0922/ttyd:1.7.7
+    container_name: zf-ttyd
+    command: ttyd -W -p 7681 bash # -W = schrijfbaar; auth doet Caddy (basicauth)
+    volumes:
+      - ./workspace:/root/project
+    working_dir: /root/project
+    restart: always
+    # Geen poorten gepubliceerd: alleen via Caddy.
+
+  caddy:
+    image: caddy:2.8
+    container_name: zf-code-caddy
+    depends_on:
+      - code-server
+      - ttyd
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env # DOMAIN, TTYD_USER, TTYD_PASS_HASH voor de Caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    restart: always

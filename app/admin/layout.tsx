@@ -41,6 +41,7 @@ const NAV = [
   { href: "/admin/bank", label: "ZekerFlex Bank", icon: <IWallet />, section: "Beheer" },
   { href: "/admin/integraties", label: "API & integraties", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/hosting", label: "Hosting & domein", icon: <IGrid />, section: "Beheer" },
+  { href: "/admin/dev", label: "Terminal & VS Code", icon: <IActivity />, section: "Operatie" },
   { href: "/admin/jarvis", label: "Jarvis-assistent", icon: <IChat />, section: "Operatie" },
   { href: "/admin/specialisten", label: "AI-specialisten", icon: <IChat />, section: "Operatie" },
   { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis", icon: <IChat />, section: "Operatie" },

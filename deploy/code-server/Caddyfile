@@ -1,0 +1,17 @@
+# Caddy haalt + vernieuwt automatisch Let's Encrypt-certificaten (soeverein-vriendelijk).
+# Twee subdomeinen: code.<domein> = VS Code, term.<domein> = terminal.
+# Zet A-records voor allebei naar het IP van deze VPS.
+
+code.{$DOMAIN} {
+	# code-server heeft zelf al een wachtwoord-login (PASSWORD).
+	reverse_proxy code-server:8080
+}
+
+term.{$DOMAIN} {
+	# De terminal is krachtig — extra basicauth-laag ervoor.
+	# Genereer de hash met: docker run --rm caddy:2.8 caddy hash-password --plaintext 'jouwwachtwoord'
+	basicauth {
+		{$TTYD_USER} {$TTYD_PASS_HASH}
+	}
+	reverse_proxy ttyd:7681
+}
