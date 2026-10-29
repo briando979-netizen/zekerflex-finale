@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
-import { PARTNER_PLANS } from "@/lib/partner-plans";
+import { PartnerPlans } from "@/components/marketing/PartnerPlans";
 
 const title = "ZekerFlex voor bureaus — plugin, white-label of self-hosted";
 const description =
@@ -39,38 +39,7 @@ export default function VoorBureausPage() {
 
       <Section tone="paper">
         <SectionHead eyebrow="Pakketten" title="Kies hoe je ZekerFlex inzet" intro="Van één gekoppelde module tot je eigen, volledig zelf-gehoste platform." />
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {PARTNER_PLANS.map((p) => (
-            <div
-              key={p.id}
-              className={`flex flex-col rounded-2xl border bg-white p-6 ${p.featured ? "border-brand-500 shadow-card" : "border-hair"}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-display text-xl font-bold text-ink">{p.name}</h3>
-                {p.featured && <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-semibold text-white">Populair</span>}
-              </div>
-              <p className="mt-1 text-sm text-neutralx-600">{p.tagline}</p>
-              <p className="mt-4 font-display text-lg font-bold text-ink">{p.priceLabel}</p>
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-neutralx-700">
-                {p.features.map((f, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden>✓</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href={`mailto:sales@zekerflex.com?subject=${encodeURIComponent(`ZekerFlex ${p.name} — aanvraag`)}`}
-                className={`mt-6 inline-block rounded-full px-5 py-2.5 text-center text-sm font-semibold ${p.featured ? "btn-primary" : "btn-ghost border border-hairstrong"}`}
-              >
-                {p.ctaLabel}
-              </a>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 text-xs text-neutralx-400">
-          Bedragen zijn indicatieve startprijzen; de definitieve prijs stemmen we af op omvang en modules.
-        </p>
+        <PartnerPlans />
       </Section>
 
       <Section>
