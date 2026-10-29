@@ -19,6 +19,31 @@ uitgaande verbinding.
 
 ---
 
+## Losse soevereine bouwstenen
+
+Naast de all-in-one prod-stack hieronder kun je elk onderdeel **los** self-hosten —
+op je VPS, of thuis/op een GPU-box en via `tunnel/` aan de live app koppelen. Elke
+map heeft een eigen README.
+
+| Map | Wat | In plaats van |
+|---|---|---|
+| `ai-node/` | Eigen taalmodel (Ollama) voor de live site | OpenAI/Anthropic-credits |
+| `image-node/` | Eigen beeldgenerator + -bewerker (Stable Diffusion) | Google "Nano Banana" / credits |
+| `redis/` | Eigen Redis met TLS | Upstash (maandlimiet) |
+| `sovereign/` | Eigen DNS (CoreDNS) + mail (Postfix/Dovecot) | TransIP-/Google-DNS & -mail |
+| `code-server/` | Web-VS-Code + web-terminal (ttyd) achter Caddy | cloud-IDE's |
+| `tunnel/` | Eigen frp-tunnel + Caddy-TLS op je VPS | Cloudflare-/managed tunnel |
+| `sandbox/` | Wegwerp-container voor (onvertrouwde) code | cloud-sandboxdienst |
+| `n8n/` | Eigen automatiseringen / RAG-endpoint | Zapier/Make |
+| `jarvis-desktop/` | Laptop-Jarvis companion | — |
+| `local-coder/` | Doorbouwen bij een Claude-limiet (Aider/Codex lokaal) | — |
+
+Voor de koppeling aan de app: de LLM- en beeld-node hebben een
+"soevereiniteitsgrendel" — op afstand draaien mag met `AI_ALLOW_REMOTE=true` resp.
+`IMAGE_ALLOW_REMOTE=true` (bewust: alleen je eigen server, nooit een vreemde cloud).
+
+---
+
 ## Overzicht van de bestanden
 
 | Bestand | Doel |
