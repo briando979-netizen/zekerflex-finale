@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { hostingChecks } from "@/lib/hosting/check";
 
 // Beheercentrum voor hosting/domein/mail. Bewaart de config via /api/admin/hosting
 // (KV, runtime). De provider-API-token komt leeg binnen en wordt alleen
@@ -76,6 +77,9 @@ export function HostingBoard() {
 
   if (!cfg) return <div className="h-40 animate-pulse rounded-2xl bg-paper-soft" />;
 
+  const host = typeof window !== "undefined" ? window.location.hostname.replace(/^www\./, "") : "jouwdomein.nl";
+  const checks = hostingChecks(cfg, host);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -85,6 +89,23 @@ export function HostingBoard() {
           het daadwerkelijk toepassen gebeurt bij je provider (of later automatisch via de provider-API hieronder).
         </p>
       </div>
+
+      <Section title="Config-check" hint="Automatische controle van je DNS-, mail- en beveiligingsconfig op veelgemaakte fouten.">
+        {checks.length === 0 ? (
+          <p className="text-sm text-brand-600">Alles in orde — geen aandachtspunten gevonden.</p>
+        ) : (
+          <ul className="space-y-2">
+            {checks.map((c, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span className={`mt-0.5 flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${c.level === "warn" ? "bg-crit text-white" : "bg-paper-soft text-neutralx-600"}`}>
+                  {c.level === "warn" ? "Let op" : "Tip"}
+                </span>
+                <span><span className="font-medium text-ink">{c.title}.</span> <span className="text-neutralx-600">{c.hint}</span></span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <Section title="Mailserver" hint="Inkomende en uitgaande mail voor je domein (met SSL: IMAP 993, SMTP 465, POP3 995).">
         <div className="grid gap-3 sm:grid-cols-2">
