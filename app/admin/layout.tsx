@@ -52,6 +52,7 @@ const NAV = [
   { href: "/admin/pensioen", label: "Pensioenaangifte (StiPP)", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/fiscaal", label: "Werkvormen & btw", icon: <IDoc />, section: "Operatie" },
   { href: "/admin/uitzendbureau", label: "Uitzendbureau", icon: <IBriefcase />, section: "Operatie" },
+  { href: "/admin/recruiter", label: "AI-recruiter", icon: <IUsers />, section: "Operatie" },
   { href: "/admin/sales", label: "Sales-pijplijn", icon: <IRocket />, section: "Operatie" },
   { href: "/admin/disputes", label: "Disputen", icon: <IShield />, section: "Operatie" },
   { href: "/admin/fraude", label: "Fraude & signalen", icon: <IShield />, section: "Operatie" },
