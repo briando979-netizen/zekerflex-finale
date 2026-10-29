@@ -1,0 +1,42 @@
+name: Self-host deploy (VPS)
+
+# Deployt bij elke push naar main automatisch naar je EIGEN VPS via SSH — zodat
+# updates vanzelf live gaan, zonder Vercel. Eenmalig instellen in GitHub:
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     VPS_HOST    = IP of hostnaam van je VPS
+#     VPS_USER    = SSH-gebruiker (bv. zeker)
+#     VPS_SSH_KEY = private SSH-sleutel met toegang tot die server
+#     VPS_PATH    = pad naar de repo op de VPS (bv. /home/zeker/zekerflex)
+# Zonder deze secrets doet de workflow niets (hij slaat netjes over, faalt niet).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer of de VPS-secrets gezet zijn
+        id: check
+        run: |
+          if [ -n "${{ secrets.VPS_HOST }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "VPS-secrets niet ingesteld — deploy overgeslagen."
+          fi
+
+      - name: Deploy over SSH
+        if: steps.check.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_PATH }}
+            git pull --ff-only
+            bash deploy/scripts/deploy.sh
