@@ -25,7 +25,7 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
   const [tenantId, setTenantId] = useState("");
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [newKey, setNewKey] = useState<{ prefix: string; raw: string } | null>(null);
+  const [newKey, setNewKey] = useState<{ prefix: string; raw: string; rotatedUntil?: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function refresh() {
@@ -76,6 +76,19 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
     if (res.ok) void refresh();
   }
 
+  async function rotate(id: string) {
+    if (!window.confirm("Nieuwe sleutel uitgeven? De oude blijft nog 24 uur werken zodat je de integratie kunt omzetten.")) return;
+    setMsg(null);
+    const res = await fetch(`/api/admin/api-keys/${id}/rotate`, { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setNewKey({ prefix: d.prefix, raw: d.raw, rotatedUntil: d.oldValidUntil });
+      void refresh();
+    } else {
+      setMsg(d?.error?.message ?? "Roteren mislukt.");
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -96,6 +109,11 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
           <code className="block break-all rounded-lg border border-hairstrong bg-white px-3 py-2 text-xs">
             {newKey.raw}
           </code>
+          {newKey.rotatedUntil && (
+            <p className="text-xs text-neutralx-600">
+              De vorige sleutel blijft nog werken tot {new Date(newKey.rotatedUntil).toLocaleString("nl-NL")} — zet je integratie vóór die tijd om.
+            </p>
+          )}
           <button type="button" onClick={() => setNewKey(null)} className="btn-ghost text-xs">
             Ik heb hem bewaard
           </button>
@@ -157,23 +175,34 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
           <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen sleutels aangemaakt.</p>
         ) : (
           <ul className="divide-y divide-hair">
-            {keys.map((k) => (
-              <li key={k.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
-                <div className="min-w-0">
-                  <p className="font-medium text-ink">{k.name}</p>
-                  <p className="truncate text-xs text-neutralx-400">
-                    <code>{k.prefix}…</code> · {k.tenant?.name ?? "platformbreed"} · {k.scopes.join(", ")}
-                  </p>
-                </div>
-                {k.revokedAt ? (
-                  <span className="pill-neutral flex-shrink-0">ingetrokken</span>
-                ) : (
-                  <button type="button" onClick={() => revoke(k.id)} className="btn-ghost flex-shrink-0 text-xs text-crit">
-                    Intrekken
-                  </button>
-                )}
-              </li>
-            ))}
+            {keys.map((k) => {
+              const rev = k.revokedAt ? new Date(k.revokedAt) : null;
+              const inGrace = rev !== null && rev.getTime() > Date.now();
+              return (
+                <li key={k.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{k.name}</p>
+                    <p className="truncate text-xs text-neutralx-400">
+                      <code>{k.prefix}…</code> · {k.tenant?.name ?? "platformbreed"} · {k.scopes.join(", ")}
+                    </p>
+                  </div>
+                  {rev && !inGrace ? (
+                    <span className="pill-neutral flex-shrink-0">ingetrokken</span>
+                  ) : inGrace ? (
+                    <span className="pill-neutral flex-shrink-0">geroteerd · geldig tot {rev!.toLocaleDateString("nl-NL")}</span>
+                  ) : (
+                    <div className="flex flex-shrink-0 gap-2">
+                      <button type="button" onClick={() => rotate(k.id)} className="btn-ghost text-xs">
+                        Roteren
+                      </button>
+                      <button type="button" onClick={() => revoke(k.id)} className="btn-ghost text-xs text-crit">
+                        Intrekken
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
