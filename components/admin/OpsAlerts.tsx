@@ -10,7 +10,7 @@ interface Alert {
   severity: "critical" | "warning";
   url: string;
   at: string;
-  sent: { push: number; mail: boolean };
+  sent: { push: number; mail: boolean; webhook?: boolean };
 }
 
 /** Recent owner alerts + a test button to check that push and mail actually arrive. */
@@ -67,7 +67,7 @@ export function OpsAlerts() {
                 <span className="block font-medium text-ink">{a.title}</span>
                 <span className="block text-xs text-neutralx-500">{a.detail}</span>
                 <span className="block text-[11px] text-neutralx-400">
-                  {new Date(a.at).toLocaleString("nl-NL")} · push naar {a.sent.push} apparaat{a.sent.push === 1 ? "" : "en"} · e-mail {a.sent.mail ? "verstuurd" : "niet verstuurd"}
+                  {new Date(a.at).toLocaleString("nl-NL")} · push naar {a.sent.push} apparaat{a.sent.push === 1 ? "" : "en"} · e-mail {a.sent.mail ? "verstuurd" : "niet verstuurd"}{a.sent.webhook ? " · webhook verstuurd" : ""}
                 </span>
               </span>
               <Link href={a.url} className="text-xs font-semibold text-brand-600 hover:underline">

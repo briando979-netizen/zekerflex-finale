@@ -277,6 +277,10 @@ const schema = z.object({
   /** pk_live_/pk_test_ key: lets Stripe Issuing Elements show a ZekerFlex Bank card number in the browser. */
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
+  /** Optionele inkomende-webhook (Discord/Slack/Mattermost/generiek) waar owner-
+   *  alerts óók naartoe gaan, naast push + MAIL_ADMIN. Leeg = alleen push/mail. */
+  OPS_ALERT_WEBHOOK: z.string().optional(),
+
   // Self-hosted TURN relay (coturn, docker-compose.prod.yml --profile turn) for
   // chat calls. Without it, calls fall back to STUN-only, which fails to
   // connect for peers behind symmetric NAT / strict corporate firewalls.

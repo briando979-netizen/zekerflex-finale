@@ -27,7 +27,30 @@ export interface LoggedAlert {
   severity: AlertSeverity;
   url: string;
   at: string;
-  sent: { push: number; mail: boolean };
+  sent: { push: number; mail: boolean; webhook: boolean };
+}
+
+// Stuurt het alert ook naar een inkomende-webhook (Discord/Slack/Mattermost/
+// generiek). Discord leest `content`, Slack leest `text` — we sturen beide, dus
+// het werkt met de meeste ontvangers. Faalt stil (alerting mag nooit breken).
+export async function postOpsWebhook(url: string | undefined, text: string): Promise<boolean> {
+  const target = (url ?? "").trim();
+  if (!target) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const res = await fetch(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text, text }),
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const LOG_KEY = "ops-alerts:log";
@@ -62,11 +85,12 @@ export async function alertOwner(alert: OpsAlert, now = Date.now()): Promise<"se
     })
       .then(() => true)
       .catch(() => false);
+    const webhook = await postOpsWebhook(env.OPS_ALERT_WEBHOOK, `${icon} ${alert.title}\n${alert.detail}\n${base}${url}`);
 
-    const entry: LoggedAlert = { key: alert.key, title: alert.title, detail: alert.detail, severity, url, at: new Date(now).toISOString(), sent: { push, mail } };
+    const entry: LoggedAlert = { key: alert.key, title: alert.title, detail: alert.detail, severity, url, at: new Date(now).toISOString(), sent: { push, mail, webhook } };
     const log = (await kvGet<LoggedAlert[]>(LOG_KEY)) ?? [];
     await kvSet(LOG_KEY, [entry, ...log].slice(0, 100));
-    logger.warn("owner alert", { key: alert.key, severity, push, mail });
+    logger.warn("owner alert", { key: alert.key, severity, push, mail, webhook });
     return "sent";
   } catch (err) {
     logger.error("owner alert failed", { key: alert.key, error: (err as Error).message });
