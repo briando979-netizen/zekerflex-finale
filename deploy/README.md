@@ -22,14 +22,20 @@ uitgaande verbinding.
 ## Altijd live, zonder Vercel (één commando)
 
 Wil je volledig van Vercel af en zelf de baas — een site die na een crash of
-reboot vanzelf terugkomt? Op een verse VPS (Debian/Ubuntu), na clonen + een
-ingevulde `.env.production`:
+reboot vanzelf terugkomt? Op een verse VPS (Debian/Ubuntu) hoef je na het clonen
+maar **één commando** te draaien. De installer genereert zelf alle secrets en
+vult `.env.production` automatisch in — je geeft alleen je domein:
 
 ```bash
-sudo bash deploy/scripts/bootstrap.sh
+sudo DOMAIN=jouwdomein.nl CLOUDFLARE_TUNNEL_TOKEN=... bash deploy/scripts/install.sh
 ```
 
-Dat doet in één keer: Docker + firewall (alleen SSH), bouwen + migreren + starten,
+(De `CLOUDFLARE_TUNNEL_TOKEN` haal je uit het Cloudflare-dashboard, zie §2 — je
+mag 'm ook leeglaten en later in `.env.production` zetten. Heb je de env liever
+zelf ingevuld, draai dan direct `sudo bash deploy/scripts/bootstrap.sh`.)
+
+`install.sh` → `bootstrap.sh` doen samen in één keer: Docker + firewall (alleen
+SSH), bouwen + migreren + starten,
 en het installeert **systemd-units** zodat ZekerFlex:
 
 - **na elke reboot vanzelf opstart** (`zekerflex.service`),
