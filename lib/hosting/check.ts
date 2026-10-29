@@ -1,4 +1,5 @@
 import type { HostingConfig } from "@/lib/hosting/config";
+import { bimiRecordName } from "@/lib/hosting/bimi";
 
 // ---------------------------------------------------------------------------
 // Config-gezondheidscheck voor Hosting & domein. Het paneel sláát de config op;
@@ -36,6 +37,12 @@ export function hostingChecks(cfg: HostingConfig, host: string): HostingCheck[] 
   const out: HostingCheck[] = [];
   const recs = normRecords(cfg);
   const txt = recs.filter((r) => r.type === "TXT");
+  const dmarc = txt.find((r) => r.name.startsWith("_dmarc") && /v=dmarc1/i.test(r.value));
+  const dmarcPolicy = (() => {
+    if (!dmarc) return "";
+    const m = /(?:^|[;\s])p=([a-z]+)/i.exec(dmarc.value);
+    return (m?.[1] ?? "").toLowerCase();
+  })();
 
   // Nameservers
   if (!cfg.dns.primaryNs.trim()) {
@@ -71,7 +78,7 @@ export function hostingChecks(cfg: HostingConfig, host: string): HostingCheck[] 
         hint: "Zonder SPF belandt je uitgaande mail sneller in spam. Zet TXT @ op 'v=spf1 mx -all'.",
       });
     }
-    if (!txt.some((r) => r.name.startsWith("_dmarc") && /v=dmarc1/i.test(r.value))) {
+    if (!dmarc) {
       out.push({
         level: "warn",
         title: "Geen DMARC-record",
@@ -83,6 +90,63 @@ export function hostingChecks(cfg: HostingConfig, host: string): HostingCheck[] 
         level: "info",
         title: "Nog geen DKIM-record",
         hint: "Genereer DKIM op je mailserver ('setup config dkim') en zet de TXT (…_domainkey) in je zone voor betrouwbare aflevering.",
+      });
+    }
+  }
+
+  // BIMI — merklogo in de inbox (alleen checken als het aan staat of een logo is ingevuld)
+  const bimiWanted = cfg.bimi.enabled || Boolean(cfg.bimi.logoUrl.trim());
+  if (bimiWanted) {
+    if (!dmarc) {
+      out.push({
+        level: "warn",
+        title: "BIMI werkt niet zonder DMARC",
+        hint: "Zet eerst een DMARC-record met handhaving (p=quarantine of p=reject); zonder DMARC tonen inboxen geen BIMI-logo.",
+      });
+    } else if (dmarcPolicy === "none" || dmarcPolicy === "") {
+      out.push({
+        level: "warn",
+        title: "DMARC-handhaving te laag voor BIMI",
+        hint: "Inboxen tonen het BIMI-logo pas bij p=quarantine of p=reject; nu staat de policy op p=none.",
+      });
+    }
+
+    const logo = cfg.bimi.logoUrl.trim();
+    if (!logo) {
+      out.push({
+        level: "warn",
+        title: "Geen BIMI-logo ingesteld",
+        hint: "Vul de HTTPS-URL naar je SVG P/S-logo in (ZekerFlex levert er al een op /bimi-logo.svg).",
+      });
+    } else if (!/^https:\/\//i.test(logo)) {
+      out.push({
+        level: "warn",
+        title: "BIMI-logo moet via HTTPS",
+        hint: "De logo-URL moet met https:// beginnen; inboxen weigeren http of relatieve URL's.",
+      });
+    } else if (!/\.svg($|\?)/i.test(logo)) {
+      out.push({
+        level: "info",
+        title: "BIMI-logo lijkt geen SVG",
+        hint: "BIMI vereist een SVG P/S-bestand (.svg, vierkant, SVG Tiny 1.2). PNG/JPG worden niet geaccepteerd.",
+      });
+    }
+
+    const bimiName = bimiRecordName(cfg.bimi.selector).toLowerCase();
+    const hasBimiRecord = recs.some((r) => r.name === bimiName || (r.name.includes("_bimi") && /v=bimi1/i.test(r.value)));
+    if (!hasBimiRecord) {
+      out.push({
+        level: "warn",
+        title: "Geen BIMI DNS-record",
+        hint: `Zet een TXT-record op ${bimiRecordName(cfg.bimi.selector)} met 'v=BIMI1; l=<logo-URL>'. Gebruik "+ BIMI-record toevoegen" in het paneel.`,
+      });
+    }
+
+    if (!cfg.bimi.vmcUrl.trim()) {
+      out.push({
+        level: "info",
+        title: "Nog geen VMC-certificaat",
+        hint: "Gmail toont het logo alleen mét een VMC (betaald merkcertificaat, bv. DigiCert/Entrust). Apple Mail en Yahoo tonen het ook zonder.",
       });
     }
   }

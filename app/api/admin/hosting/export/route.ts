@@ -1,5 +1,6 @@
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { getHostingConfig } from "@/lib/hosting/config";
+import { buildBimiRecord } from "@/lib/hosting/bimi";
 import { SITE } from "@/lib/seo";
 
 export const runtime = "nodejs";
@@ -37,6 +38,16 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
     const name = r.name.trim() || "@";
     const ttl = r.ttl.trim() || "3600";
     lines.push(`${name}\t${ttl}\tIN\t${r.type.trim().toUpperCase()}\t${r.value.trim()}`);
+  }
+
+  // BIMI (merklogo in de inbox): voeg het TXT-record toe als er een logo is
+  // ingesteld en het nog niet handmatig in de records staat.
+  const bimi = buildBimiRecord(cfg);
+  if (bimi) {
+    const already = cfg.dns.records.some(
+      (r) => r.type.trim().toUpperCase() === "TXT" && r.name.trim().toLowerCase() === bimi.name.toLowerCase(),
+    );
+    if (!already) lines.push(`${bimi.name}\t3600\tIN\tTXT\t"${bimi.value}"`);
   }
 
   lines.push("");

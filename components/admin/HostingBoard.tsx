@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { hostingChecks } from "@/lib/hosting/check";
+import { buildBimiRecord } from "@/lib/hosting/bimi";
 
 // Beheercentrum voor hosting/domein/mail. Bewaart de config via /api/admin/hosting
 // (KV, runtime). De provider-API-token komt leeg binnen en wordt alleen
@@ -17,6 +18,7 @@ interface Cfg {
   ssl: { status: string; note: string };
   vps: { provider: string; host: string; ipv4: string; sshKey: string; note: string };
   api: { provider: string; endpoint: string; token: string };
+  bimi: { enabled: boolean; selector: string; logoUrl: string; vmcUrl: string };
 }
 
 const inp = "w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm";
@@ -75,6 +77,30 @@ export function HostingBoard() {
     }
   }
 
+  function useBuiltInLogo() {
+    if (typeof window === "undefined") return;
+    set("bimi", { logoUrl: `${window.location.origin}/bimi-logo.svg` });
+  }
+
+  function addBimiRecord() {
+    if (!cfg) return;
+    const rec = buildBimiRecord(cfg);
+    if (!rec) {
+      setMsg("Vul eerst een BIMI-logo-URL in (of gebruik het ingebouwde logo).");
+      return;
+    }
+    const idx = cfg.dns.records.findIndex(
+      (r) => r.type.trim().toUpperCase() === "TXT" && r.name.trim().toLowerCase() === rec.name.toLowerCase(),
+    );
+    if (idx >= 0) {
+      set("dns", { records: cfg.dns.records.map((r, j) => (j === idx ? { ...r, value: rec.value } : r)) });
+      setMsg("BIMI-record bijgewerkt onder DNS-records — sla op om te bewaren.");
+    } else {
+      set("dns", { records: [...cfg.dns.records, { type: "TXT", name: rec.name, value: rec.value, ttl: "3600" }] });
+      setMsg("BIMI-record toegevoegd onder DNS-records — sla op om te bewaren.");
+    }
+  }
+
   if (!cfg) return <div className="h-40 animate-pulse rounded-2xl bg-paper-soft" />;
 
   const host = typeof window !== "undefined" ? window.location.hostname.replace(/^www\./, "") : "jouwdomein.nl";
@@ -130,6 +156,20 @@ export function HostingBoard() {
           </div>
           <button type="button" onClick={() => set("mail", { aliases: [...cfg.mail.aliases, { alias: "", forwardsTo: "" }] })} className="btn-ghost mt-2 text-xs">+ alias</button>
         </div>
+      </Section>
+
+      <Section title="BIMI — merklogo in de inbox" hint="Laat je logo naast je e-mails verschijnen in Gmail, Apple Mail en Yahoo. Vereist DMARC-handhaving (p=quarantine/reject) + een SVG P/S-logo via HTTPS.">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cfg.bimi.enabled} onChange={(e) => set("bimi", { enabled: e.target.checked })} /> BIMI inschakelen</label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><label className={lbl}>Selector</label><input className={inp} value={cfg.bimi.selector} onChange={(e) => set("bimi", { selector: e.target.value })} placeholder="default" /></div>
+          <div><label className={lbl}>Logo-URL (SVG P/S)</label><input className={inp} value={cfg.bimi.logoUrl} onChange={(e) => set("bimi", { logoUrl: e.target.value })} placeholder="https://jouwdomein.nl/bimi-logo.svg" /></div>
+          <div className="sm:col-span-2"><label className={lbl}>VMC-certificaat-URL (optioneel — nodig voor het Gmail-vinkje)</label><input className={inp} value={cfg.bimi.vmcUrl} onChange={(e) => set("bimi", { vmcUrl: e.target.value })} placeholder="https://jouwdomein.nl/vmc.pem" /></div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={useBuiltInLogo} className="btn-ghost text-xs" title="Vul de URL van het meegeleverde, BIMI-compliant ZekerFlex-logo in">Gebruik ingebouwd logo</button>
+          <button type="button" onClick={addBimiRecord} className="btn-ghost text-xs">+ BIMI-record toevoegen aan DNS</button>
+        </div>
+        <p className="text-xs text-neutralx-400">Het logo moet vierkant zijn (SVG Tiny 1.2, zonder scripts) en via HTTPS bereikbaar. ZekerFlex levert er al een op <code>/bimi-logo.svg</code>. Gmail toont het logo alleen met een VMC; Apple Mail en Yahoo ook zonder.</p>
       </Section>
 
       <Section title="Nameservers &amp; DNS" hint="De nameservers van je domein en de DNS-records.">

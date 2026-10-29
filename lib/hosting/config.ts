@@ -57,6 +57,12 @@ export interface HostingConfig {
     endpoint: string;
     token: string; // GEHEIM — gemaskeerd teruggegeven door de route
   };
+  bimi: {
+    enabled: boolean;
+    selector: string; // meestal "default" → record op default._bimi
+    logoUrl: string; // HTTPS-URL naar je SVG P/S-logo (bv. /bimi-logo.svg)
+    vmcUrl: string; // HTTPS-URL naar je VMC/CMC (.pem) — nodig voor het Gmail-vinkje
+  };
   updatedAt?: string;
 }
 
@@ -67,6 +73,7 @@ export const DEFAULT_HOSTING: HostingConfig = {
   ssl: { status: "onbekend", note: "" },
   vps: { provider: "", host: "", ipv4: "", sshKey: "", note: "" },
   api: { provider: "", endpoint: "", token: "" },
+  bimi: { enabled: false, selector: "default", logoUrl: "", vmcUrl: "" },
 };
 
 export async function getHostingConfig(): Promise<HostingConfig> {
@@ -85,6 +92,7 @@ export async function getHostingConfig(): Promise<HostingConfig> {
         ssl: { ...DEFAULT_HOSTING.ssl, ...v.ssl },
         vps: { ...DEFAULT_HOSTING.vps, ...v.vps },
         api: { ...DEFAULT_HOSTING.api, ...v.api },
+        bimi: { ...DEFAULT_HOSTING.bimi, ...v.bimi },
         ...(v.updatedAt ? { updatedAt: v.updatedAt } : {}),
       };
     }
