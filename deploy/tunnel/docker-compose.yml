@@ -1,0 +1,31 @@
+# Eigen tunnel — zonder Cloudflare, zonder managed dienst. Draait op je EIGEN VPS.
+#   frps  = de tunnelserver (open-source frp). De frpc-client op je thuis-/GPU-box
+#           maakt een uitgaande verbinding hierheen en publiceert zo een lokale
+#           dienst (image-node 7860, ai-node 11434, code-server, …) via je VPS.
+#   caddy = TLS ervoor (automatisch Let's Encrypt), routeert <sub>.<domein> → frps.
+# Zie README.md. Alleen jouw VPS is nodig (onvermijdelijk); verder niemand.
+services:
+  frps:
+    image: ${FRP_IMAGE:-snowdreamtech/frps}
+    container_name: zf-frps
+    env_file: .env # FRP_TOKEN wordt via {{ .Envs.FRP_TOKEN }} in frps.toml gelezen
+    volumes:
+      - ./frps.toml:/etc/frp/frps.toml:ro
+    ports:
+      - "7000:7000" # frpc-client verbindt hiermee (open dit in de firewall)
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8
+    container_name: zf-tunnel-caddy
+    depends_on:
+      - frps
+    env_file: .env # DOMAIN voor de Caddyfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    restart: unless-stopped

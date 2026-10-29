@@ -1,0 +1,18 @@
+# Caddy haalt + vernieuwt automatisch Let's Encrypt-certificaten en routeert
+# elk subdomein naar de frp-vhost (frps bepaalt via de Host-header welke lokale
+# dienst). Caddy v2 behoudt de originele Host, dus frp's customDomains matchen.
+#
+# Zet voor elke dienst een A-record <sub>.<domein> → VPS-IP, en een proxy in
+# frpc.toml met dezelfde customDomains. Voeg hier simpelweg een blok per dienst toe.
+
+image.{$DOMAIN} {
+	reverse_proxy frps:8080
+}
+
+# Voorbeelden (ontgrendel wat je gebruikt):
+# ai.{$DOMAIN} {
+# 	reverse_proxy frps:8080
+# }
+# code.{$DOMAIN} {
+# 	reverse_proxy frps:8080
+# }

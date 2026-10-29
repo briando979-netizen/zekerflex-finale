@@ -1,0 +1,10 @@
+# frp-tunnelserver (draait op je VPS). frp leest {{ .Envs.X }} uit de omgeving,
+# dus het geheime token komt uit .env — niet hardgecodeerd in dit bestand.
+bindPort = 7000
+
+# HTTP-vhost: frps matcht inkomende requests op de Host-header (customDomains in
+# frpc). Caddy zet er TLS voor en proxyt hiernaartoe.
+vhostHTTPPort = 8080
+
+auth.method = "token"
+auth.token = "{{ .Envs.FRP_TOKEN }}"

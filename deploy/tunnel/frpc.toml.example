@@ -1,0 +1,30 @@
+# frp-client (draait op je THUIS-/GPU-box, naast de dienst zelf). Kopieer naar
+# frpc.toml en vul in. Start met: frpc -c frpc.toml  (of via de snowdreamtech/frpc
+# Docker-image met dit bestand gemount op /etc/frp/frpc.toml).
+
+serverAddr = "jouw-vps-ip-of-domein" # het publieke adres van je VPS
+serverPort = 7000
+auth.method = "token"
+auth.token = "ZELFDE-TOKEN-ALS-IN-.env-OP-DE-VPS"
+
+# Elke lokale dienst = één proxy. type "http" matcht op customDomains.
+[[proxies]]
+name = "image"
+type = "http"
+localIP = "127.0.0.1"
+localPort = 7860 # image-node (Stable Diffusion)
+customDomains = ["image.jouwdomein.nl"]
+
+# [[proxies]]
+# name = "ai"
+# type = "http"
+# localIP = "127.0.0.1"
+# localPort = 11434            # ai-node (Ollama)
+# customDomains = ["ai.jouwdomein.nl"]
+
+# [[proxies]]
+# name = "code"
+# type = "http"
+# localIP = "127.0.0.1"
+# localPort = 8080            # code-server
+# customDomains = ["code.jouwdomein.nl"]
