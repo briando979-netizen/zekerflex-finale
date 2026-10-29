@@ -52,6 +52,9 @@ export interface EmployerShiftView {
     name: string;
     score: number;
     travelMinutes: number;
+    distanceMeters: number;
+    withinGeofence: boolean;
+    scoreBreakdown: unknown;
     status: string;
     avatarUrl: string | null;
   }[];
@@ -120,6 +123,9 @@ export async function getEmployerShift(
         select: {
           score: true,
           travelMinutes: true,
+          distanceMeters: true,
+          withinGeofence: true,
+          scoreBreakdown: true,
           status: true,
           freelancer: { select: { id: true, userId: true, user: { select: { fullName: true } } } },
         },
@@ -206,6 +212,9 @@ export async function getEmployerShift(
         name: m.freelancer.user.fullName,
         score: m.score,
         travelMinutes: m.travelMinutes,
+        distanceMeters: m.distanceMeters,
+        withinGeofence: m.withinGeofence,
+        scoreBreakdown: m.scoreBreakdown,
         status: m.status,
         avatarUrl: avatarUrl(m.freelancer.userId),
       })),

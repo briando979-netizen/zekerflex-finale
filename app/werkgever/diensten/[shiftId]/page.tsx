@@ -19,6 +19,7 @@ import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
 import { freelancerRatings } from "@/lib/reviews/ratings";
+import { explainMatch } from "@/lib/matching/explain";
 
 export const dynamic = "force-dynamic";
 
@@ -231,7 +232,9 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <EmptyState title={d.queueEmptyTitle} body={d.queueEmptyBody} />
           ) : (
             <ul className="divide-y divide-hair">
-              {s.queue.slice(0, 10).map((q) => (
+              {s.queue.slice(0, 10).map((q) => {
+                const ex = explainMatch(q);
+                return (
                 <li key={q.freelancerId} className="flex items-center justify-between gap-3 px-5 py-3.5">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar url={q.avatarUrl} name={q.name} />
@@ -243,6 +246,19 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                       <p className="text-xs text-neutralx-500">
                         {fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes })}
                       </p>
+                      <details className="mt-1 text-xs">
+                        <summary className="cursor-pointer text-brand-600 hover:underline">Waarom deze match? ({ex.verdict})</summary>
+                        <ul className="mt-1 space-y-0.5">
+                          {ex.reasons.map((r, i) => (
+                            <li key={i} className="text-neutralx-600">
+                              <span className={r.strength === "goed" ? "text-brand-600" : r.strength === "zwak" ? "text-crit" : "text-neutralx-400"} aria-hidden>
+                                ●
+                              </span>{" "}
+                              <span className="font-medium text-ink">{r.label}:</span> {r.detail}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -254,7 +270,8 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                     <FreelancerRelationButton userId={q.userId} name={q.name} kind="block" active={blockSet.has(q.userId)} />
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </Panel>
