@@ -51,9 +51,16 @@ REDIS_URL=rediss://default:<REDIS_PASSWORD>@redis.zekerflex.com:6380
 Laat `KV_REST_API_*` en `KV_URL` staan (die horen bij de Postgres-KV, los van dit).
 
 ## Onderhoud
-- **Certificaat vernieuwen** (elke ~60 dagen): `sudo certbot renew`, kopieer de
-  pem's opnieuw naar `certs/`, en `docker compose restart redis`. Zet dat in een
-  maandelijkse cron.
+- **Certificaat vernieuwt zichzelf.** Gebruik het meegeleverde `renew-cert.sh`
+  (draait `certbot renew`, kopieert de pem's en herstart Redis **alleen** als er
+  echt een nieuw certificaat is — via `--deploy-hook`). Zet het in een cron,
+  bv. 2× per maand; handmatig vernieuwen kan ook met `./renew-cert.sh`:
+
+```bash
+chmod +x renew-cert.sh
+( crontab -l 2>/dev/null; echo "0 3 1,15 * * $(pwd)/renew-cert.sh >> /var/log/zf-redis-renew.log 2>&1" ) | crontab -
+```
+
 - **Data** staat in het `redis-data`-volume (AOF + snapshots), dus een herstart
   verliest niets. Redis bevat alleen vluchtige dingen (limieten, sloten, caches),
   geen klantdata — een lege Redis na een crash is geen ramp.

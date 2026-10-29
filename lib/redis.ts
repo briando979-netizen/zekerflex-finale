@@ -61,10 +61,21 @@ export async function cached<T>(
   ttlSeconds: number,
   produce: () => Promise<T>,
 ): Promise<T> {
-  const hit = await redis.get(key);
-  if (hit) return JSON.parse(hit) as T;
+  // Fail-open: een cache is nooit kritiek. Valt Redis weg of is het quotum vol
+  // ("max requests limit exceeded"), dan berekenen we gewoon opnieuw i.p.v. te
+  // gooien — net als de login-lockout en acquireLock.
+  try {
+    const hit = await redis.get(key);
+    if (hit) return JSON.parse(hit) as T;
+  } catch (err) {
+    console.warn(`cached: Redis-get faalde voor "${key}", bereken opnieuw:`, (err as Error).message);
+  }
   const value = await produce();
-  await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  try {
+    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  } catch {
+    // Cache-set faalde (quotum/onbereikbaar) — niet fataal, we hebben de waarde al.
+  }
   return value;
 }
 
