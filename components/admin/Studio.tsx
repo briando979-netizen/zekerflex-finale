@@ -249,6 +249,12 @@ export function Studio() {
             <p className="text-xs text-neutralx-500">
               Geen GPU? Het werkt op CPU maar een render duurt dan enkele minuten.
             </p>
+            <p className="text-xs text-neutralx-500">
+              Kant-en-klaar recept: <span className="font-mono text-xs">deploy/image-node/</span>. Draai je je eigen server op
+              afstand (bv. je VPS via een tunnel, net als de AI-node)? Zet dan ook{" "}
+              <span className="font-mono text-xs">IMAGE_ALLOW_REMOTE=true</span> zodat ook de live app je eigen beeldserver mag
+              gebruiken.
+            </p>
           </div>
         )}
       </div>

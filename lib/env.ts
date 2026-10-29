@@ -90,6 +90,12 @@ const schema = z.object({
     .transform((v) => v === "true"),
   IMAGE_BACKEND: z.enum(["a1111", "openai", "comfyui"]).default("a1111"),
   IMAGE_BASE_URL: z.string().url().default("http://localhost:7860"),
+  // Standaard mag de beeldserver alleen lokaal/privé zijn (data blijft binnen).
+  // Zet dit op "true" ALLEEN om je EIGEN self-hoste server op afstand te
+  // gebruiken (bv. je VPS via een Cloudflare-tunnel, net als de AI-node) — dan
+  // kan ook de live app je eigen beeldgenerator bereiken. Nooit voor een
+  // vreemde cloud-dienst.
+  IMAGE_ALLOW_REMOTE: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   IMAGE_MODEL: z.string().optional(),
   IMAGE_API_KEY: z.string().optional(),
   IMAGE_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),

@@ -31,6 +31,7 @@ export interface ImageBackendHealth {
   baseUrl: string;
   reachable: boolean;
   local: boolean;
+  remoteAllowed: boolean;
   detail?: string;
   models?: string[];
 }
@@ -42,6 +43,7 @@ export async function imageHealth(): Promise<ImageBackendHealth> {
     backend: env.IMAGE_BACKEND,
     baseUrl: env.IMAGE_BASE_URL,
     local: isLocalImageBackend(),
+    remoteAllowed: env.IMAGE_ALLOW_REMOTE,
   };
   if (!env.IMAGE_ENABLED) {
     return { ...common, reachable: false, detail: "IMAGE_ENABLED staat op false" };
@@ -111,8 +113,10 @@ async function runRender<T>(purpose: string, fn: () => Promise<T>): Promise<T> {
       "De beeldgenerator is niet ingeschakeld. Zet IMAGE_ENABLED=true en start een lokale Stable Diffusion-server.",
     );
   }
-  if (!isLocalImageBackend()) {
-    throw AppError.upstream(`Soevereiniteitsgrendel: IMAGE_BASE_URL host "${imageHost()}" is niet lokaal.`);
+  if (!isLocalImageBackend() && !env.IMAGE_ALLOW_REMOTE) {
+    throw AppError.upstream(
+      `Soevereiniteitsgrendel: IMAGE_BASE_URL host "${imageHost()}" is niet lokaal. Draai je je eigen server op afstand (bv. je VPS via een tunnel)? Zet dan IMAGE_ALLOW_REMOTE=true.`,
+    );
   }
 
   let held = false;

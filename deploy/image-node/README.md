@@ -54,7 +54,7 @@ curl http://localhost:7860/sdapi/v1/sd-models   # moet een lijst modellen geven
 
 Zet in de env van je app (lokaal `.env`, of je eigen-beheer-deploy):
 
-```
+```ini
 IMAGE_ENABLED=true
 IMAGE_BACKEND=a1111
 IMAGE_BASE_URL=http://localhost:7860     # of http://<privé-IP>:7860 op je LAN
@@ -67,6 +67,26 @@ Daarna in **Admin → Studio**:
 - **Sjabloon / Eigen idee** → genereren (tekst → beeld).
 - **Bewerk foto** → een bestaande foto bewerken met een instructie (img2img) —
   je eigen "Nano Banana", zonder credits.
+
+## Op afstand draaien (je eigen VPS) — ook voor de live app
+
+Wil je dat ook je **live** (Vercel-)site je eigen beeldserver gebruikt? Draai de
+server dan op je eigen VPS/GPU-box en maak hem bereikbaar via een **Cloudflare-
+tunnel** (precies zoals `deploy/ai-node/` doet voor het taalmodel — HTTP/2 i.p.v.
+QUIC). Zet dan in de app-env:
+
+```ini
+IMAGE_ENABLED=true
+IMAGE_BACKEND=a1111
+IMAGE_BASE_URL=https://image.jouwdomein.nl   # jouw eigen tunnel-URL
+IMAGE_ALLOW_REMOTE=true                        # expliciet: eigen server op afstand mag
+IMAGE_API_KEY=<een-geheim>                     # beveilig de tunnel/endpoint
+```
+
+De grendel staat remote standaard uit; `IMAGE_ALLOW_REMOTE=true` is je bewuste
+"ja, dit is mijn eigen server"-schakelaar — bedoeld voor je eigen hardware, nooit
+voor een vreemde clouddienst. Beveilig de endpoint (API-key / tunnel-auth), want
+hij staat dan aan het internet.
 
 ## Eerlijk over de grenzen
 
