@@ -1,0 +1,27 @@
+# Self-hosted Stable Diffusion (AUTOMATIC1111 / Forge) met de API aan, voor
+# ZekerFlex Studio (genereren + bewerken). Draait op je EIGEN machine — geen
+# cloud, geen credits. Zie README.md; voor de betrouwbaarste opzet raden we
+# AbdBarho/stable-diffusion-webui-docker aan.
+#
+# Image-tags verouderen, dus je zet SD_IMAGE zelf in .env (een werkende image
+# uit de README). GPU is sterk aanbevolen; zonder GPU verwijder je het
+# 'deploy.resources'-blok en draait het (traag) op CPU.
+services:
+  webui:
+    image: ${SD_IMAGE:?Zet SD_IMAGE in .env (zie README voor werkende images)}
+    container_name: zf-image-node
+    # --api zet de REST-API aan (txt2img/img2img), --listen bindt op 0.0.0.0.
+    command: ["--api", "--listen", "--port", "7860", "--xformers"]
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./models:/stable-diffusion-webui/models # zet hier je SDXL-model(len)
+      - ./outputs:/stable-diffusion-webui/outputs
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
