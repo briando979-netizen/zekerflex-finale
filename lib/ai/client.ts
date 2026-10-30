@@ -300,7 +300,9 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
           messages: opts.messages,
           temperature: opts.temperature ?? 0.2,
           stream: false,
-          keep_alive: env.LLM_KEEP_ALIVE,
+          // keep_alive is Ollama-only; remote OpenAI-compat providers (Gemini)
+          // reject it with HTTP 400, so only send it for local inference.
+          ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
           ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         },
@@ -402,7 +404,8 @@ export async function* chatStream(
         messages: opts.messages,
         temperature: opts.temperature ?? 0.4,
         stream: true,
-        keep_alive: env.LLM_KEEP_ALIVE,
+        // keep_alive is Ollama-only; remote providers (Gemini) 400 on it.
+        ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
       }),
     });
