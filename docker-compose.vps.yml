@@ -61,7 +61,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
       POSTGRES_DB: zekerflex
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      # Postgres 18+ image wil één mount op /var/lib/postgresql (data komt in een
+      # versie-submap); /var/lib/postgresql/data zoals bij <=16 laat 18 crashen.
+      - pg-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U zekerflex -d zekerflex"]
       interval: 10s
