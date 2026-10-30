@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
 import { PartnerPlans } from "@/components/marketing/PartnerPlans";
@@ -33,6 +34,10 @@ export default function VoorBureausPage() {
           <p className="mt-6 max-w-xl text-lg text-white/70">
             De complete flex-/uitzend-motor — AI-recruiter, matching, uren &amp; facturen, uitzend (ABU/StiPP) en webshop —
             als plugin op je eigen systeem, als white-label platform onder je merk, of volledig self-hosted op je eigen infra.
+          </p>
+          <p className="mt-4 text-sm text-white/60">
+            Liever één losse module i.p.v. het hele platform?{" "}
+            <Link href="/producten" className="text-brand-mint underline">Bekijk de losse producten →</Link>
           </p>
         </div>
       </div>

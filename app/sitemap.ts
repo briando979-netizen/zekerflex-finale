@@ -6,6 +6,7 @@ import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { publicOpenShifts } from "@/lib/public-shifts";
+import { SPINOFF_PRODUCTS } from "@/lib/products";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -46,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]),
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
+
+    // Producten (ontbundeld) + los aanbod voor bureaus
+    entry("/producten", 0.8, "weekly"),
+    ...SPINOFF_PRODUCTS.map((p) => entry(`/producten/${p.slug}`, 0.7, "weekly")),
+    entry("/voor-bureaus", 0.7, "monthly"),
+
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
     entry("/over-ons", 0.6, "monthly"),

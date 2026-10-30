@@ -15,6 +15,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/voor-freelancers", label: "Voor freelancers" },
       { href: "/uitzendbureau", label: "Werken via uitzendbureau" },
       { href: "/voor-bedrijven", label: "Voor bedrijven" },
+      { href: "/producten", label: "Producten & losse modules" },
+      { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
       { href: "/prijzen", label: "Prijzen" },
       { href: "/shop", label: "ZekerFlex shop" },
       { href: "/app", label: "Download de app" },
