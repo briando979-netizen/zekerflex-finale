@@ -69,6 +69,12 @@ const schema = z.object({
   LLM_TRANSLATE_MODEL: z.string().optional(),
   LLM_API_KEY: z.string().optional(),
   LLM_EMBED_MODEL: z.string().optional(),
+  // Optional: embed via a DIFFERENT endpoint than chat. Lets chat run on a free
+  // frontier model (LLM_BASE_URL, e.g. Gemini) while embeddings run on local
+  // Ollama here — so bulk RAG-indexing doesn't hit the chat provider's
+  // embedding quota. No API key is sent to this endpoint. Falls back to
+  // LLM_BASE_URL when unset.
+  LLM_EMBED_BASE_URL: z.string().url().optional(),
   // A vision-capable (multimodal) model for the KYC document/selfie review
   // (lib/kyc/vision.ts). Unset by default -> that review is skipped and
   // onboarding falls back to the text-only checks, never blocking on a

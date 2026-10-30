@@ -475,12 +475,37 @@ export async function embed(input: string | string[]): Promise<number[][]> {
     throw AppError.upstream("No embedding model configured (LLM_EMBED_MODEL)");
   }
   return withGovernor("embed", async () => {
-    const data = (await post(
-      "/embeddings",
-      // keep_alive is Ollama-only; remote providers (Gemini) 400 on it.
-      { model: env.LLM_EMBED_MODEL, input, ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}) },
-      env.LLM_TIMEOUT_MS,
-    )) as {
+    // Embeddings may use a dedicated endpoint (LLM_EMBED_BASE_URL, typically
+    // local Ollama) so bulk RAG-indexing doesn't burn the chat provider's
+    // embedding quota. A dedicated endpoint is treated as local: no API key,
+    // and keep_alive is allowed (Ollama accepts it).
+    const dedicated = Boolean(env.LLM_EMBED_BASE_URL);
+    const embedBase = (env.LLM_EMBED_BASE_URL ?? baseUrl()).replace(/\/+$/, "");
+    const localEmbed = dedicated || isLocalInference();
+    const llmKey = dedicated ? null : await getLlmApiKey();
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      res = await fetch(`${embedBase}/embeddings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(llmKey ? { Authorization: `Bearer ${llmKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: env.LLM_EMBED_MODEL,
+          input,
+          ...(localEmbed ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
+        }),
+        signal: AbortSignal.timeout(env.LLM_TIMEOUT_MS),
+      });
+      if (res.ok) break;
+      if (![429, 502, 503, 504].includes(res.status) || attempt === 2) {
+        const detail = await res.text().catch(() => "");
+        throw AppError.upstream(`LLM ${res.status}: ${detail.slice(0, 200)}`);
+      }
+      await sleep(800 * (attempt + 1));
+    }
+    const data = (await (res as Response).json()) as {
       data?: { embedding: number[] }[];
       usage?: { prompt_tokens?: number; total_tokens?: number };
     };
