@@ -30,6 +30,12 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:-postgresql://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/zekerflex?schema=public}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Lokaal taalmodel (Ollama) zodat Jarvis/AI werkt zonder externe dienst.
+      # Klein model i.v.m. CPU-only VPS; vervang door LLM_API_KEY/LLM_BASE_URL in
+      # .env.production voor een sneller extern model.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
+      LLM_FAST_MODEL: ${LLM_FAST_MODEL:-qwen2.5:3b}
     volumes:
       - app-storage:/app/storage
     depends_on:
@@ -84,6 +90,21 @@ services:
       retries: 5
     networks: [internal]
 
+  # Lokaal taalmodel voor Jarvis/AI (CPU-only; klein model). Draait zelf-gehost,
+  # geen externe dienst. Op een kleine VPS kun je deze service weglaten en in
+  # plaats daarvan LLM_API_KEY + LLM_BASE_URL (+ AI_ALLOW_REMOTE=true) zetten.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks: [internal]
+
 networks:
   internal:
     driver: bridge
@@ -94,3 +115,4 @@ volumes:
   redis-data:
   caddy-data:
   caddy-config:
+  ollama-models:
