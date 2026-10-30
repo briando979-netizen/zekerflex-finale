@@ -10,6 +10,7 @@ import { PushToggle } from "@/components/app/PushToggle";
 import { ZiekMelden } from "@/components/app/ZiekMelden";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
+import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { inAndroidApp } from "@/lib/app-mode-server";
@@ -123,9 +124,6 @@ export default async function AccountPage() {
     {
       items: [{ label: "Privacy instellingen", href: "/privacy" }],
     },
-    {
-      items: [{ label: "Taal", value: "Nederlands" }],
-    },
   ];
 
   return (
@@ -220,6 +218,10 @@ export default async function AccountPage() {
 
         <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
           <ThemeToggleRow theme={theme} />
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+          <AccountLanguageRow />
         </div>
 
         <form action={logoutAction} className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">

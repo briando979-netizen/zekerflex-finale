@@ -80,29 +80,43 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
     setError(null);
     setState("busy");
     try {
+      if (!vapidKey) throw new Error("geen sleutel");
       const perm = await Notification.requestPermission();
       if (perm !== "granted") {
         setState(perm === "denied" ? "denied" : "off");
         return;
       }
       const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
+      const appServerKey = urlBase64ToBuffer(vapidKey);
+      let existing = await reg.pushManager.getSubscription();
+      // Een bestaande subscription van een ANDERE (vorige) VAPID-sleutel kan
+      // onze meldingen niet ontvangen — na een sleutelwissel opruimen en
+      // opnieuw aanmelden met de huidige sleutel.
+      if (existing) {
+        const want = new Uint8Array(appServerKey);
+        const have = existing.options.applicationServerKey
+          ? new Uint8Array(existing.options.applicationServerKey as ArrayBuffer)
+          : null;
+        const sameKey = !!have && have.length === want.length && have.every((b, i) => b === want[i]);
+        if (!sameKey) {
+          await existing.unsubscribe().catch(() => undefined);
+          existing = null;
+        }
+      }
       const sub =
         existing ??
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToBuffer(vapidKey as string),
-        }));
+        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appServerKey }));
       const json = sub.toJSON();
       const res = await fetch("/api/me/push", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
       });
-      if (!res.ok) throw new Error("server");
+      if (!res.ok) throw new Error(`server ${res.status}`);
       setState("on");
-    } catch {
-      setError("Aanzetten lukte niet. Probeer het opnieuw.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "onbekend";
+      setError(`Aanzetten lukte niet (${msg}). Probeer het opnieuw.`);
       setState("off");
     }
   }, [vapidKey]);
