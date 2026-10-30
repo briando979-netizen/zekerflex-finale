@@ -105,6 +105,21 @@ services:
       retries: 5
     networks: [internal]
 
+  # Self-host scheduler: triggert de interne cron-endpoints op schema (zoals
+  # Vercel-Cron deed). Zonder deze service draait geen enkele geplande taak.
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      CRON_TARGET: ${CRON_TARGET:-http://app:3000}
+    volumes:
+      - ./deploy/cron/entrypoint.sh:/entrypoint.sh:ro
+    command: ["sh", "/entrypoint.sh"]
+    depends_on:
+      app: { condition: service_started }
+    networks: [internal]
+
 networks:
   internal:
     driver: bridge
