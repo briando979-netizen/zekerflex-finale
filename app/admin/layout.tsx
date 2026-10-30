@@ -35,6 +35,7 @@ const NAV = [
   { href: "/admin/agenda", label: "Agenda", icon: <ICalendar />, section: "Hoofd" },
   { href: "/admin/gebruikers", label: "Gebruikers", icon: <IUsers />, section: "Beheer" },
   { href: "/admin/bedrijven", label: "Bedrijven", icon: <IBriefcase />, section: "Beheer" },
+  { href: "/admin/tenants", label: "Klanten & white-label", icon: <IBriefcase />, section: "Beheer" },
   { href: "/admin/facturen", label: "Facturen", icon: <IDoc />, section: "Beheer" },
   { href: "/admin/financien", label: "Financiën & winst", icon: <IWallet />, section: "Beheer" },
   { href: "/admin/betalingen", label: "AI-betalingen", icon: <IWallet />, section: "Beheer" },
