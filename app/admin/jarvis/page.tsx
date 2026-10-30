@@ -1,32 +1,17 @@
-import { getPrincipal, hasRole } from "@/lib/auth";
-import { JarvisConsole } from "@/components/jarvis/JarvisConsole";
-import { AiNodeKey } from "@/components/admin/AiNodeKey";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function JarvisPage() {
-  const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <main className="p-8">
-        <h1 className="text-lg font-semibold">Geen toegang</h1>
-        <p className="text-slate-600">
-          De Jarvis-console is alleen beschikbaar voor platformbeheerders.
-        </p>
-      </main>
-    );
-  }
-  return (
-    <div className="space-y-4">
-      <details className="rounded-xl border border-hair bg-white">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
-          AI-node-instellingen (laptop)
-        </summary>
-        <div className="px-3 pb-3">
-          <AiNodeKey />
-        </div>
-      </details>
-      <JarvisConsole />
-    </div>
-  );
+// De Jarvis-assistent heet nu "ZekerFlex AI" en leeft in de studio op
+// /admin/zekerflex-ai. Oude links (incl. de ⌘K-balk met ?q=…) blijven werken via
+// deze doorverwijzing.
+export default async function JarvisRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const raw = sp.q;
+  const q = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : undefined;
+  redirect(q ? `/admin/zekerflex-ai?q=${encodeURIComponent(q)}` : "/admin/zekerflex-ai");
 }

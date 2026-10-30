@@ -186,7 +186,7 @@ async function main() {
     line("");
     ok(`${c.bold}ZekerFlex draait op ${URL}${c.reset}`);
     line(
-      `  ${c.dim}Jarvis-console: ${URL}/admin/jarvis · Verkeer: ${URL}/admin/analytics${c.reset}`,
+      `  ${c.dim}ZekerFlex AI: ${URL}/admin/zekerflex-ai · Verkeer: ${URL}/admin/analytics${c.reset}`,
     );
     openBrowser(URL);
   } else {

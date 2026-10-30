@@ -378,7 +378,7 @@ export function ControlCenter() {
                 // .map() return value, so react/jsx-key can't see that.
                 /* eslint-disable react/jsx-key */
                 [
-                  ["Jarvis-console", "/admin/jarvis", <IChat />],
+                  ["ZekerFlex AI", "/admin/zekerflex-ai", <IChat />],
                   ["De Sim — kantoorvloer", "/admin/sim", <IPulse />],
                   ["Advertentiegenerator", "/admin/ads", <IActivity />],
                   ["Wekelijkse verloning", "/admin/verloning", <IWallet />],

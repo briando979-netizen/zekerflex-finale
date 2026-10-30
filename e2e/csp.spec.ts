@@ -18,7 +18,7 @@ test("every response carries the hardened CSP baseline", async ({ request }) => 
   expect(csp, "CSP header present").toBeTruthy();
   expect(csp).toContain("default-src 'self'");
   expect(csp).toContain("object-src 'none'");
-  expect(csp).toContain("frame-ancestors 'none'");
+  expect(csp).toContain("frame-ancestors 'self'");
   expect(csp).toContain("base-uri 'self'");
   expect(csp).toContain("form-action 'self'");
 });

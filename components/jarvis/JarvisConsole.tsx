@@ -4,10 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/jarvis/Markdown";
 
 // ---------------------------------------------------------------------------
-// JARVIS — VS-Code / Claude-Code-style workbench for the local (or cloud)
+// ZEKERFLEX AI — VS-Code / Claude-Code-style workbench for the local (or cloud)
 // assistant. One editor pane with the conversation; the model's thinking and
 // tool steps render INLINE as collapsible blocks (like Claude Code), a left
 // rail holds the session history, and a brein badge shows which model is live.
+//
+// Reused in two shapes: standalone on /admin/zekerflex-ai (via the studio) and,
+// historically, on its own page. Pass `embedded` to fill a parent flex box
+// instead of breaking out of the admin padding, and `hideRail` to drop the
+// session rail when the surrounding studio already provides one.
 //
 // All the working logic below (voice loop, streaming, turn polling, uploads)
 // is unchanged from the previous console — only the presentation moved to an
@@ -45,7 +50,7 @@ interface ChatMessage {
 }
 
 const AGENT_LABEL: Record<string, string> = {
-  jarvis: "Jarvis",
+  jarvis: "ZekerFlex AI",
   analyst: "Analyst",
   "developer:tom": "Developer · Tom",
   sales: "Sales",
@@ -94,7 +99,13 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
-export function JarvisConsole() {
+export function JarvisConsole({
+  embedded = false,
+  hideRail = false,
+}: {
+  embedded?: boolean;
+  hideRail?: boolean;
+} = {}) {
   const [turn, setTurn] = useState<TurnState | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -406,7 +417,7 @@ export function JarvisConsole() {
             await runFullTurn(prompt, []);
             return;
           }
-          throw new Error(data?.error?.message ?? "Jarvis kon niet antwoorden");
+          throw new Error(data?.error?.message ?? "ZekerFlex AI kon niet antwoorden");
         }
         // streaming conversational reply
         if (!res.body) throw new Error("geen stroom");
@@ -430,7 +441,7 @@ export function JarvisConsole() {
         else if (!acc.trim()) {
           setMessages((m) => {
             const c = [...m];
-            c[c.length - 1] = { role: "error", text: "Jarvis gaf geen antwoord — probeer het opnieuw." };
+            c[c.length - 1] = { role: "error", text: "ZekerFlex AI gaf geen antwoord — probeer het opnieuw." };
             return c;
           });
         }
@@ -694,11 +705,18 @@ export function JarvisConsole() {
   const micLevelPct = Math.round((listening ? micLevel : 0) * 100);
 
   return (
-    <div className="-m-4 flex h-[calc(100dvh-9.5rem)] min-h-0 overflow-hidden bg-[#0b0e13] text-white lg:-m-8">
+    <div
+      className={
+        embedded
+          ? "flex h-full min-h-0 flex-1 overflow-hidden bg-[#0b0e13] text-white"
+          : "-m-4 flex h-[calc(100dvh-9.5rem)] min-h-0 overflow-hidden bg-[#0b0e13] text-white lg:-m-8"
+      }
+    >
       {/* sessions rail */}
+      {!hideRail && (
       <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-white/10 bg-[#0e1116] md:flex">
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-          <span className="font-display text-sm font-bold tracking-[0.18em]">JARVIS</span>
+          <span className="font-display text-sm font-bold tracking-[0.18em]">ZEKERFLEX AI</span>
           <button
             type="button"
             onClick={newChat}
@@ -791,6 +809,7 @@ export function JarvisConsole() {
           )}
         </div>
       </aside>
+      )}
 
       {/* editor pane */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -858,7 +877,7 @@ export function JarvisConsole() {
               <div className="pt-10 text-center">
                 <p className="text-white/50">Stel een vraag of geef een opdracht — typen of spreken.</p>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  {["Hallo Jarvis", "Geef me een briefing", "Hoeveel flexwerkers zijn er?", "Controleer het platform"].map(
+                  {["Hallo", "Geef me een briefing", "Hoeveel flexwerkers zijn er?", "Controleer het platform"].map(
                     (s) => (
                       <button
                         key={s}
@@ -899,7 +918,7 @@ export function JarvisConsole() {
                 {busy && (
                   <div className="flex items-center gap-2 text-sm text-white/40">
                     <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-brand-mint" />
-                    {turn ? "Jarvis werkt… (lokaal model kan even duren)" : "Jarvis denkt na…"}
+                    {turn ? "ZekerFlex AI werkt… (lokaal model kan even duren)" : "ZekerFlex AI denkt na…"}
                   </div>
                 )}
               </>
@@ -941,7 +960,7 @@ export function JarvisConsole() {
                 rows={1}
                 disabled={busy || listening}
                 placeholder={
-                  busy ? "Jarvis is aan het werk…" : listening ? "Aan het luisteren…" : "Typ of spreek je bericht…"
+                  busy ? "ZekerFlex AI is aan het werk…" : listening ? "Aan het luisteren…" : "Typ of spreek je bericht…"
                 }
                 className="jarvis-input max-h-32 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-base text-white placeholder:text-white/35 focus:outline-none disabled:opacity-60 sm:text-sm"
               />

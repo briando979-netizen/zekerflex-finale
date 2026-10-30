@@ -109,13 +109,16 @@ export function CommandBar() {
     if (isAdmin) {
       const jarvis: Cmd = {
         id: "jarvis",
-        label: q.trim() && !"jarvis".includes(q.toLowerCase()) ? `Vraag Jarvis: "${q.trim()}"` : "Vraag Jarvis",
+        label:
+          q.trim() && !"zekerflex ai jarvis".includes(q.toLowerCase())
+            ? `Vraag ZekerFlex AI: "${q.trim()}"`
+            : "Vraag ZekerFlex AI",
         hint: "Enter",
         group: "Assistent",
-        keywords: "ai chat vraag",
+        keywords: "ai chat vraag jarvis zekerflex",
         run: () => {
           setOpen(false);
-          router.push(q.trim() ? `/admin/jarvis?q=${encodeURIComponent(q.trim())}` : "/admin/jarvis");
+          router.push(q.trim() ? `/admin/zekerflex-ai?q=${encodeURIComponent(q.trim())}` : "/admin/zekerflex-ai");
         },
       };
       list.unshift(jarvis);

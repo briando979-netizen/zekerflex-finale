@@ -25,7 +25,9 @@ describe("buildContentSecurityPolicy — production", () => {
   it("locks down the usual suspects", () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("object-src 'none'");
-    expect(csp).toContain("frame-ancestors 'none'");
+    // 'self' (not 'none'): same-origin framing is allowed for the ZekerFlex AI
+    // studio's live preview, but every cross-origin framer is still blocked.
+    expect(csp).toContain("frame-ancestors 'self'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
@@ -34,10 +36,46 @@ describe("buildContentSecurityPolicy — production", () => {
     expect(csp).toContain("manifest-src 'self'");
   });
 
+  it("only allows Stripe's iframe by default; never 'self' framing outside the studio", () => {
+    expect(csp).toContain("frame-src https://js.stripe.com");
+    const frameSrc = csp.split("; ").find((d) => d.startsWith("frame-src"))!;
+    expect(frameSrc).not.toContain("'self'");
+  });
+
   it("still allows the Google Fonts stylesheet + inline style (documented trade-off)", () => {
     expect(csp).toContain("style-src 'self' 'unsafe-inline'");
     expect(csp).not.toContain("fonts.googleapis.com"); // fonts are self-hosted (lib/fonts.ts)
     expect(csp).toContain("font-src 'self'");
+  });
+});
+
+describe("buildContentSecurityPolicy — ZekerFlex AI studio (scoped relaxations)", () => {
+  it("lets the studio frame same-origin, blob and external pages (live preview)", () => {
+    const csp = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/admin/zekerflex-ai" });
+    const frameSrc = csp.split("; ").find((d) => d.startsWith("frame-src"))!;
+    expect(frameSrc).toContain("'self'");
+    expect(frameSrc).toContain("blob:");
+    expect(frameSrc).toContain("https:");
+    // Its scripts stay strict — only the isolated sandbox sub-frame loosens that.
+    expect(csp).toContain("script-src 'self' 'nonce-N' 'strict-dynamic'");
+  });
+
+  it("runs the sandbox sub-frame's own HTML/JS under a loose, isolated policy", () => {
+    const csp = buildContentSecurityPolicy({
+      dev: false,
+      nonce: "N",
+      pathname: "/admin/zekerflex-ai/sandbox-frame",
+    });
+    expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+    expect(csp).toContain("img-src * data: blob:");
+    // Still framable only by same-origin (the studio page).
+    expect(csp).toContain("frame-ancestors 'self'");
+  });
+
+  it("does not loosen scripts for any other admin route", () => {
+    const csp = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/admin/cockpit" });
+    expect(csp).toContain("script-src 'self' 'nonce-N' 'strict-dynamic'");
+    expect(csp).toContain("frame-src https://js.stripe.com");
   });
 });
 

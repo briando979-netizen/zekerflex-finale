@@ -243,7 +243,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   const ctx: RequestContext = {
     cid: correlationId(req),
     nonce,
-    csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce }),
+    csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname }),
   };
   const rule = matchRouteRule(pathname);
 

@@ -30,9 +30,9 @@ interface CronJob {
 }
 
 const ROOMS: { agent: string; label: string; desk: string; href: string; hrefLabel: string }[] = [
-  { agent: "jarvis", label: "Jarvis — Hoofdkantoor", desk: "Orchestrator, delegeert naar de andere afdelingen", href: "/admin/jarvis", hrefLabel: "Volledige console" },
-  { agent: "analyst", label: "Analyst", desk: "Leest elke cyclus de platformstatus en meldt bevindingen", href: "/admin/jarvis", hrefLabel: "Bevindingen in Jarvis" },
-  { agent: "developer:tom", label: "Developer · Tom", desk: "Stelt codepatches voor — iemand moet ze zelf toepassen", href: "/admin/jarvis", hrefLabel: "Voorstellen bekijken" },
+  { agent: "jarvis", label: "ZekerFlex AI — Hoofdkantoor", desk: "Orchestrator, delegeert naar de andere afdelingen", href: "/admin/zekerflex-ai", hrefLabel: "ZekerFlex AI-studio" },
+  { agent: "analyst", label: "Analyst", desk: "Leest elke cyclus de platformstatus en meldt bevindingen", href: "/admin/zekerflex-ai", hrefLabel: "Bevindingen in ZekerFlex AI" },
+  { agent: "developer:tom", label: "Developer · Tom", desk: "Stelt codepatches voor — iemand moet ze zelf toepassen", href: "/admin/zekerflex-ai", hrefLabel: "Voorstellen bekijken" },
   { agent: "sales", label: "Sales", desk: "Autonome leadwerving en wervingscampagnes, met harde caps", href: "/admin/sales", hrefLabel: "Sales-dashboard" },
 ];
 
