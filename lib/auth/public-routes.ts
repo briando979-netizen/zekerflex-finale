@@ -26,6 +26,7 @@ const PUBLIC_PREFIXES = [
   "/api/chat", // public marketing chat widget + its own IP rate limiting
   "/api/demo", // public "book a demo" form + its .ics link
   "/api/afspraak", // public AI-concierge (bel)afspraak form + its own IP rate limiting
+  "/api/telephony", // Twilio voice webhooks — X-Twilio-Signature validated (lib/telephony)
   "/api/werken-bij", // public job application form
   "/api/kennis/whitepaper", // public whitepaper downloads
   "/api/mail/afmelden",

@@ -187,6 +187,23 @@ const schema = z.object({
   WHISPER_MODEL: z.string().default("Systran/faster-whisper-base"),
   WHISPER_API_KEY: z.string().optional(),
 
+  // ---- Telefonie: ZekerFlex AI-beller (lib/telephony) ---------------------
+  // Leeg = de beller draait in MOCK: hij legt oproepen vast en toont scripts,
+  // maar belt niet echt. Vul een Twilio-account in om echt uit te bellen én
+  // 24/7 inkomend te beantwoorden. Webhooks zijn Twilio-handtekening-gevalideerd.
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
+  // Twilio <Say>-stem voor Nederlandse spraak (Amazon Polly via Twilio).
+  TELEPHONY_VOICE: z.string().default("Polly.Lotte"),
+  // Koude B2B-oproepen (bedrijven, mét opt-out) toestaan. Standaard UIT: dan
+  // mag de beller alleen nummers bellen met vastgelegde toestemming. Koud bellen
+  // naar particulieren is in NL sowieso niet toegestaan zonder opt-in.
+  TELEPHONY_ALLOW_B2B_COLD: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with
   // exponential backoff up to LLM_RETRY_MAX times or LLM_RETRY_MAX_WAIT_MS total.
