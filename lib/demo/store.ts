@@ -21,6 +21,10 @@ export interface DemoRequest {
   /** HH:MM, 24h */
   time: string;
   note?: string;
+  /** "demo" (platformrondleiding, standaard) of "call" (belafspraak — we bellen je op). */
+  kind?: "demo" | "call";
+  /** Waar het over gaat — vrije korte omschrijving van de bezoeker. */
+  topic?: string;
 }
 
 export async function saveDemoRequest(input: Omit<DemoRequest, "id" | "at">): Promise<DemoRequest> {

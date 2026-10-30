@@ -26,20 +26,25 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
   if (!rec) return new Response("Not found", { status: 404 });
 
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const isCall = rec.kind === "call";
+  const summary = isCall ? "Belafspraak ZekerFlex" : "Demo ZekerFlex";
+  const description = isCall
+    ? `Telefonische afspraak met ZekerFlex${rec.phone ? ` — we bellen je op ${rec.phone}` : ""}.${rec.topic ? ` Onderwerp: ${rec.topic}.` : ""}`
+    : `Rondleiding door het ZekerFlex-platform voor ${rec.company}. Je ontvangt vooraf een videolink per e-mail.`;
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//ZekerFlex//Demo//NL",
+    "PRODID:-//ZekerFlex//Afspraak//NL",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:demo-${rec.id}@zekerflex.com`,
+    `UID:${isCall ? "call" : "demo"}-${rec.id}@zekerflex.com`,
     `DTSTAMP:${stamp}`,
     `DTSTART:${dt(rec.date, rec.time)}`,
     `DTEND:${addMinutes(rec.date, rec.time, 30)}`,
-    "SUMMARY:Demo ZekerFlex",
-    `DESCRIPTION:Rondleiding door het ZekerFlex-platform voor ${rec.company}. Je ontvangt vooraf een videolink per e-mail.`,
-    "LOCATION:Online",
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${description}`,
+    `LOCATION:${isCall ? "Telefonisch" : "Online"}`,
     "STATUS:TENTATIVE",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -50,7 +55,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
     status: 200,
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="zekerflex-demo-${rec.id}.ics"`,
+      "Content-Disposition": `attachment; filename="zekerflex-afspraak-${rec.id}.ics"`,
     },
   });
 }

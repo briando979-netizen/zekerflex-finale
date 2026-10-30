@@ -8,7 +8,9 @@ import { canonical } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Over ZekerFlex",
   description:
-    "Een platform voor flexibel werk in Nederland. Dit is wie we zijn en waarom we ZekerFlex bouwen.",
+    "ZekerFlex is opgebouwd, bedacht en zelf geschreven door oprichter Briando van Essen — een Nederlands platform voor flexibel werk dat eerlijk, snel en zeker hoort te zijn.",
+  authors: [{ name: "Briando van Essen" }],
+  creator: "Briando van Essen",
   ...canonical("/over-ons"),
 };
 
@@ -47,6 +49,25 @@ export default function OverOnsPage() {
             betalingen, e-mail en identiteitscontroles werken we met gespecialiseerde
             dienstverleners. Onze AI-assistent kan draaien op een eigen modelserver.
             We leggen in ons privacybeleid uit welke gegevens we gebruiken en met wie we die delen.
+          </p>
+        </div>
+      </Section>
+
+      <Section tone="paper">
+        <div id="oprichter" className="scroll-mt-24" />
+        <SectionHead eyebrow="De oprichter" title="Gebouwd door één persoon" />
+        <div className="mt-8 max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
+          <p>
+            ZekerFlex is opgebouwd, bedacht en zelf geschreven door{" "}
+            <strong className="text-ink">Briando van Essen</strong> — van het eerste idee tot de code die je nu
+            gebruikt. Geen team van investeerders, geen overgenomen platform: één persoon die het hele systeem van de
+            grond af heeft neergezet, omdat het eerlijker en simpeler kon.
+          </p>
+          <p>
+            De overtuiging erachter is nuchter: flexibel werk hoort voor iedereen bereikbaar te zijn. Of je nu studeert,
+            er een baan naast hebt, of je leven even anders loopt — je moet er werk bij kunnen pakken dat zich voegt naar
+            jóuw agenda, snel uitbetaalt en je niet opzadelt met rompslomp. Dat is waar ZekerFlex voor is gebouwd: werk
+            dat meebeweegt met je leven, niet andersom.
           </p>
         </div>
       </Section>

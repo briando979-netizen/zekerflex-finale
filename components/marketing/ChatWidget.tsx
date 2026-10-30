@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
+import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
 
 interface Msg {
   role: "user" | "assistant" | "agent";
@@ -64,6 +65,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [booking, setBooking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -100,6 +102,17 @@ export function ChatWidget() {
     if (s.length < 3) return [];
     return INTENTS.filter((i) => i.re.test(s)).slice(0, 3);
   }, [input]);
+
+  // Someone asking to be called / to plan a meeting → offer the booking panel.
+  const wantsBooking = useMemo(
+    () => /\bbel(\s|me|len|afspraak)|terugbel|afspraak|inplan|spreek|spreken|contact opnemen/i.test(input.trim()),
+    [input],
+  );
+
+  function onBooked(msg: string) {
+    setBooking(false);
+    setMessages((m) => [...m, { role: "assistant", content: msg }]);
+  }
 
   async function rate(idx: number, up: boolean) {
     const m = messages[idx];
@@ -233,6 +246,7 @@ export function ChatWidget() {
                 <Dot /> <Dot delay="0.15s" /> <Dot delay="0.3s" />
               </div>
             )}
+            {booking && <BookingForm onCancel={() => setBooking(false)} onBooked={onBooked} />}
             {(() => {
               const last = messages[messages.length - 1];
               const follow = last && last.role === "assistant" && messages.length > 1 && !busy ? splitSuggestions(last.content).suggestions : [];
@@ -263,9 +277,18 @@ export function ChatWidget() {
           </div>
 
           {/* live intent chips */}
-          {liveIntents.length > 0 && !busy && (
+          {(liveIntents.length > 0 || (wantsBooking && !booking)) && !busy && (
             <div className="flex flex-wrap gap-1.5 border-t border-hair bg-white px-3 pb-1 pt-2">
               <span className="self-center text-[10px] uppercase tracking-wide text-neutralx-400">Bedoel je</span>
+              {wantsBooking && !booking && (
+                <button
+                  type="button"
+                  onClick={() => setBooking(true)}
+                  className="rounded-full bg-brand-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-600"
+                >
+                  📅 Belafspraak plannen
+                </button>
+              )}
               {liveIntents.map((it) => (
                 <button
                   key={it.label}
@@ -286,6 +309,17 @@ export function ChatWidget() {
             }}
             className="flex items-center gap-2 border-t border-hair p-3"
           >
+            <button
+              type="button"
+              onClick={() => setBooking((v) => !v)}
+              title="Plan een belafspraak of demo"
+              aria-pressed={booking}
+              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-base ${
+                booking ? "border-brand-500 bg-brand-50 text-brand-600" : "border-hairstrong text-neutralx-500 hover:border-brand-500 hover:text-brand-500"
+              }`}
+            >
+              📅
+            </button>
             <input
               ref={inputRef}
               value={input}
@@ -312,4 +346,149 @@ export function ChatWidget() {
 
 function Dot({ delay = "0s" }: { delay?: string }) {
   return <span className="h-1.5 w-1.5 rounded-full bg-neutralx-400 animate-pulse-dot" style={{ animationDelay: delay }} />;
+}
+
+/** In-chat booking panel: the assistant plans a real call-back or demo, captures
+ *  the details and posts them to /api/afspraak (confirmation mail + calendar). */
+function BookingForm({ onCancel, onBooked }: { onCancel: () => void; onBooked: (msg: string) => void }) {
+  const [kind, setKind] = useState<"call" | "demo">("call");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [topic, setTopic] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dates = useMemo(() => {
+    const out: string[] = [];
+    const now = new Date();
+    for (let i = 1; i <= 60 && out.length < 15; i++) {
+      const c = new Date(now);
+      c.setDate(now.getDate() + i);
+      const iso = `${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, "0")}-${String(c.getDate()).padStart(2, "0")}`;
+      if (isSelectableDemoDate(iso)) out.push(iso);
+    }
+    return out;
+  }, []);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!name.trim() || !email.trim() || !date || !time || !consent) {
+      setError("Vul je naam, e-mail, datum, tijd en akkoord in.");
+      return;
+    }
+    if (kind === "call" && phone.trim().length < 6) {
+      setError("Voor een belafspraak hebben we je telefoonnummer nodig.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/afspraak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          kind,
+          date,
+          time,
+          topic: topic.trim() || undefined,
+          conversationId: conversationId(),
+          consent: true,
+        }),
+      });
+      const d: { ok?: boolean; when?: string; error?: { message?: string } } = await res.json().catch(() => ({}));
+      if (!res.ok || !d.ok) {
+        setError(d?.error?.message ?? "Het lukte niet om de afspraak vast te leggen. Probeer het zo nog eens.");
+        return;
+      }
+      onBooked(
+        `✅ ${kind === "call" ? "Belafspraak" : "Demo"} genoteerd voor ${d.when}. Je krijgt een bevestiging per e-mail met een knop om hem in je agenda te zetten.`,
+      );
+    } catch {
+      setError("De verbinding viel weg. Probeer het zo nog eens.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const field = "w-full rounded-lg border border-hairstrong px-3 py-2 text-sm outline-none focus:border-brand-500";
+
+  return (
+    <form onSubmit={submit} className="rounded-2xl border border-brand-500/30 bg-white p-3 text-ink shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold">Plan een afspraak</p>
+        <button type="button" onClick={onCancel} className="text-xs text-neutralx-400 hover:text-neutralx-700">
+          sluiten ✕
+        </button>
+      </div>
+      <div className="mb-2 grid grid-cols-2 gap-1.5">
+        {([["call", "📞 Bel mij terug"], ["demo", "🖥️ Demo (online)"]] as [typeof kind, string][]).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setKind(k)}
+            className={`rounded-lg border px-2 py-1.5 text-xs font-medium ${
+              kind === k ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hair text-neutralx-600 hover:border-brand-500"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <input className={field} placeholder="Je naam" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+        <input className={field} type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+        <input
+          className={field}
+          type="tel"
+          placeholder={kind === "call" ? "Telefoonnummer (voor de belafspraak)" : "Telefoon (optioneel)"}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          autoComplete="tel"
+        />
+        <div className="grid grid-cols-2 gap-1.5">
+          <select className={field} value={date} onChange={(e) => setDate(e.target.value)} aria-label="Datum">
+            <option value="">Kies een dag…</option>
+            {dates.map((iso) => (
+              <option key={iso} value={iso}>
+                {formatDemoDate(iso)}
+              </option>
+            ))}
+          </select>
+          <select className={field} value={time} onChange={(e) => setTime(e.target.value)} aria-label="Tijd">
+            <option value="">Tijd…</option>
+            {DEMO_TIME_SLOTS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <input
+          className={field}
+          placeholder="Waar gaat het over? (optioneel)"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+        />
+        <label className="flex items-start gap-2 pt-0.5 text-[11px] leading-snug text-neutralx-600">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
+          <span>Ik ga ermee akkoord dat ZekerFlex contact met me opneemt over deze afspraak.</span>
+        </label>
+      </div>
+      {error && <p className="mt-2 text-xs text-crit">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="mt-2 w-full rounded-full bg-brand-500 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+      >
+        {submitting ? "Bezig…" : kind === "call" ? "Plan belafspraak" : "Plan demo"}
+      </button>
+    </form>
+  );
 }
