@@ -5,15 +5,17 @@ export function Section({
   children,
   className = "",
   tone = "paper",
+  id,
 }: {
   children: ReactNode;
   className?: string;
   tone?: "paper" | "soft" | "ink";
+  id?: string;
 }) {
   const bg =
     tone === "ink" ? "hero-ink text-white" : tone === "soft" ? "bg-paper-soft" : "bg-paper";
   return (
-    <section className={`${bg} ${className}`}>
+    <section id={id} className={`${bg} ${className} ${id ? "scroll-mt-24" : ""}`}>
       <div className="shell py-20 md:py-28">{children}</div>
     </section>
   );

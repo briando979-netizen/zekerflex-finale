@@ -17,6 +17,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/voor-bedrijven", label: "Voor bedrijven" },
       { href: "/producten", label: "Producten & losse modules" },
       { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
+      { href: "/sales-partner", label: "Word sales-partner (commissie)" },
       { href: "/prijzen", label: "Prijzen" },
       { href: "/shop", label: "ZekerFlex shop" },
       { href: "/app", label: "Download de app" },

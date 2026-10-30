@@ -52,6 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/producten", 0.8, "weekly"),
     ...SPINOFF_PRODUCTS.map((p) => entry(`/producten/${p.slug}`, 0.7, "weekly")),
     entry("/voor-bureaus", 0.7, "monthly"),
+    entry("/sales-partner", 0.6, "monthly"),
 
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
