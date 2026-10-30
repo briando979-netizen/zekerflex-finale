@@ -1,0 +1,22 @@
+# ZekerFlex — reverse proxy voor een VPS met eigen publiek IP (TransIP e.d.).
+# Dit is het alternatief voor de Cloudflare-tunnel in docker-compose.prod.yml:
+# hier komt verkeer rechtstreeks binnen op poort 80/443 van de VPS.
+#
+# SITE_ADDRESS (uit .env.production) bepaalt of er TLS is:
+#   :80            platte HTTP (standaard) — gebruik dit zolang het domein nog
+#                  ergens anders heen wijst; de site is dan bereikbaar op het IP.
+#   zekerflex.com  Caddy haalt automatisch een Let's Encrypt-certificaat op en
+#                  forceert HTTPS. Zet dit pas zodra de A-record van het domein
+#                  naar deze VPS wijst, en herstart caddy.
+#
+# ACME_EMAIL is optioneel (voor verlooptmeldingen van Let's Encrypt).
+
+{
+	email {$ACME_EMAIL:}
+}
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+	# Next.js standalone server draait in de app-container op poort 3000.
+	reverse_proxy app:3000
+}

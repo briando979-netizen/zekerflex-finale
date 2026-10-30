@@ -1,0 +1,94 @@
+# ZekerFlex Sovereign Box — productie-stack voor een VPS met EIGEN PUBLIEK IP
+# (TransIP, Hetzner, …). Dit is de variant van docker-compose.prod.yml zonder
+# Cloudflare-tunnel: verkeer komt rechtstreeks binnen via Caddy op poort 80/443.
+# Gebruik dit wanneer je domein-DNS NIET bij Cloudflare staat (zoals bij TransIP).
+#
+#   cp deploy/.env.production.example .env.production   # of laat deploy-vps.sh 'm genereren
+#   docker compose --env-file .env.production -f docker-compose.vps.yml up -d --build
+#
+# Inbound poorten: 80 + 443 (Caddy). Houd de rest van de firewall dicht, op SSH na.
+# TLS: zet SITE_ADDRESS in .env.production op je domein zodra de A-record naar
+# deze VPS wijst; Caddy haalt dan automatisch een Let's Encrypt-certificaat op.
+#
+# Zware AI-diensten (ollama/whisper/sd) zitten hier bewust NIET in: op een CPU-
+# only VPS draaien die slecht. De app valt terug op sjablonen, of je zet een
+# externe LLM aan via LLM_API_KEY + LLM_BASE_URL in .env.production.
+#
+# Dit bestand migreert of seedt de database nooit. Zie deploy/README.md.
+
+name: zekerflex
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zekerflex-app:latest
+    restart: unless-stopped
+    env_file: [.env.production]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/zekerflex?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    volumes:
+      - app-storage:/app/storage
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    # Geen `ports:` — alles loopt via Caddy.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: [.env.production]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app: { condition: service_started }
+    networks: [internal]
+
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zekerflex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: zekerflex
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zekerflex -d zekerflex"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  redis:
+    image: redis:7-bookworm
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  app-storage:
+  pg-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
