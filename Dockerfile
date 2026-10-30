@@ -46,7 +46,11 @@ COPY --from=build --chown=nextjs:nodejs /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Recreate the CLI symlink: `COPY` dereferences .bin/prisma into a real file,
+# which makes the CLI look for its wasm (prisma_schema_build_bg.wasm) next to
+# .bin/ instead of in prisma/build/. A symlink keeps __dirname at the package
+# so `npx prisma migrate deploy` works in this runtime image.
+RUN mkdir -p ./node_modules/.bin && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma
 COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Local storage (uploads, mailbox, prefs, fiscal) — mount a volume over this.
