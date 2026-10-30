@@ -477,7 +477,8 @@ export async function embed(input: string | string[]): Promise<number[][]> {
   return withGovernor("embed", async () => {
     const data = (await post(
       "/embeddings",
-      { model: env.LLM_EMBED_MODEL, input, keep_alive: env.LLM_KEEP_ALIVE },
+      // keep_alive is Ollama-only; remote providers (Gemini) 400 on it.
+      { model: env.LLM_EMBED_MODEL, input, ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}) },
       env.LLM_TIMEOUT_MS,
     )) as {
       data?: { embedding: number[] }[];
