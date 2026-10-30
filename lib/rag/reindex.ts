@@ -53,6 +53,13 @@ async function indexEntries(
     });
   }
 
+  logger.info("rag index debug", {
+    sourceType,
+    entries: entries.length,
+    chunks: pending.length,
+    embedded: withVectors.length,
+    vecLen: withVectors[0]?.embedding?.length ?? 0,
+  });
   await replaceSource(sourceType, withVectors);
   return withVectors.length;
 }
