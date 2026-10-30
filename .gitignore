@@ -73,3 +73,9 @@ studio/projects/*/out/
 __pycache__/
 *.pyc
 *.pyo
+
+# Lokale runtime (thuis draaien) - niet committen
+cloudflared.exe
+server.log
+tunnel.log
+tunnel.out
