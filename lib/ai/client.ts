@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { isLocalInference, withGovernor } from "@/lib/ai/governor";
+import { fixBrandName } from "@/lib/ai/brand";
 import { modelForPurpose } from "@/lib/ai/models";
 import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
 import { getLlmApiKey } from "@/lib/ai/llm-key";
@@ -315,7 +316,7 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
       const usage = readUsage(data);
       return {
         value: {
-          text: data.choices?.[0]?.message?.content ?? "",
+          text: fixBrandName(data.choices?.[0]?.message?.content ?? ""),
           model: data.model ?? model,
           raw: data,
         } satisfies ChatResult,
@@ -437,6 +438,9 @@ export async function* chatStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  // Hold back the trailing partial word so brand-correction (fixBrandName) is
+  // never split across chunks (e.g. "Seeker" + "Flex" arriving separately).
+  let pending = "";
   try {
     for (;;) {
       const { done, value } = await reader.read();
@@ -453,8 +457,16 @@ export async function* chatStream(
           const j = JSON.parse(payload) as { choices?: { delta?: { content?: string } }[] };
           const delta = j.choices?.[0]?.delta?.content;
           if (delta) {
-            full += delta;
-            yield delta;
+            pending += delta;
+            const cut = Math.max(pending.lastIndexOf(" "), pending.lastIndexOf("\n"), pending.lastIndexOf("\t"));
+            if (cut >= 0) {
+              const emit = fixBrandName(pending.slice(0, cut + 1));
+              pending = pending.slice(cut + 1);
+              if (emit) {
+                full += emit;
+                yield emit;
+              }
+            }
           }
         } catch {
           /* partial JSON line — ignore, next chunk completes it */
@@ -463,6 +475,11 @@ export async function* chatStream(
     }
   } finally {
     reader.releaseLock();
+  }
+  if (pending) {
+    const emit = fixBrandName(pending);
+    full += emit;
+    yield emit;
   }
   return { text: full, model };
 }
