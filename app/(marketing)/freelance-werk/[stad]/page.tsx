@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
 export default async function FreelanceWerkStadPage({ params }: { params: Promise<{ stad: string }> }) {
   const c = cityBySlug((await params).stad);
   if (!c) notFound();
-  const shifts = await publicOpenShifts({ near: { lat: c.lat, lng: c.lng, km: RADIUS_KM }, take: 30 });
+  const shifts = await publicOpenShifts({ near: { lat: c.lat, lng: c.lng, km: RADIUS_KM }, take: 30 }).catch(() => []);
   const faq = [
     {
       q: `Hoe vind ik freelance werk in ${c.name}?`,

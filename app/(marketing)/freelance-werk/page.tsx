@@ -37,7 +37,7 @@ const FAQ = [
 ];
 
 export default async function FreelanceWerkPage() {
-  const shifts = await publicOpenShifts({ take: 12 });
+  const shifts = await publicOpenShifts({ take: 12 }).catch(() => []);
   return (
     <>
       <script

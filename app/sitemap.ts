@@ -69,6 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/dsa", 0.3, "yearly"),
     entry("/privacy", 0.3, "yearly"),
     entry("/voorwaarden", 0.3, "yearly"),
+    entry("/voorwaarden/snelle-uitbetaling", 0.3, "yearly"),
     entry("/cookiebeleid", 0.3, "yearly"),
     entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
@@ -78,6 +79,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(await prisma.shopProduct.findMany({
       where: { active: true },
       select: { slug: true, updatedAt: true },
-    })).map((p) => entry(`/shop/${p.slug}`, 0.6, "weekly", p.updatedAt)),
+    }).catch(() => [] as { slug: string; updatedAt: Date }[])).map((p) => entry(`/shop/${p.slug}`, 0.6, "weekly", p.updatedAt)),
   ];
 }

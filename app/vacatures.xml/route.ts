@@ -34,7 +34,7 @@ function description(s: PublicShift): string {
 export async function GET(): Promise<Response> {
   const shifts = await publicOpenShifts({ take: 500 }).catch(() => [] as PublicShift[]);
   const tenantOf = new Map(
-    (await prisma.shift.findMany({ where: { id: { in: shifts.map((s) => s.id) } }, select: { id: true, branch: { select: { tenantId: true } } } })).map((r) => [r.id, r.branch.tenantId]),
+    (await prisma.shift.findMany({ where: { id: { in: shifts.map((s) => s.id) } }, select: { id: true, branch: { select: { tenantId: true } } } }).catch(() => [] as { id: string; branch: { tenantId: string } }[])).map((r) => [r.id, r.branch.tenantId]),
   );
   const verified = new Map<string, boolean>();
   const tenantIds = [...new Set(tenantOf.values())];

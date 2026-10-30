@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function KlussenPage() {
-  const shifts = await publicOpenShifts({ take: 60 });
+  const shifts = await publicOpenShifts({ take: 60 }).catch(() => []);
   return (
     <>
       <script
