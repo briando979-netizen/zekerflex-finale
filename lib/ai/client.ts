@@ -429,7 +429,8 @@ export async function* chatStream(
     throw unreachable(err);
   }
   if (!res.ok || !res.body) {
-    throw AppError.upstream(`LLM stream HTTP ${res.status}`);
+    const detail = await res.text().catch(() => "");
+    throw AppError.upstream(`LLM stream HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
 
   const reader = res.body.getReader();
