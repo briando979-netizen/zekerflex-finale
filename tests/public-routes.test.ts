@@ -26,6 +26,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/chat/rate",
     "/api/demo",
     "/api/demo/abc123/ics",
+    "/api/afspraak",
     "/api/werken-bij",
     "/api/kennis/whitepaper/omzetbelasting",
     "/api/mail/afmelden",
