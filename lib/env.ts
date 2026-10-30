@@ -203,6 +203,10 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  // Nummer waar de AI-beller een inkomend gesprek naar doorschakelt als de beller
+  // de baas / een mens wil spreken (of naar iemand bij naam vraagt). Leeg = niet
+  // doorschakelen (de AI biedt dan een terugbelafspraak aan).
+  TELEPHONY_FORWARD_NUMBER: z.string().optional(),
 
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with

@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
-import { twiml, sayAndGather, hangupAfter } from "@/lib/telephony/twiml";
+import { twiml, sayAndGather, hangupAfter, say, dial } from "@/lib/telephony/twiml";
 import { getCall, addTurn } from "@/lib/telephony/store";
 import { PHONE_AGENT_SYSTEM } from "@/lib/telephony/scripts";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
@@ -10,6 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BYE = /\b(doei|daag|dag|tot ziens|bedankt|dank (?:je|u)|fijne dag|hang|ophangen|nee bedankt)\b/i;
+// De beller wil een mens / de baas / iemand bij naam → doorschakelen.
+const FORWARD = /\b(de baas|\bbaas\b|briando|eigenaar|directeur|met iemand|iemand spreken|een mens|een medewerker|doorverbind|doorschakel|met een persoon|verantwoordelijke)\b/i;
 const FALLBACK = "Dat kan ik het beste via de website regelen: kijk op zekerflex punt com, of mail naar info at zekerflex punt com. Kan ik u verder nog ergens mee helpen?";
 
 // POST /api/telephony/gather — de gesprekslus. Twilio stuurt wat de beller zei
@@ -23,6 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!rec || !callId) {
     return xmlResponse(twiml(hangupAfter("Er ging iets mis. Bel ons gerust opnieuw. Tot ziens.")));
   }
+  const action = `${env.APP_BASE_URL.replace(/\/+$/, "")}/api/telephony/gather?callId=${callId}`;
 
   const speech = (params.SpeechResult ?? "").trim();
   if (speech) await addTurn(callId, "beller", speech).catch(() => undefined);
@@ -30,6 +33,18 @@ export async function POST(request: Request): Promise<Response> {
   if (speech && BYE.test(speech) && speech.length < 40) {
     await addTurn(callId, "ai", "Fijn dat u belde. Een prettige dag nog, en tot ziens.").catch(() => undefined);
     return xmlResponse(twiml(hangupAfter("Fijn dat u belde. Een prettige dag nog, en tot ziens.")));
+  }
+
+  // Doorschakelen naar een mens/de baas als daarom gevraagd wordt.
+  if (speech && FORWARD.test(speech)) {
+    const fwd = env.TELEPHONY_FORWARD_NUMBER;
+    if (fwd) {
+      await addTurn(callId, "ai", `Doorverbinden naar ${fwd}…`).catch(() => undefined);
+      return xmlResponse(twiml(say("Ik verbind u door, een moment alstublieft.") + dial(fwd)));
+    }
+    const back = "Die persoon is nu niet direct bereikbaar. Ik kan een terugbelafspraak inplannen — zeg uw naam en wanneer u gebeld wilt worden.";
+    await addTurn(callId, "ai", back).catch(() => undefined);
+    return xmlResponse(twiml(sayAndGather(back, action)));
   }
 
   let reply = FALLBACK;
@@ -56,6 +71,5 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   await addTurn(callId, "ai", reply).catch(() => undefined);
-  const action = `${env.APP_BASE_URL.replace(/\/+$/, "")}/api/telephony/gather?callId=${callId}`;
   return xmlResponse(twiml(sayAndGather(reply, action)));
 }

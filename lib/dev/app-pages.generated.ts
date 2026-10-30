@@ -68,6 +68,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/admin/mail","file":"app/admin/mail/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/mijn-mail","file":"app/admin/mijn-mail/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/nieuwsbrief","file":"app/admin/nieuwsbrief/page.tsx","area":"Admin","dynamic":false},
+  {"route":"/admin/offertes","file":"app/admin/offertes/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/pensioen","file":"app/admin/pensioen/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/recruiter","file":"app/admin/recruiter/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/sales","file":"app/admin/sales/page.tsx","area":"Admin","dynamic":false},

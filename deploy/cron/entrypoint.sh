@@ -16,6 +16,7 @@ cat > /etc/crontabs/root <<EOF
 0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/orchestration/tick"
 0 12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
+0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
 0 7 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/ai/watchdog"
 0 5 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/payroll/abu-phase-sweep"
 0 9 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/claims/collections-sweep"
