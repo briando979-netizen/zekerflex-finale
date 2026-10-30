@@ -388,10 +388,9 @@ export async function* chatStream(
     throw AppError.upstream(`Soevereiniteitsgrendel: LLM_BASE_URL host "${host}" is niet lokaal.`);
   }
 
-  let res: Response;
   const llmKey = await getLlmApiKey();
-  try {
-    res = await fetch(`${baseUrl()}/chat/completions`, {
+  const streamOnce = (m: string): Promise<Response> =>
+    fetch(`${baseUrl()}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -399,7 +398,7 @@ export async function* chatStream(
       },
       signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
-        model,
+        model: m,
         messages: opts.messages,
         temperature: opts.temperature ?? 0.4,
         stream: true,
@@ -407,6 +406,16 @@ export async function* chatStream(
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
       }),
     });
+
+  let res: Response;
+  try {
+    res = await streamOnce(model);
+    // Rol-model niet gedownload op de node (Ollama → 404)? Val terug op het
+    // hoofdmodel — net als de non-stream post — zodat de stream niet hard faalt
+    // op een verkeerd/ontbrekend model (bv. een oude fleet-override).
+    if (res.status === 404 && model !== env.LLM_MODEL) {
+      res = await streamOnce(env.LLM_MODEL);
+    }
   } catch (err) {
     throw unreachable(err);
   }
