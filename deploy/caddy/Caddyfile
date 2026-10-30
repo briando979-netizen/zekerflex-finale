@@ -9,11 +9,8 @@
 #                  forceert HTTPS. Zet dit pas zodra de A-record van het domein
 #                  naar deze VPS wijst, en herstart caddy.
 #
-# ACME_EMAIL is optioneel (voor verlooptmeldingen van Let's Encrypt).
-
-{
-	email {$ACME_EMAIL:}
-}
+# TLS werkt zonder e-mailadres (Caddy gebruikt dan Let's Encrypt zonder account-
+# mail). Wil je verloopmeldingen? Voeg dan zelf een globale `email ...`-regel toe.
 
 {$SITE_ADDRESS::80} {
 	encode zstd gzip

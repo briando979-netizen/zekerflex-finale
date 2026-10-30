@@ -81,6 +81,9 @@ INTERNAL_CRON_TOKEN=${INTERNAL_CRON_TOKEN}
 # Datastores in de compose-stack.
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 DATABASE_URL=postgresql://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/zekerflex?schema=public
+# Zelf-gehoste Postgres kent geen aparte pooled/direct-URL; Prisma's directUrl
+# (gebruikt door 'migrate deploy') wijst naar dezelfde verbinding.
+DATABASE_URL_UNPOOLED=postgresql://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/zekerflex?schema=public
 REDIS_URL=redis://redis:6379
 
 # Web Push (self-hosted VAPID).
