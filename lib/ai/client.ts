@@ -413,6 +413,12 @@ export async function* chatStream(
   let res: Response;
   try {
     res = await streamOnce(model);
+    // Tijdelijke overbelasting (bv. Gemini's gratis laag: 429/502/503/504) →
+    // kort opnieuw proberen i.p.v. de gebruiker een foutmelding tonen.
+    for (let attempt = 0; attempt < 3 && [429, 502, 503, 504].includes(res.status); attempt++) {
+      await sleep(600 * (attempt + 1));
+      res = await streamOnce(model);
+    }
     // Rol-model niet gedownload op de node (Ollama → 404)? Val terug op het
     // hoofdmodel — net als de non-stream post — zodat de stream niet hard faalt
     // op een verkeerd/ontbrekend model (bv. een oude fleet-override).
