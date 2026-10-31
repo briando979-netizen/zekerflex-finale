@@ -2,6 +2,22 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
+import { placesEnabled, lookupCompanyContact } from "@/lib/sales/discovery/places-lookup";
+
+function safeOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+function safeHost(origin: string): string | null {
+  try {
+    return new URL(origin).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Contactgegevens-verrijker. KVKBase-leads zijn kale stubs (naam + KVK, geen
@@ -72,47 +88,49 @@ export interface ContactScrapeResult {
   updated: boolean;
 }
 
-/** Zoek telefoon + e-mail voor één lead en vul de ontbrekende velden aan. */
+/** Zoek telefoon + e-mail voor één lead en vul de ontbrekende velden aan.
+ *  Bron-volgorde: Google Places (echt nummer + website) → domein raden →
+ *  website afzoeken op (nog ontbrekende) telefoon + e-mail. */
 export async function enrichLeadContact(leadId: string): Promise<ContactScrapeResult> {
   const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
   if (!lead) return { origin: null, phone: null, email: null, updated: false };
 
-  let origin: string | null = null;
-  if (lead.sourceUrl) {
-    try {
-      origin = new URL(lead.sourceUrl).origin;
-    } catch {
-      origin = null;
-    }
+  let phone: string | null = null;
+  let email: string | null = null;
+  let origin: string | null = lead.sourceUrl ? safeOrigin(lead.sourceUrl) : null;
+
+  // 1. Google Places: echt telefoonnummer + website (beste bron, als geconfigureerd).
+  if (placesEnabled()) {
+    const p = await lookupCompanyContact(lead.companyName, lead.city).catch(() => null);
+    if (p?.phone) phone = p.phone;
+    if (p?.website && !origin) origin = safeOrigin(p.website);
   }
+
+  // 2. Nog geen website? Raad het domein.
   if (!origin) {
     const guess = await guessAndVerifyDomain(lead.companyName).catch(() => null);
     origin = guess?.origin ?? null;
   }
-  if (!origin) return { origin: null, phone: null, email: null, updated: false };
 
-  let siteDomain: string | null = null;
-  try {
-    siteDomain = new URL(origin).hostname.replace(/^www\./, "");
-  } catch {
-    siteDomain = null;
+  // 3. Website afzoeken op ontbrekende telefoon + e-mail.
+  if (origin) {
+    const siteDomain = safeHost(origin);
+    for (const path of CONTACT_PATHS) {
+      if (phone && email) break;
+      const html = await fetchPage(origin + path);
+      if (!html) continue;
+      phone = phone ?? extractPhone(html);
+      email = email ?? extractEmail(html, siteDomain);
+    }
   }
 
-  let phone: string | null = null;
-  let email: string | null = null;
-  for (const path of CONTACT_PATHS) {
-    if (phone && email) break;
-    const html = await fetchPage(origin + path);
-    if (!html) continue;
-    phone = phone ?? extractPhone(html);
-    email = email ?? extractEmail(html, siteDomain);
-  }
+  if (!phone && !email && !origin) return { origin: null, phone: null, email: null, updated: false };
 
   const update: Prisma.SalesLeadUpdateInput = {
     ...(phone && !lead.contactPhone ? { contactPhone: phone } : {}),
     ...(email && !lead.discoveredEmail ? { discoveredEmail: email } : {}),
     ...(email && !lead.contactEmail ? { contactEmail: email } : {}),
-    ...(lead.sourceUrl ? {} : { sourceUrl: origin }),
+    ...(origin && !lead.sourceUrl ? { sourceUrl: origin } : {}),
   };
   let updated = false;
   if (Object.keys(update).length > 0) {
