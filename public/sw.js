@@ -4,7 +4,7 @@
  * than a spinner. Only a static offline page is precached. */
 
 const OFFLINE_URL = "/offline.html";
-const CACHE = "zf-shell-v1";
+const CACHE = "zf-shell-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.add(OFFLINE_URL)));
@@ -13,10 +13,19 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+      await self.clients.claim();
+      // Na een service-worker-update: open vensters één keer verversen zodat ze
+      // gegarandeerd de nieuwste build laden. Dit trekt een "werkt in incognito
+      // maar niet in de normale browser"-situatie los (vastgezette oude build).
+      // Draait alleen bij een échte SW-versiewissel, dus geen herlaad-lus.
+      const windows = await self.clients.matchAll({ type: "window" });
+      await Promise.all(
+        windows.map((c) => ("navigate" in c ? Promise.resolve(c.navigate(c.url)).catch(() => {}) : Promise.resolve())),
+      );
+    })(),
   );
 });
 
