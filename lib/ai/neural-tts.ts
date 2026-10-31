@@ -4,17 +4,23 @@ import { logger } from "@/lib/logger";
 // ---------------------------------------------------------------------------
 // Neurale tekst-naar-spraak via Google Cloud Text-to-Speech (Wavenet NL) — een
 // natuurlijke stem voor het "voorlezen" in de ZekerFlex AI-console, i.p.v. de
-// robotachtige browserstem. Dormant zonder GOOGLE_MAPS_API_KEY; vereist dat de
-// "Cloud Text-to-Speech API" in Google Cloud aanstaat (zelfde sleutel als Places).
+// robotachtige browserstem. Gebruikt GOOGLE_TTS_API_KEY (valt terug op
+// GOOGLE_MAPS_API_KEY) en vereist dat de "Cloud Text-to-Speech API" aanstaat.
+// Let op: een Maps-Platform-sleutel mag géén TTS — gebruik hiervoor een losse,
+// onbeperkte API-sleutel. Dormant (→ browserstem) zolang geen sleutel TTS mag.
 // ---------------------------------------------------------------------------
 
+function ttsKey(): string | undefined {
+  return env.GOOGLE_TTS_API_KEY ?? env.GOOGLE_MAPS_API_KEY;
+}
+
 export function neuralTtsEnabled(): boolean {
-  return Boolean(env.GOOGLE_MAPS_API_KEY);
+  return Boolean(ttsKey());
 }
 
 /** Zet tekst om naar MP3-bytes (neurale NL-stem), of null als het niet lukt/uit staat. */
 export async function synthesizeSpeech(text: string, voiceName = "nl-NL-Wavenet-D"): Promise<Buffer | null> {
-  const key = env.GOOGLE_MAPS_API_KEY;
+  const key = ttsKey();
   if (!key || !text.trim()) return null;
   try {
     const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`, {

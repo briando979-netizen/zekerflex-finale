@@ -47,6 +47,10 @@ const schema = z.object({
   MATCHING_WEIGHT_SKILL: z.coerce.number().min(0).max(1).default(0.25),
 
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  // Aparte sleutel voor Cloud Text-to-Speech (de voorlees-stem in de console).
+  // Een Maps-Platform-sleutel mag géén TTS, dus dit staat los; valt terug op
+  // GOOGLE_MAPS_API_KEY als het niet apart gezet is.
+  GOOGLE_TTS_API_KEY: z.string().optional(),
   OPENOV_BASE_URL: z.string().url().default("https://api.openov.nl"),
 
   // Push: self-hosted Web Push (VAPID / RFC 8291) is the only channel.
