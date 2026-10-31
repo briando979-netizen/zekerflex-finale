@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { enrichLead, getLead, scoreLead } from "@/lib/sales/leads";
+import { enrichLead, getLead, scoreLead, setLeadStage } from "@/lib/sales/leads";
 import { draftOutreach } from "@/lib/sales/outreach";
 import { markLeadBounced, markLeadReplied, suppressLead } from "@/lib/sales/reply";
 import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 const patchSchema = z.object({
-  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress", "scrape-contact"]),
+  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress", "scrape-contact", "set-stage"]),
+  status: z.enum(["NEW", "QUEUED", "REPLIED", "WON", "LOST"]).optional(),
 });
 
 export const GET = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_req, { params }) => {
@@ -25,7 +26,13 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
   const json = await request.json().catch(() => {
     throw AppError.validation("Body must be JSON");
   });
-  const { action } = patchSchema.parse(json);
+  const parsed = patchSchema.parse(json);
+  const { action } = parsed;
+
+  if (action === "set-stage") {
+    if (!parsed.status) throw AppError.validation("Fase ontbreekt.");
+    return NextResponse.json({ lead: await setLeadStage(id, parsed.status, principal.userId) });
+  }
 
   if (action === "enrich") {
     return NextResponse.json({ lead: await enrichLead(id, principal.userId) });

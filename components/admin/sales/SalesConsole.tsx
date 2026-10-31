@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { SalesDashboard, type LeadDto } from "@/components/admin/SalesDashboard";
+import { PipelineBoard } from "@/components/admin/sales/PipelineBoard";
 import { CampaignsTab, type CampaignDto } from "@/components/admin/sales/CampaignsTab";
 import { EngineTab, type EngineSnapshot } from "@/components/admin/sales/EngineTab";
 import { SuppressionTab, type SuppressionEntry } from "@/components/admin/sales/SuppressionTab";
 
-type Tab = "leads" | "campagnes" | "motor" | "onderdrukking";
+type Tab = "pijplijn" | "leads" | "campagnes" | "motor" | "onderdrukking";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "leads", label: "Leads" },
+  { id: "pijplijn", label: "📊 Pijplijn" },
+  { id: "leads", label: "Leads (lijst)" },
   { id: "campagnes", label: "Campagnes" },
   { id: "motor", label: "Motor" },
   { id: "onderdrukking", label: "Onderdrukkingslijst" },
@@ -26,7 +28,7 @@ export function SalesConsole({
   initialEngine: EngineSnapshot;
   initialSuppression: SuppressionEntry[];
 }) {
-  const [tab, setTab] = useState<Tab>("leads");
+  const [tab, setTab] = useState<Tab>("pijplijn");
 
   return (
     <div className="space-y-4">
@@ -51,6 +53,7 @@ export function SalesConsole({
         })}
       </div>
 
+      {tab === "pijplijn" && <PipelineBoard initialLeads={initialLeads} />}
       {tab === "leads" && <SalesDashboard initialLeads={initialLeads} />}
       {tab === "campagnes" && <CampaignsTab initialCampaigns={initialCampaigns} />}
       {tab === "motor" && <EngineTab initial={initialEngine} />}

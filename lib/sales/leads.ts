@@ -33,6 +33,24 @@ export interface CreateLeadInput {
   discoveredEmail?: string | undefined;
 }
 
+// Fases die de kanban-pijplijn mag zetten (slepen tussen kolommen).
+const STAGE_STATUSES: SalesLeadStatus[] = ["NEW", "QUEUED", "REPLIED", "WON", "LOST"];
+
+/** Verplaats een lead naar een pijplijn-fase (vanuit het kanban-bord). */
+export async function setLeadStage(id: string, status: SalesLeadStatus, actorUserId: string) {
+  if (!STAGE_STATUSES.includes(status)) throw AppError.validation("Ongeldige fase.");
+  const lead = await prisma.salesLead.update({ where: { id }, data: { status } });
+  await recordAudit({
+    category: "SALES",
+    action: "sales.lead.stage",
+    actorUserId,
+    summary: `Lead "${lead.companyName}" verplaatst naar fase ${status}`,
+    targetType: "salesLead",
+    targetId: id,
+  });
+  return lead;
+}
+
 export async function createLead(input: CreateLeadInput) {
   const lead = await prisma.salesLead.create({
     data: {
