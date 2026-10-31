@@ -4,6 +4,7 @@ import { getPrincipal, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { jsonError } from "@/lib/http/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { adminFullAccess } from "@/lib/auth/admin-access";
 import {
   getManagedWebsite,
   isUnlocked,
@@ -16,24 +17,25 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function tenantFor(): Promise<{ tenantId: string; userId: string; email: string }> {
+async function tenantFor(): Promise<{ tenantId: string; userId: string; email: string; admin: boolean }> {
   const principal = await getPrincipal();
   if (!principal) throw AppError.unauthenticated();
   requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
   if (!tenantId) throw AppError.validation("Geen organisatie gekoppeld aan je account.");
-  return { tenantId, userId: principal.userId, email: principal.email };
+  return { tenantId, userId: principal.userId, email: principal.email, admin: adminFullAccess(principal) };
 }
 
 // GET — huidige status van het website-beheer voor deze organisatie.
 export async function GET(): Promise<NextResponse> {
   try {
-    const { tenantId } = await tenantFor();
+    const { tenantId, admin } = await tenantFor();
     const record = await getManagedWebsite(tenantId);
     return NextResponse.json({
       status: record?.status ?? null,
-      unlocked: isUnlocked(record),
+      unlocked: isUnlocked(record) || admin,
+      adminOverride: admin,
       plan: record?.plan ?? null,
       domain: record?.domain ?? null,
       provider: record?.provider ?? null,
@@ -69,7 +71,7 @@ const bodySchema = z.discriminatedUnion("action", [
 // POST — abonnement starten (subscribe) of websitegegevens opslaan (save).
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const { tenantId, userId, email } = await tenantFor();
+    const { tenantId, userId, email, admin } = await tenantFor();
     const body = bodySchema.parse(await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
     }));
@@ -82,7 +84,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // body bevat `action: "save"` plus de (optionele) detailvelden; saveWebsiteDetails
     // leest alleen de velden die het kent, dus het action-veld wordt genegeerd.
-    await saveWebsiteDetails(tenantId, body);
+    // Admin krijgt gratis toegang (geen abonnement nodig).
+    await saveWebsiteDetails(tenantId, body, { adminOverride: admin });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return jsonError(err);

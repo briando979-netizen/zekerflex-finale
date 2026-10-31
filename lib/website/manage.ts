@@ -149,11 +149,16 @@ export interface WebsiteDetailsInput {
 }
 
 /** Opdrachtgever vult (of werkt bij) zijn websitegegevens + SSH-toegang in. De
- *  gevoelige velden worden verzegeld; alleen niet-lege waarden worden bewaard. */
-export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetailsInput): Promise<void> {
-  const record = await prisma.managedWebsite.findUnique({ where: { tenantId } });
-  if (!record) throw AppError.notFound("Nog geen website-beheer abonnement");
-  if (!isUnlocked(record)) throw AppError.precondition("Je abonnement is nog niet actief.");
+ *  gevoelige velden worden verzegeld; alleen niet-lege waarden worden bewaard.
+ *  `adminOverride` geeft de platform-admin gratis toegang: zonder abonnement
+ *  wordt direct een actief record aangemaakt. */
+export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetailsInput, opts: { adminOverride?: boolean } = {}): Promise<void> {
+  let record = await prisma.managedWebsite.findUnique({ where: { tenantId } });
+  if (!record) {
+    if (!opts.adminOverride) throw AppError.notFound("Nog geen website-beheer abonnement");
+    record = await prisma.managedWebsite.create({ data: { tenantId, status: "ACTIVE", plan: "admin", subscribedAt: new Date() } });
+  }
+  if (!isUnlocked(record) && !opts.adminOverride) throw AppError.precondition("Je abonnement is nog niet actief.");
 
   const secrets: Record<string, string> = {};
   const put = (key: string, value: string | undefined) => {

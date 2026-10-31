@@ -47,7 +47,7 @@ const STAT_TILES = [
   { label: "Beveiliging", icon: "🛡️" },
 ];
 
-export function WebsiteManage({ initial, plans }: { initial: WebsiteInitial; plans: Record<string, PlanDef> }) {
+export function WebsiteManage({ initial, plans, adminOverride = false }: { initial: WebsiteInitial; plans: Record<string, PlanDef>; adminOverride?: boolean }) {
   const [state, setState] = useState<WebsiteInitial>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -122,11 +122,17 @@ export function WebsiteManage({ initial, plans }: { initial: WebsiteInitial; pla
         <p className="mt-1 text-sm text-neutralx-500">Laat ZekerFlex je website onderhouden, beveiligen en doorontwikkelen — jij hoeft nergens meer naar om te kijken.</p>
       </header>
 
+      {adminOverride && (
+        <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+          👑 Admin: je hebt gratis toegang tot deze functie — geen abonnement nodig.
+        </div>
+      )}
+
       {state.unlocked ? (
-        state.status === "ONBOARDING" ? (
-          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} />
-        ) : (
+        state.status === "SUBMITTED" || state.status === "ACTIVE" || state.status === "PAUSED" ? (
           <ManagedDashboard state={state} message={message} onEdit={() => setState((s) => ({ ...s, status: "ONBOARDING" }))} />
+        ) : (
+          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} />
         )
       ) : (
         <LockedView plans={plans} onSubscribe={subscribe} busy={busy} message={message} pending={state.status === "PENDING_PAYMENT"} />
