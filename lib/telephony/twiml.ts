@@ -17,9 +17,9 @@ export function xmlEscape(s: string): string {
 
 const VOICE = () => env.TELEPHONY_VOICE;
 
-/** <Say> in het Nederlands met de ingestelde stem. */
-export function say(text: string): string {
-  const v = VOICE();
+/** <Say> met de opgegeven stem (of de standaardstem). */
+export function say(text: string, voice?: string): string {
+  const v = voice ?? VOICE();
   // Polly/Google-stemmen bepalen hun taal zelf; een language-attribuut erbij kan
   // Twilio laten terugvallen op een robotachtige basisstem. Alleen basisstemmen
   // (man/vrouw/alice) krijgen language mee.
@@ -27,20 +27,38 @@ export function say(text: string): string {
   return `<Say voice="${xmlEscape(v)}"${lang}>${xmlEscape(text)}</Say>`;
 }
 
-/** Spreek iets uit en luister daarna naar het antwoord (spraak → actie-URL). */
-export function sayAndGather(text: string, actionUrl: string): string {
+/** Spreek iets uit en luister daarna naar het gesproken antwoord (spraak → actie-URL). */
+export function sayAndGather(
+  text: string,
+  actionUrl: string,
+  opts: { voice?: string; recogLang?: string } = {},
+): string {
+  const voice = opts.voice;
+  const recog = opts.recogLang ?? "nl-NL";
+  const nothing = recog.startsWith("en")
+    ? "I didn't catch that. You can always reach us via our website."
+    : "Ik hoorde niets. Je kunt ons altijd bereiken via de website.";
   return (
-    `<Gather input="speech" language="nl-NL" speechTimeout="auto" action="${xmlEscape(actionUrl)}" method="POST">` +
-    say(text) +
+    `<Gather input="speech" language="${xmlEscape(recog)}" speechTimeout="auto" action="${xmlEscape(actionUrl)}" method="POST">` +
+    say(text, voice) +
     `</Gather>` +
-    // Niets gehoord: nog één poging, anders nette afsluiting.
-    say("Ik hoorde niets. Je kunt ons altijd bereiken via de website.") +
+    say(nothing, voice) +
     `<Hangup/>`
   );
 }
 
-export function hangupAfter(text: string): string {
-  return say(text) + "<Hangup/>";
+/** Spreek een menutekst uit en wacht op één toets (DTMF). Niets getoetst → terug naar de actie (lege input). */
+export function gatherDigits(text: string, actionUrl: string, voice?: string, numDigits = 1): string {
+  return (
+    `<Gather input="dtmf" numDigits="${numDigits}" timeout="7" action="${xmlEscape(actionUrl)}" method="POST">` +
+    say(text, voice) +
+    `</Gather>` +
+    `<Redirect method="POST">${xmlEscape(actionUrl)}</Redirect>`
+  );
+}
+
+export function hangupAfter(text: string, voice?: string): string {
+  return say(text, voice) + "<Hangup/>";
 }
 
 /** Verbind door naar een mens (bv. kantoornummer). */

@@ -31,6 +31,10 @@ export interface CallRecord {
   leadId?: string;
   providerCallId?: string;
   recordingUrl?: string;
+  /** Gekozen taal (IVR) — stuurt stem, spraakherkenning en AI-taal. */
+  lang?: "nl" | "en";
+  /** Gekozen afdeling in het keuzemenu (toets). */
+  dept?: string;
   transcript: CallTurn[];
   updatedAt: string;
 }
