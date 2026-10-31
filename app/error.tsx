@@ -28,7 +28,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           message: error?.message ?? String(error),
           stack: error?.stack ?? "",
           digest: error?.digest ?? "",
-          url: typeof window !== "undefined" ? window.location.href : "",
+          // Zonder querystring: daar kunnen tokens in staan (bv. wachtwoord herstellen).
+          url: typeof window !== "undefined" ? window.location.origin + window.location.pathname : "",
           userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
         }),
       }).catch(() => undefined);
