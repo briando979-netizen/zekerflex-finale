@@ -177,6 +177,29 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
     }
   }
 
+  async function callLead(id: string, phone: string | null) {
+    if (!phone) return;
+    setBusy(`${id}:call`);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/telephony", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "call", to: phone, leadId: id, b2b: true, script: "intro-werkgever" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setMsg(
+        res.ok && data.ok
+          ? `📞 Oproep gestart naar ${phone}${data.mock ? " (mock — Twilio niet geconfigureerd)" : ""}.`
+          : `Bellen mislukt: ${data.reason ?? data?.error?.message ?? "onbekend"}`,
+      );
+    } catch {
+      setMsg("Netwerkfout.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <APageHeader
@@ -334,6 +357,13 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           disabled={!l.contactEmail || busy !== null}
                           onClick={() => patchLead(l.id, "draft")}
                           hint={!l.contactEmail ? "E-mailadres ontbreekt" : undefined}
+                        />
+                        <SmartBtn
+                          label={busy === `${l.id}:call` ? "Bellen…" : "📞 Bel via AI"}
+                          primary
+                          disabled={!l.contactPhone || busy !== null}
+                          onClick={() => callLead(l.id, l.contactPhone)}
+                          hint={!l.contactPhone ? "Telefoonnummer ontbreekt" : undefined}
                         />
                         {o && o.status === "DRAFT" && (
                           <SmartBtn
