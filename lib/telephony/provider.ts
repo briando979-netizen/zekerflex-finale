@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { twilioConfigured, placeTwilioCall } from "@/lib/telephony/twilio";
-import { isAllowedToCall } from "@/lib/telephony/consent";
+import { isAllowedToCall, normalizeNumber } from "@/lib/telephony/consent";
 import { createCall, addTurn, type CallRecord } from "@/lib/telephony/store";
 import { scriptOrDefault } from "@/lib/telephony/scripts";
 
@@ -37,7 +37,9 @@ function base(): string {
 }
 
 export async function placeOutboundCall(input: OutboundInput): Promise<OutboundResult> {
-  const decision = await isAllowedToCall(input.to, {
+  // Twilio eist E.164 (+31…). Normaliseer één keer centraal (06… → +316…).
+  const to = normalizeNumber(input.to);
+  const decision = await isAllowedToCall(to, {
     b2b: input.b2b ?? false,
     humanInitiated: input.humanInitiated ?? false,
   });
@@ -50,7 +52,7 @@ export async function placeOutboundCall(input: OutboundInput): Promise<OutboundR
 
   const rec: CallRecord = await createCall({
     direction: "outbound",
-    toNumber: input.to,
+    toNumber: to,
     fromNumber: env.TWILIO_FROM_NUMBER ?? "mock",
     status: configured ? "queued" : "mock",
     script: input.script,
@@ -67,7 +69,7 @@ export async function placeOutboundCall(input: OutboundInput): Promise<OutboundR
   try {
     const voiceUrl = `${base()}/api/telephony/voice?callId=${rec.id}`;
     const statusUrl = `${base()}/api/telephony/status?callId=${rec.id}`;
-    const { sid } = await placeTwilioCall({ to: input.to, voiceUrl, statusUrl });
+    const { sid } = await placeTwilioCall({ to, voiceUrl, statusUrl });
     const { patchCall } = await import("@/lib/telephony/store");
     await patchCall(rec.id, { providerCallId: sid });
     logger.info("telephony outbound call placed", { callId: rec.id, sid, to: input.to });
