@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { twilioConfigured, placeTwilioCall } from "@/lib/telephony/twilio";
 import { isAllowedToCall, normalizeNumber } from "@/lib/telephony/consent";
 import { createCall, addTurn, type CallRecord } from "@/lib/telephony/store";
-import { scriptOrDefault } from "@/lib/telephony/scripts";
+import { scriptOrDefault, openingText } from "@/lib/telephony/scripts";
 
 // ---------------------------------------------------------------------------
 // Hoog niveau: consent → opslag → Twilio (of mock). Mock = veilig: legt de
@@ -61,7 +61,7 @@ export async function placeOutboundCall(input: OutboundInput): Promise<OutboundR
 
   if (!configured) {
     // Mock: leg de openingszin vast zodat je het script ziet, maar bel niet.
-    await addTurn(rec.id, "ai", script.opening);
+    await addTurn(rec.id, "ai", openingText(script));
     logger.info("telephony mock call (geen Twilio geconfigureerd)", { callId: rec.id, to: input.to });
     return { ok: true, reason: "mock — geen echte oproep (Twilio niet geconfigureerd)", callId: rec.id, mock: true };
   }

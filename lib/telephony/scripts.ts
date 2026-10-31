@@ -56,35 +56,43 @@ export function phoneSystem(lang: Lang): string {
 
 export interface CallScript {
   label: string;
-  /** Eerste zin die de AI uitspreekt wanneer er wordt opgenomen. */
-  opening: string;
+  /** Wie er belt + de opname-melding. Wordt altijd helemaal uitgesproken, ook als de beller er doorheen praat. */
+  notice: string;
+  /** Wat daarna komt. Hier luisteren we mee, dus de beller kan dit onderbreken. */
+  question: string;
 }
 
 export const CALL_SCRIPTS: Record<string, CallScript> = {
   "intro-werkgever": {
     label: "Werkgever — kennismaking",
-    opening:
-      "Goedendag, u spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen voor kwaliteit. Ik bel omdat ZekerFlex u kan helpen snel betrouwbaar flexibel personeel te vinden, zonder abonnement — u betaalt alleen per gewerkt uur. Mag ik u kort iets vragen over hoe u nu aan personeel komt?",
+    notice: "Goedendag, u spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen voor kwaliteit.",
+    question:
+      "Ik bel omdat ZekerFlex u kan helpen snel betrouwbaar flexibel personeel te vinden, zonder abonnement — u betaalt alleen per gewerkt uur. Mag ik u kort iets vragen over hoe u nu aan personeel komt?",
   },
   "intro-werknemer": {
     label: "Werkzoekende — kennismaking",
-    opening:
-      "Hoi, je spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen. Ik bel omdat ZekerFlex losse diensten matcht die bij jou passen, met snelle uitbetaling. Zoek je op dit moment werk?",
+    notice: "Hoi, je spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen.",
+    question: "Ik bel omdat ZekerFlex losse diensten matcht die bij jou passen, met snelle uitbetaling. Zoek je op dit moment werk?",
   },
   terugbel: {
     label: "Terugbelverzoek",
-    opening:
-      "Goedendag, u spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen. U had een terugbelafspraak met ons — waar kan ik u mee helpen?",
+    notice: "Goedendag, u spreekt met de digitale assistent van ZekerFlex. Dit gesprek kan worden opgenomen.",
+    question: "U had een terugbelafspraak met ons — waar kan ik u mee helpen?",
   },
   inbound: {
     label: "Inkomend (24/7)",
-    opening:
-      "Goedendag, u bent bij ZekerFlex, het platform voor flexibel werk. U spreekt met de digitale assistent; dit gesprek kan worden opgenomen. Waar kan ik u mee helpen?",
+    notice: "Goedendag, u bent bij ZekerFlex, het platform voor flexibel werk. U spreekt met de digitale assistent; dit gesprek kan worden opgenomen.",
+    question: "Waar kan ik u mee helpen?",
   },
 };
 
 export function scriptOrDefault(key: string): CallScript {
   return CALL_SCRIPTS[key] ?? CALL_SCRIPTS.inbound!;
+}
+
+/** De hele openingstekst, voor het transcript en de mock-modus. */
+export function openingText(script: CallScript): string {
+  return `${script.notice} ${script.question}`;
 }
 
 // De gesproken feiten-basis — bewust kort gehouden t.o.v. de webchat, want dit
@@ -107,7 +115,7 @@ Belangrijk: antwoord ALTIJD in de taal die de beller gebruikt — spreekt iemand
 
 Gesprekstechniek:
 - Begroet hooguit één keer terug. Groet de beller alleen "hallo" of "goedendag", herhaal de begroeting dan NIET nog een keer — stel meteen je kernvraag ("Zoekt u personeel, of kan ik u ergens anders mee helpen?").
-- Toont iemand interesse (zoekt personeel, zoekt werk, of wil teruggebeld worden)? Vraag dan vriendelijk naar zijn/haar NAAM, het BEDRIJF (bij werkgevers) en een goed moment om terug te bellen, en bevestig dat een collega contact opneemt. Zo kunnen we echt opvolgen.
+- Toont iemand interesse (zoekt personeel, zoekt werk, of wil teruggebeld worden)? Vraag dan vriendelijk naar zijn/haar NAAM, het BEDRIJF (bij werkgevers) en een goed moment om terug te bellen, en zeg dat je dit doorgeeft aan een collega. Beloof nooit een vast tijdstip zoals "over tien minuten": je weet niet wanneer iemand kan bellen.
 - De spraakherkenning is soms onnauwkeurig; versta je iets echt niet, vraag dan kort om herhaling in plaats van een los antwoord te verzinnen.
 - Schrijf foutloos Nederlands zonder typefouten — je tekst wordt letterlijk voorgelezen door een stem.`;
 
@@ -136,5 +144,5 @@ Reply in the language the caller uses. Wrap up when the caller is done.
 
 Conversation technique:
 - Greet back at most once. If the caller only says "hello", do NOT greet again — go straight to your key question ("Are you looking for staff, or can I help you with something else?").
-- If the caller shows interest (needs staff, looking for work, or wants a call back), politely ask for their NAME, their COMPANY (for employers) and a good time to call back, and confirm a colleague will reach out — so we can actually follow up.
+- If the caller shows interest (needs staff, looking for work, or wants a call back), politely ask for their NAME, their COMPANY (for employers) and a good time to call back, and say you will pass this on to a colleague. Never promise a fixed time such as "in ten minutes": you don't know when someone can call.
 - Speech recognition is sometimes inaccurate; if you truly can't understand, briefly ask them to repeat instead of inventing an answer.`;

@@ -3,7 +3,8 @@ import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, sayAndGather, hangupAfter, say, dial } from "@/lib/telephony/twiml";
 import { getCall, addTurn, patchCall } from "@/lib/telephony/store";
-import { phoneSystem, voiceForLang, recogLang, type Lang } from "@/lib/telephony/scripts";
+import { phoneSystem, voiceForLang, recogLang, scriptOrDefault, voicemailMessage, type Lang } from "@/lib/telephony/scripts";
+import { isGoodbye, isGreetingOnly, looksLikeVoicemail } from "@/lib/telephony/intents";
 import { captureCallOutcome } from "@/lib/telephony/outcome";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
@@ -11,22 +12,23 @@ import { logger } from "@/lib/logger";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Einde-gesprek + "ik wil een mens" herkenning, NL + EN.
-const BYE =
-  /\b(doei|daag|dag|tot ziens|bedankt|dank (?:je|u)|fijne dag|hang|ophangen|nee bedankt|bye|goodbye|thanks|thank you|no thanks)\b/i;
+// "Ik wil een mens"-herkenning, NL + EN.
 const FORWARD =
   /\b(de baas|\bbaas\b|briando|eigenaar|directeur|met iemand|iemand spreken|een mens|een medewerker|doorverbind|doorschakel|met een persoon|verantwoordelijke|the boss|a human|a person|someone|representative|an agent|manager)\b/i;
 
-// Alleen een begroeting (evt. herhaald: "hallo", "hallo hallo", "hoi hallo").
-// Zulke beurten gaan NIET naar het taalmodel — anders spiegelt de AI de
-// begroeting of komt 'ie leeg terug; we antwoorden deterministisch met een
-// proactieve vraag en luisteren opnieuw. Een begroeting als deel van een echte
-// zin ("hallo ik zoek personeel") matcht niet en gaat gewoon naar de AI.
-const GREETING_ONLY =
-  /^(?:(?:hal+o+|hoi+|hey+|hai+|yo+|goe[a-z]*(?:dag|morgen|middag|avond)|hello+|hi+|hey\s*there|good\s*(?:morning|afternoon|evening|day))[\s,!.?-]*)+$/i;
-const GREET_PROACTIVE: Record<Lang, string> = {
-  nl: "Goedendag! Waar kan ik u mee helpen — zoekt u personeel, zoekt u zelf werk, of heeft u een andere vraag?",
-  en: "Hello! How can I help — are you looking for staff, looking for work yourself, or do you have another question?",
+// Twilio wacht maar kort op een webhook: zonder eigen grens loopt een traag model
+// (standaard 30s, met herhalingen) uit op een afgebroken gesprek.
+const REPLY_TIMEOUT_MS = 8_000;
+
+// Antwoord op alleen een begroeting. "Hallo?" betekent aan de telefoon meestal
+// "is daar iemand?", dus eerst dat, buiten <Gather> zodat nog een "hallo" het niet afkapt.
+const HEARD: Record<Lang, string> = {
+  nl: "Ja, ik hoor u goed.",
+  en: "Yes, I can hear you.",
+};
+const GREET_QUESTION: Record<Lang, string> = {
+  nl: "Waar kan ik u mee helpen — zoekt u personeel, zoekt u zelf werk, of heeft u een andere vraag?",
+  en: "How can I help — are you looking for staff, looking for work yourself, or do you have another question?",
 };
 
 const FALLBACK: Record<Lang, string> = {
@@ -58,21 +60,30 @@ export async function POST(request: Request): Promise<Response> {
   const action = `${env.APP_BASE_URL.replace(/\/+$/, "")}/api/telephony/gather?callId=${callId}`;
 
   const speech = (params.SpeechResult ?? "").trim();
+  const firstReply = !rec.transcript.some((t) => t.who === "beller");
   if (speech) await addTurn(callId, "beller", speech).catch(() => undefined);
 
-  if (speech && BYE.test(speech) && speech.length < 40) {
+  // Voicemail of bandje (alleen als wij belden): één bericht inspreken en ophangen.
+  if (speech && rec.direction === "outbound" && looksLikeVoicemail(speech)) {
+    const message = voicemailMessage(rec.script);
+    await addTurn(callId, "ai", `(voicemail) ${message}`).catch(() => undefined);
+    return xmlResponse(twiml(hangupAfter(message, voice)));
+  }
+
+  if (speech && isGoodbye(speech, firstReply)) {
     await addTurn(callId, "ai", BYE_LINE[lang]).catch(() => undefined);
     await patchCall(callId, { status: "completed" }).catch(() => undefined);
-    // Nette afsluiting (ook inkomend) → uitkomst vastleggen op de achtergrond.
-    after(() => captureCallOutcome(callId).catch(() => undefined));
+    // Uitgaand komt dit via de status-callback van Twilio; inkomend krijgt die niet.
+    if (rec.direction === "inbound") after(() => captureCallOutcome(callId).catch(() => undefined));
     return xmlResponse(twiml(hangupAfter(BYE_LINE[lang], voice)));
   }
 
-  // Alleen een begroeting → deterministisch een proactieve vraag (geen taalmodel),
-  // hoe vaak de beller ook "hallo" zegt. Breekt de begroetings-loop gegarandeerd.
-  if (speech && GREETING_ONLY.test(speech)) {
-    await addTurn(callId, "ai", GREET_PROACTIVE[lang]).catch(() => undefined);
-    return xmlResponse(twiml(sayAndGather(GREET_PROACTIVE[lang], action, { voice, recogLang: recogLang(lang) })));
+  // Alleen een begroeting gaat niet naar het taalmodel: dat spiegelt de begroeting
+  // of komt leeg terug. Uitgaand herhalen we waarom we bellen.
+  if (speech && isGreetingOnly(speech, firstReply)) {
+    const question = rec.direction === "outbound" ? scriptOrDefault(rec.script).question : GREET_QUESTION[lang];
+    await addTurn(callId, "ai", `${HEARD[lang]} ${question}`).catch(() => undefined);
+    return xmlResponse(twiml(say(HEARD[lang], voice) + sayAndGather(question, action, { voice, recogLang: recogLang(lang) })));
   }
 
   if (speech && FORWARD.test(speech)) {
@@ -104,6 +115,8 @@ export async function POST(request: Request): Promise<Response> {
         model: fastModel(),
         temperature: 0.3,
         maxTokens: 140,
+        timeoutMs: REPLY_TIMEOUT_MS,
+        retry: false,
         messages: [{ role: "system", content: phoneSystem(lang) }, ...history],
       });
       const t = out.text.trim();

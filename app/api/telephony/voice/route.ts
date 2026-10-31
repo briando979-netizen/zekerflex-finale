@@ -1,8 +1,8 @@
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
-import { twiml, sayAndGather, gatherDigits, hangupAfter } from "@/lib/telephony/twiml";
-import { getCall, createCall, addTurn, patchCall } from "@/lib/telephony/store";
-import { scriptOrDefault, LANG_MENU, voicemailMessage } from "@/lib/telephony/scripts";
+import { twiml, say, sayAndGather, gatherDigits } from "@/lib/telephony/twiml";
+import { getCall, createCall, addTurn } from "@/lib/telephony/store";
+import { scriptOrDefault, openingText, LANG_MENU } from "@/lib/telephony/scripts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,18 +20,11 @@ export async function POST(request: Request): Promise<Response> {
   if (existingId) {
     const rec = await getCall(existingId);
     if (rec) {
-      // Voicemail/antwoordapparaat (AMD): spreek één kort bericht in en hang op,
-      // in plaats van tegen de voicemail door te praten.
-      const answeredBy = params.AnsweredBy ?? "";
-      if (answeredBy.startsWith("machine") || answeredBy === "fax") {
-        const vm = voicemailMessage(rec.script);
-        await addTurn(existingId, "ai", `(voicemail) ${vm}`).catch(() => undefined);
-        await patchCall(existingId, { status: "completed" }).catch(() => undefined);
-        return xmlResponse(twiml(hangupAfter(vm)));
-      }
       const script = scriptOrDefault(rec.script);
-      await addTurn(existingId, "ai", script.opening).catch(() => undefined);
-      return xmlResponse(twiml(sayAndGather(script.opening, `${base}/api/telephony/gather?callId=${existingId}`)));
+      await addTurn(existingId, "ai", openingText(script)).catch(() => undefined);
+      // De melding staat buiten <Gather>: spraak kapt een <Say> binnen <Gather> af,
+      // en wie "hallo" zegt moet alsnog horen wie er belt en dat er opgenomen wordt.
+      return xmlResponse(twiml(say(script.notice) + sayAndGather(script.question, `${base}/api/telephony/gather?callId=${existingId}`)));
     }
   }
 

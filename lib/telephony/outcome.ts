@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { getCall, patchCall, type CallOutcome } from "@/lib/telephony/store";
+import { getCall, patchCall, type CallOutcome, type CallRecord } from "@/lib/telephony/store";
 import { createLead } from "@/lib/sales/leads";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
+import { alertOwner } from "@/lib/ops/alert";
 import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,7 @@ export async function captureCallOutcome(callId: string): Promise<void> {
     const when = new Date(rec.at).toLocaleString("nl-NL");
     const note = `📞 AI-belgesprek (${when}): ${outcome.summary}${outcome.callbackNote ? ` — terugbellen: ${outcome.callbackNote}` : ""}`;
     const soon = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const counterpart = counterpartOf(rec);
 
     if (rec.leadId) {
       const lead = await prisma.salesLead.findUnique({ where: { id: rec.leadId }, select: { id: true, notes: true } });
@@ -90,17 +92,34 @@ export async function captureCallOutcome(callId: string): Promise<void> {
         });
       }
     } else if (outcome.interested && (outcome.kind === "werkgever" || outcome.kind === "werknemer")) {
-      // Inkomende geïnteresseerde beller zonder bestaande lead → maak er een lead van.
-      await createLead({
-        companyName: outcome.company || (outcome.contactName ? outcome.contactName : `Inkomende beller ${rec.fromNumber}`),
+      // Geïnteresseerde beller zonder bestaande lead → maak er een lead van.
+      const lead = await createLead({
+        companyName: outcome.company || outcome.contactName || `Beller ${counterpart}`,
         source: "ai-beller",
         notes: note,
         createdById: null,
         ...(outcome.contactName ? { contactName: outcome.contactName } : {}),
-        ...(rec.fromNumber && rec.fromNumber !== "onbekend" ? { contactPhone: rec.fromNumber } : {}),
+        ...(counterpart && counterpart !== "onbekend" ? { contactPhone: counterpart } : {}),
       });
+      await prisma.salesLead.update({ where: { id: lead.id }, data: { nextActionAt: soon } });
     }
   } catch (err) {
     logger.warn("call outcome persist failed", { callId, error: (err as Error).message });
   }
+
+  // De AI zegt tegen de beller dat een collega contact opneemt, dus iemand moet dat weten.
+  if (outcome.interested || outcome.callbackNote) {
+    await alertOwner({
+      key: `call-followup:${callId}`,
+      severity: "warning",
+      title: `Opvolgen: ${outcome.contactName || outcome.company || counterpartOf(rec)}`,
+      detail: `${outcome.summary}${outcome.callbackNote ? ` Terugbellen: ${outcome.callbackNote}.` : ""} Nummer: ${counterpartOf(rec)}.`,
+      url: "/admin/beller",
+    });
+  }
+}
+
+/** De andere partij: bij uitgaand zijn wij "from", bij inkomend zijn wij "to". */
+function counterpartOf(rec: CallRecord): string {
+  return rec.direction === "outbound" ? rec.toNumber : rec.fromNumber;
 }

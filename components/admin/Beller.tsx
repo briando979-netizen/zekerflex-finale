@@ -17,6 +17,7 @@ interface CallRecord {
   script: string;
   recordingUrl?: string;
   transcript: CallTurn[];
+  outcome?: { interested: boolean; summary: string; callbackNote?: string };
 }
 interface Data {
   configured: boolean;
@@ -202,6 +203,12 @@ export function Beller() {
                 </button>
                 {open === c.id && (
                   <div className="space-y-1.5 border-t border-hair px-3 py-2">
+                    {c.outcome && (
+                      <p className="rounded-lg bg-paper-soft px-2 py-1.5 text-xs leading-relaxed text-neutralx-700">
+                        <span className="font-semibold text-ink">{c.outcome.interested ? "🔥 Opvolgen" : "Uitkomst"}:</span> {c.outcome.summary}
+                        {c.outcome.callbackNote ? ` Terugbellen: ${c.outcome.callbackNote}.` : ""}
+                      </p>
+                    )}
                     {c.transcript.map((t, i) => (
                       <p key={i} className="text-xs leading-relaxed">
                         <span className={t.who === "ai" ? "font-semibold text-brand-700" : "font-semibold text-ink"}>
