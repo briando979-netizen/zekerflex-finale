@@ -92,9 +92,10 @@ export function Beller() {
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">📞 ZekerFlex AI-beller</h1>
         <p className="mt-1 text-sm text-neutralx-600">
-          Script-gestuurde uitgaande belletjes met AI-antwoorden, 24/7 inkomend beantwoorden en opname. Koud bellen naar
-          particulieren mag in Nederland alleen met opt-in; B2B mag mét opt-out. Daarom belt de motor alleen nummers met
-          vastgelegde toestemming (of B2B als dat aanstaat).
+          Script-gestuurde uitgaande belletjes met AI-antwoorden, 24/7 inkomend beantwoorden en opname.{" "}
+          <strong>Handmatig bellen vanuit dit scherm mag altijd</strong> — jij bent dan verantwoordelijk; alleen nummers
+          op de niet-bellen-lijst worden geweigerd. De <em>autonome</em> motor is strenger: die belt koud alleen met
+          vastgelegde opt-in (of B2B als dat aanstaat), want particulieren mogen in Nederland niet koud gebeld worden.
         </p>
       </div>
 

@@ -35,11 +35,21 @@ export async function recordOptOut(number: string, reason = "verzoek niet te bel
   await kvDelete(consentKey(number)).catch(() => undefined);
 }
 
-export async function isAllowedToCall(number: string, opts: { b2b?: boolean } = {}): Promise<ConsentDecision> {
+export async function isAllowedToCall(
+  number: string,
+  opts: { b2b?: boolean; humanInitiated?: boolean } = {},
+): Promise<ConsentDecision> {
   const n = normalizeNumber(number);
   if (!/^\+\d{8,15}$/.test(n)) return { allowed: false, reason: "ongeldig telefoonnummer" };
+  // De niet-bellen-lijst blokkeert ALTIJD — ook een handmatige oproep.
   if (await kvGet(optoutKey(n))) return { allowed: false, reason: "staat op de niet-bellen-lijst (opt-out)" };
   if (await kvGet(consentKey(n))) return { allowed: true, reason: "toestemming vastgelegd" };
+  // Een mens (beheerder) die zélf op "bel nu" klikt is een bewuste, verantwoorde
+  // keuze — dat mag, alleen de opt-out-lijst hierboven houdt tegen. De strenge
+  // opt-in-eis geldt voor de AUTONOME motor (autopilot), niet voor handwerk.
+  if (opts.humanInitiated) {
+    return { allowed: true, reason: "handmatig gestart door beheerder (opt-out gerespecteerd)" };
+  }
   if (opts.b2b && env.TELEPHONY_ALLOW_B2B_COLD) {
     return { allowed: true, reason: "B2B koud toegestaan (opt-out wordt gerespecteerd)" };
   }

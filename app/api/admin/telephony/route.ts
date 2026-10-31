@@ -54,6 +54,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const result = await placeOutboundCall({
     to: body.to,
     script: body.script,
+    humanInitiated: true, // een beheerder klikte zelf op "bel nu"
     ...(body.leadId ? { leadId: body.leadId } : {}),
     ...(body.b2b !== undefined ? { b2b: body.b2b } : {}),
   });

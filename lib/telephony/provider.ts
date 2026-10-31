@@ -21,6 +21,8 @@ export interface OutboundInput {
   leadId?: string | undefined;
   /** De beller is een bedrijf (B2B). Bepaalt of koud bellen mag (zie consent). */
   b2b?: boolean | undefined;
+  /** Een mens (beheerder) startte de oproep zelf → alleen opt-out blokkeert. */
+  humanInitiated?: boolean | undefined;
 }
 
 export interface OutboundResult {
@@ -35,7 +37,10 @@ function base(): string {
 }
 
 export async function placeOutboundCall(input: OutboundInput): Promise<OutboundResult> {
-  const decision = await isAllowedToCall(input.to, { b2b: input.b2b ?? false });
+  const decision = await isAllowedToCall(input.to, {
+    b2b: input.b2b ?? false,
+    humanInitiated: input.humanInitiated ?? false,
+  });
   if (!decision.allowed) {
     return { ok: false, reason: decision.reason, mock: !callerConfigured() };
   }
