@@ -17,6 +17,18 @@ const BYE =
 const FORWARD =
   /\b(de baas|\bbaas\b|briando|eigenaar|directeur|met iemand|iemand spreken|een mens|een medewerker|doorverbind|doorschakel|met een persoon|verantwoordelijke|the boss|a human|a person|someone|representative|an agent|manager)\b/i;
 
+// Alleen een begroeting (evt. herhaald: "hallo", "hallo hallo", "hoi hallo").
+// Zulke beurten gaan NIET naar het taalmodel — anders spiegelt de AI de
+// begroeting of komt 'ie leeg terug; we antwoorden deterministisch met een
+// proactieve vraag en luisteren opnieuw. Een begroeting als deel van een echte
+// zin ("hallo ik zoek personeel") matcht niet en gaat gewoon naar de AI.
+const GREETING_ONLY =
+  /^(?:(?:hal+o+|hoi+|hey+|hai+|yo+|goe[a-z]*(?:dag|morgen|middag|avond)|hello+|hi+|hey\s*there|good\s*(?:morning|afternoon|evening|day))[\s,!.?-]*)+$/i;
+const GREET_PROACTIVE: Record<Lang, string> = {
+  nl: "Goedendag! Waar kan ik u mee helpen — zoekt u personeel, zoekt u zelf werk, of heeft u een andere vraag?",
+  en: "Hello! How can I help — are you looking for staff, looking for work yourself, or do you have another question?",
+};
+
 const FALLBACK: Record<Lang, string> = {
   nl: "Dat kan ik het beste via de website regelen: kijk op zekerflex punt com, of mail naar info at zekerflex punt com. Kan ik u verder nog ergens mee helpen?",
   en: "I can best arrange that via the website: visit zekerflex dot com, or e-mail info at zekerflex dot com. Can I help you with anything else?",
@@ -54,6 +66,13 @@ export async function POST(request: Request): Promise<Response> {
     // Nette afsluiting (ook inkomend) → uitkomst vastleggen op de achtergrond.
     after(() => captureCallOutcome(callId).catch(() => undefined));
     return xmlResponse(twiml(hangupAfter(BYE_LINE[lang], voice)));
+  }
+
+  // Alleen een begroeting → deterministisch een proactieve vraag (geen taalmodel),
+  // hoe vaak de beller ook "hallo" zegt. Breekt de begroetings-loop gegarandeerd.
+  if (speech && GREETING_ONLY.test(speech)) {
+    await addTurn(callId, "ai", GREET_PROACTIVE[lang]).catch(() => undefined);
+    return xmlResponse(twiml(sayAndGather(GREET_PROACTIVE[lang], action, { voice, recogLang: recogLang(lang) })));
   }
 
   if (speech && FORWARD.test(speech)) {
