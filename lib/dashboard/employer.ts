@@ -14,7 +14,15 @@ export async function resolveEmployerScope(p: Principal): Promise<EmployerScope>
       where: { type: { in: ["ENTERPRISE_HQ", "FRANCHISE"] } },
       select: { id: true },
     });
-    return { tenantIds: tenants.map((t) => t.id), branchIds: null };
+    // Een beheerder met een eigen bedrijf krijgt dat vooraan: de werkgever-omgeving
+    // werkt voor naam, abonnement en API-sleutels met tenantIds[0].
+    const own = new Set(
+      p.grants
+        .filter((g) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(g.role))
+        .map((g) => g.organizationId),
+    );
+    const tenantIds = tenants.map((t) => t.id).sort((a, b) => Number(own.has(b)) - Number(own.has(a)));
+    return { tenantIds, branchIds: null };
   }
 
   const tenantIds = [
