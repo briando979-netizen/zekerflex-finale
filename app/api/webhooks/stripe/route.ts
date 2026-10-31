@@ -18,6 +18,7 @@ import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
+import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -288,6 +289,10 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     const session = event.data.object as Stripe.Checkout.Session;
 
     if (session.mode === "subscription") {
+      if (session.metadata?.managedWebsiteTenantId) {
+        await activateManagedWebsite(session);
+        return NextResponse.json({ ok: true });
+      }
       await activateApiSubscription(session);
       return NextResponse.json({ ok: true });
     }
@@ -414,7 +419,12 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
   }
 
   if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
-    await syncApiSubscription(event.data.object as Stripe.Subscription, event.type);
+    const sub = event.data.object as Stripe.Subscription;
+    if (sub.metadata?.managedWebsiteTenantId) {
+      if (event.type === "customer.subscription.deleted") await cancelManagedWebsiteBySub(sub.id);
+    } else {
+      await syncApiSubscription(sub, event.type);
+    }
   }
 
   // Storno: een betaalde factuur wordt teruggeboekt/gedisputeerd → terugvordering.

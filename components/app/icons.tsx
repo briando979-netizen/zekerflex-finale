@@ -19,6 +19,14 @@ export function IGrid(_: P) {
     </svg>
   );
 }
+export function IGlobe(_: P) {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 export function ICalendar(_: P) {
   return (
     <svg {...s}>

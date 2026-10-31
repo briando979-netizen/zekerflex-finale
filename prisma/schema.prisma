@@ -86,6 +86,7 @@ model Tenant {
   webhookSubscriptions WebhookSubscription[]
   favoritePools        FavoritePool[]
   credits              TenantCredit[]
+  managedWebsite       ManagedWebsite?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1939,6 +1940,45 @@ model ShopOrder {
 
   @@index([status, createdAt])
   @@index([email])
+}
+
+// ===========================================================================
+// Managed Website — ZekerFlex beheert de website van een opdrachtgever. Zit
+// achter een abonnement (Stripe): vergrendeld tot betaald, daarna vult de
+// opdrachtgever zijn websitegegevens + SSH-toegang in (AES-256-GCM-verzegeld
+// via lib/security/sealed-secret) zodat wij het onderhoud overnemen.
+// ===========================================================================
+enum ManagedWebsiteStatus {
+  PENDING_PAYMENT // abonnement gestart, wacht op Stripe-betaling
+  ONBOARDING // betaald, wacht op websitegegevens
+  SUBMITTED // gegevens ingevuld, wij nemen het over
+  ACTIVE // wij beheren de site
+  PAUSED
+  CANCELLED
+}
+
+model ManagedWebsite {
+  id              String               @id @default(cuid())
+  tenantId        String               @unique
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedById   String?
+  status          ManagedWebsiteStatus @default(PENDING_PAYMENT)
+  plan            String? // "basis" | "pro"
+  domain          String?
+  provider        String? // hostingpartij/platform (WordPress, Wix, eigen VPS, …)
+  notes           String?
+  // AES-256-GCM-verzegelde JSON met SSH-host/gebruiker/poort/privésleutel +
+  // hosting-login. NOOIT plaintext in de DB. Zie lib/security/sealed-secret.ts.
+  secretsSealed   String?
+  secretsSetAt    DateTime?
+  stripeSubId     String?
+  stripeSessionId String?              @unique
+  subscribedAt    DateTime?
+  submittedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([status])
 }
 
 // ===========================================================================

@@ -155,6 +155,52 @@ export async function createSubscriptionCheckoutSession(
   });
 }
 
+export interface WebsiteManagementCheckoutInput {
+  stripeCustomerId: string;
+  tenantId: string;
+  plan: string;
+  planLabel: string;
+  priceCentsPerMonth: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/**
+ * Subscription-mode Checkout voor het "Website-beheer"-abonnement. Zelfde
+ * inline-price_data-patroon als de API-abonnementen, maar met eigen metadata
+ * (`managedWebsiteTenantId`) zodat de webhook het naar lib/website/manage kan
+ * routeren i.p.v. de API-abonnement-sync.
+ */
+export async function createWebsiteManagementCheckoutSession(
+  input: WebsiteManagementCheckoutInput,
+): Promise<Stripe.Checkout.Session> {
+  if (input.priceCentsPerMonth <= 0) {
+    throw AppError.validation("Subscription price must be positive to collect payment");
+  }
+  const stripe = getStripeClient();
+  const metadata = { managedWebsiteTenantId: input.tenantId, websitePlan: input.plan };
+
+  return stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: input.stripeCustomerId,
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          recurring: { interval: "month" },
+          product_data: { name: `ZekerFlex Websitebeheer — ${input.planLabel}` },
+          unit_amount: input.priceCentsPerMonth,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata,
+    subscription_data: { metadata },
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+  });
+}
+
 /** Stripe-hosted portal for a tenant to change plan, update payment method, or cancel. */
 export async function createBillingPortalSession(
   stripeCustomerId: string,

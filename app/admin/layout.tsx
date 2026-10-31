@@ -58,6 +58,7 @@ const NAV = [
   { href: "/admin/beller", label: "📞 AI-beller", icon: <IChat />, section: "Operatie" },
   { href: "/admin/sales", label: "Sales-pijplijn", icon: <IRocket />, section: "Operatie" },
   { href: "/admin/offertes", label: "📨 Offerte-AI (sales@)", icon: <IMail />, section: "Operatie" },
+  { href: "/admin/website-beheer", label: "🌐 Website-beheer (klanten)", icon: <IGrid />, section: "Operatie" },
   { href: "/admin/disputes", label: "Disputen", icon: <IShield />, section: "Operatie" },
   { href: "/admin/fraude", label: "Fraude & signalen", icon: <IShield />, section: "Operatie" },
   { href: "/admin/berichten", label: "Berichten & Support", icon: <IChat />, section: "Communicatie" },
