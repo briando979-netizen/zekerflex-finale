@@ -194,8 +194,10 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
-  // Twilio <Say>-stem voor Nederlandse spraak (Amazon Polly via Twilio).
-  TELEPHONY_VOICE: z.string().default("Polly.Lotte"),
+  // Twilio <Say>-stem. Standaard een NEURALE, natuurlijke NL-stem (Amazon Polly
+  // Laura-Neural). Alternatieven: "Polly.Ruben" (man, basis), "Google.nl-NL-Wavenet-D",
+  // "Google.nl-NL-Standard-E". Neurale stemmen klinken veel menselijker dan de basis.
+  TELEPHONY_VOICE: z.string().default("Polly.Laura-Neural"),
   // Koude B2B-oproepen (bedrijven, mét opt-out) toestaan. Standaard UIT: dan
   // mag de beller alleen nummers bellen met vastgelegde toestemming. Koud bellen
   // naar particulieren is in NL sowieso niet toegestaan zonder opt-in.

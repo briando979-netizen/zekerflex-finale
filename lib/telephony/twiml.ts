@@ -19,7 +19,12 @@ const VOICE = () => env.TELEPHONY_VOICE;
 
 /** <Say> in het Nederlands met de ingestelde stem. */
 export function say(text: string): string {
-  return `<Say voice="${xmlEscape(VOICE())}" language="nl-NL">${xmlEscape(text)}</Say>`;
+  const v = VOICE();
+  // Polly/Google-stemmen bepalen hun taal zelf; een language-attribuut erbij kan
+  // Twilio laten terugvallen op een robotachtige basisstem. Alleen basisstemmen
+  // (man/vrouw/alice) krijgen language mee.
+  const lang = v.includes(".") ? "" : ` language="nl-NL"`;
+  return `<Say voice="${xmlEscape(v)}"${lang}>${xmlEscape(text)}</Say>`;
 }
 
 /** Spreek iets uit en luister daarna naar het antwoord (spraak → actie-URL). */
