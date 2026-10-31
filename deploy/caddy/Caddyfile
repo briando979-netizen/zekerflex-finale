@@ -14,6 +14,20 @@
 
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
+
+	# www en het kale domein delen geen cookies. Wie op www inlogt krijgt de sessie
+	# op www, wordt daarna naar AUTH_URL (zonder www) gestuurd en lijkt dan uitgelogd.
+	# Daarom gaan pagina's altijd naar één adres. /api/* blijft buiten de redirect:
+	# webhooks volgen geen redirects en clients met een Authorization-header (Laptop-
+	# Jarvis, AI-node, partner-API) raken die kwijt bij een overstap naar een andere host.
+	@www {
+		host www.zekerflex.com
+		not path /api/* /.well-known/*
+	}
+	# Tijdelijk (307), zodat browsers dit niet vastleggen zolang de Android-app nog op
+	# www gebouwd is. Zet op 308 zodra zeker is dat het kale domein het hoofdadres blijft.
+	redir @www https://zekerflex.com{uri} 307
+
 	# Next.js standalone server draait in de app-container op poort 3000.
 	reverse_proxy app:3000
 }
