@@ -1,8 +1,10 @@
+import { after } from "next/server";
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, sayAndGather, hangupAfter, say, dial } from "@/lib/telephony/twiml";
-import { getCall, addTurn } from "@/lib/telephony/store";
+import { getCall, addTurn, patchCall } from "@/lib/telephony/store";
 import { phoneSystem, voiceForLang, recogLang, type Lang } from "@/lib/telephony/scripts";
+import { captureCallOutcome } from "@/lib/telephony/outcome";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 
@@ -48,6 +50,9 @@ export async function POST(request: Request): Promise<Response> {
 
   if (speech && BYE.test(speech) && speech.length < 40) {
     await addTurn(callId, "ai", BYE_LINE[lang]).catch(() => undefined);
+    await patchCall(callId, { status: "completed" }).catch(() => undefined);
+    // Nette afsluiting (ook inkomend) → uitkomst vastleggen op de achtergrond.
+    after(() => captureCallOutcome(callId).catch(() => undefined));
     return xmlResponse(twiml(hangupAfter(BYE_LINE[lang], voice)));
   }
 

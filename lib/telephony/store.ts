@@ -19,6 +19,16 @@ export interface CallTurn {
   text: string;
 }
 
+/** Gestructureerde uitkomst van een gesprek (door de AI uit het transcript gehaald). */
+export interface CallOutcome {
+  interested: boolean;
+  kind: "werkgever" | "werknemer" | "melding" | "support" | "anders";
+  contactName?: string;
+  company?: string;
+  callbackNote?: string;
+  summary: string;
+}
+
 export interface CallRecord {
   id: string;
   at: string;
@@ -36,6 +46,8 @@ export interface CallRecord {
   /** Gekozen afdeling in het keuzemenu (toets). */
   dept?: string;
   transcript: CallTurn[];
+  /** Uitkomst na afloop: interesse, naam/bedrijf, terugbelnotitie, samenvatting. */
+  outcome?: CallOutcome;
   updatedAt: string;
 }
 

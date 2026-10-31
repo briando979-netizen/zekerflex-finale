@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { readForm, signatureValid } from "@/lib/telephony/webhook";
 import { patchCall, type CallStatus } from "@/lib/telephony/store";
+import { captureCallOutcome } from "@/lib/telephony/outcome";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +29,11 @@ export async function POST(request: Request): Promise<Response> {
   if (st) patch.status = st;
   if (params.RecordingUrl) patch.recordingUrl = `${params.RecordingUrl}.mp3`;
   if (Object.keys(patch).length) await patchCall(callId, patch).catch(() => undefined);
+
+  // Gesprek afgelopen → uitkomst (interesse/naam/terugbel) uit het transcript
+  // halen en in de pijplijn zetten. Op de achtergrond zodat Twilio snel een
+  // antwoord krijgt.
+  if (st === "completed") after(() => captureCallOutcome(callId).catch(() => undefined));
 
   return new Response("", { status: 204 });
 }

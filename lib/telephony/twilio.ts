@@ -33,6 +33,11 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<{ sid: str
     StatusCallbackMethod: "POST",
     Record: "true",
     RecordingStatusCallback: input.statusUrl,
+    // Voicemail-detectie: Twilio wacht tot een eventueel antwoordapparaat is
+    // uitgesproken en geeft dan AnsweredBy (human | machine_* | fax | unknown)
+    // mee aan de voice-webhook, zodat we niet tegen een voicemail doorpraten.
+    MachineDetection: "DetectMessageEnd",
+    MachineDetectionTimeout: "15",
   });
   body.append("StatusCallbackEvent", "initiated");
   body.append("StatusCallbackEvent", "answered");
