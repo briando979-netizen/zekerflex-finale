@@ -17,7 +17,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const audio = await synthesizeSpeech(parsed.data.text);
   if (!audio) return new Response("Neurale stem niet beschikbaar.", { status: 404 });
 
-  return new Response(audio, {
+  return new Response(new Uint8Array(audio), {
     status: 200,
     headers: { "content-type": "audio/mpeg", "cache-control": "private, no-store" },
   });

@@ -2,10 +2,10 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
-// Google Places-opzoeker: zoekt een bedrijf (naam + stad) en geeft het ECHTE
-// telefoonnummer + de website terug. Dit is de betrouwbaarste bron voor
-// telefoonnummers (veel beter dan domein-raden). Dormant zonder
-// GOOGLE_MAPS_API_KEY; vereist dat de "Places API" in Google Cloud aanstaat.
+// Google Places (NEW) als databron voor echte telefoonnummers. Zoekt een bedrijf
+// (naam + stad) via places:searchText en geeft het telefoonnummer + de website
+// terug — de betrouwbaarste bron, veel beter dan domein-raden. Dormant zonder
+// GOOGLE_MAPS_API_KEY; vereist de "Places API (New)" in Google Cloud.
 // ---------------------------------------------------------------------------
 
 export function placesEnabled(): boolean {
@@ -18,41 +18,44 @@ export interface PlacesContact {
   matchedName: string | null;
 }
 
-async function fetchJson(url: string): Promise<Record<string, unknown> | null> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return null;
-    return (await res.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 export async function lookupCompanyContact(name: string, city?: string | null): Promise<PlacesContact | null> {
   const key = env.GOOGLE_MAPS_API_KEY;
   if (!key) return null;
-
-  const query = encodeURIComponent([name, city].filter(Boolean).join(" ") + " Nederland");
-  const search = await fetchJson(
-    `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&region=nl&language=nl&key=${key}`,
-  );
-  const results = Array.isArray(search?.results) ? (search!.results as Record<string, unknown>[]) : [];
-  const placeId = str(results[0]?.place_id);
-  if (!placeId) return { phone: null, website: null, matchedName: null };
-
-  const det = await fetchJson(
-    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}` +
-      `&fields=formatted_phone_number,international_phone_number,website,name&language=nl&key=${key}`,
-  );
-  const r = (det?.result && typeof det.result === "object" ? det.result : {}) as Record<string, unknown>;
-  const rawPhone = str(r.international_phone_number) ?? str(r.formatted_phone_number);
-  const website = str(r.website);
-  logger.info("places lookup", { name, hasPhone: Boolean(rawPhone), hasWebsite: Boolean(website) });
-  return {
-    phone: rawPhone ? rawPhone.replace(/[^\d+]/g, "") : null,
-    website,
-    matchedName: str(r.name),
-  };
+  try {
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.displayName,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri",
+      },
+      body: JSON.stringify({
+        textQuery: [name, city].filter(Boolean).join(" ") + " Nederland",
+        languageCode: "nl",
+        regionCode: "NL",
+        maxResultCount: 1,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      logger.warn("places lookup failed", { status: res.status });
+      return { phone: null, website: null, matchedName: null };
+    }
+    const data = (await res.json()) as { places?: Record<string, unknown>[] };
+    const place = data.places?.[0] ?? {};
+    const rawPhone = str(place.internationalPhoneNumber) ?? str(place.nationalPhoneNumber);
+    const website = str(place.websiteUri);
+    const dn = place.displayName && typeof place.displayName === "object" ? (place.displayName as Record<string, unknown>) : {};
+    logger.info("places lookup", { name, hasPhone: Boolean(rawPhone), hasWebsite: Boolean(website) });
+    return {
+      phone: rawPhone ? rawPhone.replace(/[^\d+]/g, "") : null,
+      website,
+      matchedName: str(dn.text),
+    };
+  } catch (err) {
+    logger.warn("places lookup error", { error: (err as Error).message });
+    return null;
+  }
 }
