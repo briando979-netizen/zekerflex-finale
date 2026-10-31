@@ -81,6 +81,9 @@ export const SITE = {
   ],
   twitter: "@zekerflex",
   email: "info@zekerflex.com",
+  /** Zichtbaar telefoonnummer (nette weergave) + tel:-link. De AI-assistent neemt 24/7 op. */
+  phone: "+31 970 102 51797",
+  phoneHref: "tel:+3197010251797",
   foundingYear: "2025",
 } as const;
 

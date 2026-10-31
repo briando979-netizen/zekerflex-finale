@@ -43,6 +43,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/over-ons", label: "Over ZekerFlex" },
       { href: "/contact", label: "Contact" },
+      { href: "tel:+3197010251797", label: "📞 +31 970 102 51797" },
       { href: "/demo", label: "Vraag een demo aan" },
       { href: "/over-ons#werken-bij", label: "Werken bij ons" },
       { href: "/status", label: "Uptime & incidenten" },

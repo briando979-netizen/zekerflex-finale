@@ -37,6 +37,15 @@ export default function ContactPage() {
             {SITE.name} is een Nederlands bedrijf (ZekerFlex B.V., gevestigd in Amsterdam). Hieronder het
             juiste adres per onderwerp — zo komt je vraag meteen bij de juiste persoon terecht.
           </p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <a
+              href={SITE.phoneHref}
+              className="inline-flex items-center gap-2.5 rounded-full bg-brand-mint px-6 py-3.5 font-display text-lg font-bold text-ink shadow-lift transition hover:brightness-95"
+            >
+              <span aria-hidden>📞</span> {SITE.phone}
+            </a>
+            <span className="text-sm text-white/60">Neem contact op — onze assistent neemt 24/7 op.</span>
+          </div>
         </div>
       </div>
 
@@ -62,7 +71,10 @@ export default function ContactPage() {
           intro="Voor werkgevers die willen zien hoe het platform werkt, of voor een formele klacht, hebben we een directe route."
         />
         <div className="mt-8 flex flex-wrap gap-4">
-          <Link href="/demo" className="btn-primary">
+          <a href={SITE.phoneHref} className="btn-primary">
+            📞 Bel ons: {SITE.phone}
+          </a>
+          <Link href="/demo" className="btn-ghost">
             Vraag een demo aan
           </Link>
           <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
