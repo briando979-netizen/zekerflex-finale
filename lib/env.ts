@@ -209,6 +209,10 @@ const schema = z.object({
   // de baas / een mens wil spreken (of naar iemand bij naam vraagt). Leeg = niet
   // doorschakelen (de AI biedt dan een terugbelafspraak aan).
   TELEPHONY_FORWARD_NUMBER: z.string().optional(),
+  // Hoe snel de beller reageert: seconden stilte voordat Twilio het gezegde
+  // verwerkt. Lager = snapper (maar kapt iemand eerder af). "auto" = Twilio kiest.
+  // Live bij te stellen zonder redeploy (zet op "1" voor extra snel).
+  TELEPHONY_SPEECH_TIMEOUT: z.string().default("2"),
 
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with

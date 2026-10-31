@@ -38,8 +38,9 @@ export function sayAndGather(
   const nothing = recog.startsWith("en")
     ? "I didn't catch that. You can always reach us via our website."
     : "Ik hoorde niets. Je kunt ons altijd bereiken via de website.";
+  // Snappere reactie: kortere stilte-drempel (env) + telefoon-spraakmodel.
   return (
-    `<Gather input="speech" language="${xmlEscape(recog)}" speechTimeout="auto" action="${xmlEscape(actionUrl)}" method="POST">` +
+    `<Gather input="speech" language="${xmlEscape(recog)}" speechTimeout="${xmlEscape(env.TELEPHONY_SPEECH_TIMEOUT)}" speechModel="phone_call" enhanced="true" action="${xmlEscape(actionUrl)}" method="POST">` +
     say(text, voice) +
     `</Gather>` +
     say(nothing, voice) +
