@@ -129,6 +129,7 @@ const WEBSITE_ID = `${SITE.url}/#website`;
 
 /** schema.org Organization block for the homepage <head>. */
 export function organizationJsonLd(): Record<string, unknown> {
+  const tel = SITE.phoneHref.replace(/^tel:/, "");
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -141,6 +142,7 @@ export function organizationJsonLd(): Record<string, unknown> {
     slogan: SITE.tagline,
     description: SITE.description,
     email: SITE.email,
+    telephone: tel,
     foundingDate: SITE.foundingYear,
     areaServed: { "@type": "Country", name: "Netherlands" },
     knowsLanguage: "nl-NL",
@@ -150,6 +152,7 @@ export function organizationJsonLd(): Record<string, unknown> {
         "@type": "ContactPoint",
         contactType: "customer support",
         email: CONTACTS.support,
+        telephone: tel,
         areaServed: "NL",
         availableLanguage: ["nl"],
       },
@@ -157,6 +160,7 @@ export function organizationJsonLd(): Record<string, unknown> {
         "@type": "ContactPoint",
         contactType: "sales",
         email: CONTACTS.sales,
+        telephone: tel,
         areaServed: "NL",
         availableLanguage: ["nl"],
       },

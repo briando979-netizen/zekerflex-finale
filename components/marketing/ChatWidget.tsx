@@ -272,6 +272,12 @@ export function ChatWidget() {
                     {s}
                   </button>
                 ))}
+                <a
+                  href="tel:+3197010251797"
+                  className="flex w-full items-center gap-1.5 pt-1 text-xs text-neutralx-500 hover:text-brand-600"
+                >
+                  📞 Liever bellen? <span className="font-semibold">+31 970 102 51797</span>
+                </a>
               </div>
             )}
           </div>
