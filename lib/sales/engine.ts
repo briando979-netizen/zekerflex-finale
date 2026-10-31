@@ -17,6 +17,7 @@ import {
 import { discoverViaKvkBase } from "@/lib/sales/discovery/kvkbase";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
+import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
 
 // ---------------------------------------------------------------------------
 // The recruiter motor. One tick:
@@ -320,6 +321,34 @@ async function resolveLeadDomains(campaign: SalesCampaign, errors: string[]): Pr
   return created;
 }
 
+/**
+ * Vult ontbrekende contactgegevens (telefoon + e-mail) van leads aan door de
+ * bedrijfswebsite af te zoeken. KVKBase-leads komen als kale stubs binnen; dit
+ * maakt ze pas écht bereikbaar (bellen/mailen). Begrensd per tick.
+ */
+async function enrichContacts(campaign: SalesCampaign, errors: string[]): Promise<number> {
+  let done = 0;
+  const leads = await prisma.salesLead.findMany({
+    where: {
+      campaignId: campaign.id,
+      contactPhone: null,
+      status: { notIn: ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED"] },
+    },
+    orderBy: { createdAt: "asc" },
+    take: 6,
+  });
+  for (const lead of leads) {
+    const r = await safe(
+      `contact:${lead.id}`,
+      () => enrichLeadContact(lead.id),
+      { origin: null, phone: null, email: null, updated: false },
+      errors,
+    );
+    if (r.updated) done += 1;
+  }
+  return done;
+}
+
 async function processDueLeads(
   campaign: SalesCampaign,
   errors: string[],
@@ -501,6 +530,7 @@ export async function runSalesEngineTick(opts: SalesTickOptions = {}): Promise<S
         0,
         base.errors,
       );
+      await safe("contact-scrape", () => enrichContacts(campaign, base.errors), 0, base.errors);
       const dd = await processDueLeads(campaign, base.errors);
       base.drafted += dd.drafted;
       base.sent += dd.sent;

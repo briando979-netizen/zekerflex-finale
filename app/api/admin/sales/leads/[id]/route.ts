@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { enrichLead, getLead, scoreLead } from "@/lib/sales/leads";
 import { draftOutreach } from "@/lib/sales/outreach";
 import { markLeadBounced, markLeadReplied, suppressLead } from "@/lib/sales/reply";
+import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 const patchSchema = z.object({
-  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress"]),
+  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress", "scrape-contact"]),
 });
 
 export const GET = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_req, { params }) => {
@@ -40,6 +41,10 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
   }
   if (action === "suppress") {
     return NextResponse.json({ lead: await suppressLead(id, principal.userId) });
+  }
+  if (action === "scrape-contact") {
+    const scrape = await enrichLeadContact(id);
+    return NextResponse.json({ lead: await getLead(id), scrape });
   }
   const outreach = await draftOutreach(id, principal.userId);
   return NextResponse.json({ outreach }, { status: 201 });

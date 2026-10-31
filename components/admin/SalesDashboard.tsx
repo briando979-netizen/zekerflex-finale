@@ -103,7 +103,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
 
   async function patchLead(
     id: string,
-    action: "enrich" | "score" | "draft" | "mark-replied" | "mark-bounced" | "suppress",
+    action: "enrich" | "score" | "draft" | "mark-replied" | "mark-bounced" | "suppress" | "scrape-contact",
   ) {
     setBusy(`${id}:${action}`);
     setMsg(null);
@@ -127,6 +127,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
         setLeads((ls) => ls.map((x) => (x.id === id ? { ...x, ...l } : x)));
         const done: Record<string, string> = {
           enrich: "Lead verrijkt vanuit het Handelsregister.",
+          "scrape-contact": "Contactgegevens opgezocht — bekijk telefoon/e-mail hierboven.",
           score: "Fit-score bijgewerkt.",
           "mark-replied": "Gemarkeerd als 'reactie ontvangen' — sequence gestopt.",
           "mark-bounced": "Gemarkeerd als bounce — adres onderdrukt.",
@@ -346,6 +347,11 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           disabled={!l.kvkNumber || busy !== null}
                           onClick={() => patchLead(l.id, "enrich")}
                           hint={!l.kvkNumber ? "KVK-nummer ontbreekt" : undefined}
+                        />
+                        <SmartBtn
+                          label={busy === `${l.id}:scrape-contact` ? "Zoeken…" : "📇 Zoek telefoon/mail"}
+                          disabled={busy !== null}
+                          onClick={() => patchLead(l.id, "scrape-contact")}
                         />
                         <SmartBtn
                           label={busy === `${l.id}:score` ? "Bezig…" : "Bereken fit-score"}
