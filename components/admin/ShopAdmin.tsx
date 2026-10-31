@@ -91,6 +91,7 @@ export function ShopAdmin() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [pStatus, setPStatus] = useState<"all" | "live" | "hidden">("all");
+  const [generating, setGenerating] = useState<string | null>(null);
 
   const load = async () => {
     const response = await fetch("/api/shop/products", { headers: { "x-shop-admin": "true" }, cache: "no-store" });
@@ -153,6 +154,38 @@ export function ShopAdmin() {
   const edit = (product: Product) => { setEditing(product.id); setForm(product); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const newProduct = () => { setEditing(null); setForm(empty); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); void loadStats(); };
+
+  // Genereert een productfoto via de eigen beeld-generator en koppelt 'm. Zet
+  // het product NIET live — de eigenaar controleert en activeert zelf.
+  const generatePhoto = async (id: string): Promise<boolean> => {
+    setGenerating(id);
+    try {
+      const response = await fetch(`/api/shop/products/${id}/photo`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { setMessage(data?.error?.message ?? "Foto genereren mislukt."); return false; }
+      return true;
+    } catch {
+      setMessage("Geen verbinding met de beeld-generator.");
+      return false;
+    } finally {
+      setGenerating(null);
+    }
+  };
+  const generateOne = async (id: string) => { if (await generatePhoto(id)) { setMessage("Foto gegenereerd. Controleer 'm en zet het product daarna live."); await load(); } };
+  // Bulk: één render tegelijk (de beeld-server verwerkt er maar één), dus serieel.
+  const generateMissingPhotos = async () => {
+    const todo = products.filter((p) => !p.imageUrl);
+    if (todo.length === 0) return;
+    if (!window.confirm(`Foto's genereren voor ${todo.length} product(en) zonder foto? Dit kan even duren (één render tegelijk).`)) return;
+    let ok = 0;
+    for (const [i, p] of todo.entries()) {
+      setMessage(`Bezig… ${i + 1}/${todo.length}: ${p.name}`);
+      if (await generatePhoto(p.id)) ok += 1;
+      else break; // stop bij de eerste fout (bv. generator uit) i.p.v. N keer dezelfde melding
+    }
+    setMessage(`${ok}/${todo.length} foto('s) gegenereerd. Controleer ze en zet de producten daarna zelf live.`);
+    await load();
+  };
 
   const addVariant = async (productId: string) => {
     setVariantMessage("");
@@ -306,6 +339,11 @@ export function ShopAdmin() {
             <button key={k} type="button" onClick={() => setPStatus(k)} className="rounded-lg px-3 py-1.5 text-sm font-medium transition" style={pStatus === k ? { background: "var(--a-panel-2)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}>{l}</button>
           ))}
         </div>
+        {products.some((p) => !p.imageUrl) && (
+          <button type="button" className="a-button text-sm" disabled={generating !== null} onClick={() => void generateMissingPhotos()} title="Genereer foto's voor alle producten zonder foto via de eigen beeld-generator">
+            {generating !== null ? "✨ Bezig…" : `✨ Genereer ontbrekende foto's (${products.filter((p) => !p.imageUrl).length})`}
+          </button>
+        )}
         <input value={productQuery} onChange={(e) => setProductQuery(e.target.value)} placeholder="Zoeken…" className="a-input ml-auto max-w-xs flex-1" />
       </div>
       <div className="overflow-x-auto">
@@ -349,6 +387,7 @@ export function ShopAdmin() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
+                      {!product.imageUrl && <button type="button" className="a-button text-xs" disabled={generating !== null} onClick={() => void generateOne(product.id)} title="Genereer een foto via de eigen beeld-generator">{generating === product.id ? "✨ Bezig…" : "✨ Foto"}</button>}
                       <button type="button" className="a-button text-xs" onClick={() => setVariantsOpen(variantsOpen === product.id ? null : product.id)}>Varianten</button>
                       <button type="button" className="a-button text-xs" onClick={() => edit(product)}>Bewerken</button>
                       {product.active && <button type="button" className="a-button text-xs" onClick={() => archive(product.id)}>Verbergen</button>}
