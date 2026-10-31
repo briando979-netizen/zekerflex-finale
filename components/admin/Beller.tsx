@@ -211,9 +211,11 @@ export function Beller() {
                       </p>
                     ))}
                     {c.recordingUrl && (
-                      <a href={c.recordingUrl} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline">
-                        🎧 Opname beluisteren
-                      </a>
+                      <div className="pt-1">
+                        <span className="mb-0.5 block text-xs text-neutralx-500">🎧 Opname</span>
+                        {/* Via de eigen beveiligde proxy — geen Twilio-login nodig. */}
+                        <audio controls preload="none" src={`/api/admin/telephony/recording/${c.id}`} className="h-9 w-full max-w-sm" />
+                      </div>
                     )}
                   </div>
                 )}
