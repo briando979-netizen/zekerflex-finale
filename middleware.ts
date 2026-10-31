@@ -78,7 +78,16 @@ function loginRedirect(req: NextRequest, ctx: RequestContext): NextResponse {
   url.search = `?callbackUrl=${encodeURIComponent(
     req.nextUrl.pathname + req.nextUrl.search,
   )}`;
-  return decorate(NextResponse.redirect(url), ctx);
+  const res = decorate(NextResponse.redirect(url), ctx);
+  // loginRedirect komt alleen hier als er GEEN geldige sessie is. Staat er dan
+  // toch een sessie-cookie in de request, dan is die niet (meer) te decoderen
+  // (oud AUTH_SECRET / restant van een vorige deploy). Ruim 'm actief op, anders
+  // blijft de browser die kapotte cookie sturen → login-lus (telkens teruggestuurd
+  // naar /login ondanks inloggen). Een geldige sessie bereikt dit nooit.
+  if (req.cookies.get(SESSION_COOKIE)) {
+    res.cookies.set(SESSION_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax", secure: !IS_DEV });
+  }
+  return res;
 }
 
 function sessionToken(req: NextRequest): string | undefined {
