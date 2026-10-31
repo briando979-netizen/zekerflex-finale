@@ -17,6 +17,24 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
   useEffect(() => {
     console.error(error);
+    // Stuur de echte fout naar de server zodat die in de logs komt en
+    // diagnosticeerbaar is (de boundary belooft "we hebben de fout gelogd").
+    try {
+      void fetch("/api/client-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          message: error?.message ?? String(error),
+          stack: error?.stack ?? "",
+          digest: error?.digest ?? "",
+          url: typeof window !== "undefined" ? window.location.href : "",
+          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        }),
+      }).catch(() => undefined);
+    } catch {
+      /* rapporteren mag nooit zelf crashen */
+    }
     // Zelfherstel na een deploy: herlaad één keer (max. 1× per 10s zodat een
     // echt blijvende fout niet in een herlaad-lus belandt).
     if (stale && typeof window !== "undefined") {

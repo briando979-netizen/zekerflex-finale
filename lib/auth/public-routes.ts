@@ -37,6 +37,7 @@ const PUBLIC_PREFIXES = [
   "/api/companion", // owner's desktop Jarvis — its own personal-token auth (lib/companion)
   "/api/shop", // public storefront reads; writes are admin-gated inside the route
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
+  "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([
