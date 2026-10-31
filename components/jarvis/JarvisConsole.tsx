@@ -139,6 +139,7 @@ export function JarvisConsole({
   const mediaRef = useRef<{ recorder: MediaRecorder; stream: MediaStream; chunks: Blob[] } | null>(null);
   const analyserRef = useRef<{ ctx: AudioContext; raf: number } | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const neuralAudioRef = useRef<HTMLAudioElement | null>(null);
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sendRef = useRef<(t?: string) => void>(() => undefined);
   const startListeningRef = useRef<() => void>(() => undefined);
@@ -197,59 +198,100 @@ export function JarvisConsole({
     [],
   );
 
-  // ---- speak a reply ---------------------------------------------------
+  // ---- speak a reply (neural server-voice first, browser voice as fallback) ----
   const sayAloud = useCallback((text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setVoiceError("Voorlezen wordt niet ondersteund in deze browser.");
-      return;
-    }
     const plain = stripMarkdown(text).slice(0, 1000);
     if (!plain) return;
 
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(plain);
-    u.lang = "nl-NL";
-    if (voiceRef.current) u.voice = voiceRef.current;
-    u.rate = 1.04;
-    u.pitch = 1;
-    u.onstart = () => {
-      setSpeaking(true);
-      // Chrome pauses long utterances after ~15s; nudge it.
-      if (resumeTimerRef.current) clearInterval(resumeTimerRef.current);
-      resumeTimerRef.current = setInterval(() => {
-        try {
-          if (synth.speaking) synth.resume();
-        } catch {
-          /* ignore */
-        }
-      }, 6000);
-    };
-    const finish = () => {
+    const afterNeural = () => {
       setSpeaking(false);
-      if (resumeTimerRef.current) {
-        clearInterval(resumeTimerRef.current);
-        resumeTimerRef.current = null;
-      }
-      if (handsFreeRef.current && !busyRef.current) {
-        setTimeout(() => startListeningRef.current(), 350);
-      }
+      if (handsFreeRef.current && !busyRef.current) setTimeout(() => startListeningRef.current(), 350);
     };
-    u.onend = finish;
-    u.onerror = (e) => {
-      // "interrupted"/"canceled" are normal when we cancel(); ignore those.
-      if (e.error && !["interrupted", "canceled"].includes(e.error)) {
-        setVoiceError(`Voorlezen mislukte (${e.error}).`);
+
+    // Terugval: de eigen stem van de browser (offline, maar robotachtiger).
+    const browserTts = () => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        setVoiceError("Voorlezen wordt niet ondersteund in deze browser.");
+        return;
       }
-      finish();
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(plain);
+      u.lang = "nl-NL";
+      if (voiceRef.current) u.voice = voiceRef.current;
+      u.rate = 1.04;
+      u.pitch = 1;
+      u.onstart = () => {
+        setSpeaking(true);
+        if (resumeTimerRef.current) clearInterval(resumeTimerRef.current);
+        resumeTimerRef.current = setInterval(() => {
+          try {
+            if (synth.speaking) synth.resume();
+          } catch {
+            /* ignore */
+          }
+        }, 6000);
+      };
+      const finish = () => {
+        setSpeaking(false);
+        if (resumeTimerRef.current) {
+          clearInterval(resumeTimerRef.current);
+          resumeTimerRef.current = null;
+        }
+        if (handsFreeRef.current && !busyRef.current) setTimeout(() => startListeningRef.current(), 350);
+      };
+      u.onend = finish;
+      u.onerror = (e) => {
+        if (e.error && !["interrupted", "canceled"].includes(e.error)) {
+          setVoiceError(`Voorlezen mislukte (${e.error}).`);
+        }
+        finish();
+      };
+      try {
+        synth.resume();
+      } catch {
+        /* ignore */
+      }
+      synth.speak(u);
     };
-    // A user gesture already happened (mic/send click); resume unlocks Chrome.
-    try {
-      synth.resume();
-    } catch {
-      /* ignore */
-    }
-    synth.speak(u);
+
+    // Probeer eerst de natuurlijke neurale server-stem; bij elke fout → browserstem.
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: plain }),
+        });
+        if (res.ok && (res.headers.get("content-type") ?? "").includes("audio")) {
+          try {
+            neuralAudioRef.current?.pause();
+          } catch {
+            /* ignore */
+          }
+          try {
+            window.speechSynthesis?.cancel();
+          } catch {
+            /* ignore */
+          }
+          const url = URL.createObjectURL(await res.blob());
+          const audio = new Audio(url);
+          neuralAudioRef.current = audio;
+          setSpeaking(true);
+          const done = () => {
+            URL.revokeObjectURL(url);
+            afterNeural();
+          };
+          audio.onended = done;
+          audio.onerror = done;
+          await audio.play();
+          return;
+        }
+      } catch {
+        /* val terug op de browserstem */
+      }
+      browserTts();
+    })();
   }, []);
 
   // ---- sessions + brein status ------------------------------------
