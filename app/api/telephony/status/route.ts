@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { readForm, signatureValid } from "@/lib/telephony/webhook";
-import { patchCall, type CallStatus } from "@/lib/telephony/store";
+import { findCallByProviderId, patchCall, type CallStatus } from "@/lib/telephony/store";
 import { captureCallOutcome } from "@/lib/telephony/outcome";
 
 export const runtime = "nodejs";
@@ -17,12 +17,16 @@ function mapStatus(s: string | undefined): CallStatus | null {
 
 // POST /api/telephony/status — Twilio status- én opname-callback. Werkt het
 // oproep-record bij (status, opname-URL). Geen TwiML nodig. Handtekening vereist.
+// Uitgaand zit ons id in de URL; inkomend komt via de status-callback van het
+// Twilio-nummer en kennen we het gesprek alleen aan zijn CallSid.
 export async function POST(request: Request): Promise<Response> {
   const params = readForm(await request.text());
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
 
-  const callId = new URL(request.url).searchParams.get("callId");
-  if (!callId) return new Response("", { status: 204 });
+  const callId =
+    new URL(request.url).searchParams.get("callId") ??
+    (params.CallSid ? (await findCallByProviderId(params.CallSid))?.id : undefined);
+  if (!callId) return new Response(null, { status: 204 });
 
   const patch: { status?: CallStatus; recordingUrl?: string } = {};
   const st = mapStatus(params.CallStatus);
@@ -35,5 +39,5 @@ export async function POST(request: Request): Promise<Response> {
   // antwoord krijgt.
   if (st === "completed") after(() => captureCallOutcome(callId).catch(() => undefined));
 
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 }

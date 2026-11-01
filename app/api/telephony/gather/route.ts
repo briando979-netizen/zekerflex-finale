@@ -1,11 +1,9 @@
-import { after } from "next/server";
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, sayAndGather, hangupAfter, say, dial } from "@/lib/telephony/twiml";
 import { getCall, addTurn, patchCall } from "@/lib/telephony/store";
 import { phoneSystem, voiceForLang, recogLang, scriptOrDefault, voicemailMessage, type Lang } from "@/lib/telephony/scripts";
 import { isGoodbye, isGreetingOnly, looksLikeVoicemail } from "@/lib/telephony/intents";
-import { captureCallOutcome } from "@/lib/telephony/outcome";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 
@@ -73,8 +71,7 @@ export async function POST(request: Request): Promise<Response> {
   if (speech && isGoodbye(speech, firstReply)) {
     await addTurn(callId, "ai", BYE_LINE[lang]).catch(() => undefined);
     await patchCall(callId, { status: "completed" }).catch(() => undefined);
-    // Uitgaand komt dit via de status-callback van Twilio; inkomend krijgt die niet.
-    if (rec.direction === "inbound") after(() => captureCallOutcome(callId).catch(() => undefined));
+    // De uitkomst komt via de status-callback, ook als iemand zomaar ophangt.
     return xmlResponse(twiml(hangupAfter(BYE_LINE[lang], voice)));
   }
 

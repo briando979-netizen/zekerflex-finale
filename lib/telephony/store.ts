@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { kvGet, kvSet, kvListValues } from "@/lib/storage/kv";
+import { kvGet, kvSet, kvListValues, kvFindByField } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Belgeschiedenis (ZekerFlex AI-beller). Postgres-backed via KeyValueStore,
@@ -82,6 +82,12 @@ export async function createCall(input: {
 export async function getCall(id: string): Promise<CallRecord | null> {
   if (!/^[a-f0-9-]{6,20}$/.test(id)) return null;
   return kvGet<CallRecord>(key(id));
+}
+
+/** Zoekt een gesprek op Twilio's CallSid: inkomende status-callbacks kennen ons id niet. */
+export async function findCallByProviderId(callSid: string): Promise<CallRecord | null> {
+  const [rec] = await kvFindByField<CallRecord>("call:", "providerCallId", callSid, 1);
+  return rec ?? null;
 }
 
 export async function patchCall(id: string, patch: Partial<Omit<CallRecord, "id" | "at">>): Promise<CallRecord | null> {
