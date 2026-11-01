@@ -18,8 +18,8 @@ dezelfde database, zodat er niets gesplitst raakt.
   - `DATABASE_URL` en `DATABASE_URL_UNPOOLED` → de **Neon**-connectiestrings (NIET de lokale).
   - `REDIS_URL` → je externe Redis (bijv. Upstash). *Zie noot Redis onderaan.*
   - `AUTH_SECRET` (exact dezelfde, anders zijn alle sessies ongeldig).
-  - `APP_BASE_URL=https://www.zekerflex.com`, en alle Stripe/mail/LLM-sleutels.
-  - `STORAGE_BACKEND=db` (uploads staan in Postgres, net als op Vercel).
+  - `APP_BASE_URL=https://zekerflex.com` en `AUTH_URL` hetzelfde (zonder www: cookies gelden per host, dus www als hoofdadres breekt het inloggen), en alle Stripe/mail/LLM-sleutels.
+  - `STORAGE_BACKEND=db` (uploads sinds 31 okt 2026 staan in Postgres; oudere uploads staan in de S3-bucket van de oude Vercel-omgeving).
 
 ## 2. Opstarten op de reserveserver
 ```bash
