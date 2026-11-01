@@ -17,14 +17,14 @@
     -Uninstall  haal die automatische start weer weg
     -NoSleep    laat de laptop niet in slaap vallen zolang hij aan de lader zit
     -ShowKey    toon de sleutel in beeld (anders alleen op het klembord)
-    -Site       ander ZekerFlex-adres (standaard https://www.zekerflex.com)
+    -Site       ander ZekerFlex-adres (standaard https://zekerflex.com)
 #>
 param(
   [switch]$Install,
   [switch]$Uninstall,
   [switch]$NoSleep,
   [switch]$ShowKey,
-  [string]$Site = "https://www.zekerflex.com",
+  [string]$Site = "https://zekerflex.com",
   [string]$Model = "qwen3:4b",
   [string]$FastModel = "qwen3:1.7b",
   [string]$ReasoningModel = "qwen3:4b",

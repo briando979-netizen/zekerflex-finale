@@ -56,7 +56,7 @@ Zie je "app niet beschikbaar"? Dan staat je adres nog niet op de lijst. Probeer 
 
 Onze vraag aan jou: houd de app minstens 14 dagen geïnstalleerd en gebruik hem af en toe. Zie je iets wat niet werkt of beter kan? Antwoord gewoon op deze mail.
 
-Heb je een iPhone? De iOS-versie volgt later. Tot die tijd werkt alles via www.zekerflex.com.
+Heb je een iPhone? De iOS-versie volgt later. Tot die tijd werkt alles via zekerflex.com.
 
 Bedankt dat je ons helpt!
 

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SITE: https://www.zekerflex.com
+      SITE: https://zekerflex.com
     steps:
       - name: Check site
         id: check

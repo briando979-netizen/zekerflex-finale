@@ -16,7 +16,7 @@ if (!linkArg) {
   process.exit(1);
 }
 const token = linkArg.includes("zf_inspect=") ? new URL(linkArg).searchParams.get("zf_inspect") : linkArg;
-const base = linkArg.startsWith("http") ? new URL(linkArg).origin : "https://www.zekerflex.com";
+const base = linkArg.startsWith("http") ? new URL(linkArg).origin : "https://zekerflex.com";
 const app = !args.includes("--web");
 const outIdx = args.indexOf("--out");
 const out = outIdx >= 0 ? args[outIdx + 1] : "inspect-shots";

@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         ]}
       />
       <LegalSection
-        body="De app bevat geen advertenties en geen tracking-SDK's van derden, en we verkopen geen gegevens. Je account verwijderen kan in de app of via www.zekerflex.com/account-verwijderen; losse gegevens laten verwijderen zonder je account op te heffen via www.zekerflex.com/gegevens-verwijderen."
+        body="De app bevat geen advertenties en geen tracking-SDK's van derden, en we verkopen geen gegevens. Je account verwijderen kan in de app of via zekerflex.com/account-verwijderen; losse gegevens laten verwijderen zonder je account op te heffen via zekerflex.com/gegevens-verwijderen."
       />
       <LegalSection
         body="We verwerken deze gegevens om de diensten uit te voeren, op grond van ons gerechtvaardigd belang, omdat we een overeenkomst met je aangaan, omdat je toestemming hebt gegeven, of omdat het onze wettelijke verplichting is."

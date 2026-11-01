@@ -47,7 +47,7 @@ export function InspectLinkPanel({ userId }: { userId: string }) {
   }
 
   const aiPrompt = link
-    ? `Bekijk de ZekerFlex-app als testgebruiker (alleen-lezen). Open deze link: ${link.app}\nZet op elke pagina die je wilt bekijken "?${link.param}&app=1" achter het adres, bijvoorbeeld https://www.zekerflex.com/dashboard/klussen?${link.param}&app=1 . Vertel me wat je ziet en wat er niet goed werkt.`
+    ? `Bekijk de ZekerFlex-app als testgebruiker (alleen-lezen). Open deze link: ${link.app}\nZet op elke pagina die je wilt bekijken "?${link.param}&app=1" achter het adres, bijvoorbeeld https://zekerflex.com/dashboard/klussen?${link.param}&app=1 . Vertel me wat je ziet en wat er niet goed werkt.`
     : "";
 
   return (

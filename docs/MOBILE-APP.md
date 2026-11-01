@@ -3,7 +3,7 @@
 ZekerFlex is a **Next.js web app**, not a native one. You do **not** rewrite it
 in another framework to ship an app. The web app is now an installable **PWA**;
 Google Play distributes it as a **Trusted Web Activity (TWA)** — a ~1 MB
-Android shell that opens `www.zekerflex.com` full-screen, with the same code,
+Android shell that opens `zekerflex.com` full-screen, with the same code,
 instant updates, and no content review for changes.
 
 > **Status (2026-10-10):** the Play Console app already exists — package
@@ -15,7 +15,7 @@ instant updates, and no content review for changes.
 > SDK that this machine's network couldn't download (crawled at ~100KB/min).
 > Either retry `bubblewrap build` from `android-twa/` once on a faster
 > connection, or use [pwabuilder.com](https://www.pwabuilder.com) (enter
-> `https://www.zekerflex.com`, package for Android/Google Play, package ID
+> `https://zekerflex.com`, package for Android/Google Play, package ID
 > `com.zekerflex`) which builds the `.aab` in the browser — no local Android
 > SDK needed — then sign it with `android-twa/android-release.keystore`.
 
@@ -38,7 +38,7 @@ Now it can.
 
 ## Prerequisites
 
-1. `APP_BASE_URL=https://www.zekerflex.com`, HTTPS live, `WEBPUSH_VAPID_*` set
+1. `APP_BASE_URL=https://zekerflex.com`, HTTPS live, `WEBPUSH_VAPID_*` set
    (`npm run vapid:keys`).
 2. A **Google Play Console** account (one-time $25) — already set up, app
    `com.zekerflex` exists in Draft.
@@ -54,7 +54,7 @@ Now it can.
 ## Step by step — TWA with Bubblewrap
 
 The config already exists at `android-twa/twa-manifest.json` (package
-`com.zekerflex`, host `www.zekerflex.com`, signing key already generated —
+`com.zekerflex`, host `zekerflex.com`, signing key already generated —
 see `android-twa/KEYSTORE-CREDENTIALS.txt`, gitignored, **back it up**). From
 a machine with a working JDK 17 + Android SDK:
 
@@ -70,7 +70,7 @@ regenerate the fingerprint: `bubblewrap fingerprint`, or directly via
 `keytool -list -v -keystore android-release.keystore -alias zekerflex`.
 
 **No working local JDK/SDK?** Use [pwabuilder.com](https://www.pwabuilder.com)
-instead — enter `https://www.zekerflex.com`, "Package for stores" → Android,
+instead — enter `https://zekerflex.com`, "Package for stores" → Android,
 package ID `com.zekerflex`. It builds the `.aab` server-side (no local
 Android SDK needed) and lets you either have it sign the bundle (register
 *that* new fingerprint in Play Console → Android developer verification →
@@ -78,7 +78,7 @@ Android SDK needed) and lets you either have it sign the bundle (register
 `android-release.keystore`.
 
 1. The fingerprint already in `public/.well-known/assetlinks.json` is live —
-   verify at `https://www.zekerflex.com/.well-known/assetlinks.json` with
+   verify at `https://zekerflex.com/.well-known/assetlinks.json` with
    `Content-Type: application/json`.
 2. In Play Console → **Android developer verification** → the `Zekerflex.com`
    app → **Add key**, paste the same SHA-256 fingerprint so this new upload
@@ -93,8 +93,8 @@ Android SDK needed) and lets you either have it sign the bundle (register
 2. **Upload the `.aab`** to Internal testing first.
 3. Fill in: store listing (use the copy from `lib/seo.ts`), a 512×512 icon
    (`public/icons/icon-512.png`), feature graphic (1024×500), 2+ phone
-   screenshots, privacy policy URL (`https://www.zekerflex.com/privacy`),
-   and the **Account deletion** URL: `https://www.zekerflex.com/account-verwijderen`.
+   screenshots, privacy policy URL (`https://zekerflex.com/privacy`),
+   and the **Account deletion** URL: `https://zekerflex.com/account-verwijderen`.
 4. Complete the **Data safety** form — declare: account data, location
    (GPS check-in), photos (KYC), device ids. Reference `docs/` and the AVG
    register.

@@ -49,7 +49,7 @@ def load_env() -> dict[str, str]:
 
 
 ENV = load_env()
-BASE = ENV.get("ZEKERFLEX_URL", "https://www.zekerflex.com").rstrip("/")
+BASE = ENV.get("ZEKERFLEX_URL", "https://zekerflex.com").rstrip("/")
 TOKEN = ENV.get("ZEKERFLEX_TOKEN", "")
 
 

@@ -56,7 +56,7 @@ export async function requestDataDeletionAction(_prev: DataDeletionState, formDa
   await sendMail({
     to: CONTACTS.privacy,
     subject: `Verzoek gegevens verwijderen (${ref}) — ${email}`,
-    text: `Verzoek via www.zekerflex.com/gegevens-verwijderen\n\nE-mailadres account: ${email}\nReferentie: ${ref}\n\nTe verwijderen:\n${list}\n\nToelichting:\n${note ?? "(geen)"}\n\nControleer eerst dat het verzoek van de accounthouder komt (de bevestigingsmail ging naar dit adres) en handel af binnen één maand (AVG art. 12 lid 3). Wettelijk te bewaren gegevens (facturen, loonadministratie, KVK/btw, IBAN) blijven bewaard.`,
+    text: `Verzoek via zekerflex.com/gegevens-verwijderen\n\nE-mailadres account: ${email}\nReferentie: ${ref}\n\nTe verwijderen:\n${list}\n\nToelichting:\n${note ?? "(geen)"}\n\nControleer eerst dat het verzoek van de accounthouder komt (de bevestigingsmail ging naar dit adres) en handel af binnen één maand (AVG art. 12 lid 3). Wettelijk te bewaren gegevens (facturen, loonadministratie, KVK/btw, IBAN) blijven bewaard.`,
     kind: "support",
     replyTo: email,
   }).catch(() => undefined);

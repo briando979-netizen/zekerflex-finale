@@ -24,9 +24,9 @@
 		host www.zekerflex.com
 		not path /api/* /.well-known/*
 	}
-	# Tijdelijk (307), zodat browsers dit niet vastleggen zolang de Android-app nog op
-	# www gebouwd is. Zet op 308 zodra zeker is dat het kale domein het hoofdadres blijft.
-	redir @www https://zekerflex.com{uri} 307
+	# Definitief (308): het kale domein is het hoofdadres. Browsers en zoekmachines
+	# leggen dit vast, en de methode blijft behouden.
+	redir @www https://zekerflex.com{uri} 308
 
 	# Next.js standalone server draait in de app-container op poort 3000.
 	reverse_proxy app:3000

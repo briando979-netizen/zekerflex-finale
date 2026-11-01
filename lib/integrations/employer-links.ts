@@ -183,7 +183,7 @@ export async function postToChatHook(event: string, tenantId: string, payload: R
   try {
     const hook = await getChatHook(tenantId);
     if (!hook || !hook.events.includes(event as ChatHookEvent)) return;
-    const site = (process.env.APP_BASE_URL ?? "https://www.zekerflex.com").replace(/\/+$/, "");
+    const site = (process.env.APP_BASE_URL ?? "https://zekerflex.com").replace(/\/+$/, "");
     await postText(hook, await describe(event as ChatHookEvent, payload, site));
   } catch (err) {
     logger.warn("chat hook post failed", { tenantId, event, error: (err as Error).message });
