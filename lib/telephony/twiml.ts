@@ -27,6 +27,9 @@ export function say(text: string, voice?: string): string {
   return `<Say voice="${xmlEscape(v)}"${lang}>${xmlEscape(text)}</Say>`;
 }
 
+// Deepgram kent Nederlands als "nl", de andere modellen als "nl-NL".
+const speechLanguage = (recog: string, model: string): string => (model.startsWith("deepgram") && recog === "nl-NL" ? "nl" : recog);
+
 /** Spreek iets uit en luister daarna naar het gesproken antwoord (spraak → actie-URL). */
 export function sayAndGather(
   text: string,
@@ -35,17 +38,19 @@ export function sayAndGather(
 ): string {
   const voice = opts.voice;
   const recog = opts.recogLang ?? "nl-NL";
-  const nothing = recog.startsWith("en")
-    ? "I didn't catch that. You can always reach us via our website."
-    : "Ik hoorde niets. Je kunt ons altijd bereiken via de website.";
-  // Snappere reactie: kortere stilte-drempel (env) + telefoon-spraakmodel.
-  return (
-    `<Gather input="speech" language="${xmlEscape(recog)}" speechTimeout="${xmlEscape(env.TELEPHONY_SPEECH_TIMEOUT)}" speechModel="phone_call" enhanced="true" action="${xmlEscape(actionUrl)}" method="POST">` +
-    say(text, voice) +
-    `</Gather>` +
-    say(nothing, voice) +
-    `<Hangup/>`
-  );
+  const english = recog.startsWith("en");
+  const stillThere = english ? "Are you still there? I can't hear you." : "Bent u er nog? Ik hoor u even niet.";
+  const nothing = english
+    ? "I can't hear you, so I'll end the call. You can always reach us via our website."
+    : "Ik hoor u niet, dus ik hang op. U kunt ons altijd bereiken via de website.";
+  const model = env.TELEPHONY_SPEECH_MODEL;
+  const gather = (spoken: string) =>
+    `<Gather input="speech" language="${xmlEscape(speechLanguage(recog, model))}" speechTimeout="${xmlEscape(env.TELEPHONY_SPEECH_TIMEOUT)}" speechModel="${xmlEscape(model)}" action="${xmlEscape(actionUrl)}" method="POST">` +
+    say(spoken, voice) +
+    `</Gather>`;
+  // Twilio wacht 5 seconden op spraak. Wie even nadenkt krijgt nog één kans, want
+  // daarna hangen we op.
+  return gather(text) + gather(stillThere) + say(nothing, voice) + `<Hangup/>`;
 }
 
 /** Spreek een menutekst uit en wacht op één toets (DTMF). Niets getoetst → terug naar de actie (lege input). */

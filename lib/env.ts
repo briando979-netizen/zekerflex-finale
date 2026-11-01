@@ -214,9 +214,14 @@ const schema = z.object({
   // doorschakelen (de AI biedt dan een terugbelafspraak aan).
   TELEPHONY_FORWARD_NUMBER: z.string().optional(),
   // Hoe snel de beller reageert: seconden stilte voordat Twilio het gezegde
-  // verwerkt. Lager = snapper (maar kapt iemand eerder af). "auto" = Twilio kiest.
+  // verwerkt. Lager = snapper (maar kapt iemand eerder af). Moet een heel getal zijn:
+  // "auto" mag niet samen met een spraakmodel.
   // Live bij te stellen zonder redeploy (zet op "1" voor extra snel).
   TELEPHONY_SPEECH_TIMEOUT: z.string().default("2"),
+  // Spraakherkenning van de beller. Deepgram verstond Nederlands aan de telefoon het
+  // best in onze metingen. Twilio wijkt bij een storing niet uit naar een andere
+  // aanbieder: zet dan "default" (Twilio kiest zelf) en herstart de app.
+  TELEPHONY_SPEECH_MODEL: z.string().default("deepgram_nova-3"),
 
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with
