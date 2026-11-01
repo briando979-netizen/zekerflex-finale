@@ -26,6 +26,7 @@ export function storageBackend(): Backend {
 const DB_PREFIX = "db:";
 /** Where an EXISTING upload lives — from its key, so reads keep working if the backend setting changes. */
 const backendOfKey = (storageKey: string): Backend => (storageKey.startsWith(DB_PREFIX) ? "db" : env.STORAGE_BACKEND === "s3" ? "s3" : "local");
+const s3Reachable = (): boolean => Boolean(env.STORAGE_S3_BUCKET && env.STORAGE_S3_ACCESS_KEY_ID && env.STORAGE_S3_SECRET_ACCESS_KEY);
 
 async function dbPut(storageKey: string, bytes: Buffer): Promise<void> {
   await prisma.$executeRaw`INSERT INTO "UploadBlob" ("storageKey", "bytes") VALUES (${storageKey}, ${bytes})`;
@@ -161,6 +162,15 @@ export async function readUpload(
   try {
     await stat(abs);
   } catch {
+    // Uploads van vóór de verhuizing naar de VPS staan niet op deze schijf maar nog
+    // in de S3-bucket van de oude omgeving. Werkt zodra STORAGE_S3_* is ingesteld.
+    if (s3Reachable()) {
+      try {
+        return { bytes: await getObjectBytes(row.storageKey), filename: row.filename, mimeType: row.mimeType };
+      } catch (err) {
+        logger.warn("upload niet gevonden in S3", { id, error: (err as Error).message });
+      }
+    }
     throw AppError.notFound("Bestand ontbreekt op schijf");
   }
   return {
@@ -191,6 +201,8 @@ export async function deleteUpload(id: string): Promise<void> {
       if (!rel.startsWith("..") && !rel.startsWith(sep) && !isAbsolute(rel)) {
         await rm(abs, { force: true });
       }
+      // Een oude upload kan alleen in S3 staan; een verwijderverzoek moet daar ook gelden.
+      if (s3Reachable()) await deleteObject(row.storageKey);
     }
   } catch (err) {
     logger.warn("upload bytes could not be deleted", {
