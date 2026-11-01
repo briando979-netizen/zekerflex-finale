@@ -186,14 +186,13 @@ A full local alternative to Google Analytics — nothing leaves the box.
 
 ## Admin control center
 
-**`/admin`** (`HQ_ADMIN` / `PLATFORM_ADMIN`) — `components/admin/ControlCenter.tsx`
-polls one aggregated endpoint (`GET /api/admin/overview`,
-`lib/admin/overview.ts#buildAdminOverview`, every 5s) and shows the whole box on
-one screen: system health (db / Redis / local LLM + model / Web Push), AI token
-budget bar + concurrency, work queues (disputes, timesheets, failed payments,
-open findings), live traffic, the four sub-agents with their last task, recent
-orchestration findings, and quick links. Every field is best-effort — a slow
-dependency degrades to a number, never an error.
+**`/admin`** — the whole business on one screen: KPIs with a period choice, charts,
+what needs action and a tile per section (`lib/admin/insights/home.ts`). The menu is
+`lib/admin/nav.ts`; the building blocks every admin page uses are
+`components/admin/kit.tsx` (server) and `kit-client.tsx` (charts, tables). The header
+polls `GET /api/admin/overview` (`lib/admin/overview.ts#buildAdminOverview`) for system
+health and live visitors. Every figure is best-effort: a slow dependency degrades to a
+number, never an error.
 
 ## Jarvis console + AI budget governor
 
