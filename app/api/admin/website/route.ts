@@ -7,8 +7,10 @@ import { listManagedWebsites, revealWebsiteSecrets, setManagedWebsiteStatus } fr
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Alleen platformbeheerders: HQ_ADMIN is de bedrijfsbeheerder van een klant, en hier
+// staan de servertoegang en wachtwoorden van alle klanten.
 // GET — alle website-beheer-aanvragen/-abonnementen (admin).
-export const GET = withAdminAccess(["PLATFORM_ADMIN", "HQ_ADMIN"], async () => {
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   return NextResponse.json({ sites: await listManagedWebsites() });
 });
 
@@ -22,7 +24,7 @@ const schema = z.discriminatedUnion("action", [
 ]);
 
 // POST — toegangsgegevens onthullen (geaudit) of de status aanpassen.
-export const POST = withAdminAccess(["PLATFORM_ADMIN", "HQ_ADMIN"], async (request, { principal }) => {
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const body = schema.parse(
     await request.json().catch(() => {
       throw AppError.validation("Body moet JSON zijn");
