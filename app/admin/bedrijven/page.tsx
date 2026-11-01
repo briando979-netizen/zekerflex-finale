@@ -1,97 +1,99 @@
-import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { PageHeader, Panel, EmptyState, dateShort } from "@/components/app/ui";
+import { resolvePeriod } from "@/lib/admin/period";
+import { companiesInsights } from "@/lib/admin/insights/people";
+import { count, dateNl, euro } from "@/lib/admin/format";
+import { BarList, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar } from "@/components/admin/kit";
+import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 
 export const dynamic = "force-dynamic";
 
-const TYPE_LABEL: Record<string, string> = {
-  PLATFORM: "Platform",
-  ENTERPRISE_HQ: "Hoofdkantoor",
-  FRANCHISE: "Franchise",
-};
+const VIA_LABEL: Record<string, string> = { kvk: "KVK", admin: "Handmatig", history: "Bestaande klant", platform: "Platform" };
 
-export default async function BedrijvenPage(props: { searchParams: Promise<{ q?: string }> }) {
-  const searchParams = await props.searchParams;
+export default async function BedrijvenPage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <div className="mx-auto max-w-6xl">
-        <PageHeader title="Geen toegang" subtitle="Het bedrijvenoverzicht is alleen voor platformbeheerders." />
-      </div>
-    );
+    return <PageHead title="Geen toegang" subtitle="Het bedrijvenoverzicht is alleen voor platformbeheerders." />;
   }
+  const { periode } = await props.searchParams;
+  const period = resolvePeriod(periode);
+  const d = await companiesInsights(period);
 
-  const q = searchParams.q?.trim() ?? "";
-  const tenants = await prisma.tenant.findMany({
-    where: {
-      type: { not: "PLATFORM" },
-      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      kvkNumber: true,
-      createdAt: true,
-      _count: { select: { branches: true, memberships: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 150,
+  const rows: TableRow[] = d.rows.map((c) => {
+    const verified = c.verifiedVia ? "ja" : "nee";
+    return {
+      id: c.id,
+      href: `/admin/bedrijven/${c.id}`,
+      search: `${c.name} ${c.kvkNumber ?? ""}`,
+      filters: { verified },
+      cells: {
+        name: <NameCell name={c.name} sub={c.kvkNumber ? `KVK ${c.kvkNumber}` : "Geen KVK-nummer"} href={`/admin/bedrijven/${c.id}`} />,
+        verified: c.verifiedVia ? <Pill tone="trust">{VIA_LABEL[c.verifiedVia] ?? "Geverifieerd"}</Pill> : <Pill tone="warn">Niet geverifieerd</Pill>,
+        branches: count(c.branches),
+        members: count(c.members),
+        shifts: count(c.shifts),
+        billed: euro(c.billedCents),
+        open: c.openCents > 0 ? <span style={{ color: "var(--a-money)" }}>{euro(c.openCents)}</span> : "—",
+        since: dateNl(c.createdAt),
+      },
+      sort: { name: c.name, verified, branches: c.branches, members: c.members, shifts: c.shifts, billed: c.billedCents, open: c.openCents, since: c.createdAt.getTime() },
+      csv: { name: `${c.name} (KVK ${c.kvkNumber ?? "onbekend"})`, verified: c.verifiedVia ? (VIA_LABEL[c.verifiedVia] ?? "ja") : "nee", branches: c.branches, members: c.members, shifts: c.shifts, billed: (c.billedCents / 100).toFixed(2), open: (c.openCents / 100).toFixed(2), since: c.createdAt.toISOString() },
+    };
   });
 
+  const top = [...d.rows].filter((c) => c.billedCents > 0).sort((a, b) => b.billedCents - a.billedCents).slice(0, 6);
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <PageHeader title="Bedrijven" subtitle="Alle organisaties die als opdrachtgever op ZekerFlex actief zijn." />
+    <div className="space-y-4">
+      <PageHead
+        title="Bedrijven"
+        subtitle="Alle organisaties die als opdrachtgever op ZekerFlex actief zijn."
+        actions={<PeriodTabs period={period} basePath="/admin/bedrijven" />}
+      />
 
-      <form className="flex gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Zoek op bedrijfsnaam…"
-          className="w-72 rounded-lg border border-hairstrong bg-white px-3 py-1.5 text-sm"
+      <KpiStrip
+        items={[
+          { label: "Bedrijven", value: count(d.total), hint: `${d.verified} geverifieerd` },
+          { label: "Actief", value: count(d.active), hint: `met klussen in ${period.label}` },
+          { label: "Nieuw", value: count(d.newCount), delta: d.newDelta, hint: `in ${period.label}` },
+          { label: "Klussen", value: count(d.shifts), delta: d.shiftsDelta, spark: d.shiftSeries },
+          { label: "Gefactureerd", value: euro(d.billed), delta: d.billedDelta, spark: d.billedSeries, href: "/admin/facturen" },
+          { label: "Staat open", value: euro(d.open), href: "/admin/facturen", ...(d.open > 0 ? { tone: "money" as const } : {}) },
+        ]}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <Panel title="Klussen" subtitle={`Geplaatste klussen, laatste ${period.label}`}>
+          <Chart title="Klussen per periode" kind="bars" unit="count" labels={d.labels} series={[{ label: "Klussen", values: d.shiftSeries }]} height={210} emptyText="Geen klussen in deze periode." />
+        </Panel>
+        <div className="grid gap-4">
+          <Panel title="Grootste opdrachtgevers" subtitle={`Gefactureerd in ${period.label}`}>
+            <BarList rows={top.map((c) => ({ key: c.id, label: c.name, value: c.billedCents, display: euro(c.billedCents), href: `/admin/bedrijven/${c.id}` }))} emptyText="Nog niets gefactureerd in deze periode." />
+          </Panel>
+          <Panel title="Verificatie">
+            <StackBar segments={d.verification} format={count} emptyText="Nog geen bedrijven." />
+          </Panel>
+        </div>
+      </div>
+
+      <Panel flush title="Alle bedrijven" subtitle={`${count(d.total)} organisaties. Cijfers over ${period.label}.`}>
+        <DataTable
+          columns={[
+            { key: "name", label: "Organisatie" },
+            { key: "verified", label: "Verificatie" },
+            { key: "branches", label: "Vestigingen", align: "right", hideOnMobile: true },
+            { key: "members", label: "Gebruikers", align: "right", hideOnMobile: true },
+            { key: "shifts", label: "Klussen", align: "right", hideOnMobile: true },
+            { key: "billed", label: "Gefactureerd", align: "right", hideOnMobile: true },
+            { key: "open", label: "Open", align: "right" },
+            { key: "since", label: "Aangemeld", hideOnMobile: true },
+          ]}
+          rows={rows}
+          searchPlaceholder="Zoek op naam of KVK"
+          csvName="bedrijven"
+          defaultSort={{ key: "since", dir: "desc" }}
+          filters={[{ key: "verified", label: "Verificatie", chips: true, options: [{ value: "ja", label: "Geverifieerd" }, { value: "nee", label: "Niet geverifieerd" }] }]}
+          emptyText="Er zijn nog geen bedrijven."
         />
-        <button type="submit" className="btn-ghost text-sm">
-          Zoeken
-        </button>
-      </form>
-
-      <Panel title={`${tenants.length} organisatie${tenants.length === 1 ? "" : "s"}`}>
-        {tenants.length === 0 ? (
-          <EmptyState title="Geen bedrijven gevonden" body="Pas je zoekopdracht aan." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">Organisatie</th>
-                  <th className="px-5 py-2.5 font-medium">Type</th>
-                  <th className="px-5 py-2.5 font-medium">KVK</th>
-                  <th className="px-5 py-2.5 font-medium">Vestigingen</th>
-                  <th className="px-5 py-2.5 font-medium">Gebruikers</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Aangemeld</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-paper-soft">
-                    <td className="px-5 py-3">
-                      <Link href={`/admin/bedrijven/${t.id}`} className="font-medium text-ink hover:text-brand-600">
-                        {t.name}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{TYPE_LABEL[t.type] ?? t.type}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{t.kvkNumber ?? "—"}</td>
-                    <td className="px-5 py-3 text-neutralx-600">{t._count.branches}</td>
-                    <td className="px-5 py-3 text-neutralx-600">{t._count.memberships}</td>
-                    <td className="px-5 py-3 text-right text-neutralx-600">{dateShort(t.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </Panel>
     </div>
   );

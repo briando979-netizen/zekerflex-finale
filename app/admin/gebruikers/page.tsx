@@ -1,175 +1,130 @@
-import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { PageHeader, Panel, EmptyState, StatusPill, dateShort } from "@/components/app/ui";
+import { resolvePeriod } from "@/lib/admin/period";
+import { usersInsights, type PersonKind } from "@/lib/admin/insights/people";
+import { count, dateNl, percentOf, timeAgoNl } from "@/lib/admin/format";
+import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar, type Tone } from "@/components/admin/kit";
+import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 
 export const dynamic = "force-dynamic";
 
 const ROLE_LABEL: Record<string, string> = {
-  FREELANCER: "Freelancer",
+  FREELANCER: "Flexwerker",
   LOCAL_MANAGER: "Vestigingsmanager",
   HQ_ADMIN: "Bedrijfsbeheerder",
   DISPUTE_MANAGER: "Dispuutmanager",
   PLATFORM_ADMIN: "Platformbeheerder",
+  SALES: "Sales",
 };
 
-const STATUS_TABS = [
-  { key: "", label: "Alle" },
-  { key: "active", label: "Actief" },
-  { key: "blocked", label: "Geblokkeerd" },
-];
+const KYC: Record<string, { label: string; tone: Tone }> = {
+  VERIFIED: { label: "Geverifieerd", tone: "trust" },
+  PENDING: { label: "In beoordeling", tone: "warn" },
+  NOT_STARTED: { label: "Niet gestart", tone: "neutral" },
+  REJECTED: { label: "Afgewezen", tone: "crit" },
+  EXPIRED: { label: "Verlopen", tone: "crit" },
+};
 
-export default async function GebruikersPage(
-  props: {
-    searchParams: Promise<{ q?: string; status?: string }>;
-  }
-) {
-  const searchParams = await props.searchParams;
+const KIND_LABEL: Record<PersonKind, string> = {
+  flexwerker: "Flexwerkers",
+  opdrachtgever: "Opdrachtgevers",
+  beheerder: "Beheerders",
+  overig: "Overig",
+};
+
+export default async function GebruikersPage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <div className="mx-auto max-w-6xl">
-        <PageHeader title="Geen toegang" subtitle="Het gebruikersoverzicht is alleen voor platformbeheerders." />
-      </div>
-    );
+    return <PageHead title="Geen toegang" subtitle="Het gebruikersoverzicht is alleen voor platformbeheerders." />;
   }
+  const { periode } = await props.searchParams;
+  const period = resolvePeriod(periode);
+  const d = await usersInsights(period);
 
-  const q = searchParams.q?.trim() ?? "";
-  const status = searchParams.status ?? "";
-
-  const [users, totals] = await Promise.all([
-    prisma.user.findMany({
-      where: {
-        ...(q
-          ? {
-              OR: [
-                { fullName: { contains: q, mode: "insensitive" } },
-                { email: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-        ...(status === "active" ? { disabledAt: null } : status === "blocked" ? { disabledAt: { not: null } } : {}),
+  const rows: TableRow[] = d.rows.map((u) => {
+    const role = u.memberships.map((m) => `${ROLE_LABEL[m.role] ?? m.role}${m.tenant.type === "PLATFORM" ? "" : ` · ${m.tenant.name}`}`).join(", ") || "Geen rol";
+    const kyc = KYC[u.kycStatus] ?? { label: u.kycStatus, tone: "neutral" as const };
+    const status = u.disabledAt ? "geblokkeerd" : u.emailVerifiedAt ? "actief" : "onbevestigd";
+    return {
+      id: u.id,
+      href: `/admin/gebruikers/${u.id}`,
+      search: `${u.fullName} ${u.email} ${u.phone ?? ""} ${role}`,
+      filters: { kind: u.kind, kyc: u.kycStatus, status },
+      cells: {
+        name: <NameCell name={u.fullName} sub={u.email} href={`/admin/gebruikers/${u.id}`} />,
+        role: <span className="block max-w-[16rem] truncate" title={role}>{role}</span>,
+        kyc: <Pill tone={kyc.tone}>{kyc.label}</Pill>,
+        last: u.lastLoginAt ? timeAgoNl(u.lastLoginAt) : "Nooit",
+        since: dateNl(u.createdAt),
+        status: u.disabledAt ? <Pill tone="crit">Geblokkeerd</Pill> : u.emailVerifiedAt ? <Pill tone="ok">Actief</Pill> : <Pill tone="warn">E-mail onbevestigd</Pill>,
       },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        kycStatus: true,
-        disabledAt: true,
-        lastLoginAt: true,
-        emailVerifiedAt: true,
-        createdAt: true,
-        memberships: { select: { role: true, tenant: { select: { name: true } } } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 150,
-    }),
-    prisma.$transaction([
-      prisma.user.count(),
-      prisma.user.count({ where: { disabledAt: { not: null } } }),
-      prisma.user.count({ where: { memberships: { some: { role: "FREELANCER" } } } }),
-      prisma.user.count({ where: { memberships: { some: { role: { in: ["HQ_ADMIN", "LOCAL_MANAGER"] } } } } }),
-    ]),
-  ]);
-
-  const [total, blocked, freelancers, employers] = totals;
+      sort: { name: u.fullName, role, kyc: kyc.label, last: u.lastLoginAt?.getTime() ?? null, since: u.createdAt.getTime(), status },
+      csv: { name: `${u.fullName} <${u.email}>`, role, kyc: kyc.label, last: u.lastLoginAt?.toISOString() ?? "", since: u.createdAt.toISOString(), status },
+    };
+  });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <PageHeader
+    <div className="space-y-4">
+      <PageHead
         title="Gebruikers"
-        subtitle="Iedereen die een account heeft op ZekerFlex — freelancers, werkgevers en beheerders."
+        subtitle="Iedereen met een account: flexwerkers, opdrachtgevers en beheerders."
+        actions={<PeriodTabs period={period} basePath="/admin/gebruikers" />}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          ["Totaal", total],
-          ["Freelancers", freelancers],
-          ["Werkgevers", employers],
-          ["Geblokkeerd", blocked],
-        ].map(([l, n]) => (
-          <div key={l as string} className="card p-4">
-            <p className="text-xs text-neutralx-500">{l}</p>
-            <p className="num mt-1 text-2xl font-bold text-ink">{n}</p>
-          </div>
-        ))}
-      </div>
+      <KpiStrip
+        items={[
+          { label: "Alle gebruikers", value: count(d.total), hint: d.blocked > 0 ? `${d.blocked} geblokkeerd` : "Niemand geblokkeerd" },
+          { label: "Flexwerkers", value: count(d.flexCount), hint: `${percentOf(d.kycVerified, d.flexCount)}% geverifieerd` },
+          { label: "Opdrachtgevers", value: count(d.employerCount) },
+          { label: "Nieuw", value: count(d.newCount), delta: d.newDelta, spark: d.signupSeries, hint: `in ${period.label}` },
+          { label: "Actief", value: count(d.active), delta: d.activeDelta, hint: `ingelogd in ${period.label}` },
+        ]}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1">
-          {STATUS_TABS.map((t) => (
-            <Link
-              key={t.key}
-              href={`/admin/gebruikers?${new URLSearchParams({ ...(q ? { q } : {}), ...(t.key ? { status: t.key } : {}) }).toString()}`}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                status === t.key ? "bg-ink text-white" : "bg-paper-soft text-neutralx-600 hover:text-ink"
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-        <form className="flex gap-2">
-          {status && <input type="hidden" name="status" value={status} />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Zoek op naam of e-mail…"
-            className="w-64 rounded-lg border border-hairstrong bg-white px-3 py-1.5 text-sm"
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <Panel title="Aanmeldingen" subtitle={`Nieuwe accounts, laatste ${period.label}`}>
+          <Chart
+            title="Nieuwe accounts per type"
+            kind="bars"
+            unit="count"
+            labels={d.labels}
+            series={[
+              { label: "Flexwerkers", values: d.flexSeries, slot: 1 },
+              { label: "Opdrachtgevers", values: d.employerSeries, slot: 3 },
+            ]}
+            height={230}
+            emptyText="Geen aanmeldingen in deze periode."
           />
-          <button type="submit" className="btn-ghost text-sm">
-            Zoeken
-          </button>
-        </form>
+        </Panel>
+        <Panel title="Van aanmelding naar werk" subtitle="Flexwerkers, sinds het begin">
+          <Funnel stages={d.funnel} />
+        </Panel>
       </div>
 
-      <Panel title={`${users.length} gebruiker${users.length === 1 ? "" : "s"}`}>
-        {users.length === 0 ? (
-          <EmptyState title="Geen gebruikers gevonden" body="Pas je zoekopdracht of filter aan." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">Naam</th>
-                  <th className="px-5 py-2.5 font-medium">Rol / organisatie</th>
-                  <th className="px-5 py-2.5 font-medium">KYC</th>
-                  <th className="px-5 py-2.5 font-medium">Laatst ingelogd</th>
-                  <th className="px-5 py-2.5 font-medium">Lid sinds</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-paper-soft">
-                    <td className="px-5 py-3">
-                      <Link href={`/admin/gebruikers/${u.id}`} className="font-medium text-ink hover:text-brand-600">
-                        {u.fullName}
-                      </Link>
-                      <p className="text-xs text-neutralx-400">
-                        {u.email} {!u.emailVerifiedAt && "· niet geverifieerd"}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">
-                      {u.memberships.length === 0
-                        ? "—"
-                        : u.memberships
-                            .map((m) => `${ROLE_LABEL[m.role] ?? m.role}${m.tenant ? ` · ${m.tenant.name}` : ""}`)
-                            .join(", ")}
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{u.kycStatus}</td>
-                    <td className="px-5 py-3 text-neutralx-600">{u.lastLoginAt ? dateShort(u.lastLoginAt) : "nooit"}</td>
-                    <td className="px-5 py-3 text-neutralx-600">{dateShort(u.createdAt)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <StatusPill tone={u.disabledAt ? "crit" : "ok"}>{u.disabledAt ? "geblokkeerd" : "actief"}</StatusPill>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Panel title="Identiteitscontrole" subtitle="Stand van alle flexwerkers">
+        <StackBar segments={d.kyc} format={count} emptyText="Nog geen flexwerkers." />
+      </Panel>
+
+      <Panel flush title="Alle gebruikers" subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}>
+        <DataTable
+          columns={[
+            { key: "name", label: "Naam" },
+            { key: "role", label: "Rol", hideOnMobile: true },
+            { key: "kyc", label: "Identiteit" },
+            { key: "last", label: "Laatst ingelogd", hideOnMobile: true },
+            { key: "since", label: "Lid sinds", hideOnMobile: true },
+            { key: "status", label: "Status", hideOnMobile: true },
+          ]}
+          rows={rows}
+          searchPlaceholder="Zoek op naam, e-mail of bedrijf"
+          csvName="gebruikers"
+          defaultSort={{ key: "since", dir: "desc" }}
+          filters={[
+            { key: "kind", label: "Type", chips: true, options: (["flexwerker", "opdrachtgever", "beheerder"] as const).map((value) => ({ value, label: KIND_LABEL[value] })) },
+            { key: "kyc", label: "Identiteit", options: Object.entries(KYC).map(([value, k]) => ({ value, label: k.label })) },
+            { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }] },
+          ]}
+          emptyText="Er zijn nog geen gebruikers."
+        />
       </Panel>
     </div>
   );
