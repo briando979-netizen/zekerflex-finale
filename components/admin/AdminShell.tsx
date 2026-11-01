@@ -4,26 +4,32 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
+import { ADMIN_HUBS, locateAdminPage, type AdminHub, type HubIcon } from "@/lib/admin/nav";
 import { ViewAsSwitcher } from "@/components/admin/ViewAsControls";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
-
-export interface AdminNavItem {
-  href: string;
-  label: string;
-  icon: ReactNode;
-  section?: string;
-}
+import { LogoGlyph } from "@/components/brand/Logo";
+import { IGrid, IUsers, IWallet, IRocket, IChat, IPulse, IShield, IBriefcase } from "@/components/app/icons";
 
 const THEME_KEY = "zf-admin-theme";
+const COLLAPSE_KEY = "zf-admin-collapsed";
+
+const HUB_ICONS: Record<HubIcon, ReactNode> = {
+  overview: <IGrid />,
+  people: <IUsers />,
+  money: <IWallet />,
+  growth: <IRocket />,
+  chat: <IChat />,
+  shop: <IBriefcase />,
+  ai: <IPulse />,
+  shield: <IShield />,
+};
 
 export function AdminShell({
-  nav,
   userName,
   userMeta,
   avatarUrl,
   children,
 }: {
-  nav: AdminNavItem[];
   userName: string;
   userMeta: string;
   /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
@@ -31,288 +37,312 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const located = locateAdminPage(pathname);
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [clock, setClock] = useState("");
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("zf-admin-sections") || "{}");
-      if (saved && typeof saved === "object") setOpenSections(saved as Record<string, boolean>);
-    } catch {
-      /* geen opgeslagen voorkeur */
-    }
-  }, []);
+  // null = volg de actieve pagina; anders heeft de gebruiker zelf iets open of dicht gezet.
+  const [openHub, setOpenHub] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(THEME_KEY);
       if (saved === "light" || saved === "dark") setTheme(saved);
+      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
     } catch {
-      /* ignore */
+      /* geen opgeslagen voorkeur */
     }
   }, []);
   useEffect(() => {
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /* ignore */
-    }
-  }, [theme]);
-  useEffect(() => {
-    const t = () => setClock(new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }));
-    t();
-    const id = setInterval(t, 20_000);
-    return () => clearInterval(id);
-  }, []);
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+    setMobileOpen(false);
+    setOpenHub(null);
+  }, [pathname]);
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/admin" && pathname.startsWith(href + "/"));
-  const current = nav.find((n) => isActive(n.href));
-  const defaultOpen = (s: string) => s === "Hoofd" || s === current?.section;
-  const sectionOpen = (s: string | null) => !s || collapsed || (openSections[s] ?? defaultOpen(s));
-  const toggleSection = (s: string) =>
-    setOpenSections((prev) => {
-      const next = { ...prev, [s]: !(prev[s] ?? defaultOpen(s)) };
-      try { localStorage.setItem("zf-admin-sections", JSON.stringify(next)); } catch { /* ignore */ }
+  const toggleTheme = () =>
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* geen opslag */ }
       return next;
     });
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* geen opslag */ }
+      return !c;
+    });
 
-  const groups: { section: string | null; items: AdminNavItem[] }[] = [];
-  for (const item of nav) {
-    const key = item.section ?? null;
-    const last = groups[groups.length - 1];
-    if (last && last.section === key) last.items.push(item);
-    else groups.push({ section: key, items: [item] });
-  }
-
-  const sidebarW = collapsed ? "5rem" : "16rem";
+  const activeHub = located?.hub.id ?? ADMIN_HUBS[0]!.id;
+  const shownHub = openHub ?? activeHub;
 
   return (
-    <div
-      className="admin-scope min-h-screen"
-      data-theme={theme}
-      style={{ background: "var(--a-page)" }}
-    >
+    <div className="admin-scope min-h-screen" data-theme={theme}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg"
       >
         Naar hoofdinhoud
       </a>
-      <div className="flex min-h-screen flex-col gap-3 p-3 pt-4 lg:p-4 lg:pt-5">
-        {/* Topbar */}
-        <header className="a-panel flex h-14 flex-shrink-0 items-center gap-3 px-3 lg:h-16 lg:px-4">
+
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />}
+
+      {/* Zijmenu */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col transition-[width,transform] duration-200 lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[4.25rem]" : "lg:w-[15.5rem]"} w-[17rem]`}
+        style={{ background: "var(--a-side-bg)", color: "var(--a-side-text)" }}
+      >
+        <div className={`flex h-14 flex-shrink-0 items-center gap-2.5 px-4 ${collapsed ? "lg:justify-center lg:px-0" : ""}`}>
+          <Link href="/admin" className="flex min-w-0 items-center gap-2.5" aria-label="Naar het controlecentrum">
+            <LogoGlyph size={28} tone="light" className="flex-shrink-0" />
+            <span className={`truncate text-[0.9375rem] font-semibold tracking-tight text-white ${collapsed ? "lg:hidden" : ""}`}>ZekerFlex</span>
+          </Link>
+          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${collapsed ? "lg:hidden" : ""}`} style={{ background: "var(--a-side-hover)", color: "var(--a-side-mute)" }}>
+            Beheer
+          </span>
+        </div>
+
+        <nav aria-label="Hoofdnavigatie" className="a-scroll-x flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4 pt-1">
+          {ADMIN_HUBS.map((hub) => (
+            <HubLink
+              key={hub.id}
+              hub={hub}
+              active={hub.id === activeHub}
+              open={!collapsed && hub.id === shownHub}
+              collapsed={collapsed}
+              pathname={pathname}
+              onToggle={() => setOpenHub((cur) => ((cur ?? activeHub) === hub.id ? "" : hub.id))}
+            />
+          ))}
+        </nav>
+
+        <div className="flex-shrink-0 space-y-0.5 px-2.5 py-2.5" style={{ borderTop: "1px solid var(--a-side-line)" }}>
+          <Link
+            href="/"
+            className={`flex items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] transition-colors hover:bg-[var(--a-side-hover)] ${collapsed ? "lg:justify-center" : ""}`}
+            style={{ color: "var(--a-side-mute)" }}
+            title={collapsed ? "Naar de website" : undefined}
+          >
+            <GlobeIcon />
+            <span className={collapsed ? "lg:hidden" : ""}>Naar de website</span>
+          </Link>
           <button
             type="button"
-            onClick={() => {
-              if (window.matchMedia("(min-width: 1024px)").matches) {
-                setCollapsed((v) => !v);
-              } else {
-                setMobileOpen((v) => !v);
-              }
-            }}
-            className="a-elev grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl"
-            style={{ border: "1px solid var(--a-border)" }}
-            aria-label="Menu"
+            onClick={toggleCollapsed}
+            className={`hidden w-full items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] transition-colors hover:bg-[var(--a-side-hover)] lg:flex ${collapsed ? "lg:justify-center" : ""}`}
+            style={{ color: "var(--a-side-mute)" }}
+            aria-label={collapsed ? "Menu uitklappen" : "Menu inklappen"}
+            title={collapsed ? "Menu uitklappen" : undefined}
           >
-            <Bars />
+            <CollapseIcon flipped={collapsed} />
+            <span className={collapsed ? "lg:hidden" : ""}>Inklappen</span>
           </button>
-          <Link href="/admin" className="flex flex-shrink-0 items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#3155D8] text-[11px] font-bold text-white shadow-sm">
-              ZF
-            </span>
-            <span className="hidden font-display text-[0.95rem] font-bold sm:inline" style={{ color: "var(--a-text)" }}>
-              ZekerFlex
-            </span>
-          </Link>
+        </div>
+      </aside>
 
-          <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full px-3.5 py-2 md:flex"
-            style={{ background: "var(--a-panel-2)", border: "1px solid var(--a-border)" }}>
-            <Search />
-            <input
-              placeholder="Zoeken…"
-              className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: "var(--a-text)" }}
-              onFocus={(e) => e.currentTarget.blur()}
-              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-              readOnly
-            />
-            <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]" style={{ borderColor: "var(--a-border)", color: "var(--a-mute)" }}>
-              ⌘K
-            </kbd>
-          </div>
-
-          <div className="ml-auto flex items-center gap-1.5">
-            <ViewAsSwitcher />
-            {/* wrapped: the unlayered .a-btn display rule would beat Tailwind's `hidden` */}
-            <span className="hidden sm:inline-flex">
-              <Link href="/admin/bedrijven" className="a-btn a-btn-primary">
-                + Bedrijf beheren
-              </Link>
-            </span>
-            <span className="hidden md:inline-flex">
-              <Link href="/admin/gebruikers" className="a-btn a-btn-ghost">
-                Gebruikers
-              </Link>
-            </span>
-            <span className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium lg:flex"
-              style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
-              🇳🇱 NL
-            </span>
-            <span className="num hidden font-mono text-xs md:inline" style={{ color: "var(--a-mute)" }}>{clock}</span>
+      {/* Inhoud */}
+      <div className={`flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ${collapsed ? "lg:pl-[4.25rem]" : "lg:pl-[15.5rem]"}`}>
+        <header
+          className="sticky top-0 z-30 backdrop-blur-md"
+          style={{ background: "color-mix(in srgb, var(--a-page) 86%, transparent)" }}
+        >
+          <div className="flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:px-7">
             <button
               type="button"
-              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-              className="grid h-11 w-11 place-items-center rounded-xl"
-              style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}
-              aria-label="Thema wisselen"
+              onClick={() => setMobileOpen(true)}
+              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg lg:hidden"
+              style={{ color: "var(--a-dim)" }}
+              aria-label="Menu openen"
             >
-              {theme === "dark" ? <Sun /> : <Moon />}
+              <BarsIcon />
             </button>
-            <NotificationsBell />
-            <div ref={menuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-xl px-1.5 py-1.5"
-                style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}
-              >
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="" className="h-7 w-7 rounded-lg object-cover" />
-                ) : (
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-[11px] font-bold text-white">
-                    {initials(userName)}
-                  </span>
-                )}
-                <span className="hidden text-sm font-medium sm:inline" style={{ color: "var(--a-text)" }}>
-                  {userName.split(" ")[0]}
-                </span>
-                <Chevron />
-              </button>
-              {menuOpen && (
-                <div
-                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl p-1 shadow-2xl"
-                  style={{ background: "var(--a-panel)", border: "1px solid var(--a-border-strong)" }}
-                >
-                  <div className="px-3 py-2">
-                    <p className="text-sm font-medium" style={{ color: "var(--a-text)" }}>{userName}</p>
-                    <p className="text-xs" style={{ color: "var(--a-mute)" }}>{userMeta}</p>
-                  </div>
-                  <Link href="/" className="block rounded-lg px-3 py-2 text-sm hover:bg-white/5" style={{ color: "var(--a-dim)" }}>
-                    Naar website
-                  </Link>
-                  <form action={logoutAction}>
-                    <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#f87171] hover:bg-white/5">
-                      Uitloggen
-                    </button>
-                  </form>
-                </div>
-              )}
+            <nav aria-label="Kruimelpad" className="flex min-w-0 items-center gap-1.5 text-[0.8125rem]">
+              <span className="hidden truncate sm:inline" style={{ color: "var(--a-mute)" }}>{located?.hub.label ?? "Beheer"}</span>
+              <span className="hidden sm:inline" style={{ color: "var(--a-axis)" }} aria-hidden>/</span>
+              <span className="truncate font-medium" style={{ color: "var(--a-text)" }}>{located?.page.label ?? "Beheer"}</span>
+            </nav>
+
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+              className="ml-auto hidden h-9 w-full max-w-[17rem] items-center gap-2 rounded-lg px-3 text-[0.8125rem] transition-colors md:flex"
+              style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-mute)", boxShadow: "var(--a-shadow-sm)" }}
+            >
+              <SearchIcon />
+              <span>Zoeken of vraag Jarvis</span>
+              <kbd className="ml-auto rounded px-1.5 py-0.5 font-sans text-[10px] font-semibold" style={{ background: "var(--a-elev)", color: "var(--a-mute)" }}>⌘K</kbd>
+            </button>
+
+            <div className="ml-auto flex flex-shrink-0 items-center gap-1 md:ml-1">
+              <ViewAsSwitcher />
+              <IconButton onClick={toggleTheme} label={theme === "dark" ? "Licht thema" : "Donker thema"}>
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </IconButton>
+              <NotificationsBell />
+              <UserMenu userName={userName} userMeta={userMeta} avatarUrl={avatarUrl ?? null} />
             </div>
           </div>
+          {located && located.hub.pages.length > 1 && <SectionTabs hub={located.hub} current={located.page.href} />}
         </header>
 
-        <div className="flex flex-1 gap-3 lg:gap-4">
-          {/* Sidebar */}
-          <aside
-            className={`a-panel fixed inset-y-3 left-3 z-40 flex flex-col overflow-hidden transition-transform duration-300 lg:static lg:inset-auto lg:z-auto lg:translate-x-0 ${
-              mobileOpen ? "translate-x-0" : "-translate-x-[110%]"
-            }`}
-            style={{ width: sidebarW }}
-          >
-            <nav aria-label="Hoofdnavigatie" className="flex-1 space-y-5 overflow-y-auto p-3">
-              {groups.map((g, gi) => (
-                <div key={gi} className="space-y-1">
-                  {g.section && !collapsed && (
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(g.section!)}
-                      className="flex w-full items-center justify-between px-3 pb-1 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em]"
-                      style={{ color: "var(--a-mute)" }}
-                      aria-expanded={sectionOpen(g.section)}
-                    >
-                      <span>{g.section}</span>
-                      <span className={`transition-transform ${sectionOpen(g.section) ? "" : "-rotate-90"}`} aria-hidden>▾</span>
-                    </button>
-                  )}
-                  {sectionOpen(g.section) && g.items.map((n) => {
-                    const active = isActive(n.href);
-                    return (
-                      <Link
-                        key={n.href}
-                        href={n.href}
-                        onClick={() => setMobileOpen(false)}
-                        title={collapsed ? n.label : undefined}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                          collapsed ? "justify-center" : ""
-                        }`}
-                        style={{
-                          background: active ? "var(--a-elev)" : "transparent",
-                          color: active ? "var(--a-text)" : "var(--a-dim)",
-                          fontWeight: active ? 600 : 500,
-                        }}
-                      >
-                        <span className="flex-shrink-0" style={{ color: active ? "var(--a-accent)" : "var(--a-mute)" }}>
-                          {n.icon}
-                        </span>
-                        {!collapsed && <span className="truncate">{n.label}</span>}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
-            <div className="border-t p-3" style={{ borderColor: "var(--a-border)" }}>
-              <div className={`mb-2 flex items-center gap-2 px-2 text-[11px] ${collapsed ? "justify-center" : ""}`} style={{ color: "var(--a-mute)" }}>
-                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
-                {!collapsed && "Sovereign · lokaal"}
-              </div>
-              <form action={logoutAction}>
-                <button
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${
-                    collapsed ? "justify-center" : ""
-                  }`}
-                  style={{ color: "var(--a-dim)" }}
-                >
-                  <LogoutIcon />
-                  {!collapsed && "Uitloggen"}
-                </button>
-              </form>
-            </div>
-          </aside>
-
-          {mobileOpen && (
-            <div className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
-          )}
-
-          {/* Content */}
-          <main id="main" tabIndex={-1} className="min-w-0 flex-1 outline-none">
-            <div className="mb-4 flex items-center gap-2 text-sm" style={{ color: "var(--a-mute)" }}>
-              <HomeIcon />
-              <span>›</span>
-              <span>Beheer</span>
-              <span>›</span>
-              <span style={{ color: "var(--a-text)" }}>{current?.label ?? "Controlecentrum"}</span>
-            </div>
-            <div key={pathname} className="animate-slide-up-fade pb-10">
-              {children}
-            </div>
-          </main>
-        </div>
+        <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1500px] flex-1 px-3 pb-14 pt-5 outline-none sm:px-5 lg:px-7 lg:pt-6">
+          <div key={pathname} className="animate-slide-up-fade">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
+  );
+}
+
+/** Een onderdeel in het zijmenu. De naam gaat naar de eerste pagina, het pijltje klapt alleen uit. */
+function HubLink({
+  hub,
+  active,
+  open,
+  collapsed,
+  pathname,
+  onToggle,
+}: {
+  hub: AdminHub;
+  active: boolean;
+  open: boolean;
+  collapsed: boolean;
+  pathname: string;
+  onToggle: () => void;
+}) {
+  return (
+    <div>
+      <div
+        className={`group relative flex items-center rounded-lg transition-colors ${active ? "" : "hover:bg-[var(--a-side-hover)]"}`}
+        style={active ? { background: "var(--a-side-active)" } : undefined}
+      >
+        <Link
+          href={hub.pages[0]!.href}
+          title={collapsed ? hub.label : undefined}
+          className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] ${collapsed ? "lg:justify-center" : ""}`}
+          style={{ color: active ? "#ffffff" : "var(--a-side-text)", fontWeight: active ? 600 : 500 }}
+        >
+          <span className="flex-shrink-0" style={{ color: active ? "rgb(var(--brand-mint-rgb))" : "var(--a-side-mute)" }}>
+            {HUB_ICONS[hub.icon]}
+          </span>
+          <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{hub.label}</span>
+        </Link>
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`mr-1 grid h-6 w-6 flex-shrink-0 place-items-center rounded ${collapsed ? "lg:hidden" : ""}`}
+          style={{ color: "var(--a-side-mute)" }}
+          aria-expanded={open}
+          aria-label={`${hub.label} ${open ? "inklappen" : "uitklappen"}`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={`transition-transform duration-150 ${open ? "rotate-90" : ""}`} aria-hidden>
+            <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {open && (
+        <ul className="mb-1.5 ml-[1.3125rem] mt-0.5 space-y-px pl-3" style={{ borderLeft: "1px solid var(--a-side-line)" }}>
+          {hub.pages.map((page) => {
+            const here = pathname === page.href || (page.href !== "/admin" && pathname.startsWith(`${page.href}/`));
+            return (
+              <li key={page.href}>
+                <Link
+                  href={page.href}
+                  aria-current={here ? "page" : undefined}
+                  className="block truncate rounded-md px-2.5 py-1.5 text-[0.8125rem] transition-colors hover:bg-[var(--a-side-hover)]"
+                  style={{ color: here ? "#ffffff" : "var(--a-side-mute)", fontWeight: here ? 600 : 400 }}
+                >
+                  {page.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** De pagina's van dit onderdeel als tabbladen: dashboards binnen dashboards. */
+function SectionTabs({ hub, current }: { hub: AdminHub; current: string }) {
+  const activeRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [current]);
+  return (
+    <nav aria-label={`Pagina's in ${hub.label}`} className="a-scroll-x overflow-x-auto px-3 sm:px-5 lg:px-7" style={{ borderBottom: "1px solid var(--a-border)" }}>
+      <ul className="flex min-w-max items-center gap-5">
+        {hub.pages.map((page) => {
+          const here = page.href === current;
+          return (
+            <li key={page.href}>
+              <Link
+                ref={here ? activeRef : undefined}
+                href={page.href}
+                aria-current={here ? "page" : undefined}
+                className="relative block whitespace-nowrap pb-2.5 pt-1 text-[0.8125rem] transition-colors"
+                style={{ color: here ? "var(--a-text)" : "var(--a-mute)", fontWeight: here ? 600 : 500 }}
+              >
+                {page.label}
+                {here && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: "var(--a-accent)" }} />}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function UserMenu({ userName, userMeta, avatarUrl }: { userName: string; userMeta: string; avatarUrl: string | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+  return (
+    <div ref={ref} className="relative ml-1">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="grid h-9 w-9 place-items-center rounded-full" aria-label="Accountmenu" aria-expanded={open}>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+        ) : (
+          <span className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-semibold" style={{ background: "var(--a-accent)", color: "var(--a-on-accent)" }}>
+            {initials(userName)}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl p-1" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border-strong)", boxShadow: "var(--a-shadow-lg)" }}>
+          <div className="px-3 py-2.5">
+            <p className="truncate text-sm font-semibold" style={{ color: "var(--a-text)" }}>{userName}</p>
+            <p className="truncate text-xs" style={{ color: "var(--a-mute)" }}>{userMeta}</p>
+          </div>
+          <div className="my-1 h-px" style={{ background: "var(--a-border)" }} />
+          <Link href="/" className="block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-dim)" }}>
+            Naar de website
+          </Link>
+          <Link href="/admin/beveiliging" className="block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-dim)" }}>
+            Beveiliging & 2FA
+          </Link>
+          <form action={logoutAction}>
+            <button className="w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-crit)" }}>
+              Uitloggen
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IconButton({ onClick, label, children }: { onClick: () => void; label: string; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="grid h-9 w-9 place-items-center rounded-lg transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-dim)" }} aria-label={label} title={label}>
+      {children}
+    </button>
   );
 }
 
@@ -320,12 +350,11 @@ function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 }
 
-/* icons — 18px, currentColor */
-const S = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none" } as const;
-function Bars() { return <svg {...S}><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function Search() { return <svg {...S} style={{ color: "var(--a-mute)" }}><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function Sun() { return <svg {...S} style={{ color: "var(--a-text)" }}><circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" /><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function Moon() { return <svg {...S} style={{ color: "var(--a-text)" }}><path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>; }
-function Chevron() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--a-mute)" }}><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function HomeIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 11 12 4l8 7M6 10v9h12v-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function LogoutIcon() { return <svg {...S}><path d="M15 4h4v16h-4M11 12h9m0 0-3-3m3 3-3 3M4 4v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+/* iconen — currentColor */
+const S = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", "aria-hidden": true } as const;
+function BarsIcon() { return <svg {...S}><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function SearchIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function SunIcon() { return <svg {...S}><circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" /><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function MoonIcon() { return <svg {...S}><path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>; }
+function GlobeIcon() { return <svg {...S}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function CollapseIcon({ flipped }: { flipped: boolean }) { return <svg {...S} className={flipped ? "rotate-180" : ""}><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2" /><path d="M9 4v16M16 9.5 13.5 12l2.5 2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }

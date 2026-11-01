@@ -407,81 +407,151 @@ body {
   .live-dot::after { animation: none; }
 }
 
-/* ============================================================ ADMIN (dark)
-   Aniq-style admin surface. Scoped to .admin-scope so it never leaks into the
-   marketing site or the freelancer/employer dashboards. Dark by default; a
-   [data-theme="light"] on the same node flips every token. */
+/* ============================================================ ADMIN
+   De beheeromgeving. Alles hangt aan .admin-scope, zodat het nooit doorlekt naar de
+   website of de dashboards van flexwerkers en opdrachtgevers. Licht is de standaard;
+   [data-theme="dark"] op hetzelfde element wisselt elke kleur. De actiekleur komt uit
+   de merkkleur, dus Admin → Huisstijl verandert die mee. Grafiekkleuren zijn gecontroleerd
+   op kleurenblindheid; wijzig de volgorde niet zonder opnieuw te valideren. */
 
 .admin-scope {
-  --a-page: #f5f7fb;
+  --a-page: #f6f6f3;
   --a-panel: #ffffff;
-  --a-panel-2: #fbfcff;
-  --a-elev: #f0f3f9;
-  --a-elev-hover: #e8edf7;
-  --a-border: rgba(15, 35, 75, 0.09);
-  --a-border-strong: rgba(15, 35, 75, 0.16);
-  --a-text: #17233b;
-  --a-dim: #5d6a80;
-  --a-mute: #5f6774;
-  --a-accent: #10b981;
-  /* Text-weight green for use on light/tinted surfaces (the solid --a-accent
-     only clears AA as a fill behind white, not as small text on a pastel). */
-  --a-accent-ink: #0b6e54;
-  --a-accent-soft: rgba(16, 185, 129, 0.14);
-  --a-blue: #60a5fa;
-  --a-amber: #f59e0b;
-  --a-red: #f87171;
-  --a-blue: #3155d8;
-  --a-invert-bg: #3155d8;
-  --a-invert-fg: #ffffff;
-  --a-radius: 0.75rem;
+  --a-panel-2: #fafaf7;
+  --a-elev: #f1f1ed;
+  --a-elev-hover: #e8e8e3;
+  --a-border: rgba(20, 24, 22, 0.085);
+  --a-border-strong: rgba(20, 24, 22, 0.17);
+  --a-text: #141816;
+  --a-dim: #4d5551;
+  --a-mute: #68706b;
+
+  --a-accent: rgb(var(--brand-500-rgb));
+  --a-accent-hover: rgb(var(--brand-600-rgb));
+  --a-accent-ink: rgb(var(--brand-600-rgb));
+  --a-accent-soft: rgb(var(--brand-500-rgb) / 0.08);
+  --a-on-accent: #ffffff;
+  --a-invert-bg: var(--a-accent);
+  --a-invert-fg: var(--a-on-accent);
+  --a-radius: 0.875rem;
+
+  /* één kleur = één betekenis (components/app/ColorLegend.tsx) */
+  --a-ok: #15803d;
+  --a-ok-soft: rgba(21, 128, 61, 0.1);
+  --a-warn: #a35f07;
+  --a-warn-soft: rgba(217, 119, 6, 0.12);
+  --a-crit: #b91c1c;
+  --a-crit-soft: rgba(185, 28, 28, 0.09);
+  --a-plan: #1e4fc2;
+  --a-plan-soft: rgba(37, 99, 235, 0.09);
+  --a-trust: #6d28d9;
+  --a-trust-soft: rgba(124, 58, 237, 0.09);
+  --a-money: #8a5a06;
+  --a-money-soft: rgba(183, 121, 31, 0.13);
+  --a-blue: #1e4fc2;
+  --a-amber: #d97706;
+  --a-red: #dc2626;
+
+  /* grafieken */
+  --a-grid: #ecebe6;
+  --a-axis: #c9c7bf;
+  --a-other: #a7aba8;
+  --a-s1: #00856b;
+  --a-s2: #eb6834;
+  --a-s3: #2a78d6;
+  --a-s4: #eda100;
+  --a-s5: #e87ba4;
+  --a-s6: #008300;
+  --a-s7: #6250d6;
+  --a-s8: #e34948;
+
+  /* zijmenu: in beide thema's donker */
+  --a-side-bg: #0d1513;
+  --a-side-line: rgba(255, 255, 255, 0.075);
+  --a-side-text: #d6dedb;
+  --a-side-mute: #8f9c97;
+  --a-side-hover: rgba(255, 255, 255, 0.055);
+  --a-side-active: rgba(79, 224, 160, 0.11);
+
+  --a-shadow-sm: 0 1px 2px rgba(20, 24, 22, 0.05);
+  --a-shadow-md: 0 1px 2px rgba(20, 24, 22, 0.05), 0 8px 24px -12px rgba(20, 24, 22, 0.14);
+  --a-shadow-lg: 0 2px 6px rgba(20, 24, 22, 0.06), 0 24px 60px -18px rgba(20, 24, 22, 0.28);
 
   color: var(--a-text);
   background: var(--a-page);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "ss01";
 }
 
-.admin-scope[data-theme="light"] {
-  --a-page: #f5f7fb;
-  --a-panel: #ffffff;
-  --a-panel-2: #fbfbfc;
-  --a-elev: #eef2f8;
-  --a-elev-hover: #e4eaf5;
-  --a-border: rgba(15, 35, 75, 0.09);
-  --a-border-strong: rgba(15, 35, 75, 0.16);
-  --a-text: #17233b;
-  --a-dim: #5d6a80;
-  --a-mute: #5f6774;
-  --a-accent-soft: rgba(16, 185, 129, 0.12);
-  --a-invert-bg: #3155d8;
-  --a-invert-fg: #fafafa;
+.admin-scope[data-theme="dark"] {
+  --a-page: #0b0e0d;
+  --a-panel: #131716;
+  --a-panel-2: #171c1a;
+  --a-elev: #1d2321;
+  --a-elev-hover: #262d2a;
+  --a-border: rgba(255, 255, 255, 0.085);
+  --a-border-strong: rgba(255, 255, 255, 0.17);
+  --a-text: #eef1ef;
+  --a-dim: #b7bfba;
+  --a-mute: #8e9691;
+
+  --a-accent: rgb(var(--brand-mint-rgb));
+  --a-accent-hover: rgb(var(--brand-300-rgb));
+  --a-accent-ink: rgb(var(--brand-mint-rgb));
+  --a-accent-soft: rgb(var(--brand-mint-rgb) / 0.12);
+  --a-on-accent: #07130f;
+
+  --a-ok: #4ade80;
+  --a-ok-soft: rgba(74, 222, 128, 0.13);
+  --a-warn: #fbbf24;
+  --a-warn-soft: rgba(251, 191, 36, 0.13);
+  --a-crit: #fca5a5;
+  --a-crit-soft: rgba(248, 113, 113, 0.14);
+  --a-plan: #93b4fb;
+  --a-plan-soft: rgba(96, 165, 250, 0.14);
+  --a-trust: #c4b0fb;
+  --a-trust-soft: rgba(167, 139, 250, 0.14);
+  --a-money: #f5c451;
+  --a-money-soft: rgba(245, 196, 81, 0.13);
+  --a-blue: #93b4fb;
+  --a-amber: #fbbf24;
+  --a-red: #fca5a5;
+
+  --a-grid: #232927;
+  --a-axis: #39403d;
+  --a-other: #5c635f;
+  --a-s1: #00a585;
+  --a-s2: #d95926;
+  --a-s3: #3987e5;
+  --a-s4: #c98500;
+  --a-s5: #d55181;
+  --a-s6: #008300;
+  --a-s7: #9085e9;
+  --a-s8: #e66767;
+
+  --a-side-bg: #090c0b;
+
+  --a-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --a-shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 26px -14px rgba(0, 0, 0, 0.6);
+  --a-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 28px 70px -20px rgba(0, 0, 0, 0.8);
 }
 
-/* Jampack-inspired admin frame: quiet canvas, blue utility line, crisp panels. */
-.admin-scope::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 60;
-  height: 3px;
-  background: #3155d8;
-  pointer-events: none;
+/* Geen losse display-letter in de beheeromgeving: alles in dezelfde strakke sans. */
+.admin-scope .font-display {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.022em;
+  font-weight: 600;
 }
-.admin-scope .a-panel {
-  box-shadow: 0 1px 2px rgba(15, 35, 75, 0.03), 0 10px 28px rgba(15, 35, 75, 0.045);
-}
-.admin-scope .a-btn-primary {
-  background: #3155d8;
-  color: #ffffff;
-  box-shadow: 0 5px 12px rgba(49, 85, 216, 0.18);
-}
-.admin-scope .a-btn-primary:hover { background: #2746bb; }
+.admin-scope h1 { letter-spacing: -0.024em; }
+.admin-scope :focus-visible { outline: 2px solid var(--a-accent); outline-offset: 2px; }
+.admin-scope ::selection { background: var(--a-accent-soft); }
 
 /* structural helpers */
 .admin-scope .a-panel {
   background: var(--a-panel);
   border: 1px solid var(--a-border);
   border-radius: var(--a-radius);
+  box-shadow: var(--a-shadow-sm);
 }
 .admin-scope .a-elev { background: var(--a-elev); }
 .admin-scope .a-hair { border-color: var(--a-border); }
@@ -490,29 +560,46 @@ body {
     linear-gradient(90deg, var(--a-border) 1px, transparent 1px);
   background-size: 44px 44px;
 }
+.admin-scope .a-scroll-x { scrollbar-width: none; }
+.admin-scope .a-scroll-x::-webkit-scrollbar { display: none; }
 
-.admin-scope .a-btn {
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  border-radius: 999px; padding: 0.5rem 1rem;
-  font-size: 0.8125rem; font-weight: 600;
-  transition: all 0.16s ease; white-space: nowrap;
+/* Knoppen. a-button en a-btn zijn hetzelfde: de ene stond in de code zonder opmaak. */
+.admin-scope .a-btn,
+.admin-scope .a-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 2.125rem; border-radius: 0.5625rem; padding: 0.375rem 0.8125rem;
+  font-size: 0.8125rem; font-weight: 550; line-height: 1.2; white-space: nowrap;
+  color: var(--a-text); background: var(--a-panel);
+  border: 1px solid var(--a-border-strong);
+  box-shadow: var(--a-shadow-sm);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  cursor: pointer;
 }
-.admin-scope .a-btn-primary { background: var(--a-invert-bg); color: var(--a-invert-fg); }
-.admin-scope .a-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.admin-scope .a-btn-ghost {
-  background: var(--a-elev); color: var(--a-text);
-  border: 1px solid var(--a-border);
+.admin-scope .a-btn:hover,
+.admin-scope .a-button:hover { background: var(--a-elev); }
+.admin-scope .a-btn:disabled,
+.admin-scope .a-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-scope .a-btn-primary,
+.admin-scope .a-button-primary {
+  background: var(--a-accent); color: var(--a-on-accent); border-color: transparent;
 }
-.admin-scope .a-btn-ghost:hover { background: var(--a-elev-hover); }
+.admin-scope .a-btn-primary:hover,
+.admin-scope .a-button-primary:hover { background: var(--a-accent-hover); }
+.admin-scope .a-btn-ghost { background: transparent; box-shadow: none; }
+.admin-scope .a-btn-ghost:hover { background: var(--a-elev); }
+.admin-scope .a-button.text-xs,
+.admin-scope .a-btn.text-xs { min-height: 1.75rem; padding: 0.25rem 0.625rem; font-size: 0.75rem; border-radius: 0.5rem; }
 
 .admin-scope .a-input {
-  width: 100%; border-radius: 0.65rem;
-  background: var(--a-panel-2); border: 1px solid var(--a-border);
-  color: var(--a-text); padding: 0.6rem 0.85rem; font-size: 0.875rem;
-  outline: none; transition: border-color 0.16s ease;
+  width: 100%; border-radius: 0.5625rem;
+  background: var(--a-panel); border: 1px solid var(--a-border-strong);
+  color: var(--a-text); padding: 0.5rem 0.75rem; font-size: 0.875rem;
+  outline: none; transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .admin-scope .a-input::placeholder { color: var(--a-mute); }
-.admin-scope .a-input:focus { border-color: var(--a-border-strong); }
+.admin-scope .a-input:focus { border-color: var(--a-accent); box-shadow: 0 0 0 3px var(--a-accent-soft); }
+.admin-scope .a-label { display: block; font-size: 0.8125rem; font-weight: 550; color: var(--a-text); }
+.admin-scope .a-label > .a-input { margin-top: 0.375rem; font-weight: 400; }
 
 /* Make the shared component kit adopt the dark surface inside admin */
 .admin-scope .card,
@@ -520,13 +607,13 @@ body {
   background: var(--a-panel) !important;
   border: 1px solid var(--a-border) !important;
   border-radius: var(--a-radius) !important;
-  box-shadow: none !important;
+  box-shadow: var(--a-shadow-sm) !important;
   color: var(--a-text);
 }
 .admin-scope .surface::before { display: none; }
 .admin-scope .surface-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.6) !important;
+  transform: none;
+  border-color: var(--a-border-strong) !important;
 }
 
 .admin-scope h1, .admin-scope h2, .admin-scope h3 { color: var(--a-text); }
@@ -536,14 +623,16 @@ body {
 .admin-scope .text-neutralx-500 { color: var(--a-dim) !important; }
 .admin-scope .text-neutralx-400 { color: var(--a-mute) !important; }
 .admin-scope .text-brand-600,
-.admin-scope .text-brand-500 { color: var(--a-accent) !important; }
-.admin-scope .eyebrow { color: var(--a-accent) !important; }
+.admin-scope .text-brand-500 { color: var(--a-accent-ink) !important; }
+.admin-scope .eyebrow { color: var(--a-accent-ink) !important; }
+/* Het streepje onder paginatitels en het balkje boven oude KPI-kaarten vallen weg. */
+.admin-scope h1 + span.bg-gradient-to-r { display: none; }
 
 .admin-scope .border-hair,
 .admin-scope .border-hairstrong,
 .admin-scope .divide-hair > * { border-color: var(--a-border) !important; }
-.admin-scope .bg-paper-soft,
-.admin-scope .bg-white { background: var(--a-panel-2) !important; }
+.admin-scope .bg-paper-soft { background: var(--a-panel-2) !important; }
+.admin-scope .bg-white { background: var(--a-panel) !important; }
 /* neutralise white->paper gradients (Panel/PageHeader bars) on the dark surface */
 .admin-scope .bg-gradient-to-b.from-white,
 .admin-scope .bg-gradient-to-r.from-white,
@@ -562,17 +651,21 @@ body {
   border-color: var(--a-border) !important;
   color: var(--a-mute);
 }
-.admin-scope table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
-.admin-scope[data-theme="light"] table tbody tr:hover { background: rgba(9, 9, 11, 0.02); }
+.admin-scope table thead th {
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.035em; text-transform: uppercase;
+  color: var(--a-mute);
+}
+.admin-scope table tbody tr { transition: background-color 0.1s ease; }
+.admin-scope table tbody tr:hover { background: var(--a-panel-2); }
 
 /* pills */
-.admin-scope .pill-ok { color: #4ade80; background: rgba(16, 185, 129, 0.15); }
-.admin-scope .pill-warn { color: #fbbf24; background: rgba(245, 158, 11, 0.15); }
-.admin-scope .pill-crit { color: #fca5a5; background: rgba(248, 113, 113, 0.15); }
+.admin-scope .pill-ok { color: var(--a-ok); background: var(--a-ok-soft); }
+.admin-scope .pill-warn { color: var(--a-warn); background: var(--a-warn-soft); }
+.admin-scope .pill-crit { color: var(--a-crit); background: var(--a-crit-soft); }
 .admin-scope .pill-neutral { color: var(--a-dim); background: var(--a-elev); }
 
 /* KPI accent bar from ui.tsx still shows; soften its wash on dark */
-.admin-scope .surface > span[aria-hidden] { opacity: 0.9; }
+.admin-scope .surface > span[aria-hidden] { display: none; }
 
 /* the 6-dot drag handle */
 .admin-scope .a-handle {
@@ -586,24 +679,33 @@ body {
 .admin-scope input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 .admin-scope select,
 .admin-scope textarea {
-  background: var(--a-panel-2);
-  border-color: var(--a-border);
+  background: var(--a-panel);
+  border-color: var(--a-border-strong);
   color: var(--a-text);
 }
+.admin-scope input[type="checkbox"],
+.admin-scope input[type="radio"] { accent-color: var(--a-accent); }
 .admin-scope input::placeholder,
 .admin-scope textarea::placeholder { color: var(--a-mute); }
 /* Jarvis is a dark console inside the (light) admin theme — keep its composer dark. */
 .admin-scope textarea.jarvis-input { background: transparent; border-color: transparent; color: #fff; }
 .admin-scope textarea.jarvis-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
-.admin-scope .btn-ghost {
-  background: var(--a-elev);
-  border-color: var(--a-border);
-  color: var(--a-text);
+.admin-scope .btn-ghost,
+.admin-scope .btn-primary {
+  min-height: 2.125rem; border-radius: 0.5625rem; padding: 0.375rem 0.8125rem;
+  font-size: 0.8125rem; font-weight: 550;
+  transform: none; backdrop-filter: none;
 }
-.admin-scope .btn-ghost:hover { background: var(--a-elev-hover); }
-.admin-scope .btn-primary { background: var(--a-invert-bg); color: var(--a-invert-fg); }
-.admin-scope .btn-primary:hover { opacity: 0.9; background: var(--a-invert-bg); }
+.admin-scope .btn-ghost {
+  background: var(--a-panel);
+  border: 1px solid var(--a-border-strong);
+  color: var(--a-text);
+  box-shadow: var(--a-shadow-sm);
+}
+.admin-scope .btn-ghost:hover { background: var(--a-elev); border-color: var(--a-border-strong); transform: none; }
+.admin-scope .btn-primary { background: var(--a-accent); color: var(--a-on-accent); box-shadow: var(--a-shadow-sm); }
+.admin-scope .btn-primary:hover { background: var(--a-accent-hover); transform: none; }
 
 .admin-scope code {
   background: var(--a-elev);
@@ -650,7 +752,7 @@ body {
 .admin-scope .shadow-card,
 .admin-scope .shadow-e1,
 .admin-scope .shadow-e2,
-.admin-scope .shadow-e3 { box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7) !important; }
+.admin-scope .shadow-e3 { box-shadow: var(--a-shadow-lg) !important; }
 
 /* ============================================================ APP (freelancer/employer) dark mode
    Same technique as .admin-scope above: CSS variables + !important overrides
@@ -745,4 +847,10 @@ body {
 .app-scope[data-theme="dark"] code {
   background: var(--app-card);
   color: var(--app-fg-muted);
+}
+
+/* Beheeromgeving: een oneven laatste kerncijfer loopt op de telefoon over de hele breedte. */
+.admin-scope .a-kpis > :last-child:nth-child(odd) { grid-column: span 2; }
+@media (min-width: 1024px) {
+  .admin-scope .a-kpis > :last-child:nth-child(odd) { grid-column: auto; }
 }

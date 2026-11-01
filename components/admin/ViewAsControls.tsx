@@ -25,8 +25,8 @@ async function go(role: Role) {
 export function ViewAsSwitcher() {
   const [busy, setBusy] = useState<Role | null>(null);
   return (
-    <span className="hidden items-center gap-1 rounded-full px-1.5 py-1 text-xs lg:inline-flex" style={{ border: "1px solid var(--a-border)" }}>
-      <span className="px-1.5" style={{ color: "var(--a-mute)" }}>
+    <span className="mr-1 hidden h-9 items-center gap-0.5 whitespace-nowrap rounded-lg px-1 text-xs xl:inline-flex" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", boxShadow: "var(--a-shadow-sm)" }}>
+      <span className="px-2" style={{ color: "var(--a-mute)" }}>
         Bekijk als
       </span>
       {(["freelancer", "employer"] as const).map((r) => (
@@ -39,7 +39,7 @@ export function ViewAsSwitcher() {
             await go(r);
             setBusy(null);
           }}
-          className="rounded-full px-2.5 py-1 font-semibold transition hover:bg-black/5 disabled:opacity-50"
+          className="rounded-md px-2 py-1 font-medium transition-colors hover:bg-[var(--a-elev)] disabled:opacity-50"
           style={{ color: "var(--a-text)" }}
         >
           {busy === r ? "…" : LABEL[r]}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ADMIN_HUBS } from "@/lib/admin/nav";
 
 interface Me {
   authenticated: boolean;
@@ -89,15 +90,7 @@ export function CommandBar() {
       );
     }
     if (isAdmin) {
-      list.push(
-        { id: "a", label: "Controlecentrum", group: "Admin", run: go("/admin") },
-        { id: "a-an", label: "Verkeer & analytics", group: "Admin", run: go("/admin/analytics") },
-        { id: "a-d", label: "Disputen", group: "Admin", run: go("/admin/disputes") },
-        { id: "a-m", label: "Mailbox", group: "Admin", run: go("/admin/mail") },
-        { id: "a-s", label: "Studio (beeld)", group: "Admin", run: go("/admin/studio") },
-        { id: "a-sys", label: "Systeemstatus", group: "Admin", run: go("/admin/systeem") },
-        { id: "a-au", label: "Auditspoor", group: "Admin", run: go("/admin/audit") },
-      );
+      list.push(...ADMIN_HUBS.flatMap((hub) => hub.pages.map((page) => ({ id: `a-${page.href}`, label: page.label, group: hub.label, run: go(page.href), keywords: hub.label }))));
     }
 
     list.push(

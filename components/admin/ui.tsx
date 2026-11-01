@@ -123,7 +123,6 @@ export function AStat({
             {label}
           </span>
         </div>
-        <span className="a-handle text-xs">⣿</span>
       </div>
       <div className="mt-3 flex items-end justify-between gap-2">
         <span className="num font-display text-[1.65rem] font-bold leading-none" style={{ color: "var(--a-text)" }}>
