@@ -123,12 +123,13 @@ export async function activateManagedWebsite(session: Stripe.Checkout.Session): 
 export async function cancelManagedWebsiteBySub(subId: string): Promise<void> {
   const record = await prisma.managedWebsite.findFirst({ where: { stripeSubId: subId } });
   if (!record || record.status === "CANCELLED") return;
-  await prisma.managedWebsite.update({ where: { id: record.id }, data: { status: "CANCELLED" } });
+  // Wie opzegt laten we geen toegang tot zijn server achter: bij een nieuw abonnement vult hij die opnieuw in.
+  await prisma.managedWebsite.update({ where: { id: record.id }, data: { status: "CANCELLED", secretsSealed: null, secretsSetAt: null } });
   await recordAudit({
     category: "BILLING",
     action: "website.subscription.cancelled",
     actorLabel: "integration:stripe",
-    summary: `Website-beheer abonnement opgezegd voor tenant ${record.tenantId}`,
+    summary: `Website-beheer abonnement opgezegd voor tenant ${record.tenantId}, toegangsgegevens gewist`,
     targetType: "managed-website",
     targetId: record.id,
   });
@@ -149,7 +150,7 @@ export interface WebsiteDetailsInput {
 }
 
 /** Opdrachtgever vult (of werkt bij) zijn websitegegevens + SSH-toegang in. De
- *  gevoelige velden worden verzegeld; alleen niet-lege waarden worden bewaard.
+ *  gevoelige velden worden verzegeld; een leeg veld laat de bewaarde waarde staan.
  *  `adminOverride` geeft de platform-admin gratis toegang: zonder abonnement
  *  wordt direct een actief record aangemaakt. */
 export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetailsInput, opts: { adminOverride?: boolean } = {}): Promise<void> {
@@ -182,7 +183,9 @@ export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetails
     submittedAt: new Date(),
   };
   if (hasSecret) {
-    data.secretsSealed = sealSecret(JSON.stringify(secrets), SECRET_PURPOSE);
+    // Aanvullen, niet vervangen: wat niet opnieuw is ingevuld blijft staan.
+    const existing = record.secretsSealed ? (JSON.parse(openSecret(record.secretsSealed, SECRET_PURPOSE)) as Record<string, string>) : {};
+    data.secretsSealed = sealSecret(JSON.stringify({ ...existing, ...secrets }), SECRET_PURPOSE);
     data.secretsSetAt = new Date();
   }
   await prisma.managedWebsite.update({ where: { tenantId }, data });

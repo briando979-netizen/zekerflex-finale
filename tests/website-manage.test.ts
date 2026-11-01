@@ -125,6 +125,32 @@ describe("toegangsgegevens", () => {
     expect(row!.domain).toBe("y.nl");
   });
 
+  it("houdt eerdere toegang vast als iemand later iets aanvult", async () => {
+    await saveWebsiteDetails("t1", { domain: "x.nl", sshHost: "1.2.3.4", sshPrivateKey: PRIVATE_KEY, hostingPassword: "wachtwoord123" });
+    await saveWebsiteDetails("t1", { domain: "x.nl", sshUser: "deploy", sshPort: "2222" });
+    expect(await revealWebsiteSecrets("mw1", "admin-1")).toEqual({
+      sshHost: "1.2.3.4",
+      sshPrivateKey: PRIVATE_KEY,
+      hostingPassword: "wachtwoord123",
+      sshUser: "deploy",
+      sshPort: "2222",
+    });
+  });
+
+  it("vervangt alleen wat opnieuw is ingevuld", async () => {
+    await saveWebsiteDetails("t1", { domain: "x.nl", sshHost: "1.2.3.4", hostingPassword: "oud" });
+    await saveWebsiteDetails("t1", { domain: "x.nl", hostingPassword: "nieuw", sshHost: "  " });
+    expect(await revealWebsiteSecrets("mw1", "admin-1")).toEqual({ sshHost: "1.2.3.4", hostingPassword: "nieuw" });
+  });
+
+  it("wist de toegang als het abonnement wordt opgezegd", async () => {
+    await saveWebsiteDetails("t1", { domain: "x.nl", sshPrivateKey: PRIVATE_KEY });
+    row = { ...row!, stripeSubId: "sub_1" };
+    await cancelManagedWebsiteBySub("sub_1");
+    expect(row).toMatchObject({ status: "CANCELLED", secretsSealed: null });
+    expect(await revealWebsiteSecrets("mw1", "admin-1")).toBeNull();
+  });
+
   it("geeft niets terug als er geen gegevens zijn", async () => {
     expect(await revealWebsiteSecrets("mw1", "admin-1")).toBeNull();
     expect(recordAudit).not.toHaveBeenCalled();

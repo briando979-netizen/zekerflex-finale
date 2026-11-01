@@ -55,7 +55,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
     domain: initial.domain ?? "",
     provider: initial.provider ?? "",
     sshHost: "",
-    sshPort: "22",
+    sshPort: "",
     sshUser: "",
     sshPrivateKey: "",
     hostingLoginUrl: "",
@@ -132,7 +132,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
         state.status === "SUBMITTED" || state.status === "ACTIVE" || state.status === "PAUSED" ? (
           <ManagedDashboard state={state} message={message} onEdit={() => setState((s) => ({ ...s, status: "ONBOARDING" }))} />
         ) : (
-          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} />
+          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} hasSecrets={state.hasSecrets} />
         )
       ) : (
         <LockedView plans={plans} onSubscribe={subscribe} busy={busy} message={message} pending={state.status === "PENDING_PAYMENT"} />
@@ -238,18 +238,21 @@ function OnboardingForm({
   onSubmit,
   busy,
   message,
+  hasSecrets,
 }: {
   form: FormState;
   set: (k: keyof FormState, v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   busy: boolean;
   message: string;
+  hasSecrets: boolean;
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-3 text-sm text-brand-800">
         ✅ Je abonnement is actief. Vul hieronder de gegevens van je website in — dan nemen wij het beheer over.
         Alles wat je invult wordt <strong>versleuteld</strong> opgeslagen en is alleen voor ons beheerteam zichtbaar.
+        {hasSecrets && " Je opgeslagen toegangsgegevens blijven staan: vul alleen in wat verandert."}
       </div>
 
       <section className="rounded-2xl border border-hair bg-white p-6 shadow-e1">
@@ -272,7 +275,7 @@ function OnboardingForm({
             <input className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm" placeholder="123.45.67.89 of ssh.jouwhost.nl" value={form.sshHost} onChange={(e) => set("sshHost", e.target.value)} autoComplete="off" />
           </label>
           <label className="block text-sm font-medium text-ink">Poort
-            <input className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm" value={form.sshPort} onChange={(e) => set("sshPort", e.target.value)} autoComplete="off" />
+            <input className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm" placeholder="22" value={form.sshPort} onChange={(e) => set("sshPort", e.target.value)} autoComplete="off" />
           </label>
           <label className="block text-sm font-medium text-ink">SSH-gebruiker
             <input className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm" placeholder="root / deploy" value={form.sshUser} onChange={(e) => set("sshUser", e.target.value)} autoComplete="off" />
