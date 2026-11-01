@@ -8,13 +8,19 @@ interface Clawback {
   tenantId: string | null;
   amountCents: number;
   reason: string;
+  providerRef: string | null;
   workerPaid: boolean;
   status: string;
   at: string;
 }
 
 const eur = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const STATUSES = ["open", "herincasso", "opgelost", "afgeschreven"];
+const STATUSES = [
+  { value: "open", label: "Nieuw: jij beslist" },
+  { value: "herincasso", label: "Opnieuw innen" },
+  { value: "opgelost", label: "Geld is binnen" },
+  { value: "afgeschreven", label: "Afschrijven" },
+];
 
 /** Admin → Fraude: storno's / terugvorderingen van teruggeboekte facturen. */
 export function ClawbacksPanel() {
@@ -36,7 +42,8 @@ export function ClawbacksPanel() {
       <div className="flex items-center justify-between border-b border-hair px-5 py-4">
         <div>
           <h2 className="font-display text-base font-bold text-ink">Storno&apos;s / terugvorderingen</h2>
-          <p className="text-xs text-neutralx-500">Teruggeboekte facturen. Exposure = al uitbetaald en nog niet terugontvangen.</p>
+          <p className="text-xs text-neutralx-500">Teruggeboekte facturen. Voorgeschoten = al uitbetaald en nog niet terugontvangen.</p>
+          <p className="mt-1 text-xs text-neutralx-500">Staat een factuur hierdoor weer open, dan bepaalt jouw keuze wat ermee gebeurt. Nieuw: geen herinneringen. Opnieuw innen: herinneringen lopen. Geld is binnen: factuur betaald. Afschrijven: factuur geannuleerd.</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${data.exposureCents > 0 ? "bg-crit/10 text-crit" : "bg-brand-50 text-brand-700"}`}>
           voorgeschoten: {eur(data.exposureCents)}
@@ -47,7 +54,7 @@ export function ClawbacksPanel() {
       ) : (
         <ul className="divide-y divide-hair">
           {data.clawbacks.map((c) => (
-            <li key={c.invoiceId} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+            <li key={`${c.invoiceId}:${c.providerRef ?? ""}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
               <span className="min-w-0">
                 <span className="text-sm font-medium text-ink">{c.invoiceNumber}</span>
                 <span className="ml-2 text-sm">{eur(c.amountCents)}</span>
@@ -66,8 +73,8 @@ export function ClawbacksPanel() {
                 className="field-input w-auto py-1 text-xs"
               >
                 {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                  <option key={s.value} value={s.value}>
+                    {s.label}
                   </option>
                 ))}
               </select>

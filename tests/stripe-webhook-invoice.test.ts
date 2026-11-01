@@ -5,7 +5,11 @@ const constructWebhookEvent = vi.fn();
 vi.mock("@/lib/billing/stripe", () => ({ constructWebhookEvent: (...a: unknown[]) => constructWebhookEvent(...a) }));
 
 const claimIdempotency = vi.fn().mockResolvedValue(true);
-vi.mock("@/lib/redis", () => ({ claimIdempotency: (...a: unknown[]) => claimIdempotency(...a) }));
+const releaseIdempotency = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/redis", () => ({
+  claimIdempotency: (...a: unknown[]) => claimIdempotency(...a),
+  releaseIdempotency: (...a: unknown[]) => releaseIdempotency(...a),
+}));
 
 const recordAudit = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => recordAudit(...a) }));
@@ -37,6 +41,18 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+const recordChargeRefund = vi.fn().mockResolvedValue(undefined);
+const recordDisputeOpened = vi.fn().mockResolvedValue(undefined);
+const recordDisputeClosed = vi.fn().mockResolvedValue(undefined);
+const settleClawbacks = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/billing/clawback", () => ({
+  recordChargeRefund: (...a: unknown[]) => recordChargeRefund(...a),
+  recordDisputeOpened: (...a: unknown[]) => recordDisputeOpened(...a),
+  recordDisputeClosed: (...a: unknown[]) => recordDisputeClosed(...a),
+  settleClawbacks: (...a: unknown[]) => settleClawbacks(...a),
+}));
+
+import { readFileSync } from "node:fs";
 import { POST } from "@/app/api/webhooks/stripe/route";
 
 function webhookReq(body: unknown) {
@@ -121,6 +137,79 @@ describe("POST /api/webhooks/stripe — single invoice", () => {
   });
 });
 
+describe("POST /api/webhooks/stripe — a paid invoice", () => {
+  it("settles an open clawback when a reopened invoice is paid again", async () => {
+    constructWebhookEvent.mockReturnValue({
+      id: "evt_7",
+      type: "checkout.session.completed",
+      data: { object: { mode: "payment", payment_status: "paid", payment_intent: "pi_2", metadata: { invoiceId: "inv_1" } } },
+    });
+    invoiceFindUnique.mockResolvedValue(INVOICE);
+    invoiceUpdate.mockResolvedValue({});
+    await POST(webhookReq({}));
+    expect(settleClawbacks).toHaveBeenCalledWith("inv_1");
+  });
+
+  it("still answers 200 when settling fails, because the invoice is already paid", async () => {
+    constructWebhookEvent.mockReturnValue({
+      id: "evt_8",
+      type: "checkout.session.completed",
+      data: { object: { mode: "payment", payment_status: "paid", payment_intent: "pi_2", metadata: { invoiceId: "inv_1" } } },
+    });
+    invoiceFindUnique.mockResolvedValue(INVOICE);
+    invoiceUpdate.mockResolvedValue({});
+    settleClawbacks.mockRejectedValueOnce(new Error("kv down"));
+    expect((await POST(webhookReq({}))).status).toBe(200);
+  });
+});
+
+describe("POST /api/webhooks/stripe — refunds and disputes", () => {
+  it.each([
+    ["charge.refunded", recordChargeRefund],
+    ["charge.dispute.created", recordDisputeOpened],
+    ["charge.dispute.closed", recordDisputeClosed],
+  ] as const)("%s goes to the clawback handling", async (type, handler) => {
+    const object = { id: "x", payment_intent: "pi_1" };
+    constructWebhookEvent.mockReturnValue({ id: `evt_${type}`, type, data: { object } });
+    expect((await POST(webhookReq({}))).status).toBe(200);
+    expect(handler).toHaveBeenCalledWith(object);
+  });
+});
+
+describe("POST /api/webhooks/stripe — when processing fails", () => {
+  const refundEvent = { id: "evt_fail", type: "charge.refunded", data: { object: { id: "ch_1" } } };
+
+  it("answers 500 and gives the claim back, so Stripe's retry is really processed", async () => {
+    constructWebhookEvent.mockReturnValue(refundEvent);
+    recordChargeRefund.mockRejectedValueOnce(new Error("db down"));
+    expect((await POST(webhookReq({}))).status).toBe(500);
+    expect(releaseIdempotency).toHaveBeenCalledWith("stripe:evt_fail");
+  });
+
+  it("keeps the claim when processing succeeds", async () => {
+    constructWebhookEvent.mockReturnValue(refundEvent);
+    expect((await POST(webhookReq({}))).status).toBe(200);
+    expect(releaseIdempotency).not.toHaveBeenCalled();
+  });
+
+  it("does not process an event twice", async () => {
+    constructWebhookEvent.mockReturnValue(refundEvent);
+    claimIdempotency.mockResolvedValueOnce(false);
+    const res = await POST(webhookReq({}));
+    expect((await res.json()).duplicate).toBe(true);
+    expect(recordChargeRefund).not.toHaveBeenCalled();
+  });
+
+  it("still processes when the idempotency store is down, and has no claim to give back", async () => {
+    constructWebhookEvent.mockReturnValue(refundEvent);
+    claimIdempotency.mockRejectedValueOnce(new Error("redis down"));
+    recordChargeRefund.mockRejectedValueOnce(new Error("db down"));
+    expect((await POST(webhookReq({}))).status).toBe(500);
+    expect(recordChargeRefund).toHaveBeenCalled();
+    expect(releaseIdempotency).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /api/webhooks/stripe — bulk invoice checkout", () => {
   it("marks every invoice in the invoiceIds metadata array PAID", async () => {
     constructWebhookEvent.mockReturnValue({
@@ -147,6 +236,13 @@ describe("POST /api/webhooks/stripe — bulk invoice checkout", () => {
     expect(invoiceUpdate).toHaveBeenCalledTimes(2);
     expect(invoiceUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "inv_1" } }));
     expect(invoiceUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "inv_2" } }));
+  });
+
+  it("lets invoices share one payment intent, because a bulk checkout has only one", () => {
+    const schema = readFileSync("prisma/schema.prisma", "utf8");
+    const model = schema.slice(schema.indexOf("model Invoice {"), schema.indexOf("model InvoiceLine"));
+    expect(model).toMatch(/stripePaymentIntentId\s+String\?\s*\n/);
+    expect(model).toContain("@@index([stripePaymentIntentId])");
   });
 
   it("reports unmatched when payment_status is not paid, without touching any invoice", async () => {

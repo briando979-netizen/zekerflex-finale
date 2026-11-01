@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { kvGet, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { INVOICE_DUE_DAYS } from "@/lib/claims/policy";
 import { payUrl } from "@/lib/billing/pay-link";
+import { invoicesOnHold } from "@/lib/billing/clawback";
 
 // ---------------------------------------------------------------------------
 // Payment reminders for client invoices (hours + platform fee + uitzend):
@@ -33,6 +34,8 @@ interface ReminderState {
   at: string;
 }
 const stateKey = (invoiceId: string) => `invoice-reminder:${invoiceId}`;
+/** A reversed invoice starts over: reminders sent before it was paid no longer count. */
+export const resetInvoiceReminders = (invoiceId: string) => kvDelete(stateKey(invoiceId));
 const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
 const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 
@@ -59,11 +62,13 @@ export interface OverdueInvoice {
 }
 
 async function openInvoices() {
-  return prisma.invoice.findMany({
+  const invoices = await prisma.invoice.findMany({
     where: { status: InvoiceStatus.ISSUED, type: { in: COLLECTED_TYPES }, recipientTenantId: { not: null }, totalCents: { gt: 0 } },
     select: { id: true, number: true, totalCents: true, dueAt: true, issuedAt: true, createdAt: true, recipientTenantId: true, recipientTenant: { select: { name: true } } },
     take: 5000,
   });
+  const onHold = await invoicesOnHold();
+  return invoices.filter((inv) => !onHold.has(inv.id));
 }
 
 /** Overdue client invoices with how far the reminder flow got — for the admin list. */

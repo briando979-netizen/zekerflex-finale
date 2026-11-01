@@ -85,6 +85,11 @@ export async function claimIdempotency(key: string, ttlSeconds: number): Promise
   return result === "OK";
 }
 
+/** Gives a claim back after failed processing, so a retry isn't treated as a duplicate. */
+export async function releaseIdempotency(key: string): Promise<void> {
+  await redis.del(`idempotency:${key}`);
+}
+
 type CircuitState = { failures: number; openedUntil: number };
 const circuitStates = new Map<string, CircuitState>();
 

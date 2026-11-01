@@ -45,6 +45,22 @@ beforeEach(() => {
 });
 
 describe("reminder schedule", () => {
+  it("skips an invoice that was refunded until the owner decides", async () => {
+    kv.set("clawbacks", [{ invoiceId: "a", reopened: true, status: "open" }]);
+    await runInvoiceReminders(at(5));
+    expect(m.mail).toHaveBeenCalledOnce();
+    const text = (m.mail.mock.calls[0]![0] as { text: string }).text;
+    expect(text).toContain("F-b");
+    expect(text).not.toContain("F-a");
+    expect((await overdueInvoices(at(5))).map((i) => i.id)).toEqual(["b"]);
+  });
+
+  it("reminds again once the owner chose to collect it", async () => {
+    kv.set("clawbacks", [{ invoiceId: "a", reopened: true, status: "herincasso" }]);
+    await runInvoiceReminders(at(5));
+    expect((m.mail.mock.calls[0]![0] as { text: string }).text).toContain("F-a");
+  });
+
   it("does nothing until the owner switches automatic reminders on", async () => {
     kv.set("invoice-reminders:settings", { enabled: false });
     expect(await runInvoiceReminders(at(5))).toMatchObject({ disabled: true, mailed: 0 });

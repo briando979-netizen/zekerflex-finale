@@ -7,13 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { constructWebhookEvent } from "@/lib/billing/stripe";
-import { claimIdempotency } from "@/lib/redis";
+import { claimIdempotency, releaseIdempotency } from "@/lib/redis";
 import { book } from "@/lib/bank/ledger";
 import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
 import { markRequestPaidExternally } from "@/lib/bank/p2p";
 import { payOnClientPayment } from "@/lib/payouts/execute";
 import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
-import { reverseByPaymentIntent } from "@/lib/billing/clawback";
+import { recordChargeRefund, recordDisputeClosed, recordDisputeOpened, settleClawbacks } from "@/lib/billing/clawback";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
@@ -66,6 +66,7 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
         stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
       },
     });
+    await settleClawbacks(invoice.id).catch((err) => logger.error("settling clawback failed", { invoiceId: invoice.id, error: (err as Error).message }));
     // The client paid the freelancer's (self-billed) invoice: a freelancer
     // who chose "wait for the client" is paid in full now.
     if (invoice.type === InvoiceType.SELF_BILL_FREELANCER) {
@@ -239,14 +240,27 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     return NextResponse.json({ error: "invalid signature" }, { status: 400 });
   }
 
+  const claimKey = `stripe:${event.id}`;
+  let claimed = false;
   try {
-    if (!(await claimIdempotency(`stripe:${event.id}`, 24 * 60 * 60))) {
+    if (!(await claimIdempotency(claimKey, 24 * 60 * 60))) {
       return NextResponse.json({ ok: true, duplicate: true });
     }
+    claimed = true;
   } catch (err) {
     log.warn("webhook idempotency store unavailable", { error: (err as Error).message });
   }
 
+  try {
+    return await processStripeEvent(event, log);
+  } catch (err) {
+    // Give the claim back: otherwise Stripe's retry reads "already processed" and a payment stays stuck.
+    if (claimed) await releaseIdempotency(claimKey).catch((e) => log.warn("releasing webhook claim failed", { error: (e as Error).message }));
+    throw err;
+  }
+}
+
+async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof logger.forRequest>): Promise<NextResponse> {
   // ID verification via Stripe Identity (lib/kyc/stripe-identity.ts).
   if (event.type.startsWith("identity.verification_session.")) {
     await handleStripeIdentityEvent(event);
@@ -427,15 +441,11 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     }
   }
 
-  // Storno: een betaalde factuur wordt teruggeboekt/gedisputeerd → terugvordering.
-  if (event.type === "charge.refunded" || event.type === "charge.dispute.created" || event.type === "charge.dispute.funds_withdrawn") {
-    const obj = event.data.object as { payment_intent?: string | { id: string } | null };
-    const pi = typeof obj.payment_intent === "string" ? obj.payment_intent : (obj.payment_intent?.id ?? null);
-    if (pi) {
-      const reason = event.type === "charge.refunded" ? "Stripe-terugbetaling (refund)" : "Stripe-geschil (chargeback)";
-      await reverseByPaymentIntent(pi, reason, event.id).catch((err) => logger.error("clawback from webhook failed", { error: (err as Error).message }));
-    }
-  }
+  // Storno: een betaalde factuur wordt teruggeboekt of betwist (lib/billing/clawback.ts).
+  // Een fout gaat naar boven, zodat Stripe het opnieuw probeert.
+  if (event.type === "charge.refunded") await recordChargeRefund(event.data.object);
+  if (event.type === "charge.dispute.created") await recordDisputeOpened(event.data.object);
+  if (event.type === "charge.dispute.closed") await recordDisputeClosed(event.data.object);
 
   return NextResponse.json({ ok: true });
 }
