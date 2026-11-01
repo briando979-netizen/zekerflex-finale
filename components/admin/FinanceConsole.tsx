@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { euro, euroExact } from "@/lib/admin/format";
+import { InfoList, KpiStrip, PageHead, Panel, StackBar } from "@/components/admin/kit";
 
 interface Settings {
   stripeFeePct: number;
@@ -22,7 +24,6 @@ interface Overview {
   settings: Settings;
 }
 
-const eur = (c: number) => `€ ${(c / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (f: number) => `${(f * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 })}%`;
 
 const PERIODS: { id: string; label: string }[] = [
@@ -31,11 +32,39 @@ const PERIODS: { id: string; label: string }[] = [
   { id: "all", label: "Alles" },
 ];
 
-export function FinanceConsole() {
+/** Van omzet naar eigen geld: elke stap zichtbaar, de eindstand vet. */
+function Bridge({ data }: { data: Overview }) {
+  const steps = [
+    { label: "Eigen omzet", value: data.revenue.total, sign: "" },
+    { label: "Betaalkosten en vaste lasten", value: data.costs.total, sign: "−" },
+    { label: "Nettowinst", value: data.netProfit, sign: "=", strong: true },
+    { label: `Belastingreservering (${pct(data.settings.taxReservePct)})`, value: data.taxReserve, sign: "−" },
+    { label: "Eigen geld, uitkeerbaar", value: data.distributable, sign: "=", strong: true },
+  ];
+  const max = Math.max(1, ...steps.map((s) => Math.abs(s.value)));
+  return (
+    <ol className="space-y-2.5">
+      {steps.map((s) => (
+        <li key={s.label}>
+          <span className="mb-1 flex items-baseline justify-between gap-3 text-[0.8125rem]">
+            <span className="min-w-0 truncate" style={{ color: s.strong ? "var(--a-text)" : "var(--a-dim)", fontWeight: s.strong ? 600 : 400 }}>{s.label}</span>
+            <span className="num flex-shrink-0" style={{ color: "var(--a-text)", fontWeight: s.strong ? 600 : 500 }}>{s.sign === "−" ? "− " : ""}{euroExact(s.value)}</span>
+          </span>
+          <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: "var(--a-elev)" }}>
+            <span className="block h-full rounded-full" style={{ width: `${(Math.abs(s.value) / max) * 100}%`, background: s.sign === "−" ? "var(--a-other)" : s.value < 0 ? "var(--a-crit)" : "var(--a-s1)" }} />
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export function FinanceConsole({ chart }: { chart?: ReactNode }) {
   const [period, setPeriod] = useState("year");
   const [data, setData] = useState<Overview | null>(null);
   const [edit, setEdit] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const load = useCallback(async (p: string) => {
     const r = await fetch(`/api/admin/financien?period=${p}`, { cache: "no-store" });
@@ -53,103 +82,112 @@ export function FinanceConsole() {
   const save = async () => {
     if (!edit) return;
     setSaving(true);
+    setSaved(false);
     try {
       const r = await fetch("/api/admin/financien", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(edit),
       });
-      if (r.ok) await load(period);
+      if (r.ok) {
+        await load(period);
+        setSaved(true);
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  const card = { background: "var(--a-elev)", border: "1px solid var(--a-border)" };
-  const text = { color: "var(--a-text)" };
-  const mute = { color: "var(--a-mute)" };
-
   return (
-    <div className="space-y-5">
-      {/* period toggle */}
-      <div className="flex gap-2">
-        {PERIODS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setPeriod(p.id)}
-            className="rounded-lg px-3 py-1.5 text-sm font-semibold"
-            style={period === p.id ? { background: "var(--a-accent, #0E5C4A)", color: "#fff" } : { background: "var(--a-elev)", border: "1px solid var(--a-border)", color: "var(--a-text)" }}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Financiën & winst"
+        subtitle="Je echte omzet en marge, los van doorlopende posten, met btw, kosten en wat je eruit kunt halen."
+        actions={
+          <nav aria-label="Periode" className="inline-flex rounded-lg p-0.5" style={{ background: "var(--a-elev)" }}>
+            {PERIODS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPeriod(p.id)}
+                aria-pressed={period === p.id}
+                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                style={period === p.id ? { background: "var(--a-panel)", color: "var(--a-text)", boxShadow: "var(--a-shadow-sm)" } : { color: "var(--a-mute)" }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </nav>
+        }
+      />
 
       {!data ? (
-        <div className="h-40 animate-pulse rounded-xl" style={{ background: "var(--a-elev)" }} />
+        <div className="a-panel h-28 animate-pulse" />
       ) : (
         <>
-          {/* top KPIs */}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Kpi label="Jouw omzet (marge)" value={eur(data.revenue.total)} sub="platformfee + uitzendopslag" />
-            <Kpi label="Nettowinst" value={eur(data.netProfit)} sub="omzet − kosten" tone={data.netProfit >= 0 ? "up" : "down"} />
-            <Kpi label="Uitkeerbaar — eigen geld" value={eur(data.distributable)} sub="na belastingreservering" tone="up" />
-            <Kpi label="Btw af te dragen" value={eur(data.vat.due)} sub="output − voorbelasting" tone={data.vat.due > 0 ? "down" : "up"} />
+          <KpiStrip
+            items={[
+              { label: "Eigen omzet", value: euro(data.revenue.total), hint: "marge, zonder btw" },
+              { label: "Nettowinst", value: euro(data.netProfit), hint: "omzet min kosten", ...(data.netProfit < 0 ? { tone: "crit" as const } : {}) },
+              { label: "Eigen geld", value: euro(data.distributable), hint: "na belastingreservering", tone: "money" },
+              { label: "Btw af te dragen", value: euro(data.vat.due), hint: "indicatief" },
+              { label: "Door het platform", value: euro(data.grossInvoiced), hint: "inclusief doorloop en btw" },
+            ]}
+          />
+
+          <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+            {chart}
+            <Panel title="Van omzet naar eigen geld" subtitle="Kosten en belasting zijn indicatief">
+              <Bridge data={data} />
+            </Panel>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Block title="Jouw omzet (marge)">
-              <Row k="Platformkosten (€/uur)" v={eur(data.revenue.platformFee)} />
-              <Row k="Uitzendopslag (bemiddeling + lasten)" v={eur(data.revenue.uitzendMargin)} />
-              <Row k="Webshop" v={eur(data.revenue.shop)} />
-              <Row k="Snelle uitbetaling / voorschot (fees)" v={eur(data.revenue.fastPay)} />
-              <Row k="Totaal eigen omzet" v={eur(data.revenue.total)} strong />
-            </Block>
-
-            <Block title="Doorlopende posten (geen winst)">
-              <Row k="Uitzendloon (naar krachten)" v={eur(data.passthrough.uitzendWages)} />
-              <Row k="Freelancer-facturen (reverse billing)" v={eur(data.passthrough.freelancerInvoices)} />
-              <Row k="Annulerings-/no-show-claims" v={eur(data.passthrough.penalties)} />
-              <Row k="Totaal doorloop" v={eur(data.passthrough.total)} strong />
-            </Block>
-
-            <Block title="Kosten (indicatief)">
-              <Row k={`Stripe-/betaalkosten (${pct(data.settings.stripeFeePct)})`} v={eur(data.costs.stripe)} />
-              <Row k={`Vaste maandlasten × ${data.months} mnd`} v={eur(data.costs.operational)} />
-              <Row k="Totaal kosten" v={eur(data.costs.total)} strong />
-            </Block>
-
-            <Block title="Btw-positie (indicatief)">
-              <Row k="Btw op je verkoopfacturen (output)" v={eur(data.vat.output)} />
-              <Row k={`Geschatte voorbelasting (${pct(data.settings.vatInputPct)})`} v={`− ${eur(data.vat.inputEstimate)}`} />
-              <Row k="Af te dragen / terug" v={eur(data.vat.due)} strong />
-            </Block>
-
-            <Block title="Winst & eigen geld">
-              <Row k="Nettowinst (excl. btw)" v={eur(data.netProfit)} />
-              <Row k={`Belastingreservering (${pct(data.settings.taxReservePct)})`} v={`− ${eur(data.taxReserve)}`} />
-              <Row k="Uitkeerbaar naar holding/privé" v={eur(data.distributable)} strong />
-            </Block>
-
-            <Block title="Bruto gefactureerd">
-              <Row k="Totaal gefactureerd (incl. doorloop + btw)" v={eur(data.grossInvoiced)} />
-              <p className="px-1 pt-2 text-xs" style={mute}>
-                Dit is alles wat er door het platform stroomt — het meeste is geen winst maar loon/facturen die doorbetaald worden.
-              </p>
-            </Block>
+            <Panel title="Waar je omzet vandaan komt">
+              <StackBar
+                format={euro}
+                emptyText="Nog geen omzet in deze periode."
+                segments={[
+                  { label: "Platformkosten (€/uur)", value: data.revenue.platformFee, slot: 1 },
+                  { label: "Uitzendopslag", value: data.revenue.uitzendMargin, slot: 2 },
+                  { label: "Webshop", value: data.revenue.shop, slot: 3 },
+                  { label: "Snelle uitbetaling", value: data.revenue.fastPay, slot: 4 },
+                ]}
+              />
+            </Panel>
+            <Panel title="Doorlopende posten" subtitle="Geen winst: dit betaal je weer door">
+              <StackBar
+                format={euro}
+                emptyText="Nog geen doorlopende posten in deze periode."
+                segments={[
+                  { label: "Uitzendloon", value: data.passthrough.uitzendWages, slot: 1 },
+                  { label: "Freelancer-facturen", value: data.passthrough.freelancerInvoices, slot: 2 },
+                  { label: "Annulerings- en no-show-claims", value: data.passthrough.penalties, slot: 3 },
+                ]}
+              />
+            </Panel>
+            <Panel title="Kosten" subtitle="Indicatief">
+              <InfoList
+                rows={[
+                  { label: `Stripe- en betaalkosten (${pct(data.settings.stripeFeePct)})`, value: euroExact(data.costs.stripe) },
+                  { label: `Vaste maandlasten × ${data.months} mnd`, value: euroExact(data.costs.operational) },
+                  { label: "Totaal", value: euroExact(data.costs.total) },
+                ]}
+              />
+            </Panel>
+            <Panel title="Btw-positie" subtitle="Indicatief">
+              <InfoList
+                rows={[
+                  { label: "Btw op je verkoopfacturen", value: euroExact(data.vat.output) },
+                  { label: `Geschatte voorbelasting (${pct(data.settings.vatInputPct)})`, value: `− ${euroExact(data.vat.inputEstimate)}` },
+                  { label: "Af te dragen of terug", value: euroExact(data.vat.due) },
+                ]}
+              />
+            </Panel>
           </div>
 
-          {/* settings */}
           {edit && (
-            <div className="rounded-xl p-4" style={card}>
-              <p className="mb-1 text-sm font-semibold" style={text}>
-                Tarieven & reserveringen
-              </p>
-              <p className="mb-3 text-xs" style={mute}>
-                Btw, belasting en kosten zijn <b>indicatief</b> op basis van deze tarieven — stel ze op jouw situatie in en laat je
-                boekhouder ze bevestigen. Alleen de omzet- en factuurbedragen komen rechtstreeks uit je echte facturen.
-              </p>
+            <Panel title="Tarieven & reserveringen" subtitle="Btw, belasting en kosten rekenen met deze tarieven: stel ze in op jouw situatie en laat je boekhouder ze bevestigen. Alleen omzet- en factuurbedragen komen rechtstreeks uit je echte facturen.">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <Field label="Stripe-kosten %" value={edit.stripeFeePct * 100} onChange={(n) => setEdit({ ...edit, stripeFeePct: n / 100 })} />
                 <Field label="Voorbelasting (btw) %" value={edit.vatInputPct * 100} onChange={(n) => setEdit({ ...edit, vatInputPct: n / 100 })} />
@@ -162,16 +200,13 @@ export function FinanceConsole() {
                   allowEmpty
                 />
               </div>
-              <button
-                type="button"
-                onClick={save}
-                disabled={saving}
-                className="mt-3 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: "var(--a-accent, #0E5C4A)" }}
-              >
-                {saving ? "Opslaan…" : "Tarieven opslaan"}
-              </button>
-            </div>
+              <div className="mt-3 flex items-center gap-3">
+                <button type="button" onClick={save} disabled={saving} className="a-button a-button-primary">
+                  {saving ? "Opslaan…" : "Tarieven opslaan"}
+                </button>
+                {saved && <span className="text-xs" style={{ color: "var(--a-ok)" }}>Opgeslagen</span>}
+              </div>
+            </Panel>
           )}
         </>
       )}
@@ -179,40 +214,10 @@ export function FinanceConsole() {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "up" | "down" }) {
-  return (
-    <div className="rounded-xl p-4" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
-      <p className="text-xs font-medium" style={{ color: "var(--a-mute)" }}>{label}</p>
-      <p className="mt-1 font-display text-2xl font-bold" style={{ color: tone === "down" ? "#f87171" : tone === "up" ? "#34d399" : "var(--a-text)" }}>
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>{sub}</p>}
-    </div>
-  );
-}
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl p-4" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
-      <p className="mb-2 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{title}</p>
-      <div className="divide-y" style={{ borderColor: "var(--a-border)" }}>{children}</div>
-    </div>
-  );
-}
-
-function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2 text-sm">
-      <span style={{ color: strong ? "var(--a-text)" : "var(--a-mute)", fontWeight: strong ? 600 : 400 }}>{k}</span>
-      <span className="font-mono" style={{ color: "var(--a-text)", fontWeight: strong ? 700 : 500 }}>{v}</span>
-    </div>
-  );
-}
-
 function Field({ label, value, onChange, allowEmpty }: { label: string; value: number; onChange: (n: number) => void; allowEmpty?: boolean }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs" style={{ color: "var(--a-mute)" }}>{label}</span>
+    <label className="a-label">
+      {label}
       <input
         type="number"
         step="0.01"
@@ -222,8 +227,7 @@ function Field({ label, value, onChange, allowEmpty }: { label: string; value: n
           if (raw === "" && allowEmpty) onChange(NaN);
           else onChange(Number(raw));
         }}
-        className="w-full rounded-lg px-2.5 py-1.5 text-sm"
-        style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-text)" }}
+        className="a-input"
       />
     </label>
   );

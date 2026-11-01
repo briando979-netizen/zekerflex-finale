@@ -1,9 +1,12 @@
-import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { payToken } from "@/lib/billing/pay-link";
+import { dueDateOf } from "@/lib/billing/reminders";
+import { resolvePeriod } from "@/lib/admin/period";
+import { AGE_BUCKETS, invoicesInsights } from "@/lib/admin/insights/money";
+import { count, dateNl, euro, euroExact } from "@/lib/admin/format";
+import { BarList, KpiStrip, PageHead, Panel, PeriodTabs, Pill, type Tone } from "@/components/admin/kit";
+import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { OverdueInvoices } from "@/components/admin/OverdueInvoices";
-import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,161 +14,123 @@ const TYPE_LABEL: Record<string, string> = {
   PLATFORM_FEE: "Platformfee",
   SELF_BILL_FREELANCER: "Dienst (zzp)",
   CANCELLATION_PENALTY: "Annuleringsvergoeding",
-  UITZEND_FEE: "Uitzendkracht (loon + opslag)",
+  UITZEND_FEE: "Uitzendkracht",
 };
 
-const STATUS_FILTERS = [
-  { key: "", label: "Alles" },
-  { key: "ISSUED", label: "Openstaand" },
-  { key: "PAID", label: "Betaald" },
-  { key: "DRAFT", label: "Concept" },
-] as const;
+const STATUS: Record<string, { label: string; tone: Tone }> = {
+  PAID: { label: "Betaald", tone: "ok" },
+  ISSUED: { label: "Open", tone: "warn" },
+  DRAFT: { label: "Concept", tone: "neutral" },
+  CANCELLED: { label: "Geannuleerd", tone: "neutral" },
+};
 
-// Platform-brede factuurlijst — tot nu toe bestond er alleen een per-werkgever
-// weergave (/werkgever/facturen). Admin had geen enkel overzicht van omzet/
-// openstaand over alle organisaties heen.
-export default async function AdminFacturenPage(props: { searchParams: Promise<{ status?: string; q?: string }> }) {
+// Platform-brede factuurlijst, over alle organisaties heen.
+export default async function AdminFacturenPage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return <div className="mx-auto max-w-5xl"><PageHeader title="Geen toegang" subtitle="Facturatie-overzicht is alleen voor platformbeheerders." /></div>;
+    return <PageHead title="Geen toegang" subtitle="Facturatie-overzicht is alleen voor platformbeheerders." />;
   }
+  const { periode } = await props.searchParams;
+  const period = resolvePeriod(periode);
+  const d = await invoicesInsights(period);
+  const now = new Date();
 
-  const searchParams = await props.searchParams;
-  const status = STATUS_FILTERS.find((f) => f.key === (searchParams.status ?? ""))?.key ?? "";
-  const q = searchParams.q?.trim() ?? "";
-
-  const [invoices, totals] = await Promise.all([
-    prisma.invoice.findMany({
-      where: {
-        ...(status ? { status: status as never } : {}),
-        ...(q ? { number: { contains: q, mode: "insensitive" } } : {}),
+  const rows: TableRow[] = d.invoices.map((inv) => {
+    const debtor = inv.recipientTenant?.name ?? inv.recipientFreelancer?.user.fullName ?? "—";
+    const due = dueDateOf(inv);
+    const late = inv.status === "ISSUED" && due < now;
+    const status = STATUS[inv.status] ?? { label: inv.status, tone: "neutral" as const };
+    const typeLabel = TYPE_LABEL[inv.type] ?? inv.type;
+    return {
+      id: inv.id,
+      search: `${inv.number} ${debtor} ${typeLabel}`,
+      filters: { status: late ? "LATE" : inv.status, type: inv.type },
+      cells: {
+        number: <span className="font-mono text-xs" style={{ color: "var(--a-text)" }}>{inv.number}</span>,
+        debtor: <span className="block max-w-[14rem] truncate" title={debtor}>{debtor}</span>,
+        type: typeLabel,
+        total: <span className="font-medium" style={{ color: "var(--a-text)" }}>{euroExact(inv.totalCents)}</span>,
+        date: dateNl(inv.createdAt),
+        due: inv.status === "ISSUED" ? <span style={late ? { color: "var(--a-crit)", fontWeight: 500 } : undefined}>{dateNl(due)}</span> : "—",
+        status: late ? <Pill tone="crit">Te laat</Pill> : <Pill tone={status.tone}>{status.label}</Pill>,
+        actions: (
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            {inv.status === "ISSUED" && (inv.recipientTenantId || inv.recipientFreelancerId) && (
+              <a href={`/betaal/${payToken(inv.id)}`} target="_blank" rel="noopener noreferrer" className="a-button text-xs" title="Openbare betaalpagina met QR-code, om door te sturen naar de klant">
+                Betaallink
+              </a>
+            )}
+            <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer" className="a-button text-xs">PDF</a>
+          </span>
+        ),
       },
-      select: {
-        id: true,
-        number: true,
-        type: true,
-        status: true,
-        totalCents: true,
-        currency: true,
-        createdAt: true,
-        recipientTenantId: true,
-        recipientFreelancerId: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 150,
-    }),
-    prisma.invoice.groupBy({ by: ["status"], _sum: { totalCents: true }, _count: true }),
-  ]);
-
-  const tenantIds = [...new Set(invoices.map((i) => i.recipientTenantId).filter((id): id is string => Boolean(id)))];
-  const tenants = tenantIds.length > 0 ? await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } }) : [];
-  const tenantName = new Map(tenants.map((t) => [t.id, t.name]));
-
-  const freelancerIds = [...new Set(invoices.map((i) => i.recipientFreelancerId).filter((id): id is string => Boolean(id)))];
-  const freelancers = freelancerIds.length > 0
-    ? await prisma.freelancerProfile.findMany({ where: { id: { in: freelancerIds } }, select: { id: true, user: { select: { fullName: true } } } })
-    : [];
-  const freelancerName = new Map(freelancers.map((f) => [f.id, f.user.fullName]));
-
-  const outstandingCents = totals.find((t) => t.status === "ISSUED")?._sum.totalCents ?? 0;
-  const paidCents = totals.find((t) => t.status === "PAID")?._sum.totalCents ?? 0;
-  const totalCount = totals.reduce((s, t) => s + t._count, 0);
+      sort: { number: inv.number, debtor, type: typeLabel, total: inv.totalCents, date: inv.createdAt.getTime(), due: inv.status === "ISSUED" ? due.getTime() : null, status: late ? "Te laat" : status.label },
+      csv: { number: inv.number, debtor, type: typeLabel, total: (inv.totalCents / 100).toFixed(2), date: inv.createdAt.toISOString().slice(0, 10), due: inv.status === "ISSUED" ? due.toISOString().slice(0, 10) : "", status: late ? "Te laat" : status.label, actions: "" },
+    };
+  });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <PageHeader title="Facturen" subtitle="Alle facturen op het platform, over alle organisaties heen — omzet, openstaand en status." />
+    <div className="space-y-4">
+      <PageHead
+        title="Facturen"
+        subtitle="Alle facturen op het platform, over alle organisaties heen."
+        actions={<PeriodTabs period={period} basePath="/admin/facturen" />}
+      />
+
+      <KpiStrip
+        items={[
+          { label: "Gefactureerd", value: euro(d.billed), delta: d.billedDelta, spark: d.paidSeries.map((v, i) => v + (d.openSeries[i] ?? 0)), hint: `${count(d.billedCount)} facturen` },
+          { label: "Betaald", value: euro(d.paidCents), hint: `in ${period.label}` },
+          { label: "Staat open", value: euro(d.openCents), hint: `${count(d.openCount)} facturen`, ...(d.openCents > 0 ? { tone: "money" as const } : {}) },
+          { label: "Te laat", value: euro(d.overdueCents), hint: d.overdueCount > 0 ? `${count(d.overdueCount)} facturen` : "Niets te laat", ...(d.overdueCents > 0 ? { tone: "crit" as const } : {}) },
+          { label: "Gemiddelde betaaltijd", value: d.avgPayDays === null ? "—" : `${d.avgPayDays} ${d.avgPayDays === 1 ? "dag" : "dagen"}`, hint: "van factuur tot betaling" },
+        ]}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Panel title="Gefactureerd" subtitle={`Laatste ${period.label}`}>
+          <Chart
+            title="Gefactureerd per periode, betaald en open"
+            kind="bars"
+            unit="money"
+            labels={d.labels}
+            series={[
+              { label: "Betaald", values: d.paidSeries, slot: 1 },
+              { label: "Open", values: d.openSeries, slot: 4 },
+            ]}
+            height={230}
+            emptyText="Nog geen facturen in deze periode."
+          />
+        </Panel>
+        <Panel title="Ouderdom van wat open staat" subtitle="Hoe lang facturen al openstaan">
+          <BarList rows={AGE_BUCKETS.map((label, i) => ({ key: label, label, value: d.ages[i] ?? 0, display: euro(d.ages[i] ?? 0) }))} />
+        </Panel>
+      </div>
 
       <OverdueInvoices />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Openstaand" value={money(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "default"} />
-        <KpiCard label="Betaald" value={money(paidCents)} tone="brand" />
-        <KpiCard label="Facturen" value={String(totalCount)} />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1">
-          {STATUS_FILTERS.map((f) => (
-            <Link
-              key={f.key}
-              href={`/admin/facturen${f.key ? `?status=${f.key}` : ""}`}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                status === f.key ? "bg-ink text-white" : "bg-paper-soft text-neutralx-600 hover:text-ink"
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </div>
-        <form className="flex gap-2">
-          {status && <input type="hidden" name="status" value={status} />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Zoek op factuurnummer…"
-            className="w-60 rounded-lg border border-hairstrong bg-white px-3 py-1.5 text-sm"
-          />
-          <button type="submit" className="btn-ghost text-sm">Zoeken</button>
-        </form>
-      </div>
-
-      <Panel title={`${invoices.length} factu${invoices.length === 1 ? "ur" : "ren"}`}>
-        {invoices.length === 0 ? (
-          <EmptyState title="Niets gevonden" body="Pas het filter of je zoekopdracht aan." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">Nummer</th>
-                  <th className="px-5 py-2.5 font-medium">Debiteur</th>
-                  <th className="px-5 py-2.5 font-medium">Soort</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Totaal</th>
-                  <th className="px-5 py-2.5 font-medium">Datum</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Acties</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {invoices.map((i) => (
-                  <tr key={i.id}>
-                    <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{i.number}</td>
-                    <td className="px-5 py-3 text-neutralx-600">
-                      {i.recipientTenantId ? (tenantName.get(i.recipientTenantId) ?? "—") : i.recipientFreelancerId ? (freelancerName.get(i.recipientFreelancerId) ?? "—") : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{TYPE_LABEL[i.type] ?? i.type}</td>
-                    <td className="num px-5 py-3 text-right font-medium">{moneyExact(i.totalCents)}</td>
-                    <td className="px-5 py-3 text-neutralx-500">{dateTime(i.createdAt)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <StatusPill tone={i.status === "PAID" ? "ok" : i.status === "ISSUED" ? "warn" : "neutral"}>
-                        {i.status === "PAID" ? "Betaald" : i.status === "ISSUED" ? "Open" : i.status}
-                      </StatusPill>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className="inline-flex items-center gap-3">
-                        {i.status === "ISSUED" && (i.recipientTenantId || i.recipientFreelancerId) && (
-                          <a
-                            href={`/betaal/${payToken(i.id)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-medium text-brand-600 hover:underline"
-                            title="Openbare betaalpagina met QR-code — door te sturen naar de klant"
-                          >
-                            Betaallink / QR
-                          </a>
-                        )}
-                        <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
-                          PDF ↓
-                        </a>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Panel flush title="Alle facturen" subtitle={`${count(d.invoices.length)} facturen`}>
+        <DataTable
+          columns={[
+            { key: "number", label: "Nummer" },
+            { key: "debtor", label: "Debiteur" },
+            { key: "type", label: "Soort", hideOnMobile: true },
+            { key: "total", label: "Totaal", align: "right" },
+            { key: "date", label: "Datum", hideOnMobile: true },
+            { key: "due", label: "Vervalt", hideOnMobile: true },
+            { key: "status", label: "Status" },
+            { key: "actions", label: "", align: "right", sortable: false },
+          ]}
+          rows={rows}
+          searchPlaceholder="Zoek op nummer of debiteur"
+          csvName="facturen"
+          defaultSort={{ key: "date", dir: "desc" }}
+          filters={[
+            { key: "status", label: "Status", chips: true, options: [{ value: "ISSUED", label: "Open" }, { value: "LATE", label: "Te laat" }, { value: "PAID", label: "Betaald" }, { value: "DRAFT", label: "Concept" }, { value: "CANCELLED", label: "Geannuleerd" }] },
+            { key: "type", label: "Soort", options: Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label })) },
+          ]}
+          emptyText="Er zijn nog geen facturen."
+        />
       </Panel>
     </div>
   );

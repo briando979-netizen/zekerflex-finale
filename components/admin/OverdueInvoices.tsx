@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { euroExact } from "@/lib/admin/format";
+import { Panel, Pill } from "@/components/admin/kit";
 
 interface Row {
   id: string;
@@ -13,8 +15,7 @@ interface Row {
   tenantName: string;
 }
 
-const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
-const STAGE = ["nog geen herinnering", "1e herinnering verstuurd", "2e herinnering verstuurd", "bij jou gemeld"];
+const STAGE = ["Nog geen herinnering", "1e herinnering verstuurd", "2e herinnering verstuurd", "Bij jou gemeld"];
 
 /** Overdue client invoices grouped per company, with the reminder progress and a "remind now" button. */
 export function OverdueInvoices() {
@@ -42,22 +43,6 @@ export function OverdueInvoices() {
     const r = await fetch("/api/admin/invoices/overdue", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: next }) }).catch(() => null);
     if (r?.ok) setEnabled(next);
   }
-  const toggleRow = (
-    <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-      <input type="checkbox" checked={enabled} onChange={(e) => void toggle(e.target.checked)} className="h-4 w-4 accent-brand-500" />
-      Automatische herinneringen {enabled ? "aan" : "uit"}
-    </label>
-  );
-  if (rows.length === 0)
-    return (
-      <section className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-hair bg-white px-5 py-3 shadow-card">
-        <p className="min-w-0 flex-1 text-sm text-neutralx-600">Geen achterstallige facturen. 👍</p>
-        {toggleRow}
-      </section>
-    );
-  const groups = [...rows.reduce((m, r) => m.set(r.tenantId, [...(m.get(r.tenantId) ?? []), r]), new Map<string, Row[]>())];
-  const total = rows.reduce((s, r) => s + r.totalCents, 0);
-
   async function remind(tenantId: string, name: string) {
     setBusy(tenantId);
     const r = await fetch("/api/admin/invoices/overdue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenantId }) }).catch(() => null);
@@ -67,39 +52,48 @@ export function OverdueInvoices() {
     void load();
   }
 
+  const toggleRow = (
+    <label className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--a-dim)" }}>
+      <input type="checkbox" checked={enabled} onChange={(e) => void toggle(e.target.checked)} className="h-4 w-4" />
+      Automatische herinneringen {enabled ? "aan" : "uit"}
+    </label>
+  );
+
+  const groups = [...rows.reduce((m, r) => m.set(r.tenantId, [...(m.get(r.tenantId) ?? []), r]), new Map<string, Row[]>())];
+  const total = rows.reduce((s, r) => s + r.totalCents, 0);
+
   return (
-    <section className="mb-6 overflow-hidden rounded-2xl border border-warn/40 bg-white shadow-card">
-      <div className="flex flex-wrap items-start gap-3 border-b border-hair px-5 py-4">
-        <div className="min-w-[15rem] flex-1">
-        <p className="text-sm font-semibold text-ink">
-          ⏰ Achterstallig: {euro(total)} bij {groups.length} bedrij{groups.length === 1 ? "f" : "ven"}
-        </p>
-        <p className="text-xs text-neutralx-500">Betaaltermijn 14 dagen. {enabled ? "Automatisch" : "Als je het aanzet"}: herinnering na 3 dagen, tweede na 10, melding bij jou na 17. Freelancers met standaard uitbetaling wachten op deze betalingen.</p>
-        </div>
-        {toggleRow}
-      </div>
-      {note && <p className="border-b border-hair px-5 py-2.5 text-sm text-neutralx-600">{note}</p>}
-      <ul className="divide-y divide-hair">
-        {groups.map(([tenantId, list]) => {
-          const sum = list.reduce((s, r) => s + r.totalCents, 0);
-          const worst = Math.max(...list.map((r) => r.daysLate));
-          const stage = Math.max(...list.map((r) => r.stage));
-          return (
-            <li key={tenantId} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-              <span className="min-w-[12rem] flex-1">
-                <span className="block font-medium text-ink">{list[0]!.tenantName}</span>
-                <span className="block text-xs text-neutralx-500">
-                  {list.length} factu{list.length === 1 ? "ur" : "ren"} · tot {worst} dag{worst === 1 ? "" : "en"} te laat · {STAGE[stage] ?? STAGE[3]}
+    <Panel
+      flush
+      title={rows.length === 0 ? "Betaalherinneringen" : `Achterstallig: ${euroExact(total)} bij ${groups.length} ${groups.length === 1 ? "bedrijf" : "bedrijven"}`}
+      subtitle={rows.length === 0 ? "Geen achterstallige facturen." : `Betaaltermijn 14 dagen. ${enabled ? "Automatisch" : "Als je het aanzet"}: herinnering na 3 dagen, tweede na 10, melding bij jou na 17.`}
+      actions={toggleRow}
+    >
+      {note && <p className="px-5 pb-3 text-sm" style={{ color: "var(--a-dim)" }}>{note}</p>}
+      {groups.length > 0 && (
+        <ul>
+          {groups.map(([tenantId, list]) => {
+            const sum = list.reduce((s, r) => s + r.totalCents, 0);
+            const worst = Math.max(...list.map((r) => r.daysLate));
+            const stage = Math.max(...list.map((r) => r.stage));
+            return (
+              <li key={tenantId} className="flex flex-wrap items-center gap-3 px-4 py-3 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                <span className="min-w-[12rem] flex-1">
+                  <span className="block font-medium" style={{ color: "var(--a-text)" }}>{list[0]!.tenantName}</span>
+                  <span className="block text-xs" style={{ color: "var(--a-mute)" }}>
+                    {list.length} {list.length === 1 ? "factuur" : "facturen"}, tot {worst} {worst === 1 ? "dag" : "dagen"} te laat
+                  </span>
                 </span>
-              </span>
-              <span className="num font-semibold text-ink">{euro(sum)}</span>
-              <button type="button" disabled={busy === tenantId} onClick={() => void remind(tenantId, list[0]!.tenantName)} className="btn-ghost text-xs disabled:opacity-50">
-                {busy === tenantId ? "Versturen…" : "Nu herinneren"}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+                <Pill tone={stage >= 3 ? "crit" : stage > 0 ? "warn" : "neutral"}>{STAGE[stage] ?? STAGE[3]}</Pill>
+                <span className="num w-24 text-right font-semibold" style={{ color: "var(--a-text)" }}>{euroExact(sum)}</span>
+                <button type="button" disabled={busy === tenantId} onClick={() => void remind(tenantId, list[0]!.tenantName)} className="a-button text-xs">
+                  {busy === tenantId ? "Versturen…" : "Nu herinneren"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
   );
 }

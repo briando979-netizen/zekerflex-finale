@@ -1,14 +1,16 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { getStripeOverview, type MoneyAmount, type StripeOverview } from "@/lib/billing/stripe-overview";
-import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, moneyExact } from "@/components/app/ui";
+import { euroExact, dateNl, dateTimeNl } from "@/lib/admin/format";
+import { Empty, KpiStrip, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
+import { DataTable, type TableRow } from "@/components/admin/kit-client";
 import { AutoRefresh } from "@/components/admin/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
-const PAYOUT_STATUS: Record<string, { label: string; tone: "ok" | "warn" | "crit" | "neutral" }> = {
+const PAYOUT_STATUS: Record<string, { label: string; tone: Tone }> = {
   paid: { label: "Op je rekening", tone: "ok" },
-  in_transit: { label: "Onderweg", tone: "warn" },
+  in_transit: { label: "Onderweg", tone: "plan" },
   pending: { label: "In behandeling", tone: "warn" },
   failed: { label: "Mislukt", tone: "crit" },
   canceled: { label: "Geannuleerd", tone: "neutral" },
@@ -24,18 +26,6 @@ const DISPUTE_REASON: Record<string, string> = {
   general: "Algemeen",
 };
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("nl-NL", {
-    timeZone: "Europe/Amsterdam",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-const day = (iso: string) =>
-  new Date(iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", year: "numeric" });
-
 function amount(cents: number, currency: string): string {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
 }
@@ -49,19 +39,10 @@ function sum(list: MoneyAmount[] | undefined): string {
 export default async function AdminStripePage() {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <div className="mx-auto max-w-5xl">
-        <PageHeader title="Geen toegang" subtitle="Het Stripe-overzicht is alleen voor platformbeheerders." />
-      </div>
-    );
+    return <PageHead title="Geen toegang" subtitle="Het Stripe-overzicht is alleen voor platformbeheerders." />;
   }
-
   if (!env.STRIPE_SECRET_KEY) {
-    return (
-      <div className="mx-auto max-w-5xl">
-        <PageHeader title="Stripe live" subtitle="Er is nog geen Stripe-sleutel ingesteld (STRIPE_SECRET_KEY)." />
-      </div>
-    );
+    return <PageHead title="Stripe" subtitle="Er is nog geen Stripe-sleutel ingesteld (STRIPE_SECRET_KEY)." />;
   }
 
   let o: StripeOverview;
@@ -69,11 +50,9 @@ export default async function AdminStripePage() {
     o = await getStripeOverview();
   } catch (err) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4">
-        <PageHeader title="Stripe live" subtitle="Rechtstreeks uit je Stripe-account." />
-        <p className="rounded-xl border border-crit/30 bg-crit/5 px-4 py-3 text-sm text-ink">
-          Stripe is nu niet bereikbaar: {(err as Error).message}
-        </p>
+      <div className="space-y-4">
+        <PageHead title="Stripe" subtitle="Rechtstreeks uit je Stripe-account." />
+        <Panel><p className="text-sm" style={{ color: "var(--a-crit)" }}>Stripe is nu niet bereikbaar: {(err as Error).message}</p></Panel>
       </div>
     );
   }
@@ -81,145 +60,114 @@ export default async function AdminStripePage() {
   const openDisputes = o.disputes.filter((d) => d.open);
   const succeeded = o.payments.filter((p) => p.status === "succeeded");
 
+  const paymentRows: TableRow[] = o.payments.map((p) => {
+    const status = p.status === "succeeded" ? "Geslaagd" : p.status === "failed" ? "Mislukt" : "In behandeling";
+    return {
+      id: p.id,
+      search: `${p.payer ?? ""} ${p.method} ${p.description ?? ""} ${p.link?.label ?? ""}`,
+      filters: { status: p.status },
+      cells: {
+        when: <span className="whitespace-nowrap">{dateTimeNl(p.created)}</span>,
+        amount: (
+          <span className="whitespace-nowrap font-medium" style={{ color: "var(--a-text)" }}>
+            {amount(p.amountCents, p.currency)}
+            {p.refundedCents > 0 && <span className="block text-xs font-normal" style={{ color: "var(--a-mute)" }}>−{amount(p.refundedCents, p.currency)} terug</span>}
+          </span>
+        ),
+        method: p.method,
+        payer: <span className="block max-w-[14rem] truncate">{p.payer ?? "—"}</span>,
+        purpose: p.link ? <a href={p.link.href} className="text-xs font-medium hover:underline" style={{ color: "var(--a-accent-ink)" }}>{p.link.label}</a> : <span className="block max-w-[14rem] truncate text-xs">{p.description ?? "—"}</span>,
+        status: <Pill tone={p.status === "succeeded" ? "ok" : p.status === "failed" ? "crit" : "warn"}>{status}</Pill>,
+        open: <a href={p.dashboardUrl} target="_blank" rel="noopener noreferrer" className="a-button text-xs" aria-label="Openen in Stripe">Stripe ↗</a>,
+      },
+      sort: { when: new Date(p.created).getTime(), amount: p.amountCents, method: p.method, payer: p.payer ?? "", status },
+      csv: { when: p.created, amount: (p.amountCents / 100).toFixed(2), method: p.method, payer: p.payer ?? "", purpose: p.link?.label ?? p.description ?? "", status, open: p.dashboardUrl },
+    };
+  });
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageHeader
-          title="Stripe live"
-          subtitle="Saldo, betalingen, uitbetalingen en geschillen — rechtstreeks uit je Stripe-account, zonder Stripe te openen."
-        />
-        <div className="flex items-center gap-3 pb-1">
-          <StatusPill tone={o.livemode ? "ok" : "warn"}>{o.livemode ? "Live-modus" : "Testmodus"}</StatusPill>
-          <AutoRefresh fetchedAt={o.fetchedAt} />
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Stripe"
+        subtitle="Saldo, betalingen, uitbetalingen en geschillen, rechtstreeks uit je Stripe-account."
+        meta={<Pill tone={o.livemode ? "ok" : "warn"}>{o.livemode ? "Live" : "Testmodus"}</Pill>}
+        actions={<AutoRefresh fetchedAt={o.fetchedAt} />}
+      />
 
       {o.errors.length > 0 && (
-        <ul className="space-y-1 rounded-xl border border-warn/30 bg-warn/5 px-4 py-3 text-sm text-ink">
-          {o.errors.map((e) => (
-            <li key={e}>⚠ {e}</li>
-          ))}
-        </ul>
+        <Panel>
+          <ul className="space-y-1 text-sm" style={{ color: "var(--a-warn)" }}>
+            {o.errors.map((e) => <li key={e}>{e}</li>)}
+          </ul>
+        </Panel>
       )}
 
       {openDisputes.length > 0 && (
-        <div className="rounded-xl border border-crit/30 bg-crit/5 px-4 py-3 text-sm text-ink">
-          <p className="font-semibold text-crit">
-            {openDisputes.length === 1 ? "1 open geschil" : `${openDisputes.length} open geschillen`} — reageer op tijd, anders
-            verlies je het bedrag automatisch.
-          </p>
-          <ul className="mt-1.5 space-y-0.5">
+        <Panel
+          flush
+          title={openDisputes.length === 1 ? "1 open geschil" : `${openDisputes.length} open geschillen`}
+          subtitle="Reageer op tijd, anders verlies je het bedrag automatisch."
+        >
+          <ul>
             {openDisputes.map((d) => (
-              <li key={d.id}>
-                {amount(d.amountCents, d.currency)} · {DISPUTE_REASON[d.reason] ?? d.reason}
-                {d.dueBy ? ` · uiterlijk ${day(d.dueBy)}` : ""} ·{" "}
-                <a href={d.dashboardUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-600 hover:underline">
-                  bewijs aanleveren in Stripe ↗
-                </a>
+              <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                <span className="num font-semibold" style={{ color: "var(--a-text)" }}>{amount(d.amountCents, d.currency)}</span>
+                <span className="min-w-[10rem] flex-1" style={{ color: "var(--a-dim)" }}>{DISPUTE_REASON[d.reason] ?? d.reason}{d.dueBy ? `, uiterlijk ${dateNl(d.dueBy)}` : ""}</span>
+                <a href={d.dashboardUrl} target="_blank" rel="noopener noreferrer" className="a-button a-button-primary text-xs">Bewijs aanleveren ↗</a>
               </li>
             ))}
           </ul>
-        </div>
+        </Panel>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Beschikbaar saldo" value={sum(o.balance?.available)} tone="brand" hint="Klaar om uit te betalen" />
-        <KpiCard label="Onderweg" value={sum(o.balance?.pending)} hint="Nog niet vrijgegeven door Stripe" />
-        <KpiCard
-          label="Omzet 30 dagen"
-          value={o.last30 ? moneyExact(o.last30.grossCents) : "—"}
-          {...(o.last30
-            ? {
-                hint: `${o.last30.payments} betaling${o.last30.payments === 1 ? "" : "en"}${
-                  o.last30.refundedCents ? ` · ${moneyExact(o.last30.refundedCents)} terugbetaald` : ""
-                }`,
-              }
-            : {})}
-        />
-        <KpiCard
-          label="Stripe-kosten 30 dagen"
-          value={o.last30 ? moneyExact(o.last30.feeCents) : "—"}
-          {...(o.last30 ? { hint: `Netto ontvangen: ${moneyExact(o.last30.netCents)}` } : {})}
-        />
-      </div>
+      <KpiStrip
+        items={[
+          { label: "Beschikbaar", value: sum(o.balance?.available), hint: "klaar om uit te betalen", tone: "money" },
+          { label: "Onderweg", value: sum(o.balance?.pending), hint: "nog niet vrijgegeven" },
+          ...(o.last30
+            ? [
+                { label: "Omzet 30 dagen", value: euroExact(o.last30.grossCents), hint: `${o.last30.payments} ${o.last30.payments === 1 ? "betaling" : "betalingen"}${o.last30.refundedCents ? `, ${euroExact(o.last30.refundedCents)} terug` : ""}` },
+                { label: "Stripe-kosten 30 dagen", value: euroExact(o.last30.feeCents), hint: `netto ${euroExact(o.last30.netCents)}` },
+              ]
+            : []),
+        ]}
+      />
 
-      <Panel title={`Recente betalingen (${succeeded.length} geslaagd van ${o.payments.length})`}>
-        {o.payments.length === 0 ? (
-          <EmptyState title="Nog geen betalingen" body="Zodra er via Stripe betaald wordt, zie je het hier meteen." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">Moment</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Bedrag</th>
-                  <th className="px-5 py-2.5 font-medium">Betaalmethode</th>
-                  <th className="px-5 py-2.5 font-medium">Betaler</th>
-                  <th className="px-5 py-2.5 font-medium">Voor</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {o.payments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="whitespace-nowrap px-5 py-3 text-neutralx-500">{when(p.created)}</td>
-                    <td className="num whitespace-nowrap px-5 py-3 text-right font-medium">
-                      {amount(p.amountCents, p.currency)}
-                      {p.refundedCents > 0 && (
-                        <span className="block text-xs font-normal text-neutralx-400">−{amount(p.refundedCents, p.currency)} terug</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{p.method}</td>
-                    <td className="max-w-[14rem] truncate px-5 py-3 text-neutralx-600">{p.payer ?? "—"}</td>
-                    <td className="px-5 py-3">
-                      {p.link ? (
-                        <a href={p.link.href} className="text-xs font-medium text-brand-600 hover:underline">
-                          {p.link.label}
-                        </a>
-                      ) : (
-                        <span className="text-xs text-neutralx-400">{p.description ?? "—"}</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-right">
-                      <StatusPill tone={p.status === "succeeded" ? "ok" : p.status === "failed" ? "crit" : "warn"}>
-                        {p.status === "succeeded" ? "Geslaagd" : p.status === "failed" ? "Mislukt" : "In behandeling"}
-                      </StatusPill>
-                      <a
-                        href={p.dashboardUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-xs text-neutralx-400 hover:text-ink"
-                        aria-label="Openen in Stripe"
-                      >
-                        ↗
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Panel flush title="Recente betalingen" subtitle={`${succeeded.length} geslaagd van ${o.payments.length}`}>
+        <DataTable
+          columns={[
+            { key: "when", label: "Moment" },
+            { key: "amount", label: "Bedrag", align: "right" },
+            { key: "method", label: "Methode", hideOnMobile: true },
+            { key: "payer", label: "Betaler", hideOnMobile: true },
+            { key: "purpose", label: "Voor", hideOnMobile: true, sortable: false },
+            { key: "status", label: "Status" },
+            { key: "open", label: "", align: "right", sortable: false },
+          ]}
+          rows={paymentRows}
+          searchPlaceholder="Zoek op betaler of omschrijving"
+          csvName="stripe-betalingen"
+          defaultSort={{ key: "when", dir: "desc" }}
+          filters={[{ key: "status", label: "Status", chips: true, options: [{ value: "succeeded", label: "Geslaagd" }, { value: "failed", label: "Mislukt" }, { value: "pending", label: "In behandeling" }] }]}
+          emptyText="Zodra er via Stripe betaald wordt, zie je het hier meteen."
+        />
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Uitbetalingen naar je bank">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel flush title="Uitbetalingen naar je bank">
           {o.payouts.length === 0 ? (
-            <EmptyState title="Nog geen uitbetalingen" body="Stripe maakt het saldo automatisch over zodra er genoeg vrijgegeven is." />
+            <Empty title="Nog geen uitbetalingen" body="Stripe maakt het saldo automatisch over zodra er genoeg vrijgegeven is." />
           ) : (
-            <ul className="divide-y divide-hair text-sm">
+            <ul>
               {o.payouts.map((p) => {
                 const s = PAYOUT_STATUS[p.status] ?? { label: p.status, tone: "neutral" as const };
                 return (
-                  <li key={p.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                     <span>
-                      <span className="num font-medium text-ink">{amount(p.amountCents, p.currency)}</span>
-                      <span className="block text-xs text-neutralx-500">
-                        {day(p.arrivalDate)}
-                        {p.destination ? ` · ${p.destination}` : ""}
-                      </span>
+                      <span className="num block font-medium" style={{ color: "var(--a-text)" }}>{amount(p.amountCents, p.currency)}</span>
+                      <span className="block text-xs" style={{ color: "var(--a-mute)" }}>{dateNl(p.arrivalDate)}{p.destination ? `, ${p.destination}` : ""}</span>
                     </span>
-                    <StatusPill tone={s.tone}>{s.label}</StatusPill>
+                    <Pill tone={s.tone}>{s.label}</Pill>
                   </li>
                 );
               })}
@@ -227,21 +175,19 @@ export default async function AdminStripePage() {
           )}
         </Panel>
 
-        <Panel title="Geschillen (chargebacks)">
+        <Panel flush title="Geschillen">
           {o.disputes.length === 0 ? (
-            <EmptyState title="Geen geschillen" body="Mooi zo — niemand heeft een betaling teruggedraaid." />
+            <Empty title="Geen geschillen" body="Niemand heeft een betaling betwist." />
           ) : (
-            <ul className="divide-y divide-hair text-sm">
+            <ul>
               {o.disputes.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <li key={d.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                   <span>
-                    <span className="num font-medium text-ink">{amount(d.amountCents, d.currency)}</span>
-                    <span className="block text-xs text-neutralx-500">{DISPUTE_REASON[d.reason] ?? d.reason}</span>
+                    <span className="num block font-medium" style={{ color: "var(--a-text)" }}>{amount(d.amountCents, d.currency)}</span>
+                    <span className="block text-xs" style={{ color: "var(--a-mute)" }}>{DISPUTE_REASON[d.reason] ?? d.reason}</span>
                   </span>
                   <a href={d.dashboardUrl} target="_blank" rel="noopener noreferrer">
-                    <StatusPill tone={d.open ? "crit" : d.status === "won" ? "ok" : "neutral"}>
-                      {d.open ? "Open" : d.status === "won" ? "Gewonnen" : d.status === "lost" ? "Verloren" : d.status}
-                    </StatusPill>
+                    <Pill tone={d.open ? "crit" : d.status === "won" ? "ok" : "neutral"}>{d.open ? "Open" : d.status === "won" ? "Gewonnen" : d.status === "lost" ? "Verloren" : d.status}</Pill>
                   </a>
                 </li>
               ))}
