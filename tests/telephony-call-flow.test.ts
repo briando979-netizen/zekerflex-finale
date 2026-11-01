@@ -17,6 +17,7 @@ vi.mock("@/lib/telephony/store", () => ({
     Object.assign(calls.get(id)!, patch);
     return calls.get(id);
   }),
+  findCallByProviderId: vi.fn(async (sid: string) => [...calls.values()].find((c) => c.providerCallId === sid) ?? null),
   createCall: vi.fn(),
 }));
 const chat = vi.fn();
@@ -35,8 +36,10 @@ vi.mock("next/server", async (importOriginal) => ({
 
 import { POST as voice } from "@/app/api/telephony/voice/route";
 import { POST as gather } from "@/app/api/telephony/gather/route";
+import { POST as status } from "@/app/api/telephony/status/route";
 import { placeTwilioCall } from "@/lib/telephony/twilio";
 import { CALL_SCRIPTS } from "@/lib/telephony/scripts";
+import { sayAndGather } from "@/lib/telephony/twiml";
 
 const werkgever = CALL_SCRIPTS["intro-werkgever"]!;
 const BYE = "Fijn dat u belde";
@@ -93,6 +96,31 @@ describe("het begin van een uitgaand gesprek", () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(String(init.body)).not.toContain("MachineDetection");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("luisteren naar de beller", () => {
+  const dutch = sayAndGather("Vraag?", "https://x/gather");
+
+  it("gebruikt het spraakmodel met de taalcode die daarbij hoort", () => {
+    expect(dutch).toContain('speechModel="deepgram_nova-3"');
+    expect(dutch).toContain('language="nl"');
+    expect(sayAndGather("Question?", "https://x/gather", { recogLang: "en-US" })).toContain('language="en-US"');
+    // "enhanced" hoort bij het oude model en wordt anders genegeerd.
+    expect(dutch).not.toContain("enhanced");
+  });
+
+  it("gebruikt een positief getal als stilte-drempel, want 'auto' mag niet met een model", () => {
+    expect(dutch).toMatch(/speechTimeout="[1-9]\d*"/);
+  });
+
+  it("geeft wie even stil is nog één kans voordat er wordt opgehangen", () => {
+    expect(dutch.match(/<Gather /g)).toHaveLength(2);
+    const stillThere = dutch.indexOf("Bent u er nog?");
+    expect(stillThere).toBeGreaterThan(dutch.indexOf("Vraag?"));
+    expect(stillThere).toBeLessThan(dutch.lastIndexOf("</Gather>"));
+    expect(dutch.indexOf("Ik hoor u niet")).toBeGreaterThan(dutch.lastIndexOf("</Gather>"));
+    expect(dutch.endsWith("<Hangup/>")).toBe(true);
   });
 });
 
@@ -163,17 +191,38 @@ describe("voicemail en bandjes", () => {
 });
 
 describe("afronden", () => {
-  it("laat uitgaand de uitkomst over aan de status-callback, zodat die niet dubbel loopt", async () => {
+  const statusCallback = (query: string, form: Record<string, string>) =>
+    status(new Request(`http://localhost:3000/api/telephony/status${query}`, { method: "POST", body: new URLSearchParams(form).toString() }));
+
+  it("laat de uitkomst over aan de status-callback, zodat die niet dubbel loopt", async () => {
     record({ transcript: [{ at: "t", who: "beller", text: "Ik zoek personeel" }] });
     expect(await say("Doei")).toContain(BYE);
+    expect(calls.get("c1")!.status).toBe("completed");
     expect(captureCallOutcome).not.toHaveBeenCalled();
   });
 
-  it("legt inkomend de uitkomst zelf vast, want daar komt geen status-callback", async () => {
-    record({ direction: "inbound", script: "inbound" });
-    await say("Doei");
-    expect(captureCallOutcome).toHaveBeenCalledWith("c1");
+  it("verwerkt een uitgaand gesprek via het id in de URL", async () => {
+    record();
+    const res = await statusCallback("?callId=c1", { CallStatus: "completed", CallSid: "CA1" });
+    expect(res.status).toBe(204);
     expect(calls.get("c1")!.status).toBe("completed");
+    expect(captureCallOutcome).toHaveBeenCalledWith("c1");
+  });
+
+  it("sluit een inkomend gesprek af als iemand zomaar ophangt, op basis van de CallSid", async () => {
+    record({ direction: "inbound", script: "inbound", providerCallId: "CA-inkomend", status: "in-progress" });
+    const res = await statusCallback("", { CallStatus: "completed", CallSid: "CA-inkomend" });
+    expect(res.status).toBe(204);
+    expect(calls.get("c1")!.status).toBe("completed");
+    expect(captureCallOutcome).toHaveBeenCalledWith("c1");
+  });
+
+  it("doet niets bij een onbekende CallSid", async () => {
+    record({ providerCallId: "CA-ander" });
+    const res = await statusCallback("", { CallStatus: "completed", CallSid: "CA-onbekend" });
+    expect(res.status).toBe(204);
+    expect(captureCallOutcome).not.toHaveBeenCalled();
+    expect(calls.get("c1")!.status).toBe("in-progress");
   });
 });
 
