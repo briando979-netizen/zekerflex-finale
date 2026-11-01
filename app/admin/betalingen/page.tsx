@@ -1,8 +1,14 @@
+import { getPrincipal, hasRole } from "@/lib/auth";
+import { PageHead } from "@/components/admin/kit";
 import { AgentPayConsole } from "@/components/admin/AgentPayConsole";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminBetalingenPage() {
+export default async function AdminBetalingenPage() {
+  const principal = await getPrincipal();
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
+    return <PageHead title="Geen toegang" subtitle="AI-betalingen zijn alleen voor platformbeheerders." />;
+  }
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>

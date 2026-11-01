@@ -282,6 +282,73 @@ export function Chart({
   );
 }
 
+// --- Invoer ------------------------------------------------------------------
+
+/** Knop die ter plekke om een korte invoer vraagt, in plaats van een browservenster. */
+export function InlineAsk({
+  label,
+  question,
+  initial = "",
+  placeholder,
+  required = false,
+  submitLabel = "Opslaan",
+  inputMode,
+  buttonClassName = "a-button text-xs",
+  onSubmit,
+}: {
+  label: ReactNode;
+  question: string;
+  initial?: string;
+  placeholder?: string;
+  required?: boolean;
+  submitLabel?: string;
+  inputMode?: "text" | "decimal" | "numeric";
+  buttonClassName?: string;
+  onSubmit: (value: string) => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(initial);
+  const [busy, setBusy] = useState(false);
+
+  if (!open) {
+    return (
+      <button type="button" className={buttonClassName} onClick={() => { setValue(initial); setOpen(true); }}>
+        {label}
+      </button>
+    );
+  }
+  return (
+    <form
+      className="inline-flex max-w-full flex-wrap items-center justify-end gap-1.5 text-left"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (required && !value.trim()) return;
+        setBusy(true);
+        try {
+          await onSubmit(value.trim());
+          setOpen(false);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder ?? question}
+        aria-label={question}
+        title={question}
+        {...(inputMode ? { inputMode } : {})}
+        className="a-input !w-44 !py-1 text-[0.8125rem]"
+        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+      />
+      <button type="submit" className="a-button a-button-primary text-xs" disabled={busy || (required && !value.trim())}>{busy ? "Bezig…" : submitLabel}</button>
+      <button type="button" className="a-button text-xs" onClick={() => setOpen(false)}>Annuleren</button>
+    </form>
+  );
+}
+
 // --- Tabel -------------------------------------------------------------------
 
 export interface TableColumn {
@@ -490,7 +557,7 @@ export function DataTable({
               <tr key={row.id} onClick={(e) => onRowClick(e, row.href)} className={row.href ? "cursor-pointer" : ""} style={{ borderBottom: "1px solid var(--a-border)" }}>
                 {columns.map((col) => (
                   <td key={col.key} className={`px-3 py-2.5 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${col.align === "right" ? "num text-right" : ""} ${col.hideOnMobile ? "hidden md:table-cell" : ""}`} style={{ color: "var(--a-dim)" }}>
-                    {row.cells[col.key] ?? "—"}
+                    {row.cells[col.key] ?? (col.label ? "—" : null)}
                   </td>
                 ))}
               </tr>

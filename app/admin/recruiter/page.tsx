@@ -1,8 +1,14 @@
+import { getPrincipal, hasRole } from "@/lib/auth";
+import { PageHead } from "@/components/admin/kit";
 import { RecruiterConsole } from "@/components/admin/RecruiterConsole";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminRecruiterPage() {
+export default async function AdminRecruiterPage() {
+  const principal = await getPrincipal();
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
+    return <PageHead title="Geen toegang" subtitle="De AI-recruiter is alleen voor platformbeheerders." />;
+  }
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>

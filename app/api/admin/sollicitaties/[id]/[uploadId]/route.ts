@@ -17,7 +17,7 @@ export async function GET(
   const { id, uploadId } = await props.params;
   try {
     const p = await requirePrincipal();
-    requireRole(p, "PLATFORM_ADMIN", "HQ_ADMIN");
+    requireRole(p, "PLATFORM_ADMIN");
 
     const app = await getApplication(id);
     const file = app?.files.find((f) => f.uploadId === uploadId);

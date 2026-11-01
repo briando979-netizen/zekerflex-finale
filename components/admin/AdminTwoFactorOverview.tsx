@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { NameCell, Panel, Pill } from "@/components/admin/kit";
+import { DataTable, type TableRow } from "@/components/admin/kit-client";
 
 interface Person {
   id: string;
@@ -27,37 +29,35 @@ export function AdminTwoFactorOverview({ people, selfId }: { people: Person[]; s
     } else setNote("Resetten lukte niet.");
   }
 
+  const rows: TableRow[] = list.map((p) => ({
+    id: p.id,
+    search: `${p.name} ${p.email}`,
+    filters: { state: p.twoFactor ? "on" : "off" },
+    cells: {
+      name: <NameCell name={p.id === selfId ? `${p.name} (jij)` : p.name} sub={p.email} />,
+      roles: p.roles.map((r) => ROLE[r] ?? r).join(", "),
+      state: <Pill tone={p.twoFactor ? "ok" : "warn"}>{p.twoFactor ? "Aan" : "Uit"}</Pill>,
+      action: p.twoFactor && p.id !== selfId ? <button type="button" onClick={() => void reset(p)} className="a-button text-xs">Resetten</button> : null,
+    },
+    sort: { name: p.name, roles: p.roles.join(","), state: p.twoFactor ? 1 : 0 },
+  }));
+
   return (
-    <section className="a-panel overflow-hidden">
-      <div className="flex flex-wrap items-center gap-3 border-b px-5 py-4" style={{ borderColor: "var(--a-border)" }}>
-        <h2 className="font-display text-lg font-semibold">Beheerders en werkgevers</h2>
-        <span className="text-sm" style={{ color: "var(--a-dim)" }}>
-          {on} van {list.length} met tweestapsverificatie
-        </span>
-      </div>
-      {note && <p className="px-5 pt-3 text-sm" style={{ color: "var(--a-dim)" }}>{note}</p>}
-      <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-        {list.map((p) => (
-          <li key={p.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-            <span className="min-w-0 flex-1">
-              <span className="block font-medium" style={{ color: "var(--a-text)" }}>
-                {p.name} {p.id === selfId && <span style={{ color: "var(--a-mute)" }}>(jij)</span>}
-              </span>
-              <span className="block text-xs" style={{ color: "var(--a-mute)" }}>
-                {p.email} · {p.roles.map((r) => ROLE[r] ?? r).join(", ")}
-              </span>
-            </span>
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.twoFactor ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>
-              {p.twoFactor ? "✓ aan" : "uit"}
-            </span>
-            {p.twoFactor && p.id !== selfId && (
-              <button type="button" onClick={() => void reset(p)} className="text-xs underline" style={{ color: "var(--a-mute)" }}>
-                Resetten
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Panel flush title="Beheerders en werkgevers" subtitle={`${on} van ${list.length} met tweestapsverificatie`}>
+      {note && <p role="status" className="px-4 pb-3 text-[0.8125rem] sm:px-5" style={{ color: "var(--a-dim)" }}>{note}</p>}
+      <DataTable
+        columns={[
+          { key: "name", label: "Naam" },
+          { key: "roles", label: "Rol", hideOnMobile: true },
+          { key: "state", label: "Tweestaps" },
+          { key: "action", label: "", align: "right", sortable: false },
+        ]}
+        rows={rows}
+        pageSize={15}
+        searchPlaceholder="Zoek op naam of e-mail"
+        filters={[{ key: "state", label: "Tweestaps", chips: true, options: [{ value: "off", label: "Uit" }, { value: "on", label: "Aan" }] }]}
+        emptyText="Nog geen beheerders of werkgevers."
+      />
+    </Panel>
   );
 }

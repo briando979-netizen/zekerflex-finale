@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { count } from "@/lib/admin/format";
+import { Empty, KpiStrip, Panel, Pill } from "@/components/admin/kit";
 
 interface Entry {
   host: string;
@@ -8,14 +10,37 @@ interface Entry {
   brand: { name: string; primaryColor: string; logoUrl: string };
 }
 
-const inp = "w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm";
-const lbl = "block text-xs font-medium text-neutralx-500 mb-1";
+export interface TenantOption {
+  id: string;
+  name: string;
+}
+
 const emptyEntry = (): Entry => ({ host: "", tenantId: "", brand: { name: "", primaryColor: "#0E5C4A", logoUrl: "" } });
 
-export function TenancyBoard() {
+/** Hoe de omgeving van deze klant eruitziet: logo of naam op de eigen kleur. */
+function BrandPreview({ brand, host }: { brand: Entry["brand"]; host: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg p-3" style={{ background: "var(--a-panel-2)" }}>
+      <span className="grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden rounded-lg text-sm font-semibold text-white" style={{ background: brand.primaryColor || "#0E5C4A" }}>
+        {brand.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={brand.logoUrl} alt="" className="h-full w-full object-contain" />
+        ) : (
+          (brand.name || "?").slice(0, 1).toUpperCase()
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>{brand.name || "Nog geen naam"}</span>
+        <span className="block truncate text-xs" style={{ color: "var(--a-mute)" }}>{host || "Nog geen adres"}</span>
+      </span>
+    </div>
+  );
+}
+
+export function TenancyBoard({ tenants }: { tenants: TenantOption[] }) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testHost, setTestHost] = useState("");
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -43,7 +68,7 @@ export function TenancyBoard() {
     setMsg(null);
     try {
       const res = await fetch("/api/admin/tenancy", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entries }) });
-      setMsg(res.ok ? "Opgeslagen." : "Opslaan mislukt.");
+      setMsg(res.ok ? { ok: true, text: "Opgeslagen." } : { ok: false, text: "Opslaan mislukt. Controleer of elke klant een adres en tenant heeft." });
     } finally {
       setSaving(false);
     }
@@ -53,48 +78,86 @@ export function TenancyBoard() {
     setTestResult(null);
     const res = await fetch(`/api/tenancy/resolve?host=${encodeURIComponent(testHost)}`, { cache: "no-store" });
     const d = (await res.json().catch(() => ({}))) as { matched?: boolean; tenantId?: string; brand?: { name?: string } };
-    setTestResult(d.matched ? `→ tenant ${d.tenantId} (${d.brand?.name ?? "—"})` : "→ geen klant gekoppeld (standaard ZekerFlex-merk)");
+    setTestResult(d.matched ? `Hoort bij ${d.brand?.name ?? "—"} (${d.tenantId})` : "Geen klant gekoppeld: dit adres krijgt het standaard ZekerFlex-merk");
   }
 
-  if (!entries) return <div className="h-40 animate-pulse rounded-2xl bg-paper-soft" />;
+  if (!entries) return <div className="a-panel h-40 animate-pulse" />;
+
+  const tenantName = (id: string) => tenants.find((t) => t.id === id)?.name ?? null;
+  const unknownTenants = entries.filter((e) => e.tenantId && !tenantName(e.tenantId)).length;
 
   return (
-    <div className="space-y-6">
-      <div className="card space-y-3 p-5">
-        <div>
-          <p className="text-sm font-semibold text-ink">Klant-omgevingen (white-label)</p>
-          <p className="mt-0.5 text-xs text-neutralx-500">
-            Koppel een host (subdomein of eigen domein van de klant) aan hun tenant + merk. Gebruik <code>*.jouwplatform.nl</code> als
-            wildcard voor alle subdomeinen. De tenant-id is een bestaande organisatie (child van jouw reseller-tenant).
-          </p>
-        </div>
-        <div className="space-y-3">
-          {entries.map((e, i) => (
-            <div key={i} className="grid gap-2 rounded-xl border border-hairstrong p-3 sm:grid-cols-[1.3fr_1fr_1.3fr_0.8fr_1fr_auto]">
-              <div><label className={lbl}>Host</label><input className={inp} value={e.host} onChange={(ev) => patch(i, { host: ev.target.value })} placeholder="klant1.jouwplatform.nl" /></div>
-              <div><label className={lbl}>Tenant-id</label><input className={inp} value={e.tenantId} onChange={(ev) => patch(i, { tenantId: ev.target.value })} placeholder="cl_…" /></div>
-              <div><label className={lbl}>Merknaam</label><input className={inp} value={e.brand.name} onChange={(ev) => patch(i, { brand: { name: ev.target.value } })} placeholder="Klant BV" /></div>
-              <div><label className={lbl}>Kleur</label><input className={inp} type="color" value={e.brand.primaryColor} onChange={(ev) => patch(i, { brand: { primaryColor: ev.target.value } })} /></div>
-              <div><label className={lbl}>Logo-URL</label><input className={inp} value={e.brand.logoUrl} onChange={(ev) => patch(i, { brand: { logoUrl: ev.target.value } })} placeholder="https://…/logo.svg" /></div>
-              <button type="button" onClick={() => setEntries(entries.filter((_, j) => j !== i))} className="btn-ghost self-end text-xs text-crit">×</button>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => setEntries([...entries, emptyEntry()])} className="btn-ghost text-xs">+ klant koppelen</button>
-          <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? "Opslaan…" : "Opslaan"}</button>
-          {msg && <span className="text-sm text-neutralx-600">{msg}</span>}
-        </div>
-      </div>
+    <div className="space-y-4">
+      <KpiStrip
+        items={[
+          { label: "Gekoppelde klanten", value: count(entries.length), hint: "adres gekoppeld aan een organisatie" },
+          { label: "Met wildcard", value: count(entries.filter((e) => e.host.includes("*")).length), hint: "alle subdomeinen in één keer" },
+          { label: "Met eigen logo", value: count(entries.filter((e) => e.brand.logoUrl).length), hint: "de rest toont de merknaam" },
+          { label: "Onbekende organisatie", value: count(unknownTenants), hint: unknownTenants > 0 ? "controleer de tenant-id" : "alles klopt", ...(unknownTenants > 0 ? { tone: "warn" as const } : {}) },
+        ]}
+      />
 
-      <div className="card space-y-2 p-5">
-        <p className="text-sm font-semibold text-ink">Test een host</p>
+      <Panel
+        flush
+        title="Klant-omgevingen"
+        subtitle="Koppel een adres (subdomein of eigen domein van de klant) aan een organisatie en merk. Gebruik *.jouwplatform.nl voor alle subdomeinen."
+        actions={<button type="button" onClick={() => setEntries([...entries, emptyEntry()])} className="a-button text-xs">Klant koppelen</button>}
+        footer={
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => void save()} disabled={saving} className="a-button a-button-primary">{saving ? "Opslaan…" : "Opslaan"}</button>
+            {msg && <span role="status" className="text-xs" style={{ color: msg.ok ? "var(--a-ok)" : "var(--a-crit)" }}>{msg.text}</span>}
+          </div>
+        }
+      >
+        <datalist id="tenant-options">
+          {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </datalist>
+        {entries.length === 0 ? (
+          <Empty title="Nog geen klanten gekoppeld" body="Host andere bureaus onder je platform met een eigen adres en merk." />
+        ) : (
+          <ul>
+            {entries.map((e, i) => {
+              const name = tenantName(e.tenantId);
+              return (
+                <li key={i} className="grid gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[1fr_16rem]" style={{ borderTop: "1px solid var(--a-border)" }}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="a-label">Adres<input className="a-input" value={e.host} onChange={(ev) => patch(i, { host: ev.target.value })} placeholder="klant1.jouwplatform.nl" /></label>
+                    <label className="a-label">
+                      Organisatie (tenant-id)
+                      <input className="a-input" list="tenant-options" value={e.tenantId} onChange={(ev) => patch(i, { tenantId: ev.target.value })} placeholder="Kies of plak een id" />
+                      {e.tenantId && (
+                        <span className="mt-1 block text-xs font-normal">
+                          {name ? <Pill tone="ok">{name}</Pill> : <Pill tone="warn">Onbekende organisatie</Pill>}
+                        </span>
+                      )}
+                    </label>
+                    <label className="a-label">Merknaam<input className="a-input" value={e.brand.name} onChange={(ev) => patch(i, { brand: { name: ev.target.value } })} placeholder="Klant BV" /></label>
+                    <label className="a-label">Logo-adres<input className="a-input" value={e.brand.logoUrl} onChange={(ev) => patch(i, { brand: { logoUrl: ev.target.value } })} placeholder="https://…/logo.svg" /></label>
+                  </div>
+                  <div className="space-y-2.5">
+                    <BrandPreview brand={e.brand} host={e.host} />
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--a-dim)" }}>
+                        Kleur
+                        <input type="color" aria-label="Merkkleur" value={e.brand.primaryColor} onChange={(ev) => patch(i, { brand: { primaryColor: ev.target.value } })} className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+                      </label>
+                      <button type="button" onClick={() => setEntries(entries.filter((_, j) => j !== i))} className="a-button text-xs" style={{ color: "var(--a-crit)" }}>Verwijderen</button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Test een adres" subtitle="Zie welk merk en welke organisatie bij een adres hoort">
         <div className="flex flex-wrap items-center gap-2">
-          <input className={`${inp} max-w-xs`} value={testHost} onChange={(e) => setTestHost(e.target.value)} placeholder="klant1.jouwplatform.nl" />
-          <button type="button" onClick={() => void test()} className="btn-ghost text-sm">Resolve</button>
-          {testResult && <span className="text-sm text-neutralx-600">{testResult}</span>}
+          <input className="a-input max-w-xs" value={testHost} onChange={(e) => setTestHost(e.target.value)} placeholder="klant1.jouwplatform.nl" aria-label="Adres om te testen" />
+          <button type="button" onClick={() => void test()} disabled={!testHost.trim()} className="a-button">Testen</button>
+          {testResult && <span role="status" className="text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>{testResult}</span>}
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
-import { ADMIN_HUBS, locateAdminPage, type AdminHub, type HubIcon } from "@/lib/admin/nav";
+import { locateAdminPage, visibleHubs, type AdminHub, type HubIcon } from "@/lib/admin/nav";
 import { ViewAsSwitcher } from "@/components/admin/ViewAsControls";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { LogoGlyph } from "@/components/brand/Logo";
@@ -28,12 +28,15 @@ export function AdminShell({
   userName,
   userMeta,
   avatarUrl,
+  limited = false,
   children,
 }: {
   userName: string;
   userMeta: string;
   /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
   avatarUrl?: string | null;
+  /** Geen platformbeheerder: alleen wat deze rol hier mag zien. */
+  limited?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -70,7 +73,8 @@ export function AdminShell({
       return !c;
     });
 
-  const activeHub = located?.hub.id ?? ADMIN_HUBS[0]!.id;
+  const hubs = visibleHubs(limited);
+  const activeHub = located?.hub.id ?? hubs[0]?.id ?? "";
   const shownHub = openHub ?? activeHub;
 
   return (
@@ -90,7 +94,7 @@ export function AdminShell({
         style={{ background: "var(--a-side-bg)", color: "var(--a-side-text)" }}
       >
         <div className={`flex h-14 flex-shrink-0 items-center gap-2.5 px-4 ${collapsed ? "lg:justify-center lg:px-0" : ""}`}>
-          <Link href="/admin" className="flex min-w-0 items-center gap-2.5" aria-label="Naar het controlecentrum">
+          <Link href={hubs[0]?.pages[0]?.href ?? "/admin"} className="flex min-w-0 items-center gap-2.5" aria-label="Naar de startpagina van beheer">
             <LogoGlyph size={28} tone="light" className="flex-shrink-0" />
             <span className={`truncate text-[0.9375rem] font-semibold tracking-tight text-white ${collapsed ? "lg:hidden" : ""}`}>ZekerFlex</span>
           </Link>
@@ -100,7 +104,7 @@ export function AdminShell({
         </div>
 
         <nav aria-label="Hoofdnavigatie" className="a-scroll-x flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4 pt-1">
-          {ADMIN_HUBS.map((hub) => (
+          {hubs.map((hub) => (
             <HubLink
               key={hub.id}
               hub={hub}
@@ -171,7 +175,7 @@ export function AdminShell({
             </button>
 
             <div className="ml-auto flex flex-shrink-0 items-center gap-1 md:ml-1">
-              <ViewAsSwitcher />
+              {!limited && <ViewAsSwitcher />}
               <IconButton onClick={toggleTheme} label={theme === "dark" ? "Licht thema" : "Donker thema"}>
                 {theme === "dark" ? <SunIcon /> : <MoonIcon />}
               </IconButton>
@@ -179,7 +183,7 @@ export function AdminShell({
               <UserMenu userName={userName} userMeta={userMeta} avatarUrl={avatarUrl ?? null} />
             </div>
           </div>
-          {located && located.hub.pages.length > 1 && <SectionTabs hub={located.hub} current={located.page.href} />}
+          {located && !limited && located.hub.pages.length > 1 && <SectionTabs hub={located.hub} current={located.page.href} />}
         </header>
 
         <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1500px] flex-1 px-3 pb-14 pt-5 outline-none sm:px-5 lg:px-7 lg:pt-6">

@@ -138,6 +138,14 @@ export const ADMIN_HUBS: AdminHub[] = [
   },
 ];
 
+/** Wat een bedrijfsbeheerder of dispuutmanager hier mag zien: de eigen disputen, verder niets van het platform. */
+const LIMITED_PAGES = new Set(["/admin/disputes"]);
+
+export function visibleHubs(limited: boolean): AdminHub[] {
+  if (!limited) return ADMIN_HUBS;
+  return ADMIN_HUBS.map((hub) => ({ ...hub, pages: hub.pages.filter((page) => LIMITED_PAGES.has(page.href)) })).filter((hub) => hub.pages.length > 0);
+}
+
 const ALL_PAGES = ADMIN_HUBS.flatMap((hub) => hub.pages.map((page) => ({ hub, page })));
 
 /** Het onderdeel en de pagina bij een adres. Ook voor detailpagina's zoals /admin/gebruikers/123. */

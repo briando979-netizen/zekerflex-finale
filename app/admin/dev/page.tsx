@@ -1,9 +1,15 @@
+import { getPrincipal, hasRole } from "@/lib/auth";
+import { PageHead } from "@/components/admin/kit";
 import { ConsoleTerminal } from "@/components/admin/ConsoleTerminal";
 import { DevEnvLauncher } from "@/components/admin/DevEnvLauncher";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminDevPage() {
+export default async function AdminDevPage() {
+  const principal = await getPrincipal();
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
+    return <PageHead title="Geen toegang" subtitle="De terminal is alleen voor platformbeheerders." />;
+  }
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>

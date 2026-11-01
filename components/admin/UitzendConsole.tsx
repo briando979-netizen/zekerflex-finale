@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { count, dateTimeNl, euro, percentOf } from "@/lib/admin/format";
+import { Empty, Feed, KpiStrip, NameCell, PageHead, Panel, Pill, StackBar, type Tone } from "@/components/admin/kit";
+import { DataTable, InlineAsk, type TableRow } from "@/components/admin/kit-client";
 
 interface Worker {
   userId: string;
@@ -38,17 +41,32 @@ interface Lead {
   notes: string | null;
   createdAt: string;
 }
+interface Client {
+  tenantId: string;
+  tenantName: string;
+  shiftCount: number;
+  openPositions: number;
+  filledPositions: number;
+  nextShiftAt: string | null;
+}
 interface Data {
   leads: Lead[];
+  clients: Client[];
   pool: Worker[];
   signals: Signal[];
   economics: Econ[];
   defaultMarkup: number;
 }
 
-const eur = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c / 100);
-const PHASE: Record<Worker["phase"], string> = { A: "Fase A", B: "Fase B", C: "Fase C" };
-const LEAD_STATUS: Record<string, string> = { NEW: "nieuw", ENRICHED: "nieuw", REPLIED: "in gesprek", WON: "klant", LOST: "verloren", DISQUALIFIED: "afgewezen", SENT: "uitgenodigd" };
+const LEAD_STATUS: Record<string, { label: string; tone: Tone }> = {
+  NEW: { label: "Nieuw", tone: "warn" },
+  ENRICHED: { label: "Nieuw", tone: "warn" },
+  SENT: { label: "Uitgenodigd", tone: "plan" },
+  REPLIED: { label: "In gesprek", tone: "plan" },
+  WON: { label: "Klant", tone: "ok" },
+  LOST: { label: "Verloren", tone: "neutral" },
+  DISQUALIFIED: { label: "Afgewezen", tone: "neutral" },
+};
 
 /** /admin/uitzendbureau — ABU signals, the pool, numbers per client and the aanvragen pipeline. */
 export function UitzendConsole() {
@@ -71,179 +89,218 @@ export function UitzendConsole() {
     void load();
   }
 
-  if (!d) return <p className="py-8 text-center text-sm" style={{ color: "var(--a-mute)" }}>Laden…</p>;
-  const totals = d.economics.reduce((s, e) => ({ rev: s.rev + e.revenueCents, markup: s.markup + e.markupCents, hours: s.hours + e.hours }), { rev: 0, markup: 0, hours: 0 });
-  const box = { background: "var(--a-elev)" };
+  const head = <PageHead title="Uitzendbureau" subtitle="Bedrijven die personeel via het ZekerFlex-uitzendbureau afnemen, van eerste aanvraag tot actieve klant." />;
+
+  if (!d) {
+    return (
+      <div className="space-y-4">
+        {head}
+        <div className="a-panel h-28 animate-pulse" />
+      </div>
+    );
+  }
+
+  const totals = d.economics.reduce((s, e) => ({ rev: s.rev + e.revenueCents, wage: s.wage + e.wageCents, markup: s.markup + e.markupCents, hours: s.hours + e.hours }), { rev: 0, wage: 0, markup: 0, hours: 0 });
+  const open = d.clients.reduce((n, c) => n + c.openPositions, 0);
+  const filled = d.clients.reduce((n, c) => n + c.filledPositions, 0);
+  const phaseCount = (p: Worker["phase"]) => d.pool.filter((w) => w.phase === p).length;
+  const openLeads = d.leads.filter((l) => !["WON", "LOST", "DISQUALIFIED"].includes(l.status));
+
+  const clientRows: TableRow[] = d.clients.map((c) => ({
+    id: c.tenantId,
+    href: `/admin/bedrijven/${c.tenantId}`,
+    search: c.tenantName,
+    cells: {
+      name: <NameCell name={c.tenantName} sub={`${c.shiftCount} ${c.shiftCount === 1 ? "klus" : "klussen"}`} />,
+      filled: count(c.filledPositions),
+      open: c.openPositions > 0 ? <span style={{ color: "var(--a-warn)", fontWeight: 500 }}>{count(c.openPositions)}</span> : "0",
+      next: c.nextShiftAt ? dateTimeNl(c.nextShiftAt) : "—",
+    },
+    sort: { name: c.tenantName, filled: c.filledPositions, open: c.openPositions, next: c.nextShiftAt ? new Date(c.nextShiftAt).getTime() : null },
+  }));
+
+  const econRows: TableRow[] = d.economics.map((e) => ({
+    id: e.tenantId,
+    search: e.name,
+    cells: {
+      name: <span className="font-medium" style={{ color: "var(--a-text)" }}>{e.name}</span>,
+      hours: e.hours.toLocaleString("nl-NL"),
+      wage: euro(e.wageCents),
+      markup: euro(e.markupCents),
+      revenue: <span className="font-medium" style={{ color: "var(--a-text)" }}>{euro(e.revenueCents)}</span>,
+      rate: (
+        <InlineAsk
+          label={`${Math.round(e.markupRate * 100)}%`}
+          question={`Opslag voor ${e.name} in % (leeg = standaard ${Math.round(d.defaultMarkup * 100)}%)`}
+          initial={String(Math.round(e.markupRate * 100))}
+          inputMode="decimal"
+          onSubmit={(v) => post("/api/admin/uitzendbureau", { action: "markup", tenantId: e.tenantId, rate: v ? Number(v.replace(",", ".")) / 100 : null }, "Opslag opgeslagen. Dit geldt voor nieuwe goedkeuringen.")}
+        />
+      ),
+    },
+    sort: { name: e.name, hours: e.hours, wage: e.wageCents, markup: e.markupCents, revenue: e.revenueCents, rate: e.markupRate },
+    csv: { name: e.name, hours: e.hours, wage: (e.wageCents / 100).toFixed(2), markup: (e.markupCents / 100).toFixed(2), revenue: (e.revenueCents / 100).toFixed(2), rate: Math.round(e.markupRate * 100) },
+  }));
+
+  const poolRows: TableRow[] = d.pool.map((w) => ({
+    id: w.userId,
+    href: `/admin/gebruikers/${w.userId}`,
+    search: `${w.name} ${w.email ?? ""}`,
+    filters: { phase: w.phase },
+    cells: {
+      name: <NameCell name={w.name} {...(w.email ? { sub: w.email } : {})} />,
+      phase: <Pill tone={w.phase === "A" ? "neutral" : w.phase === "B" ? "plan" : "warn"}>Fase {w.phase}</Pill>,
+      weeks: count(w.weeksWorked),
+      lastWeek: w.lastWeek,
+      hours: count(w.lastWeekHours),
+      gross: euro(w.lastWeekGrossCents),
+    },
+    sort: { name: w.name, phase: w.phase, weeks: w.weeksWorked, lastWeek: w.lastWeek, hours: w.lastWeekHours, gross: w.lastWeekGrossCents },
+  }));
 
   return (
-    <div className="space-y-6">
-      {note && <p className="a-panel p-3 text-sm" style={{ color: note.ok ? "#16a34a" : "#dc2626" }}>{note.text}</p>}
+    <div className="space-y-4">
+      {head}
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        {[
-          ["Uitzendkrachten (pool)", String(d.pool.length)],
-          ["Uren deze maand", totals.hours.toLocaleString("nl-NL")],
-          ["Omzet deze maand", eur(totals.rev)],
-          ["Opslag deze maand", eur(totals.markup)],
-        ].map(([l, v]) => (
-          <div key={l} className="a-panel p-4">
-            <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--a-mute)" }}>{l}</p>
-            <p className="mt-1 font-display text-2xl font-bold" style={{ color: "var(--a-text)" }}>{v}</p>
-          </div>
-        ))}
+      {note && (
+        <Panel>
+          <p role="status" className="text-[0.8125rem]" style={{ color: note.ok ? "var(--a-ok)" : "var(--a-crit)" }}>{note.text}</p>
+        </Panel>
+      )}
+
+      <KpiStrip
+        items={[
+          { label: "Omzet deze maand", value: euro(totals.rev), hint: `${totals.hours.toLocaleString("nl-NL")} uur` },
+          { label: "Opslag deze maand", value: euro(totals.markup), hint: totals.rev > 0 ? `${percentOf(totals.markup, totals.rev)}% van de omzet` : "nog geen omzet", tone: "money" },
+          { label: "Actieve klanten", value: count(d.clients.length), hint: `${count(openLeads.length)} open aanvragen` },
+          { label: "Open plekken", value: count(open), hint: `${count(filled)} bezet`, ...(open > 0 ? { tone: "warn" as const } : {}) },
+          { label: "Uitzendkrachten", value: count(d.pool.length), hint: "in de recente verloningen" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <Panel title="Actie nodig" subtitle="ABU-drempels die binnen enkele weken bereikt worden" className="lg:col-span-1">
+          <Feed
+            emptyText="Geen naderende drempels."
+            items={d.signals.map((s, i) => ({ key: `${s.userId}-${i}`, text: <><strong className="font-medium">{s.name}</strong>: {s.text}</>, tone: s.level === "warn" ? "warn" as const : "plan" as const, href: `/admin/gebruikers/${s.userId}` }))}
+          />
+        </Panel>
+        <Panel title="Kosten en opslag" subtitle="Deze maand: wat loon is en wat bij ZekerFlex blijft" className="lg:col-span-1">
+          <StackBar
+            format={euro}
+            emptyText="Nog geen uitzendfacturen deze maand."
+            segments={[
+              { label: "Loonkosten", value: totals.wage, slot: 3 },
+              { label: "Opslag", value: totals.markup, slot: 1 },
+            ]}
+          />
+        </Panel>
+        <Panel title="Fasen in de pool" subtitle="Hoe ver uitzendkrachten in de ABU-cao zijn" className="lg:col-span-1">
+          <StackBar
+            emptyText="Nog geen uitzendkrachten in de recente verloningen."
+            segments={[
+              { label: "Fase A", value: phaseCount("A"), slot: 1 },
+              { label: "Fase B", value: phaseCount("B"), slot: 3 },
+              { label: "Fase C", value: phaseCount("C"), slot: 4 },
+            ]}
+          />
+        </Panel>
       </div>
 
-      <section className="a-panel p-5">
-        <h2 className="font-display text-lg font-semibold" style={{ color: "var(--a-text)" }}>⚠️ Actie nodig (ABU-cao)</h2>
-        <p className="mb-3 text-xs" style={{ color: "var(--a-mute)" }}>Drempels die binnen enkele weken bereikt worden — op tijd een contract of pensioen regelen voorkomt claims.</p>
-        {d.signals.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--a-mute)" }}>Geen naderende drempels.</p>
-        ) : (
-          <ul className="space-y-2">
-            {d.signals.map((s, i) => (
-              <li key={i} className="rounded-xl px-4 py-2.5 text-sm" style={box}>
-                <span className="font-semibold" style={{ color: s.level === "warn" ? "#d97706" : "var(--a-text)" }}>{s.name}</span>
-                <span style={{ color: "var(--a-dim)" }}> — {s.text}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Panel flush title="Actieve klanten" subtitle="Bedrijven met minstens één klus via het uitzendbureau">
+        <DataTable
+          columns={[
+            { key: "name", label: "Bedrijf" },
+            { key: "filled", label: "Bezet", align: "right" },
+            { key: "open", label: "Open", align: "right" },
+            { key: "next", label: "Eerstvolgende", hideOnMobile: true },
+          ]}
+          rows={clientRows}
+          pageSize={10}
+          defaultSort={{ key: "open", dir: "desc" }}
+          emptyText="Nog geen klussen met het uitzendbureau-vinkje."
+        />
+      </Panel>
 
-      <section className="a-panel p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold" style={{ color: "var(--a-text)" }}>Cijfers per klant (deze maand)</h2>
-        {d.economics.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen uitzendfacturen deze maand.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase" style={{ color: "var(--a-mute)" }}>
-                  <th className="py-2">Klant</th>
-                  <th className="py-2 text-right">Uren</th>
-                  <th className="py-2 text-right">Loonkosten</th>
-                  <th className="py-2 text-right">Opslag</th>
-                  <th className="py-2 text-right">Omzet</th>
-                  <th className="py-2 text-right">Opslag %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.economics.map((e) => (
-                  <tr key={e.tenantId} className="border-t" style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}>
-                    <td className="py-2">{e.name}</td>
-                    <td className="py-2 text-right">{e.hours.toLocaleString("nl-NL")}</td>
-                    <td className="py-2 text-right">{eur(e.wageCents)}</td>
-                    <td className="py-2 text-right">{eur(e.markupCents)}</td>
-                    <td className="py-2 text-right font-semibold">{eur(e.revenueCents)}</td>
-                    <td className="py-2 text-right">
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() => {
-                          const v = window.prompt(`Opslag voor ${e.name} in % (leeg = standaard ${Math.round(d.defaultMarkup * 100)}%)`, String(Math.round(e.markupRate * 100)));
-                          if (v === null) return;
-                          const rate = v.trim() ? Number(v.replace(",", ".")) / 100 : null;
-                          void post("/api/admin/uitzendbureau", { action: "markup", tenantId: e.tenantId, rate }, "Opslag opgeslagen — geldt voor nieuwe goedkeuringen.");
-                        }}
-                      >
-                        {Math.round(e.markupRate * 100)}%
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <p className="mt-2 text-xs" style={{ color: "var(--a-mute)" }}>Opslag = wat ZekerFlex bovenop het loon factureert, vóór werkgeverslasten (vakantiegeld, premies, pensioen).</p>
-      </section>
+      <Panel flush title="Cijfers per klant" subtitle="Deze maand. Opslag is wat ZekerFlex bovenop het loon factureert, vóór werkgeverslasten zoals vakantiegeld, premies en pensioen.">
+        <DataTable
+          columns={[
+            { key: "name", label: "Klant" },
+            { key: "hours", label: "Uren", align: "right" },
+            { key: "wage", label: "Loonkosten", align: "right", hideOnMobile: true },
+            { key: "markup", label: "Opslag", align: "right", hideOnMobile: true },
+            { key: "revenue", label: "Omzet", align: "right" },
+            { key: "rate", label: "Opslag %", align: "right" },
+          ]}
+          rows={econRows}
+          pageSize={10}
+          csvName="uitzend-per-klant"
+          defaultSort={{ key: "revenue", dir: "desc" }}
+          emptyText="Nog geen uitzendfacturen deze maand."
+        />
+      </Panel>
 
-      <section className="a-panel p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold" style={{ color: "var(--a-text)" }}>Uitzendkrachten</h2>
-        {d.pool.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen uitzendkrachten in de recente verloningen.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase" style={{ color: "var(--a-mute)" }}>
-                  <th className="py-2">Naam</th>
-                  <th className="py-2">Fase</th>
-                  <th className="py-2 text-right">Weken</th>
-                  <th className="py-2 text-right">Laatste week</th>
-                  <th className="py-2 text-right">Uren</th>
-                  <th className="py-2 text-right">Bruto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.pool.map((w) => (
-                  <tr key={w.userId} className="border-t" style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}>
-                    <td className="py-2">{w.name}</td>
-                    <td className="py-2">{PHASE[w.phase]}</td>
-                    <td className="py-2 text-right">{w.weeksWorked}</td>
-                    <td className="py-2 text-right">{w.lastWeek}</td>
-                    <td className="py-2 text-right">{w.lastWeekHours}</td>
-                    <td className="py-2 text-right">{eur(w.lastWeekGrossCents)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <Panel flush title="Uitzendkrachten" subtitle={`${count(d.pool.length)} in de recente verloningen`}>
+        <DataTable
+          columns={[
+            { key: "name", label: "Naam" },
+            { key: "phase", label: "Fase" },
+            { key: "weeks", label: "Weken", align: "right" },
+            { key: "lastWeek", label: "Laatste week", hideOnMobile: true },
+            { key: "hours", label: "Uren", align: "right", hideOnMobile: true },
+            { key: "gross", label: "Bruto", align: "right", hideOnMobile: true },
+          ]}
+          rows={poolRows}
+          pageSize={15}
+          searchPlaceholder="Zoek op naam"
+          filters={[{ key: "phase", label: "Fase", chips: true, options: [{ value: "A", label: "Fase A" }, { value: "B", label: "Fase B" }, { value: "C", label: "Fase C" }] }]}
+          defaultSort={{ key: "weeks", dir: "desc" }}
+          emptyText="Nog geen uitzendkrachten in de recente verloningen."
+        />
+      </Panel>
 
-      <section className="a-panel p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold" style={{ color: "var(--a-text)" }}>Aanvragen ({d.leads.length})</h2>
+      <Panel flush title="Aanvragen" subtitle={`${count(d.leads.length)} via /uitzendbureau, ${count(openLeads.length)} staan open`}>
         {d.leads.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen aanvragen via /uitzendbureau.</p>
+          <Empty title="Nog geen aanvragen" body="Aanvragen via /uitzendbureau komen hier binnen." />
         ) : (
-          <ul className="space-y-2.5">
-            {d.leads.map((l) => (
-              <li key={l.id} className="rounded-xl px-4 py-3" style={box}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>{l.companyName}</span>
-                  <span className="a-tag">{LEAD_STATUS[l.status] ?? l.status.toLowerCase()}</span>
-                  <span className="ml-auto flex flex-wrap gap-2 text-xs">
-                    {l.contactEmail && !["WON", "LOST", "DISQUALIFIED"].includes(l.status) && (
-                      <button type="button" className="a-button" onClick={() => post(`/api/sales/leads/${l.id}/invite`, undefined, `Account-uitnodiging verstuurd naar ${l.contactEmail}.`)}>
-                        Account sturen
-                      </button>
-                    )}
-                    {!["REPLIED", "WON", "LOST", "DISQUALIFIED"].includes(l.status) && (
-                      <button type="button" className="a-button" onClick={() => post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "REPLIED" }, "Op 'in gesprek' gezet.")}>
-                        In gesprek
-                      </button>
-                    )}
-                    {l.status !== "WON" && (
-                      <button type="button" className="a-button" onClick={() => post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "WON" }, `${l.companyName} is klant!`)}>
-                        Gewonnen
-                      </button>
-                    )}
-                    {!["LOST", "WON"].includes(l.status) && (
-                      <button
-                        type="button"
-                        className="a-button"
-                        onClick={() => {
-                          const n = window.prompt("Waarom verloren? (optioneel)") ?? undefined;
-                          void post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "LOST", ...(n ? { note: n } : {}) }, "Op verloren gezet.");
-                        }}
-                      >
-                        Verloren
-                      </button>
-                    )}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>
-                  {l.contactName ?? "—"}
-                  {l.contactEmail ? ` · ${l.contactEmail}` : ""}
-                  {l.contactPhone ? ` · ${l.contactPhone}` : ""} · {new Date(l.createdAt).toLocaleString("nl-NL")}
-                </p>
-                {l.notes && <p className="mt-1.5 whitespace-pre-wrap text-xs" style={{ color: "var(--a-dim)" }}>{l.notes}</p>}
-              </li>
-            ))}
+          <ul>
+            {d.leads.map((l) => {
+              const status = LEAD_STATUS[l.status] ?? { label: l.status.toLowerCase(), tone: "neutral" as const };
+              return (
+                <li key={l.id} className="px-4 py-3 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>{l.companyName}</span>
+                    <Pill tone={status.tone}>{status.label}</Pill>
+                    <span className="ml-auto flex flex-wrap justify-end gap-1.5">
+                      {l.contactEmail && !["WON", "LOST", "DISQUALIFIED"].includes(l.status) && (
+                        <button type="button" className="a-button text-xs" onClick={() => post(`/api/sales/leads/${l.id}/invite`, undefined, `Account-uitnodiging verstuurd naar ${l.contactEmail}.`)}>Account sturen</button>
+                      )}
+                      {!["REPLIED", "WON", "LOST", "DISQUALIFIED"].includes(l.status) && (
+                        <button type="button" className="a-button text-xs" onClick={() => post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "REPLIED" }, "Op in gesprek gezet.")}>In gesprek</button>
+                      )}
+                      {l.status !== "WON" && (
+                        <button type="button" className="a-button text-xs" onClick={() => post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "WON" }, `${l.companyName} is klant.`)}>Gewonnen</button>
+                      )}
+                      {!["LOST", "WON"].includes(l.status) && (
+                        <InlineAsk
+                          label="Verloren"
+                          question="Waarom verloren? (optioneel)"
+                          submitLabel="Op verloren zetten"
+                          onSubmit={(n) => post("/api/admin/uitzendbureau", { action: "lead-status", leadId: l.id, status: "LOST", ...(n ? { note: n } : {}) }, "Op verloren gezet.")}
+                        />
+                      )}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>
+                    {[l.contactName, l.contactEmail, l.contactPhone, dateTimeNl(l.createdAt)].filter(Boolean).join(", ")}
+                  </p>
+                  {l.notes && <p className="mt-1.5 whitespace-pre-wrap text-xs" style={{ color: "var(--a-dim)" }}>{l.notes}</p>}
+                </li>
+              );
+            })}
           </ul>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

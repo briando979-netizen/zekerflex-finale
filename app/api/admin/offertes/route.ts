@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/offertes — recente verwerkte offerteaanvragen + config.
-export const GET = withAdminAccess(["PLATFORM_ADMIN", "HQ_ADMIN"], async () => {
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const offers = await listOffers(80);
   return NextResponse.json({ mailboxConnected: Boolean(imapConfig()), offers });
 });
@@ -28,7 +28,7 @@ const schema = z.discriminatedUnion("action", [
 ]);
 
 // POST /api/admin/offertes — { action: "analyze" | "status" | "sweep" }.
-export const POST = withAdminAccess(["PLATFORM_ADMIN", "HQ_ADMIN"], async (request) => {
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation("Ongeldig verzoek", parsed.error.flatten());
   const body = parsed.data;

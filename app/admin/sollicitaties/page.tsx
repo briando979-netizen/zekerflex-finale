@@ -1,108 +1,57 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { APageHeader, APanel } from "@/components/admin/ui";
 import { listApplications } from "@/lib/jobs/store";
+import { bucketCount, resolvePeriod, timelineKeys } from "@/lib/admin/period";
+import { count } from "@/lib/admin/format";
+import { BarList, KpiStrip, PageHead, Panel, PeriodTabs } from "@/components/admin/kit";
+import { Chart } from "@/components/admin/kit-client";
+import { ApplicationsBoard } from "@/components/admin/ApplicationsBoard";
 
 export const dynamic = "force-dynamic";
 
-function nlDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export default async function SollicitatiesPage() {
+export default async function SollicitatiesPage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN", "HQ_ADMIN")) {
-    return <APageHeader title="Geen toegang" subtitle="Open sollicitaties zijn voor beheerders." />;
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
+    return <PageHead title="Geen toegang" subtitle="Open sollicitaties zijn alleen voor platformbeheerders." />;
   }
+  const { periode } = await props.searchParams;
+  const period = resolvePeriod(periode, 90);
 
   const apps = await listApplications(200);
+  const inPeriod = apps.filter((a) => new Date(a.at) >= period.from);
+  const withCv = apps.filter((a) => a.files.some((f) => f.kind === "cv")).length;
+  const withMotivation = apps.filter((a) => a.motivationText?.trim() || a.files.some((f) => f.kind === "motivatiebrief")).length;
+
+  const interests = new Map<string, number>();
+  for (const a of apps) for (const s of a.skills) interests.set(s, (interests.get(s) ?? 0) + 1);
+  const topInterests = [...interests.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <APageHeader
-        title="Open sollicitaties"
-        subtitle="Iedereen die via /over-ons een open sollicitatie heeft ingestuurd. Bijlagen (motivatiebrief, cv) staan hieronder."
-        badge={`${apps.length}`}
+    <div className="space-y-4">
+      <PageHead
+        title="Sollicitaties"
+        subtitle="Iedereen die via /over-ons een open sollicitatie heeft ingestuurd, met motivatie en cv."
+        actions={<PeriodTabs period={period} basePath="/admin/sollicitaties" />}
       />
 
-      {apps.length === 0 ? (
-        <APanel>
-          <p className="py-10 text-center text-sm" style={{ color: "var(--a-mute)" }}>
-            Nog geen sollicitaties.
-          </p>
-        </APanel>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {apps.map((a) => (
-            <APanel key={a.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[15px] font-semibold" style={{ color: "var(--a-text)" }}>
-                    {a.name}
-                  </p>
-                  <p className="text-[13px]" style={{ color: "var(--a-dim)" }}>
-                    <a href={`mailto:${a.email}`} className="underline">
-                      {a.email}
-                    </a>
-                    {a.phone ? ` · ${a.phone}` : ""}
-                  </p>
-                </div>
-                <p className="font-mono text-xs" style={{ color: "var(--a-mute)" }}>
-                  {nlDateTime(a.at)}
-                </p>
-              </div>
+      <KpiStrip
+        items={[
+          { label: "In deze periode", value: count(inPeriod.length), hint: `laatste ${period.label}`, spark: bucketCount(apps, (a) => new Date(a.at), period) },
+          { label: "Totaal", value: count(apps.length), hint: "alle sollicitaties" },
+          { label: "Met cv", value: count(withCv), hint: "kun je meteen bekijken" },
+          { label: "Met motivatie", value: count(withMotivation), hint: "tekst of brief" },
+        ]}
+      />
 
-              {a.skills.length > 0 && (
-                <p className="mt-3 text-[13px]" style={{ color: "var(--a-dim)" }}>
-                  <span style={{ color: "var(--a-mute)" }}>Interesse: </span>
-                  {a.skills.join(", ")}
-                </p>
-              )}
+      <div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Panel title="Binnengekomen" subtitle={`Laatste ${period.label}`}>
+          <Chart title="Sollicitaties per periode" kind="bars" unit="count" labels={timelineKeys(period)} series={[{ label: "Sollicitaties", values: bucketCount(apps, (a) => new Date(a.at), period) }]} height={170} emptyText="Nog geen sollicitaties in deze periode." />
+        </Panel>
+        <Panel title="Waar mensen interesse in hebben">
+          <BarList emptyText="Nog geen interesses opgegeven." rows={topInterests.map(([label, value]) => ({ key: label, label, value, display: count(value) }))} />
+        </Panel>
+      </div>
 
-              {a.motivationText && (
-                <p
-                  className="mt-3 whitespace-pre-wrap rounded-lg p-3 text-[13px] leading-relaxed"
-                  style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}
-                >
-                  {a.motivationText}
-                </p>
-              )}
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {a.files.length === 0 && (
-                  <span className="text-xs" style={{ color: "var(--a-mute)" }}>
-                    Geen bijlagen
-                  </span>
-                )}
-                {a.files.map((f, i) =>
-                  f.uploadId ? (
-                    <a
-                      key={i}
-                      href={`/api/admin/sollicitaties/${a.id}/${f.uploadId}`}
-                      className="rounded-lg px-3 py-1.5 text-xs font-medium"
-                      style={{ background: "var(--a-elev)", color: "var(--a-text)" }}
-                    >
-                      ⬇ {f.kind} — {f.filename}
-                    </a>
-                  ) : (
-                    <span key={i} className="text-xs" style={{ color: "var(--a-mute)" }}>
-                      {f.kind}: {f.filename} (oud record, niet downloadbaar)
-                    </span>
-                  ),
-                )}
-              </div>
-              <p className="mt-3 font-mono text-[11px]" style={{ color: "var(--a-mute)" }}>
-                ref {a.id}
-              </p>
-            </APanel>
-          ))}
-        </div>
-      )}
+      <ApplicationsBoard applications={apps} />
     </div>
   );
 }

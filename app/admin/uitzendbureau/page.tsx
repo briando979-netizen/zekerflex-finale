@@ -1,93 +1,13 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { APageHeader, APanel, AStat } from "@/components/admin/ui";
+import { PageHead } from "@/components/admin/kit";
 import { UitzendConsole } from "@/components/admin/UitzendConsole";
-import { getUitzendbureauOverview } from "@/lib/uitzendbureau/admin";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<string, string> = {
-  NEW: "Nieuw",
-  ENRICHED: "Verrijkt",
-  QUEUED: "In wachtrij",
-  DRAFTED: "Concept klaar",
-  APPROVED: "Goedgekeurd",
-  SENT: "Benaderd",
-  REPLIED: "Gereageerd",
-  BOUNCED: "Onbezorgbaar",
-  UNSUBSCRIBED: "Afgemeld",
-  WON: "Klant",
-  LOST: "Verloren",
-  DISQUALIFIED: "Afgewezen",
-};
-const STATUS_TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
-  NEW: "warn",
-  WON: "ok",
-  REPLIED: "ok",
-  LOST: "crit",
-  DISQUALIFIED: "crit",
-  BOUNCED: "crit",
-  UNSUBSCRIBED: "crit",
-};
-
-function nlDateTime(d: Date): string {
-  return d.toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
 export default async function UitzendbureauAdminPage() {
   const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN", "HQ_ADMIN")) {
-    return <APageHeader title="Geen toegang" subtitle="Het uitzendbureau-overzicht is alleen voor beheerders." />;
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
+    return <PageHead title="Geen toegang" subtitle="Het uitzendbureau-overzicht is alleen voor platformbeheerders." />;
   }
-
-  const { leads, clients } = await getUitzendbureauOverview();
-  const openPositions = clients.reduce((n, c) => n + c.openPositions, 0);
-  const filledPositions = clients.reduce((n, c) => n + c.filledPositions, 0);
-
-  return (
-    <div className="mx-auto max-w-5xl">
-      <APageHeader
-        title="Uitzendbureau"
-        subtitle="Bedrijven die personeel via het ZekerFlex-uitzendbureau afnemen — van eerste aanvraag tot actieve klant."
-      />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        <AStat label="Aanvragen" value={leads.length} />
-        <AStat label="Actieve klanten" value={clients.length} />
-        <AStat label="Open plekken" value={openPositions} />
-        <AStat label="Bezette plekken" value={filledPositions} />
-      </div>
-
-      <APanel title="Actieve klanten" subtitle="Bedrijven met minstens één klus via het uitzendbureau.">
-        {clients.length === 0 ? (
-          <p className="py-6 text-center text-sm" style={{ color: "var(--a-mute)" }}>
-            Nog geen klussen met het uitzendbureau-vinkje.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {clients.map((c) => (
-              <div
-                key={c.tenantId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3"
-                style={{ background: "var(--a-elev)" }}
-              >
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
-                    {c.tenantName}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--a-mute)" }}>
-                    {c.shiftCount} {c.shiftCount === 1 ? "klus" : "klussen"} · {c.filledPositions} bezet, {c.openPositions} open
-                    {c.nextShiftAt ? ` · eerstvolgende ${nlDateTime(c.nextShiftAt)}` : ""}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </APanel>
-
-      <div className="mt-6">
-        <UitzendConsole />
-      </div>
-    </div>
-  );
+  return <UitzendConsole />;
 }

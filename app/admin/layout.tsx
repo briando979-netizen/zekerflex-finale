@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
-    <AdminShell userName={principal.fullName} userMeta={principal.email} avatarUrl={avatarUrl}>
+    <AdminShell userName={principal.fullName} userMeta={principal.email} avatarUrl={avatarUrl} limited={!hasRole(principal, "PLATFORM_ADMIN")}>
       {children}
       <ChatDock />
     </AdminShell>

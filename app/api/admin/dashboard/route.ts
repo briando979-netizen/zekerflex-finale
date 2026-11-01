@@ -6,6 +6,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/dashboard — Shopify-stijl KPI's + 30-daagse reeks + activiteitenfeed.
-export const GET = withAdminAccess(["PLATFORM_ADMIN", "HQ_ADMIN"], async () => {
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   return NextResponse.json(await dashboardStats());
 });
