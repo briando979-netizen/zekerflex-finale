@@ -161,7 +161,7 @@ export function Delta({ value, goodWhen = "up", suffix = "%" }: { value: number 
   return (
     <span className="inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color }}>
       <span aria-hidden>{flat ? "→" : value > 0 ? "↗" : "↘"}</span>
-      {value > 0 ? "+" : ""}{value}{suffix}
+      {value > 0 ? "+" : ""}{value.toLocaleString("nl-NL")}{suffix}
     </span>
   );
 }
@@ -180,16 +180,16 @@ export interface KpiProps {
 function KpiCell({ label, value, delta, goodWhen = "up", hint, spark, tone }: KpiProps) {
   return (
     <>
-      <div className="flex h-[1.625rem] items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>{label}</p>
-        {spark ? <Spark data={spark} width={52} height={22} /> : null}
-      </div>
-      <p className="mt-1 truncate text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: tone ? TONE_INK[tone] : "var(--a-text)" }}>{value}</p>
-      {delta !== undefined && delta !== null || hint ? (
-        <p className="mt-1.5 flex min-h-[1rem] flex-wrap items-center gap-x-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
-          <Delta value={delta} goodWhen={goodWhen} />
-          {hint ? <span className="truncate">{hint}</span> : null}
-        </p>
+      <p className="text-[0.8125rem] leading-snug" style={{ color: "var(--a-mute)" }}>{label}</p>
+      <p className="mt-1.5 truncate text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: tone ? TONE_INK[tone] : "var(--a-text)" }}>{value}</p>
+      {(delta !== undefined && delta !== null) || hint || spark ? (
+        <div className="mt-1.5 flex min-h-[1.375rem] items-center justify-between gap-2">
+          <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
+            <Delta value={delta} goodWhen={goodWhen} />
+            {hint ? <span className="min-w-0">{hint}</span> : null}
+          </p>
+          {spark ? <Spark data={spark} width={52} height={22} /> : null}
+        </div>
       ) : null}
     </>
   );
@@ -325,7 +325,7 @@ export function Funnel({ stages }: { stages: { label: string; value: number; hre
             <span className="mb-1 flex items-baseline justify-between gap-3 text-[0.8125rem]">
               <span className="min-w-0 truncate" style={{ color: "var(--a-dim)" }}>{stage.label}</span>
               <span className="flex flex-shrink-0 items-baseline gap-2">
-                {prev !== null && <span className="num text-xs" style={{ color: "var(--a-mute)" }}>{percentOf(stage.value, prev)}% door</span>}
+                {prev !== null && prev > 0 && <span className="num text-xs" style={{ color: "var(--a-mute)" }}>{percentOf(stage.value, prev)}% door</span>}
                 <span className="num font-medium" style={{ color: "var(--a-text)" }}>{stage.value}</span>
               </span>
             </span>

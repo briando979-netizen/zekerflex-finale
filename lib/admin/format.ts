@@ -47,9 +47,12 @@ export function dateNl(d: Date | string | null | undefined, opts: Intl.DateTimeF
   return new Date(d).toLocaleDateString("nl-NL", { timeZone: TZ, ...opts });
 }
 
-export function dateTimeNl(d: Date | string | null | undefined): string {
+/** Dag en tijd. Het jaartal staat er alleen bij als het niet dit jaar is. */
+export function dateTimeNl(d: Date | string | null | undefined, now = new Date()): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("nl-NL", { timeZone: TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const at = new Date(d);
+  const sameYear = at.toLocaleDateString("nl-NL", { timeZone: TZ, year: "numeric" }) === now.toLocaleDateString("nl-NL", { timeZone: TZ, year: "numeric" });
+  return at.toLocaleString("nl-NL", { timeZone: TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", ...(sameYear ? {} : { year: "numeric" }) });
 }
 
 export function timeAgoNl(d: Date | string | null | undefined, now = Date.now()): string {

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { KpiStrip, PageHead, Panel } from "@/components/admin/kit";
+import { AgendaMonth } from "@/components/admin/AgendaMonth";
 
 type Dict = Record<
   | "title" | "subtitle" | "add" | "addTitle" | "fieldTitle" | "fieldDate" | "fieldStart" | "fieldEnd" | "fieldAllDay"
@@ -54,6 +56,7 @@ export function AgendaView({
   mailHref,
   whatsappHref,
   shiftHrefBase,
+  admin = false,
 }: {
   t: Dict;
   withShifts: boolean;
@@ -61,11 +64,14 @@ export function AgendaView({
   whatsappHref: string;
   /** e.g. "/werkgever/diensten/" — the shift id is appended */
   shiftHrefBase?: string;
+  /** In de beheeromgeving: met kerncijfers en een maandkalender. */
+  admin?: boolean;
 }) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [mailConnected, setMailConnected] = useState<boolean | null>(null);
   const [adding, setAdding] = useState(false);
+  const [addDate, setAddDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const from = new Date(Date.now() - DAY).toISOString();
@@ -127,29 +133,65 @@ export function AgendaView({
     manual: t.sourceManual,
   };
 
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink">{t.title}</h1>
-          <p className="mt-1 text-sm text-neutralx-600">{t.subtitle}</p>
-        </div>
-        <button type="button" onClick={() => setAdding((v) => !v)} className="btn-primary text-sm">
-          {t.add}
-        </button>
-      </div>
+  const dayCounts = new Map(days.map(([key, entries]) => [key, entries.length]));
+  const todayKey = dayKey(new Date().toISOString());
+  const weekKey = dayKey(new Date(Date.now() + 7 * DAY).toISOString());
+  const allEntries = days.flatMap(([, entries]) => entries);
+  const nextUp = days[0];
+  const nextLabel = nextUp ? label(nextUp[0]) : null;
 
-      {adding && <AddForm t={t} onDone={() => { setAdding(false); void load(); }} onCancel={() => setAdding(false)} />}
+  /** Klik in de maandkalender: naar die dag in de lijst, of een lege dag meteen invullen. */
+  function pickDay(key: string) {
+    if (dayCounts.has(key)) {
+      document.getElementById(`agenda-${key}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setAddDate(key);
+    setAdding(true);
+  }
+
+  return (
+    <div className={admin ? "space-y-4" : "space-y-5"}>
+      {admin ? (
+        <PageHead
+          title={t.title}
+          subtitle={t.subtitle}
+          actions={<button type="button" onClick={() => { setAddDate(null); setAdding((v) => !v); }} className="a-button a-button-primary">{t.add}</button>}
+        />
+      ) : (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-ink">{t.title}</h1>
+            <p className="mt-1 text-sm text-neutralx-600">{t.subtitle}</p>
+          </div>
+          <button type="button" onClick={() => setAdding((v) => !v)} className="btn-primary text-sm">
+            {t.add}
+          </button>
+        </div>
+      )}
+
+      {admin && (
+        <KpiStrip
+          items={[
+            { label: "Vandaag", value: dayCounts.get(todayKey) ?? 0, hint: dayCounts.get(todayKey) ? "in de agenda" : "niets gepland" },
+            { label: "Komende 7 dagen", value: days.filter(([key]) => key <= weekKey).reduce((sum, [, entries]) => sum + entries.length, 0), hint: "afspraken" },
+            { label: "Komende 90 dagen", value: allEntries.length, hint: "afspraken" },
+            { label: "Eerstvolgende", value: nextLabel ?? "—", hint: nextUp ? `${nextUp[1].length} in de agenda` : "nog niets gepland" },
+          ]}
+        />
+      )}
+
+      {adding && <AddForm key={addDate ?? "vandaag"} t={t} initialDate={addDate} onDone={() => { setAdding(false); void load(); }} onCancel={() => setAdding(false)} />}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        <div className="card overflow-hidden">
+        <div className={`card overflow-hidden ${admin ? "h-fit" : ""}`}>
           {items === null ? (
             <p className="px-5 py-10 text-center text-sm text-neutralx-400">{t.loading}</p>
           ) : days.length === 0 ? (
             <p className="px-5 py-12 text-center text-sm text-neutralx-500">{t.empty}</p>
           ) : (
             days.map(([key, entries]) => (
-              <section key={key} className="border-b border-hair last:border-b-0">
+              <section key={key} id={`agenda-${key}`} className="border-b border-hair last:border-b-0">
                 <h2 className="bg-paper-soft px-5 py-2 text-xs font-semibold uppercase tracking-wide text-neutralx-500">{label(key)}</h2>
                 <ul className="divide-y divide-hair">
                   {entries.map((e) =>
@@ -204,11 +246,17 @@ export function AgendaView({
           )}
         </div>
 
+        <div className="h-fit space-y-4">
+        {admin && (
+          <Panel>
+            <AgendaMonth busy={dayCounts} onPick={pickDay} />
+          </Panel>
+        )}
         <aside className="card h-fit space-y-3 p-5 text-sm">
           <p className="font-semibold text-ink">{t.sources}</p>
           <ul className="space-y-2">
             <li className="flex items-center justify-between gap-2">
-              <span>✉️ {t.sourceMail}</span>
+              <span className="whitespace-nowrap">{admin ? "" : "✉️ "}{t.sourceMail}</span>
               {mailConnected ? (
                 <span className="text-xs font-semibold text-ok">{t.sourceMailConnected}</span>
               ) : (
@@ -218,11 +266,11 @@ export function AgendaView({
               )}
             </li>
             <li className="flex items-center justify-between gap-2">
-              <span>💬 {t.sourceChat}</span>
+              <span className="whitespace-nowrap">{admin ? "" : "💬 "}{t.sourceChat}</span>
               <span className="text-xs text-ok">{t.sourceChatOn}</span>
             </li>
             <li className="flex items-center justify-between gap-2">
-              <span>🟢 {t.sourceWhatsapp}</span>
+              <span className="whitespace-nowrap">{admin ? "" : "🟢 "}{t.sourceWhatsapp}</span>
               <Link href={whatsappHref} className="text-xs font-semibold text-brand-600 hover:underline">
                 {t.sourceWhatsappImport}
               </Link>
@@ -230,15 +278,16 @@ export function AgendaView({
           </ul>
           <p className="text-xs leading-relaxed text-neutralx-500">{t.autoNote}</p>
         </aside>
+        </div>
       </div>
     </div>
   );
 }
 
-function AddForm({ t, onDone, onCancel }: { t: Dict; onDone: () => void; onCancel: () => void }) {
+function AddForm({ t, initialDate, onDone, onCancel }: { t: Dict; initialDate?: string | null; onDone: () => void; onCancel: () => void }) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: TZ });
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(initialDate ?? today);
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("10:00");
   const [allDay, setAllDay] = useState(false);

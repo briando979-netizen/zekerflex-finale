@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Empty, KpiStrip, Panel, Pill } from "@/components/admin/kit";
 
 // ---------------------------------------------------------------------------
 // Live kantoor — an isometric, physical world: nine departments with walls,
@@ -883,15 +884,16 @@ export function OfficeSim() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: "var(--a-dim)" }}>
-        <span className="rounded-full px-3 py-1 font-mono" style={{ background: "var(--a-panel-2)", color: "var(--a-text)" }}>
-          {night ? "🌙" : hour < 8 || hour >= 19 ? "🌅" : "☀️"} {clock.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}
-        </span>
-        <span>{events.length} echte gebeurtenissen in de laatste 24 uur</span>
-        {busiest && <span>· drukst: {ROOM.get(busiest[0])?.name ?? busiest[0]} ({busiest[1]})</span>}
-      </div>
+      <KpiStrip
+        items={[
+          { label: "Gebeurtenissen", value: events.length, hint: "in de laatste 24 uur" },
+          { label: "Drukste afdeling", value: busiest ? (ROOM.get(busiest[0])?.name ?? busiest[0]) : "—", hint: busiest ? `${busiest[1]} gebeurtenissen` : "nog niets gebeurd" },
+          { label: "Robots aan het werk", value: stats.working, hint: stats.sleeping > 0 ? `${stats.sleeping} laden op` : "niemand laadt op" },
+          { label: "Onderweg", value: stats.walking + stats.couriers, hint: `${stats.couriers} met een echte gebeurtenis` },
+        ]}
+      />
 
-      <div ref={wrapRef} className="relative w-full overflow-hidden rounded-3xl border" style={{ borderColor: "var(--a-border)" }}>
+      <div ref={wrapRef} className="a-panel relative w-full overflow-hidden">
         <canvas
           ref={canvasRef}
           className="block w-full touch-none select-none"
@@ -899,56 +901,55 @@ export function OfficeSim() {
           role="img"
           aria-label={`Live kantoor: ${stats.working} robots aan het werk, ${stats.walking} onderweg, ${stats.sleeping} aan het opladen, ${stats.couriers} koeriers met echte gebeurtenissen. Het logboek hieronder bevat dezelfde gebeurtenissen als tekst.`}
         />
+        <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-slate-800">
+          {night ? "Nacht" : hour < 8 || hour >= 19 ? "Schemer" : "Dag"}, {clock.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}
+        </span>
         <div className="absolute right-3 top-3 flex flex-col gap-1.5">
-          <button type="button" onClick={() => zoom(1.35)} className="grid h-9 w-9 place-items-center rounded-full bg-white/90 text-lg font-bold text-slate-800 shadow" aria-label="Inzoomen">
+          <button type="button" onClick={() => zoom(1.35)} className="grid h-9 w-9 place-items-center rounded-full bg-white/90 text-lg font-semibold text-slate-800 shadow" aria-label="Inzoomen">
             +
           </button>
-          <button type="button" onClick={() => zoom(1 / 1.35)} className="grid h-9 w-9 place-items-center rounded-full bg-white/90 text-lg font-bold text-slate-800 shadow" aria-label="Uitzoomen">
+          <button type="button" onClick={() => zoom(1 / 1.35)} className="grid h-9 w-9 place-items-center rounded-full bg-white/90 text-lg font-semibold text-slate-800 shadow" aria-label="Uitzoomen">
             −
           </button>
         </div>
-        <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
-          <span className="rounded-full bg-white/90 px-2 py-0.5 text-slate-700">💻 {stats.working} aan het werk</span>
-          <span className="rounded-full bg-white/90 px-2 py-0.5 text-slate-700">🚶 {stats.walking} onderweg</span>
-          {stats.sleeping > 0 && <span className="rounded-full bg-white/90 px-2 py-0.5 text-slate-700">🔋 {stats.sleeping} laden op</span>}
-          <span className="rounded-full bg-white/90 px-2 py-0.5 text-slate-700">📦 {stats.couriers} koeriers</span>
+      </div>
+
+      <Panel>
+        <div aria-live="polite" className="text-[0.8125rem]">
+          {sel ? (
+            <p style={{ color: "var(--a-text)" }}>
+              <strong className="font-semibold">{sel.name}</strong> <span style={{ color: "var(--a-mute)" }}>in {sel.room}</span>
+              <br />
+              {sel.activity}
+            </p>
+          ) : (
+            <p style={{ color: "var(--a-mute)" }}>Klik op een robot of afdeling om te zien wat er gebeurt. Zoom in met + en sleep om rond te kijken.</p>
+          )}
         </div>
-      </div>
+      </Panel>
 
-      <div className="a-panel min-h-[64px] p-4 text-sm" aria-live="polite">
-        {sel ? (
-          <p style={{ color: "var(--a-text)" }}>
-            <strong>{sel.name}</strong> <span style={{ color: "var(--a-mute)" }}>· {sel.room}</span>
-            <br />
-            {sel.activity}
-          </p>
-        ) : (
-          <p style={{ color: "var(--a-mute)" }}>Klik op een robot of afdeling om te zien wat er gebeurt. Zoom in met + en sleep om rond te kijken.</p>
-        )}
-      </div>
-
-      <div className="a-panel p-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--a-mute)" }}>
-          Logboek — wat de afdelingen echt deden
-        </p>
+      <Panel flush title="Logboek" subtitle="Wat de afdelingen echt deden">
         {events.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen activiteit in de laatste 24 uur.</p>
+          <Empty title="Nog geen activiteit" body="Er gebeurde niets in de laatste 24 uur." />
         ) : (
-          <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">
+          <ul className="max-h-80 overflow-y-auto">
             {events.map((e) => (
-              <li key={e.id} className="flex gap-2">
-                <span className="w-12 flex-shrink-0 font-mono text-xs" style={{ color: "var(--a-mute)" }}>
-                  {new Date(e.at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
+              <li key={e.id} className="flex items-baseline gap-3 px-4 py-2 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                <span className="num w-11 flex-shrink-0 text-xs" style={{ color: "var(--a-mute)" }}>
+                  {new Date(e.at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}
                 </span>
-                <span className="flex-shrink-0 font-semibold" style={{ color: ROOM.get(e.room)?.accent ?? "var(--a-text)" }}>
-                  {ROOM.get(e.room)?.short ?? "•"}
+                <span className="flex w-24 flex-shrink-0 items-center gap-1.5 text-xs font-medium" style={{ color: "var(--a-dim)" }}>
+                  <span className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ background: ROOM.get(e.room)?.accent ?? "var(--a-other)" }} aria-hidden />
+                  <span className="truncate">{ROOM.get(e.room)?.short ?? "Overig"}</span>
                 </span>
-                <span style={{ color: e.severity === "critical" ? "#dc2626" : e.severity === "warning" ? "#d97706" : "var(--a-text)" }}>{e.summary}</span>
+                <span className="min-w-0 flex-1" style={{ color: "var(--a-text)" }}>{e.summary}</span>
+                {e.severity === "critical" && <Pill tone="crit">Kritiek</Pill>}
+                {e.severity === "warning" && <Pill tone="warn">Let op</Pill>}
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

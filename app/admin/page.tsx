@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { ADMIN_HUBS } from "@/lib/admin/nav";
 import { resolvePeriod } from "@/lib/admin/period";
@@ -26,19 +27,14 @@ function greeting(now: Date): string {
 
 export default async function AdminHomePage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <main className="p-8">
-        <h1 className="text-lg font-semibold">Geen toegang</h1>
-        <p className="text-slate-600">Het controlecentrum is voor beheerders.</p>
-      </main>
-    );
-  }
+  // De layout laat ook bedrijfsbeheerders en dispuutmanagers toe: die horen bij hun disputen.
+  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) redirect("/admin/disputes");
   const { periode } = await props.searchParams;
   const period = resolvePeriod(periode);
   const d = await homeInsights(period);
   const now = new Date();
   const firstName = principal.fullName.split(/\s+/)[0] ?? "";
+  const funnels = d.funnels.filter((f) => f.steps.some((s) => s.count > 0));
 
   return (
     <div className="space-y-4">
@@ -64,17 +60,12 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
         <Panel title="Eigen omzet" subtitle={`Marge op facturen en webshop, laatste ${period.label}`}>
           <Chart title={`Eigen omzet per ${period.bucket === "month" ? "maand" : "dag"}`} kind="bars" unit="money" labels={d.labels} series={[{ label: "Eigen omzet", values: d.revenue.series }]} height={250} emptyText="Nog geen omzet in deze periode." />
         </Panel>
-        <Panel
-          flush
-          title="Actie vereist"
-          subtitle={d.triage.length === 0 ? "Alles is afgehandeld" : `${d.urgent} urgent, ${d.triage.length} in totaal`}
-          actions={<Link href="/admin/te-doen" className="text-xs font-medium hover:underline" style={{ color: "var(--a-accent-ink)" }}>Alles bekijken</Link>}
-        >
+        <Panel flush title="Actie vereist" subtitle={d.triage.length === 0 ? "Alles is afgehandeld" : `${d.urgent} urgent, ${d.triage.length} in totaal`}>
           {d.triage.length === 0 ? (
             <p className="px-5 pb-6 text-sm" style={{ color: "var(--a-mute)" }}>Niets openstaand. Alles onder controle.</p>
           ) : (
-            <ul>
-              {d.triage.slice(0, 6).map((item) => (
+            <ul className="max-h-[19.5rem] overflow-y-auto">
+              {d.triage.map((item) => (
                 <li key={item.id} style={{ borderTop: "1px solid var(--a-border)" }}>
                   <Link href={item.href} className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--a-panel-2)] sm:px-5">
                     <span className="min-w-0 flex-1">
@@ -115,14 +106,14 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
                       {hub.label}
                       <span className="transition-transform group-hover:translate-x-0.5" style={{ color: "var(--a-mute)" }} aria-hidden>→</span>
                     </p>
-                    <p className="mt-0.5 truncate text-xs" style={{ color: "var(--a-mute)" }}>{hub.blurb}</p>
+                    <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>{hub.blurb}</p>
                   </div>
-                  {data.spark ? <Spark data={data.spark} width={64} height={24} /> : null}
+                  {data.spark ? <Spark data={data.spark} width={52} height={22} /> : null}
                 </div>
                 <dl className="mt-3.5 grid grid-cols-3 gap-2">
                   {data.metrics.map((m) => (
-                    <div key={m.label} className="min-w-0">
-                      <dt className="truncate text-[0.6875rem]" style={{ color: "var(--a-mute)" }} title={m.label}>{m.label}</dt>
+                    <div key={m.label} className="flex min-w-0 flex-col justify-end">
+                      <dt className="text-[0.6875rem] leading-tight" style={{ color: "var(--a-mute)" }}>{m.label}</dt>
                       <dd className="mt-0.5 truncate text-[0.9375rem] font-semibold tracking-tight" style={{ color: m.tone && m.tone !== "neutral" ? `var(--a-${m.tone})` : "var(--a-text)" }}>{m.value}</dd>
                     </div>
                   ))}
@@ -133,13 +124,13 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
         </div>
       </section>
 
-      <div className="grid gap-4 pt-2 lg:grid-cols-3">
-        {d.funnels.filter((f) => f.steps.some((s) => s.count > 0)).map((f) => (
+      <div className={`grid gap-4 pt-2 ${funnels.length >= 2 ? "lg:grid-cols-3" : funnels.length === 1 ? "lg:grid-cols-2" : ""}`}>
+        {funnels.map((f) => (
           <Panel key={f.key} title={f.label} subtitle={period.days > 90 ? "Laatste 12 maanden" : "Laatste 3 maanden"}>
             <Funnel stages={f.steps.map((s) => ({ label: s.label, value: s.count }))} />
           </Panel>
         ))}
-        <Panel title="Laatste activiteit" subtitle="Wat er net gebeurde" className={d.funnels.some((f) => f.steps.some((s) => s.count > 0)) ? "" : "lg:col-span-3"}>
+        <Panel title="Laatste activiteit" subtitle="Wat er net gebeurde">
           <Feed
             items={d.activity.map((a) => ({
               key: a.key,

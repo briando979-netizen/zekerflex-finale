@@ -6,9 +6,5 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminAgendaPage() {
   await requirePrincipal();
-  return (
-    <div className="mx-auto max-w-6xl">
-      <AgendaView t={(await getDict()).agenda} withShifts={false} mailHref="/admin/mijn-mail" whatsappHref="/admin/whatsapp" />
-    </div>
-  );
+  return <AgendaView admin t={(await getDict()).agenda} withShifts={false} mailHref="/admin/mijn-mail" whatsappHref="/admin/whatsapp" />;
 }
