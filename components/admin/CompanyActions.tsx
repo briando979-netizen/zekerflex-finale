@@ -86,41 +86,41 @@ export function CompanyActions({
   }
 
   return (
-    <div className="w-full max-w-xs space-y-3 sm:w-auto">
+    <div className="w-full space-y-3 sm:w-auto sm:max-w-md">
       <div className="flex flex-wrap justify-end gap-2">
-        <ChatUserButton toUserId={contactUserId} label="Stuur bericht" className="btn-ghost text-xs" />
-        <button type="button" onClick={() => setEmailOpen((v) => !v)} className="btn-ghost text-xs">
+        <ChatUserButton toUserId={contactUserId} label="Stuur bericht" className="a-button text-xs" />
+        <button type="button" onClick={() => setEmailOpen((v) => !v)} className="a-button text-xs">
           Stuur e-mail
         </button>
         {(verifiedVia === null || verifiedVia === "admin") && (
-          <button type="button" onClick={() => setApproval(verifiedVia === null)} disabled={busy} className="btn-ghost text-xs disabled:opacity-50">
+          <button type="button" onClick={() => setApproval(verifiedVia === null)} disabled={busy} className="a-button text-xs">
             {verifiedVia === null ? "Bedrijf goedkeuren" : "Goedkeuring intrekken"}
           </button>
         )}
-        <button type="button" onClick={toggleBlock} disabled={busy} className="btn-ghost text-xs text-crit disabled:opacity-50">
+        <button type="button" onClick={toggleBlock} disabled={busy} className="a-button text-xs" style={{ color: "var(--a-crit)" }}>
           {blocked ? "Deblokkeer" : "Blokkeer"}
         </button>
       </div>
 
-      {msg && <p className="text-right text-xs text-neutralx-600">{msg}</p>}
+      {msg && <p role="status" className="text-right text-xs" style={{ color: "var(--a-dim)" }}>{msg}</p>}
 
       {emailOpen && (
-        <div className="card space-y-2 p-4">
-          <p className="text-xs font-semibold text-ink">E-mail naar alle bedrijfsbeheerders</p>
+        <div className="a-panel space-y-2 p-4 text-left">
+          <p className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>E-mail naar alle bedrijfsbeheerders</p>
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Onderwerp"
-            className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+            className="a-input"
           />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={4}
             placeholder="Bericht…"
-            className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+            className="a-input"
           />
-          <button type="button" onClick={sendEmail} disabled={busy || !subject.trim() || !body.trim()} className="btn-primary w-full text-xs disabled:opacity-50">
+          <button type="button" onClick={sendEmail} disabled={busy || !subject.trim() || !body.trim()} className="a-button a-button-primary w-full text-xs">
             {busy ? "Bezig…" : "Versturen"}
           </button>
         </div>

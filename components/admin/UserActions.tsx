@@ -94,61 +94,61 @@ export function UserActions({ userId, blocked }: { userId: string; blocked: bool
   }
 
   return (
-    <div className="w-full max-w-xs space-y-3 sm:w-auto">
+    <div className="w-full space-y-3 sm:w-auto sm:max-w-md">
       <div className="flex flex-wrap justify-end gap-2">
-        <ChatUserButton toUserId={userId} label="Stuur bericht" className="btn-ghost text-xs" />
-        <a href={`/api/admin/gebruikers/${userId}/overeenkomst`} className="btn-ghost text-xs">
+        <ChatUserButton toUserId={userId} label="Stuur bericht" className="a-button text-xs" />
+        <a href={`/api/admin/gebruikers/${userId}/overeenkomst`} className="a-button text-xs">
           Maak overeenkomst
         </a>
-        <button type="button" onClick={() => setPanel(panel === "email" ? null : "email")} className="btn-ghost text-xs">
+        <button type="button" onClick={() => setPanel(panel === "email" ? null : "email")} className="a-button text-xs">
           Stuur e-mail
         </button>
-        <button type="button" onClick={() => setPanel(panel === "warn" ? null : "warn")} className="btn-ghost text-xs text-warn">
+        <button type="button" onClick={() => setPanel(panel === "warn" ? null : "warn")} className="a-button text-xs" style={{ color: "var(--a-warn)" }}>
           Waarschuwing
         </button>
-        <button type="button" onClick={toggleBlock} disabled={busy} className="btn-ghost text-xs text-crit disabled:opacity-50">
+        <button type="button" onClick={toggleBlock} disabled={busy} className="a-button text-xs" style={{ color: "var(--a-crit)" }}>
           {blocked ? "Deblokkeer" : "Blokkeer"}
         </button>
-        <button type="button" onClick={remove} disabled={busy} className="btn-ghost text-xs text-crit disabled:opacity-50">
+        <button type="button" onClick={remove} disabled={busy} className="a-button text-xs" style={{ color: "var(--a-crit)" }}>
           Verwijder
         </button>
       </div>
 
-      {msg && <p className="text-right text-xs text-neutralx-600">{msg}</p>}
+      {msg && <p role="status" className="text-right text-xs" style={{ color: "var(--a-dim)" }}>{msg}</p>}
 
       {panel === "warn" && (
-        <div className="card space-y-2 p-4">
-          <p className="text-xs font-semibold text-ink">Waarschuwing versturen</p>
+        <div className="a-panel space-y-2 p-4 text-left">
+          <p className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>Waarschuwing versturen</p>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="Reden…"
-            className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+            className="a-input"
           />
-          <button type="button" onClick={sendWarning} disabled={busy || !reason.trim()} className="btn-primary w-full text-xs disabled:opacity-50">
+          <button type="button" onClick={sendWarning} disabled={busy || !reason.trim()} className="a-button a-button-primary w-full text-xs">
             {busy ? "Bezig…" : "Versturen"}
           </button>
         </div>
       )}
 
       {panel === "email" && (
-        <div className="card space-y-2 p-4">
-          <p className="text-xs font-semibold text-ink">E-mail versturen</p>
+        <div className="a-panel space-y-2 p-4 text-left">
+          <p className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>E-mail versturen</p>
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Onderwerp"
-            className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+            className="a-input"
           />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={4}
             placeholder="Bericht…"
-            className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
+            className="a-input"
           />
-          <button type="button" onClick={sendEmail} disabled={busy || !subject.trim() || !body.trim()} className="btn-primary w-full text-xs disabled:opacity-50">
+          <button type="button" onClick={sendEmail} disabled={busy || !subject.trim() || !body.trim()} className="a-button a-button-primary w-full text-xs">
             {busy ? "Bezig…" : "Versturen"}
           </button>
         </div>
