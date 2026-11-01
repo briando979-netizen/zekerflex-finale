@@ -1001,9 +1001,10 @@ model Invoice {
 
   // Online collection of the invoice via Stripe Checkout (employer-paid
   // invoices only; the freelancer payout side still runs through
-  // Payment/SEPA above and never touches these fields).
+  // Payment/SEPA above and never touches these fields). Not unique: one bulk
+  // checkout pays several invoices with a single payment intent.
   stripeCheckoutSessionId String?
-  stripePaymentIntentId   String? @unique
+  stripePaymentIntentId   String?
 
   // Collections lifecycle (CANCELLATION_PENALTY only) — see lib/claims/collections-sweep.ts.
   dueAt              DateTime?
@@ -1026,6 +1027,7 @@ model Invoice {
   @@index([timesheetId])
   @@index([type, status])
   @@index([claimId])
+  @@index([stripePaymentIntentId])
 }
 
 // Monotonic per-(type, year) invoice counter. Incremented inside the approval
