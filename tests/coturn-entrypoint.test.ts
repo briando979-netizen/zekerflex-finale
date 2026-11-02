@@ -47,13 +47,22 @@ describe.skipIf(!hasSh)("TURN-relay op de server", () => {
         "127.0.0.0-127.255.255.255", // de server zelf
         "169.254.0.0-169.254.255.255", // metadata van de hoster
         "100.64.0.0-100.127.255.255", // CGNAT
-        "::-::1",
+        "::1",
         "::ffff:0.0.0.0-::ffff:255.255.255.255", // IPv4 verpakt in IPv6
         "64:ff9b::-64:ff9b::ffff:ffff", // NAT64
         "fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
         "fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
       ]),
     );
+  });
+
+  it("laat geen bereik bij het nul-adres beginnen (dan weigert coturn alle IPv4 of alle IPv6)", () => {
+    // coturn 4.6.3 slaat bij een ondergrens 0.0.0.0 of :: de controle over en
+    // rekent elk adres van de andere familie mee: "::-::1" blokkeerde 1.1.1.1.
+    const cmd = run({ TURN_SHARED_SECRET: SECRET, TURN_RELAY_IPS: "37.97.226.24" });
+    const lows = [...cmd.matchAll(/--denied-peer-ip=([^\s-]+)/g)].map((m) => m[1]);
+    expect(lows.length).toBeGreaterThan(10);
+    expect(lows.filter((low) => /^(0\.0\.0\.0|::|0:0:0:0:0:0:0:0)$/.test(low!))).toEqual([]);
   });
 
   it("heeft hetzelfde relaybereik als de firewallregel bij installatie", () => {

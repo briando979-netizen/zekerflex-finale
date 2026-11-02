@@ -40,8 +40,11 @@ done
 # Nooit doorsturen naar: de eigen machine, privé- en docker-netwerken, CGNAT,
 # link-local, multicast, documentatie- en gereserveerde blokken, en IPv6-vormen
 # die naar IPv4 terugvertalen (mapped, NAT64, 6to4, Teredo).
+# Geen bereik laten beginnen bij het nul-adres (0.0.0.0 of ::): coturn slaat dan
+# de ondergrens over en weigert elk adres van de andere IP-familie (4.6.3:
+# "::-::1" blokkeerde 1.1.1.1). Het nul-adres zelf weigert coturn al.
 for range in \
-  0.0.0.0-0.255.255.255 \
+  0.0.0.1-0.255.255.255 \
   10.0.0.0-10.255.255.255 \
   100.64.0.0-100.127.255.255 \
   127.0.0.0-127.255.255.255 \
@@ -55,7 +58,7 @@ for range in \
   198.51.100.0-198.51.100.255 \
   203.0.113.0-203.0.113.255 \
   224.0.0.0-255.255.255.255 \
-  ::-::1 \
+  ::1 \
   ::ffff:0.0.0.0-::ffff:255.255.255.255 \
   64:ff9b::-64:ff9b::ffff:ffff \
   100::-100::ffff:ffff:ffff:ffff \

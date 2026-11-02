@@ -11,6 +11,12 @@ sudo docker tag zekerflex-app:latest zekerflex-app:rollback
 for i in 1 2 3; do
   if sudo $C build app; then
     sudo $C up -d app backup coturn
+    # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand
+    # (nieuwe inode): alleen bij een gewijzigd script opnieuw aanmaken. Niet altijd,
+    # want lopende gesprekken via de relay vallen dan even weg.
+    if [ "$(sudo docker exec zekerflex-coturn-1 cat /zf-turn.sh 2>/dev/null | sha256sum)" != "$(sha256sum < deploy/coturn/entrypoint.sh)" ]; then
+      sudo $C up -d --force-recreate coturn
+    fi
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
     sudo $C restart cron
     # Elke build laat oude lagen achter; in nov 2026 stond de schijf zo op 79%
