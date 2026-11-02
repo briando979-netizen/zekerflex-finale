@@ -4,7 +4,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { reviewSummary } from "@/lib/reviews/store";
 import { prisma } from "@/lib/prisma";
-import { getDict, getLocale } from "@/lib/i18n/server";
+import { clientDict, getDict, getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
@@ -65,7 +65,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
-    <I18nProvider locale={locale}>
+    <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="employer" />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg">
         Naar hoofdinhoud

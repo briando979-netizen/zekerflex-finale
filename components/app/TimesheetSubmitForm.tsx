@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
-import { useFT } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 
 // ---------------------------------------------------------------------------
 // "Uren invullen" as a short guided flow instead of one long form:

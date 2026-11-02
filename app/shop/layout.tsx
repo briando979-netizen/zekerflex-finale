@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getLocale } from "@/lib/i18n/server";
+import { clientDict, getLocale } from "@/lib/i18n/server";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ShopChrome } from "@/components/marketing/ShopChrome";
 import { fontSerif } from "@/lib/fonts-shop";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ShopLayout({ children }: { children: ReactNode }) {
   const locale = await getLocale();
   return (
-    <I18nProvider locale={locale}>
+    <I18nProvider locale={locale} t={clientDict(locale)}>
       <div className={fontSerif.variable}>
         <ShopChrome>{children}</ShopChrome>
       </div>

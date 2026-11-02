@@ -10,13 +10,13 @@ import {
   type EmployerOnboardingState,
 } from "@/app/werkgever/onboarding/actions";
 import { useT } from "@/components/i18n/I18nProvider";
-import { DICTS, fmt } from "@/lib/i18n/dictionaries";
+import { nl, fmt } from "@/lib/i18n/dictionaries";
 
 type StepKey = "org" | "adres" | "profiel" | "foto" | "email" | "klaar";
 
 const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior"] as const;
 // The stored value is always the canonical Dutch option (matched on re-display).
-const CANON = DICTS.nl.onboarding.selects;
+const CANON = nl.onboarding.selects;
 const FORM_NAME: Record<(typeof SELECT_KEYS)[number], string> = {
   role: "role",
   sector: "sector",
@@ -160,7 +160,7 @@ export function EmployerOnboardingWizard({
           <div className="space-y-3">
             <p className={`rounded-lg px-3 py-2.5 text-sm ${kvkState.kvkValid ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
               {fmt(kvkState.kvkValid ? o.kvkVerified : o.kvkSaved, {
-                name: kvkState.companyName ?? DICTS.nl.shell.orgFallback,
+                name: kvkState.companyName ?? nl.shell.orgFallback,
               })}
             </p>
             <button type="button" onClick={() => setOpen("profiel")} className="btn-primary text-sm">

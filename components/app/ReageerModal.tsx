@@ -6,7 +6,7 @@ import { Portal } from "@/components/chat/Portal";
 import { useToast } from "@/components/ui/Toast";
 import { counterOfferAction } from "@/app/dashboard/klussen/actions";
 import { moneyExact } from "@/components/app/ui";
-import { useFT } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 
 export interface OtherShiftOption {
   id: string;

@@ -1,8 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { DICTS, type Dict } from "@/lib/i18n/dictionaries";
-import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
+import { nl, type Dict } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_MAX_AGE, type Locale } from "@/lib/i18n/config";
 
 interface I18nValue {
@@ -10,16 +9,22 @@ interface I18nValue {
   t: Dict;
 }
 
-const Ctx = createContext<I18nValue>({ locale: DEFAULT_LOCALE, t: DICTS[DEFAULT_LOCALE] });
+const Ctx = createContext<I18nValue>({ locale: DEFAULT_LOCALE, t: nl });
 
+/**
+ * `t` is the dictionary for any language but Dutch, passed in by the server
+ * layout (lib/i18n/server.ts clientDict) — only Dutch ships in the bundle.
+ */
 export function I18nProvider({
   locale,
+  t,
   children,
 }: {
   locale: Locale;
+  t?: Dict | undefined;
   children: ReactNode;
 }) {
-  return <Ctx.Provider value={{ locale, t: DICTS[locale] }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t: t ?? nl }}>{children}</Ctx.Provider>;
 }
 
 /** Client-side translation dictionary + current locale. Falls back to Dutch outside a provider. */
@@ -30,11 +35,6 @@ export function useI18n(): I18nValue {
 /** Just the dictionary. */
 export function useT(): Dict {
   return useContext(Ctx).t;
-}
-
-/** Freelancer-app dictionary (NL/EN/PL/RO/UK) for the current locale. */
-export function useFT(): FreelancerDict {
-  return FREELANCER_DICTS[useContext(Ctx).locale];
 }
 
 /** Set the locale cookie and reload so server components re-render. */

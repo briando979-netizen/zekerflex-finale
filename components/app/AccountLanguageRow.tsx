@@ -1,6 +1,7 @@
 "use client";
 
-import { useI18n, useFT, setLocale } from "@/components/i18n/I18nProvider";
+import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 
 // Werkende taalkeuze in de Account-tab: toont de HUIDIGE taal (uit de locale-

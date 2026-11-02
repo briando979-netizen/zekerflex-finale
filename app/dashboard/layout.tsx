@@ -5,7 +5,7 @@ import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
-import { getLocale } from "@/lib/i18n/server";
+import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
-    <I18nProvider locale={locale}>
+    <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="freelancer" />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg">
         Naar hoofdinhoud

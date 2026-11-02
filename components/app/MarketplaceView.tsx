@@ -7,7 +7,7 @@ import { ShiftMiniMap } from "@/components/app/ShiftMiniMap";
 import { ShiftCard, ShiftStatusButton } from "@/components/app/ShiftCard";
 import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
 import { hiddenEmployers } from "@/components/app/ShiftMenu";
-import { useFT } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 

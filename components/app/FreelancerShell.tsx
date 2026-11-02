@@ -8,7 +8,8 @@ import { PushToggle } from "@/components/app/PushToggle";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
-import { useI18n, useFT, setLocale } from "@/components/i18n/I18nProvider";
+import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------

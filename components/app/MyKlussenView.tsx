@@ -8,7 +8,7 @@ import { ShiftCard } from "@/components/app/ShiftCard";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
 import { CancellationClaimButton } from "@/components/app/CancellationClaimButton";
 import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
-import { useFT } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 type TabId = "pending" | "active" | "history";
