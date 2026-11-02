@@ -7,6 +7,13 @@ vi.mock("@/lib/ai/governor", () => ({
     (await fn()).value,
   isLocalInference: () => true,
 }));
+// …and the KV reads behind the node key/model/registry: the first chat() would
+// otherwise wait on a real Redis/database and time out where none answers.
+vi.mock("@/lib/storage/kv", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/storage/kv")>()),
+  kvGet: async () => null,
+  kvSet: async () => undefined,
+}));
 
 import { _resetLlmBreaker, chat, extractJson } from "@/lib/ai/client";
 
