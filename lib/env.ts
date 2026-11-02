@@ -223,6 +223,16 @@ const schema = z.object({
   // aanbieder: zet dan "default" (Twilio kiest zelf) en herstart de app.
   TELEPHONY_SPEECH_MODEL: z.string().default("deepgram_nova-3"),
 
+  // ---- TransIP-API: ZekerFlex Mail + domeinen ------------------------------
+  // Leeg = mailboxen en domeinen draaien in MOCK: aanvragen worden vastgelegd,
+  // maar er wordt niets bij TransIP aangemaakt. Sleutelpaar maken in het
+  // TransIP-controlepaneel (Account → API) met het IP van de server op de
+  // whitelist. Een domein registreren maakt een factuur: alleen na akkoord van
+  // een beheerder, nooit automatisch.
+  TRANSIP_LOGIN: z.string().optional(),
+  // PEM-privésleutel; mag op één regel met \n in .env.production staan.
+  TRANSIP_PRIVATE_KEY: z.string().optional(),
+
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with
   // exponential backoff up to LLM_RETRY_MAX times or LLM_RETRY_MAX_WAIT_MS total.

@@ -389,6 +389,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: Boolean(env.TURN_HOST && env.TURN_SHARED_SECRET),
     },
     {
+      id: "transip-api",
+      group: "Bellen & koppelingen",
+      title: "TransIP-sleutel maken voor ZekerFlex Mail en domeinen",
+      why: "Met deze sleutel maakt ZekerFlex zelf mailadressen aan (zoals jan@zekerflex.com), koppelt het domeinen van klanten en zoekt het vrije domeinnamen op. Je mail staat al bij TransIP; de server mag alleen via TransIP mailen, dus dit is de route die echt werkt. Zonder sleutel worden aanvragen alleen bewaard.",
+      how: [
+        "Log in op transip.nl → Controlepaneel → Account (rechtsboven) → API.",
+        "Zet de API aan en maak een nieuw sleutelpaar. Vink 'Alleen whitelisted IP-adressen' aan en voeg het IP van de server toe: 37.97.226.24.",
+        "Geef Claude je TransIP-loginnaam en de privésleutel (het blok dat begint met -----BEGIN PRIVATE KEY-----). Die worden verzegeld op de server gezet; daarna vinkt deze taak zichzelf af.",
+        "Domeinen registreren maakt bij TransIP een factuur. Dat gebeurt alleen als een beheerder in Admin op 'Registreer' drukt, nooit vanzelf.",
+      ],
+      auto: true,
+      done: Boolean(env.TRANSIP_LOGIN && env.TRANSIP_PRIVATE_KEY),
+    },
+    {
       id: "telefonie-prijzen",
       group: "Bellen & koppelingen",
       title: "Prijzen voor zakelijke nummers bevestigen",
