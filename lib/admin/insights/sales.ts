@@ -21,6 +21,11 @@ const SOURCE_LABEL: Record<string, string> = {
   offerte: "Offerte-AI",
   "offerte-inbound": "Offerte-AI",
   "website-check": "Website-check",
+  "ai-belafspraak": "Afspraak via AI-beller",
+  "ai-demo": "Demo via AI-assistent",
+  "sales-partner-application": "Aanmelding sales-partner",
+  "product-interest": "Interesse in een product",
+  "partner-interest": "Interesse als partner",
 };
 
 export async function salesInsights(period: Period) {
