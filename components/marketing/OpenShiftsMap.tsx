@@ -19,8 +19,9 @@ function project(lng: number, lat: number): [number, number] {
   return [x, y];
 }
 
-// Ruwe, herkenbare omtrek van Nederland (lng, lat), met de klok mee.
-const OUTLINE: [number, number][] = [
+// Ruwe, herkenbare omtrek van Nederland (lng, lat), met de klok mee. Ook gebruikt
+// door de 3D-kaart (OpenShifts3D), zodat beide kaarten dezelfde vorm hebben.
+export const NL_OUTLINE: [number, number][] = [
   [4.73, 52.96], [4.55, 52.75], [4.2, 52.45], [4.05, 52.1], [4.0, 51.95],
   [3.95, 51.78], [3.5, 51.45], [3.85, 51.4], [4.24, 51.37], [4.9, 51.41],
   [5.2, 51.26], [5.8, 51.1], [5.64, 50.84], [6.02, 50.76], [6.08, 51.18],
@@ -30,7 +31,7 @@ const OUTLINE: [number, number][] = [
 ];
 
 export function OpenShiftsMap({ cities }: { cities: MapCity[] }) {
-  const outline = OUTLINE.map(([lng, lat]) => project(lng, lat).map((n) => n.toFixed(1)).join(",")).join(" ");
+  const outline = NL_OUTLINE.map(([lng, lat]) => project(lng, lat).map((n) => n.toFixed(1)).join(",")).join(" ");
   const maxCount = Math.max(1, ...cities.map((c) => c.count));
   const labelled = new Set(cities.slice(0, 8).map((c) => c.city));
 
