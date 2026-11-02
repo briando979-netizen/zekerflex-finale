@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/admin/telephony — config + recente oproepen (voor de admin-UI).
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
-  const calls = await listCalls(60);
+  const calls = await listCalls(250);
   return NextResponse.json({
     configured: callerConfigured(),
     allowB2bCold: env.TELEPHONY_ALLOW_B2B_COLD,

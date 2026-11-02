@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { APageHeader, APanel, AStat, APill, AButton } from "@/components/admin/ui";
-import { IBriefcase, IRocket, IMail, IActivity } from "@/components/app/icons";
+import { APanel, APill, AButton } from "@/components/admin/ui";
 
 export type LeadDto = {
   id: string;
@@ -203,29 +202,22 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
 
   return (
     <div className="space-y-4">
-      <APageHeader
-        title="Sales-pijplijn"
-        subtitle="Leads van buitendienst en import — verrijken, scoren, benaderen en opvolgen."
-        badge={`${stats.open} open`}
-        action={<AButton onClick={() => setShowNew((v) => !v)} icon={<IBriefcase />}>Nieuwe lead</AButton>}
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AStat label="Totaal leads" value={stats.total} icon={<IBriefcase />} sub={`${stats.open} nog open`} />
-        <AStat label="Benaderd" value={stats.sent} icon={<IMail />} sub="verstuurd of reactie" />
-        <AStat label="Gewonnen" value={stats.won} icon={<IRocket />} sub="account aangemaakt" />
-        <AStat label="Gem. fit-score" value={stats.avgScore ?? "–"} icon={<IActivity />} sub="0–100" />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+          {stats.total} leads, {stats.open} open{stats.avgScore !== null ? `, gemiddelde fit-score ${stats.avgScore}` : ""}
+        </p>
+        <AButton onClick={() => setShowNew((v) => !v)}>Nieuwe lead</AButton>
       </div>
 
       {showNew && <NewLeadForm onCreated={(l) => { setLeads((ls) => [l, ...ls]); setShowNew(false); setMsg("Lead toegevoegd."); }} />}
 
       {msg && (
-        <div className="rounded-xl px-4 py-2.5 text-sm" style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
+        <p role="status" className="rounded-lg px-4 py-2.5 text-[0.8125rem]" style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
           {msg}
-        </div>
+        </p>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-0.5">
         {(["ALL", ...PIPELINE, "LOST", "DISQUALIFIED"] as string[]).map((s) => {
           const count = s === "ALL" ? leads.length : leads.filter((l) => l.status === s).length;
           const active = filter === s;
@@ -234,14 +226,12 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
               key={s}
               type="button"
               onClick={() => setFilter(s)}
-              className="rounded-full px-3 py-1.5 text-xs font-medium transition"
-              style={{
-                background: active ? "var(--a-accent)" : "var(--a-panel-2)",
-                color: active ? "#04140d" : "var(--a-dim)",
-                border: "1px solid var(--a-border)",
-              }}
+              aria-pressed={active}
+              className="rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors"
+              style={active ? { background: "var(--a-elev)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
             >
-              {s === "ALL" ? "Alles" : STATUS_LABEL[s]} · {count}
+              {s === "ALL" ? "Alles" : STATUS_LABEL[s]}
+              <span className="num ml-1.5 text-xs" style={{ color: "var(--a-mute)" }}>{count}</span>
             </button>
           );
         })}
@@ -279,8 +269,8 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
                       <span
                         className="num rounded-lg px-2 py-1 text-xs font-bold"
                         style={{
-                          background: l.score >= 60 ? "rgba(16,185,129,0.15)" : l.score >= 40 ? "rgba(245,158,11,0.15)" : "var(--a-elev)",
-                          color: l.score >= 60 ? "#4ade80" : l.score >= 40 ? "#fbbf24" : "var(--a-dim)",
+                          background: l.score >= 60 ? "var(--a-ok-soft)" : l.score >= 40 ? "var(--a-warn-soft)" : "var(--a-elev)",
+                          color: l.score >= 60 ? "var(--a-ok)" : l.score >= 40 ? "var(--a-warn)" : "var(--a-dim)",
                         }}
                       >
                         {l.score}
@@ -458,7 +448,7 @@ function SmartBtn({
       className="rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40"
       style={{
         background: primary ? "var(--a-accent)" : "var(--a-panel)",
-        color: primary ? "#04140d" : "var(--a-dim)",
+        color: primary ? "var(--a-on-accent)" : "var(--a-dim)",
         border: "1px solid var(--a-border)",
       }}
     >
@@ -525,7 +515,7 @@ function NewLeadForm({ onCreated }: { onCreated: (l: LeadDto) => void }) {
             style={{ background: "var(--a-panel-2)", color: "var(--a-text)", border: "1px solid var(--a-border)" }}
           />
         </label>
-        {err && <p className="text-xs sm:col-span-2" style={{ color: "#fca5a5" }}>{err}</p>}
+        {err && <p className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
         <div className="sm:col-span-2">
           <AButton type="submit" disabled={busy || form.companyName.trim().length < 2}>
             {busy ? "Bezig…" : "Lead opslaan"}

@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { count, dateTimeNl } from "@/lib/admin/format";
+import { bucketCount, resolvePeriod, timelineKeys } from "@/lib/admin/period";
+import { Empty, KpiStrip, Notice, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
+import { Chart } from "@/components/admin/kit-client";
 
 interface OfferAnalysis {
   isOffer: boolean;
@@ -26,8 +30,43 @@ interface OfferRecord extends OfferAnalysis {
   status: "nieuw" | "beantwoord" | "afgewezen";
 }
 
+const STATUS: Record<OfferRecord["status"], { label: string; tone: Tone }> = {
+  nieuw: { label: "Wacht op antwoord", tone: "warn" },
+  beantwoord: { label: "Beantwoord", tone: "ok" },
+  afgewezen: { label: "Afgewezen", tone: "neutral" },
+};
+
+const PERIOD = resolvePeriod("30");
+
 function copy(text: string) {
   navigator.clipboard?.writeText(text).catch(() => undefined);
+}
+
+function Details({ a }: { a: OfferAnalysis }) {
+  const rows = ([["Bedrijf", a.company], ["Contact", a.contactName], ["Behoefte", a.behoefte], ["Aantal", a.aantal], ["Locatie", a.locatie], ["Periode", a.periode], ["Functie", a.functietype]] as [string, string | null][]).filter(([, v]) => v);
+  if (rows.length === 0) return null;
+  return (
+    <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex gap-2">
+          <dt className="w-16 flex-shrink-0" style={{ color: "var(--a-mute)" }}>{k}</dt>
+          <dd style={{ color: "var(--a-text)" }}>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Draft({ text }: { text: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>Concept-antwoord</span>
+        <button type="button" onClick={() => copy(text)} className="a-button text-xs">Kopiëren</button>
+      </div>
+      <pre className="whitespace-pre-wrap rounded-lg p-3 font-sans text-xs leading-relaxed" style={{ background: "var(--a-panel-2)", color: "var(--a-dim)" }}>{text}</pre>
+    </div>
+  );
 }
 
 export function Offertes() {
@@ -38,6 +77,8 @@ export function Offertes() {
   const [analysis, setAnalysis] = useState<OfferAnalysis | null>(null);
   const [busy, setBusy] = useState(false);
   const [sweepMsg, setSweepMsg] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"alle" | OfferRecord["status"]>("alle");
+  const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -88,7 +129,7 @@ export function Offertes() {
         body: JSON.stringify({ action: "sweep" }),
       });
       const d = await res.json().catch(() => ({}));
-      setSweepMsg(d.ok ? `Klaar: ${d.scanned} gescand, ${d.offers} offerteaanvraag(/vragen) gevonden.` : `Niet gelukt: ${d.reason ?? "onbekend"}`);
+      setSweepMsg(d.ok ? `Klaar: ${d.scanned} mails gelezen, ${d.offers} offerteaanvraag(en) gevonden.` : `Niet gelukt: ${d.reason ?? "onbekend"}`);
       await load();
     } catch {
       setSweepMsg("Netwerkfout.");
@@ -107,121 +148,118 @@ export function Offertes() {
     [load],
   );
 
+  const offers = useMemo(() => data?.offers ?? [], [data]);
+  const shown = filter === "alle" ? offers : offers.filter((o) => o.status === filter);
+  const waiting = offers.filter((o) => o.status === "nieuw").length;
+  const withLead = offers.filter((o) => o.leadId).length;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">📨 Offerte-AI (sales@)</h1>
-        <p className="mt-1 text-sm text-neutralx-600">
-          De AI leest de ZekerFlex-mailbox, herkent offerte- en personeelsaanvragen van bedrijven, haalt de details
-          eruit, zet er een warme lead van in de sales-pijplijn en schrijft een concept-antwoord. Jij controleert en
-          verstuurt — de AI mailt niet zelf.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Offerte-AI"
+        subtitle="De AI leest de mailbox van sales@, herkent offerte- en personeelsaanvragen, haalt de details eruit, maakt er een warme lead van en schrijft een concept-antwoord. Jij controleert en verstuurt: de AI mailt niet zelf."
+        meta={data ? <Pill tone={data.mailboxConnected ? "ok" : "warn"}>{data.mailboxConnected ? "Mailbox gekoppeld" : "Geen mailbox gekoppeld"}</Pill> : undefined}
+        actions={<button type="button" onClick={() => void sweep()} disabled={!data?.mailboxConnected} className="a-button a-button-primary">Verwerk de inbox nu</button>}
+      />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-hair bg-white p-4">
-        <span className={`inline-flex items-center gap-1.5 text-sm ${data?.mailboxConnected ? "text-ok" : "text-neutralx-500"}`}>
-          <span className={`h-2 w-2 rounded-full ${data?.mailboxConnected ? "bg-ok" : "bg-neutralx-400"}`} />
-          {data?.mailboxConnected ? "Mailbox gekoppeld" : "Geen mailbox gekoppeld (IMAP)"}
-        </span>
-        <button
-          type="button"
-          onClick={() => void sweep()}
-          disabled={!data?.mailboxConnected}
-          className="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40"
-        >
-          Verwerk sales@-inbox nu
-        </button>
-        {sweepMsg && <span className="text-xs text-neutralx-600">{sweepMsg}</span>}
-        <span className="ml-auto text-xs text-neutralx-400">Draait ook automatisch (cron).</span>
-      </div>
+      {sweepMsg && <Notice>{sweepMsg} De inbox wordt ook automatisch drie keer per dag verwerkt.</Notice>}
 
-      <section className="rounded-xl border border-hair bg-white p-5">
-        <h2 className="text-sm font-semibold text-ink">Plak een aanvraag (of forward)</h2>
-        <p className="mt-1 text-xs text-neutralx-500">Test de AI op een losse mail: plak de inhoud, de AI haalt het eruit en schrijft een concept.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Afzender e-mail (optioneel)" className="rounded-lg border border-hairstrong px-3 py-2 text-sm outline-none focus:border-brand-500" />
-          <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Onderwerp (optioneel)" className="rounded-lg border border-hairstrong px-3 py-2 text-sm outline-none focus:border-brand-500" />
-        </div>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={6}
-          placeholder="Plak hier de e-mail…"
-          className="mt-2 w-full resize-y rounded-lg border border-hairstrong px-3 py-2 text-sm outline-none focus:border-brand-500"
-        />
-        <div className="mt-2 flex gap-2">
-          <button type="button" onClick={() => void analyze(false)} disabled={busy || !body.trim()} className="rounded-full border border-brand-500 px-4 py-1.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 disabled:opacity-40">
-            {busy ? "Bezig…" : "Analyseer"}
-          </button>
-          <button type="button" onClick={() => void analyze(true)} disabled={busy || !body.trim()} className="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">
-            Analyseer + bewaar als lead
-          </button>
-        </div>
-        {analysis && (
-          <div className="mt-3 rounded-lg border border-hair bg-paper-soft p-3 text-sm">
-            {analysis.isOffer ? (
-              <>
-                <p className="font-semibold text-ok">✓ Offerteaanvraag ({Math.round(analysis.confidence * 100)}% zeker)</p>
-                <p className="mt-1 text-neutralx-700">{analysis.samenvatting}</p>
-                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutralx-600">
-                  {([["Bedrijf", analysis.company], ["Contact", analysis.contactName], ["Behoefte", analysis.behoefte], ["Aantal", analysis.aantal], ["Locatie", analysis.locatie], ["Periode", analysis.periode]] as [string, string | null][]) .filter(([, v]) => v).map(([k, v]) => (
-                    <div key={k}><dt className="inline font-medium">{k}:</dt> <dd className="inline">{v}</dd></div>
-                  ))}
-                </dl>
-                {analysis.draftReply && (
-                  <div className="mt-2">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-ink">Concept-antwoord</span>
-                      <button type="button" onClick={() => copy(analysis.draftReply)} className="text-xs text-brand-600 hover:underline">kopieer</button>
-                    </div>
-                    <pre className="whitespace-pre-wrap rounded border border-hair bg-white p-2 text-xs text-neutralx-700">{analysis.draftReply}</pre>
-                  </div>
+      <KpiStrip
+        items={[
+          { label: "Aanvragen", value: count(offers.length), hint: "herkend in de mailbox", spark: bucketCount(offers, (o) => new Date(o.at), PERIOD) },
+          { label: "Wacht op antwoord", value: count(waiting), hint: waiting > 0 ? "concept staat klaar" : "alles beantwoord", ...(waiting > 0 ? { tone: "warn" as const } : {}) },
+          { label: "Beantwoord", value: count(offers.filter((o) => o.status === "beantwoord").length) },
+          { label: "In de pijplijn", value: count(withLead), hint: "als warme lead", href: "/admin/sales" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <Panel title="Binnengekomen" subtitle="Aanvragen per dag, de laatste 30 dagen">
+          <Chart title="Offerteaanvragen per dag" kind="bars" unit="count" labels={timelineKeys(PERIOD)} series={[{ label: "Aanvragen", values: bucketCount(offers, (o) => new Date(o.at), PERIOD) }]} height={170} emptyText="Nog geen aanvragen in de laatste 30 dagen." />
+        </Panel>
+        <Panel title="Test met een losse mail" subtitle="Plak de inhoud: de AI haalt de details eruit en schrijft een concept">
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Afzender (optioneel)" aria-label="Afzender" className="a-input" />
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Onderwerp (optioneel)" aria-label="Onderwerp" className="a-input" />
+            </div>
+            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} placeholder="Plak hier de e-mail" aria-label="Inhoud van de e-mail" className="a-input resize-y" />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void analyze(false)} disabled={busy || !body.trim()} className="a-button">{busy ? "Bezig…" : "Analyseren"}</button>
+              <button type="button" onClick={() => void analyze(true)} disabled={busy || !body.trim()} className="a-button a-button-primary">Analyseren en als lead bewaren</button>
+            </div>
+            {analysis && (
+              <div className="space-y-2.5 rounded-lg p-3" style={{ border: "1px solid var(--a-border)" }}>
+                {analysis.isOffer ? (
+                  <>
+                    <p className="flex flex-wrap items-center gap-2 text-[0.8125rem]">
+                      <Pill tone="ok">Offerteaanvraag</Pill>
+                      <span style={{ color: "var(--a-mute)" }}>{Math.round(analysis.confidence * 100)}% zeker</span>
+                    </p>
+                    <p className="text-[0.8125rem]" style={{ color: "var(--a-text)" }}>{analysis.samenvatting}</p>
+                    <Details a={analysis} />
+                    {analysis.draftReply && <Draft text={analysis.draftReply} />}
+                  </>
+                ) : (
+                  <p className="text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>Dit lijkt geen offerteaanvraag. {analysis.samenvatting}</p>
                 )}
-              </>
-            ) : (
-              <p className="text-neutralx-500">Dit lijkt geen offerteaanvraag. {analysis.samenvatting}</p>
+              </div>
             )}
           </div>
-        )}
-      </section>
+        </Panel>
+      </div>
 
-      <section className="rounded-xl border border-hair bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ink">Verwerkte aanvragen</h2>
-          <button type="button" onClick={() => void load()} className="text-xs text-brand-600 hover:underline">vernieuwen</button>
+      <Panel flush title="Verwerkte aanvragen" actions={<button type="button" onClick={() => void load()} className="a-button text-xs">Vernieuwen</button>}>
+        <div role="group" aria-label="Aanvragen tonen" className="flex flex-wrap gap-0.5 px-3 py-2.5 sm:px-4" style={{ borderTop: "1px solid var(--a-border)", borderBottom: "1px solid var(--a-border)" }}>
+          {(["alle", "nieuw", "beantwoord", "afgewezen"] as const).map((f) => {
+            const n = f === "alle" ? offers.length : offers.filter((o) => o.status === f).length;
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                aria-pressed={filter === f}
+                className="rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors"
+                style={filter === f ? { background: "var(--a-elev)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
+              >
+                {f === "alle" ? "Alle" : STATUS[f].label}
+                <span className="num ml-1.5 text-xs" style={{ color: "var(--a-mute)" }}>{n}</span>
+              </button>
+            );
+          })}
         </div>
-        <div className="mt-3 space-y-3">
-          {(data?.offers ?? []).length === 0 ? (
-            <p className="text-sm text-neutralx-400">Nog geen aanvragen verwerkt.</p>
-          ) : (
-            (data?.offers ?? []).map((o) => (
-              <div key={o.id} className="rounded-lg border border-hair p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-sm text-ink">{o.company ?? o.fromName ?? o.fromAddress ?? "Onbekend"}</strong>
-                  {o.fromAddress && <span className="font-mono text-xs text-neutralx-500">{o.fromAddress}</span>}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${o.status === "beantwoord" ? "bg-emerald-100 text-emerald-700" : o.status === "afgewezen" ? "bg-neutralx-100 text-neutralx-500" : "bg-amber-100 text-amber-700"}`}>{o.status}</span>
-                  <span className="ml-auto text-[10px] text-neutralx-400">{new Date(o.at).toLocaleString("nl-NL")}</span>
-                </div>
-                <p className="mt-1 text-sm text-neutralx-700">{o.samenvatting}</p>
-                {o.draftReply && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-xs font-semibold text-brand-600">Concept-antwoord</summary>
-                    <div className="mt-1 flex items-start gap-2">
-                      <pre className="flex-1 whitespace-pre-wrap rounded border border-hair bg-paper-soft p-2 text-xs text-neutralx-700">{o.draftReply}</pre>
-                      <button type="button" onClick={() => copy(o.draftReply)} className="flex-shrink-0 text-xs text-brand-600 hover:underline">kopieer</button>
+        {shown.length === 0 ? (
+          <Empty title={offers.length === 0 ? "Nog geen aanvragen verwerkt" : "Geen aanvragen met dit filter"} />
+        ) : (
+          <ul>
+            {shown.map((o) => {
+              const isOpen = open === o.id;
+              return (
+                <li key={o.id} style={{ borderBottom: "1px solid var(--a-border)" }}>
+                  <button type="button" onClick={() => setOpen(isOpen ? null : o.id)} aria-expanded={isOpen} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left text-[0.8125rem] transition-colors hover:bg-[var(--a-panel-2)] sm:px-5">
+                    <span className="font-medium" style={{ color: "var(--a-text)" }}>{o.company ?? o.fromName ?? o.fromAddress ?? "Onbekend"}</span>
+                    <Pill tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Pill>
+                    <span className="min-w-0 flex-1 truncate text-xs" style={{ color: "var(--a-mute)" }}>{o.samenvatting}</span>
+                    <span className="flex-shrink-0 text-xs" style={{ color: "var(--a-mute)" }}>{dateTimeNl(o.at)}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="space-y-3 px-4 pb-4 sm:px-5">
+                      {o.fromAddress && <p className="font-mono text-xs" style={{ color: "var(--a-mute)" }}>{o.fromAddress}{o.subject ? `, ${o.subject}` : ""}</p>}
+                      <Details a={o} />
+                      {o.draftReply && <Draft text={o.draftReply} />}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {o.leadId && <Link href="/admin/sales" className="a-button text-xs">In de pijplijn →</Link>}
+                        {o.status !== "beantwoord" && <button type="button" onClick={() => void setStatus(o.id, "beantwoord")} className="a-button a-button-primary text-xs">Markeer als beantwoord</button>}
+                        {o.status !== "afgewezen" && <button type="button" onClick={() => void setStatus(o.id, "afgewezen")} className="a-button text-xs">Afwijzen</button>}
+                      </div>
                     </div>
-                  </details>
-                )}
-                <div className="mt-2 flex items-center gap-3 text-xs">
-                  {o.leadId && <Link href="/admin/sales" className="text-brand-600 hover:underline">→ in sales-pijplijn</Link>}
-                  <button type="button" onClick={() => void setStatus(o.id, "beantwoord")} className="text-emerald-600 hover:underline">markeer beantwoord</button>
-                  <button type="button" onClick={() => void setStatus(o.id, "afgewezen")} className="text-neutralx-500 hover:underline">afwijzen</button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
     </div>
   );
 }

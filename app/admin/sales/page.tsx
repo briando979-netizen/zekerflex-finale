@@ -1,6 +1,10 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { PageHeader } from "@/components/app/ui";
 import { prisma } from "@/lib/prisma";
+import { resolvePeriod } from "@/lib/admin/period";
+import { salesInsights } from "@/lib/admin/insights/sales";
+import { count, percentOf } from "@/lib/admin/format";
+import { BarList, Funnel, KpiStrip, PageHead, Panel, PeriodTabs } from "@/components/admin/kit";
+import { Chart } from "@/components/admin/kit-client";
 import { env } from "@/lib/env";
 import { listLeads } from "@/lib/sales/leads";
 import { listCampaigns, startOfToday } from "@/lib/sales/campaign";
@@ -13,13 +17,16 @@ import type { EngineSnapshot } from "@/components/admin/sales/EngineTab";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesAdminPage() {
+export default async function SalesAdminPage(props: { searchParams: Promise<{ periode?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return <PageHeader title="Geen toegang" subtitle="Het sales-dashboard is alleen voor platformbeheerders." />;
+    return <PageHead title="Geen toegang" subtitle="Het sales-dashboard is alleen voor platformbeheerders." />;
   }
+  const { periode } = await props.searchParams;
+  const period = resolvePeriod(periode);
 
-  const [rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns] = await Promise.all([
+  const [insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns] = await Promise.all([
+    salesInsights(period),
     listLeads({ limit: 200 }),
     listCampaigns(),
     listSuppression(200),
@@ -141,11 +148,41 @@ export default async function SalesAdminPage() {
   }));
 
   return (
-    <SalesConsole
-      initialLeads={leads}
-      initialCampaigns={campaigns}
-      initialEngine={engine}
-      initialSuppression={suppressionDto}
-    />
+    <div className="space-y-4">
+      <PageHead
+        title="Sales-pijplijn"
+        subtitle="Leads van buitendienst, import en de site: verrijken, scoren, benaderen en opvolgen."
+        actions={<PeriodTabs period={period} basePath="/admin/sales" />}
+      />
+
+      <KpiStrip
+        items={[
+          { label: "Nieuwe leads", value: count(insights.newCount), hint: `laatste ${period.label}`, spark: insights.newSeries },
+          { label: "Open in de pijplijn", value: count(insights.open), hint: `van ${count(insights.total)} leads` },
+          { label: "In gesprek", value: count(insights.talking), hint: "wachten op jouw opvolging", ...(insights.talking > 0 ? { tone: "warn" as const } : {}) },
+          { label: "Gewonnen", value: count(insights.won), hint: `${percentOf(insights.won, insights.funnel[1]?.value ?? 0)}% van wie benaderd is`, tone: "ok" },
+          { label: "Vandaag verstuurd", value: `${count(sentToday)} / ${count(env.SALES_DAILY_CAP_GLOBAL)}`, hint: "dagelijkse grens van de motor" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <Panel title="Nieuwe leads" subtitle={`Per ${period.bucket === "month" ? "maand" : "dag"}, laatste ${period.label}`} className="lg:col-span-1">
+          <Chart title="Nieuwe leads per periode" kind="bars" unit="count" labels={insights.labels} series={[{ label: "Nieuwe leads", values: insights.newSeries }]} height={170} emptyText="Geen nieuwe leads in deze periode." />
+        </Panel>
+        <Panel title="Doorstroom" subtitle="Alle leads, van eerste contact tot klant">
+          <Funnel stages={insights.funnel} />
+        </Panel>
+        <Panel title="Waar leads vandaan komen">
+          <BarList emptyText="Nog geen leads." rows={insights.sources.map((s) => ({ key: s.key, label: s.label, value: s.value, display: count(s.value) }))} />
+        </Panel>
+      </div>
+
+      <SalesConsole
+        initialLeads={leads}
+        initialCampaigns={campaigns}
+        initialEngine={engine}
+        initialSuppression={suppressionDto}
+      />
+    </div>
   );
 }

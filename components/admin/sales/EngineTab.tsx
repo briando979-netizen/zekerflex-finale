@@ -97,14 +97,12 @@ export function EngineTab({ initial }: { initial: EngineSnapshot }) {
         <div className="flex flex-wrap items-center gap-3">
           {snap.paused ? (
             <button type="button" onClick={() => post("resume")} disabled={busy !== null}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-              style={{ background: "var(--a-accent)", color: "#04140d", border: "1px solid var(--a-border)" }}>
+              className="a-button a-button-primary text-xs">
               {busy === "resume" ? "Bezig…" : "Motor hervatten"}
             </button>
           ) : (
             <button type="button" onClick={() => post("pause")} disabled={busy !== null}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-              style={{ background: "rgba(248,113,113,0.15)", color: "#fca5a5", border: "1px solid var(--a-border)" }}>
+              className="a-button text-xs" style={{ color: "var(--a-crit)" }}>
               {busy === "pause" ? "Bezig…" : "Noodstop (pauzeren)"}
             </button>
           )}

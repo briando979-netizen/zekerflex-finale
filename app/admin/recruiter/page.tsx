@@ -10,15 +10,11 @@ export default async function AdminRecruiterPage() {
     return <PageHead title="Geen toegang" subtitle="De AI-recruiter is alleen voor platformbeheerders." />;
   }
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">AI-recruiter</h1>
-        <p className="mt-1 text-sm text-neutralx-600">
-          Sourcet kandidaten uit je eigen pool, rangschikt ze met uitleg en certificaten, en schrijft met je eigen AI een
-          persoonlijk concept-bericht per kandidaat. Jij houdt de controle: de AI stelt voor, jij kiest en verstuurt — er gaan
-          geen gegevens naar een externe dienst en er zijn geen kosten per intake.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="AI-recruiter"
+        subtitle="Zoekt kandidaten in je eigen pool, rangschikt ze met uitleg en certificaten, en schrijft een persoonlijk concept-bericht. Jij kiest en verstuurt. Er gaan geen gegevens naar een externe dienst."
+      />
       <RecruiterConsole />
     </div>
   );

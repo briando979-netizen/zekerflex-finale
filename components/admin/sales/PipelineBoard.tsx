@@ -6,18 +6,18 @@ import type { LeadDto } from "@/components/admin/SalesDashboard";
 // ---------------------------------------------------------------------------
 // Salesforce-achtig kanban-bord voor de sales-pijplijn. Kolommen per fase,
 // sleepbare kaarten (slepen = fase wijzigen), en per kaart meteen zichtbaar of
-// de lead bereikbaar is (📞 / ✉️) met een inline "bel" of "zoek nummer". Zo is
+// de lead bereikbaar is (telefoon, mail) met een inline "bel" of "zoek nummer". Zo is
 // het bord óók het gereedschap om het datagat (lege nummers) te dichten.
 // ---------------------------------------------------------------------------
 
 type StageId = "nieuw" | "benaderd" | "gesprek" | "gewonnen" | "verloren";
 
 const COLUMNS: { id: StageId; label: string; set: string; accent: string; statuses: string[] }[] = [
-  { id: "nieuw", label: "Nieuw", set: "NEW", accent: "#64748b", statuses: ["NEW", "ENRICHED"] },
-  { id: "benaderd", label: "Benaderd", set: "QUEUED", accent: "#3b82f6", statuses: ["QUEUED", "DRAFTED", "APPROVED", "SENT"] },
-  { id: "gesprek", label: "In gesprek", set: "REPLIED", accent: "#f59e0b", statuses: ["REPLIED"] },
-  { id: "gewonnen", label: "Gewonnen", set: "WON", accent: "#10b981", statuses: ["WON"] },
-  { id: "verloren", label: "Verloren", set: "LOST", accent: "#9ca3af", statuses: ["LOST", "BOUNCED", "UNSUBSCRIBED", "DISQUALIFIED"] },
+  { id: "nieuw", label: "Nieuw", set: "NEW", accent: "var(--a-axis)", statuses: ["NEW", "ENRICHED"] },
+  { id: "benaderd", label: "Benaderd", set: "QUEUED", accent: "var(--a-plan)", statuses: ["QUEUED", "DRAFTED", "APPROVED", "SENT"] },
+  { id: "gesprek", label: "In gesprek", set: "REPLIED", accent: "var(--a-warn)", statuses: ["REPLIED"] },
+  { id: "gewonnen", label: "Gewonnen", set: "WON", accent: "var(--a-ok)", statuses: ["WON"] },
+  { id: "verloren", label: "Verloren", set: "LOST", accent: "var(--a-mute)", statuses: ["LOST", "BOUNCED", "UNSUBSCRIBED", "DISQUALIFIED"] },
 ];
 
 function columnOf(status: string): StageId {
@@ -72,7 +72,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
         body: JSON.stringify({ action: "call", to: phone, leadId: id, b2b: true, script: "intro-werkgever" }),
       });
       const d = await res.json().catch(() => ({}));
-      setMsg(res.ok && d.ok ? `📞 Oproep gestart naar ${phone}.` : `Bellen mislukt: ${d.reason ?? "onbekend"}`);
+      setMsg(res.ok && d.ok ? `Oproep gestart naar ${phone}.` : `Bellen mislukt: ${d.reason ?? "onbekend"}`);
     } catch {
       setMsg("Netwerkfout.");
     } finally {
@@ -107,9 +107,9 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
     <div className="space-y-3">
       <div className="flex items-center gap-3">
         <p className="text-xs" style={{ color: "var(--a-mute)" }}>
-          Sleep een kaart naar een andere kolom om de fase te wijzigen. 📞/✉️ tonen of de lead bereikbaar is.
+          Sleep een kaart naar een andere kolom om de fase te wijzigen. Tel en Mail laten zien of de lead bereikbaar is.
         </p>
-        {msg && <span className="text-xs font-medium" style={{ color: "var(--a-accent)" }}>{msg}</span>}
+        {msg && <span role="status" className="text-xs font-medium" style={{ color: "var(--a-text)" }}>{msg}</span>}
       </div>
 
       <div className="grid gap-3 md:grid-cols-5">
@@ -128,10 +128,11 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                 if (dragId) void move(dragId, col.id);
                 setDragId(null);
               }}
-              className="flex min-h-[120px] flex-col rounded-xl p-2 transition"
+              className="flex min-h-[120px] flex-col rounded-xl p-2 transition-colors"
               style={{
                 background: overCol === col.id ? "var(--a-elev)" : "var(--a-panel-2)",
-                border: `1px solid ${overCol === col.id ? col.accent : "var(--a-border)"}`,
+                border: `1px solid ${overCol === col.id ? "var(--a-border-strong)" : "var(--a-border)"}`,
+                boxShadow: `inset 0 2px 0 ${col.accent}`,
               }}
             >
               <div className="mb-2 flex items-center gap-2 px-1">
@@ -149,7 +150,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                     draggable
                     onDragStart={() => setDragId(l.id)}
                     onDragEnd={() => setDragId(null)}
-                    className="cursor-grab rounded-lg p-2.5 active:cursor-grabbing"
+                    className="cursor-grab rounded-lg p-2.5 transition-shadow hover:shadow-[var(--a-shadow-sm)] active:cursor-grabbing"
                     style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", opacity: dragId === l.id ? 0.5 : 1 }}
                   >
                     <div className="flex items-start gap-1.5">
@@ -160,8 +161,8 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                         <span
                           className="rounded px-1.5 text-[10px] font-bold"
                           style={{
-                            background: l.score >= 60 ? "rgba(16,185,129,0.15)" : l.score >= 40 ? "rgba(245,158,11,0.15)" : "var(--a-elev)",
-                            color: l.score >= 60 ? "#10b981" : l.score >= 40 ? "#f59e0b" : "var(--a-dim)",
+                            background: l.score >= 60 ? "var(--a-ok-soft)" : l.score >= 40 ? "var(--a-warn-soft)" : "var(--a-elev)",
+                            color: l.score >= 60 ? "var(--a-ok)" : l.score >= 40 ? "var(--a-warn)" : "var(--a-dim)",
                           }}
                         >
                           {l.score}
@@ -169,13 +170,13 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                       )}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: "var(--a-mute)" }}>
-                      <span title={l.contactPhone ?? "geen nummer"} style={{ color: l.contactPhone ? "#10b981" : "var(--a-mute)" }}>
-                        {l.contactPhone ? "📞" : "📵"}
+                      <span title={l.contactPhone ?? "geen nummer"} className={l.contactPhone ? "font-medium" : "line-through"} style={{ color: l.contactPhone ? "var(--a-ok)" : "var(--a-mute)" }}>
+                        Tel
                       </span>
-                      <span title={l.contactEmail ?? "geen e-mail"} style={{ color: l.contactEmail ? "#10b981" : "var(--a-mute)" }}>
-                        {l.contactEmail ? "✉️" : "✖"}
+                      <span title={l.contactEmail ?? "geen e-mail"} className={l.contactEmail ? "font-medium" : "line-through"} style={{ color: l.contactEmail ? "var(--a-ok)" : "var(--a-mute)" }}>
+                        Mail
                       </span>
-                      {l.city && <span className="truncate">· {l.city}</span>}
+                      {l.city && <span className="truncate">{l.city}</span>}
                     </div>
                     <div className="mt-1.5 flex gap-1.5">
                       {l.contactPhone ? (
@@ -183,20 +184,18 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           type="button"
                           onClick={() => void callLead(l.id, l.contactPhone!)}
                           disabled={busy !== null}
-                          className="rounded px-2 py-0.5 text-[11px] font-semibold disabled:opacity-40"
-                          style={{ background: "var(--a-accent)", color: "#04140d" }}
+                          className="a-button a-button-primary !min-h-0 !px-2 !py-0.5 text-[11px]"
                         >
-                          {busy === `${l.id}:call` ? "…" : "📞 Bel"}
+                          {busy === `${l.id}:call` ? "…" : "Bellen"}
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={() => void scrape(l.id)}
                           disabled={busy !== null}
-                          className="rounded px-2 py-0.5 text-[11px] disabled:opacity-40"
-                          style={{ border: "1px solid var(--a-border)", color: "var(--a-dim)" }}
+                          className="a-button !min-h-0 !px-2 !py-0.5 text-[11px]"
                         >
-                          {busy === `${l.id}:scrape` ? "Zoeken…" : "📇 Zoek nr."}
+                          {busy === `${l.id}:scrape` ? "Zoeken…" : "Zoek nummer"}
                         </button>
                       )}
                     </div>

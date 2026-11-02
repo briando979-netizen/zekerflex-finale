@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { count, dateNl, euroExact } from "@/lib/admin/format";
+import { Empty, KpiStrip, Meter, Panel, Pill } from "@/components/admin/kit";
 
 interface Vac {
   id: string;
@@ -40,10 +42,7 @@ interface Draft {
   aiUsed?: boolean;
 }
 
-const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const dayLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
-const reasonColor = (s: Reason["strength"]) => (s === "goed" ? "text-brand-600" : s === "zwak" ? "text-crit" : "text-neutralx-400");
+const REASON_TONE: Record<Reason["strength"], string> = { goed: "var(--a-ok)", ok: "var(--a-axis)", zwak: "var(--a-crit)" };
 
 export function RecruiterConsole() {
   const [vacancies, setVacancies] = useState<Vac[] | null>(null);
@@ -104,108 +103,112 @@ export function RecruiterConsole() {
     }
   }
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-      {/* vacatures */}
-      <div className="card p-5">
-        <p className="text-sm font-semibold text-ink">Openstaande uitzend-vacatures</p>
-        <p className="mt-0.5 text-xs text-neutralx-500">Kies een vacature om kandidaten uit je eigen pool te sourcen.</p>
-        <div className="mt-3 space-y-2">
-          {vacancies === null ? (
-            <div className="h-24 animate-pulse rounded-xl bg-paper-soft" />
-          ) : vacancies.length === 0 ? (
-            <p className="text-sm text-neutralx-500">Geen openstaande uitzend-vacatures.</p>
-          ) : (
-            vacancies.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => void source(v.id)}
-                className={`w-full rounded-xl border p-3 text-left text-sm transition ${
-                  selected === v.id ? "border-brand-600 bg-paper-soft" : "border-hairstrong hover:bg-paper-soft"
-                }`}
-              >
-                <span className="block font-medium text-ink">{v.title}</span>
-                <span className="block text-xs text-neutralx-500">
-                  {v.city} · {dayLabel(v.startsAt)} · {euro(v.hourlyRateCents)}/u · {v.positions} plek{v.positions === 1 ? "" : "ken"} · {v.candidateCount} kandida{v.candidateCount === 1 ? "at" : "ten"}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+  const list = vacancies ?? [];
+  const current = list.find((v) => v.id === selected) ?? null;
 
-      {/* shortlist */}
-      <div className="card p-5">
-        <p className="text-sm font-semibold text-ink">Shortlist</p>
-        {!selected ? (
-          <p className="mt-2 text-sm text-neutralx-500">Kies links een vacature.</p>
-        ) : sourcing ? (
-          <div className="mt-3 h-40 animate-pulse rounded-xl bg-paper-soft" />
-        ) : candidates && candidates.length === 0 ? (
-          <p className="mt-2 text-sm text-neutralx-500">Nog geen gescoorde kandidaten voor deze vacature. De matching vult dit zodra er geschikte mensen zijn.</p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {(candidates ?? []).map((c) => {
-              const d = drafts[c.freelancerId];
-              return (
-                <li key={c.freelancerId} className="rounded-xl border border-hairstrong p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-ink">{c.name}</span>
-                    <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-semibold text-white">{c.scorePct}% · {c.verdict}</span>
-                    <span className="text-xs text-neutralx-400">{c.travelMinutes} min reizen</span>
-                  </div>
-                  {c.certificates.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {c.certificates.map((cert, i) => (
-                        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] ${cert.status === "VERIFIED" ? "bg-brand-600 text-white" : "bg-paper-soft text-neutralx-600"}`}>
-                          {cert.type}
-                          {cert.status === "VERIFIED" ? " ✓" : ""}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <ul className="mt-2 space-y-0.5 text-xs text-neutralx-600">
-                    {c.reasons.map((r, i) => (
-                      <li key={i}>
-                        <span className={reasonColor(r.strength)} aria-hidden>●</span> <span className="font-medium text-ink">{r.label}:</span> {r.detail}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <select
-                      value={d?.channel ?? "whatsapp"}
-                      onChange={(e) => setDraft(c.freelancerId, { channel: e.target.value as Channel })}
-                      className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-xs"
+  return (
+    <div className="space-y-4">
+      <KpiStrip
+        items={[
+          { label: "Open uitzend-vacatures", value: vacancies ? count(list.length) : "—" },
+          { label: "Plekken te vullen", value: vacancies ? count(list.reduce((n, v) => n + v.positions, 0)) : "—" },
+          { label: "Gescoorde kandidaten", value: vacancies ? count(list.reduce((n, v) => n + v.candidateCount, 0)) : "—", hint: "uit je eigen pool" },
+          { label: "Shortlist", value: candidates ? count(candidates.length) : "—", hint: current ? current.title : "kies een vacature" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+        <Panel flush title="Open uitzend-vacatures" subtitle="Kies een vacature om kandidaten te zoeken">
+          {vacancies === null ? (
+            <div className="mx-5 mb-5 h-24 animate-pulse rounded-lg" style={{ background: "var(--a-elev)" }} />
+          ) : list.length === 0 ? (
+            <Empty title="Geen open uitzend-vacatures" />
+          ) : (
+            <ul>
+              {list.map((v) => {
+                const on = selected === v.id;
+                return (
+                  <li key={v.id} style={{ borderTop: "1px solid var(--a-border)" }}>
+                    <button
+                      type="button"
+                      onClick={() => void source(v.id)}
+                      aria-current={on ? "true" : undefined}
+                      className="w-full px-4 py-3 text-left text-[0.8125rem] transition-colors hover:bg-[var(--a-panel-2)] sm:px-5"
+                      style={on ? { background: "var(--a-panel-2)", boxShadow: "inset 2px 0 0 var(--a-accent)" } : undefined}
                     >
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="email">E-mail</option>
-                      <option value="chat">Chat</option>
-                    </select>
-                    <button type="button" onClick={() => void genDraft(c)} disabled={d?.busy} className="btn-ghost text-xs disabled:opacity-50">
-                      {d?.busy ? "Schrijven…" : "✎ AI-concept-bericht"}
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-medium" style={{ color: "var(--a-text)" }}>{v.title}</span>
+                        <span className="flex-shrink-0 text-xs" style={{ color: "var(--a-mute)" }}>{count(v.candidateCount)} kandidaten</span>
+                      </span>
+                      <span className="mt-0.5 block text-xs" style={{ color: "var(--a-mute)" }}>
+                        {v.city}, {dateNl(v.startsAt, { weekday: "short", day: "numeric", month: "short" })}, {euroExact(v.hourlyRateCents)} per uur, {v.positions} {v.positions === 1 ? "plek" : "plekken"}
+                      </span>
                     </button>
-                  </div>
-                  {d?.text !== undefined && (
-                    <div className="mt-2 space-y-1">
-                      <textarea
-                        value={d.text}
-                        onChange={(e) => setDraft(c.freelancerId, { text: e.target.value })}
-                        rows={4}
-                        className="w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
-                      />
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => void navigator.clipboard?.writeText(d.text)} className="btn-ghost text-xs">Kopieer</button>
-                        {d.aiUsed === false && <span className="text-[11px] text-neutralx-400">(sjabloon — AI-node was niet bereikbaar)</span>}
-                        <span className="text-[11px] text-neutralx-400">Jij controleert en verstuurt zelf — de AI beslist niets.</span>
-                      </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel flush title="Shortlist" subtitle={current ? `${current.title}, ${current.city}` : "Kies links een vacature"}>
+          {!selected ? (
+            <Empty title="Nog geen vacature gekozen" body="De beste kandidaten uit je pool verschijnen hier, met uitleg waarom." />
+          ) : sourcing ? (
+            <div className="mx-5 mb-5 h-40 animate-pulse rounded-lg" style={{ background: "var(--a-elev)" }} />
+          ) : candidates && candidates.length === 0 ? (
+            <Empty title="Nog geen gescoorde kandidaten" body="De matching vult dit zodra er geschikte mensen zijn." />
+          ) : (
+            <ul>
+              {(candidates ?? []).map((c) => {
+                const d = drafts[c.freelancerId];
+                return (
+                  <li key={c.freelancerId} className="space-y-2.5 px-4 py-3.5 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>{c.name}</span>
+                      <Pill tone={c.scorePct >= 70 ? "ok" : c.scorePct >= 50 ? "plan" : "neutral"}>{c.verdict}</Pill>
+                      <span className="ml-auto text-xs" style={{ color: "var(--a-mute)" }}>{c.travelMinutes} min reizen</span>
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <Meter label="Match" value={c.scorePct} max={100} display={`${c.scorePct}%`} tone="ok" />
+                    {c.certificates.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {c.certificates.map((cert, i) => (
+                          <Pill key={i} tone={cert.status === "VERIFIED" ? "trust" : "neutral"}>{cert.type}{cert.status === "VERIFIED" ? ", gecontroleerd" : ""}</Pill>
+                        ))}
+                      </div>
+                    )}
+                    <ul className="space-y-0.5 text-xs" style={{ color: "var(--a-dim)" }}>
+                      {c.reasons.map((r, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: REASON_TONE[r.strength] }} aria-hidden />
+                          <span><span className="font-medium" style={{ color: "var(--a-text)" }}>{r.label}:</span> {r.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select value={d?.channel ?? "whatsapp"} onChange={(e) => setDraft(c.freelancerId, { channel: e.target.value as Channel })} aria-label="Kanaal" className="a-input !w-auto !py-1 text-xs">
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="email">E-mail</option>
+                        <option value="chat">Chat</option>
+                      </select>
+                      <button type="button" onClick={() => void genDraft(c)} disabled={d?.busy} className="a-button text-xs">{d?.busy ? "Schrijven…" : "AI-concept schrijven"}</button>
+                    </div>
+                    {d?.text !== undefined && d.text !== "" && (
+                      <div className="space-y-1.5">
+                        <textarea value={d.text} onChange={(e) => setDraft(c.freelancerId, { text: e.target.value })} rows={4} aria-label={`Bericht aan ${c.name}`} className="a-input text-[0.8125rem]" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => void navigator.clipboard?.writeText(d.text)} className="a-button text-xs">Kopiëren</button>
+                          {d.aiUsed === false && <span className="text-xs" style={{ color: "var(--a-mute)" }}>Sjabloon: de AI-node was niet bereikbaar.</span>}
+                          <span className="text-xs" style={{ color: "var(--a-mute)" }}>Jij controleert en verstuurt zelf.</span>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
       </div>
     </div>
   );

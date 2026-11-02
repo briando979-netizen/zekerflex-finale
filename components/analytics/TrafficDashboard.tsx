@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APageHeader, APanel, AStat } from "@/components/admin/ui";
+import type { LiveSnapshot } from "@/lib/analytics/live";
+import { count, percentOf } from "@/lib/admin/format";
+import { BarList, Feed, KpiStrip, PageHead, Panel, Pill } from "@/components/admin/kit";
+import { Chart } from "@/components/admin/kit-client";
 import { LiveAttention } from "@/components/analytics/LiveAttention";
 
 interface Live {
@@ -25,181 +28,129 @@ interface Summary {
   };
 }
 
-function Row({ left, right, mute }: { left: string; right: string | number; mute?: boolean }) {
-  return (
-    <li className="flex items-center justify-between gap-3 py-1.5 text-[13px]">
-      <span className="truncate" style={{ color: mute ? "var(--a-mute)" : "var(--a-dim)" }}>
-        {left}
-      </span>
-      <span className="num shrink-0 font-mono text-xs" style={{ color: "var(--a-mute)" }}>
-        {right}
-      </span>
-    </li>
-  );
-}
-
-function Empty({ children }: { children: string }) {
-  return (
-    <p className="py-6 text-center text-[13px]" style={{ color: "var(--a-mute)" }}>
-      {children}
-    </p>
-  );
-}
+const RANGES = [7, 30, 90] as const;
 
 export function TrafficDashboard() {
   const [live, setLive] = useState<Live | null>(null);
+  const [attention, setAttention] = useState<LiveSnapshot | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [days, setDays] = useState<(typeof RANGES)[number]>(30);
 
   useEffect(() => {
+    let alive = true;
     const load = async () => {
-      try {
-        const r = await fetch("/api/admin/analytics/live", { cache: "no-store" });
-        if (r.ok) setLive(await r.json());
-      } catch {
-        /* ignore */
-      }
+      const [l, a] = await Promise.all([
+        fetch("/api/admin/analytics/live", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/analytics/attention", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+      if (!alive) return;
+      if (l) setLive(l);
+      if (a) setAttention(a);
     };
     void load();
-    const t = setInterval(load, 4000);
-    return () => clearInterval(t);
+    const t = setInterval(load, 6000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, []);
 
   useEffect(() => {
-    fetch("/api/admin/analytics/summary?days=7", { cache: "no-store" })
+    fetch(`/api/admin/analytics/summary?days=${days}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setSummary(d))
       .catch(() => undefined);
-  }, []);
+  }, [days]);
 
-  const maxDay = Math.max(1, ...(summary?.days.map((d) => d.pageviews) ?? [1]));
+  const who = attention?.today.who ?? {};
+  const totalWho = Object.values(who).reduce((a, b) => a + b, 0);
+  const loggedIn = (who.freelancer ?? 0) + (who.bedrijf ?? 0);
+  const totalViews = summary?.days.reduce((s, d) => s + d.pageviews, 0) ?? 0;
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <APageHeader
-        title="Verkeer & Analytics"
-        badge="First-party · geen cookies"
-        subtitle="Realtime bezoek, kliks en historie via de cookie-vrije analytics van ZekerFlex."
-        action={
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
-            <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#4ade80" }} />
-            live
-          </span>
+    <div className="space-y-4">
+      <PageHead
+        title="Verkeer"
+        subtitle="Realtime bezoek, aandacht, kliks en historie, via de eigen analytics van ZekerFlex zonder cookies."
+        meta={
+          <>
+            <Pill tone="ok">Live</Pill>
+            <Pill dot={false}>Zonder cookies</Pill>
+          </>
         }
       />
 
-      <LiveAttention />
+      <KpiStrip
+        items={[
+          { label: "Nu op de site", value: attention ? count(attention.active.length) : "—", hint: "laatste 90 seconden" },
+          { label: "Bezoekers vandaag", value: live ? count(live.visitorsToday) : "—", hint: live ? `${count(live.pageviewsToday)} pagina's bekeken` : "laden" },
+          { label: "Zonder account", value: attention ? `${percentOf(who.anoniem ?? 0, totalWho)}%` : "—", hint: `${count(who.anoniem ?? 0)} bezoeken vandaag` },
+          { label: "Ingelogd vandaag", value: attention ? count(loggedIn) : "—", hint: `${count(who.freelancer ?? 0)} freelancer, ${count(who.bedrijf ?? 0)} bedrijf` },
+          { label: "Laatste 5 minuten", value: live ? count(live.pageviewsLast5m) : "—", hint: live ? `${count(live.activeVisitors)} actieve bezoekers` : "laden" },
+        ]}
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <AStat label="Actieve bezoekers" value={live?.activeVisitors ?? "–"} sub="laatste 5 min" watermark={<Glyph />} />
-        <AStat label="Pageviews" value={live?.pageviewsLast5m ?? "–"} sub="laatste 5 min" watermark={<Glyph />} />
-        <AStat label="Bezoekers vandaag" value={live?.visitorsToday ?? "–"} watermark={<Glyph />} />
-        <AStat label="Pageviews vandaag" value={live?.pageviewsToday ?? "–"} watermark={<Glyph />} />
+      <Panel
+        title="Bezoek per dag"
+        subtitle={summary ? `${count(totalViews)} pagina's bekeken in ${days} dagen` : undefined}
+        actions={
+          <nav aria-label="Periode" className="inline-flex rounded-lg p-0.5" style={{ background: "var(--a-elev)" }}>
+            {RANGES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setDays(n)}
+                aria-pressed={days === n}
+                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                style={days === n ? { background: "var(--a-panel)", color: "var(--a-text)", boxShadow: "var(--a-shadow-sm)" } : { color: "var(--a-mute)" }}
+              >
+                {n} d
+              </button>
+            ))}
+          </nav>
+        }
+      >
+        <Chart
+          title="Bekeken pagina's en unieke bezoekers per dag"
+          kind="line"
+          unit="count"
+          labels={(summary?.days ?? []).map((d) => d.date)}
+          series={[
+            { label: "Bekeken pagina's", values: (summary?.days ?? []).map((d) => d.pageviews), slot: 1 },
+            { label: "Bezoekers", values: (summary?.days ?? []).map((d) => d.visitors), slot: 3 },
+          ]}
+          height={240}
+          emptyText="Nog geen historie in deze periode."
+        />
+      </Panel>
+
+      <LiveAttention d={attention} />
+
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Panel title="Populairste pagina's" subtitle={`Laatste ${days} dagen`}>
+          <BarList emptyText="Nog geen historie." rows={(summary?.topPaths ?? []).map((p) => ({ key: p.path, label: <span className="font-mono text-xs">{p.path}</span>, value: p.pageviews, display: count(p.pageviews) }))} />
+        </Panel>
+        <Panel title="Verwijzers" subtitle={`Laatste ${days} dagen`}>
+          <BarList emptyText="Geen externe verwijzers." rows={(summary?.topReferrers ?? []).map((r) => ({ key: r.host, label: r.host, value: r.count, display: count(r.count) }))} />
+        </Panel>
+        <Panel title="Actieve pagina's" subtitle="Wie kijkt nu waarnaar">
+          <BarList emptyText="Nog geen activiteit." rows={(live?.activePages ?? []).map((p) => ({ key: p.path, label: <span className="font-mono text-xs">{p.path}</span>, value: p.visitors, display: count(p.visitors) }))} />
+        </Panel>
+        <Panel title="Laatste kliks" subtitle="Uit de eigen tracker">
+          <Feed emptyText="Nog geen kliks." items={(live?.recentClicks ?? []).map((c, i) => ({ key: `${c.at}-${i}`, text: c.label ?? "—", meta: c.path }))} />
+        </Panel>
       </div>
 
-      <section className="mt-4 grid gap-4 md:grid-cols-2">
-        <APanel title="Actieve pagina's" subtitle="wie kijkt nu waarnaar">
-          {live && live.activePages.length > 0 ? (
-            <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-              {live.activePages.map((p) => (
-                <Row key={p.path} left={p.path} right={p.visitors} />
-              ))}
-            </ul>
-          ) : (
-            <Empty>Nog geen activiteit.</Empty>
-          )}
-        </APanel>
-
-        <APanel title="Laatste kliks" subtitle="events uit de sovereign tracker">
-          {live && live.recentClicks.length > 0 ? (
-            <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-              {live.recentClicks.map((clk, i) => (
-                <Row key={i} left={clk.label ?? "—"} right={clk.path} mute />
-              ))}
-            </ul>
-          ) : (
-            <Empty>Nog geen kliks.</Empty>
-          )}
-        </APanel>
-      </section>
-
-      <section className="mt-4">
-        <APanel title="Laatste 7 dagen" subtitle="pageviews per dag">
-          {summary?.days.length ? (
-            <div className="flex items-end gap-2" style={{ height: 140 }}>
-              {summary.days.map((d) => (
-                <div key={d.date} className="flex flex-1 flex-col items-center gap-1.5">
-                  <div className="flex w-full flex-1 items-end">
-                    <div
-                      className="w-full rounded-t-md"
-                      style={{
-                        height: `${Math.max(4, (d.pageviews / maxDay) * 100)}%`,
-                        background: "linear-gradient(to top, var(--a-accent), color-mix(in srgb, var(--a-accent) 55%, transparent))",
-                      }}
-                      title={`${d.pageviews} pageviews · ${d.visitors} bezoekers`}
-                    />
-                  </div>
-                  <span className="num font-mono text-[10px]" style={{ color: "var(--a-mute)" }}>
-                    {d.date.slice(5)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Empty>Nog geen historie.</Empty>
-          )}
-        </APanel>
-      </section>
-
-      <section className="mt-4 grid gap-4 md:grid-cols-2">
-        <APanel title="Populairste pagina's" subtitle="laatste 7 dagen">
-          {summary?.topPaths.length ? (
-            <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-              {summary.topPaths.map((p) => (
-                <Row key={p.path} left={p.path} right={p.pageviews} />
-              ))}
-            </ul>
-          ) : (
-            <Empty>Nog geen historie.</Empty>
-          )}
-        </APanel>
-        <APanel title="Verwijzers" subtitle="laatste 7 dagen">
-          {summary && summary.topReferrers.length > 0 ? (
-            <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
-              {summary.topReferrers.map((r) => (
-                <Row key={r.host} left={r.host} right={r.count} />
-              ))}
-            </ul>
-          ) : (
-            <Empty>Geen externe verwijzers.</Empty>
-          )}
-        </APanel>
-      </section>
-
-      <section className="mt-4">
-        <APanel title="Marketing-conversies" subtitle="laatste 7 dagen — instroom uit de site">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <AStat label="Demo-aanvragen" value={summary?.inbound.demoRequests ?? 0} sub="→ sales-pijplijn" />
-            <AStat label="Open sollicitaties" value={summary?.inbound.jobApplications ?? 0} sub="→ sollicitaties" />
-            <AStat label="Whitepaper-downloads" value={summary?.inbound.whitepaperDownloads ?? 0} />
-          </div>
-          {summary && summary.inbound.topWhitepapers.length > 0 && (
-            <ul className="mt-3 divide-y" style={{ borderColor: "var(--a-border)" }}>
-              {summary.inbound.topWhitepapers.map((w) => (
-                <Row key={w.slug} left={w.slug} right={w.downloads} />
-              ))}
-            </ul>
-          )}
-        </APanel>
+      <section className="space-y-2.5">
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Instroom uit de site, laatste {days} dagen</h2>
+        <KpiStrip
+          items={[
+            { label: "Demo-aanvragen", value: count(summary?.inbound.demoRequests ?? 0), hint: "naar de sales-pijplijn", href: "/admin/sales" },
+            { label: "Open sollicitaties", value: count(summary?.inbound.jobApplications ?? 0), hint: "naar sollicitaties", href: "/admin/sollicitaties" },
+            { label: "Whitepaper-downloads", value: count(summary?.inbound.whitepaperDownloads ?? 0), hint: summary?.inbound.topWhitepapers[0] ? `meest: ${summary.inbound.topWhitepapers[0].slug}` : "nog geen downloads" },
+          ]}
+        />
       </section>
     </div>
-  );
-}
-
-function Glyph() {
-  return (
-    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 3v18h18" strokeLinecap="round" />
-      <path d="M7 14l3-4 3 3 4-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

@@ -206,7 +206,7 @@ function Btn({
       className="rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40"
       style={{
         background: primary ? "var(--a-accent)" : "var(--a-panel)",
-        color: primary ? "#04140d" : "var(--a-dim)",
+        color: primary ? "var(--a-on-accent)" : "var(--a-dim)",
         border: "1px solid var(--a-border)",
       }}
     >
@@ -363,7 +363,7 @@ function NewCampaignForm({ onCreated }: { onCreated: () => Promise<void> }) {
         {field("Plaatsen (komma)", "cities", "Amsterdam, Utrecht")}
         {field("Min. fit-score", "minScore")}
         {field("Dagcap", "dailyCap")}
-        {err && <p className="text-xs sm:col-span-2" style={{ color: "#fca5a5" }}>{err}</p>}
+        {err && <p className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
         <div className="sm:col-span-2">
           <AButton type="submit" disabled={busy || form.name.trim().length < 2}>{busy ? "Bezig…" : "Campagne aanmaken"}</AButton>
         </div>
