@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
+import { Model3DViewer } from "@/components/marketing/Model3DViewer";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { IconHeart } from "@/components/marketing/ShopStorefront";
@@ -35,6 +36,8 @@ export type PdpProduct = {
   badge: string | null;
   variants: PdpVariant[];
   bundleItems?: PdpBundleItem[];
+  /** 3D-model (glb) als de beheerder er een koppelde */
+  model3dUrl?: string | null;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -48,6 +51,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   // would otherwise show the same thumbnail twice (and collide on the React key).
   const gallery = [...new Set([product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];
   const [active, setActive] = useState(0);
+  const [show3d, setShow3d] = useState(false);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
@@ -83,12 +87,28 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
       <div className="grid gap-10 lg:grid-cols-2">
         {/* galerij */}
         <div>
-          <div className="overflow-hidden rounded-2xl bg-paper-soft">
-            {gallery.length > 0 ? (
+          <div className="relative overflow-hidden rounded-2xl bg-paper-soft">
+            {show3d && product.model3dUrl ? (
+              <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={gallery[0] ?? null} className="aspect-square w-full" />
+            ) : gallery.length > 0 ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={gallery[active]} alt={product.name} fetchPriority="high" className="aspect-square w-full object-cover" />
             ) : (
               <div className="aspect-square w-full bg-paper-soft"><ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} /></div>
+            )}
+            {product.model3dUrl && (
+              <button
+                type="button"
+                onClick={() => setShow3d((v) => !v)}
+                aria-pressed={show3d}
+                className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-ink shadow-e1 transition hover:bg-white"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <path d="M12 22V11.5M20 6.5l-8 5-8-5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+                {show3d ? "Terug naar foto" : "Bekijk in 3D"}
+              </button>
             )}
           </div>
           {gallery.length > 1 && (
@@ -97,8 +117,11 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                 <button
                   key={src}
                   type="button"
-                  onClick={() => setActive(i)}
-                  className={`h-20 w-20 overflow-hidden rounded-lg border-2 transition ${i === active ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
+                  onClick={() => {
+                    setActive(i);
+                    setShow3d(false);
+                  }}
+                  className={`h-20 w-20 overflow-hidden rounded-lg border-2 transition ${i === active && !show3d ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />

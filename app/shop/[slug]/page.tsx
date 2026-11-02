@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { canonical, productJsonLd } from "@/lib/seo";
 import { ProductDetail, type PdpProduct } from "@/components/marketing/ProductDetail";
 import { boughtTogether } from "@/lib/shop/recommend";
+import { getModel3D, model3dUrl } from "@/lib/shop/model3d";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     take: Math.max(0, 4 - together.length),
   });
   const related = [...together, ...fill];
+  const model3d = await getModel3D(product.id);
 
   return (
     <>
@@ -77,7 +79,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
           ),
         }}
       />
-      <ProductDetail product={toDto(product)} related={related.map(toDto)} boughtTogether={together.length > 0} />
+      <ProductDetail product={{ ...toDto(product), model3dUrl: model3d ? model3dUrl(product.id) : null }} related={related.map(toDto)} boughtTogether={together.length > 0} />
     </>
   );
 }
