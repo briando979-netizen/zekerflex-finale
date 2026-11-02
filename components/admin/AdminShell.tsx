@@ -46,6 +46,27 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   // null = volg de actieve pagina; anders heeft de gebruiker zelf iets open of dicht gezet.
   const [openHub, setOpenHub] = useState<string | null>(null);
+  // Wat per onderdeel om aandacht vraagt: open disputen, mislukte betalingen, open AI-bevindingen.
+  const [badges, setBadges] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (limited) return;
+    let alive = true;
+    const load = () =>
+      fetch("/api/admin/overview", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((o: { queues?: { openDisputes?: number; failedPayments?: number; openFindings?: number } } | null) => {
+          if (!alive || !o?.queues) return;
+          setBadges({ veiligheid: o.queues.openDisputes ?? 0, geld: o.queues.failedPayments ?? 0, ai: o.queues.openFindings ?? 0 });
+        })
+        .catch(() => undefined);
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [limited]);
 
   useEffect(() => {
     try {
@@ -108,6 +129,7 @@ export function AdminShell({
             <HubLink
               key={hub.id}
               hub={hub}
+              badge={badges[hub.id] ?? 0}
               active={hub.id === activeHub}
               open={!collapsed && hub.id === shownHub}
               collapsed={collapsed}
@@ -199,6 +221,7 @@ export function AdminShell({
 /** Een onderdeel in het zijmenu. De naam gaat naar de eerste pagina, het pijltje klapt alleen uit. */
 function HubLink({
   hub,
+  badge,
   active,
   open,
   collapsed,
@@ -206,6 +229,8 @@ function HubLink({
   onToggle,
 }: {
   hub: AdminHub;
+  /** Aantal dat om aandacht vraagt; 0 = niets tonen. */
+  badge: number;
   active: boolean;
   open: boolean;
   collapsed: boolean;
@@ -224,10 +249,16 @@ function HubLink({
           className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] ${collapsed ? "lg:justify-center" : ""}`}
           style={{ color: active ? "#ffffff" : "var(--a-side-text)", fontWeight: active ? 600 : 500 }}
         >
-          <span className="flex-shrink-0" style={{ color: active ? "rgb(var(--brand-mint-rgb))" : "var(--a-side-mute)" }}>
+          <span className="relative flex-shrink-0" style={{ color: active ? "rgb(var(--brand-mint-rgb))" : "var(--a-side-mute)" }}>
             {HUB_ICONS[hub.icon]}
+            {badge > 0 && collapsed && <span className="absolute -right-1 -top-1 hidden h-2 w-2 rounded-full lg:block" style={{ background: "var(--a-warn)" }} aria-hidden />}
           </span>
           <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{hub.label}</span>
+          {badge > 0 && (
+            <span className={`num ml-auto rounded-full px-1.5 text-[0.6875rem] font-semibold ${collapsed ? "lg:hidden" : ""}`} style={{ background: "var(--a-warn)", color: "#1a1204" }} aria-label={`${badge} vragen aandacht`}>
+              {badge}
+            </span>
+          )}
         </Link>
         <button
           type="button"
