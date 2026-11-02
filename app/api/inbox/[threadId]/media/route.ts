@@ -10,8 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/inbox/:threadId/media  (multipart: file, optional durationSec)
-// Stores a chat attachment on the box's disk. Returns the descriptor to attach
-// to a message via POST /api/inbox/:threadId.
+// Stores a chat attachment, bound to this thread and uploader (photos lose their
+// metadata). Returns the descriptor to attach to a message via POST /api/inbox/:threadId.
 export async function POST(request: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
   const params = await props.params;
   try {
@@ -32,7 +32,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
 
     const bytes = Buffer.from(await file.arrayBuffer());
     try {
-      const stored = await storeChatMedia(thread.id, {
+      const stored = await storeChatMedia(thread.id, p.userId, {
         filename: file.name || "bestand",
         mimeType: file.type || "application/octet-stream",
         bytes,

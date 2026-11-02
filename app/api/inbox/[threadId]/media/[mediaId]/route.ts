@@ -3,12 +3,13 @@ import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { canAccess, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
-import { readChatMedia } from "@/lib/messaging/media";
+import { opensInline, readChatMedia } from "@/lib/messaging/media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox/:threadId/media/:mediaId — stream a chat attachment to a participant.
+// Only an attachment this thread's messages show (lib/messaging/media.ts).
 export async function GET(
   req: Request,
   props: { params: Promise<{ threadId: string; mediaId: string }> }
@@ -21,15 +22,17 @@ export async function GET(
     if (!thread || !canAccess(thread, p.userId, admin)) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Niet gevonden" } }, { status: 404 });
     }
-    const file = await readChatMedia(thread.id, params.mediaId);
+    const file = await readChatMedia(thread.id, params.mediaId, p.userId);
     if (!file) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Bestand ontbreekt" } }, { status: 404 });
 
-    const download = new URL(req.url).searchParams.get("dl") === "1";
+    const inline = new URL(req.url).searchParams.get("dl") !== "1" && opensInline(file.mimeType);
     return new Response(new Uint8Array(file.bytes), {
       headers: {
         "Content-Type": file.mimeType,
-        "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${encodeURIComponent(file.filename)}"`,
+        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(file.filename)}"`,
         "Cache-Control": "private, max-age=86400",
+        // opened in its own tab a file may not run script on our origin; Chrome's PDF viewer refuses a sandbox
+        ...(file.mimeType === "application/pdf" ? {} : { "Content-Security-Policy": "sandbox" }),
       },
     });
   } catch (err) {

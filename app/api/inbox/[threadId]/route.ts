@@ -19,6 +19,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
+import { ownChatUpload } from "@/lib/messaging/media";
 import { blockedBetween, checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
@@ -175,11 +176,15 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
 
     const extra: MessageExtra = {};
     if (input.attachment) {
+      // Only what this user just uploaded in this thread: an upload id from elsewhere
+      // (an ID photo, an invoice) must not be pulled into a chat and read through it.
+      const own = await ownChatUpload(input.attachment.mediaId, thread.id, p.userId);
+      if (!own) throw AppError.forbidden("Deze bijlage hoort niet bij dit gesprek.");
       extra.attachment = {
-        mediaId: input.attachment.mediaId,
-        filename: input.attachment.filename,
-        mimeType: input.attachment.mimeType,
-        sizeBytes: input.attachment.sizeBytes,
+        mediaId: own.mediaId,
+        filename: own.filename,
+        mimeType: own.mimeType,
+        sizeBytes: own.sizeBytes,
         ...(input.attachment.durationSec != null ? { durationSec: input.attachment.durationSec } : {}),
       };
     }

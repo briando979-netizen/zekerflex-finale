@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { fmtDuration, type Msg } from "./shared";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle } from "./icons";
 
@@ -60,8 +60,10 @@ export function Composer({
   }
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
+  const [sendError, setSendError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
   const mediaRec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -76,8 +78,12 @@ export function Composer({
     const fd = new FormData();
     fd.append("file", file, filename);
     if (durationSec) fd.append("durationSec", String(durationSec));
-    const r = await fetch(`/api/inbox/${threadId}/media`, { method: "POST", body: fd });
-    if (!r.ok) throw new Error("upload mislukt");
+    const r = await fetch(`/api/inbox/${threadId}/media`, { method: "POST", body: fd }).catch(() => null);
+    if (!r) throw new Error("geen verbinding");
+    if (!r.ok) {
+      const d = await r.json().catch(() => null);
+      throw new Error(d?.error?.message ?? "uploaden is mislukt");
+    }
     return (await r.json()).attachment as OutgoingMessage["attachment"];
   }
 
@@ -97,15 +103,24 @@ export function Composer({
   const sendFile = async (file: File, kind: "file" | "image") => {
     setBusy(true);
     setMenuOpen(false);
+    setSendError(null);
     try {
       const att = await uploadMedia(file, file.name);
       if (att) await onSend({ text: "", kind, attachment: att, ...(replyTo ? { replyToId: replyTo.id } : {}) });
       onClearReply();
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // silently swallowing this made photos look broken ("werkte niet") without any hint why
+      setSendError(`${kind === "image" ? "Foto" : "Bestand"} niet verstuurd: ${(e as Error).message}.`);
     } finally {
       setBusy(false);
     }
+  };
+
+  const pick = (kind: "file" | "image") => (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    // cleared, so picking the same photo again fires onChange again
+    e.target.value = "";
+    if (f) void sendFile(f, kind);
   };
 
   const shareLocation = () => {
@@ -156,9 +171,12 @@ export function Composer({
         setRecSecs(0);
         if (blob.size < 800) return; // discarded / too short
         setBusy(true);
+        setSendError(null);
         try {
           const att = await uploadMedia(blob, `spraak-${Date.now()}.webm`, secs);
           if (att) await onSend({ text: "", kind: "voice", attachment: att });
+        } catch (e) {
+          setSendError(`Spraakbericht niet verstuurd: ${(e as Error).message}.`);
         } finally {
           setBusy(false);
         }
@@ -226,6 +244,15 @@ export function Composer({
         </div>
       )}
 
+      {sendError && (
+        <div role="alert" className="flex items-center gap-2 border-b border-hair bg-crit/10 px-3 py-1.5 text-xs text-crit">
+          <span className="min-w-0 flex-1">{sendError}</span>
+          <button type="button" onClick={() => setSendError(null)} className="text-neutralx-400" aria-label="Melding sluiten">
+            ✕
+          </button>
+        </div>
+      )}
+
       {showQuick && quickReplies.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-b border-hair p-2">
           {quickReplies.map((q) => (
@@ -281,6 +308,8 @@ export function Composer({
             </button>
             {menuOpen && (
               <div className="absolute bottom-11 left-0 z-10 w-44 rounded-xl border border-hairstrong bg-white p-1 shadow-lift">
+                <MenuItem icon="🖼️" label="Foto" onClick={() => imgRef.current?.click()} />
+                <MenuItem icon="📷" label="Camera" onClick={() => camRef.current?.click()} />
                 <MenuItem icon="📄" label="Document" onClick={() => fileRef.current?.click()} />
                 <MenuItem icon="📍" label="Locatie delen" onClick={shareLocation} />
               </div>
@@ -347,25 +376,10 @@ export function Composer({
             </button>
           )}
 
-          <input
-            ref={imgRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void sendFile(f, "image");
-            }}
-          />
-          <input
-            ref={fileRef}
-            type="file"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void sendFile(f, "file");
-            }}
-          />
+          <input ref={imgRef} type="file" accept="image/*" hidden onChange={pick("image")} />
+          {/* on a phone this opens the camera straight away; a computer shows the file picker */}
+          <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={pick("image")} />
+          <input ref={fileRef} type="file" hidden onChange={pick("file")} />
         </form>
       )}
     </div>
