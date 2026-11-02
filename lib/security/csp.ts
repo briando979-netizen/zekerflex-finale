@@ -62,8 +62,16 @@ export const SITE_PREVIEW_CSP = [
   "object-src 'none'",
 ].join("; ");
 
+/**
+ * Een chatbijlage die los geopend wordt (een foto in een nieuw tabblad,
+ * /api/inbox/<gesprek>/media/<id>): geen script, een eigen lege herkomst en
+ * niets inladen. Het bestand zelf toont gewoon.
+ */
+export const CHAT_MEDIA_CSP = ["sandbox", "default-src 'none'", "style-src 'unsafe-inline'", "frame-ancestors 'self'"].join("; ");
+
 export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions): string {
   if (pathname?.startsWith("/website-preview/")) return SITE_PREVIEW_CSP;
+  if (pathname && /^\/api\/inbox\/[^/]+\/media\/[^/]+$/.test(pathname)) return CHAT_MEDIA_CSP;
   const studio =
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);
   const sandboxFrame = pathname === "/admin/zekerflex-ai/sandbox-frame";

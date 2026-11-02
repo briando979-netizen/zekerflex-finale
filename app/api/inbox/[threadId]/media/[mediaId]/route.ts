@@ -25,14 +25,14 @@ export async function GET(
     const file = await readChatMedia(thread.id, params.mediaId, p.userId);
     if (!file) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Bestand ontbreekt" } }, { status: 404 });
 
+    // Opened in its own tab, the middleware gives this path a sandboxed CSP
+    // (CHAT_MEDIA_CSP in lib/security/csp.ts); anything not plainly safe downloads.
     const inline = new URL(req.url).searchParams.get("dl") !== "1" && opensInline(file.mimeType);
     return new Response(new Uint8Array(file.bytes), {
       headers: {
         "Content-Type": file.mimeType,
         "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(file.filename)}"`,
         "Cache-Control": "private, max-age=86400",
-        // opened in its own tab a file may not run script on our origin; Chrome's PDF viewer refuses a sandbox
-        ...(file.mimeType === "application/pdf" ? {} : { "Content-Security-Policy": "sandbox" }),
       },
     });
   } catch (err) {

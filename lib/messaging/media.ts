@@ -114,9 +114,13 @@ export async function readChatMedia(
   }
 }
 
-/** Opened on its own (a new tab), only these may show in the browser; anything else downloads. */
+/**
+ * Opened on its own (a new tab), only these may show in the browser; anything
+ * else downloads. Not PDF: Chrome's PDF viewer refuses the sandboxed CSP that
+ * chat media gets, and the chat downloads documents anyway.
+ */
 export function opensInline(mime: string): boolean {
-  return /^(?:image\/(?:jpeg|png|gif|webp|avif|bmp|heic|heif)$|audio\/|video\/|application\/pdf$|text\/plain$)/.test(mime);
+  return /^(?:image\/(?:jpeg|png|gif|webp|avif|bmp|heic|heif)$|audio\/|video\/|text\/plain$)/.test(mime);
 }
 
 export async function chatMediaDuration(mediaId: string): Promise<number | null> {

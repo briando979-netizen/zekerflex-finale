@@ -25,6 +25,7 @@ vi.mock("@/lib/storage/local", () => ({
 vi.mock("@/lib/messaging/store", () => ({ getMessages: async (threadId: string) => messages.get(threadId) ?? [] }));
 
 import { cleanPhoto, isAllowedChatMime, opensInline, ownChatUpload, PHOTO_MAX_PX, readChatMedia, storeChatMedia } from "@/lib/messaging/media";
+import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
 beforeEach(() => {
   kv.clear();
@@ -86,8 +87,18 @@ describe("chatbijlagen", () => {
     expect(await readChatMedia("t1", stored.mediaId, "u2")).toBeNull();
   });
 
+  it("een los geopende bijlage draait in een sandbox zonder script, de chat zelf niet", () => {
+    const csp = buildContentSecurityPolicy({ dev: false, nonce: "n", pathname: "/api/inbox/thr_1/media/upl_1" });
+    expect(csp).toMatch(/^sandbox;/);
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).not.toContain("script-src");
+    // het uploadadres en de chatpagina houden het gewone beleid
+    expect(buildContentSecurityPolicy({ dev: false, nonce: "n", pathname: "/api/inbox/thr_1/media" })).not.toContain("sandbox");
+    expect(buildContentSecurityPolicy({ dev: false, nonce: "n", pathname: "/dashboard/berichten" })).not.toContain("sandbox");
+  });
+
   it("toont alleen veilige soorten los in de browser", () => {
-    for (const ok of ["image/jpeg", "image/png", "audio/webm", "video/mp4", "application/pdf", "text/plain"]) expect(opensInline(ok)).toBe(true);
-    for (const no of ["image/svg+xml", "text/html", "text/csv", "application/msword", "application/octet-stream"]) expect(opensInline(no)).toBe(false);
+    for (const ok of ["image/jpeg", "image/png", "audio/webm", "video/mp4", "text/plain"]) expect(opensInline(ok)).toBe(true);
+    for (const no of ["image/svg+xml", "text/html", "text/csv", "application/pdf", "application/msword", "application/octet-stream"]) expect(opensInline(no)).toBe(false);
   });
 });
