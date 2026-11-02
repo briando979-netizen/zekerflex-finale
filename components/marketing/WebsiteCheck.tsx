@@ -345,7 +345,11 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
                     </span>
                     <h2 className="mt-2 break-words font-display text-2xl font-bold text-ink">{result.host}</h2>
                     <p className="mt-1 text-sm text-neutralx-600">
-                      {problems === 0 ? "Geen grote problemen gevonden." : `${problems} ${problems === 1 ? "probleem" : "problemen"} en ${open.length - problems} aandachtspunten.`}
+                      {problems === 0
+                        ? open.length === 0
+                          ? "Geen problemen gevonden."
+                          : `Geen grote problemen, wel ${open.length} ${open.length === 1 ? "aandachtspunt" : "aandachtspunten"}.`
+                        : `${problems} ${problems === 1 ? "probleem" : "problemen"} en ${open.length - problems} ${open.length - problems === 1 ? "aandachtspunt" : "aandachtspunten"}.`}
                       {result.platform ? ` Gemaakt met ${result.platform}.` : ""}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
