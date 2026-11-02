@@ -10,7 +10,7 @@ C="docker compose -f docker-compose.vps.yml --env-file .env.production"
 sudo docker tag zekerflex-app:latest zekerflex-app:rollback
 for i in 1 2 3; do
   if sudo $C build app; then
-    sudo $C up -d app backup
+    sudo $C up -d app backup coturn
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
     sudo $C restart cron
     # Elke build laat oude lagen achter; in nov 2026 stond de schijf zo op 79%

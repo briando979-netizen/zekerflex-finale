@@ -33,11 +33,15 @@ systemctl enable --now docker
 docker --version
 docker compose version
 
-echo "==> 2/6 Firewall: SSH + HTTP(S) open (web komt rechtstreeks binnen)"
+echo "==> 2/6 Firewall: SSH + HTTP(S) open (web komt rechtstreeks binnen), plus TURN voor bellen"
 if command -v ufw >/dev/null 2>&1; then
   ufw allow 22/tcp  || true
   ufw allow 80/tcp  || true
   ufw allow 443/tcp || true
+  # coturn (deploy/coturn/entrypoint.sh): besturing + het relaybereik
+  ufw allow 3478/udp || true
+  ufw allow 3478/tcp || true
+  ufw allow 49160:49260/udp || true
   ufw --force enable || true
 fi
 
@@ -58,6 +62,7 @@ if [ ! -f .env.production ]; then
   POSTGRES_PASSWORD="$(val POSTGRES_PASSWORD)"
   VAPID_PUB="$(val WEBPUSH_VAPID_PUBLIC_KEY)"
   VAPID_PRIV="$(val WEBPUSH_VAPID_PRIVATE_KEY)"
+  TURN_SHARED_SECRET="$(val TURN_SHARED_SECRET)"
 
   umask 077
   cat > .env.production <<EOF
@@ -90,6 +95,11 @@ REDIS_URL=redis://redis:6379
 WEBPUSH_VAPID_PUBLIC_KEY=${VAPID_PUB}
 WEBPUSH_VAPID_PRIVATE_KEY=${VAPID_PRIV}
 WEBPUSH_CONTACT=mailto:info@zekerflex.com
+
+# Bellen: eigen TURN-relay (coturn-dienst). TURN_HOST = dit adres, rechtstreeks
+# (geen proxy ertussen), want TURN is UDP.
+TURN_HOST=${DOMAIN:-$PUBLIC_IP}
+TURN_SHARED_SECRET=${TURN_SHARED_SECRET}
 
 # AI: standaard uit (geen lokale LLM op een CPU-VPS). Zet een externe LLM aan
 # met LLM_API_KEY + LLM_BASE_URL als je snelle AI wilt; anders valt de app

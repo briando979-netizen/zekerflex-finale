@@ -6,7 +6,8 @@
 #   cp deploy/.env.production.example .env.production   # of laat deploy-vps.sh 'm genereren
 #   docker compose --env-file .env.production -f docker-compose.vps.yml up -d --build
 #
-# Inbound poorten: 80 + 443 (Caddy). Houd de rest van de firewall dicht, op SSH na.
+# Inbound poorten: 80 + 443 (Caddy), en voor bellen 3478/udp+tcp en 49160:49260/udp
+# (coturn). Houd de rest van de firewall dicht, op SSH na.
 # TLS: zet SITE_ADDRESS in .env.production op je domein zodra de A-record naar
 # deze VPS wijst; Caddy haalt dan automatisch een Let's Encrypt-certificaat op.
 #
@@ -148,6 +149,25 @@ services:
     depends_on:
       app: { condition: service_started }
     networks: [internal]
+
+  # TURN-relay voor gesprekken in de chat, zodat bellen ook achter strenge
+  # firewalls werkt. Host-netwerk: ~100 UDP-relaypoorten gaan niet praktisch door
+  # Docker's NAT. Alleen deze drie variabelen gaan erin, niet heel .env.production.
+  # Zonder TURN_SHARED_SECRET doet de dienst niets. Zie deploy/coturn/entrypoint.sh.
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-}
+      TURN_REALM: ${TURN_REALM:-zekerflex.com}
+      TURN_RELAY_IPS: ${TURN_RELAY_IPS:-}
+    volumes:
+      - ./deploy/coturn/entrypoint.sh:/zf-turn.sh:ro
+    entrypoint: ["sh", "/zf-turn.sh"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
 networks:
   internal:

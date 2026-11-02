@@ -384,7 +384,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "Bellen & koppelingen",
       title: "Eigen TURN-server voor bellen (aanrader)",
       why: "Zonder TURN lukken (video)gesprekken niet altijd achter strenge bedrijfsfirewalls of sommige mobiele netwerken.",
-      how: ["Dit kan op de eigen server (VPS) draaien: een coturn-container met de poorten 3478 (udp+tcp) en 49160–49200/udp open.", "Vraag Claude het op te zetten; daarna staan TURN_HOST en TURN_SHARED_SECRET op de server en vinkt deze taak zichzelf af."],
+      how: ["Draait op de eigen server (VPS): de coturn-dienst met de poorten 3478 (udp+tcp) en 49160–49260/udp open (deploy/coturn/entrypoint.sh).", "Vraag Claude het op te zetten; daarna staan TURN_HOST en TURN_SHARED_SECRET op de server en vinkt deze taak zichzelf af."],
       auto: true,
       done: Boolean(env.TURN_HOST && env.TURN_SHARED_SECRET),
     },
