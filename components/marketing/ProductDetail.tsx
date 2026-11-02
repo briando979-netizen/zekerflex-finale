@@ -9,20 +9,11 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { IconHeart, ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
-import type { ShopCardProduct, ShopCategory } from "@/components/marketing/shop-product";
+import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import { specFor } from "@/lib/shop/product-specs";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
-/** Sizes in the order people expect: 38 < 39 < … , XS < S < M < L < XL < XXL, "39-42" by its first number. */
-const LETTER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
-function bySize(a: string, b: string): number {
-  const la = LETTER.indexOf(a.toUpperCase()), lb = LETTER.indexOf(b.toUpperCase());
-  if (la >= 0 && lb >= 0) return la - lb;
-  const na = parseFloat(a), nb = parseFloat(b);
-  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
-  return a.localeCompare(b, "nl");
-}
 
 export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 export type PdpBundleItem = { id: string; name: string; imageUrl: string | null; priceCents: number };

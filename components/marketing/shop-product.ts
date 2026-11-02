@@ -51,5 +51,18 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
 
 export const shopMoney = (euros: number): string => `€ ${euros.toFixed(2).replace(".", ",")}`;
 
+/** Maten in de volgorde die mensen verwachten: XS < S < M < L < XL, 38 < 39, "39-42" op zijn eerste getal. */
+const LETTER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+export function bySize(a: string, b: string): number {
+  const la = LETTER.indexOf(a.toUpperCase());
+  const lb = LETTER.indexOf(b.toUpperCase());
+  if (la >= 0 && lb >= 0) return la - lb;
+  if (la >= 0 !== lb >= 0) return la >= 0 ? -1 : 1; // letters vóór getallen
+  const na = parseFloat(a);
+  const nb = parseFloat(b);
+  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+  return a.localeCompare(b, "nl");
+}
+
 /** Breedtes voor next/image in het productraster: 2 kolommen op de telefoon, 3 op een tablet, 4 op een computer. */
 export const GRID_SIZES = "(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw";

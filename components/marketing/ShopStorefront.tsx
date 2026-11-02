@@ -5,7 +5,7 @@ import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ShopProductCard } from "@/components/marketing/ShopProductCard";
-import type { ShopCardProduct, ShopCategory } from "@/components/marketing/shop-product";
+import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 
 // De collectie op de shop-homepage: categorie-tabs, zoeken, en filters/sorteren
 // in een uitschuifpaneel. De producten komen van de server (app/shop/page.tsx);
@@ -42,6 +42,8 @@ export function ShopStorefront({
   products: ShopCardProduct[];
 }) {
   const t = useT();
+  // dezelfde namen als het menu en de categorievakken ("Cadeaus" heet daar "Voor teams")
+  const TAB_LABEL: Record<Category, string> = { Alles: t.shop.all, "Werk & PBM": t.shop.navPbm, Kleding: t.shop.navKleding, Werkdag: t.shop.navWerkdag, Cadeaus: t.shop.navTeams };
   const PRICE_LABEL: Record<PriceBucket, string> = { Alle: t.shop.allPrices, onder15: t.shop.under15, "15-30": t.shop.between1530, vanaf30: t.shop.from30 };
   const SORT_LABEL: Record<SortOrder, string> = { relevantie: t.shop.sortRelevance, "prijs-op": t.shop.sortPriceAsc, "prijs-af": t.shop.sortPriceDesc, naam: t.shop.sortName };
   const [category, setCategory] = useState<Category>(initialCat);
@@ -81,7 +83,7 @@ export function ShopStorefront({
     );
   }, [products, category, gender, query, onlyWishlist, wishlist]);
 
-  const sizes = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))], [facetScope]);
+  const sizes = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))].sort(bySize), [facetScope]);
   const colors = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.color).filter((c): c is string => Boolean(c))))], [facetScope]);
   useEffect(() => {
     if (sizeFilter !== "Alle" && !sizes.includes(sizeFilter)) setSizeFilter("Alle");
@@ -120,7 +122,7 @@ export function ShopStorefront({
       <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className="font-serif text-4xl text-lux-ink sm:text-5xl">{category === "Alles" ? t.shop.collection : category}</h2>
+            <h2 className="font-serif text-4xl text-lux-ink sm:text-5xl">{category === "Alles" ? t.shop.collection : TAB_LABEL[category]}</h2>
             <p className="mt-2 text-[13px] text-lux-mute">{fmt(t.shop.articles, { n: shown.length })}</p>
           </div>
           <label className="flex w-full items-center gap-2.5 border-b border-lux-line pb-2 sm:w-72">
@@ -145,11 +147,12 @@ export function ShopStorefront({
                 aria-pressed={category === c}
                 className={`shrink-0 border-b pb-1 text-[12px] font-semibold uppercase tracking-[0.14em] transition ${category === c ? "border-lux-ink text-lux-ink" : "border-transparent text-lux-mute hover:text-lux-ink"}`}
               >
-                {c === "Alles" ? t.shop.all : c}
+                {TAB_LABEL[c]}
               </button>
             ))}
           </nav>
-          <button type="button" onClick={() => setPanel(true)} className="flex shrink-0 items-center gap-2 py-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-lux-ink">
+          {/* op de telefoon staat er alleen een icoon: de naam moet er dan nog steeds zijn */}
+          <button type="button" onClick={() => setPanel(true)} aria-label={active > 0 ? `${t.shop.filterSort} (${active})` : t.shop.filterSort} className="flex shrink-0 items-center gap-2 py-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-lux-ink">
             <IconSliders />
             <span className="hidden sm:inline">{t.shop.filterSort}</span>
             {active > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-lux-ink px-1 text-[10px] text-white">{active}</span>}
