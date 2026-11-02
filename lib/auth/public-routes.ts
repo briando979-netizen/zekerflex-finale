@@ -38,6 +38,7 @@ const PUBLIC_PREFIXES = [
   "/api/shop", // public storefront reads; writes are admin-gated inside the route
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
+  "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([

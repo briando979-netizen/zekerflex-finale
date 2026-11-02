@@ -20,6 +20,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/sales-partner", label: "Word sales-partner (commissie)" },
       { href: "/prijzen", label: "Prijzen" },
       { href: "/shop", label: "ZekerFlex shop" },
+      { href: "/website-check", label: "Gratis website-check" },
       { href: "/app", label: "Download de app" },
       { href: "/status", label: "Systeemstatus" },
       { href: "/developers", label: "API voor ontwikkelaars" },
