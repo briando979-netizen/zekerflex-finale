@@ -116,3 +116,32 @@ export function auditContext(req: { headers: Headers }): {
     : h.get("x-real-ip");
   return { ipAddress: ip ?? null, userAgent: h.get("user-agent") };
 }
+
+export interface AuditActor {
+  id: string | null;
+  email: string | null;
+  name: string;
+}
+
+type ActorRef = { actorUserId: string | null; actorLabel: string };
+
+/**
+ * Who did it, for the audit views. AuditLog has no relation to User (deleting
+ * an account must never rewrite a sealed row), so the names of a page of rows
+ * are looked up in one query; an account that no longer exists keeps its id
+ * and shows as "verwijderd account".
+ */
+export async function auditActors(rows: ActorRef[]): Promise<(row: ActorRef) => AuditActor> {
+  const ids = [...new Set(rows.map((r) => r.actorUserId).filter((id): id is string => Boolean(id)))];
+  const users = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, email: true, fullName: true } })
+    : [];
+  const byId = new Map(users.map((u) => [u.id, u]));
+  return (row) => {
+    if (!row.actorUserId) return { id: null, email: null, name: row.actorLabel };
+    const user = byId.get(row.actorUserId);
+    return user
+      ? { id: user.id, email: user.email, name: user.fullName }
+      : { id: row.actorUserId, email: null, name: "verwijderd account" };
+  };
+}

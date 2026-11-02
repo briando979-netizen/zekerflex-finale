@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AuditCategory } from "@prisma/client";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { auditActors } from "@/lib/audit";
 import { bucketCount, resolvePeriod, safe, timelineKeys } from "@/lib/admin/period";
 import { count, dateTimeNl } from "@/lib/admin/format";
 import { BarList, KpiStrip, PageHead, Panel, PeriodTabs, Pill, type Tone } from "@/components/admin/kit";
@@ -52,11 +53,11 @@ export default async function AuditPage(props: { searchParams: Promise<{ folder?
         action: true,
         severity: true,
         summary: true,
+        actorUserId: true,
         actorLabel: true,
         targetType: true,
         targetId: true,
         createdAt: true,
-        actor: { select: { fullName: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 500,
@@ -67,10 +68,11 @@ export default async function AuditPage(props: { searchParams: Promise<{ folder?
 
   const severityCount = (s: string) => inPeriod.filter((e) => e.severity === s).length;
   const extra: Record<string, string> = { ...(folder.key ? { folder: folder.key } : {}), ...(q ? { q } : {}) };
+  const actor = await auditActors(entries);
 
   const rows: TableRow[] = entries.map((e) => {
     const sev = SEVERITY[e.severity] ?? { label: e.severity, tone: "neutral" as const };
-    const who = e.actor?.fullName ?? e.actorLabel;
+    const who = actor(e).name;
     return {
       id: e.id,
       search: `${e.summary} ${e.action} ${who}`,

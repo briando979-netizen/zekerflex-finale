@@ -114,7 +114,6 @@ model User {
   approvedTimesheets   Timesheet[]            @relation("TimesheetApprover")
   raisedDisputes       Dispute[]              @relation("DisputeRaisedBy")
   resolvedDisputes     Dispute[]              @relation("DisputeResolvedBy")
-  auditLogs            AuditLog[]             @relation("AuditActor")
   apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
   webPushSubscriptions WebPushSubscription[]
 
@@ -1210,7 +1209,9 @@ model AuditLog {
   hash     String?
   prevHash String?
 
-  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  // Deliberately no relation to User: actorUserId is in the hash, and a foreign
+  // key with ON DELETE SET NULL rewrote it whenever an account was deleted,
+  // breaking the chain (migration 20261102230000). Look names up with auditActors().
 
   createdAt DateTime @default(now())
 

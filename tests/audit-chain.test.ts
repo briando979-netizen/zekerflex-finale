@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const rowsRef: { current: Record<string, unknown>[] } = { current: [] };
+const users = [{ id: "u-live", email: "live@x.nl", fullName: "Live Gebruiker" }];
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -10,10 +12,14 @@ vi.mock("@/lib/prisma", () => ({
         return rowsRef.current.filter((r) => from == null || (r.seq as bigint) >= from);
       },
     },
+    user: {
+      findMany: async ({ where }: { where: { id: { in: string[] } } }) => users.filter((u) => where.id.in.includes(u.id)),
+    },
   },
 }));
 
 import { computeAuditHash, verifyAuditChain, GENESIS_HASH } from "@/lib/audit-chain";
+import { auditActors } from "@/lib/audit";
 
 const base = {
   category: "SECURITY",
@@ -106,5 +112,37 @@ describe("verifyAuditChain", () => {
     const res = await verifyAuditChain();
     expect(res.ok).toBe(false);
     expect(res.firstBreakSeq).toBe("8");
+  });
+
+  it("breaks when an actor id is wiped — what ON DELETE SET NULL used to do", async () => {
+    const rows = chain(5);
+    (rows[2] as { actorUserId: string | null }).actorUserId = null;
+    rowsRef.current = rows;
+    const res = await verifyAuditChain();
+    expect(res.ok).toBe(false);
+    expect(res.firstBreakSeq).toBe("3");
+  });
+});
+
+describe("AuditLog schema", () => {
+  it("has no relation to User, so deleting an account never rewrites a sealed row", () => {
+    const schema = readFileSync("prisma/schema.prisma", "utf8");
+    const model = schema.slice(schema.indexOf("model AuditLog {"), schema.indexOf("\n}", schema.indexOf("model AuditLog {")));
+    expect(model).toContain("actorUserId String?");
+    expect(model).not.toContain("@relation");
+    expect(schema).not.toMatch(/AuditLog\[\]/);
+  });
+});
+
+describe("auditActors", () => {
+  it("names a live account, keeps the id of a deleted one, and falls back to the label", async () => {
+    const actor = await auditActors([
+      { actorUserId: "u-live", actorLabel: "user" },
+      { actorUserId: "u-weg", actorLabel: "user" },
+      { actorUserId: null, actorLabel: "system" },
+    ]);
+    expect(actor({ actorUserId: "u-live", actorLabel: "user" })).toEqual({ id: "u-live", email: "live@x.nl", name: "Live Gebruiker" });
+    expect(actor({ actorUserId: "u-weg", actorLabel: "user" })).toEqual({ id: "u-weg", email: null, name: "verwijderd account" });
+    expect(actor({ actorUserId: null, actorLabel: "system" })).toEqual({ id: null, email: null, name: "system" });
   });
 });

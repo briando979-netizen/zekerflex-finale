@@ -4,6 +4,7 @@ import { AuditCategory, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { auditActors } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,13 +52,11 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
     orderBy: { createdAt: "desc" },
     take: q.limit + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    include: {
-      actor: { select: { id: true, email: true, fullName: true } },
-    },
   });
 
   const hasMore = rows.length > q.limit;
   const page = hasMore ? rows.slice(0, q.limit) : rows;
+  const actor = await auditActors(page);
 
   return NextResponse.json({
     entries: page.map((r) => ({
@@ -66,9 +65,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
       action: r.action,
       severity: r.severity,
       summary: r.summary,
-      actor: r.actor
-        ? { id: r.actor.id, email: r.actor.email, name: r.actor.fullName }
-        : { id: null, email: null, name: r.actorLabel },
+      actor: actor(r),
       ipAddress: r.ipAddress,
       targetType: r.targetType,
       targetId: r.targetId,
