@@ -68,7 +68,7 @@ function Field({ label, value, onChange, type = "text", autoComplete, suffix, au
         placeholder=" "
         autoComplete={autoComplete}
         autoFocus={autoFocus}
-        className="peer h-full min-w-0 flex-1 rounded-md bg-transparent px-4 pt-3 text-[15px] text-ink outline-none"
+        className="peer h-full min-w-0 flex-1 rounded-md bg-transparent px-4 pt-3 text-[15px] text-ink outline-none focus-visible:outline-none"
       />
       {suffix && <span className="flex-shrink-0 pr-4 pt-3 text-[15px] text-neutralx-500">{suffix}</span>}
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 bg-white px-1 text-[15px] text-neutralx-500 transition-all peer-focus:top-2 peer-focus:text-xs peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-xs">
