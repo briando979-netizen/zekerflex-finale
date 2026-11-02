@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 // platform's shared mailbox.
 export default async function AdminMyMailPage() {
   const principal = await requirePrincipal();
+  const dict = await getDict();
   return (
     <div className="mx-auto max-w-6xl">
-      <EmployerMailbox t={(await getDict()).mailbox} userEmail={principal.email} />
+      <EmployerMailbox t={dict.mailbox} zt={dict.zfmail} userEmail={principal.email} />
     </div>
   );
 }

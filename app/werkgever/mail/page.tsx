@@ -6,6 +6,6 @@ export const dynamic = "force-dynamic";
 
 export default async function WerkgeverMailPage() {
   const principal = await requirePrincipal();
-  const t = (await getDict()).mailbox;
-  return <EmployerMailbox t={t} userEmail={principal.email} />;
+  const dict = await getDict();
+  return <EmployerMailbox t={dict.mailbox} zt={dict.zfmail} userEmail={principal.email} />;
 }

@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
 import { MailToolsBar } from "@/components/mail/MailToolsBar";
+import { ZfMailSignup } from "@/components/app/ZfMailSignup";
 import { MAIL_PRESETS, OAUTH_ONLY_DOMAINS, OAUTH_ONLY_NOTE, domainOf, suggestServers, type ServerSettings } from "@/lib/mail/presets";
+
+type ZfDict = ComponentProps<typeof ZfMailSignup>["t"];
 
 type Dict = Record<
   | "title" | "subtitle" | "tabInbox" | "tabZekerflex" | "tabSent" | "search" | "compose" | "refresh" | "loading" | "empty"
@@ -63,8 +66,10 @@ async function readError(res: Response, fallback: string): Promise<string> {
   return d?.error?.message ?? fallback;
 }
 
-export function EmployerMailbox({ t, userEmail }: { t: Dict; userEmail: string }) {
+export function EmployerMailbox({ t, zt, userEmail }: { t: Dict; zt: ZfDict; userEmail: string }) {
   const [status, setStatus] = useState<{ connected: boolean; connection: Connection | null } | null>(null);
+  // connecting another provider is now the "move your old mailbox" route, shown on request
+  const [showConnect, setShowConnect] = useState(false);
   const [tab, setTab] = useState<Tab>("inbox");
   const [selection, setSelection] = useState<Selection>(null);
   const [query, setQuery] = useState("");
@@ -258,6 +263,18 @@ export function EmployerMailbox({ t, userEmail }: { t: Dict; userEmail: string }
         )}
       </div>
 
+      {status && !connected && (
+        <ZfMailSignup
+          t={zt}
+          onCreated={() => void loadStatus().then(() => setTab("inbox"))}
+          onMoveOld={() => {
+            setShowConnect(true);
+            setTab("inbox");
+            setSelection(null);
+          }}
+        />
+      )}
+
       <div className="card grid overflow-hidden sm:grid-cols-[280px_1fr] md:grid-cols-[320px_1fr]" style={{ minHeight: 560 }}>
         <div className="flex flex-col border-b border-hair sm:border-b-0 sm:border-r">
           <div className="flex items-center gap-1 border-b border-hair p-2">
@@ -335,7 +352,16 @@ export function EmployerMailbox({ t, userEmail }: { t: Dict; userEmail: string }
 
         <div className="flex min-h-0 flex-col overflow-y-auto">
           {status && !connected && tab === "inbox" ? (
-            <ConnectForm t={t} onConnected={() => void loadStatus().then(() => setTab("inbox"))} />
+            showConnect ? (
+              <ConnectForm t={t} onConnected={() => void loadStatus().then(() => setTab("inbox"))} />
+            ) : (
+              <div className="space-y-3 p-6 text-sm text-neutralx-600">
+                <p>{t.connectInboxHint}</p>
+                <button type="button" onClick={() => setShowConnect(true)} className="font-semibold text-brand-600 hover:underline">
+                  {zt.moveOld}
+                </button>
+              </div>
+            )
           ) : selection?.tab === "compose" ? (
             <div className="space-y-3 p-6">
               <h2 className="font-display text-lg font-bold">{t.newMessage}</h2>

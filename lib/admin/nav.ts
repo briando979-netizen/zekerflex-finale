@@ -91,6 +91,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/webchat", label: "Website-chat" },
       { href: "/admin/mail", label: "Mailbox" },
       { href: "/admin/mijn-mail", label: "Mijn mailbox" },
+      { href: "/admin/zekerflex-mail", label: "ZekerFlex Mail" },
       { href: "/admin/whatsapp", label: "WhatsApp" },
     ],
   },
