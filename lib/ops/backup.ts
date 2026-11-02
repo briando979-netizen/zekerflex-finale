@@ -167,7 +167,7 @@ export async function checkBackup(now = Date.now(), dir = BACKUP_DIR): Promise<B
     await alertOwner({
       key: "disk:server",
       title: `Serverschijf ${disk.usedPercent}% vol`,
-      detail: `Er is nog ${Math.round(disk.freeBytes / 1e9)} GB vrij. Bij een volle schijf kan de database niets meer opslaan. Ruim oude images op: docker image prune -f && docker builder prune -f --filter until=72h.`,
+      detail: `Er is nog ${Math.round(disk.freeBytes / 1024 ** 3)} GB vrij. Bij een volle schijf kan de database niets meer opslaan. Ruim oude images op: docker image prune -f && docker builder prune -f --filter until=72h.`,
       severity: disk.usedPercent >= DISK_CRIT_PERCENT ? "critical" : "warning",
       url: "/admin/systeem#backups",
     });

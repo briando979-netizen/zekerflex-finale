@@ -116,7 +116,8 @@ export default async function SysteemPage() {
   const backupBroken = backup.available && backup.state !== "ok";
   const disk = backup.disk;
   const diskTone = !disk ? "neutral" : disk.usedPercent >= DISK_CRIT_PERCENT ? "crit" : disk.usedPercent >= DISK_WARN_PERCENT ? "warn" : "ok";
-  const gb = (bytes: number) => `${count(Math.round(bytes / 1e9))} GB`;
+  // zelfde eenheid als df en TransIP (1024-machten), anders lijkt de schijf groter
+  const gb = (bytes: number) => `${count(Math.round(bytes / 1024 ** 3))} GB`;
   const mb = (bytes: number) => (bytes >= 1e6 ? `${(bytes / 1e6).toLocaleString("nl-NL", { maximumFractionDigits: 1 })} MB` : `${count(Math.round(bytes / 1e3))} kB`);
   const TONE: Record<State, { tone: "ok" | "crit" | "neutral"; label: string }> = {
     ok: { tone: "ok", label: "OK" },
@@ -237,7 +238,7 @@ export default async function SysteemPage() {
                               : "mislukt",
                           },
                           { label: "Duur", value: `${count(backup.status.seconds)} s` },
-                          { label: "Bewaard", value: `${count(backup.files.length)} back-ups` },
+                          { label: "Bewaard", value: `${count(backup.files.length)} ${backup.files.length === 1 ? "back-up" : "back-ups"}` },
                         ]}
                       />
                     ) : (
