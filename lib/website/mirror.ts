@@ -647,12 +647,13 @@ export function prefixRootRefs(text: string, prefix: string, kind: "html" | "css
   );
 }
 
-// In de sandbox gooit elke poging tot document.cookie of localStorage een fout.
-// Veel sites lezen die (cookiebanners, statistieken); een React- of Next-site
-// crasht daar helemaal op. Alleen in het voorbeeld krijgen ze een vervanger in
-// het geheugen, zodat de site gewoon toont. De isolatie blijft: er is niets
-// echts te lezen. De kopie op schijf (die live gaat) krijgt dit niet.
-const PREVIEW_SHIM = `<script>(function(){var m="";try{document.cookie}catch(e){try{Object.defineProperty(document,"cookie",{configurable:true,get:function(){return m},set:function(v){var kv=String(v).split(";")[0].trim(),n=kv.split("=")[0],p=m?m.split("; ").filter(function(c){return c.split("=")[0]!==n}):[];if(kv.indexOf("=")>0)p.push(kv);m=p.join("; ")}})}catch(e2){}}function s(){var d={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}["localStorage","sessionStorage"].forEach(function(n){try{window[n]}catch(e){try{Object.defineProperty(window,n,{configurable:true,value:s()})}catch(e2){}}})})();</script>`;
+// In de sandbox gooit elke poging tot document.cookie, localStorage of een
+// service worker een fout. Veel sites gebruiken die (cookiebanners, statistieken,
+// PWA's); een React- of Next-site crasht daar helemaal op. Alleen in het
+// voorbeeld krijgen ze een vervanger in het geheugen (een service worker wordt
+// nooit geregistreerd), zodat de site gewoon toont. De isolatie blijft: er is
+// niets echts te lezen. De kopie op schijf (die live gaat) krijgt dit niet.
+const PREVIEW_SHIM = `<script>(function(){var m="";try{document.cookie}catch(e){try{Object.defineProperty(document,"cookie",{configurable:true,get:function(){return m},set:function(v){var kv=String(v).split(";")[0].trim(),n=kv.split("=")[0],p=m?m.split("; ").filter(function(c){return c.split("=")[0]!==n}):[];if(kv.indexOf("=")>0)p.push(kv);m=p.join("; ")}})}catch(e2){}}function s(){var d={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}["localStorage","sessionStorage"].forEach(function(n){try{window[n]}catch(e){try{Object.defineProperty(window,n,{configurable:true,value:s()})}catch(e2){}}});try{navigator.serviceWorker}catch(e){try{var w=new Promise(function(){});Object.defineProperty(navigator,"serviceWorker",{configurable:true,value:{controller:null,ready:w,register:function(){return w},getRegistration:function(){return Promise.resolve(undefined)},getRegistrations:function(){return Promise.resolve([])},addEventListener:function(){},removeEventListener:function(){}}})}catch(e2){}}})();</script>`;
 
 export function injectPreviewShim(html: string): string {
   const head = /<head\b[^>]*>/i.exec(html);
