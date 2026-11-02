@@ -2,14 +2,17 @@ import Link from "next/link";
 import type { AuditCategory } from "@prisma/client";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PageHeader, Panel, EmptyState, StatusPill, dateTime } from "@/components/app/ui";
+import { bucketCount, resolvePeriod, safe, timelineKeys } from "@/lib/admin/period";
+import { count, dateTimeNl } from "@/lib/admin/format";
+import { BarList, KpiStrip, PageHead, Panel, PeriodTabs, Pill, type Tone } from "@/components/admin/kit";
+import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 
 export const dynamic = "force-dynamic";
 
-const SEV_TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
-  info: "neutral",
-  warning: "warn",
-  critical: "crit",
+const SEVERITY: Record<string, { label: string; tone: Tone }> = {
+  info: { label: "Info", tone: "neutral" },
+  warning: { label: "Let op", tone: "warn" },
+  critical: { label: "Kritiek", tone: "crit" },
 };
 
 // "Folders" the admin can click through — each maps to one or more of the
@@ -25,120 +28,160 @@ const FOLDERS: { key: string; label: string; categories: AuditCategory[] }[] = [
   { key: "beheer", label: "Beheer & sales", categories: ["ADMIN", "SALES", "ORCHESTRATION"] },
 ];
 
-export default async function AuditPage(props: { searchParams: Promise<{ folder?: string; q?: string }> }) {
+export default async function AuditPage(props: { searchParams: Promise<{ folder?: string; q?: string; periode?: string }> }) {
   const searchParams = await props.searchParams;
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return <NoAccess />;
+    return <PageHead title="Geen toegang" subtitle="Het auditspoor is alleen voor platformbeheerders." />;
   }
 
   const folder = FOLDERS.find((f) => f.key === (searchParams.folder ?? "")) ?? FOLDERS[0]!;
   const q = searchParams.q?.trim() ?? "";
+  const period = resolvePeriod(searchParams.periode);
+  const where = {
+    ...(folder.categories.length ? { category: { in: folder.categories } } : {}),
+    ...(q ? { summary: { contains: q, mode: "insensitive" as const } } : {}),
+  };
 
-  const entries = await prisma.auditLog.findMany({
-    where: {
-      ...(folder.categories.length ? { category: { in: folder.categories } } : {}),
-      ...(q ? { summary: { contains: q, mode: "insensitive" } } : {}),
-    },
-    select: {
-      id: true,
-      category: true,
-      action: true,
-      severity: true,
-      summary: true,
-      actorLabel: true,
-      targetType: true,
-      targetId: true,
-      createdAt: true,
-      actor: { select: { fullName: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 150,
+  const [entries, inPeriod, byCategory] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      select: {
+        id: true,
+        category: true,
+        action: true,
+        severity: true,
+        summary: true,
+        actorLabel: true,
+        targetType: true,
+        targetId: true,
+        createdAt: true,
+        actor: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    }),
+    safe(() => prisma.auditLog.findMany({ where: { ...where, createdAt: { gte: period.from } }, select: { createdAt: true, severity: true }, take: 50_000 }), []),
+    safe(() => prisma.auditLog.groupBy({ by: ["category"], where: { ...where, createdAt: { gte: period.from } }, _count: { _all: true } }), []),
+  ]);
+
+  const severityCount = (s: string) => inPeriod.filter((e) => e.severity === s).length;
+  const extra: Record<string, string> = { ...(folder.key ? { folder: folder.key } : {}), ...(q ? { q } : {}) };
+
+  const rows: TableRow[] = entries.map((e) => {
+    const sev = SEVERITY[e.severity] ?? { label: e.severity, tone: "neutral" as const };
+    const who = e.actor?.fullName ?? e.actorLabel;
+    return {
+      id: e.id,
+      search: `${e.summary} ${e.action} ${who}`,
+      filters: { severity: e.severity },
+      cells: {
+        when: <span className="whitespace-nowrap">{dateTimeNl(e.createdAt)}</span>,
+        what: (
+          <span className="block min-w-[16rem]">
+            <span className="block" style={{ color: "var(--a-text)" }}>{e.summary}</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--a-mute)" }}>
+              <span className="font-mono">{e.action}</span>
+              {e.targetType === "user" && e.targetId && <Link href={`/admin/gebruikers/${e.targetId}`} className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Gebruiker →</Link>}
+              {e.targetType === "tenant" && e.targetId && <Link href={`/admin/bedrijven/${e.targetId}`} className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Organisatie →</Link>}
+            </span>
+          </span>
+        ),
+        who: who,
+        category: <Pill dot={false}>{e.category}</Pill>,
+        severity: <Pill tone={sev.tone}>{sev.label}</Pill>,
+      },
+      sort: { when: e.createdAt.getTime(), who, category: e.category, severity: e.severity },
+      csv: { when: e.createdAt.toISOString(), what: e.summary, who, category: e.category, severity: sev.label },
+    };
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader
+    <div className="space-y-4">
+      <PageHead
         title="Auditspoor"
         subtitle="Onwisbaar logboek van elke gevoelige handeling op het platform, per map te doorzoeken."
+        actions={<PeriodTabs period={period} basePath="/admin/audit" extra={extra} />}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1">
-          {FOLDERS.map((f) => (
+      <nav aria-label="Mappen" className="a-scroll-x flex gap-1 overflow-x-auto">
+        {FOLDERS.map((f) => {
+          const on = folder.key === f.key;
+          const params = new URLSearchParams({ ...(f.key ? { folder: f.key } : {}), ...(q ? { q } : {}), periode: String(period.days) }).toString();
+          return (
             <Link
               key={f.key}
-              href={`/admin/audit${f.key ? `?folder=${f.key}` : ""}`}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                folder.key === f.key ? "bg-ink text-white" : "bg-paper-soft text-neutralx-600 hover:text-ink"
-              }`}
+              href={`/admin/audit?${params}`}
+              aria-current={on ? "true" : undefined}
+              className="whitespace-nowrap rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors"
+              style={on ? { background: "var(--a-elev)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
             >
               {f.label}
             </Link>
-          ))}
-        </div>
-        <form className="flex gap-2">
-          {folder.key && <input type="hidden" name="folder" value={folder.key} />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Zoek in samenvatting…"
-            className="w-60 rounded-lg border border-hairstrong bg-white px-3 py-1.5 text-sm"
+          );
+        })}
+      </nav>
+
+      <KpiStrip
+        items={[
+          { label: "Gebeurtenissen", value: count(inPeriod.length), hint: `laatste ${period.label}`, spark: bucketCount(inPeriod, (e) => e.createdAt, period) },
+          { label: "Kritiek", value: count(severityCount("critical")), hint: "vraagt aandacht", ...(severityCount("critical") > 0 ? { tone: "crit" as const } : {}) },
+          { label: "Let op", value: count(severityCount("warning")), ...(severityCount("warning") > 0 ? { tone: "warn" as const } : {}) },
+          { label: "Info", value: count(severityCount("info")) },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Panel title="Gebeurtenissen per periode" subtitle={folder.label}>
+          <Chart
+            title="Gebeurtenissen in het auditspoor per periode, naar ernst"
+            kind="bars"
+            unit="count"
+            labels={timelineKeys(period)}
+            series={[
+              { label: "Info", values: bucketCount(inPeriod.filter((e) => e.severity === "info"), (e) => e.createdAt, period), slot: 3 },
+              { label: "Let op", values: bucketCount(inPeriod.filter((e) => e.severity === "warning"), (e) => e.createdAt, period), slot: 4 },
+              { label: "Kritiek", values: bucketCount(inPeriod.filter((e) => e.severity === "critical"), (e) => e.createdAt, period), slot: 8 },
+            ]}
+            height={190}
+            emptyText="Geen gebeurtenissen in deze periode."
           />
-          <button type="submit" className="btn-ghost text-sm">
-            Zoeken
-          </button>
-        </form>
+        </Panel>
+        <Panel title="Per categorie" subtitle={`Laatste ${period.label}`}>
+          <BarList emptyText="Geen gebeurtenissen." rows={byCategory.sort((a, b) => b._count._all - a._count._all).map((c) => ({ key: c.category, label: c.category, value: c._count._all, display: count(c._count._all) }))} />
+        </Panel>
       </div>
 
-      <Panel title={`${entries.length} gebeurtenis${entries.length === 1 ? "" : "sen"} in ${folder.label.toLowerCase()}`}>
-        {entries.length === 0 ? (
-          <EmptyState title="Niets gevonden" body="Pas de map of je zoekopdracht aan." />
-        ) : (
-          <ul className="divide-y divide-hair">
-            {entries.map((e) => (
-              <li key={e.id} className="flex items-start justify-between gap-4 px-5 py-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="pill-neutral">{e.category}</span>
-                    <span className="font-mono text-xs text-neutralx-400">{e.action}</span>
-                  </div>
-                  <p className="mt-1 text-sm text-ink">{e.summary}</p>
-                  <p className="mt-0.5 text-xs text-neutralx-400">
-                    {e.actor?.fullName ?? e.actorLabel} · {dateTime(e.createdAt)}
-                    {e.targetType === "user" && e.targetId && (
-                      <>
-                        {" · "}
-                        <Link href={`/admin/gebruikers/${e.targetId}`} className="text-brand-600 hover:underline">
-                          bekijk gebruiker
-                        </Link>
-                      </>
-                    )}
-                    {e.targetType === "tenant" && e.targetId && (
-                      <>
-                        {" · "}
-                        <Link href={`/admin/bedrijven/${e.targetId}`} className="text-brand-600 hover:underline">
-                          bekijk organisatie
-                        </Link>
-                      </>
-                    )}
-                  </p>
-                </div>
-                <StatusPill tone={SEV_TONE[e.severity] ?? "neutral"}>{e.severity}</StatusPill>
-              </li>
-            ))}
-          </ul>
-        )}
+      <Panel
+        flush
+        title={`${count(entries.length)} ${entries.length === 1 ? "gebeurtenis" : "gebeurtenissen"} in ${folder.label.toLowerCase()}`}
+        subtitle={q ? `Gezocht op “${q}”` : "De nieuwste 500"}
+        actions={
+          <form className="flex gap-2">
+            {folder.key && <input type="hidden" name="folder" value={folder.key} />}
+            <input type="hidden" name="periode" value={period.days} />
+            <input type="search" name="q" defaultValue={q} placeholder="Zoek in het hele logboek" aria-label="Zoek in het hele logboek" className="a-input !w-56 !py-1 text-[0.8125rem]" />
+            <button type="submit" className="a-button text-xs">Zoeken</button>
+          </form>
+        }
+      >
+        <DataTable
+          columns={[
+            { key: "when", label: "Moment" },
+            { key: "what", label: "Wat er gebeurde", sortable: false },
+            { key: "who", label: "Door", hideOnMobile: true },
+            { key: "category", label: "Map", hideOnMobile: true },
+            { key: "severity", label: "Ernst" },
+          ]}
+          rows={rows}
+          pageSize={25}
+          searchPlaceholder="Filter deze lijst"
+          csvName="auditspoor"
+          filters={[{ key: "severity", label: "Ernst", chips: true, options: [{ value: "critical", label: "Kritiek" }, { value: "warning", label: "Let op" }, { value: "info", label: "Info" }] }]}
+          defaultSort={{ key: "when", dir: "desc" }}
+          emptyText="Niets gevonden. Pas de map of je zoekopdracht aan."
+        />
       </Panel>
-    </div>
-  );
-}
-
-function NoAccess() {
-  return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeader title="Geen toegang" subtitle="Het auditspoor is alleen voor platformbeheerders." />
     </div>
   );
 }

@@ -48,7 +48,7 @@ export function WebhooksBoard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-xl font-bold text-ink">Webhooks</h2>
+        <h2 className="text-lg font-semibold tracking-tight" style={{ color: "var(--a-text)" }}>Webhooks</h2>
         <p className="mt-1 text-sm text-neutralx-600">
           Abonnementen die partners zelf aanmaken via <code>POST /api/public/v1/webhooks</code>, en of de
           afleveringen ook echt aankomen.

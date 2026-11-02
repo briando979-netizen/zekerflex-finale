@@ -18,10 +18,10 @@ export function AiFeaturesPanel({ features, connected, problem }: { features: Ai
   const [res, setRes] = useState<TestResult | null>(null);
 
   return (
-    <section className="mt-8 rounded-2xl border border-hair bg-white">
+    <section className="a-panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hair px-5 py-4">
         <div>
-          <h2 className="font-display text-base font-bold text-ink">AI-functies</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>AI-functies</h2>
           <p className="text-xs text-neutralx-500">
             {connected ? "Taalmodel gekoppeld — alle functies draaien op de AI." : "Geen taalmodel gekoppeld — functies draaien op hun vaste regels (rechterkolom)."}
           </p>

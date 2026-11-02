@@ -282,6 +282,67 @@ export function Chart({
   );
 }
 
+// --- Tabbladen ---------------------------------------------------------------
+
+export interface TabItem {
+  id: string;
+  label: ReactNode;
+  /** Aantal achter het label, bijvoorbeeld open meldingen. */
+  badge?: number | null;
+  content: ReactNode;
+}
+
+/**
+ * Tabbladen binnen een pagina. Alle inhoud wordt meteen gemaakt en alleen verborgen, zodat
+ * formulieren hun invoer houden. Het gekozen tabblad staat in het adres (#id): delen en terugkomen werkt.
+ */
+export function Tabs({ tabs, label }: { tabs: TabItem[]; label: string }) {
+  const [active, setActive] = useState(tabs[0]?.id ?? "");
+  useEffect(() => {
+    const fromHash = window.location.hash.slice(1);
+    if (fromHash && tabs.some((t) => t.id === fromHash)) setActive(fromHash);
+  }, [tabs]);
+  const choose = (id: string) => {
+    setActive(id);
+    try {
+      window.history.replaceState(null, "", `#${id}`);
+    } catch {
+      /* geen geschiedenis beschikbaar */
+    }
+  };
+  return (
+    <div className="space-y-4">
+      <div role="tablist" aria-label={label} className="a-scroll-x flex gap-5 overflow-x-auto" style={{ borderBottom: "1px solid var(--a-border)" }}>
+        {tabs.map((t) => {
+          const on = t.id === active;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-selected={on}
+              aria-controls={`paneel-${t.id}`}
+              onClick={() => choose(t.id)}
+              className="relative flex items-center gap-1.5 whitespace-nowrap pb-2.5 text-[0.8125rem] transition-colors"
+              style={{ color: on ? "var(--a-text)" : "var(--a-mute)", fontWeight: on ? 600 : 500 }}
+            >
+              {t.label}
+              {t.badge ? <span className="num rounded-full px-1.5 text-[0.6875rem] font-semibold" style={{ background: "var(--a-warn-soft)", color: "var(--a-warn)" }}>{t.badge}</span> : null}
+              {on && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: "var(--a-accent)" }} />}
+            </button>
+          );
+        })}
+      </div>
+      {tabs.map((t) => (
+        <div key={t.id} role="tabpanel" id={`paneel-${t.id}`} aria-labelledby={`tab-${t.id}`} hidden={t.id !== active} className="space-y-4">
+          {t.content}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // --- Invoer ------------------------------------------------------------------
 
 /** Knop die ter plekke om een korte invoer vraagt, in plaats van een browservenster. */

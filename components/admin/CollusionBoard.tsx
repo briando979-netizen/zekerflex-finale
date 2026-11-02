@@ -45,7 +45,7 @@ export function CollusionBoard() {
     <section className="rounded-2xl border border-hair bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hair px-5 py-4">
         <div>
-          <h2 className="font-display text-base font-bold text-ink">Collusie-signalen</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Collusie-signalen</h2>
           <p className="text-xs text-neutralx-500">Paren die samen geld kunnen rondpompen. Dit is een signaal voor onderzoek, geen oordeel.</p>
         </div>
         <label className="text-xs text-neutralx-600">

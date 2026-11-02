@@ -37,9 +37,9 @@ export function RagLab() {
   }, []);
 
   return (
-    <section className="mt-8 rounded-2xl border border-hair bg-white">
+    <section className="a-panel overflow-hidden">
       <div className="border-b border-hair px-5 py-4">
-        <h2 className="font-display text-base font-bold text-ink">RAG-lab — het brein onder de motorkap</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>RAG-lab — het brein onder de motorkap</h2>
         <p className="text-xs text-neutralx-500">Eén vraag door elke pijplijn, naast elkaar. Alleen lezen.</p>
       </div>
 

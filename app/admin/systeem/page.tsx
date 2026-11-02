@@ -11,9 +11,12 @@ import { FeatureFlagsPanel } from "@/components/admin/FeatureFlagsPanel";
 import { FunnelPanel } from "@/components/admin/FunnelPanel";
 import { pushChannels } from "@/lib/notifications/push";
 import { budgetSnapshot } from "@/lib/ai/governor";
+import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { env } from "@/lib/env";
 import { smtpConfigured } from "@/lib/mail";
-import { PageHeader, Panel, KpiCard, StatusPill } from "@/components/app/ui";
+import { count, percentOf } from "@/lib/admin/format";
+import { KpiStrip, Meter, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
+import { Tabs } from "@/components/admin/kit-client";
 import { OpsAlerts } from "@/components/admin/OpsAlerts";
 import { UsagePanel } from "@/components/admin/UsagePanel";
 
@@ -32,11 +35,7 @@ async function ok(fn: () => Promise<unknown>): Promise<{ ok: boolean; ms: number
 export default async function SysteemPage() {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <PageHeader title="Geen toegang" subtitle="Systeemstatus is alleen voor platformbeheerders." />
-      </div>
-    );
+    return <PageHead title="Geen toegang" subtitle="Systeemstatus is alleen voor platformbeheerders." />;
   }
 
   async function whisperReachable(): Promise<boolean> {
@@ -53,12 +52,13 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
     budgetSnapshot().catch(() => null),
     whisperReachable(),
+    cronHeartbeats().catch(() => []),
   ]);
   const channels = pushChannels();
 
@@ -75,7 +75,7 @@ export default async function SysteemPage() {
     {
       label: "Soevereiniteitsgrendel",
       state: (budget ? budget.localInference : true) ? "ok" : "crit",
-      meta: budget ? (budget.localInference ? `lokaal · ${budget.host}` : "externe host!") : "onbekend",
+      meta: budget ? (budget.localInference ? `lokaal, ${budget.host}` : "externe host!") : "onbekend",
     },
     {
       label: "Web Push (VAPID)",
@@ -90,12 +90,12 @@ export default async function SysteemPage() {
     {
       label: "Mailserver (SMTP)",
       state: smtpConfigured() ? "ok" : "crit",
-      meta: smtpConfigured() ? `${env.SMTP_HOST}:${env.SMTP_PORT}` : "mailbox-only — zie /admin/mail",
+      meta: smtpConfigured() ? `${env.SMTP_HOST}:${env.SMTP_PORT}` : "alleen mailbox, zie /admin/mail",
     },
     {
       label: "Beeldgenerator (Studio)",
       state: env.IMAGE_ENABLED ? "ok" : "off",
-      meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND} · ${env.IMAGE_BASE_URL}` : "uitgeschakeld (optioneel)",
+      meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND}, ${env.IMAGE_BASE_URL}` : "uitgeschakeld (optioneel)",
     },
   ];
   const TONE: Record<State, { tone: "ok" | "crit" | "neutral"; label: string }> = {
@@ -103,60 +103,103 @@ export default async function SysteemPage() {
     crit: { tone: "crit", label: "Storing" },
     off: { tone: "neutral", label: "Uitgeschakeld" },
   };
+  const broken = components.filter((c) => c.state === "crit").length;
+  const working = components.filter((c) => c.state === "ok").length;
+  const staleJobs = crons.filter((c) => c.stale).length;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <PageHeader title="Systeemstatus" subtitle="De in-box afhankelijkheden van het platform, live gecontroleerd." />
+    <div className="space-y-4">
+      <PageHead
+        title="Systeem"
+        subtitle="De afhankelijkheden van het platform, live gecontroleerd, met AI, geplande taken, functies en gebruik."
+        meta={<Pill tone={broken === 0 ? "ok" : "crit"}>{broken === 0 ? "Alles werkt" : `${broken} ${broken === 1 ? "storing" : "storingen"}`}</Pill>}
+      />
 
-      {budget && (
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
-          <KpiCard
-            label="AI-tokens vandaag"
-            value={`${Math.round(budget.tokensUsed / 1000)}k`}
-            hint={`budget ${Math.round(budget.tokenBudget / 1000)}k`}
-            tone="brand"
-          />
-          <KpiCard label="Rekensloten" value={`${budget.concurrencyInUse}/${budget.concurrencyMax}`} />
-          <KpiCard label="Verzoeken/min" value={`${budget.requestsThisMinute}/${budget.requestsPerMinute}`} />
-        </div>
-      )}
+      <KpiStrip
+        items={[
+          { label: "Componenten", value: `${working} van ${components.length}`, hint: broken === 0 ? "werken zoals verwacht" : `${broken} met een storing`, ...(broken > 0 ? { tone: "crit" as const } : {}) },
+          { label: "Geplande taken", value: `${crons.length - staleJobs} van ${crons.length}`, hint: staleJobs === 0 ? "op schema" : `${staleJobs} te laat`, ...(staleJobs > 0 ? { tone: "crit" as const } : {}) },
+          { label: "AI-tokens vandaag", value: budget ? `${count(Math.round(budget.tokensUsed / 1000))}k` : "—", hint: budget ? `${percentOf(budget.tokensUsed, budget.tokenBudget)}% van het budget` : "onbekend" },
+          { label: "Rekensloten", value: budget ? `${budget.concurrencyInUse} / ${budget.concurrencyMax}` : "—", hint: "tegelijk in gebruik" },
+          { label: "Verzoeken per minuut", value: budget ? `${budget.requestsThisMinute} / ${budget.requestsPerMinute}` : "—", hint: "naar het taalmodel" },
+        ]}
+      />
 
-      <Panel title="Componenten">
-        <ul className="divide-y divide-hair">
-          {components.map((c) => {
-            const t = TONE[c.state];
-            return (
-              <li key={c.label} className="flex items-center justify-between px-5 py-4">
-                <span className="text-sm font-medium text-ink">{c.label}</span>
-                <span className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-neutralx-400">{c.meta}</span>
-                  <StatusPill tone={t.tone}>{t.label}</StatusPill>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </Panel>
-
-      {!db.ok && db.detail && (
-        <p className="mt-4 rounded-lg bg-crit/10 px-4 py-3 text-sm text-crit">Database: {db.detail}</p>
-      )}
-
-      <AiFeaturesPanel features={AI_FEATURES} connected={llm.ok} problem={llm.ok ? null : (llmConfigProblem() ?? (("detail" in llm && llm.detail) || "Taalmodel niet bereikbaar"))} />
-
-      <CronHealthPanel />
-
-      <FunnelPanel />
-
-      <FeatureFlagsPanel />
-
-      <ModelFleet />
-
-      <RagLab />
-
-      <OpsAlerts />
-
-      <UsagePanel />
+      <Tabs
+        label="Onderdelen van het systeem"
+        tabs={[
+          {
+            id: "componenten",
+            label: "Componenten",
+            badge: broken || null,
+            content: (
+              <>
+                {!db.ok && db.detail && <Notice tone="crit" role="alert">Database: {db.detail}</Notice>}
+                <div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+                  <Panel flush title="Componenten" subtitle="Elke keer dat je deze pagina opent opnieuw gecontroleerd">
+                    <ul>
+                      {components.map((c) => {
+                        const t = TONE[c.state];
+                        return (
+                          <li key={c.label} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                            <span className="text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>{c.label}</span>
+                            <span className="flex min-w-0 items-center gap-3">
+                              <span className="truncate font-mono text-xs" style={{ color: "var(--a-mute)" }}>{c.meta}</span>
+                              <Pill tone={t.tone}>{t.label}</Pill>
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </Panel>
+                  {budget && (
+                    <Panel title="AI-budget" subtitle="Vandaag, op het eigen model">
+                      <div className="space-y-4">
+                        <Meter label="Tokens" value={budget.tokensUsed} max={budget.tokenBudget} display={`${count(Math.round(budget.tokensUsed / 1000))}k van ${count(Math.round(budget.tokenBudget / 1000))}k`} tone={budget.tokensUsed >= budget.tokenBudget ? "crit" : "ok"} />
+                        <Meter label="Rekensloten" value={budget.concurrencyInUse} max={budget.concurrencyMax} display={`${budget.concurrencyInUse} van ${budget.concurrencyMax}`} tone="plan" />
+                        <Meter label="Verzoeken deze minuut" value={budget.requestsThisMinute} max={budget.requestsPerMinute} display={`${budget.requestsThisMinute} van ${budget.requestsPerMinute}`} tone="plan" />
+                      </div>
+                    </Panel>
+                  )}
+                </div>
+              </>
+            ),
+          },
+          {
+            id: "ai",
+            label: "AI",
+            content: (
+              <>
+                <AiFeaturesPanel features={AI_FEATURES} connected={llm.ok} problem={llm.ok ? null : (llmConfigProblem() ?? (("detail" in llm && llm.detail) || "Taalmodel niet bereikbaar"))} />
+                <ModelFleet />
+                <RagLab />
+              </>
+            ),
+          },
+          {
+            id: "taken",
+            label: "Taken en meldingen",
+            badge: staleJobs || null,
+            content: (
+              <>
+                <CronHealthPanel />
+                <OpsAlerts />
+              </>
+            ),
+          },
+          { id: "functies", label: "Functies aan en uit", content: <FeatureFlagsPanel /> },
+          {
+            id: "gebruik",
+            label: "Gebruik en snelheid",
+            content: (
+              <>
+                <FunnelPanel />
+                <UsagePanel />
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

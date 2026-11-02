@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { DisputeConsole } from "@/components/disputes/DisputeConsole";
+import { PageHead } from "@/components/admin/kit";
 import type { DisputeDto, GpsEventDto } from "@/types/disputes";
 
 export const dynamic = "force-dynamic";
@@ -100,12 +101,7 @@ async function loadDisputes(
 export default async function DisputesPage() {
   const principal = await getPrincipal();
   if (!principal) {
-    return (
-      <main className="p-8">
-        <h1 className="text-lg font-semibold">Niet ingelogd</h1>
-        <p className="text-slate-600">Log in om de dispuut-console te bekijken.</p>
-      </main>
-    );
+    return <PageHead title="Niet ingelogd" subtitle="Log in om de dispuut-console te bekijken." />;
   }
 
   const canReview = hasRole(
@@ -115,14 +111,7 @@ export default async function DisputesPage() {
     "PLATFORM_ADMIN",
   );
   if (!canReview) {
-    return (
-      <main className="p-8">
-        <h1 className="text-lg font-semibold">Geen toegang</h1>
-        <p className="text-slate-600">
-          Deze console is alleen beschikbaar voor dispuut-beheerders.
-        </p>
-      </main>
-    );
+    return <PageHead title="Geen toegang" subtitle="Deze console is alleen beschikbaar voor dispuut-beheerders." />;
   }
 
   // Same scoping used everywhere else in the employer/admin surface: platform
@@ -132,17 +121,12 @@ export default async function DisputesPage() {
   const disputes = await loadDisputes(scope);
 
   return (
-    <main className="mx-auto max-w-7xl p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Dispuut-console
-        </h1>
-        <p className="text-sm text-slate-600">
-          Urenafwijkingen naast de GPS check-in/check-out registratie. Beoordeel,
-          overrule of keur goed.
-        </p>
-      </header>
+    <div className="space-y-4">
+      <PageHead
+        title="Disputen"
+        subtitle="Urenafwijkingen naast de GPS-registratie van in- en uitchecken. Beoordeel, corrigeer of keur goed."
+      />
       <DisputeConsole disputes={disputes} />
-    </main>
+    </div>
   );
 }

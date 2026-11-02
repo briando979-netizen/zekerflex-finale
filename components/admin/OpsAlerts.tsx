@@ -43,7 +43,7 @@ export function OpsAlerts() {
   }
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+    <section className="a-panel overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-hair px-5 py-4">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">Storingsmeldingen</p>

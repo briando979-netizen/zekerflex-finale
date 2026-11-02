@@ -41,7 +41,7 @@ export function ClawbacksPanel() {
     <section className="mt-6 rounded-2xl border border-hair bg-white">
       <div className="flex items-center justify-between border-b border-hair px-5 py-4">
         <div>
-          <h2 className="font-display text-base font-bold text-ink">Storno&apos;s / terugvorderingen</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Storno&apos;s / terugvorderingen</h2>
           <p className="text-xs text-neutralx-500">Teruggeboekte facturen. Voorgeschoten = al uitbetaald en nog niet terugontvangen.</p>
           <p className="mt-1 text-xs text-neutralx-500">Staat een factuur hierdoor weer open, dan bepaalt jouw keuze wat ermee gebeurt. Nieuw: geen herinneringen. Opnieuw innen: herinneringen lopen. Geld is binnen: factuur betaald. Afschrijven: factuur geannuleerd.</p>
         </div>

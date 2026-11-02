@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PageHead } from "@/components/admin/kit";
 import type { ReactNode } from "react";
 import { hostingChecks } from "@/lib/hosting/check";
 import { buildBimiRecord } from "@/lib/hosting/bimi";
@@ -28,7 +29,7 @@ const lbl = "block text-xs font-medium text-neutralx-500 mb-1";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="card space-y-3 p-5">
+    <div className="card mb-4 break-inside-avoid space-y-3 p-5">
       <div>
         <p className="text-sm font-semibold text-ink">{title}</p>
         {hint && <p className="mt-0.5 text-xs text-neutralx-500">{hint}</p>}
@@ -139,14 +140,11 @@ export function HostingBoard() {
   })();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">Hosting &amp; domein</h1>
-        <p className="mt-1 text-sm text-neutralx-600">
-          Eén plek voor je mailserver-, DNS-, domein- en VPS-instellingen. Dit is de administratie en het koppelpunt:
-          het daadwerkelijk toepassen gebeurt bij je provider (of later automatisch via de provider-API hieronder).
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Hosting & domein"
+        subtitle="Eén plek voor je mailserver-, DNS-, domein- en VPS-instellingen. Dit is de administratie en het koppelpunt: het toepassen gebeurt bij je provider, of automatisch via de provider-API hieronder."
+      />
 
       <Section title="Config-check" hint="Automatische controle van je DNS-, mail- en beveiligingsconfig op veelgemaakte fouten.">
         {checks.length === 0 ? (
@@ -165,6 +163,7 @@ export function HostingBoard() {
         )}
       </Section>
 
+      <div className="gap-4 xl:columns-2">
       <Section title="Mailserver" hint="Inkomende en uitgaande mail voor je domein (met SSL: IMAP 993, SMTP 465, POP3 995).">
         <div className="grid gap-3 sm:grid-cols-2">
           <div><label className={lbl}>IMAP-server</label><input className={inp} value={cfg.mail.imapHost} onChange={(e) => set("mail", { imapHost: e.target.value })} placeholder="imap.jouwdomein.nl" /></div>
@@ -311,8 +310,9 @@ export function HostingBoard() {
         </div>
         <button type="button" onClick={() => setCfg((c) => (c ? { ...c, custom: [...c.custom, { key: "", value: "" }] } : c))} className="btn-ghost mt-2 text-xs">+ veld</button>
       </Section>
+      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="a-panel sticky bottom-3 z-10 flex flex-wrap items-center gap-3 p-3 sm:px-5">
         <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? "Opslaan…" : "Opslaan"}</button>
         <button type="button" onClick={() => window.open("/api/admin/hosting/export", "_blank")} className="btn-ghost text-sm" title="Download DNS-zone + mail-aliassen voor je eigen CoreDNS/BIND/Postfix">
           Exporteer config (DNS + mail)

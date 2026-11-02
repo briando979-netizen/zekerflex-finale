@@ -33,7 +33,7 @@ function Table({ rows, empty }: { rows: RouteUsage[]; empty: string }) {
 export async function UsagePanel() {
   const u = await usageSnapshot();
   return (
-    <div className="mt-6 space-y-6">
+    <div className="space-y-4">
       {u.warnings.length > 0 && (
         <div className="rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">Let op</p>

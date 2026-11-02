@@ -61,9 +61,9 @@ export function FeatureFlagsPanel() {
   };
 
   return (
-    <section className="mt-8 rounded-2xl border border-hair bg-white">
+    <section className="a-panel overflow-hidden">
       <div className="border-b border-hair px-5 py-4">
-        <h2 className="font-display text-base font-bold text-ink">Feature flags</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Feature flags</h2>
         <p className="text-xs text-neutralx-500">Functies aan/uit of gefaseerd uitrollen (% gebruikers) zonder nieuwe deploy. Een gebruiker blijft stabiel in of uit een uitrol.</p>
       </div>
       <ul className="divide-y divide-hair">

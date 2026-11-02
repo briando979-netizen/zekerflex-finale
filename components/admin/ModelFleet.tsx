@@ -7,9 +7,9 @@ export async function ModelFleet() {
   // Ollama lists untagged pulls as "<name>:latest"
   const has = (m: string) => served.includes(m) || served.includes(`${m}:latest`);
   return (
-    <section className="mt-8 rounded-2xl border border-hair bg-white">
+    <section className="a-panel overflow-hidden">
       <div className="border-b border-hair px-5 py-4">
-        <h2 className="font-display text-base font-bold text-ink">Modellen</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Modellen</h2>
         <p className="text-xs text-neutralx-500">
           Elk soort werk heeft zijn eigen model; zonder eigen model valt het terug op het hoofdmodel.{" "}
           {served.length ? `Op de AI-server: ${served.join(", ")}.` : "AI-server niet bereikbaar of nog niet gekoppeld."}

@@ -4,9 +4,9 @@ import { allFunnelReports } from "@/lib/analytics/funnel";
 export async function FunnelPanel({ months = 3 }: { months?: number }) {
   const funnels = await allFunnelReports(months).catch(() => []);
   return (
-    <section className="mt-8 rounded-2xl border border-hair bg-white">
+    <section className="a-panel overflow-hidden">
       <div className="border-b border-hair px-5 py-4">
-        <h2 className="font-display text-base font-bold text-ink">Funnel & drop-off</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Funnel & drop-off</h2>
         <p className="text-xs text-neutralx-500">Waar haken mensen af (laatste {months} maanden). Eigen tellers, geen externe dienst.</p>
       </div>
       <div className="grid gap-5 px-5 py-4 md:grid-cols-2">

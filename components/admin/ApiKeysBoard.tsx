@@ -92,7 +92,7 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold text-ink">API & integraties</h1>
+        <h1 className="text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: "var(--a-text)" }}>API & integraties</h1>
         <p className="mt-1 text-sm text-neutralx-600">
           Geef externe systemen — een boekhoudkoppeling, een partner, een bedrijf dat zijn eigen tooling wil
           aansluiten — een sleutel om de publieke ZekerFlex-API te gebruiken.
