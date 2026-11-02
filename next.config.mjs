@@ -7,7 +7,9 @@ const nextConfig = {
   output: "standalone",
   compress: true,
   images: {
-    formats: ["image/avif", "image/webp"],
+    // Alleen WebP: AVIF-omzetting liep op de VPS blijvend vast (2 nov 2026: elke
+    // volgende aanvraag voor die foto wachtte eeuwig op de eerste) en kost veel CPU.
+    formats: ["image/webp"],
     // Local images may carry a cache-busting ?v= (marketing photos) — allow it.
     localPatterns: [{ pathname: "/**" }],
     minimumCacheTTL: 2678400,

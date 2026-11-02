@@ -41,6 +41,8 @@ services:
       - app-storage:/app/storage
       # Back-ups van beheerde klantsites: eigen volume, niet in onze eigen nachtelijke back-up.
       - site-backups:/app/site-backups
+      # Omgezette foto's van next/image: blijven bewaard bij een deploy.
+      - next-cache:/app/.next/cache
       # Alleen-lezen: de app controleert de nachtelijke back-up (lib/ops/backup.ts).
       - ./backups:/backups:ro
     depends_on:
@@ -176,6 +178,7 @@ networks:
 volumes:
   app-storage:
   site-backups:
+  next-cache:
   pg-data:
   redis-data:
   caddy-data:

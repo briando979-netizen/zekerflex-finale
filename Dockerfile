@@ -60,6 +60,10 @@ VOLUME ["/app/storage"]
 # bewust niet onder /app/storage (dat gaat elke nacht mee in onze eigen back-up).
 RUN mkdir -p /app/site-backups && chown -R nextjs:nodejs /app/site-backups
 VOLUME ["/app/site-backups"]
+# Cache van next/image (omgezette foto's): als volume overleeft hij een deploy, anders
+# moet na elke update elke foto opnieuw worden omgezet, allemaal tegelijk.
+RUN mkdir -p /app/.next/cache/images && chown -R nextjs:nodejs /app/.next/cache
+VOLUME ["/app/.next/cache"]
 
 USER nextjs
 EXPOSE 3000
