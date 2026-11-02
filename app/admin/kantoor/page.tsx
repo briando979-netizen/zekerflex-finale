@@ -1,7 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead } from "@/components/admin/kit";
 import { OfficeFloor } from "@/components/admin/OfficeFloor";
-import { OfficeSim } from "@/components/admin/OfficeSim";
+import { KantoorView } from "@/components/admin/KantoorView";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function KantoorPage() {
         title="Live kantoor"
         subtitle="Het ZekerFlex-kantoor waar AI-robotjes werken. Elke robot in de gang brengt een échte gebeurtenis van de laatste 24 uur naar de afdeling die hem afhandelde."
       />
-      <OfficeSim />
+      <KantoorView />
       <OfficeFloor />
     </div>
   );
