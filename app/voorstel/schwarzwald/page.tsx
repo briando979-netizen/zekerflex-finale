@@ -22,11 +22,7 @@ export default function SchwarzwaldHome() {
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-0 h-[380px] w-[380px] animate-aurora-drift rounded-full bg-schw-moss/70 blur-3xl [animation-delay:-6s]" />
         <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-4 pb-24 pt-12 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:pb-32 lg:pt-20">
           <div className="animate-fade-up">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-schw-cream/80">
-              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-schw-orange" aria-hidden="true" />
-              Rijssen · Twente · direct aan de A1
-            </p>
-            <h1 className="mt-6 font-display text-[clamp(3.4rem,11vw,7.5rem)] font-bold leading-[0.88] tracking-[-0.03em]">
+            <h1 className="font-display text-[clamp(3.4rem,11vw,7.5rem)] font-bold leading-[0.88] tracking-[-0.03em]">
               <span className="block">Je beleeft</span>
               <span className="mt-2 block">
                 <span className="inline-block -rotate-3 rounded-2xl bg-schw-orange px-4 pb-2 text-schw-night">&apos;t</span>{" "}
