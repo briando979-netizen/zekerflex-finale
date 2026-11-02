@@ -234,11 +234,12 @@ export function Offertes() {
           <ul>
             {shown.map((o) => {
               const isOpen = open === o.id;
+              const status = STATUS[o.status] ?? { label: String(o.status ?? "Onbekend"), tone: "neutral" as const };
               return (
                 <li key={o.id} style={{ borderBottom: "1px solid var(--a-border)" }}>
                   <button type="button" onClick={() => setOpen(isOpen ? null : o.id)} aria-expanded={isOpen} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left text-[0.8125rem] transition-colors hover:bg-[var(--a-panel-2)] sm:px-5">
                     <span className="font-medium" style={{ color: "var(--a-text)" }}>{o.company ?? o.fromName ?? o.fromAddress ?? "Onbekend"}</span>
-                    <Pill tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Pill>
+                    <Pill tone={status.tone}>{status.label}</Pill>
                     <span className="min-w-0 flex-1 truncate text-xs" style={{ color: "var(--a-mute)" }}>{o.samenvatting}</span>
                     <span className="flex-shrink-0 text-xs" style={{ color: "var(--a-mute)" }}>{dateTimeNl(o.at)}</span>
                   </button>

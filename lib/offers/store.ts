@@ -26,6 +26,13 @@ export interface CounterOffer {
 
 const key = (id: string) => `offer:${id}`;
 
+// De Offerte-AI (lib/sales/offers.ts) bewaart onder hetzelfde voorvoegsel, plus
+// "offer:seen:<uid>"-merktekens. Alleen echte tegenbiedingen tellen hier mee.
+export const isCounterOffer = (value: unknown): value is CounterOffer => {
+  const v = value as Partial<CounterOffer> | null;
+  return Boolean(v) && typeof v?.id === "string" && typeof v.at === "string" && typeof v.userId === "string" && typeof v.shiftId === "string";
+};
+
 export async function createCounterOffer(
   input: Omit<CounterOffer, "id" | "at" | "status" | "respondedAt">,
 ): Promise<CounterOffer> {
@@ -49,7 +56,7 @@ export async function createCounterOffer(
 
 export async function listCounterOffers(limit = 200): Promise<CounterOffer[]> {
   const rows = await kvListValues<CounterOffer>("offer:", 2000);
-  return rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
+  return rows.filter(isCounterOffer).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
 }
 
 export async function offersForUser(userId: string): Promise<CounterOffer[]> {
@@ -66,7 +73,7 @@ export async function myOfferForShift(userId: string, shiftId: string): Promise<
 
 export async function setOfferStatus(id: string, status: OfferStatus): Promise<CounterOffer | null> {
   const rec = await kvGet<CounterOffer>(key(id.replace(/[^a-z0-9-]/gi, "")));
-  if (!rec) return null;
+  if (!isCounterOffer(rec)) return null;
   rec.status = status;
   rec.respondedAt = status === "pending" ? null : new Date().toISOString();
   await kvSet(key(rec.id), rec);

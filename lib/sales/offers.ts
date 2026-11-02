@@ -121,17 +121,25 @@ ${input.body.slice(0, 6000)}`;
 const offerKey = (id: string) => `offer:${id}`;
 const seenKey = (uid: number) => `offer:seen:${uid}`;
 
+// De tegenbiedingen van freelancers (lib/offers/store.ts) bewaren onder hetzelfde
+// voorvoegsel. Alleen wat de Offerte-AI zelf vastlegde, telt hier mee.
+const isOfferRecord = (value: unknown): value is OfferRecord => {
+  const v = value as Partial<OfferRecord> | null;
+  return Boolean(v) && typeof v?.id === "string" && typeof v.at === "string" && typeof v.isOffer === "boolean" && typeof v.samenvatting === "string";
+};
+
 export async function listOffers(limit = 100): Promise<OfferRecord[]> {
-  const rows = await kvListValues<OfferRecord>("offer:", limit * 3);
+  const rows = await kvListValues<OfferRecord>("offer:", 2000);
   return rows
-    .filter((r) => r && typeof (r as OfferRecord).id === "string")
+    .filter(isOfferRecord)
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, limit);
 }
 
 export async function getOffer(id: string): Promise<OfferRecord | null> {
   if (!/^[a-f0-9-]{6,20}$/.test(id)) return null;
-  return kvGet<OfferRecord>(offerKey(id));
+  const rec = await kvGet<OfferRecord>(offerKey(id));
+  return isOfferRecord(rec) ? rec : null;
 }
 
 export async function setOfferStatus(id: string, status: OfferStatus): Promise<OfferRecord | null> {
