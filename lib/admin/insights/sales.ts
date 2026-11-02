@@ -19,6 +19,8 @@ const SOURCE_LABEL: Record<string, string> = {
   "ai-beller": "AI-beller",
   website: "Website",
   offerte: "Offerte-AI",
+  "offerte-inbound": "Offerte-AI",
+  "website-check": "Website-check",
 };
 
 export async function salesInsights(period: Period) {
