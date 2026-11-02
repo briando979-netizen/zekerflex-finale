@@ -5,7 +5,11 @@
 //   • minimumloon-vloer (WML) inclusief jeugdloon
 //   • per branche-CAO instelbare percentages
 // Pure functies, integer centen. Geen DB / filesystem.
+// Uren en dagen tellen in Nederlandse tijd: de server draait in UTC, en een
+// nachtuur of zondag is dat volgens de klok in Nederland.
 // ---------------------------------------------------------------------------
+
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 export interface CaoRates {
   key: string;
@@ -181,8 +185,10 @@ export function publicHolidaysOf(year: number): Set<string> {
   return set;
 }
 
+/** Valt dit moment op een Nederlandse feestdag (Nederlandse kalenderdag)? */
 export function isPublicHoliday(d: Date): boolean {
-  return publicHolidaysOf(d.getFullYear()).has(iso(d));
+  const day = amsterdamDayKey(d);
+  return publicHolidaysOf(Number(day.slice(0, 4))).has(day);
 }
 
 // --- Segmentindeling van een gewerkte dienst ----------------------------
@@ -258,8 +264,7 @@ export function computeCaoLine(input: {
 
   for (let t = start.getTime(); t < end.getTime(); t += STEP_MIN * 60000) {
     const at = new Date(t);
-    const day = at.getDay(); // 0 = zo, 6 = za
-    const hour = at.getHours();
+    const { weekday: day, hour } = amsterdamParts(at); // day: 0 = zo, 6 = za
 
     const inNight =
       cao.nightFromHour <= cao.nightToHour
