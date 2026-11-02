@@ -415,6 +415,7 @@ export const en: Dict = {
     kpiPerSeat: "Per seat",
     kpiFee: "Platform cost",
     kpiFeeSub: "€ 3.50 per hour worked · {h} h",
+    kpiFeeFreeSub: "Free for your account · {h} h",
     kpiOccupancy: "Occupancy",
     kpiOffers: "{n} reaction",
     kpiMatching: "matching running",

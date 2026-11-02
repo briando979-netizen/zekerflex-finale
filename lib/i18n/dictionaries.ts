@@ -419,6 +419,7 @@ export const nl = {
     kpiPerSeat: "Per plek",
     kpiFee: "Platformkosten",
     kpiFeeSub: "€ 3,50 per gewerkt uur · {h} u",
+    kpiFeeFreeSub: "Gratis voor jouw account · {h} u",
     kpiOccupancy: "Bezetting",
     kpiOffers: "{n} reactie",
     kpiMatching: "matchen loopt",

@@ -7,6 +7,7 @@ import { listReplacementRequests } from "@/lib/replacements/store";
 import { getUserAvatars } from "@/lib/profile/store";
 import { reviewSummary } from "@/lib/reviews/store";
 import { poolsInvitedToShift } from "@/lib/pools/store";
+import { isCompTenant } from "@/lib/billing/comp";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -33,6 +34,8 @@ export interface EmployerShiftView {
   hours: number;
   grossPerSeatCents: number;
   platformFeeCents: number;
+  /** kosteloos bedrijf (lib/billing/comp): the fee invoice is € 0 */
+  platformFeeFree: boolean;
   assigned: {
     assignmentId: string;
     freelancerId: string;
@@ -98,7 +101,7 @@ export async function getEmployerShift(
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
-      branch: { select: { id: true, name: true, city: true } },
+      branch: { select: { id: true, name: true, city: true, tenantId: true } },
       assignments: {
         where: { cancelledAt: null },
         select: {
@@ -134,10 +137,11 @@ export async function getEmployerShift(
   });
   if (!shift) return null;
 
-  const [replacements, allOffers, invitedPools] = await Promise.all([
+  const [replacements, allOffers, invitedPools, feeFree] = await Promise.all([
     listReplacementRequests(300),
     listCounterOffers(500),
     shift.visibility === "POOL_ONLY" ? poolsInvitedToShift(shift.id) : Promise.resolve([]),
+    isCompTenant(shift.branch.tenantId),
   ]);
   const replacementAssignmentIds = new Set(
     replacements.filter((r) => r.status === "open").map((r) => r.assignmentId),
@@ -190,7 +194,8 @@ export async function getEmployerShift(
     skill: shift.requiredSkill?.name ?? null,
     hours: Math.round(Math.max(0, hours) * 10) / 10,
     grossPerSeatCents: grossPerSeat,
-    platformFeeCents: Math.round(Math.max(0, hours) * env.PLATFORM_FEE_PER_HOUR_CENTS),
+    platformFeeCents: feeFree ? 0 : Math.round(Math.max(0, hours) * env.PLATFORM_FEE_PER_HOUR_CENTS),
+    platformFeeFree: feeFree,
     assigned: shift.assignments.map((a) => ({
       assignmentId: a.id,
       freelancerId: a.freelancer.id,

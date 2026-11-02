@@ -139,7 +139,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
       <div className="grid gap-4 sm:grid-cols-4">
         <Kpi label={d.kpiRate} value={`${moneyExact(s.hourlyRateCents)}`} sub={d.kpiRateSub} />
         <Kpi label={d.kpiPerSeat} value={money(s.grossPerSeatCents)} sub={`${s.hours} u`} />
-        <Kpi label={d.kpiFee} value={money(s.platformFeeCents)} sub={fmt(d.kpiFeeSub, { h: s.hours })} />
+        <Kpi label={d.kpiFee} value={money(s.platformFeeCents)} sub={fmt(s.platformFeeFree ? d.kpiFeeFreeSub : d.kpiFeeSub, { h: s.hours })} />
         <Kpi
           label={d.kpiOccupancy}
           value={`${s.assigned.length}/${s.positions}`}
