@@ -164,7 +164,7 @@ export function WebhooksBoard() {
                 <span className="font-medium text-ink">{d.eventType}</span>
                 <span className="min-w-0 flex-1 truncate font-mono text-neutralx-500">{d.subscription.url}</span>
                 <span className="text-neutralx-500">{d.deliveredAt ? `HTTP ${d.statusCode}` : d.lastError ?? "mislukt"} · {d.attempts}×</span>
-                <span className="text-neutralx-400">{new Date(d.createdAt).toLocaleString("nl-NL")}</span>
+                <span className="text-neutralx-400">{new Date(d.createdAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}</span>
               </li>
             ))}
           </ul>

@@ -8,6 +8,7 @@ import { ShiftCard, ShiftStatusButton } from "@/components/app/ShiftCard";
 import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
 import { hiddenEmployers } from "@/components/app/ShiftMenu";
 import { useFT } from "@/components/i18n/useFT";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -80,16 +81,16 @@ function KlusTypeExplainer() {
     </details>
   );
 }
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// Days in Dutch time: the list is rendered on the UTC server first, and a shift
+// at 00:30 belongs to the Dutch day whatever zone the phone is in.
+const dayKey = (d: Date) => amsterdamDayKey(d);
 
 function isTomorrow(d: Date): boolean {
-  const t = new Date();
-  t.setDate(t.getDate() + 1);
-  return dayKey(d) === dayKey(t);
+  const p = amsterdamParts(new Date());
+  return dayKey(d) === new Date(Date.UTC(p.year, p.month - 1, p.day + 1)).toISOString().slice(0, 10);
 }
 function isUpcomingWeekend(d: Date): boolean {
-  const day = d.getDay(); // 0 = Sun, 6 = Sat
+  const day = amsterdamParts(d).weekday; // 0 = Sun, 6 = Sat
   if (day !== 0 && day !== 6) return false;
   const diff = (d.getTime() - Date.now()) / 86_400_000;
   return diff >= -0.5 && diff <= 8;
@@ -404,16 +405,19 @@ export function MarketplaceView({
               <div className={openChip === "all" ? "mt-3" : ""}>
                 {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.days}</p>}
                 <div className="flex flex-wrap gap-1.5">
-                  {dayOptions.map(([k, d]) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => toggle(setDates)(k)}
-                      className={`rounded-lg border px-2 py-1 text-[11px] ${dates.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
-                    >
-                      {t.date.wd[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
-                    </button>
-                  ))}
+                  {dayOptions.map(([k, d]) => {
+                    const p = amsterdamParts(d);
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => toggle(setDates)(k)}
+                        className={`rounded-lg border px-2 py-1 text-[11px] ${dates.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
+                      >
+                        {t.date.wd[p.weekday]} {p.day}/{p.month}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

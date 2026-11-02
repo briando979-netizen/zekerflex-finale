@@ -49,7 +49,7 @@ function Qr({ url, size = 128 }: { url: string; size?: number }) {
 
 function fmtDate(iso?: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("nl-NL", { year: "numeric", month: "long" });
+  return new Date(iso).toLocaleDateString("nl-NL", { year: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
 }
 
 export default async function PassportPage(props: { params: Promise<{ token: string }> }) {
@@ -185,7 +185,7 @@ export default async function PassportPage(props: { params: Promise<{ token: str
                   <dl className="mt-3 space-y-0.5 font-mono text-[11px] text-neutralx-500">
                     <div>Referentie: {p.seal.reference}</div>
                     <div className="truncate">Inhoudshash: {p.seal.contentHash.slice(0, 32)}…</div>
-                    <div>Verzegeld: {new Date(p.seal.sealedAt).toLocaleString("nl-NL")}</div>
+                    <div>Verzegeld: {new Date(p.seal.sealedAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}</div>
                   </dl>
                   <Link href={`/paspoort/${token}/verify`} className="mt-2 inline-block text-xs font-semibold text-brand-600 hover:underline">
                     Verifieer via API →

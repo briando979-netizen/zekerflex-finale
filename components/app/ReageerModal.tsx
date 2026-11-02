@@ -329,8 +329,8 @@ function Modal({
                           <span className="min-w-0">
                             <span className="block truncate font-medium text-ink">{o.title}</span>
                             <span className="block text-[11px] text-neutralx-400">
-                              {od.toLocaleDateString(ft.intl, { weekday: "short", day: "numeric", month: "short" })} ·{" "}
-                              {od.toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" })}
+                              {od.toLocaleDateString(ft.intl, { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam" })} ·{" "}
+                              {od.toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}
                             </span>
                           </span>
                         </label>

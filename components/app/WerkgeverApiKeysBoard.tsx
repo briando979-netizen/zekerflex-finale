@@ -150,7 +150,7 @@ export function WerkgeverApiKeysBoard({ allowedScopes }: { allowedScopes: readon
                 {k.revokedAt && new Date(k.revokedAt) <= new Date() ? (
                   <span className="pill-neutral flex-shrink-0">ingetrokken</span>
                 ) : k.revokedAt ? (
-                  <span className="flex-shrink-0 text-xs text-warn">vervangen · werkt nog tot {new Date(k.revokedAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="flex-shrink-0 text-xs text-warn">vervangen · werkt nog tot {new Date(k.revokedAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}</span>
                 ) : (
                   <span className="flex flex-shrink-0 gap-1">
                     <button type="button" onClick={() => rotate(k.id)} className="btn-ghost text-xs">

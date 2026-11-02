@@ -55,7 +55,7 @@ type Tab = "inbox" | "zekerflex" | "sent";
 type Selection = { tab: Tab; id: string } | { tab: "compose" } | null;
 
 const fill = (s: string, v: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k: string) => v[k] ?? "");
-const when = (d: string | null) => (d ? new Date(d).toLocaleString("nl-NL") : "");
+const when = (d: string | null) => (d ? new Date(d).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "");
 const size = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${Math.round(b / 1024)} KB` : `${(b / 1048576).toFixed(1)} MB`);
 
 async function readError(res: Response, fallback: string): Promise<string> {

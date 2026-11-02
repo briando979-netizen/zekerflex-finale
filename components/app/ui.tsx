@@ -229,8 +229,9 @@ export function moneyExact(cents: number): string {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(cents / 100);
 }
 
+// Always Dutch time: the server runs in UTC, and server and browser must agree.
 export function dateShort(d: Date | string): string {
-  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+  return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
 }
 
 export function dateTime(d: Date | string): string {
@@ -239,5 +240,6 @@ export function dateTime(d: Date | string): string {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
   });
 }

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/ui";
 import { ColorLegend } from "@/components/app/ColorLegend";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,12 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 function parseMonth(m: string | undefined): { y: number; mo: number } {
-  const now = new Date();
   if (m && /^\d{4}-\d{2}$/.test(m)) {
     const [y, mo] = m.split("-").map(Number) as [number, number];
     if (y >= 2000 && y <= 2100 && mo >= 1 && mo <= 12) return { y, mo: mo - 1 };
   }
-  return { y: now.getFullYear(), mo: now.getMonth() };
+  const now = amsterdamParts(new Date()); // this month in Dutch time (server runs in UTC)
+  return { y: now.year, mo: now.month - 1 };
 }
 
 const key = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}`;
@@ -97,7 +98,7 @@ export default async function KalenderPage(
                         : "text-neutralx-400/60"
                   }`}
                 >
-                  {cell.date.getDate()}
+                  {cell.day}
                 </div>
                 <div className="space-y-1">
                   {cell.shifts.slice(0, 3).map((s) => (
@@ -109,7 +110,7 @@ export default async function KalenderPage(
                       }`}
                       title={`${s.title} · ${s.branch} · ${s.filled}/${s.positions}`}
                     >
-                      {s.startsAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" })} {s.title}
+                      {s.startsAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })} {s.title}
                     </Link>
                   ))}
                   {cell.shifts.length > 3 && (

@@ -38,7 +38,7 @@ const STATUS: Record<Cert["status"], { label: string; cls: string }> = {
   rejected: { label: "Afgekeurd", cls: "bg-crit/10 text-crit" },
 };
 
-const fmt = (s?: string) => (s ? new Date(s).toLocaleDateString("nl-NL") : "—");
+const fmt = (s?: string) => (s ? new Date(s).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "—");
 function expiresSoon(s?: string) {
   if (!s) return false;
   const d = new Date(s).getTime() - Date.now();

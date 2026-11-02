@@ -70,7 +70,7 @@ export function ShopAccount({
                     <Link href={`/shop/bestelling/${o.id}`} className="flex items-center justify-between py-3 text-sm hover:text-brand-600">
                       <span>
                         <span className="font-semibold">{STATUS_LABEL[o.status]}</span>
-                        <span className="ml-2 text-neutralx-400">{new Date(o.createdAt).toLocaleDateString("nl-NL")} · {o.itemCount} artikel(en)</span>
+                        <span className="ml-2 text-neutralx-400">{new Date(o.createdAt).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })} · {o.itemCount} artikel(en)</span>
                       </span>
                       <span className="font-semibold">{money(o.totalCents)}</span>
                     </Link>

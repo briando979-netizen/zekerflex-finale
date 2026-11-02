@@ -13,7 +13,7 @@ interface Contract {
 }
 
 const fmt = (s: string) =>
-  new Date(s).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  new Date(s).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 export function UitzendContractCard() {
   const [active, setActive] = useState<Contract | null | undefined>(undefined);

@@ -78,7 +78,7 @@ export default async function OpenShiftsPage() {
             </div>
             <p className="mt-4 text-xs text-neutralx-400">
               Locaties zijn samengevat per plaats — werkgever en exact adres zie je pas na het reageren. Bijgewerkt:{" "}
-              {new Date(map.generatedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}.
+              {new Date(map.generatedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}.
             </p>
           </div>
         </div>

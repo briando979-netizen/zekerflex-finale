@@ -28,13 +28,12 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { cleanBranchLabel } from "@/lib/shifts/place-label";
+import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
 
-const hhmm = (d: Date | string) => {
-  const x = new Date(d);
-  return `${String(x.getHours()).padStart(2, "0")}:${String(x.getMinutes()).padStart(2, "0")}`;
-};
+// Dutch wall-clock times — this page renders on the server, which runs in UTC.
+const hhmm = (d: Date | string) => amsterdamClock(d);
 const MODE_EMOJI: Record<string, string> = { driving: "🚗", transit: "🚆", walking: "🚶", bicycling: "🚲" };
 
 
@@ -122,7 +121,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   // Cancellation deadline: 24h before the shift starts.
   const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
   const cancelPassed = cancelDeadline.getTime() < Date.now();
-  const fmtDay = (d: Date) => `${WD[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}. ${hhmm(d)}`;
+  const fmtDay = (d: Date) => {
+    const p = amsterdamParts(d);
+    return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(d)}`;
+  };
 
   // Does the freelancer already have a klus that overlaps this time window?
   const myProfile = await prisma.freelancerProfile.findUnique({
@@ -236,7 +238,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     ts && ["SUBMITTED", "APPROVED", "PAID", "DISPUTED"].includes(ts.status),
   );
 
-  const dateLabel = `${WD[start.getDay()]} ${start.getDate()} ${MON[start.getMonth()]}.`;
+  const sp = amsterdamParts(start);
+  const dateLabel = `${WD[sp.weekday]} ${sp.day} ${MON[sp.month - 1]}.`;
   const timeLabel = `${hhmm(s.startsAt)} - ${hhmm(s.endsAt)}`;
 
   const calendarEvent: CalendarEvent = {
@@ -616,6 +619,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               {otherShifts.map((o) => {
                 const oc = shiftCategory(o.title, o.requiredSkill?.name ?? null);
                 const od = new Date(o.startsAt);
+                const odp = amsterdamParts(od);
                 const oh =
                   Math.round(
                     ((new Date(o.endsAt).getTime() - od.getTime()) / 3_600_000 - o.breakMinutes / 60) * 10,
@@ -632,7 +636,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                       <p className="text-xs font-semibold text-brand-600">{cleanBranchLabel(o.branch.name)}</p>
                       <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-ink">{o.title}</p>
                       <p className="mt-1 text-[11px] text-neutralx-400">
-                        {WD[od.getDay()]} {od.getDate()} {MON[od.getMonth()]}. · {hhmm(o.startsAt)} · {o.branch.city}
+                        {WD[odp.weekday]} {odp.day} {MON[odp.month - 1]}. · {hhmm(o.startsAt)} · {o.branch.city}
                       </p>
                       <p className="mt-1.5 text-sm font-bold text-ink">
                         {moneyExact(o.hourlyRateCents)} <span className="text-[11px] font-normal text-neutralx-400">· {ft.card.hours(oh)}</span>

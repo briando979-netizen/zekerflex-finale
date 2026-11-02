@@ -42,7 +42,8 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
   const router = useRouter();
   const ft = useFT();
   const c = ft.checkin;
-  const time = (d: string) => new Date(d).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" });
+  // Dutch time: rendered on the UTC server first, and the shift runs in NL.
+  const time = (d: string) => new Date(d).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
   const [busy, setBusy] = useState<Ev | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [inAt, setInAt] = useState(props.actualStart);

@@ -33,8 +33,9 @@ interface Contact {
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ""));
-const day = (d: string | null) => (d ? new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }) : "");
-const time = (d: string) => new Date(d).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+// Dutch time, so the UTC server and the browser render the same text.
+const day = (d: string | null) => (d ? new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Amsterdam" }) : "");
+const time = (d: string) => new Date(d).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
 export function WhatsAppHub({ t }: { t: Dict }) {
   const [tab, setTab] = useState<"chats" | "contacts">("chats");

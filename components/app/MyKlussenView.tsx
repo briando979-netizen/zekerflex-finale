@@ -10,6 +10,7 @@ import { CancellationClaimButton } from "@/components/app/CancellationClaimButto
 import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
 import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 type TabId = "pending" | "active" | "history";
 
@@ -19,8 +20,8 @@ const TABS: { id: TabId; key: "tabPending" | "tabActive" | "tabHistory" }[] = [
   { id: "history", key: "tabHistory" },
 ];
 type W = FreelancerDict["work"];
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// Dutch days: rendered on the UTC server first, and shifts happen in Dutch time.
+const dayKey = (d: Date) => amsterdamDayKey(d);
 
 export function MyKlussenView({
   work,
@@ -164,22 +165,25 @@ export function MyKlussenView({
             <div className="mt-3">
               <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{w.whichDays}</p>
               <div className="flex flex-wrap gap-1.5">
-                {dayOptions.map(([k, d]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() =>
-                      setDays((prev) => {
-                        const n = new Set(prev);
-                        n.has(k) ? n.delete(k) : n.add(k);
-                        return n;
-                      })
-                    }
-                    className={`rounded-lg border px-2 py-1 text-[11px] ${days.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
-                  >
-                    {ft.date.wd[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
-                  </button>
-                ))}
+                {dayOptions.map(([k, d]) => {
+                  const p = amsterdamParts(d);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() =>
+                        setDays((prev) => {
+                          const n = new Set(prev);
+                          n.has(k) ? n.delete(k) : n.add(k);
+                          return n;
+                        })
+                      }
+                      className={`rounded-lg border px-2 py-1 text-[11px] ${days.has(k) ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-neutralx-600"}`}
+                    >
+                      {ft.date.wd[p.weekday]} {p.day}/{p.month}
+                    </button>
+                  );
+                })}
               </div>
               {days.size > 0 && (
                 <button type="button" onClick={() => setDays(new Set())} className="mt-2 text-xs text-brand-600 hover:underline">

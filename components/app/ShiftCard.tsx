@@ -7,6 +7,7 @@ import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
 import { WebOnly } from "@/components/app/WebOnly";
 import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
+import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Shift card — YoungOnes-style: photo header with the category + a save heart,
@@ -14,12 +15,11 @@ import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 // Presentational; `action` / `footerOverride` drive the apply control.
 // ---------------------------------------------------------------------------
 
+// Dutch wall-clock times, so the UTC server and any phone render the same text.
 function whenLabel(start: Date, end: Date, t: FreelancerDict): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  const day = `${t.date.wd[s.getDay()]} ${s.getDate()} ${t.date.mon[s.getMonth()]}.`;
-  const hm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${day} · ${hm(s)}–${hm(e)}`;
+  const s = amsterdamParts(new Date(start));
+  const day = `${t.date.wd[s.weekday]} ${s.day} ${t.date.mon[s.month - 1]}.`;
+  return `${day} · ${amsterdamClock(start)}–${amsterdamClock(end)}`;
 }
 
 export function ShiftCard({

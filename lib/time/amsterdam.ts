@@ -55,3 +55,20 @@ export function amsterdamParts(d: Date): { year: number; month: number; day: num
   const day = Number(parts.day);
   return { year, month, day, hour: Number(parts.hour), minute: Number(parts.minute), weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
 }
+
+// Display helpers. Shift times are Dutch wall-clock times: the server runs in
+// UTC and a phone may sit in another zone, so local getters (getHours, getDay…)
+// show the wrong hour and make server and browser render different text.
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** "09:05" — the Amsterdam time of an instant, the same on server and phone. */
+export function amsterdamClock(d: Date | string | number): string {
+  const p = amsterdamParts(new Date(d));
+  return `${pad2(p.hour)}:${pad2(p.minute)}`;
+}
+
+/** "2026-11-03" — the Amsterdam calendar day of an instant (grouping, day filters). */
+export function amsterdamDayKey(d: Date | string | number): string {
+  const p = amsterdamParts(new Date(d));
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
+}
