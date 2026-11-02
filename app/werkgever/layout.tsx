@@ -13,7 +13,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +50,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc />, section: t.nav.beheer },
     { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid />, section: t.nav.beheer },
     { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe />, section: t.nav.beheer },
+    { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone />, section: t.nav.beheer },
   ];
 
   const scope = await resolveEmployerScope(principal);

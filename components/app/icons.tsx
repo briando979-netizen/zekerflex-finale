@@ -27,6 +27,13 @@ export function IGlobe(_: P) {
     </svg>
   );
 }
+export function IPhone(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M6.6 3.5h2.6l1.4 3.6-1.9 1.3a11 11 0 006.9 6.9l1.3-1.9 3.6 1.4v2.6a2 2 0 01-2.2 2A16 16 0 014.6 5.7a2 2 0 012-2.2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
 export function ICalendar(_: P) {
   return (
     <svg {...s}>
