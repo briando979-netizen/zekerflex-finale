@@ -101,7 +101,7 @@ export async function movePot(input: { potId: string; accountId: string; directi
   if (input.amountCents <= 0) throw AppError.validation("Ongeldig bedrag");
   if (pot.kind === "FIXED") {
     if (input.direction === "in") throw AppError.precondition("Bij een deposito kun je niet bijstorten — open een nieuwe");
-    throw AppError.precondition(`Vastgezet tot ${pot.lockedUntil?.toLocaleDateString("nl-NL")} — eerder opnemen kan niet`);
+    throw AppError.precondition(`Vastgezet tot ${pot.lockedUntil?.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })} — eerder opnemen kan niet`);
   }
   const key = `pot-${input.direction}:${pot.id}:${input.requestKey}`;
   if (input.direction === "in") {

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Dynamic Pricing Engine
@@ -51,8 +52,8 @@ function urgencyMultiplier(startsAt: Date): { mult: number; label: string } {
 }
 
 function timeOfWeekMultiplier(startsAt: Date): { mult: number; label: string } {
-  const day = startsAt.getDay(); // 0=Sun, 6=Sat
-  const hour = startsAt.getHours();
+  // Dutch wall-clock: the server runs in UTC
+  const { weekday: day, hour } = amsterdamParts(startsAt); // day: 0=Sun, 6=Sat
   if (day === 0 || day === 6) return { mult: 1.2, label: "Weekend" };
   if (hour < 6 || hour >= 22) return { mult: 1.15, label: "Nacht/vroeg" };
   return { mult: 1.0, label: "" };

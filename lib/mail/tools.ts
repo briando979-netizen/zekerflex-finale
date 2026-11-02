@@ -37,7 +37,7 @@ export async function setMailTools(userId: string, tools: MailTools): Promise<Ma
 
 /** Fills {datum}, {mijnnaam}, {bedrijf}; {naam} stays for the sender to complete. */
 export function fillTemplate(text: string, vars: { mijnnaam: string; bedrijf: string; datum?: string }): string {
-  const datum = vars.datum ?? new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  const datum = vars.datum ?? new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
   return text.replace(/\{datum\}/g, datum).replace(/\{mijnnaam\}/g, vars.mijnnaam).replace(/\{bedrijf\}/g, vars.bedrijf);
 }
 

@@ -223,7 +223,7 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
     kind: "replacement",
     text:
       `${req.freelancerName} heeft de dienst "${result.shiftTitle}" bij ${req.branch} ` +
-      `(${new Date(req.startsAt).toLocaleString("nl-NL")}) overgedragen aan ${substitute.user.fullName}.\n\n` +
+      `(${new Date(req.startsAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}) overgedragen aan ${substitute.user.fullName}.\n\n` +
       `Nieuwe assignment: ${result.newAssignmentId}. Verzoek-id: ${input.requestId}.`,
   }).catch(() => undefined);
 

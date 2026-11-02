@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SimplePdf } from "@/lib/pdf/simple";
 
-const nlDate = (d: Date) => d.toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+const nlDate = (d: Date) => d.toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 /** A "verzekeringsbewijs" for a worker — indicative cover while on a ZekerFlex shift. */
 export async function insurancePdf(userId: string): Promise<{ bytes: Buffer; filename: string } | null> {

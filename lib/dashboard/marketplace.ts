@@ -9,10 +9,13 @@ import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/store";
 import { tenantsBlockingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
 // Preferences (min rate, max travel, availability) come from storage/prefs.
+// Hours and weekdays are Dutch wall-clock (amsterdamParts): the server runs
+// in UTC.
 // ---------------------------------------------------------------------------
 
 const KMH = 22; // rough door-to-door average incl. stops / transfers
@@ -79,7 +82,7 @@ export interface MarketplaceData {
 }
 
 function daypartOf(d: Date): MarketplaceShift["daypart"] {
-  const h = d.getHours();
+  const h = amsterdamParts(d).hour;
   return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
 }
 
@@ -335,7 +338,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         grossCents: Math.round(Math.max(0, hours) * s.hourlyRateCents),
         hours: Math.round(Math.max(0, hours) * 10) / 10,
         daypart: daypartOf(s.startsAt),
-        weekday: s.startsAt.getDay(),
+        weekday: amsterdamParts(s.startsAt).weekday,
         workedHereBefore: priorByBranch.get(s.branchId) ?? 0,
         travel: computeTravel(home, { lat: s.branch.latitude, lng: s.branch.longitude }),
         series: series.get(s.id) ?? null,
@@ -482,7 +485,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
         ).map((a) => a.shiftId),
       )
     : new Set<string>();
-  const hh = row.startsAt.getHours();
+  const hh = amsterdamParts(row.startsAt).hour;
   const dayStart = new Date(row.startsAt);
   dayStart.setDate(dayStart.getDate() - 14);
   const dayEnd = new Date(row.startsAt);
@@ -504,11 +507,11 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
   });
   const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
   const seriesDays = seriesRows
-    .filter((r) => r.startsAt.getHours() === hh)
+    .filter((r) => amsterdamParts(r.startsAt).hour === hh)
     .map((r) => ({
       shiftId: r.id,
-      date: r.startsAt.toISOString().slice(0, 10),
-      weekday: WD[r.startsAt.getDay()] ?? "",
+      date: amsterdamDayKey(r.startsAt),
+      weekday: WD[amsterdamParts(r.startsAt).weekday] ?? "",
       seatsFree: Math.max(0, r.positions - r._count.assignments),
       mine: mine.has(r.id),
     }));
@@ -535,7 +538,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       grossCents: Math.round(Math.max(0, detailHours) * row.hourlyRateCents),
       hours: Math.round(Math.max(0, detailHours) * 10) / 10,
       daypart: daypartOf(row.startsAt),
-      weekday: row.startsAt.getDay(),
+      weekday: amsterdamParts(row.startsAt).weekday,
       match: null,
       travel: computeTravel(detailHome, { lat: row.branch.latitude, lng: row.branch.longitude }),
       workedHereBefore: 0,

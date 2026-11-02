@@ -204,7 +204,7 @@ export async function recordDisputeOpened(dispute: DisputeFields): Promise<void>
   await report(saved, {
     step: "opened",
     title: `Betaalgeschil: ${numbers(saved)}`,
-    detail: `De klant betwist ${euro(dispute.amount)} (${dispute.reason}).${dueBy ? ` Reageer in Stripe vóór ${new Date(dueBy * 1000).toLocaleDateString("nl-NL")}.` : ""} De factuur blijft op betaald staan tot de uitkomst bekend is.`,
+    detail: `De klant betwist ${euro(dispute.amount)} (${dispute.reason}).${dueBy ? ` Reageer in Stripe vóór ${new Date(dueBy * 1000).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}.` : ""} De factuur blijft op betaald staan tot de uitkomst bekend is.`,
     url: "/admin/stripe",
   });
 }

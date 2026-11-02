@@ -311,5 +311,5 @@ export function postBySlug(slug: string): Post | undefined {
 }
 
 export function nlDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 }

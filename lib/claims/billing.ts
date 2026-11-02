@@ -95,7 +95,7 @@ export async function issueClaimInvoice(claim: CancellationClaim): Promise<{ inv
       subject: `Factuur ${invoice.number} — ${description}`,
       text:
         `Hoi ${debtorName},\n\n${description}.\n\nBedrag: ${euro(invoice.totalCents)}\n` +
-        `Te betalen voor: ${dueAt.toLocaleDateString("nl-NL")}\n\nBetaal direct: ${session.url}\n\n` +
+        `Te betalen voor: ${dueAt.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}\n\nBetaal direct: ${session.url}\n\n` +
         `Niet op tijd betaald? Dan volgt een gratis betalingsherinnering, en bij aanhoudend ` +
         `niet betalen kunnen wettelijke incassokosten en uiteindelijk een schorsing van je ` +
         `platformaccount volgen.\n\nZekerFlex`,
@@ -104,7 +104,7 @@ export async function issueClaimInvoice(claim: CancellationClaim): Promise<{ inv
         `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${debtorName},</p>
          <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#17211C">${description}.</p>
          <p style="margin:0 0 4px;font-size:15px;color:#17211C"><strong>Bedrag: ${euro(invoice.totalCents)}</strong></p>
-         <p style="margin:0 0 18px;font-size:13px;color:#667469">Te betalen voor ${dueAt.toLocaleDateString("nl-NL")}</p>
+         <p style="margin:0 0 18px;font-size:13px;color:#667469">Te betalen voor ${dueAt.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}</p>
          ${mailButton(session.url, "Nu betalen")}
          <p style="margin:18px 0 0;font-size:12px;color:#667469">Niet op tijd betaald? Dan volgt een gratis
          betalingsherinnering, en bij aanhoudend niet betalen kunnen wettelijke incassokosten en uiteindelijk

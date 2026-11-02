@@ -5,6 +5,8 @@
 // the same start/end time.
 // ---------------------------------------------------------------------------
 
+import { amsterdamParts } from "@/lib/time/amsterdam";
+
 export interface CalendarEvent {
   title: string;
   /** Local wall-clock, "YYYY-MM-DDTHH:mm:ss" (no timezone marker). */
@@ -19,13 +21,12 @@ const TZ = "Europe/Amsterdam";
 /** "2026-09-08T11:00:00" -> "20260908T110000" */
 const compact = (local: string) => local.replace(/[-:]/g, "").replace(/\.\d+$/, "");
 
+/** Amsterdam wall-clock of an instant — the links declare `ctz` Europe/Amsterdam,
+ *  so the server's own (UTC) clock would put the event an hour or two early. */
 export function localStamp(d: Date | string): string {
-  const x = new Date(d);
+  const x = amsterdamParts(new Date(d));
   const p = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}` +
-    `T${p(x.getHours())}:${p(x.getMinutes())}:00`
-  );
+  return `${x.year}-${p(x.month)}-${p(x.day)}T${p(x.hour)}:${p(x.minute)}:00`;
 }
 
 export function googleCalendarUrl(e: CalendarEvent): string {

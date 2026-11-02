@@ -5,7 +5,9 @@ import { payUrl } from "@/lib/billing/pay-link";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
-const nlDate = (d: Date | string) => new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+// Every date and time in these documents is Dutch time (the server runs in UTC).
+const TZ = "Europe/Amsterdam";
+const nlDate = (d: Date | string) => new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric", timeZone: TZ });
 
 const VAT_LABEL: Record<string, string> = {
   STANDARD_RATE: "21% btw",
@@ -162,10 +164,10 @@ export async function shopOrderReceiptPdf(orderId: string): Promise<{ bytes: Buf
 }
 
 const nlLong = (d: Date | string) =>
-  new Date(d).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const nlLongTime = (d: Date | string) =>
-  `${nlLong(d)} om ${new Date(d).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
-const ddmmyyyy = (d: Date | string) => new Date(d).toLocaleDateString("nl-NL");
+  new Date(d).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TZ });
+const nlTime = (d: Date | string) => new Date(d).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const nlLongTime = (d: Date | string) => `${nlLong(d)} om ${nlTime(d)}`;
+const ddmmyyyy = (d: Date | string) => new Date(d).toLocaleDateString("nl-NL", { timeZone: TZ });
 
 const CANCEL_HOURS = 24;
 
@@ -200,7 +202,7 @@ function renderAgreementPdf(a: AgreementPdfData): Buffer {
   const clientName = a.clientLegalName || a.tenant?.name || "Opdrachtgever";
   const clientCity = a.branch?.city || "Nederland";
   const opdrachtTitel = a.scopeDescription || a.shift?.title || "de klus";
-  const uitvoerDatum = a.shift ? ddmmyyyy(a.shift.startsAt) + " " + new Date(a.shift.startsAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }) : "de overeengekomen datum";
+  const uitvoerDatum = a.shift ? ddmmyyyy(a.shift.startsAt) + " " + nlTime(a.shift.startsAt) : "de overeengekomen datum";
   const rate = a.hourlyRateCents ? euro(a.hourlyRateCents) : "het overeengekomen tarief";
   const modelAssessmentNote = a.belastingdienstNr
     ? `Deze Overeenkomst is gebaseerd op de door de Belastingdienst beoordeelde modelovereenkomst met kenmerk ${a.belastingdienstNr};`

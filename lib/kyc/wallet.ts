@@ -212,7 +212,7 @@ export async function completeWalletVerification(input: {
       label: "Geldigheid document",
       ok: expiryOk,
       detail: expiryOk
-        ? `Geldig tot ${expiry!.toLocaleDateString("nl-NL")}`
+        ? `Geldig tot ${expiry!.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}`
         : "Het document lijkt verlopen of de geldigheidsdatum ontbreekt",
     },
   ];

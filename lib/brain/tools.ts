@@ -87,7 +87,7 @@ export const TOOLS: BrainTool[] = [
     roles: ["werknemer"],
     run: async (p) => {
       const o = await getFreelancerOverview(p.userId);
-      const last = o.payouts.slice(0, 3).map((x) => `• ${x.number}: ${eur(x.totalCents)} — ${x.settledAt ? `betaald ${new Date(x.settledAt).toLocaleDateString("nl-NL")}` : x.status.toLowerCase()}`);
+      const last = o.payouts.slice(0, 3).map((x) => `• ${x.number}: ${eur(x.totalCents)} — ${x.settledAt ? `betaald ${new Date(x.settledAt).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` : x.status.toLowerCase()}`);
       return {
         text: `Verdiend deze maand: ${eur(o.kpis.earnedThisMonthCents)}. Nog uit te betalen: ${eur(o.kpis.pendingPayoutCents)}.${last.length ? `\nLaatste uitbetalingen:\n${last.join("\n")}` : ""}`,
         href: "/dashboard/uitbetalingen",

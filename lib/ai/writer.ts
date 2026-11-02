@@ -1,4 +1,5 @@
 import { chatJson, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
+import { amsterdamClock } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // ✨ Writing help in forms that used to be a blank textarea:
@@ -63,13 +64,14 @@ export function profileFor(title: string): Profile {
   return PROFILES.find((p) => p.re.test(title)) ?? GENERIC;
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
 function hhmm(iso?: string): string | null {
   if (!iso) return null;
-  const m = iso.match(/T(\d{2}):(\d{2})/);
+  // a form value without zone ("2026-11-03T09:00") is already Dutch wall-clock
+  const m = iso.match(/T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   if (m) return `${m[1]}:${m[2]}`;
+  // an instant ("…Z", "+01:00") → Dutch time; the server runs in UTC
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return Number.isNaN(d.getTime()) ? null : amsterdamClock(d);
 }
 
 /** The template draft — also what the model gets as its starting point. */

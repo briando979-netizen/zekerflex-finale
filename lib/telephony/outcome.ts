@@ -74,7 +74,7 @@ export async function captureCallOutcome(callId: string): Promise<void> {
 
   // In de pijplijn vastleggen zodat sales het oppakt.
   try {
-    const when = new Date(rec.at).toLocaleString("nl-NL");
+    const when = new Date(rec.at).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" });
     const note = `📞 AI-belgesprek (${when}): ${outcome.summary}${outcome.callbackNote ? ` — terugbellen: ${outcome.callbackNote}` : ""}`;
     const soon = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const counterpart = counterpartOf(rec);

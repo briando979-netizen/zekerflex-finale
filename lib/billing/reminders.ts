@@ -37,7 +37,7 @@ const stateKey = (invoiceId: string) => `invoice-reminder:${invoiceId}`;
 /** A reversed invoice starts over: reminders sent before it was paid no longer count. */
 export const resetInvoiceReminders = (invoiceId: string) => kvDelete(stateKey(invoiceId));
 const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
-const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 export const dueDateOf = (inv: { dueAt: Date | null; issuedAt: Date | null; createdAt: Date }) =>
   inv.dueAt ?? new Date((inv.issuedAt ?? inv.createdAt).getTime() + INVOICE_DUE_DAYS * DAY);

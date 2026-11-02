@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Prisma, ShiftStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { defineMutation, type MutationHandler } from "@/lib/admin-console/types";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Data-changing operations. Each declares a `dryRun` (blast radius, no writes)
@@ -16,8 +17,8 @@ const MATCHABLE: ShiftStatus[] = [
 ];
 
 function fridayAfternoonWarning(): string[] {
-  const now = new Date();
-  return now.getDay() === 5 && now.getHours() >= 12
+  const now = amsterdamParts(new Date()); // Dutch clock: the server runs in UTC
+  return now.weekday === 5 && now.hour >= 12
     ? [
         "Het is vrijdagmiddag. Accounts die na het weekend terugkeren moeten " +
           "handmatig worden geheractiveerd - overweeg dit maandagochtend te doen.",

@@ -155,7 +155,7 @@ export async function packingSlipPdf(orderId: string): Promise<{ bytes: Buffer; 
   }
   pdf.gap(8);
   pdf.rule();
-  pdf.row("Besteld op", o.createdAt.toLocaleDateString("nl-NL"));
+  pdf.row("Besteld op", o.createdAt.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }));
   pdf.row("Aantal artikelen", String(((o.itemsJson as unknown as OrderLine[]) ?? []).reduce((s, l) => s + l.qty, 0)));
   pdf.gap(12);
   pdf.line("Vragen of retour? Mail shop@zekerflex.com met je bestelnummer.", 9, { color: [0.4, 0.45, 0.42] });

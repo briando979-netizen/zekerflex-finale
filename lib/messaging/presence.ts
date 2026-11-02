@@ -1,4 +1,5 @@
 import { redis } from "@/lib/redis";
+import { amsterdamClock, amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Lightweight presence. Each authenticated poll of the inbox calls touch();
@@ -81,13 +82,14 @@ export function formatLastSeen(p: Presence | undefined): string {
   if (!p) return "";
   if (p.online) return "online";
   if (!p.lastSeen) return "";
+  // Dutch days and clock: this runs on the server, which is in UTC
   const d = new Date(p.lastSeen);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  const y = new Date(now);
-  y.setDate(now.getDate() - 1);
-  const time = d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
-  if (sameDay) return `laatst gezien vandaag om ${time}`;
-  if (d.toDateString() === y.toDateString()) return `laatst gezien gisteren om ${time}`;
-  return `laatst gezien ${d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}`;
+  const day = amsterdamDayKey(d);
+  const t = amsterdamParts(new Date());
+  const today = amsterdamDayKey(new Date());
+  const yesterday = new Date(Date.UTC(t.year, t.month - 1, t.day - 1)).toISOString().slice(0, 10);
+  const time = amsterdamClock(d);
+  if (day === today) return `laatst gezien vandaag om ${time}`;
+  if (day === yesterday) return `laatst gezien gisteren om ${time}`;
+  return `laatst gezien ${d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" })}`;
 }

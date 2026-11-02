@@ -38,7 +38,7 @@ export interface WorkerMilestones {
 }
 
 const euro = (cents: number) => `€ ${Math.round(cents / 100).toLocaleString("nl-NL")}`;
-const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 const QUARTER_RANGE = ["jan–mrt", "apr–jun", "jul–sep", "okt–dec"];
 
 /** Laatste dag van de maand ná het kwartaaleinde = btw-aangiftedeadline. */

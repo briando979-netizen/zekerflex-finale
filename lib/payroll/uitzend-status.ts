@@ -5,6 +5,7 @@ import {
   STIPP_BASIS_START_WEEK,
   STIPP_PLUS_START_WEEK,
 } from "@/lib/payroll/compute";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Uitzendkracht status: ABU-fase, StiPP-pensioen en contracturen — afgeleid
@@ -57,10 +58,12 @@ export async function getUitzendStatus(userId: string): Promise<UitzendStatus | 
   const hoursWorked = Math.round((timesheets.reduce((s, t) => s + t.billableMinutes, 0) / 60) * 10) / 10;
   const weekKeys = new Set(
     timesheets.map((t) => {
-      const d = new Date(t.scheduledStart);
-      const jan1 = new Date(d.getFullYear(), 0, 1);
-      const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86_400_000 + jan1.getDay() + 1) / 7);
-      return `${d.getFullYear()}-${week}`;
+      // same week formula, on the Dutch wall-clock (the server runs in UTC)
+      const p = amsterdamParts(new Date(t.scheduledStart));
+      const wall = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+      const jan1 = new Date(Date.UTC(p.year, 0, 1));
+      const week = Math.ceil(((wall - jan1.getTime()) / 86_400_000 + jan1.getUTCDay() + 1) / 7);
+      return `${p.year}-${week}`;
     }),
   );
   const weeksWorked = weekKeys.size;

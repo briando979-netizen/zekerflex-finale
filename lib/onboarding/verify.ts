@@ -421,7 +421,7 @@ export async function submitFreelancerOnboarding(
     label: "Geldigheid document",
     ok: expiryOk,
     detail: expiryOk
-      ? `Geldig tot ${expiry.toLocaleDateString("nl-NL")}`
+      ? `Geldig tot ${expiry.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}`
       : "Het document lijkt verlopen of de datum is ongeldig",
   });
 
@@ -693,7 +693,7 @@ export async function submitFreelancerOnboardingViaWallet(
     label: "Geldigheid document",
     ok: expiryOk,
     detail: expiryOk
-      ? `Geldig tot ${expiry!.toLocaleDateString("nl-NL")}`
+      ? `Geldig tot ${expiry!.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}`
       : "Het document in de wallet lijkt verlopen",
   });
 

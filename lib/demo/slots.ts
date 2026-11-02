@@ -2,6 +2,8 @@
 // weekday dates and half-hour slots a requester can express a preference for;
 // the ZekerFlex team confirms the appointment by e-mail.
 
+import { amsterdamParts } from "@/lib/time/amsterdam";
+
 export const DEMO_TIME_SLOTS = [
   "09:00",
   "09:30",
@@ -20,20 +22,17 @@ export const DEMO_TIME_SLOTS = [
 ];
 
 /** true when `iso` (YYYY-MM-DD) is a selectable demo date: a weekday, from
- *  tomorrow up to ~8 weeks out. */
+ *  tomorrow up to ~8 weeks out — in Dutch days, so the page and the (UTC)
+ *  server agree around midnight. */
 export function isSelectableDemoDate(iso: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
-  const d = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return false;
-  const day = d.getDay();
+  const d = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso) return false;
+  const day = d.getUTCDay();
   if (day === 0 || day === 6) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const min = new Date(today);
-  min.setDate(min.getDate() + 1);
-  const max = new Date(today);
-  max.setDate(max.getDate() + 56);
-  return d >= min && d <= max;
+  const t = amsterdamParts(new Date());
+  const fromToday = (n: number) => new Date(Date.UTC(t.year, t.month - 1, t.day + n)).toISOString().slice(0, 10);
+  return iso >= fromToday(1) && iso <= fromToday(56);
 }
 
 export function isValidDemoTime(t: string): boolean {
@@ -57,6 +56,6 @@ const NL_MONTHS = [
 ];
 
 export function formatDemoDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return `${NL_DAYS[d.getDay()]} ${d.getDate()} ${NL_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const d = new Date(`${iso}T12:00:00Z`);
+  return `${NL_DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${NL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }

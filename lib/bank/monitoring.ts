@@ -80,7 +80,7 @@ export async function scanAlerts(now = new Date()): Promise<AmlAlert[]> {
     if (now.getTime() - created.getTime() < 7 * DAY) {
       const volume = list.reduce((s, e) => s + Math.abs(e.amountCents), 0);
       if (volume >= 250_000) {
-        alerts.push({ id: `new:${accountId}`, accountId, holderName, rule: "new_account_volume", title: "Nieuwe rekening, veel volume", detail: `${(volume / 100).toFixed(0)} EUR bewogen sinds opening ${created.toLocaleDateString("nl-NL")}`, amountCents: volume, at: list.at(-1)!.createdAt.toISOString() });
+        alerts.push({ id: `new:${accountId}`, accountId, holderName, rule: "new_account_volume", title: "Nieuwe rekening, veel volume", detail: `${(volume / 100).toFixed(0)} EUR bewogen sinds opening ${created.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}`, amountCents: volume, at: list.at(-1)!.createdAt.toISOString() });
       }
     }
   }

@@ -101,7 +101,7 @@ export async function getTriage(): Promise<TriageItem[]> {
       kind: "Vervanger",
       severity: new Date(rq.startsAt).getTime() - now < DAY ? "high" : "medium",
       title: `Vervanger gevraagd — ${rq.shiftTitle}`,
-      detail: `${rq.freelancerName} · ${rq.branch} · ${new Date(rq.startsAt).toLocaleString("nl-NL")}`,
+      detail: `${rq.freelancerName} · ${rq.branch} · ${new Date(rq.startsAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}`,
       href: "/admin/mail",
       at: rq.at,
     });
@@ -145,7 +145,7 @@ export async function getTriage(): Promise<TriageItem[]> {
       kind: "Bezetting",
       severity: s.startsAt.getTime() - now < DAY ? "high" : "medium",
       title: `Dienst nog niet vol — ${s.title}`,
-      detail: `${s.branch.name} · ${s._count.assignments}/${s.positions} · ${s.startsAt.toLocaleString("nl-NL")}`,
+      detail: `${s.branch.name} · ${s._count.assignments}/${s.positions} · ${s.startsAt.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}`,
       href: "/werkgever/diensten",
       at: s.startsAt.toISOString(),
     });

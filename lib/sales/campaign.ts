@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Sales campaigns: a named target set + the hard limits the engine runs under.
@@ -196,16 +197,16 @@ export async function deleteCampaign(id: string, actorUserId: string) {
 
 // ---- send-window + cap helpers --------------------------------------------
 
+// Days and send hours are Dutch wall-clock: the server runs in UTC, and a
+// 9–17 window means 9–17 for the Dutch businesses we write to.
 export function startOfToday(now = new Date()): Date {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const t = amsterdamParts(now);
+  return amsterdamToUtc(t.year, t.month, t.day);
 }
 
 export function withinSendWindow(campaign: SalesCampaign, now = new Date()): boolean {
-  const day = now.getDay(); // 0 = Sun, 6 = Sat
+  const { weekday: day, hour } = amsterdamParts(now); // day: 0 = Sun, 6 = Sat
   if (campaign.workdaysOnly && (day === 0 || day === 6)) return false;
-  const hour = now.getHours();
   const { sendStartHour: a, sendEndHour: b } = campaign;
   return a <= b ? hour >= a && hour < b : hour >= a || hour < b;
 }

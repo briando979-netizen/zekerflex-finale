@@ -104,7 +104,7 @@ export async function sweepNoShows(): Promise<NoShowSweepResult> {
         kind: "replacement",
         text:
           `${a.freelancer.user.fullName} is niet opgekomen voor "${a.shift.title}" bij ${a.shift.branch.name} ` +
-          `(begon ${a.shift.startsAt.toLocaleString("nl-NL")}), zonder afmelding. ` +
+          `(begon ${a.shift.startsAt.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}), zonder afmelding. ` +
           `De opdrachtgever heeft een 50% claimoptie gekregen.`,
       }).catch(() => undefined);
 

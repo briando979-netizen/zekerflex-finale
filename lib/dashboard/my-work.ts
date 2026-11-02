@@ -4,6 +4,7 @@ import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser } from "@/lib/offers/store";
 import { healAcceptedOffer } from "@/lib/matching/heal";
 import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplace";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -61,7 +62,7 @@ export interface MyWork {
 }
 
 const WD_DAYPART = (d: Date): MarketplaceShift["daypart"] => {
-  const h = d.getHours();
+  const h = amsterdamParts(d).hour; // Dutch wall-clock: the server runs in UTC
   return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
 };
 
@@ -103,7 +104,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     grossCents: Math.round(Math.max(0, hours) * row.hourlyRateCents),
     hours: Math.round(Math.max(0, hours) * 10) / 10,
     daypart: WD_DAYPART(row.startsAt),
-    weekday: row.startsAt.getDay(),
+    weekday: amsterdamParts(row.startsAt).weekday,
     match: null,
     travel: computeTravel(home, { lat: row.branch.latitude, lng: row.branch.longitude }),
     workedHereBefore: 0,
