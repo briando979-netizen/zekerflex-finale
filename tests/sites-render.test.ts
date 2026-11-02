@@ -127,6 +127,9 @@ describe("een complete, nette website", () => {
     expect(pages.map((p) => p.slug)).toEqual(["", "over-ons", "contact"]);
     expect(JSON.stringify(pages)).toContain("Jansen Bouw");
     expect(JSON.stringify(pages)).not.toContain("{bedrijf}");
+    const zonderPlaats = JSON.stringify(pagesFromTemplate(SECTOR_TEMPLATES.find((t) => t.id === "bouw")!, { ...company, plaats: "" }, id));
+    expect(zonderPlaats).toContain("in de regio.");
+    expect(zonderPlaats).not.toContain("de regio en omgeving");
     expect(slugify("Bakkerij Ünal & Zn.")).toBe("bakkerij-unal-en-zn");
     expect(newBlock("galerij", "b1")).toMatchObject({ type: "galerij", props: { fotos: [] } });
   });

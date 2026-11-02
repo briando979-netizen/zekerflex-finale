@@ -150,11 +150,33 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "fotos", label: "Foto's" },
   { id: "berichten", label: "Berichten" },
 ];
+// The preview renders at the device's real width and is scaled down to fit, so
+// "Computer" shows the desktop layout even in a narrow column.
 const DEVICES = [
-  { id: "computer", label: "Computer", width: "100%" },
-  { id: "tablet", label: "Tablet", width: "820px" },
-  { id: "telefoon", label: "Telefoon", width: "390px" },
+  { id: "computer", label: "Computer", width: 1280, height: 860 },
+  { id: "tablet", label: "Tablet", width: 820, height: 1100 },
+  { id: "telefoon", label: "Telefoon", width: 390, height: 844 },
 ] as const;
+
+function ScaledPreview({ html, title, device }: { html: string; title: string; device: (typeof DEVICES)[number] }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [boxWidth, setBoxWidth] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => setBoxWidth(entries[0]?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const scale = boxWidth ? Math.min(1, boxWidth / device.width) : 1;
+  return (
+    <div ref={box} className="w-full">
+      <div className="mx-auto overflow-hidden rounded-lg border border-hair bg-white shadow-card" style={{ width: device.width * scale, height: device.height * scale }}>
+        <iframe title={title} srcDoc={html} sandbox="allow-same-origin" style={{ width: device.width, height: device.height, transform: `scale(${scale})`, transformOrigin: "top left", border: 0 }} />
+      </div>
+    </div>
+  );
+}
 
 function Editor({ data, site: initial, origin, onSite }: { data: Data; site: SiteDoc; origin: string; onSite: (s: SiteDoc) => void }) {
   const [site, setSite] = useState<SiteDoc>(initial);
@@ -291,14 +313,8 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
               ))}
             </div>
           </div>
-          <div className="flex justify-center bg-paper-soft p-3">
-            <iframe
-              title={`Voorbeeld van ${page.titel}`}
-              srcDoc={html}
-              sandbox="allow-same-origin"
-              className="h-[720px] max-w-full rounded-lg border border-hair bg-white shadow-card"
-              style={{ width: DEVICES.find((d) => d.id === device)!.width }}
-            />
+          <div className="bg-paper-soft p-3">
+            <ScaledPreview html={html} title={`Voorbeeld van ${page.titel}`} device={DEVICES.find((d) => d.id === device) ?? DEVICES[0]} />
           </div>
         </section>
 

@@ -262,7 +262,12 @@ export const SECTOR_TEMPLATES: SectorTemplate[] = [
   },
 ];
 
-const fillIn = (s: string, c: Pick<Company, "naam" | "plaats">) => s.replaceAll("{bedrijf}", c.naam || "Ons bedrijf").replaceAll("{plaats}", c.plaats || "de regio");
+const fillIn = (s: string, c: Pick<Company, "naam" | "plaats">) =>
+  s
+    .replaceAll("{bedrijf}", c.naam || "Ons bedrijf")
+    // no town known: "in de regio", not "in de regio en omgeving"
+    .replaceAll("{plaats} en omgeving", c.plaats ? `${c.plaats} en omgeving` : "de regio")
+    .replaceAll("{plaats}", c.plaats || "de regio");
 
 /** The pages of a new site, from a sector template and the company details. */
 export function pagesFromTemplate(t: SectorTemplate, c: Company, newId: () => string): Page[] {
