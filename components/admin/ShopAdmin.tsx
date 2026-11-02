@@ -3,6 +3,10 @@
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
+import { bucketSum, resolvePeriod, timelineKeys } from "@/lib/admin/period";
+import { count as fmtCount, euro } from "@/lib/admin/format";
+import { BarList, Empty, KpiStrip, PageHead, Panel, Pill, StackBar, type Tone } from "@/components/admin/kit";
+import { Chart } from "@/components/admin/kit-client";
 
 type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; sku: string };
 
@@ -55,15 +59,17 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELLED: "Geannuleerd",
   PAYMENT_FAILED: "Betaling mislukt",
 };
-// Shopify-achtige status-tint per orderstatus.
-const ORDER_STATUS_TONE: Record<OrderStatus, { fg: string; bg: string }> = {
-  PENDING_PAYMENT: { fg: "#9a6b00", bg: "rgba(234,179,8,0.16)" },
-  RECEIVED: { fg: "#15803d", bg: "rgba(22,163,74,0.14)" },
-  CONFIRMED: { fg: "#15803d", bg: "rgba(22,163,74,0.14)" },
-  SHIPPED: { fg: "#1d4ed8", bg: "rgba(37,99,235,0.14)" },
-  CANCELLED: { fg: "#b91c1c", bg: "rgba(220,38,38,0.14)" },
-  PAYMENT_FAILED: { fg: "#b91c1c", bg: "rgba(220,38,38,0.14)" },
+// Status per bestelling, in de vaste kleurtaal: wacht = amber, geld binnen = groen, onderweg = blauw.
+const ORDER_STATUS_TONE: Record<OrderStatus, Tone> = {
+  PENDING_PAYMENT: "warn",
+  RECEIVED: "ok",
+  CONFIRMED: "ok",
+  SHIPPED: "plan",
+  CANCELLED: "neutral",
+  PAYMENT_FAILED: "crit",
 };
+const PAID_STATUSES: OrderStatus[] = ["RECEIVED", "CONFIRMED", "SHIPPED"];
+const SHOP_PERIOD = resolvePeriod("30");
 
 const money = (euros: number) => `€ ${euros.toFixed(2).replace(".", ",")}`;
 const moneyCents = (cents: number) => money(cents / 100);
@@ -223,19 +229,33 @@ export function ShopAdmin() {
   );
 
   const liveCount = products.filter((p) => p.active).length;
+  const paidOrders = orders.filter((o) => PAID_STATUSES.includes(o.status));
+  const revenueSeries = bucketSum(paidOrders, (o) => new Date(o.createdAt), (o) => o.totalCents, SHOP_PERIOD);
+  const avgOrder = paidOrders.length ? Math.round(paidOrders.reduce((s, o) => s + o.totalCents, 0) / paidOrders.length) : 0;
+  const toShip = orders.filter((o) => o.status === "RECEIVED" || o.status === "CONFIRMED").length;
 
-  return <div className="mx-auto max-w-7xl space-y-5">
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold" style={{ color: "var(--a-text)" }}>Webshop</h1>
-        <p className="mt-0.5 text-sm" style={{ color: "var(--a-mute)" }}>Producten, bestellingen, voorraad en statistieken.</p>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg preview" : "Live preview"}</button>
-        <a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk shop ↗</a>
-        <button type="button" className="a-button a-button-primary" onClick={newProduct}>Product toevoegen</button>
-      </div>
-    </header>
+  return <div className="space-y-4">
+    <PageHead
+      title="Webshop"
+      subtitle="Producten, bestellingen, voorraad en statistieken."
+      actions={
+        <>
+          <button type="button" className="a-button" onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Verberg voorbeeld" : "Live voorbeeld"}</button>
+          <a href="/shop" target="_blank" rel="noreferrer" className="a-button">Bekijk shop ↗</a>
+          <button type="button" className="a-button a-button-primary" onClick={newProduct}>Product toevoegen</button>
+        </>
+      }
+    />
+
+    <KpiStrip
+      items={[
+        { label: "Omzet, 30 dagen", value: stats ? euro(stats.revenue30dCents) : "—", hint: stats ? `${euro(stats.revenueCents)} in totaal` : "laden", spark: revenueSeries, tone: "money" },
+        { label: "Betaalde bestellingen", value: stats ? fmtCount(stats.paidOrderCount) : "—", hint: paidOrders.length ? `gemiddeld ${euro(avgOrder)}` : "nog geen bestellingen" },
+        { label: "Te verzenden", value: fmtCount(toShip), hint: "betaald, nog niet verzonden", ...(toShip > 0 ? { tone: "warn" as const } : {}) },
+        { label: "Wacht op betaling", value: stats ? fmtCount(stats.pendingOrderCount) : "—" },
+        { label: "Producten live", value: `${liveCount} van ${products.length}`, hint: stats && stats.lowStock.length > 0 ? `${stats.lowStock.length} met lage voorraad` : "voorraad in orde" },
+      ]}
+    />
 
     <div className="flex gap-6 border-b" style={{ borderColor: "var(--a-border)" }}>
       {([
@@ -265,51 +285,36 @@ export function ShopAdmin() {
     {tab === "tools" && <ShopAdminTools />}
 
     {tab === "stats" && stats && (
-      <div className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Omzet (betaald, totaal)", moneyCents(stats.revenueCents)],
-            ["Omzet laatste 30 dagen", moneyCents(stats.revenue30dCents)],
-            ["Betaalde bestellingen", `${stats.paidOrderCount}`],
-            ["Wacht op betaling", `${stats.pendingOrderCount}`],
-          ].map(([label, value]) => (
-            <div key={label} className="a-panel p-4">
-              <p className="text-xs" style={{ color: "var(--a-mute)" }}>{label}</p>
-              <p className="mt-1 text-2xl font-semibold" style={{ color: "var(--a-text)" }}>{value}</p>
-            </div>
-          ))}
+      <div className="space-y-4">
+        <div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <Panel title="Omzet per dag" subtitle="Betaalde bestellingen, de laatste 30 dagen">
+            <Chart title="Omzet van de webshop per dag" kind="bars" unit="money" labels={timelineKeys(SHOP_PERIOD)} series={[{ label: "Omzet", values: revenueSeries }]} height={200} emptyText="Nog geen betaalde bestellingen in de laatste 30 dagen." />
+          </Panel>
+          <Panel title="Bestellingen naar status">
+            <StackBar
+              emptyText="Nog geen bestellingen."
+              segments={(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).map((s) => ({ label: ORDER_STATUS_LABEL[s], value: orders.filter((o) => o.status === s).length, tone: ORDER_STATUS_TONE[s] }))}
+            />
+          </Panel>
         </div>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="a-panel p-5">
-            <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Bestverkocht</p>
-            {stats.topProducts.length === 0 ? (
-              <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen betaalde bestellingen.</p>
-            ) : (
-              <ul className="mt-2 space-y-1.5 text-sm">
-                {stats.topProducts.map((p) => (
-                  <li key={p.name} className="flex justify-between" style={{ color: "var(--a-text)" }}>
-                    <span>{p.name}</span>
-                    <span style={{ color: "var(--a-mute)" }}>{p.qty}x · {moneyCents(p.revenueCents)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section className="a-panel p-5">
-            <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Lage voorraad (≤ 5)</p>
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <Panel title="Bestverkocht" subtitle="Op omzet">
+            <BarList emptyText="Nog geen betaalde bestellingen." rows={stats.topProducts.map((p) => ({ key: p.name, label: `${p.name}, ${p.qty} verkocht`, value: p.revenueCents, display: moneyCents(p.revenueCents) }))} />
+          </Panel>
+          <Panel flush title="Lage voorraad" subtitle="Varianten met 5 of minder op voorraad">
             {stats.lowStock.length === 0 ? (
-              <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>Niets kritiek — alle varianten hebben genoeg voorraad.</p>
+              <Empty title="Niets kritiek" body="Alle varianten hebben genoeg voorraad." />
             ) : (
-              <ul className="mt-2 space-y-1.5 text-sm">
+              <ul>
                 {stats.lowStock.map((v) => (
-                  <li key={v.variantId} className="flex justify-between" style={{ color: "var(--a-text)" }}>
-                    <span>{v.productName}{[v.size, v.color].filter(Boolean).length > 0 ? ` (${[v.size, v.color].filter(Boolean).join(", ")})` : ""}</span>
-                    <span className={v.stock === 0 ? "font-semibold text-red-600" : ""} style={v.stock > 0 ? { color: "var(--a-mute)" } : undefined}>{v.stock} op voorraad</span>
+                  <li key={v.variantId} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                    <span className="min-w-0 truncate" style={{ color: "var(--a-text)" }}>{v.productName}{[v.size, v.color].filter(Boolean).length > 0 ? ` (${[v.size, v.color].filter(Boolean).join(", ")})` : ""}</span>
+                    <Pill tone={v.stock === 0 ? "crit" : "warn"}>{v.stock === 0 ? "Uitverkocht" : `${v.stock} op voorraad`}</Pill>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </Panel>
         </div>
       </div>
     )}
@@ -532,22 +537,11 @@ type ShopStats = {
 };
 
 function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium" style={active ? { background: "rgba(22,163,74,0.14)", color: "#15803d" } : { background: "var(--a-panel-2)", color: "var(--a-mute)" }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: active ? "#16a34a" : "var(--a-mute)" }} />
-      {active ? "Live" : "Verborgen"}
-    </span>
-  );
+  return <Pill tone={active ? "ok" : "neutral"}>{active ? "Live" : "Verborgen"}</Pill>;
 }
 
 function OrderPill({ status }: { status: OrderStatus }) {
-  const tone = ORDER_STATUS_TONE[status];
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: tone.bg, color: tone.fg }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone.fg }} />
-      {ORDER_STATUS_LABEL[status]}
-    </span>
-  );
+  return <Pill tone={ORDER_STATUS_TONE[status]}>{ORDER_STATUS_LABEL[status]}</Pill>;
 }
 
 function ImageUpload({ label, value, busy, onUpload }: { label: string; value: string | null | undefined; busy: boolean; onUpload: (file: File) => void }) {

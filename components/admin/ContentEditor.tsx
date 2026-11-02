@@ -50,7 +50,7 @@ export function ContentEditor() {
     }
   };
 
-  const panel = { background: "var(--a-elev)", border: "1px solid var(--a-border)" };
+  const panel = { background: "var(--a-panel)", border: "1px solid var(--a-border)", boxShadow: "var(--a-shadow-sm)" };
   const mute = { color: "var(--a-mute)" };
   const fieldStyle = { background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-text)" };
 

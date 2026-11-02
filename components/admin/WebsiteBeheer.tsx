@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Empty, KpiStrip, Notice, PageHead, Pill, StackBar, type Tone } from "@/components/admin/kit";
 
 // Admin-console voor "Website-beheer": alle opdrachtgevers die hun website door
 // ZekerFlex laten beheren. Toont status/plan/domein; "Toon toegang" ontsleutelt
@@ -31,6 +32,15 @@ const STATUS_LABEL: Record<Status, string> = {
   ACTIVE: "Actief beheerd",
   PAUSED: "Gepauzeerd",
   CANCELLED: "Opgezegd",
+};
+// Wacht op de klant = blauw, wacht op ons = amber, loopt = groen.
+const STATUS_TONE: Record<Status, Tone> = {
+  PENDING_PAYMENT: "plan",
+  ONBOARDING: "plan",
+  SUBMITTED: "warn",
+  ACTIVE: "ok",
+  PAUSED: "neutral",
+  CANCELLED: "neutral",
 };
 const STATUS_ORDER: Status[] = ["PENDING_PAYMENT", "ONBOARDING", "SUBMITTED", "ACTIVE", "PAUSED", "CANCELLED"];
 const SECRET_LABEL: Record<string, string> = {
@@ -70,17 +80,36 @@ export function WebsiteBeheer() {
     else { const d = await res.json(); setMessage(d?.error?.message ?? "Status bijwerken mislukt."); }
   };
 
-  if (loading) return <p className="text-sm" style={{ color: "var(--a-mute)" }}>Laden…</p>;
+  const head = <PageHead title="Website-beheer" subtitle="Opdrachtgevers van wie wij de website beheren. Toegangsgegevens worden versleuteld bewaard en zijn alleen geaudit zichtbaar." />;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {head}
+        <div className="a-panel h-28 animate-pulse" />
+      </div>
+    );
+  }
+  const countOf = (s: Status) => rows.filter((r) => r.status === s).length;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <header>
-        <h1 className="text-2xl font-semibold" style={{ color: "var(--a-text)" }}>Website-beheer</h1>
-        <p className="mt-0.5 text-sm" style={{ color: "var(--a-mute)" }}>Opdrachtgevers van wie wij de website beheren. Toegangsgegevens worden versleuteld bewaard en zijn geaudit zichtbaar.</p>
-      </header>
-      {message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}
+    <div className="space-y-4">
+      {head}
+      <KpiStrip
+        items={[
+          { label: "Actief beheerd", value: countOf("ACTIVE"), tone: "ok" },
+          { label: "Gegevens binnen", value: countOf("SUBMITTED"), hint: "klaar om op te pakken", ...(countOf("SUBMITTED") > 0 ? { tone: "warn" as const } : {}) },
+          { label: "Wacht op de klant", value: countOf("PENDING_PAYMENT") + countOf("ONBOARDING"), hint: "betaling of gegevens" },
+          { label: "Opgezegd of gepauzeerd", value: countOf("CANCELLED") + countOf("PAUSED") },
+        ]}
+      />
+      {rows.length > 0 && (
+        <section className="a-panel p-4 sm:p-5">
+          <StackBar segments={STATUS_ORDER.map((s) => ({ label: STATUS_LABEL[s], value: countOf(s), tone: STATUS_TONE[s] }))} />
+        </section>
+      )}
+      {message && <Notice>{message}</Notice>}
       {rows.length === 0 ? (
-        <p className="a-panel p-6 text-sm" style={{ color: "var(--a-mute)" }}>Nog geen aanvragen. Zodra een opdrachtgever een abonnement neemt, verschijnt het hier.</p>
+        <section className="a-panel"><Empty title="Nog geen aanvragen" body="Zodra een opdrachtgever een abonnement neemt, verschijnt het hier." /></section>
       ) : (
         <div className="space-y-3">
           {rows.map((r) => (
@@ -91,8 +120,8 @@ export function WebsiteBeheer() {
                   <p className="text-xs" style={{ color: "var(--a-mute)" }}>{r.tenantName}{r.provider ? ` · ${r.provider}` : ""}{r.plan ? ` · plan: ${r.plan}` : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--a-panel-2)", color: "var(--a-text)" }}>{STATUS_LABEL[r.status]}</span>
-                  <select value={r.status} onChange={(e) => void setStatus(r.id, e.target.value as Status)} className="a-input text-xs">
+                  <Pill tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Pill>
+                  <select value={r.status} onChange={(e) => void setStatus(r.id, e.target.value as Status)} aria-label="Status wijzigen" className="a-input !w-auto !py-1 text-xs">
                     {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
                 </div>
@@ -102,7 +131,7 @@ export function WebsiteBeheer() {
                 {r.hasSecrets ? (
                   secrets[r.id] ? (
                     <div className="rounded-lg border p-3 text-sm" style={{ borderColor: "var(--a-border)" }}>
-                      <p className="mb-2 text-xs font-semibold" style={{ color: "var(--a-mute)" }}>🔓 Toegangsgegevens (geaudit geopend)</p>
+                      <p className="mb-2 text-xs font-semibold" style={{ color: "var(--a-mute)" }}>Toegangsgegevens, geopend en vastgelegd in het auditspoor</p>
                       <dl className="space-y-1.5">
                         {Object.entries(secrets[r.id] as Record<string, string>).map(([k, v]) => (
                           <div key={k} className="flex flex-col gap-0.5">
@@ -114,7 +143,7 @@ export function WebsiteBeheer() {
                       <button type="button" className="a-button mt-2 text-xs" onClick={() => setSecrets((s) => ({ ...s, [r.id]: null }))}>Verbergen</button>
                     </div>
                   ) : (
-                    <button type="button" className="a-button text-xs" disabled={busy === r.id} onClick={() => void reveal(r.id)}>{busy === r.id ? "Ontsleutelen…" : "🔑 Toon toegangsgegevens"}</button>
+                    <button type="button" className="a-button text-xs" disabled={busy === r.id} onClick={() => void reveal(r.id)}>{busy === r.id ? "Ontsleutelen…" : "Toegangsgegevens tonen"}</button>
                   )
                 ) : (
                   <p className="text-xs" style={{ color: "var(--a-mute)" }}>Nog geen toegangsgegevens ingevuld.</p>

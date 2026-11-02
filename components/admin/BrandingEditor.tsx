@@ -43,7 +43,7 @@ export function BrandingEditor() {
     void save(DEFAULT_PRIMARY, DEFAULT_MINT);
   };
 
-  const panel = { background: "var(--a-elev)", border: "1px solid var(--a-border)" };
+  const panel = { background: "var(--a-panel)", border: "1px solid var(--a-border)", boxShadow: "var(--a-shadow-sm)" };
   const text = { color: "var(--a-text)" };
   const mute = { color: "var(--a-mute)" };
 
@@ -72,14 +72,14 @@ export function BrandingEditor() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => save()} disabled={saving} className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--a-accent, #0E5C4A)" }}>
+        <button type="button" onClick={() => save()} disabled={saving} className="a-button a-button-primary">
           {saving ? "Opslaan…" : "Kleuren opslaan"}
         </button>
-        <button type="button" onClick={reset} disabled={saving} className="rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-text)" }}>
+        <button type="button" onClick={reset} disabled={saving} className="a-button">
           Herstel standaard
         </button>
         {saved && (
-          <button type="button" onClick={() => window.location.reload()} className="text-xs font-semibold hover:underline" style={{ color: "#34d399" }}>
+          <button type="button" onClick={() => window.location.reload()} className="text-xs font-semibold hover:underline" style={{ color: "var(--a-accent-ink)" }}>
             Opgeslagen — herlaad om de nieuwe kleuren overal te zien ↻
           </button>
         )}

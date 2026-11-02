@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Empty, KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 
 interface Health {
   configured: boolean;
@@ -178,315 +179,196 @@ export function Studio() {
   }
 
   const ok = health?.configured && health?.reachable;
+  const live = slots.filter((s) => s.ready).length;
 
   return (
-    <div className="studio-scope -m-4 min-h-[calc(100vh-7rem)] bg-[#151515] px-4 py-8 text-white lg:-m-8 lg:px-8 lg:py-10">
-      <div className="mx-auto max-w-7xl space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <p className="studio-kicker">ZekerFlex creative control</p>
-          <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Maak beelden die werk in beweging zetten.</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">Genereer, bewerk en publiceer visuele content vanuit één lokale creatieve werkplek.</p>
-        </div>
-        <div className="studio-status"><span className="h-2 w-2 rounded-full bg-[#8BEF3D]" /> {ok ? "Creative engine online" : "Creative engine offline"}</div>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Studio"
+        subtitle="Maak, bewerk en publiceer beelden voor de site vanuit één werkplek op je eigen server. Er gaat niets naar buiten."
+        meta={health ? <Pill tone={ok ? "ok" : "warn"}>{ok ? "Beeldmodel online" : "Beeldmodel offline"}</Pill> : undefined}
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["AI Image", "Nieuwe campagnebeelden", "✦", "#8BEF3D"],
-          ["Brand assets", "Hero’s en social visuals", "▣", "#65B8FF"],
-          ["Site slots", "Direct publiceren", "↗", "#FFB84D"],
-          ["Local first", "Alles blijft op de box", "◉", "#D18CFF"],
-        ].map(([title, detail, icon, color]) => <div key={title} className="studio-tool"><span className="studio-tool-icon" style={{ color }}>{icon}</span><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-white/45">{detail}</p></div><span className="ml-auto text-white/25">›</span></div>)}
-      </div>
+      <KpiStrip
+        items={[
+          { label: "Beeldplekken live", value: `${live} van ${slots.length}`, hint: live < slots.length ? "de rest toont een illustratie" : "overal een echte foto" },
+          { label: "Beeldmodel", value: health === null ? "—" : ok ? "Bereikbaar" : health.configured ? "Niet bereikbaar" : "Niet ingesteld", hint: health ? health.backend : "status laden", ...(health && !ok ? { tone: "warn" as const } : {}) },
+          { label: "Draait op", value: health === null ? "—" : health.local ? "Eigen server" : "Op afstand", hint: health?.models?.[0] ?? "geen model gemeld" },
+          { label: "Sjablonen", value: presets.length, hint: "klaar voor gebruik" },
+        ]}
+      />
 
-      {/* backend status */}
-      <div
-        className={`studio-backend p-4 text-sm ${
-          ok ? "border-ok/30 bg-ok/5" : "border-warn/30 bg-warn/5"
-        }`}
-      >
-        {health === null ? (
-          "Status ophalen…"
-        ) : ok ? (
-          <span className="flex flex-wrap items-center gap-2 text-ok">
-            <span className="h-2 w-2 rounded-full bg-ok" />
-            Beeldmodel bereikbaar — <span className="font-mono text-xs text-neutralx-600">{health.backend} · {health.baseUrl}</span>
-            {health.models?.[0] && (
-              <span className="font-mono text-xs text-neutralx-500">· {health.models[0]}</span>
-            )}
-          </span>
-        ) : (
-          <div className="space-y-2 text-neutralx-700">
-            <p className="font-semibold text-ink">
-              {health.configured ? "Beeldmodel niet bereikbaar" : "Nog geen beeldmodel ingesteld"}
-            </p>
-            <p>
-              De Studio heeft een lokale Stable Diffusion-server nodig. Er gaat niets naar buiten.
-              Snelste optie:
-            </p>
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>
-                Installeer <span className="font-mono text-xs">AUTOMATIC1111</span> of{" "}
-                <span className="font-mono text-xs">Stable Diffusion WebUI Forge</span> en start met{" "}
-                <span className="font-mono text-xs">--api --listen</span>.
-              </li>
-              <li>
-                Download een fotorealistisch SDXL-model (bijv. <em>RealVisXL</em>) naar de{" "}
-                <span className="font-mono text-xs">models/Stable-diffusion</span> map.
-              </li>
-              <li>
-                Zet in <span className="font-mono text-xs">.env</span>:{" "}
-                <span className="font-mono text-xs">IMAGE_ENABLED=true</span>,{" "}
-                <span className="font-mono text-xs">IMAGE_BACKEND=a1111</span>,{" "}
-                <span className="font-mono text-xs">IMAGE_BASE_URL=http://localhost:7860</span>.
-              </li>
-              <li>Herstart de app en ververs deze pagina.</li>
-            </ol>
-            {health.detail && (
-              <p className="font-mono text-xs text-neutralx-400">{health.detail}</p>
-            )}
-            <p className="text-xs text-neutralx-500">
-              Geen GPU? Het werkt op CPU maar een render duurt dan enkele minuten.
-            </p>
-            <p className="text-xs text-neutralx-500">
-              Kant-en-klaar recept: <span className="font-mono text-xs">deploy/image-node/</span>. Draai je je eigen server op
-              afstand (bv. je VPS via een tunnel, net als de AI-node)? Zet dan ook{" "}
-              <span className="font-mono text-xs">IMAGE_ALLOW_REMOTE=true</span> zodat ook de live app je eigen beeldserver mag
-              gebruiken.
-            </p>
-          </div>
-        )}
-      </div>
+      {health && !ok && (
+        <Panel title={health.configured ? "Beeldmodel niet bereikbaar" : "Nog geen beeldmodel ingesteld"} subtitle="De Studio heeft een eigen Stable Diffusion-server nodig. De snelste weg:">
+          <ol className="list-decimal space-y-1 pl-5 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
+            <li>Installeer <span className="font-mono text-xs">AUTOMATIC1111</span> of <span className="font-mono text-xs">Stable Diffusion WebUI Forge</span> en start met <span className="font-mono text-xs">--api --listen</span>.</li>
+            <li>Download een fotorealistisch SDXL-model, bijvoorbeeld <em>RealVisXL</em>, naar de map <span className="font-mono text-xs">models/Stable-diffusion</span>.</li>
+            <li>Zet in <span className="font-mono text-xs">.env</span>: <span className="font-mono text-xs">IMAGE_ENABLED=true</span>, <span className="font-mono text-xs">IMAGE_BACKEND=a1111</span>, <span className="font-mono text-xs">IMAGE_BASE_URL=http://localhost:7860</span>.</li>
+            <li>Herstart de app en ververs deze pagina.</li>
+          </ol>
+          {health.detail && <p className="mt-2 font-mono text-xs" style={{ color: "var(--a-mute)" }}>{health.detail}</p>}
+          <p className="mt-2 text-xs" style={{ color: "var(--a-mute)" }}>
+            Geen GPU? Het werkt op CPU, maar een beeld duurt dan enkele minuten. Recept: <span className="font-mono">deploy/image-node/</span>. Draait je beeldserver op afstand, zoals de AI-node via een tunnel? Zet dan ook <span className="font-mono">IMAGE_ALLOW_REMOTE=true</span>.
+          </p>
+        </Panel>
+      )}
+      {ok && health && (
+        <Notice tone="ok">
+          Beeldmodel bereikbaar: <span className="font-mono text-xs">{health.backend}, {health.baseUrl}{health.models?.[0] ? `, ${health.models[0]}` : ""}</span>
+        </Notice>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        {/* controls */}
-        <div className="studio-panel space-y-5 p-5 sm:p-6">
-          <div className="grid grid-cols-3 gap-1 rounded-full border border-hairstrong p-1">
-            {(["preset", "idea", "edit"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                  mode === m ? "bg-brand-500 text-white" : "text-neutralx-600"
-                }`}
-              >
-                {m === "preset" ? "Sjabloon" : m === "idea" ? "Eigen idee" : "Bewerk foto"}
-              </button>
-            ))}
-          </div>
+      <div className="grid items-start gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <Panel title="Maken">
+          <div className="space-y-4">
+            <div role="group" aria-label="Manier van maken" className="grid grid-cols-3 gap-0.5 rounded-lg p-0.5" style={{ background: "var(--a-elev)" }}>
+              {(["preset", "idea", "edit"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  aria-pressed={mode === m}
+                  className="rounded-md px-3 py-1.5 text-[0.8125rem] font-medium transition-colors"
+                  style={mode === m ? { background: "var(--a-panel)", color: "var(--a-text)", boxShadow: "var(--a-shadow-sm)" } : { color: "var(--a-mute)" }}
+                >
+                  {m === "preset" ? "Sjabloon" : m === "idea" ? "Eigen idee" : "Foto bewerken"}
+                </button>
+              ))}
+            </div>
 
-          {mode === "preset" ? (
-            <label className="block">
-              <span className="field-label">Sjabloon</span>
-              <select value={presetKey} onChange={(e) => setPresetKey(e.target.value)} className="field-input">
-                {presets.map((p) => (
-                  <option key={p.key} value={p.key}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : mode === "idea" ? (
-            <div className="space-y-2">
-              <label className="block">
-                <span className="field-label">Beschrijf het beeld</span>
-                <textarea
-                  value={idea}
-                  onChange={(e) => setIdea(e.target.value)}
-                  rows={3}
-                  placeholder="Bijv. een monteur die 's ochtends zijn bus inlaadt bij een bedrijventerrein"
-                  className="field-input"
-                />
+            {mode === "preset" ? (
+              <label className="a-label">
+                Sjabloon
+                <select value={presetKey} onChange={(e) => setPresetKey(e.target.value)} className="a-input">
+                  {presets.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+                </select>
               </label>
-              <label className="flex items-center gap-2 text-sm text-neutralx-600">
-                <input type="checkbox" checked={enhance} onChange={(e) => setEnhance(e.target.checked)} />
-                Laat de lokale AI de prompt aanscherpen
+            ) : mode === "idea" ? (
+              <div className="space-y-2">
+                <label className="a-label">
+                  Beschrijf het beeld
+                  <textarea value={idea} onChange={(e) => setIdea(e.target.value)} rows={3} placeholder="Bijvoorbeeld: een monteur die 's ochtends zijn bus inlaadt bij een bedrijventerrein" className="a-input" />
+                </label>
+                <label className="flex items-center gap-2 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
+                  <input type="checkbox" checked={enhance} onChange={(e) => setEnhance(e.target.checked)} />
+                  Laat de eigen AI de beschrijving aanscherpen
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="a-label">
+                  Foto om te bewerken
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setEditSrc(typeof reader.result === "string" ? reader.result : null);
+                      reader.readAsDataURL(file);
+                    }}
+                    className="a-input"
+                  />
+                </label>
+                {editSrc && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={editSrc} alt="Bron-foto" className="max-h-40 rounded-lg" style={{ border: "1px solid var(--a-border)" }} />
+                )}
+                <label className="a-label">
+                  Wat moet er veranderen?
+                  <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={2} placeholder="Bijvoorbeeld: maak de achtergrond wit, voeg een bouwhelm toe, verwijder het logo" className="a-input" />
+                </label>
+                <label className="a-label">
+                  Hoeveel mag veranderen: {Math.round(denoise * 100)}%
+                  <input type="range" min={10} max={90} value={Math.round(denoise * 100)} onChange={(e) => setDenoise(Number(e.target.value) / 100)} className="mt-3 w-full" style={{ accentColor: "var(--a-accent)" }} />
+                </label>
+                <p className="text-xs" style={{ color: "var(--a-mute)" }}>Laag percentage blijft dicht bij het origineel, hoog geeft meer vrijheid.</p>
+              </div>
+            )}
+
+            {mode !== "edit" && (
+              <label className="a-label">
+                Extra details (optioneel)
+                <input value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="regen, blauw uur, van opzij gefotografeerd" className="a-input" />
+              </label>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="a-label">
+                Verhouding
+                <select value={aspect} onChange={(e) => setAspect(e.target.value as typeof aspect)} className="a-input">
+                  <option value="portrait">Staand (hero)</option>
+                  <option value="landscape">Liggend</option>
+                  <option value="wide">Breed (16:9)</option>
+                </select>
+              </label>
+              <label className="a-label">
+                Stappen: {steps}
+                <input type="range" min={12} max={40} value={steps} onChange={(e) => setSteps(Number(e.target.value))} className="mt-3 w-full" style={{ accentColor: "var(--a-accent)" }} />
               </label>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <label className="block">
-                <span className="field-label">Foto om te bewerken</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setEditSrc(typeof reader.result === "string" ? reader.result : null);
-                    reader.readAsDataURL(file);
-                  }}
-                  className="field-input"
-                />
-              </label>
-              {editSrc && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={editSrc} alt="Bron-foto" className="max-h-40 rounded-lg border border-hair" />
-              )}
-              <label className="block">
-                <span className="field-label">Wat moet er veranderen?</span>
-                <textarea
-                  value={instruction}
-                  onChange={(e) => setInstruction(e.target.value)}
-                  rows={2}
-                  placeholder="Bijv. maak de achtergrond wit, voeg een bouwhelm toe, verwijder het logo"
-                  className="field-input"
-                />
-              </label>
-              <label className="block">
-                <span className="field-label">Hoeveel mag veranderen: {Math.round(denoise * 100)}%</span>
-                <input
-                  type="range"
-                  min={10}
-                  max={90}
-                  value={Math.round(denoise * 100)}
-                  onChange={(e) => setDenoise(Number(e.target.value) / 100)}
-                  className="mt-3 w-full accent-brand-500"
-                />
-              </label>
-              <p className="text-xs text-neutralx-400">
-                Eigen beeldgenerator — geen credits, geen cloud. Laag % = dicht bij het origineel, hoog % = meer vrijheid.
-              </p>
-            </div>
-          )}
 
-          {mode !== "edit" && (
-            <label className="block">
-              <span className="field-label">Extra details <span className="text-neutralx-400">(optioneel)</span></span>
-              <input
-                value={extra}
-                onChange={(e) => setExtra(e.target.value)}
-                placeholder="regen, blauw uur, van opzij gefotografeerd…"
-                className="field-input"
-              />
-            </label>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="field-label">Verhouding</span>
-              <select
-                value={aspect}
-                onChange={(e) => setAspect(e.target.value as typeof aspect)}
-                className="field-input"
-              >
-                <option value="portrait">Staand (hero)</option>
-                <option value="landscape">Liggend</option>
-                <option value="wide">Breed (16:9)</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="field-label">Stappen: {steps}</span>
-              <input
-                type="range"
-                min={12}
-                max={40}
-                value={steps}
-                onChange={(e) => setSteps(Number(e.target.value))}
-                className="mt-3 w-full accent-brand-500"
-              />
-            </label>
+            <button
+              type="button"
+              onClick={mode === "edit" ? editPhoto : generate}
+              disabled={busy || !ok || (mode === "idea" && !idea.trim()) || (mode === "edit" && (!editSrc || !instruction.trim()))}
+              className="a-button a-button-primary w-full"
+            >
+              {busy ? "Bezig met maken…" : mode === "edit" ? "Foto bewerken" : "Beeld maken"}
+            </button>
+            {busy && <p className="text-xs" style={{ color: "var(--a-mute)" }}>Op een CPU kan dit een paar minuten duren. Laat het tabblad open.</p>}
+            {error && <Notice tone="crit" role="alert">{error}</Notice>}
           </div>
+        </Panel>
 
-          <button
-            type="button"
-            onClick={mode === "edit" ? editPhoto : generate}
-            disabled={
-              busy ||
-              !ok ||
-              (mode === "idea" && !idea.trim()) ||
-              (mode === "edit" && (!editSrc || !instruction.trim()))
-            }
-            className="btn-primary w-full"
-          >
-            {busy ? "Bezig met renderen…" : mode === "edit" ? "Bewerk foto" : "Genereer"}
-          </button>
-          {busy && (
-            <p className="text-xs text-neutralx-400">
-              Op een CPU kan dit een paar minuten duren. Laat het tabblad open.
-            </p>
-          )}
-          {error && <p className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
-        </div>
-
-        {/* result */}
-        <div className="studio-panel flex min-h-[480px] flex-col p-5 sm:p-6">
+        <Panel title="Resultaat" className="min-h-[28rem]">
           {result ? (
-            <>
-              <div className="overflow-hidden rounded-xl border border-hair bg-paper-soft">
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-lg" style={{ border: "1px solid var(--a-border)", background: "var(--a-panel-2)" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`data:image/png;base64,${result.b64}`}
-                  alt="Gegenereerd beeld"
-                  className="w-full"
-                />
+                <img src={`data:image/png;base64,${result.b64}`} alt="Gemaakt beeld" className="w-full" />
               </div>
-              <p className="mt-2 font-mono text-[11px] text-neutralx-400">
+              <p className="font-mono text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
                 {result.width}×{result.height}
-                {result.seed !== null ? ` · seed ${result.seed}` : ""}
+                {result.seed !== null ? `, seed ${result.seed}` : ""}
               </p>
-              <p className="mt-3 text-xs font-medium text-neutralx-600">Plaats als:</p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {slots.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => saveToSlot(s.key)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-                      saved === s.key
-                        ? "border-ok bg-ok/10 text-ok"
-                        : "border-hairstrong text-neutralx-600 hover:border-brand-500"
-                    }`}
-                  >
-                    {saved === s.key ? "✓ " : ""}
-                    {SLOT_LABEL[s.key] ?? s.key}
-                  </button>
-                ))}
+              <div>
+                <p className="mb-1.5 text-xs font-medium" style={{ color: "var(--a-mute)" }}>Plaatsen als</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {slots.map((s) => (
+                    <button key={s.key} type="button" onClick={() => void saveToSlot(s.key)} className={`a-button text-xs ${saved === s.key ? "a-button-primary" : ""}`}>
+                      {saved === s.key ? "Geplaatst: " : ""}
+                      {SLOT_LABEL[s.key] ?? s.key}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <a
-                href={`data:image/png;base64,${result.b64}`}
-                download="zekerflex-beeld.png"
-                className="btn-ghost mt-3 self-start text-xs"
-              >
-                Download PNG
-              </a>
-            </>
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-center text-sm text-neutralx-400">
-              Nog geen beeld. Kies een sjabloon en klik op <span className="mx-1 font-medium">Genereer</span>.
+              <a href={`data:image/png;base64,${result.b64}`} download="zekerflex-beeld.png" className="a-button text-xs">PNG downloaden</a>
             </div>
+          ) : (
+            <Empty title="Nog geen beeld" body="Kies een sjabloon of beschrijf je idee en klik op Beeld maken." />
           )}
-        </div>
+        </Panel>
       </div>
 
-      {/* slots overview */}
-      <div>
-        <div className="mb-4 flex items-end justify-between gap-4"><div><p className="studio-kicker">Asset library</p><h2 className="mt-2 font-display text-2xl font-bold">Beeldplekken op de site</h2></div><span className="text-xs text-white/40">{slots.filter((s) => s.ready).length}/{slots.length} live</span></div>
-        <p className="mb-3 text-xs text-white/45">
-          Upload een eigen foto (stock of een shoot) of gebruik een gegenereerd beeld hierboven.
-          Zodra er een foto staat, verdwijnt de illustratie automatisch op de site.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Panel title="Beeldplekken op de site" subtitle="Upload een eigen foto of gebruik een gemaakt beeld. Zodra er een foto staat, verdwijnt de illustratie op de site." actions={<Pill tone={live === slots.length && slots.length > 0 ? "ok" : "warn"}>{live} van {slots.length} live</Pill>}>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {slots.map((s) => (
-            <div key={s.key} className="studio-asset overflow-hidden">
-              <div className="aspect-[4/3] bg-paper-soft">
+            <div key={s.key} className="overflow-hidden rounded-lg" style={{ border: "1px solid var(--a-border)" }}>
+              <div className="aspect-[4/3]" style={{ background: "var(--a-panel-2)" }}>
                 {s.ready ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={`/marketing/${s.file}?v=${Date.now().toString(36)}`} alt={s.spec.alt} className="h-full w-full object-cover" />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-white/35">
-                    illustratie (geen foto)
-                  </div>
+                  <div className="flex h-full items-center justify-center text-xs" style={{ color: "var(--a-mute)" }}>Illustratie, nog geen foto</div>
                 )}
               </div>
-              <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <span className="truncate text-xs font-medium text-white">{SLOT_LABEL[s.key] ?? s.key}</span>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline">
-                    {s.ready ? "vervang" : "upload"}
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                <span className="truncate text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>{SLOT_LABEL[s.key] ?? s.key}</span>
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                  <label className="a-button cursor-pointer text-xs">
+                    {s.ready ? "Vervangen" : "Uploaden"}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/avif"
@@ -498,22 +380,13 @@ export function Studio() {
                       }}
                     />
                   </label>
-                  {s.ready && (
-                    <button
-                      type="button"
-                      onClick={() => removeSlot(s.key)}
-                      className="text-xs text-neutralx-400 hover:text-crit"
-                    >
-                      verwijder
-                    </button>
-                  )}
+                  {s.ready && <button type="button" onClick={() => void removeSlot(s.key)} className="a-button text-xs" style={{ color: "var(--a-crit)" }}>Verwijderen</button>}
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
-      </div>
+      </Panel>
     </div>
   );
 }

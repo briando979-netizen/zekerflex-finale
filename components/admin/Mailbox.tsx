@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { PageHead, Pill } from "@/components/admin/kit";
 import { MailToolsBar } from "@/components/mail/MailToolsBar";
 
 interface SentMsg {
@@ -261,19 +262,12 @@ export function Mailbox() {
   const selectedSent = selection?.tab === "sent" ? sent?.messages.find((m) => m.id === selection.id) : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink">Mailbox</h1>
-          <p className="mt-1 text-sm text-neutralx-600">
-            {t?.admin ? `Echt postvak in van ${t.admin}` : "Inkomende en uitgaande e-mail van ZekerFlex"}
-            {inbox?.host ? ` (${inbox.host})` : ""}
-          </p>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${smtpOk ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
-          {!sent ? "Status…" : smtpOk ? "Mailserver actief" : "Geen mailserver ingesteld"}
-        </span>
-      </div>
+    <div className="space-y-4">
+      <PageHead
+        title="Mailbox"
+        subtitle={`${t?.admin ? `Echt postvak in van ${t.admin}` : "Inkomende en uitgaande e-mail van ZekerFlex"}${inbox?.host ? ` (${inbox.host})` : ""}`}
+        meta={<Pill tone={!sent ? "neutral" : smtpOk ? "ok" : "warn"}>{!sent ? "Status laden" : smtpOk ? "Mailserver actief" : "Geen mailserver ingesteld"}</Pill>}
+      />
 
       {sent && !smtpOk && (
         <div className="card space-y-2 p-4 text-sm text-neutralx-700">
@@ -287,9 +281,9 @@ export function Mailbox() {
         </div>
       )}
 
-      <div className="card grid overflow-hidden sm:grid-cols-[280px_1fr] md:grid-cols-[320px_1fr]" style={{ minHeight: 560 }}>
+      <div className="card grid overflow-hidden sm:h-[calc(100dvh-12rem)] sm:min-h-[34rem] sm:grid-cols-[280px_1fr] md:grid-cols-[340px_1fr]">
         {/* lijst-paneel */}
-        <div className="flex flex-col border-b border-hair sm:border-b-0 sm:border-r">
+        <div className="flex max-h-[70vh] min-h-0 flex-col border-b border-hair sm:max-h-none sm:border-b-0 sm:border-r">
           <div className="flex items-center gap-1 border-b border-hair p-2">
             <button
               type="button"
