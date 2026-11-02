@@ -129,8 +129,8 @@ function LineRow({ line, onSave }: { line: PhoneLine; onSave: (patch: { status: 
 
   return (
     <li className="space-y-2 px-4 py-3 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>
             {line.orgName ?? line.requesterName} <span style={{ color: "var(--a-mute)" }}>· {line.scope === "bedrijf" ? "bedrijf" : "flexkracht"} · {line.requesterEmail}</span>
           </p>
@@ -147,7 +147,7 @@ function LineRow({ line, onSave }: { line: PhoneLine; onSave: (patch: { status: 
         </span>
       </div>
       <form
-        className="flex flex-wrap items-center gap-2"
+        className="grid items-center gap-2 sm:grid-cols-[11rem_12rem_minmax(0,1fr)_auto]"
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
@@ -155,13 +155,13 @@ function LineRow({ line, onSave }: { line: PhoneLine; onSave: (patch: { status: 
           setBusy(false);
         }}
       >
-        <select value={status} onChange={(e) => setStatus(e.target.value as LineStatus)} className="a-input w-auto" aria-label="Status">
+        <select value={status} onChange={(e) => setStatus(e.target.value as LineStatus)} className="a-input" aria-label="Status">
           {(Object.keys(STATUS) as LineStatus[]).map((s) => (
             <option key={s} value={s}>{STATUS[s].label}</option>
           ))}
         </select>
-        <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Toegewezen nummer" aria-label="Toegewezen nummer" className="a-input w-44" />
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notitie (alleen beheer)" aria-label="Notitie" className="a-input min-w-0 flex-1" />
+        <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Toegewezen nummer" aria-label="Toegewezen nummer" className="a-input" />
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notitie (alleen beheer)" aria-label="Notitie" className="a-input" />
         <button type="submit" className="a-button" disabled={busy}>{busy ? "Bezig…" : "Opslaan"}</button>
       </form>
     </li>

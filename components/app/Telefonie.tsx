@@ -159,13 +159,13 @@ export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope:
               {NEEDS_OWN_NUMBER.includes(kind) && (
                 <label className="mt-4 block text-sm font-medium text-ink">
                   Je huidige nummer
-                  <input value={ownNumber} onChange={(e) => setOwnNumber(e.target.value)} inputMode="tel" placeholder="06 12345678" className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
+                  <input value={ownNumber} onChange={(e) => setOwnNumber(e.target.value)} inputMode="tel" placeholder="06 12345678" className="mt-1 block w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
                 </label>
               )}
               {kind === "lokaal" && (
                 <label className="mt-4 block text-sm font-medium text-ink">
                   Voor welke stad of welk netnummer?
-                  <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Groningen (050)" className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
+                  <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Groningen (050)" className="mt-1 block w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
                 </label>
               )}
             </section>
@@ -243,7 +243,7 @@ export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope:
               {needsForward && (
                 <label className="mt-4 block text-sm font-medium text-ink">
                   Naar welk nummer schakelen we door?
-                  <input value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} inputMode="tel" placeholder={ownNumber || "06 12345678"} className="mt-1 w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
+                  <input value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} inputMode="tel" placeholder={ownNumber || "06 12345678"} className="mt-1 block w-full rounded-lg border border-hairstrong px-3 py-2 text-sm sm:w-72" />
                 </label>
               )}
               <label className="mt-4 block text-sm font-medium text-ink">
