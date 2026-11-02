@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { count, euroExact, percentOf } from "@/lib/admin/format";
+import { KpiStrip, Meter, Notice, Panel, Pill, StackBar, type Tone } from "@/components/admin/kit";
+import { DataTable, type TableRow } from "@/components/admin/kit-client";
 
 interface Line {
   naam: string;
@@ -34,7 +37,11 @@ interface Data {
   deliveryConfigured: boolean;
 }
 
-const eur = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
+const STATUS: Record<Aangifte["status"], { label: string; tone: Tone }> = {
+  geleverd: { label: "Geleverd", tone: "ok" },
+  mislukt: { label: "Mislukt", tone: "crit" },
+  concept: { label: "Concept", tone: "warn" },
+};
 
 /** Admin → Pensioen: de maandelijkse StiPP-aangifte (UPA) voor de uitzendtak. */
 export function PensioenBoard() {
@@ -56,15 +63,33 @@ export function PensioenBoard() {
   }, []);
   useEffect(() => load(), [load]);
 
-  if (!d) return <p className="text-sm text-neutralx-500">Laden…</p>;
+  if (!d) return <div className="a-panel h-28 animate-pulse" />;
   const a = d.aangifte;
-  const badge = a.status === "geleverd" ? "bg-brand-50 text-brand-700" : a.status === "mislukt" ? "bg-crit/10 text-crit" : "bg-paper-soft text-neutralx-600";
+  const status = STATUS[a.status];
+
+  const rows: TableRow[] = a.lines.map((l) => ({
+    id: l.naam,
+    search: l.naam,
+    filters: { complete: l.compleet ? "yes" : "no" },
+    cells: {
+      name: <span className="font-medium" style={{ color: "var(--a-text)" }}>{l.naam}</span>,
+      bsn: l.bsnOpDossier ? <span className="font-mono text-xs">…{l.bsnLaatste4 ?? ""}</span> : <Pill tone="crit">Ontbreekt</Pill>,
+      regeling: <span className="capitalize">{l.regeling}</span>,
+      fase: l.fase,
+      uren: l.uren.toLocaleString("nl-NL", { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+      loon: euroExact(l.pensioengevendLoonCents),
+      wn: euroExact(l.werknemerPremieCents),
+      wg: euroExact(l.werkgeverPremieCents),
+      status: l.compleet ? <Pill tone="ok">Compleet</Pill> : <Pill tone="crit">{l.ontbreekt.join(", ")}</Pill>,
+    },
+    sort: { name: l.naam, regeling: l.regeling, fase: l.fase, uren: l.uren, loon: l.pensioengevendLoonCents, wn: l.werknemerPremieCents, wg: l.werkgeverPremieCents, status: l.compleet ? 1 : 0 },
+  }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-hair bg-white px-5 py-4">
-        <label className="text-sm text-neutralx-600">
-          Tijdvak{" "}
+    <div className="space-y-4">
+      <section className="a-panel flex flex-wrap items-center gap-3 p-3 sm:px-5">
+        <label className="flex items-center gap-2 text-[0.8125rem] font-medium" style={{ color: "var(--a-text)" }}>
+          Tijdvak
           <select
             value={period ?? ""}
             onChange={(e) => {
@@ -72,20 +97,16 @@ export function PensioenBoard() {
               setMsg(null);
               load(e.target.value);
             }}
-            className="field-input ml-1 w-auto py-1.5 text-sm"
+            className="a-input !w-auto !py-1 text-[0.8125rem]"
           >
-            {d.periods.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
+            {d.periods.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badge}`}>{a.status}</span>
-        <span className="text-xs text-neutralx-500">
-          {a.uitvoerder ?? "StiPP"} · aansluitnummer {a.aansluitnummer ?? <span className="text-crit">ontbreekt</span>}
+        <Pill tone={status.tone}>{status.label}</Pill>
+        <span className="text-xs" style={{ color: "var(--a-mute)" }}>
+          {a.uitvoerder ?? "StiPP"}, aansluitnummer {a.aansluitnummer ?? <span style={{ color: "var(--a-crit)" }}>ontbreekt</span>}
         </span>
-        <span className="ml-auto flex gap-2">
+        <span className="ml-auto flex flex-wrap gap-1.5">
           <button
             type="button"
             disabled={busy !== null}
@@ -101,13 +122,11 @@ export function PensioenBoard() {
                 setBusy(null);
               }
             }}
-            className="rounded-full border border-hairstrong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-paper-soft disabled:opacity-50"
+            className="a-button text-xs"
           >
             {busy === "gen" ? "Bezig…" : "Opnieuw opbouwen"}
           </button>
-          <a href={`/api/admin/pensioen/${period}/export`} className="rounded-full border border-hairstrong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-paper-soft">
-            Download CSV
-          </a>
+          <a href={`/api/admin/pensioen/${period}/export`} className="a-button text-xs">Download CSV</a>
           <button
             type="button"
             disabled={busy !== null || a.lines.length === 0}
@@ -124,81 +143,75 @@ export function PensioenBoard() {
                 setBusy(null);
               }
             }}
-            className="btn-primary px-4 py-1.5 text-xs disabled:opacity-50"
+            className="a-button a-button-primary text-xs"
           >
             {busy === "deliver" ? "Leveren…" : "Leveren aan StiPP"}
           </button>
         </span>
-      </div>
+      </section>
 
       {!d.deliveryConfigured && (
-        <p className="rounded-lg bg-paper-soft px-4 py-3 text-xs text-neutralx-700">
-          Nog geen automatisch leverkanaal. Zet <code>STIPP_AANSLUITNUMMER</code>, <code>STIPP_UPA_ENDPOINT</code> en <code>STIPP_UPA_TOKEN</code> in de omgeving, of download de CSV en lever die in het StiPP/APG-portaal. Zodra het kanaal er is, gaat de maandelijkse levering vanzelf (1e van de maand).
-        </p>
+        <Notice>
+          Nog geen automatisch leverkanaal. Zet STIPP_AANSLUITNUMMER, STIPP_UPA_ENDPOINT en STIPP_UPA_TOKEN in de omgeving, of download de CSV en lever die in het StiPP/APG-portaal. Zodra het kanaal er is, gaat de levering vanzelf op de 1e van de maand.
+        </Notice>
       )}
-      {msg && <p className="rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-800">{msg}</p>}
-      {a.leveringDetail && <p className="text-xs text-neutralx-500">Laatste levering: {a.leveringDetail}</p>}
-
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          ["Werknemers", String(a.totals.werknemers)],
-          ["Pensioengevend loon", eur(a.totals.pensioengevendLoonCents)],
-          ["Premie werkgever", eur(a.totals.werkgeverPremieCents)],
-          ["Premie totaal", eur(a.totals.totaalPremieCents)],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-xl border border-hair bg-white px-4 py-3">
-            <p className="text-xs text-neutralx-500">{k}</p>
-            <p className="font-display text-lg font-bold text-ink">{v}</p>
-          </div>
-        ))}
-      </div>
-
+      {msg && <Notice tone="ok">{msg}</Notice>}
+      {a.leveringDetail && <Notice>Laatste levering: {a.leveringDetail}</Notice>}
       {a.totals.incompleet > 0 && (
-        <p className="rounded-lg bg-crit/10 px-4 py-2 text-sm text-crit">
-          {a.totals.incompleet} werknemer(s) hebben nog ontbrekende gegevens (vaak de BSN). Die regels kunnen niet geleverd worden tot ze compleet zijn.
-        </p>
+        <Notice tone="crit" role="alert">{a.totals.incompleet} werknemer(s) hebben nog ontbrekende gegevens, vaak de BSN. Die regels kunnen niet geleverd worden tot ze compleet zijn.</Notice>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-hair bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="text-xs text-neutralx-500">
-            <tr>
-              <th className="px-4 py-2 font-medium">Naam</th>
-              <th className="px-4 py-2 font-medium">BSN</th>
-              <th className="px-4 py-2 font-medium">Regeling</th>
-              <th className="px-4 py-2 font-medium">Fase</th>
-              <th className="px-4 py-2 font-medium">Uren</th>
-              <th className="px-4 py-2 font-medium">Pens. loon</th>
-              <th className="px-4 py-2 font-medium">Premie wn.</th>
-              <th className="px-4 py-2 font-medium">Premie wg.</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-hair">
-            {a.lines.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-neutralx-500">
-                  Geen uitzendkrachten met pensioenopbouw in dit tijdvak.
-                </td>
-              </tr>
-            ) : (
-              a.lines.map((l) => (
-                <tr key={l.naam} className="align-top">
-                  <td className="px-4 py-2 font-medium text-ink">{l.naam}</td>
-                  <td className="px-4 py-2 text-xs">{l.bsnOpDossier ? `…${l.bsnLaatste4 ?? ""}` : <span className="text-crit">ontbreekt</span>}</td>
-                  <td className="px-4 py-2 capitalize">{l.regeling}</td>
-                  <td className="px-4 py-2">{l.fase}</td>
-                  <td className="px-4 py-2">{l.uren.toFixed(1).replace(".", ",")}</td>
-                  <td className="px-4 py-2">{eur(l.pensioengevendLoonCents)}</td>
-                  <td className="px-4 py-2">{eur(l.werknemerPremieCents)}</td>
-                  <td className="px-4 py-2">{eur(l.werkgeverPremieCents)}</td>
-                  <td className="px-4 py-2 text-xs">{l.compleet ? <span className="text-brand-700">compleet</span> : <span className="text-crit">{l.ontbreekt.join(", ")}</span>}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <KpiStrip
+        items={[
+          { label: "Werknemers", value: count(a.totals.werknemers), hint: `${a.totals.uren.toLocaleString("nl-NL")} uur` },
+          { label: "Pensioengevend loon", value: euroExact(a.totals.pensioengevendLoonCents), hint: a.label },
+          { label: "Premie werkgever", value: euroExact(a.totals.werkgeverPremieCents), hint: "voor rekening van ZekerFlex" },
+          { label: "Premie totaal", value: euroExact(a.totals.totaalPremieCents), hint: "af te dragen", tone: "money" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Panel title="Verdeling van de premie">
+          <StackBar
+            format={euroExact}
+            emptyText="Geen premie in dit tijdvak."
+            segments={[
+              { label: "Werkgever", value: a.totals.werkgeverPremieCents, slot: 1 },
+              { label: "Werknemer", value: a.totals.werknemerPremieCents, slot: 3 },
+            ]}
+          />
+        </Panel>
+        <Panel title="Klaar om te leveren" subtitle="Werknemers met alle gegevens compleet">
+          <Meter
+            label="Compleet"
+            value={a.totals.werknemers - a.totals.incompleet}
+            max={a.totals.werknemers}
+            display={`${count(a.totals.werknemers - a.totals.incompleet)} van ${count(a.totals.werknemers)}, ${percentOf(a.totals.werknemers - a.totals.incompleet, a.totals.werknemers)}%`}
+            tone={a.totals.incompleet > 0 ? "warn" : "ok"}
+          />
+        </Panel>
       </div>
+
+      <Panel flush title="Regels van de aangifte" subtitle={a.label}>
+        <DataTable
+          columns={[
+            { key: "name", label: "Naam" },
+            { key: "bsn", label: "BSN", sortable: false },
+            { key: "regeling", label: "Regeling", hideOnMobile: true },
+            { key: "fase", label: "Fase", hideOnMobile: true },
+            { key: "uren", label: "Uren", align: "right", hideOnMobile: true },
+            { key: "loon", label: "Pens. loon", align: "right" },
+            { key: "wn", label: "Premie wn.", align: "right", hideOnMobile: true },
+            { key: "wg", label: "Premie wg.", align: "right", hideOnMobile: true },
+            { key: "status", label: "Status" },
+          ]}
+          rows={rows}
+          pageSize={20}
+          searchPlaceholder="Zoek een naam"
+          filters={[{ key: "complete", label: "Status", chips: true, options: [{ value: "no", label: "Onvolledig" }, { value: "yes", label: "Compleet" }] }]}
+          emptyText="Geen uitzendkrachten met pensioenopbouw in dit tijdvak."
+        />
+      </Panel>
     </div>
   );
 }

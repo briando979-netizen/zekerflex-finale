@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { count, percentOf } from "@/lib/admin/format";
+import { KpiStrip, Meter, NameCell, PageHead, Panel, Pill, StackBar } from "@/components/admin/kit";
+import { DataTable, type TableRow } from "@/components/admin/kit-client";
 
 interface Row {
   userId: string;
@@ -19,7 +22,7 @@ interface Payload {
   counts: { total: number; complete: number; zzp: number; flexwerker: number; uitzendkracht: number; vatInvalid: number };
 }
 
-const KIND: Record<string, string> = { zzp: "ZZP'er", flexwerker: "Flexwerker", uitzendkracht: "Uitzendkracht" };
+const KIND: Record<string, string> = { zzp: "Zzp'er", flexwerker: "Flexwerker", uitzendkracht: "Uitzendkracht" };
 const MODE: Record<string, string> = {
   "reverse-billing": "Reverse billing",
   "self-invoice": "Zelf-facturatie (KOR)",
@@ -28,7 +31,6 @@ const MODE: Record<string, string> = {
 
 export function FiscalBoard() {
   const [data, setData] = useState<Payload | null>(null);
-  const [filter, setFilter] = useState<string>("");
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [revealing, setRevealing] = useState<string | null>(null);
 
@@ -56,97 +58,99 @@ export function FiscalBoard() {
     }
   }
 
-  const rows = (data?.rows ?? []).filter((r) => !filter || r.workerKind === filter);
+  const head = (
+    <PageHead
+      title="Werkvormen & btw"
+      subtitle="Btw-nummers en verloningsvorm per flexwerker, voor correcte facturatie en verloning. Btw-nummers zijn gemaskeerd totdat je op Openen klikt. Dat wordt vastgelegd in het auditspoor."
+    />
+  );
+
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        {head}
+        <div className="a-panel h-28 animate-pulse" />
+      </div>
+    );
+  }
+
+  const { counts } = data;
+  const rows: TableRow[] = data.rows.map((r) => ({
+    id: r.userId,
+    search: `${r.name} ${r.email ?? ""}`,
+    filters: { kind: r.workerKind ?? "", complete: r.complete ? "yes" : "no" },
+    cells: {
+      name: <NameCell name={r.name} {...(r.email ? { sub: r.email } : {})} href={`/admin/gebruikers/${r.userId}`} />,
+      kind: r.workerKind ? KIND[r.workerKind] : "—",
+      vat: !r.hasVat ? (
+        "—"
+      ) : revealed[r.userId] ? (
+        <span className="inline-flex items-center gap-2">
+          <span className="font-mono text-xs" style={{ color: "var(--a-text)" }}>{revealed[r.userId]}</span>
+          <Pill tone={r.vatValid ? "ok" : "warn"}>{r.vatValid ? "Geldig" : "Ongeldig"}</Pill>
+        </span>
+      ) : (
+        <button type="button" onClick={() => void reveal(r.userId)} disabled={revealing === r.userId} className="a-button text-xs">
+          {revealing === r.userId ? "Bezig…" : "•••• Openen"}
+        </button>
+      ),
+      mode: MODE[r.invoiceMode] ?? r.invoiceMode,
+      status: <Pill tone={r.complete ? "ok" : "warn"}>{r.complete ? "Compleet" : "Onvolledig"}</Pill>,
+    },
+    sort: { name: r.name, kind: r.workerKind ?? "", mode: r.invoiceMode, status: r.complete ? 1 : 0 },
+    csv: { name: r.name, kind: r.workerKind ? (KIND[r.workerKind] ?? "") : "", vat: r.hasVat ? "gemaskeerd" : "", mode: MODE[r.invoiceMode] ?? r.invoiceMode, status: r.complete ? "Compleet" : "Onvolledig" },
+  }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">Werkvormen & fiscale gegevens</h1>
-        <p className="mt-1 text-sm text-neutralx-600">
-          Btw-nummers en verloningsvorm per flexwerker — voor correcte facturatie en verloning. Alleen zichtbaar
-          voor platformbeheerders; btw-nummers zijn gemaskeerd totdat je op &ldquo;Open&rdquo; klikt (dit wordt
-          vastgelegd in het auditspoor).
-        </p>
+    <div className="space-y-4">
+      {head}
+
+      <KpiStrip
+        items={[
+          { label: "Profielen", value: count(counts.total), hint: "fiscaal ingevuld" },
+          { label: "Compleet", value: `${percentOf(counts.complete, counts.total)}%`, hint: `${count(counts.complete)} van ${count(counts.total)}`, tone: counts.complete === counts.total ? "ok" : "warn" },
+          { label: "Btw ongeldig", value: count(counts.vatInvalid), hint: counts.vatInvalid > 0 ? "controleer deze nummers" : "alles klopt", ...(counts.vatInvalid > 0 ? { tone: "crit" as const } : {}) },
+          { label: "Zzp'ers", value: count(counts.zzp), hint: "factureren zelf of via reverse billing" },
+          { label: "Uitzendkrachten", value: count(counts.uitzendkracht), hint: "via de verloning" },
+        ]}
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Panel title="Verdeling over werkvormen">
+          <StackBar
+            emptyText="Nog geen fiscale profielen ingevuld."
+            segments={[
+              { label: "Zzp'ers", value: counts.zzp, slot: 1 },
+              { label: "Flexwerkers", value: counts.flexwerker, slot: 3 },
+              { label: "Uitzendkrachten", value: counts.uitzendkracht, slot: 7 },
+            ]}
+          />
+        </Panel>
+        <Panel title="Klaar voor facturatie en verloning">
+          <Meter label="Compleet ingevuld" value={counts.complete} max={counts.total} display={`${count(counts.complete)} van ${count(counts.total)}`} tone={counts.complete === counts.total ? "ok" : "warn"} />
+        </Panel>
       </div>
 
-      {data && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-          {[
-            ["Totaal", data.counts.total, ""],
-            ["Compleet", data.counts.complete, "ok"],
-            ["ZZP'ers", data.counts.zzp, "zzp"],
-            ["Flexwerkers", data.counts.flexwerker, "flexwerker"],
-            ["Uitzendkr.", data.counts.uitzendkracht, "uitzendkracht"],
-            ["Btw ongeldig", data.counts.vatInvalid, "warn"],
-          ].map(([l, n, key]) => (
-            <button
-              key={l as string}
-              type="button"
-              onClick={() => setFilter(["zzp", "flexwerker", "uitzendkracht"].includes(key as string) ? (filter === key ? "" : (key as string)) : "")}
-              className={`card p-3 text-left ${filter === key ? "ring-2 ring-brand-500" : ""}`}
-            >
-              <p className="text-xs text-neutralx-500">{l}</p>
-              <p className={`num mt-1 text-xl font-bold ${key === "warn" && (n as number) > 0 ? "text-crit" : key === "ok" ? "text-ok" : "text-ink"}`}>{n}</p>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="card overflow-hidden">
-        {!data ? (
-          <div className="space-y-px">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 animate-pulse bg-paper-soft" />)}</div>
-        ) : rows.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen fiscale profielen ingevuld.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">Naam</th>
-                  <th className="px-5 py-2.5 font-medium">Werkvorm</th>
-                  <th className="px-5 py-2.5 font-medium">Btw-nummer</th>
-                  <th className="px-5 py-2.5 font-medium">Facturatie</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {rows.map((r) => (
-                  <tr key={r.userId}>
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-ink">{r.name}</p>
-                      {r.email && <p className="text-xs text-neutralx-400">{r.email}</p>}
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{r.workerKind ? KIND[r.workerKind] : "—"}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-neutralx-600">
-                      {!r.hasVat ? (
-                        "—"
-                      ) : revealed[r.userId] ? (
-                        <>
-                          {revealed[r.userId]}{" "}
-                          <span className={r.vatValid ? "text-ok" : "text-warn"}>{r.vatValid ? "✓" : "!"}</span>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => reveal(r.userId)}
-                          disabled={revealing === r.userId}
-                          className="rounded-full border border-hairstrong px-2 py-0.5 font-sans text-[11px] font-medium text-brand-600 hover:bg-paper-soft disabled:opacity-50"
-                        >
-                          {revealing === r.userId ? "Bezig…" : "•••••• Open"}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-neutralx-600">{MODE[r.invoiceMode] ?? r.invoiceMode}</td>
-                    <td className="px-5 py-3 text-right">
-                      <span className={r.complete ? "pill-ok" : "pill-warn"}>{r.complete ? "Compleet" : "Onvolledig"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <Panel flush title="Alle profielen">
+        <DataTable
+          columns={[
+            { key: "name", label: "Naam" },
+            { key: "kind", label: "Werkvorm" },
+            { key: "vat", label: "Btw-nummer", sortable: false },
+            { key: "mode", label: "Facturatie", hideOnMobile: true },
+            { key: "status", label: "Status" },
+          ]}
+          rows={rows}
+          pageSize={20}
+          searchPlaceholder="Zoek op naam of e-mail"
+          csvName="werkvormen"
+          filters={[
+            { key: "kind", label: "Werkvorm", chips: true, options: Object.entries(KIND).map(([value, label]) => ({ value, label })) },
+            { key: "complete", label: "Status", options: [{ value: "no", label: "Onvolledig" }, { value: "yes", label: "Compleet" }] },
+          ]}
+          emptyText="Nog geen fiscale profielen ingevuld."
+        />
+      </Panel>
     </div>
   );
 }

@@ -96,6 +96,15 @@ export function Pill({ tone = "neutral", children, dot = true }: { tone?: Tone; 
   );
 }
 
+/** Een melding tussen de panelen: wat er net gebeurde, of waar je op moet letten. */
+export function Notice({ tone = "neutral", children, role = "status" }: { tone?: Tone; children: ReactNode; role?: "status" | "alert" }) {
+  return (
+    <p role={role} className="rounded-lg px-4 py-2.5 text-[0.8125rem]" style={{ color: tone === "neutral" ? "var(--a-dim)" : "var(--a-text)", background: TONE_SOFT[tone], boxShadow: `inset 3px 0 0 ${tone === "neutral" ? "var(--a-border-strong)" : TONE_INK[tone]}` }}>
+      {children}
+    </p>
+  );
+}
+
 export function Empty({ title, body, action }: { title: string; body?: ReactNode; action?: ReactNode }) {
   return (
     <div className="px-4 py-10 text-center">
