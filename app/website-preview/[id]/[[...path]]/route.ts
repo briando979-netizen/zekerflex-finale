@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SITE_PREVIEW_CSP } from "@/lib/security/csp";
-import { getMirror, prefixRootRefs, readMirrorFile, resolveMirrorFile } from "@/lib/website/mirror";
+import { getMirror, injectPreviewShim, prefixRootRefs, readMirrorFile, resolveMirrorFile } from "@/lib/website/mirror";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const data = await readMirrorFile(found.file);
   const prefix = `/website-preview/${id}`;
   if (found.type.startsWith("text/html")) {
-    return new NextResponse(prefixRootRefs(data.toString("utf8"), prefix, "html"), { headers: { ...HEADERS, "Content-Type": found.type } });
+    return new NextResponse(injectPreviewShim(prefixRootRefs(data.toString("utf8"), prefix, "html")), { headers: { ...HEADERS, "Content-Type": found.type } });
   }
   if (found.type.startsWith("text/css")) {
     return new NextResponse(prefixRootRefs(data.toString("utf8"), prefix, "css"), { headers: { ...HEADERS, "Content-Type": found.type } });

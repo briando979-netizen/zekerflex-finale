@@ -73,7 +73,7 @@ describe("ophalen, omschrijven en verbeteren", () => {
       ["bakkerij.nl/over-ons", "/over-ons/"],
       ["bakkerij.nl/contact", "/contact/"],
     ]);
-    const counters = { httpsFixed: 0, missing: 0 };
+    const counters = { httpsFixed: 0, missing: 0, pagesOutside: 0 };
     const out = mirror.rewriteRefs(PAGE, base, map, "bakkerij.nl", counters, "html");
     expect(out).toContain('href="/css/site.css"');
     expect(out).toContain('src="/js/app.js"');
@@ -88,6 +88,13 @@ describe("ophalen, omschrijven en verbeteren", () => {
     // favicon zat niet in de kopie: wijst naar de originele site
     expect(out).toContain('href="https://bakkerij.nl/favicon.ico"');
     expect(counters.missing).toBe(1);
+  });
+
+  it("links naar pagina's buiten de kopie tellen apart van ontbrekende bestanden", () => {
+    const counters = { httpsFixed: 0, missing: 0, pagesOutside: 0 };
+    const out = mirror.rewriteRefs('<a href="/blog/artikel-99">x</a><a href="/oud.php">y</a><img src="/img/weg.png">', new URL("https://bakkerij.nl/"), new Map(), "bakkerij.nl", counters, "html");
+    expect(counters).toEqual({ httpsFixed: 0, missing: 1, pagesOutside: 2 });
+    expect(out).toContain('href="https://bakkerij.nl/blog/artikel-99"');
   });
 
   it("verbetert zonder het uiterlijk te veranderen", () => {
@@ -119,6 +126,13 @@ describe("voorbeeld tonen", () => {
     expect(out).toContain('srcset="/website-preview/abc/img/b.png 1x, /website-preview/abc/img/c.png 2x"');
     expect(out).toContain('href="//cdn.x.nl/y"');
     expect(out).toContain("url(/website-preview/abc/img/d.jpg)");
+  });
+
+  it("geeft scripts in het voorbeeld een vervanger voor cookies, vóór elk ander script", () => {
+    const out = mirror.injectPreviewShim('<html><head><meta charset="utf-8"><script src="/app.js"></script></head></html>');
+    expect(out.indexOf('Object.defineProperty(document,"cookie"')).toBeGreaterThan(out.indexOf("<head>"));
+    expect(out.indexOf('Object.defineProperty(document,"cookie"')).toBeLessThan(out.indexOf("/app.js"));
+    expect(mirror.injectPreviewShim("<p>zonder head</p>")).toMatch(/^<script>/);
   });
 
   it("vindt bestanden in de kopie, maar nooit daarbuiten", async () => {

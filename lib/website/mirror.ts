@@ -63,6 +63,7 @@ export interface MirrorRecord {
   assets: number;
   bytes: number;
   missing: number;
+  pagesOutside?: number;
   brokenLinks: string[];
   upgrades: MirrorUpgrades;
   dynamic: string[];
@@ -189,8 +190,16 @@ function lookupMapped(map: UrlMap, u: URL): string | undefined {
   return map.get(mapKey(u, true)) ?? map.get(mapKey(u, false));
 }
 
+export interface RewriteCounters {
+  httpsFixed: number;
+  /** bestanden (beeld, stijl, script) van de eigen site die niet in de kopie zitten */
+  missing: number;
+  /** links naar pagina's buiten de kopie (boven het maximum aantal pagina's) */
+  pagesOutside: number;
+}
+
 /** Herschrijft verwijzingen naar de eigen site naar paden in de kopie; telt http→https-reparaties. */
-export function rewriteRefs(text: string, base: URL, map: UrlMap, site: string, counters: { httpsFixed: number; missing: number }, kind: "html" | "css"): string {
+export function rewriteRefs(text: string, base: URL, map: UrlMap, site: string, counters: RewriteCounters, kind: "html" | "css"): string {
   const own = (u: URL) => sameSite(u.hostname, site);
   const swap = (raw: string): string => {
     const value = decodeAttr(raw);
@@ -207,7 +216,8 @@ export function rewriteRefs(text: string, base: URL, map: UrlMap, site: string, 
     const mapped = lookupMapped(map, u);
     if (/^http:\/\//i.test(value)) counters.httpsFixed += 1;
     if (mapped) return mapped;
-    counters.missing += 1;
+    if (HTML_EXT.test(u.pathname) || !/\.[a-z0-9]{2,5}$/i.test(u.pathname)) counters.pagesOutside += 1;
+    else counters.missing += 1;
     return `https://${u.host}${u.pathname}${u.search}`;
   };
 
@@ -515,7 +525,7 @@ async function runMirror(rec: MirrorRecord): Promise<void> {
     }
 
     // 3. Verwijzingen omschrijven, verbeteringen toepassen, wegschrijven.
-    const counters = { httpsFixed: 0, missing: 0 };
+    const counters: RewriteCounters = { httpsFixed: 0, missing: 0, pagesOutside: 0 };
     for (const c of cssFiles) {
       const css = rewriteRefs(c.css, c.url, map, site, counters, "css");
       await writeFileSafe(root, c.file, css);
@@ -537,6 +547,7 @@ async function runMirror(rec: MirrorRecord): Promise<void> {
     }
     rec.upgrades.httpsFixed = counters.httpsFixed;
     rec.missing = counters.missing;
+    rec.pagesOutside = counters.pagesOutside;
     rec.dynamic = [...allDynamic];
     rec.brokenLinks = [...linkStatus].filter(([, s]) => s === null || (s ?? 0) >= 400).map(([u]) => u).slice(0, 30);
 
@@ -634,6 +645,19 @@ export function prefixRootRefs(text: string, prefix: string, kind: "html" | "css
       .replace(/(\s(?:href|src|poster|action|data-src|data-lazy-src)\s*=\s*["'])\/(?!\/)/gi, `$1${prefix}/`)
       .replace(/(\s(?:srcset|data-srcset)\s*=\s*["'])([^"']*)/gi, (_m, pre: string, v: string) => pre + v.replace(/(^|,\s*)\/(?!\/)/g, `$1${prefix}/`)),
   );
+}
+
+// In de sandbox gooit elke poging tot document.cookie of localStorage een fout.
+// Veel sites lezen die (cookiebanners, statistieken); een React- of Next-site
+// crasht daar helemaal op. Alleen in het voorbeeld krijgen ze een vervanger in
+// het geheugen, zodat de site gewoon toont. De isolatie blijft: er is niets
+// echts te lezen. De kopie op schijf (die live gaat) krijgt dit niet.
+const PREVIEW_SHIM = `<script>(function(){var m="";try{document.cookie}catch(e){try{Object.defineProperty(document,"cookie",{configurable:true,get:function(){return m},set:function(v){var kv=String(v).split(";")[0].trim(),n=kv.split("=")[0],p=m?m.split("; ").filter(function(c){return c.split("=")[0]!==n}):[];if(kv.indexOf("=")>0)p.push(kv);m=p.join("; ")}})}catch(e2){}}function s(){var d={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}["localStorage","sessionStorage"].forEach(function(n){try{window[n]}catch(e){try{Object.defineProperty(window,n,{configurable:true,value:s()})}catch(e2){}}})})();</script>`;
+
+export function injectPreviewShim(html: string): string {
+  const head = /<head\b[^>]*>/i.exec(html);
+  if (head) return html.slice(0, head.index + head[0].length) + PREVIEW_SHIM + html.slice(head.index + head[0].length);
+  return PREVIEW_SHIM + html;
 }
 
 export async function readMirrorFile(file: string): Promise<Buffer> {

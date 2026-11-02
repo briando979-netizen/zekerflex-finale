@@ -165,7 +165,12 @@ export function SiteMirrorPanel({ siteId }: { siteId: string }) {
               <strong>Werkt niet vanzelf in een kopie:</strong> {m.dynamic.join(" ")}
             </Notice>
           )}
-          {m.missing > 0 && <p className="text-xs" style={{ color: "var(--a-mute)" }}>{m.missing} verwijzingen naar de eigen site konden niet gekopieerd worden en wijzen nog naar de originele site.</p>}
+          {(m.missing > 0 || (m.pagesOutside ?? 0) > 0) && (
+            <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+              {m.missing > 0 && `${m.missing} bestanden van de eigen site konden niet gekopieerd worden en komen nog van de originele site. `}
+              {(m.pagesOutside ?? 0) > 0 && `${m.pagesOutside} links gaan naar pagina's buiten de kopie (we kopiëren er maximaal 40) en wijzen naar de originele site.`}
+            </p>
+          )}
         </div>
       )}
     </div>
