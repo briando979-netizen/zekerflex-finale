@@ -44,6 +44,19 @@ export const IconPhone = (p: P) => (
   </svg>
 );
 
+export const IconVideo = (p: P) => (
+  <svg {...fill(p)}>
+    <path d="M4 6h10a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zM17 10.2l4.2-2.6c.4-.2.8 0 .8.4v8c0 .4-.4.6-.8.4L17 13.8v-3.6z" />
+  </svg>
+);
+
+export const IconScreenShare = (p: P) => (
+  <svg {...stroke(p)}>
+    <rect x="3" y="4" width="18" height="12" rx="1.5" />
+    <path d="M8 20h8M12 16v4M12 13V7.5M9.5 10l2.5-2.5 2.5 2.5" />
+  </svg>
+);
+
 export const IconPaperclip = (p: P) => (
   <svg {...stroke(p)}>
     <path d="M21 11.5l-8.6 8.6a5 5 0 01-7-7l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.7 8.6a1.6 1.6 0 01-2.3-2.3l8-8" />

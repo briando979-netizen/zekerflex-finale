@@ -7,7 +7,7 @@ import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
-import { IconSearch, IconDots, IconPhone, IconChatBubble, IconBell, IconBriefcase, IconGear, IconPencil } from "./icons";
+import { IconSearch, IconDots, IconPhone, IconVideo, IconScreenShare, IconChatBubble, IconBell, IconBriefcase, IconGear, IconPencil } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
@@ -17,6 +17,7 @@ import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel"
 import { Portal } from "./Portal";
 import { BrainChat } from "@/components/brain/BrainChat";
 import {
+  canShareScreen,
   dayLabel,
   fmtTime,
   lastSeenLabel,
@@ -707,7 +708,12 @@ export function InboxPage({
             </button>
             {activeThread.kind === "direct" && (
               <div className="ml-auto flex items-center gap-1">
-                <button type="button" onClick={() => startCall("audio")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Bellen"><IconPhone className="h-5 w-5" /></button>
+                <button type="button" onClick={() => startCall("video")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Videobellen" title="Videobellen"><IconVideo className="h-5 w-5" /></button>
+                <button type="button" onClick={() => startCall("audio")} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Bellen" title="Bellen"><IconPhone className="h-5 w-5" /></button>
+                {/* the header only renders after the threads load in the browser, so no hydration mismatch */}
+                {canShareScreen() && (
+                  <button type="button" onClick={() => startCall("screen")} className="hidden h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft sm:grid" aria-label="Scherm delen" title="Scherm delen"><IconScreenShare className="h-5 w-5" /></button>
+                )}
                 <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Profiel">ⓘ</button>
               </div>
             )}

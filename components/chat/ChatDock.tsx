@@ -7,7 +7,7 @@ import { useMessageSearch } from "./useMessageSearch";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
-import { IconBack, IconPhone, IconSearch } from "./icons";
+import { IconBack, IconPhone, IconSearch, IconVideo } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
@@ -431,6 +431,7 @@ export function ChatDock() {
                 <button type="button" onClick={search.openSearch} aria-label="Zoek in gesprek"><IconSearch className="h-5 w-5" /></button>
                 {activeThread.kind === "direct" && (
                   <>
+                    <button type="button" onClick={() => startCall("video")} aria-label="Videobellen"><IconVideo className="h-5 w-5" /></button>
                     <button type="button" onClick={() => startCall("audio")} aria-label="Bellen"><IconPhone className="h-5 w-5" /></button>
                   </>
                 )}

@@ -51,6 +51,13 @@ function videoSenderOf(peer: RTCPeerConnection | null): RTCRtpSender | null {
   return peer?.getTransceivers().find((t) => t.receiver.track?.kind === "video")?.sender ?? null;
 }
 
+// Each side posts its candidates while the offer/answer is still on its way, so
+// they can arrive first. Adding one before the remote description fails, and a
+// lost candidate can be the only route that works, so they wait in a queue.
+async function addQueued(peer: RTCPeerConnection, queue: RTCIceCandidateInit[]): Promise<void> {
+  for (const c of queue.splice(0)) await peer.addIceCandidate(c).catch(() => undefined);
+}
+
 export function CallOverlay({
   threadId,
   callId,
@@ -77,6 +84,8 @@ export function CallOverlay({
   );
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(mode === "audio");
+  const [hasCam, setHasCam] = useState(mode === "video");
+  const [failReason, setFailReason] = useState<"network" | "media">("network");
   const [sharing, setSharing] = useState(mode === "screen" && role === "caller");
   const [secs, setSecs] = useState(0);
   const [minimized, setMinimized] = useState(false);
@@ -96,6 +105,7 @@ export function CallOverlay({
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ended = useRef(false);
+  const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
 
   // The media elements remount whenever the call is minimized/expanded or
   // video switches on, so each one picks up the current stream as it mounts.
@@ -166,6 +176,12 @@ export function CallOverlay({
     [onEnd, post],
   );
 
+  // No microphone (or no permission): say so, instead of a call that just vanishes.
+  const mediaFailed = useCallback(() => {
+    setFailReason("media");
+    cleanup(role === "callee", true);
+  }, [cleanup, role]);
+
   // The callee of a screen-share call only talks; the caller is the one sharing.
   const getMedia = useCallback(async (): Promise<MediaStream> => {
     if (mode === "screen" && role === "caller") {
@@ -179,7 +195,16 @@ export function CallOverlay({
       }
       return s;
     }
-    return navigator.mediaDevices.getUserMedia({ audio: true, video: mode === "video" });
+    if (mode === "video") {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      } catch {
+        // no camera (a desktop without webcam): carry on as a voice call, the other side's video still shows
+        setHasCam(false);
+        setCamOff(true);
+      }
+    }
+    return navigator.mediaDevices.getUserMedia({ audio: true });
   }, [mode, role]);
 
   const stopShare = useCallback(async () => {
@@ -263,8 +288,10 @@ export function CallOverlay({
         try {
           if (s.type === "offer" && role === "callee") {
             await peer.setRemoteDescription(new RTCSessionDescription(s.data as RTCSessionDescriptionInit));
-            const stream = localStream.current ?? (await getMedia());
+            await addQueued(peer, pendingCandidates.current);
             if (!localStream.current) {
+              const stream = await getMedia().catch(() => null);
+              if (!stream) return mediaFailed();
               attachStream(stream);
               stream.getTracks().forEach((t) => peer.addTrack(t, stream));
             }
@@ -274,13 +301,16 @@ export function CallOverlay({
             setState("connecting");
           } else if (s.type === "answer" && role === "caller") {
             await peer.setRemoteDescription(new RTCSessionDescription(s.data as RTCSessionDescriptionInit));
+            await addQueued(peer, pendingCandidates.current);
             // The other side has picked up — stop the ring-back immediately
             // rather than waiting for ICE to fully connect, which can take a
             // few more seconds and left the ringtone audibly playing well
             // after the callee had already answered.
             setState("connecting");
           } else if (s.type === "candidate") {
-            await peer.addIceCandidate(new RTCIceCandidate(s.data as RTCIceCandidateInit));
+            const candidate = s.data as RTCIceCandidateInit;
+            if (peer.remoteDescription) await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            else pendingCandidates.current.push(candidate);
           } else if (s.type === "end" || s.type === "decline") {
             cleanup(false);
           }
@@ -289,7 +319,7 @@ export function CallOverlay({
         }
       }
     },
-    [role, getMedia, post, cleanup, attachStream],
+    [role, getMedia, post, cleanup, attachStream, mediaFailed],
   );
 
   // start
@@ -301,7 +331,12 @@ export function CallOverlay({
       const peer = makePc(ice);
       if (role === "caller") {
         const stream = await getMedia().catch(() => null);
-        if (!stream || !alive) return cleanup(false);
+        if (!alive) {
+          stream?.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        // a cancelled screen picker is a choice, not an error
+        if (!stream) return mode === "screen" ? cleanup(false) : mediaFailed();
         attachStream(stream);
         if (mode === "screen") {
           const shared = stream.getVideoTracks()[0] ?? null;
@@ -372,7 +407,9 @@ export function CallOverlay({
           ? fmtDuration(secs)
           : state === "ended"
             ? "Beëindigd"
-            : "Verbinding mislukt";
+            : failReason === "media"
+              ? "Geen microfoon"
+              : "Verbinding mislukt";
 
   const muteButton = (size: string) => (
     <button
@@ -444,11 +481,23 @@ export function CallOverlay({
             <div className="grid flex-1 place-items-center px-6 text-center">
               <div>
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crit/20 text-3xl">⚠️</div>
-                <p className="mt-4 text-base font-semibold">Kon niet verbinden met {peerName}</p>
-                <p className="mt-1.5 max-w-sm text-sm text-white/60">
-                  Dit gebeurt meestal als jullie netwerken geen directe verbinding kunnen opzetten. Probeer het
-                  opnieuw, of vraag de ander om via wifi te bellen in plaats van mobiel internet.
-                </p>
+                {failReason === "media" ? (
+                  <>
+                    <p className="mt-4 text-base font-semibold">Geen toegang tot je microfoon</p>
+                    <p className="mt-1.5 max-w-sm text-sm text-white/60">
+                      Sta de microfoon{mode === "video" ? " en camera" : ""} toe in je browser: klik op het slotje naast het
+                      adres, zet het op Toestaan en bel daarna opnieuw.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-4 text-base font-semibold">Kon niet verbinden met {peerName}</p>
+                    <p className="mt-1.5 max-w-sm text-sm text-white/60">
+                      Dit gebeurt meestal als jullie netwerken geen directe verbinding kunnen opzetten. Probeer het
+                      opnieuw, of vraag de ander om via wifi te bellen in plaats van mobiel internet.
+                    </p>
+                  </>
+                )}
                 <button type="button" onClick={() => { setState("ended"); onEnd(); }} className="btn-primary mt-5">
                   Sluiten
                 </button>
@@ -478,7 +527,7 @@ export function CallOverlay({
           {state !== "failed" && (
             <div className="flex items-center justify-center gap-4 p-6">
               {muteButton("h-12 w-12 text-xl")}
-              {mode === "video" && (
+              {mode === "video" && hasCam && (
                 <button
                   type="button"
                   onClick={toggleCam}
