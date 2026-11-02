@@ -39,6 +39,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "worker-push-sweep", label: "Meldingen werknemers", maxAgeHours: 26 },
   { job: "autopilot", label: "Autopilot", maxAgeHours: 26 },
   { job: "pensioen-aangifte", label: "StiPP-pensioenaangifte", maxAgeHours: 24 * 35 },
+  // alleen zelf-gehost: backup-dienst in docker-compose.vps.yml + /api/internal/backup/check
+  { job: "db-backup", label: "Database-back-up", maxAgeHours: 26 },
 ];
 
 interface Beat {

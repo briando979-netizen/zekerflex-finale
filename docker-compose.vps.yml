@@ -38,6 +38,8 @@ services:
       LLM_FAST_MODEL: ${LLM_FAST_MODEL:-qwen2.5:3b}
     volumes:
       - app-storage:/app/storage
+      # Alleen-lezen: de app controleert de nachtelijke back-up (lib/ops/backup.ts).
+      - ./backups:/backups:ro
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -75,6 +77,31 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [internal]
+
+  # Nachtelijke back-up van de database + uploads, met proef-terugzetting in een
+  # wegwerp-database. Schrijft naar ./backups op de server; de nieuwste 14 blijven
+  # staan. Zie deploy/backup/entrypoint.sh en deploy/DISASTER-RECOVERY.md.
+  backup:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: zekerflex
+      PGDATABASE: zekerflex
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_AT: ${BACKUP_AT:-02:30}
+      # eigenaar van de back-upbestanden op de host (de deploy-gebruiker), zodat
+      # ze zonder sudo naar een andere computer gekopieerd kunnen worden
+      BACKUP_UID: ${BACKUP_UID:-1000}
+    volumes:
+      - ./deploy/backup/entrypoint.sh:/backup.sh:ro
+      - ./backups:/backups
+      - app-storage:/storage:ro
+    entrypoint: ["bash", "/backup.sh"]
+    depends_on:
+      postgres: { condition: service_healthy }
     networks: [internal]
 
   redis:

@@ -1,4 +1,58 @@
-# Noodplan — ZekerFlex draaiende houden als Vercel uitvalt
+# Noodplan
+
+## Nu: zelf-gehost op de VPS (sinds okt 2026)
+
+ZekerFlex draait op de TransIP-VPS met `docker-compose.vps.yml`: app, Postgres,
+Redis, Caddy, Ollama, cron en **backup**. Database en uploads staan op die ene
+server; de back-up is dus wat je data redt.
+
+**Wat er elke nacht gebeurt** (`deploy/backup/entrypoint.sh`, 02:30 UTC):
+- `pg_dump` van de database naar `~/zekerflex/backups/db/zekerflex-<datum>.dump`
+  en de uploads naar `~/zekerflex/backups/storage/`. De nieuwste 14 blijven staan.
+- De dump wordt proef-teruggezet in de wegwerp-database `zf_restore_check`
+  (tabellen en gebruikers geteld, daarna weer weg). Lukt dat niet, dan telt de
+  back-up als mislukt.
+- Om 03:30 UTC controleert de app de uitkomst (`/api/internal/backup/check`).
+  Mislukt, ontbrekend of ouder dan 26 uur → melding aan de eigenaar. Ook bij een
+  serverschijf vanaf 85% vol. Zie Admin → Systeem → Back-ups.
+
+**Meteen een back-up maken** (bijv. vóór een riskante migratie):
+```bash
+cd ~/zekerflex
+sudo docker compose -f docker-compose.vps.yml --env-file .env.production exec backup bash /backup.sh now
+```
+
+**Terugzetten** (overschrijft de live database; maak eerst een verse back-up hierboven):
+```bash
+cd ~/zekerflex
+C="docker compose -f docker-compose.vps.yml --env-file .env.production"
+sudo $C stop app cron
+sudo $C exec -T postgres pg_restore -U zekerflex -d zekerflex --clean --if-exists --no-owner \
+  < backups/db/zekerflex-20261103-0230.dump
+sudo docker run --rm -v zekerflex_app-storage:/data -v "$PWD/backups/storage:/b:ro" alpine \
+  sh -c 'tar xzf /b/storage-20261103-0230.tar.gz -C /data'
+sudo $C up -d app cron
+curl -fsS https://zekerflex.com/api/health
+```
+
+**Kopie buiten de server.** De back-ups staan op dezelfde schijf als de database:
+ze beschermen tegen fouten en per ongeluk wissen, niet tegen het verlies van de
+hele VPS. Haal ze regelmatig naar een andere plek, bijvoorbeeld vanaf je eigen
+computer (de bestanden zijn van de deploy-gebruiker, dus zonder sudo):
+```bash
+scp -i ~/.ssh/transip -r briando@37.97.226.24:zekerflex/backups/db ./zekerflex-backups/
+```
+of zet een S3/R2-bucket op en synchroniseer de map daarheen.
+
+**Schijf vol?** Elke update (`deploy/scripts/vps-update.sh`) ruimt oude images
+en build-cache zelf op. Handmatig: `sudo docker image prune -f && sudo docker builder prune -f --filter until=72h`.
+
+---
+
+## Vroeger: ZekerFlex draaiende houden als Vercel uitvalt
+
+*Uit de tijd dat de site op Vercel + Neon draaide; alleen nog relevant als je
+daarnaar teruggaat.*
 
 De live site draait op Vercel. Valt Vercel langdurig uit, dan is de site offline
 tot herstel. **Je data gaat niet verloren**: database (Neon), Redis en uploads

@@ -12,15 +12,23 @@ import { FunnelPanel } from "@/components/admin/FunnelPanel";
 import { pushChannels } from "@/lib/notifications/push";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
+import { readBackupReport, BACKUP_MAX_AGE_HOURS, DISK_CRIT_PERCENT, DISK_WARN_PERCENT, type BackupReport } from "@/lib/ops/backup";
 import { env } from "@/lib/env";
 import { smtpConfigured } from "@/lib/mail";
-import { count, percentOf } from "@/lib/admin/format";
-import { KpiStrip, Meter, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
+import { count, dateTimeNl, percentOf, timeAgoNl } from "@/lib/admin/format";
+import { Empty, InfoList, KpiStrip, Meter, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { Tabs } from "@/components/admin/kit-client";
 import { OpsAlerts } from "@/components/admin/OpsAlerts";
 import { UsagePanel } from "@/components/admin/UsagePanel";
 
 export const dynamic = "force-dynamic";
+
+const BACKUP_STATE: Record<BackupReport["state"], string> = {
+  ok: "In orde",
+  failed: "Mislukt",
+  stale: "Te oud",
+  missing: "Nog geen",
+};
 
 async function ok(fn: () => Promise<unknown>): Promise<{ ok: boolean; ms: number; detail?: string }> {
   const t = Date.now();
@@ -52,14 +60,16 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
     budgetSnapshot().catch(() => null),
     whisperReachable(),
     cronHeartbeats().catch(() => []),
+    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null })),
   ]);
+  const now = new Date();
   const channels = pushChannels();
 
   // "off" = a deliberately optional feature that's simply not switched on —
@@ -97,7 +107,17 @@ export default async function SysteemPage() {
       state: env.IMAGE_ENABLED ? "ok" : "off",
       meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND}, ${env.IMAGE_BASE_URL}` : "uitgeschakeld (optioneel)",
     },
+    {
+      label: "Database-back-up",
+      state: !backup.available ? "off" : backup.state === "ok" ? "ok" : "crit",
+      meta: !backup.available ? "niet op deze omgeving" : backup.status ? `laatste ${dateTimeNl(backup.status.at, now)}` : "nog geen back-up",
+    },
   ];
+  const backupBroken = backup.available && backup.state !== "ok";
+  const disk = backup.disk;
+  const diskTone = !disk ? "neutral" : disk.usedPercent >= DISK_CRIT_PERCENT ? "crit" : disk.usedPercent >= DISK_WARN_PERCENT ? "warn" : "ok";
+  const gb = (bytes: number) => `${count(Math.round(bytes / 1e9))} GB`;
+  const mb = (bytes: number) => (bytes >= 1e6 ? `${(bytes / 1e6).toLocaleString("nl-NL", { maximumFractionDigits: 1 })} MB` : `${count(Math.round(bytes / 1e3))} kB`);
   const TONE: Record<State, { tone: "ok" | "crit" | "neutral"; label: string }> = {
     ok: { tone: "ok", label: "OK" },
     crit: { tone: "crit", label: "Storing" },
@@ -184,6 +204,71 @@ export default async function SysteemPage() {
               <>
                 <CronHealthPanel />
                 <OpsAlerts />
+              </>
+            ),
+          },
+          {
+            id: "backups",
+            label: "Back-ups",
+            badge: backupBroken ? 1 : null,
+            content: !backup.available ? (
+              <Panel title="Back-ups">
+                <Empty title="Geen back-upmap op deze omgeving" body="De nachtelijke back-up draait op de server (docker-compose.vps.yml). Hier is niets te tonen." />
+              </Panel>
+            ) : (
+              <>
+                {backupBroken && <Notice tone="crit" role="alert">{backup.reasons.join(" ")}</Notice>}
+                <div className="grid items-start gap-4 lg:grid-cols-[1fr_1fr]">
+                  <Panel
+                    title="Laatste back-up"
+                    subtitle="Elke nacht, daarna proef-teruggezet in een wegwerp-database"
+                    actions={<Pill tone={backup.state === "ok" ? "ok" : "crit"}>{BACKUP_STATE[backup.state]}</Pill>}
+                  >
+                    {backup.status ? (
+                      <InfoList
+                        rows={[
+                          { label: "Gemaakt", value: `${dateTimeNl(backup.status.at, now)} (${timeAgoNl(backup.status.at, now.getTime())})` },
+                          { label: "Database", value: mb(backup.status.bytes) },
+                          { label: "Uploads", value: backup.status.storageFile ? mb(backup.status.storageBytes) : "—" },
+                          {
+                            label: "Proef-terugzetting",
+                            value: backup.status.restore.ok
+                              ? `${count(backup.status.restore.tables)} tabellen, ${count(backup.status.restore.users)} gebruikers (live ${count(backup.status.restore.liveUsers)})`
+                              : "mislukt",
+                          },
+                          { label: "Duur", value: `${count(backup.status.seconds)} s` },
+                          { label: "Bewaard", value: `${count(backup.files.length)} back-ups` },
+                        ]}
+                      />
+                    ) : (
+                      <Empty title="Nog geen back-up" body={`De eerste wordt gemaakt zodra de back-updienst start. Daarna elke nacht; na ${BACKUP_MAX_AGE_HOURS} uur zonder nieuwe krijg je een melding.`} />
+                    )}
+                  </Panel>
+                  <div className="space-y-4">
+                    <Panel title="Serverschijf" subtitle={`Melding vanaf ${DISK_WARN_PERCENT}%, kritiek vanaf ${DISK_CRIT_PERCENT}%. Elke update ruimt oude versies zelf op.`}>
+                      {disk ? (
+                        <Meter label="In gebruik" value={disk.usedPercent} max={100} display={`${disk.usedPercent}%, ${gb(disk.freeBytes)} vrij van ${gb(disk.totalBytes)}`} tone={diskTone} />
+                      ) : (
+                        <p className="text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>Onbekend</p>
+                      )}
+                    </Panel>
+                    <Panel flush title="Bewaarde back-ups" subtitle="Op de server in ~/zekerflex/backups">
+                      {backup.files.length === 0 ? (
+                        <Empty title="Nog geen bestanden" />
+                      ) : (
+                        <ul>
+                          {backup.files.map((f) => (
+                            <li key={f.name} className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                              <span className="text-[0.8125rem]" style={{ color: "var(--a-text)" }}>{dateTimeNl(f.at, now)}</span>
+                              <span className="num font-mono text-xs" style={{ color: "var(--a-mute)" }}>{mb(f.bytes)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </Panel>
+                  </div>
+                </div>
+                <Notice>Deze back-ups staan op dezelfde server als de database. Ze beschermen tegen fouten en wissen, niet tegen het kwijtraken van de hele server. Hoe je ze ook elders bewaart en terugzet staat in deploy/DISASTER-RECOVERY.md.</Notice>
               </>
             ),
           },
