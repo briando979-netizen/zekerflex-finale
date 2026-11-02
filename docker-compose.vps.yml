@@ -38,6 +38,8 @@ services:
       LLM_FAST_MODEL: ${LLM_FAST_MODEL:-qwen2.5:3b}
     volumes:
       - app-storage:/app/storage
+      # Back-ups van beheerde klantsites: eigen volume, niet in onze eigen nachtelijke back-up.
+      - site-backups:/app/site-backups
       # Alleen-lezen: de app controleert de nachtelijke back-up (lib/ops/backup.ts).
       - ./backups:/backups:ro
     depends_on:
@@ -153,6 +155,7 @@ networks:
 
 volumes:
   app-storage:
+  site-backups:
   pg-data:
   redis-data:
   caddy-data:

@@ -148,11 +148,11 @@ export function rollbackScript(real: string, oldDir: string, asideDir: string): 
   ].join("\n");
 }
 
-const zfLine = (out: string) => out.split("\n").find((l) => l.startsWith("ZF|"))?.trim() ?? "";
+export const zfLine = (out: string) => out.split("\n").find((l) => l.startsWith("ZF|"))?.trim() ?? "";
 
 /* ------------------------------- SSH-laag -------------------------------- */
 
-interface Access {
+export interface Access {
   ip: string;
   host: string;
   port: number;
@@ -160,7 +160,8 @@ interface Access {
   privateKey: string;
 }
 
-async function access(siteId: string, actor: string, reason: string): Promise<Access> {
+/** Servertoegang van een klant (verzegeld, geaudit). actor null = het systeem zelf (nachtelijke back-up). */
+export async function access(siteId: string, actor: string | null, reason: string): Promise<Access> {
   const s = await unsealWebsiteSecrets(siteId, actor, reason);
   if (!s?.sshHost || !s.sshUser || !s.sshPrivateKey) throw new Error("De klant heeft nog geen SSH-host, gebruiker en sleutel ingevuld.");
   const port = s.sshPort ? Number(s.sshPort) : 22;
@@ -186,7 +187,7 @@ function sshMessage(err: Error & { level?: string; code?: string }): string {
   return "Verbinden met de server is mislukt.";
 }
 
-function connect(a: Access, expectedKey: string | null): Promise<{ conn: Client; fingerprint: string }> {
+export function connect(a: Access, expectedKey: string | null): Promise<{ conn: Client; fingerprint: string }> {
   return new Promise((resolve, reject) => {
     const conn = new Client();
     let fingerprint = "";
@@ -217,7 +218,7 @@ function connect(a: Access, expectedKey: string | null): Promise<{ conn: Client;
   });
 }
 
-function run(conn: Client, script: string, timeoutMs = 120_000): Promise<string> {
+export function run(conn: Client, script: string, timeoutMs = 120_000): Promise<string> {
   return new Promise((resolve, reject) => {
     conn.exec(`sh -c ${q(script)}`, (err: Error | undefined, stream: ClientChannel) => {
       if (err) return reject(err);
@@ -236,11 +237,11 @@ function run(conn: Client, script: string, timeoutMs = 120_000): Promise<string>
   });
 }
 
-function sftpOf(conn: Client): Promise<SFTPWrapper> {
+export function sftpOf(conn: Client): Promise<SFTPWrapper> {
   return new Promise((resolve, reject) => conn.sftp((err, sftp) => (err ? reject(err) : resolve(sftp))));
 }
 
-const put = (sftp: SFTPWrapper, local: string, remote: string) =>
+export const put = (sftp: SFTPWrapper, local: string, remote: string) =>
   new Promise<void>((resolve, reject) => sftp.fastPut(local, remote, (err) => (err ? reject(err) : resolve())));
 
 async function listFiles(root: string, rel = ""): Promise<string[]> {
@@ -253,7 +254,7 @@ async function listFiles(root: string, rel = ""): Promise<string[]> {
   return out;
 }
 
-const stamp = () => new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
+export const stamp = () => new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
 
 /* ------------------------------ acties ------------------------------------ */
 

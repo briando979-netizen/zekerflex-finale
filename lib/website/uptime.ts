@@ -260,13 +260,15 @@ export interface MonitorView {
   uptime30: number | null;
   incidents: UptimeIncident[];
   weekly: { score: number; at: string; checkId: string; previous: number | null } | null;
+  /** laatste geslaagde nachtelijke back-up (lib/website/site-backup.ts) */
+  backup: { at: string; bytes: number } | null;
 }
 
 /** Wat klant en beheerder te zien krijgen. */
 export async function monitorView(siteId: string, domain: string | null): Promise<MonitorView | null> {
   const host = hostOf(domain);
   if (!host) return null;
-  const [u, w] = await Promise.all([getUptime(siteId), getWeekly(siteId)]);
+  const [u, w, b] = await Promise.all([getUptime(siteId), getWeekly(siteId), kvGet<{ host: string; last: { ok: boolean; at: string; bytes: number } | null }>(`site-backup:${siteId}`).catch(() => null)]);
   const state = u && u.host === host ? u : null;
   const weekly = w && w.host === host ? w.checks : [];
   const latest = weekly[weekly.length - 1];
@@ -279,5 +281,6 @@ export async function monitorView(siteId: string, domain: string | null): Promis
     uptime30: state ? uptimePercent(state) : null,
     incidents: (state?.incidents ?? []).slice(-5).reverse(),
     weekly: latest ? { ...latest, previous: weekly[weekly.length - 2]?.score ?? null } : null,
+    backup: b && b.host === host && b.last?.ok ? { at: b.last.at, bytes: b.last.bytes } : null,
   };
 }

@@ -28,6 +28,7 @@ next-env.d.ts
 # local upload storage (sovereign box - files live on disk, not in git)
 /storage/
 /backups
+/site-backups
 .env.production
 
 # Android TWA (Bubblewrap) — generated Gradle project + signing key; never

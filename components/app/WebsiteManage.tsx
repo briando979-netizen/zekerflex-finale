@@ -402,7 +402,11 @@ function ManagedDashboard({ state, message, onEdit }: { state: WebsiteInitial; m
         <ul className="mt-3 space-y-2 text-sm text-neutralx-700">
           <li className="flex gap-2"><span className="text-brand-600">✓</span> Elke 5 minuten kijken we of je site online is. Valt hij uit, dan krijg je een mail en gaan wij aan de slag.</li>
           <li className="flex gap-2"><span className="text-brand-600">✓</span> Elke week een check op snelheid, Google en veiligheid, met de score hierboven.</li>
-          <li className="flex gap-2"><span className="text-brand-600">✓</span> Updates, back-ups en beveiliging regelt ons team.</li>
+          {state.monitor?.backup ? (
+            <li className="flex gap-2"><span className="text-brand-600">✓</span> Elke nacht een back-up van je website; de nieuwste 7 bewaren we. Laatste: {dateTime(state.monitor.backup.at)}.</li>
+          ) : (
+            <li className="flex gap-2"><span className="text-brand-600">✓</span> Updates, back-ups en beveiliging regelt ons team.</li>
+          )}
           <li className="flex gap-2"><span className="text-brand-600">✓</span> Wijzigingen? Stuur ons een bericht via de chat.</li>
         </ul>
         <p className="mt-4 text-sm text-neutralx-600">

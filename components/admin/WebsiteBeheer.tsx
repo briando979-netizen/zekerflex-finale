@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Empty, KpiStrip, Notice, PageHead, Pill, StackBar, type Tone } from "@/components/admin/kit";
 import { SiteMirrorPanel } from "@/components/admin/SiteMirrorPanel";
+import { SiteBackupPanel } from "@/components/admin/SiteBackupPanel";
 
 // Admin-console voor "Website-beheer": alle opdrachtgevers die hun website door
 // ZekerFlex laten beheren. Toont status/plan/domein; "Toon toegang" ontsleutelt
@@ -61,6 +62,7 @@ export function WebsiteBeheer() {
   const [secrets, setSecrets] = useState<Record<string, Record<string, string> | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [mirrorOpen, setMirrorOpen] = useState<Record<string, boolean>>({});
+  const [backupOpen, setBackupOpen] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const res = await fetch("/api/admin/website", { cache: "no-store" });
@@ -168,14 +170,21 @@ export function WebsiteBeheer() {
                 )}
               </div>
               {r.domain && UNLOCKED.includes(r.status) && (
-                mirrorOpen[r.id] ? (
-                  <SiteMirrorPanel siteId={r.id} />
-                ) : (
-                  <button type="button" className="a-button mt-3 text-xs" onClick={() => setMirrorOpen((s) => ({ ...s, [r.id]: true }))}>
-                    Website-verhuizer: kopie met verbeteringen
-                  </button>
-                )
+                <div className="flex flex-wrap gap-2">
+                  {!backupOpen[r.id] && r.hasSecrets && (
+                    <button type="button" className="a-button mt-3 text-xs" onClick={() => setBackupOpen((s) => ({ ...s, [r.id]: true }))}>
+                      Back-ups
+                    </button>
+                  )}
+                  {!mirrorOpen[r.id] && (
+                    <button type="button" className="a-button mt-3 text-xs" onClick={() => setMirrorOpen((s) => ({ ...s, [r.id]: true }))}>
+                      Website-verhuizer: kopie met verbeteringen
+                    </button>
+                  )}
+                </div>
               )}
+              {r.domain && UNLOCKED.includes(r.status) && backupOpen[r.id] && <SiteBackupPanel siteId={r.id} />}
+              {r.domain && UNLOCKED.includes(r.status) && mirrorOpen[r.id] && <SiteMirrorPanel siteId={r.id} />}
             </section>
           ))}
         </div>

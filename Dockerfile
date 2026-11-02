@@ -56,6 +56,10 @@ COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
 # Local storage (uploads, mailbox, prefs, fiscal) — mount a volume over this.
 RUN mkdir -p /app/storage && chown -R nextjs:nodejs /app/storage
 VOLUME ["/app/storage"]
+# Back-ups van beheerde klantsites (lib/website/site-backup.ts): eigen volume,
+# bewust niet onder /app/storage (dat gaat elke nacht mee in onze eigen back-up).
+RUN mkdir -p /app/site-backups && chown -R nextjs:nodejs /app/site-backups
+VOLUME ["/app/site-backups"]
 
 USER nextjs
 EXPOSE 3000
