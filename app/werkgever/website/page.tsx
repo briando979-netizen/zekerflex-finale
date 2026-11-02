@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getPrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { adminFullAccess } from "@/lib/auth/admin-access";
+import { freeAccess } from "@/lib/billing/comp";
 import { getManagedWebsite, isUnlocked, WEBSITE_PLANS } from "@/lib/website/manage";
 import { WebsiteManage } from "@/components/app/WebsiteManage";
 import { renewalView } from "@/lib/website/renewal";
@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 export default async function WebsiteBeheerPage() {
   // Toegang is al afgedwongen in app/werkgever/layout.tsx.
   const principal = await getPrincipal();
-  const admin = adminFullAccess(principal);
+  // platform admins and free (comp) accounts use this without a subscription
+  const admin = await freeAccess(principal);
   const scope = principal ? await resolveEmployerScope(principal) : { tenantIds: [] as string[], branchIds: null };
   const tenantId = scope.tenantIds[0];
   const record = tenantId ? await getManagedWebsite(tenantId) : null;

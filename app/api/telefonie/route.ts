@@ -5,7 +5,8 @@ import { AppError } from "@/lib/errors";
 import { jsonError } from "@/lib/http/errors";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { cancelLineRequest, createLineRequest, getPricing, linesOf, requestSchema, type LineScope } from "@/lib/telephony/lines";
+import { cancelLineRequest, createLineRequest, linesOf, pricingFor, requestSchema, type LineScope } from "@/lib/telephony/lines";
+import { freeAccess } from "@/lib/billing/comp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const scope = scopeOf(new URL(request.url).searchParams.get("scope"));
     const { ownerId, principal } = await owner(scope, false);
-    const [pricing, lines] = await Promise.all([getPricing(), linesOf(scope, ownerId)]);
+    const [pricing, lines] = await Promise.all([pricingFor(await freeAccess(principal)), linesOf(scope, ownerId)]);
     return NextResponse.json({ pricing, lines, canRequest: scope === "persoonlijk" || hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") });
   } catch (err) {
     return jsonError(err);
@@ -61,6 +62,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const line = await createLineRequest(
       { userId: principal.userId, name: principal.fullName, email: principal.email, tenantId, orgName },
       input,
+      { free: await freeAccess(principal) },
     );
     return NextResponse.json({ line }, { status: 201 });
   } catch (err) {

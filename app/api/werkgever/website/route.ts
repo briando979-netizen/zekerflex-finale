@@ -4,7 +4,7 @@ import { getPrincipal, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { jsonError } from "@/lib/http/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { adminFullAccess } from "@/lib/auth/admin-access";
+import { freeAccess } from "@/lib/billing/comp";
 import {
   getManagedWebsite,
   isUnlocked,
@@ -28,7 +28,7 @@ async function tenantFor(): Promise<{ tenantId: string; userId: string; email: s
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
   if (!tenantId) throw AppError.validation("Geen organisatie gekoppeld aan je account.");
-  return { tenantId, userId: principal.userId, email: principal.email, admin: adminFullAccess(principal) };
+  return { tenantId, userId: principal.userId, email: principal.email, admin: await freeAccess(principal) };
 }
 
 // GET — huidige status van het website-beheer voor deze organisatie.

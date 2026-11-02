@@ -31,6 +31,7 @@ import { accountForPrincipal } from "@/lib/bank/accounts";
 import { rewardReferral } from "@/lib/rewards/referral";
 import { getFastPay } from "@/lib/payouts/fastpay";
 import { feePerHourFor, monthHoursFor, tierFor } from "@/lib/pricing/volume";
+import { isCompTenant } from "@/lib/billing/comp";
 import { markupFor } from "@/lib/uitzendbureau/insights";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
@@ -271,6 +272,8 @@ export async function approveTimesheet(
 
     // Staffelkorting: rate by hours this client already had approved this month.
     const monthHours = await monthHoursFor(ts.branch.tenantId);
+    // A free (comp) company pays no platform fee; its € 0 fee invoice is booked as paid.
+    const freeFee = await isCompTenant(ts.branch.tenantId);
 
     // --- Transaction: approve + invoices + pending payment ------------
     const persisted = await prisma.$transaction(async (tx) => {
@@ -296,7 +299,7 @@ export async function approveTimesheet(
         platformInvoiceNumber: platformNumber,
         extraCostsGrossCents: ts.extraCostsCents,
         extraCostsNote: ts.extraCostsNote,
-        platformFeePerHourCents: feePerHourFor(monthHours),
+        platformFeePerHourCents: freeFee ? 0 : feePerHourFor(monthHours),
         volumeTierName: tierFor(monthHours).tier.name,
       });
 
@@ -334,6 +337,7 @@ export async function approveTimesheet(
       const platformFeeInvoice = await persistInvoice(
         tx,
         billing.platformFeeInvoice,
+        { paid: billing.platformFeeInvoice.totalCents === 0 },
       );
       await applyPendingTenantCredits(tx, ts.branch.tenantId, platformFeeInvoice.id, platformFeeInvoice.totalCents);
 
@@ -430,14 +434,17 @@ export async function approveTimesheet(
       totalCents: persisted.billing.platformFeeInvoice.totalCents,
     }).catch(() => undefined);
 
-    await notifyInvoiceIssued({
-      tenantId: ts.branch.tenantId,
-      orgName: ts.branch.tenant.name,
-      invoiceNumber: persisted.platformFeeInvoice.number,
-      totalCents: persisted.billing.platformFeeInvoice.totalCents,
-      description: `platformkosten, shift @ ${ts.branch.name}`,
-      log,
-    });
+    // nothing to pay (free company): no "new invoice" mail
+    if (persisted.billing.platformFeeInvoice.totalCents > 0) {
+      await notifyInvoiceIssued({
+        tenantId: ts.branch.tenantId,
+        orgName: ts.branch.tenant.name,
+        invoiceNumber: persisted.platformFeeInvoice.number,
+        totalCents: persisted.billing.platformFeeInvoice.totalCents,
+        description: `platformkosten, shift @ ${ts.branch.name}`,
+        log,
+      });
+    }
 
     return {
       timesheetId: ts.id,
@@ -725,13 +732,17 @@ async function notifyInvoiceIssued(args: {
 async function persistInvoice(
   tx: Prisma.TransactionClient,
   invoice: ComputedInvoice,
+  opts: { paid?: boolean } = {},
 ) {
+  const now = new Date();
   return tx.invoice.create({
     data: {
       number: invoice.number,
       type: invoice.type,
-      status: InvoiceStatus.ISSUED,
-      issuedAt: new Date(),
+      // a € 0 platform fee (free company) has nothing to collect: paid at once
+      status: opts.paid ? InvoiceStatus.PAID : InvoiceStatus.ISSUED,
+      issuedAt: now,
+      ...(opts.paid ? { paidAt: now } : {}),
       timesheetId: invoice.timesheetId,
       recipientTenantId: invoice.recipientTenantId,
       issuerTenantId: invoice.issuerTenantId ?? null,

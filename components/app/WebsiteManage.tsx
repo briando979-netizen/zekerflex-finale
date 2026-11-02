@@ -155,7 +155,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
 
       {adminOverride && (
         <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
-          👑 Admin: je hebt gratis toegang tot deze functie — geen abonnement nodig.
+          Gratis voor jouw account: je gebruikt deze functie zonder abonnement.
         </div>
       )}
 

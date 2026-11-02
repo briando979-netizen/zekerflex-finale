@@ -151,8 +151,8 @@ export interface WebsiteDetailsInput {
 
 /** Opdrachtgever vult (of werkt bij) zijn websitegegevens + SSH-toegang in. De
  *  gevoelige velden worden verzegeld; een leeg veld laat de bewaarde waarde staan.
- *  `adminOverride` geeft de platform-admin gratis toegang: zonder abonnement
- *  wordt direct een actief record aangemaakt. */
+ *  `adminOverride` geeft de platform-admin of een kosteloos account (lib/billing/comp)
+ *  gratis toegang: zonder abonnement wordt direct een actief record aangemaakt. */
 export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetailsInput, opts: { adminOverride?: boolean } = {}): Promise<void> {
   let record = await prisma.managedWebsite.findUnique({ where: { tenantId } });
   if (!record) {
@@ -179,7 +179,9 @@ export async function saveWebsiteDetails(tenantId: string, input: WebsiteDetails
     domain: input.domain?.trim() || null,
     provider: input.provider?.trim() || null,
     notes: input.notes?.trim() || null,
-    status: record.status === "ONBOARDING" ? "SUBMITTED" : record.status,
+    // free access (admin or comp account) with a record still waiting for payment or
+    // cancelled: treat as paid, so DNS check, going live and monitoring work too
+    status: record.status === "ONBOARDING" || (opts.adminOverride && !isUnlocked(record)) ? "SUBMITTED" : record.status,
     submittedAt: new Date(),
   };
   if (hasSecret) {

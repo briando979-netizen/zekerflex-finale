@@ -105,6 +105,26 @@ export async function getPricing(): Promise<Pricing> {
   };
 }
 
+/** The same prices at € 0, for platform admins and free (comp) accounts (lib/billing/comp).
+ *  Numbers that need a partner stay "op aanvraag": that is about delivery, not money. */
+export function freePricing(p: Pricing): Pricing {
+  const zero = <K extends string>(r: Record<K, number>) => Object.fromEntries(Object.keys(r).map((k) => [k, 0])) as Record<K, number>;
+  return {
+    lineCents: 0,
+    numberCents: Object.fromEntries(Object.entries(p.numberCents).map(([k, v]) => [k, v === null ? null : 0])) as Pricing["numberCents"],
+    optionCents: zero(p.optionCents),
+    bundleCents: zero(p.bundleCents),
+    includedMinutes: p.includedMinutes,
+    extraMinuteCents: 0,
+  };
+}
+
+/** The prices this requester sees and is quoted: normal, or € 0 with free access. */
+export async function pricingFor(free: boolean): Promise<Pricing> {
+  const p = await getPricing();
+  return free ? freePricing(p) : p;
+}
+
 const cents = z.number().int().min(0).max(1_000_000);
 export const pricingSchema = z.object({
   lineCents: cents,
@@ -132,7 +152,7 @@ export interface Requester {
   orgName: string | null;
 }
 
-export async function createLineRequest(who: Requester, input: LineRequestInput): Promise<PhoneLine> {
+export async function createLineRequest(who: Requester, input: LineRequestInput, opts: { free?: boolean } = {}): Promise<PhoneLine> {
   if (input.scope === "bedrijf" && !who.tenantId) throw AppError.validation("Geen organisatie gekoppeld aan je account.");
   if (NEEDS_OWN_NUMBER.includes(input.kind) && !input.ownNumber) throw AppError.validation("Vul het nummer in dat je wilt houden.");
   if (input.kind === "lokaal" && !input.region) throw AppError.validation("Vul in voor welke stad of welk netnummer je een nummer wilt.");
@@ -158,7 +178,7 @@ export async function createLineRequest(who: Requester, input: LineRequestInput)
     region: input.region || null,
     note: input.note || null,
     // altijd hier berekend, nooit het bedrag uit de browser
-    quote: quote(selection, await getPricing()),
+    quote: quote(selection, await pricingFor(Boolean(opts.free))),
     status: "aangevraagd",
     number: null,
     adminNote: null,
