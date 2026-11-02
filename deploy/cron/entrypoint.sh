@@ -29,6 +29,8 @@ cat > /etc/crontabs/root <<EOF
 0 15 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/autopilot/tick"
 0 7 1 * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/pensioen/aangifte"
 30 3 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/backup/check"
+*/5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/website/uptime"
+0 6 * * 1 wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website/weekly-check"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"

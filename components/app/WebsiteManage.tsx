@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { RenewalView } from "@/lib/website/renewal";
+import type { MonitorView } from "@/lib/website/uptime";
 
 // ---------------------------------------------------------------------------
 // Opdrachtgevers-onderdeel "Website-beheer". Drie toestanden:
@@ -24,6 +25,7 @@ export interface WebsiteInitial {
   notes: string | null;
   hasSecrets: boolean;
   renewal?: RenewalView | null;
+  monitor?: MonitorView | null;
 }
 
 type FormState = {
@@ -42,12 +44,39 @@ type FormState = {
 
 const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 
-const STAT_TILES = [
-  { label: "Bezoekers (30 d)", icon: "👣" },
-  { label: "Uptime", icon: "🟢" },
-  { label: "Back-ups", icon: "💾" },
-  { label: "Beveiliging", icon: "🛡️" },
-];
+const dateTime = (iso: string) => new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+/** De vier tegels bovenaan: echte metingen van de bewaking (lib/website/uptime.ts). */
+function monitorTiles(m: MonitorView | null | undefined): { label: string; value: string; hint: string; tone: "ok" | "crit" | "neutral"; href?: string }[] {
+  const pct = (n: number) => `${n.toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`;
+  return [
+    {
+      label: "Status",
+      value: m?.up === true ? "Online" : m?.up === false ? "Offline" : "Wordt gemeten",
+      hint: m?.since ? `sinds ${dateTime(m.since)}` : "eerste meting binnen 5 minuten",
+      tone: m?.up === true ? "ok" : m?.up === false ? "crit" : "neutral",
+    },
+    {
+      label: "Bereikbaar (30 dagen)",
+      value: m?.uptime30 !== null && m?.uptime30 !== undefined ? pct(m.uptime30) : "—",
+      hint: "elke 5 minuten gecontroleerd",
+      tone: m?.uptime30 !== null && m?.uptime30 !== undefined && m.uptime30 < 99 ? "crit" : "neutral",
+    },
+    {
+      label: "Reactiesnelheid",
+      value: m?.avgMs ? `${m.avgMs.toLocaleString("nl-NL")} ms` : "—",
+      hint: "gemiddeld vandaag",
+      tone: "neutral",
+    },
+    {
+      label: "Website-score",
+      value: m?.weekly ? `${m.weekly.score} / 100` : "—",
+      hint: m?.weekly ? (m.weekly.previous !== null ? `vorige week ${m.weekly.previous}` : `gemeten ${dateTime(m.weekly.at)}`) : "elke maandag een nieuwe check",
+      tone: "neutral",
+      ...(m?.weekly ? { href: `/website-check?r=${m.weekly.checkId}` } : {}),
+    },
+  ];
+}
 
 export function WebsiteManage({ initial, plans, adminOverride = false }: { initial: WebsiteInitial; plans: Record<string, PlanDef>; adminOverride?: boolean }) {
   const [state, setState] = useState<WebsiteInitial>(initial);
@@ -170,11 +199,10 @@ function LockedView({
             <span className="rounded-full bg-mintwash px-2 py-0.5 text-[11px] font-bold text-brand-700">Live</span>
           </div>
           <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-            {STAT_TILES.map((t) => (
+            {monitorTiles(null).map((t) => (
               <div key={t.label} className="rounded-xl border border-hair bg-paper-soft p-4">
-                <p className="text-lg">{t.icon}</p>
-                <p className="mt-2 text-xs text-neutralx-500">{t.label}</p>
-                <p className="mt-1 h-5 w-14 rounded bg-neutralx-200" />
+                <p className="text-xs text-neutralx-500">{t.label}</p>
+                <p className="mt-2 h-5 w-14 rounded bg-neutralx-200" />
               </div>
             ))}
           </div>
@@ -337,21 +365,44 @@ function ManagedDashboard({ state, message, onEdit }: { state: WebsiteInitial; m
           <span className="rounded-full bg-mintwash px-3 py-1 text-xs font-bold text-brand-700">{statusLabel[state.status ?? ""] ?? "In behandeling"}</span>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {STAT_TILES.map((t) => (
-            <div key={t.label} className="rounded-xl border border-hair bg-paper-soft p-4">
-              <p className="text-lg">{t.icon}</p>
-              <p className="mt-2 text-xs text-neutralx-500">{t.label}</p>
-              <p className="mt-1 text-sm font-semibold text-ink">Wij bewaken dit</p>
-            </div>
-          ))}
+          {monitorTiles(state.monitor).map((t) => {
+            const inner = (
+              <>
+                <p className="text-xs text-neutralx-500">{t.label}</p>
+                <p className={`num mt-1 flex items-center gap-1.5 text-lg font-bold ${t.tone === "ok" ? "text-ok" : t.tone === "crit" ? "text-crit" : "text-ink"}`}>
+                  {t.tone !== "neutral" && <span className="h-2 w-2 rounded-full bg-current" aria-hidden />}
+                  {t.value}
+                </p>
+                <p className="mt-0.5 text-xs text-neutralx-500">{t.hint}</p>
+              </>
+            );
+            return t.href ? (
+              <a key={t.label} href={t.href} className="rounded-xl border border-hair bg-paper-soft p-4 transition hover:border-hairstrong">{inner}</a>
+            ) : (
+              <div key={t.label} className="rounded-xl border border-hair bg-paper-soft p-4">{inner}</div>
+            );
+          })}
         </div>
+        {state.monitor && state.monitor.incidents.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-neutralx-500">Laatste storingen</p>
+            <ul className="mt-1 space-y-1 text-sm text-neutralx-700">
+              {state.monitor.incidents.map((i) => (
+                <li key={i.start}>
+                  {dateTime(i.start)} – {i.end ? dateTime(i.end) : "nog bezig"} · {i.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-hair bg-white p-6 shadow-e1">
         <h2 className="font-display text-base font-bold text-ink">Wat wij voor je doen</h2>
         <ul className="mt-3 space-y-2 text-sm text-neutralx-700">
-          <li className="flex gap-2"><span className="text-brand-600">✓</span> Updates, back-ups en beveiliging — automatisch.</li>
-          <li className="flex gap-2"><span className="text-brand-600">✓</span> We houden je site online en snel.</li>
+          <li className="flex gap-2"><span className="text-brand-600">✓</span> Elke 5 minuten kijken we of je site online is. Valt hij uit, dan krijg je een mail en gaan wij aan de slag.</li>
+          <li className="flex gap-2"><span className="text-brand-600">✓</span> Elke week een check op snelheid, Google en veiligheid, met de score hierboven.</li>
+          <li className="flex gap-2"><span className="text-brand-600">✓</span> Updates, back-ups en beveiliging regelt ons team.</li>
           <li className="flex gap-2"><span className="text-brand-600">✓</span> Wijzigingen? Stuur ons een bericht via de chat.</li>
         </ul>
         <p className="mt-4 text-sm text-neutralx-600">

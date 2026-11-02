@@ -14,6 +14,7 @@ import {
   WEBSITE_PLANS,
 } from "@/lib/website/manage";
 import { renewalView } from "@/lib/website/renewal";
+import { monitorView } from "@/lib/website/uptime";
 import { checkDnsVerification } from "@/lib/website/verify";
 
 export const runtime = "nodejs";
@@ -44,6 +45,7 @@ export async function GET(): Promise<NextResponse> {
       notes: record?.notes ?? null,
       hasSecrets: Boolean(record?.secretsSealed),
       renewal: record?.domain && isUnlocked(record) ? await renewalView(record).catch(() => null) : null,
+      monitor: record?.domain && isUnlocked(record) ? await monitorView(record.id, record.domain).catch(() => null) : null,
       plans: WEBSITE_PLANS,
     });
   } catch (err) {

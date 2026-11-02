@@ -4,6 +4,7 @@ import { adminFullAccess } from "@/lib/auth/admin-access";
 import { getManagedWebsite, isUnlocked, WEBSITE_PLANS } from "@/lib/website/manage";
 import { WebsiteManage } from "@/components/app/WebsiteManage";
 import { renewalView } from "@/lib/website/renewal";
+import { monitorView } from "@/lib/website/uptime";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function WebsiteBeheerPage() {
   const tenantId = scope.tenantIds[0];
   const record = tenantId ? await getManagedWebsite(tenantId) : null;
   const renewal = record?.domain && isUnlocked(record) ? await renewalView(record).catch(() => null) : null;
+  const monitor = record?.domain && isUnlocked(record) ? await monitorView(record.id, record.domain).catch(() => null) : null;
 
   return (
     <WebsiteManage
@@ -27,6 +29,7 @@ export default async function WebsiteBeheerPage() {
         notes: record?.notes ?? null,
         hasSecrets: Boolean(record?.secretsSealed),
         renewal,
+        monitor,
       }}
       plans={WEBSITE_PLANS}
       adminOverride={admin}

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { listManagedWebsites, revealWebsiteSecrets, setManagedWebsiteStatus } from "@/lib/website/manage";
+import { monitorView } from "@/lib/website/uptime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,9 @@ export const dynamic = "force-dynamic";
 // staan de servertoegang en wachtwoorden van alle klanten.
 // GET — alle website-beheer-aanvragen/-abonnementen (admin).
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
-  return NextResponse.json({ sites: await listManagedWebsites() });
+  const sites = await listManagedWebsites();
+  const withMonitor = await Promise.all(sites.map(async (s) => ({ ...s, monitor: await monitorView(s.id, s.domain).catch(() => null) })));
+  return NextResponse.json({ sites: withMonitor });
 });
 
 const schema = z.discriminatedUnion("action", [

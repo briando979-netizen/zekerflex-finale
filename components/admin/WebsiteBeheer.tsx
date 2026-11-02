@@ -24,7 +24,10 @@ type Row = {
   subscribedAt: string | null;
   submittedAt: string | null;
   createdAt: string;
+  monitor: { up: boolean | null; since: string | null; uptime30: number | null; avgMs: number | null; weekly: { score: number } | null } | null;
 };
+
+const since = (iso: string) => new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const STATUS_LABEL: Record<Status, string> = {
   PENDING_PAYMENT: "Wacht op betaling",
@@ -130,6 +133,17 @@ export function WebsiteBeheer() {
                   </select>
                 </div>
               </div>
+              {r.monitor && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--a-mute)" }}>
+                  <Pill tone={r.monitor.up === true ? "ok" : r.monitor.up === false ? "crit" : "neutral"}>
+                    {r.monitor.up === true ? "Online" : r.monitor.up === false ? "Offline" : "Nog niet gemeten"}
+                  </Pill>
+                  {r.monitor.since && <span>sinds {since(r.monitor.since)}</span>}
+                  {r.monitor.uptime30 !== null && <span>· {r.monitor.uptime30.toLocaleString("nl-NL")}% bereikbaar (30 d)</span>}
+                  {r.monitor.avgMs !== null && <span>· {r.monitor.avgMs} ms</span>}
+                  {r.monitor.weekly && <span>· score {r.monitor.weekly.score}</span>}
+                </div>
+              )}
               {r.notes && <p className="mt-2 text-sm" style={{ color: "var(--a-dim)" }}>{r.notes}</p>}
               <div className="mt-3">
                 {r.hasSecrets ? (
