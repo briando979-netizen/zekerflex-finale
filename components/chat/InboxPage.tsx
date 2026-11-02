@@ -714,7 +714,8 @@ export function InboxPage({
                 {canShareScreen() && (
                   <button type="button" onClick={() => startCall("screen")} className="hidden h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft sm:grid" aria-label="Scherm delen" title="Scherm delen"><IconScreenShare className="h-5 w-5" /></button>
                 )}
-                <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="grid h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Profiel">ⓘ</button>
+                {/* on a phone the name itself opens the profile; the room goes to the name */}
+                <button type="button" onClick={() => setCardUser(otherOf(activeThread).userId)} className="hidden h-9 w-9 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft sm:grid" aria-label="Profiel">ⓘ</button>
               </div>
             )}
             <button
