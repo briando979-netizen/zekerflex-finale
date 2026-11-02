@@ -43,7 +43,20 @@ const dateNl = (iso: string) => {
   return `${Number(d)} ${MONTHS[Number(m) - 1] ?? ""} ${y}`;
 };
 
-export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope: LineScope; pricing: Pricing; initialLines: PhoneLine[]; canRequest: boolean }) {
+export function Telefonie({
+  scope,
+  pricing,
+  free,
+  initialLines,
+  canRequest,
+}: {
+  scope: LineScope;
+  pricing: Pricing;
+  /** kosteloos account (lib/billing/comp): the prices are already € 0, nothing to pay later */
+  free: boolean;
+  initialLines: PhoneLine[];
+  canRequest: boolean;
+}) {
   const [lines, setLines] = useState(initialLines);
   const [kind, setKind] = useState<NumberKind>("mobiel097");
   const [bundle, setBundle] = useState<BundleId | null>("start");
@@ -81,7 +94,7 @@ export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope:
       return;
     }
     setLines((l) => [data.line as PhoneLine, ...l]);
-    setDone("Aangevraagd. We nemen binnen een werkdag contact met je op; je betaalt pas als je lijn klaarstaat.");
+    setDone(free ? "Aangevraagd. We nemen binnen een werkdag contact met je op." : "Aangevraagd. We nemen binnen een werkdag contact met je op; je betaalt pas als je lijn klaarstaat.");
   }
 
   async function cancel(id: string) {
@@ -101,6 +114,12 @@ export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope:
             : "Een apart nummer voor je werk, zodat je privénummer privé blijft. Met voicemail, doorschakelen of een AI-assistent die voor je opneemt."}
         </p>
       </header>
+
+      {free && (
+        <p className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+          Gratis voor jouw account: de lijn, de bundels en alle opties kosten € 0.
+        </p>
+      )}
 
       {lines.length > 0 && (
         <section className="rounded-2xl border border-hair bg-white p-5 shadow-e1">
@@ -283,7 +302,13 @@ export function Telefonie({ scope, pricing, initialLines, canRequest }: { scope:
             <button type="button" onClick={() => void submit()} disabled={busy} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50">
               {busy ? "Bezig…" : "Aanvragen"}
             </button>
-            <p className="mt-2 text-[11px] text-neutralx-500">Je betaalt nog niets. We zetten je lijn klaar en sturen je dan de betaallink.</p>
+            <p className="mt-2 text-[11px] text-neutralx-500">
+              {free
+                ? q.onRequest
+                  ? "Gratis voor jouw account: de lijn en de opties kosten niets."
+                  : "Gratis voor jouw account: we zetten je lijn klaar, er komt geen betaallink."
+                : "Je betaalt nog niets. We zetten je lijn klaar en sturen je dan de betaallink."}
+            </p>
             {error && <p role="alert" className="mt-2 text-sm font-semibold text-crit">{error}</p>}
             {done && <p role="status" className="mt-2 text-sm font-semibold text-ok">{done}</p>}
           </aside>

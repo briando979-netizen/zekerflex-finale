@@ -163,7 +163,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
         state.status === "SUBMITTED" || state.status === "ACTIVE" || state.status === "PAUSED" ? (
           <ManagedDashboard state={state} message={message} onEdit={() => setState((s) => ({ ...s, status: "ONBOARDING" }))} />
         ) : (
-          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} hasSecrets={state.hasSecrets} />
+          <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} hasSecrets={state.hasSecrets} free={adminOverride} />
         )
       ) : (
         <LockedView plans={plans} onSubscribe={subscribe} busy={busy} message={message} pending={state.status === "PENDING_PAYMENT"} />
@@ -269,6 +269,7 @@ function OnboardingForm({
   busy,
   message,
   hasSecrets,
+  free,
 }: {
   form: FormState;
   set: (k: keyof FormState, v: string) => void;
@@ -276,11 +277,13 @@ function OnboardingForm({
   busy: boolean;
   message: string;
   hasSecrets: boolean;
+  /** gratis zonder abonnement (kosteloos account of beheerder) */
+  free: boolean;
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-3 text-sm text-brand-800">
-        ✅ Je abonnement is actief. Vul hieronder de gegevens van je website in — dan nemen wij het beheer over.
+        ✅ {free ? "Website-beheer staat voor je aan." : "Je abonnement is actief."} Vul hieronder de gegevens van je website in — dan nemen wij het beheer over.
         Alles wat je invult wordt <strong>versleuteld</strong> opgeslagen en is alleen voor ons beheerteam zichtbaar.
         {hasSecrets && " Je opgeslagen toegangsgegevens blijven staan: vul alleen in wat verandert."}
       </div>

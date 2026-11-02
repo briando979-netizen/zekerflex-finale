@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Kosteloze accounts: de eigenaar geeft een account (en zijn bedrijf) elke
@@ -74,6 +75,15 @@ describe("€ 0 in de praktijk", () => {
     expect(free.numberCents.mobiel06).toBeNull();
     const q = quote({ kind: "mobiel097", bundle: "compleet", options: ["ai", "sms"] }, free);
     expect(q.monthlyCents).toBe(0);
+  });
+
+  it("de telefoniepagina's tonen dezelfde prijzen als de aanvrager betaalt", () => {
+    for (const page of ["app/werkgever/telefonie/page.tsx", "app/dashboard/telefonie/page.tsx"]) {
+      const src = readFileSync(page, "utf8");
+      expect(src, page).toContain("pricingFor(free)");
+      expect(src, page).toContain("freeAccess(principal)");
+      expect(src, page).not.toContain("getPricing(");
+    }
   });
 
   it("de bemiddelingsfee per uur wordt een factuur van precies € 0", () => {

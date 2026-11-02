@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { hasRole, requirePrincipal } from "@/lib/auth";
-import { getPricing, linesOf } from "@/lib/telephony/lines";
+import { linesOf, pricingFor } from "@/lib/telephony/lines";
+import { freeAccess } from "@/lib/billing/comp";
 import { Telefonie } from "@/components/app/Telefonie";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyNumberPage() {
   const principal = await requirePrincipal();
-  const [pricing, lines] = await Promise.all([getPricing(), linesOf("persoonlijk", principal.userId)]);
+  const free = await freeAccess(principal);
+  const [pricing, lines] = await Promise.all([pricingFor(free), linesOf("persoonlijk", principal.userId)]);
   return (
     <>
       <div className="mb-6">
@@ -15,7 +17,7 @@ export default async function MyNumberPage() {
           ← Terug
         </Link>
       </div>
-      <Telefonie scope="persoonlijk" pricing={pricing} initialLines={lines} canRequest={hasRole(principal, "FREELANCER", "PLATFORM_ADMIN")} />
+      <Telefonie scope="persoonlijk" pricing={pricing} free={free} initialLines={lines} canRequest={hasRole(principal, "FREELANCER", "PLATFORM_ADMIN")} />
     </>
   );
 }
