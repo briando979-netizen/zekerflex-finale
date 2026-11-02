@@ -6,6 +6,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   user: { id: "u1", email: "jan@test.nl", fullName: "Jan Kowalski", emailVerifiedAt: null as Date | null, memberships: [{ role: "FREELANCER" }] },
   mail: vi.fn(async (_x: { subject: string; to: string }) => ({ delivered: true, transport: "mailbox" })),
+  // De herzend-pauze staat in Redis; in de test kiezen we zelf of die vrij is.
+  gate: { ok: true, retryAfterSeconds: 0 },
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  fixedWindow: async () => m.gate,
+  privateRateLimitIdentifier: (s: string) => `hash-${s.length}`,
 }));
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zf.test" } }));
@@ -36,7 +43,15 @@ import { confirmVerificationCode, confirmVerificationToken, sendVerificationEmai
 describe("welcome mail after e-mail verification", () => {
   beforeEach(() => {
     m.user.emailVerifiedAt = null;
+    m.gate = { ok: true, retryAfterSeconds: 0 };
     m.mail.mockClear();
+  });
+
+  it("binnen de herzend-pauze gaat er geen tweede codemail uit", async () => {
+    m.gate = { ok: false, retryAfterSeconds: 30 };
+    const r = await sendVerificationEmail("u1", "jan@test.nl", "Jan Kowalski");
+    expect(r).toMatchObject({ sent: false, cooldownSeconds: 30 });
+    expect(m.mail).not.toHaveBeenCalled();
   });
 
   it("the code mail alone is not a welcome mail", async () => {

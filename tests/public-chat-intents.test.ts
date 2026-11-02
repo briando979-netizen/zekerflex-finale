@@ -19,7 +19,13 @@ describe("public chat assistant without a model", () => {
   });
 
   it("answers the common topics, including the new ones", () => {
-    expect(topicAnswer("hoe snel krijg ik mijn geld")?.reply).toContain("1 minuut");
+    // De drie echte keuzes uit het geldmodel, zonder de oude belofte "binnen 1 minuut"
+    // (een externe bank kan langer doen over de bijschrijving).
+    const payout = topicAnswer("hoe snel krijg ik mijn geld")?.reply ?? "";
+    expect(payout).toContain("direct indienen (4%");
+    expect(payout).toContain("binnen 3 werkdagen indienen (2%)");
+    expect(payout).toContain("gratis wachten");
+    expect(payout).not.toContain("1 minuut");
     expect(topicAnswer("wat is zekerflex bank")?.reply).toContain("eigen rekening");
     expect(topicAnswer("ik heb geen kvk")?.reply).toContain("uitzendkracht");
     expect(topicAnswer("hoe moet ik inchecken")?.reply).toContain("check je in");

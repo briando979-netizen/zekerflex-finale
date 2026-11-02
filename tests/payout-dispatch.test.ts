@@ -78,12 +78,16 @@ describe("dispatching a payout", () => {
     m.speed = "threeDay";
     const now = new Date("2026-10-16T10:00:00Z"); // Friday
     const r = await dispatchPayout({ paymentId: "pay1", invoiceId: "inv1", userId: "u1", tenantId: "t1", amountCents: 10_000, now });
-    expect(r.dueAt).toBe("2026-10-21T10:00:00.000Z"); // Mon, Tue, Wed
+    // Gepland op het begin van werkdag twee (di 00:00 UTC): de dagelijkse run van
+    // dinsdag dient hem in, dus altijd vóór werkdag drie (wo), hoe laat de run ook draait.
+    expect(r.dueAt).toBe("2026-10-20T00:00:00.000Z");
     expect(m.sepa).not.toHaveBeenCalled();
-    expect(await runScheduledPayouts(new Date("2026-10-20T10:00:00Z"))).toEqual({ paid: 0, failed: 0 });
-    expect(await runScheduledPayouts(new Date("2026-10-21T12:00:00Z"))).toEqual({ paid: 1, failed: 0 });
+    expect(await runScheduledPayouts(new Date("2026-10-19T23:59:00Z"))).toEqual({ paid: 0, failed: 0 });
+    expect(await runScheduledPayouts(new Date("2026-10-20T10:00:00Z"))).toEqual({ paid: 1, failed: 0 });
     expect(m.sepa).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 9_800 }));
-    expect(await runScheduledPayouts(new Date("2026-10-22T12:00:00Z"))).toEqual({ paid: 0, failed: 0 });
+    // maar één keer
+    expect(await runScheduledPayouts(new Date("2026-10-21T12:00:00Z"))).toEqual({ paid: 0, failed: 0 });
+    expect(m.sepa).toHaveBeenCalledTimes(1);
   });
 
   it("standard: waits for the client, then pays in full", async () => {

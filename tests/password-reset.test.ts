@@ -7,10 +7,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // place. completePasswordReset() must clear it itself.
 const userUpdate = vi.fn();
 const tokenDelete = vi.fn();
+const tokenFindUnique = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { update: (...a: unknown[]) => userUpdate(...a) },
-    passwordResetToken: { delete: (...a: unknown[]) => tokenDelete(...a) },
+    passwordResetToken: {
+      delete: (...a: unknown[]) => tokenDelete(...a),
+      findUnique: (...a: unknown[]) => tokenFindUnique(...a),
+    },
   },
 }));
 
@@ -22,12 +26,26 @@ vi.mock("@/lib/auth/login-throttle", () => ({
   clearLoginFailures: (...a: unknown[]) => clearLoginFailures(...a),
 }));
 
+// Sterkte en datalek-check: de echte check vraagt de pwnedpasswords-API, en een
+// test mag nooit van internet afhangen.
+const scorePassword = vi.fn();
+const isBreached = vi.fn();
+vi.mock("@/lib/auth/password", () => ({
+  scorePassword: (...a: unknown[]) => scorePassword(...a),
+  isBreached: (...a: unknown[]) => isBreached(...a),
+}));
+
 import { completePasswordReset } from "@/lib/auth/password-reset";
+
+const validToken = () => tokenFindUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000) });
 
 afterEach(() => vi.clearAllMocks());
 
 describe("completePasswordReset", () => {
   it("clears the login-throttle lockout for the account's email on success", async () => {
+    validToken();
+    scorePassword.mockReturnValue({ score: 4, warnings: [] });
+    isBreached.mockResolvedValue(false);
     tokenDelete.mockResolvedValue({ userId: "u1", expiresAt: new Date(Date.now() + 60_000) });
     userUpdate.mockResolvedValue({ email: "Jan.VanLummel@Gmail.com" });
 
@@ -38,11 +56,12 @@ describe("completePasswordReset", () => {
   });
 
   it("does not touch the throttle when the token is invalid or expired", async () => {
-    tokenDelete.mockRejectedValue(new Error("not found"));
+    tokenFindUnique.mockResolvedValue(null);
 
     const result = await completePasswordReset("a".repeat(24), "nieuwewachtwoord123");
 
     expect(result.ok).toBe(false);
+    expect(tokenDelete).not.toHaveBeenCalled();
     expect(clearLoginFailures).not.toHaveBeenCalled();
   });
 
@@ -50,6 +69,22 @@ describe("completePasswordReset", () => {
     const result = await completePasswordReset("a".repeat(24), "kort");
 
     expect(result.ok).toBe(false);
+    expect(tokenDelete).not.toHaveBeenCalled();
+    expect(clearLoginFailures).not.toHaveBeenCalled();
+  });
+
+  it("een zwak of uitgelekt wachtwoord verbruikt de herstellink niet", async () => {
+    validToken();
+    scorePassword.mockReturnValue({ score: 1, warnings: ["Te voorspelbaar."] });
+    const weak = await completePasswordReset("a".repeat(24), "wachtwoord1");
+    expect(weak).toEqual({ ok: false, reason: "Te voorspelbaar." });
+
+    scorePassword.mockReturnValue({ score: 4, warnings: [] });
+    isBreached.mockResolvedValue(true);
+    const leaked = await completePasswordReset("a".repeat(24), "uitgelekt-maar-lang");
+    expect(leaked.ok).toBe(false);
+
+    // de link blijft bruikbaar voor een beter wachtwoord
     expect(tokenDelete).not.toHaveBeenCalled();
     expect(clearLoginFailures).not.toHaveBeenCalled();
   });

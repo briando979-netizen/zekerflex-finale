@@ -22,7 +22,11 @@ vi.mock("@/lib/prisma", () => ({
     },
   },
 }));
-vi.mock("@/lib/rate-limit", () => ({ fixedWindow: (...a: unknown[]) => fixedWindow(...a) }));
+// privateRateLimitIdentifier hasht het e-mailadres zodat het nooit leesbaar in Redis staat.
+vi.mock("@/lib/rate-limit", () => ({
+  fixedWindow: (...a: unknown[]) => fixedWindow(...a),
+  privateRateLimitIdentifier: (s: string) => `hash-van-${s.length}-tekens`,
+}));
 vi.mock("@/lib/mail", () => ({
   sendMail: (...a: unknown[]) => sendMail(...a),
   accountDeletionEmail: (name: string, link: string) => ({ to: "", subject: "x", kind: "account-verwijdering-bevestiging", text: link, html: link }),
@@ -70,6 +74,16 @@ describe("requestAccountDeletion", () => {
 
     expect(userFindFirst).not.toHaveBeenCalled();
     expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it("zet het e-mailadres nooit leesbaar in de sleutel van de rate-limit", async () => {
+    fixedWindow.mockResolvedValue({ ok: false });
+
+    await requestAccountDeletion("jan@example.nl");
+
+    const key = String(fixedWindow.mock.calls[0]?.[0]);
+    expect(key).toMatch(/^account-deletion:rl:/);
+    expect(key).not.toContain("jan@example.nl");
   });
 });
 

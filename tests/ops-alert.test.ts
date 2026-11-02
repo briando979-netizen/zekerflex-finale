@@ -41,7 +41,8 @@ describe("owner alerts", () => {
     m.push.mockRejectedValue(new Error("push down"));
     m.mail.mockRejectedValue(new Error("smtp down"));
     expect(await alertOwner({ key: "k", title: "x", detail: "y" })).toBe("sent");
-    expect((await recentAlerts())[0]?.sent).toEqual({ push: 0, mail: false });
+    // zonder ingestelde webhook (OPS_WEBHOOK_URL) gaat er ook daar niets heen
+    expect((await recentAlerts())[0]?.sent).toEqual({ push: 0, mail: false, webhook: false });
   });
 });
 
