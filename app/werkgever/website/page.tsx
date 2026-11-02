@@ -3,6 +3,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { adminFullAccess } from "@/lib/auth/admin-access";
 import { getManagedWebsite, isUnlocked, WEBSITE_PLANS } from "@/lib/website/manage";
 import { WebsiteManage } from "@/components/app/WebsiteManage";
+import { renewalView } from "@/lib/website/renewal";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default async function WebsiteBeheerPage() {
   const scope = principal ? await resolveEmployerScope(principal) : { tenantIds: [] as string[], branchIds: null };
   const tenantId = scope.tenantIds[0];
   const record = tenantId ? await getManagedWebsite(tenantId) : null;
+  const renewal = record?.domain && isUnlocked(record) ? await renewalView(record).catch(() => null) : null;
 
   return (
     <WebsiteManage
@@ -24,6 +26,7 @@ export default async function WebsiteBeheerPage() {
         provider: record?.provider ?? null,
         notes: record?.notes ?? null,
         hasSecrets: Boolean(record?.secretsSealed),
+        renewal,
       }}
       plans={WEBSITE_PLANS}
       adminOverride={admin}

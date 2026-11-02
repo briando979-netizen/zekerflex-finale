@@ -121,7 +121,7 @@ function flatHeaders(h: http.IncomingHttpHeaders): Record<string, string> {
   return out;
 }
 
-function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean }): Promise<RawResponse> {
+function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean; maxBytes: number }): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
     const started = performance.now();
     const mod = url.protocol === "https:" ? https : http;
@@ -159,14 +159,14 @@ function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean }
         let truncated = false;
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
-          if (size > MAX_TRANSFER_BYTES) {
+          if (size > opts.maxBytes) {
             truncated = true;
             res.destroy();
             return;
           }
           chunks.push(chunk);
         });
-        const finish = () => done(() => resolve({ status, headers, raw: Buffer.concat(chunks), transferBytes: Math.min(size, MAX_TRANSFER_BYTES), ttfbMs, truncated }));
+        const finish = () => done(() => resolve({ status, headers, raw: Buffer.concat(chunks), transferBytes: Math.min(size, opts.maxBytes), ttfbMs, truncated }));
         res.on("end", finish);
         res.on("close", finish);
         res.on("error", (e) => (truncated ? finish() : done(() => reject(toFetchError(e, url.hostname)))));
@@ -185,29 +185,38 @@ function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean }
   });
 }
 
-function decode(raw: Buffer, encoding: string | undefined): Buffer {
+function decode(raw: Buffer, encoding: string | undefined, maxBytes: number): Buffer {
   const enc = (encoding ?? "").toLowerCase().trim();
   try {
-    if (enc === "gzip" || enc === "x-gzip") return zlib.gunzipSync(raw, { finishFlush: zlib.constants.Z_SYNC_FLUSH, maxOutputLength: MAX_BODY_BYTES });
-    if (enc === "deflate") return zlib.inflateSync(raw, { finishFlush: zlib.constants.Z_SYNC_FLUSH, maxOutputLength: MAX_BODY_BYTES });
-    if (enc === "br") return zlib.brotliDecompressSync(raw, { finishFlush: zlib.constants.BROTLI_OPERATION_FLUSH, maxOutputLength: MAX_BODY_BYTES });
+    if (enc === "gzip" || enc === "x-gzip") return zlib.gunzipSync(raw, { finishFlush: zlib.constants.Z_SYNC_FLUSH, maxOutputLength: maxBytes });
+    if (enc === "deflate") return zlib.inflateSync(raw, { finishFlush: zlib.constants.Z_SYNC_FLUSH, maxOutputLength: maxBytes });
+    if (enc === "br") return zlib.brotliDecompressSync(raw, { finishFlush: zlib.constants.BROTLI_OPERATION_FLUSH, maxOutputLength: maxBytes });
   } catch {
     return Buffer.alloc(0);
   }
-  return raw.subarray(0, MAX_BODY_BYTES);
+  return raw.subarray(0, maxBytes);
 }
 
 const REDIRECT = new Set([301, 302, 303, 307, 308]);
 
-/** Haalt een pagina op en volgt maximaal `maxRedirects` doorverwijzingen, elk opnieuw gecontroleerd. */
-export async function fetchPage(rawUrl: string, opts: { timeoutMs?: number; maxRedirects?: number; headersOnly?: boolean } = {}): Promise<FetchedPage> {
+export interface FetchOptions {
+  timeoutMs?: number;
+  maxRedirects?: number;
+  headersOnly?: boolean;
+  /** maximale grootte over de lijn; standaard 3 MB (genoeg voor een HTML-pagina) */
+  maxBytes?: number;
+}
+
+/** Zoals fetchPage, maar met de ruwe bytes (afbeeldingen, lettertypes). */
+export async function fetchResource(rawUrl: string, opts: FetchOptions = {}): Promise<Omit<FetchedPage, "body"> & { data: Buffer }> {
   const timeoutMs = opts.timeoutMs ?? 10_000;
   const maxRedirects = opts.maxRedirects ?? 5;
+  const maxBytes = opts.maxBytes ?? MAX_TRANSFER_BYTES;
   const started = performance.now();
   const redirects: string[] = [];
   let current = assertFetchableUrl(rawUrl);
   for (let hop = 0; ; hop++) {
-    const res = await requestOnce(current, { timeoutMs, headersOnly: Boolean(opts.headersOnly) });
+    const res = await requestOnce(current, { timeoutMs, headersOnly: Boolean(opts.headersOnly), maxBytes });
     const location = res.headers.location;
     if (REDIRECT.has(res.status) && location) {
       if (hop >= maxRedirects) throw new FetchError("Deze website stuurt te vaak door.", "REDIRECTS");
@@ -215,19 +224,25 @@ export async function fetchPage(rawUrl: string, opts: { timeoutMs?: number; maxR
       current = assertFetchableUrl(new URL(location, current).toString());
       continue;
     }
-    const body = decode(res.raw, res.headers["content-encoding"]);
+    const data = decode(res.raw, res.headers["content-encoding"], Math.max(maxBytes, MAX_BODY_BYTES));
     return {
       url: rawUrl,
       finalUrl: current.toString(),
       status: res.status,
       headers: res.headers,
-      body: body.toString("utf8"),
+      data,
       transferBytes: res.transferBytes,
-      bytes: body.length,
+      bytes: data.length,
       ttfbMs: Math.round(res.ttfbMs),
       totalMs: Math.round(performance.now() - started),
       redirects,
       truncated: res.truncated,
     };
   }
+}
+
+/** Haalt een pagina op en volgt maximaal `maxRedirects` doorverwijzingen, elk opnieuw gecontroleerd. */
+export async function fetchPage(rawUrl: string, opts: FetchOptions = {}): Promise<FetchedPage> {
+  const { data, ...rest } = await fetchResource(rawUrl, opts);
+  return { ...rest, body: data.toString("utf8") };
 }

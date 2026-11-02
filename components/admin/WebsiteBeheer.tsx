@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Empty, KpiStrip, Notice, PageHead, Pill, StackBar, type Tone } from "@/components/admin/kit";
+import { SiteMirrorPanel } from "@/components/admin/SiteMirrorPanel";
 
 // Admin-console voor "Website-beheer": alle opdrachtgevers die hun website door
 // ZekerFlex laten beheren. Toont status/plan/domein; "Toon toegang" ontsleutelt
@@ -43,6 +44,8 @@ const STATUS_TONE: Record<Status, Tone> = {
   CANCELLED: "neutral",
 };
 const STATUS_ORDER: Status[] = ["PENDING_PAYMENT", "ONBOARDING", "SUBMITTED", "ACTIVE", "PAUSED", "CANCELLED"];
+// zelfde regel als isUnlocked in lib/website/manage.ts: betaald en niet opgezegd
+const UNLOCKED: Status[] = ["ONBOARDING", "SUBMITTED", "ACTIVE", "PAUSED"];
 const SECRET_LABEL: Record<string, string> = {
   sshHost: "SSH-host", sshPort: "SSH-poort", sshUser: "SSH-gebruiker", sshPrivateKey: "SSH-privésleutel",
   hostingLoginUrl: "Login-URL", hostingUsername: "Gebruikersnaam", hostingPassword: "Wachtwoord", extra: "Extra info",
@@ -54,6 +57,7 @@ export function WebsiteBeheer() {
   const [message, setMessage] = useState("");
   const [secrets, setSecrets] = useState<Record<string, Record<string, string> | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [mirrorOpen, setMirrorOpen] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const res = await fetch("/api/admin/website", { cache: "no-store" });
@@ -149,6 +153,15 @@ export function WebsiteBeheer() {
                   <p className="text-xs" style={{ color: "var(--a-mute)" }}>Nog geen toegangsgegevens ingevuld.</p>
                 )}
               </div>
+              {r.domain && UNLOCKED.includes(r.status) && (
+                mirrorOpen[r.id] ? (
+                  <SiteMirrorPanel siteId={r.id} />
+                ) : (
+                  <button type="button" className="a-button mt-3 text-xs" onClick={() => setMirrorOpen((s) => ({ ...s, [r.id]: true }))}>
+                    Website-verhuizer: kopie met verbeteringen
+                  </button>
+                )
+              )}
             </section>
           ))}
         </div>

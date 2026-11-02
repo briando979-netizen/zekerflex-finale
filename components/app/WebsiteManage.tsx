@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { RenewalView } from "@/lib/website/renewal";
 
 // ---------------------------------------------------------------------------
 // Opdrachtgevers-onderdeel "Website-beheer". Drie toestanden:
@@ -22,6 +23,7 @@ export interface WebsiteInitial {
   provider: string | null;
   notes: string | null;
   hasSecrets: boolean;
+  renewal?: RenewalView | null;
 }
 
 type FormState = {
@@ -359,7 +361,107 @@ function ManagedDashboard({ state, message, onEdit }: { state: WebsiteInitial; m
           Gegevens aanvullen / bijwerken
         </button>
       </div>
+      {state.renewal && <RenewalCard initial={state.renewal} />}
       {message && <p role="status" className="text-sm font-semibold text-brand-700">{message}</p>}
+    </div>
+  );
+}
+
+// --- Vernieuwde website: eigendom bewijzen en het voorbeeld bekijken ---------
+function RenewalCard({ initial }: { initial: RenewalView }) {
+  const [r, setR] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const check = async () => {
+    setBusy(true);
+    setNote("");
+    try {
+      const res = await fetch("/api/werkgever/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify-dns" }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setNote(data?.error?.message ?? "Controleren mislukt.");
+      else {
+        if (data.renewal) setR(data.renewal as RenewalView);
+        setNote(data.ok ? "Gelukt: het domein is bevestigd." : "We zien de regel nog niet. Een wijziging in je DNS kan tot een uur duren.");
+      }
+    } catch {
+      setNote("Geen verbinding. Probeer het opnieuw.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(r.record);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* geen klembord */
+    }
+  };
+
+  const m = r.mirror;
+  return (
+    <div className="rounded-2xl border border-hair bg-white p-6 shadow-e1">
+      <h2 className="font-display text-base font-bold text-ink">Je vernieuwde website</h2>
+      <p className="mt-1 text-sm text-neutralx-600">
+        We maken een kopie van {r.host ?? "je website"} die er hetzelfde uitziet, maar sneller is en beter gevonden wordt. Pas als jij akkoord geeft, gaat die live.
+      </p>
+
+      {!r.verified ? (
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-neutralx-700">
+            <strong className="text-ink">Stap 1: laat zien dat het domein van jou is.</strong> Voeg bij je domeinbeheer (bijvoorbeeld TransIP of Strato) een TXT-record toe op {r.host ?? "je domein"} met deze waarde:
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <code className="min-w-0 flex-1 break-all rounded-lg bg-paper-soft px-3 py-2 font-mono text-xs text-ink">{r.record}</code>
+            <button type="button" onClick={copy} className="rounded-lg border border-hairstrong px-3 py-2 text-sm font-semibold text-ink hover:border-ink">
+              {copied ? "Gekopieerd" : "Kopieer"}
+            </button>
+          </div>
+          <button type="button" onClick={check} disabled={busy} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+            {busy ? "Controleren…" : "Ik heb het toegevoegd, controleer"}
+          </button>
+          <p className="text-xs text-neutralx-500">Lukt het niet? Stuur ons een bericht via de chat, dan helpen we je.</p>
+        </div>
+      ) : !m ? (
+        <p className="mt-4 rounded-xl bg-mintwash/60 px-4 py-3 text-sm text-brand-800">Het domein is bevestigd. We maken nu je vernieuwde versie en laten het je weten zodra je hem kunt bekijken.</p>
+      ) : m.status === "bezig" ? (
+        <p className="mt-4 rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-700" role="status">We zijn je vernieuwde versie aan het maken…</p>
+      ) : m.status === "mislukt" ? (
+        <p className="mt-4 rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-700">De vorige poging lukte niet. We kijken ernaar en proberen het opnieuw.</p>
+      ) : (
+        <div className="mt-4 space-y-4">
+          {m.scoreBefore !== null && m.scoreAfter !== null && (
+            <div className="flex flex-wrap items-center gap-4 rounded-xl bg-paper-soft px-4 py-3">
+              <div>
+                <p className="text-xs text-neutralx-500">Score nu</p>
+                <p className="num font-display text-2xl font-bold text-ink">{m.scoreBefore}</p>
+              </div>
+              <span className="text-neutralx-400" aria-hidden>→</span>
+              <div>
+                <p className="text-xs text-neutralx-500">Vernieuwde versie</p>
+                <p className="num font-display text-2xl font-bold text-ok">{m.scoreAfter}</p>
+              </div>
+              <p className="text-sm text-neutralx-600">{m.pages} pagina&apos;s gekopieerd</p>
+            </div>
+          )}
+          {m.fixed.length > 0 && (
+            <ul className="space-y-1.5 text-sm text-neutralx-700">
+              {m.fixed.map((f) => (
+                <li key={f} className="flex gap-2"><span className="text-ok" aria-hidden>✓</span>{f}</li>
+              ))}
+            </ul>
+          )}
+          <a href={`/website-preview/${m.id}/`} target="_blank" rel="noopener noreferrer" className="inline-block rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white">
+            Bekijk je vernieuwde website
+          </a>
+          <p className="text-xs text-neutralx-500">Dit is een voorbeeld: formulieren versturen kan hier nog niet. Live zetten doen we samen met jou.</p>
+        </div>
+      )}
+      {note && <p role="status" className="mt-3 text-sm font-semibold text-brand-700">{note}</p>}
     </div>
   );
 }

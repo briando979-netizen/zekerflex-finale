@@ -13,6 +13,8 @@ import {
   saveWebsiteDetails,
   WEBSITE_PLANS,
 } from "@/lib/website/manage";
+import { renewalView } from "@/lib/website/renewal";
+import { checkDnsVerification } from "@/lib/website/verify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +43,7 @@ export async function GET(): Promise<NextResponse> {
       provider: record?.provider ?? null,
       notes: record?.notes ?? null,
       hasSecrets: Boolean(record?.secretsSealed),
+      renewal: record?.domain && isUnlocked(record) ? await renewalView(record).catch(() => null) : null,
       plans: WEBSITE_PLANS,
     });
   } catch (err) {
@@ -65,6 +68,7 @@ const detailsSchema = z.object({
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("subscribe"), plan: z.string() }),
+  z.object({ action: z.literal("verify-dns") }),
   detailsSchema,
 ]);
 
@@ -80,6 +84,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (!isWebsitePlan(body.plan)) throw AppError.validation("Onbekend abonnement.");
       const { checkoutUrl } = await startWebsiteSubscription({ tenantId, userId, email, plan: body.plan });
       return NextResponse.json({ ok: true, checkoutUrl });
+    }
+
+    if (body.action === "verify-dns") {
+      const record = await getManagedWebsite(tenantId);
+      if (!record?.domain || !isUnlocked(record)) throw AppError.validation("Vul eerst het domein van je website in.");
+      const res = await checkDnsVerification(record.id, record.domain);
+      return NextResponse.json({ ok: res.ok, renewal: await renewalView(record) });
     }
 
     // body bevat `action: "save"` plus de (optionele) detailvelden; saveWebsiteDetails

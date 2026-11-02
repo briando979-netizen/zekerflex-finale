@@ -47,7 +47,23 @@ export interface CspOptions {
   pathname?: string | undefined;
 }
 
+/**
+ * Het voorbeeld van de website-verhuizer (/website-preview/<id>/…) toont de
+ * gekopieerde site van een klant, met zijn eigen scripts. `sandbox` zonder
+ * allow-same-origin geeft die pagina een eigen, lege herkomst: geen toegang tot
+ * cookies of opslag van zekerflex.com, en verzoeken naar onze API gaan als
+ * vreemde site zonder sessie. Formulieren versturen kan niet (form-action 'none').
+ */
+export const SITE_PREVIEW_CSP = [
+  "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
+  "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
+  "form-action 'none'",
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+].join("; ");
+
 export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions): string {
+  if (pathname?.startsWith("/website-preview/")) return SITE_PREVIEW_CSP;
   const studio =
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);
   const sandboxFrame = pathname === "/admin/zekerflex-ai/sandbox-frame";
