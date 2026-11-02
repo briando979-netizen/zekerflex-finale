@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fmtDuration } from "./shared";
+import { canShareScreen, fmtDuration } from "./shared";
 import { Portal } from "./Portal";
 import { Avatar } from "./Avatar";
 import { makeRingback } from "./ringtone";
@@ -397,7 +397,8 @@ export function CallOverlay({
 
   const showVideo = mode !== "audio";
   const showSelfView = mode === "video" ? !camOff || sharing : sharing;
-  const canShare = mode === "video" || (mode === "screen" && role === "caller");
+  // phones have no screen capture; the overlay only renders in the browser, so this is hydration-safe
+  const canShare = canShareScreen() && (mode === "video" || (mode === "screen" && role === "caller"));
   const status =
     state === "ringing"
       ? "Overgaan…"
