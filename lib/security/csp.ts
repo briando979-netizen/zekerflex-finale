@@ -20,6 +20,15 @@
 // far weaker vector than script injection, so this is a conscious stop here.
 // ---------------------------------------------------------------------------
 
+/** Our own public origin (from APP_BASE_URL); the middleware runs on the edge, so read it directly. */
+const SITE_ORIGIN = (() => {
+  try {
+    return new URL(process.env.APP_BASE_URL ?? "https://zekerflex.com").origin;
+  } catch {
+    return "https://zekerflex.com";
+  }
+})();
+
 /** 16 random bytes, base64 — safe for a CSP nonce and an HTTP header value. */
 export function generateNonce(): string {
   const bytes = new Uint8Array(16);
@@ -63,6 +72,27 @@ export const SITE_PREVIEW_CSP = [
 ].join("; ");
 
 /**
+ * Websites die ZekerFlex voor klanten host (/site/<naam>/…). De pagina's
+ * bevatten geen scripts (lib/sites/render.ts) en krijgen hier ook geen enkel
+ * script: `sandbox` zonder allow-scripts en allow-same-origin geeft ze een eigen
+ * lege herkomst, dus geen toegang tot cookies of de API van zekerflex.com.
+ * Alleen eigen foto's en stijlen; formulieren alleen naar de site zelf.
+ * `origin` staat er naast 'self' omdat browsers 'self' in een sandbox
+ * verschillend uitleggen.
+ */
+export function siteHostCsp(origin: string): string {
+  return [
+    "sandbox allow-forms allow-popups allow-popups-to-escape-sandbox",
+    "default-src 'none'",
+    `img-src 'self' ${origin} data:`,
+    `style-src 'self' ${origin} 'unsafe-inline'`,
+    `form-action 'self' ${origin}`,
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+/**
  * Een chatbijlage die los geopend wordt (een foto in een nieuw tabblad,
  * /api/inbox/<gesprek>/media/<id>): geen script, een eigen lege herkomst en
  * niets inladen. Het bestand zelf toont gewoon.
@@ -71,6 +101,7 @@ export const CHAT_MEDIA_CSP = ["sandbox", "default-src 'none'", "style-src 'unsa
 
 export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions): string {
   if (pathname?.startsWith("/website-preview/")) return SITE_PREVIEW_CSP;
+  if (pathname === "/site" || pathname?.startsWith("/site/")) return siteHostCsp(SITE_ORIGIN);
   if (pathname && /^\/api\/inbox\/[^/]+\/media\/[^/]+$/.test(pathname)) return CHAT_MEDIA_CSP;
   const studio =
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);
