@@ -12,7 +12,7 @@ describe("etalageproduct", () => {
   });
 
   it("sorteert maten zoals mensen verwachten", () => {
-    expect(["XL", "39-42", "S", "38", "M", "43-46", "XXL", "110"].sort(bySize)).toEqual(["S", "M", "XL", "XXL", "38", "39-42", "43-46", "110"]);
+    expect(["XL", "39-42", "S", "38", "M", "43-46", "XXL", "110", "39"].sort(bySize)).toEqual(["S", "M", "XL", "XXL", "38", "39", "39-42", "43-46", "110"]);
   });
 
   it("schrijft bedragen op zijn Nederlands", () => {

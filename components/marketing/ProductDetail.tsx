@@ -84,12 +84,12 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
 
   return (
     <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 md:py-12 lg:px-12">
-      <nav aria-label="Broodkruimel" className="mb-8 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-lux-mute">
-        <Link href="/shop" className="hover:text-lux-ink">{t.shop.shopBreadcrumb}</Link>
-        <span>/</span>
-        <Link href={`/shop?cat=${encodeURIComponent(product.category)}#collectie`} className="hover:text-lux-ink">{product.category}</Link>
-        <span>/</span>
-        <span className="text-lux-ink">{product.name}</span>
+      <nav aria-label="Broodkruimel" className="mb-8 flex min-w-0 items-center gap-2 whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-lux-mute">
+        <Link href="/shop" className="shrink-0 hover:text-lux-ink">{t.shop.shopBreadcrumb}</Link>
+        <span aria-hidden>/</span>
+        <Link href={`/shop?cat=${encodeURIComponent(product.category)}#collectie`} className="shrink-0 hover:text-lux-ink">{product.category}</Link>
+        <span aria-hidden>/</span>
+        <span className="min-w-0 truncate text-lux-ink">{product.name}</span>
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">

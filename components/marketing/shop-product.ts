@@ -60,7 +60,7 @@ export function bySize(a: string, b: string): number {
   if (la >= 0 !== lb >= 0) return la >= 0 ? -1 : 1; // letters vóór getallen
   const na = parseFloat(a);
   const nb = parseFloat(b);
-  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb || a.length - b.length; // 39 vóór 39-42
   return a.localeCompare(b, "nl");
 }
 

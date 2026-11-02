@@ -85,7 +85,8 @@ export function ShopProductCard({ p, sizes = GRID_SIZES, priority = false }: { p
           </button>
         )}
       </div>
-      <div className="mt-3.5 flex items-start justify-between gap-3">
+      {/* telefoon: prijs onder de naam (twee smalle kolommen); groter: ernaast */}
+      <div className="mt-3 flex flex-col gap-1 sm:mt-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <h3 className="text-[13px] leading-snug text-lux-ink">{p.name}</h3>
         <p className="shrink-0 text-[13px] text-lux-mute">{shopMoney(p.price)}</p>
       </div>
