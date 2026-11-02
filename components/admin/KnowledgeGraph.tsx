@@ -75,7 +75,8 @@ export function KnowledgeGraph({ nodes, edges }: { nodes: GNode[]; edges: GEdge[
     pos.current = nodes.map((_, i) => {
       const a = (i / Math.max(1, nodes.length)) * Math.PI * 2;
       const r = 180 + ((i * 53) % 120);
-      return { x: W / 2 + Math.cos(a) * r, y: H / 2 + Math.sin(a) * r, vx: 0, vy: 0 };
+      // afgerond: sin/cos verschillen op server en browser in de laatste decimalen
+      return { x: Math.round((W / 2 + Math.cos(a) * r) * 100) / 100, y: Math.round((H / 2 + Math.sin(a) * r) * 100) / 100, vx: 0, vy: 0 };
     });
   }
 
