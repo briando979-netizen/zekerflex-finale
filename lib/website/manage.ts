@@ -256,6 +256,27 @@ export async function revealWebsiteSecrets(id: string, actorUserId: string): Pro
   return parsed;
 }
 
+/**
+ * Zelfde ontsleuteling, maar voor de server zelf (live zetten via SSH): de
+ * gegevens gaan nooit naar een scherm, wel in het auditspoor met de reden.
+ */
+export async function unsealWebsiteSecrets(id: string, actorUserId: string, reason: string): Promise<Record<string, string> | null> {
+  const record = await prisma.managedWebsite.findUnique({ where: { id } });
+  if (!record?.secretsSealed) return null;
+  const parsed = JSON.parse(openSecret(record.secretsSealed, SECRET_PURPOSE)) as Record<string, string>;
+  await recordAudit({
+    category: "ADMIN",
+    action: "website.secrets.used",
+    actorUserId,
+    actorLabel: "user",
+    severity: "warning",
+    summary: `Servertoegang gebruikt voor ${record.domain ?? record.tenantId}: ${reason}`,
+    targetType: "managed-website",
+    targetId: id,
+  });
+  return parsed;
+}
+
 export async function setManagedWebsiteStatus(id: string, status: ManagedWebsiteStatus, actorUserId: string): Promise<void> {
   await prisma.managedWebsite.update({ where: { id }, data: { status } });
   await recordAudit({

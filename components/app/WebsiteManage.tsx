@@ -424,6 +424,23 @@ function RenewalCard({ initial }: { initial: RenewalView }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
+  const [agree, setAgree] = useState(false);
+
+  const approve = async () => {
+    if (!r.mirror) return;
+    setBusy(true);
+    setNote("");
+    try {
+      const res = await fetch("/api/werkgever/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve-renewal", mirrorId: r.mirror.id }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setNote(data?.error?.message ?? "Akkoord geven is mislukt.");
+      else if (data.renewal) setR(data.renewal as RenewalView);
+    } catch {
+      setNote("Geen verbinding. Probeer het opnieuw.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const check = async () => {
     setBusy(true);
@@ -506,10 +523,33 @@ function RenewalCard({ initial }: { initial: RenewalView }) {
               ))}
             </ul>
           )}
-          <a href={`/website-preview/${m.id}/`} target="_blank" rel="noopener noreferrer" className="inline-block rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white">
+          <a href={`/website-preview/${m.id}/`} target="_blank" rel="noopener noreferrer" className="inline-block rounded-lg border border-hairstrong px-4 py-2 text-sm font-semibold text-ink hover:border-ink">
             Bekijk je vernieuwde website
           </a>
-          <p className="text-xs text-neutralx-500">Dit is een voorbeeld: formulieren versturen kan hier nog niet. Live zetten doen we samen met jou.</p>
+          {r.deploy?.mirrorId === m.id && r.deploy.status === "live" ? (
+            <p className="rounded-xl bg-mintwash/60 px-4 py-3 text-sm text-brand-800">
+              Je vernieuwde website staat live{r.deploy.finishedAt ? ` sinds ${new Date(r.deploy.finishedAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}` : ""}. Je oude site hebben we bewaard: wil je terug, laat het ons weten via de chat.
+            </p>
+          ) : r.deploy?.mirrorId === m.id && r.deploy.status === "bezig" ? (
+            <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-700" role="status">We zetten je vernieuwde website nu live…</p>
+          ) : r.approvedAt ? (
+            <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-700">
+              Je gaf akkoord op {new Date(r.approvedAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}. We zetten hem zo snel mogelijk live en laten het je weten.
+            </p>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-hair p-4">
+              <label className="flex items-start gap-2 text-sm text-neutralx-700">
+                <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1" />
+                <span>
+                  Ik heb de vernieuwde versie bekeken en wil dat die mijn huidige website vervangt. Mijn huidige site blijft bewaard, zodat hij terug kan.
+                </span>
+              </label>
+              <button type="button" onClick={approve} disabled={!agree || busy} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {busy ? "Versturen…" : "Akkoord, zet hem live"}
+              </button>
+              <p className="text-xs text-neutralx-500">Formulieren, webshop en inloggen werken in het voorbeeld nog niet; die koppelen we bij het live zetten.</p>
+            </div>
+          )}
         </div>
       )}
       {note && <p role="status" className="mt-3 text-sm font-semibold text-brand-700">{note}</p>}

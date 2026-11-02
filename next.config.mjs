@@ -13,7 +13,8 @@ const nextConfig = {
     minimumCacheTTL: 2678400,
   },
   // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).
-  serverExternalPackages: ["ioredis"],
+  // ssh2 laadt optionele native modules (cpu-features, sshcrypto) die webpack niet moet bundelen.
+  serverExternalPackages: ["ioredis", "ssh2"],
   // The RAG brain reads lib/rag/knowledge/*.md at runtime (lib/rag/corpus.ts) —
   // ship them with every server function, not only the routes that import them.
   outputFileTracingIncludes: {

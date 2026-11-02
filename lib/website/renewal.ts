@@ -1,5 +1,6 @@
 import { getVerification, hostOf, verificationRecord } from "@/lib/website/verify";
 import { latestMirror } from "@/lib/website/mirror";
+import { getApproval, getDeploy } from "@/lib/website/deploy";
 
 // Wat de opdrachtgever in /werkgever/website ziet van de website-verhuizer:
 // de DNS-code om eigendom te bewijzen, en zodra wij een kopie hebben gemaakt
@@ -18,10 +19,13 @@ export interface RenewalView {
     scoreAfter: number | null;
     fixed: string[];
   } | null;
+  /** wanneer de klant akkoord gaf voor de huidige kopie */
+  approvedAt: string | null;
+  deploy: { status: "bezig" | "live" | "mislukt" | "teruggezet"; mirrorId: string; finishedAt: string | null } | null;
 }
 
 export async function renewalView(site: { id: string; domain: string | null }): Promise<RenewalView> {
-  const [verification, m] = await Promise.all([getVerification(site.id, site.domain), latestMirror(site.id)]);
+  const [verification, m, approval, deploy] = await Promise.all([getVerification(site.id, site.domain), latestMirror(site.id), getApproval(site.id), getDeploy(site.id)]);
   const afterOpen = m?.after?.findings.filter((f) => f.status !== "goed") ?? [];
   return {
     host: hostOf(site.domain),
@@ -38,5 +42,7 @@ export async function renewalView(site: { id: string; domain: string | null }): 
           fixed: (m.before?.findings ?? []).filter((f) => f.status !== "goed" && !afterOpen.some((a) => a.id === f.id)).map((f) => f.title).slice(0, 8),
         }
       : null,
+    approvedAt: approval && m && approval.mirrorId === m.id ? approval.at : null,
+    deploy: deploy ? { status: deploy.status, mirrorId: deploy.mirrorId, finishedAt: deploy.finishedAt } : null,
   };
 }

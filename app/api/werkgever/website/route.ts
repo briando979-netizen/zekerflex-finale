@@ -16,6 +16,7 @@ import {
 import { renewalView } from "@/lib/website/renewal";
 import { monitorView } from "@/lib/website/uptime";
 import { checkDnsVerification } from "@/lib/website/verify";
+import { approveMirror } from "@/lib/website/deploy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,6 +72,7 @@ const detailsSchema = z.object({
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("subscribe"), plan: z.string() }),
   z.object({ action: z.literal("verify-dns") }),
+  z.object({ action: z.literal("approve-renewal"), mirrorId: z.string().regex(/^[a-f0-9]{16}$/) }),
   detailsSchema,
 ]);
 
@@ -93,6 +95,21 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (!record?.domain || !isUnlocked(record)) throw AppError.validation("Vul eerst het domein van je website in.");
       const res = await checkDnsVerification(record.id, record.domain);
       return NextResponse.json({ ok: res.ok, renewal: await renewalView(record) });
+    }
+
+    if (body.action === "approve-renewal") {
+      // Alleen de bedrijfsbeheerder van deze klant (of de eigenaar) geeft akkoord om live te zetten.
+      const principal = await getPrincipal();
+      if (!principal) throw AppError.unauthenticated();
+      requireRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
+      const record = await getManagedWebsite(tenantId);
+      if (!record?.domain || !isUnlocked(record)) throw AppError.validation("Er is geen beheerde website om live te zetten.");
+      try {
+        await approveMirror(record.id, body.mirrorId, userId);
+      } catch (err) {
+        throw AppError.validation((err as Error).message);
+      }
+      return NextResponse.json({ ok: true, renewal: await renewalView(record) });
     }
 
     // body bevat `action: "save"` plus de (optionele) detailvelden; saveWebsiteDetails
