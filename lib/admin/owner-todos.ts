@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Resolver } from "node:dns/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { env } from "@/lib/env";
@@ -10,14 +11,19 @@ import { platformAdminIds } from "@/lib/messaging/contacts";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { prisma } from "@/lib/prisma";
 import { getReminderSettings } from "@/lib/billing/reminders";
+import { readBackupReport, type BackupReport } from "@/lib/ops/backup";
+import { listModels3D } from "@/lib/shop/model3d";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
 // details, legal sign-off). Where the platform can see it, an item checks
-// itself (env set, model reachable, Stripe webhook configured); the rest is
-// ticked off by hand. Plus free-form notes/todos of the owner's own.
+// itself (env set, model reachable, Stripe webhook configured, last night's
+// backup restored); the rest is ticked off by hand. Plus free-form notes/todos
+// of the owner's own.
 //   key "owner-todos:done"   → { [id]: { at, by } }
 //   key "owner-todos:custom" → CustomTodo[]
+// Since 30 Oct 2026 the site runs on its own server (VPS), not on Vercel:
+// settings go to Claude, who puts them in .env.production on that server.
 // ---------------------------------------------------------------------------
 
 export interface OwnerTodo {
@@ -40,6 +46,9 @@ export interface CustomTodo {
 }
 
 const ISSUING_EVENTS = ["issuing_authorization.request", "issuing_authorization.updated", "issuing_transaction.created", "issuing_card.updated"];
+
+/** Cities that say nothing about where the work is ("centrum"). */
+const VAGUE_CITIES = ["centrum", "center", "stad", "onbekend", "nvt", "n.v.t.", "-"];
 
 /** Does at least one platform admin receive push notifications (for outage alerts)? */
 async function adminHasPush(): Promise<boolean> {
@@ -72,6 +81,68 @@ async function stripeIssuingActive(): Promise<boolean | null> {
   }
 }
 
+/** Every event the enabled Stripe webhook endpoints receive ("*" = all), or null when Stripe can't be asked. */
+async function stripeWebhookEvents(): Promise<Set<string> | null> {
+  if (!env.STRIPE_SECRET_KEY) return null;
+  try {
+    const list = await getStripeClient().webhookEndpoints.list({ limit: 100 });
+    return new Set(list.data.filter((w) => w.status === "enabled").flatMap((w) => w.enabled_events as string[]));
+  } catch {
+    return null;
+  }
+}
+
+const receives = (events: Set<string>, type: string) => events.has("*") || events.has(type);
+
+/** Search Console's "Domein" method: a google-site-verification TXT record on the main domain. */
+async function googleDnsVerified(base: string): Promise<boolean> {
+  let host = "";
+  try {
+    host = new URL(base).hostname.replace(/^www\./, "");
+  } catch {
+    return false;
+  }
+  if (!host.includes(".")) return false;
+  try {
+    const records = await new Resolver({ timeout: 2500, tries: 1 }).resolveTxt(host);
+    return records.some((r) => r.join("").startsWith("google-site-verification="));
+  } catch {
+    return false;
+  }
+}
+
+/** Throwaway accounts from the October login diagnosis (zf-…@example.com); null = couldn't count. */
+async function testAccountCount(): Promise<number | null> {
+  try {
+    return await prisma.user.count({ where: { email: { startsWith: "zf-", endsWith: "@example.com" } } });
+  } catch {
+    return null;
+  }
+}
+
+/** Branches whose city says nothing, as "company (branch)" so the owner knows whom to ask; null = couldn't look. */
+async function vagueBranchCities(): Promise<string[] | null> {
+  try {
+    const rows = await prisma.branch.findMany({
+      where: { OR: [{ city: "" }, ...VAGUE_CITIES.map((c) => ({ city: { equals: c, mode: "insensitive" as const } }))] },
+      select: { name: true, tenant: { select: { name: true } } },
+      take: 20,
+    });
+    return rows.map((b) => `${b.tenant.name} (${b.name})`);
+  } catch {
+    return null;
+  }
+}
+
+function backupNote(report: BackupReport | null): string {
+  if (!report?.available) return "geen back-upmap gevonden op deze server";
+  if (report.state === "ok" && report.status) {
+    const when = new Date(report.status.at).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    return `laatste back-up ${when}, proef-terugzetting gelukt`;
+  }
+  return report.reasons[0] ?? "de laatste back-up is niet in orde";
+}
+
 const hasVideos = () => {
   try {
     return existsSync(path.join(process.cwd(), "public", "videos", "wat-is-zekerflex.mp4"));
@@ -80,20 +151,23 @@ const hasVideos = () => {
   }
 };
 
-async function stripeIssuingWebhookOk(): Promise<boolean | null> {
-  if (!env.STRIPE_SECRET_KEY) return null;
-  try {
-    const list = await getStripeClient().webhookEndpoints.list({ limit: 100 });
-    return list.data.some((w) => w.status === "enabled" && (w.enabled_events.includes("*") || ISSUING_EVENTS.every((e) => w.enabled_events.includes(e as never))));
-  } catch {
-    return null;
-  }
-}
-
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
-  const [webhookOk, products, issuing, llm, admin2fa, adminPush, reminders] = await Promise.all([stripeIssuingWebhookOk(), getProducts().catch(() => []), stripeIssuingActive(), llmHealth(), adminTwoFactor(), adminHasPush(), getReminderSettings().catch(() => ({ enabled: false }))]);
   const base = env.APP_BASE_URL ?? "";
+  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches] = await Promise.all([
+    stripeWebhookEvents(),
+    getProducts().catch(() => []),
+    stripeIssuingActive(),
+    llmHealth(),
+    adminTwoFactor(),
+    adminHasPush(),
+    getReminderSettings().catch(() => ({ enabled: false })),
+    readBackupReport().catch(() => null),
+    listModels3D().catch(() => new Map()),
+    googleDnsVerified(base),
+    testAccountCount(),
+    vagueBranchCities(),
+  ]);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL")}` } : {}) });
 
   return [
@@ -102,7 +176,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "AI",
       title: "Eigen AI-server (taalmodel) aanzetten",
       why: "Zet Jarvis, de denkende AI-teams, herschrijven/vertalen in de chat, het volle specialistenadvies en nieuwe advertentievarianten aan.",
-      how: ["Huur een server met GPU — hoe meer videogeheugen, hoe slimmer de AI (24 GB of meer aangeraden, 48 GB voor de beste kwaliteit) — en maak een subdomein ai.zekerflex.com met een A-record naar de server.", "Kopieer deploy/ai-node/setup.sh naar de server en draai: sudo bash setup.sh ai.zekerflex.com", "Zet de waarden die het script laat zien in Vercel → Settings → Environment Variables (Production) en klik Redeploy."],
+      how: ["Huur een server met GPU — hoe meer videogeheugen, hoe slimmer de AI (24 GB of meer aangeraden, 48 GB voor de beste kwaliteit) — en maak een subdomein ai.zekerflex.com met een A-record naar de server.", "Kopieer deploy/ai-node/setup.sh naar de server en draai: sudo bash setup.sh ai.zekerflex.com", "Geef de waarden die het script laat zien aan Claude; die zet ze op de server en herstart de app."],
       auto: true,
       done: llm.ok,
       doneNote: llm.ok ? `AI-server antwoordt (model ${llm.model})` : `nog niet: ${llm.detail ?? "niet bereikbaar"}`,
@@ -112,7 +186,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "AI",
       title: "Beeldserver voor de Studio koppelen (optioneel)",
       why: "Nodig om in admin → Studio beelden te laten maken.",
-      how: ["Draai ComfyUI of AUTOMATIC1111 op dezelfde GPU-server (zie deploy/ai-node/README.md).", "Zet IMAGE_ENABLED=true, IMAGE_BACKEND, IMAGE_BASE_URL en IMAGE_API_KEY in Vercel en redeploy."],
+      how: ["Draai ComfyUI of AUTOMATIC1111 op dezelfde GPU-server (zie deploy/ai-node/README.md).", "Geef Claude het adres en de sleutel van die beeldserver; die zet IMAGE_ENABLED, IMAGE_BACKEND, IMAGE_BASE_URL en IMAGE_API_KEY op de server."],
       auto: true,
       done: env.IMAGE_ENABLED,
     },
@@ -121,38 +195,33 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "Geld & bank",
       title: "Zakelijke rekening van ZekerFlex invullen (SEPA)",
       why: "Zonder deze gegevens kunnen freelancers niet op hun eigen IBAN worden uitbetaald en kunnen opnames van ZekerFlex Bank niet worden verwerkt.",
-      how: ["Vercel → Environment Variables: SEPA_CREDITOR_IBAN = jullie zakelijke IBAN, SEPA_CREDITOR_NAME = ZekerFlex B.V.", "Redeploy. Daarna komt elke ochtend automatisch een SEPA-bestand klaar (je krijgt een mail)."],
+      how: ["Geef Claude jullie zakelijke IBAN en de tenaamstelling (bijv. ZekerFlex B.V.); die worden SEPA_CREDITOR_IBAN en SEPA_CREDITOR_NAME op de server.", "Daarna komt elke ochtend automatisch een SEPA-bestand klaar (je krijgt een mail)."],
       auto: true,
       done: Boolean(env.SEPA_CREDITOR_IBAN && env.SEPA_CREDITOR_NAME),
     },
     {
-      id: "stripe-webhook",
+      id: "issuing-active",
       group: "Geld & bank",
-      title: "Stripe-webhook uitbreiden voor betaalpassen",
-      why: "Zonder deze events wordt elke betaling met een ZekerFlex-pas geweigerd.",
-      how: ["Stripe Dashboard → Developers → Webhooks → jullie endpoint (…/api/webhooks/stripe).", `Voeg toe: ${ISSUING_EVENTS.join(", ")}.`],
-      auto: webhookOk !== null,
-      done: webhookOk === true,
-      ...(webhookOk === null ? { doneNote: "kon Stripe niet controleren — vink handmatig af als het klaar is" } : {}),
-      ...(webhookOk === null ? m("stripe-webhook") : {}),
+      title: "Betaalpassen: een andere uitgever zoeken (Stripe zei nee)",
+      why: "Stripe heeft Issuing (betaalpassen) op 30 oktober afgewezen voor ZekerFlex. De passen blijven uit tot een Europese partij ze wél uitgeeft; de rest van de site werkt gewoon.",
+      how: [
+        "Vraag offertes bij Europese kaartuitgevers met een e-geldvergunning (bijvoorbeeld Swan of Treezor) en kies er één.",
+        "Geef Claude de documentatie van die partij; de regels voor limieten en blokkades die al gebouwd zijn, worden hergebruikt.",
+        `Komt Stripe er toch op terug, dan vinkt deze taak zichzelf af. Daarna nog nodig: op de Stripe-webhook ${ISSUING_EVENTS.join(", ")}, de publishable key (pk_live_…) op de server en Apple/Google Pay onder Issuing → Settings.`,
+      ],
+      auto: issuing !== null,
+      done: issuing === true,
+      ...(issuing === null ? m("issuing-active") : {}),
     },
     {
-      id: "stripe-pk",
+      id: "stripe-expired",
       group: "Geld & bank",
-      title: "Stripe publishable key invullen",
-      why: "Nodig om in de app het volledige kaartnummer en de CVC van een ZekerFlex-pas te tonen.",
-      how: ["Stripe Dashboard → Developers → API keys → Publishable key (pk_live_…).", "Vercel → STRIPE_PUBLISHABLE_KEY = die sleutel, en redeploy."],
-      auto: true,
-      done: Boolean(env.STRIPE_PUBLISHABLE_KEY),
-    },
-    {
-      id: "issuing-wallets",
-      group: "Geld & bank",
-      title: "Apple Pay / Google Pay aanzetten voor de passen",
-      why: "Zodat gebruikers hun ZekerFlex-pas in hun telefoon kunnen zetten.",
-      how: ["Stripe Dashboard → Issuing → Settings → Digital wallets: aanzetten (kan goedkeuring van Stripe vragen)."],
-      auto: false,
-      ...m("issuing-wallets"),
+      title: "Stripe-melding 'checkout.session.expired' aanzetten",
+      why: "Sluit iemand in de webshop het betaalscherm zonder te betalen, dan meldt Stripe dat na 24 uur. Zonder die melding blijft zo'n bestelling in Admin → Shop op 'wacht op betaling' staan. Voorraad gaat pas af bij betaling, dus er gaat niets mis: het is opruimen.",
+      how: ["dashboard.stripe.com → Developers → Webhooks → het endpoint dat eindigt op /api/webhooks/stripe.", "Kies 'Gebeurtenissen bewerken', voeg checkout.session.expired toe en sla op."],
+      auto: webhookEvents !== null,
+      done: webhookEvents !== null && receives(webhookEvents, "checkout.session.expired"),
+      ...(webhookEvents === null ? m("stripe-expired") : {}),
     },
     {
       id: "terms-review",
@@ -182,21 +251,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("bank-name"),
     },
     {
-      id: "issuing-active",
-      group: "Geld & bank",
-      title: "Stripe Issuing (betaalpassen) laten activeren",
-      why: "Pas als 'card_issuing' actief is op je Stripe-account kunnen gebruikers echt een pas krijgen.",
-      how: ["Stripe Dashboard → Issuing: rond de aanvraag af (bedrijfsgegevens, gebruik, eventueel extra documenten).", "Wacht op de goedkeuring van Stripe; deze taak vinkt zichzelf af zodra het actief is."],
-      auto: issuing !== null,
-      done: issuing === true,
-      ...(issuing === null ? m("issuing-active") : {}),
-    },
-    {
       id: "domain",
       group: "Vindbaarheid & app",
       title: "Hoofddomein vastleggen (APP_BASE_URL)",
-      why: "Bepaalt alle links in mails, de sitemap en Google. De site draait op zekerflex.com, eerder was zekerflex.nl gekozen — kies er één en laat de andere doorverwijzen.",
-      how: ["Kies het hoofddomein (bv. https://zekerflex.com).", "Vercel: APP_BASE_URL = dat adres (met https://), en zet het andere domein in Vercel → Domains op doorverwijzen.", "Redeploy."],
+      why: "Bepaalt alle links in mails, de sitemap en Google. Kies één domein en laat de andere doorverwijzen.",
+      how: ["Kies het hoofddomein (bv. https://zekerflex.com). Pagina's op www sturen nu al door naar het adres zonder www.", "Wil je een ander hoofddomein, vraag het aan Claude: die zet APP_BASE_URL op de server en past de doorverwijzing aan."],
       auto: true,
       done: /^https:\/\//.test(base) && !/localhost/.test(base),
     },
@@ -205,9 +264,14 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "Vindbaarheid & app",
       title: "Google Search Console en Bing koppelen",
       why: "Zodat Google en Bing de site goed indexeren en je ziet waarop je gevonden wordt.",
-      how: ["search.google.com/search-console → eigendom toevoegen → kies 'HTML-tag' en kopieer de code achter content=.", "Vercel: GOOGLE_SITE_VERIFICATION = die code (en BING_SITE_VERIFICATION via Bing Webmaster Tools). Redeploy en klik daarna op Verifiëren.", "Dien /sitemap.xml in bij beide."],
+      how: [
+        "search.google.com/search-console → Eigendom toevoegen → kies 'Domein' en vul zekerflex.com in.",
+        "Google geeft een TXT-record (google-site-verification=…). Zet dat bij TransIP in de DNS van zekerflex.com (naam @) en klik in Google op Verifiëren.",
+        "Dien daarna https://zekerflex.com/sitemap.xml in onder Sitemaps. Bing: bing.com/webmasters → 'Importeren uit Google Search Console'.",
+      ],
       auto: true,
-      done: Boolean(process.env.GOOGLE_SITE_VERIFICATION),
+      done: Boolean(process.env.GOOGLE_SITE_VERIFICATION) || googleDns,
+      ...(googleDns ? { doneNote: "De Google-verificatie staat in de DNS van zekerflex.com. Of de sitemap is ingediend, kan deze lijst niet zien." } : {}),
     },
     {
       id: "socials",
@@ -219,20 +283,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("socials"),
     },
     {
-      id: "play-store",
-      group: "Vindbaarheid & app",
-      title: "App publiceren in de Google Play Store",
-      why: "De app (PWA) is klaar om als Android-app te verschijnen; de koppeling (assetlinks) staat al.",
-      how: ["Volg docs/MOBILE-APP.md: bubblewrap build met jullie ondertekeningssleutel.", "Maak een Google Play Console-account (eenmalig 25 dollar) en upload het .aab-bestand met screenshots en beschrijving."],
-      auto: false,
-      ...m("play-store"),
-    },
-    {
       id: "videos",
       group: "Vindbaarheid & app",
       title: "Uitlegvideo's plaatsen",
       why: "De pagina /uitleg toont nu alleen foto's met 'video komt binnenkort'.",
-      how: ["Maak of lever 5 korte video's: wat is ZekerFlex, klus plaatsen, uitzenden of freelance, uren goedkeuren, kosten en facturen.", "Geef ze aan mij door; ik zet ze online (bij voorkeur via een videodienst of Vercel Blob, niet in git)."],
+      how: ["Maak of lever 5 korte video's: wat is ZekerFlex, klus plaatsen, uitzenden of freelance, uren goedkeuren, kosten en facturen.", "Geef ze aan mij door; ik zet ze online (bij voorkeur via een videodienst of de eigen server, niet in git)."],
       auto: true,
       done: hasVideos(),
     },
@@ -246,11 +301,90 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("product-photos"),
     },
     {
+      id: "3d-models",
+      group: "Vindbaarheid & app",
+      title: "3D-modellen van je webshopproducten maken",
+      why: "Een product kan in de shop nu draaien en zoomen in 3D, en op de telefoon in je eigen kamer staan (AR). Er zijn alleen nog geen echte modellen; verzonnen modellen zetten we er bewust niet bij.",
+      how: [
+        "Installeer een 3D-scan-app zoals Polycam of KIRI Engine en maak rondom het product zo'n 30 foto's.",
+        "Exporteer als .glb zonder compressie (geen Draco), kleiner dan 25 MB.",
+        "Admin → Shop → product bewerken → 3D-model: upload het bestand en controleer het met 'Bekijk in 3D'.",
+      ],
+      auto: true,
+      done: models3d.size > 0,
+      ...(models3d.size > 0 ? { doneNote: `${models3d.size} ${models3d.size === 1 ? "product heeft" : "producten hebben"} een 3D-model` } : {}),
+    },
+    {
+      id: "map-3d",
+      group: "Vindbaarheid & app",
+      title: "Kiezen waar de 3D-kaart van open diensten komt",
+      why: "De 3D-kaart (vraag en aanbod per regio) staat klaar op zekerflex.com/open-diensten/3d, maar is nog verborgen voor Google en nergens gelinkt. Zonder jouw akkoord komt hij niet op de homepage.",
+      how: ["Bekijk zekerflex.com/open-diensten/3d op je telefoon en op een computer.", "Zeg Claude waar hij mag komen: op de homepage, op de pagina Open diensten, of nog nergens."],
+      auto: false,
+      ...m("map-3d"),
+    },
+    {
+      id: "homepage-meta",
+      group: "Vindbaarheid & app",
+      title: "Akkoord geven op een kortere homepage-titel voor Google",
+      why: "Google toont ongeveer 60 tekens titel en 155 tekens omschrijving. Die van de homepage zijn langer, dus Google knipt ze midden in een zin af. Claude verandert marketingteksten niet zonder jouw akkoord.",
+      how: ["Zeg Claude: 'maak een voorstel voor de homepage-titel'. Je krijgt eerst het voorstel te zien.", "Pas na jouw ja wordt het aangepast; vink het daarna af."],
+      auto: false,
+      ...m("homepage-meta"),
+    },
+    {
+      id: "branch-cities",
+      group: "Vindbaarheid & app",
+      title: "Vestigingen met een onduidelijke plaatsnaam (zoals 'centrum')",
+      why: "De plaatsnaam van een vestiging staat bij elke dienst en in de titel die Google toont, bijvoorbeeld 'Barmedewerker in centrum'. Dan weet een werkzoekende niet in welke stad het werk is.",
+      how: ["Vraag de opdrachtgever om in zijn account bij Locaties de echte plaatsnaam in te vullen (bijv. Groningen). Gegevens van klanten passen we niet zonder hen aan.", "Deze taak vinkt zichzelf af zodra elke vestiging een echte plaatsnaam heeft."],
+      auto: true,
+      done: vagueBranches !== null && vagueBranches.length === 0,
+      ...(vagueBranches && vagueBranches.length > 0 ? { doneNote: `Bij: ${vagueBranches.join(", ")}` } : {}),
+    },
+    {
+      id: "play-store-app",
+      group: "Vindbaarheid & app",
+      title: "Android-app in de Play Store zetten",
+      why: "Een echte app in de Play Store geeft betrouwbare pushmeldingen en een icoon op het beginscherm. Het ondertekende app-bestand staat al klaar.",
+      how: [
+        "Het bestand staat op je bureaublad: ZekerFlex-app-1.0.3.aab (ondertekend, opent zekerflex.com).",
+        "Ga naar play.google.com/console (je ontwikkelaarsaccount is al betaald) → App maken → 'ZekerFlex', pakketnaam com.zekerflex → Interne test of Productie → upload dat .aab-bestand, met screenshots en een korte beschrijving.",
+        "Play Console → Instellingen → App-integriteit: kopieer de SHA-256 van de 'App-ondertekeningssleutel' en geef hem aan Claude; die moet in /.well-known/assetlinks.json zodat de app zonder adresbalk opent.",
+        "Zet KEYSTORE-CREDENTIALS.txt en android-release.keystore (map android-twa) ook in je wachtwoordmanager: zonder die sleutel kun je de app nooit meer bijwerken.",
+      ],
+      auto: false,
+      ...m("play-store-app"),
+    },
+    {
+      id: "vacaturefeed",
+      group: "Vindbaarheid & app",
+      title: "Vacaturefeed aanmelden bij Indeed, Jooble en Adzuna (gratis bereik)",
+      why: "Elke open klus staat automatisch in zekerflex.com/vacatures.xml. Vacaturesites halen die feed elke paar uur op en tonen je klussen gratis aan iedereen die daar zoekt.",
+      how: [
+        "Indeed: ga naar indeed.com/hire/xml-feed-guidelines (of mail je accountmanager) en geef de feed-URL zekerflex.com/vacatures.xml op als 'organische XML-feed'.",
+        "Jooble: jooble.org/info/partners → 'Add your vacancies via XML' → feed-URL invullen.",
+        "Adzuna en Careerjet: via hun partnerpagina hetzelfde (beide lezen het Indeed-formaat).",
+        "Werk.nl (UWV) neemt alleen vacatures van erkende koppelpartners op; vraag dat aan via werk.nl → werkgevers → 'vacatures koppelen', of plaats grote klussen daar los.",
+      ],
+      auto: false,
+      ...m("vacaturefeed"),
+    },
+    {
+      id: "google-business",
+      group: "Vindbaarheid & app",
+      title: "Google Bedrijfsprofiel aanmaken (vindbaarheid 'uitzendbureau in de buurt')",
+      why: "Voor zoekopdrachten als 'uitzendbureau' of 'uitzendbureau Amsterdam' laat Google eerst bedrijven op de kaart zien. Zonder Bedrijfsprofiel sta je daar niet tussen, hoe goed de website ook is. Reviews op dat profiel tellen zwaar mee.",
+      how: ["Ga naar business.google.com en maak een profiel voor ZekerFlex (categorie 'Uitzendbureau', tweede categorie 'Arbeidsbemiddelingsbureau').", "Vul het adres van je kantoor in (of kies 'servicegebied: Nederland' als je geen bezoekadres hebt), je telefoonnummer en zekerflex.com.", "Verifieer het profiel (Google stuurt een code) en vraag je eerste opdrachtgevers en flexkrachten om een review."],
+      auto: false,
+      ...m("google-business"),
+    },
+    {
       id: "turn",
       group: "Bellen & koppelingen",
       title: "Eigen TURN-server voor bellen (aanrader)",
       why: "Zonder TURN lukken (video)gesprekken niet altijd achter strenge bedrijfsfirewalls of sommige mobiele netwerken.",
-      how: ["Op je eigen server: TURN_SHARED_SECRET maken (deploy/scripts/gen-secrets.mjs) en poorten 3478 (udp+tcp) en 49160–49200/udp openzetten.", "Start met docker compose --profile turn (zie docker-compose.prod.yml).", "Vercel: TURN_HOST en TURN_SHARED_SECRET invullen en redeploy."],
+      how: ["Dit kan op de eigen server (VPS) draaien: een coturn-container met de poorten 3478 (udp+tcp) en 49160–49200/udp open.", "Vraag Claude het op te zetten; daarna staan TURN_HOST en TURN_SHARED_SECRET op de server en vinkt deze taak zichzelf af."],
       auto: true,
       done: Boolean(env.TURN_HOST && env.TURN_SHARED_SECRET),
     },
@@ -293,52 +427,14 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Optioneel, push op je telefoon bij storing: installeer de app 'ntfy', abonneer je op een eigen geheime naam (bijv. zekerflex-alarm-8k2q) en zet die naam als repository-secret NTFY_TOPIC (Settings → Secrets and variables → Actions).",
       ],
       auto: false,
-      done: false,
-    },
-    {
-      id: "play-store-app",
-      group: "Vindbaarheid & app",
-      title: "Android-app bouwen en in de Play Store zetten",
-      why: "Een echte app in de Play Store geeft betrouwbare pushmeldingen en een icoon op het beginscherm. Het project, het icoon en de ondertekeningssleutel staan klaar in de map android-twa (niet in Git).",
-      how: [
-        "Open Android Studio → Open → kies de map 'android-twa' in de ZekerFlex-map. Klik bij de melding over de SDK op 'Install missing platform' / 'Sync' — het project is al bijgewerkt naar de nieuwste Android-plugin.",
-        "Build → Generate Signed App Bundle / APK → Android App Bundle → kies android-release.keystore, alias 'zekerflex' en het wachtwoord uit KEYSTORE-CREDENTIALS.txt → release.",
-        "Ga naar play.google.com/console (je ontwikkelaarsaccount is al betaald) → App maken → 'ZekerFlex', pakketnaam com.zekerflex → Productie of Interne test → upload het .aab-bestand uit app/release.",
-        "Play Console → Instellingen → App-integriteit: kopieer de SHA-256 van de 'App-ondertekeningssleutel' en stuur hem door; die moet in /.well-known/assetlinks.json zodat de app zonder adresbalk opent.",
-        "Zet KEYSTORE-CREDENTIALS.txt en android-release.keystore ook in je wachtwoordmanager: zonder die sleutel kun je de app nooit meer bijwerken.",
-      ],
-      auto: false,
-      done: false,
-    },
-    {
-      id: "vacaturefeed",
-      group: "Vindbaarheid & app",
-      title: "Vacaturefeed aanmelden bij Indeed, Jooble en Adzuna (gratis bereik)",
-      why: "Elke open klus staat automatisch in zekerflex.com/vacatures.xml. Vacaturesites halen die feed elke paar uur op en tonen je klussen gratis aan iedereen die daar zoekt.",
-      how: [
-        "Indeed: ga naar indeed.com/hire/xml-feed-guidelines (of mail je accountmanager) en geef de feed-URL zekerflex.com/vacatures.xml op als 'organische XML-feed'.",
-        "Jooble: jooble.org/info/partners → 'Add your vacancies via XML' → feed-URL invullen.",
-        "Adzuna en Careerjet: via hun partnerpagina hetzelfde (beide lezen het Indeed-formaat).",
-        "Werk.nl (UWV) neemt alleen vacatures van erkende koppelpartners op; vraag dat aan via werk.nl → werkgevers → 'vacatures koppelen', of plaats grote klussen daar los.",
-      ],
-      auto: false,
-      done: false,
-    },
-    {
-      id: "google-business",
-      group: "Vindbaarheid & app",
-      title: "Google Bedrijfsprofiel aanmaken (vindbaarheid 'uitzendbureau in de buurt')",
-      why: "Voor zoekopdrachten als 'uitzendbureau' of 'uitzendbureau Amsterdam' laat Google eerst bedrijven op de kaart zien. Zonder Bedrijfsprofiel sta je daar niet tussen, hoe goed de website ook is. Reviews op dat profiel tellen zwaar mee.",
-      how: ["Ga naar business.google.com en maak een profiel voor ZekerFlex (categorie 'Uitzendbureau', tweede categorie 'Arbeidsbemiddelingsbureau').", "Vul het adres van je kantoor in (of kies 'servicegebied: Nederland' als je geen bezoekadres hebt), je telefoonnummer en zekerflex.com.", "Verifieer het profiel (Google stuurt een code) en vraag je eerste opdrachtgevers en flexkrachten om een review."],
-      auto: false,
-      done: false,
+      ...m("github-billing"),
     },
     {
       id: "smtp",
       group: "Beheer & veiligheid",
       title: "Mail echt laten versturen (SMTP)",
       why: "Zonder SMTP-instellingen worden mails (codes, welkomstmails, facturen, herinneringen) alleen in Admin → Mail bewaard en komen ze nooit bij gebruikers aan.",
-      how: ["Pak de SMTP-gegevens van je mailprovider (bijv. TransIP, Mailgun, Postmark of je eigen mailserver): host, poort, gebruikersnaam, wachtwoord.", "Vercel → Settings → Environment Variables: zet SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS en MAIL_FROM (bijv. no-reply@zekerflex.com) en deploy opnieuw.", "Controleer in Admin → Mail dat nieuwe mails als 'verstuurd' staan in plaats van alleen 'opgeslagen'."],
+      how: ["Pak de SMTP-gegevens van je mailprovider (bijv. TransIP, Mailgun, Postmark of je eigen mailserver): host, poort, gebruikersnaam, wachtwoord.", "Geef ze aan Claude; die zet SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS en MAIL_FROM (bijv. no-reply@zekerflex.com) op de server.", "Controleer in Admin → Mail dat nieuwe mails als 'verstuurd' staan in plaats van alleen 'opgeslagen'."],
       auto: true,
       done: Boolean(process.env.SMTP_HOST?.trim()),
     },
@@ -347,9 +443,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "Geld & bank",
       title: "Stripe Identity activeren (ID-controle via Stripe)",
       why: "Freelancers maken dan op Stripe's eigen pagina een foto van hun ID en een live selfie; Stripe controleert of het document echt is en of het gezicht klopt. Meestal binnen een minuut goedgekeurd, zonder dat jij foto's hoeft na te kijken (±€1,50 per controle).",
-      how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan met STRIPE_IDENTITY_ENABLED = false in Vercel."],
+      how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan altijd: vraag Claude om STRIPE_IDENTITY_ENABLED op false te zetten."],
       auto: false,
-      done: false,
+      ...m("stripe-identity"),
     },
     {
       id: "alert-push",
@@ -365,18 +461,50 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       group: "Beheer & veiligheid",
       title: "Bewaking of de site online is (van buitenaf)",
       why: "Als de hele site plat ligt, kan hij dat zelf niet meer melden. Een dienst van buitenaf controleert elke minuut of zekerflex.com werkt en waarschuwt je anders.",
-      how: ["Eigen beheer (past bij je voorkeur): installeer Uptime Kuma op je AI-server (docker run -d -p 3001:3001 louislam/uptime-kuma) en voeg een monitor toe op https://zekerflex.com/api/health.", "Of snel en gratis: een uptime-dienst zoals UptimeRobot of Better Stack met dezelfde URL.", "Laat meldingen naar je telefoon/mail sturen en vink deze taak af."],
+      how: ["Snel en gratis: maak een account bij UptimeRobot of Better Stack en voeg een monitor toe op https://zekerflex.com/api/health.", "Eigen beheer kan ook (Uptime Kuma), maar zet het dan op een andere machine dan de site, anders valt de bewaking tegelijk uit.", "Laat meldingen naar je telefoon/mail sturen en vink deze taak af."],
       auto: false,
       ...m("uptime"),
     },
     {
       id: "backups",
       group: "Beheer & veiligheid",
-      title: "Back-ups en een hersteltest",
-      why: "Zorg dat je bij een storing echt alles terugkrijgt — test het één keer echt.",
-      how: ["Controleer bij je databaseprovider dat dagelijkse back-ups aan staan en hoe lang ze bewaard worden.", "Doe één keer een hersteltest op een testdatabase (zie deploy/scripts/restore.sh)."],
+      title: "Dagelijkse back-up met hersteltest",
+      why: "Elke nacht maakt de server een back-up van de database en de uploads, en zet die op proef terug om te bewijzen dat hij bruikbaar is.",
+      how: ["Dit gaat vanzelf. De stand zie je in Admin → Systeem → tab Back-ups.", "Gaat er iets mis, dan krijg je een melding. Herstellen na een storing staat in deploy/DISASTER-RECOVERY.md (of vraag Claude)."],
+      auto: true,
+      done: backup?.state === "ok",
+      doneNote: backupNote(backup),
+    },
+    {
+      id: "backup-offsite",
+      group: "Beheer & veiligheid",
+      title: "Kopie van de back-ups buiten de server",
+      why: "De nachtelijke back-ups staan op dezelfde server als de site. Gaat die server stuk of wordt hij gehackt, dan ben je de back-ups ook kwijt.",
+      how: [
+        "Kies één van twee: elke nacht een versleutelde kopie naar deze laptop (Claude kan dat instellen met de sleutel die er al op staat), of opslag in de cloud zoals Cloudflare R2 of Backblaze B2 (een paar euro per maand): maak daar een bucket met sleutel aan en geef die aan Claude.",
+        "Claude zet het aan en test één keer een terugzetting vanaf de kopie. Vink het daarna af.",
+      ],
       auto: false,
-      ...m("backups"),
+      ...m("backup-offsite"),
+    },
+    {
+      id: "test-accounts",
+      group: "Beheer & veiligheid",
+      title: "Oude wegwerp-testaccounts laten opruimen",
+      why: "Bij het zoeken naar een inlogprobleem op 23 oktober zijn testaccounts aangemaakt (zf-…@example.com, nooit geverifieerd). Ze doen niets, maar vervuilen de gebruikerslijst en de cijfers.",
+      how: ["Zeg tegen Claude: 'ruim de testaccounts op'. Alleen accounts op @example.com die met zf- beginnen worden verwijderd; echte gebruikers blijven staan."],
+      auto: true,
+      done: testAccounts === 0,
+      ...(testAccounts ? { doneNote: `nog ${testAccounts} over` } : {}),
+    },
+    {
+      id: "google-login-test",
+      group: "Beheer & veiligheid",
+      title: "Inloggen met Google één keer zelf proberen",
+      why: "De knop 'Inloggen met Google' staat aan. Probeer hem één keer met het Google-account waarmee je ook op ZekerFlex staat; dan weet je zeker dat nieuwe gebruikers er ook mee binnenkomen.",
+      how: ["Open een privévenster en ga naar zekerflex.com/login (zonder www).", "Klik 'Inloggen met Google'. Kom je in je account, vink dit dan af. Zie je een foutmelding, maak er een foto van en stuur die naar Claude."],
+      auto: false,
+      ...m("google-login-test"),
     },
     {
       id: "git-purge",
@@ -388,20 +516,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("git-purge"),
     },
     {
-      id: "vercel-access",
+      id: "old-uploads",
       group: "Overig",
-      title: "Claude toegang geven tot Vercel (optioneel)",
-      why: "Dan kan Claude omgevingsvariabelen en deploys voortaan zelf regelen.",
-      how: ["Start een interactieve Claude Code-sessie en autoriseer de Vercel-koppeling via /mcp."],
+      title: "Oude uploads (september–oktober) terughalen",
+      why: "Toen de site nog op Vercel draaide, gingen uploads naar een aparte S3-opslag. Die 19 bestanden (onder andere de foto's van de Riem en de Thermo bodywarmer in de shop) zijn niet meeverhuisd. Nieuwe uploads staan sinds 31 oktober in je eigen database.",
+      how: ["Zoek uit bij welke opslagdienst die S3-bucket staat (bijv. AWS, Cloudflare R2, Backblaze of DigitalOcean; kijk in je mail naar facturen).", "Maak daar een sleutel met alleen leesrechten en geef Claude het adres (endpoint), de bucketnaam en de sleutel; die kopieert de bestanden naar de server en koppelt de twee shopfoto's opnieuw."],
       auto: false,
-      ...m("vercel-access"),
+      ...m("old-uploads"),
     },
     {
       id: "vercel-duplicate",
       group: "Overig",
-      title: "Dubbel Vercel-project opruimen",
-      why: "Het project 'briando979-netizens-projects/zekerflex-finale' faalt bij elke push (oude dubbele koppeling); het echte project is 'briando/zekerflex-finale'.",
-      how: ["Vercel → dat project → Settings → Git: ontkoppelen, of het project verwijderen als je het niet gebruikt."],
+      title: "Oude Vercel-projecten opzeggen",
+      why: "Sinds 30 oktober draait de site op je eigen server; Vercel krijgt geen bezoekers meer. De projecten 'briando/zekerflex-finale' en 'briando979-netizens-projects/zekerflex-finale' kunnen weg.",
+      how: ["Doe eerst 'Oude uploads terughalen': in Vercel staan nog de namen van de instellingen van die oude opslag.", "Daarna: Vercel → elk project → Settings → onderaan 'Delete Project'. Kijk onder Billing of je niets meer betaalt."],
       auto: false,
       ...m("vercel-duplicate"),
     },

@@ -1,23 +1,69 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const kv = vi.hoisted(() => new Map<string, unknown>());
+const live = vi.hoisted(() => ({
+  env: { STRIPE_SECRET_KEY: "", SEPA_CREDITOR_IBAN: "NL91ABNA0417164300", SEPA_CREDITOR_NAME: "ZekerFlex B.V.", STRIPE_PUBLISHABLE_KEY: "", IMAGE_ENABLED: false, APP_BASE_URL: "https://www.zekerflex.com" },
+  txt: [] as string[][],
+  txtHosts: [] as string[],
+  backup: null as unknown,
+  models: new Map<string, unknown>(),
+  testUsers: 0,
+  branches: [] as { name: string; tenant: { name: string } }[],
+  webhookEvents: [] as string[],
+}));
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
-vi.mock("@/lib/env", () => ({ env: { STRIPE_SECRET_KEY: "", SEPA_CREDITOR_IBAN: "NL91ABNA0417164300", SEPA_CREDITOR_NAME: "ZekerFlex B.V.", STRIPE_PUBLISHABLE_KEY: "", IMAGE_ENABLED: false, APP_BASE_URL: "https://www.zekerflex.com" } }));
+vi.mock("@/lib/env", () => ({ env: live.env }));
 vi.mock("@/lib/ai/client", () => ({
   ensureAiNode: async () => undefined, llmHealth: async () => ({ ok: false, baseUrl: "", model: "m", detail: "geen model" }) }));
-vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: vi.fn() }));
+vi.mock("@/lib/billing/stripe", () => ({
+  getStripeClient: () => ({
+    accounts: { retrieveCurrent: async () => ({ capabilities: {} }) },
+    webhookEndpoints: { list: async () => ({ data: [{ status: "enabled", enabled_events: live.webhookEvents }] }) },
+  }),
+}));
 vi.mock("@/lib/bank/insurance", () => ({ getProducts: async () => [] }));
+vi.mock("@/lib/messaging/contacts", () => ({ platformAdminIds: async () => [] }));
+vi.mock("@/lib/billing/reminders", () => ({ getReminderSettings: async () => ({ enabled: false }) }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: { count: async () => live.testUsers },
+    branch: { findMany: async () => live.branches },
+    webPushSubscription: { count: async () => 0 },
+  },
+}));
+vi.mock("@/lib/ops/backup", () => ({ readBackupReport: async () => live.backup }));
+vi.mock("@/lib/shop/model3d", () => ({ listModels3D: async () => live.models }));
+vi.mock("node:dns/promises", () => ({
+  Resolver: class {
+    async resolveTxt(host: string) {
+      live.txtHosts.push(host);
+      return live.txt;
+    }
+  },
+}));
 
 import { addCustom, customTodos, ownerTodos, setManualDone, updateCustom } from "@/lib/admin/owner-todos";
 
-beforeEach(() => kv.clear());
+const byId = async () => Object.fromEntries((await ownerTodos()).map((x) => [x.id, x]));
+
+beforeEach(() => {
+  kv.clear();
+  live.env.STRIPE_SECRET_KEY = "";
+  live.txt = [];
+  live.txtHosts = [];
+  live.backup = null;
+  live.models = new Map();
+  live.testUsers = 0;
+  live.branches = [];
+  live.webhookEvents = [];
+});
 
 describe("owner to-do list", () => {
   it("checks configuration automatically", async () => {
-    const t = Object.fromEntries((await ownerTodos()).map((x) => [x.id, x]));
+    const t = await byId();
     expect(t.sepa!.done).toBe(true);
     expect(t.llm!.done).toBe(false);
-    expect(t["stripe-pk"]!.done).toBe(false);
+    expect(t["issuing-active"]!.done).toBe(false);
     expect(t.insurer!.done).toBe(false);
   });
 
@@ -28,6 +74,63 @@ describe("owner to-do list", () => {
     expect(t.doneNote).toContain("Brian");
     await setManualDone("terms-review", false, "Brian");
     expect((await ownerTodos()).find((x) => x.id === "terms-review")!.done).toBe(false);
+  });
+
+  it("every item that can't check itself can be ticked off (none snaps back)", async () => {
+    const manual = (await ownerTodos()).filter((x) => !x.auto);
+    for (const x of manual) await setManualDone(x.id, true, "Brian");
+    const after = await byId();
+    expect(manual.filter((x) => !after[x.id]!.done).map((x) => x.id)).toEqual([]);
+    expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "github-billing", "play-store-app", "vacaturefeed", "google-business"]));
+  });
+
+  it("sends the owner to the own server, not to Vercel, for settings", async () => {
+    const stale = (await ownerTodos()).filter((x) => x.id !== "vercel-duplicate" && /vercel/i.test(x.how.join(" ")));
+    expect(stale.map((x) => x.id)).toEqual([]);
+  });
+
+  it("ticks the backup off only after a good night with a restore drill", async () => {
+    expect((await byId()).backups).toMatchObject({ auto: true, done: false, doneNote: "geen back-upmap gevonden op deze server" });
+    live.backup = { available: true, state: "ok", reasons: [], status: { at: "2026-11-02T02:31:00Z" }, files: [], disk: null };
+    const ok = (await byId()).backups!;
+    expect(ok.done).toBe(true);
+    expect(ok.doneNote).toContain("proef-terugzetting gelukt");
+    live.backup = { available: true, state: "failed", reasons: ["De proef-terugzetting is niet gelukt."], status: null, files: [], disk: null };
+    expect((await byId()).backups).toMatchObject({ done: false, doneNote: "De proef-terugzetting is niet gelukt." });
+  });
+
+  it("counts Search Console as done when the DNS record of the main domain is there", async () => {
+    expect((await byId())["search-console"]!.done).toBe(false);
+    live.txt = [["v=spf1 include:_spf.transip.email ~all"], ["google-site-verification=abc", "123"]];
+    expect((await byId())["search-console"]!.done).toBe(true);
+    expect(live.txtHosts.at(-1)).toBe("zekerflex.com");
+  });
+
+  it("reads the Stripe webhook for the expired-checkout event", async () => {
+    expect((await byId())["stripe-expired"]!.auto).toBe(false);
+    live.env.STRIPE_SECRET_KEY = "sk_test_x";
+    live.webhookEvents = ["checkout.session.completed"];
+    expect((await byId())["stripe-expired"]).toMatchObject({ auto: true, done: false });
+    live.webhookEvents = ["checkout.session.completed", "checkout.session.expired"];
+    expect((await byId())["stripe-expired"]!.done).toBe(true);
+    live.webhookEvents = ["*"];
+    expect((await byId())["stripe-expired"]!.done).toBe(true);
+  });
+
+  it("names leftover test accounts, vague branch cities and counts 3D models", async () => {
+    live.testUsers = 5;
+    live.branches = [{ name: "Hoofdvestiging", tenant: { name: "Café De Hoek" } }];
+    let t = await byId();
+    expect(t["test-accounts"]).toMatchObject({ done: false, doneNote: "nog 5 over" });
+    expect(t["branch-cities"]).toMatchObject({ done: false, doneNote: "Bij: Café De Hoek (Hoofdvestiging)" });
+    expect(t["3d-models"]!.done).toBe(false);
+    live.testUsers = 0;
+    live.branches = [];
+    live.models = new Map([["p1", {}]]);
+    t = await byId();
+    expect(t["test-accounts"]!.done).toBe(true);
+    expect(t["branch-cities"]!.done).toBe(true);
+    expect(t["3d-models"]).toMatchObject({ done: true, doneNote: "1 product heeft een 3D-model" });
   });
 
   it("keeps own notes", async () => {
