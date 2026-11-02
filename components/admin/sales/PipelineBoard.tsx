@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { LeadDto } from "@/components/admin/SalesDashboard";
+import { WEBSITE_OPPORTUNITY_BELOW } from "@/lib/sales/website-score-shared";
 
 // ---------------------------------------------------------------------------
 // Salesforce-achtig kanban-bord voor de sales-pijplijn. Kolommen per fase,
@@ -167,6 +168,21 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                         >
                           {l.score}
                         </span>
+                      )}
+                      {l.websiteCheck && (
+                        <a
+                          href={`/website-check?r=${l.websiteCheck.checkId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Website ${l.websiteCheck.host}: ${l.websiteCheck.score}/100${l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? " · kans voor Website-beheer" : ""}`}
+                          className="rounded px-1.5 text-[10px] font-bold"
+                          style={{
+                            background: l.websiteCheck.score < 50 ? "var(--a-crit-soft)" : l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? "var(--a-warn-soft)" : "var(--a-elev)",
+                            color: l.websiteCheck.score < 50 ? "var(--a-crit)" : l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? "var(--a-warn)" : "var(--a-dim)",
+                          }}
+                        >
+                          Web {l.websiteCheck.score}
+                        </a>
                       )}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: "var(--a-mute)" }}>

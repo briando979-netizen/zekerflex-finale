@@ -3,6 +3,7 @@ import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
 import { runSalesEngineTick } from "@/lib/sales/engine";
+import { sweepLeadWebsites } from "@/lib/sales/website-score";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,8 @@ async function handle(request: Request): Promise<NextResponse> {
   try {
     const result = await runSalesEngineTick();
     recordCronRun("sales-motor", true);
+    // Websitescore voor open leads met een bekende site; op de achtergrond, los van de motor.
+    void sweepLeadWebsites(8).catch((err) => logger.warn("lead website sweep failed", { error: (err as Error).message }));
     return NextResponse.json(result);
   } catch (err) {
     recordCronRun("sales-motor", false);

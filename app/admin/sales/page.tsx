@@ -12,6 +12,7 @@ import { enginePaused } from "@/lib/sales/engine";
 import { listSuppression } from "@/lib/sales/suppression";
 import { SalesConsole } from "@/components/admin/sales/SalesConsole";
 import type { LeadDto } from "@/components/admin/SalesDashboard";
+import { websiteCheckOf } from "@/lib/sales/website-score-shared";
 import type { CampaignDto } from "@/components/admin/sales/CampaignsTab";
 import type { EngineSnapshot } from "@/components/admin/sales/EngineTab";
 
@@ -57,6 +58,7 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
     notes: l.notes,
     vacancySignal: l.vacancySignal,
     sourceUrl: l.sourceUrl,
+    websiteCheck: websiteCheckOf(l.enrichmentJson),
     sequenceStep: l.sequenceStep,
     nextActionAt: l.nextActionAt ? l.nextActionAt.toISOString() : null,
     invitedAt: l.invitedAt ? l.invitedAt.toISOString() : null,

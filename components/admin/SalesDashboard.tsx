@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { APanel, APill, AButton } from "@/components/admin/ui";
+import { WEBSITE_OPPORTUNITY_BELOW, type LeadWebsiteCheck } from "@/lib/sales/website-score-shared";
 
 export type LeadDto = {
   id: string;
@@ -25,6 +26,8 @@ export type LeadDto = {
   lastContactedAt: string | null;
   createdAt: string;
   outreach: { id: string; status: string; subject: string; updatedAt: string } | null;
+  /** gratis website-check van de bedrijfssite (lib/sales/website-score.ts) */
+  websiteCheck?: LeadWebsiteCheck | null;
 };
 
 type OutreachDto = { id: string; status: string; subject: string; body: string };
@@ -102,7 +105,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
 
   async function patchLead(
     id: string,
-    action: "enrich" | "score" | "draft" | "mark-replied" | "mark-bounced" | "suppress" | "scrape-contact",
+    action: "enrich" | "score" | "draft" | "mark-replied" | "mark-bounced" | "suppress" | "scrape-contact" | "website-check",
   ) {
     setBusy(`${id}:${action}`);
     setMsg(null);
@@ -127,6 +130,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
         const done: Record<string, string> = {
           enrich: "Lead verrijkt vanuit het Handelsregister.",
           "scrape-contact": "Contactgegevens opgezocht — bekijk telefoon/e-mail hierboven.",
+          "website-check": "Website gecheckt — de score staat hierboven.",
           score: "Fit-score bijgewerkt.",
           "mark-replied": "Gemarkeerd als 'reactie ontvangen' — sequence gestopt.",
           "mark-bounced": "Gemarkeerd als bounce — adres onderdrukt.",
@@ -313,6 +317,17 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           <span className="font-semibold">Fit-score {l.score}:</span> {l.scoreRationale}
                         </p>
                       )}
+                      {l.websiteCheck && (
+                        <p className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
+                          <span className="font-semibold" style={{ color: "var(--a-text)" }}>Website {l.websiteCheck.host}: {l.websiteCheck.score}/100</span>
+                          <span>
+                            {l.websiteCheck.problems} {l.websiteCheck.problems === 1 ? "probleem" : "problemen"}, {l.websiteCheck.attention} aandachtspunten
+                            {l.websiteCheck.platform ? ` · ${l.websiteCheck.platform}` : ""}
+                          </span>
+                          {l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW && <APill tone="warn">Kans voor Website-beheer</APill>}
+                          <a href={`/website-check?r=${l.websiteCheck.checkId}`} target="_blank" rel="noopener noreferrer" className="underline">Rapport</a>
+                        </p>
+                      )}
                       {l.notes && (
                         <p className="text-xs" style={{ color: "var(--a-mute)" }}>
                           <span className="font-semibold">Notitie:</span> {l.notes}
@@ -347,6 +362,12 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           label={busy === `${l.id}:score` ? "Bezig…" : "Bereken fit-score"}
                           disabled={busy !== null}
                           onClick={() => patchLead(l.id, "score")}
+                        />
+                        <SmartBtn
+                          label={busy === `${l.id}:website-check` ? "Checken…" : l.websiteCheck ? "Website opnieuw checken" : "Website checken"}
+                          disabled={!l.sourceUrl?.startsWith("http") || busy !== null}
+                          onClick={() => patchLead(l.id, "website-check")}
+                          hint={!l.sourceUrl?.startsWith("http") ? "Website onbekend" : undefined}
                         />
                         <SmartBtn
                           label={busy === `${l.id}:draft` ? "Bezig…" : o ? "Concept opnieuw" : "Concept-mail schrijven"}
