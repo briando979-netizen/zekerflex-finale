@@ -453,6 +453,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: reminders.enabled,
     },
     {
+      id: "payslips-utc",
+      group: "Geld & bank",
+      title: "Twee oude loonstroken nakijken (toeslagen op de verkeerde klok)",
+      why: "Tot 2 november rekende de loonberekening nacht-, zaterdag-, zondag- en feestdagtoeslagen met de klok van de server (UTC) in plaats van de Nederlandse tijd. Dat scheelt alleen bij uren rond de grenzen, bijvoorbeeld 22:00–23:00, 06:00–07:00 of het eerste uur van een zondag. Er staan 2 loonstroken van daarvoor; bij één zit een toeslag.",
+      how: ["Open Admin → Verloning en bekijk de loonrondes van vóór 2 november.", "Begint of eindigt een dienst rond 22:00, 06:00 of middernacht? Vraag Claude dan om die strook opnieuw te berekenen. Anders kun je dit afvinken."],
+      auto: false,
+      ...m("payslips-utc"),
+    },
+    {
       id: "github-billing",
       group: "Beheer & veiligheid",
       title: "GitHub-account ontgrendelen (betaalprobleem) — anders draaien de automatische tests en de uptime-bewaking niet",
