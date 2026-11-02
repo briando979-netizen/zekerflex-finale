@@ -376,7 +376,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
       {!canMoveMoney && role === "organisation" && (
         <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">Je kunt de bedrijfsrekening bekijken; alleen de hoofdbeheerder kan geld verplaatsen.</p>
       )}
-      {note && <p className={`rounded-xl px-4 py-3 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
+      {note && <p role={note.ok ? "status" : "alert"} className={`rounded-xl px-4 py-3 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
 
       {account.balanceCents < 0 && role !== "platform" && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-crit/30 bg-crit/5 px-4 py-3 text-sm text-ink">

@@ -156,7 +156,7 @@ export function ApiKeysBoard({ tenants }: { tenants: { id: string; name: string 
             </button>
           ))}
         </div>
-        {msg && <p className="text-sm text-crit">{msg}</p>}
+        {msg && <p role="alert" className="text-sm text-crit">{msg}</p>}
         <button
           type="button"
           onClick={create}

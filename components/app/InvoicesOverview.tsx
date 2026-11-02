@@ -223,7 +223,7 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
               {paying ? t.payPending : t.payDirectCta}
             </button>
             {selected.size === 0 && <p className="mt-2 text-xs text-neutralx-400">{t.payDirectNone}</p>}
-            {payError && <p className="mt-2 text-xs text-crit">{payError}</p>}
+            {payError && <p role="alert" className="mt-2 text-xs text-crit">{payError}</p>}
           </div>
         )}
       </div>

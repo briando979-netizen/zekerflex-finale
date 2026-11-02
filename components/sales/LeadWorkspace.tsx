@@ -226,7 +226,7 @@ function NewVisitForm({ onCreated }: { onCreated: () => void }) {
         <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} className="field-input" />
       </label>
 
-      {msg && <p className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
+      {msg && <p role={msg.t === "ok" ? "status" : "alert"} className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
       <button type="submit" disabled={busy} className="btn-primary mt-4 min-h-12 w-full disabled:opacity-50">
         {busy ? "Opslaan…" : "Bezoek vastleggen"}
       </button>

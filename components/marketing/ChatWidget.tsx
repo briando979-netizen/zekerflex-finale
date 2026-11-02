@@ -487,7 +487,7 @@ function BookingForm({ onCancel, onBooked }: { onCancel: () => void; onBooked: (
           <span>Ik ga ermee akkoord dat ZekerFlex contact met me opneemt over deze afspraak.</span>
         </label>
       </div>
-      {error && <p className="mt-2 text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-xs text-crit">{error}</p>}
       <button
         type="submit"
         disabled={submitting}

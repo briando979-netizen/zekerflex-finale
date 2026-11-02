@@ -176,7 +176,7 @@ export function PayoutSpeedPanel() {
           </button>
           <span className="text-xs text-neutralx-400">max {euro(d.maxAdvanceCents)}</span>
         </div>
-        {advErr && <p className="mt-2 text-xs text-crit">{advErr}</p>}
+        {advErr && <p role="alert" className="mt-2 text-xs text-crit">{advErr}</p>}
 
         {d.advances.length > 0 && (
           <ul className="mt-4 divide-y divide-hair text-sm">

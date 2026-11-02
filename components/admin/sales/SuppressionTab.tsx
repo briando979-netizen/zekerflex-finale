@@ -77,7 +77,7 @@ export function SuppressionTab({ initial }: { initial: SuppressionEntry[] }) {
           />
           <AButton onClick={add} disabled={busy}>{busy ? "Bezig…" : "Toevoegen"}</AButton>
         </div>
-        {msg && <p className="mt-2 text-xs" style={{ color: "var(--a-crit)" }}>{msg}</p>}
+        {msg && <p role="alert" className="mt-2 text-xs" style={{ color: "var(--a-crit)" }}>{msg}</p>}
       </APanel>
 
       <APanel pad={false}>

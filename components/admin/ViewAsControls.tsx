@@ -107,7 +107,7 @@ export function ChooseViewAsAccount({ userId, roles }: { userId: string; roles: 
           </button>
         ),
       )}
-      {note && <span className="text-xs text-crit">{note}</span>}
+      {note && <span role="alert" className="text-xs text-crit">{note}</span>}
     </div>
   );
 }

@@ -146,7 +146,7 @@ export function WhatsAppHub({ t }: { t: Dict }) {
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="btn-primary text-sm disabled:opacity-50">
               {busy ? t.uploading : t.chooseFile}
             </button>
-            {note && <span className={`text-sm ${note.ok ? "text-ok" : "text-crit"}`}>{note.text}</span>}
+            {note && <span role={note.ok ? "status" : "alert"} className={`text-sm ${note.ok ? "text-ok" : "text-crit"}`}>{note.text}</span>}
           </div>
         </div>
         <div className="card p-5">

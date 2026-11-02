@@ -229,7 +229,7 @@ export function PinModal({ mode, onDone, onClose }: { mode: "set" | "unlock"; on
           {mode === "set" && (
             <input type="password" inputMode="numeric" maxLength={6} placeholder="Herhaal" value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ""))} className="field-input mt-2 text-center text-lg tracking-[0.5em]" />
           )}
-          {err && <p className="mt-2 text-xs text-crit">{err}</p>}
+          {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
           <button type="submit" disabled={!valid || busy} className="btn-primary mt-4 w-full disabled:opacity-50">
             {busy ? "…" : mode === "set" ? "Pincode instellen" : "Openen"}
           </button>

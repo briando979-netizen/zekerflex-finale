@@ -73,7 +73,7 @@ export function WebhooksBoard() {
           </button>
         </div>
       )}
-      {note && <p className={`rounded-xl px-4 py-2 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
+      {note && <p role={note.ok ? "status" : "alert"} className={`rounded-xl px-4 py-2 text-sm ${note.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>{note.text}</p>}
 
       <div className="card space-y-3 p-5">
         <p className="text-sm font-semibold text-ink">Webhook toevoegen</p>

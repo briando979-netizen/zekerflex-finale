@@ -48,7 +48,7 @@ export function AiFeaturesPanel({ features, connected, problem }: { features: Ai
       </div>
 
       {res && (
-        <div className={`mx-5 mt-4 rounded-lg px-4 py-3 text-sm ${res.ok ? "bg-brand-50 text-brand-800" : "bg-crit/10 text-crit"}`}>
+        <div role={res.ok ? "status" : "alert"} className={`mx-5 mt-4 rounded-lg px-4 py-3 text-sm ${res.ok ? "bg-brand-50 text-brand-800" : "bg-crit/10 text-crit"}`}>
           {res.ok ? (
             <p>
               ✅ Antwoord van <b>{res.model}</b> in {res.ms} ms: “{res.reply}”

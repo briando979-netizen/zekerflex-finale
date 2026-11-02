@@ -112,7 +112,7 @@ export function ResolveDisputeForm({ dispute }: { dispute: DisputeDto }) {
           label={decision === "OVERRULE" ? "Overrule toepassen" : "Goedkeuren"}
         />
         {state.message && (
-          <p
+          <p role={state.ok ? "status" : "alert"}
             className={`text-sm ${
               state.ok ? "text-emerald-700" : "text-red-700"
             }`}

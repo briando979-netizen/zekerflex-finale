@@ -497,7 +497,7 @@ function Modal({
 
           <div className="border-t border-hair p-4">
             {conflict && (
-              <p className="mb-2 text-center text-xs leading-relaxed text-crit">
+              <p role="alert" className="mb-2 text-center text-xs leading-relaxed text-crit">
                 {a.conflict}
               </p>
             )}

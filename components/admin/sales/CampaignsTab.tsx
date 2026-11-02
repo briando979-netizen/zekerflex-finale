@@ -363,7 +363,7 @@ function NewCampaignForm({ onCreated }: { onCreated: () => Promise<void> }) {
         {field("Plaatsen (komma)", "cities", "Amsterdam, Utrecht")}
         {field("Min. fit-score", "minScore")}
         {field("Dagcap", "dailyCap")}
-        {err && <p className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
+        {err && <p role="alert" className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
         <div className="sm:col-span-2">
           <AButton type="submit" disabled={busy || form.name.trim().length < 2}>{busy ? "Bezig…" : "Campagne aanmaken"}</AButton>
         </div>

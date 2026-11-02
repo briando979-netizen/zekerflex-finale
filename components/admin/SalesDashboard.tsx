@@ -515,7 +515,7 @@ function NewLeadForm({ onCreated }: { onCreated: (l: LeadDto) => void }) {
             style={{ background: "var(--a-panel-2)", color: "var(--a-text)", border: "1px solid var(--a-border)" }}
           />
         </label>
-        {err && <p className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
+        {err && <p role="alert" className="text-xs sm:col-span-2" style={{ color: "var(--a-crit)" }}>{err}</p>}
         <div className="sm:col-span-2">
           <AButton type="submit" disabled={busy || form.companyName.trim().length < 2}>
             {busy ? "Bezig…" : "Lead opslaan"}

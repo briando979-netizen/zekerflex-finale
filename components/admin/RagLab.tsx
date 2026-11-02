@@ -112,7 +112,7 @@ export function RagLab() {
           {busy ? "Bezig…" : "Vergelijk"}
         </button>
       </form>
-      {err && <p className="px-5 pb-3 text-sm text-crit">{err}</p>}
+      {err && <p role="alert" className="px-5 pb-3 text-sm text-crit">{err}</p>}
 
       {res && (
         <div className="grid gap-3 px-5 pb-5 md:grid-cols-2">

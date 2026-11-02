@@ -71,7 +71,7 @@ export function InspectLinkPanel({ userId }: { userId: string }) {
           {busy ? "Bezig…" : "Maak inspectielink"}
         </button>
       </div>
-      {error && <p className="text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="text-xs text-crit">{error}</p>}
       {link && (
         <div className="space-y-2 rounded-lg border border-hair bg-paper-soft p-3 text-xs">
           <p className="text-neutralx-500">Geldig tot {new Date(link.expiresAt).toLocaleString("nl-NL")}</p>

@@ -65,7 +65,7 @@ export function KycOverride({ userId, status }: { userId: string; status: string
           </button>
         )}
       </div>
-      {error && <p className="w-full text-xs text-crit">{error}</p>}
+      {error && <p role="alert" className="w-full text-xs text-crit">{error}</p>}
     </div>
   );
 }

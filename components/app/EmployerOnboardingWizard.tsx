@@ -169,7 +169,7 @@ export function EmployerOnboardingWizard({
           </div>
         ) : (
           <form action={kvkFormAction} className="space-y-4">
-            {kvkState.error && <p className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
+            {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
             <label className="block">
               <span className="field-label">{o.kvkNumber}</span>
               <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
