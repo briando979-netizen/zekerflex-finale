@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, REVIEWS, THEMAFEESTEN, activiteit, type Activiteit } from "@/lib/voorstel/schwarzwald";
-import { ActiviteitKaart, ArrangementBlok, Beeld, Sterren } from "@/components/voorstel/SchwarzwaldCards";
+import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, REVIEWS, THEMAFEESTEN, activiteit, doelgroepHref, type Activiteit } from "@/lib/voorstel/schwarzwald";
+import { pagina, type Blok } from "@/lib/voorstel/schwarzwald-paginas";
+import { ActiviteitKaart, ArrangementBlok, Beeld, CtaBand, Sterren } from "@/components/voorstel/SchwarzwaldCards";
+import { RunsWeergave } from "@/components/voorstel/SchwarzwaldBlokken";
+
+type Alinea = Extract<Blok, { type: "alinea" }>;
+const alineaDieBegintMet = (blokken: Blok[], begin: string) =>
+  blokken.find((b): b is Alinea => b.type === "alinea" && b.runs.map((r) => r.t).join("").startsWith(begin));
 
 const UITGELICHT = ["buggy-rijden", "quad-rijden", "escaperoom", "e-chopper-tour", "f1-sim-race", "kever-rally"];
 // absolute: anders plakt de root-layout er "· ZekerFlex" achter
@@ -13,6 +19,9 @@ const TICKER = ["Buggy", "Quad", "Escaperoom", "F1 sim race", "E-chopper", "Keve
 export default function SchwarzwaldHome() {
   const uitgelicht = UITGELICHT.map(activiteit).filter((a): a is Activiteit => a !== undefined);
   const buggy = activiteit("buggy-rijden");
+  const home = pagina("/");
+  const trending = home && alineaDieBegintMet(home.blokken, "Trending");
+  const intro = home && alineaDieBegintMet(home.blokken, "Het Schwarzwald in Rijssen");
 
   return (
     <>
@@ -96,8 +105,31 @@ export default function SchwarzwaldHome() {
         </div>
       </div>
 
+      {/* Hun eigen homepage-tekst, letterlijk */}
+      {(intro || trending) && (
+        <section className="mx-auto grid max-w-[1280px] gap-8 px-4 pt-20 sm:px-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Over ons</p>
+            <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{home?.titel}</h2>
+            {intro && (
+              <p className="mt-5 text-lg leading-relaxed text-schw-night/85">
+                <RunsWeergave runs={intro.runs} />
+              </p>
+            )}
+          </div>
+          {trending && (
+            <div className="rounded-xl3 bg-schw-night p-7 text-schw-cream sm:p-8">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-sun">Trending</p>
+              <p className="mt-3 leading-relaxed text-schw-cream/90">
+                <RunsWeergave runs={trending.runs} />
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Doelgroepen */}
-      <section className="mx-auto max-w-[1280px] px-4 pb-20 pt-24 sm:px-8">
+      <section className="mx-auto max-w-[1280px] px-4 pb-20 pt-20 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Voor elke groep</p>
@@ -109,7 +141,7 @@ export default function SchwarzwaldHome() {
           {DOELGROEPEN.map((d) => (
             <Link
               key={d.slug}
-              href={`${BASE}/voor/${d.slug}`}
+              href={doelgroepHref(d)}
               className="group relative aspect-[4/5] overflow-hidden rounded-xl3 bg-schw-forest sm:aspect-[4/3]"
             >
               <Image
@@ -217,7 +249,7 @@ export default function SchwarzwaldHome() {
           {THEMAFEESTEN.map((t) => (
             <Link
               key={t.slug}
-              href={`${BASE}/themafeesten#${t.slug}`}
+              href={`${BASE}${t.bron}`}
               className="group w-[78%] shrink-0 snap-start overflow-hidden rounded-xl3 bg-white shadow-[0_18px_40px_-24px_rgba(10,18,14,0.35)] sm:w-[340px]"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
@@ -252,19 +284,7 @@ export default function SchwarzwaldHome() {
         </div>
       </section>
 
-      {/* Afsluiter */}
-      <section className="bg-schw-orange px-4 py-20 text-center text-schw-night sm:px-8">
-        <h2 className="mx-auto max-w-3xl font-display text-[clamp(2.4rem,6vw,4.5rem)] font-bold leading-[0.95] tracking-[-0.02em]">Klaar voor jullie dag?</h2>
-        <p className="mx-auto mt-4 max-w-xl text-lg">Reserveer online of bel ons, dan denken we mee over het programma.</p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href={`${BASE}/reserveren`} className="rounded-full bg-schw-night px-7 py-4 font-bold text-schw-cream transition-transform hover:-translate-y-0.5">
-            Reserveer nu
-          </Link>
-          <a href={CONTACT.telefoonHref} className="rounded-full border-2 border-schw-night px-7 py-4 font-bold">
-            Bel {CONTACT.telefoon}
-          </a>
-        </div>
-      </section>
+      <CtaBand />
     </>
   );
 }

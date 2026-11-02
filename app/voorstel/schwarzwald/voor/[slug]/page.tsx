@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { BASE, CONTACT, REVIEWS, THEMAFEESTEN, activiteitenVoor, doelgroep } from "@/lib/voorstel/schwarzwald";
+import { notFound, redirect } from "next/navigation";
+import { BASE, CONTACT, REVIEWS, THEMAFEESTEN, activiteitenVoor, doelgroep, doelgroepHref } from "@/lib/voorstel/schwarzwald";
 import { ActiviteitKaart, Beeld, Sterren } from "@/components/voorstel/SchwarzwaldCards";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -13,6 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function DoelgroepPage({ params }: { params: Promise<{ slug: string }> }) {
   const d = doelgroep((await params).slug);
   if (!d) notFound();
+  // doelgroepen met een eigen pagina op hun site tonen die (letterlijke) pagina
+  if (d.bron) redirect(doelgroepHref(d));
 
   const activiteiten = activiteitenVoor(d.slug);
   const review = REVIEWS.find((r) => (d.slug === "trouwen" ? r.bij === "Bruiloft" : r.bij !== "Bruiloft"));
@@ -27,7 +29,7 @@ export default async function DoelgroepPage({ params }: { params: Promise<{ slug
               {d.nieuw && <span className="ml-3 rounded-full bg-schw-sun px-2.5 py-0.5 text-schw-night">Nieuw</span>}
             </p>
             <h1 className="mt-4 font-display text-[clamp(2.6rem,7vw,5rem)] font-bold leading-[0.95] tracking-[-0.03em]">{d.kop}</h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-schw-cream/80">{d.intro}</p>
+            {d.intro && <p className="mt-6 max-w-xl text-lg leading-relaxed text-schw-cream/80">{d.intro}</p>}
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={`${BASE}/reserveren?voor=${d.slug}`} className="rounded-full bg-schw-orange px-7 py-4 font-bold text-schw-night transition-transform hover:-translate-y-0.5">
                 Vraag een voorstel aan
@@ -77,7 +79,7 @@ export default async function DoelgroepPage({ params }: { params: Promise<{ slug
           <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Sluit af met een themafeest</h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {THEMAFEESTEN.slice(0, 3).map((t) => (
-              <Link key={t.slug} href={`${BASE}/themafeesten#${t.slug}`} className="group overflow-hidden rounded-xl3 bg-white shadow-[0_18px_40px_-24px_rgba(10,18,14,0.35)]">
+              <Link key={t.slug} href={`${BASE}${t.bron}`} className="group overflow-hidden rounded-xl3 bg-white shadow-[0_18px_40px_-24px_rgba(10,18,14,0.35)]">
                 <div className="relative aspect-[16/10] overflow-hidden">
                   <Beeld src={t.foto} alt={t.naam} sizes="(max-width: 1024px) 50vw, 400px" className="transition-transform duration-700 ease-spring group-hover:scale-105" />
                 </div>

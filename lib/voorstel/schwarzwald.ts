@@ -1,13 +1,14 @@
 // ---------------------------------------------------------------------------
 // Ontwerpvoorstel voor Het Schwarzwald (Rijssen): een nieuwe website gebouwd op
-// ZekerFlex in plaats van WordPress. Alle inhoud staat hier, de pagina's onder
-// app/voorstel/schwarzwald/ renderen alleen deze lijsten. Een activiteit,
-// feest of doelgroep toevoegen = één entry hieronder.
+// ZekerFlex in plaats van WordPress. Hier staan de lijsten (activiteiten,
+// feesten, doelgroepen, menu) voor kaarten en navigatie. De volledige teksten
+// van hun pagina's staan letterlijk in schwarzwald-paginas.json, gekoppeld via
+// `bron` (hun oorspronkelijke pad).
 //
-// Feiten en prijzen komen van hetschwarzwald.nl (opgehaald 2 nov 2026), de
-// teksten zijn nieuw geschreven. Prijzen zijn hun gepubliceerde actieprijzen en
-// kunnen veranderen. De foto's in /public/voorstel/schwarzwald/ zijn van hun
-// eigen site en alleen voor dit voorstel bedoeld (pagina's staan op noindex).
+// Alles komt van hetschwarzwald.nl (opgehaald 2 nov 2026). Alleen de korte
+// kaartteksten en feitenlijstjes hieronder zijn nieuw geschreven. De foto's in
+// /public/voorstel/schwarzwald/ zijn van hun eigen site en alleen voor dit
+// voorstel bedoeld (pagina's staan op noindex).
 // ---------------------------------------------------------------------------
 
 export const BASE = "/voorstel/schwarzwald";
@@ -24,7 +25,20 @@ export const CONTACT = {
   reserveerUrl: "https://schwarzwald.stackbase.nl/",
   score: "9,5",
   aantalReviews: 337,
+  kvk: "51448041",
+  btw: "NL823223735 B01",
 } as const;
+
+export const OPENINGSTIJDEN = [
+  { dagen: "Woensdag t/m vrijdag", tijd: "13:00 – 22:30" },
+  { dagen: "Zaterdag en zondag", tijd: "11:00 – 22:30" },
+] as const;
+
+export const SOCIAAL = [
+  { naam: "Facebook", href: "https://nl-nl.facebook.com/Hetschwarzwald" },
+  { naam: "Instagram", href: "https://instagram.com/explore/locations/302260007/" },
+  { naam: "Twitter", href: "https://twitter.com/hetschwarzwald" },
+] as const;
 
 export type Categorie = "wielen" | "spel" | "skills";
 
@@ -44,10 +58,11 @@ export interface Arrangement {
 
 export interface Activiteit {
   slug: string;
+  /** hun pad, sleutel in schwarzwald-paginas.json */
+  bron: string;
   naam: string;
   /** één regel op de kaart */
   kort: string;
-  intro: string;
   foto?: string;
   categorie: Categorie;
   /** speelt zich binnen af, dus regenproof */
@@ -66,10 +81,9 @@ const ONTVANGST = "Ontvangst met koffie, thee en cake (30 min)";
 export const ACTIVITEITEN: Activiteit[] = [
   {
     slug: "buggy-rijden",
+    bron: "/activiteiten/buggy-rijden",
     naam: "Buggy rijden",
     kort: "150cc crossbuggy's door zand en bos",
-    intro:
-      "Met z'n tweeën in een robuuste crossbuggy, achter de instructeur aan door zand, bospaden en over verharde wegen. Halverwege wissel je van stuur. Stof in je haren, grijns op je gezicht.",
     foto: `${FOTO}/buggy.webp`,
     categorie: "wielen",
     prijs: "€ 65 p.p.",
@@ -86,10 +100,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "quad-rijden",
+    bron: "/activiteiten/quad-rijden",
     naam: "Quad rijden",
     kort: "Onze meest geboekte activiteit, op een echte crossbaan",
-    intro:
-      "Heuvels, springbulten en scherpe bochten op een echte motorcrossbaan. De 250cc-automaatquads rijden makkelijk, dus met een klein beetje lef kan iedereen mee. Voor kinderen staan elektrische kinderquads klaar.",
     foto: `${FOTO}/quad.webp`,
     categorie: "wielen",
     prijs: "vanaf € 60 p.p.",
@@ -100,10 +113,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "4x4-off-road",
+    bron: "/activiteiten/4x4-off-road-tour",
     naam: "4×4 off-road tour",
     kort: "Modder, hellingen en een stoere terreinwagen",
-    intro:
-      "Een instructeur leert je hoe je een 4×4 over modder en steile hellingen stuurt. Het gaat om techniek en beheersing, en dat blijkt lastiger (en leuker) dan je denkt.",
     foto: `${FOTO}/offroad.webp`,
     categorie: "wielen",
     prijs: "vanaf € 60 p.p.",
@@ -114,10 +126,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "e-chopper-tour",
+    bron: "/activiteiten/e-chopper-tour",
     naam: "E-chopper tour",
     kort: "Geluidloos toeren door bos en heide",
-    intro:
-      "Stoere elektrische choppers, een volle accu en een route langs de Sallandse Heuvelrug. De route werkt met fotoherkenning, dus verdwalen kan niet. Stop onderweg gerust bij een terras.",
     foto: `${FOTO}/e-chopper.webp`,
     categorie: "wielen",
     prijs: "vanaf € 35 p.p.",
@@ -129,10 +140,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "solex-rijden",
+    bron: "/activiteiten/solex-rijden",
     naam: "Solex rijden",
     kort: "In leren jas langs Markelo, Holten en Diepenheim",
-    intro:
-      "Hijs je in de ouderwetse leren outfit, start de Solex en tuf langs de mooiste plekjes van Overijssel. Langzaam, luidruchtig en gegarandeerd hilarisch.",
     foto: `${FOTO}/solex.webp`,
     categorie: "wielen",
     prijs: "vanaf € 35 p.p.",
@@ -143,10 +153,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "retro-scooter-tour",
+    bron: "/activiteiten/retro-scooter-tour",
     naam: "Retro scooter tour",
     kort: "Vespa-gevoel in de Twentse natuur",
-    intro:
-      "Een retro scooter, een unieke route en de frisse lucht van de Schwarzwalder bossen. Wedden dat je na afloop helemaal ontspannen bent?",
     foto: `${FOTO}/scooter.webp`,
     categorie: "wielen",
     prijs: "vanaf € 35 p.p.",
@@ -157,10 +166,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "kever-rally",
+    bron: "/activiteiten/kever-rally",
     naam: "Kever rally",
     kort: "Puzzeltocht in een échte Volkswagen Kever",
-    intro:
-      "Terug naar de jaren zestig: stap in een klassieke Kever en los onderweg de puzzels op. Geen ellenlange briefing, gewoon instappen en genieten van de bosrijke route.",
     foto: `${FOTO}/kever.webp`,
     categorie: "wielen",
     prijs: "€ 35 p.p.",
@@ -171,10 +179,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "swing-trike",
+    bron: "/activiteiten/swing-trike",
     naam: "Swing Trike",
     kort: "Elektrische driewieler die je stuurt met je lijf",
-    intro:
-      "De Swing Trike stuur je net als een Segway met je lichaam. Hij gaat niet harder dan 25 km/u, dus je kunt onderweg gewoon met elkaar kletsen tussen de bomen.",
     categorie: "wielen",
     prijs: "€ 35 p.p.",
     duur: "1 uur",
@@ -184,10 +191,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "segway-clinic",
+    bron: "/activiteiten/segway-clinic",
     naam: "Segway clinic",
     kort: "Leunen is rijden, terugleunen is remmen",
-    intro:
-      "Eerst wennen, dan los op de uitdagende Segway-baan in het bos. Je stuurt met je eigen lichaamsgewicht en hebt het sneller onder de knie dan je denkt.",
     foto: `${FOTO}/segway.webp`,
     categorie: "skills",
     prijs: "€ 25 p.p.",
@@ -198,10 +204,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "anti-slipcursus",
+    bron: "/activiteiten/anti-slipcursus",
     naam: "Anti-slipcursus",
     kort: "Theorie en praktijk in onze eigen slipauto's",
-    intro:
-      "Twee uur lang leren wat je auto doet als het glad wordt, en hoe je hem weer onder controle krijgt. Leerzaam, spannend en net zo leuk als een kermisattractie.",
     foto: `${FOTO}/slipcursus.webp`,
     categorie: "skills",
     prijs: "€ 75 p.p. (normaal € 100)",
@@ -212,10 +217,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "shooting-games",
+    bron: "/activiteiten/shooting-games",
     naam: "Shooting games",
     kort: "Handboog en luchtbuks: wie is de scherpschutter?",
-    intro:
-      "Handboogschieten en luchtbuksschieten midden in het Schwarzwalder bos, met instructeurs die je de kneepjes leren. Een uurtje dolle pret, zeker als je tegen collega's of vrienden strijdt.",
     foto: `${FOTO}/shooting.webp`,
     categorie: "spel",
     prijs: "prijs op aanvraag",
@@ -226,10 +230,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "escaperoom",
+    bron: "/activiteiten/escaperoom",
     naam: "Escaperoom",
     kort: "Zes rooms, vijftig spelers tegelijk",
-    intro:
-      "Wild West, de Tweede Wereldoorlog of de maffia: kies je thema en ontsnap binnen het uur. Met zes rooms spelen tot vijftig mensen tegelijk, uniek in Nederland. Win jij de battle in een van de vier identieke kamers?",
     foto: `${FOTO}/escaperoom.webp`,
     categorie: "spel",
     binnen: true,
@@ -242,10 +245,9 @@ export const ACTIVITEITEN: Activiteit[] = [
   },
   {
     slug: "f1-sim-race",
+    bron: "/activiteiten/sim-race-f1-playseat",
     naam: "F1 sim race",
     kort: "Echte F1-playseats, racen tegen elkaar",
-    intro:
-      "Kruip in een F1-playseat en race over de officiële Grand Prix-circuits. De simulators zijn aan elkaar te koppelen, dus je racet echt tegen je collega's. Ook te huur op je eigen locatie.",
     categorie: "spel",
     binnen: true,
     prijs: "vanaf € 200 per stoel",
@@ -262,6 +264,8 @@ export const ACTIVITEITEN: Activiteit[] = [
 
 export interface Themafeest {
   slug: string;
+  /** hun pad, sleutel in schwarzwald-paginas.json */
+  bron: string;
   naam: string;
   kort: string;
   tekst: string;
@@ -272,6 +276,7 @@ export interface Themafeest {
 export const THEMAFEESTEN: Themafeest[] = [
   {
     slug: "tiroler-apres-ski",
+    bron: "/themafeest/tiroler-apres-skihut",
     naam: "Tiroler après-skihut",
     kort: "De absolute topper",
     tekst: "DJ en presentator nemen de zaal mee in broekhangen, boomstamzagen, de Tiroler quiz, skilopen en jodelen. Niets is te gek.",
@@ -279,6 +284,7 @@ export const THEMAFEESTEN: Themafeest[] = [
   },
   {
     slug: "pubquiz",
+    bron: "/themafeest/interactieve-pubquiz-feestquiz",
     naam: "Interactieve pubquiz",
     kort: "Meer dan 1500 groepen gingen je voor",
     tekst: "Een feestquiz met DJ-entertainer, gekke hoeden en teams die allemaal willen winnen. De perfecte afsluiter van een bedrijfsfeest.",
@@ -286,24 +292,28 @@ export const THEMAFEESTEN: Themafeest[] = [
   },
   {
     slug: "ik-hou-van-holland",
+    bron: "/themafeest/ik-hou-van-holland",
     naam: "Ik hou van Holland",
     kort: "Lachen, zingen, dansen",
     tekst: "Pruiken, gekke brillen en oranje boa's, en dan een interactieve spelshow met DJ en entertainer. Oer-Hollandse gezelligheid.",
   },
   {
     slug: "vikingfeest",
+    bron: "/themafeest/vikingfeest",
     naam: "Vikingfeest",
     kort: "Trainingskamp voor stoere zeelieden",
     tekst: "Een Viking-trainingskamp in onze feestzaal, waar je gasten tot het uiterste gaan. Feesten zoals alleen Vikingen dat kunnen.",
   },
   {
     slug: "ziekenhuis-op-stelten",
+    bron: "/themafeest/ziekenhuis-op-stelten",
     naam: "Ziekenhuis op stelten",
     kort: "Doldwaze doktoren en verpleegsters",
     tekst: "Schort aan en leer het vak van een stel doldwaze doktoren. Begint met een kruidenbittertje, en wie het nodig heeft neemt er nog één.",
   },
   {
     slug: "halloween-gps-speurtocht",
+    bron: "/themafeest/halloween-gps-speurtocht",
     naam: "Halloween GPS-speurtocht",
     kort: "Vind de geheime uitgang van het bos",
     tekst: "Een interactieve GPS-game met app, inclusief soep, een drankje en snoep. Er is ook een 18+-editie met acteurs. Haal jij de Wall of Fame?",
@@ -313,11 +323,14 @@ export const THEMAFEESTEN: Themafeest[] = [
 
 export interface Doelgroep {
   slug: DoelgroepSlug;
+  /** hun pagina voor deze doelgroep; zonder bron krijgt hij een eigen /voor-pagina */
+  bron?: string;
   naam: string;
   /** korte titel voor tegels */
   tegel: string;
   kop: string;
-  intro: string;
+  /** alleen nodig voor een eigen /voor-pagina */
+  intro?: string;
   foto: string;
   punten: string[];
   /** toon de themafeesten op deze pagina */
@@ -328,33 +341,30 @@ export interface Doelgroep {
 export const DOELGROEPEN: Doelgroep[] = [
   {
     slug: "bedrijfsuitje",
+    bron: "/bedrijfsfeest",
     naam: "Bedrijfsfeest & teamuitje",
     tegel: "Bedrijfsuitje",
     kop: "Het bedrijfsfeest waar maandag nog over gepraat wordt",
-    intro:
-      "Van teamuitje met acht collega's tot personeelsfeest met honderden mensen: wij regelen activiteit, eten, drinken en feest op één bosrijke locatie direct aan de A1. Ook voor jubilea en vergaderingen.",
     foto: `${FOTO}/groep.webp`,
     punten: ["Groepen tot 400 personen, ruimte voor 500", "Vijf moderne zalen, ook om te vergaderen", "Vergaderen vanaf € 37,50 p.p. all-in", "Geen tussenpersoon, één duidelijke offerte"],
     themas: true,
   },
   {
     slug: "vrijgezellenfeest",
+    bron: "/vrijgezellenfeest-arrangementen",
     naam: "Vrijgezellenfeest",
     tegel: "Vrijgezellen",
     kop: "Eén dag knallen voordat het serieus wordt",
-    intro:
-      "Kies een stoere activiteit, sluit af met een BBQ en jullie vrijgezellenfeest is meteen geregeld. Van budget tot deluxe, en niemand hoeft ergens achteraan.",
     foto: `${FOTO}/segway-groep.webp`,
     punten: ["Vanaf 8 personen", "All-in met BBQ of buffet vanaf € 65 p.p.", "Buggy, quad, e-chopper en zes escaperooms", "Combineer gerust twee activiteiten"],
     themas: true,
   },
   {
     slug: "familiefeest",
+    bron: "/familiefeest",
     naam: "Familiefeest",
     tegel: "Familie",
     kop: "Opa op de Solex, de neven in de escaperoom",
-    intro:
-      "Familiefeesten draaien om samen lachen. Midden in het bos tussen Rijssen, Holten en Markelo combineer je een activiteit met heerlijk eten, zodat jong en oud een dag hebben om nooit te vergeten.",
     foto: `${FOTO}/e-chopper.webp`,
     punten: ["All-in arrangementen vanaf € 55 p.p.", "Activiteiten voor jong en oud", "Eten en drinken op dezelfde plek", "Gratis parkeren"],
   },
@@ -364,28 +374,26 @@ export const DOELGROEPEN: Doelgroep[] = [
     tegel: "Kinderfeestje",
     kop: "Een kinderfeestje met een echt crossbaan-gevoel",
     intro:
-      "Op onze crossbaan staan elektrische kinderquads klaar, met helm en uitleg erbij. En straks komt daar ons nieuwe indoor entertainmentcenter bij: feest bij elk weer.",
+      "Op onze crossbaan staan elektrische kinderquads klaar, met helm en crossjas erbij. En straks komt daar ons nieuwe indoor entertainmentcenter bij: feest bij elk weer.",
     foto: `${FOTO}/quad.webp`,
     punten: ["Elektrische kinderquads", "Helm en crossjas inbegrepen", "Te combineren met eten en drinken", "Binnenkort ook indoor"],
     nieuw: true,
   },
   {
     slug: "trouwen",
+    bron: "/trouw-arrangement",
     naam: "Trouwen",
     tegel: "Trouwen",
     kop: "Ja zeggen in het bos",
-    intro:
-      "Als officiële trouwlocatie verzorgen we jullie hele dag: de ceremonie, de receptie, een familiediner en een avondfeest waarvoor de zaal een complete metamorfose krijgt. Met persoonlijke aandacht en een dagplanning op maat.",
     foto: `${FOTO}/bruiloft.webp`,
     punten: ["Officiële trouwlocatie", "Ceremonie, receptie, diner en avondfeest", "Muzikale invulling op maat", "Eigen ceremoniemeester"],
   },
   {
     slug: "restaurant",
+    bron: "/restaurant",
     naam: "Restaurant & horeca",
     tegel: "Eten & drinken",
     kop: "Na het avontuur: aan tafel",
-    intro:
-      "Of je nu komt voor een feest of gewoon lekker wilt eten: ons restaurant serveert van koffietafel tot bourgondische hittesteen. Bij de arrangementen hoort onbeperkt bier, fris en wijn.",
     foto: `${FOTO}/restaurant.webp`,
     punten: ["Koffietafel en lunch", "Warm en koud buffet", "Bourgondische hittesteen en BBQ", "À la carte en kookworkshops"],
   },
@@ -426,3 +434,87 @@ export function doelgroep(slug: string): Doelgroep | undefined {
 export function activiteitenVoor(slug: DoelgroepSlug): Activiteit[] {
   return ACTIVITEITEN.filter((a) => a.voor.includes(slug));
 }
+
+/** Waar een doelgroep naartoe linkt: hun pagina, of anders onze eigen /voor-pagina. */
+export function doelgroepHref(d: Doelgroep): string {
+  return d.bron ? `${BASE}${d.bron}` : `${BASE}/voor/${d.slug}`;
+}
+
+export interface MenuItem {
+  label: string;
+  href: string;
+  nieuw?: boolean;
+}
+
+export interface MenuGroep {
+  label: string;
+  /** overzichtspagina van de groep, als die er is */
+  href?: string;
+  items: MenuItem[];
+}
+
+// Hetzelfde menu als op hetschwarzwald.nl, plus het nieuwe kinderfeestje.
+export const MENU: MenuGroep[] = [
+  {
+    label: "Ik zoek een…",
+    items: [
+      { label: "Bedrijfsfeest", href: `${BASE}/bedrijfsfeest` },
+      { label: "Jubileumfeest", href: `${BASE}/jubileumfeest` },
+      { label: "Personeelsfeest", href: `${BASE}/personeelsfeest` },
+      { label: "Vrijgezellenfeest", href: `${BASE}/vrijgezellenfeest-arrangementen` },
+      { label: "Familiefeest", href: `${BASE}/familiefeest` },
+      { label: "Kinderfeestje", href: `${BASE}/voor/kinderfeestje`, nieuw: true },
+      { label: "Vergaderlocatie", href: `${BASE}/zakelijk` },
+    ],
+  },
+  {
+    label: "Activiteiten",
+    href: `${BASE}/activiteiten`,
+    items: ACTIVITEITEN.map((a) => ({ label: a.naam, href: `${BASE}/activiteiten/${a.slug}` })),
+  },
+  {
+    label: "Themafeesten",
+    href: `${BASE}/themafeesten`,
+    items: THEMAFEESTEN.map((t) => ({ label: t.naam, href: `${BASE}${t.bron}` })),
+  },
+  {
+    label: "Vergaderen",
+    href: `${BASE}/zakelijk`,
+    items: [
+      { label: "Vergaderarrangementen", href: `${BASE}/zakelijk` },
+      { label: "Teambuilding & events", href: `${BASE}/zakelijk/teambuilding-events` },
+      { label: "Eten & drinken", href: `${BASE}/zakelijk/eten-en-drinken` },
+    ],
+  },
+  {
+    label: "Trouwen",
+    href: `${BASE}/trouw-arrangement`,
+    items: [
+      { label: "Trouwarrangement", href: `${BASE}/trouw-arrangement` },
+      { label: "Huwelijksvoltrekking", href: `${BASE}/huwelijksvoltrekking` },
+      { label: "Muzikale invulling", href: `${BASE}/muzikale-invulling` },
+      { label: "Familiediner", href: `${BASE}/familiediner` },
+      { label: "Avondfeest", href: `${BASE}/avondfeest` },
+    ],
+  },
+  {
+    label: "Restaurant",
+    href: `${BASE}/restaurant`,
+    items: [
+      { label: "Restaurant", href: `${BASE}/restaurant` },
+      { label: "Koffietafel", href: `${BASE}/restaurant/koffietafel` },
+      { label: "Warm en koud buffet", href: `${BASE}/restaurant/warm-en-koud-buffet` },
+      { label: "Hittesteen", href: `${BASE}/restaurant/hittesteen` },
+      { label: "À la carte", href: `${BASE}/restaurant/a-la-carte` },
+      { label: "BBQ", href: `${BASE}/restaurant/bbq` },
+      { label: "Kookworkshops", href: `${BASE}/restaurant/workshops` },
+    ],
+  },
+];
+
+export const TOPLINKS: MenuItem[] = [
+  { label: "Vacatures", href: `${BASE}/vacatures` },
+  { label: "Openingstijden", href: `${BASE}/openingstijden` },
+  { label: "Nieuws", href: `${BASE}/nieuws` },
+  { label: "Contact", href: `${BASE}/contact` },
+];

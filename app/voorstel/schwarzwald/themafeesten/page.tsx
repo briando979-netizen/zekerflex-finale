@@ -34,12 +34,14 @@ export default function ThemafeestenPage() {
               <h2 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{t.naam}</h2>
               <p className="mt-4 text-lg leading-relaxed text-schw-mute">{t.tekst}</p>
               {t.prijs && <p className="mt-4 font-bold">{t.prijs}</p>}
-              <Link
-                href={`${BASE}/reserveren?thema=${t.slug}`}
-                className="mt-6 self-start rounded-full bg-schw-night px-6 py-3 text-sm font-bold text-schw-cream transition-transform hover:-translate-y-0.5"
-              >
-                Vraag dit feest aan
-              </Link>
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <Link href={`${BASE}${t.bron}`} className="rounded-full bg-schw-night px-6 py-3 text-sm font-bold text-schw-cream transition-transform hover:-translate-y-0.5">
+                  Alles over dit feest
+                </Link>
+                <Link href={`${BASE}/reserveren?thema=${t.slug}`} className="text-sm font-semibold underline decoration-schw-orange decoration-2 underline-offset-4">
+                  Vraag dit feest aan
+                </Link>
+              </div>
             </div>
           </article>
         ))}

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BASE, CATEGORIE_LABEL, type Activiteit } from "@/lib/voorstel/schwarzwald";
+import { BASE, CATEGORIE_LABEL, CONTACT, type Activiteit } from "@/lib/voorstel/schwarzwald";
 
 // Bouwstenen die op meerdere Schwarzwald-pagina's terugkomen. Geen hooks, dus
 // bruikbaar in server- én clientcomponenten.
@@ -101,5 +101,23 @@ export function Sterren({ className = "" }: { className?: string }) {
     <span aria-hidden="true" className={`tracking-[0.1em] text-schw-sun ${className}`}>
       ★★★★★
     </span>
+  );
+}
+
+/** Oranje afsluiter onderaan elke pagina: reserveren of bellen. */
+export function CtaBand({ kop = "Klaar voor jullie dag?" }: { kop?: string }) {
+  return (
+    <section className="bg-schw-orange px-4 py-20 text-center text-schw-night sm:px-8">
+      <h2 className="mx-auto max-w-3xl font-display text-[clamp(2.4rem,6vw,4.5rem)] font-bold leading-[0.95] tracking-[-0.02em]">{kop}</h2>
+      <p className="mx-auto mt-4 max-w-xl text-lg">Reserveer online of bel ons, dan denken we mee over het programma.</p>
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <Link href={`${BASE}/reserveren`} className="rounded-full bg-schw-night px-7 py-4 font-bold text-schw-cream transition-transform hover:-translate-y-0.5">
+          Reserveer nu
+        </Link>
+        <a href={CONTACT.telefoonHref} className="rounded-full border-2 border-schw-night px-7 py-4 font-bold">
+          Bel {CONTACT.telefoon}
+        </a>
+      </div>
+    </section>
   );
 }
