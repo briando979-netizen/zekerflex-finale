@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { resolveTenantPlan } from "@/lib/api-plans/resolve";
 import { API_PLANS } from "@/lib/api-plans/catalog";
+import { isCompTenant } from "@/lib/billing/comp";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { PlanPicker } from "@/components/app/PlanPicker";
 import { WerkgeverApiKeysBoard } from "@/components/app/WerkgeverApiKeysBoard";
@@ -16,6 +17,7 @@ export default async function IntegratiesPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0] ?? null;
   const plan = tenantId ? await resolveTenantPlan(tenantId) : API_PLANS.free;
+  const free = tenantId ? await isCompTenant(tenantId) : false;
 
   return (
     <>
@@ -32,7 +34,7 @@ export default async function IntegratiesPage() {
       <h2 className="mb-3 font-display text-lg font-bold text-ink">Voor ontwikkelaars</h2>
       <div className="mb-8">
         <Panel title="Abonnement">
-          <PlanPicker currentPlanKey={plan.key} hasOrganization={Boolean(tenantId)} />
+          <PlanPicker currentPlanKey={plan.key} hasOrganization={Boolean(tenantId)} free={free} />
         </Panel>
       </div>
 

@@ -8,9 +8,12 @@ const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 export function PlanPicker({
   currentPlanKey,
   hasOrganization,
+  free = false,
 }: {
   currentPlanKey: PlanKey;
   hasOrganization: boolean;
+  /** kosteloos account (lib/billing/comp): the top plan without a subscription, so nothing to choose or cancel */
+  free?: boolean;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -53,6 +56,11 @@ export function PlanPicker({
 
   return (
     <div>
+      {free && (
+        <p className="mb-4 rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+          Gratis voor jouw account: je hebt het hoogste pakket zonder abonnement.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PLAN_KEYS.map((key) => {
           const plan = API_PLANS[key];
@@ -64,7 +72,7 @@ export function PlanPicker({
             >
               <p className="font-display text-base font-bold text-ink">{plan.label}</p>
               <p className="mt-1 text-2xl font-bold text-ink">
-                {plan.priceCentsPerMonth === null ? "Op aanvraag" : plan.priceCentsPerMonth === 0 ? "Gratis" : `${euro(plan.priceCentsPerMonth)}/mnd`}
+                {free && isCurrent ? "Gratis" : plan.priceCentsPerMonth === null ? "Op aanvraag" : plan.priceCentsPerMonth === 0 ? "Gratis" : `${euro(plan.priceCentsPerMonth)}/mnd`}
               </p>
               <ul className="mt-3 space-y-1 text-xs text-neutralx-600">
                 <li>{plan.rateLimitPerMinute}/min</li>
@@ -75,7 +83,7 @@ export function PlanPicker({
                 <span className="mt-4 block rounded-lg bg-brand-500 px-3 py-1.5 text-center text-xs font-semibold text-white">
                   Huidig abonnement
                 </span>
-              ) : plan.selfService ? (
+              ) : free ? null : plan.selfService ? (
                 <button
                   type="button"
                   onClick={() => upgrade(key)}
@@ -94,7 +102,7 @@ export function PlanPicker({
         })}
       </div>
       {err && <p role="alert" className="mt-3 text-sm text-crit">{err}</p>}
-      {currentPlanKey !== "free" && (
+      {currentPlanKey !== "free" && !free && (
         <button type="button" onClick={manage} disabled={busy === "portal"} className="btn-ghost mt-4 text-xs disabled:opacity-50">
           {busy === "portal" ? "Bezig…" : "Abonnement beheren / opzeggen"}
         </button>
