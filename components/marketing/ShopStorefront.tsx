@@ -1,34 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
-import { useShopCart } from "@/components/marketing/useShopCart";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
-import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
+import { ShopProductCard } from "@/components/marketing/ShopProductCard";
+import type { ShopCardProduct, ShopCategory } from "@/components/marketing/shop-product";
 
-// De shop-homepage: hero-carrousel, productraster, categorie-/inspiratielijsten
-// en nieuwsbrief. Promo-balk, header en footer zitten in ShopChrome (layout).
+// De collectie op de shop-homepage: categorie-tabs, zoeken, en filters/sorteren
+// in een uitschuifpaneel. De producten komen van de server (app/shop/page.tsx);
+// de vaste delen eromheen staan in ShopSections.
 
-type Category = "Alles" | "Werk & PBM" | "Kleding" | "Werkdag" | "Cadeaus";
+export { IconHeart } from "@/components/marketing/ShopProductCard";
+
+type Category = "Alles" | ShopCategory;
 type Gender = "Alle" | "Heren" | "Vrouwen" | "Kinderen";
 const GENDER_VALUE: Record<Exclude<Gender, "Alle">, string> = { Heren: "heren", Vrouwen: "vrouwen", Kinderen: "kinderen" };
-type Variant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
-type Product = {
-  id: string;
-  slug?: string | undefined;
-  name: string;
-  description: string;
-  price: number;
-  category: Exclude<Category, "Alles">;
-  gender?: string | null;
-  label?: string | null;
-  imageUrl?: string | null;
-  variants: Variant[];
-};
-
-const oneSize = (id: string, stock = 10): Variant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
+const GENDERS: Gender[] = ["Alle", "Heren", "Vrouwen", "Kinderen"];
+const TABS: Category[] = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"];
 
 type PriceBucket = "Alle" | "onder15" | "15-30" | "vanaf30";
 const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
@@ -37,138 +26,69 @@ const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
   if (bucket === "15-30") return price >= 15 && price <= 30;
   return price > 30;
 };
-
 type SortOrder = "relevantie" | "prijs-op" | "prijs-af" | "naam";
 
-
-/** API/DB product → storefront product (same shape for the server render and the client refresh). */
-function toProduct(it: Record<string, unknown>): Product {
-  return {
-    id: String(it.id),
-    slug: typeof it.slug === "string" ? it.slug : undefined,
-    name: String(it.name),
-    description: String(it.description ?? ""),
-    price: Number(it.priceCents) / 100,
-    category: (it.category as Product["category"]) ?? "Werkdag",
-    gender: typeof it.gender === "string" ? it.gender : null,
-    label: typeof it.badge === "string" ? it.badge : null,
-    imageUrl: typeof it.imageUrl === "string" ? it.imageUrl : null,
-    variants: Array.isArray(it.variants) && it.variants.length > 0
-      ? (it.variants as Record<string, unknown>[]).map((v) => ({
-          id: String(v.id),
-          size: typeof v.size === "string" ? v.size : null,
-          color: typeof v.color === "string" ? v.color : null,
-          priceCents: typeof v.priceCents === "number" ? v.priceCents : null,
-          stock: Number(v.stock ?? 0),
-        }))
-      : oneSize(String(it.id), Number(it.stock ?? 0)),
-  };
-}
-
-const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
-const SUB_NAV: Category[] = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"];
-
-const CATEGORY_LINKS = [
-  "Veiligheidsschoenen", "Veiligheidssneakers", "Antislip werkschoenen", "Werkhandschoenen",
-  "Snijbestendige handschoenen", "Veiligheidshesjes", "Gehoorbescherming", "Veiligheidsbrillen",
-  "Kniebeschermers", "Werkbroeken", "Softshell werkjassen", "Veiligheidshelmen",
-  "VCA-lesboek", "Werk-T-shirts", "Drinkflessen", "Werktassen",
-];
-const INSPIRATION = [
-  { title: "Magazijnmedewerker", items: "Veiligheidsschoenen S3 · hesje · handschoenen" },
-  { title: "Bouwvakker", items: "Helm · werkbroek · veiligheidsbril" },
-  { title: "Horeca / keuken", items: "Antislip schoenen · werk-T-shirt" },
-  { title: "Evenementen", items: "Hesje · gehoorbescherming · comfortabele schoenen" },
-  { title: "Schoonmaak", items: "Handschoenen · antislip schoenen" },
-  { title: "Nieuwe collega", items: "Welcome Work Kit · hoodie · fles" },
-];
-const HERO_SLIDES = [
-  { img: "/shifts/logistiek.jpg", kicker: "Werk & PBM", title: "Alles voor een veilige werkdag", sub: "Veiligheidsschoenen, handschoenen en zichtbaarheid — gecertificeerd en op voorraad." },
-  { img: "/marketing/team-shift.jpg", kicker: "Voor teams", title: "Rust je hele ploeg in één keer uit", sub: "Bestel op rekening, lever per vestiging. Zakelijke prijzen vanaf 10 stuks." },
-  { img: "/shifts/bouw.jpg", kicker: "Bouw", title: "Van helm tot werkbroek", sub: "De complete uitrusting voor op de bouwplaats — morgen in huis." },
-];
+const PILL = "rounded-full border px-4 py-2 text-[12px] font-medium transition";
+const pill = (on: boolean) => `${PILL} ${on ? "border-lux-ink bg-lux-ink text-white" : "border-lux-line text-lux-ink hover:border-lux-ink"}`;
 
 export function ShopStorefront({
   initialCat = "Alles",
-  initialProducts = [],
+  initialQuery = "",
+  products,
 }: {
   initialCat?: Category;
-  /** Active products straight from the DB, so the first HTML (and Google) shows the real catalog. */
-  initialProducts?: Record<string, unknown>[];
+  initialQuery?: string;
+  /** Actieve producten van de server, zodat de eerste HTML (en Google) de echte catalogus toont. */
+  products: ShopCardProduct[];
 }) {
   const t = useT();
-  const PRICE_BUCKET_LABEL: Record<PriceBucket, string> = {
-    Alle: t.shop.allPrices,
-    onder15: t.shop.under15,
-    "15-30": t.shop.between1530,
-    vanaf30: t.shop.from30,
-  };
-  const SORT_LABEL: Record<SortOrder, string> = {
-    relevantie: t.shop.sortRelevance,
-    "prijs-op": t.shop.sortPriceAsc,
-    "prijs-af": t.shop.sortPriceDesc,
-    naam: t.shop.sortName,
-  };
+  const PRICE_LABEL: Record<PriceBucket, string> = { Alle: t.shop.allPrices, onder15: t.shop.under15, "15-30": t.shop.between1530, vanaf30: t.shop.from30 };
+  const SORT_LABEL: Record<SortOrder, string> = { relevantie: t.shop.sortRelevance, "prijs-op": t.shop.sortPriceAsc, "prijs-af": t.shop.sortPriceDesc, naam: t.shop.sortName };
   const [category, setCategory] = useState<Category>(initialCat);
   const [gender, setGender] = useState<Gender>("Alle");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [onlyWishlist, setOnlyWishlist] = useState(false);
-  const [sizeFilter, setSizeFilter] = useState<string>("Alle");
-  const [colorFilter, setColorFilter] = useState<string>("Alle");
+  const [sizeFilter, setSizeFilter] = useState("Alle");
+  const [colorFilter, setColorFilter] = useState("Alle");
   const [priceBucket, setPriceBucket] = useState<PriceBucket>("Alle");
   const [sort, setSort] = useState<SortOrder>("relevantie");
-  const [catalog, setCatalog] = useState<Product[]>(() => initialProducts.map(toProduct));
-  const [slide, setSlide] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const { add } = useShopCart();
+  const [panel, setPanel] = useState(false);
   const wishlist = useShopWishlist();
-  const gridRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
 
+  // links als /shop?cat=… of /shop?q=… (categorievakken, pakketten) zetten het raster opnieuw
   useEffect(() => setCategory(initialCat), [initialCat]);
+  useEffect(() => setQuery(initialQuery), [initialQuery]);
 
   useEffect(() => {
-    fetch("/api/shop/products", { cache: "no-store" })
-      .then(async (r) => (r.ok ? (await r.json()).products : []))
-      .then((items: Array<Record<string, unknown>>) => {
-        if (!items.length) return;
-        setCatalog(
-          items.map(toProduct),
-        );
-      })
-      .catch(() => undefined);
-  }, []);
+    if (!panel) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPanel(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panel]);
 
-  useEffect(() => {
-    if (!playing) return;
-    const t = setInterval(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), 6000);
-    return () => clearInterval(t);
-  }, [playing]);
-
-  // Basisset vóór maat/kleur/prijs — hierop worden de beschikbare
-  // filteropties berekend, zodat een gekozen filter niet zijn eigen
-  // alternatieven uit de lijst laat verdwijnen.
+  // De basisset vóór maat/kleur/prijs: daarop worden de filteropties berekend, zodat
+  // een gekozen filter zijn eigen alternatieven niet uit de lijst laat verdwijnen.
   const facetScope = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return catalog.filter(
+    return products.filter(
       (p) =>
         (category === "Alles" || p.category === category) &&
         (gender === "Alle" || p.gender === GENDER_VALUE[gender]) &&
         (!onlyWishlist || wishlist.has(p.id)) &&
         (!q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)),
     );
-  }, [catalog, category, gender, query, onlyWishlist, wishlist]);
+  }, [products, category, gender, query, onlyWishlist, wishlist]);
 
-  const availableSizes = useMemo(
-    () => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))],
-    [facetScope],
-  );
-  const availableColors = useMemo(
-    () => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.color).filter((c): c is string => Boolean(c))))],
-    [facetScope],
-  );
-
-  useEffect(() => { if (sizeFilter !== "Alle" && !availableSizes.includes(sizeFilter)) setSizeFilter("Alle"); }, [availableSizes, sizeFilter]);
-  useEffect(() => { if (colorFilter !== "Alle" && !availableColors.includes(colorFilter)) setColorFilter("Alle"); }, [availableColors, colorFilter]);
+  const sizes = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))], [facetScope]);
+  const colors = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.color).filter((c): c is string => Boolean(c))))], [facetScope]);
+  useEffect(() => {
+    if (sizeFilter !== "Alle" && !sizes.includes(sizeFilter)) setSizeFilter("Alle");
+  }, [sizes, sizeFilter]);
+  useEffect(() => {
+    if (colorFilter !== "Alle" && !colors.includes(colorFilter)) setColorFilter("Alle");
+  }, [colors, colorFilter]);
 
   const shown = useMemo(() => {
     const filtered = facetScope.filter(
@@ -185,244 +105,172 @@ export function ShopStorefront({
     return sorted;
   }, [facetScope, sizeFilter, colorFilter, priceBucket, sort]);
 
-  const pick = (c: Category) => {
-    setCategory(c);
-    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const active = [gender !== "Alle", sizeFilter !== "Alle", colorFilter !== "Alle", priceBucket !== "Alle", sort !== "relevantie", onlyWishlist].filter(Boolean).length;
+  const clearAll = () => {
+    setGender("Alle");
+    setSizeFilter("Alle");
+    setColorFilter("Alle");
+    setPriceBucket("Alle");
+    setSort("relevantie");
+    setOnlyWishlist(false);
   };
 
   return (
-    <>
-      {/* hero-carrousel */}
-      <section className="relative">
-        <div className="relative h-[340px] overflow-hidden md:h-[440px]">
-          {HERO_SLIDES.map((s, i) => (
-            <div key={s.title} className={`absolute inset-0 transition-opacity duration-700 ${i === slide ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.img} alt="" loading={i === 0 ? "eager" : "lazy"} {...(i === 0 ? { fetchPriority: "high" as const } : {})} decoding="async" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/45 to-transparent" />
-              <div className="shell absolute inset-0 flex flex-col justify-center text-white">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-mint">{s.kicker}</p>
-                <h1 className="mt-3 max-w-xl font-display text-3xl font-bold leading-tight md:text-5xl">{s.title}</h1>
-                <p className="mt-3 max-w-md text-sm text-white/75 md:text-base">{s.sub}</p>
-                <div className="mt-6 flex flex-wrap gap-2.5">
-                  {([
-                    { label: "Werk & PBM", cat: "Werk & PBM" as Category },
-                    { label: "Kleding", cat: "Kleding" as Category },
-                    { label: "Voor teams", cat: "Cadeaus" as Category },
-                  ]).map((b) => (
-                    <button key={b.label} type="button" onClick={() => pick(b.cat)} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-brand-mint">{b.label}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-          <button type="button" aria-label="Vorige" onClick={() => setSlide((s) => (s - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} className="absolute left-4 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-lg text-ink hover:bg-white">‹</button>
-          <button type="button" aria-label="Volgende" onClick={() => setSlide((s) => (s + 1) % HERO_SLIDES.length)} className="absolute right-4 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-lg text-ink hover:bg-white">›</button>
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2">
-            {HERO_SLIDES.map((s, i) => (
-              <button key={s.title} type="button" aria-label={`Slide ${i + 1}`} onClick={() => setSlide(i)} className={`h-1.5 rounded-full transition-all ${i === slide ? "w-6 bg-white" : "w-1.5 bg-white/50"}`} />
-            ))}
-            <button type="button" aria-label={playing ? "Pauzeer" : "Afspelen"} onClick={() => setPlaying((p) => !p)} className="ml-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-[11px] text-ink">{playing ? "❚❚" : "▶"}</button>
+    <section id="collectie" className="scroll-mt-16 bg-white">
+      <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <h2 className="font-serif text-4xl text-lux-ink sm:text-5xl">{category === "Alles" ? t.shop.collection : category}</h2>
+            <p className="mt-2 text-[13px] text-lux-mute">{fmt(t.shop.articles, { n: shown.length })}</p>
           </div>
+          <label className="flex w-full items-center gap-2.5 border-b border-lux-line pb-2 sm:w-72">
+            <IconSearch />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.shop.search} aria-label={t.shop.search} className="min-w-0 flex-1 bg-transparent text-[14px] text-lux-ink outline-none placeholder:text-lux-mute" />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} aria-label={t.shop.clearAll} className="text-lux-mute hover:text-lux-ink">
+                ×
+              </button>
+            )}
+          </label>
         </div>
-      </section>
 
-      <div className="border-b border-hair bg-paper-soft">
-        <div className="shell flex flex-wrap justify-center gap-x-8 gap-y-2 py-3 text-xs font-semibold text-neutralx-600">
-          <span>✓ Gecertificeerde PBM (EN-normen)</span>
-          <span>✓ Voor 22:00 besteld, morgen in huis</span>
-          <span>✓ Zakelijk bestellen op rekening</span>
-          <span>✓ 30 dagen retour</span>
-        </div>
-      </div>
-
-      {/* productraster */}
-      <section ref={gridRef} className="shell scroll-mt-24 py-12 md:py-16">
-        {catalog.some((p) => p.gender) && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {(["Alle", "Heren", "Vrouwen", "Kinderen"] as Gender[]).map((g) => (
+        {/* blijft onder de kop staan tijdens scrollen */}
+        <div className="sticky top-16 z-20 -mx-5 mt-8 flex items-center gap-4 border-y border-lux-line bg-white/90 px-5 backdrop-blur sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12">
+          <nav aria-label={t.shop.collection} className="flex min-w-0 flex-1 gap-6 overflow-x-auto py-4 [scrollbar-width:none]">
+            {TABS.map((c) => (
               <button
-                key={g}
+                key={c}
                 type="button"
-                onClick={() => setGender(g)}
-                className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${gender === g ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+                onClick={() => setCategory(c)}
+                aria-pressed={category === c}
+                className={`shrink-0 border-b pb-1 text-[12px] font-semibold uppercase tracking-[0.14em] transition ${category === c ? "border-lux-ink text-lux-ink" : "border-transparent text-lux-mute hover:text-lux-ink"}`}
               >
-                {g}
+                {c === "Alles" ? t.shop.all : c}
               </button>
             ))}
-          </div>
-        )}
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="font-display text-2xl font-bold md:text-3xl">{category === "Alles" ? t.shop.all : category}</h2>
-            <p className="mt-1 text-sm text-neutralx-500">{shown.length} artikelen</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-full border border-hairstrong px-4 py-1.5">
-              <IconSearch />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.shop.search} className="w-28 bg-transparent text-sm outline-none placeholder:text-neutralx-400 focus:w-40" />
-            </label>
-            {SUB_NAV.map((c) => (
-              <button key={c} type="button" onClick={() => setCategory(c)} className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${category === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}>{c === "Alles" ? t.shop.all : c}</button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setOnlyWishlist((v) => !v)}
-              className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${onlyWishlist ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
-            >
-              <IconHeart filled={onlyWishlist} /> {t.shop.favorites}{wishlist.count > 0 ? ` (${wishlist.count})` : ""}
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-6 flex flex-wrap items-center gap-3 border-y border-hair py-3">
-          {availableSizes.length > 0 && (
-            <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-              {t.shop.size}
-              <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-                <option value="Alle">{t.shop.all}</option>
-                {availableSizes.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
-          )}
-          {availableColors.length > 0 && (
-            <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-              {t.shop.color}
-              <select value={colorFilter} onChange={(e) => setColorFilter(e.target.value)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-                <option value="Alle">{t.shop.all}</option>
-                {availableColors.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
-          )}
-          <label className="flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-            {t.shop.price}
-            <select value={priceBucket} onChange={(e) => setPriceBucket(e.target.value as PriceBucket)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-              {(Object.keys(PRICE_BUCKET_LABEL) as PriceBucket[]).map((b) => <option key={b} value={b}>{PRICE_BUCKET_LABEL[b]}</option>)}
-            </select>
-          </label>
-          <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-neutralx-600">
-            {t.shop.sort}
-            <select value={sort} onChange={(e) => setSort(e.target.value as SortOrder)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-sm font-normal text-ink">
-              {(Object.keys(SORT_LABEL) as SortOrder[]).map((s) => <option key={s} value={s}>{SORT_LABEL[s]}</option>)}
-            </select>
-          </label>
+          </nav>
+          <button type="button" onClick={() => setPanel(true)} className="flex shrink-0 items-center gap-2 py-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-lux-ink">
+            <IconSliders />
+            <span className="hidden sm:inline">{t.shop.filterSort}</span>
+            {active > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-lux-ink px-1 text-[10px] text-white">{active}</span>}
+          </button>
         </div>
 
         {shown.length === 0 ? (
-          <p className="py-16 text-center text-sm text-neutralx-500">
-            {onlyWishlist ? t.shop.noFavoritesFound : t.shop.noArticlesFound}
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
-            {shown.map((p) => {
-              const singleVariant = p.variants.length <= 1 ? p.variants[0] : null;
-              const inner = (
-                <>
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-paper-soft">
-                    {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                    ) : (
-                      <ProductPlaceholder name={p.name} slug={p.slug} category={p.category} glyphSize={64} />
-                    )}
-                    {p.label && <span className="absolute left-3 top-3 rounded bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">{p.label}</span>}
-                    <button
-                      type="button"
-                      aria-label={wishlist.has(p.id) ? t.shop.removeFromFavorites : t.shop.addToFavorites}
-                      onClick={(e) => { e.preventDefault(); wishlist.toggle(p.id); }}
-                      className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
-                    >
-                      <IconHeart filled={wishlist.has(p.id)} />
-                    </button>
-                    {singleVariant ? (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); add(singleVariant.id); }}
-                        // Visible by default (touch has no hover — iPad included — so an
-                        // opacity-0-until-hover button would be invisible and effectively
-                        // unusable there); only real hover-capable pointers get the
-                        // fade-in-on-hover treatment.
-                        className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink py-2 text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                      >
-                        {t.shop.addToCart}
-                      </button>
-                    ) : (
-                      // Meerdere maten/kleuren — kies eerst op de productpagina.
-                      <span className="absolute inset-x-3 bottom-3 min-h-11 rounded-lg bg-ink/90 py-2 text-center text-sm font-bold text-white opacity-100 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
-                        {t.shop.chooseOption}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3">
-                    <h3 className="text-sm font-semibold leading-snug">{p.name}</h3>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-neutralx-500">{p.description}</p>
-                    <p className="mt-1.5 text-sm font-bold">{money(p.price)}</p>
-                  </div>
-                </>
-              );
-              return p.slug ? (
-                <Link key={p.id} href={`/shop/${p.slug}`} id={p.slug} className="group scroll-mt-28">{inner}</Link>
-              ) : (
-                <article key={p.id} id={p.id} className="group scroll-mt-28">{inner}</article>
-              );
-            })}
+          <div className="py-24 text-center">
+            <p className="font-serif text-2xl text-lux-ink">{onlyWishlist ? t.shop.noFavoritesFound : t.shop.noArticlesFound}</p>
+            {(active > 0 || query) && (
+              <button type="button" onClick={() => { clearAll(); setQuery(""); setCategory("Alles"); }} className="mt-6 text-[12px] font-semibold uppercase tracking-[0.14em] text-lux-ink underline underline-offset-4">
+                {t.shop.clearAll}
+              </button>
+            )}
           </div>
-        )}
-      </section>
-
-      <section className="border-t border-hair bg-paper-soft py-12 md:py-16">
-        <div className="shell">
-          <h2 className="font-display text-2xl font-bold">Meer categorieën</h2>
-          <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm text-neutralx-600 sm:grid-cols-3 lg:grid-cols-4">
-            {CATEGORY_LINKS.map((c) => (
-              <button key={c} type="button" onClick={() => { setCategory("Alles"); setQuery(c.split(" ")[0] ?? c); gridRef.current?.scrollIntoView({ behavior: "smooth" }); }} className="text-left transition hover:text-brand-600 hover:underline">{c}</button>
+        ) : (
+          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-y-16">
+            {shown.map((p) => (
+              <ShopProductCard key={p.id} p={p} />
             ))}
           </div>
-        </div>
-      </section>
+        )}
+      </div>
 
-      <section className="shell py-12 md:py-16">
-        <h2 className="font-display text-2xl font-bold">Dit heb je nodig voor…</h2>
-        <p className="mt-1 text-sm text-neutralx-500">Kant-en-klare pakketten per soort werk.</p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {INSPIRATION.map((b) => (
-            <button key={b.title} type="button" onClick={() => pick("Werk & PBM")} className="rounded-2xl border border-hair p-5 text-left transition hover:border-ink hover:shadow-card">
-              <p className="font-display text-lg font-bold">{b.title}</p>
-              <p className="mt-1.5 text-sm text-neutralx-500">{b.items}</p>
-              <span className="mt-3 inline-block text-sm font-semibold text-brand-600">Bekijk →</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t border-hair bg-ink text-white">
-        <div className="shell grid gap-8 py-12 md:grid-cols-2 md:py-16">
-          <div>
-            <h2 className="font-display text-2xl font-bold md:text-3xl">10% korting + nieuwe PBM en tips<br />rechtstreeks in je e-mail</h2>
-            <p className="mt-3 max-w-md text-sm text-white/60">
-              Schrijf je in en ontvang de code <span className="font-mono font-bold text-brand-mint">WELKOM10</span> voor
-              10% korting op je eerste bestelling — in te vullen bij het afrekenen.
-            </p>
+      {panel && (
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t.shop.filterSort}>
+          <button type="button" aria-label={t.shop.close} onClick={() => setPanel(false)} className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-white sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] sm:rounded-none">
+            <div className="flex items-center justify-between border-b border-lux-line px-6 py-5">
+              <p className="font-serif text-2xl text-lux-ink">{t.shop.filterSort}</p>
+              <button ref={closeRef} type="button" onClick={() => setPanel(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-full text-xl text-lux-ink hover:bg-lux-stone">
+                ×
+              </button>
+            </div>
+            <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
+              {products.some((p) => p.gender) && (
+                <FilterGroup title={t.shop.forWho}>
+                  {GENDERS.map((g) => (
+                    <button key={g} type="button" onClick={() => setGender(g)} aria-pressed={gender === g} className={pill(gender === g)}>
+                      {g === "Alle" ? t.shop.all : g}
+                    </button>
+                  ))}
+                </FilterGroup>
+              )}
+              {sizes.length > 0 && (
+                <FilterGroup title={t.shop.size}>
+                  {["Alle", ...sizes].map((s) => (
+                    <button key={s} type="button" onClick={() => setSizeFilter(s)} aria-pressed={sizeFilter === s} className={pill(sizeFilter === s)}>
+                      {s === "Alle" ? t.shop.all : s}
+                    </button>
+                  ))}
+                </FilterGroup>
+              )}
+              {colors.length > 0 && (
+                <FilterGroup title={t.shop.color}>
+                  {["Alle", ...colors].map((c) => (
+                    <button key={c} type="button" onClick={() => setColorFilter(c)} aria-pressed={colorFilter === c} className={pill(colorFilter === c)}>
+                      {c === "Alle" ? t.shop.all : c}
+                    </button>
+                  ))}
+                </FilterGroup>
+              )}
+              <FilterGroup title={t.shop.price}>
+                {(Object.keys(PRICE_LABEL) as PriceBucket[]).map((b) => (
+                  <button key={b} type="button" onClick={() => setPriceBucket(b)} aria-pressed={priceBucket === b} className={pill(priceBucket === b)}>
+                    {PRICE_LABEL[b]}
+                  </button>
+                ))}
+              </FilterGroup>
+              <FilterGroup title={t.shop.sort}>
+                {(Object.keys(SORT_LABEL) as SortOrder[]).map((s) => (
+                  <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={pill(sort === s)}>
+                    {SORT_LABEL[s]}
+                  </button>
+                ))}
+              </FilterGroup>
+              <label className="flex items-center justify-between gap-4 border-t border-lux-line pt-6 text-[14px] text-lux-ink">
+                {t.shop.onlyFavorites}
+                {wishlist.count > 0 && <span className="text-[12px] text-lux-mute">({wishlist.count})</span>}
+                <input type="checkbox" checked={onlyWishlist} onChange={(e) => setOnlyWishlist(e.target.checked)} className="ml-auto h-5 w-5 accent-lux-ink" />
+              </label>
+            </div>
+            <div className="flex gap-3 border-t border-lux-line px-6 py-5">
+              <button type="button" onClick={clearAll} className="flex-1 rounded-full border border-lux-line py-3.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-lux-ink hover:border-lux-ink">
+                {t.shop.clearAll}
+              </button>
+              <button type="button" onClick={() => setPanel(false)} className="flex-[1.4] rounded-full bg-lux-ink py-3.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-black">
+                {fmt(t.shop.showResults, { n: shown.length })}
+              </button>
+            </div>
           </div>
-          <NewsletterSignup source="shop" />
         </div>
-      </section>
-    </>
+      )}
+    </section>
+  );
+}
+
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <fieldset>
+      <legend className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-mute">{title}</legend>
+      <div className="mt-3 flex flex-wrap gap-2">{children}</div>
+    </fieldset>
   );
 }
 
 function IconSearch() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-neutralx-400">
-      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0 text-lux-mute" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
     </svg>
   );
 }
 
-export function IconHeart({ filled }: { filled: boolean }) {
+function IconSliders() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s-7.5-4.6-10-9.1C.5 8.6 2 5 5.6 5 8 5 10 6.5 12 9c2-2.5 4-4 6.4-4C22 5 23.5 8.6 22 11.9 19.5 16.4 12 21 12 21z" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
     </svg>
   );
 }

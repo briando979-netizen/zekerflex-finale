@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { canonical } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
+import { getDict } from "@/lib/i18n/server";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
+import { ShopFeatured } from "@/components/marketing/ShopProductCard";
+import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { ShopCategoryTiles, ShopHero, ShopMoreCategories, ShopNewsletter, ShopTeams, ShopUsps, type CategoryTile } from "@/components/marketing/ShopSections";
 
 const title = "ZekerFlex Shop — werkkleding, PBM & werkdag-essentials";
 const description =
@@ -18,13 +22,41 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 type Cat = (typeof CATS)[number];
 
-export default async function ShopPage(props: { searchParams: Promise<{ cat?: string }> }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string }> }) {
   const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
-  // Same query as GET /api/shop/products (public): rendered on the server so the
-  // first HTML has the real, buyable catalog — no placeholder flash, no dead links.
-  const products = await prisma.shopProduct
+  const initialQuery = typeof searchParams.q === "string" ? searchParams.q.slice(0, 60) : "";
+  // Op de server opgehaald en omgezet: de eerste HTML (en Google) toont de echte,
+  // koopbare catalogus, en de browser krijgt alleen wat de kaarten nodig hebben.
+  const rows = await prisma.shopProduct
     .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } } } })
     .catch(() => []);
-  return <ShopStorefront initialCat={initialCat} initialProducts={JSON.parse(JSON.stringify(products))} />;
+  const products = rows.map((r) => toShopProduct(r as unknown as Record<string, unknown>));
+  const t = (await getDict()).shop;
+
+  const tileDefs: { cat: ShopCategory; label: string }[] = [
+    { cat: "Werk & PBM", label: t.navPbm },
+    { cat: "Kleding", label: t.navKleding },
+    { cat: "Werkdag", label: t.navWerkdag },
+    { cat: "Cadeaus", label: t.navTeams },
+  ];
+  const tiles: CategoryTile[] = tileDefs
+    .map((d) => ({ ...d, image: products.find((p) => p.category === d.cat && p.imageUrl)?.imageUrl ?? null, count: products.filter((p) => p.category === d.cat).length }))
+    .filter((c) => c.count > 0);
+  // uitgelicht: eerst producten met een label (bestseller, nieuw…), altijd met foto
+  const withPhoto = products.filter((p) => p.imageUrl);
+  const featured = [...withPhoto.filter((p) => p.label), ...withPhoto.filter((p) => !p.label)].slice(0, 4);
+
+  return (
+    <>
+      <ShopHero t={t} />
+      <ShopUsps t={t} />
+      {tiles.length > 1 && <ShopCategoryTiles t={t} tiles={tiles} />}
+      {featured.length === 4 && <ShopFeatured title={t.featured} products={featured} />}
+      <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} products={products} />
+      <ShopTeams t={t} />
+      <ShopMoreCategories t={t} />
+      <ShopNewsletter t={t} />
+    </>
+  );
 }

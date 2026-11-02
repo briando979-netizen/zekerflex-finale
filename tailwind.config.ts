@@ -57,6 +57,8 @@ const config: Config = {
         plan: { DEFAULT: "#2563EB", soft: "#EAF1FE", ink: "#1E40AF" },
         trust: { DEFAULT: "#7C3AED", soft: "#F3EDFE", ink: "#5B21B6" },
         money: { DEFAULT: "#B7791F", soft: "#FDF3DC", ink: "#7C4A03", bright: "#F5C451" },
+        // De webshop (/shop): warm ivoor, antraciet, dunne lijnen en een vleugje goud.
+        lux: { bg: "#FAF8F4", stone: "#F1EDE6", ink: "#151412", mute: "#6E675E", line: "#E6E0D6", gold: "#A8834F" },
         risk: {
           low: "#15803D",
           medium: "#B45309",
@@ -68,6 +70,8 @@ const config: Config = {
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        // Alleen in de webshop geladen (lib/fonts-shop.ts).
+        serif: ["var(--font-serif)", "Georgia", "Cambria", "serif"],
       },
       borderRadius: {
         xl2: "1.25rem",

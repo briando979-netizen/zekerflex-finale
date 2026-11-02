@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { Model3DViewer } from "@/components/marketing/Model3DViewer";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
-import { IconHeart } from "@/components/marketing/ShopStorefront";
+import { IconHeart, ShopProductCard } from "@/components/marketing/ShopProductCard";
+import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
+import type { ShopCardProduct, ShopCategory } from "@/components/marketing/shop-product";
 import { specFor } from "@/lib/shop/product-specs";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -42,6 +45,20 @@ export type PdpProduct = {
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
+/** Een gerelateerd product als etalagekaart (zelfde kaart als op de shop-homepage). */
+const asCard = (p: PdpProduct): ShopCardProduct => ({
+  id: p.id,
+  slug: p.slug,
+  name: p.name,
+  description: p.description,
+  price: p.priceCents / 100,
+  category: p.category as ShopCategory,
+  label: p.badge,
+  imageUrl: p.imageUrl,
+  altImageUrl: p.modelPhotoUrl && p.modelPhotoUrl !== p.imageUrl ? p.modelPhotoUrl : null,
+  variants: p.variants,
+});
+
 export function ProductDetail({ product, related, boughtTogether = false }: { product: PdpProduct; related: PdpProduct[]; boughtTogether?: boolean }) {
   const t = useT();
   const { add, count } = useShopCart();
@@ -75,26 +92,27 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const variantStock = variant?.stock ?? product.stock;
 
   return (
-    <div className="shell py-8 md:py-12">
-      <nav aria-label="Broodkruimel" className="mb-6 flex items-center gap-2 text-xs text-neutralx-500">
-        <Link href="/shop" className="hover:text-ink">{t.shop.shopBreadcrumb}</Link>
+    <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 md:py-12 lg:px-12">
+      <nav aria-label="Broodkruimel" className="mb-8 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-lux-mute">
+        <Link href="/shop" className="hover:text-lux-ink">{t.shop.shopBreadcrumb}</Link>
         <span>/</span>
-        <Link href={`/shop?cat=${encodeURIComponent(product.category)}`} className="hover:text-ink">{product.category}</Link>
+        <Link href={`/shop?cat=${encodeURIComponent(product.category)}#collectie`} className="hover:text-lux-ink">{product.category}</Link>
         <span>/</span>
-        <span className="text-ink">{product.name}</span>
+        <span className="text-lux-ink">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
         {/* galerij */}
         <div>
-          <div className="relative overflow-hidden rounded-2xl bg-paper-soft">
+          <div className="relative overflow-hidden bg-lux-stone">
             {show3d && product.model3dUrl ? (
-              <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={gallery[0] ?? null} className="aspect-square w-full" />
+              <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={gallery[0] ?? null} className="aspect-[4/5] w-full" />
             ) : gallery.length > 0 ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={gallery[active]} alt={product.name} fetchPriority="high" className="aspect-square w-full object-cover" />
+              <div className="relative aspect-[4/5] w-full">
+                <Image src={gallery[active] ?? gallery[0]!} alt={product.name} fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover" />
+              </div>
             ) : (
-              <div className="aspect-square w-full bg-paper-soft"><ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} /></div>
+              <div className="aspect-[4/5] w-full"><ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} className="text-[#C8BCA9]" /></div>
             )}
             {product.model3dUrl && (
               <button
@@ -121,10 +139,10 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                     setActive(i);
                     setShow3d(false);
                   }}
-                  className={`h-20 w-20 overflow-hidden rounded-lg border-2 transition ${i === active && !show3d ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
+                  aria-label={`Foto ${i + 1}`}
+                  className={`relative h-24 w-20 overflow-hidden border transition ${i === active && !show3d ? "border-lux-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                  <Image src={src} alt="" fill sizes="80px" className="object-cover" />
                 </button>
               ))}
             </div>
@@ -135,32 +153,34 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
         <div>
           <div className="flex items-start justify-between gap-3">
             {product.badge ? (
-              <span className="inline-block rounded bg-mintwash px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">{product.badge}</span>
+              <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-gold">{product.badge}</span>
             ) : <span />}
             <button
               type="button"
               aria-label={wishlist.has(product.id) ? t.shop.removeFromFavorites : t.shop.addToFavorites}
+              aria-pressed={wishlist.has(product.id)}
               onClick={() => wishlist.toggle(product.id)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-hairstrong text-ink transition hover:border-ink"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-lux-line text-lux-ink transition hover:border-lux-ink"
             >
               <IconHeart filled={wishlist.has(product.id)} />
             </button>
           </div>
-          <h1 className="mt-2 font-display text-3xl font-bold leading-tight">{product.name}</h1>
-          <p className="mt-3 text-2xl font-bold">{money(variantPriceCents)}</p>
-          <p className="mt-1 text-xs text-neutralx-500">{t.shop.inclVat}</p>
-          {spec.fit && <p className="mt-4 text-sm text-neutralx-600"><span className="font-semibold text-ink">{t.shop.fit}</span> {spec.fit}</p>}
+          <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-[-0.01em] text-lux-ink sm:text-5xl">{product.name}</h1>
+          <p className="mt-5 text-xl text-lux-ink">{money(variantPriceCents)}</p>
+          <p className="mt-1 text-[12px] text-lux-mute">{t.shop.inclVat}</p>
+          {spec.fit && <p className="mt-5 text-[14px] text-lux-mute"><span className="text-lux-ink">{t.shop.fit}</span> {spec.fit}</p>}
 
           {sizes.length > 0 && (
-            <div className="mt-5">
-              <p className="text-sm font-semibold text-ink">{t.shop.size}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-7">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-mute">{t.shop.size}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {sizes.map((s) => (
                   <button
                     key={s}
                     type="button"
+                    aria-pressed={selSize === s}
                     onClick={() => { setSelSize(s); setAdded(false); }}
-                    className={`rounded-lg border px-3.5 py-2 text-sm font-semibold transition ${selSize === s ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+                    className={`min-w-12 border px-4 py-2.5 text-[13px] transition ${selSize === s ? "border-lux-ink bg-lux-ink text-white" : "border-lux-line text-lux-ink hover:border-lux-ink"}`}
                   >
                     {s}
                   </button>
@@ -169,15 +189,16 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
             </div>
           )}
           {colors.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm font-semibold text-ink">{t.shop.color}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-mute">{t.shop.color}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {colors.map((c) => (
                   <button
                     key={c}
                     type="button"
+                    aria-pressed={selColor === c}
                     onClick={() => { setSelColor(c); setAdded(false); }}
-                    className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${selColor === c ? "border-ink bg-ink text-white" : "border-hairstrong hover:border-ink"}`}
+                    className={`rounded-full border px-4 py-2 text-[13px] transition ${selColor === c ? "border-lux-ink bg-lux-ink text-white" : "border-lux-line text-lux-ink hover:border-lux-ink"}`}
                   >
                     {c}
                   </button>
@@ -186,28 +207,33 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
             </div>
           )}
 
-          <div className="mt-6 flex items-center gap-3">
-            <div className="inline-flex items-center rounded-full border border-hairstrong">
-              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3.5 py-2 text-lg">−</button>
-              <span className="min-w-8 text-center text-sm font-semibold">{qty}</span>
-              <button type="button" onClick={() => setQty((q) => Math.min(20, q + 1))} className="px-3.5 py-2 text-lg">+</button>
+          <div className="mt-8 flex items-center gap-3">
+            <div className="inline-flex items-center rounded-full border border-lux-line">
+              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Minder" className="px-4 py-3 text-lg">−</button>
+              <span className="min-w-8 text-center text-[14px]">{qty}</span>
+              <button type="button" onClick={() => setQty((q) => Math.min(20, q + 1))} aria-label="Meer" className="px-4 py-3 text-lg">+</button>
             </div>
             <button
               type="button"
-              onClick={() => { if (variant) { add(variant.id, qty); setAdded(true); } }}
+              onClick={() => {
+                if (!variant) return;
+                add(variant.id, qty);
+                setAdded(true);
+                window.dispatchEvent(new Event(CART_OPEN_EVENT));
+              }}
               disabled={!variant || variantStock <= 0}
-              className="flex-1 rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-500 disabled:opacity-40"
+              className="flex-1 rounded-full bg-lux-ink py-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black disabled:opacity-40"
             >
               {!variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart}
             </button>
           </div>
           {added && (
-            <p className="mt-3 text-sm font-semibold text-brand-600">
+            <p role="status" className="mt-3 text-[13px] text-lux-ink">
               {fmt(t.shop.addedToCart, { n: count })}{" "}
-              <Link href="/shop" className="underline">{t.shop.continueShopping}</Link>
+              <Link href="/shop" className="underline underline-offset-4">{t.shop.continueShopping}</Link>
             </p>
           )}
-          <p className="mt-2 text-xs text-neutralx-400">
+          <p className="mt-3 text-[12px] text-lux-mute">
             {variant
               ? variantStock > 0
                 ? fmt(t.shop.inStock, { n: variantStock })
@@ -216,9 +242,9 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           </p>
 
           {product.bundleItems && product.bundleItems.length > 0 && (
-            <div className="mt-6 rounded-xl border border-hair p-4">
-              <p className="text-sm font-semibold text-ink">{t.shop.bundleContains}</p>
-              <ul className="mt-2 space-y-1.5 text-sm text-neutralx-600">
+            <div className="mt-7 border border-lux-line p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-mute">{t.shop.bundleContains}</p>
+              <ul className="mt-3 space-y-2 text-[14px] text-lux-ink">
                 {product.bundleItems.map((b) => (
                   <li key={b.id} className="flex items-center justify-between">
                     <span>{b.name}</span>
@@ -230,12 +256,12 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           )}
 
           {/* productomschrijving */}
-          <div className="mt-8 border-t border-hair pt-6">
-            <h2 className="font-display text-lg font-bold">{t.shop.productDescription}</h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutralx-600">
+          <div className="mt-10 border-t border-lux-line pt-7">
+            <h2 className="font-serif text-2xl text-lux-ink">{t.shop.productDescription}</h2>
+            <ul className="mt-4 space-y-2.5 text-[14px] leading-relaxed text-lux-mute">
               {spec.bullets.map((b) => (
-                <li key={b} className="flex gap-2">
-                  <span aria-hidden className="mt-1 h-1 w-1 shrink-0 rounded-full bg-neutralx-400" />
+                <li key={b} className="flex gap-3">
+                  <span aria-hidden className="mt-[0.6rem] h-px w-3 shrink-0 bg-lux-gold" />
                   <span>{b}</span>
                 </li>
               ))}
@@ -244,10 +270,10 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
 
           {/* maattabel */}
           {hasSize && spec.sizeTable && (
-            <div className="mt-4 border-t border-hair pt-6">
-              <button type="button" onClick={() => setSizeOpen((o) => !o)} className="flex w-full items-center justify-between font-display text-lg font-bold">
+            <div className="mt-6 border-t border-lux-line pt-6">
+              <button type="button" onClick={() => setSizeOpen((o) => !o)} aria-expanded={sizeOpen} className="flex w-full items-center justify-between font-serif text-2xl text-lux-ink">
                 {t.shop.sizeTable}
-                <span className="text-base font-normal text-neutralx-400">{sizeOpen ? "−" : "+"}</span>
+                <span className="font-sans text-lg font-light text-lux-mute">{sizeOpen ? "−" : "+"}</span>
               </button>
               {sizeOpen && (
                 <div className="mt-4">
@@ -288,22 +314,11 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
 
       {/* gerelateerd */}
       {related.length > 0 && (
-        <div className="mt-16 border-t border-hair pt-10">
-          <h2 className="font-display text-xl font-bold">{boughtTogether ? "Vaak samen gekocht" : t.shop.alsoViewed}</h2>
-          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+        <div className="mt-20 border-t border-lux-line pt-14">
+          <h2 className="font-serif text-4xl text-lux-ink">{boughtTogether ? "Vaak samen gekocht" : t.shop.alsoViewed}</h2>
+          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 md:grid-cols-4">
             {related.map((r) => (
-              <Link key={r.id} href={`/shop/${r.slug}`} className="group">
-                <div className="aspect-[4/5] overflow-hidden rounded-xl bg-paper-soft">
-                  {r.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.imageUrl} alt={r.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                  ) : (
-                    <ProductPlaceholder name={r.name} slug={r.slug} category={r.category} glyphSize={56} />
-                  )}
-                </div>
-                <h3 className="mt-2 text-sm font-semibold leading-snug">{r.name}</h3>
-                <p className="mt-0.5 text-sm font-bold">{money(r.priceCents)}</p>
-              </Link>
+              <ShopProductCard key={r.id} p={asCard(r)} sizes="(min-width: 768px) 25vw, 50vw" />
             ))}
           </div>
         </div>
