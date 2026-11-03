@@ -3,16 +3,17 @@
 import { useState } from "react";
 import type { UserPrefs, JobAlert } from "@/lib/prefs/store";
 import { useToast } from "@/components/ui/Toast";
+import { useFT } from "@/components/i18n/useFT";
 
-const DAYS = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
-const PARTS = [
-  { k: "morning", l: "Ochtend" },
-  { k: "afternoon", l: "Middag" },
-  { k: "evening", l: "Avond" },
-] as const;
+const PART_KEYS = ["morning", "afternoon", "evening"] as const;
 
 export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
   const toast = useToast();
+  const ft = useFT();
+  const t = ft.avail;
+  // Korte dagnamen in de app-taal, met hoofdletter (zo=0 … za=6, zoals availability opslaat).
+  const DAYS = ft.date.wd.map((d) => d.charAt(0).toUpperCase() + d.slice(1));
+  const PARTS = PART_KEYS.map((k) => ({ k, l: t[k] }));
   const [avail, setAvail] = useState<UserPrefs["availability"]>(initial.availability ?? {});
   const [minRate, setMinRate] = useState(initial.minHourlyRateCents ? initial.minHourlyRateCents / 100 : 0);
   const [desiredRate, setDesiredRate] = useState(initial.desiredHourlyRateCents ? initial.desiredHourlyRateCents / 100 : 0);
@@ -40,13 +41,13 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as UserPrefs;
-      if (!res.ok) toast.error("Opslaan mislukt");
+      if (!res.ok) toast.error(t.saveFailed);
       else {
         setAlerts(data.jobAlerts ?? []);
         toast.success(okMsg);
       }
     } catch {
-      toast.error("Opslaan mislukt");
+      toast.error(t.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -61,14 +62,14 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
         maxTravelMinutes: maxTravel,
         standby,
       },
-      "Voorkeuren opgeslagen",
+      t.saved,
     );
 
   const addAlert = () => {
     if (!alertLabel.trim()) return;
     put(
       { addAlert: { label: alertLabel.trim(), ...(alertRate ? { minRateCents: Math.round(alertRate * 100) } : {}) } },
-      "Job-alert toegevoegd",
+      t.alertAdded,
     );
     setAlertLabel("");
     setAlertRate(0);
@@ -77,8 +78,8 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
   return (
     <div className="space-y-6">
       <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold">Wanneer kun je?</h2>
-        <p className="mt-1 text-sm text-neutralx-600">Markeer je beschikbaarheid. Matching prioriteert je dan en je krijgt alleen relevante meldingen.</p>
+        <h2 className="font-display text-lg font-semibold">{t.whenTitle}</h2>
+        <p className="mt-1 text-sm text-neutralx-600">{t.whenBody}</p>
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[420px] text-center text-sm">
             <thead>
@@ -119,46 +120,46 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
       </section>
 
       <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold">Tarief & reistijd</h2>
+        <h2 className="font-display text-lg font-semibold">{t.rateTitle}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <label className="block">
-            <span className="field-label">Minimumtarief (€/u)</span>
+            <span className="field-label">{t.minRate}</span>
             <input type="number" min={0} step={0.5} value={minRate || ""} onChange={(e) => setMinRate(Number(e.target.value))} className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">Diensten hieronder worden verborgen.</span>
+            <span className="mt-1 block text-xs text-neutralx-400">{t.minRateHint}</span>
           </label>
           <label className="block">
-            <span className="field-label">Richttarief (€/u)</span>
+            <span className="field-label">{t.desiredRate}</span>
             <input type="number" min={0} step={0.5} value={desiredRate || ""} onChange={(e) => setDesiredRate(Number(e.target.value))} className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">Diensten eronder krijgen een label.</span>
+            <span className="mt-1 block text-xs text-neutralx-400">{t.desiredRateHint}</span>
           </label>
           <label className="block">
-            <span className="field-label">Max. reistijd: {maxTravel} min</span>
+            <span className="field-label">{t.maxTravel(maxTravel)}</span>
             <input type="range" min={10} max={90} value={maxTravel} onChange={(e) => setMaxTravel(Number(e.target.value))} className="mt-3 w-full accent-brand-500" />
           </label>
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm text-neutralx-700">
           <input type="checkbox" checked={standby} onChange={(e) => setStandby(e.target.checked)} />
-          Standby-modus — ik spring bij voor spoeddiensten (vaak hoger betaald)
+          {t.standby}
         </label>
       </section>
 
       <button type="button" onClick={saveAll} disabled={saving} className="btn-primary">
-        {saving ? "Opslaan…" : "Voorkeuren opslaan"}
+        {saving ? t.saving : t.save}
       </button>
 
       <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold">Job-alerts</h2>
-        <p className="mt-1 text-sm text-neutralx-600">Sla een zoekopdracht op. Zodra er een passende dienst is, verschijnt die bovenaan je klussenoverzicht met een melding.</p>
+        <h2 className="font-display text-lg font-semibold">{t.alertsTitle}</h2>
+        <p className="mt-1 text-sm text-neutralx-600">{t.alertsBody}</p>
         {alerts.length > 0 && (
           <ul className="mt-4 space-y-2">
             {alerts.map((a) => (
               <li key={a.id} className="flex items-center justify-between rounded-lg border border-hair px-3 py-2 text-sm">
                 <span>
                   {a.label}
-                  {a.minRateCents ? <span className="ml-2 text-xs text-neutralx-400">min € {(a.minRateCents / 100).toFixed(0)}/u</span> : null}
+                  {a.minRateCents ? <span className="ml-2 text-xs text-neutralx-400">{t.alertMin(Math.round(a.minRateCents / 100))}</span> : null}
                 </span>
-                <button type="button" onClick={() => put({ removeAlertId: a.id }, "Alert verwijderd")} className="text-xs text-neutralx-400 hover:text-crit">
-                  verwijder
+                <button type="button" onClick={() => put({ removeAlertId: a.id }, t.alertRemoved)} className="text-xs text-neutralx-400 hover:text-crit">
+                  {t.remove}
                 </button>
               </li>
             ))}
@@ -166,15 +167,15 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
         )}
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="block flex-1">
-            <span className="field-label">Omschrijving</span>
-            <input value={alertLabel} onChange={(e) => setAlertLabel(e.target.value)} placeholder="Bijv. Horeca Amsterdam avond" className="field-input" />
+            <span className="field-label">{t.description}</span>
+            <input value={alertLabel} onChange={(e) => setAlertLabel(e.target.value)} placeholder={t.descPlaceholder} className="field-input" />
           </label>
           <label className="block w-28">
-            <span className="field-label">min €/u</span>
+            <span className="field-label">{t.minPerHour}</span>
             <input type="number" min={0} value={alertRate || ""} onChange={(e) => setAlertRate(Number(e.target.value))} className="field-input" />
           </label>
           <button type="button" onClick={addAlert} disabled={saving || !alertLabel.trim()} className="btn-ghost">
-            Toevoegen
+            {t.add}
           </button>
         </div>
       </section>
