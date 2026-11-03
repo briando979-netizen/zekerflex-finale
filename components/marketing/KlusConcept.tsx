@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CONCEPT_KEY, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
-import { centsFrom, euroCents, euroWhole, hoursNl, numberFrom } from "@/lib/rekentools/invoer";
+import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 
 export interface ConceptTemplate {
@@ -18,6 +18,8 @@ const ANDERS = "anders";
 const PAUZES = [0, 15, 30, 45, 60];
 
 const pad = (n: number) => String(n).padStart(2, "0");
+// Shift hours keep their half and quarter hours (7,5 uur), unlike the rounded totals in invoer.ts.
+const uurNl = (h: number) => h.toLocaleString("nl-NL", { maximumFractionDigits: 2 });
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 function dateNl(iso: string): string {
@@ -187,7 +189,7 @@ export function KlusConcept({
             {[city.trim() || "Plaats", date ? dateNl(date) : "datum", `${start}–${end}`].join(" · ")}
           </p>
           <p className="mt-2 text-sm text-ink">
-            <span className="num font-semibold">{euroCents(effectiveRate)}</span> per uur · {hoursNl(cost.hours)} uur ·{" "}
+            <span className="num font-semibold">{euroCents(effectiveRate)}</span> per uur · {uurNl(cost.hours)} uur ·{" "}
             {people} {people === 1 ? "persoon" : "mensen"}
           </p>
         </div>
@@ -195,7 +197,7 @@ export function KlusConcept({
         <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <dt className="text-neutralx-600">Loon kracht{people > 1 ? "en" : ""}</dt>
           <dd className="num text-right font-semibold text-ink">{euroCents(cost.grossTotalCents)}</dd>
-          <dt className="text-neutralx-600">Platformkosten ({hoursNl(cost.totalHours)} uur)</dt>
+          <dt className="text-neutralx-600">Platformkosten ({uurNl(cost.totalHours)} uur)</dt>
           <dd className="num text-right font-semibold text-ink">{euroCents(cost.feeTotalCents)}</dd>
           <dt className="border-t border-hair pt-2 font-semibold text-ink">Totaal excl. btw</dt>
           <dd className="num border-t border-hair pt-2 text-right font-display text-xl font-bold text-ink">{euroWhole(cost.totalCents)}</dd>
