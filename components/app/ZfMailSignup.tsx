@@ -168,10 +168,11 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
             <p className="text-sm text-crit">{fill(t.blockedBody, { address: account.address })}</p>
           ) : (
             <>
-              <h2 className="font-display text-lg font-bold text-ink">
+              {/* An e-mail address has no spaces: let it break on a phone instead of pushing the card wider. */}
+              <h2 className="break-words font-display text-lg font-bold text-ink">
                 {isDone ? fill(t.doneTitle, { name: first || account.displayName }) : fill(t.queuedTitle, { address: account.address })}
               </h2>
-              <p className="mt-1 text-sm text-neutralx-600">{isDone ? fill(t.doneBody, { address: account.address }) : t.queuedBody}</p>
+              <p className="mt-1 break-words text-sm text-neutralx-600">{isDone ? fill(t.doneBody, { address: account.address }) : t.queuedBody}</p>
             </>
           )}
         </div>

@@ -134,10 +134,14 @@ export function AreaChart({
         <path d={line} fill="none" stroke={stroke} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {labels ? (
-        <div className="mt-1.5 flex justify-between text-[10px]" style={{ color: "var(--a-mute)" }}>
-          {labels.map((l, i) => (
-            <span key={i}>{l}</span>
-          ))}
+        // At most ~7 labels (evenly spread, always the last): 30 dates side by side are
+        // wider than a phone. Hidden ones stay as empty spans so the positions line up.
+        <div className="mt-1.5 flex justify-between overflow-hidden whitespace-nowrap text-[10px]" style={{ color: "var(--a-mute)" }}>
+          {labels.map((l, i) => {
+            const every = Math.ceil(labels.length / 7);
+            const show = i % every === 0 || i === labels.length - 1;
+            return <span key={i}>{show ? l : ""}</span>;
+          })}
         </div>
       ) : null}
     </div>

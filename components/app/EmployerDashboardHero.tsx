@@ -59,18 +59,18 @@ export function EmployerDashboardHero() {
 
   return (
     <section className="mb-8 space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="Uitgegeven (7 dagen)" value={money(s.spentCents)} tone={s.spentChangePct >= 0 ? "neutral" : "up"} sub={<>{s.spentChangePct >= 0 ? "▲" : "▼"} {Math.abs(s.spentChangePct)}% t.o.v. vorige week</>} />
         <Kpi label="Gewerkte uren (7 dagen)" value={`${s.workedHours} uur`} sub={`${s.activeWorkersToday} flexwerker(s) vandaag aan het werk`} />
         <Kpi label="Bezetting (30 dagen)" value={`${(s.fillRate * 100).toFixed(0)}%`} sub={`${s.shiftsFilled} van ${s.shiftsTotal} klussen vol`} />
         <Kpi label="Uren te keuren" value={String(s.hoursToApprove)} tone={s.hoursToApprove === 0 ? "up" : "down"} sub={s.hoursToApprove === 0 ? "alles bijgewerkt" : "wachten op je goedkeuring"} />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="rounded-xl border border-hair bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.06)] lg:col-span-2">
-          <div className="mb-3 flex items-baseline justify-between">
-            <p className="text-sm font-semibold text-ink">Uitgaven &amp; gewerkte uren — laatste 30 dagen</p>
-            <p className="text-xs text-neutralx-400">dagelijks</p>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="min-w-0 rounded-xl border border-hair bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.06)] lg:col-span-2">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <p className="min-w-0 text-sm font-semibold text-ink">Uitgaven &amp; gewerkte uren — laatste 30 dagen</p>
+            <p className="flex-shrink-0 text-xs text-neutralx-400">dagelijks</p>
           </div>
           <AreaChart data={s.series.map((d) => d.spentCents / 100)} height={150} labels={s.series.map((d) => d.date.slice(5))} />
         </div>

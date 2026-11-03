@@ -247,6 +247,8 @@ export default async function WerkgeverStartPage() {
           {o.invoices.length === 0 ? (
             <EmptyState title={t.start.invoicesEmptyTitle} body={t.start.invoicesEmptyBody} />
           ) : (
+            // Four columns don't fit a phone: scroll sideways there instead of widening the page.
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
@@ -273,6 +275,7 @@ export default async function WerkgeverStartPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </Panel>
       </div>

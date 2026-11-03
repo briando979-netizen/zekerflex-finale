@@ -191,7 +191,7 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
             name="file"
             accept="image/jpeg,image/png,image/webp,application/pdf"
             onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-            className="text-sm text-neutralx-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+            className="w-full min-w-0 text-sm text-neutralx-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
           <p className="mt-1 text-xs text-neutralx-400">{fileName ? t.chosen(fileName) : t.fileHint}</p>
         </div>
