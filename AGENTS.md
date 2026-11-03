@@ -1,33 +1,96 @@
-# AGENTS.md — ZekerFlex (instructies voor coding-agents, bv. Codex)
+# AGENTS.md — ZekerFlex (instructies voor coding-agents: Codex, Claude, de ZekerFlex Bouwer)
 
 ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
-**Stack:** Next.js (App Router) · TypeScript (strict) · Prisma · Tailwind · deploy op **Vercel**.
+**Stack:** Next.js (App Router) · TypeScript (strict) · Prisma · Tailwind · draait op de **eigen TransIP-VPS** (Docker Compose + Caddy, `docker-compose.vps.yml`).
 
 ## Gouden regels (ALTIJD volgen)
 
 1. **Verifieer vóór elke commit** en lees de output:
    - `npx tsc --noEmit -p .`  (moet 0 fouten geven)
    - `npx eslint <gewijzigde bestanden>`  (moet schoon zijn)
-   Commit/push **alleen** als beide schoon zijn.
-2. **Pushen naar `main` = live.** Vercel bouwt + deployt automatisch, en **draait Prisma-migraties op prod** (een migratie pushen = toepassen op productie). Push dus alleen gecontroleerde wijzigingen.
+   - `npx vitest run <tests die je wijziging raken>` (of `npx vitest related <bestanden>`)
+   Commit/push **alleen** als alles schoon is.
+2. **Pushen naar `main` is nog niet live, maar wel de volgende uitrol.** Live zetten gaat via Admin → ZekerFlex AI → Live zetten (de live-zetter op de VPS) of `deploy/scripts/vps-update.sh`; die zetten GitHub `main` live. Migraties draaien **niet** vanzelf: alleen met `ZF_MIGREER=1`, na een droge proef (`BEGIN … ROLLBACK`). Push dus alleen gecontroleerde wijzigingen.
 3. **Strikte TypeScript:** `noUncheckedIndexedAccess` (guard `arr[i]` met `?? …`) en `exactOptionalPropertyTypes` (nooit `prop: undefined` toekennen; laat de key weg of type `| undefined`).
 4. **Volg de bestaande stijl** (naamgeving, comment-dichtheid, patronen van omringende code). Kijk eerst hoe iets elders is gedaan.
 5. **Kleine, omkeerbare diffs.** Geen destructieve/riskante commando's. Bouw niet opnieuw wat al bestaat — het platform is zeer compleet; zoek echte gaten.
+6. **Alle zichtbare tekst is gewoon Nederlands** (de eigenaar leest geen Engels).
+
+## Valkuilen (lessen uit eerdere fouten)
+
+### Tijd en gegevens
+
+- **Tijd:** de server draait in UTC. Gebruik `lib/time/amsterdam.ts` (`amsterdamDayKey`, `amsterdamClock`, `amsterdamStartOfDay`, …); nooit `getHours()`/`toLocale*` zonder `timeZone: "Europe/Amsterdam"`. Ook in client-componenten die op de server renderen (anders hydratiefout #418). Tijden in `.ics` altijd UTC met `Z` (`toISOString`).
+- **Annuleringen** tellen alleen tegen een werker via het begin van `cancelReason` ("Afgezegd door flexwerker…", "Niet opgekomen…"; `lib/profile/card.ts`). Een nieuw annuleringspad krijgt dus een herkenbaar begin.
+- **Promise.all uitbreiden:** controleer de volgorde van de destructuring.
+- **Na een PATCH** de teruggegeven serverversie overnemen in de lijst, niet lokaal één veld bijwerken (de server kan bijeffecten hebben).
+- **Gedeelde staat in het geheugen** (wachtrijen, caches) via `globalThis`: Next bundelt routes apart, dus een gewone module-variabele bestaat per bundel.
+- **AuditLog** heeft bewust geen relatie met User (de hashketen); voeg die niet toe.
+
+### Veiligheid en privacy
+
+- **JSON-LD:** altijd via `ldJson()` uit `lib/seo/json-ld.ts`, nooit `JSON.stringify` in een `<script>`-tag (XSS).
+- **AVG:** een nieuwe KV-sleutel per gebruiker → het voorvoegsel in `ERASABLE_KV_PREFIXES` (`lib/privacy/user-kv.ts`), anders ontbreekt hij bij export/wissen. Uitvoer naar gasten/klanten (account-API, export) bevat geen interne teamvelden: filter op één plek.
+- **Nooit capability-URL's in een log** (push-endpoints, getekende links, tokens in een querystring); log alleen de host.
+- **Herkomstcontrole achter Caddy:** `request.url` is `app:3000`; vergelijk `Origin` met `Host`/`X-Forwarded-Host` (`lib/rijschool/herkomst.ts`), anders krijgt elke echte POST een 403.
+- **Nieuwe openbare API-route** → `lib/auth/public-routes.ts` + `tests/public-routes.test.ts`.
+- **Storingen in Redis/KV mogen inloggen niet blokkeren** (fail-open voor slot/limiet).
+- **Testen met mail of bedrijven:** alleen `example.com`/`.test`-adressen (sendMail stuurt die nooit echt); nooit een echte lead.
+
+### Geld
+
+- **Platformfee-staffel:** één bron, `lib/pricing/tiers.ts`. De uitzendopslag is niet openbaar.
+- **Stripe-webhook:** elke functie een eigen tak op een metadata-sleutel, idempotent via unieke kolommen (Stripe stuurt soms dubbel).
+- **Android-app (TWA):** bank, voorschot, snelle uitbetaling en doorverwijzen zijn in de app verborgen (`lib/app-mode.ts`). Nieuwe geldfuncties daar ook afschermen.
+
+### Schermen
+
+- **Werker-app (`/dashboard`) is vijftalig** (NL/EN/PL/RO/UK): nieuwe tekst in `lib/i18n/freelancer.ts`, client via `useFT()`. Importeer nooit `dictionary-en`, `lib/i18n/server` of `FREELANCER_DICTS` in een client-bestand dat de shop laadt (`tests/i18n-bundle.test.ts`). Een onderdeel dat werker én werkgever delen krijgt een `texts`-prop met NL-standaard (zoals `components/auth/two-factor-texts.ts`).
+- **Client-componenten** importeren nooit iets dat prisma, kv, mail of zod meeneemt; zet gedeelde lijsten/hulpjes in een los, puur bestand.
+- **Geen component binnen een component** definiëren (velden verliezen hun focus) en **geen `<form>` binnen een `<form>`**.
+- **Admin:** elke pagina met de kit (`components/admin/kit.tsx` + `kit-client.tsx`: PageHead, KpiStrip, Panel, Chart, DataTable), opgenomen in `ADMIN_HUBS` (`lib/admin/nav.ts`) en strikt `PLATFORM_ADMIN` (`tests/admin-access.test.ts` en `tests/admin-nav.test.ts` bewaken dat).
+- **Kleuren:** één kleur = één betekenis — groen doen, blauw `plan` gepland, amber `warn` wacht op jou, violet `trust` verificatie, goud `money` geld, rood probleem. Kleuren die een klant kiest: tekst- en knopkleur via `lib/rijschool/kleuren.ts`; oranje op licht haalt geen AA voor kleine tekst (gebruik de donkere variant).
+- **Toegankelijkheid:** foutmeldingen in formulieren krijgen `role="alert"`; labels aan velden koppelen.
+- **Snelheid mag het uiterlijk nooit veranderen:** bewijs het met schermafbeeldingen per scrollpositie, vóór en na.
+- **Lettertypes** staan zelf gehost (`public/fonts`, `app/fonts.css`); de build haalt niets bij Google.
+- **Eigen `opengraph-image.tsx`** werkt alleen met `canonical(path, { fileImage: true })` (`lib/seo.ts`).
+- **sharp** heeft geen lettertypes in de container: geen tekst in een SVG die naar PNG gaat, alleen vormen.
+
+### Klantsites en websitevoorstellen
+
+- Gebouwde sites (`lib/sites/render.ts`) hebben geen scripts en een sandbox-CSP; alles komt van de site zelf (foto's via `media/`, lettertypes via `assets/fonts/`), nooit van een derde partij.
+- Bestaande klantsites en verstuurde voorstellen nooit ongevraagd van uiterlijk laten veranderen: een nieuwe stijl of nieuw blok is standaard alleen voor nieuwe sites; de klant kiest zelf.
+- Een voorstel mailt nooit vanzelf (een mens verstuurt) en heeft een band "niet de officiële website", noindex, geen LocalBusiness-JSON-LD en een dicht formulier.
+
+### Testen en fouten zoeken
+
+- Pas je een bestaande route of functie aan, draai dan alle tests die dat pad raken (zoek in `tests/`), niet alleen je nieuwe.
+- Pure hulpjes in `.ts`, niet `.tsx` (vitest leest geen JSX). Module met prisma testen: `vi.mock("@/lib/prisma", () => ({ prisma: {} }))`. `AppError.validation` geeft 422. Geen `.refine` binnen `z.discriminatedUnion`.
+- **Fouten zoeken:** eerst het foutenlogboek (Admin → Systeem → Foutmeldingen, `lib/ops/error-journal.ts`); meet vóór je een oorzaak noemt.
+- **Taken voor de eigenaar** (sleutels, accounts, iets in een extern portaal) horen in `lib/admin/owner-todos.ts` (Admin → Te doen); aan/uit zonder uitrol via `lib/flags`.
+
+### Gedeelde werkmap en uitrollen (sessies op de pc; de Bouwer heeft een eigen kopie)
+
+- Meerdere sessies delen één werkmap en `main`. Push op sha (`git push origin <sha>:main`) en rol een vaste hash uit, nooit HEAD. Faalt tsc door onaf werk van een ander, controleer dan HEAD + je eigen bestanden in een losse `git worktree`.
+- Vóór een uitrol: staat er op `main` een migratie van een ander die nog niet op prod is (`_prisma_migrations`), rol dan niet blind `main` uit. Meld een uitrol vooraf en "klaar" erna; test live nooit tijdens de uitrol van een ander.
+- PowerShell 5: `Out-File -Encoding utf8` zet een BOM; `git archive | ssh` beschadigt binaire data. Gebruik daarvoor Git Bash.
 
 ## Autonoom doel
 
-Blijf waardevolle, begrensde verbeteringen bouwen (feature, fix, polish, SEO/content, admin-tool, performance, toegankelijkheid): bedenk zelf → bouw → verifieer (tsc+eslint) → commit + push → kort documenteren. Zit je vast op een mensbeslissing? Noteer het en pak een andere taak.
+Blijf waardevolle, begrensde verbeteringen bouwen (feature, fix, polish, SEO/content, admin-tool, performance, toegankelijkheid): bedenk zelf → bouw → verifieer → commit + push → kort documenteren. Zit je vast op een mensbeslissing? Noteer het en pak een andere taak.
 
 ## Waar dingen staan
 
 - `app/` — routes (App Router). Publieke marketing in `app/(marketing)/`, dashboards in `app/dashboard` (freelancer), `app/werkgever` (opdrachtgever), `app/admin` (beheer). API in `app/api/`.
-- `lib/` — logica: `lib/ai/` (self-hosted LLM-adapter + model-fleet), `lib/jarvis/` (admin-assistent), `lib/rag/` (kennisbank/corpus), `lib/matching/`, `lib/billing/`, `lib/timesheets/approve.ts` (uren→facturen+fee), `lib/sales/` (outreach-motor), `lib/seo-sectors.ts` + `lib/seo-cities.ts` (programmatische landingspagina's).
+- `lib/` — logica: `lib/ai/` (LLM-adapter + model-fleet), `lib/jarvis/` (admin-assistent), `lib/rag/` (kennisbank/corpus), `lib/matching/`, `lib/billing/`, `lib/timesheets/approve.ts` (uren→facturen+fee), `lib/sales/` (outreach-motor), `lib/bouwer/` (Bouwer + live-zetter), `lib/seo-sectors.ts` + `lib/seo-cities.ts` (programmatische landingspagina's).
 - `components/` — UI (o.a. `components/marketing/`, `components/admin/`, `components/jarvis/`, `components/chat/`).
 - `prisma/schema.prisma` — datamodel; migraties in `prisma/migrations/`.
+- `deploy/` — VPS: `scripts/vps-update.sh` (uitrol), `bouwer/` (Bouwer + live-zetter), `caddy/`, `cron/`.
 
 ## Context / recent
 
-- **AI-node:** het model is self-hosted (Ollama) via `deploy/ai-node/`; de live site koppelt aan de laptop via een Cloudflare-tunnel (HTTP/2). Admin → Jarvis beheert sleutel + modelkeuze per taak.
+- **AI:** de live AI is Gemini (via `AI_ALLOW_REMOTE`); Ollama draait ook op de VPS (eigen model, nu niet in gebruik). Admin → ZekerFlex AI beheert sleutel + modelkeuze per taak.
+- **Zelf bouwen en uitrollen:** de ZekerFlex Bouwer (`deploy/bouwer/werker/`) maakt wijzigingen in een eigen werkkopie, met live voorbeeld en controle; de eigenaar keurt goed en zet live met één knop. Hij leest dit bestand als projectregels.
 - **Organische groei (GTM):** config-gestuurde sector-SEO (werkgever + werker, 5 sectoren × 21 steden) via `lib/seo-sectors.ts` + `components/marketing/SectorLanding.tsx`. Een sector toevoegen = config + dunne route-map.
 - **Geldstroom werkt:** bij goedgekeurde uren wordt automatisch een PLATFORM_FEE-factuur (€3,50/uur) aan de werkgever gemaakt; auto-matching draait bij het plaatsen van een klus.
 - Fallback-coders staan in `deploy/local-coder/` (Aider/Codex op lokaal model of OpenAI).
