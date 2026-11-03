@@ -38,6 +38,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/shop/media/abc123",
     "/api/company/search",
     "/api/orgs/org_babycare/photo",
+    "/api/sites/domein-check", // Caddy's on-demand TLS ask
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -60,6 +61,8 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/people/search",
     "/api/geo/search", // note: /api/geo/tile also requires a session; only geo isn't prefixed publicly here
     "/api/calls/incoming",
+    "/api/sites/domein-check/extra", // exact match only
+    "/api/werkgever/sites/domain",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

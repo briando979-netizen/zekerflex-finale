@@ -19,6 +19,20 @@ for i in 1 2 3; do
     fi
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
     sudo $C restart cron
+    # Caddy: eerst de nieuwe Caddyfile valideren in een losse container, want een
+    # kapotte Caddyfile legt de hele site plat. Pas dan (her)maken als de compose-
+    # instellingen veranderden, en herladen zonder onderbreking (de map-mount laat
+    # de draaiende caddy de nieuwe versie zien). Ongeldig = de vorige blijft actief.
+    if sudo $C run --rm --no-deps -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile > /tmp/zf-caddy-validate.log 2>&1; then
+      sudo $C up -d caddy
+      if sudo docker exec zekerflex-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile > /tmp/zf-caddy-reload.log 2>&1; then
+        echo "caddy: Caddyfile actief"
+      else
+        echo "CADDY_HERLADEN_MISLUKT: de vorige Caddyfile blijft actief"; tail -3 /tmp/zf-caddy-reload.log
+      fi
+    else
+      echo "CADDY_ONGELDIG: de vorige Caddyfile blijft actief"; tail -3 /tmp/zf-caddy-validate.log
+    fi
     # Elke build laat oude lagen achter; in nov 2026 stond de schijf zo op 79%
     # (52 GB build-cache). Getagde images (latest + rollback) blijven staan.
     sudo docker image prune -f > /dev/null

@@ -141,7 +141,7 @@ function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDo
 
 // ---- the editor --------------------------------------------------------------
 
-type Tab = "paginas" | "blokken" | "stijl" | "bedrijf" | "fotos" | "berichten";
+type Tab = "paginas" | "blokken" | "stijl" | "bedrijf" | "fotos" | "berichten" | "domein";
 const TABS: { id: Tab; label: string }[] = [
   { id: "blokken", label: "Blokken" },
   { id: "paginas", label: "Pagina's" },
@@ -149,6 +149,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "bedrijf", label: "Bedrijf" },
   { id: "fotos", label: "Foto's" },
   { id: "berichten", label: "Berichten" },
+  { id: "domein", label: "Domein" },
 ];
 // The preview renders at the device's real width and is scaled down to fit, so
 // "Computer" shows the desktop layout even in a narrow column.
@@ -187,6 +188,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
   const [save, setSave] = useState<{ state: "opgeslagen" | "wijzigingen" | "bezig" | "fout"; text?: string }>({ state: "opgeslagen" });
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [address, setAddress] = useState(data.address);
   const dirty = useRef(false);
 
   const page = site.pages.find((p) => p.id === pageId) ?? site.pages[0]!;
@@ -240,10 +242,10 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
           <p className="eyebrow">Website bouwen</p>
           <h1 className="truncate font-display text-xl font-bold text-ink">{site.bedrijf.naam}</h1>
           <p className="truncate text-xs text-neutralx-500">
-            {live && data.address ? (
-              <a href={data.address} target="_blank" rel="noopener" className="font-medium text-brand-600 hover:underline">{data.address}</a>
+            {live && address ? (
+              <a href={address} target="_blank" rel="noopener" className="font-medium text-brand-600 hover:underline">{address}</a>
             ) : (
-              <>Nog niet online · adres straks {data.address}</>
+              <>Nog niet online · adres straks {address}</>
             )}
           </p>
         </div>
@@ -281,6 +283,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
             {tab === "bedrijf" && <CompanyTab bedrijf={site.bedrijf} onChange={(bedrijf) => change((s) => ({ ...s, bedrijf }))} />}
             {tab === "fotos" && <PhotosTab site={site} onMedia={(media) => setSite((s) => ({ ...s, media: [...s.media, media] }))} onAlt={(id, alt) => change((s) => ({ ...s, media: s.media.map((m) => (m.id === id ? { ...m, alt } : m)) }))} />}
             {tab === "berichten" && <MessagesTab />}
+            {tab === "domein" && <DomainTab canPublish={data.canPublish} onAddress={(own) => setAddress(own ?? `${origin}/site/${site.slug}`)} />}
           </div>
           {site.builds.length > 0 && (
             <details className="mt-4 border-t border-hair pt-3 text-sm">
@@ -603,6 +606,155 @@ function MessagesTab() {
         </li>
       ))}
     </ul>
+  );
+}
+
+// ---- own domain (lib/sites/domain.ts) ------------------------------------------
+
+interface DnsRecordRow {
+  type: string;
+  name: string;
+  short: string;
+  value: string;
+  why: string;
+}
+interface DomainState {
+  host: string;
+  alias: string | null;
+  verifiedAt: string | null;
+  activeAt: string | null;
+  check: { at: string; txt: boolean; a: boolean; aaaa: boolean; alias: boolean; https: boolean; problem: string | null } | null;
+}
+
+function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: (ownDomain: string | null) => void }) {
+  const [state, setState] = useState<{ domein: DomainState | null; records: DnsRecordRow[] } | null>(null);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch("/api/werkgever/sites/domain", { cache: "no-store" }).catch(() => null);
+      if (!res?.ok) return setError(await errorText(res, "Je domein kon niet laden."));
+      setState(await res.json());
+    })();
+  }, []);
+
+  const act = async (action: "koppel" | "controleer" | "ontkoppel") => {
+    if (action === "ontkoppel" && !window.confirm("Het domein loskoppelen? Je website blijft online op het adres van ZekerFlex.")) return;
+    setBusy(action);
+    setError(null);
+    const res = await fetch("/api/werkgever/sites/domain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(action === "koppel" ? { action, domein: input } : { action }),
+    }).catch(() => null);
+    setBusy(null);
+    if (!res?.ok) return setError(await errorText(res, "Dat lukte niet. Probeer het opnieuw."));
+    const next = (await res.json()) as { domein: DomainState | null; records: DnsRecordRow[] };
+    setState(next);
+    onAddress(next.domein?.activeAt ? `https://${next.domein.host}` : null);
+  };
+
+  const copy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(value);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      setCopied(null);
+    }
+  };
+
+  if (!state) return error ? <p role="alert" className="text-sm text-crit">{error}</p> : <p className="text-sm text-neutralx-500">Laden…</p>;
+  const d = state.domein;
+  const c = d?.check ?? null;
+
+  if (!d) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="text-neutralx-600">Gebruik je eigen domeinnaam, zoals bakkerjansen.nl. Je website blijft bij ZekerFlex staan; je zet alleen een paar regels bij je domeinprovider.</p>
+        {canPublish ? (
+          <form
+            className="space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void act("koppel");
+            }}
+          >
+            <Field label="Je domeinnaam">
+              <input className="field-input" value={input} onChange={(e) => setInput(e.target.value)} placeholder="bakkerjansen.nl" autoComplete="off" spellCheck={false} />
+            </Field>
+            <button type="submit" disabled={busy !== null || !input.trim()} className="btn-primary w-full disabled:opacity-50">{busy === "koppel" ? "Bezig…" : "Koppelen"}</button>
+          </form>
+        ) : (
+          <p className="rounded-lg bg-paper-soft p-3 text-neutralx-600">
+            Een eigen domein hoort bij Website-beheer. <Link href="/werkgever/website" className="font-semibold text-brand-600 hover:underline">Bekijk Website-beheer</Link>
+          </p>
+        )}
+        {error && <p role="alert" className="text-sm text-crit">{error}</p>}
+        <p className="text-xs text-neutralx-500">Nog geen domein? Koop er een bij een domeinprovider, bijvoorbeeld TransIP, Hostnet of Strato.</p>
+      </div>
+    );
+  }
+
+  const items: { label: string; ok: boolean | null }[] = [
+    { label: "Het domein is van jou (TXT-regel)", ok: d.verifiedAt ? true : c ? c.txt : null },
+    { label: `${d.host} wijst naar ZekerFlex`, ok: c ? c.a : null },
+    { label: "Geen oude IPv6-regel naar een ander adres", ok: c ? c.aaaa : null },
+    ...(d.alias ? [{ label: `${d.alias} doet mee`, ok: c ? c.alias : null }] : []),
+    { label: "Beveiligde verbinding (https)", ok: c ? c.https : null },
+  ];
+
+  return (
+    <div className="space-y-4 text-sm">
+      {d.activeAt ? (
+        <p role="status" className="rounded-lg bg-ok/10 p-3 text-ok">
+          Je website staat op{" "}
+          <a href={`https://${d.host}`} target="_blank" rel="noopener" className="font-semibold underline">{d.host}</a>.
+        </p>
+      ) : (
+        <p className="text-neutralx-600">
+          Zet deze regels bij je domeinprovider voor <strong className="text-ink">{d.host}</strong>. Laat de MX-regels voor je e-mail staan zoals ze zijn.
+        </p>
+      )}
+
+      <ul className="space-y-2">
+        {state.records.map((r) => (
+          <li key={`${r.type}${r.name}`} className="rounded-lg border border-hair p-2.5">
+            <p className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-ink">{r.type} · naam {r.short}</span>
+              <button type="button" onClick={() => void copy(r.value)} className="font-semibold text-brand-600 hover:underline">{copied === r.value ? "Gekopieerd" : "Kopieer waarde"}</button>
+            </p>
+            <p className="mt-1 break-all font-mono text-xs text-ink">{r.value}</p>
+            <p className="mt-1 text-xs text-neutralx-500">{r.why}</p>
+          </li>
+        ))}
+      </ul>
+
+      <div className="space-y-2">
+        <button type="button" disabled={busy !== null} onClick={() => void act("controleer")} className="btn-primary w-full disabled:opacity-50">
+          {busy === "controleer" ? "Controleren… (kan een halve minuut duren)" : "Controleer"}
+        </button>
+        <ul className="space-y-1" aria-label="Stand van je domein">
+          {items.map((i) => (
+            <li key={i.label} className="flex items-start gap-2 text-xs">
+              <span aria-hidden className={i.ok === null ? "text-neutralx-400" : i.ok ? "text-ok" : "text-crit"}>{i.ok === null ? "–" : i.ok ? "✓" : "✗"}</span>
+              <span className="text-neutralx-700">
+                {i.label}
+                <span className="sr-only">{i.ok === null ? ": nog niet gecontroleerd" : i.ok ? ": in orde" : ": nog niet in orde"}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {c?.problem && <p role="status" className="rounded-lg bg-paper-soft p-3 text-xs text-neutralx-700">{c.problem}</p>}
+        {c && <p className="text-[11px] text-neutralx-400">Laatst gecontroleerd {when(c.at)}</p>}
+      </div>
+
+      {error && <p role="alert" className="text-sm text-crit">{error}</p>}
+      <button type="button" disabled={busy !== null} onClick={() => void act("ontkoppel")} className="text-xs font-semibold text-crit hover:underline disabled:opacity-50">Domein loskoppelen</button>
+    </div>
   );
 }
 

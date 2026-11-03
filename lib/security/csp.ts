@@ -102,6 +102,8 @@ export const CHAT_MEDIA_CSP = ["sandbox", "default-src 'none'", "style-src 'unsa
 export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions): string {
   if (pathname?.startsWith("/website-preview/")) return SITE_PREVIEW_CSP;
   if (pathname === "/site" || pathname?.startsWith("/site/")) return siteHostCsp(SITE_ORIGIN);
+  // Own domains get their CSP from the middleware (customerSite); typed by hand on zekerflex.com this path only 404s.
+  if (pathname?.startsWith("/site-domein/")) return siteHostCsp(SITE_ORIGIN);
   if (pathname && /^\/api\/inbox\/[^/]+\/media\/[^/]+$/.test(pathname)) return CHAT_MEDIA_CSP;
   const studio =
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);

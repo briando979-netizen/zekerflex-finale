@@ -354,6 +354,13 @@ const schema = z.object({
   TURN_SHARED_SECRET: z.string().min(16).optional(),
   TURN_REALM: z.string().default("zekerflex.com"),
 
+  // Websites die klanten met ZekerFlex bouwen, op hun eigen domein (lib/sites/domain.ts):
+  // de adressen die de klant in zijn DNS zet, en waar we na het koppelen controleren
+  // of Caddy het certificaat voor dat domein heeft (op de VPS: de caddy-container).
+  SITES_IPV4: z.string().default("37.97.226.24"),
+  SITES_IPV6: z.string().default("2a01:7c8:fffd:26f:5054:ff:fe08:a3eb"),
+  SITES_TLS_PROBE: z.string().default("caddy:443"),
+
   // KVKBase - Dutch Handelsregister company data & VAT validation.
   KVKBASE_API_URL: z.string().url().default("https://api.kvkbase.nl"),
   KVKBASE_API_KEY: z.string().optional(),

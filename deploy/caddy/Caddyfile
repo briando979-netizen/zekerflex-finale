@@ -12,6 +12,16 @@
 # TLS werkt zonder e-mailadres (Caddy gebruikt dan Let's Encrypt zonder account-
 # mail). Wil je verloopmeldingen? Voeg dan zelf een globale `email ...`-regel toe.
 
+# Klantdomeinen (websites die bedrijven met ZekerFlex bouwen, lib/sites/domain.ts)
+# krijgen hun certificaat op aanvraag, bij het eerste bezoek, en alleen als de app
+# het domein kent: gekoppeld, eigendom bewezen met een TXT-regel en de website
+# gepubliceerd. Zo kan niemand onze server certificaten laten halen voor andere namen.
+{
+	on_demand_tls {
+		ask http://app:3000/api/sites/domein-check
+	}
+}
+
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
 
@@ -29,5 +39,22 @@
 	redir @www https://zekerflex.com{uri} 308
 
 	# Next.js standalone server draait in de app-container op poort 3000.
-	reverse_proxy app:3000
+	# X-ZF-Site-Host zet alleen het blok voor klantdomeinen hieronder. Hier halen we
+	# hem weg, zodat niemand via zekerflex.com een klantwebsite kan laten tonen.
+	reverse_proxy app:3000 {
+		header_up -X-ZF-Site-Host
+	}
+}
+
+# Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
+# website en nooit naar de app zelf: met deze kop stuurt de middleware het
+# verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy app:3000 {
+		header_up X-ZF-Site-Host {host}
+	}
 }

@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { SECTOR_TEMPLATES, THEME_PRESETS } from "@/lib/sites/types";
 import { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 import { companyDefaults, mayPublish, siteTenantOf } from "@/lib/sites/access";
+import { getDomain } from "@/lib/sites/domain";
 import { createSite, saveSite, siteOfTenant } from "@/lib/sites/store";
 
 export const runtime = "nodejs";
@@ -13,14 +14,16 @@ export const dynamic = "force-dynamic";
 const addressOf = (slug: string) => `${env.APP_BASE_URL.replace(/\/+$/, "")}/site/${slug}`;
 
 // GET /api/werkgever/sites — my company's website (or null), the templates, and what we already know.
+// The address is the own domain once that is active (lib/sites/domain.ts).
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const tenantId = await siteTenantOf(p);
     const [site, defaults, canPublish] = await Promise.all([siteOfTenant(tenantId), companyDefaults(tenantId, p), mayPublish(p, tenantId)]);
+    const domein = site ? await getDomain(site.id) : null;
     return NextResponse.json({
       site,
-      address: site ? addressOf(site.slug) : null,
+      address: site ? (domein?.activeAt ? `https://${domein.host}` : addressOf(site.slug)) : null,
       templates: SECTOR_TEMPLATES.map(({ id, naam, omschrijving, theme }) => ({ id, naam, omschrijving, theme })),
       presets: THEME_PRESETS,
       defaults,

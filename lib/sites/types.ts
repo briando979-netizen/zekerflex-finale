@@ -75,6 +75,40 @@ export interface Media {
   sourceUrl?: string;
 }
 
+/** The result of the last DNS + https check of an own domain (lib/sites/domain.ts). */
+export interface DomainCheck {
+  at: string;
+  /** zekerflex-site=<code> found: the company owns the domain */
+  txt: boolean;
+  /** every A record of the domain is our server */
+  a: boolean;
+  /** no AAAA records, or only ours (a foreign one sends visitors and Let's Encrypt elsewhere) */
+  aaaa: boolean;
+  /** the alias (www) points to us too; true when there is no alias */
+  alias: boolean;
+  /** our server answered over https with this site */
+  https: boolean;
+  problem: string | null;
+}
+
+/**
+ * An own domain for a site: bakkerjansen.nl instead of /site/bakkerij-jansen.
+ * Kept under its own KV key (lib/sites/domain.ts), not on the SiteDoc, so the
+ * builder's autosave of a stale copy can never wipe it.
+ */
+export interface SiteDomain {
+  /** the address visitors use, e.g. "bakkerjansen.nl" */
+  host: string;
+  /** the other form that redirects to host ("www.bakkerjansen.nl"); null for a deeper subdomain */
+  alias: string | null;
+  addedAt: string;
+  /** ownership proven (TXT): both hosts are claimed for this site */
+  verifiedAt: string | null;
+  /** answered over https: visitors and search engines go to the own domain */
+  activeAt: string | null;
+  check: DomainCheck | null;
+}
+
 export interface SiteDoc {
   id: string;
   tenantId: string;

@@ -8,7 +8,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import type { CleanImage } from "@/lib/media/clean-image";
-import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc } from "@/lib/sites/types";
+import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain } from "@/lib/sites/types";
 import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,8 @@ import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 //   KV "site-slug:<slug>"           — claimed address part (unique key: first wins)
 //   KV "site-build:<id>:<buildId>"  — a published snapshot; visitors see doc.liveBuild
 //   KV "site-contact:<id>:<msgId>"  — messages sent through the contact form
+//   KV "site-domain:<id>"           — the own domain (lib/sites/domain.ts)
+//   KV "site-host:<host>"           — a claimed own domain → site id (first wins)
 //   disk storage/sitebuilder/<id>/media/<mediaId>.webp — the photos
 // Publishing freezes a snapshot, so editing never changes the live site until
 // the next publish, and going back is one click.
@@ -39,6 +41,17 @@ const isMediaFile = (file: string) => /^m[a-z0-9]{6,20}\.webp$/.test(file);
 
 /** Snapshot of a published site (what visitors see). */
 export type SiteSnapshot = Omit<SiteDoc, "builds" | "liveBuild">;
+
+/** A published site as visitors get it, with its own domain (if linked) — that lives apart, so linking needs no new publish. */
+export interface LiveSite {
+  snapshot: SiteSnapshot;
+  buildId: string;
+  siteId: string;
+  domein: SiteDomain | null;
+}
+
+/** KV key of a site's own domain (lib/sites/domain.ts writes it). */
+export const domainKey = (siteId: string) => `site-domain:${siteId}`;
 
 export async function getSite(id: string): Promise<SiteDoc | null> {
   return isSiteId(id) ? kvGet<SiteDoc>(siteKey(id)) : null;
@@ -160,14 +173,18 @@ export async function setLiveBuild(id: string, buildId: string | null, by: { use
   return next;
 }
 
+/** The live snapshot of a site, or null while it is offline. */
+export async function liveSiteOf(site: SiteDoc | null): Promise<LiveSite | null> {
+  if (!site?.liveBuild) return null;
+  const [snapshot, domein] = await Promise.all([kvGet<SiteSnapshot>(buildKey(site.id, site.liveBuild)), kvGet<SiteDomain>(domainKey(site.id))]);
+  return snapshot ? { snapshot, buildId: site.liveBuild, siteId: site.id, domein } : null;
+}
+
 /** What a visitor of /site/<slug>/ gets: the live snapshot, or null. */
-export async function liveSiteBySlug(slug: string): Promise<{ snapshot: SiteSnapshot; buildId: string; siteId: string } | null> {
+export async function liveSiteBySlug(slug: string): Promise<LiveSite | null> {
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) return null;
   const siteId = await kvGet<string>(slugKey(slug));
-  const site = siteId ? await getSite(siteId) : null;
-  if (!site?.liveBuild) return null;
-  const snapshot = await kvGet<SiteSnapshot>(buildKey(site.id, site.liveBuild));
-  return snapshot ? { snapshot, buildId: site.liveBuild, siteId: site.id } : null;
+  return liveSiteOf(siteId ? await getSite(siteId) : null);
 }
 
 export interface ContactMessage {

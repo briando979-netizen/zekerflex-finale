@@ -59,7 +59,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # De map, niet het bestand: tar vervangt de Caddyfile bij elke uitrol (nieuwe
+      # inode), en via de map ziet de draaiende caddy die meteen, zodat
+      # vps-update.sh hem zonder onderbreking kan herladen.
+      - ./deploy/caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
-import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
+import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
+import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
@@ -33,6 +34,10 @@ export const config = {
         { type: "header", key: "purpose", value: "prefetch" },
       ],
     },
+    // A customer's own domain (Caddy sets the header): every path, photos and
+    // sitemap.xml included, goes to that website — see customerSite() below.
+    // A literal, not SITE_HOST_HEADER: Next reads this config statically.
+    { source: "/:path*", has: [{ type: "header", key: "x-zf-site-host" }] },
   ],
 };
 
@@ -151,7 +156,27 @@ function appAllowed(pathname: string): boolean {
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+// ---------------------------------------------------------------------------
+// A company's website on its own domain (lib/sites/domain.ts). Caddy's block
+// for customer domains sets x-zf-site-host and the zekerflex.com block strips
+// it, so it can't be forged from outside. Everything on such a domain —
+// /login and /api included — goes to that website and never to the app:
+// bakkerjansen.nl/contact is served by /site-domein/bakkerjansen.nl/contact.
+// ---------------------------------------------------------------------------
+function customerSite(req: NextRequest, raw: string): NextResponse {
+  const host = siteHostFrom(raw);
+  if (!host) return new NextResponse("Onbekend domein", { status: 400 });
+  const url = req.nextUrl.clone();
+  url.pathname = `/site-domein/${host}${req.nextUrl.pathname === "/" ? "" : req.nextUrl.pathname}`;
+  const res = NextResponse.rewrite(url);
+  res.headers.set(CSP_HEADER, siteHostCsp(`https://${host}`));
+  return res;
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  const siteHost = req.headers.get(SITE_HOST_HEADER);
+  if (siteHost !== null) return customerSite(req, siteHost);
+
   // Admin "Bekijk als": outside the admin area, serve as the chosen example
   // account (read-only). /admin and /api/admin keep the admin's own session.
   const viewAs = req.cookies.get(VIEW_AS_COOKIE)?.value;
