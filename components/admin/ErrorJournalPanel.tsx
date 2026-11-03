@@ -5,6 +5,7 @@ import type { ErrorGroup } from "@/lib/ops/error-journal";
 import { count, dateTimeNl, timeAgoNl } from "@/lib/admin/format";
 import { Empty, Notice, Panel, Pill } from "@/components/admin/kit";
 import { DataTable, type TableColumn, type TableRow } from "@/components/admin/kit-client";
+import { BouwerFixKnop } from "@/components/admin/bouwer/BouwerFixKnop";
 
 // Admin → Systeem → Foutmeldingen: wat er op de site misging, ook van vóór de
 // laatste update (lib/ops/error-journal.ts), zonder persoonsgegevens.
@@ -75,9 +76,12 @@ export function ErrorJournalPanel() {
       laatst: <span className="whitespace-nowrap" title={dateTimeNl(g.lastAt)}>{timeAgoNl(g.lastAt, now)}</span>,
       eerst: <span className="whitespace-nowrap">{dateTimeNl(g.firstAt)}</span>,
       actie: (
-        <button type="button" className="a-button text-xs" disabled={busy} onClick={() => void clear({ ids: [g.id] }, "Gemarkeerd als opgelost. Gebeurt het opnieuw, dan staat het er weer.")}>
-          Opgelost
-        </button>
+        <span className="flex flex-wrap items-start gap-2">
+          <BouwerFixKnop group={g} />
+          <button type="button" className="a-button text-xs" disabled={busy} onClick={() => void clear({ ids: [g.id] }, "Gemarkeerd als opgelost. Gebeurt het opnieuw, dan staat het er weer.")}>
+            Opgelost
+          </button>
+        </span>
       ),
     },
     sort: { aantal: g.count, laatst: g.lastAt, eerst: g.firstAt },
@@ -89,7 +93,7 @@ export function ErrorJournalPanel() {
   return (
     <div className="space-y-4">
       <Notice>
-        Technische meldingen van de site, bewaard ook na een update. E-mailadressen, telefoonnummers, IBAN&apos;s en sleutels worden eruit gehaald voordat iets wordt opgeslagen. Komt iets vaak terug, vraag Claude ernaar en noem de melding.
+        Technische meldingen van de site, bewaard ook na een update. E-mailadressen, telefoonnummers, IBAN&apos;s en sleutels worden eruit gehaald voordat iets wordt opgeslagen. Komt iets vaak terug? Laat de Bouwer het oplossen met de knop bij de melding; je ziet zijn wijziging eerst en keurt hem zelf goed.
       </Notice>
       {note && (
         <Notice tone={note.tone} role={note.tone === "crit" ? "alert" : "status"}>
