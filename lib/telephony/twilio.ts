@@ -49,11 +49,24 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<{ sid: str
     },
     body,
   });
-  const data = (await res.json().catch(() => ({}))) as { sid?: string; message?: string };
-  if (!res.ok || !data.sid) {
-    throw new Error(`Twilio weigerde de oproep (${res.status}): ${data.message ?? "onbekende fout"}`);
-  }
+  const data = (await res.json().catch(() => ({}))) as { sid?: string; message?: string; code?: number };
+  if (!res.ok || !data.sid) throw new Error(twilioRefusal(res.status, data));
   return { sid: data.sid };
+}
+
+/** Twilio's most common refusals in plain Dutch, with what to do about it. Other codes keep Twilio's own text. */
+const REFUSALS: Record<number, string> = {
+  20003: "Twilio herkent de inloggegevens niet. Controleer TWILIO_ACCOUNT_SID en TWILIO_AUTH_TOKEN op de server.",
+  21210: "Het nummer waarmee ZekerFlex belt hoort niet bij dit Twilio-account. Controleer TWILIO_FROM_NUMBER.",
+  21211: "Dit telefoonnummer is ongeldig. Controleer het nummer dat je wilde bellen.",
+  21212: "Het nummer waarmee ZekerFlex belt is ongeldig. Controleer TWILIO_FROM_NUMBER.",
+  21215: "Twilio mag dit nummer niet bellen: dat land of soort nummer staat uit. Zet het aan in Twilio onder Voice → Settings → Geo permissions.",
+  21219: "Dit Twilio-account is een proefaccount en mag alleen geverifieerde nummers bellen. Verifieer het nummer in Twilio of maak het account betaald.",
+};
+
+export function twilioRefusal(status: number, data: { message?: string; code?: number }): string {
+  const known = data.code === undefined ? undefined : REFUSALS[data.code];
+  return `Twilio weigerde de oproep (${data.code ? `code ${data.code}` : status}): ${known ?? data.message ?? "onbekende fout"}`;
 }
 
 /**

@@ -97,6 +97,20 @@ describe("het begin van een uitgaand gesprek", () => {
     expect(String(init.body)).not.toContain("MachineDetection");
     vi.unstubAllGlobals();
   });
+
+  it("legt een weigering van Twilio in gewoon Nederlands uit, met wat je eraan doet", async () => {
+    const refuse = (body: object, status = 400) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status })));
+    refuse({ code: 21215, message: "Account not authorized to call +31612345678. Perhaps you need to enable some international permissions" });
+    await expect(placeTwilioCall({ to: "+31612345678", voiceUrl: "https://x/voice", statusUrl: "https://x/status" })).rejects.toThrow(
+      "Twilio weigerde de oproep (code 21215): Twilio mag dit nummer niet bellen: dat land of soort nummer staat uit. Zet het aan in Twilio onder Voice → Settings → Geo permissions.",
+    );
+    // onbekende code: Twilio's eigen tekst; geen JSON: de HTTP-status
+    refuse({ code: 99999, message: "Something else" });
+    await expect(placeTwilioCall({ to: "+31612345678", voiceUrl: "https://x/voice", statusUrl: "https://x/status" })).rejects.toThrow("(code 99999): Something else");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("kapot", { status: 502 })));
+    await expect(placeTwilioCall({ to: "+31612345678", voiceUrl: "https://x/voice", statusUrl: "https://x/status" })).rejects.toThrow("Twilio weigerde de oproep (502): onbekende fout");
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("luisteren naar de beller", () => {
