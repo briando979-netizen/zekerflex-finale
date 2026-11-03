@@ -769,7 +769,8 @@ export function InboxPage({
 
           <div
             ref={scrollRef}
-            className={`flex-1 space-y-1.5 overflow-y-auto px-5 py-4 ${look.font === "s" ? "text-[14px]" : look.font === "l" ? "text-[19px]" : "text-[16px]"}`}
+            className={`zf-chat-wall flex-1 space-y-1.5 overflow-y-auto px-5 py-4 ${look.font === "s" ? "text-[14px]" : look.font === "l" ? "text-[19px]" : "text-[16px]"}`}
+            data-wall={look.wallpaper}
             style={
               look.wallpaper === "plain"
                 ? { background: "#FFFFFF" }

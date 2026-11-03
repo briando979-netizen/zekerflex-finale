@@ -460,7 +460,8 @@ export function ChatDock() {
 
               <div
                 ref={scrollRef}
-                className="flex-1 space-y-1.5 overflow-y-auto px-3 py-3"
+                className="zf-chat-wall flex-1 space-y-1.5 overflow-y-auto px-3 py-3"
+                data-wall="dots"
                 style={{ background: "#EFEAE2", backgroundImage: "radial-gradient(rgba(12,14,18,0.04) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
               >
                 {messages.map((m, i) => {

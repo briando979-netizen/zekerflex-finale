@@ -906,7 +906,8 @@ body {
 .app-scope[data-theme="dark"] .hover\:bg-paper-soft:hover,
 .app-scope[data-theme="dark"] .group:hover .group-hover\:bg-paper-soft,
 .app-scope[data-theme="dark"] .active\:bg-paper-soft:active { background-color: var(--app-edge) !important; }
-.app-scope[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--app-card) !important; }
+.app-scope[data-theme="dark"] .hover\:bg-white:hover,
+.app-scope[data-theme="dark"] .hover\:bg-white\/70:hover { background-color: var(--app-card) !important; }
 .app-scope[data-theme="dark"] .hover\:bg-brand-50:hover,
 .app-scope[data-theme="dark"] .hover\:bg-brand-100:hover { background-color: rgb(var(--brand-mint-rgb) / 0.18) !important; }
 .app-scope[data-theme="dark"] .hover\:text-ink:hover,
@@ -920,6 +921,21 @@ body {
 .app-scope[data-theme="dark"] .group:hover .group-hover\:text-brand-700 { color: rgb(var(--brand-mint-rgb)) !important; }
 .app-scope[data-theme="dark"] .hover\:text-crit:hover { color: #fca5a5 !important; }
 .app-scope[data-theme="dark"] .hover\:text-ok:hover { color: #4ade80 !important; }
+
+/* Chat in het donker: de achtergrond (inline stijl, gekozen in Instellingen) bleef licht beige, de
+   eigen bubbel licht groen onder lichte tekst (1,0:1) en de invoerbalk lichtgrijs. Elke keuze krijgt
+   een donkere tegenhanger; de eigen bubbel het donkere WhatsApp-groen (lichte tekst 7,2:1). */
+.app-scope[data-theme="dark"] .zf-chat-wall[data-wall="dots"] {
+  background-color: #0B141A !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) !important;
+}
+.app-scope[data-theme="dark"] .zf-chat-wall[data-wall="plain"] { background: var(--app-surface) !important; }
+.app-scope[data-theme="dark"] .zf-chat-wall[data-wall="mint"] { background: #0E1F19 !important; }
+.app-scope[data-theme="dark"] .bg-\[\#D9FDD3\] { background-color: #005C4B !important; }
+.app-scope[data-theme="dark"] .bg-\[\#D9FDD3\] .text-neutralx-400,
+.app-scope[data-theme="dark"] .bg-\[\#D9FDD3\] .text-neutralx-500,
+.app-scope[data-theme="dark"] .bg-\[\#D9FDD3\] .text-neutralx-600 { color: rgba(233, 237, 239, 0.8) !important; }
+.app-scope[data-theme="dark"] .bg-\[\#F0F2F5\] { background-color: var(--app-card) !important; }
 
 /* Beheeromgeving: een oneven laatste kerncijfer loopt op de telefoon over de hele breedte. */
 .admin-scope .a-kpis > :last-child:nth-child(odd) { grid-column: span 2; }
