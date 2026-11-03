@@ -5,6 +5,7 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { CITIES, type City } from "@/lib/seo-cities";
 import { SECTORS, type Sector } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { klusUrl } from "@/lib/klusconcept/concept";
 
 // Shared template that renders a sector's hub + per-city landing pages from the
 // SECTORS config. Each page combines sector copy with the city's real local
@@ -135,7 +136,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
           intro={`Uitval, no-shows of ${s.peak}? Plaats een klus en ZekerFlex vindt binnen uren betrouwbare ${s.roles} in de buurt. Je betaalt € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/register?type=bedrijf" className="btn-primary">
+          <Link href={klusUrl({ sector: s.key })} className="btn-primary">
             Gratis klus plaatsen
           </Link>
           <Link href="/demo" className="btn-ghost">
@@ -174,7 +175,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
       <CtaBand
         title="Vandaag nog een kracht nodig?"
         body="Plaats je klus in een paar minuten — je betaalt alleen voor gewerkte uren."
-        primaryHref="/register?type=bedrijf"
+        primaryHref={klusUrl({ sector: s.key })}
         primaryLabel="Klus plaatsen"
         secondaryHref="/personeel-inhuren"
         secondaryLabel="Alle sectoren"
@@ -222,7 +223,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           intro={`Een gat in je rooster door uitval of ${s.peak} in ${c.name}? Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare ${s.roles} — voor € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/register?type=bedrijf" className="btn-primary">
+          <Link href={klusUrl({ sector: s.key, city: c.name })} className="btn-primary">
             Gratis klus plaatsen
           </Link>
           <Link href="/demo" className="btn-ghost">
@@ -262,7 +263,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
       <CtaBand
         title={`Vandaag nog een kracht nodig in ${c.name}?`}
         body="Plaats je klus in een paar minuten. Je betaalt alleen voor gewerkte uren — geen abonnement, geen uitzendmarge."
-        primaryHref="/register?type=bedrijf"
+        primaryHref={klusUrl({ sector: s.key, city: c.name })}
         primaryLabel="Klus plaatsen"
         secondaryHref={`/personeel-inhuren/${c.slug}`}
         secondaryLabel={`Alle sectoren in ${c.name}`}

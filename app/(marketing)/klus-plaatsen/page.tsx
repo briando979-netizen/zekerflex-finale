@@ -35,7 +35,11 @@ const FAQ = [
   },
 ];
 
-export default async function KlusPlaatsenPage() {
+export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ functie?: string; plaats?: string }> }) {
+  const { functie, plaats } = await props.searchParams;
+  // From a sector/city page (klusUrl): only a known template and a known city are taken over.
+  const templateKey = SHIFT_TEMPLATES.some((t) => t.key === functie) ? functie : undefined;
+  const city = CITIES.find((c) => c.name.toLowerCase() === (plaats ?? "").trim().toLowerCase())?.name;
   const cells = (await getSupplyMap().catch(() => null))?.cells ?? [];
   const cities = CITIES.map((c) => ({ name: c.name, supply: supplyLabel(supplyNear(cells, c)) }));
   const templates: ConceptTemplate[] = SHIFT_TEMPLATES.map((t) => ({
@@ -81,7 +85,12 @@ export default async function KlusPlaatsenPage() {
       </div>
 
       <Section tone="soft">
-        <KlusConcept templates={templates} minRateCents={MIN_SHIFT_RATE_CENTS} cities={cities} />
+        <KlusConcept
+          templates={templates}
+          minRateCents={MIN_SHIFT_RATE_CENTS}
+          cities={cities}
+          initial={{ ...(templateKey ? { templateKey } : {}), ...(city ? { city } : {}) }}
+        />
       </Section>
 
       <Section tone="paper">

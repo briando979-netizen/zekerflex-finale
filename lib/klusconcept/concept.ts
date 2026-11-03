@@ -120,6 +120,25 @@ export function parseConcept(raw: string | null, now = Date.now(), today = ""): 
   return c as KlusConcept;
 }
 
+/** Sector landing page (lib/seo-sectors.ts key) → the SHIFT_TEMPLATES key that fits it best. */
+export const SECTOR_TEMPLATE: Record<string, string> = {
+  horeca: "horeca",
+  logistiek: "magazijn",
+  schoonmaak: "schoonmaak",
+  evenementen: "horeca",
+  retail: "vakkenvuller",
+};
+
+/** /klus-plaatsen with the function and place already filled in, for the sector and city pages. */
+export function klusUrl(opts: { sector?: string; city?: string } = {}): string {
+  const q = new URLSearchParams();
+  const functie = opts.sector ? SECTOR_TEMPLATE[opts.sector] : undefined;
+  if (functie) q.set("functie", functie);
+  if (opts.city) q.set("plaats", opts.city);
+  const s = q.toString();
+  return s ? `/klus-plaatsen?${s}` : "/klus-plaatsen";
+}
+
 /** Roles that may put out a dienst (lib/auth/rbac.ts, /werkgever/diensten): they skip sign-up and go straight to the form. */
 const SHIFT_CREATOR_ROLES = ["LOCAL_MANAGER", "HQ_ADMIN"];
 

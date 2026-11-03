@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canPostShift, conceptCost, conceptHours, parseConcept, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
+import { canPostShift, conceptCost, conceptHours, klusUrl, parseConcept, SECTOR_TEMPLATE, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
+import { SECTORS } from "@/lib/seo-sectors";
 
 const base: KlusConcept = {
   v: 1,
@@ -71,6 +72,21 @@ describe("klusconcept: bewaren in de browser", () => {
     expect(parseConcept(raw, base.savedAt, "2026-11-21")).toBeNull();
     expect(parseConcept(JSON.stringify({ ...base, rateCents: -5 }), base.savedAt)).toBeNull();
     expect(parseConcept(JSON.stringify({ ...base, positions: 500 }), base.savedAt)).toBeNull();
+  });
+});
+
+describe("klusconcept: vanaf de sectorpagina's", () => {
+  it("fills in the function and place", () => {
+    expect(klusUrl({ sector: "horeca", city: "Den Haag" })).toBe("/klus-plaatsen?functie=horeca&plaats=Den+Haag");
+    expect(klusUrl({ sector: "logistiek" })).toBe("/klus-plaatsen?functie=magazijn");
+    expect(klusUrl({ sector: "onbekend", city: "Utrecht" })).toBe("/klus-plaatsen?plaats=Utrecht");
+    expect(klusUrl()).toBe("/klus-plaatsen");
+  });
+
+  it("has a template for every sector page", () => {
+    // keys must exist in SHIFT_TEMPLATES (lib/shifts/create.ts)
+    const templateKeys = ["vakkenvuller", "kassa", "magazijn", "schoonmaak", "horeca", "receptie"];
+    for (const s of SECTORS) expect(templateKeys, s.key).toContain(SECTOR_TEMPLATE[s.key]);
   });
 });
 

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CONCEPT_KEY, canPostShift, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { CONCEPT_KEY, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
 import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 
@@ -34,18 +34,21 @@ export function KlusConcept({
   templates,
   minRateCents,
   cities,
+  initial = {},
 }: {
   templates: ConceptTemplate[];
   minRateCents: number;
   cities: { name: string; supply: string | null }[];
+  /** from a sector/city page link (lib/klusconcept/concept.ts klusUrl) */
+  initial?: { templateKey?: string; city?: string };
 }) {
   const router = useRouter();
   const used = useEersteGebruik("klus-concept");
-  const first = templates[0];
+  const first = templates.find((t) => t.key === initial.templateKey) ?? templates[0];
   const [tpl, setTpl] = useState(first?.key ?? ANDERS);
   const [eigen, setEigen] = useState("");
   const [description, setDescription] = useState(first?.description ?? "");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState(initial.city ?? "");
   const [date, setDate] = useState("");
   const [today, setToday] = useState("");
   const [start, setStart] = useState("09:00");
@@ -63,11 +66,11 @@ export function KlusConcept({
     setDate(localDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)));
   }, []);
 
-  // Already signed in as a werkgever: skip sign-up and go straight to Nieuwe dienst (/api/me is 401 when logged out).
+  // Already signed in as a werkgever: skip sign-up and go straight to Nieuwe dienst.
   useEffect(() => {
-    fetch("/api/me", { cache: "no-store" })
+    fetch("/api/auth/werkgever", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((me: { authenticated?: boolean; roles?: unknown } | null) => setEmployer(Boolean(me?.authenticated && canPostShift(me.roles))))
+      .then((me: { werkgever?: boolean } | null) => setEmployer(me?.werkgever === true))
       .catch(() => undefined);
   }, []);
 
