@@ -5,6 +5,7 @@ import { offersForUser } from "@/lib/offers/store";
 import { healAcceptedOffer } from "@/lib/matching/heal";
 import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { amsterdamParts } from "@/lib/time/amsterdam";
+import { overlapsAny } from "@/lib/shifts/worker-overlap";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -387,6 +388,14 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   }
 
   active.sort((a, b) => a.shift.startsAt.getTime() - b.shift.startsAt.getTime());
+
+  // Dubbel ingepland (geboekt vóór de controle in lib/shifts/worker-overlap.ts):
+  // markeer beide, zodat de werker er één afzegt in plaats van niet te komen.
+  const booked = active.filter((i) => i.assignmentId && i.status === "active");
+  for (const i of booked) {
+    const others = booked.filter((o) => o.shift.id !== i.shift.id).map((o) => o.shift);
+    if (overlapsAny(others, i.shift)) i.shift.busy = true;
+  }
 
   // Uren-bucket: nog in te vullen (DRAFT) bovenaan, daarna ingediend/in dispuut.
   hours.sort((a, b) => {

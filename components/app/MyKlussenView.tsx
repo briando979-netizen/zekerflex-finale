@@ -207,6 +207,7 @@ export function MyKlussenView({
               href={`/dashboard/klussen/${item.shift.id}`}
               idReminder={tab === "active"}
               dim={tab === "history" && item.status !== "done"}
+              {...(tab === "active" && item.shift.busy ? { ribbon: { label: w.doubleBooked, tone: "crit" as const } } : {})}
               footerOverride={
                 tab === "pending" ? null : tab === "active" ? (
                   <ActiveFooter item={item} w={w} />

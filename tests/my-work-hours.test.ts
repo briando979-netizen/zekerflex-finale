@@ -83,6 +83,17 @@ describe("Mijn klussen — hours to fill in", () => {
     expect(ids((await getMyWork("u1")).history)).toContain("shift-none");
   });
 
+  it("marks two upcoming klussen that overlap as double-booked, and leaves a later one alone", async () => {
+    shiftAssignmentFindMany.mockResolvedValue([
+      assignment("a", 24, 32, "DRAFT"),
+      assignment("b", 28, 34, "DRAFT"), // overlapt met a
+      assignment("c", 34, 40, "DRAFT"), // sluit aan op b: geen botsing
+    ]);
+    const work = await getMyWork("u1");
+    const busy = Object.fromEntries(work.active.map((i) => [i.shift.id, Boolean(i.shift.busy)]));
+    expect(busy).toEqual({ "shift-a": true, "shift-b": true, "shift-c": false });
+  });
+
   it("a cancelled klus stays in the archive as cancelled", async () => {
     shiftAssignmentFindMany.mockResolvedValue([assignment("gone", -10, -2, "DRAFT", true)]);
     const work = await getMyWork("u1");
