@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { YouTubeEmbed } from "@/components/ui/YouTubeEmbed";
 import { BASE } from "@/lib/voorstel/schwarzwald";
 import type { Blok, Pakket, Run } from "@/lib/voorstel/schwarzwald-paginas";
 
@@ -169,18 +170,7 @@ function SmalleBlokken({ blokken }: { blokken: Blok[] }) {
               </p>
             );
           case "video":
-            return (
-              <a
-                key={i}
-                href={`https://www.youtube.com/watch?v=${s.youtube}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 flex items-center gap-4 rounded-2xl bg-schw-night p-5 text-schw-cream transition-transform hover:-translate-y-0.5"
-              >
-                <span aria-hidden="true" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-schw-orange text-lg text-schw-night">▶</span>
-                <span className="font-semibold">Bekijk de sfeervideo op YouTube</span>
-              </a>
-            );
+            return <YouTubeEmbed key={i} id={s.youtube} title="Sfeervideo van Het Schwarzwald" className="mt-6" />;
           default:
             return null;
         }

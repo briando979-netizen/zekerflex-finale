@@ -36,10 +36,11 @@ describe("buildContentSecurityPolicy — production", () => {
     expect(csp).toContain("manifest-src 'self'");
   });
 
-  it("only allows Stripe's iframe by default; never 'self' framing outside the studio", () => {
-    expect(csp).toContain("frame-src https://js.stripe.com");
+  it("only allows Stripe's iframe and YouTube's privacy-mode player by default; never 'self' framing outside the studio", () => {
     const frameSrc = csp.split("; ").find((d) => d.startsWith("frame-src"))!;
+    expect(frameSrc).toBe("frame-src https://js.stripe.com https://www.youtube-nocookie.com");
     expect(frameSrc).not.toContain("'self'");
+    expect(frameSrc).not.toContain("https://www.youtube.com"); // only the no-cookie host
   });
 
   it("still allows the Google Fonts stylesheet + inline style (documented trade-off)", () => {

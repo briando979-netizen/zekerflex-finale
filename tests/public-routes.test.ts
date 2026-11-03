@@ -39,6 +39,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/company/search",
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
+    "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);

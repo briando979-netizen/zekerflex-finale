@@ -39,6 +39,7 @@ const PUBLIC_PREFIXES = [
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
   "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
+  "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
   "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)
 ] as const;
 
