@@ -4,6 +4,7 @@ import { MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { isTijd } from "@/lib/horeca/tijden";
 import { SOORTEN } from "@/lib/horeca/soorten";
 import { MAX_AANTAL, MAX_REGELS } from "@/lib/horeca/bestellen";
+import { MOMENTEN } from "@/lib/horeca/taken";
 
 // Invoer van het horecabeheer (/api/horeca/beheer). Eén POST met een "actie";
 // alles wat de zaak wijzigt, gaat langs deze schema's.
@@ -97,6 +98,24 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
     maxGasten: z.number().int().min(0).max(2000),
   }),
 ]);
+
+const datumSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Kies een datum.");
+
+/** Takenlijsten (module taken): eigen schema, zodat de grote unie hierboven overzichtelijk blijft. */
+export const takenActieSchema = z.discriminatedUnion("actie", [
+  z.object({
+    actie: z.literal("takenlijst"),
+    id: id.optional(),
+    naam: tekst(60).pipe(z.string().min(1, "Geef de lijst een naam.")),
+    moment: z.enum(MOMENTEN),
+    regels: z.string().max(6000),
+  }),
+  z.object({ actie: z.literal("takenlijst-weg"), id }),
+  z.object({ actie: z.literal("takenlijst-voorbeeld") }),
+  z.object({ actie: z.literal("afvinken"), lijstId: id, datum: datumSchema, taak: z.number().int().min(0).max(39), waarde: tekst(20).default(""), door: tekst(60).default("") }),
+  z.object({ actie: z.literal("afvinken-weg"), lijstId: id, datum: datumSchema, taak: z.number().int().min(0).max(39) }),
+]);
+export const TAKEN_ACTIES: readonly string[] = ["takenlijst", "takenlijst-weg", "takenlijst-voorbeeld", "afvinken", "afvinken-weg"];
 
 /** Een gast reserveert online (/api/horeca/site/<slug>/reserveren). */
 export const gastReserveringSchema = z.object({

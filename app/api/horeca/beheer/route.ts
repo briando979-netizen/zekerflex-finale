@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
-import { aanzettenSchema, beheerActieSchema, lees } from "@/lib/horeca/schema";
+import { aanzettenSchema, beheerActieSchema, lees, takenActieSchema, TAKEN_ACTIES } from "@/lib/horeca/schema";
+import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
 import { beheerContext, eisBeheer } from "@/lib/horeca/toegang";
 import {
   bewaarCategorie,
@@ -58,6 +59,25 @@ export async function GET(request: Request): Promise<NextResponse> {
       eisModule(zaak, "bestellen");
       return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
     }
+    // ?alleen=taken&datum=JJJJ-MM-DD → de takenlijsten met de vinkjes van die dag (week)
+    if (q.get("alleen") === "taken") {
+      eisModule(zaak, "taken");
+      const datum = q.get("datum") ?? "";
+      if (!isDatum(datum)) throw AppError.validation("Kies een datum.");
+      return NextResponse.json({ datum, lijsten: await lijstenOp(zaak.id, datum) });
+    }
+    // ?alleen=registratie → de registratie van 90 dagen als CSV (voor een inspectie)
+    if (q.get("alleen") === "registratie") {
+      eisModule(zaak, "taken");
+      const veld = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const regels = (await registratie(zaak.id)).map((r) =>
+        [r.datum, r.lijst, r.taak, r.waarde, r.binnenGrens === null ? "" : r.binnenGrens ? "binnen grens" : "BUITEN GRENS", r.door, r.op.toISOString()].map(veld).join(";"),
+      );
+      const kop = ["Datum", "Lijst", "Taak", "Waarde", "Grens", "Door", "Vastgelegd (UTC)"].map(veld).join(";");
+      return new NextResponse(`﻿${[kop, ...regels].join("\r\n")}`, {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="registratie-${zaak.slug}.csv"` },
+      });
+    }
     // ?alleen=reserveringen&datum=JJJJ-MM-DD → het reserveringsboek van die dag
     if (q.get("alleen") === "reserveringen") {
       eisModule(zaak, "reserveren");
@@ -80,7 +100,24 @@ export async function POST(request: Request): Promise<NextResponse> {
       const { actie: _actie, ...g } = lees(aanzettenSchema, body);
       return NextResponse.json(await alles(await maakZaak(tenantId, g)));
     }
-    const { zaak } = await eisBeheer();
+    const { zaak, p } = await eisBeheer();
+    // takenlijsten (module taken) hebben een eigen schema
+    if (TAKEN_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {
+      eisModule(zaak, "taken");
+      const t = lees(takenActieSchema, body);
+      if (t.actie === "afvinken") {
+        const { binnenGrens } = await vinkAf(zaak, { lijstId: t.lijstId, datum: t.datum, taak: t.taak, waarde: t.waarde, door: t.door || p.fullName });
+        return NextResponse.json({ binnenGrens, lijsten: await lijstenOp(zaak.id, t.datum) });
+      }
+      if (t.actie === "afvinken-weg") {
+        await vinkUit(zaak, t);
+        return NextResponse.json({ lijsten: await lijstenOp(zaak.id, t.datum) });
+      }
+      if (t.actie === "takenlijst") await bewaarLijst(zaak, { id: t.id, naam: t.naam, moment: t.moment, regels: t.regels });
+      else if (t.actie === "takenlijst-weg") await verwijderLijst(zaak, t.id);
+      else await maakVoorbeeldlijsten(zaak);
+      return NextResponse.json({ ok: true });
+    }
     const a = lees(beheerActieSchema, body);
     let nu = zaak;
     switch (a.actie) {
