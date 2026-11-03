@@ -14,7 +14,8 @@ cat > /etc/crontabs/root <<EOF
 0 3 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/matching/tick"
 0 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/active-hours/recompute"
 0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/orchestration/tick"
-0 12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
+# RAG twee keer per dag (de route zegt "elke ~12 uur"): valt één run weg door een uitrol, dan blijft de hartslag (26 u) toch vers
+0 0,12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
 0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
 0 7 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/ai/watchdog"
