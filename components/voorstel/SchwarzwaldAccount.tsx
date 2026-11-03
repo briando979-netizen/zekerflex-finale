@@ -833,7 +833,7 @@ export function SchwarzwaldAccount(props: {
                 <li key={m.id} className={`flex ${m.soort === "bericht-klant" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${m.soort === "bericht-klant" ? "bg-schw-orange text-schw-night" : "bg-schw-sand"}`}>
                     <p className="whitespace-pre-line">{m.tekst}</p>
-                    <p className="mt-1 text-xs opacity-70">
+                    <p className={`mt-1 text-xs ${m.soort === "bericht-klant" ? "" : "opacity-70"}`}>
                       {m.soort === "bericht-team" ? `${m.door} · Het Schwarzwald` : "Jij"} · {dagNaam(m.datum.slice(0, 10), { day: "numeric", month: "short" })}
                     </p>
                   </div>

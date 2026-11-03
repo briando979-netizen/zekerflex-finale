@@ -19,7 +19,8 @@ const TOT = 23 * 60;
 const PX_PER_UUR = 56;
 const px = (min: number) => (min / 60) * PX_PER_UUR;
 
-const KLEUREN = ["#FF5F1F", "#1C3A2B", "#3730A3", "#B45309", "#0F766E", "#9D174D", "#4D7C0F", "#7C3AED", "#0369A1", "#B91C1C", "#A16207", "#334155", "#C2410C"];
+// witte tekst haalt op elk van deze kleuren minstens 4,5:1 (WCAG AA); daarom rust i.p.v. hun felle oranje
+const KLEUREN = ["#B83A0A", "#1C3A2B", "#3730A3", "#B45309", "#0F766E", "#9D174D", "#4D7C0F", "#7C3AED", "#0369A1", "#B91C1C", "#A16207", "#334155", "#C2410C"];
 
 function isoWeek(datum: string): number {
   const d = new Date(`${datum}T00:00:00Z`);
@@ -192,7 +193,7 @@ export function Planning({
                     <strong className="block truncate">
                       {b.tijd} {namen[b.activiteit] ?? b.activiteit}
                     </strong>
-                    <span className="block truncate opacity-90">
+                    <span className="block truncate">
                       {b.personen} p · {b.naam}
                     </span>
                   </button>
