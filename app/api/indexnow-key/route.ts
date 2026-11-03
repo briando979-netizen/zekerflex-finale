@@ -4,8 +4,8 @@ import { indexNowKey } from "@/lib/seo/indexnow";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// IndexNow keyLocation: serveert de key als platte tekst zodat Bing/Yandex
-// kunnen verifiëren dat wij de site bezitten.
+// Oudere IndexNow-sleutellocatie, blijft bereikbaar. De melding verwijst nu naar
+// /indexnow-key.txt in de hoofdmap: een sleutel in /api/ dekt alleen /api/-adressen.
 export function GET(): Response {
   const key = indexNowKey();
   if (!key) return NextResponse.json({ error: "INDEXNOW_KEY niet ingesteld" }, { status: 404 });
