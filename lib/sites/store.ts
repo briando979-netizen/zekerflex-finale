@@ -162,6 +162,12 @@ export async function publishSite(id: string, by: { userId: string; name: string
   return next;
 }
 
+/** Mark a site as an example (lib/sites/demo.ts): the renderer shows a banner and the contact form sends nothing. */
+export async function markExample(id: string): Promise<void> {
+  const site = await getSite(id);
+  if (site && !site.voorbeeld) await kvSet(siteKey(id), { ...site, voorbeeld: true });
+}
+
 /** Go back to an earlier published version, or take the site offline (buildId null). */
 export async function setLiveBuild(id: string, buildId: string | null, by: { userId: string; name: string }): Promise<SiteDoc> {
   const site = await getSite(id);
@@ -178,6 +184,13 @@ export async function liveSiteOf(site: SiteDoc | null): Promise<LiveSite | null>
   if (!site?.liveBuild) return null;
   const [snapshot, domein] = await Promise.all([kvGet<SiteSnapshot>(buildKey(site.id, site.liveBuild)), kvGet<SiteDomain>(domainKey(site.id))]);
   return snapshot ? { snapshot, buildId: site.liveBuild, siteId: site.id, domein } : null;
+}
+
+/** The site that owns an address part, published or not. */
+export async function siteBySlug(slug: string): Promise<SiteDoc | null> {
+  if (!/^[a-z0-9-]{3,40}$/.test(slug)) return null;
+  const siteId = await kvGet<string>(slugKey(slug));
+  return siteId ? getSite(siteId) : null;
 }
 
 /** What a visitor of /site/<slug>/ gets: the live snapshot, or null. */

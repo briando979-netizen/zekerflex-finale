@@ -1,4 +1,6 @@
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
+import { DEMO_SLUG, ensureDemoSite } from "@/lib/sites/demo";
 import { handleSiteContact, serveSitePath, siteText, type ServeOptions } from "@/lib/sites/serve";
 import { liveSiteBySlug } from "@/lib/sites/store";
 
@@ -18,6 +20,8 @@ const BASE: Pick<ServeOptions, "origin" | "noindex"> = { origin: ORIGIN, noindex
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string; path?: string[] }> }): Promise<Response> {
   const { slug, path = [] } = await params;
+  // the example site makes itself on the first visit (lib/sites/demo.ts)
+  if (slug === DEMO_SLUG) await ensureDemoSite().catch((err) => logger.warn("demo site failed", { err: String(err) }));
   const live = await liveSiteBySlug(slug).catch(() => null);
   if (!live) return siteText("Deze website bestaat niet (meer).", 404, BASE);
   if (live.domein?.activeAt) {

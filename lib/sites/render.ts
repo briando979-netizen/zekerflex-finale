@@ -12,7 +12,7 @@ import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Pa
 // ---------------------------------------------------------------------------
 
 /** What rendering needs: the site being edited or a published snapshot. */
-export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf">;
+export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld">;
 
 export interface RenderOptions {
   /** absolute path of the site root, ending in "/": "/site/bakker/" or "/" */
@@ -106,7 +106,8 @@ details.q{border-bottom:1px solid var(--line);padding:16px 0}details.q summary{c
 form.contact{display:grid;gap:14px;max-width:620px}form.contact label{display:grid;gap:6px;font-weight:600;font-size:.95rem}form.contact input,form.contact textarea{font:inherit;padding:12px 14px;border:1px solid #cfd4da;border-radius:10px;background:#fff}form.contact textarea{min-height:140px}.hp{position:absolute;left:-5000px}.small{margin:0;color:var(--mute);font-size:.9rem}
 .contact-grid{display:grid;gap:40px}@media (min-width:860px){.contact-grid{grid-template-columns:1.3fr 1fr}}.facts{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}footer a{color:#fff}footer .cols{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}footer small{display:block;margin-top:28px;color:#9aa3ad}
-:focus-visible{outline:3px solid var(--a);outline-offset:3px}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}`;
+:focus-visible{outline:3px solid var(--a);outline-offset:3px}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}`;
 }
 
 interface Ctx {
@@ -116,6 +117,10 @@ interface Ctx {
   mediaSrc: (file: string) => string;
   preview: boolean;
   bedrijf: Company;
+  /** an example site: a banner, an inert contact form, no business data for search engines */
+  voorbeeld: boolean;
+  /** where "make your own website" points, for the example banner */
+  origin: string;
 }
 
 function img(ctx: Ctx, id: string | null, sizes: string, eager = false): string {
@@ -162,8 +167,13 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       return `<section class="band"><div class="wrap"><h2>${esc(b.props.kop)}</h2>${paras(b.props.tekst)}${b.props.knop ? `<a class="btn" href="${esc(href(ctx, b.props.knopLink))}">${esc(b.props.knop)}</a>` : ""}</div></section>`;
     case "contact": {
       const c = ctx.bedrijf;
+      // an example site shows the form, but it sends nothing
+      const off = ctx.voorbeeld ? " disabled" : "";
+      const note = ctx.voorbeeld
+        ? `<p class="small"><strong>Dit is een voorbeeld:</strong> dit formulier verstuurt niets. Op je eigen website komen berichten bij jou binnen.</p>`
+        : `<p class="small">We gebruiken je gegevens alleen om je bericht te beantwoorden. Lees de <a href="${esc(href(ctx, "privacy"))}">privacyverklaring</a>.</p>`;
       const form = b.props.formulier
-        ? `<form class="contact" method="post" action="${esc(ctx.preview ? "#" : `${ctx.root}_zf/contact`)}"><label>Naam<input name="naam" required maxlength="100" autocomplete="name"></label><label>E-mailadres<input name="email" type="email" required maxlength="200" autocomplete="email"></label><label>Telefoon (mag leeg)<input name="telefoon" maxlength="30" autocomplete="tel"></label><label>Bericht<textarea name="bericht" required maxlength="4000"></textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p class="small">We gebruiken je gegevens alleen om je bericht te beantwoorden. Lees de <a href="${esc(href(ctx, "privacy"))}">privacyverklaring</a>.</p><p style="margin:0"><button class="btn" type="submit">Verstuur bericht</button></p></form>`
+        ? `<form class="contact" method="post" action="${esc(ctx.preview || ctx.voorbeeld ? "#" : `${ctx.root}_zf/contact`)}"><label>Naam<input name="naam" required maxlength="100" autocomplete="name"${off}></label><label>E-mailadres<input name="email" type="email" required maxlength="200" autocomplete="email"${off}></label><label>Telefoon (mag leeg)<input name="telefoon" maxlength="30" autocomplete="tel"${off}></label><label>Bericht<textarea name="bericht" required maxlength="4000"${off}></textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit"${off}>Verstuur bericht</button></p></form>`
         : "";
       const place = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean).join(", ");
       const facts = [
@@ -221,7 +231,11 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const favicon = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><text x="32" y="44" font-family="Arial" font-size="36" font-weight="700" text-anchor="middle" fill="#fff">${initial}</text></svg>`)}`;
   const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(`${opts.root}assets/site.css${opts.version ? `?v=${opts.version}` : ""}`)}">`;
   const robots = opts.noindex || page.id.startsWith("__") ? '<meta name="robots" content="noindex">' : "";
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${page.slug === "" ? localBusiness(ctx.bedrijf, url, ogImage) : ""}</head><body>${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}</body></html>`;
+  const business = page.slug === "" && !ctx.voorbeeld ? localBusiness(ctx.bedrijf, url, ogImage) : "";
+  const demoBar = ctx.voorbeeld
+    ? `<div class="demo-bar">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${esc(ctx.bedrijf.naam)} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></div>`
+    : "";
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body>${demoBar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}</body></html>`;
 }
 
 function context(site: RenderableSite, opts: RenderOptions): Ctx {
@@ -232,6 +246,8 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     mediaSrc: opts.preview ? opts.preview.mediaUrl : (file) => `${opts.root}media/${file}`,
     preview: Boolean(opts.preview),
     bedrijf: site.bedrijf,
+    voorbeeld: Boolean(site.voorbeeld),
+    origin: opts.origin,
   };
 }
 

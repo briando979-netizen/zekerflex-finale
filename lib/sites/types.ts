@@ -120,6 +120,8 @@ export interface SiteDoc {
   /** the build visitors see; null until the first publish */
   liveBuild: string | null;
   builds: { id: string; at: string; by: string }[];
+  /** an example site (lib/sites/demo.ts): a banner says so and the contact form sends nothing */
+  voorbeeld?: boolean;
   createdAt: string;
   updatedAt: string;
 }

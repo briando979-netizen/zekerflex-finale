@@ -69,6 +69,7 @@ const clip = (v: FormDataEntryValue | null, max: number) => String(v ?? "").trim
  * `address` is how the mail names the site; `thanks` where the visitor lands.
  */
 export async function handleSiteContact(request: Request, live: LiveSite, opts: Pick<ServeOptions, "origin" | "noindex"> & { thanks: string; address: string }): Promise<Response> {
+  if (live.snapshot.voorbeeld) return siteText("Dit is een voorbeeldwebsite: berichten worden niet verstuurd.", 403, opts);
   const thanks = new Response(null, { status: 303, headers: { Location: opts.thanks } });
   try {
     await enforceRateLimit({ name: "site-contact-ip", identifier: privateRateLimitIdentifier(clientIp(request)), limit: 5, windowSeconds: 600, message: "Te veel berichten. Probeer het later opnieuw." });
