@@ -1,13 +1,12 @@
+/// <reference types="react-dom/canary" />
+import { preload } from "react-dom";
+
 /**
- * Preloads self-hosted fonts (lib/fonts.ts). React places a <link rel="preload">
- * in <head> wherever it is rendered, and Next sends it along early.
+ * Preloads self-hosted fonts (lib/fonts.ts) the way next/font did: through
+ * ReactDOM.preload, which Next sends along as an early Link header. Server
+ * component only; renders nothing.
  */
 export function FontPreloads({ hrefs }: { hrefs: readonly string[] }) {
-  return (
-    <>
-      {hrefs.map((href) => (
-        <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
-      ))}
-    </>
-  );
+  for (const href of hrefs) preload(href, { as: "font", type: "font/woff2", crossOrigin: "" });
+  return null;
 }
