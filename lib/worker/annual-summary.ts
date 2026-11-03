@@ -123,7 +123,7 @@ export function annualSummaryPdf(s: AnnualSummary, generatedAt = new Date()): Bu
   pdf.line("De ritten zelf staan in de app onder Kilometer-administratie, ook als download.", 9);
 
   pdf.gap(16);
-  pdf.line(
+  pdf.paragraph(
     `Opgesteld door ZekerFlex op ${p.day}-${p.month}-${p.year}. Alleen werk via ZekerFlex staat hierin. Indicatief, geen belastingadvies: controleer je aangifte met je boekhouder of de Belastingdienst.`,
     8.5,
     { color: [0.4, 0.45, 0.42] },
