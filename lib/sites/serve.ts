@@ -1,9 +1,11 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
 import { clientIp } from "@/lib/http/request";
 import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
-import { renderPage, renderRobots, renderSitemap, renderSystemPage, siteCss, type RenderOptions } from "@/lib/sites/render";
+import { SITE_FONT_FILES, renderPage, renderRobots, renderSitemap, renderSystemPage, siteCss, type RenderOptions } from "@/lib/sites/render";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
 import { siteVacancies, vacancyCount } from "@/lib/sites/vacancies";
 import type { Page } from "@/lib/sites/types";
@@ -57,6 +59,18 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   }
   if (first === "assets" && second === "site.css" && rest.length === 0) {
     return new Response(siteCss(snapshot.theme), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
+  }
+  // the premium style's fonts, from the site itself (only the known files, from our own public/fonts)
+  if (first === "assets" && second === "fonts" && rest.length === 1) {
+    const file = rest[0] ?? "";
+    if (!(SITE_FONT_FILES as readonly string[]).includes(file)) return siteText("Dit bestand bestaat niet.", 404, opts);
+    try {
+      const body = await readFile(join(process.cwd(), "public", "fonts", file));
+      // a sandboxed page has an opaque origin, so its fonts load cross-origin and need CORS
+      return new Response(new Uint8Array(body), { headers: { ...siteHeaders("font/woff2", "public, max-age=31536000, immutable", opts), "Access-Control-Allow-Origin": "*" } });
+    } catch {
+      return siteText("Dit bestand bestaat niet.", 404, opts);
+    }
   }
   if (first === "media" && second && rest.length === 0) {
     try {

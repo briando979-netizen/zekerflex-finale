@@ -127,7 +127,7 @@ describe("de nieuwe website: puur", () => {
     expect(site.templateFor("Bakkerij Modern Desembrood").id).toBe("horeca");
     expect(site.templateFor("Adviesbureau Kompas").id).toBe("algemeen");
     const bouw = site.templateFor("schilder");
-    expect(site.proposalTheme("#14213D", bouw, null)).toMatchObject({ kleur: "#14213D", accent: "#B8925A", stijl: "luxe", lettertype: "klassiek" });
+    expect(site.proposalTheme("#14213D", bouw, null)).toMatchObject({ kleur: "#14213D", accent: "#B8925A", stijl: "premium", lettertype: "klassiek" });
     expect(site.proposalTheme("#F5C04E", bouw, "mlogo12345")).toMatchObject({ kleur: bouw.theme.kleur, accent: "#F5C04E", logo: "mlogo12345" });
     expect(["0548123456", "0612345678", "+31201234567", "085 123 4567", "12345"].map(site.formatPhone)).toEqual(["0548 123 456", "06 1234 5678", "020 123 4567", "085 123 4567", "12345"]);
   });
@@ -178,7 +178,7 @@ describe("een voorstel maken", () => {
 
     const live = (await liveSiteBySlug("schildersbedrijf-de-vries"))!;
     expect(live.snapshot.voorstel).toEqual({ officieel: "devries-schilders.nl", verloopt: p.expiresAt });
-    expect(live.snapshot.theme.stijl).toBe("luxe");
+    expect(live.snapshot.theme.stijl).toBe("premium");
     expect(live.snapshot.theme.logo).toBeTruthy();
     expect(live.snapshot.media).toHaveLength(4); // logo + 3 foto's; de foto die niet laadde is overgeslagen
     const home = await serveSitePath(live, [], { origin: "https://zekerflex.com", noindex: false, root: "/site/schildersbedrijf-de-vries/" });

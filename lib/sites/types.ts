@@ -69,8 +69,13 @@ export interface Theme {
   accent: string;
   lettertype: "modern" | "klassiek" | "vriendelijk";
   hoeken: "rond" | "strak";
-  /** "luxe": more room, fine lines, refined headings and a full-height opening photo */
-  stijl?: "standaard" | "luxe" | undefined;
+  /**
+   * "luxe": more room, fine lines, refined headings and a full-height opening photo.
+   * "premium": the ZekerFlex house style since 3 Nov 2026 (like schwarzwald.zekerflex.com): a dark
+   * header and opening photo with a gradient, big display headings, round buttons, white cards on
+   * cream and sand, a full footer. The default for new sites; existing sites keep theirs.
+   */
+  stijl?: "standaard" | "luxe" | "premium" | undefined;
   /** media id of a photo of this site shown as the logo in the header; the name as text when absent */
   logo?: string | null | undefined;
 }

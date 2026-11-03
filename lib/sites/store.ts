@@ -87,7 +87,8 @@ export async function createSite(tenantId: string, by: { userId: string; name: s
     id,
     tenantId,
     slug,
-    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond" },
+    // the house style for every new site since 3 Nov 2026; existing sites keep theirs
+    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: "premium" },
     bedrijf: input.bedrijf,
     pages: pagesFromTemplate(template, input.bedrijf, () => rid("b", 8)),
     media: [],

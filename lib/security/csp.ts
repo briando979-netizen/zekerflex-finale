@@ -76,7 +76,8 @@ export const SITE_PREVIEW_CSP = [
  * bevatten geen scripts (lib/sites/render.ts) en krijgen hier ook geen enkel
  * script: `sandbox` zonder allow-scripts en allow-same-origin geeft ze een eigen
  * lege herkomst, dus geen toegang tot cookies of de API van zekerflex.com.
- * Alleen eigen foto's en stijlen; formulieren alleen naar de site zelf.
+ * Alleen eigen foto's, stijlen en lettertypes (de premium-stijl haalt die van
+ * de site zelf, lib/sites/serve.ts); formulieren alleen naar de site zelf.
  * `origin` staat er naast 'self' omdat browsers 'self' in een sandbox
  * verschillend uitleggen.
  */
@@ -86,6 +87,7 @@ export function siteHostCsp(origin: string): string {
     "default-src 'none'",
     `img-src 'self' ${origin} data:`,
     `style-src 'self' ${origin} 'unsafe-inline'`,
+    `font-src 'self' ${origin}`,
     `form-action 'self' ${origin}`,
     "base-uri 'none'",
     "frame-ancestors 'none'",

@@ -83,6 +83,84 @@ const FONTS: Record<Theme["lettertype"], { kop: string; tekst: string }> = {
 /** The book faces most computers already have; Georgia last. */
 const LUXE_SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif';
 
+// ---- premium: the ZekerFlex house style (like schwarzwald.zekerflex.com) ------
+
+/**
+ * The premium style's fonts (variable: Bricolage Grotesque 500–700 for headings,
+ * Instrument Sans 400–600 for text), served by the site itself from
+ * assets/fonts/ (lib/sites/serve.ts), so nothing comes from elsewhere.
+ */
+export const SITE_FONT_FILES = [
+  "bricolage-grotesque-latin.4fd48b2c.woff2",
+  "bricolage-grotesque-latin-ext.a22c997a.woff2",
+  "instrument-sans-latin.6219bc4b.woff2",
+  "instrument-sans-latin-ext.21fac8da.woff2",
+] as const;
+const LATIN = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
+const LATIN_EXT = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF";
+const DISPLAY = `"Bricolage Grotesque", ${SANS}`;
+const TEXT = `"Instrument Sans", ${SANS}`;
+export const CREAM = "#FFF6EA";
+export const SAND = "#F4E9DA";
+const SUN = "#FFD23F";
+
+const toHex = (rgb: number[]) => `#${rgb.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("")}`;
+/** `t` of the way from colour `a` to colour `b`. */
+const mix = (a: string, b: string, t: number) => {
+  const to = hexToRgb(b);
+  return toHex(hexToRgb(a).map((v, i) => v + (to[i]! - v) * t));
+};
+export function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+}
+/** The accent, darkened just enough for small text and links on sand and cream (WCAG AA). */
+export function darkAccent(accent: string): string {
+  for (let t = 0; t <= 1; t += 0.05) {
+    const c = mix(accent, "#000000", t);
+    if (contrast(c, SAND) >= 4.6) return c;
+  }
+  return "#000000";
+}
+
+/** Dark tones from the site's own colour: night (header, opening photo, footer), forest and moss. */
+export function premiumTokens(kleur: string, accent: string): { night: string; forest: string; moss: string; accentDark: string } {
+  return { night: mix(kleur, "#000000", 0.8), forest: mix(kleur, "#000000", 0.62), moss: mix(kleur, "#000000", 0.4), accentDark: darkAccent(accent) };
+}
+
+function premiumCss(kleur: string, accent: string, fontBase: string): string {
+  const t = premiumTokens(kleur, accent);
+  const [r, g, b] = hexToRgb(t.night);
+  const night = (o: number) => `rgba(${r},${g},${b},${o})`;
+  const face = (family: string, weight: string, file: string, range: string) =>
+    `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:swap;src:url(${fontBase}${file}) format("woff2");unicode-range:${range}}`;
+  const [dl, dx, tl, tx] = SITE_FONT_FILES;
+  return `${face("Bricolage Grotesque", "500 700", dl, LATIN)}${face("Bricolage Grotesque", "500 700", dx, LATIN_EXT)}${face("Instrument Sans", "400 600", tl, LATIN)}${face("Instrument Sans", "400 600", tx, LATIN_EXT)}
+:root{--night:${t.night};--forest:${t.forest};--moss:${t.moss};--sun:${SUN};--cream:${CREAM};--sand:${SAND};--a-d:${t.accentDark};--ink:${t.night};--mute:#5C6B62;--line:rgba(10,18,14,.12);--soft:var(--sand)}
+body{background:var(--cream);font-family:${TEXT};line-height:1.7}a{color:var(--a-d)}
+h1,h2,h3,.logo{font-family:${DISPLAY};font-weight:700;letter-spacing:-.03em}h1{font-size:clamp(2.6rem,7vw,6rem);line-height:.98}h2{font-size:clamp(2rem,4.4vw,3.5rem);line-height:1.04}h3{font-size:1.3rem;letter-spacing:-.015em}
+.wrap{max-width:1280px;padding:0 24px}@media (min-width:640px){.wrap{padding:0 32px}}
+.topbar{background:var(--sun);color:var(--night);text-align:center;font-size:.875rem;font-weight:600;line-height:1.5;padding:8px 20px}.topbar a{color:var(--night)}
+header{background:var(--night);color:var(--cream);border-bottom:0}.bar{min-height:72px}.logo{color:var(--cream);font-size:1.35rem}.logo img{max-height:52px}
+nav ul{gap:2px}nav a{color:${"rgba(255,246,234,.85)"};font-size:.92rem;padding:8px 14px}nav a:hover,nav a[aria-current]{background:rgba(255,255,255,.1);color:var(--cream)}
+.bar.prem{justify-content:flex-start}.bar.prem>nav.desk{margin-left:auto}.acts{display:flex;align-items:center;gap:8px}@media (max-width:760px){.acts{margin-left:auto}}
+.cta-top{padding:11px 20px;font-size:.92rem}@media (max-width:480px){.cta-top{display:none}}
+.menu summary{border-color:rgba(255,255,255,.22);color:var(--cream)}@media (max-width:760px){.menu ul{background:#fff;border:0}.menu nav a{color:var(--night)}.menu nav a:hover,.menu nav a[aria-current]{background:var(--sand);color:var(--night)}}
+section{padding:96px 0}@media (max-width:760px){section{padding:64px 0}}section.alt{background:var(--sand)}
+.btn{border-radius:999px;padding:15px 28px;font-weight:700}.btn:hover{filter:brightness(1.05)}
+.hero{min-height:min(88vh,860px);display:flex;align-items:flex-end;padding:160px 0 96px;background:var(--night);color:var(--cream)}.hero .wrap{z-index:1;width:100%}.hero img{opacity:1}
+.hero.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,${night(0.2)} 0%,${night(0.45)} 45%,${night(0.92)} 100%)}.hero h1{color:#fff;max-width:16ch}.hero p{font-size:1.2rem;max-width:620px;opacity:.92}
+.eyebrow{margin:0 0 18px;font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--sun);opacity:1}
+@media (max-width:760px){.hero{min-height:76vh;padding:128px 0 64px}}
+.cards{gap:24px}.card{background:#fff;border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.card h3{color:var(--night)}section.alt .card{background:#fff}
+.split{gap:56px}.split img,.gallery img{border-radius:28px}details.q{border-color:var(--line)}details.q summary::after{color:var(--a-d)}.hours td{border-color:var(--line)}
+.band{background:var(--night);color:var(--cream);padding:112px 0}.band h2{color:#fff;max-width:18ch;margin-left:auto;margin-right:auto}
+form.contact input,form.contact textarea{border-radius:14px;border-color:rgba(10,18,14,.2)}
+footer{background:var(--night);color:rgba(255,246,234,.8);padding:72px 0 32px}footer a{color:var(--cream)}footer h3{font:700 .78rem/1.4 ${TEXT};letter-spacing:.18em;text-transform:uppercase;color:var(--sun);margin:0 0 14px}footer p{margin:0 0 6px}footer small{color:rgba(255,246,234,.6)}
+footer .cols{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:40px}footer ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}.foot-hours{display:grid;grid-template-columns:auto auto;gap:4px 16px;margin:0}.foot-hours dd{margin:0;font-weight:600;color:var(--cream)}
+:focus-visible{outline-color:var(--a-d)}header :focus-visible,.hero :focus-visible,.band :focus-visible,footer :focus-visible{outline-color:var(--sun)}.topbar :focus-visible{outline-color:var(--night)}`;
+}
+
 /** The "luxe" style on top of the base: room, thin gold lines, uppercase small navigation, a tall opening photo. */
 function luxeCss(serif: boolean): string {
   const kop = serif ? `h1,h2,h3,.logo{font-family:${LUXE_SERIF};font-weight:500}blockquote p{font-family:${LUXE_SERIF};font-size:1.2rem;line-height:1.6}` : "h1,h2,h3{font-weight:600}";
@@ -100,12 +178,17 @@ nav a{border-radius:0;padding:10px 14px;font-size:.76rem;letter-spacing:.14em;te
 .band{background:#151412;color:#f3eee6}.band p{opacity:.85}form.contact input,form.contact textarea{border-radius:0;border-color:#d8d2c7}.hours td{padding:14px 0}footer{background:#121110}`;
 }
 
-export function siteCss(theme: Theme): string {
+/**
+ * The stylesheet. `fontBase` is where the premium fonts are: next to the
+ * stylesheet on a published site (assets/site.css → assets/fonts/), the app's
+ * own /fonts/ for the inline CSS of the builder's preview.
+ */
+export function siteCss(theme: Theme, fontBase = "fonts/"): string {
   const kleur = isHexColor(theme.kleur) ? theme.kleur : "#0E5C4A";
   const accent = isHexColor(theme.accent) ? theme.accent : "#F2B544";
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
   const r = theme.hoeken === "strak" ? "4px" : "16px";
-  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : "";
+  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : theme.stijl === "premium" ? `\n${premiumCss(kleur, accent, fontBase)}` : "";
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:17px/1.65 ${f.tekst};color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}a{color:var(--k)}h1,h2,h3{font-family:${f.kop};line-height:1.15;margin:0 0 .6em;letter-spacing:-.01em}
@@ -181,6 +264,8 @@ interface Ctx {
   vacatures: SiteVacancy[] | undefined;
   /** where "make your own website" points, for the example banner */
   origin: string;
+  /** the premium house style: a label above the opening heading, a bar with phone/e-mail, a button in the header, a full footer */
+  premium: boolean;
 }
 
 function img(ctx: Ctx, id: string | null, sizes: string, eager = false): string {
@@ -206,7 +291,8 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
     case "hero": {
       const p = b.props;
       const pic = img(ctx, p.foto, "100vw", true);
-      return `<section class="hero${pic ? " photo" : ""}">${pic}<div class="wrap"><h1>${esc(p.kop)}</h1>${paras(p.tekst)}${p.knop ? `<p><a class="btn" href="${esc(href(ctx, p.knopLink))}">${esc(p.knop)}</a></p>` : ""}</div></section>`;
+      const label = ctx.premium ? [ctx.bedrijf.naam, ctx.bedrijf.plaats].filter(Boolean).join(" · ") : "";
+      return `<section class="hero${pic ? " photo" : ""}">${pic}<div class="wrap">${label ? `<p class="eyebrow">${esc(label)}</p>` : ""}<h1>${esc(p.kop)}</h1>${paras(p.tekst)}${p.knop ? `<p><a class="btn" href="${esc(href(ctx, p.knopLink))}">${esc(p.knop)}</a></p>` : ""}</div></section>`;
     }
     case "tekst":
       return `<section${alt}><div class="wrap narrow"><h2>${esc(b.props.kop)}</h2>${paras(b.props.tekst)}</div></section>`;
@@ -308,16 +394,66 @@ function header(ctx: Ctx, current: Page): string {
   const logo = ctx.logo
     ? `<img src="${esc(ctx.mediaSrc(ctx.logo.file))}" alt="${esc(ctx.bedrijf.naam)}" width="${ctx.logo.width}" height="${ctx.logo.height}" fetchpriority="high" decoding="async">`
     : esc(ctx.bedrijf.naam);
-  return `<a class="skip" href="#inhoud">Naar de inhoud</a><header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details></div></header>`;
+  const menu = `<details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details>`;
+  if (ctx.premium) {
+    return `<a class="skip" href="#inhoud">Naar de inhoud</a>${topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
+  }
+  return `<a class="skip" href="#inhoud">Naar de inhoud</a><header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${menu}</div></header>`;
 }
 
-function footer(ctx: Ctx): string {
+const telHref = (raw: string) => `tel:${raw.replace(/[^\d+]/g, "")}`;
+
+/** Premium: the bar above the header, with the phone number and e-mail address. */
+function topBar(ctx: Ctx): string {
   const c = ctx.bedrijf;
-  const address = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean);
-  const socials = (c.socials ?? [])
+  const parts = [
+    c.telefoon && `Bel ons: <a href="${esc(href(ctx, telHref(c.telefoon)))}">${esc(c.telefoon)}</a>`,
+    c.email && `<a href="${esc(href(ctx, `mailto:${c.email}`))}">${esc(c.email)}</a>`,
+  ].filter(Boolean);
+  return parts.length ? `<div class="topbar">${parts.join(" · ")}</div>` : "";
+}
+
+/** Premium: the round button in the header, to the contact form, or the phone number when there is none. */
+function headerButton(ctx: Ctx, current: Page): string {
+  const withForm = ctx.pages.find((p) => p.blocks.some((b) => b.type === "contact"));
+  const target = withForm ? (withForm.id === current.id ? "#contact" : withForm.slug || "home") : ctx.bedrijf.telefoon ? telHref(ctx.bedrijf.telefoon) : "";
+  if (!target) return "";
+  return `<a class="btn cta-top" href="${esc(href(ctx, target))}">${withForm ? "Contact" : "Bel ons"}</a>`;
+}
+
+function socialLinks(ctx: Ctx): string[] {
+  return (ctx.bedrijf.socials ?? [])
     .map((u) => [href(ctx, u), u] as const)
     .filter(([h]) => ctx.preview || h !== "#")
     .map(([h, u]) => `<a href="${esc(h)}" rel="noopener me">${esc(socialName(u))}</a>`);
+}
+
+/** Premium: address, opening hours (from the first opening-hours block), the menu and contact, in up to four columns. */
+function premiumFooter(ctx: Ctx): string {
+  const c = ctx.bedrijf;
+  const address = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean);
+  const hours = ctx.pages.flatMap((p) => p.blocks).find((b): b is Extract<Block, { type: "openingstijden" }> => b.type === "openingstijden");
+  const menu = ctx.pages.map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}">${esc(p.titel)}</a></li>`).join("");
+  const socials = socialLinks(ctx);
+  const contact = [
+    c.telefoon && `<p><a href="${esc(href(ctx, telHref(c.telefoon)))}">${esc(c.telefoon)}</a></p>`,
+    c.email && `<p><a href="${esc(href(ctx, `mailto:${c.email}`))}">${esc(c.email)}</a></p>`,
+    socials.length && `<p class="socials">${socials.join("")}</p>`,
+  ].filter(Boolean);
+  const cols = [
+    `<div><h3>${esc(c.naam)}</h3>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}</div>`,
+    hours?.props.regels.length ? `<div><h3>${esc(hours.props.kop || "Openingstijden")}</h3><dl class="foot-hours">${hours.props.regels.map((r) => `<dt>${esc(r.dag)}</dt><dd>${esc(r.tijd)}</dd>`).join("")}</dl></div>` : "",
+    `<div><h3>Menu</h3><ul>${menu}</ul></div>`,
+    contact.length ? `<div><h3>Contact</h3>${contact.join("")}</div>` : "",
+  ].filter(Boolean);
+  return `<footer><div class="wrap"><div class="cols">${cols.join("")}</div><small>© ${new Date().getFullYear()} ${esc(c.naam)} · <a href="${esc(href(ctx, "privacy"))}">Privacyverklaring</a> · Website gemaakt met <a href="https://zekerflex.com" rel="noopener">ZekerFlex</a></small></div></footer>`;
+}
+
+function footer(ctx: Ctx): string {
+  if (ctx.premium) return premiumFooter(ctx);
+  const c = ctx.bedrijf;
+  const address = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean);
+  const socials = socialLinks(ctx);
   return `<footer><div class="wrap"><div class="cols"><div><strong>${esc(c.naam)}</strong>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}</div><div>${c.telefoon ? `<p>${esc(c.telefoon)}</p>` : ""}${c.email ? `<p><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></p>` : ""}${socials.length ? `<p class="socials">${socials.join("")}</p>` : ""}</div><div>${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}<p><a href="${esc(href(ctx, "privacy"))}">Privacyverklaring</a></p></div></div><small>© ${new Date().getFullYear()} ${esc(c.naam)} · Website gemaakt met <a href="https://zekerflex.com" rel="noopener">ZekerFlex</a></small></div></footer>`;
 }
 
@@ -387,13 +523,17 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
     vacatures: opts.vacatures,
     origin: opts.origin,
+    premium: site.theme.stijl === "premium",
   };
 }
+
+/** The inline CSS (only used in the builder's preview, on zekerflex.com) takes the fonts from the app's own /fonts/. */
+const PREVIEW_FONTS = "/fonts/";
 
 /** One of the site's own pages as a full HTML document. */
 export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions): string {
   const ctx = context(site, opts);
-  return htmlDoc(ctx, page, page.blocks.map((b, i) => renderBlock(b, i, ctx)).join(""), opts, siteCss(site.theme));
+  return htmlDoc(ctx, page, page.blocks.map((b, i) => renderBlock(b, i, ctx)).join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
 const fixedPage = (id: string, slug: string, titel: string): Page => ({ id: `__${id}`, slug, titel, seoTitel: titel, seoOmschrijving: titel, blocks: [] });
@@ -406,12 +546,12 @@ export function renderSystemPage(site: RenderableSite, kind: "privacy" | "bedank
   const wrap = (inner: string) => `<section><div class="wrap narrow">${inner}</div></section>`;
   if (kind === "privacy") {
     const text = `${c.naam}${c.kvk ? ` (KVK ${c.kvk})` : ""} gaat zorgvuldig om met je gegevens.\n\nStuur je ons een bericht via het contactformulier, dan gebruiken we je naam, e-mailadres, telefoonnummer en bericht alleen om je te antwoorden. We bewaren ze niet langer dan nodig en delen ze met niemand, behalve met ZekerFlex, dat deze website voor ons host.\n\nDeze website gebruikt geen cookies en geen bezoekersvolgsystemen van anderen. Foto's en lettertypes komen van deze website zelf.\n\nWil je weten welke gegevens we van je hebben, of wil je ze laten verwijderen? Mail ons${c.email ? ` op ${c.email}` : ""}.`;
-    return htmlDoc(ctx, fixedPage("privacy", "privacy", `Privacyverklaring | ${c.naam}`), wrap(`<h1>Privacyverklaring</h1>${paras(text)}`), opts, siteCss(site.theme));
+    return htmlDoc(ctx, fixedPage("privacy", "privacy", `Privacyverklaring | ${c.naam}`), wrap(`<h1>Privacyverklaring</h1>${paras(text)}`), opts, siteCss(site.theme, PREVIEW_FONTS));
   }
   if (kind === "bedankt") {
-    return htmlDoc(ctx, fixedPage("bedankt", "bedankt", `Bedankt | ${c.naam}`), wrap(`<h1>Bedankt voor je bericht</h1>${paras("We hebben je bericht ontvangen en nemen zo snel mogelijk contact met je op.")}<p><a class="btn" href="${home}">Terug naar de website</a></p>`), opts, siteCss(site.theme));
+    return htmlDoc(ctx, fixedPage("bedankt", "bedankt", `Bedankt | ${c.naam}`), wrap(`<h1>Bedankt voor je bericht</h1>${paras("We hebben je bericht ontvangen en nemen zo snel mogelijk contact met je op.")}<p><a class="btn" href="${home}">Terug naar de website</a></p>`), opts, siteCss(site.theme, PREVIEW_FONTS));
   }
-  return htmlDoc(ctx, fixedPage("404", "niet-gevonden", `Pagina niet gevonden | ${c.naam}`), wrap(`<h1>Deze pagina bestaat niet</h1>${paras("Misschien is hij verhuisd. Ga terug naar de homepagina.")}<p><a class="btn" href="${home}">Naar de homepagina</a></p>`), opts, siteCss(site.theme));
+  return htmlDoc(ctx, fixedPage("404", "niet-gevonden", `Pagina niet gevonden | ${c.naam}`), wrap(`<h1>Deze pagina bestaat niet</h1>${paras("Misschien is hij verhuisd. Ga terug naar de homepagina.")}<p><a class="btn" href="${home}">Naar de homepagina</a></p>`), opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
 export function renderSitemap(site: RenderableSite, opts: RenderOptions): string {

@@ -42,11 +42,14 @@ export function templateFor(text: string): SectorTemplate {
 
 const GOLD = "#B8925A";
 
-/** Their own colour where it carries white text, otherwise as the accent; gold and the sector colour when they have none. */
+/**
+ * Their own colour where it carries white text, otherwise as the accent; gold and the sector colour
+ * when they have none. In the premium house style (since 3 Nov 2026; earlier proposals keep "luxe").
+ */
 export function proposalTheme(brand: string | null, template: SectorTemplate, logo: string | null): Theme {
   const own = brand && isHexColor(brand) ? brand : null;
   const dark = own !== null && textOn(own) === "#ffffff";
-  return { kleur: dark ? own : template.theme.kleur, accent: own && !dark ? own : GOLD, lettertype: "klassiek", hoeken: "strak", stijl: "luxe", logo };
+  return { kleur: dark ? own : template.theme.kleur, accent: own && !dark ? own : GOLD, lettertype: "klassiek", hoeken: "strak", stijl: "premium", logo };
 }
 
 const THREE_DIGIT_AREAS = new Set(["010", "013", "015", "020", "023", "024", "026", "030", "033", "035", "036", "038", "040", "043", "045", "046", "050", "053", "055", "058", "070", "071", "072", "073", "074", "075", "076", "077", "078", "079", "085", "088", "097"]);

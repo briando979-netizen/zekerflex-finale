@@ -16,14 +16,15 @@ import type { Block, BlockProps, BlockType, Company, Page, Theme } from "@/lib/s
 // ---------------------------------------------------------------------------
 
 export const DEMO_SLUG = "bakkerij-jansen";
-const DEMO_VERSION = 1;
+// 2: the premium house style (3 Nov 2026)
+const DEMO_VERSION = 2;
 const DEMO_TENANT = "voorbeeld:bakkerij-jansen";
 const STATE_KEY = "site-demo:bakkerij-jansen";
 const LOCK_KEY = "site-demo-lock:bakkerij-jansen";
 const BY = { userId: "system", name: "ZekerFlex (voorbeeld)" };
 
 const BEDRIJF: Company = { naam: "Bakkerij Jansen", kvk: "", straat: "", postcode: "", plaats: "Zonnedorp", telefoon: "", email: "" };
-const THEME: Theme = { kleur: "#3B2A1E", accent: "#D4A24C", lettertype: "klassiek", hoeken: "rond" };
+const THEME: Theme = { kleur: "#3B2A1E", accent: "#D4A24C", lettertype: "klassiek", hoeken: "rond", stijl: "premium" };
 
 const PHOTOS = {
   hero: { id: "1509440159596-0249088772ff", alt: "Ambachtelijk brood met zaden en een bos tarwe" },
