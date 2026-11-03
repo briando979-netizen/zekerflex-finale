@@ -50,6 +50,21 @@ export const onlineBetalenAan = async (r: Pick<Rijschool, "stripeAccountId">) =>
 
 /** Maakt (eenmalig) het Stripe-account van de rijschool en geeft de link om het in te vullen. */
 export async function koppelStripe(r: Rijschool): Promise<string> {
+  try {
+    return await koppel(r);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    const m = err instanceof Error ? err.message : String(err);
+    logger.warn("rijschool: Stripe koppelen mislukt", { rijschoolId: r.id, error: m });
+    throw AppError.upstream(
+      /signed up for Connect|connect/i.test(m)
+        ? "Online betalen kan nog niet: Stripe Connect staat nog niet aan bij ZekerFlex. We hebben het doorgegeven; probeer het later opnieuw."
+        : "Stripe gaf een fout bij het koppelen. Probeer het over een paar minuten opnieuw.",
+    );
+  }
+}
+
+async function koppel(r: Rijschool): Promise<string> {
   const stripe = getStripeClient();
   let id = r.stripeAccountId;
   if (!id) {
