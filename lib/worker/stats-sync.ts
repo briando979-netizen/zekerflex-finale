@@ -4,6 +4,8 @@ import { logger } from "@/lib/logger";
 import { reviewSummary } from "@/lib/reviews/store";
 import { levelFor } from "@/lib/rewards/levels";
 import { LATE_CANCEL_RELIABILITY_PENALTY, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
+import { kvGet, kvSet } from "@/lib/storage/kv";
+import { sendUserPush } from "@/lib/notifications/push";
 
 // ---------------------------------------------------------------------------
 // Dagelijks de profielcijfers van werkers uit echte data bijwerken. Drie
@@ -104,11 +106,27 @@ export interface StatsSyncResult {
   badgeDown: number;
 }
 
+const BADGE_PUSH: Partial<Record<BadgeLevel, { title: string; body: string }>> = {
+  SILVER: { title: "🥈 Je bent nu Zilver", body: "Opdrachtgevers zien je zilveren badge en je krijgt een klein voordeel in de matching." },
+  GOLD: { title: "🥇 Je bent nu Goud", body: "Voorrang in de matching: je komt eerder in beeld bij nieuwe diensten." },
+  PLATINUM: { title: "💎 Je bent nu Platina", body: "De hoogste badge, met de meeste voorrang in de matching. Knap werk!" },
+};
+
+/** Eén felicitatie per niveau, ooit: zakt iemand en stijgt hij weer, dan geen tweede push. */
+async function congratulate(userId: string, level: BadgeLevel): Promise<void> {
+  const msg = BADGE_PUSH[level];
+  if (!msg) return;
+  const key = `badge-push:${userId}:${level}`;
+  if (await kvGet(key)) return;
+  await kvSet(key, { at: new Date().toISOString() });
+  await sendUserPush([userId], { ...msg, data: { type: "REWARD", url: "/dashboard/account", tag: `badge-${level}` }, ttlSeconds: 3 * 24 * 3600 });
+}
+
 export async function syncWorkerStats(now = new Date()): Promise<StatsSyncResult> {
   const since = new Date(now.getTime() - ACCEPTANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const missSince = new Date(now.getTime() - RELIABILITY_WINDOW_DAYS * 864e5);
   const [profiles, completedRows, offerRows, missRows] = await Promise.all([
-    prisma.freelancerProfile.findMany({ select: { id: true, badgeLevel: true, shiftsCompleted: true, acceptanceScore: true, reliabilityScore: true } }),
+    prisma.freelancerProfile.findMany({ select: { id: true, userId: true, badgeLevel: true, shiftsCompleted: true, acceptanceScore: true, reliabilityScore: true } }),
     prisma.timesheet.groupBy({
       by: ["freelancerId"],
       where: { status: { in: ["APPROVED", "PAID"] } },
@@ -176,7 +194,10 @@ export async function syncWorkerStats(now = new Date()): Promise<StatsSyncResult
     await prisma.freelancerProfile.update({ where: { id: p.id }, data: { shiftsCompleted, acceptanceScore, badgeLevel, reliabilityScore } });
     result.changed++;
     const delta = BADGE_ORDER.indexOf(badgeLevel) - BADGE_ORDER.indexOf(p.badgeLevel);
-    if (delta > 0) result.badgeUp++;
+    if (delta > 0) {
+      result.badgeUp++;
+      await congratulate(p.userId, badgeLevel).catch((err) => logger.warn("badge push failed", { error: (err as Error).message }));
+    }
     if (delta < 0) result.badgeDown++;
   }
   if (result.changed) logger.info("worker stats synced", { ...result });

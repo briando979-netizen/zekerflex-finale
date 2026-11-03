@@ -20,6 +20,7 @@ export const ERASABLE_KV_PREFIXES = [
   "agenda-mail-state:",
   "agenda-mail-scan:",
   "auth-2fa:",
+  "badge-push:",
   "brain-mem:",
   "chat-prefs:",
   "chat-settings:",

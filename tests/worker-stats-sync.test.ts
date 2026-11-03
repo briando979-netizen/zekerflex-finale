@@ -21,6 +21,17 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+const kv = new Map<string, unknown>();
+vi.mock("@/lib/storage/kv", () => ({
+  kvGet: async (key: string) => kv.get(key) ?? null,
+  kvSet: async (key: string, value: unknown) => {
+    kv.set(key, value);
+  },
+}));
+
+const sendUserPush = vi.fn().mockResolvedValue(1);
+vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...a) }));
+
 const reviewSummary = vi.fn();
 vi.mock("@/lib/reviews/store", () => ({ reviewSummary: (...a: unknown[]) => reviewSummary(...a) }));
 
@@ -29,7 +40,10 @@ import { acceptanceRate, badgeForWork, missKind, reliabilityFrom, syncWorkerStat
 const NOW = new Date("2026-11-03T10:00:00Z");
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 864e5);
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  kv.clear();
+});
 
 describe("badgeForWork", () => {
   it("volgt de niveaus uit de beloningen, alleen op werk", () => {
@@ -96,9 +110,9 @@ describe("reliabilityFrom", () => {
 describe("syncWorkerStats", () => {
   it("schrijft diensten, acceptatie, badge en betrouwbaarheid alleen als er iets verandert", async () => {
     profileFindMany.mockResolvedValue([
-      { id: "a", badgeLevel: "BRONZE", shiftsCompleted: 0, acceptanceScore: 0.5, reliabilityScore: 1 }, // 45 diensten, 9/10 geaccepteerd
-      { id: "b", badgeLevel: "BRONZE", shiftsCompleted: 0, acceptanceScore: 0.5, reliabilityScore: 1 }, // nieuw: niets te doen
-      { id: "c", badgeLevel: "PLATINUM", shiftsCompleted: 20, acceptanceScore: 0.5, reliabilityScore: 0.7 }, // badge omlaag, oude no-show herstelt deels
+      { id: "a", userId: "ua", badgeLevel: "BRONZE", shiftsCompleted: 0, acceptanceScore: 0.5, reliabilityScore: 1 }, // 45 diensten, 9/10 geaccepteerd
+      { id: "b", userId: "ub", badgeLevel: "BRONZE", shiftsCompleted: 0, acceptanceScore: 0.5, reliabilityScore: 1 }, // nieuw: niets te doen
+      { id: "c", userId: "uc", badgeLevel: "PLATINUM", shiftsCompleted: 20, acceptanceScore: 0.5, reliabilityScore: 0.7 }, // badge omlaag, oude no-show herstelt deels
     ]);
     assignmentFindMany.mockResolvedValue([{ freelancerId: "c", cancelledAt: daysAgo(180), cancelReason: "Niet opgekomen (no-show, automatisch gedetecteerd)" }]);
     // c werkte daarna 3 diensten goed af
@@ -115,11 +129,22 @@ describe("syncWorkerStats", () => {
 
     const r = await syncWorkerStats(NOW);
     expect(r).toEqual({ checked: 3, changed: 2, badgeUp: 1, badgeDown: 1 });
+    // alleen wie stijgt krijgt een felicitatie, één keer per niveau
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["ua"]);
+    expect(sendUserPush.mock.calls[0]![1].title).toContain("Goud");
+    expect(kv.has("badge-push:ua:GOLD")).toBe(true);
     expect(profileUpdate).toHaveBeenCalledWith({ where: { id: "a" }, data: { shiftsCompleted: 45, acceptanceScore: 0.79, badgeLevel: "GOLD", reliabilityScore: 1 } });
     // geen beantwoorde aanbiedingen → acceptatie blijft wat hij was; no-show van een half jaar
     // geleden (× 0,5) met 3 goede diensten erna (× 0,5): 1 − 0,15 × 0,25 = 0,96
     expect(profileUpdate).toHaveBeenCalledWith({ where: { id: "c" }, data: { shiftsCompleted: 20, acceptanceScore: 0.5, badgeLevel: "SILVER", reliabilityScore: 0.96 } });
     expect(timesheetFindMany.mock.calls[0]![0].where.freelancerId).toEqual({ in: ["c"] });
+
+    // zakt "a" later en stijgt hij weer naar Goud: geen tweede felicitatie
+    sendUserPush.mockClear();
+    profileFindMany.mockResolvedValue([{ id: "a", userId: "ua", badgeLevel: "SILVER", shiftsCompleted: 45, acceptanceScore: 0.79, reliabilityScore: 1 }]);
+    await syncWorkerStats(NOW);
+    expect(sendUserPush).not.toHaveBeenCalled();
 
     const aw = assignmentFindMany.mock.calls[0]![0].where;
     expect(aw.cancelledAt.gte.toISOString()).toBe("2024-11-03T10:00:00.000Z");
