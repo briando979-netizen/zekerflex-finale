@@ -90,6 +90,25 @@ function hubFaq(s: Sector) {
   ];
 }
 
+// One line under the hero buttons that points at the matching free rekentool.
+function ToolHint({ worker = false }: { worker?: boolean }) {
+  return worker ? (
+    <p className="mt-5 text-sm text-neutralx-600">
+      Werk je als zzp&apos;er?{" "}
+      <Link href="/rekentools/zzp-uurtarief-berekenen" className="font-semibold text-brand-600 underline">
+        Bereken welk uurtarief je nodig hebt
+      </Link>
+    </p>
+  ) : (
+    <p className="mt-5 text-sm text-neutralx-600">
+      Wat kost een flexkracht tegenover een uitzendbureau?{" "}
+      <Link href="/rekentools/kosten-uitzendkracht-berekenen" className="font-semibold text-brand-600 underline">
+        Reken het uit
+      </Link>
+    </p>
+  );
+}
+
 // ---- hub page -------------------------------------------------------------
 export function SectorHub({ sector: s }: { sector: Sector }) {
   const faq = hubFaq(s);
@@ -123,6 +142,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
             Demo aanvragen
           </Link>
         </div>
+        <ToolHint />
         <h2 className="mt-14 font-display text-xl font-bold text-ink">{s.label} personeel inhuren per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (
@@ -209,6 +229,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
             Demo aanvragen
           </Link>
         </div>
+        <ToolHint />
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
@@ -337,6 +358,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
             Bekijk alle diensten
           </Link>
         </div>
+        <ToolHint worker />
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {workerBenefits(s, "").map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
@@ -411,6 +433,7 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
             Diensten in {c.name}
           </Link>
         </div>
+        <ToolHint worker />
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {workerBenefits(s, ` van ${c.name}`).map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
