@@ -30,6 +30,7 @@ import { inAndroidApp } from "@/lib/app-mode-server";
 import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
+import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
   const cat = shiftCategory(s.title, s.skill);
 
-  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient] = await Promise.all([
+  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient, market] = await Promise.all([
     listCounterOffers(500),
     reviewSummary("company", s.clientTenantId),
     getOrgProfileExtra(s.clientTenantId),
@@ -82,7 +83,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     }),
     getFiscal(principal.userId),
     isFollowing(principal.userId, s.clientTenantId),
+    marketStats().catch(() => null),
   ]);
+  // Tarief tegenover de mediaan van dit soort werk (null bij te weinig vergelijkingsmateriaal).
+  const vsMarket = rateVsMarket(s.hourlyRateCents, market, cat.key);
+  const catLabel = ft.cat[cat.key];
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
   const reactionCount = offers.filter((o) => o.shiftId === s.id && o.status === "pending").length;
 
@@ -349,6 +354,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </span>
           <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
         </div>
+        {vsMarket !== null && (
+          <p className={`mt-1 text-right text-xs font-medium ${vsMarket >= 5 ? "text-brand-600" : "text-neutralx-500"}`} title={ft.rate.note}>
+            {vsMarket >= 5 ? ft.rate.above(vsMarket, catLabel) : vsMarket <= -5 ? ft.rate.below(-vsMarket, catLabel) : ft.rate.average(catLabel)}
+          </p>
+        )}
 
         {/* Fast payout — only when the client offers it (credit-checked) */}
         <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !isPayroll ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>

@@ -19,6 +19,8 @@ export interface MarketStats {
   medianByCategory: Record<string, number>;
   /** basis-vervullingsgraad per categorie (0..1) */
   fillByCategory: Record<string, number>;
+  /** aantal klussen per categorie (ontbreekt in oudere cache tot de volgende herberekening) */
+  countByCategory?: Record<string, number>;
   overallMedian: number;
   overallFill: number;
   sample: number;
@@ -67,12 +69,17 @@ export async function marketStats(force = false): Promise<MarketStats> {
 
   const medianByCategory: Record<string, number> = {};
   const fillByCategory: Record<string, number> = {};
-  for (const [k, v] of Object.entries(rateByCat)) medianByCategory[k] = median(v);
+  const countByCategory: Record<string, number> = {};
+  for (const [k, v] of Object.entries(rateByCat)) {
+    medianByCategory[k] = median(v);
+    countByCategory[k] = v.length;
+  }
   for (const [k, v] of Object.entries(fillByCat)) fillByCategory[k] = v.total ? v.filled / v.total : 0;
 
   const stats: MarketStats = {
     medianByCategory,
     fillByCategory,
+    countByCategory,
     overallMedian: median(allRates),
     overallFill: shifts.length ? allFilled / shifts.length : 0,
     sample: shifts.length,
@@ -80,6 +87,20 @@ export async function marketStats(force = false): Promise<MarketStats> {
   };
   await kvSet(STATS_KEY, stats).catch(() => undefined);
   return stats;
+}
+
+/** Zoveel klussen in een categorie voordat we een tarief met "het gemiddelde" vergelijken. */
+const MIN_CATEGORY_SAMPLE = 8;
+
+/**
+ * Voor werkers: hoe verhoudt dit uurtarief zich tot de mediaan van dit soort werk
+ * op ZekerFlex (laatste 180 dagen)? Geheel procent, + = hoger. null bij te weinig data.
+ */
+export function rateVsMarket(rateCents: number, stats: MarketStats | null, categoryKey: string): number | null {
+  const median = stats?.medianByCategory[categoryKey] ?? 0;
+  const count = stats?.countByCategory?.[categoryKey] ?? 0;
+  if (median <= 0 || count < MIN_CATEGORY_SAMPLE) return null;
+  return Math.round(((rateCents - median) / median) * 100);
 }
 
 export interface ForecastInput {
