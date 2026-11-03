@@ -210,12 +210,14 @@ export function Office3D() {
       const q = new URLSearchParams(window.location.search);
       const thema = q.get("thema");
       const seizoen = q.get("seizoen");
+      const weer = q.get("weer");
       handle = createCity(el, labelHost, {
         reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         onPick: setSelected,
         onTourEnd: () => setTouring(false),
         ...(thema && isThemeId(thema) && thema !== "verjaardag" ? { theme: thema } : {}),
         ...(seizoen === "lente" || seizoen === "zomer" || seizoen === "herfst" || seizoen === "winter" ? { season: seizoen } : {}),
+        ...(weer && weer in WEATHER_NL ? { weather: weer as keyof typeof WEATHER_NL } : {}),
       });
       city.current = handle;
       if (lastData.current) handle.setData(lastData.current);
@@ -521,7 +523,7 @@ export function Office3D() {
                   Zwaailicht: rood = kritiek, oranje = waarschuwing
                 </li>
                 <li className="pt-1" style={{ color: "var(--a-dim)" }}>
-                  Zon, wolken, regen en sneeuw zijn echt: het weer in Amsterdam nu (bron: MET Norway, CC BY 4.0).
+                  Zon, maan, wind, wolken, regen en sneeuw zijn echt: het weer in Amsterdam nu (bron: MET Norway, CC BY 4.0). Bomen en versiering volgen het seizoen en de Nederlandse feestdagen; rond het kantoor staan verkeerslichten.
                 </li>
               </ul>
             )}

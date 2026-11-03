@@ -5,7 +5,7 @@ import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
 import type { CityData, CityWeather } from "@/lib/admin/city-data";
 import { createLife } from "@/components/admin/city/life";
 import { createFestive } from "@/components/admin/city/feest";
-import { yearSeason, type YearSeason } from "@/lib/admin/city-life";
+import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-life";
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { count, euro } from "@/lib/admin/format";
@@ -84,6 +84,8 @@ export function createCity(
     theme?: SeasonId | null;
     /** Voorbeeld van een seizoen (?seizoen=winter); anders de echte maand. */
     season?: YearSeason;
+    /** Voorbeeld van het weer (?weer=regen); anders het echte weer in Amsterdam. */
+    weather?: WeatherKind;
   },
 ): CityHandle {
   const { reduced } = opts;
@@ -599,8 +601,8 @@ export function createCity(
       sigDock = dk;
       changed = true;
     }
-    weather = d.weather;
-    const wk = d.weather ? `${d.weather.kind}|${d.weather.tempC}` : "";
+    weather = opts.weather ? { tempC: 10, windKmh: 25, cloud: 90, mmPerHour: 2, ...(d.weather ?? {}), kind: opts.weather } : d.weather;
+    const wk = weather ? `${weather.kind}|${weather.tempC}` : "";
     if (changed) refreshPickables();
     if (changed || wk !== weatherKey) {
       weatherKey = wk;
