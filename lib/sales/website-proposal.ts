@@ -377,17 +377,25 @@ export interface ProposalReminder {
 const dayName = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
 
 /**
- * Follow-ups for the maker of a sent proposal without an answer (autopilot
- * action "websitevoorstel-opvolgen"): opened 2–14 days ago, or expiring within
- * 3 days. At most one per proposal per run; expiring wins.
+ * Follow-ups for the maker of a proposal (autopilot action "websitevoorstel-opvolgen"):
+ * sent without an answer and opened 2–14 days ago, or expiring within 3 days; or made
+ * but still not sent after 2 days (it would expire unseen). At most one per proposal
+ * per run; expiring wins.
  */
 export function dueReminders(proposals: WebsiteProposal[], now: Date): ProposalReminder[] {
   const t = now.getTime();
   const out: ProposalReminder[] = [];
   for (const p of proposals) {
-    if (!p.createdById || p.akkoord || (p.status !== "verstuurd" && p.status !== "bekeken")) continue;
+    if (!p.createdById || p.akkoord) continue;
     const left = Date.parse(p.expiresAt) - t;
     if (!(left > 0)) continue;
+    if (p.status === "concept") {
+      if (t - Date.parse(p.createdAt) >= 2 * 86_400_000) {
+        out.push({ id: `${p.id}:versturen`, proposal: p, title: "✉️ Websitevoorstel nog niet verstuurd", body: `Het voorstel voor ${p.bedrijf} staat sinds ${dayName(p.createdAt)} klaar, maar is nog niet verstuurd. Verstuur het, of trek het in als het niet meer nodig is.` });
+      }
+      continue;
+    }
+    if (p.status !== "verstuurd" && p.status !== "bekeken") continue;
     if (left <= 3 * 86_400_000) {
       out.push({ id: `${p.id}:verloopt:${p.expiresAt}`, proposal: p, title: "⏳ Websitevoorstel verloopt bijna", body: `Het voorstel voor ${p.bedrijf} verloopt op ${dayName(p.expiresAt)}. Bel even na, of verleng het met 30 dagen.` });
       continue;

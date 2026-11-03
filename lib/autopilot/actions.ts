@@ -105,7 +105,7 @@ export const ACTIONS: AutopilotAction[] = [
   {
     key: "websitevoorstel-opvolgen",
     label: "Verkopers herinneren aan websitevoorstellen",
-    description: "Verstuurd voorstel zonder antwoord: 2 dagen na het openen \"even nabellen?\", en 3 dagen voor het verloopt \"bel na of verleng\". Eén pushmelding per keer aan wie het maakte, alleen op werkdagen tussen 8 en 18 uur.",
+    description: "Verstuurd voorstel zonder antwoord: 2 dagen na het openen \"even nabellen?\", en 3 dagen voor het verloopt \"bel na of verleng\". Voorstel dat na 2 dagen nog niet verstuurd is: \"nog niet verstuurd\". Eén pushmelding per keer aan wie het maakte, alleen op werkdagen tussen 8 en 18 uur.",
     tier: "auto",
     cap: 50,
     run: async (now) => {

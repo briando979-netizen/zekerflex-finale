@@ -302,14 +302,21 @@ describe("ja zeggen en de introductiekorting", () => {
 });
 
 describe("opvolgen door wie het voorstel maakte (autopilot)", () => {
-  it("nabellen 2 tot 14 dagen na het openen, herinnering 3 dagen voor het verloopt, nooit bij concept, ja of zonder maker", async () => {
+  it("nabellen 2 tot 14 dagen na het openen, herinnering 3 dagen voor het verloopt, een concept na 2 dagen nog versturen; nooit na ja of zonder maker", async () => {
     const base = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
     const DAY = 86_400_000;
     const t0 = Date.parse(base.createdAt);
     const at = (days: number) => new Date(t0 + days * DAY);
     const end = Date.parse(base.expiresAt);
     const viewed = { ...base, status: "bekeken" as const, viewedAt: base.createdAt };
-    expect(engine.dueReminders([base], at(5))).toEqual([]); // nog niet verstuurd
+    // gemaakt maar nog niet verstuurd: na twee dagen één seintje, anders verloopt het ongezien
+    expect(base.status).toBe("concept");
+    expect(engine.dueReminders([base], at(1))).toEqual([]);
+    const unsent = engine.dueReminders([base], at(5));
+    expect(unsent).toEqual([expect.objectContaining({ id: `${base.id}:versturen`, title: "✉️ Websitevoorstel nog niet verstuurd" })]);
+    expect(unsent[0]!.body).toMatch(new RegExp(`^Het voorstel voor ${base.bedrijf} staat sinds \\w+dag \\d+ \\w+ klaar, maar is nog niet verstuurd`));
+    expect(engine.dueReminders([base], new Date(end + 1000))).toEqual([]);
+    expect(engine.dueReminders([{ ...base, createdById: undefined }], at(5))).toEqual([]);
     expect(engine.dueReminders([viewed], at(1))).toEqual([]); // te vroeg
     const due = engine.dueReminders([viewed], at(3));
     expect(due).toEqual([expect.objectContaining({ id: `${base.id}:nabellen`, title: "📞 Even nabellen?" })]);
