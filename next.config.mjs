@@ -82,6 +82,13 @@ const nextConfig = {
         source: "/fonts/:file*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
+      {
+        // Photos and the hero video of the proposal sites (public/voorstel). Without
+        // this every visit re-downloaded the 6 MB video (max-age=0). The names carry
+        // no hash, so cache a day and revalidate in the background, not immutable.
+        source: "/voorstel/:pad*/:bestand.:ext(webp|png|jpg|jpeg|svg|mp4)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
     ];
   },
 };

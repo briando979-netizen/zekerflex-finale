@@ -3,30 +3,48 @@
 import { useEffect, useRef, useState } from "react";
 
 // Achtergrondvideo zonder geluid (hun eigen sfeervideo), met een pauzeknop.
-// Wie "minder beweging" heeft ingesteld, ziet eerst het stilstaande beeld.
+// Het stilstaande beeld staat er meteen; de video laadt pas als de pagina
+// klaar is, zodat de rest niet op 6 MB video wacht. Wie "minder beweging" of
+// databesparing heeft ingesteld, houdt het stilstaande beeld; de knop laadt
+// de video dan alsnog op verzoek.
+
+const zuinig = () => (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
 
 export function HeroVideo({ src, poster, label }: { src: string; poster: string; label: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [speelt, setSpeelt] = useState(false);
 
+  // de video pas ophalen als hij echt gaat spelen
+  const laad = () => {
+    const v = ref.current;
+    if (v && !v.getAttribute("src")) v.src = src;
+    return v;
+  };
+
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
     v.muted = true; // nodig voor automatisch afspelen
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    v.play().catch(() => setSpeelt(false));
-  }, []);
+    if (zuinig() || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const start = () => void laad()?.play().catch(() => setSpeelt(false));
+    if (document.readyState === "complete") {
+      start();
+      return;
+    }
+    window.addEventListener("load", start, { once: true });
+    return () => window.removeEventListener("load", start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
 
   return (
     <>
       <video
         ref={ref}
-        src={src}
         poster={poster}
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
         aria-label={label}
         onPlay={() => setSpeelt(true)}
         onPause={() => setSpeelt(false)}
@@ -35,7 +53,7 @@ export function HeroVideo({ src, poster, label }: { src: string; poster: string;
       <button
         type="button"
         onClick={() => {
-          const v = ref.current;
+          const v = laad();
           if (!v) return;
           if (v.paused) void v.play();
           else v.pause();
