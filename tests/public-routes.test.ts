@@ -40,6 +40,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
     "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail
+    "/api/indexnow-key", // IndexNow verifies site ownership without a session
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -64,6 +65,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/calls/incoming",
     "/api/sites/domein-check/extra", // exact match only
     "/api/werkgever/sites/domain",
+    "/api/indexnow-key/extra", // exact match only
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

@@ -48,6 +48,7 @@ const PUBLIC_PREFIXES = [
 const PUBLIC_EXACT = new Set<string>([
   "/api/company/search", // public KVK autocomplete — /api/company/lookup and /company/register require a session
   "/api/sites/domein-check", // Caddy's on-demand TLS "ask": says only whether a proven own domain of a published site exists
+  "/api/indexnow-key", // IndexNow keyLocation: Bing/Yandex fetch it logged-out to verify site ownership; the key is public by design
 ]);
 
 /** /api/orgs/<tenantId>/photo is public; /api/orgs and /api/orgs/photo are not. */

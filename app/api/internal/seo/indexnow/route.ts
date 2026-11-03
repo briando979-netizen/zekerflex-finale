@@ -14,6 +14,7 @@ export const maxDuration = 120;
 const PATHS = [
   "/", "/voor-bedrijven", "/voor-freelancers", "/prijzen", "/klussen",
   "/open-diensten", "/shop", "/uitzendbureau", "/kennis", "/over-ons", "/app",
+  "/rekentools", "/rekentools/zzp-uurtarief-berekenen", "/rekentools/kosten-uitzendkracht-berekenen", "/rekentools/wet-dba-check",
 ];
 
 async function handle(request: Request): Promise<NextResponse> {
