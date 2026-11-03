@@ -26,6 +26,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
             </Link>
             <nav aria-label="Verkoopnavigatie" className="hidden gap-5 text-sm font-medium text-neutralx-500 sm:flex">
               <Link href="/sales" className="min-h-11 py-2 hover:text-ink">Bezoeken</Link>
+              <Link href="/sales/websitevoorstellen" className="min-h-11 py-2 hover:text-ink">Websitevoorstellen</Link>
               <Link href="/uitleg" target="_blank" className="min-h-11 py-2 hover:text-ink">Uitlegfilmpjes</Link>
             </nav>
           </div>

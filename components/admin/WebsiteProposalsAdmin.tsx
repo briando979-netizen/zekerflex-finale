@@ -3,61 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { copyText } from "@/lib/clipboard";
 import { Empty, Notice, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
-import type { ProposalAction, ProposalPricing, ProposalStatus, WebsiteProposal } from "@/lib/sales/website-proposal";
+import type { ProposalAction, ProposalStatus, WebsiteProposal } from "@/lib/sales/website-proposal";
+import { DOMAIN_LABEL as DOMEIN, STATUS_LABEL, euro, isProposalExpired, proposalMailText as mailText, shortDay as day, type ProposalOfferView as Offer } from "@/lib/sales/website-proposal-shared";
 
 // ---------------------------------------------------------------------------
 // Admin → Websitevoorstellen (lib/sales/website-proposal.ts): make a proposal
 // from a company's website address, send it yourself (copy the link or a ready
 // e-mail text), and follow it up: seen, yes, no, more time, withdraw. Prices
-// and the launch discount are set at the bottom.
+// and the launch discount are set at the bottom. Sales people have the same
+// list without the prices at /sales/websitevoorstellen.
 // ---------------------------------------------------------------------------
 
-interface Offer {
-  pricing: ProposalPricing;
-  places: { total: number; taken: number; left: number };
-  website: { cents: number; kortingCents: number | null };
-  plannen: { key: string; label: string; priceCentsPerMonth: number }[];
-}
 interface Data {
   proposals: WebsiteProposal[];
   offer: Offer;
   pricingSet: boolean;
 }
 
-const STATUS: Record<ProposalStatus, { label: string; tone: Tone }> = {
-  concept: { label: "Nog niet verstuurd", tone: "neutral" },
-  verstuurd: { label: "Verstuurd", tone: "plan" },
-  bekeken: { label: "Bekeken", tone: "trust" },
-  akkoord: { label: "Ja gezegd", tone: "ok" },
-  afgewezen: { label: "Afgezegd", tone: "warn" },
-  ingetrokken: { label: "Ingetrokken", tone: "neutral" },
-};
-const DOMEIN: Record<string, string> = { houden: "houdt het domein bij de huidige provider", verhuizen: "wil het domein verhuizen", geen: "heeft nog geen domein", "weet-niet": "weet het nog niet" };
-
-const euro = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
-const day = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Amsterdam" });
-const longDay = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
-
-function mailText(p: WebsiteProposal, offer: Offer, origin: string, me: string): string {
-  const korting =
-    offer.website.kortingCents !== null && offer.pricing.kortingPct > 0
-      ? `\nDe eerste ${offer.places.total} bedrijven krijgen ${offer.pricing.kortingPct}% introductiekorting op de website; er zijn nog ${offer.places.left} plekken.\n`
-      : "";
-  return `Onderwerp: Een nieuwe website voor ${p.bedrijf}
-
-Hallo,
-
-Ik heb de website van ${p.bedrijf} (${p.host}) bekeken en er alvast een nieuwe voor gemaakt: sneller, veiliger, beter te vinden in Google en met een luxe uitstraling. Je huidige site scoort ${p.check.score} van de 100 in onze website-check.
-
-Je nieuwe website en alle verbeteringen staan hier, alleen voor jou:
-${origin}/websitevoorstel/${p.id}
-${korting}
-Het voorstel is geldig tot ${longDay(p.expiresAt)}. Heb je vragen, bel of mail me gerust.
-
-Met vriendelijke groet,
-${me}
-ZekerFlex`;
-}
+const TONE: Record<ProposalStatus, Tone> = { concept: "neutral", verstuurd: "plan", bekeken: "trust", akkoord: "ok", afgewezen: "warn", ingetrokken: "neutral" };
+const STATUS = Object.fromEntries((Object.keys(TONE) as ProposalStatus[]).map((s) => [s, { label: STATUS_LABEL[s], tone: TONE[s] }])) as Record<ProposalStatus, { label: string; tone: Tone }>;
 
 export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -143,7 +107,7 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
         ) : (
           <ul>
             {data.proposals.map((p) => {
-              const expired = !(Date.parse(p.expiresAt) > now);
+              const expired = isProposalExpired(p, now);
               const st = STATUS[p.status];
               const link = `${origin}/websitevoorstel/${p.id}`;
               const open = p.status !== "ingetrokken";
