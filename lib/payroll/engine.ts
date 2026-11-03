@@ -7,6 +7,7 @@ import { computePayslip, type PayLineInput } from "@/lib/payroll/compute";
 import { getRun, saveRun, type PayrollRun, type PayslipRecord } from "@/lib/payroll/store";
 import { payrollAdvancesForWeek, reconcilePayrollAdvances } from "@/lib/payouts/advances";
 import { generateSepaBatch, type SepaExportResult } from "@/lib/payroll/sepa-export";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import {
   isoWeekId,
   isoWeekLabel,
@@ -103,7 +104,7 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
       shiftId: t.assignment?.shift?.id ?? t.id,
       shiftTitle: t.assignment?.shift?.title ?? "Dienst",
       clientName: t.branch?.tenant?.name ?? t.branch?.name ?? "Opdrachtgever",
-      workedOn: t.scheduledStart.toISOString().slice(0, 10),
+      workedOn: amsterdamDayKey(t.scheduledStart), // Dutch date: a 00:30 start is not "yesterday"
       hours: round2(t.billableMinutes / 60),
       hourlyRateCents: t.hourlyRateCents,
       startISO: s.toISOString(),

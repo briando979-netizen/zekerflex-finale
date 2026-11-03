@@ -6,6 +6,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import type { ShiftTemplate } from "@/lib/shifts/create";
 import { shiftCategory } from "@/lib/shifts/category";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { extraDayOptions } from "@/lib/shifts/extra-days";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
 
@@ -131,16 +133,9 @@ export function NewShiftForm({
     setExtraDates((prev) => (prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso].sort()));
   }
 
-  // next 21 days grid (excluding the primary start date)
+  // next 21 days grid (excluding the primary start date), on the calendar date of the field
   const primaryDay = startsAt ? startsAt.slice(0, 10) : "";
-  const dayOptions = useMemo(() => {
-    const base = startsAt ? new Date(startsAt) : new Date();
-    return Array.from({ length: 21 }, (_, i) => {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i + 1);
-      return d.toISOString().slice(0, 10);
-    });
-  }, [startsAt]);
+  const dayOptions = useMemo(() => extraDayOptions(startsAt ? startsAt.slice(0, 10) : amsterdamDayKey(new Date())), [startsAt]);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
