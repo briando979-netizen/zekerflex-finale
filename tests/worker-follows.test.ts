@@ -30,7 +30,7 @@ vi.mock("@/lib/fiscal/store", () => ({
 const sendUserPush = vi.fn().mockResolvedValue(1);
 vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...a) }));
 
-import { followerCount, isFollowing, listFollows, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
+import { followerCount, followSuggestions, isFollowing, listFollows, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
 
 const NOW = new Date("2026-11-03T10:00:00Z");
 
@@ -77,6 +77,22 @@ describe("listFollows", () => {
       { tenantId: "t1", name: "Café A", openShifts: 2, shiftsWorked: 0, earnedCents: 0 },
     ]);
     expect(timesheetFindMany.mock.calls[0]![0].where.freelancer).toEqual({ userId: "u1" });
+  });
+});
+
+describe("followSuggestions", () => {
+  it("stelt bedrijven voor waar je werkte en die je nog niet volgt, meest gewerkt eerst", async () => {
+    store.set("volgt:u1", ["t1"]);
+    timesheetFindMany.mockResolvedValue([
+      { branch: { tenantId: "t1", tenant: { name: "Café A" } } }, // volg je al
+      { branch: { tenantId: "t2", tenant: { name: "Hotel B" } } },
+      { branch: { tenantId: "t3", tenant: { name: "Kantine C" } } },
+      { branch: { tenantId: "t3", tenant: { name: "Kantine C" } } },
+    ]);
+    expect(await followSuggestions("u1")).toEqual([
+      { tenantId: "t3", name: "Kantine C", shiftsWorked: 2 },
+      { tenantId: "t2", name: "Hotel B", shiftsWorked: 1 },
+    ]);
   });
 });
 

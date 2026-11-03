@@ -105,6 +105,24 @@ export async function listFollows(userId: string, now = new Date()): Promise<Fol
     }));
 }
 
+/** Bedrijven waar je al goedgekeurde uren had maar die je nog niet volgt — "misschien ook volgen". */
+export async function followSuggestions(userId: string, limit = 5): Promise<{ tenantId: string; name: string; shiftsWorked: number }[]> {
+  const mine = new Set(await getList(followsKey(userId)));
+  const rows = await prisma.timesheet.findMany({
+    where: { freelancer: { userId }, status: { in: ["APPROVED", "PAID"] } },
+    select: { branch: { select: { tenantId: true, tenant: { select: { name: true } } } } },
+    take: 2000,
+  });
+  const byTenant = new Map<string, { tenantId: string; name: string; shiftsWorked: number }>();
+  for (const r of rows) {
+    if (mine.has(r.branch.tenantId)) continue;
+    const s = byTenant.get(r.branch.tenantId) ?? { tenantId: r.branch.tenantId, name: r.branch.tenant.name, shiftsWorked: 0 };
+    s.shiftsWorked += 1;
+    byTenant.set(r.branch.tenantId, s);
+  }
+  return [...byTenant.values()].sort((a, b) => b.shiftsWorked - a.shiftsWorked).slice(0, limit);
+}
+
 /** Hoeveel werkers volgen (een van) deze bedrijven — voor het werkgeversdashboard. Telt alleen echte volgers. */
 export async function followerCount(tenantIds: string[]): Promise<number> {
   const unique = new Set<string>();

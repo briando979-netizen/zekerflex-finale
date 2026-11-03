@@ -574,6 +574,8 @@ const nl = {
     seeShifts: "Bekijk diensten",
     worked: (n: number, amount: string) => `${n}× gewerkt · ${amount} verdiend`,
     unfollow: "Ontvolgen",
+    suggestTitle: "Misschien ook volgen",
+    suggestBody: "Hier werkte je al. Volg ze om nieuwe diensten meteen te zien.",
     back: "← Terug",
   },
   rate: {
@@ -1168,6 +1170,8 @@ const en: FreelancerDict = {
     seeShifts: "View shifts",
     worked: (n: number, amount: string) => `worked ${n}× · ${amount} earned`,
     unfollow: "Unfollow",
+    suggestTitle: "Maybe follow these too",
+    suggestBody: "You have worked here before. Follow them to see new shifts straight away.",
     back: "← Back",
   },
   rate: {
@@ -1760,6 +1764,8 @@ const pl: FreelancerDict = {
     seeShifts: "Zobacz zmiany",
     worked: (n: number, amount: string) => `przepracowano ${n}× · zarobiono ${amount}`,
     unfollow: "Przestań obserwować",
+    suggestTitle: "Może też obserwuj",
+    suggestBody: "Już tu pracowałeś. Obserwuj, aby od razu widzieć nowe zmiany.",
     back: "← Wróć",
   },
   rate: {
@@ -2352,6 +2358,8 @@ const ro: FreelancerDict = {
     seeShifts: "Vezi turele",
     worked: (n: number, amount: string) => `ai lucrat de ${n} ori · ai câștigat ${amount}`,
     unfollow: "Nu mai urmări",
+    suggestTitle: "Poate urmărești și",
+    suggestBody: "Ai lucrat deja aici. Urmărește-i ca să vezi imediat turele noi.",
     back: "← Înapoi",
   },
   rate: {
@@ -2944,6 +2952,8 @@ const uk: FreelancerDict = {
     seeShifts: "Переглянути зміни",
     worked: (n: number, amount: string) => `працювали ${n} раз(и) · зароблено ${amount}`,
     unfollow: "Не стежити",
+    suggestTitle: "Можливо, теж стежити",
+    suggestBody: "Ви вже тут працювали. Стежте, щоб одразу бачити нові зміни.",
     back: "← Назад",
   },
   rate: {
