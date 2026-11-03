@@ -119,6 +119,8 @@ const REPLIABLE_KINDS = new Set([
   "sales-outreach",
   // Admin-composed ad-hoc mail — replyTo is the sending admin's own address.
   "admin-bericht",
+  // Mail namens een rijschool aan haar leerlingen: antwoorden gaan naar de rijschool (lib/rijschool/mail.ts).
+  "rijschool",
 ]);
 
 export function isAutomatedKind(kind?: string): boolean {

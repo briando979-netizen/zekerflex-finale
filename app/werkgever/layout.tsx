@@ -15,7 +15,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -57,15 +57,19 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday] = await Promise.all([
+  const [tenant, rating, avatars, birthday, rijschool] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
     getUserAvatars([principal.userId]),
     birthdayToday(principal.userId).catch(() => false),
+    // los en foutbestendig: een ontbrekende tabel (migratie nog niet gedraaid) mag het menu niet breken
+    tenantId ? prisma.rijschool.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null) : Promise.resolve(null),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
+  // het rijschool-pakket staat alleen in het menu als het aan staat (aanzetten via Website-beheer)
+  if (rijschool) nav.splice(1, 0, { href: "/werkgever/rijschool", label: "Rijschool", icon: <ICar /> });
 
   return (
     <I18nProvider locale={locale} t={clientDict(locale)}>

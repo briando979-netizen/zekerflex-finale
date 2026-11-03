@@ -87,6 +87,7 @@ model Tenant {
   favoritePools        FavoritePool[]
   credits              TenantCredit[]
   managedWebsite       ManagedWebsite?
+  rijschool            Rijschool?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2175,4 +2176,252 @@ model BankPot {
   updatedAt    DateTime    @updatedAt
 
   @@index([accountId])
+}
+
+// ===========================================================================
+// Rijschool-pakket. Een rijschool is een gewoon ZekerFlex-bedrijf (Tenant) met
+// dit onderdeel aan, en houdt dus alles wat ZekerFlex al biedt (mail,
+// telefonie, AI-beller, websitebouwer, facturen). Eigen website met
+// leerlingportaal en instructeur-app op /rijschool/<slug>. Leerlingen en
+// instructeurs hebben lichte eigen accounts (geen ZekerFlex-gebruikers); de
+// eigenaar beheert alles vanuit /werkgever/rijschool. Zie lib/rijschool.
+// ===========================================================================
+enum RijschoolLeerlingStatus {
+  AANMELDING // proefles of inschrijving via de website, nog niet gestart
+  ACTIEF
+  GESLAAGD
+  GESTOPT
+}
+
+enum RijschoolLesSoort {
+  LES
+  PROEFLES
+  TOETS // tussentijdse toets
+  EXAMEN
+}
+
+enum RijschoolLesStatus {
+  GEPLAND
+  VOLTOOID
+  GEANNULEERD
+  NIET_VERSCHENEN
+}
+
+enum RijschoolBetalingStatus {
+  OPEN
+  BETAALD
+  MISLUKT
+  VERVALLEN
+}
+
+enum RijschoolBetaalMethode {
+  IDEAL
+  PIN
+  CONTANT
+  OVERBOEKING
+}
+
+model Rijschool {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug            String   @unique
+  naam            String
+  plaats          String   @default("")
+  adres           String   @default("")
+  telefoon        String   @default("")
+  email           String   @default("")
+  kvk             String   @default("")
+  kleur           String   @default("#1D4E89")
+  accent          String   @default("#F2B544")
+  lesMinuten      Int      @default(60)
+  annuleerUren    Int      @default(24) // kosteloos annuleren tot zoveel uur vooraf
+  proeflesOnline  Boolean  @default(true) // bezoekers plannen zelf een proefles
+  zelfPlannen     Boolean  @default(false) // leerlingen plannen zelf lessen in vrije tijden
+  online          Boolean  @default(false) // website publiek; anders alleen zichtbaar voor de eigenaar
+  // Teksten en keuzes van de website (lib/rijschool/website.ts): kop, intro,
+  // werkgebied, slagingspercentage, sterke punten, veelgestelde vragen.
+  website         Json     @default("{}")
+  // Stripe Connect: lesgeld gaat rechtstreeks naar de rijschool, niet via ZekerFlex.
+  stripeAccountId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  instructeurs RijschoolInstructeur[]
+  voertuigen   RijschoolVoertuig[]
+  producten    RijschoolProduct[]
+  leerlingen   RijschoolLeerling[]
+  lessen       RijschoolLes[]
+  betalingen   RijschoolBetaling[]
+}
+
+model RijschoolInstructeur {
+  id              String    @id @default(cuid())
+  rijschoolId     String
+  rijschool       Rijschool @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  naam            String
+  email           String
+  telefoon        String    @default("")
+  bio             String    @default("")
+  categorieen     String[]  @default(["B"])
+  // Vaste werktijden: [{ dag: 1..7 (ma..zo), van: "08:00", tot: "17:00" }]
+  beschikbaarheid Json      @default("[]")
+  kleur           String    @default("#1D4E89")
+  actief          Boolean   @default(true)
+  wachtwoordHash  String?
+  uitnodigingHash String?   @unique // sha256 van de link waarmee je een wachtwoord kiest
+  uitnodigingTot  DateTime?
+  laatstIngelogd  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  leerlingen RijschoolLeerling[]
+  lessen     RijschoolLes[]
+
+  @@unique([rijschoolId, email])
+}
+
+model RijschoolVoertuig {
+  id          String    @id @default(cuid())
+  rijschoolId String
+  rijschool   Rijschool @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  naam        String // "Volkswagen Golf"
+  kenteken    String    @default("")
+  automaat    Boolean   @default(false)
+  categorie   String    @default("B")
+  actief      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  lessen RijschoolLes[]
+
+  @@index([rijschoolId])
+}
+
+model RijschoolProduct {
+  id           String    @id @default(cuid())
+  rijschoolId  String
+  rijschool    Rijschool @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  naam         String
+  omschrijving String    @default("")
+  soort        String    @default("PAKKET") // LES | PAKKET | EXAMEN | PROEFLES | OVERIG
+  prijsCent    Int
+  lessen       Int       @default(0) // zoveel lessen tegoed na betaling
+  lesMinuten   Int       @default(60)
+  examen       Boolean   @default(false) // inclusief praktijkexamen
+  zichtbaar    Boolean   @default(true) // te koop op de website en in de leerling-app
+  populair     Boolean   @default(false)
+  volgorde     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  betalingen RijschoolBetaling[]
+
+  @@index([rijschoolId])
+}
+
+model RijschoolLeerling {
+  id              String                  @id @default(cuid())
+  rijschoolId     String
+  rijschool       Rijschool               @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  instructeurId   String?
+  instructeur     RijschoolInstructeur?   @relation(fields: [instructeurId], references: [id], onDelete: SetNull)
+  naam            String
+  email           String
+  telefoon        String                  @default("")
+  adres           String                  @default("") // standaard ophaaladres
+  geboortedatum   DateTime?
+  automaat        Boolean                 @default(false)
+  status          RijschoolLeerlingStatus @default(AANMELDING)
+  theorieGehaald  Boolean                 @default(false)
+  examenDatum     DateTime?
+  notitie         String                  @default("") // alleen voor de rijschool
+  // Theorie oefenen: per onderdeel de beste ronde { [onderdeel]: { goed, totaal, at } }
+  theorie         Json                    @default("{}")
+  wachtwoordHash  String?
+  uitnodigingHash String?                 @unique
+  uitnodigingTot  DateTime?
+  laatstIngelogd  DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  lessen     RijschoolLes[]
+  tegoed     RijschoolTegoed[]
+  betalingen RijschoolBetaling[]
+
+  @@unique([rijschoolId, email])
+  @@index([rijschoolId, status])
+}
+
+model RijschoolLes {
+  id             String               @id @default(cuid())
+  rijschoolId    String
+  rijschool      Rijschool            @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  leerlingId     String?
+  leerling       RijschoolLeerling?   @relation(fields: [leerlingId], references: [id], onDelete: Cascade)
+  instructeurId  String
+  instructeur    RijschoolInstructeur @relation(fields: [instructeurId], references: [id], onDelete: Cascade)
+  voertuigId     String?
+  voertuig       RijschoolVoertuig?   @relation(fields: [voertuigId], references: [id], onDelete: SetNull)
+  soort          RijschoolLesSoort    @default(LES)
+  status         RijschoolLesStatus   @default(GEPLAND)
+  start          DateTime
+  eind           DateTime
+  ophaaladres    String               @default("")
+  // Leskaart: per onderdeel (lib/rijschool/leskaart.ts) een score 1–5 en een notitie.
+  beoordeling    Json                 @default("{}")
+  verslag        String               @default("") // zichtbaar voor de leerling
+  huiswerk       String[]             @default([]) // onderdelen om thuis voor te bereiden
+  interneNotitie String               @default("")
+  gestartOm      DateTime?
+  afgerondOm     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  tegoed RijschoolTegoed?
+
+  @@index([rijschoolId, start])
+  @@index([instructeurId, start])
+  @@index([leerlingId, start])
+}
+
+// Lestegoed in minuten: + bij een betaald pakket of handmatig, − voor een
+// gereden les. Het saldo is de som; lesId en betalingId zijn uniek, zodat een
+// les of betaling nooit twee keer telt.
+model RijschoolTegoed {
+  id           String             @id @default(cuid())
+  leerlingId   String
+  leerling     RijschoolLeerling  @relation(fields: [leerlingId], references: [id], onDelete: Cascade)
+  minuten      Int
+  omschrijving String
+  lesId        String?            @unique
+  les          RijschoolLes?      @relation(fields: [lesId], references: [id], onDelete: SetNull)
+  betalingId   String?            @unique
+  betaling     RijschoolBetaling? @relation(fields: [betalingId], references: [id], onDelete: SetNull)
+  door         String             @default("") // naam van wie het boekte; leeg = automatisch
+  createdAt    DateTime           @default(now())
+
+  @@index([leerlingId])
+}
+
+model RijschoolBetaling {
+  id              String                  @id @default(cuid())
+  rijschoolId     String
+  rijschool       Rijschool               @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  leerlingId      String
+  leerling        RijschoolLeerling       @relation(fields: [leerlingId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         RijschoolProduct?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  omschrijving    String
+  bedragCent      Int
+  status          RijschoolBetalingStatus @default(OPEN)
+  methode         RijschoolBetaalMethode?
+  stripeSessionId String?                 @unique
+  betaaldOm       DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  tegoed RijschoolTegoed?
+
+  @@index([rijschoolId, status])
+  @@index([leerlingId])
 }

@@ -35,6 +35,18 @@ export default async function WebsiteBeheerPage() {
         </span>
         <span className="btn-primary">Website bouwen</span>
       </Link>
+      <Link href="/werkgever/rijschool" className="card mb-6 flex flex-wrap items-center gap-4 p-5 transition hover:border-brand-300">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-ink text-white" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M5 16v-4.5l1.8-4.6a2 2 0 0 1 1.9-1.3h6.6a2 2 0 0 1 1.9 1.3l1.8 4.6V16M3 16h18v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.5H7v.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg font-bold text-ink">Ben je een rijschool?</span>
+          <span className="block text-sm text-neutralx-600">Website met proeflesplanner, een app voor je leerlingen en instructeurs, pakketten en tegoed. Klaar voor gebruik.</span>
+        </span>
+        <span className="btn-ghost">Rijschool-pakket</span>
+      </Link>
       <WebsiteManage
         initial={{
           status: record?.status ?? null,

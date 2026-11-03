@@ -221,6 +221,16 @@ export function IHelp(_: P) {
     </svg>
   );
 }
+export function ICar(_: P) {
+  return (
+    <svg {...s}>
+      <path d="M5 16V11.5l1.8-4.6A2 2 0 0 1 8.7 5.6h6.6a2 2 0 0 1 1.9 1.3l1.8 4.6V16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M3 16h18v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.5H7v.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2ZM5 11.5h14" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="7.5" cy="14" r="0.6" fill="currentColor" stroke="currentColor" />
+      <circle cx="16.5" cy="14" r="0.6" fill="currentColor" stroke="currentColor" />
+    </svg>
+  );
+}
 export function ISettings(_: P) {
   return (
     <svg {...s}>

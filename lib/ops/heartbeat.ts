@@ -44,6 +44,7 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "site-uptime", label: "Uptime-bewaking klantsites", maxAgeHours: 2 },
   { job: "site-weekly-check", label: "Wekelijkse check klantsites", maxAgeHours: 24 * 8 },
   { job: "site-backups", label: "Back-ups klantsites", maxAgeHours: 26 },
+  { job: "rijschool-herinneringen", label: "Rijschool: lesherinneringen", maxAgeHours: 26 },
 ];
 
 interface Beat {
