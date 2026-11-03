@@ -62,6 +62,10 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
       <AlleenOpSite>
         <div className="bg-schw-sun px-4 py-2 text-center text-xs font-semibold text-schw-night sm:text-sm">
           Ontwerpvoorstel van ZekerFlex. Dit is niet de officiële website van Het Schwarzwald.{" "}
+          <Link href={`${BASE}/rondleiding`} className="underline underline-offset-2">
+            Bekijk wat deze site kan
+          </Link>
+          {" · "}
           <a href="https://www.hetschwarzwald.nl/" className="underline underline-offset-2" rel="noopener noreferrer">
             Naar de huidige site
           </a>
