@@ -252,7 +252,8 @@ services:
     # gradle krijgt -Xmx1536m (gradle.properties van Bubblewrap); één bouw tegelijk
     mem_limit: 2560m
     cpus: 2
-    networks: [internal]
+    # niet op internal: een bouw met code van derden (gradle) kan zo niet bij de echte database of Redis
+    networks: [bouwer-toegang]
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
