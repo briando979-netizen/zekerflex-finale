@@ -35,6 +35,7 @@ vi.mock("@/lib/prisma", () => ({
         if (e === "werker@example.nl") return { memberships: [] };
         return null;
       },
+      findUnique: async ({ where }: { where: { id: string } }) => ({ "u-sales": { email: "verkoper@zekerflex.test" }, "u-admin": { email: "beheer@zekerflex.test" } })[where.id] ?? null,
     },
     salesLead: {
       findUnique: async ({ where }: { where: { id: string } }) => (where.id === lead.id ? { ...lead } : null),
@@ -471,6 +472,22 @@ describe("het openbare ja-formulier", () => {
     await engine.acceptWebsiteProposal(r.id, { ...ja, email: "jan@devries.test" });
     expect(alertOwner).toHaveBeenCalledTimes(2);
     expect(sendUserPush).toHaveBeenCalledTimes(1);
+  });
+
+  it("zonder werkend toestel gaat hetzelfde seintje per mail naar wie het maakte (alleen intern)", async () => {
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    sendUserPush.mockResolvedValueOnce(0);
+    await engine.recordProposalView(p.id);
+    expect(sendMail).toHaveBeenCalledTimes(1);
+    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
+      to: "verkoper@zekerflex.test",
+      subject: "Websitevoorstel geopend",
+      text: expect.stringMatching(new RegExp(`^${p.bedrijf} opende je websitevoorstel om .*/sales/websitevoorstellen`, "s")),
+    }));
+    // with a working device: only the push
+    const q = await engine.createWebsiteProposal({ url: "bakkerijmodern.nl" }, BY);
+    await engine.recordProposalView(q.id);
+    expect(sendMail).toHaveBeenCalledTimes(1);
   });
 
   it("een ingevuld verborgen veld (een robot) doet niets", async () => {

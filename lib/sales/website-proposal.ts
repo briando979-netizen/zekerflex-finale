@@ -7,6 +7,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { alertOwner } from "@/lib/ops/alert";
+import { sendMail } from "@/lib/mail";
 import { sendUserPush } from "@/lib/notifications/push";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -415,21 +416,33 @@ export async function pushReminder(r: ProposalReminder): Promise<void> {
 
 /**
  * A push to whoever made the proposal, opening their own list (Admin or Sales).
- * `skipAdmins` when platform admins already hear it from alertOwner.
+ * `skipAdmins` when platform admins already hear it from alertOwner. Without a
+ * working device (the owner had none after the VAPID repair of 3 Nov) the same
+ * message goes by mail, to that staff member only, so it isn't lost.
  */
 async function pushMaker(p: WebsiteProposal, push: { title: string; body: string }, opts: { skipAdmins?: boolean } = {}): Promise<void> {
   if (!p.createdById) return;
   try {
     const admin = (await prisma.membership.count({ where: { userId: p.createdById, role: "PLATFORM_ADMIN" } })) > 0;
     if (admin && opts.skipAdmins) return;
-    await sendUserPush([p.createdById], {
-      ...push,
-      data: { type: "SALES", url: admin ? "/admin/websitevoorstellen" : "/sales/websitevoorstellen", tag: `wvoorstel-${p.id}` },
-      ttlSeconds: 6 * 3600,
-    });
+    const url = admin ? "/admin/websitevoorstellen" : "/sales/websitevoorstellen";
+    const delivered = await sendUserPush([p.createdById], { ...push, data: { type: "SALES", url, tag: `wvoorstel-${p.id}` }, ttlSeconds: 6 * 3600 });
+    if (delivered === 0) await mailMaker(p.createdById, push, url);
   } catch (err) {
     logger.warn("website proposal push failed", { id: p.id, error: (err as Error).message });
   }
+}
+
+async function mailMaker(userId: string, push: { title: string; body: string }, url: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!user?.email) return;
+  await sendMail({
+    to: user.email,
+    kind: "websitevoorstel-intern",
+    // the push title starts with an emoji; a mail subject reads better without it
+    subject: push.title.replace(/^[^\p{L}]+/u, "").trim() || "Websitevoorstel",
+    text: `${push.body}\n\nOpen je voorstellen: ${env.APP_BASE_URL.replace(/\/+$/, "")}${url}\n\nJe krijgt dit per mail omdat er op geen van je toestellen meldingen van ZekerFlex aanstaan. Zet ze aan met het belletje in ZekerFlex, dan komt het voortaan als pushmelding.`,
+  });
 }
 
 export type ProposalAction = "verstuurd" | "afgewezen" | "ingetrokken" | "verlengen" | "plek-vrijgeven";
