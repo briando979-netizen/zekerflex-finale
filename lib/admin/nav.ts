@@ -136,6 +136,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/beveiliging", label: "Beveiliging" },
       { href: "/admin/hosting", label: "Hosting & domein" },
       { href: "/admin/integraties", label: "API & integraties" },
+      { href: "/admin/google-play", label: "Google Play" },
       { href: "/admin/dev", label: "Terminal" },
       { href: "/admin/beheer", label: "Instellingen" },
     ],

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
 import { huidigeLeerling, isEigenaar } from "@/lib/rijschool/accounts";
 import { websiteVan, whatsappNummer } from "@/lib/rijschool/website";
+import { prisma } from "@/lib/prisma";
+import { winkelLink } from "@/lib/play/api";
 
 // De publieke website van een rijschool: kop met menu, voettekst met de
 // wettelijk verplichte gegevens (adres, KVK). Alleen zichtbaar als de website
@@ -15,6 +17,8 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
   const eigenaar = await isEigenaar(r);
   if (!r.online && !eigenaar) notFound();
   const leerling = await huidigeLeerling(r).catch(() => null);
+  // de eigen Android-app, zodra die openbaar in de Play Store staat (lib/rijschool/app)
+  const playApp = await prisma.rijschoolApp.findUnique({ where: { rijschoolId: r.id }, select: { pakketnaam: true, liveSinds: true } }).catch(() => null);
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
   const basis = `/rijschool/${r.slug}`;
@@ -99,6 +103,21 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
                 Inloggen in de app
               </Link>
             </p>
+            <p>
+              <Link href={`${basis}/privacy`} className="hover:underline">
+                Privacy
+              </Link>
+            </p>
+            {playApp?.liveSinds && (
+              <p className="mt-3">
+                <a href={winkelLink(playApp.pakketnaam)} rel="noopener" className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden fill="currentColor">
+                    <path d="M6 4l14 8-14 8z" />
+                  </svg>
+                  Download in Google Play
+                </a>
+              </p>
+            )}
             <p className="mt-3 text-xs text-neutralx-500">
               Website en app via{" "}
               <a href="https://zekerflex.com" className="hover:underline">

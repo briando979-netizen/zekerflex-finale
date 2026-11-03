@@ -20,6 +20,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     appleWebApp: { capable: true, title: r.naam, statusBarStyle: "default" },
     robots: r.online ? { index: true, follow: true } : { index: false, follow: false },
     alternates: { canonical: `/rijschool/${r.slug}` },
+    // eigen app op het beginscherm: naam, icoon en kleur van de rijschool
+    manifest: `/rijschool/${r.slug}/manifest.webmanifest`,
+    icons: { apple: `/rijschool/${r.slug}/app-icoon.png?maat=192` },
     openGraph: { title: r.naam, siteName: r.naam, type: "website", locale: "nl_NL" },
   };
 }

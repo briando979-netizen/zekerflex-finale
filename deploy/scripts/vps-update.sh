@@ -47,6 +47,15 @@ for i in 1 2 3; do
         sudo $C restart bouwer && echo "$BOUWER_HASH" > .zf-bouwer.hash
       fi
     fi
+    # De Android-bouwer (rijschool-apps, deploy/android-bouwer): zelfde aanpak, maar
+    # alleen als hij geïnstalleerd is (de image bouwen duurt lang; dat doet installeer.sh).
+    if sudo docker image inspect zekerflex-android-bouwer:latest > /dev/null 2>&1; then
+      sudo $C up -d --no-build android-bouwer
+      ANDROID_HASH="$(cat deploy/android-bouwer/*.mjs | tr -d '\r' | sha256sum)"
+      if [ "$ANDROID_HASH" != "$(cat .zf-android-bouwer.hash 2>/dev/null)" ]; then
+        sudo $C restart android-bouwer && echo "$ANDROID_HASH" > .zf-android-bouwer.hash
+      fi
+    fi
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
     sudo $C restart cron
     # Caddy: eerst de nieuwe Caddyfile valideren in een losse container, want een

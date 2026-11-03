@@ -1,0 +1,9 @@
+{
+  "name": "zekerflex-android-bouwer",
+  "private": true,
+  "type": "module",
+  "description": "Bouwt de Android-apps (Trusted Web Activity) van rijscholen; zie server.mjs.",
+  "dependencies": {
+    "@bubblewrap/core": "1.27.0"
+  }
+}

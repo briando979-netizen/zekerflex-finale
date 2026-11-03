@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { getReminderSettings } from "@/lib/billing/reminders";
 import { readBackupReport, type BackupReport } from "@/lib/ops/backup";
 import { listModels3D } from "@/lib/shop/model3d";
+import { playIngesteld } from "@/lib/play/account";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -154,7 +155,7 @@ const hasVideos = () => {
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
-  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches] = await Promise.all([
+  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling] = await Promise.all([
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
@@ -167,6 +168,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     googleDnsVerified(base),
     testAccountCount(),
     vagueBranchCities(),
+    playIngesteld().catch(() => false),
   ]);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
@@ -369,6 +371,18 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("play-store-app"),
+    },
+    {
+      id: "play-rijschool-apps",
+      group: "Vindbaarheid & app",
+      title: "Google Play koppelen voor de apps van rijscholen",
+      why: "Rijscholen zetten hun eigen app in hun eigen Google Play-account. ZekerFlex beheert die apps daarna (testen, indienen, winkelpagina) met één serviceaccount van Google. Zonder dat account kunnen rijscholen hun app wel laten bouwen, maar niet via het dashboard indienen.",
+      how: [
+        "Ga naar Admin → Google Play en volg de 5 stappen: Google Play Android Developer API aanzetten, serviceaccount maken, JSON-sleutel downloaden en plakken.",
+        "Deze taak vinkt zichzelf af zodra de sleutel bij Google is gecontroleerd en opgeslagen.",
+      ],
+      auto: true,
+      done: playKoppeling,
     },
     {
       id: "vacaturefeed",

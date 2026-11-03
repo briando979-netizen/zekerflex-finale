@@ -2253,6 +2253,7 @@ model Rijschool {
   leerlingen   RijschoolLeerling[]
   lessen       RijschoolLes[]
   betalingen   RijschoolBetaling[]
+  app          RijschoolApp?
 }
 
 model RijschoolInstructeur {
@@ -2424,4 +2425,32 @@ model RijschoolBetaling {
 
   @@index([rijschoolId, status])
   @@index([leerlingId])
+}
+
+// De Android-app van een rijschool, in haar eigen Google Play-account
+// (lib/rijschool/app). ZekerFlex bouwt hem (deploy/android-bouwer) en beheert
+// hem daarna via de Google Play-API: de rijschool nodigt het serviceaccount
+// van ZekerFlex uit in haar Play Console.
+model RijschoolApp {
+  id                 String    @id @default(cuid())
+  rijschoolId        String    @unique
+  rijschool          Rijschool @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  pakketnaam         String    @unique // ligt vast zodra de eerste versie in Google Play staat
+  appNaam            String
+  korteTekst         String    @default("") // winkelpagina, max. 80 tekens
+  langeTekst         String    @default("") // winkelpagina, max. 4000 tekens
+  versie             Int       @default(0) // versionCode van de laatst gebouwde versie
+  sleutel            String? // uploadsleutel (keystore + wachtwoord), verzegeld (lib/security/sealed-secret)
+  uploadVingerafdruk String? // SHA-256 van de uploadsleutel
+  playVingerafdruk   String? // SHA-256 van de ondertekensleutel van Google, voor /.well-known/assetlinks.json
+  aabUploadId        String? // de laatst gebouwde .aab, om de eerste keer zelf te uploaden
+  testersGroep       String    @default("") // Google Group met de testers van de gesloten test
+  gekoppeldOp        DateTime? // ZekerFlex kon de app in Google Play openen
+  liveSinds          DateTime? // openbaar in de Play Store
+  taakFase           String    @default("") // "", "bouwt", "verwerkt" of "fout" (lib/rijschool/app/taak.ts)
+  taak               Json      @default("{}") // de lopende bouw of indiening
+  sporen             Json      @default("{}") // laatst gelezen stand per spoor uit Google Play
+  logboek            Json      @default("[]") // wat er gebeurde, nieuwste eerst
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }

@@ -230,6 +230,33 @@ services:
     mem_limit: 128m
     networks: [bouwer]
 
+  # Android-bouwer: bouwt de Android-app (.aab) van een rijschool (deploy/android-bouwer,
+  # lib/rijschool/app). Geen database en geen geheimen: de uploadsleutel geeft de app
+  # per opdracht mee. Alleen intern bereikbaar, met ANDROID_BOUWER_TOKEN. De code komt
+  # via een map-mount; Gradle en de Android-SDK zitten in de image (opgewarmd).
+  # Aanzetten (eenmalig): sudo bash deploy/android-bouwer/installeer.sh
+  android-bouwer:
+    build:
+      context: deploy/android-bouwer
+    image: zekerflex-android-bouwer:latest
+    restart: unless-stopped
+    environment:
+      ANDROID_BOUWER_TOKEN: ${ANDROID_BOUWER_TOKEN:-}
+    volumes:
+      - ./deploy/android-bouwer:/opt/android-bouwer/code:ro
+      - android-bouwer-werk:/werk
+      # Gradle-cache: de eerste keer gevuld uit de image, daarna blijft hij staan
+      - android-bouwer-gradle:/opt/gradle
+      # de uitrol-vergrendeling: gradle wacht tot een uitrol klaar is
+      - ./.zf-slot:/zf-slot:ro
+    # gradle krijgt -Xmx1536m (gradle.properties van Bubblewrap); één bouw tegelijk
+    mem_limit: 2560m
+    cpus: 2
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 networks:
   internal:
     driver: bridge
@@ -249,3 +276,5 @@ volumes:
   ollama-models:
   bouwer-werk:
   bouwer-db:
+  android-bouwer-werk:
+  android-bouwer-gradle:

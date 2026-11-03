@@ -155,6 +155,28 @@ export function herinneringMail(r: School & Pick<Rijschool, "annuleerUren">, lee
   );
 }
 
+/** Uitnodiging om de Android-app te testen (gesloten test in Google Play). */
+export function testAppMail(r: School, ontvanger: { naam: string; email: string }, links: { groep: string | null; aanmelden: string; winkel: string }): MailInput {
+  const stappen = [
+    ...(links.groep ? [{ tekst: "Word lid van de testgroep van Google (met hetzelfde Google-account als op je telefoon).", link: links.groep, label: "Lid worden" }] : []),
+    { tekst: "Meld je aan als tester van de app.", link: links.aanmelden, label: "Aanmelden als tester" },
+    { tekst: "Installeer de app via Google Play op je Android-telefoon.", link: links.winkel, label: "Naar Google Play" },
+  ];
+  return mail(
+    r,
+    ontvanger.email,
+    `Test de nieuwe app van ${r.naam}`,
+    `Hoi ${voornaam(ontvanger.naam)},\n\n${r.naam} heeft een eigen app voor Android en zoekt testers. Doe je mee? Het kost je een paar minuten. Google vraagt om de app twee weken op je telefoon te houden en af en toe te openen.\n\n${stappen.map((s, i) => `${i + 1}. ${s.tekst}\n${s.link}`).join("\n\n")}\n\nHeb je een iPhone? Dan gebruik je gewoon de app in je browser: ${siteUrl(r, "/leerling")}`,
+    omlijsting(
+      r,
+      "Test onze nieuwe app",
+      `${alinea(`Hoi ${esc(voornaam(ontvanger.naam))}, ${esc(r.naam)} heeft een eigen app voor Android en zoekt testers. Doe je mee? Het kost je een paar minuten. Google vraagt om de app twee weken op je telefoon te houden en af en toe te openen.`)}
+       ${stappen.map((s, i) => `${alinea(`<strong>${i + 1}.</strong> ${esc(s.tekst)}`)}${knop(r, s.link, s.label)}`).join("")}
+       <p style="margin:0;font-size:12px;color:#667469">Heb je een iPhone? Dan gebruik je gewoon de app in je browser: <a href="${esc(siteUrl(r, "/leerling"))}">${esc(siteUrl(r, "/leerling"))}</a></p>`,
+    ),
+  );
+}
+
 export async function verstuur(m: MailInput | null): Promise<boolean> {
   if (!m || !m.to) return false;
   try {
