@@ -22,6 +22,7 @@ const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("openingstijden"), props: z.object({ kop, regels: z.array(z.object({ dag: short, tijd: short })).max(10) }) }),
   z.object({ id: z.string().max(40), type: z.literal("cta"), props: z.object({ kop, tekst, knop: short, knopLink: link }) }),
   z.object({ id: z.string().max(40), type: z.literal("contact"), props: z.object({ kop, tekst, formulier: z.boolean() }) }),
+  z.object({ id: z.string().max(40), type: z.literal("vacatures"), props: z.object({ kop, tekst, aantal: z.number().int().min(1).max(12) }) }),
 ]);
 
 const page = z.object({

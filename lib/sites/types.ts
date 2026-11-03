@@ -16,7 +16,8 @@ export type BlockType =
   | "faq"
   | "openingstijden"
   | "cta"
-  | "contact";
+  | "contact"
+  | "vacatures";
 
 export interface Item {
   titel: string;
@@ -34,6 +35,21 @@ export interface BlockProps {
   openingstijden: { kop: string; regels: { dag: string; tijd: string }[] };
   cta: { kop: string; tekst: string; knop: string; knopLink: string };
   contact: { kop: string; tekst: string; formulier: boolean };
+  /** the company's open shifts on ZekerFlex, filled in live when a visitor opens the page */
+  vacatures: { kop: string; tekst: string; aantal: number };
+}
+
+/** One open shift as a company's own website shows it (lib/sites/vacancies.ts fills these in). */
+export interface SiteVacancy {
+  id: string;
+  titel: string;
+  /** ISO times */
+  start: string;
+  eind: string;
+  plaats: string;
+  uurloonCents: number;
+  /** where to react: the shift's page on ZekerFlex */
+  url: string;
 }
 
 export type Block = { [T in BlockType]: { id: string; type: T; props: BlockProps[T] } }[BlockType];
@@ -168,6 +184,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   openingstijden: "Openingstijden",
   cta: "Oproep met knop",
   contact: "Contact en formulier",
+  vacatures: "Vacatures (je open diensten)",
 };
 
 /** A fresh block of a type, with sensible example content. */
@@ -193,6 +210,8 @@ export function newBlock(type: BlockType, id: string): Block {
       return { id, type, props: { kop: "Klaar om te beginnen?", tekst: "Neem vandaag nog contact op.", knop: "Neem contact op", knopLink: "contact" } };
     case "contact":
       return { id, type, props: { kop: "Contact", tekst: "Stuur ons een bericht; we reageren binnen één werkdag.", formulier: true } };
+    case "vacatures":
+      return { id, type, props: { kop: "Werken bij ons", tekst: "Kom ons team versterken. Kies een dienst die bij je past en reageer direct via ZekerFlex.", aantal: 6 } };
   }
 }
 

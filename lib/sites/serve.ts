@@ -5,6 +5,8 @@ import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
 import { renderPage, renderRobots, renderSitemap, renderSystemPage, siteCss, type RenderOptions } from "@/lib/sites/render";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
+import { siteVacancies, vacancyCount } from "@/lib/sites/vacancies";
+import type { Page } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Serving a published site — shared by /site/<naam>/… (on zekerflex.com, kept
@@ -42,10 +44,16 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   const opts: ServeOptions = snapshot.voorstel ? { ...given, noindex: true } : given;
   if (proposalExpired(snapshot)) return siteText("Dit ontwerpvoorstel is verlopen. Wil je het opnieuw zien? Neem contact op met ZekerFlex.", 410, opts);
   const html = (body: string, status = 200) => new Response(body, { status, headers: siteHeaders("text/html; charset=utf-8", "public, max-age=60", opts) });
+  // a vacatures block shows the company's open shifts live; an example or a proposal has none and shows an example
+  const withVacancies = async (page: Page): Promise<ServeOptions> => {
+    const n = vacancyCount(page);
+    if (!n || snapshot.voorbeeld || snapshot.voorstel) return opts;
+    return { ...opts, vacatures: await siteVacancies(snapshot.tenantId, n) };
+  };
   const [first, second, ...rest] = path;
   if (!first) {
     const home = snapshot.pages.find((p) => p.slug === "");
-    return home ? html(renderPage(snapshot, home, opts)) : siteText("Deze website bestaat niet (meer).", 404, opts);
+    return home ? html(renderPage(snapshot, home, await withVacancies(home))) : siteText("Deze website bestaat niet (meer).", 404, opts);
   }
   if (first === "assets" && second === "site.css" && rest.length === 0) {
     return new Response(siteCss(snapshot.theme), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
@@ -61,7 +69,7 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   if (first === "robots.txt" && !second) return new Response(renderRobots(opts), { headers: siteHeaders("text/plain; charset=utf-8", "public, max-age=300", opts) });
   if (!second) {
     const page = snapshot.pages.find((p) => p.slug === first);
-    if (page) return html(renderPage(snapshot, page, opts));
+    if (page) return html(renderPage(snapshot, page, await withVacancies(page)));
     if (first === "privacy" || first === "bedankt") return html(renderSystemPage(snapshot, first, opts));
   }
   return html(renderSystemPage(snapshot, "404", opts), 404);

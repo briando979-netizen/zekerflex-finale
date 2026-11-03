@@ -1,5 +1,5 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type Theme } from "@/lib/sites/types";
+import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Sites renderer: site data → HTML pages + one stylesheet. Pure, so
@@ -25,6 +25,8 @@ export interface RenderOptions {
   preview?: { mediaUrl: (file: string) => string } | undefined;
   /** keep out of search engines (no own domain yet) */
   noindex?: boolean | undefined;
+  /** the company's open shifts, loaded live for a page with a vacatures block; absent = show an example */
+  vacatures?: SiteVacancy[] | undefined;
 }
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -131,6 +133,7 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 :focus-visible{outline:3px solid var(--a);outline-offset:3px}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
 .logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
+.vac{display:flex;flex-direction:column;gap:6px}.vac .meta{color:var(--mute);font-size:.95rem}.vac .btn{padding:10px 18px;font-size:.9rem}
 .wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}${luxe}`;
 }
 
@@ -174,6 +177,8 @@ interface Ctx {
   voorstel: SiteProposalMark | null;
   /** the photo shown as logo in the header */
   logo: Media | undefined;
+  /** live open shifts for a vacatures block; undefined in the builder, an example or a proposal */
+  vacatures: SiteVacancy[] | undefined;
   /** where "make your own website" points, for the example banner */
   origin: string;
 }
@@ -255,7 +260,45 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       ].filter(Boolean);
       return `<section id="contact"${alt}><div class="wrap contact-grid"><div><h2>${esc(b.props.kop)}</h2>${paras(b.props.tekst)}${form}</div><div><h3>${esc(c.naam)}</h3><ul class="facts">${facts.join("")}</ul></div></div></section>`;
     }
+    case "vacatures": {
+      const p = b.props;
+      const live = ctx.vacatures;
+      const list = (live ?? exampleVacancies()).slice(0, Math.max(1, Math.min(12, p.aantal)));
+      const cards = list
+        .map(
+          (v) =>
+            `<div class="card vac"><h3>${esc(v.titel)}</h3><p class="meta">${esc(vacancyWhen(v))}<br>${esc(v.plaats)} · ${esc(euroPerHour(v.uurloonCents))}</p><p style="margin:0"><a class="btn" href="${esc(live ? href(ctx, v.url) : "#")}"${live ? ' rel="noopener"' : ""}>Reageer via ZekerFlex</a></p></div>`,
+        )
+        .join("");
+      const body = live && live.length === 0
+        ? `<p class="small">Er staan nu geen diensten open. Kijk later nog eens, of <a href="${esc(href(ctx, "contact"))}">neem contact op</a>.</p>`
+        : `<div class="cards">${cards}</div>${live ? "" : `<p class="small">Voorbeeld: op je website staan hier vanzelf je open diensten op ZekerFlex.</p>`}`;
+      return `<section${alt}><div class="wrap"><h2>${esc(p.kop)}</h2>${paras(p.tekst)}${body}</div></section>`;
+    }
   }
+}
+
+/** Shown in the builder, an example site or a proposal, where there are no real shifts: always a few days ahead. */
+function exampleVacancies(now = Date.now()): SiteVacancy[] {
+  const at = (days: number, hourUtc: number, minute = 0) => {
+    const d = new Date(now + days * 86_400_000);
+    d.setUTCHours(hourUtc, minute, 0, 0);
+    return d.toISOString();
+  };
+  return [
+    { id: "voorbeeld-1", titel: "Medewerker bediening (voorbeeld)", start: at(3, 16), eind: at(3, 22), plaats: "Zwolle", uurloonCents: 1650, url: "#" },
+    { id: "voorbeeld-2", titel: "Magazijnmedewerker (voorbeeld)", start: at(5, 6), eind: at(5, 14, 30), plaats: "Zwolle", uurloonCents: 1525, url: "#" },
+  ];
+}
+
+const euroPerHour = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")} per uur`;
+
+/** "za 14 nov · 17:00 – 23:00" in Dutch time, whatever the server's clock is. */
+export function vacancyWhen(v: Pick<SiteVacancy, "start" | "eind">): string {
+  const tz = { timeZone: "Europe/Amsterdam" } as const;
+  const day = new Date(v.start).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short", ...tz });
+  const time = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", ...tz });
+  return `${day} · ${time(v.start)} – ${time(v.eind)}`;
 }
 
 function header(ctx: Ctx, current: Page): string {
@@ -341,6 +384,7 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     voorbeeld: Boolean(site.voorbeeld),
     voorstel: site.voorstel ?? null,
     logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
+    vacatures: opts.vacatures,
     origin: opts.origin,
   };
 }

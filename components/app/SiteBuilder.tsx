@@ -1030,6 +1030,25 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         </>
       );
       break;
+    case "vacatures":
+      fields = (
+        <>
+          {kop}
+          {tekst(block.props.tekst, (v) => onChange({ ...block, props: { ...block.props, tekst: v } }))}
+          <Field label="Hoeveel diensten tonen (1 tot 12)">
+            <input
+              className="field-input"
+              type="number"
+              min={1}
+              max={12}
+              value={block.props.aantal}
+              onChange={(e) => onChange({ ...block, props: { ...block.props, aantal: Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)) } })}
+            />
+          </Field>
+          <p className="text-xs text-neutralx-500">Op je website staan hier vanzelf je open diensten op ZekerFlex, met een knop om te reageren. In dit voorbeeld zie je twee voorbeelddiensten.</p>
+        </>
+      );
+      break;
   }
   return (
     <div className="space-y-3">

@@ -74,7 +74,7 @@ const toPublic = (s: Row): PublicShift => ({
   skill: s.requiredSkill?.name ?? null,
 });
 
-export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number } = {}): Promise<PublicShift[]> {
+export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number; tenantId?: string } = {}): Promise<PublicShift[]> {
   const near = opts.near;
   const latDelta = near ? near.km / 110.5 : 0;
   const maxAbsLat = near ? Math.min(89.9, Math.abs(near.lat) + latDelta) : 0;
@@ -84,10 +84,14 @@ export async function publicOpenShifts(opts: { near?: { lat: number; lng: number
       status: { in: [...OPEN] },
       visibility: "PUBLIC",
       startsAt: { gt: new Date() },
-      ...(near ? {
+      ...(near || opts.tenantId ? {
         branch: {
-          latitude: { gte: near.lat - latDelta, lte: near.lat + latDelta },
-          longitude: { gte: near.lng - lngDelta, lte: near.lng + lngDelta },
+          // one company's shifts, for the vacatures block on its own website (lib/sites/vacancies.ts)
+          ...(opts.tenantId ? { tenantId: opts.tenantId } : {}),
+          ...(near ? {
+            latitude: { gte: near.lat - latDelta, lte: near.lat + latDelta },
+            longitude: { gte: near.lng - lngDelta, lte: near.lng + lngDelta },
+          } : {}),
         },
       } : {}),
     },

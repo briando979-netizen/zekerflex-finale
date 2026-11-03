@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, socialName, textOn, waNumber, type RenderOptions } from "@/lib/sites/render";
+import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, socialName, textOn, vacancyWhen, waNumber, type RenderOptions } from "@/lib/sites/render";
+import { siteSaveSchema } from "@/lib/sites/schema";
 import { SECTOR_TEMPLATES, newBlock, pagesFromTemplate, slugify, type Company, type SiteDoc } from "@/lib/sites/types";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
@@ -197,6 +198,51 @@ describe("luxe stijl, logo, WhatsApp en sociale media", () => {
     expect(html).not.toContain("javascript:");
     expect(socialName("https://x.com/bakker")).toBe("X");
     expect(socialName("https://www.bakkerij.nl/blog")).toBe("bakkerij.nl");
+  });
+});
+
+describe("vacatureblok: open diensten van het bedrijf", () => {
+  const withBlock = (aantal = 6) => {
+    const s = site();
+    s.pages[0]!.blocks.push(newBlock("vacatures", "bvac00001"));
+    const b = s.pages[0]!.blocks.at(-1)!;
+    if (b.type === "vacatures") b.props.aantal = aantal;
+    return s;
+  };
+  const live = [
+    { id: "shift1", titel: 'Kok <b>"spoed"</b>', start: "2026-11-14T16:00:00.000Z", eind: "2026-11-14T22:00:00.000Z", plaats: "Rijssen", uurloonCents: 1875, url: "https://zekerflex.com/klussen/shift1" },
+    { id: "shift2", titel: "Afwasser", start: "2026-11-15T09:00:00.000Z", eind: "2026-11-15T13:30:00.000Z", plaats: "Rijssen", uurloonCents: 1450, url: "https://zekerflex.com/klussen/shift2" },
+  ];
+
+  it("toont live de echte diensten, in Nederlandse tijd, met een link naar ZekerFlex", () => {
+    const s = withBlock();
+    const html = renderPage(s, s.pages[0]!, { ...opts, vacatures: live });
+    expect(html).toContain("Kok &lt;b&gt;&quot;spoed&quot;&lt;/b&gt;");
+    expect(html).toContain("za 14 nov · 17:00 – 23:00"); // 16:00 UTC is 17:00 in Nederland in november
+    expect(html).toContain("Rijssen · € 18,75 per uur");
+    expect(html).toContain('href="https://zekerflex.com/klussen/shift1" rel="noopener">Reageer via ZekerFlex</a>');
+    expect(html).not.toContain("(voorbeeld)");
+    expect(renderPage(withBlock(1), withBlock(1).pages[0]!, { ...opts, vacatures: live })).not.toContain("Afwasser");
+  });
+
+  it("zonder live gegevens (bouwer, voorbeeld, voorstel) twee gemarkeerde voorbeelden; zonder open diensten een nette melding", () => {
+    const s = withBlock();
+    const preview = renderPage(s, s.pages[0]!, opts);
+    expect(preview).toContain("Medewerker bediening (voorbeeld)");
+    expect(preview).toContain("op je website staan hier vanzelf je open diensten");
+    expect(preview).toContain('<a class="btn" href="#">Reageer via ZekerFlex</a>');
+    const empty = renderPage(s, s.pages[0]!, { ...opts, vacatures: [] });
+    expect(empty).toContain("Er staan nu geen diensten open");
+    expect(empty).toContain('href="/site/bakkerij/contact"');
+    expect(vacancyWhen({ start: "2026-07-04T08:00:00.000Z", eind: "2026-07-04T16:00:00.000Z" })).toBe("za 4 jul · 10:00 – 18:00"); // zomertijd
+  });
+
+  it("de bouwer mag 1 tot 12 diensten tonen", () => {
+    const s = withBlock();
+    const ok = siteSaveSchema.safeParse({ theme: s.theme, bedrijf: s.bedrijf, pages: s.pages });
+    expect(ok.success).toBe(true);
+    const te = withBlock(13);
+    expect(siteSaveSchema.safeParse({ theme: te.theme, bedrijf: te.bedrijf, pages: te.pages }).success).toBe(false);
   });
 });
 
