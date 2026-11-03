@@ -60,7 +60,7 @@ export function deelkaart({ title, sub, example }: { title: string; sub: string;
           <div style={{ fontSize: 30, color: "#C6E9DE", maxWidth: 960, lineHeight: 1.35 }}>{sub}</div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, fontSize: 24 }}>
           <div
             style={{
               display: "flex",
@@ -72,7 +72,7 @@ export function deelkaart({ title, sub, example }: { title: string; sub: string;
           >
             {example}
           </div>
-          <div style={{ display: "flex", color: "#9FD9C6" }}>zekerflex.com/rekentools</div>
+          <div style={{ display: "flex", flexShrink: 0, color: "#9FD9C6" }}>zekerflex.com/rekentools</div>
         </div>
       </div>
     ),

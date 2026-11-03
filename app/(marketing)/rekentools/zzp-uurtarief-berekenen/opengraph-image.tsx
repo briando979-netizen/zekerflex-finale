@@ -11,6 +11,6 @@ export default function Image() {
   return deelkaart({
     title: "Welk uurtarief heb je nodig?",
     sub: "Van netto inkomen naar uurtarief, met vakantie, ziekte, pensioen, verzekering en belasting erin.",
-    example: "Voorbeeld: voor € 3.000 netto per maand reken je € 45,21 per uur",
+    example: "Voorbeeld: € 3.000 netto per maand vraagt € 45,21 per uur",
   });
 }
