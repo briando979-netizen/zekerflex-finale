@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { berekenBestelling, categorieen, euro, leesBestelForm, productSlug, type BestelInvoer } from "@/lib/sites/winkel";
 import { renderPage, renderSitemap, renderWinkelPagina, siteCss } from "@/lib/sites/render";
-import { siteSaveSchema } from "@/lib/sites/schema";
+import { siteSaveSchema, winkelSchema } from "@/lib/sites/schema";
+import { demoWinkel } from "@/lib/sites/demo";
 import { LEGE_WINKEL, newBlock, type SiteDoc, type SiteProduct, type Winkel } from "@/lib/sites/types";
 
 // De winkel van een klantsite: rekenen met de prijzen van de site, controleren wat
@@ -145,6 +146,13 @@ describe("winkel: wat de bouwer mag opslaan", () => {
     const dubbel = winkel({ producten: [product(), product({ id: "pbbbbbbb2" })] });
     expect(siteSaveSchema.safeParse({ ...basis, winkel: dubbel }).success).toBe(false);
     expect(siteSaveSchema.safeParse({ ...basis, winkel: winkel({ levering: { afhalen: false, bezorgen: false, bezorgkostenCents: 0, gratisVanafCents: null } }) }).success).toBe(false);
+  });
+
+  it("de voorbeeldwinkel van Bakkerij Jansen voldoet aan dezelfde regels", () => {
+    const w = demoWinkel(() => "mfoto000001");
+    expect(winkelSchema.safeParse(w).success).toBe(true);
+    expect(w.producten.length).toBeGreaterThanOrEqual(8);
+    expect(w.producten.some((p) => p.uitverkocht) && w.producten.some((p) => p.oudePrijsCents)).toBe(true);
   });
 
   it("houdt de adressen van de winkel vrij voor eigen pagina's", () => {

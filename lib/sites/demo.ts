@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { addMedia, createSite, markExample, publishSite, saveSite, siteBySlug, siteOfTenant } from "@/lib/sites/store";
-import type { Block, BlockProps, BlockType, Company, Page, Theme } from "@/lib/sites/types";
+import { slugify, type Block, type BlockProps, type BlockType, type Company, type Page, type SiteProduct, type Theme, type Winkel } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Voorbeeldwebsite: zekerflex.com/site/bakkerij-jansen laat zien wat een bedrijf
@@ -16,8 +16,8 @@ import type { Block, BlockProps, BlockType, Company, Page, Theme } from "@/lib/s
 // ---------------------------------------------------------------------------
 
 export const DEMO_SLUG = "bakkerij-jansen";
-// 2: the premium house style (3 Nov 2026)
-const DEMO_VERSION = 2;
+// 2: the premium house style (3 Nov 2026); 3: a webshop with products (4 Nov 2026)
+const DEMO_VERSION = 3;
 const DEMO_TENANT = "voorbeeld:bakkerij-jansen";
 const STATE_KEY = "site-demo:bakkerij-jansen";
 const LOCK_KEY = "site-demo-lock:bakkerij-jansen";
@@ -60,7 +60,8 @@ export function demoPages(foto: (key: PhotoKey) => string | null): Page[] {
       seoTitel: "Bakkerij Jansen | Ambachtelijk brood, elke ochtend vers",
       seoOmschrijving: "Desem, volkoren, croissants en taart op bestelling: elke dag vers uit de oven bij Bakkerij Jansen.",
       blocks: [
-        block("hero", { kop: "Ambachtelijk brood, elke ochtend vers", tekst: "Bij Bakkerij Jansen kneden we nog met de hand. Desem, volkoren, croissants en taart op bestelling: elke dag vers uit de oven.", knop: "Bekijk ons assortiment", knopLink: "assortiment", foto: foto("hero") }),
+        block("hero", { kop: "Ambachtelijk brood, elke ochtend vers", tekst: "Bij Bakkerij Jansen kneden we nog met de hand. Desem, volkoren, croissants en taart op bestelling: elke dag vers uit de oven.", knop: "Bestel online", knopLink: "winkel", foto: foto("hero") }),
+        block("producten", { kop: "Vandaag vers in de winkel", tekst: "Bestel online en haal het morgenochtend op, of laat het bezorgen.", categorie: "", aantal: 4 }),
         block("diensten", {
           kop: "Vers uit onze oven",
           items: [
@@ -70,6 +71,7 @@ export function demoPages(foto: (key: PhotoKey) => string | null): Page[] {
           ],
         }),
         block("tekstFoto", { kop: "Al drie generaties bakkers", tekst: "Wat begon als een klein bakkerijtje aan het dorpsplein, is nog altijd een familiebedrijf. We bakken zoals opa het ons leerde: met tijd, goede ingrediënten en zonder haast.\n\nJe proeft het verschil.", foto: foto("desem"), fotoLinks: false }),
+        block("uitgelicht", { productId: DEMO_UITGELICHT, kop: "Favoriet van de week", tekst: "", fotoLinks: true }),
         block("galerij", { kop: "Uit de bakkerij", fotos: (["croissant", "chocolade", "schaal", "cupcakes", "mand"] as const).map(foto).filter((f): f is string => Boolean(f)) }),
         block("reviews", {
           kop: "Zo kan het eruitzien met reviews (voorbeeld)",
@@ -90,24 +92,8 @@ export function demoPages(foto: (key: PhotoKey) => string | null): Page[] {
       seoOmschrijving: "Brood, banket en taart: dit bakt Bakkerij Jansen het hele jaar door.",
       blocks: [
         block("tekstFoto", { kop: "Ons assortiment", tekst: "Elke dag een ander lekker aanbod. Dit bakken we het hele jaar door; op zaterdag hebben we extra specialiteiten.", foto: foto("mand"), fotoLinks: true }),
-        block("diensten", {
-          kop: "Brood",
-          items: [
-            { titel: "Desem wit en bruin", tekst: "Drie dagen gerezen, met een open kruim en een stevige korst." },
-            { titel: "Volkoren met zaden", tekst: "Met zonnebloempitten, lijnzaad en sesam." },
-            { titel: "Spelt", tekst: "Licht verteerbaar en vol van smaak." },
-            { titel: "Stokbrood", tekst: "Elke ochtend en elke middag vers." },
-          ],
-        }),
-        block("diensten", {
-          kop: "Banket en zoet",
-          items: [
-            { titel: "Croissants", tekst: "Met echte roomboter, naturel of met amandel." },
-            { titel: "Chocoladebroodjes", tekst: "Bladerdeeg met twee staafjes pure chocolade." },
-            { titel: "Appeltaart", tekst: "Met Elstar en Goudrenet, ook per punt." },
-            { titel: "Taart op maat", tekst: "Kies smaak, formaat en tekst; we denken graag mee." },
-          ],
-        }),
+        block("producten", { kop: "Brood", tekst: "", categorie: "Brood", aantal: 8 }),
+        block("producten", { kop: "Banket en zoet", tekst: "", categorie: "Banket en zoet", aantal: 8 }),
         block("faq", {
           kop: "Veelgestelde vragen",
           items: [
@@ -138,6 +124,31 @@ export function demoPages(foto: (key: PhotoKey) => string | null): Page[] {
       blocks: [block("contact", { kop: "Kom langs of neem contact op", tekst: "Vragen, een bestelling of een taart op maat? Laat het ons weten, dan reageren we dezelfde dag.", formulier: true }), uren],
     },
   ];
+}
+
+const DEMO_UITGELICHT = "pdemo00croissant";
+
+/** The example's shop (lib/sites/winkel.ts): real-looking products with the demo's own photos; ordering is inert on an example. */
+export function demoWinkel(foto: (key: PhotoKey) => string | null): Winkel {
+  const p = (id: string, naam: string, categorie: string, prijsCents: number, korteTekst: string, omschrijving: string, fotoKey: PhotoKey | null, extra: Partial<SiteProduct> = {}): SiteProduct => {
+    const f = fotoKey ? foto(fotoKey) : null;
+    return { id, naam, slug: slugify(naam), prijsCents, oudePrijsCents: null, korteTekst, omschrijving, fotos: f ? [f] : [], categorie, zichtbaar: true, uitverkocht: false, ...extra };
+  };
+  return {
+    producten: [
+      p("pdemo0000desem", "Desembrood wit", "Brood", 465, "Drie dagen gerezen, met een open kruim", "Ons desembrood rijst drie dagen. Dat geeft een open kruim, een licht zurige smaak en een stevige, krokante korst.\n\nGebakken met meel van de molen om de hoek. Heel of gesneden, ongeveer 800 gram.", "desem"),
+      p("pdemo00volkoren", "Volkoren met zaden", "Brood", 395, "Met zonnebloempitten, lijnzaad en sesam", "Een stevig volkorenbrood vol zaden en pitten. Lekker bij de lunch en lang vers.\n\nOngeveer 800 gram.", "hero"),
+      p("pdemo0000mand", "Broodmand voor de zondag", "Brood", 1495, "Vier broden en zes broodjes, voor het hele gezin", "Voor een ontbijt of brunch met het hele gezin: desem, volkoren, spelt en een stokbrood, met zes zachte broodjes.\n\nBestel uiterlijk vrijdag, dan staat hij zondagochtend klaar.", "mand", { oudePrijsCents: 1695 }),
+      p("pdemo00stokbrood", "Stokbrood", "Brood", 225, "Elke ochtend en middag vers", "Een knapperig stokbrood, twee keer per dag vers uit de oven.", null, { uitverkocht: true }),
+      p(DEMO_UITGELICHT, "Roomboter croissant", "Banket en zoet", 185, "Met echte roomboter, met de hand gevouwen", "Vroeg in de ochtend gevouwen met echte Franse roomboter, voor een krokante buitenkant en een luchtig, zacht binnenste.\n\nNaturel, of vraag naar de amandelcroissant.", "croissant"),
+      p("pdemo0chocolade", "Chocoladebroodje", "Banket en zoet", 210, "Bladerdeeg met twee staafjes pure chocolade", "Luchtig bladerdeeg met twee staafjes pure chocolade. Het lekkerst nog even warm.", "chocolade"),
+      p("pdemo00cupcakes", "Cupcakes, doosje van 6", "Banket en zoet", 1250, "Vrolijk versierd, voor elk feestje", "Zes cupcakes met vanille, chocolade en aardbei, versierd met botercrème en spikkels.\n\nTip: bestel ze twee dagen van tevoren met jouw kleuren.", "cupcakes"),
+      p("pdemo000taart", "Taart op maat", "Banket en zoet", 3450, "Kies smaak, formaat en tekst", "Voor verjaardagen, bruiloften en het werk. Kies smaak en formaat, en zet er je eigen tekst op. Prijs voor een taart van 10 tot 12 personen.\n\nBestel minstens twee dagen van tevoren.", "schaal"),
+    ],
+    bestellen: true,
+    levering: { afhalen: true, bezorgen: true, bezorgkostenCents: 395, gratisVanafCents: 2500 },
+    betaalTekst: "Je betaalt bij het afhalen of bij de bezorging, contant of met pin.",
+  };
 }
 
 /** One builder at a time; a lock older than two minutes is from a crashed run. */
@@ -179,7 +190,8 @@ export async function ensureDemoSite(): Promise<void> {
         logger.warn("demo photo failed", { key, err: String(err) });
       }
     }
-    await saveSite(site.id, { theme: THEME, bedrijf: BEDRIJF, pages: demoPages((k) => ids[k] ?? null) as never });
+    const foto = (k: PhotoKey) => ids[k] ?? null;
+    await saveSite(site.id, { theme: THEME, bedrijf: BEDRIJF, pages: demoPages(foto) as never, winkel: demoWinkel(foto) });
     await markExample(site.id);
     await publishSite(site.id, BY);
     await kvSet(STATE_KEY, { version: DEMO_VERSION, siteId: site.id });
