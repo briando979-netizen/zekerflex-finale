@@ -569,9 +569,11 @@ export async function llmHealth(): Promise<LlmHealth> {
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;
       const served = body?.data?.map((m) => m.id).filter(Boolean) as string[] | undefined;
+      // Gemini's OpenAI-compatible list says "models/gemini-…" for the model you configure as "gemini-…"
+      const bare = (m: string) => m.replace(/^models\//, "");
       const model =
-        served?.find((m) => m === env.LLM_MODEL) ?? served?.[0] ?? env.LLM_MODEL;
-      return { ok: true, baseUrl: base, model };
+        served?.find((m) => bare(m) === env.LLM_MODEL) ?? served?.[0] ?? env.LLM_MODEL;
+      return { ok: true, baseUrl: base, model: bare(model) };
     }
     if (res.status !== 404) {
       return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: `models endpoint HTTP ${res.status}` };

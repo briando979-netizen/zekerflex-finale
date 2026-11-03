@@ -181,7 +181,7 @@ export default async function SysteemPage() {
                     </ul>
                   </Panel>
                   {budget && (
-                    <Panel title="AI-budget" subtitle="Vandaag, op het eigen model">
+                    <Panel title="AI-budget" subtitle={budget.localInference ? "Vandaag, op het eigen model" : `Vandaag, op ${budget.host}`}>
                       <div className="space-y-4">
                         <Meter label="Tokens" value={budget.tokensUsed} max={budget.tokenBudget} display={`${count(Math.round(budget.tokensUsed / 1000))}k van ${count(Math.round(budget.tokenBudget / 1000))}k`} tone={budget.tokensUsed >= budget.tokenBudget ? "crit" : "ok"} />
                         <Meter label="Rekensloten" value={budget.concurrencyInUse} max={budget.concurrencyMax} display={`${budget.concurrencyInUse} van ${budget.concurrencyMax}`} tone="plan" />
