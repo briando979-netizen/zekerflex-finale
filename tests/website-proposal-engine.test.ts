@@ -123,6 +123,8 @@ describe("de nieuwe website: puur", () => {
     expect(site.proposalName("Welkom op onze vernieuwde site", "Kapsalon Knip")).toBe("Kapsalon Knip");
     expect(site.proposalName(null, null)).toBe("Je bedrijf");
     expect(site.listOf(["Binnenschilderwerk", "Buitenschilderwerk", "Behangen"])).toBe("Binnenschilderwerk, buitenschilderwerk en behangen");
+    // een dienst met "en" erin: alleen komma's, anders lopen de "en"s door elkaar
+    expect(site.listOf(["Desembrood", "Banket en croissants", "Taarten op bestelling"])).toBe("Desembrood, banket en croissants, taarten op bestelling");
   });
 
   it("maakt pagina's die door de controle van de bouwer komen, met voorbeelden duidelijk gemarkeerd", () => {

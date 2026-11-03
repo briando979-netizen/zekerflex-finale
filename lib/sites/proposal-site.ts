@@ -114,8 +114,12 @@ const fill = (s: string, c: Company) =>
 export function listOf(items: string[]): string {
   const low = (s: string) => (/^\p{Lu}\p{Ll}/u.test(s) ? s[0]!.toLowerCase() + s.slice(1) : s);
   const parts = items.map((s, i) => (i === 0 ? s : low(s)));
-  return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} en ${parts[parts.length - 1]}`;
+  if (parts.length <= 1) return parts[0] ?? "";
+  // "Banket en croissants" in the list: commas only, or the "en"s run together
+  if (parts.some(hasEn)) return parts.join(", ");
+  return `${parts.slice(0, -1).join(", ")} en ${parts[parts.length - 1]}`;
 }
+const hasEn = (s: string) => /\sen\s/i.test(s);
 
 /** The pages of the proposal: home, about, contact. Every text fits the builder's limits (lib/sites/schema.ts). */
 export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, photos: ProposalPhotos, newId: () => string): Page[] {
@@ -129,7 +133,9 @@ export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, p
     ? f.secties.slice(0, 6).map((s) => ({ titel: s.kop.slice(0, 200), tekst: s.tekst }))
     : t.diensten.map((d) => ({ titel: fill(d.titel, c), tekst: fill(d.tekst, c) }));
   const namen = f.secties.slice(0, 3).map((s) => s.kop);
-  const heroTekst = namen.length >= 2 ? `${listOf(namen)}${c.plaats ? ` in ${c.plaats} en omgeving` : ""}.` : fill(t.heroTekst, c);
+  // "Binnenschilderwerk en buitenschilderwerk in Rijssen en omgeving." — a list with commas only gets the place as its own sentence
+  const waar = c.plaats ? (namen.some(hasEn) ? `. In ${c.plaats} en omgeving` : ` in ${c.plaats} en omgeving`) : "";
+  const heroTekst = namen.length >= 2 ? `${listOf(namen)}${waar}.` : fill(t.heroTekst, c);
   const knop = horeca ? "Reserveer of bestel" : t.id === "zorg" ? "Neem contact op" : "Vraag een offerte aan";
   const over = f.intro ?? fill(t.over, c);
   const reviews = block("reviews", {

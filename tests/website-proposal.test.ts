@@ -47,7 +47,7 @@ describe("bedrijfsgegevens uit een pagina", () => {
       <h2>Tuinontwerp</h2><p>We tekenen samen met je een tuin die past bij je huis en je manier van leven.</p>
       <h2>Onderhoud</h2><p>Snoeien, maaien en bemesten.</p>
       <h2>Openingstijden</h2><p>Maandag tot en met vrijdag van 08:00 tot 17:00 uur.</p>
-      <a href="tel:06-12345678">Bel</a></body></html>`;
+      <a href="tel:06-12345678">Bel</a><p>Tuinstraat 4, 8011 AB Zwolle</p><p>© 2019 Hoveniersbedrijf Groen, alle rechten voorbehouden</p></body></html>`;
     const b = extractBusiness(html, "https://groen.nl/");
     expect(b.secties).toEqual([
       { kop: "Tuinontwerp", tekst: "We tekenen samen met je een tuin die past bij je huis en je manier van leven." },

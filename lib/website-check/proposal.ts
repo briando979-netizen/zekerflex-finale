@@ -79,6 +79,9 @@ const GENERIC = /^(home|homepage|welkom|start|index|hoofdpagina)$/i;
 const SKIP_HEADING =
   /^(contact|menu|navigatie|zoeken|volg ons|nieuwsbrief|social|delen|cookies?|privacy|footer|meer|lees meer|copyright|openingstijden|openingsuren|adres|route|over ons|wie zijn wij|nieuws|blog|vacatures|werken bij|reviews|beoordelingen|klantervaringen|disclaimer|algemene voorwaarden|snel naar)\b/i;
 
+/** A line from the footer (copyright, registration numbers, an address), not about a service. */
+const footerLine = (t: string) => /©|copyright|alle rechten|kvk|btw-?(nummer|nr|id)|privacyverklaring|cookies?\b/i.test(t) || /\b[1-9]\d{3} ?[A-Z]{2}\b/.test(t);
+
 /** At most `max` characters, cut after a whole sentence where possible. */
 export function clipSentences(s: string, max: number): string {
   if (s.length <= max) return s;
@@ -139,7 +142,7 @@ export function extractBusiness(html: string, finalUrl: string): BusinessFacts {
   for (let i = 1; i < pieces.length && secties.length < 12; i += 2) {
     const kop = decode((pieces[i] ?? "").replace(/<[^>]+>/g, " "));
     if (!usable(kop) || secties.some((s) => s.kop === kop)) continue;
-    const under = paragraphs((pieces[i + 1] ?? "").split(/<h1\b/i)[0] ?? "").filter((t) => t.length >= 20);
+    const under = paragraphs((pieces[i + 1] ?? "").split(/<h1\b/i)[0] ?? "").filter((t) => t.length >= 20 && !footerLine(t));
     secties.push({ kop, tekst: under.length ? clipSentences(under.join(" "), 280) : "" });
   }
   const introText = paragraphs(visible).find((t) => t.length >= 120 && !/cookie|©|copyright|privacy|javascript|browser/i.test(t));
