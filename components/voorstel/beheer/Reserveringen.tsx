@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, VELD, VELD_BASIS, dagNaam, useBeheerData, vraag } from "@/components/voorstel/beheer/api";
 import { BASE } from "@/lib/voorstel/schwarzwald";
 import { AANWEZIG_LABEL, aanmeldFout, balieStand, type Aanwezig } from "@/lib/voorstel/aanwezig-regels";
+import { dubbelIngepland } from "@/lib/voorstel/begeleider-regels";
 
 // Reserveringen: overzicht per dag met zoeken en filters, bevestigen,
 // annuleren, verwijderen, zelf inboeken (telefoon/balie), gasten aanmelden
@@ -44,6 +45,10 @@ const AANWEZIG_PIL: Record<Aanwezig, string> = {
   ja: "bg-[#DCFCE7] text-[#15803D]",
   nee: "bg-[#FEE2E2] text-[#B91C1C]",
 };
+
+/** "Let op: Sanne begeleidt tegelijk ook 14:00 Buggy rijden (Gerda Gast)." */
+export const dubbelTekst = (wie: string, tegelijk: BeheerBoeking[], namen: Record<string, string>) =>
+  `Let op: ${wie} begeleidt tegelijk ook ${tegelijk.map((x) => `${x.tijd} ${namen[x.activiteit] ?? x.activiteit} (${x.naam})`).join(", ")}.`;
 
 /** Wie de groep begeleidt; de keuzelijst bevat namen die al eerder gebruikt zijn. */
 function BegeleiderVeld({ b, bezig, opslaan }: { b: BeheerBoeking; bezig: boolean; opslaan: (naam: string) => void }) {
@@ -134,7 +139,7 @@ function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; kl
   );
 }
 
-export function Reserveringen({ namen, vandaag }: { namen: Record<string, string>; vandaag: string }) {
+export function Reserveringen({ namen, duur, vandaag }: { namen: Record<string, string>; duur: Record<string, number>; vandaag: string }) {
   const { data, setData, fout, setFout, laad } = useBeheerData<{ boekingen: BeheerBoeking[] }>(BEHEER_API);
   const [alles, setAlles] = useState(false);
   const [status, setStatus] = useState<"" | Status>("");
@@ -155,6 +160,8 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
     );
   }, [data, alles, status, activiteit, zoek, vandaag]);
   const begeleiders = useMemo(() => [...new Set((data?.boekingen ?? []).flatMap((b) => (b.begeleider ? [b.begeleider] : [])))].sort((a, b) => a.localeCompare(b, "nl")), [data]);
+  // over alle boekingen, niet alleen de gefilterde: een overlap blijft zichtbaar bij zoeken
+  const dubbel = useMemo(() => dubbelIngepland(data?.boekingen ?? [], duur), [data, duur]);
   const perDag = useMemo(() => {
     const m = new Map<string, BeheerBoeking[]>();
     for (const b of lijst) m.set(b.datum, [...(m.get(b.datum) ?? []), b]);
@@ -272,6 +279,9 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                     {b.verzetVan && <p className="mt-1 text-sm font-semibold text-schw-rust">{verzetTekst(b.verzetVan)}</p>}
                     {b.aantalVan !== undefined && <p className="mt-1 text-sm font-semibold text-schw-rust">aantal gewijzigd door de gast, was {b.aantalVan}</p>}
                     {b.status !== "geannuleerd" && <BegeleiderVeld b={b} bezig={bezig === b.id} opslaan={(naam) => void wijzig(b, { begeleider: naam })} />}
+                    {b.begeleider && dubbel.has(`${b.datum}-${b.id}`) && (
+                      <p className="mt-1 text-sm font-semibold text-schw-rust">{dubbelTekst(b.begeleider, dubbel.get(`${b.datum}-${b.id}`) ?? [], namen)}</p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {!aanmeldFout(b, vandaag) &&

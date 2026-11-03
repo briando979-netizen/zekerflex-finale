@@ -177,7 +177,7 @@ export function BeheerApp({
           {tab === "planning" && <Planning namen={namen} duur={duur} vandaag={vandaag} openKlant={openKlant} />}
           {tab === "klanten" && <Klanten namen={namen} vandaag={vandaag} start={klant} />}
           {tab === "aanvragen" && <Aanvragen openKlant={openKlant} />}
-          {tab === "reserveringen" && <Reserveringen namen={namen} vandaag={vandaag} />}
+          {tab === "reserveringen" && <Reserveringen namen={namen} duur={duur} vandaag={vandaag} />}
           {tab === "wachtlijst" && <Wachtlijst namen={namen} openKlant={openKlant} />}
           {tab === "reviews" && <Reviews namen={namen} openKlant={openKlant} />}
           {tab === "sollicitaties" && <Sollicitaties />}

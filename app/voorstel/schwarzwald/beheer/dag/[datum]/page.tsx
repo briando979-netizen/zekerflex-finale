@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ACTIVITEITEN, BASE } from "@/lib/voorstel/schwarzwald";
 import { AANWEZIG_LABEL } from "@/lib/voorstel/aanwezig-regels";
+import { dubbelIngepland, perBegeleider } from "@/lib/voorstel/begeleider-regels";
 import { beheerder } from "@/lib/voorstel/schwarzwald-accounts";
 import { AGENDA, isDatum } from "@/lib/voorstel/schwarzwald-agenda";
 import { boekingenOp } from "@/lib/voorstel/schwarzwald-boekingen";
@@ -54,6 +55,8 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
   const { regels, perActiviteit, gasten, geannuleerd } = dagOverzicht(boekingen, duur);
   const kaarten = await Promise.all(regels.map((r) => klantkaart(r.b.account ?? r.b.email).catch(() => null)));
   const blokkades = (cfg.blokkades ?? []).filter((k) => k.datum === datum).sort((a, b) => a.van.localeCompare(b.van));
+  const team = perBegeleider(boekingen);
+  const dubbel = dubbelIngepland(boekingen, duur);
 
   return (
     <section className="mx-auto max-w-[1280px] px-4 py-8 sm:px-8">
@@ -93,6 +96,20 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
               </li>
             ))}
           </ul>
+        )}
+
+        {team.length > 0 && (
+          <div className="mt-4 text-sm">
+            <p className="font-bold">Per begeleider</p>
+            <ul className="mt-1 space-y-0.5">
+              {team.map((t) => (
+                <li key={t.naam}>
+                  <strong>{t.naam}</strong>: {t.groepen.map((b) => `${b.tijd} ${namen[b.activiteit] ?? b.activiteit} (${b.personen} p.)`).join(" · ")}
+                  {t.groepen.some((b) => dubbel.has(`${b.datum}-${b.id}`)) && <span className="font-bold text-schw-rust"> · let op: groepen lopen tegelijk</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {blokkades.length > 0 && (
@@ -138,6 +155,14 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
                         <>
                           <br />
                           <span className="font-semibold">Begeleider: {b.begeleider}</span>
+                          {dubbel.has(`${b.datum}-${b.id}`) && (
+                            <>
+                              <br />
+                              <span className="font-bold text-schw-rust">
+                                Tegelijk ook: {(dubbel.get(`${b.datum}-${b.id}`) ?? []).map((x) => `${x.tijd} ${namen[x.activiteit] ?? x.activiteit}`).join(", ")}
+                              </span>
+                            </>
+                          )}
                         </>
                       )}
                     </td>
