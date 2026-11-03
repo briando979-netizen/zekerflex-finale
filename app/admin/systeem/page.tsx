@@ -85,11 +85,14 @@ export default async function SysteemPage() {
   const components: { label: string; state: State; meta: string }[] = [
     { label: "PostgreSQL", state: db.ok ? "ok" : "crit", meta: `${db.ms} ms` },
     { label: "Redis", state: cache.ok ? "ok" : "crit", meta: `${cache.ms} ms` },
-    { label: "Lokale AI (Ollama)", state: llm.ok ? "ok" : "crit", meta: llm.ok ? llm.model : "niet bereikbaar" },
+    // the model may be local (Ollama) or, by the owner's choice, external (AI_ALLOW_REMOTE)
+    { label: "Taalmodel (AI)", state: llm.ok ? "ok" : "crit", meta: llm.ok ? `${llm.model}${budget ? `, ${budget.host}` : ""}` : "niet bereikbaar" },
     {
       label: "Soevereiniteitsgrendel",
-      state: (budget ? budget.localInference : true) ? "ok" : "crit",
-      meta: budget ? (budget.localInference ? `lokaal, ${budget.host}` : "externe host!") : "onbekend",
+      // a deliberately opened lock (AI_ALLOW_REMOTE=true) is a choice, not an outage; only an external
+      // host that was never allowed is a problem (and then the AI isn't used at all, lib/ai/client.ts)
+      state: !budget || budget.localInference ? "ok" : env.AI_ALLOW_REMOTE ? "off" : "crit",
+      meta: !budget ? "onbekend" : budget.localInference ? `lokaal, ${budget.host}` : env.AI_ALLOW_REMOTE ? `bewust open: AI via ${budget.host}` : `externe host ${budget.host} niet toegestaan`,
     },
     {
       label: "Web Push (VAPID)",
