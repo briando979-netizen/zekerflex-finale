@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dashboard } from "@/components/voorstel/beheer/Dashboard";
+import { Planning } from "@/components/voorstel/beheer/Planning";
 import { Klanten } from "@/components/voorstel/beheer/Klanten";
 import { Aanvragen } from "@/components/voorstel/beheer/Aanvragen";
 import { Reserveringen } from "@/components/voorstel/beheer/Reserveringen";
@@ -15,6 +16,7 @@ import { Accounts } from "@/components/voorstel/beheer/Accounts";
 
 const TABS = [
   ["dashboard", "Dashboard"],
+  ["planning", "Planning"],
   ["klanten", "Klanten (CRM)"],
   ["aanvragen", "Aanvragen"],
   ["reserveringen", "Reserveringen"],
@@ -26,7 +28,7 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
-export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, string>; vandaag: string; wie: string }) {
+export function BeheerApp({ namen, duur, vandaag, wie }: { namen: Record<string, string>; duur: Record<string, number>; vandaag: string; wie: string }) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [klant, setKlant] = useState("");
 
@@ -73,6 +75,7 @@ export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, strin
       </div>
       <div id={`paneel-${tab}`} role="tabpanel" className="mt-6">
         {tab === "dashboard" && <Dashboard namen={namen} naar={naar} openKlant={openKlant} />}
+        {tab === "planning" && <Planning namen={namen} duur={duur} vandaag={vandaag} openKlant={openKlant} />}
         {tab === "klanten" && <Klanten namen={namen} vandaag={vandaag} start={klant} />}
         {tab === "aanvragen" && <Aanvragen openKlant={openKlant} />}
         {tab === "reserveringen" && <Reserveringen namen={namen} vandaag={vandaag} />}

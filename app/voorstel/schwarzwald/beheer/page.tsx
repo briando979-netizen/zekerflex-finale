@@ -3,6 +3,8 @@ import Link from "next/link";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { ACTIVITEITEN, BASE } from "@/lib/voorstel/schwarzwald";
 import { beheerder } from "@/lib/voorstel/schwarzwald-accounts";
+import { AGENDA } from "@/lib/voorstel/schwarzwald-agenda";
+import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { BeheerApp } from "@/components/voorstel/beheer/BeheerApp";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,9 @@ export const metadata: Metadata = { title: "Beheer" };
 // rol beheerder, of een ZekerFlex-platformbeheerder (die wijst de eerste
 // beheerder aan onder Accounts).
 export default async function SchwarzwaldBeheerPage() {
-  const wie = await beheerder();
+  const [wie, cfg] = await Promise.all([beheerder(), agendaConfig()]);
+  // duur per activiteit voor de weekplanning: standaard, met de instellingen van de beheerder eroverheen
+  const duur = Object.fromEntries([...Object.entries(AGENDA), ...Object.entries(cfg.regels)].map(([slug, r]) => [slug, r.duurMin]));
 
   return (
     <>
@@ -25,7 +29,7 @@ export default async function SchwarzwaldBeheerPage() {
       </section>
       <section className="mx-auto max-w-[1280px] px-4 py-8 sm:px-8">
         {wie ? (
-          <BeheerApp namen={Object.fromEntries(ACTIVITEITEN.map((a) => [a.slug, a.naam]))} vandaag={amsterdamDayKey(new Date())} wie={wie.naam} />
+          <BeheerApp namen={Object.fromEntries(ACTIVITEITEN.map((a) => [a.slug, a.naam]))} duur={duur} vandaag={amsterdamDayKey(new Date())} wie={wie.naam} />
         ) : (
           <div className="rounded-xl3 bg-white p-8 shadow-[0_1px_2px_rgba(10,18,14,0.06)]">
             <h2 className="font-display text-2xl font-bold">Alleen voor beheerders</h2>
