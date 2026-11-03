@@ -24,7 +24,6 @@ import fcntl
 import json
 import os
 import re
-import shutil
 import socket
 import subprocess
 import sys
@@ -52,14 +51,6 @@ DESTRUCTIEF = re.compile(
     re.IGNORECASE,
 )
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
-
-# git archive voegt toe maar wist niets: een in git verwijderd bestand bleef op de
-# server staan (en Next serveert een public-bestand vóór een route). In deze mappen
-# komt alles uit git, dus wat er niet (meer) in staat is een achterblijver. Die gaat
-# naar een quarantainemap (terug te zetten), nooit de prullenbak.
-CODEMAPPEN = ("app", "components", "lib", "public", "prisma", "types")
-QUARANTAINE = os.environ.get("ZF_QUARANTAINE", os.path.expanduser("~/zekerflex-weg"))
-MAX_OPRUIMEN = 50
 
 
 def nu() -> str:
@@ -282,6 +273,7 @@ class Uitrol:
             archief.stdout.close()
         if archief.wait() != 0 or tar.returncode != 0:
             raise RuntimeError(f"uitpakken mislukt: {tar.stderr[-300:]}")
+        # git archive voegt toe maar wist niets: achterblijvers naar quarantaine
         self.opruimen(doel)
 
         self.stap("Bouwen en starten (enkele minuten)" + (" met database-wijzigingen" if migraties else ""))
@@ -307,37 +299,26 @@ class Uitrol:
         )
 
     def opruimen(self, doel: str) -> None:
-        """Achterblijvers (bestanden die niet in git staan) uit de codemappen naar quarantaine."""
-        r = subprocess.run(
-            ["git", "-C", SRC, "-c", "core.quotePath=false", "ls-tree", "-r", "-z", "--name-only", doel, "--", *CODEMAPPEN],
+        """Achterblijvers naar quarantaine, met hetzelfde script als de handmatige uitrollen."""
+        lijst = subprocess.run(
+            ["git", "-C", SRC, "-c", "core.quotePath=false", "ls-tree", "-r", "-z", "--name-only", doel],
             capture_output=True,
             text=True,
             timeout=120,
         )
-        if r.returncode != 0:
+        if lijst.returncode != 0:
             self.schrijf("!! achterblijvers niet gecontroleerd: git ls-tree mislukte")
             return
-        in_git = {p for p in r.stdout.split("\0") if p}
-        weg = []
-        for map_ in CODEMAPPEN:
-            for root, _dirs, files in os.walk(os.path.join(ZF_DIR, map_)):
-                for naam in files:
-                    rel = os.path.relpath(os.path.join(root, naam), ZF_DIR).replace(os.sep, "/")
-                    if rel not in in_git:
-                        weg.append(rel)
-        if not weg:
-            return
-        if len(weg) > MAX_OPRUIMEN:
-            # zoveel tegelijk past niet bij achterblijvers: liever niets doen dan te veel weghalen
-            self.schrijf(f"!! {len(weg)} bestanden staan niet in git; te veel om veilig op te ruimen, overgeslagen")
-            return
-        map_weg = os.path.join(QUARANTAINE, datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S"))
-        for rel in weg:
-            naar = os.path.join(map_weg, rel)
-            os.makedirs(os.path.dirname(naar), exist_ok=True)
-            shutil.move(os.path.join(ZF_DIR, rel), naar)
-            self.schrijf(f"achterblijver weggezet: {rel}")
-        self.schrijf(f"{len(weg)} achterblijver(s) staan in {map_weg} (terugzetten = terugverplaatsen)")
+        r = subprocess.run(
+            [sys.executable, os.path.join(ZF_DIR, "deploy", "scripts", "achterblijvers.py")],
+            input=lijst.stdout,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env={**os.environ, "ZF_DIR": ZF_DIR},
+        )
+        for regel in (r.stdout + r.stderr).splitlines():
+            self.schrijf(regel)
 
     def migratie_stand(self, doel: str) -> tuple[list[str], list[str]]:
         mappen = git("ls-tree", "-d", "--name-only", doel, "prisma/migrations/").splitlines()
