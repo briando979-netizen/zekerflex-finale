@@ -525,6 +525,18 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("telefonie-saldo"),
     },
     {
+      id: "twilio-085",
+      group: "Bellen & koppelingen",
+      title: "Twilio: bellen naar 085- en 088-nummers aanzetten",
+      why: "Op 3 november weigerde Twilio een oproep van de AI-beller naar een 085-nummer ('Account not authorized to call'). Bellen naar 06- en gewone netnummers werkt wel. Veel bedrijven hebben een 085- of 088-nummer, dus juist die leads kan de beller nu niet bereiken.",
+      how: [
+        "console.twilio.com → Voice → Settings → Geo permissions → Nederland: zet de soorten nummers aan die je wilt bellen. Betaalnummers (0900, 0906, 0909) laat je uit.",
+        "Vink af als het aanstaat. Een volgende oproep naar zo'n nummer laat in Admin → Telefonie zien of het werkt.",
+      ],
+      auto: false,
+      ...m("twilio-085"),
+    },
+    {
       id: "telefonie-acm",
       group: "Juridisch",
       title: "Laten checken: melding bij de ACM als aanbieder van telefonie",
