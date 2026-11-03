@@ -463,6 +463,7 @@ export function MarketplaceView({
                 shift={s}
                 t={t}
                 href={`/dashboard/klussen/${s.id}`}
+                dim={Boolean(s.busy)}
                 {...(s.isReplacement ? { ribbon: { label: mk.replacement, tone: "amber" as const } } : {})}
                 {...(pendingOffer
                   ? {

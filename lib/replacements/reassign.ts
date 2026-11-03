@@ -7,6 +7,7 @@ import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { findOverlappingShift, overlapMessageOther } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
@@ -114,6 +115,12 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
     if (clash && !clash.cancelledAt) {
       throw AppError.conflict("De vervanger staat al op deze dienst ingepland.");
     }
+    const overlap = await findOverlappingShift(tx, substitute.id, {
+      shiftId: original.shift.id,
+      startsAt: original.shift.startsAt,
+      endsAt: original.shift.endsAt,
+    });
+    if (overlap) throw AppError.conflict(`${overlapMessageOther(overlap)} Kies een andere vervanger.`);
 
     // 1. Soft-cancel the original.
     await tx.shiftAssignment.update({

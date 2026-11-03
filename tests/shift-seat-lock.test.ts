@@ -61,6 +61,8 @@ const h = vi.hoisted(() => {
       update: async () => ({}),
     };
     tx.shiftAssignment = {
+      // no other booking at the same time (lib/shifts/worker-overlap.ts)
+      findFirst: async () => null,
       count: async () =>
         seat.assignments.filter(Boolean).length,
       create: async () => {

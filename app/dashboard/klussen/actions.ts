@@ -7,6 +7,7 @@ import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { createCounterOffer } from "@/lib/offers/store";
+import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 
@@ -105,6 +106,7 @@ export async function counterOfferAction(
         hourlyRateCents: true,
         status: true,
         startsAt: true,
+        endsAt: true,
         viaUitzendbureau: true,
         branch: { select: { name: true } },
       },
@@ -121,6 +123,12 @@ export async function counterOfferAction(
     if (shift.startsAt.getTime() + LATE_REACTION_GRACE_MS < Date.now()) {
       return { ok: false, message: "Deze dienst is al meer dan 2 uur geleden begonnen — reageren kan niet meer." };
     }
+    // Wie op dat moment al werkt, kan niet worden uitgekozen: zeg dat nu, niet pas als de werkgever akkoord geeft.
+    const me = await prisma.freelancerProfile.findUnique({ where: { userId: principal.userId }, select: { id: true } });
+    const overlap = me
+      ? await findOverlappingShift(prisma, me.id, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt })
+      : null;
+    if (overlap) return { ok: false, message: overlapMessageSelf(overlap) };
 
     await createCounterOffer({
       userId: principal.userId,

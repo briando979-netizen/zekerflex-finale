@@ -8,6 +8,7 @@ import {
   getOpenRequestForShift,
   withdrawReplacementResponse,
 } from "@/lib/replacements/store";
+import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (clash && !clash.cancelledAt) {
       throw AppError.conflict("Je staat al op deze dienst ingepland.");
     }
+    const shift = await prisma.shift.findUnique({ where: { id: shiftId }, select: { startsAt: true, endsAt: true } });
+    const overlap = shift
+      ? await findOverlappingShift(prisma, profile.id, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt })
+      : null;
+    if (overlap) throw AppError.conflict(overlapMessageSelf(overlap));
 
     const updated = await addReplacementResponse(shiftId, {
       userId: principal.userId,

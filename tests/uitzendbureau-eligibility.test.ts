@@ -15,7 +15,7 @@ vi.mock("@/lib/prisma", () => ({
     freelancerProfile: { findUnique: (...a: unknown[]) => freelancerProfileFindUnique(...a) },
     shift: { findUnique: (...a: unknown[]) => shiftFindUnique(...a) },
     shiftMatch: { upsert: (...a: unknown[]) => shiftMatchUpsert(...a) },
-    shiftAssignment: { findUnique: (...a: unknown[]) => shiftAssignmentFindUnique(...a) },
+    shiftAssignment: { findUnique: (...a: unknown[]) => shiftAssignmentFindUnique(...a), findFirst: async () => null },
   },
 }));
 

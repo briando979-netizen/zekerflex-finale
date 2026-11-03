@@ -16,6 +16,7 @@ import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
+import { findOverlappingShift, overlapMessageOther } from "@/lib/shifts/worker-overlap";
 
 export interface OfferResponse {
   ok: boolean;
@@ -280,9 +281,19 @@ export async function respondToOfferAction(
     const scopeWhere = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
     const shift = await prisma.shift.findFirst({
       where: { AND: [{ id: offer.shiftId }, { branch: scopeWhere }] },
-      select: { id: true, title: true, hourlyRateCents: true, status: true },
+      select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true },
     });
     if (!shift) throw AppError.forbidden("Je hebt geen toegang tot deze dienst.");
+
+    // Is de flexwerker intussen al ergens anders op dat moment ingepland? Dan
+    // niets wijzigen (ook het tarief niet) en dat zonder de andere klant te noemen.
+    if (decision === "accepted") {
+      const worker = await prisma.freelancerProfile.findUnique({ where: { userId: offer.userId }, select: { id: true } });
+      const overlap = worker
+        ? await findOverlappingShift(prisma, worker.id, { shiftId: shift.id, startsAt: shift.startsAt, endsAt: shift.endsAt })
+        : null;
+      if (overlap) return { ok: false, message: overlapMessageOther(overlap) };
+    }
 
     if (decision === "accepted" && offer.proposedRateCents < MIN_SHIFT_RATE_CENTS) {
       return {

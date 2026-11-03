@@ -32,6 +32,7 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
+import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -117,14 +118,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   }));
   const missingRequiredCert = certList.find((c) => c.required && !c.have) ?? null;
   const uitzendbureauBlocked = s.viaUitzendbureau && !isPayroll;
-  const applyDisabled = !s.canApply || Boolean(missingRequiredCert) || uitzendbureauBlocked;
-  const applyBlockReason = !s.canApply
-    ? s.blockReason && translateBlockReason(s.blockReason, ft)
-    : uitzendbureauBlocked
-      ? D.blockAgencyOnly
-      : missingRequiredCert
-        ? D.blockCert(missingRequiredCert.label)
-        : null;
 
   // Cancellation deadline: 24h before the shift starts.
   const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
@@ -135,20 +128,29 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   };
 
   // Does the freelancer already have a klus that overlaps this time window?
+  // The server refuses a second booking (lib/shifts/worker-overlap.ts), so say why up front.
   const myProfile = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },
     select: { id: true },
   });
-  const conflict = myProfile
-    ? (await prisma.shiftAssignment.count({
-        where: {
-          freelancerId: myProfile.id,
-          cancelledAt: null,
-          shiftId: { not: s.id },
-          shift: { startsAt: { lt: s.endsAt }, endsAt: { gt: s.startsAt } },
-        },
-      })) > 0
-    : false;
+  const overlap = myProfile
+    ? await findOverlappingShift(prisma, myProfile.id, { shiftId: s.id, startsAt: new Date(s.startsAt), endsAt: new Date(s.endsAt) })
+    : null;
+  const conflict = Boolean(overlap);
+  const overlapWhen = (o: NonNullable<typeof overlap>) => {
+    const p = amsterdamParts(o.startsAt);
+    return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(o.startsAt)}–${hhmm(o.endsAt)}`;
+  };
+  const applyDisabled = !s.canApply || Boolean(overlap) || Boolean(missingRequiredCert) || uitzendbureauBlocked;
+  const applyBlockReason = !s.canApply
+    ? s.blockReason && translateBlockReason(s.blockReason, ft)
+    : overlap
+      ? D.blockOverlap(overlap.title, overlapWhen(overlap))
+      : uitzendbureauBlocked
+        ? D.blockAgencyOnly
+        : missingRequiredCert
+          ? D.blockCert(missingRequiredCert.label)
+          : null;
   let assigned: {
     assignmentId: string;
     confirmedAt: string | null;

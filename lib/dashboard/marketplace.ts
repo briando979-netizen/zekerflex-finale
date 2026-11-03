@@ -11,6 +11,7 @@ import { tenantsBlockingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { followedTenantIds } from "@/lib/worker/follows";
+import { overlapsAny } from "@/lib/shifts/worker-overlap";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -59,6 +60,8 @@ export interface MarketplaceShift {
   workedHereBefore: number;
   /** the freelancer follows this employer (❤️, lib/worker/follows) */
   followed: boolean;
+  /** overlaps a shift the freelancer already works: taking it is refused (lib/shifts/worker-overlap) */
+  busy?: boolean;
   /** part of a multi-day run posted by the employer */
   series: Series | null;
   /** this seat opened up because someone needs a replacement */
@@ -203,14 +206,16 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
       : profile.homePostalCode || null;
   const skills = new Set((profile?.skills ?? []).map((s) => s.skill.name));
 
-  const takenShiftIds = profile
-    ? (
-        await prisma.shiftAssignment.findMany({
-          where: { freelancerId: profile.id, cancelledAt: null },
-          select: { shiftId: true },
-        })
-      ).map((a) => a.shiftId)
+  const taken = profile
+    ? await prisma.shiftAssignment.findMany({
+        where: { freelancerId: profile.id, cancelledAt: null },
+        select: { shiftId: true, shift: { select: { startsAt: true, endsAt: true } } },
+      })
     : [];
+  const takenShiftIds = taken.map((a) => a.shiftId);
+  // Upcoming own work, to mark klussen that clash with it ("Je werkt dan al").
+  const nowMs = Date.now();
+  const busyWindows = taken.map((a) => a.shift).filter((w) => w.endsAt.getTime() > nowMs);
 
   // Branches where this freelancer has worked before (for "je werkte hier al Nx").
   const priorByBranch = new Map<string, number>();
@@ -347,6 +352,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         weekday: amsterdamParts(s.startsAt).weekday,
         workedHereBefore: priorByBranch.get(s.branchId) ?? 0,
         followed: followed.has(s.branch.tenantId),
+        busy: overlapsAny(busyWindows, s),
         travel: computeTravel(home, { lat: s.branch.latitude, lng: s.branch.longitude }),
         series: series.get(s.id) ?? null,
         isReplacement: replacementByShift.has(s.id),

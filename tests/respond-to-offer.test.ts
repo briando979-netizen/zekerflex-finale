@@ -18,9 +18,12 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const shiftFindFirst = vi.fn();
 const shiftUpdate = vi.fn();
+const overlapRow = vi.fn(async (): Promise<unknown> => null);
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shift: { findFirst: (...a: unknown[]) => shiftFindFirst(...a), update: (...a: unknown[]) => shiftUpdate(...a) },
+    freelancerProfile: { findUnique: async () => ({ id: "fp1" }) },
+    shiftAssignment: { findFirst: () => overlapRow() },
   },
 }));
 
@@ -77,6 +80,8 @@ const shift = {
   title: "Receptiemedewerker",
   hourlyRateCents: 1500,
   status: "OPEN",
+  startsAt: new Date("2026-11-04T08:00:00Z"),
+  endsAt: new Date("2026-11-04T16:00:00Z"),
 };
 
 afterEach(() => vi.clearAllMocks());
@@ -111,6 +116,34 @@ describe("respondToOfferAction", () => {
     expect(setOfferStatus).not.toHaveBeenCalled();
     expect(result.ok).toBe(false);
     expect(result.message).toContain("Deze dienst is al vol.");
+  });
+
+  it("refuses before changing the rate when the freelancer is booked elsewhere at that time", async () => {
+    requirePrincipal.mockResolvedValue(manager());
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });
+    listCounterOffers.mockResolvedValue([offer]);
+    shiftFindFirst.mockResolvedValue(shift);
+    overlapRow.mockResolvedValueOnce({
+      shift: {
+        id: "other1",
+        title: "Afwasser",
+        startsAt: new Date("2026-11-04T10:00:00Z"),
+        endsAt: new Date("2026-11-04T14:00:00Z"),
+        branch: { name: "Concurrent BV" },
+      },
+    });
+
+    const result = await respondToOfferAction("offer1", "accepted");
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("al ingepland");
+    expect(result.message).toContain("11:00–15:00");
+    // de andere klant blijft onbekend voor deze werkgever
+    expect(result.message).not.toContain("Concurrent BV");
+    expect(result.message).not.toContain("Afwasser");
+    expect(shiftUpdate).not.toHaveBeenCalled();
+    expect(applyToShift).not.toHaveBeenCalled();
+    expect(setOfferStatus).not.toHaveBeenCalled();
   });
 
   it("declines an offer without touching the assignment path", async () => {

@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { isTenantVerified } from "@/lib/company/verified";
 import { myOfferForShift } from "@/lib/offers/store";
+import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
 
 // ---------------------------------------------------------------------------
 // Een geaccepteerde reactie bij een GEVERIFIEERD bedrijf hoort een echte
@@ -39,6 +40,8 @@ export async function healAcceptedOffer(userId: string, freelancerId: string, sh
   if (!shift) return null;
   if (shift._count.assignments >= shift.positions) return null; // al vol
   if (!(await isTenantVerified(shift.branch.tenantId))) return null; // bewust niet inplannen
+  // Intussen op dat moment al ergens anders ingepland: niet stilletjes dubbel boeken.
+  if (await findOverlappingShift(prisma, freelancerId, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt })) return null;
 
   const offer = await myOfferForShift(userId, shiftId);
 

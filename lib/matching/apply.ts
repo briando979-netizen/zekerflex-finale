@@ -7,6 +7,7 @@ import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { isBlockedByAny } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
+import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -60,6 +61,7 @@ export async function applyToShift(
       id: true,
       status: true,
       startsAt: true,
+      endsAt: true,
       positions: true,
       viaUitzendbureau: true,
       visibility: true,
@@ -90,6 +92,9 @@ export async function applyToShift(
     select: { id: true, cancelledAt: true },
   });
   if (already && !already.cancelledAt) throw AppError.conflict("Je hebt deze dienst al aangenomen.");
+  // Eerst hier (vóór de reactie wordt vastgelegd); recordOfferResponse controleert nog eens binnen de transactie.
+  const overlap = await findOverlappingShift(prisma, profile.id, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt });
+  if (overlap) throw AppError.conflict(overlapMessageSelf(overlap));
 
   const distanceMeters = Math.round(
     haversineMeters(

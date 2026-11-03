@@ -14,6 +14,7 @@ import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
@@ -417,6 +418,9 @@ export async function recordOfferResponse(
     if (taken >= shift.positions) {
       throw AppError.conflict("This shift is already fully staffed");
     }
+    // Not on two shifts at once (the offer may predate another booking).
+    const overlap = await findOverlappingShift(tx, freelancerId, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt });
+    if (overlap) throw AppError.conflict(overlapMessageSelf(overlap));
 
     const assignment = await tx.shiftAssignment.create({
       data: { shiftId, freelancerId, source: MatchStatus.ACCEPTED },

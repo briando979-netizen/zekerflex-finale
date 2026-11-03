@@ -18,7 +18,11 @@ vi.mock("@/lib/fiscal/eligibility", () => ({ payoutEligibility: (...a: unknown[]
 
 const shiftFindUnique = vi.fn();
 vi.mock("@/lib/prisma", () => ({
-  prisma: { shift: { findUnique: (...a: unknown[]) => shiftFindUnique(...a) } },
+  prisma: {
+    shift: { findUnique: (...a: unknown[]) => shiftFindUnique(...a) },
+    freelancerProfile: { findUnique: async () => ({ id: "fp1" }) },
+    shiftAssignment: { findFirst: async () => null },
+  },
 }));
 
 const createCounterOffer = vi.fn();
@@ -44,6 +48,7 @@ const uitzendShift = {
   hourlyRateCents: 1700,
   status: "OPEN",
   startsAt: new Date(Date.now() + 86_400_000),
+  endsAt: new Date(Date.now() + 86_400_000 + 8 * 3_600_000),
   viaUitzendbureau: true,
   branch: { name: "Branch 1" },
 };
