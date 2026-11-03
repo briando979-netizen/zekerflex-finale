@@ -152,7 +152,7 @@ export const DBA_QUESTIONS: DbaQuestion[] = [
     good: "De zzp'er werkt voor meerdere opdrachtgevers.",
     zzp: {
       q: "Heb je naast deze opdrachtgever ook andere opdrachtgevers?",
-      tip: "Zorg voor meer dan één opdrachtgever. Dat laat zien dat je echt onderneemt en maakt je minder afhankelijk.",
+      tip: "Zorg voor meer dan één opdrachtgever. Dat laat zien dat je echt onderneemt en maakt je minder afhankelijk. Op ZekerFlex zie je in je administratie hoe je omzet verdeeld is, met een seintje als één opdrachtgever te groot wordt.",
       good: "Je werkt voor meerdere opdrachtgevers.",
     },
   },
