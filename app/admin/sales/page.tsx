@@ -2,6 +2,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolvePeriod } from "@/lib/admin/period";
 import { salesInsights } from "@/lib/admin/insights/sales";
+import { rekentoolInsights } from "@/lib/admin/insights/rekentools";
 import { count, percentOf } from "@/lib/admin/format";
 import { BarList, Funnel, KpiStrip, PageHead, Panel, PeriodTabs } from "@/components/admin/kit";
 import { Chart } from "@/components/admin/kit-client";
@@ -26,7 +27,7 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
   const { periode } = await props.searchParams;
   const period = resolvePeriod(periode);
 
-  const [insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns] = await Promise.all([
+  const [insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns, tools] = await Promise.all([
     salesInsights(period),
     listLeads({ limit: 200 }),
     listCampaigns(),
@@ -40,6 +41,7 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
       select: { id: true, companyName: true, nextActionAt: true, sequenceStep: true },
     }),
     prisma.salesEngineRun.findMany({ orderBy: { startedAt: "desc" }, take: 15 }),
+    rekentoolInsights(period),
   ]);
 
   const leads: LeadDto[] = rows.map((l) => ({
@@ -178,6 +180,46 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
           <BarList emptyText="Nog geen leads." rows={insights.sources.map((s) => ({ key: s.key, label: s.label, value: s.value, display: count(s.value) }))} />
         </Panel>
       </div>
+
+      <Panel
+        title="Rekentools"
+        subtitle={`Laatste ${period.label}: bekeken, echt ingevuld en leads via "Stuur mij de uitkomst"`}
+        flush
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[34rem] text-[0.8125rem]">
+            <thead>
+              <tr style={{ color: "var(--a-mute)" }}>
+                <th scope="col" className="px-4 py-2 text-left font-medium sm:px-5">Tool</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Bekeken</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Ingevuld</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Leads</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium sm:px-5">Bekeken → lead</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tools.map((t) => (
+                <tr key={t.key} style={{ borderTop: "1px solid var(--a-border)" }}>
+                  <td className="px-4 py-2.5 sm:px-5">
+                    <a href={t.path} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: "var(--a-text)" }}>
+                      {t.label}
+                    </a>
+                  </td>
+                  <td className="num px-3 py-2.5 text-right" style={{ color: "var(--a-text)" }}>{count(t.views)}</td>
+                  <td className="num px-3 py-2.5 text-right" style={{ color: "var(--a-text)" }}>
+                    {count(t.used)}
+                    {t.views > 0 ? <span className="ml-1.5 text-xs" style={{ color: "var(--a-mute)" }}>{percentOf(t.used, t.views)}%</span> : null}
+                  </td>
+                  <td className="num px-3 py-2.5 text-right" style={{ color: "var(--a-text)" }}>{t.leads === null ? "n.v.t." : count(t.leads)}</td>
+                  <td className="num px-4 py-2.5 text-right sm:px-5" style={{ color: "var(--a-mute)" }}>
+                    {t.leads === null || t.views === 0 ? "–" : `${percentOf(t.leads, t.views)}%`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
 
       <SalesConsole
         initialLeads={leads}
