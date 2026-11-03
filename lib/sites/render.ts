@@ -54,8 +54,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop, 4 Nov 2026). */
-const CSS_REV = 2;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones, 4 Nov 2026). */
+const CSS_REV = 3;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];

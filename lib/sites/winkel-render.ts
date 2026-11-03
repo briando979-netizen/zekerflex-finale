@@ -89,7 +89,8 @@ function productLd(p: SiteProduct, url: string, beeld: string | null, verkoper: 
 export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, meta: { url: string; beeld: string | null; seo: boolean }): string {
   const fotos = p.fotos.map((f, i) => ctx.img(f, i === 0 ? "(min-width: 900px) 55vw, 100vw" : "(min-width: 900px) 14vw, 25vw", i === 0)).filter(Boolean);
   const galerij = fotos.length ? `<div class="pgal">${fotos.join("")}</div>` : `<div class="pgal"><span class="pimg">${foto(ctx, p, "100vw")}</span></div>`;
-  const kruimel = `<nav class="crumbs" aria-label="Kruimelpad"><a href="${ctx.esc(pad(ctx, "winkel"))}">Winkel</a>${p.categorie ? ` › <a href="${ctx.esc(pad(ctx, `winkel#${ankerVan(p.categorie)}`))}">${ctx.esc(p.categorie)}</a>` : ""}</nav>`;
+  // een div met de rol van nav: de menu-opmaak van de site (nav a als blok, licht in premium) hoort hier niet
+  const kruimel = `<div class="crumbs" role="navigation" aria-label="Kruimelpad"><a href="${ctx.esc(pad(ctx, "winkel"))}">Winkel</a>${p.categorie ? ` <span aria-hidden="true">›</span> <a href="${ctx.esc(pad(ctx, `winkel#${ankerVan(p.categorie)}`))}">${ctx.esc(p.categorie)}</a>` : ""}</div>`;
   const uit = ctx.inert ? " disabled" : "";
   const bestel = p.uitverkocht
     ? `<p class="psold big">Uitverkocht</p><p><a class="btn" href="${ctx.esc(ctx.href("contact"))}">Vraag wanneer het er weer is</a></p>`
@@ -142,7 +143,8 @@ export function bestelPaginaBody(ctx: WinkelCtx, w: Winkel, opts: { invoer?: Bes
     : "";
   const fouten = opts.fouten?.length ? `<div class="alert" role="alert"><p><strong>Nog even kijken:</strong></p><ul>${opts.fouten.map((f) => `<li>${ctx.esc(f)}</li>`).join("")}</ul></div>` : "";
   const note = ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> bestellen kan hier niet.</p>` : `<p class="small">We gebruiken je gegevens alleen voor je bestelling. Lees de <a href="${ctx.esc(ctx.href("privacy"))}">privacyverklaring</a>.</p>`;
-  return `<section><div class="wrap narrow"><h1>Bestellen</h1>${fouten}<form class="contact order" method="post" action="${ctx.esc(ctx.preview || ctx.inert ? "#" : `${ctx.root}_zf/bestelling`)}"><input type="hidden" name="stap" value="controle"><fieldset><legend>Wat wil je bestellen?</legend>${lijst}</fieldset>${levering}<fieldset><legend>Je gegevens</legend>${veld(ctx, "naam", "Naam", v?.naam ?? "", ' required maxlength="100" autocomplete="name"')}${veld(ctx, "email", "E-mailadres", v?.email ?? "", ' type="email" required maxlength="200" autocomplete="email"')}${veld(ctx, "telefoon", "Telefoon", v?.telefoon ?? "", ' type="tel" required maxlength="30" autocomplete="tel"')}</fieldset>${adres}<label>Opmerking (mag leeg)<textarea name="opmerking" maxlength="1000"${uit}>${ctx.esc(v?.opmerking ?? "")}</textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit"${uit}>Bekijk je bestelling</button></p></form></div></section>`;
+  // op de computer: links de producten, rechts (meeschuivend) levering, gegevens en de knop
+  return `<section><div class="wrap"><h1>Bestellen</h1>${fouten}<form class="contact order" method="post" action="${ctx.esc(ctx.preview || ctx.inert ? "#" : `${ctx.root}_zf/bestelling`)}"><input type="hidden" name="stap" value="controle"><div class="ocols"><div><fieldset><legend>Wat wil je bestellen?</legend>${lijst}</fieldset></div><div class="oside">${levering}<fieldset><legend>Je gegevens</legend>${veld(ctx, "naam", "Naam", v?.naam ?? "", ' required maxlength="100" autocomplete="name"')}${veld(ctx, "email", "E-mailadres", v?.email ?? "", ' type="email" required maxlength="200" autocomplete="email"')}${veld(ctx, "telefoon", "Telefoon", v?.telefoon ?? "", ' type="tel" required maxlength="30" autocomplete="tel"')}</fieldset>${adres}<label>Opmerking (mag leeg)<textarea name="opmerking" maxlength="1000"${uit}>${ctx.esc(v?.opmerking ?? "")}</textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit"${uit}>Bekijk je bestelling</button></p></div></div></form></div></section>`;
 }
 
 /** Stap 2: het overzicht met totaal; dezelfde gegevens gaan verborgen mee naar "plaatsen" of terug naar "wijzigen". */
@@ -181,7 +183,9 @@ export function winkelCss(premium: boolean): string {
 .psold{display:inline-block;margin:6px 0 0;font-size:.82rem;font-weight:700;color:#9b1c1c}.psold.big{font-size:1rem;margin:0 0 12px}.pmore{margin:32px 0 0}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 32px;padding:0;list-style:none}.chips a{display:block;padding:9px 18px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-weight:600;font-size:.92rem;text-decoration:none}.chips a:hover{border-color:var(--k)}
 .pcatgroup{margin:0 0 56px;scroll-margin-top:96px}.pcatgroup h2{margin-bottom:20px}
-.crumbs{margin:0 0 24px;font-size:.92rem;color:var(--mute)}.crumbs a{color:inherit}
+.crumbs{margin:0 0 24px;font-size:.92rem;color:var(--mute)}.crumbs a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pbody{padding:12px 12px 16px}.pkort{display:none}.pcard h3{font-size:.98rem}.pprice{font-size:1rem}.pcat{font-size:.68rem;letter-spacing:.1em}}
+form.order{max-width:none}.ocols{display:grid;gap:20px}.oside{display:grid;gap:14px}@media (min-width:900px){.ocols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}.oside{position:sticky;top:100px}}
 .product{display:grid;gap:40px;align-items:start}@media (min-width:900px){.product{grid-template-columns:1.1fr 1fr;gap:64px}.pinfo{position:sticky;top:100px}}
 .pgal{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}.pgal img,.pgal .pimg{border-radius:var(--r);width:100%;aspect-ratio:1;object-fit:cover}.pgal>:first-child{grid-column:1/-1}
 .pinfo h1{font-size:clamp(2rem,4vw,3.2rem);margin-bottom:12px}.lead{font-size:1.15rem;color:var(--mute)}.pdesc{margin-top:28px;border-top:1px solid var(--line);padding-top:24px}
@@ -194,7 +198,7 @@ form.order .radio{display:flex;align-items:center;gap:10px;font-weight:600}form.
 table.sum{width:100%;border-collapse:collapse;margin:0 0 20px}table.sum td,table.sum th{padding:12px 0;border-bottom:1px solid var(--line);text-align:left}table.sum td+td{text-align:right}table.sum tfoot th,table.sum tfoot td{font-weight:700;font-size:1.15rem;border-bottom:0}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}.acts-row{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 0}
 @media (prefers-reduced-motion:reduce){.pcard,.pimg img{transition:none}.pcard:hover{transform:none}.pcard:hover .pimg img{transform:none}}`;
-  const prem = `.pcard{border:0;border-radius:28px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.pcard:hover{box-shadow:0 2px 4px rgba(10,18,14,.06),0 24px 48px rgba(10,18,14,.14)}.pbody{padding:22px 26px 28px}
+  const prem = `.pcard{border:0;border-radius:28px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.pcard:hover{box-shadow:0 2px 4px rgba(10,18,14,.06),0 24px 48px rgba(10,18,14,.14)}.pbody{padding:22px 26px 28px}@media (max-width:640px){.pcard{border-radius:18px}.pbody{padding:12px 12px 16px}}
 .pprice{color:var(--a-d)}.pgal img,.pgal .pimg,.feat .pimg{border-radius:28px}.chips a{border-color:rgba(10,18,14,.14)}.chips a:hover{border-color:var(--a-d)}
 form.order fieldset{border:0;border-radius:24px;padding:24px 26px 28px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.btn.ghost{color:var(--night);border-color:rgba(10,18,14,.2)}`;
   return premium ? `${basis}\n${prem}` : basis;
