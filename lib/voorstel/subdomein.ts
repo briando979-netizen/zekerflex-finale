@@ -14,6 +14,16 @@ export const VOORSTELLEN: Record<string, string> = {
   schwarzwald: "/voorstel/schwarzwald",
 };
 
+/**
+ * Het korte adres voor de adresbalk op het subdomein: /voorstel/schwarzwald/x
+ * wordt /x. Links in de site wijzen naar het lange pad; voorstelPad() hierboven
+ * zet het korte pad weer om, dus vernieuwen en terug-knop blijven werken.
+ */
+export function kortPad(pad: string, basis = VOORSTELLEN.schwarzwald ?? ""): string {
+  if (!basis || (pad !== basis && !pad.startsWith(`${basis}/`))) return pad;
+  return pad.slice(basis.length) || "/";
+}
+
 /** Gedeelde openbare API's die de voorstelpagina's zelf gebruiken. */
 const GEDEELDE_API = ["/api/media/youtube/"];
 

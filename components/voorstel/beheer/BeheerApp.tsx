@@ -43,13 +43,13 @@ export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, strin
 
   const naar = (t: Tab) => {
     setTab(t);
-    window.history.replaceState(null, "", `#${t}`);
+    window.history.replaceState(window.history.state, "", `#${t}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const openKlant = (email: string) => {
     setKlant(email);
     setTab("klanten");
-    window.history.replaceState(null, "", `#klanten=${encodeURIComponent(email)}`);
+    window.history.replaceState(window.history.state, "", `#klanten=${encodeURIComponent(email)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

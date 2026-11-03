@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { BASE, CONTACT, DOELGROEPEN, MENU, OPENINGSTIJDEN, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
 import { pagina, paginaPaden } from "@/lib/voorstel/schwarzwald-paginas";
 import { beheerder, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { leesInstellingen } from "@/lib/voorstel/schwarzwald-instellingen";
 import { Logo, SchwarzwaldHeader, type KopAccount, type ZoekItem } from "@/components/voorstel/SchwarzwaldHeader";
+import { KortAdres } from "@/components/voorstel/KortAdres";
+import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
 
 // Ontwerpvoorstel: een nieuwe website voor Het Schwarzwald, gebouwd op
 // ZekerFlex in plaats van WordPress. Eigen omlijsting, los van de
@@ -40,7 +43,9 @@ const KOP = "text-xs font-bold uppercase tracking-[0.18em] text-schw-sun";
 const LINK = "text-schw-cream/80 hover:text-schw-cream";
 
 export default async function SchwarzwaldLayout({ children }: { children: ReactNode }) {
-  const [account, beheer, instellingen] = await Promise.all([huidigAccount().catch(() => null), beheerder().catch(() => null), leesInstellingen()]);
+  const [account, beheer, instellingen, kop] = await Promise.all([huidigAccount().catch(() => null), beheerder().catch(() => null), leesInstellingen(), headers()]);
+  // op het eigen subdomein (Caddy zet de kop) korte adressen in de adresbalk
+  const subdomein = kop.get(VOORSTEL_HEADER) !== null;
   const kopAccount: KopAccount | null = account
     ? { voornaam: account.naam.split(" ")[0] ?? account.naam, beheerder: !!beheer }
     : beheer
@@ -57,6 +62,7 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
           Naar de huidige site
         </a>
       </div>
+      {subdomein && <KortAdres />}
       <SchwarzwaldHeader zoekIndex={zoekIndex()} account={kopAccount} />
       {instellingen.aankondiging && (
         <div role="note" className="bg-schw-orange px-4 py-2.5 text-center text-sm font-bold text-schw-night">

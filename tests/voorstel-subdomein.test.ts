@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { voorstelPad } from "@/lib/voorstel/subdomein";
+import { kortPad, voorstelPad } from "@/lib/voorstel/subdomein";
 
 describe("voorstel op een eigen subdomein", () => {
   it("toont het voorstel op de kale paden", () => {
@@ -25,6 +25,16 @@ describe("voorstel op een eigen subdomein", () => {
     // ZekerFlex-pagina's worden voorstelpaden en bestaan daar dus niet (404)
     expect(voorstelPad("schwarzwald", "/admin")).toBe("/voorstel/schwarzwald/admin");
     expect(voorstelPad("schwarzwald", "/login")).toBe("/voorstel/schwarzwald/login");
+  });
+
+  it("maakt korte adressen voor de adresbalk, en die komen weer bij dezelfde pagina uit", () => {
+    expect(kortPad("/voorstel/schwarzwald")).toBe("/");
+    expect(kortPad("/voorstel/schwarzwald/restaurant/bbq")).toBe("/restaurant/bbq");
+    expect(kortPad("/voorstel/schwarzwaldx/y")).toBe("/voorstel/schwarzwaldx/y");
+    expect(kortPad("/restaurant/bbq")).toBe("/restaurant/bbq");
+    for (const lang of ["/voorstel/schwarzwald", "/voorstel/schwarzwald/activiteiten/buggy-rijden", "/voorstel/schwarzwald/beheer"]) {
+      expect(voorstelPad("schwarzwald", kortPad(lang))).toBe(lang);
+    }
   });
 
   it("weigert onbekende voorstellen", () => {
