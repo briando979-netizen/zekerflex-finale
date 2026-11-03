@@ -22,6 +22,8 @@ import { OpsAlerts } from "@/components/admin/OpsAlerts";
 import { UsagePanel } from "@/components/admin/UsagePanel";
 import { ErrorJournalPanel } from "@/components/admin/ErrorJournalPanel";
 import { listErrorGroups } from "@/lib/ops/error-journal";
+import { agentLeeft, leesLive } from "@/lib/bouwer/live";
+import { bouwerGezond, bouwerIngesteld, bouwerInstellingen } from "@/lib/bouwer/werker";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +64,7 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
@@ -71,6 +73,9 @@ export default async function SysteemPage() {
     cronHeartbeats().catch(() => []),
     readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null })),
     listErrorGroups(500).catch(() => []),
+    leesLive().catch(() => null),
+    bouwerGezond(),
+    bouwerInstellingen().catch(() => null),
   ]);
   const now = new Date();
   const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
@@ -118,6 +123,22 @@ export default async function SysteemPage() {
       label: "Database-back-up",
       state: !backup.available ? "off" : backup.state === "ok" ? "ok" : "crit",
       meta: !backup.available ? "niet op deze omgeving" : backup.status ? `laatste ${dateTimeNl(backup.status.at, now)}` : "nog geen back-up",
+    },
+    // ZekerFlex AI → Live zetten: de dienst op de server die uitrolt (deploy/bouwer/zf-live.py)
+    {
+      label: "Live-zetter (uitrollen)",
+      state: !liveStand?.hartslag ? "off" : agentLeeft(liveStand.hartslag) ? "ok" : "crit",
+      meta: !liveStand?.hartslag ? "niet op deze omgeving" : agentLeeft(liveStand.hartslag) ? "draait op de server" : `reageert niet sinds ${dateTimeNl(liveStand.hartslag.op, now)}`,
+    },
+    // ZekerFlex AI → Bouwer: de AI-programmeur (deploy/bouwer/werker)
+    {
+      label: "Bouwer (AI-programmeur)",
+      state: !bouwerIngesteld() ? "off" : bouwerOk?.ok ? "ok" : "crit",
+      meta: !bouwerIngesteld()
+        ? "niet geïnstalleerd (optioneel)"
+        : !bouwerOk?.ok
+          ? "reageert niet"
+          : `${bouwerSet?.model ?? "?"}${bouwerSet && !bouwerSet.githubSleutel ? ", GitHub-sleutel ontbreekt" : ""}`,
     },
   ];
   const backupBroken = backup.available && backup.state !== "ok";

@@ -24,6 +24,13 @@ describe("wat er live ging, in gewone taal", () => {
     expect(mail?.tekst).toContain("https://zekerflex.com/admin/zekerflex-ai");
   });
 
+  it("blijft leesbaar op een drukke dag (max 25 per kopje)", () => {
+    const veel = Array.from({ length: 40 }, (_, i) => `feat(x): onderdeel ${i + 1}`);
+    const mail = dagoverzichtTekst(veel, null, "https://zekerflex.com");
+    expect(mail?.tekst).toContain("• Onderdeel 25\n… en nog 15 meer");
+    expect(mail?.tekst).not.toContain("Onderdeel 26");
+  });
+
   it("geen wijzigingen = geen mail", () => {
     expect(dagoverzichtTekst([], null, "https://zekerflex.com")).toBeNull();
   });

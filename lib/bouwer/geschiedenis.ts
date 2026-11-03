@@ -16,6 +16,7 @@ const K_GESCHIEDENIS = "bouwer:live:geschiedenis";
 const K_DAG = "bouwer:dagoverzicht:laatst";
 const MAX_GESCHIEDENIS = 60;
 const UUR_DAGOVERZICHT = 18;
+const MAX_PER_KOPJE = 25;
 
 export interface LiveMoment extends Versie {
   /** wanneer de app deze versie voor het eerst live zag */
@@ -57,7 +58,12 @@ export function dagoverzichtTekst(onderwerpen: string[], live: Versie | null, ba
   const blokken = (Object.keys(kopje) as (keyof typeof kopje)[])
     .map((s) => ({ s, items: regels.filter((r) => r.soort === s) }))
     .filter((b) => b.items.length > 0)
-    .map((b) => `${kopje[b.s]}\n${b.items.map((r) => `• ${r.tekst}`).join("\n")}`);
+    // op een drukke dag blijft de mail leesbaar: hooguit 25 per kopje
+    .map((b) => {
+      const meer = b.items.length - MAX_PER_KOPJE;
+      const lijst = b.items.slice(0, MAX_PER_KOPJE).map((r) => `• ${r.tekst}`);
+      return `${kopje[b.s]}\n${lijst.join("\n")}${meer > 0 ? `\n… en nog ${meer} meer (zie Live zetten)` : ""}`;
+    });
   const achter = regels.filter((r) => r.soort === "achter").length;
   if (!blokken.length && !achter) return null;
   const tekst = [
@@ -65,7 +71,7 @@ export function dagoverzichtTekst(onderwerpen: string[], live: Versie | null, ba
     "",
     ...blokken.flatMap((b) => [b, ""]),
     ...(achter ? [`En ${achter} kleinere wijziging${achter === 1 ? "" : "en"} achter de schermen.`, ""] : []),
-    ...(live ? [`Live staat nu: ${live.onderwerp} (${live.sha.slice(0, 7)}).`] : []),
+    ...(live ? [`Live staat nu: ${leesbaar(live.onderwerp).tekst} (${live.sha.slice(0, 7)}).`] : []),
     `Alles bekijken: ${basisUrl}/admin/zekerflex-ai (tabblad Live zetten).`,
   ].join("\n");
   return { onderwerp: `ZekerFlex: vandaag live gezet (${regels.length} wijziging${regels.length === 1 ? "" : "en"})`, tekst };
