@@ -8,7 +8,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import type { CleanImage } from "@/lib/media/clean-image";
-import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain } from "@/lib/sites/types";
+import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain, type SiteProposalMark } from "@/lib/sites/types";
 import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 
 // ---------------------------------------------------------------------------
@@ -107,6 +107,7 @@ export async function saveSite(id: string, input: z.infer<typeof siteSaveSchema>
   if (!site) throw AppError.notFound("Deze website bestaat niet.");
   const known = new Set(site.media.map((m) => m.id));
   // photos must be ones this site owns
+  if (input.theme.logo && !known.has(input.theme.logo)) throw AppError.validation("Het logo hoort niet bij deze website.");
   for (const p of input.pages)
     for (const b of p.blocks) {
       const ids = b.type === "hero" || b.type === "tekstFoto" ? [b.props.foto] : b.type === "galerij" ? b.props.fotos : [];
@@ -166,6 +167,21 @@ export async function publishSite(id: string, by: { userId: string; name: string
 export async function markExample(id: string): Promise<void> {
   const site = await getSite(id);
   if (site && !site.voorbeeld) await kvSet(siteKey(id), { ...site, voorbeeld: true });
+}
+
+/** Mark a site as a design proposal (lib/sales/website-proposal.ts), or take the mark off (null) once it is the company's own. Visitors see it after the next publish. */
+export async function markProposal(id: string, mark: SiteProposalMark | null): Promise<void> {
+  const site = await getSite(id);
+  if (!site) throw AppError.notFound("Deze website bestaat niet.");
+  const { voorstel, ...rest } = site;
+  void voorstel;
+  await kvSet(siteKey(id), mark ? { ...rest, voorstel: mark } : rest);
+}
+
+/** Give a site's address back (a withdrawn proposal), so a real company or a new proposal can have it. The site keeps its data. */
+export async function freeSlug(siteId: string): Promise<void> {
+  const site = await getSite(siteId);
+  if (site && (await kvGet<string>(slugKey(site.slug))) === siteId) await kvDelete(slugKey(site.slug));
 }
 
 /** Go back to an earlier published version, or take the site offline (buildId null). */

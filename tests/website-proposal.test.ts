@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractBusiness, extraScores, improvementPlan, proposalFindings } from "@/lib/website-check/proposal";
+import { clipSentences, extractBusiness, extraScores, improvementPlan, proposalFindings } from "@/lib/website-check/proposal";
 
 // Uitgebreide beoordeling voor een websitevoorstel: bedrijfsgegevens uit de
 // pagina halen (voor de nieuwe site), vertrouwen/uitstraling/contact
@@ -39,6 +39,25 @@ describe("bedrijfsgegevens uit een pagina", () => {
   it("zonder copyright of site-naam: het stuk uit de titel dat niet de plaats is", () => {
     const html = `<html><head><title>Kapsalon Knip | Haarden</title></head><body><p>Kerkstraat 3</p><p>7771 AB Haarden</p></body></html>`;
     expect(extractBusiness(html, "https://knip.nl/").naam).toBe("Kapsalon Knip");
+  });
+
+  it("haalt diensten met hun eigen tekst, een introductie en een 06-nummer", () => {
+    const html = `<html><head><title>Hoveniersbedrijf Groen</title></head><body>
+      <p>Hoveniersbedrijf Groen ontwerpt, legt aan en onderhoudt tuinen in de hele regio. Al twintig jaar met vakmensen die van hun werk houden en netjes opleveren.</p>
+      <h2>Tuinontwerp</h2><p>We tekenen samen met je een tuin die past bij je huis en je manier van leven.</p>
+      <h2>Onderhoud</h2><p>Snoeien, maaien en bemesten.</p>
+      <h2>Openingstijden</h2><p>Maandag tot en met vrijdag van 08:00 tot 17:00 uur.</p>
+      <a href="tel:06-12345678">Bel</a></body></html>`;
+    const b = extractBusiness(html, "https://groen.nl/");
+    expect(b.secties).toEqual([
+      { kop: "Tuinontwerp", tekst: "We tekenen samen met je een tuin die past bij je huis en je manier van leven." },
+      { kop: "Onderhoud", tekst: "Snoeien, maaien en bemesten." },
+    ]);
+    expect(b.intro).toMatch(/^Hoveniersbedrijf Groen ontwerpt/);
+    expect(b.mobiel).toBe(true);
+    expect(extractBusiness(OUD, "https://devries-schilders.nl/").mobiel).toBe(false);
+    expect(clipSentences("Dit is zin een. Dit is zin twee die lang is.", 30)).toBe("Dit is zin een.");
+    expect(clipSentences("woord ".repeat(20).trim(), 20)).toBe("woord woord woord…");
   });
 
   it("en uit een moderne site: merkkleur, foto's (geen iconen), WhatsApp, reviews, reserveren", () => {

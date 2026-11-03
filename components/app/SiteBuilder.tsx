@@ -279,7 +279,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
           <div className="pt-3">
             {tab === "blokken" && <BlocksTab page={page} selected={blockId} onSelect={setBlockId} updatePage={updatePage} />}
             {tab === "paginas" && <PagesTab site={site} current={page.id} onSelect={(id) => { setPageId(id); setBlockId(null); }} change={change} />}
-            {tab === "stijl" && <StyleTab theme={site.theme} presets={data.presets} onTheme={(theme) => change((s) => ({ ...s, theme }))} />}
+            {tab === "stijl" && <StyleTab theme={site.theme} presets={data.presets} media={site.media} onTheme={(theme) => change((s) => ({ ...s, theme }))} />}
             {tab === "bedrijf" && <CompanyTab bedrijf={site.bedrijf} onChange={(bedrijf) => change((s) => ({ ...s, bedrijf }))} />}
             {tab === "fotos" && <PhotosTab site={site} onMedia={(media) => setSite((s) => ({ ...s, media: [...s.media, media] }))} onAlt={(id, alt) => change((s) => ({ ...s, media: s.media.map((m) => (m.id === id ? { ...m, alt } : m)) }))} />}
             {tab === "berichten" && <MessagesTab />}
@@ -441,9 +441,33 @@ function PagesTab({ site, current, onSelect, change }: { site: SiteDoc; current:
   );
 }
 
-function StyleTab({ theme, presets, onTheme }: { theme: Theme; presets: Data["presets"]; onTheme: (t: Theme) => void }) {
+function StyleTab({ theme, presets, media, onTheme }: { theme: Theme; presets: Data["presets"]; media: Media[]; onTheme: (t: Theme) => void }) {
   return (
     <div className="space-y-4 text-sm">
+      <Field label="Stijl">
+        <select className="field-input" value={theme.stijl ?? "standaard"} onChange={(e) => onTheme({ ...theme, stijl: e.target.value === "luxe" ? "luxe" : "standaard" })}>
+          <option value="standaard">Standaard (licht en vriendelijk)</option>
+          <option value="luxe">Luxe (veel ruimte, grote foto, verfijnde letters)</option>
+        </select>
+      </Field>
+      <div>
+        <p className="field-label">Logo bovenaan</p>
+        {media.length === 0 ? (
+          <p className="mt-1 text-xs text-neutralx-500">Zet je logo eerst bij Foto&apos;s (JPG, PNG of WebP), dan kun je het hier kiezen.</p>
+        ) : (
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            <button type="button" onClick={() => onTheme({ ...theme, logo: null })} aria-pressed={!theme.logo} className={`rounded-lg border p-1 text-[11px] leading-tight ${!theme.logo ? "border-brand-600 ring-2 ring-brand-100" : "border-hair hover:border-brand-300"}`}>
+              Naam als tekst
+            </button>
+            {media.map((m) => (
+              <button key={m.id} type="button" onClick={() => onTheme({ ...theme, logo: m.id })} aria-pressed={theme.logo === m.id} aria-label={`Als logo: ${m.alt || "foto"}`} className={`rounded-lg border bg-white p-1 ${theme.logo === m.id ? "border-brand-600 ring-2 ring-brand-100" : "border-hair hover:border-brand-300"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mediaUrl(m.file)} alt="" className="h-10 w-full object-contain" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div>
         <p className="field-label">Kleuren</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
@@ -480,8 +504,20 @@ function StyleTab({ theme, presets, onTheme }: { theme: Theme; presets: Data["pr
   );
 }
 
+/** The lines someone typed → https links ("www.instagram.com/x" becomes "https://www.instagram.com/x"); the rest is left out. */
+function socialLinks(text: string): string[] {
+  return text
+    .split("\n")
+    .map((s) => s.trim().replace(/^http:\/\//i, "https://"))
+    .map((s) => (/^[a-z][a-z0-9+.-]*:/i.test(s) || !/^[\w-]+(\.[\w-]+)+(\/|$)/.test(s) ? s : `https://${s}`))
+    .filter((s) => /^https:\/\/[^\s<>"']+\.[^\s<>"']+$/.test(s))
+    .slice(0, 6);
+}
+
 function CompanyTab({ bedrijf, onChange }: { bedrijf: Company; onChange: (c: Company) => void }) {
   const set = (k: keyof Company) => (e: ChangeEvent<HTMLInputElement>) => onChange({ ...bedrijf, [k]: e.target.value });
+  // the text as typed (half-typed lines included); only finished links are saved
+  const [socialText, setSocialText] = useState(() => (bedrijf.socials ?? []).join("\n"));
   return (
     <div className="space-y-3">
       <Field label="Bedrijfsnaam"><input className="field-input" value={bedrijf.naam} onChange={set("naam")} maxLength={100} /></Field>
@@ -493,6 +529,19 @@ function CompanyTab({ bedrijf, onChange }: { bedrijf: Company; onChange: (c: Com
       </div>
       <Field label="Telefoon"><input className="field-input" value={bedrijf.telefoon} onChange={set("telefoon")} maxLength={30} /></Field>
       <Field label="E-mail (berichten van bezoekers)"><input className="field-input" type="email" value={bedrijf.email} onChange={set("email")} maxLength={200} /></Field>
+      <Field label="WhatsApp (mobiel nummer, mag leeg)"><input className="field-input" value={bedrijf.whatsapp ?? ""} onChange={set("whatsapp")} inputMode="tel" maxLength={30} placeholder="06 12345678" /></Field>
+      <Field label="Sociale media (één link per regel)">
+        <textarea
+          className="field-input min-h-[80px]"
+          value={socialText}
+          onChange={(e) => {
+            setSocialText(e.target.value);
+            onChange({ ...bedrijf, socials: socialLinks(e.target.value) });
+          }}
+          placeholder="https://www.instagram.com/jouwbedrijf"
+        />
+      </Field>
+      <p className="text-xs text-neutralx-500">Met een WhatsApp-nummer staat er een WhatsApp-knop op elke pagina. Sociale media komen onderaan.</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, textOn, type RenderOptions } from "@/lib/sites/render";
+import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, socialName, textOn, waNumber, type RenderOptions } from "@/lib/sites/render";
 import { SECTOR_TEMPLATES, newBlock, pagesFromTemplate, slugify, type Company, type SiteDoc } from "@/lib/sites/types";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
@@ -149,6 +149,67 @@ describe("fotogalerij", () => {
       "gallery g3",
     ]);
     expect(siteCss(site().theme)).toContain(".gallery.bento img:first-child{grid-column:span 2;grid-row:span 2}");
+  });
+});
+
+describe("luxe stijl, logo, WhatsApp en sociale media", () => {
+  it("de luxe stijl komt alleen bij stijl luxe, met boekletters bij klassiek", () => {
+    const base = site().theme;
+    expect(siteCss(base)).not.toContain("hero.photo::after");
+    const luxe = siteCss({ ...base, stijl: "luxe", lettertype: "klassiek" });
+    expect(luxe).toContain(".hero.photo::after");
+    expect(luxe).toContain("Palatino");
+    expect(siteCss({ ...base, stijl: "luxe", lettertype: "modern" })).not.toContain("Palatino");
+  });
+
+  it("toont een eigen foto als logo, en anders de naam", () => {
+    const s = site({ theme: { ...site().theme, logo: "mfoto0001" } });
+    const html = renderPage(s, s.pages[0]!, opts);
+    expect(html).toMatch(/<a class="logo" href="\/site\/bakkerij"><img src="\/site\/bakkerij\/media\/mfoto0001\.webp" alt="Bakkerij &lt;script&gt;/);
+    const vreemd = site({ theme: { ...site().theme, logo: "monbekend1" } });
+    expect(renderPage(vreemd, vreemd.pages[0]!, opts)).toContain('<a class="logo" href="/site/bakkerij">Bakkerij &lt;script&gt;');
+  });
+
+  it("zet een WhatsApp-knop neer voor een echt mobiel nummer", () => {
+    expect(["06 12345678", "+31 6 1234 5678", "0031612345678", "06-12"].map(waNumber)).toEqual(["31612345678", "31612345678", "31612345678", null]);
+    const s = site({ bedrijf: { ...company, whatsapp: "06 12345678" } });
+    const contact = s.pages.find((p) => p.slug === "contact")!;
+    const html = renderPage(s, contact, opts);
+    expect(html).toContain('<a class="wa" href="https://wa.me/31612345678" rel="noopener">');
+    expect(html).toContain('WhatsApp: <a href="https://wa.me/31612345678"');
+    expect(renderPage(site(), contact, opts)).not.toContain('class="wa"');
+  });
+
+  it("laat alleen veilige links naar sociale media door, met een nette naam", () => {
+    const s = site({ bedrijf: { ...company, socials: ["https://www.instagram.com/bakkerij", "javascript:alert(1)", "https://nl.linkedin.com/company/bakkerij"] } });
+    const html = renderPage(s, s.pages[0]!, opts);
+    expect(html).toContain('<p class="socials"><a href="https://www.instagram.com/bakkerij" rel="noopener me">Instagram</a><a href="https://nl.linkedin.com/company/bakkerij" rel="noopener me">LinkedIn</a></p>');
+    expect(html).not.toContain("javascript:");
+    expect(socialName("https://x.com/bakker")).toBe("X");
+    expect(socialName("https://www.bakkerij.nl/blog")).toBe("bakkerij.nl");
+  });
+});
+
+describe("ontwerpvoorstel voor een bedrijf", () => {
+  const voorstel = { officieel: "bakkerij.nl", verloopt: "2026-12-03T10:00:00.000Z" };
+
+  it("zegt op elke pagina dat het niet de officiële website is, en verwijst naar die site", () => {
+    const s = site({ voorstel });
+    const html = renderPage(s, s.pages[0]!, { ...opts, noindex: false });
+    expect(html).toContain("Ontwerpvoorstel van ZekerFlex voor Bakkerij &lt;script&gt;");
+    expect(html).toContain('die staat op <a href="https://bakkerij.nl" rel="noopener">bakkerij.nl</a>');
+    expect(html).toContain('<meta name="robots" content="noindex">'); // ook als de plek zelf wel geïndexeerd mag worden
+    expect(html).not.toContain("application/ld+json");
+    expect(renderSystemPage(s, "privacy", opts)).toContain("Ontwerpvoorstel van ZekerFlex");
+  });
+
+  it("het formulier staat uit en verstuurt niets", () => {
+    const s = site({ voorstel });
+    const contact = s.pages.find((p) => p.slug === "contact")!;
+    const html = renderPage(s, contact, opts);
+    expect(html).toContain('<form class="contact" method="post" action="#">');
+    expect(html).toMatch(/<button class="btn" type="submit" disabled>/);
+    expect(html).toContain("Dit is een ontwerpvoorstel:");
   });
 });
 

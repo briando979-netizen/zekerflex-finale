@@ -53,6 +53,10 @@ export interface Theme {
   accent: string;
   lettertype: "modern" | "klassiek" | "vriendelijk";
   hoeken: "rond" | "strak";
+  /** "luxe": more room, fine lines, refined headings and a full-height opening photo */
+  stijl?: "standaard" | "luxe" | undefined;
+  /** media id of a photo of this site shown as the logo in the header; the name as text when absent */
+  logo?: string | null | undefined;
 }
 
 export interface Company {
@@ -63,6 +67,22 @@ export interface Company {
   plaats: string;
   telefoon: string;
   email: string;
+  /** mobile number for a WhatsApp button, empty for none */
+  whatsapp?: string | undefined;
+  /** the company's pages on social media (https only) */
+  socials?: string[] | undefined;
+}
+
+/**
+ * A design proposal from ZekerFlex to a company (lib/sales/website-proposal.ts):
+ * every page says it is not their official website, the contact form sends
+ * nothing, search engines stay out and it stops showing when it expires.
+ */
+export interface SiteProposalMark {
+  /** their current, official website ("devries-schilders.nl"), if known */
+  officieel: string | null;
+  /** ISO time after which the proposal no longer shows */
+  verloopt: string;
 }
 
 export interface Media {
@@ -122,6 +142,8 @@ export interface SiteDoc {
   builds: { id: string; at: string; by: string }[];
   /** an example site (lib/sites/demo.ts): a banner says so and the contact form sends nothing */
   voorbeeld?: boolean;
+  /** a design proposal to a company that is not (yet) a customer */
+  voorstel?: SiteProposalMark | undefined;
   createdAt: string;
   updatedAt: string;
 }

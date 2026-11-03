@@ -73,6 +73,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     icon: "growth",
     pages: [
       { href: "/admin/sales", label: "Pijplijn" },
+      { href: "/admin/websitevoorstellen", label: "Websitevoorstellen" },
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },
       { href: "/admin/telefonie", label: "Telefonie" },

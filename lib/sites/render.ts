@@ -1,5 +1,5 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
+import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type Theme } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Sites renderer: site data → HTML pages + one stylesheet. Pure, so
@@ -12,7 +12,7 @@ import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Pa
 // ---------------------------------------------------------------------------
 
 /** What rendering needs: the site being edited or a published snapshot. */
-export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld">;
+export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld" | "voorstel">;
 
 export interface RenderOptions {
   /** absolute path of the site root, ending in "/": "/site/bakker/" or "/" */
@@ -78,12 +78,32 @@ const FONTS: Record<Theme["lettertype"], { kop: string; tekst: string }> = {
   klassiek: { kop: 'Georgia, Cambria, "Times New Roman", serif', tekst: SANS },
   vriendelijk: { kop: '"Trebuchet MS", "Segoe UI", Verdana, sans-serif', tekst: '"Segoe UI", Verdana, system-ui, sans-serif' },
 };
+/** The book faces most computers already have; Georgia last. */
+const LUXE_SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif';
+
+/** The "luxe" style on top of the base: room, thin gold lines, uppercase small navigation, a tall opening photo. */
+function luxeCss(serif: boolean): string {
+  const kop = serif ? `h1,h2,h3,.logo{font-family:${LUXE_SERIF};font-weight:500}blockquote p{font-family:${LUXE_SERIF};font-size:1.2rem;line-height:1.6}` : "h1,h2,h3{font-weight:600}";
+  return `:root{--ink:#1c1b19;--mute:#6a655d;--line:#e8e3da;--soft:#f6f3ee}body{background:#fdfcfa;font-size:17.5px;line-height:1.75}${kop}
+h1{font-size:clamp(2.5rem,6.2vw,4.75rem);line-height:1.04;letter-spacing:-.02em}h2{font-size:clamp(1.85rem,3.6vw,2.9rem);letter-spacing:-.015em}h3{font-size:1.3rem}
+section{padding:120px 0}@media (max-width:760px){section{padding:80px 0}}section h2::before{content:"";display:block;width:40px;height:2px;background:var(--a);margin:0 0 24px}.band h2::before{margin:0 auto 24px}
+header{background:rgba(253,252,250,.94)}.bar{min-height:84px}.logo{font-size:1.5rem;letter-spacing:.01em}.logo img{max-height:56px}
+nav a{border-radius:0;padding:10px 14px;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase}nav a:hover,nav a[aria-current]{background:transparent;color:var(--ink);box-shadow:inset 0 -2px 0 var(--a)}.menu summary{border-radius:0;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase}
+.btn{border-radius:0;padding:17px 34px;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase}
+.hero{min-height:min(86vh,860px);display:flex;align-items:flex-end;padding:160px 0 104px}.hero .wrap{z-index:1;width:100%}.hero p{font-size:1.22rem;max-width:600px}
+.hero.photo{background:#0f0f0e;color:#fff}.hero.photo img{opacity:1}.hero.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,9,.18) 0%,rgba(10,10,9,.32) 42%,rgba(10,10,9,.82) 100%)}
+@media (max-width:760px){.hero{min-height:72vh;padding:120px 0 64px}}
+.cards{gap:48px 40px}.card{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:28px 0 0}.card h3{color:var(--ink)}section.alt .card{border-color:#ddd6ca}
+.split{gap:64px}.split img{border-radius:0;aspect-ratio:4/5}.gallery{gap:8px}.gallery img{border-radius:0}.stars{letter-spacing:4px}
+.band{background:#151412;color:#f3eee6}.band p{opacity:.85}form.contact input,form.contact textarea{border-radius:0;border-color:#d8d2c7}.hours td{padding:14px 0}footer{background:#121110}`;
+}
 
 export function siteCss(theme: Theme): string {
   const kleur = isHexColor(theme.kleur) ? theme.kleur : "#0E5C4A";
   const accent = isHexColor(theme.accent) ? theme.accent : "#F2B544";
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
   const r = theme.hoeken === "strak" ? "4px" : "16px";
+  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : "";
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:17px/1.65 ${f.tekst};color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}a{color:var(--k)}h1,h2,h3{font-family:${f.kop};line-height:1.15;margin:0 0 .6em;letter-spacing:-.01em}
@@ -109,7 +129,36 @@ form.contact{display:grid;gap:14px;max-width:620px}form.contact label{display:gr
 .contact-grid{display:grid;gap:40px}@media (min-width:860px){.contact-grid{grid-template-columns:1.3fr 1fr}}.facts{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}footer a{color:#fff}footer .cols{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}footer small{display:block;margin-top:28px;color:#9aa3ad}
 :focus-visible{outline:3px solid var(--a);outline-offset:3px}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-.demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}`;
+.demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
+.logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
+.wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}${luxe}`;
+}
+
+/** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
+export function waNumber(raw: string): string | null {
+  let d = raw.replace(/[^\d+]/g, "");
+  if (d.startsWith("+")) d = d.slice(1);
+  else if (d.startsWith("00")) d = d.slice(2);
+  else if (d.startsWith("0")) d = `31${d.slice(1)}`;
+  return /^[1-9]\d{9,14}$/.test(d) ? d : null;
+}
+
+const SOCIAL_NAMES: [RegExp, string][] = [
+  [/(^|\.)facebook\.com$/, "Facebook"],
+  [/(^|\.)instagram\.com$/, "Instagram"],
+  [/(^|\.)linkedin\.com$/, "LinkedIn"],
+  [/(^|\.)tiktok\.com$/, "TikTok"],
+  [/(^|\.)youtube\.com$/, "YouTube"],
+  [/(^|\.)(x|twitter)\.com$/, "X"],
+];
+/** "https://www.instagram.com/bakkerij" → "Instagram"; another site by its own name. */
+export function socialName(url: string): string {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return SOCIAL_NAMES.find(([re]) => re.test(host))?.[1] ?? host.replace(/^www\./, "");
+  } catch {
+    return "Link";
+  }
 }
 
 interface Ctx {
@@ -121,6 +170,10 @@ interface Ctx {
   bedrijf: Company;
   /** an example site: a banner, an inert contact form, no business data for search engines */
   voorbeeld: boolean;
+  /** a design proposal to a company: the same, with a banner that it is not their official site */
+  voorstel: SiteProposalMark | null;
+  /** the photo shown as logo in the header */
+  logo: Media | undefined;
   /** where "make your own website" points, for the example banner */
   origin: string;
 }
@@ -147,7 +200,8 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
   switch (b.type) {
     case "hero": {
       const p = b.props;
-      return `<section class="hero">${img(ctx, p.foto, "100vw", true)}<div class="wrap"><h1>${esc(p.kop)}</h1>${paras(p.tekst)}${p.knop ? `<p><a class="btn" href="${esc(href(ctx, p.knopLink))}">${esc(p.knop)}</a></p>` : ""}</div></section>`;
+      const pic = img(ctx, p.foto, "100vw", true);
+      return `<section class="hero${pic ? " photo" : ""}">${pic}<div class="wrap"><h1>${esc(p.kop)}</h1>${paras(p.tekst)}${p.knop ? `<p><a class="btn" href="${esc(href(ctx, p.knopLink))}">${esc(p.knop)}</a></p>` : ""}</div></section>`;
     }
     case "tekst":
       return `<section${alt}><div class="wrap narrow"><h2>${esc(b.props.kop)}</h2>${paras(b.props.tekst)}</div></section>`;
@@ -178,17 +232,22 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       return `<section class="band"><div class="wrap"><h2>${esc(b.props.kop)}</h2>${paras(b.props.tekst)}${b.props.knop ? `<a class="btn" href="${esc(href(ctx, b.props.knopLink))}">${esc(b.props.knop)}</a>` : ""}</div></section>`;
     case "contact": {
       const c = ctx.bedrijf;
-      // an example site shows the form, but it sends nothing
-      const off = ctx.voorbeeld ? " disabled" : "";
-      const note = ctx.voorbeeld
-        ? `<p class="small"><strong>Dit is een voorbeeld:</strong> dit formulier verstuurt niets. Op je eigen website komen berichten bij jou binnen.</p>`
-        : `<p class="small">We gebruiken je gegevens alleen om je bericht te beantwoorden. Lees de <a href="${esc(href(ctx, "privacy"))}">privacyverklaring</a>.</p>`;
+      // an example or a proposal shows the form, but it sends nothing
+      const inert = ctx.voorbeeld || Boolean(ctx.voorstel);
+      const off = inert ? " disabled" : "";
+      const note = ctx.voorstel
+        ? `<p class="small"><strong>Dit is een ontwerpvoorstel:</strong> dit formulier verstuurt nog niets. Op je nieuwe website komen berichten direct bij jou binnen.</p>`
+        : ctx.voorbeeld
+          ? `<p class="small"><strong>Dit is een voorbeeld:</strong> dit formulier verstuurt niets. Op je eigen website komen berichten bij jou binnen.</p>`
+          : `<p class="small">We gebruiken je gegevens alleen om je bericht te beantwoorden. Lees de <a href="${esc(href(ctx, "privacy"))}">privacyverklaring</a>.</p>`;
       const form = b.props.formulier
-        ? `<form class="contact" method="post" action="${esc(ctx.preview || ctx.voorbeeld ? "#" : `${ctx.root}_zf/contact`)}"><label>Naam<input name="naam" required maxlength="100" autocomplete="name"${off}></label><label>E-mailadres<input name="email" type="email" required maxlength="200" autocomplete="email"${off}></label><label>Telefoon (mag leeg)<input name="telefoon" maxlength="30" autocomplete="tel"${off}></label><label>Bericht<textarea name="bericht" required maxlength="4000"${off}></textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit"${off}>Verstuur bericht</button></p></form>`
+        ? `<form class="contact" method="post" action="${esc(ctx.preview || inert ? "#" : `${ctx.root}_zf/contact`)}"><label>Naam<input name="naam" required maxlength="100" autocomplete="name"${off}></label><label>E-mailadres<input name="email" type="email" required maxlength="200" autocomplete="email"${off}></label><label>Telefoon (mag leeg)<input name="telefoon" maxlength="30" autocomplete="tel"${off}></label><label>Bericht<textarea name="bericht" required maxlength="4000"${off}></textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit"${off}>Verstuur bericht</button></p></form>`
         : "";
       const place = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      const wa = c.whatsapp ? waNumber(c.whatsapp) : null;
       const facts = [
         c.telefoon && `<li>Telefoon: <a href="tel:${esc(c.telefoon.replace(/[^\d+]/g, ""))}">${esc(c.telefoon)}</a></li>`,
+        wa && `<li>WhatsApp: <a href="${esc(href(ctx, `https://wa.me/${wa}`))}" rel="noopener">stuur een bericht</a></li>`,
         c.email && `<li>E-mail: <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></li>`,
         place && `<li>${esc(place)}</li>`,
       ].filter(Boolean);
@@ -201,13 +260,27 @@ function header(ctx: Ctx, current: Page): string {
   const links = ctx.pages
     .map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}"${p.id === current.id ? ' aria-current="page"' : ""}>${esc(p.titel)}</a></li>`)
     .join("");
-  return `<a class="skip" href="#inhoud">Naar de inhoud</a><header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${esc(ctx.bedrijf.naam)}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details></div></header>`;
+  const logo = ctx.logo
+    ? `<img src="${esc(ctx.mediaSrc(ctx.logo.file))}" alt="${esc(ctx.bedrijf.naam)}" width="${ctx.logo.width}" height="${ctx.logo.height}" fetchpriority="high" decoding="async">`
+    : esc(ctx.bedrijf.naam);
+  return `<a class="skip" href="#inhoud">Naar de inhoud</a><header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details></div></header>`;
 }
 
 function footer(ctx: Ctx): string {
   const c = ctx.bedrijf;
   const address = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean);
-  return `<footer><div class="wrap"><div class="cols"><div><strong>${esc(c.naam)}</strong>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}</div><div>${c.telefoon ? `<p>${esc(c.telefoon)}</p>` : ""}${c.email ? `<p><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></p>` : ""}</div><div>${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}<p><a href="${esc(href(ctx, "privacy"))}">Privacyverklaring</a></p></div></div><small>© ${new Date().getFullYear()} ${esc(c.naam)} · Website gemaakt met <a href="https://zekerflex.com" rel="noopener">ZekerFlex</a></small></div></footer>`;
+  const socials = (c.socials ?? [])
+    .map((u) => [href(ctx, u), u] as const)
+    .filter(([h]) => ctx.preview || h !== "#")
+    .map(([h, u]) => `<a href="${esc(h)}" rel="noopener me">${esc(socialName(u))}</a>`);
+  return `<footer><div class="wrap"><div class="cols"><div><strong>${esc(c.naam)}</strong>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}</div><div>${c.telefoon ? `<p>${esc(c.telefoon)}</p>` : ""}${c.email ? `<p><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></p>` : ""}${socials.length ? `<p class="socials">${socials.join("")}</p>` : ""}</div><div>${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}<p><a href="${esc(href(ctx, "privacy"))}">Privacyverklaring</a></p></div></div><small>© ${new Date().getFullYear()} ${esc(c.naam)} · Website gemaakt met <a href="https://zekerflex.com" rel="noopener">ZekerFlex</a></small></div></footer>`;
+}
+
+/** A WhatsApp button that stays in the corner, when the company has a mobile number for it. */
+function whatsappButton(ctx: Ctx): string {
+  const wa = ctx.bedrijf.whatsapp ? waNumber(ctx.bedrijf.whatsapp) : null;
+  if (!wa) return "";
+  return `<a class="wa" href="${esc(href(ctx, `https://wa.me/${wa}`))}" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C7 3 3 6.6 3 11c0 2.2 1 4.2 2.7 5.6L5 21l4.3-2.3c.9.2 1.8.3 2.7.3 5 0 9-3.6 9-8s-4-8-9-8z"/></svg>WhatsApp</a>`;
 }
 
 function localBusiness(c: Company, url: string, image: string | null): string {
@@ -241,23 +314,31 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const initial = esc((ctx.bedrijf.naam.trim()[0] ?? "Z").toUpperCase());
   const favicon = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><text x="32" y="44" font-family="Arial" font-size="36" font-weight="700" text-anchor="middle" fill="#fff">${initial}</text></svg>`)}`;
   const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(`${opts.root}assets/site.css${opts.version ? `?v=${opts.version}` : ""}`)}">`;
-  const robots = opts.noindex || page.id.startsWith("__") ? '<meta name="robots" content="noindex">' : "";
-  const business = page.slug === "" && !ctx.voorbeeld ? localBusiness(ctx.bedrijf, url, ogImage) : "";
-  const demoBar = ctx.voorbeeld
-    ? `<div class="demo-bar">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${esc(ctx.bedrijf.naam)} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></div>`
-    : "";
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body>${demoBar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}</body></html>`;
+  const robots = opts.noindex || ctx.voorstel || page.id.startsWith("__") ? '<meta name="robots" content="noindex">' : "";
+  // a proposal or an example says nothing to search engines about a business
+  const business = page.slug === "" && !ctx.voorbeeld && !ctx.voorstel ? localBusiness(ctx.bedrijf, url, ogImage) : "";
+  const naam = esc(ctx.bedrijf.naam);
+  const officieel = ctx.voorstel?.officieel;
+  const bar = ctx.voorstel
+    ? `<div class="demo-bar">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}${officieel ? `; die staat op <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">${esc(officieel)}</a>` : ""}.</div>`
+    : ctx.voorbeeld
+      ? `<div class="demo-bar">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></div>`
+      : "";
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}</body></html>`;
 }
 
 function context(site: RenderableSite, opts: RenderOptions): Ctx {
+  const media = new Map(site.media.map((m) => [m.id, m]));
   return {
     root: opts.root,
     pages: site.pages,
-    media: new Map(site.media.map((m) => [m.id, m])),
+    media,
     mediaSrc: opts.preview ? opts.preview.mediaUrl : (file) => `${opts.root}media/${file}`,
     preview: Boolean(opts.preview),
     bedrijf: site.bedrijf,
     voorbeeld: Boolean(site.voorbeeld),
+    voorstel: site.voorstel ?? null,
+    logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
     origin: opts.origin,
   };
 }

@@ -41,6 +41,9 @@ export const companySchema = z.object({
   plaats: z.string().trim().max(80),
   telefoon: z.string().trim().max(30),
   email: z.string().trim().max(200).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v), "Vul een geldig e-mailadres in."),
+  // checked loosely, so half-typed numbers still save; the site shows the button only for a real number (waNumber)
+  whatsapp: z.string().trim().max(30).regex(/^[\d\s+()-]*$/, "Gebruik voor WhatsApp alleen cijfers, spaties en een +.").optional(),
+  socials: z.array(z.string().trim().max(300).regex(/^https:\/\/[^\s<>"']+$/, "Een link naar sociale media begint met https://.")).max(6).optional(),
 });
 
 export const themeSchema = z.object({
@@ -48,6 +51,8 @@ export const themeSchema = z.object({
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   lettertype: z.enum(["modern", "klassiek", "vriendelijk"]),
   hoeken: z.enum(["rond", "strak"]),
+  stijl: z.enum(["standaard", "luxe"]).optional(),
+  logo: mediaId.optional(),
 });
 
 export const siteSaveSchema = z

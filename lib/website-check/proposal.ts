@@ -30,6 +30,12 @@ export interface BusinessFacts {
   fotos: string[];
   /** h2/h3 headings: what the company offers, as a starting point for the new pages */
   koppen: string[];
+  /** the same headings with the text under them, in the company's own words */
+  secties: { kop: string; tekst: string }[];
+  /** the first real paragraph of the page (their own words), for "about us" */
+  intro: string | null;
+  /** the phone number is a Dutch mobile number, so it can carry a WhatsApp button */
+  mobiel: boolean;
   /** brand colour from <meta name="theme-color">, if any */
   kleur: string | null;
   /** latest year in the copyright line */
@@ -70,7 +76,17 @@ const abs = (src: string, base: URL) => {
 };
 
 const GENERIC = /^(home|homepage|welkom|start|index|hoofdpagina)$/i;
-const SKIP_HEADING = /^(contact|menu|navigatie|zoeken|volg ons|nieuwsbrief|social|delen|cookies?|privacy|footer|meer|lees meer|copyright)\b/i;
+const SKIP_HEADING =
+  /^(contact|menu|navigatie|zoeken|volg ons|nieuwsbrief|social|delen|cookies?|privacy|footer|meer|lees meer|copyright|openingstijden|openingsuren|adres|route|over ons|wie zijn wij|nieuws|blog|vacatures|werken bij|reviews|beoordelingen|klantervaringen|disclaimer|algemene voorwaarden|snel naar)\b/i;
+
+/** At most `max` characters, cut after a whole sentence where possible. */
+export function clipSentences(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  if (end > max * 0.4) return cut.slice(0, end + 1);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 1)).replace(/[,;:\s]+$/, "")}…`;
+}
 
 export function extractBusiness(html: string, finalUrl: string): BusinessFacts {
   const base = new URL(finalUrl);
@@ -114,13 +130,19 @@ export function extractBusiness(html: string, finalUrl: string): BusinessFacts {
       .map((i) => abs(attr(i, "src") ?? "", base)),
   ].filter((u, idx, all): u is string => Boolean(u) && all.indexOf(u) === idx).slice(0, 8);
 
-  const koppen = [
-    ...new Set(
-      (visible.match(/<h[23]\b[^>]*>[\s\S]*?<\/h[23]>/gi) ?? [])
-        .map((h) => decode(h.replace(/<[^>]+>/g, " ")))
-        .filter((h) => h.length >= 3 && h.length <= 60 && !SKIP_HEADING.test(h)),
-    ),
-  ].slice(0, 12);
+  const usable = (h: string) => h.length >= 3 && h.length <= 60 && !SKIP_HEADING.test(h);
+  const koppen = [...new Set((visible.match(/<h[23]\b[^>]*>[\s\S]*?<\/h[23]>/gi) ?? []).map((h) => decode(h.replace(/<[^>]+>/g, " "))).filter(usable))].slice(0, 12);
+  const paragraphs = (html: string) => (html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) ?? []).map((p) => decode(p.replace(/<[^>]+>/g, " ")));
+  // a heading and the paragraphs under it, up to the next heading
+  const pieces = visible.split(/(<h[23]\b[^>]*>[\s\S]*?<\/h[23]>)/i);
+  const secties: { kop: string; tekst: string }[] = [];
+  for (let i = 1; i < pieces.length && secties.length < 12; i += 2) {
+    const kop = decode((pieces[i] ?? "").replace(/<[^>]+>/g, " "));
+    if (!usable(kop) || secties.some((s) => s.kop === kop)) continue;
+    const under = paragraphs((pieces[i + 1] ?? "").split(/<h1\b/i)[0] ?? "").filter((t) => t.length >= 20);
+    secties.push({ kop, tekst: under.length ? clipSentences(under.join(" "), 280) : "" });
+  }
+  const introText = paragraphs(visible).find((t) => t.length >= 120 && !/cookie|©|copyright|privacy|javascript|browser/i.test(t));
 
   const themeTag = meta("name", "theme-color");
   const theme = themeTag ? attr(themeTag, "content") : null;
@@ -140,6 +162,9 @@ export function extractBusiness(html: string, finalUrl: string): BusinessFacts {
     logo,
     fotos,
     koppen,
+    secties,
+    intro: introText ? clipSentences(introText, 600) : null,
+    mobiel: tel ? /^(\+?31|0031|0)6\d{8}$/.test(tel) : false,
     kleur: theme && /^#[0-9a-f]{6}$/i.test(theme) ? theme.toUpperCase() : null,
     jaar: years.length ? Math.max(...years) : null,
     whatsapp: hrefs.some((h) => /wa\.me\/|api\.whatsapp\.com|whatsapp:/i.test(h)),

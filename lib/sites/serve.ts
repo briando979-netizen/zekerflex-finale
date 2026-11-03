@@ -32,9 +32,15 @@ export function siteText(body: string, status: number, opts: Pick<ServeOptions, 
   return new Response(body, { status, headers: siteHeaders("text/plain; charset=utf-8", "no-store", opts) });
 }
 
+/** A design proposal past its date shows nothing any more. */
+export const proposalExpired = (snapshot: LiveSite["snapshot"], now = Date.now()) => Boolean(snapshot.voorstel && !(Date.parse(snapshot.voorstel.verloopt) > now));
+
 /** GET one path of a live site: a page, the stylesheet, a photo, the sitemap or robots.txt. */
-export async function serveSitePath(live: LiveSite, path: string[], opts: ServeOptions): Promise<Response> {
+export async function serveSitePath(live: LiveSite, path: string[], given: ServeOptions): Promise<Response> {
   const { snapshot, siteId } = live;
+  // a proposal stays out of search engines wherever it is shown
+  const opts: ServeOptions = snapshot.voorstel ? { ...given, noindex: true } : given;
+  if (proposalExpired(snapshot)) return siteText("Dit ontwerpvoorstel is verlopen. Wil je het opnieuw zien? Neem contact op met ZekerFlex.", 410, opts);
   const html = (body: string, status = 200) => new Response(body, { status, headers: siteHeaders("text/html; charset=utf-8", "public, max-age=60", opts) });
   const [first, second, ...rest] = path;
   if (!first) {
@@ -70,6 +76,8 @@ const clip = (v: FormDataEntryValue | null, max: number) => String(v ?? "").trim
  */
 export async function handleSiteContact(request: Request, live: LiveSite, opts: Pick<ServeOptions, "origin" | "noindex"> & { thanks: string; address: string }): Promise<Response> {
   if (live.snapshot.voorbeeld) return siteText("Dit is een voorbeeldwebsite: berichten worden niet verstuurd.", 403, opts);
+  // a proposal carries the real company's e-mail address: nothing may ever be sent to it from here
+  if (live.snapshot.voorstel) return siteText("Dit is een ontwerpvoorstel: berichten worden niet verstuurd.", 403, opts);
   const thanks = new Response(null, { status: 303, headers: { Location: opts.thanks } });
   try {
     await enforceRateLimit({ name: "site-contact-ip", identifier: privateRateLimitIdentifier(clientIp(request)), limit: 5, windowSeconds: 600, message: "Te veel berichten. Probeer het later opnieuw." });
