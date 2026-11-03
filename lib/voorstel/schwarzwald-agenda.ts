@@ -169,3 +169,12 @@ export function groepFout(slug: string, personen: number, cfg: AgendaConfig = ST
   if (personen > regel.max) return `Online maximaal ${regel.max} personen; bel ons voor grotere groepen.`;
   return null;
 }
+
+/** Waarom deze activiteit niet op die dag en dat tijdstip kan (boeken of verzetten), of null als het kan. */
+export function slotFout(slug: string, datum: string, tijd: string, personen: number, bezet: BezetteTijd[], cfg: AgendaConfig = STANDAARD): string | null {
+  if (!openOp(datum, personen, cfg)) return "Op deze dag zijn we gesloten. Op maandag en dinsdag alleen voor groepen vanaf 12 personen.";
+  const slot = tijdsloten(slug, datum, personen, bezet, cfg).find((s) => s.tijd === tijd);
+  if (!slot) return "Op dit tijdstip kan deze activiteit niet beginnen.";
+  if (slot.status === "vol") return "Dit tijdslot is net vol geraakt. Kies een ander tijdstip.";
+  return null;
+}

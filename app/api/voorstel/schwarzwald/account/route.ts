@@ -6,7 +6,7 @@ import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
 import { bevestigWachtwoord, eisZelfdeHerkomst, huidigAccount, inloggen, registreer, uitloggen, wijzigProfiel } from "@/lib/voorstel/schwarzwald-accounts";
 import { wisGast } from "@/lib/voorstel/schwarzwald-privacy";
-import { annuleerEigen, boekingenVanAccount } from "@/lib/voorstel/schwarzwald-boekingen";
+import { annuleerEigen, boekingenVanAccount, verzetEigen } from "@/lib/voorstel/schwarzwald-boekingen";
 import { aanvragenVan, klantkaart, tijdlijn, voegItemToe, wijzigKlantkaart } from "@/lib/voorstel/schwarzwald-crm";
 import { plaatsReview, reviewsVan } from "@/lib/voorstel/schwarzwald-reviews";
 
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 // Klantaccount van de Schwarzwald-site (eigen sessie-cookie, los van
 // ZekerFlex-login; openbaar in lib/auth/public-routes.ts).
 // GET  → ingelogd account + eigen reserveringen, aanvragen, berichten en wensen
-// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | wensen | bericht | review | verwijderen}
+// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | verzetten | wensen | bericht | review | verwijderen}
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -63,6 +63,7 @@ const schema = z.discriminatedUnion("actie", [
     nieuwWachtwoord: z.union([WACHTWOORD, z.literal("")]).optional(),
   }),
   z.object({ actie: z.literal("annuleren"), datum: z.string().max(10), id: z.string().max(8) }),
+  z.object({ actie: z.literal("verzetten"), datum: z.string().max(10), id: z.string().max(8), naarDatum: z.string().max(10), naarTijd: z.string().max(5) }),
   z.object({ actie: z.literal("wensen"), wensen: z.string().trim().max(1000) }),
   z.object({ actie: z.literal("bericht"), tekst: z.string().trim().min(1, "Schrijf eerst een bericht.").max(2000) }),
   z.object({ actie: z.literal("review"), boekingId: z.string().max(8), score: z.number().int().min(1).max(5), tekst: z.string().trim().max(1500) }),
@@ -104,6 +105,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (d.actie === "review") {
       const r = await plaatsReview(account, { boekingId: d.boekingId, score: d.score, tekst: d.tekst });
       return NextResponse.json({ review: { id: r.id, boekingId: r.boekingId, score: r.score, tekst: r.tekst, status: r.status, antwoord: r.antwoord } });
+    }
+    if (d.actie === "verzetten") {
+      const { oud, nieuw } = await verzetEigen(d.datum, d.id, account.email, { datum: d.naarDatum, tijd: d.naarTijd });
+      // het team ziet het in het klantdossier (interne notitie)
+      await voegItemToe({ email: account.email, soort: "notitie", tekst: `Reservering ${nieuw.id} verzet door de gast: van ${oud.datum} ${oud.tijd} naar ${nieuw.datum} ${nieuw.tijd}. Opnieuw bevestigen.`, door: account.naam }).catch(() => undefined);
+      return NextResponse.json({ boeking: nieuw });
     }
     if (d.actie === "verwijderen") {
       await enforceRateLimit({ name: "voorstel-schwarzwald-verwijderen", identifier: account.email, limit: 5, windowSeconds: 600, message: "Te veel pogingen. Wacht even en probeer het opnieuw." });

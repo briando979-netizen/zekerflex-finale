@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar/links";
 import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { sterren } from "@/lib/voorstel/review-weergave";
+import { VOORUIT_DAGEN, plusDagen } from "@/lib/voorstel/schwarzwald-agenda";
 
 // Klantaccount: inloggen/registreren (ook met Google), en ingelogd een
 // dashboard met je volgende uitje, reserveringen, aanvragen, berichten met het
@@ -308,6 +309,91 @@ function Inloggen({ googleAan, fout: startFout }: { googleAan: boolean; fout: st
   );
 }
 
+/** Een eigen reservering naar een andere dag of tijd verzetten; de vrije tijden komen live uit de agenda. */
+function Verzetten({ b, naam, vandaag, verzet, sluit }: { b: MijnBoeking; naam: string; vandaag: string; verzet: (datum: string, tijd: string) => Promise<boolean>; sluit: () => void }) {
+  const [datum, setDatum] = useState("");
+  const [sloten, setSloten] = useState<{ tijd: string; status: string }[] | null>(null);
+  const [melding, setMelding] = useState("");
+  const [tijd, setTijd] = useState("");
+  const [bezig, setBezig] = useState(false);
+  const gevraagd = useRef("");
+
+  async function kies(d: string) {
+    gevraagd.current = d;
+    setDatum(d);
+    setTijd("");
+    setSloten(null);
+    setMelding("");
+    if (!d) return;
+    try {
+      const r = await fetch(`/api/voorstel/schwarzwald/agenda?activiteit=${encodeURIComponent(b.activiteit)}&personen=${b.personen}&datum=${d}`, { cache: "no-store" });
+      const j = (await r.json().catch(() => ({}))) as { status?: string; sloten?: { tijd: string; status: string }[]; error?: { message?: string } };
+      if (gevraagd.current !== d) return; // intussen een andere dag gekozen
+      if (!r.ok) throw new Error(j.error?.message ?? "De tijden konden niet geladen worden.");
+      if (j.status === "verleden") setMelding("Deze datum is niet te boeken.");
+      else if (j.status === "gesloten") setMelding("Op deze dag zijn we gesloten voor jullie groep.");
+      setSloten(j.sloten ?? []);
+    } catch (err) {
+      if (gevraagd.current === d) setMelding(err instanceof Error ? err.message : "De tijden konden niet geladen worden.");
+    }
+  }
+
+  return (
+    <div className="w-full space-y-3 rounded-xl bg-white p-4">
+      <p className="text-sm font-semibold">
+        {naam} verzetten · {b.personen} personen
+      </p>
+      <label className="block text-sm font-semibold">
+        Nieuwe datum
+        <input type="date" min={plusDagen(vandaag, 1)} max={plusDagen(vandaag, VOORUIT_DAGEN)} value={datum} onChange={(e) => void kies(e.target.value)} className={VELD} />
+      </label>
+      {melding && <p className="text-sm font-semibold text-[#B91C1C]">{melding}</p>}
+      {sloten && sloten.length > 0 && (
+        <div role="radiogroup" aria-label="Nieuwe begintijd" className="flex flex-wrap gap-2">
+          {sloten.map((s) => {
+            const huidig = datum === b.datum && s.tijd === b.tijd;
+            return (
+              <button
+                key={s.tijd}
+                type="button"
+                role="radio"
+                aria-checked={tijd === s.tijd}
+                disabled={s.status === "vol" || huidig}
+                onClick={() => setTijd(s.tijd)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-35 ${tijd === s.tijd ? "bg-schw-night text-schw-cream" : "bg-schw-cream ring-1 ring-schw-night/10"}`}
+              >
+                {s.tijd}
+                {huidig ? " (nu)" : s.status === "vol" ? " vol" : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {sloten && sloten.length === 0 && !melding && <p className="text-sm text-schw-mute">Op deze dag zijn er geen tijden.</p>}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={!tijd || bezig}
+          onClick={() => {
+            setBezig(true);
+            void verzet(datum, tijd).then((gelukt) => {
+              setBezig(false);
+              if (gelukt) sluit();
+            });
+          }}
+          className="rounded-full bg-schw-night px-5 py-2.5 text-sm font-bold text-schw-cream disabled:opacity-40"
+        >
+          {tijd ? `Verzet naar ${dagNaam(datum, { weekday: "short", day: "numeric", month: "short" })} ${tijd}` : "Kies een dag en tijd"}
+        </button>
+        <button type="button" onClick={sluit} className="rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-schw-night/15">
+          Annuleren
+        </button>
+      </div>
+      <p className="text-xs text-schw-mute">Het team bevestigt de nieuwe tijd opnieuw.</p>
+    </div>
+  );
+}
+
 /** Inzage (download) en zelf je account met alle gegevens wissen (AVG). */
 function MijnGegevens({ heeftWachtwoord, gewist }: { heeftWachtwoord: boolean; gewist: () => void }) {
   const [open, setOpen] = useState(false);
@@ -404,6 +490,7 @@ export function SchwarzwaldAccount(props: {
   const [wensen, setWensen] = useState(props.wensen);
   const [bericht, setBericht] = useState("");
   const [gewist, setGewist] = useState(false);
+  const [verzetId, setVerzetId] = useState<string | null>(null);
 
   const komend = useMemo(() => boekingen.filter((b) => b.datum >= vandaag).sort((a, b) => `${a.datum}${a.tijd}`.localeCompare(`${b.datum}${b.tijd}`)), [boekingen, vandaag]);
   const eerder = useMemo(() => boekingen.filter((b) => b.datum < vandaag).sort((a, b) => `${b.datum}${b.tijd}`.localeCompare(`${a.datum}${a.tijd}`)), [boekingen, vandaag]);
@@ -472,6 +559,11 @@ export function SchwarzwaldAccount(props: {
               In agenda
             </a>
           )}
+          {b.status !== "geannuleerd" && b.datum > vandaag && verzetId !== b.id && (
+            <button type="button" disabled={bezig} onClick={() => setVerzetId(b.id)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+              Verzetten
+            </button>
+          )}
           {b.status !== "geannuleerd" && b.datum > vandaag && (
             <button
               type="button"
@@ -490,6 +582,17 @@ export function SchwarzwaldAccount(props: {
             </Link>
           )}
         </div>
+        {verzetId === b.id && (
+          <Verzetten
+            b={b}
+            naam={namen[b.activiteit] ?? b.activiteit}
+            vandaag={vandaag}
+            verzet={(datum, tijd) =>
+              actie({ actie: "verzetten", datum: b.datum, id: b.id, naarDatum: datum, naarTijd: tijd }, `Verzet naar ${dagNaam(datum)} om ${tijd}. Het team bevestigt de nieuwe tijd.`)
+            }
+            sluit={() => setVerzetId(null)}
+          />
+        )}
         {b.status !== "geannuleerd" && b.datum <= vandaag && (
           <ReviewBlok
             review={reviewPer.get(b.id)}

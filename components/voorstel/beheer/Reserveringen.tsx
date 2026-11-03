@@ -19,8 +19,14 @@ export interface BeheerBoeking {
   opmerking: string;
   status: Status;
   door?: "online" | "beheer";
+  /** "JJJJ-MM-DD HH:MM" waarvandaan de gast hem zelf verzette */
+  verzetVan?: string;
   prijs: number | null;
 }
+
+/** "verzet door de gast, was wo 4 nov 14:00" */
+export const verzetTekst = (van: string) =>
+  `verzet door de gast, was ${dagNaam(van.slice(0, 10), { weekday: "short", day: "numeric", month: "short" })} ${van.slice(11)}`;
 
 const PIL: Record<Status, string> = {
   nieuw: "bg-schw-sun text-schw-night",
@@ -207,6 +213,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                       {b.prijs !== null && <> · € {b.prijs.toLocaleString("nl-NL")}</>}
                     </p>
                     {b.opmerking && <p className="mt-1 text-sm">&ldquo;{b.opmerking}&rdquo;</p>}
+                    {b.verzetVan && <p className="mt-1 text-sm font-semibold text-schw-orange">{verzetTekst(b.verzetVan)}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {b.status !== "bevestigd" && (

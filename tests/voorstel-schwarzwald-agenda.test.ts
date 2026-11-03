@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITEITEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
+import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
 
 // 2026-11-04 = woensdag, 11-07 = zaterdag, 11-08 = zondag, 11-09 = maandag
 describe("Schwarzwald-agenda", () => {
@@ -32,6 +32,13 @@ describe("Schwarzwald-agenda", () => {
     const kever = tijdsloten("kever-rally", "2026-11-04", 8, [{ activiteit: "kever-rally", tijd: "14:00", personen: 20 }]);
     expect(kever.find((x) => x.tijd === "15:00")?.status).toBe("vol");
     expect(kever.find((x) => x.tijd === "16:00")?.status).toBe("vrij");
+  });
+
+  it("controleert dag en tijdstip bij boeken en verzetten", () => {
+    expect(slotFout("buggy-rijden", "2026-11-04", "14:00", 8, [])).toBeNull();
+    expect(slotFout("buggy-rijden", "2026-11-09", "14:00", 8, [])).toMatch(/gesloten/);
+    expect(slotFout("buggy-rijden", "2026-11-04", "11:00", 8, [])).toMatch(/kan deze activiteit niet beginnen/);
+    expect(slotFout("f1-sim-race", "2026-11-04", "14:00", 4, [{ activiteit: "f1-sim-race", tijd: "14:00", personen: 8 }])).toMatch(/vol/);
   });
 
   it("geeft een dagstatus binnen het boekbare venster", () => {

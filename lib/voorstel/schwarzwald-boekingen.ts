@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import { kvDelete, kvFindByField, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { groepFout, inVenster, isDatum, isTijd, openOp, tijdsloten, type BezetteTijd } from "@/lib/voorstel/schwarzwald-agenda";
+import { groepFout, inVenster, isDatum, isTijd, slotFout, type BezetteTijd } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +34,8 @@ export interface Boeking {
   account?: string;
   /** online door de gast, of door het personeel in het beheer */
   door?: "online" | "beheer";
+  /** "JJJJ-MM-DD HH:MM" waarvandaan de gast de boeking zelf verzette */
+  verzetVan?: string;
 }
 
 const sleutel = (datum: string, id: string) => `${PREFIX}${datum}:${id}`;
@@ -85,11 +87,9 @@ export async function maakBoeking(input: NieuweBoeking, opties: { account?: stri
   // het personeel mag ook nog voor vandaag inboeken
   const venster = opties.door === "beheer" ? input.datum === vandaag || inVenster(input.datum, vandaag) : inVenster(input.datum, vandaag);
   if (!venster) throw AppError.validation("Deze datum is niet (meer) te boeken.");
-  if (!openOp(input.datum, input.personen, cfg)) throw AppError.validation("Op deze dag zijn we gesloten. Op maandag en dinsdag alleen voor groepen vanaf 12 personen.");
   // opnieuw controleren op de server: het slot kan net vol zijn geraakt
-  const slot = tijdsloten(input.activiteit, input.datum, input.personen, bezetVan(await boekingenOp(input.datum)), cfg).find((s) => s.tijd === input.tijd);
-  if (!slot) throw AppError.validation("Op dit tijdstip kan deze activiteit niet beginnen.");
-  if (slot.status === "vol") throw AppError.validation("Dit tijdslot is net vol geraakt. Kies een ander tijdstip.");
+  const slot = slotFout(input.activiteit, input.datum, input.tijd, input.personen, bezetVan(await boekingenOp(input.datum)), cfg);
+  if (slot) throw AppError.validation(slot);
 
   const boeking: Boeking = {
     ...input,
@@ -120,6 +120,33 @@ export async function annuleerEigen(datum: string, id: string, email: string): P
   if (!b || b.account !== email.toLowerCase()) throw AppError.notFound("Boeking niet gevonden.");
   if (b.datum <= amsterdamDayKey(new Date())) throw AppError.validation("Annuleren kan tot de dag ervoor. Bel ons voor vandaag.");
   return zetStatus(datum, id, "geannuleerd");
+}
+
+/**
+ * De klant verzet zijn eigen, toekomstige boeking naar een andere dag of tijd.
+ * Zelfde regels als boeken; de boeking zelf telt niet mee voor de bezetting.
+ * Het team bevestigt daarna opnieuw (status terug naar nieuw).
+ */
+export async function verzetEigen(datum: string, id: string, email: string, naar: { datum: string; tijd: string }): Promise<{ oud: Boeking; nieuw: Boeking }> {
+  if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
+  const b = await kvGet<Boeking>(sleutel(datum, id));
+  if (!b || b.account !== email.toLowerCase() || b.status === "geannuleerd") throw AppError.notFound("Boeking niet gevonden.");
+  const cfg = await agendaConfig();
+  const vandaag = amsterdamDayKey(new Date());
+  if (b.datum <= vandaag) throw AppError.validation("Verzetten kan tot de dag ervoor. Bel ons voor vandaag.");
+  if (!isDatum(naar.datum) || !isTijd(naar.tijd)) throw AppError.validation("Kies een geldige datum en tijd.");
+  if (naar.datum === b.datum && naar.tijd === b.tijd) throw AppError.validation("Kies een andere dag of tijd.");
+  if (!inVenster(naar.datum, vandaag)) throw AppError.validation("Deze datum is niet (meer) te boeken.");
+  const groep = groepFout(b.activiteit, b.personen, cfg);
+  if (groep) throw AppError.validation(groep);
+  const anderen = (await boekingenOp(naar.datum)).filter((x) => x.id !== b.id);
+  const slot = slotFout(b.activiteit, naar.datum, naar.tijd, b.personen, bezetVan(anderen), cfg);
+  if (slot) throw AppError.validation(slot);
+
+  const nieuw: Boeking = { ...b, datum: naar.datum, tijd: naar.tijd, status: "nieuw", verzetVan: `${b.datum} ${b.tijd}` };
+  await kvSet(sleutel(nieuw.datum, nieuw.id), nieuw);
+  if (nieuw.datum !== b.datum) await kvDelete(sleutel(b.datum, b.id));
+  return { oud: b, nieuw };
 }
 
 export async function verwijderBoeking(datum: string, id: string): Promise<void> {

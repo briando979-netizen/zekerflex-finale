@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, dagNaam, euro, useBeheerData, vraag } from "@/components/voorstel/beheer/api";
-import type { BeheerBoeking, Status } from "@/components/voorstel/beheer/Reserveringen";
+import { verzetTekst, type BeheerBoeking, type Status } from "@/components/voorstel/beheer/Reserveringen";
 import { indelen, maandagVan, minuten, plusDagen, weekDagen } from "@/lib/voorstel/schwarzwald-planning";
 
 // Weekplanning: één kolom per dag, een blok per reservering op zijn tijd en
@@ -207,6 +207,7 @@ export function Planning({
                 <a href={`mailto:${keuze.email}`} className="underline">{keuze.email}</a>
               </p>
               {keuze.opmerking && <p className="mt-2">&ldquo;{keuze.opmerking}&rdquo;</p>}
+              {keuze.verzetVan && <p className="mt-2 font-semibold text-schw-orange">{verzetTekst(keuze.verzetVan)}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
               {keuze.status !== "bevestigd" && (
