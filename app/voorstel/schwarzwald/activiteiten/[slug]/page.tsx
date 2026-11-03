@@ -7,6 +7,10 @@ import { SchwarzwaldBlokken } from "@/components/voorstel/SchwarzwaldBlokken";
 import { ActiviteitKaart, Beeld, CtaBand } from "@/components/voorstel/SchwarzwaldCards";
 import { goedgekeurdeReviews } from "@/lib/voorstel/schwarzwald-reviews";
 import { gemiddelde, sterren } from "@/lib/voorstel/review-weergave";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { boekbaar, eerstVrij, standaardGroep } from "@/lib/voorstel/schwarzwald-agenda";
+import { alleBoekingen, bezetVan } from "@/lib/voorstel/schwarzwald-boekingen";
+import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const a = activiteit((await params).slug);
@@ -20,6 +24,12 @@ export default async function ActiviteitPage({ params }: { params: Promise<{ slu
   // hun eigen tekst over deze activiteit, letterlijk
   const bron = await paginaVoorSite(a.bron);
   const reviews = await goedgekeurdeReviews(a.slug).catch(() => []);
+  // eerstvolgende dagen met nog plek, voor de standaardgroep van de agenda
+  const [cfg, boekingen] = await Promise.all([agendaConfig(), alleBoekingen().catch(() => [])]);
+  const groep = standaardGroep(a.slug, cfg);
+  const vrij = boekbaar(a, cfg)
+    ? eerstVrij(a.slug, groep, amsterdamDayKey(new Date()), (d) => bezetVan(boekingen.filter((b) => b.datum === d)), cfg)
+    : [];
   const ookLeuk = ACTIVITEITEN.filter((x) => x.slug !== a.slug && x.categorie === a.categorie).slice(0, 3);
   const doelgroepen = DOELGROEPEN.filter((d) => a.voor.includes(d.slug));
 
@@ -63,6 +73,23 @@ export default async function ActiviteitPage({ params }: { params: Promise<{ slu
         <a href={CONTACT.telefoonHref} className="text-sm font-semibold text-schw-mute hover:text-schw-night">
           of bel {CONTACT.telefoon}
         </a>
+        {vrij.length > 0 && (
+          <div className="w-full pt-2">
+            <p className="text-sm font-semibold text-schw-mute">Eerstvolgende dagen met plek (voor {groep} personen):</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {vrij.map((d) => (
+                <li key={d}>
+                  <Link
+                    href={`${BASE}/reserveren?activiteit=${a.slug}&datum=${d}`}
+                    className="inline-block rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15 hover:bg-schw-sun"
+                  >
+                    {new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`))}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {doelgroepen.length > 0 && (
           <div className="flex w-full flex-wrap gap-2 pt-2">
             <span className="py-2 text-sm font-semibold text-schw-mute">Populair bij</span>

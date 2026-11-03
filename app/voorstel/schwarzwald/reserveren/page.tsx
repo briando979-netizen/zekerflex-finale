@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ACTIVITEITEN, BASE, CONTACT, OPENINGSTIJDEN } from "@/lib/voorstel/schwarzwald";
-import { boekbaar } from "@/lib/voorstel/schwarzwald-agenda";
+import { boekbaar, isDatum } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { ReserveerAanvraag } from "@/components/voorstel/ReserveerAanvraag";
@@ -45,6 +45,7 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
         <SchwarzwaldAgenda
           activiteiten={activiteiten}
           start={tekst(sp.activiteit)}
+          startDatum={isDatum(tekst(sp.datum)) ? tekst(sp.datum) : ""}
           gegevens={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
         />
       </section>

@@ -46,10 +46,13 @@ const eindTijd = (tijd: string, duur: number) => {
 export function SchwarzwaldAgenda({
   activiteiten,
   start = "",
+  startDatum = "",
   gegevens: bekend = null,
 }: {
   activiteiten: AgendaActiviteit[];
   start?: string;
+  /** JJJJ-MM-DD: deze dag alvast kiezen (link "eerstvolgende vrije dagen") */
+  startDatum?: string;
   /** ingelogd account: velden alvast ingevuld */
   gegevens?: { naam: string; email: string; telefoon: string } | null;
 }) {
@@ -57,10 +60,10 @@ export function SchwarzwaldAgenda({
   const [slug, setSlug] = useState(eerste?.slug ?? "");
   const act = activiteiten.find((a) => a.slug === slug);
   const [personen, setPersonen] = useState(Math.max(eerste?.min ?? 8, 8));
-  const [maand, setMaand] = useState("");
+  const [maand, setMaand] = useState(startDatum.slice(0, 7));
   const [vandaag, setVandaag] = useState("");
   const [dagen, setDagen] = useState<{ datum: string; status: DagStatus }[]>([]);
-  const [datum, setDatum] = useState("");
+  const [datum, setDatum] = useState(startDatum);
   const [sloten, setSloten] = useState<{ tijd: string; status: SlotStatus }[] | null>(null);
   const [prijs, setPrijs] = useState<number | null>(null);
   const [tijd, setTijd] = useState("");
@@ -119,9 +122,10 @@ export function SchwarzwaldAgenda({
     return () => ctrl.abort();
   }, [act, personen, datum, groepOk, ververs]);
 
-  // gekozen dag vervalt als hij in de nieuwe maandweergave niet meer vrij is
+  // gekozen dag vervalt als hij voorbij of dicht is; een volle dag blijft
+  // gekozen, want daar kan de gast op de wachtlijst
   useEffect(() => {
-    if (datum && dagen.some((d) => d.datum === datum && d.status !== "vrij")) setDatum("");
+    if (datum && dagen.some((d) => d.datum === datum && d.status !== "vrij" && d.status !== "vol")) setDatum("");
   }, [dagen, datum]);
 
   const rooster = useMemo(() => {

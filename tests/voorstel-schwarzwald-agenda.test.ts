@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITEITEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, STANDAARD, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten, wijzigFout } from "@/lib/voorstel/schwarzwald-agenda";
+import { AGENDA, STANDAARD, STANDAARD_OPEN, boekbaar, dagStatus, eerstVrij, groepFout, inVenster, openOp, prijsIndicatie, slotFout, standaardGroep, tijdsloten, wijzigFout } from "@/lib/voorstel/schwarzwald-agenda";
 
 // 2026-11-04 = woensdag, 11-07 = zaterdag, 11-08 = zondag, 11-09 = maandag
 describe("Schwarzwald-agenda", () => {
@@ -75,6 +75,21 @@ describe("Schwarzwald-agenda", () => {
     // groepsgrenzen en maandag (alleen groepen vanaf 12)
     expect(wijzigFout(b, zo({ personen: 11 }), "2026-11-02", [])).toMatch(/maximaal/);
     expect(wijzigFout({ ...b, activiteit: "buggy-rijden", personen: 12, datum: "2026-11-09" }, { datum: "2026-11-09", tijd: "14:00", personen: 8 }, "2026-11-02", [])).toMatch(/gesloten/);
+  });
+
+  it("vindt de eerstvolgende vrije dagen, zonder dichte en volle dagen", () => {
+    // vandaag di 3 nov: wo 4 t/m zo 8 open, ma 9 en di 10 dicht (8 personen)
+    expect(eerstVrij("buggy-rijden", 8, "2026-11-03", () => [])).toEqual(["2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"]);
+    // F1 op woensdag de hele dag vol (10 plekken per slot)
+    const volWo = (d: string) => (d === "2026-11-04" ? Array.from({ length: 10 }, (_, i) => ({ activiteit: "f1-sim-race", tijd: `${String(13 + i).padStart(2, "0")}:00`, personen: 10 })) : []);
+    expect(eerstVrij("f1-sim-race", 4, "2026-11-03", volWo, STANDAARD, 2)).toEqual(["2026-11-05", "2026-11-06"]);
+    expect(eerstVrij("onbekend", 8, "2026-11-03", () => [])).toEqual([]);
+  });
+
+  it("kiest 8 als standaardgroep, binnen de grenzen van de activiteit", () => {
+    expect(standaardGroep("buggy-rijden")).toBe(8);
+    expect(standaardGroep("4x4-off-road")).toBe(10);
+    expect(standaardGroep("f1-sim-race")).toBe(8);
   });
 
   it("geeft een dagstatus binnen het boekbare venster", () => {

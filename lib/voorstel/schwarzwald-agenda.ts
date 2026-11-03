@@ -167,6 +167,25 @@ export function dagStatus(slug: string, datum: string, personen: number, vandaag
   return tijdsloten(slug, datum, personen, bezet, cfg).some((s) => s.status !== "vol") ? "vrij" : "vol";
 }
 
+/**
+ * De eerstvolgende dagen (vanaf morgen, hooguit `zoek` dagen vooruit) waarop
+ * deze activiteit voor deze groep nog een tijdslot vrij heeft.
+ */
+export function eerstVrij(slug: string, personen: number, vandaag: string, bezetOp: (datum: string) => BezetteTijd[], cfg: AgendaConfig = STANDAARD, aantal = 5, zoek = 60): string[] {
+  const uit: string[] = [];
+  for (let i = 1; i <= zoek && uit.length < aantal; i++) {
+    const d = plusDagen(vandaag, i);
+    if (dagStatus(slug, d, personen, vandaag, bezetOp(d), cfg) === "vrij") uit.push(d);
+  }
+  return uit;
+}
+
+/** Standaard groepsgrootte in de agenda: 8, binnen de grenzen van de activiteit. */
+export const standaardGroep = (slug: string, cfg: AgendaConfig = STANDAARD) => {
+  const r = cfg.regels[slug];
+  return r ? Math.min(r.max, Math.max(r.min, 8)) : 8;
+};
+
 /** Prijsindicatie in hele euro's, of null als er geen vaste prijs per persoon is. */
 export function prijsIndicatie(slug: string, personen: number, datum: string, cfg: AgendaConfig = STANDAARD): number | null {
   const regel = cfg.regels[slug];
