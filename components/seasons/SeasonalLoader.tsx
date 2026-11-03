@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { isThemeId, type ThemeId } from "@/lib/seasons/calendar";
 
 // The decoration itself is its own chunk: on an ordinary day nothing loads.
@@ -46,5 +47,7 @@ export function SeasonalLoader({
     return () => window.clearTimeout(timer);
   }, [theme, preview]);
 
-  return show ? <SeasonalDecor theme={show} countdownTo={countdownTo} naam={naam} /> : null;
+  // Into <body>: inside an app shell an animated ancestor (transform) would make
+  // "fixed" relative to that element instead of the screen.
+  return show ? createPortal(<SeasonalDecor theme={show} countdownTo={countdownTo} naam={naam} />, document.body) : null;
 }
