@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { copyText } from "@/lib/clipboard";
+import { useFT } from "@/components/i18n/useFT";
 
 // "Diensten in je eigen agenda": één abonnementslink voor Google Agenda,
 // Apple Agenda en Outlook. De agenda-app haalt hem zelf periodiek op, dus
 // nieuwe en afgezegde diensten komen vanzelf goed (lib/worker/calendar-feed).
 export function CalendarFeedCard({ initialUrl }: { initialUrl: string }) {
+  const t = useFT().feed;
   const [url, setUrl] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,7 +29,7 @@ export function CalendarFeedCard({ initialUrl }: { initialUrl: string }) {
   };
 
   const renew = async () => {
-    if (!window.confirm("Een nieuwe link maken? De oude link werkt dan meteen niet meer, ook niet in agenda's waar je hem al gebruikt.")) return;
+    if (!window.confirm(t.renewConfirm)) return;
     setBusy(true);
     try {
       const r = await fetch("/api/me/agenda-link", { method: "POST" });
@@ -45,30 +47,27 @@ export function CalendarFeedCard({ initialUrl }: { initialUrl: string }) {
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
-        <h2 className="font-display text-lg font-semibold">Kies je agenda</h2>
-        <p className="mt-1 text-sm text-neutralx-600">
-          Eén keer koppelen, daarna staan al je diensten er vanzelf in: met adres, pauze en een herinnering. Een afgezegde
-          dienst verdwijnt ook weer.
-        </p>
+        <h2 className="font-display text-lg font-semibold">{t.chooseTitle}</h2>
+        <p className="mt-1 text-sm text-neutralx-600">{t.chooseBody}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={google} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
-            Google Agenda
+            {t.google}
           </a>
           <a href={webcal} className={button}>
-            Apple Agenda (iPhone, Mac)
+            {t.apple}
           </a>
           <a href={outlook} target="_blank" rel="noopener noreferrer" className={button}>
-            Outlook
+            {t.outlook}
           </a>
         </div>
       </div>
 
       <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
-        <h2 className="font-display text-base font-semibold">Andere agenda-app</h2>
-        <p className="mt-1 text-sm text-neutralx-600">Kopieer de link en kies in je agenda &quot;Abonneren op agenda&quot; of &quot;Agenda toevoegen via URL&quot;.</p>
+        <h2 className="font-display text-base font-semibold">{t.otherTitle}</h2>
+        <p className="mt-1 text-sm text-neutralx-600">{t.otherBody}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label htmlFor="agenda-link" className="sr-only">
-            Je agenda-link
+            {t.linkLabel}
           </label>
           <input
             id="agenda-link"
@@ -78,23 +77,23 @@ export function CalendarFeedCard({ initialUrl }: { initialUrl: string }) {
             className="min-w-0 flex-1 rounded-lg border border-neutralx-200 bg-neutralx-50 px-3 py-2 text-sm text-neutralx-700"
           />
           <button type="button" onClick={copy} className="btn-primary text-sm">
-            {copied ? "Gekopieerd ✓" : "Kopieer link"}
+            {copied ? t.copied : t.copy}
           </button>
         </div>
         {renewed && (
           <p role="status" className="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700">
-            Nieuwe link gemaakt. Koppel je agenda opnieuw; de oude link werkt niet meer.
+            {t.renewed}
           </p>
         )}
       </div>
 
       <div className="rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-600">
-        <span className="font-semibold text-ink">Houd de link voor jezelf. </span>
-        Wie hem heeft, ziet je diensten (tijden, opdrachtgever en adres). Gedeeld per ongeluk?{" "}
+        <span className="font-semibold text-ink">{t.privateTitle} </span>
+        {t.privateBody}{" "}
         <button type="button" onClick={renew} disabled={busy} className="font-semibold text-brand-600 hover:underline disabled:opacity-50">
-          Maak een nieuwe link
+          {t.renew}
         </button>
-        . Agenda-apps verversen zelf, meestal binnen een paar uur; Google kan er soms een halve dag over doen.
+        {t.refreshNote}
       </div>
     </div>
   );

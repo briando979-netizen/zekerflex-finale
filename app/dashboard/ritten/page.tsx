@@ -4,11 +4,26 @@ import { PageHeader, EmptyState } from "@/components/app/ui";
 import { MileageLog } from "@/components/app/MileageLog";
 import { currentYear, getMileageLog } from "@/lib/worker/mileage";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { getFreelancerDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
+/** "**vet** rest" → nadruk-span + tekst, zodat elke taal zijn eigen woordvolgorde houdt. */
+function rich(text: string) {
+  return text.split("**").map((part, i) =>
+    i % 2 ? (
+      <span key={i} className="font-semibold text-ink">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+}
+
 export default async function RittenPage(props: { searchParams: Promise<{ jaar?: string }> }) {
   const principal = await requirePrincipal();
+  const t = (await getFreelancerDict()).trips;
   const searchParams = await props.searchParams;
   const thisYear = currentYear();
   const asked = Number(searchParams.jaar);
@@ -18,22 +33,22 @@ export default async function RittenPage(props: { searchParams: Promise<{ jaar?:
   if (!log) {
     return (
       <>
-        <Back />
-        <PageHeader title="Kilometer-administratie" subtitle="Je ritten naar je diensten, automatisch bijgehouden." />
-        <EmptyState icon="🚗" title="Nog geen profiel" body="Deze pagina verschijnt zodra je als professional bent geregistreerd." />
+        <Back label={t.back} />
+        <PageHeader title={t.title} subtitle={t.noProfileSub} />
+        <EmptyState icon="🚗" title={t.noProfileTitle} body={t.noProfileBody} />
       </>
     );
   }
 
+  // "… Vul je [adresgegevens] in …" → tekst, link, tekst
+  const [beforeLink = "", linkText = "", afterLink = ""] = t.homeUnknown.split(/\[|\]/);
+
   return (
     <>
-      <Back />
-      <PageHeader
-        title="Kilometer-administratie"
-        subtitle="Elke dienst die je werkt, staat hier vanzelf als rit van huis naar de opdrachtgever en terug. Werk je ook buiten ZekerFlex? Voeg die ritten zelf toe, dan heb je alles op één plek."
-      />
+      <Back label={t.back} />
+      <PageHeader title={t.title} subtitle={t.subtitle} />
 
-      <nav aria-label="Kies een jaar" className="mb-5 flex flex-wrap gap-2">
+      <nav aria-label={t.chooseYear} className="mb-5 flex flex-wrap gap-2">
         {[thisYear, thisYear - 1, thisYear - 2].map((y) => (
           <Link
             key={y}
@@ -48,9 +63,11 @@ export default async function RittenPage(props: { searchParams: Promise<{ jaar?:
 
       {!log.homeKnown && (
         <div className="mb-5 rounded-xl border border-warn/30 bg-warn/5 p-4 text-sm text-neutralx-700">
-          We kennen je thuisadres nog niet, dus we kunnen de afstand niet schatten. Vul je{" "}
-          <Link href="/dashboard/profiel" className="font-semibold text-brand-600 hover:underline">adresgegevens</Link>{" "}
-          in, of typ per rit zelf de kilometers.
+          {beforeLink}
+          <Link href="/dashboard/profiel" className="font-semibold text-brand-600 hover:underline">
+            {linkText}
+          </Link>
+          {afterLink}
         </div>
       )}
 
@@ -63,34 +80,18 @@ export default async function RittenPage(props: { searchParams: Promise<{ jaar?:
       />
 
       <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-600">
-        {log.isPayroll ? (
-          <>
-            <span className="font-semibold text-ink">Als uitzendkracht </span>
-            trek je reiskosten niet zelf af. Je uitzendbureau mag je reiskosten vergoeden, onbelast tot € 0,23 per km. Met dit
-            overzicht kun je nagaan of de vergoeding op je loonstrook klopt.
-          </>
-        ) : (
-          <>
-            <span className="font-semibold text-ink">Rij je met je eigen auto naar je opdrachtgever? </span>
-            Dan mag je als ondernemer € 0,23 per zakelijke kilometer aftrekken. Daarvoor heb je een rittenadministratie nodig:
-            datum, van, naar, doel en kilometers. Precies wat de download voor je boekhouder bevat.
-          </>
-        )}
-        <span className="mt-2 block text-neutralx-400">
-          De afstand is een schatting over de weg, op basis van je postcode ({log.homePostalCode || "onbekend"}) en het adres
-          van de vestiging. Controleer je ritten, want dit is geen belastingadvies. Ritten die je zelf toevoegt, tellen mee in het
-          totaal en in de download.
-        </span>
+        {rich(log.isPayroll ? t.payrollNote : t.zzpNote)}
+        <span className="mt-2 block text-neutralx-400">{t.estimateNote(log.homePostalCode || t.unknown)}</span>
       </div>
     </>
   );
 }
 
-function Back() {
+function Back({ label }: { label: string }) {
   return (
     <div className="mb-6">
       <Link href="/dashboard/administratie" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-        ← Terug
+        {label}
       </Link>
     </div>
   );
