@@ -52,6 +52,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Geen component binnen een component** definiëren (velden verliezen hun focus) en **geen `<form>` binnen een `<form>`**.
 - **Admin:** elke pagina met de kit (`components/admin/kit.tsx` + `kit-client.tsx`: PageHead, KpiStrip, Panel, Chart, DataTable), opgenomen in `ADMIN_HUBS` (`lib/admin/nav.ts`) en strikt `PLATFORM_ADMIN` (`tests/admin-access.test.ts` en `tests/admin-nav.test.ts` bewaken dat).
 - **Kleuren:** één kleur = één betekenis — groen doen, blauw `plan` gepland, amber `warn` wacht op jou, violet `trust` verificatie, goud `money` geld, rood probleem. Kleuren die een klant kiest: tekst- en knopkleur via `lib/rijschool/kleuren.ts`; oranje op licht haalt geen AA voor kleine tekst (gebruik de donkere variant).
+- **Donkere modus (werker- en werkgeversapp)** werkt alleen via de regels `.app-scope[data-theme="dark"] .<klasse>` in `app/globals.css`; Tailwind `dark:` volgt het systeem, niet de themaknop. Een kleurklasse zonder zo'n regel (ook `hover:…`) blijft licht en wordt onleesbaar: voeg hem daar toe, met de lichte tint uit het donkere beheerthema.
 - **Toegankelijkheid:** foutmeldingen in formulieren krijgen `role="alert"`; labels aan velden koppelen.
 - **Snelheid mag het uiterlijk nooit veranderen:** bewijs het met schermafbeeldingen per scrollpositie, vóór en na.
 - **Lettertypes** staan zelf gehost (`public/fonts`, `app/fonts.css`); de build haalt niets bij Google.
