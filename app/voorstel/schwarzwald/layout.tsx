@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BASE, CONTACT, DOELGROEPEN, MENU, OPENINGSTIJDEN, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
 import { pagina, paginaPaden } from "@/lib/voorstel/schwarzwald-paginas";
-import { Logo, SchwarzwaldHeader, type ZoekItem } from "@/components/voorstel/SchwarzwaldHeader";
+import { beheerder, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
+import { leesInstellingen } from "@/lib/voorstel/schwarzwald-instellingen";
+import { Logo, SchwarzwaldHeader, type KopAccount, type ZoekItem } from "@/components/voorstel/SchwarzwaldHeader";
 
 // Ontwerpvoorstel: een nieuwe website voor Het Schwarzwald, gebouwd op
 // ZekerFlex in plaats van WordPress. Eigen omlijsting, los van de
@@ -20,6 +22,7 @@ function zoekIndex(): ZoekItem[] {
     ...MENU.flatMap((g) => g.items.map((i) => ({ label: i.label, href: i.href, groep: g.label }))),
     ...TOPLINKS.map((t) => ({ label: t.label, href: t.href, groep: "Algemeen" })),
     { label: "Reserveren", href: `${BASE}/reserveren`, groep: "Algemeen" },
+    { label: "Inloggen / mijn account", href: `${BASE}/account`, groep: "Algemeen" },
     ...paginaPaden()
       .filter((p) => p.startsWith("/vacatures/"))
       .map((p) => ({ label: pagina(p)?.titel ?? p, href: `${BASE}${p}`, groep: "Vacatures" })),
@@ -36,7 +39,13 @@ function zoekIndex(): ZoekItem[] {
 const KOP = "text-xs font-bold uppercase tracking-[0.18em] text-schw-sun";
 const LINK = "text-schw-cream/80 hover:text-schw-cream";
 
-export default function SchwarzwaldLayout({ children }: { children: ReactNode }) {
+export default async function SchwarzwaldLayout({ children }: { children: ReactNode }) {
+  const [account, beheer, instellingen] = await Promise.all([huidigAccount().catch(() => null), beheerder().catch(() => null), leesInstellingen()]);
+  const kopAccount: KopAccount | null = account
+    ? { voornaam: account.naam.split(" ")[0] ?? account.naam, beheerder: !!beheer }
+    : beheer
+      ? { voornaam: beheer.naam, beheerder: true }
+      : null;
   return (
     <div className="min-h-screen bg-schw-cream font-sans text-schw-night">
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-schw-sun focus:px-4 focus:py-2 focus:font-bold">
@@ -48,7 +57,12 @@ export default function SchwarzwaldLayout({ children }: { children: ReactNode })
           Naar de huidige site
         </a>
       </div>
-      <SchwarzwaldHeader zoekIndex={zoekIndex()} />
+      <SchwarzwaldHeader zoekIndex={zoekIndex()} account={kopAccount} />
+      {instellingen.aankondiging && (
+        <div role="note" className="bg-schw-orange px-4 py-2.5 text-center text-sm font-bold text-schw-night">
+          {instellingen.aankondiging}
+        </div>
+      )}
       <main id="inhoud">{children}</main>
       <footer className="bg-schw-night text-schw-cream">
         <div className="mx-auto grid max-w-[1280px] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">

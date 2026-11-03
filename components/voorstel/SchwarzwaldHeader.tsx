@@ -69,7 +69,12 @@ function Zoeken({ index, autoFocus = false, donker = false }: { index: ZoekItem[
   );
 }
 
-export function SchwarzwaldHeader({ zoekIndex }: { zoekIndex: ZoekItem[] }) {
+export interface KopAccount {
+  voornaam: string;
+  beheerder: boolean;
+}
+
+export function SchwarzwaldHeader({ zoekIndex, account }: { zoekIndex: ZoekItem[]; account: KopAccount | null }) {
   const [mobiel, setMobiel] = useState(false);
   const [groep, setGroep] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
@@ -115,25 +120,6 @@ export function SchwarzwaldHeader({ zoekIndex }: { zoekIndex: ZoekItem[] }) {
   return (
     // geen backdrop-blur: dat maakt de kop het referentievlak voor `fixed`, en dan vult het mobiele menu het scherm niet meer
     <header ref={kop} className="sticky top-0 z-40 bg-schw-night text-schw-cream">
-      {/* bovenbalk, zoals op hun site */}
-      <div className="hidden border-b border-white/10 lg:block">
-        <div className="mx-auto flex h-9 max-w-[1280px] items-center gap-6 px-8 text-xs">
-          <span className="text-schw-cream/80">
-            <span className="text-schw-sun">★★★★★</span> <strong className="text-schw-cream">{CONTACT.score}</strong>/10 uit {CONTACT.aantalReviews} beoordelingen
-          </span>
-          <nav aria-label="Service" className="ml-auto flex items-center gap-5">
-            {TOPLINKS.map((t) => (
-              <Link key={t.href} href={t.href} className="text-schw-cream/70 hover:text-schw-cream">
-                {t.label}
-              </Link>
-            ))}
-            <a href={CONTACT.telefoonHref} className="font-semibold text-schw-cream hover:text-schw-sun">
-              Bel ons: {CONTACT.telefoon}
-            </a>
-          </nav>
-        </div>
-      </div>
-
       <div className="mx-auto flex h-[72px] max-w-[1280px] items-center gap-4 px-4 sm:px-8">
         <Link href={BASE} aria-label="Het Schwarzwald, naar de homepage" className="shrink-0">
           <Logo />
@@ -178,6 +164,11 @@ export function SchwarzwaldHeader({ zoekIndex }: { zoekIndex: ZoekItem[] }) {
                 </li>
               );
             })}
+            <li>
+              <Link href={`${BASE}/contact`} className="block rounded-full px-3.5 py-2 text-sm font-semibold text-schw-cream/85 hover:text-schw-cream">
+                Contact
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -201,6 +192,17 @@ export function SchwarzwaldHeader({ zoekIndex }: { zoekIndex: ZoekItem[] }) {
           )}
         </div>
 
+        <Link
+          href={account?.beheerder ? `${BASE}/beheer` : `${BASE}/account`}
+          aria-label={account ? (account.beheerder ? "Naar beheer" : "Mijn account") : "Inloggen"}
+          className="hidden h-10 items-center gap-2 rounded-full border border-white/15 px-3 text-sm font-semibold hover:bg-white/10 sm:flex"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="5" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M2.5 14.5c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          <span className="max-w-[8rem] truncate">{account ? (account.beheerder ? "Beheer" : account.voornaam) : "Inloggen"}</span>
+        </Link>
         <Link
           href={`${BASE}/reserveren`}
           className="rounded-full bg-schw-orange px-5 py-2.5 text-sm font-bold text-schw-night shadow-[0_8px_24px_-8px_rgba(255,95,31,0.7)] transition-transform hover:-translate-y-0.5"
@@ -278,6 +280,11 @@ export function SchwarzwaldHeader({ zoekIndex }: { zoekIndex: ZoekItem[] }) {
               })}
             </ul>
             <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
+              <li className="col-span-2">
+                <Link href={account?.beheerder ? `${BASE}/beheer` : `${BASE}/account`} className="block rounded-xl bg-white/10 px-4 py-3 font-bold">
+                  {account ? (account.beheerder ? "Beheer" : `Mijn account (${account.voornaam})`) : "Inloggen of account maken"}
+                </Link>
+              </li>
               {TOPLINKS.map((t) => (
                 <li key={t.href}>
                   <Link href={t.href} className="block rounded-xl bg-white/5 px-4 py-3 font-semibold">

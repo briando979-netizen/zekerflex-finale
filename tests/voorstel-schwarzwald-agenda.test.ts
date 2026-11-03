@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITEITEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
+import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
 
 // 2026-11-04 = woensdag, 11-07 = zaterdag, 11-08 = zondag, 11-09 = maandag
 describe("Schwarzwald-agenda", () => {
@@ -53,6 +53,21 @@ describe("Schwarzwald-agenda", () => {
     expect(groepFout("buggy-rijden", 8)).toBeNull();
     expect(groepFout("f1-sim-race", 11)).toMatch(/maximaal 10/);
     expect(groepFout("anti-slipcursus", 10)).toMatch(/niet online/);
+  });
+
+  it("volgt de instellingen van de beheerder: gesloten dag, eigen prijs, activiteit uit", () => {
+    const { "f1-sim-race": _uit, ...zonderF1 } = AGENDA;
+    const cfg = {
+      regels: { ...zonderF1, "buggy-rijden": { ...AGENDA["buggy-rijden"]!, prijsPP: 70, prijsPPZondag: 70 } },
+      open: { ...STANDAARD_OPEN, 1: { van: 12 * 60, tot: 18 * 60 } },
+      gesloten: ["2026-11-11"],
+    };
+    expect(openOp("2026-11-11", 8, cfg)).toBeNull();
+    expect(dagStatus("buggy-rijden", "2026-11-11", 8, "2026-11-02", [], cfg)).toBe("gesloten");
+    expect(openOp("2026-11-09", 8, cfg)).toEqual({ van: 720, tot: 1080 });
+    expect(prijsIndicatie("buggy-rijden", 8, "2026-11-08", cfg)).toBe(560);
+    expect(ACTIVITEITEN.filter((a) => boekbaar(a, cfg)).some((a) => a.slug === "f1-sim-race")).toBe(false);
+    expect(groepFout("f1-sim-race", 4, cfg)).toMatch(/niet online/);
   });
 
   it("heeft regels voor elke boekbare activiteit, behalve de anti-slipcursus", () => {

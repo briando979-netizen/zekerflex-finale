@@ -39,7 +39,7 @@ const PUBLIC_PREFIXES = [
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
   "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
-  "/api/voorstel/schwarzwald/agenda", // reserveringsagenda van het Schwarzwald-voorstel: beschikbaarheid + proefboeking, IP-begrensd; .../beheer blijft achter login
+  "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([

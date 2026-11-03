@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { ACTIVITEITEN, CONTACT, OPENINGSTIJDEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, boekbaar } from "@/lib/voorstel/schwarzwald-agenda";
+import Link from "next/link";
+import { ACTIVITEITEN, BASE, CONTACT, OPENINGSTIJDEN } from "@/lib/voorstel/schwarzwald";
+import { boekbaar } from "@/lib/voorstel/schwarzwald-agenda";
+import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
+import { huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { ReserveerAanvraag } from "@/components/voorstel/ReserveerAanvraag";
 import { SchwarzwaldAgenda, type AgendaActiviteit } from "@/components/voorstel/SchwarzwaldAgenda";
 
@@ -10,11 +13,12 @@ const tekst = (v: string | string[] | undefined) => (typeof v === "string" ? v :
 
 // Eigen agenda in plaats van de link naar Stackbase: activiteiten met vaste
 // tijdsloten direct boeken. Themafeesten, bruiloften en grote groepen gaan via
-// het aanvraagformulier eronder.
+// het aanvraagformulier eronder. Ingelogd: gegevens alvast ingevuld en de
+// boeking komt in "Mijn account".
 export default async function ReserverenPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp = await searchParams;
-  const activiteiten: AgendaActiviteit[] = ACTIVITEITEN.filter(boekbaar).flatMap((a) => {
-    const r = AGENDA[a.slug];
+  const [sp, cfg, account] = await Promise.all([searchParams, agendaConfig(), huidigAccount().catch(() => null)]);
+  const activiteiten: AgendaActiviteit[] = ACTIVITEITEN.filter((a) => boekbaar(a, cfg)).flatMap((a) => {
+    const r = cfg.regels[a.slug];
     return r ? [{ slug: a.slug, naam: a.naam, min: r.min, max: r.max, duurMin: r.duurMin }] : [];
   });
 
@@ -27,11 +31,22 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
             Nog één klik en het <span className="text-schw-orange">feest</span> staat.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-schw-cream/80">Kies je activiteit, zie meteen welke dagen en tijden nog vrij zijn, en reserveer direct.</p>
+          <p className="mt-4 text-sm text-schw-cream/70">
+            {account ? (
+              <>Ingelogd als {account.naam}: je reservering komt in <Link href={`${BASE}/account`} className="underline">Mijn account</Link>.</>
+            ) : (
+              <><Link href={`${BASE}/account`} className="underline">Log in</Link> om je reserveringen later terug te zien en te annuleren.</>
+            )}
+          </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-[1280px] px-4 py-12 sm:px-8">
-        <SchwarzwaldAgenda activiteiten={activiteiten} start={tekst(sp.activiteit)} />
+        <SchwarzwaldAgenda
+          activiteiten={activiteiten}
+          start={tekst(sp.activiteit)}
+          gegevens={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
+        />
       </section>
 
       <section className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-16 sm:px-8 lg:grid-cols-[1fr_1.2fr]">

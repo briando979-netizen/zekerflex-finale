@@ -5,8 +5,10 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { AGENDA, dagStatus, isDatum, prijsIndicatie, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
+import { dagStatus, isDatum, prijsIndicatie, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
+import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { alleBoekingen, bezetVan, boekingenOp, maakBoeking } from "@/lib/voorstel/schwarzwald-boekingen";
+import { eisZelfdeHerkomst, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,26 +17,28 @@ export const dynamic = "force-dynamic";
 // lib/auth/public-routes.ts).
 // GET  ?activiteit&personen&maand=YYYY-MM → status per dag
 // GET  ?activiteit&personen&datum=YYYY-MM-DD → tijdsloten (zonder aantallen)
-// POST → boeking vastleggen (proefboeking, zie schwarzwald-boekingen.ts)
+// POST → boeking vastleggen (proefboeking, zie schwarzwald-boekingen.ts);
+//        ingelogd → gekoppeld aan het account
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const q = new URL(request.url).searchParams;
     const activiteit = q.get("activiteit") ?? "";
     const personen = Number(q.get("personen") ?? "0");
-    if (!Object.prototype.hasOwnProperty.call(AGENDA, activiteit)) throw AppError.validation("Onbekende activiteit.");
+    const cfg = await agendaConfig();
+    if (!Object.prototype.hasOwnProperty.call(cfg.regels, activiteit)) throw AppError.validation("Deze activiteit is niet online te boeken.");
     if (!Number.isInteger(personen) || personen < 1 || personen > 500) throw AppError.validation("Ongeldig aantal personen.");
     const vandaag = amsterdamDayKey(new Date());
 
     const datum = q.get("datum");
     if (datum) {
       if (!isDatum(datum)) throw AppError.validation("Ongeldige datum.");
-      const sloten = tijdsloten(activiteit, datum, personen, bezetVan(await boekingenOp(datum)));
+      const sloten = tijdsloten(activiteit, datum, personen, bezetVan(await boekingenOp(datum)), cfg);
       return NextResponse.json({
         datum,
-        status: dagStatus(activiteit, datum, personen, vandaag, []),
+        status: dagStatus(activiteit, datum, personen, vandaag, [], cfg),
         sloten: sloten.map(({ tijd, status }) => ({ tijd, status })),
-        prijs: prijsIndicatie(activiteit, personen, datum),
+        prijs: prijsIndicatie(activiteit, personen, datum, cfg),
       });
     }
 
@@ -45,7 +49,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const aantal = new Date(Date.UTC(jaar, mnd, 0)).getUTCDate();
     const dagen = Array.from({ length: aantal }, (_, i) => {
       const d = `${maand}-${String(i + 1).padStart(2, "0")}`;
-      return { datum: d, status: dagStatus(activiteit, d, personen, vandaag, bezetVan(alle.filter((b) => b.datum === d))) };
+      return { datum: d, status: dagStatus(activiteit, d, personen, vandaag, bezetVan(alle.filter((b) => b.datum === d)), cfg) };
     });
     return NextResponse.json({ maand, vandaag, dagen });
   } catch (err) {
@@ -67,6 +71,7 @@ const schema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    eisZelfdeHerkomst(request);
     await enforceRateLimit({
       name: "voorstel-schwarzwald-boeking",
       identifier: clientIp(request),
@@ -80,23 +85,28 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw AppError.validation("Controleer je gegevens en zet het vinkje voor akkoord.", parsed.error.flatten());
     const d = parsed.data;
-    const boeking = await maakBoeking({
-      activiteit: d.activiteit,
-      datum: d.datum,
-      tijd: d.tijd,
-      personen: d.personen,
-      naam: d.naam,
-      email: d.email,
-      telefoon: d.telefoon,
-      opmerking: d.opmerking,
-    });
+    const account = await huidigAccount();
+    const boeking = await maakBoeking(
+      {
+        activiteit: d.activiteit,
+        datum: d.datum,
+        tijd: d.tijd,
+        personen: d.personen,
+        naam: d.naam,
+        email: d.email,
+        telefoon: d.telefoon,
+        opmerking: d.opmerking,
+      },
+      { account: account?.email, door: "online" },
+    );
     return NextResponse.json({
       id: boeking.id,
       activiteit: boeking.activiteit,
       datum: boeking.datum,
       tijd: boeking.tijd,
       personen: boeking.personen,
-      prijs: prijsIndicatie(boeking.activiteit, boeking.personen, boeking.datum),
+      prijs: prijsIndicatie(boeking.activiteit, boeking.personen, boeking.datum, await agendaConfig()),
+      account: !!boeking.account,
     });
   } catch (err) {
     return jsonError(err);

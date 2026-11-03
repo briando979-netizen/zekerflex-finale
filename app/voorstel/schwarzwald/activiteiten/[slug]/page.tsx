@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, activiteit, doelgroepHref } from "@/lib/voorstel/schwarzwald";
-import { pagina } from "@/lib/voorstel/schwarzwald-paginas";
+import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { SchwarzwaldBlokken } from "@/components/voorstel/SchwarzwaldBlokken";
 import { ActiviteitKaart, Beeld, CtaBand } from "@/components/voorstel/SchwarzwaldCards";
 
@@ -16,7 +16,7 @@ export default async function ActiviteitPage({ params }: { params: Promise<{ slu
   if (!a) notFound();
 
   // hun eigen tekst over deze activiteit, letterlijk
-  const bron = pagina(a.bron);
+  const bron = await paginaVoorSite(a.bron);
   const ookLeuk = ACTIVITEITEN.filter((x) => x.slug !== a.slug && x.categorie === a.categorie).slice(0, 3);
   const doelgroepen = DOELGROEPEN.filter((d) => a.voor.includes(d.slug));
 

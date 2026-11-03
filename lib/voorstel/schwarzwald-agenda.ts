@@ -44,7 +44,17 @@ export const AGENDA: Record<string, AgendaRegel> = {
   "f1-sim-race": { duurMin: 60, capaciteit: 10, min: 1, max: 10 },
 };
 
-export const boekbaar = (a: Activiteit) => Object.prototype.hasOwnProperty.call(AGENDA, a.slug);
+/** Welke regels gelden: standaard, of zoals de beheerder ze heeft ingesteld (schwarzwald-instellingen.ts). */
+export interface AgendaConfig {
+  /** alleen activiteiten die online te boeken zijn */
+  regels: Record<string, AgendaRegel>;
+  /** weekdag (0 = zondag) -> open van/tot in minuten na middernacht, of null = dicht */
+  open: Record<number, { van: number; tot: number } | null>;
+  /** extra gesloten datums (feestdagen, besloten feest) */
+  gesloten: string[];
+}
+
+export const boekbaar = (a: Activiteit, cfg: AgendaConfig = STANDAARD) => Object.prototype.hasOwnProperty.call(cfg.regels, a.slug);
 
 /** Op ma en di alleen open voor groepen vanaf dit aantal, op reservering. */
 export const GROEP_ANDERE_DAGEN = 12;
@@ -52,7 +62,7 @@ export const GROEP_ANDERE_DAGEN = 12;
 export const VOORUIT_DAGEN = 180;
 
 // Weekdag (0 = zondag) -> openingstijden in minuten na middernacht
-const OPEN: Record<number, { van: number; tot: number } | null> = {
+export const STANDAARD_OPEN: Record<number, { van: number; tot: number } | null> = {
   0: { van: 11 * 60, tot: 22 * 60 + 30 },
   1: null,
   2: null,
@@ -63,6 +73,8 @@ const OPEN: Record<number, { van: number; tot: number } | null> = {
 };
 // Ma/di voor grote groepen: zelfde tijden als doordeweeks
 const OPEN_GROEP = { van: 13 * 60, tot: 22 * 60 + 30 };
+
+export const STANDAARD: AgendaConfig = { regels: AGENDA, open: STANDAARD_OPEN, gesloten: [] };
 
 export const isDatum = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
 export const isTijd = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
@@ -77,12 +89,13 @@ export function plusDagen(datum: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-const minuten = (tijd: string) => Number(tijd.slice(0, 2)) * 60 + Number(tijd.slice(3, 5));
-const klok = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+export const minuten = (tijd: string) => Number(tijd.slice(0, 2)) * 60 + Number(tijd.slice(3, 5));
+export const klok = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
 /** Openingstijden op een datum voor een groep van deze grootte, of null als dicht. */
-export function openOp(datum: string, personen: number): { van: number; tot: number } | null {
-  const open = OPEN[weekdag(datum)] ?? null;
+export function openOp(datum: string, personen: number, cfg: AgendaConfig = STANDAARD): { van: number; tot: number } | null {
+  if (cfg.gesloten.includes(datum)) return null;
+  const open = cfg.open[weekdag(datum)] ?? null;
   if (open) return open;
   return personen >= GROEP_ANDERE_DAGEN ? OPEN_GROEP : null;
 }
@@ -108,9 +121,9 @@ export interface Slot {
 }
 
 /** Tijdsloten (ieder heel uur) waarop de activiteit kan beginnen, met wat er nog vrij is. */
-export function tijdsloten(slug: string, datum: string, personen: number, bezet: BezetteTijd[]): Slot[] {
-  const regel = AGENDA[slug];
-  const open = openOp(datum, personen);
+export function tijdsloten(slug: string, datum: string, personen: number, bezet: BezetteTijd[], cfg: AgendaConfig = STANDAARD): Slot[] {
+  const regel = cfg.regels[slug];
+  const open = openOp(datum, personen, cfg);
   if (!regel || !open) return [];
   const eigen = bezet.filter((b) => b.activiteit === slug && isTijd(b.tijd));
   const sloten: Slot[] = [];
@@ -132,15 +145,15 @@ export function tijdsloten(slug: string, datum: string, personen: number, bezet:
 
 export type DagStatus = "verleden" | "gesloten" | "vrij" | "vol";
 
-export function dagStatus(slug: string, datum: string, personen: number, vandaag: string, bezet: BezetteTijd[]): DagStatus {
+export function dagStatus(slug: string, datum: string, personen: number, vandaag: string, bezet: BezetteTijd[], cfg: AgendaConfig = STANDAARD): DagStatus {
   if (!inVenster(datum, vandaag)) return "verleden";
-  if (!openOp(datum, personen)) return "gesloten";
-  return tijdsloten(slug, datum, personen, bezet).some((s) => s.status !== "vol") ? "vrij" : "vol";
+  if (!openOp(datum, personen, cfg)) return "gesloten";
+  return tijdsloten(slug, datum, personen, bezet, cfg).some((s) => s.status !== "vol") ? "vrij" : "vol";
 }
 
 /** Prijsindicatie in hele euro's, of null als er geen vaste prijs per persoon is. */
-export function prijsIndicatie(slug: string, personen: number, datum: string): number | null {
-  const regel = AGENDA[slug];
+export function prijsIndicatie(slug: string, personen: number, datum: string, cfg: AgendaConfig = STANDAARD): number | null {
+  const regel = cfg.regels[slug];
   if (!regel) return null;
   if (regel.prijsPerRoom) return Math.ceil(personen / regel.prijsPerRoom.perRoom) * regel.prijsPerRoom.prijs;
   if (regel.prijsPP === undefined) return null;
@@ -149,8 +162,8 @@ export function prijsIndicatie(slug: string, personen: number, datum: string): n
 }
 
 /** Waarom deze groep niet kan boeken, of null als het past. */
-export function groepFout(slug: string, personen: number): string | null {
-  const regel = AGENDA[slug];
+export function groepFout(slug: string, personen: number, cfg: AgendaConfig = STANDAARD): string | null {
+  const regel = cfg.regels[slug];
   if (!regel) return "Deze activiteit is niet online te boeken.";
   if (!Number.isInteger(personen) || personen < regel.min) return `Minimaal ${regel.min} personen.`;
   if (personen > regel.max) return `Online maximaal ${regel.max} personen; bel ons voor grotere groepen.`;

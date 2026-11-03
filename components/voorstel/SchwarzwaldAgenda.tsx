@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar/links";
-import { CONTACT } from "@/lib/voorstel/schwarzwald";
+import Link from "next/link";
+import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 
 // Eigen reserveringsagenda: activiteit + groep kiezen, dag in de maandkalender,
 // tijdslot, gegevens, bevestigen. Beschikbaarheid en boeken via
@@ -39,7 +40,16 @@ const eindTijd = (tijd: string, duur: number) => {
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 };
 
-export function SchwarzwaldAgenda({ activiteiten, start = "" }: { activiteiten: AgendaActiviteit[]; start?: string }) {
+export function SchwarzwaldAgenda({
+  activiteiten,
+  start = "",
+  gegevens: bekend = null,
+}: {
+  activiteiten: AgendaActiviteit[];
+  start?: string;
+  /** ingelogd account: velden alvast ingevuld */
+  gegevens?: { naam: string; email: string; telefoon: string } | null;
+}) {
   const eerste = activiteiten.find((a) => a.slug === start) ?? activiteiten[0];
   const [slug, setSlug] = useState(eerste?.slug ?? "");
   const act = activiteiten.find((a) => a.slug === slug);
@@ -57,7 +67,7 @@ export function SchwarzwaldAgenda({ activiteiten, start = "" }: { activiteiten: 
   const [klaar, setKlaar] = useState<Bevestiging | null>(null);
   // verhogen = beschikbaarheid opnieuw ophalen (na een mislukte of gelukte boeking)
   const [ververs, setVervers] = useState(0);
-  const [gegevens, setGegevens] = useState({ naam: "", email: "", telefoon: "", opmerking: "", akkoord: false });
+  const [gegevens, setGegevens] = useState({ naam: bekend?.naam ?? "", email: bekend?.email ?? "", telefoon: bekend?.telefoon ?? "", opmerking: "", akkoord: false });
 
   const groepOk = !!act && personen >= act.min && personen <= act.max;
 
@@ -162,6 +172,7 @@ export function SchwarzwaldAgenda({ activiteiten, start = "" }: { activiteiten: 
         </p>
         <p className="mt-2 text-schw-cream/70">
           Reserveringsnummer <strong className="font-mono text-schw-sun">{klaar.id}</strong>. Het Schwarzwald bevestigt de reservering.
+          {bekend && <> Je vindt hem terug onder <Link href={`${BASE}/account`} className="underline">Mijn account</Link>.</>}
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-schw-orange px-6 py-3 font-bold text-schw-night">

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, REVIEWS, THEMAFEESTEN, activiteit, doelgroepHref, type Activiteit } from "@/lib/voorstel/schwarzwald";
-import { pagina, type Blok } from "@/lib/voorstel/schwarzwald-paginas";
+import type { Blok } from "@/lib/voorstel/schwarzwald-paginas";
+import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { ActiviteitKaart, ArrangementBlok, Beeld, CtaBand, Sterren } from "@/components/voorstel/SchwarzwaldCards";
 import { RunsWeergave } from "@/components/voorstel/SchwarzwaldBlokken";
 
@@ -16,10 +17,10 @@ export const metadata: Metadata = { title: { absolute: "Het Schwarzwald · ontwe
 
 const TICKER = ["Buggy", "Quad", "Escaperoom", "F1 sim race", "E-chopper", "Kever rally", "Après-ski", "Pubquiz", "Solex", "4×4 off-road"];
 
-export default function SchwarzwaldHome() {
+export default async function SchwarzwaldHome() {
   const uitgelicht = UITGELICHT.map(activiteit).filter((a): a is Activiteit => a !== undefined);
   const buggy = activiteit("buggy-rijden");
-  const home = pagina("/");
+  const home = await paginaVoorSite("/");
   const trending = home && alineaDieBegintMet(home.blokken, "Trending");
   const intro = home && alineaDieBegintMet(home.blokken, "Het Schwarzwald in Rijssen");
 

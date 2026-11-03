@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BASE, DOELGROEPEN, activiteitenVoor } from "@/lib/voorstel/schwarzwald";
-import { pagina } from "@/lib/voorstel/schwarzwald-paginas";
+import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { SchwarzwaldBlokken } from "@/components/voorstel/SchwarzwaldBlokken";
 import { ActiviteitKaart, CtaBand } from "@/components/voorstel/SchwarzwaldCards";
 
@@ -16,13 +16,13 @@ type Props = { params: Promise<{ pad: string[] }> };
 const sleutel = (pad: string[]) => `/${pad.join("/")}`;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = pagina(sleutel((await params).pad));
+  const p = await paginaVoorSite(sleutel((await params).pad));
   return p ? { title: p.titel } : { title: "Pagina niet gevonden" };
 }
 
 export default async function SchwarzwaldPagina({ params }: Props) {
   const key = sleutel((await params).pad);
-  const p = pagina(key);
+  const p = await paginaVoorSite(key);
   if (!p) notFound();
 
   const doelgroep = DOELGROEPEN.find((d) => d.bron === key);
