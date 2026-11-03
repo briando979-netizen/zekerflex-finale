@@ -25,16 +25,18 @@ const schema = z.object({
     .regex(/^(github_pat_|ghp_)[A-Za-z0-9_]{20,250}$/, "Dit lijkt geen GitHub-sleutel (begint met github_pat_ of ghp_)")
     .nullable()
     .optional(),
+  autoFouten: z.boolean().optional(),
 });
 
 export const PUT = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation(parsed.error.issues[0]?.message ?? "Controleer de invoer");
-  const { model, githubToken } = parsed.data;
+  const { model, githubToken, autoFouten } = parsed.data;
 
   await zetBouwerInstellingen({
     ...(model !== undefined ? { model: model || null } : {}),
     ...(githubToken !== undefined ? { githubToken } : {}),
+    ...(autoFouten !== undefined ? { autoFouten } : {}),
   });
   await recordAudit({
     category: "ADMIN",
@@ -44,7 +46,7 @@ export const PUT = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princip
     actorLabel: "user",
     summary: `${principal.email} wijzigde de Bouwer-instellingen${model !== undefined ? ` (model: ${model || "standaard"})` : ""}${
       githubToken !== undefined ? (githubToken ? " (GitHub-sleutel ingesteld)" : " (GitHub-sleutel verwijderd)") : ""
-    }`,
+    }${autoFouten !== undefined ? ` (automatische reparaties ${autoFouten ? "aan" : "uit"})` : ""}`,
   });
   return NextResponse.json(await bouwerInstellingen());
 });

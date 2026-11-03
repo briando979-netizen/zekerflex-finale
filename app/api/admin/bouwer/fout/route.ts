@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { isErrorGroupId, listErrorGroups } from "@/lib/ops/error-journal";
+import { flushJournal, isErrorGroupId, listErrorGroups } from "@/lib/ops/error-journal";
 import { foutOpdracht, kanBouwerOplossen } from "@/lib/bouwer/fout-opdracht";
 import { bouwer, bouwerLlm, type TaakKort } from "@/lib/bouwer/werker";
 
@@ -19,6 +19,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation("Onbekende melding");
 
+  await flushJournal().catch(() => undefined);
   const groep = (await listErrorGroups()).find((g) => g.id === parsed.data.id);
   if (!groep) throw AppError.notFound("Deze melding staat niet (meer) in het logboek");
   if (!kanBouwerOplossen(groep)) throw AppError.validation("Deze melding kan tekst van bezoekers bevatten; die gaat niet naar de Bouwer");

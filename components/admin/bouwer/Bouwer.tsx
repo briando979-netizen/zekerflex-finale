@@ -513,7 +513,7 @@ function Wijzigingen({ diff, bestanden }: { diff: string; bestanden: { status: s
 }
 
 function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
-  const [data, setData] = useState<{ model: string; modelGekozen: boolean; githubSleutel: boolean; modellen: string[] } | null>(null);
+  const [data, setData] = useState<{ model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean; modellen: string[] } | null>(null);
   const [model, setModel] = useState("");
   const [sleutel, setSleutel] = useState("");
   const [melding, setMelding] = useState<string | null>(null);
@@ -521,7 +521,7 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
   useEffect(() => {
     void fetch("/api/admin/bouwer/instellingen", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: { model: string; modelGekozen: boolean; githubSleutel: boolean; modellen: string[] }) => {
+      .then((d: { model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean; modellen: string[] }) => {
         setData(d);
         setModel(d.modelGekozen ? d.model : "");
       })
@@ -531,7 +531,7 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
   const bewaar = async (body: Record<string, unknown>) => {
     setMelding(null);
     try {
-      const d = await verstuur<{ model: string; modelGekozen: boolean; githubSleutel: boolean }>("/api/admin/bouwer/instellingen", "PUT", body);
+      const d = await verstuur<{ model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean }>("/api/admin/bouwer/instellingen", "PUT", body);
       setData((o) => (o ? { ...o, ...d } : o));
       setSleutel("");
       setMelding("Opgeslagen");
@@ -594,6 +594,15 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
           )}
         </p>
       </div>
+      <label className="flex items-start gap-2 leading-relaxed">
+        <input type="checkbox" className="mt-0.5" checked={data.autoFouten} onChange={(e) => void bewaar({ autoFouten: e.target.checked })} />
+        <span>
+          <span className="text-white/80">Automatisch reparaties voorstellen</span>
+          <span className="block text-white/35">
+            Komt een fout uit het foutenlogboek minstens 3 keer terug, dan begint de Bouwer er zelf aan en krijg je een melding zodra er een reparatie klaarstaat. Goedkeuren doe je altijd zelf. Hooguit 3 per dag; nooit meldingen met tekst van bezoekers.
+          </span>
+        </span>
+      </label>
       {melding && <p className="text-white/50">{melding}</p>}
     </div>
   );

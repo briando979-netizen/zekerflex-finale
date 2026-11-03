@@ -71,6 +71,8 @@ export interface Taak extends Omit<TaakKort, "bestanden"> {
 interface Instellingen {
   model?: string;
   githubToken?: string;
+  /** Zelf reparaties voorstellen voor terugkerende fouten (lib/bouwer/autopilot.ts). */
+  autoFouten?: boolean;
 }
 
 export function bouwerIngesteld(): boolean {
@@ -140,19 +142,31 @@ async function lees(): Promise<Instellingen> {
   return (await kvGet<Instellingen>(K_INSTELLINGEN)) ?? {};
 }
 
+// In de proef van 3 nov programmeerde gemini-3.5-flash duidelijk beter dan het
+// lichte flash-lite dat de rest van de AI gebruikt, op dezelfde (gratis) sleutel.
+const GEMINI_CODE_MODEL = "gemini-3.5-flash";
+
+/** Zonder eigen keuze: het code-model uit de AI-instellingen, maar bij Gemini niet de lichte variant. */
+export function standaardBouwerModel(codeModel: string, hoofdModel: string, baseUrl: string): string {
+  const model = codeModel || hoofdModel;
+  if (/generativelanguage\.googleapis\.com/.test(baseUrl) && /flash-lite/.test(model)) return GEMINI_CODE_MODEL;
+  return model;
+}
+
 export async function bouwerModel(): Promise<string> {
   await primeMainModel();
-  return (await lees()).model || modelFor("code") || env.LLM_MODEL;
+  return (await lees()).model || standaardBouwerModel(modelFor("code"), env.LLM_MODEL, env.LLM_BASE_URL);
 }
 
 export async function bouwerInstellingen() {
   const i = await lees();
-  return { model: await bouwerModel(), modelGekozen: Boolean(i.model), githubSleutel: Boolean(i.githubToken) };
+  return { model: await bouwerModel(), modelGekozen: Boolean(i.model), githubSleutel: Boolean(i.githubToken), autoFouten: Boolean(i.autoFouten) };
 }
 
-export async function zetBouwerInstellingen(wijziging: { model?: string | null; githubToken?: string | null }): Promise<void> {
+export async function zetBouwerInstellingen(wijziging: { model?: string | null; githubToken?: string | null; autoFouten?: boolean }): Promise<void> {
   const i = await lees();
   const volgende: Instellingen = { ...i };
+  if (wijziging.autoFouten !== undefined) volgende.autoFouten = wijziging.autoFouten;
   if (wijziging.model !== undefined) {
     if (wijziging.model) volgende.model = wijziging.model;
     else delete volgende.model;
