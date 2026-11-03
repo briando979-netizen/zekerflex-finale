@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { sendUserPush } from "@/lib/notifications/push";
-import { getWorkerMilestones } from "@/lib/worker/milestones";
+import { amsterdamYearQuarter, getWorkerMilestones } from "@/lib/worker/milestones";
 
 // ---------------------------------------------------------------------------
 // Dagelijkse herinneringen voor administratie-mijlpalen (btw-deadline, 1.225-
@@ -19,8 +19,7 @@ async function claim(key: string): Promise<boolean> {
 }
 
 export async function sweepMilestoneReminders(now = new Date()): Promise<{ users: number; sent: number }> {
-  const year = now.getFullYear();
-  const quarter = Math.floor(now.getMonth() / 3) + 1;
+  const { year, quarter } = amsterdamYearQuarter(now);
 
   const users = await prisma.user.findMany({
     where: {

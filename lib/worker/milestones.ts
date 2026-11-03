@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor, type WorkerKind } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
+import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // "Je administratie, zonder gedoe": mijlpalen, drempels en deadlines die een
@@ -41,9 +42,16 @@ const euro = (cents: number) => `€ ${Math.round(cents / 100).toLocaleString("n
 const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 const QUARTER_RANGE = ["jan–mrt", "apr–jun", "jul–sep", "okt–dec"];
 
-/** Laatste dag van de maand ná het kwartaaleinde = btw-aangiftedeadline. */
-function btwDeadline(year: number, quarter: number): Date {
-  return new Date(year, quarter * 3 + 1, 0);
+/** Jaar en kwartaal zoals in Nederland (de server draait in UTC). */
+export function amsterdamYearQuarter(d: Date): { year: number; quarter: number } {
+  const p = amsterdamParts(d);
+  return { year: p.year, quarter: Math.floor((p.month - 1) / 3) + 1 };
+}
+
+/** Laatste dag van de maand ná het kwartaaleinde = btw-aangiftedeadline, eind van die dag in Nederland. */
+export function btwDeadline(year: number, quarter: number): Date {
+  const last = new Date(Date.UTC(year, quarter * 3 + 1, 0)); // dag 0 = laatste dag van de maand ervoor
+  return amsterdamToUtc(last.getUTCFullYear(), last.getUTCMonth() + 1, last.getUTCDate(), 23, 59, 59);
 }
 
 export async function getWorkerMilestones(userId: string, now = new Date()): Promise<WorkerMilestones | null> {
@@ -52,9 +60,9 @@ export async function getWorkerMilestones(userId: string, now = new Date()): Pro
 
   const fiscal = await getFiscal(userId);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
-  const year = now.getFullYear();
-  const yearStart = new Date(year, 0, 1);
-  const yearEnd = new Date(year + 1, 0, 1);
+  const { year, quarter } = amsterdamYearQuarter(now);
+  const yearStart = amsterdamToUtc(year, 1, 1);
+  const yearEnd = amsterdamToUtc(year + 1, 1, 1);
   const milestones: Milestone[] = [];
 
   if (isPayroll) {
@@ -116,9 +124,8 @@ export async function getWorkerMilestones(userId: string, now = new Date()): Pro
 
   const hoursThisYear = Math.round((timesheets.reduce((s, t) => s + t.billableMinutes, 0) / 60) * 10) / 10;
   const omzetCents = invoices.reduce((s, i) => s + i.subtotalCents, 0);
-  const quarter = Math.floor(now.getMonth() / 3) + 1;
   const quarterVatCents = invoices
-    .filter((i) => Math.floor(i.createdAt.getMonth() / 3) + 1 === quarter)
+    .filter((i) => amsterdamYearQuarter(i.createdAt).quarter === quarter)
     .reduce((s, i) => s + i.vatCents, 0);
 
   // 1) Urencriterium 1225u → zelfstandigenaftrek
