@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { blockSummary, renderPage } from "@/lib/sites/render";
 import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
 
@@ -33,7 +33,23 @@ interface Message {
 
 const RESERVED = ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots"];
 const nid = (p: string) => `${p}${Math.random().toString(36).slice(2, 10)}`;
-const mediaUrl = (file: string) => `/api/werkgever/sites/media/${file}`;
+
+/**
+ * Where the builder saves: a company's own site, or (Admin → Websitevoorstellen) a
+ * design proposal. The base serves GET/PUT, with "/publish" and "/media" under it.
+ * A proposal has no messages, no own domain and no "offline" (withdraw it instead).
+ */
+interface BuilderApi {
+  base: string;
+  proposal: boolean;
+}
+const BuilderApiContext = createContext<BuilderApi>({ base: "/api/werkgever/sites", proposal: false });
+const useBuilderApi = () => useContext(BuilderApiContext);
+/** The builder's own photo route (img-src 'self'); the preview and the pickers load photos through it. */
+function useMediaUrl(): (file: string) => string {
+  const { base } = useBuilderApi();
+  return useCallback((file: string) => `${base}/media/${file}`, [base]);
+}
 const when = (iso: string) => new Date(iso).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
 async function errorText(res: Response | null, fallback: string): Promise<string> {
@@ -50,15 +66,25 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function SiteBuilder({ origin }: { origin: string }) {
+export function SiteBuilder({ origin, apiBase = "/api/werkgever/sites", proposal = false }: { origin: string; apiBase?: string; proposal?: boolean }) {
+  const api = useMemo(() => ({ base: apiBase, proposal }), [apiBase, proposal]);
+  return (
+    <BuilderApiContext.Provider value={api}>
+      <Builder origin={origin} />
+    </BuilderApiContext.Provider>
+  );
+}
+
+function Builder({ origin }: { origin: string }) {
+  const { base } = useBuilderApi();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/werkgever/sites", { cache: "no-store" }).catch(() => null);
+    const res = await fetch(base, { cache: "no-store" }).catch(() => null);
     if (!res?.ok) return setError(await errorText(res, "De websitebouwer kon niet laden."));
     setData((await res.json()) as Data);
-  }, []);
+  }, [base]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -76,11 +102,12 @@ function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDo
   const [bedrijf, setBedrijf] = useState<Company>(data.defaults);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { base } = useBuilderApi();
 
   const create = async () => {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/werkgever/sites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
+    const res = await fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setError(await errorText(res, "Maken lukte niet."));
     const d = await res.json();
@@ -190,6 +217,8 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
   const [busy, setBusy] = useState(false);
   const [address, setAddress] = useState(data.address);
   const dirty = useRef(false);
+  const { base, proposal } = useBuilderApi();
+  const mediaUrl = useMediaUrl();
 
   const page = site.pages.find((p) => p.id === pageId) ?? site.pages[0]!;
   const block = page.blocks.find((b) => b.id === blockId) ?? null;
@@ -205,7 +234,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
     const timer = setTimeout(async () => {
       dirty.current = false;
       setSave({ state: "bezig" });
-      const res = await fetch("/api/werkgever/sites", {
+      const res = await fetch(base, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ theme: site.theme, bedrijf: site.bedrijf, pages: site.pages, altTexts: Object.fromEntries(site.media.map((m) => [m.id, m.alt])) }),
@@ -214,32 +243,34 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
       setSave({ state: "opgeslagen" });
     }, 1200);
     return () => clearTimeout(timer);
-  }, [site]);
+  }, [site, base]);
 
   const updatePage = (fn: (p: Page) => Page) => change((s) => ({ ...s, pages: s.pages.map((p) => (p.id === page.id ? fn(p) : p)) }));
   const updateBlock = (id: string, fn: (b: Block) => Block) => updatePage((p) => ({ ...p, blocks: p.blocks.map((b) => (b.id === id ? fn(b) : b)) }));
 
-  const html = useMemo(() => renderPage(site, page, { root: "/", origin, preview: { mediaUrl } }), [site, page, origin]);
+  const html = useMemo(() => renderPage(site, page, { root: "/", origin, preview: { mediaUrl } }), [site, page, origin, mediaUrl]);
 
   const publish = async (action: "publiceer" | "terug" | "offline", buildId?: string) => {
     if (action === "offline" && !window.confirm("De website offline halen? Bezoekers zien dan een melding dat hij niet bestaat. Je kunt hem later weer publiceren.")) return;
     setBusy(true);
     setNotice(null);
-    const res = await fetch("/api/werkgever/sites/publish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...(buildId ? { buildId } : {}) }) }).catch(() => null);
+    const res = await fetch(`${base}/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...(buildId ? { buildId } : {}) }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setNotice({ ok: false, text: await errorText(res, "Dat lukte niet.") });
     const next = (await res.json()).site as SiteDoc;
     setSite((s) => ({ ...s, liveBuild: next.liveBuild, builds: next.builds }));
     onSite(next);
-    setNotice({ ok: true, text: action === "publiceer" ? "Je website staat online." : action === "terug" ? "De gekozen versie staat weer online." : "Je website staat offline." });
+    const done = proposal ? "Het voorstel is bijgewerkt: de voorstelsite toont nu deze versie." : "Je website staat online.";
+    setNotice({ ok: true, text: action === "publiceer" ? done : action === "terug" ? "De gekozen versie staat weer online." : "Je website staat offline." });
   };
 
   const live = Boolean(site.liveBuild);
+  const tabs = proposal ? TABS.filter((t) => t.id !== "berichten" && t.id !== "domein") : TABS;
   return (
     <div className="space-y-4">
       <header className="card flex flex-wrap items-center gap-3 p-4">
         <div className="min-w-0 flex-1">
-          <p className="eyebrow">Website bouwen</p>
+          <p className="eyebrow">{proposal ? "Websitevoorstel aanpassen" : "Website bouwen"}</p>
           <h1 className="truncate font-display text-xl font-bold text-ink">{site.bedrijf.naam}</h1>
           <p className="truncate text-xs text-neutralx-500">
             {live && address ? (
@@ -270,7 +301,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
       <div className="grid gap-4 xl:grid-cols-[320px_1fr_340px]">
         <aside className="card min-w-0 p-3">
           <div className="flex flex-wrap gap-1 border-b border-hair pb-2" role="tablist">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${tab === t.id ? "bg-ink text-white" : "text-neutralx-600 hover:bg-paper-soft"}`}>
                 {t.label}
               </button>
@@ -298,7 +329,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
                   </li>
                 ))}
               </ul>
-              {live && (
+              {live && !proposal && (
                 <button type="button" onClick={() => void publish("offline")} className="mt-3 text-xs font-semibold text-crit hover:underline">Website offline halen</button>
               )}
             </details>
@@ -442,6 +473,7 @@ function PagesTab({ site, current, onSelect, change }: { site: SiteDoc; current:
 }
 
 function StyleTab({ theme, presets, media, onTheme }: { theme: Theme; presets: Data["presets"]; media: Media[]; onTheme: (t: Theme) => void }) {
+  const mediaUrl = useMediaUrl();
   return (
     <div className="space-y-4 text-sm">
       <Field label="Stijl">
@@ -549,10 +581,11 @@ function CompanyTab({ bedrijf, onChange }: { bedrijf: Company; onChange: (c: Com
 function usePhotoAdd(onMedia: (m: Media) => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { base } = useBuilderApi();
   const send = async (init: RequestInit, failed: string): Promise<Media | null> => {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/werkgever/sites/media", { method: "POST", ...init }).catch(() => null);
+    const res = await fetch(`${base}/media`, { method: "POST", ...init }).catch(() => null);
     setBusy(false);
     if (!res?.ok) {
       setError(await errorText(res, failed));
@@ -617,6 +650,7 @@ function AddPhoto({ onMedia, onAdded }: { onMedia: (m: Media) => void; onAdded?:
 }
 
 function PhotosTab({ site, onMedia, onAlt }: { site: SiteDoc; onMedia: (m: Media) => void; onAlt: (id: string, alt: string) => void }) {
+  const mediaUrl = useMediaUrl();
   return (
     <div className="space-y-3">
       <AddPhoto onMedia={onMedia} />
@@ -810,6 +844,7 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
 // ---- one block's fields --------------------------------------------------------
 
 function PhotoPicker({ value, site, onPick, onMedia }: { value: string | null; site: SiteDoc; onPick: (id: string | null) => void; onMedia: (m: Media) => void }) {
+  const mediaUrl = useMediaUrl();
   return (
     <div className="space-y-2">
       <span className="field-label">Foto</span>
@@ -878,6 +913,7 @@ function ItemsEditor<T extends Record<string, string | number>>({ items, fields,
 }
 
 function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block; site: SiteDoc; onChange: (b: Block) => void; onClose: () => void; onMedia: (m: Media) => void }) {
+  const mediaUrl = useMediaUrl();
   const kop = (
     <Field label="Kop">
       <input className="field-input" value={(block.props as { kop: string }).kop} maxLength={160} onChange={(e) => onChange({ ...block, props: { ...block.props, kop: e.target.value } } as Block)} />

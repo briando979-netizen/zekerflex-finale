@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { copyText } from "@/lib/clipboard";
 import { Empty, Notice, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
@@ -177,6 +178,7 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                   {open && (
                     <div className="flex flex-wrap gap-2">
                       <a href={`/site/${p.slug}`} target="_blank" rel="noopener" className="a-button text-xs">Nieuwe website</a>
+                      <Link href={`/admin/websitevoorstellen/${p.id}/bouwer`} className="a-button text-xs">Aanpassen in de bouwer</Link>
                       <a href={`/websitevoorstel/${p.id}`} target="_blank" rel="noopener" className="a-button text-xs">Voorstelpagina</a>
                       <button type="button" onClick={() => void copy(link, "Link")} className="a-button text-xs">Kopieer link</button>
                       <button type="button" onClick={() => void copy(mailText(p, data.offer, origin, me), "Mailtekst")} className="a-button text-xs">Kopieer mailtekst</button>

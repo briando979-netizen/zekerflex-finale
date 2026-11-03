@@ -17,6 +17,7 @@ import { leadWebsiteUrl } from "@/lib/sales/website-score-shared";
 import { markLeadReplied } from "@/lib/sales/reply";
 import { buildProposalSite } from "@/lib/sites/proposal-site";
 import { freeSlug, getSite, markProposal, publishSite, setLiveBuild, transferSite } from "@/lib/sites/store";
+import type { SiteDoc } from "@/lib/sites/types";
 import { pricingFor } from "@/lib/telephony/lines";
 import { WEBSITE_PLANS, type WebsitePlanKey } from "@/lib/website/manage";
 
@@ -192,6 +193,17 @@ export async function getWebsiteProposal(id: string): Promise<WebsiteProposal | 
 export async function listWebsiteProposals(limit = 300): Promise<WebsiteProposal[]> {
   const rows = await kvListValues<WebsiteProposal>("wvoorstel:", 5000).catch(() => []);
   return rows.filter((r) => r && typeof r.id === "string").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+}
+
+/** The site of a proposal that may still be edited in the builder (Admin): not withdrawn, not handed to the company. */
+export async function editableProposalSite(id: string): Promise<SiteDoc> {
+  const p = await getWebsiteProposal(id);
+  if (!p) throw AppError.notFound("Dit voorstel bestaat niet.");
+  if (p.status === "overgezet") throw AppError.validation("Deze website is nu van het bedrijf; aanpassen doen zij in hun eigen websitebouwer.");
+  if (p.status === "ingetrokken") throw AppError.validation("Dit voorstel is ingetrokken.");
+  const site = await getSite(p.siteId);
+  if (!site) throw AppError.notFound("De website van dit voorstel bestaat niet meer.");
+  return site;
 }
 
 /** The proposal a lead or website already has that is still going, if any. */

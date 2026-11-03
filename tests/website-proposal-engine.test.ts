@@ -273,6 +273,22 @@ describe("na een ja: overzetten naar het bedrijfsaccount", () => {
     expect(store.get("site-slug:schildersbedrijf-de-vries")).toBe(p.siteId);
   });
 
+  it("alleen een lopend voorstel is in de bouwer aan te passen, en opslaan houdt de voorstelband", async () => {
+    const { saveSite } = await import("@/lib/sites/store");
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    const s = await engine.editableProposalSite(p.id);
+    expect(s.id).toBe(p.siteId);
+    const saved = await saveSite(s.id, siteSaveSchema.parse({ theme: s.theme, bedrijf: { ...s.bedrijf, naam: "Schildersbedrijf De Vries & Zn" }, pages: s.pages }));
+    expect(saved.voorstel).toEqual({ officieel: "devries-schilders.nl", verloopt: p.expiresAt });
+    expect(saved.bedrijf.naam).toBe("Schildersbedrijf De Vries & Zn");
+    await engine.acceptWebsiteProposal(p.id, ja);
+    await engine.transferWebsiteProposal(p.id, "beheer@echtbedrijf.nl", BY);
+    await expect(engine.editableProposalSite(p.id)).rejects.toThrow(/van het bedrijf/);
+    const q = await engine.createWebsiteProposal({ url: "bakkerijmodern.nl" }, BY);
+    await engine.updateWebsiteProposal(q.id, "ingetrokken", BY);
+    await expect(engine.editableProposalSite(q.id)).rejects.toThrow(/ingetrokken/);
+  });
+
   it("alleen naar precies één bedrijf, en nooit over een bestaande website heen", async () => {
     const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
     await engine.acceptWebsiteProposal(p.id, ja);
