@@ -3,6 +3,7 @@
 import { copyText } from "@/lib/clipboard";
 
 import { useCallback, useEffect, useState } from "react";
+import { TWO_FACTOR_NL, type TwoFactorTexts } from "@/components/auth/two-factor-texts";
 
 interface Status {
   enabled: boolean;
@@ -15,10 +16,10 @@ async function call(body: unknown): Promise<{ ok: boolean; data: Record<string, 
   const data = r ? ((await r.json().catch(() => ({}))) as Record<string, unknown>) : {};
   return { ok: Boolean(r?.ok), data };
 }
-const errMsg = (d: Record<string, unknown>) => ((d.error as { message?: string } | undefined)?.message ?? "Dat lukte niet. Probeer het opnieuw.");
+const errMsg = (d: Record<string, unknown>, fallback: string) => ((d.error as { message?: string } | undefined)?.message ?? fallback);
 
 /** Two-step verification: turn on (scan QR → confirm code → save recovery codes), regenerate codes, turn off. */
-export function TwoFactorSettings({ recommended = false }: { recommended?: boolean }) {
+export function TwoFactorSettings({ recommended = false, texts: t = TWO_FACTOR_NL }: { recommended?: boolean; texts?: TwoFactorTexts }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [setup, setSetup] = useState<{ secret: string; otpauth: string; qrSvg: string } | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
@@ -42,18 +43,18 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
     const { ok, data } = await call(body);
     setBusy(false);
     if (ok) onOk(data);
-    else setError(errMsg(data));
+    else setError(errMsg(data, t.genericError));
   };
 
-  if (!status) return <p className="text-sm text-neutralx-400">Laden…</p>;
+  if (!status) return <p className="text-sm text-neutralx-400">{t.loading}</p>;
 
   // recovery codes, shown exactly once
   if (codes) {
-    const text = `ZekerFlex herstelcodes (elke code werkt één keer)\n\n${codes.join("\n")}\n`;
+    const text = `${t.recoveryFileHeader}\n\n${codes.join("\n")}\n`;
     return (
       <div className="space-y-3">
-        <p className="text-sm font-semibold text-ink">Bewaar je herstelcodes</p>
-        <p className="text-sm text-neutralx-600">Telefoon kwijt? Met een van deze codes kom je toch binnen. Elke code werkt één keer. We laten ze maar één keer zien.</p>
+        <p className="text-sm font-semibold text-ink">{t.saveTitle}</p>
+        <p className="text-sm text-neutralx-600">{t.saveBody}</p>
         <ul className="grid grid-cols-2 gap-2 rounded-xl bg-paper-soft p-3 font-mono text-sm text-ink">
           {codes.map((c) => (
             <li key={c}>{c}</li>
@@ -61,14 +62,14 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
         </ul>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-ghost text-sm" onClick={() => void copyText(text)}>
-            Kopiëren
+            {t.copy}
           </button>
           <a className="btn-ghost text-sm" href={`data:text/plain;charset=utf-8,${encodeURIComponent(text)}`} download="zekerflex-herstelcodes.txt">
-            Downloaden
+            {t.download}
           </a>
         </div>
         <label className="flex items-center gap-2 text-sm text-neutralx-600">
-          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="h-4 w-4 accent-brand-500" /> Ik heb mijn herstelcodes veilig bewaard
+          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="h-4 w-4 accent-brand-500" /> {t.savedCheck}
         </label>
         <button
           type="button"
@@ -80,7 +81,7 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
             void load();
           }}
         >
-          Klaar
+          {t.done}
         </button>
       </div>
     );
@@ -90,18 +91,18 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
     return (
       <div className="space-y-4">
         <ol className="list-decimal space-y-1 pl-5 text-sm text-neutralx-600">
-          <li>Installeer een authenticator-app (bijv. Google Authenticator, Microsoft Authenticator of 1Password).</li>
-          <li>Scan de QR-code met de app — of op je telefoon: tik op &ldquo;Toevoegen aan app&rdquo;.</li>
-          <li>Vul de 6-cijferige code in die de app laat zien.</li>
+          <li>{t.step1}</li>
+          <li>{t.step2}</li>
+          <li>{t.step3}</li>
         </ol>
         <div className="flex flex-wrap items-center gap-4">
           {/* SVG generated server-side by the qrcode library from our own otpauth URL */}
           <div className="h-[180px] w-[180px] flex-shrink-0 overflow-hidden rounded-xl bg-white p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: setup.qrSvg }} />
           <div className="min-w-0 flex-1 space-y-2 text-sm">
             <a href={setup.otpauth} className="btn-ghost inline-block text-sm">
-              Toevoegen aan app
+              {t.addToApp}
             </a>
-            <p className="text-neutralx-500">Of typ deze sleutel over:</p>
+            <p className="text-neutralx-500">{t.typeKey}</p>
             <p className="break-all rounded-lg bg-paper-soft px-3 py-2 font-mono text-xs text-ink">{setup.secret.replace(/(.{4})/g, "$1 ").trim()}</p>
           </div>
         </div>
@@ -117,14 +118,14 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
           }}
         >
           <label className="block">
-            <span className="field-label">Code uit de app</span>
+            <span className="field-label">{t.codeFromApp}</span>
             <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="123456" className="field-input w-40 text-center font-mono tracking-widest" />
           </label>
           <button type="submit" disabled={busy || code.replace(/\s/g, "").length < 6} className="btn-primary text-sm disabled:opacity-50">
-            {busy ? "Controleren…" : "Bevestigen"}
+            {busy ? t.checking : t.confirm}
           </button>
           <button type="button" className="btn-ghost text-sm" onClick={() => setSetup(null)}>
-            Annuleren
+            {t.cancel}
           </button>
         </form>
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
@@ -136,11 +137,11 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
     return (
       <div className="space-y-3">
         <p className="text-sm text-neutralx-600">
-          Met tweestapsverificatie heb je naast je wachtwoord ook een code van je telefoon nodig om in te loggen. Een gestolen wachtwoord is dan niet genoeg.
-          {recommended && <strong className="text-ink"> Sterk aangeraden voor jouw account: je hebt toegang tot betalingen en persoonsgegevens.</strong>}
+          {t.intro}
+          {recommended && <strong className="text-ink">{t.recommended}</strong>}
         </p>
         <button type="button" disabled={busy} className="btn-primary text-sm disabled:opacity-50" onClick={() => void run({ action: "begin" }, (d) => setSetup(d as { secret: string; otpauth: string; qrSvg: string }))}>
-          {busy ? "Bezig…" : "Tweestapsverificatie aanzetten"}
+          {busy ? t.busy : t.enable}
         </button>
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
@@ -150,18 +151,18 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink">
-        <span className="font-semibold text-ok">✓ Aan</span>
-        {status.enabledAt && <span className="text-neutralx-500"> sinds {new Date(status.enabledAt).toLocaleDateString("nl-NL")}</span>}
-        <span className="text-neutralx-500"> · {status.recoveryLeft} herstelcode{status.recoveryLeft === 1 ? "" : "s"} over</span>
+        <span className="font-semibold text-ok">{t.on}</span>
+        {status.enabledAt && <span className="text-neutralx-500">{t.since.replace("{date}", new Date(status.enabledAt).toLocaleDateString(t.dateLocale, { timeZone: "Europe/Amsterdam" }))}</span>}
+        <span className="text-neutralx-500">{status.recoveryLeft === 1 ? t.recoveryLeftOne : t.recoveryLeftMany.replace("{n}", String(status.recoveryLeft))}</span>
       </p>
-      {status.recoveryLeft <= 3 && <p className="text-sm text-warn">Je hebt nog maar weinig herstelcodes — maak nieuwe aan.</p>}
+      {status.recoveryLeft <= 3 && <p className="text-sm text-warn">{t.lowCodes}</p>}
       {mode === "idle" ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-ghost text-sm" onClick={() => setMode("recovery")}>
-            Nieuwe herstelcodes
+            {t.newCodes}
           </button>
           <button type="button" className="btn-ghost text-sm text-crit" onClick={() => setMode("disable")}>
-            Uitzetten
+            {t.disable}
           </button>
         </div>
       ) : (
@@ -178,14 +179,14 @@ export function TwoFactorSettings({ recommended = false }: { recommended?: boole
           }}
         >
           <label className="block">
-            <span className="field-label">{mode === "disable" ? "Code om uit te zetten" : "Code uit de app"}</span>
+            <span className="field-label">{mode === "disable" ? t.codeToDisable : t.codeFromApp}</span>
             <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" maxLength={20} className="field-input w-44 text-center font-mono" />
           </label>
           <button type="submit" disabled={busy || code.trim().length < 6} className={`${mode === "disable" ? "btn-ghost text-crit" : "btn-primary"} text-sm disabled:opacity-50`}>
-            {mode === "disable" ? "Uitzetten" : "Aanmaken"}
+            {mode === "disable" ? t.disable : t.create}
           </button>
           <button type="button" className="btn-ghost text-sm" onClick={() => setMode("idle")}>
-            Annuleren
+            {t.cancel}
           </button>
         </form>
       )}
