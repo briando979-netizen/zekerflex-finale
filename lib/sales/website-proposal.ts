@@ -362,22 +362,26 @@ export async function recordProposalView(id: string): Promise<void> {
     return;
   }
   await save(p, "Voor het eerst bekeken", "bezoeker", { views: p.views + 1, viewedAt: now, status: p.status === "concept" || p.status === "verstuurd" ? "bekeken" : p.status });
-  await pushFirstView(p, now);
+  // the company is reading it: a good moment to call (once per proposal)
+  await pushMaker(p, { title: "👀 Websitevoorstel geopend", body: `${p.bedrijf} opende je websitevoorstel om ${amsterdamClock(now)}. Een goed moment om even te bellen.` });
 }
 
-/** A push to whoever made the proposal: the company is reading it, a good moment to call. Once per proposal. */
-async function pushFirstView(p: WebsiteProposal, at: string): Promise<void> {
+/**
+ * A push to whoever made the proposal, opening their own list (Admin or Sales).
+ * `skipAdmins` when platform admins already hear it from alertOwner.
+ */
+async function pushMaker(p: WebsiteProposal, push: { title: string; body: string }, opts: { skipAdmins?: boolean } = {}): Promise<void> {
   if (!p.createdById) return;
   try {
-    const admin = await prisma.membership.count({ where: { userId: p.createdById, role: "PLATFORM_ADMIN" } });
+    const admin = (await prisma.membership.count({ where: { userId: p.createdById, role: "PLATFORM_ADMIN" } })) > 0;
+    if (admin && opts.skipAdmins) return;
     await sendUserPush([p.createdById], {
-      title: "👀 Websitevoorstel geopend",
-      body: `${p.bedrijf} opende je websitevoorstel om ${amsterdamClock(at)}. Een goed moment om even te bellen.`,
-      data: { type: "SALES", url: admin > 0 ? "/admin/websitevoorstellen" : "/sales/websitevoorstellen", tag: `wvoorstel-${p.id}` },
+      ...push,
+      data: { type: "SALES", url: admin ? "/admin/websitevoorstellen" : "/sales/websitevoorstellen", tag: `wvoorstel-${p.id}` },
       ttlSeconds: 6 * 3600,
     });
   } catch (err) {
-    logger.warn("website proposal view push failed", { id: p.id, error: (err as Error).message });
+    logger.warn("website proposal push failed", { id: p.id, error: (err as Error).message });
   }
 }
 
@@ -518,6 +522,8 @@ export async function acceptWebsiteProposal(id: string, input: z.infer<typeof ac
       detail: `${p.bedrijf} wil de nieuwe website met ${plan.label}${plek ? ` (introductieplek ${plek} van ${pricing.plekken})` : ""}. Bekijk de gegevens en neem contact op.`,
       url: "/admin/websitevoorstellen",
     });
+    // a sales person who made it hears it too; they promised contact within one working day
+    await pushMaker(p, { title: "🎉 Ja op je websitevoorstel", body: `${p.bedrijf} wil de nieuwe website met ${plan.label}. We beloofden binnen één werkdag contact op te nemen.` }, { skipAdmins: true });
   }
   return { proposal: next, nieuw: true };
 }

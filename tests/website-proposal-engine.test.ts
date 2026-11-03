@@ -415,6 +415,29 @@ describe("het openbare ja-formulier", () => {
     expect(sendUserPush).toHaveBeenCalledTimes(2);
   });
 
+  it("een ja: de verkoper die het maakte krijgt een pushmelding, een beheerder niet dubbel, een testadres niemand", async () => {
+    const ja = { naam: "Jan de Vries", email: "jan@echtbedrijf.nl", telefoon: "", pakket: "pro" as const, domein: "houden" as const, opmerking: "", begrepen: true as const };
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    await engine.acceptWebsiteProposal(p.id, ja);
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+    expect(sendUserPush).toHaveBeenCalledWith(["u-sales"], expect.objectContaining({
+      title: "🎉 Ja op je websitevoorstel",
+      body: `${p.bedrijf} wil de nieuwe website met Pro. We beloofden binnen één werkdag contact op te nemen.`,
+      data: expect.objectContaining({ url: "/sales/websitevoorstellen" }),
+    }));
+    // een beheerder hoort het al via alertOwner
+    const q = await engine.createWebsiteProposal({ url: "bakkerijmodern.nl" }, { userId: "u-admin", name: "Anne Admin" });
+    await engine.acceptWebsiteProposal(q.id, ja);
+    expect(alertOwner).toHaveBeenCalledTimes(2);
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+    // een testadres: geen melding en geen push
+    await engine.updateWebsiteProposal(p.id, "ingetrokken", BY);
+    const r = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    await engine.acceptWebsiteProposal(r.id, { ...ja, email: "jan@devries.test" });
+    expect(alertOwner).toHaveBeenCalledTimes(2);
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+  });
+
   it("een ingevuld verborgen veld (een robot) doet niets", async () => {
     const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
     const res = await post(p.id, { naam: "Bot", email: "bot@spam.nl", pakket: "basis", domein: "houden", begrepen: true, website: "http://spam" });
