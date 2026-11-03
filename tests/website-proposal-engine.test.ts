@@ -43,8 +43,13 @@ vi.mock("@/lib/prisma", () => ({
         return lead;
       },
     },
+    membership: {
+      count: async ({ where }: { where: { userId: string; role: string } }) => (where.userId === "u-admin" && where.role === "PLATFORM_ADMIN" ? 1 : 0),
+    },
   },
 }));
+const sendUserPush = vi.fn().mockResolvedValue(1);
+vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...a) }));
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
 const alertOwner = vi.fn().mockResolvedValue("sent");
 vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(...a) }));
@@ -106,7 +111,7 @@ const check = (host = "devries-schilders.nl") => ({
 beforeEach(() => {
   store.clear();
   lead.notes = null;
-  [alertOwner, markLeadReplied, sendMail, importRemoteImage, runWebsiteCheck, fetchPage].forEach((m) => m.mockClear());
+  [alertOwner, markLeadReplied, sendMail, importRemoteImage, runWebsiteCheck, fetchPage, sendUserPush].forEach((m) => m.mockClear());
   importRemoteImage.mockImplementation(async (url: string) => {
     if (url.endsWith("ladder.jpg")) throw new Error("404");
     if (url.endsWith("logo.png")) return { bytes: Buffer.from("logo"), width: 400, height: 120, sourceUrl: url };
@@ -383,6 +388,31 @@ describe("het openbare ja-formulier", () => {
     expect(isPublicApiRoute("/api/websitevoorstel/0123456789abcdef01234567/bekeken")).toBe(true);
     expect(isPublicApiRoute("/api/admin/websitevoorstellen")).toBe(false);
     expect(isPublicApiRoute("/api/admin/websitevoorstellen/0123456789abcdef01234567")).toBe(false);
+  });
+
+  it("de eerste keer bekeken: één pushmelding aan wie het voorstel maakte, met het tijdstip", async () => {
+    const { amsterdamClock } = await import("@/lib/time/amsterdam");
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    expect(p.createdById).toBe("u-sales");
+    await engine.recordProposalView(p.id);
+    await engine.recordProposalView(p.id);
+    const seen = (await engine.getWebsiteProposal(p.id))!;
+    expect(seen).toMatchObject({ views: 2, status: "bekeken" });
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+    expect(sendUserPush).toHaveBeenCalledWith(["u-sales"], expect.objectContaining({
+      body: `${p.bedrijf} opende je websitevoorstel om ${amsterdamClock(seen.viewedAt!)}. Een goed moment om even te bellen.`,
+      data: expect.objectContaining({ url: "/sales/websitevoorstellen", tag: `wvoorstel-${p.id}` }),
+    }));
+    // gemaakt in het beheer: de melding opent het beheer
+    const q = await engine.createWebsiteProposal({ url: "bakkerijmodern.nl" }, { userId: "u-admin", name: "Anne Admin" });
+    await engine.recordProposalView(q.id);
+    expect(sendUserPush).toHaveBeenLastCalledWith(["u-admin"], expect.objectContaining({ data: expect.objectContaining({ url: "/admin/websitevoorstellen" }) }));
+    // een voorstel van vóór deze melding (zonder maker) krijgt er geen
+    await engine.updateWebsiteProposal(p.id, "ingetrokken", BY);
+    const r = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    delete (store.get(`wvoorstel:${r.id}`) as { createdById?: string }).createdById;
+    await engine.recordProposalView(r.id);
+    expect(sendUserPush).toHaveBeenCalledTimes(2);
   });
 
   it("een ingevuld verborgen veld (een robot) doet niets", async () => {

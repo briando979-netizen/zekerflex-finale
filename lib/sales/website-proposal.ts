@@ -7,8 +7,9 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { alertOwner } from "@/lib/ops/alert";
+import { sendUserPush } from "@/lib/notifications/push";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
-import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
 import { CATEGORY_LABEL, scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { extractBusiness, extraScores, improvementPlan, proposalFindings } from "@/lib/website-check/proposal";
@@ -87,6 +88,8 @@ export interface WebsiteProposal {
   status: ProposalStatus;
   createdAt: string;
   createdBy: string;
+  /** who made it, told when the company first opens it (absent on proposals from before 3 Nov 2026) */
+  createdById?: string | undefined;
   expiresAt: string;
   sentAt: string | null;
   viewedAt: string | null;
@@ -298,6 +301,7 @@ export async function createWebsiteProposal(input: { leadId?: string | undefined
     status: "concept",
     createdAt: now.toISOString(),
     createdBy: by.name,
+    createdById: by.userId,
     expiresAt,
     sentAt: null,
     viewedAt: null,
@@ -358,6 +362,23 @@ export async function recordProposalView(id: string): Promise<void> {
     return;
   }
   await save(p, "Voor het eerst bekeken", "bezoeker", { views: p.views + 1, viewedAt: now, status: p.status === "concept" || p.status === "verstuurd" ? "bekeken" : p.status });
+  await pushFirstView(p, now);
+}
+
+/** A push to whoever made the proposal: the company is reading it, a good moment to call. Once per proposal. */
+async function pushFirstView(p: WebsiteProposal, at: string): Promise<void> {
+  if (!p.createdById) return;
+  try {
+    const admin = await prisma.membership.count({ where: { userId: p.createdById, role: "PLATFORM_ADMIN" } });
+    await sendUserPush([p.createdById], {
+      title: "👀 Websitevoorstel geopend",
+      body: `${p.bedrijf} opende je websitevoorstel om ${amsterdamClock(at)}. Een goed moment om even te bellen.`,
+      data: { type: "SALES", url: admin > 0 ? "/admin/websitevoorstellen" : "/sales/websitevoorstellen", tag: `wvoorstel-${p.id}` },
+      ttlSeconds: 6 * 3600,
+    });
+  } catch (err) {
+    logger.warn("website proposal view push failed", { id: p.id, error: (err as Error).message });
+  }
 }
 
 export type ProposalAction = "verstuurd" | "afgewezen" | "ingetrokken" | "verlengen" | "plek-vrijgeven";
