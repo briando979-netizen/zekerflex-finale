@@ -872,6 +872,50 @@ body {
 .app-scope[data-theme="dark"] .bg-brand-mint.text-ink,
 .app-scope[data-theme="dark"] .bg-brand-mint .text-ink { color: #0C0E12 !important; }
 
+/* Betekeniskleuren in het donker: ok/warn/plan haalden op de donkere kaart ±3,5:1, crit 2,75:1 en
+   de -ink-tinten ±2:1 (kleine tekst vraagt 4,5:1). Zelfde betekenis, de lichte tint van het donkere
+   beheerthema (8,6–10:1). De zachte vlakken (effen licht) worden een donkere tint van die kleur. */
+.app-scope[data-theme="dark"] .text-ok,
+.app-scope[data-theme="dark"] .pill-ok { color: #4ade80 !important; }
+.app-scope[data-theme="dark"] .text-warn,
+.app-scope[data-theme="dark"] .pill-warn { color: #fbbf24 !important; }
+.app-scope[data-theme="dark"] .text-crit,
+.app-scope[data-theme="dark"] .pill-crit { color: #fca5a5 !important; }
+.app-scope[data-theme="dark"] .text-plan,
+.app-scope[data-theme="dark"] .text-plan-ink { color: #93b4fb !important; }
+.app-scope[data-theme="dark"] .text-trust,
+.app-scope[data-theme="dark"] .text-trust-ink { color: #c4b0fb !important; }
+.app-scope[data-theme="dark"] .text-money,
+.app-scope[data-theme="dark"] .text-money-ink { color: #f5c451 !important; }
+.app-scope[data-theme="dark"] .text-money-ink\/70 { color: rgba(245, 196, 81, 0.7) !important; }
+.app-scope[data-theme="dark"] .bg-plan-soft { background-color: rgba(96, 165, 250, 0.14) !important; }
+.app-scope[data-theme="dark"] .bg-trust-soft { background-color: rgba(167, 139, 250, 0.14) !important; }
+.app-scope[data-theme="dark"] .bg-money-soft { background-color: rgba(245, 196, 81, 0.13) !important; }
+.app-scope[data-theme="dark"] .bg-money-soft\/60 { background-color: rgba(245, 196, 81, 0.08) !important; }
+.app-scope[data-theme="dark"] .bg-mintwash { background-color: rgb(var(--brand-mint-rgb) / 0.12) !important; }
+.app-scope[data-theme="dark"] .bg-mintwash\/50,
+.app-scope[data-theme="dark"] .bg-mintwash\/60 { background-color: rgb(var(--brand-mint-rgb) / 0.07) !important; }
+
+/* Aanwijzen in het donker: hover:bg-paper-soft (±100 rijen en knoppen) maakte het vlak lichtgrijs
+   onder lichte tekst, hover:text-ink maakte tekst bijna zwart. Aanwijzen wordt nu een tint lichter. */
+.app-scope[data-theme="dark"] .hover\:bg-paper-soft:hover,
+.app-scope[data-theme="dark"] .group:hover .group-hover\:bg-paper-soft,
+.app-scope[data-theme="dark"] .active\:bg-paper-soft:active { background-color: var(--app-edge) !important; }
+.app-scope[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--app-card) !important; }
+.app-scope[data-theme="dark"] .hover\:bg-brand-50:hover,
+.app-scope[data-theme="dark"] .hover\:bg-brand-100:hover { background-color: rgb(var(--brand-mint-rgb) / 0.18) !important; }
+.app-scope[data-theme="dark"] .hover\:text-ink:hover,
+.app-scope[data-theme="dark"] .hover\:text-neutralx-700:hover { color: var(--app-fg) !important; }
+.app-scope[data-theme="dark"] .hover\:text-neutralx-600:hover { color: var(--app-fg-muted) !important; }
+.app-scope[data-theme="dark"] .hover\:text-brand-500:hover,
+.app-scope[data-theme="dark"] .hover\:text-brand-600:hover,
+.app-scope[data-theme="dark"] .hover\:text-brand-700:hover,
+.app-scope[data-theme="dark"] .focus\:text-brand-600:focus,
+.app-scope[data-theme="dark"] .group:hover .group-hover\:text-brand-500,
+.app-scope[data-theme="dark"] .group:hover .group-hover\:text-brand-700 { color: rgb(var(--brand-mint-rgb)) !important; }
+.app-scope[data-theme="dark"] .hover\:text-crit:hover { color: #fca5a5 !important; }
+.app-scope[data-theme="dark"] .hover\:text-ok:hover { color: #4ade80 !important; }
+
 /* Beheeromgeving: een oneven laatste kerncijfer loopt op de telefoon over de hele breedte. */
 .admin-scope .a-kpis > :last-child:nth-child(odd) { grid-column: span 2; }
 @media (min-width: 1024px) {
