@@ -123,6 +123,7 @@ export function Office3D() {
   const [legend, setLegend] = useState(false);
   const [clock, setClock] = useState("");
   const [latest, setLatest] = useState<CityEvent | null>(null);
+  const [replay, setReplay] = useState<{ at: string; left: number; total: number } | null>(null);
 
   // Een nieuwe gebeurtenis staat even in beeld (klik om het voertuig te volgen).
   useEffect(() => {
@@ -245,6 +246,23 @@ export function Office3D() {
     choose({ kind: "company", id });
   };
   const pickEvent = (id: string) => choose({ kind: "event", id });
+  // De laatste 24 uur versneld afspelen: alle echte gebeurtenissen rijden nog een keer, oudste eerst.
+  const toggleReplay = async () => {
+    if (replay) {
+      city.current?.stopReplay();
+      setReplay(null);
+      return;
+    }
+    const r = await fetch("/api/admin/office?limit=200", { cache: "no-store" }).catch(() => null);
+    if (!r?.ok) return;
+    const d: { events: CityEvent[] } = await r.json();
+    const list = [...d.events].reverse();
+    const first = list[0];
+    if (!first) return;
+    setReplay({ at: first.at, left: list.length, total: list.length });
+    city.current?.fly("stad");
+    city.current?.replay(list, (ev, left) => setReplay(ev ? { at: ev.at, left, total: list.length } : null));
+  };
   const originNl = (from: Origin) => (from.startsWith("bedrijf:") ? (data?.companies.find((c) => `bedrijf:${c.id}` === from)?.name ?? "Klantpand") : (ORIGIN_NL[from] ?? from));
 
   const byRooms = (...rooms: string[]) => events.filter((e) => rooms.includes(e.room));
@@ -447,6 +465,15 @@ export function Office3D() {
         >
           {touring ? "Stop rondleiding" : "▶ Rondleiding"}
         </button>
+        <button
+          type="button"
+          onClick={() => void toggleReplay()}
+          aria-pressed={Boolean(replay)}
+          className="rounded-full border px-2.5 py-1 text-xs font-semibold transition"
+          style={replay ? { borderColor: "#0d9488", background: "#0d9488", color: "#fff" } : { borderColor: "#0d9488", color: "#0d9488" }}
+        >
+          {replay ? "Stop afspelen" : "⏪ Laatste 24 uur afspelen"}
+        </button>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div
@@ -492,7 +519,11 @@ export function Office3D() {
             </p>
           )}
           <div aria-live="polite" className="absolute left-3 top-12 max-w-[calc(100%-1.5rem)] sm:top-3 sm:max-w-[55%]">
-            {latest && (
+            {replay ? (
+              <p className="rounded-full px-3 py-1 text-[11px] font-semibold shadow" style={{ background: "#0d9488", color: "#fff" }}>
+                Afspelen · {timeNl(replay.at)} · {count(replay.total - replay.left)} van {count(replay.total)}
+              </p>
+            ) : latest && (
               <button type="button" onClick={() => pickEvent(latest.id)} className="block max-w-full truncate rounded-full px-3 py-1 text-left text-[11px] font-medium shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
                 <span aria-hidden style={{ color: latest.severity === "critical" ? "#dc2626" : latest.severity === "warning" ? "#f59e0b" : "#16a34a" }}>
                   ●

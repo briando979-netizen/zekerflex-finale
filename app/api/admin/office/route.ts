@@ -36,12 +36,14 @@ async function tenantsFor(rows: { targetType: string | null; targetId: string | 
 }
 
 // GET /api/admin/office — the last real events (from the audit trail), mapped to rooms.
-export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
+// ?limit= up to 200 for the 24-hour replay in the 3D city (default 40).
+export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const since = new Date(Date.now() - 24 * 3_600_000);
+  const limit = Math.max(1, Math.min(200, Number(new URL(request.url).searchParams.get("limit")) || 40));
   const rows = await prisma.auditLog.findMany({
     where: { createdAt: { gte: since }, NOT: { action: { startsWith: "auth." } } },
     orderBy: { createdAt: "desc" },
-    take: 40,
+    take: limit,
     select: { id: true, category: true, action: true, summary: true, severity: true, actorLabel: true, targetType: true, targetId: true, createdAt: true },
   });
   const tenants = await tenantsFor(rows);

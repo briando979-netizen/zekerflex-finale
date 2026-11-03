@@ -22,6 +22,9 @@ export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "m
 export interface CityHandle {
   setData: (d: CityData) => void;
   pushEvents: (evs: CityEvent[]) => void;
+  /** Speel gebeurtenissen (oudste eerst) versneld af; `onStep` krijgt elke vertrekkende gebeurtenis, en null aan het eind. */
+  replay: (evs: CityEvent[], onStep: (ev: CityEvent | null, left: number) => void) => void;
+  stopReplay: () => void;
   fly: (to: View | { company: string }) => void;
   tour: (on: boolean) => void;
   select: (p: Pick | null) => void;
@@ -36,6 +39,8 @@ interface Trip {
   from: Place;
   back: boolean;
   wait: number;
+  /** Afgespeeld uit de laatste 24 uur: sneller, en na het afleveren meteen weg. */
+  replay: boolean;
 }
 
 const SPEED_CAR = 9;
@@ -385,18 +390,32 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   const queue: CityEvent[] = [];
   const couriers: { mover: Mover; g: THREE.Object3D }[] = [];
   let nextSpawn = 0;
+  // afspelen van de laatste 24 uur: eigen wachtrij, live gebeurtenissen wachten zolang
+  let replayQ: CityEvent[] = [];
+  let onReplay: ((ev: CityEvent | null, left: number) => void) | null = null;
+  const endReplay = () => {
+    replayQ = [];
+    const cb = onReplay;
+    onReplay = null;
+    cb?.(null, 0);
+  };
   const spawnTrip = (now: number) => {
-    if (now < nextSpawn || trips.length >= MAX_TRIPS) return;
-    const ev = queue.shift();
+    const replaying = onReplay !== null;
+    if (now < nextSpawn || trips.length >= (replaying ? 16 : MAX_TRIPS)) return;
+    const ev = replaying ? replayQ.shift() : queue.shift();
     if (!ev) return;
-    nextSpawn = now + 1800;
+    nextSpawn = now + (replaying ? 450 : 1800);
+    if (replaying) {
+      onReplay?.(ev, replayQ.length);
+      if (replayQ.length === 0) endReplay();
+    }
     const t = trafficFor(ev, companyIds);
     const from = placeOf(t.from);
     const { g } = vehicle(kit, t.kind, shadow, { severity: ev.severity });
     g.userData.pick = { kind: "event", id: ev.id } satisfies Pick;
-    const mover = new Mover(g, laneOffset(tripCenter(from, LANDMARKS.hq), LANE_CAR), SPEED_CAR, ROAD_TOP);
+    const mover = new Mover(g, laneOffset(tripCenter(from, LANDMARKS.hq), LANE_CAR), SPEED_CAR * (replaying ? 2.2 : 1), ROAD_TOP);
     scene.add(g);
-    trips.push({ mover, g, ev, from, back: false, wait: 0 });
+    trips.push({ mover, g, ev, from, back: false, wait: 0, replay: replaying });
     refreshPickables();
   };
   const spawnCourier = (ev: CityEvent) => {
@@ -634,9 +653,9 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
         continue;
       }
       if (tooClose(t.mover, cars) || !t.mover.step(dt)) continue;
-      if (!t.back) {
-        // aangekomen bij het hoofdkantoor: de robot neemt het pakketje over
-        spawnCourier(t.ev);
+      // aangekomen bij het hoofdkantoor: de robot neemt het pakketje over
+      if (!t.back) spawnCourier(t.ev);
+      if (!t.back && !t.replay) {
         t.back = true;
         t.wait = 0.9;
         t.mover.reroute(laneOffset(tripCenter(LANDMARKS.hq, t.from), LANE_CAR));
@@ -773,6 +792,14 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   return {
     setData,
     pushEvents: (evs) => queue.push(...evs),
+    replay(evs, onStep) {
+      if (onReplay) endReplay();
+      if (evs.length === 0) return onStep(null, 0);
+      replayQ = [...evs];
+      onReplay = onStep;
+      nextSpawn = 0;
+    },
+    stopReplay: endReplay,
     fly: flyTo,
     tour(on) {
       touring = on;
