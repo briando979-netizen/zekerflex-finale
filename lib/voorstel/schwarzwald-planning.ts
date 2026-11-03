@@ -65,3 +65,24 @@ export function indelen<T extends PlanItem>(items: T[]): Geplaatst<T>[] {
   if (groep.length) sluit();
   return uit;
 }
+
+export const klokVan = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/**
+ * Dagplanning om te printen: wat doorgaat op begintijd, met eindtijd, plus het
+ * aantal groepen en gasten per activiteit (drukste eerst).
+ */
+export function dagOverzicht<T extends { activiteit: string; tijd: string; personen: number; status: string }>(boekingen: T[], duur: Record<string, number>) {
+  const actief = boekingen.filter((b) => b.status !== "geannuleerd").sort((a, b) => a.tijd.localeCompare(b.tijd));
+  const per = new Map<string, { groepen: number; personen: number }>();
+  for (const b of actief) {
+    const t = per.get(b.activiteit) ?? { groepen: 0, personen: 0 };
+    per.set(b.activiteit, { groepen: t.groepen + 1, personen: t.personen + b.personen });
+  }
+  return {
+    regels: actief.map((b) => ({ b, eind: klokVan(minuten(b.tijd) + (duur[b.activiteit] ?? 60)) })),
+    perActiviteit: [...per].map(([activiteit, t]) => ({ activiteit, ...t })).sort((a, b) => b.personen - a.personen),
+    gasten: actief.reduce((s, b) => s + b.personen, 0),
+    geannuleerd: boekingen.length - actief.length,
+  };
+}

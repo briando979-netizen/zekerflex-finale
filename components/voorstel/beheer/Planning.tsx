@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, dagNaam, euro, useBeheerData, vraag } from "@/components/voorstel/beheer/api";
 import { verzetTekst, type BeheerBoeking, type Status } from "@/components/voorstel/beheer/Reserveringen";
 import { indelen, maandagVan, minuten, plusDagen, weekDagen } from "@/lib/voorstel/schwarzwald-planning";
+import { BASE } from "@/lib/voorstel/schwarzwald";
 
 // Weekplanning: één kolom per dag, een blok per reservering op zijn tijd en
 // met zijn duur. Wat tegelijk loopt staat naast elkaar. Klik op een blok voor
@@ -120,6 +121,9 @@ export function Planning({
                 <p className="text-xs font-bold uppercase tracking-wide text-schw-mute">{dagNaam(d, { weekday: "short" })}</p>
                 <p className="font-display text-lg font-bold">{dagNaam(d, { day: "numeric", month: "short" })}</p>
                 <p className="text-xs text-schw-mute">{gasten ? `${gasten} gasten` : "–"}</p>
+                <a href={`${BASE}/beheer/dag/${d}`} target="_blank" rel="noopener" className="text-xs font-semibold underline" aria-label={`Dagplanning ${dagNaam(d, { weekday: "long", day: "numeric", month: "long" })} printen`}>
+                  Print
+                </a>
               </div>
             );
           })}

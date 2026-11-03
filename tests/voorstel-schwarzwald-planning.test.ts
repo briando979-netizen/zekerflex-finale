@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indelen, maandagVan, weekDagen } from "@/lib/voorstel/schwarzwald-planning";
+import { dagOverzicht, indelen, maandagVan, weekDagen } from "@/lib/voorstel/schwarzwald-planning";
 
 describe("weekplanning", () => {
   it("vindt de maandag van de week, ook vanaf een zondag", () => {
@@ -21,5 +21,23 @@ describe("weekplanning", () => {
     expect(new Set([per.a?.baan, per.b?.baan])).toEqual(new Set([0, 1]));
     expect(per.c?.baan).toBe(per.a?.baan);
     expect(per.d).toMatchObject({ baan: 0, banen: 1 });
+  });
+
+  it("maakt een dagplanning op begintijd met eindtijd en gasten per activiteit", () => {
+    const o = dagOverzicht(
+      [
+        { activiteit: "kever-rally", tijd: "16:00", personen: 12, status: "bevestigd" },
+        { activiteit: "buggy-rijden", tijd: "14:00", personen: 8, status: "nieuw" },
+        { activiteit: "buggy-rijden", tijd: "15:00", personen: 10, status: "geannuleerd" },
+        { activiteit: "buggy-rijden", tijd: "18:00", personen: 6, status: "bevestigd" },
+      ],
+      { "kever-rally": 90, "buggy-rijden": 60 },
+    );
+    expect(o.regels.map((r) => `${r.b.tijd}-${r.eind}`)).toEqual(["14:00-15:00", "16:00-17:30", "18:00-19:00"]);
+    expect(o.perActiviteit).toEqual([
+      { activiteit: "buggy-rijden", groepen: 2, personen: 14 },
+      { activiteit: "kever-rally", groepen: 1, personen: 12 },
+    ]);
+    expect(o).toMatchObject({ gasten: 26, geannuleerd: 1 });
   });
 });

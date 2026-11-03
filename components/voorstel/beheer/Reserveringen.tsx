@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, VELD, VELD_BASIS, dagNaam, useBeheerData, vraag } from "@/components/voorstel/beheer/api";
+import { BASE } from "@/lib/voorstel/schwarzwald";
 
 // Reserveringen: overzicht per dag met zoeken en filters, bevestigen,
 // annuleren, verwijderen, zelf inboeken (telefoon/balie) en Excel-export.
@@ -197,6 +198,9 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
               <span className="ml-3 text-sm font-semibold text-schw-mute">
                 {items.filter((b) => b.status !== "geannuleerd").reduce((s, b) => s + b.personen, 0)} gasten
               </span>
+              <a href={`${BASE}/beheer/dag/${datum}`} target="_blank" rel="noopener" className="ml-3 text-sm font-semibold underline">
+                Dagplanning printen
+              </a>
             </h3>
             <ul className="mt-3 space-y-2">
               {items.map((b) => (
