@@ -90,9 +90,12 @@ export async function sendWebPush(
   const gone = res.status === 404 || res.status === 410;
   const ok = res.status >= 200 && res.status < 300;
   if (!ok && !gone) {
+    // why: Apple answers {"reason":"BadJwtToken"}, FCM a short text, WNS a header
+    const why = ((await res.text().catch(() => "")) || res.headers.get("x-wns-error-description") || "").trim().slice(0, 200);
     logger.warn("web push rejected", {
       pushService: pushServiceOf(target.endpoint),
       status: res.status,
+      ...(why ? { reason: why } : {}),
     });
   }
   return { ok, statusCode: res.status, gone };

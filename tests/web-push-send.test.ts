@@ -104,6 +104,10 @@ describe("sendWebPush", () => {
     );
     expect(res).toEqual({ ok: false, statusCode: 401, gone: false });
     expect(warn).toHaveBeenCalledWith("web push rejected", { pushService: "wns2-par02p.notify.windows.com", status: 401 });
+    // Apple says why in the body: that goes in the log, so the cause shows in the error journal
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"reason":"BadJwtToken"}', { status: 400 })) as never);
+    await sendWebPush({ endpoint: "https://web.push.apple.com/QGabc", p256dh: client.getPublicKey().toString("base64url"), auth: randomBytes(16).toString("base64url") }, "{}", { ttlSeconds: 60 });
+    expect(warn).toHaveBeenLastCalledWith("web push rejected", { pushService: "web.push.apple.com", status: 400, reason: '{"reason":"BadJwtToken"}' });
     warn.mockRestore();
   });
 });
