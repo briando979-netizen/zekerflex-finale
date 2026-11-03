@@ -83,7 +83,9 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, host.clientWidth / host.clientHeight, 0.5, 900);
-  camera.position.set(0, 78, 104);
+  // Op een smal, staand scherm (telefoon) staat de camera verder weg, anders zie je maar een strook van de stad.
+  const fitScale = () => (camera.aspect >= 1 ? 1 : Math.min(1.8, (1 / camera.aspect) ** 0.7));
+  camera.position.set(0, 78 * fitScale(), 6 + 98 * fitScale());
 
   const kit = makeKit();
   const win = windowTextures(kit);
@@ -234,7 +236,8 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   });
 
   const viewFor = (to: View | { company: string }): { pos: THREE.Vector3; target: THREE.Vector3 } => {
-    const around = (x: number, y: number, z: number, dx: number, dy: number, dz: number) => ({ target: new THREE.Vector3(x, y, z), pos: new THREE.Vector3(x + dx, y + dy, z + dz) });
+    const k = fitScale();
+    const around = (x: number, y: number, z: number, dx: number, dy: number, dz: number) => ({ target: new THREE.Vector3(x, y, z), pos: new THREE.Vector3(x + dx * k, y + dy * k, z + dz * k) });
     if (typeof to === "object") {
       const k = data?.companies.findIndex((c) => c.id === to.company) ?? -1;
       const s = COMPANY_SLOTS[k] ?? COMPANY_SLOTS[0];
@@ -293,7 +296,8 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
         followCam = true;
         ring.scale.setScalar(2.6);
         const at = t.g.position;
-        flyToPoints(new THREE.Vector3(at.x + 8, 28, at.z + 22), new THREE.Vector3(at.x, 0, at.z));
+        const k = fitScale();
+        flyToPoints(new THREE.Vector3(at.x + 8 * k, 28 * k, at.z + 22 * k), new THREE.Vector3(at.x, 0, at.z));
       }
       return refreshLabels();
     }
@@ -772,11 +776,14 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       const near = l.a.key === "landmark:hq" ? d >= 78 : true;
       const show = l === sel || (near && (l.a.tier === "room" ? d < 78 : l.a.tier === "company" ? d < 165 : d < 420));
       v.copy(l.a.pos).project(camera);
-      const x = ((v.x + 1) / 2) * w;
+      let x = ((v.x + 1) / 2) * w;
       const y = ((1 - v.y) / 2) * h;
+      // het gekozen bordje schuift binnen beeld; andere die niet passen, verdwijnen (geen afgekapte stukjes)
+      if (l === sel) x = Math.max(l.w / 2 + 4, Math.min(w - l.w / 2 - 4, x));
       const box: [number, number, number, number] = [x - l.w / 2 - 2, y - l.h - 2, x + l.w / 2 + 2, y + 2];
+      const outside = box[0] < 0 || box[2] > w || box[1] < 0 || box[3] > h;
       const overlaps = placed.some((p) => box[0] < p[2] && box[2] > p[0] && box[1] < p[3] && box[3] > p[1]);
-      if (!show || v.z >= 1 || overlaps) {
+      if (!show || v.z >= 1 || overlaps || outside) {
         l.el.style.display = "none";
         continue;
       }
