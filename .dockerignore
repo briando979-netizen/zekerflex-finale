@@ -26,3 +26,10 @@ docker-compose*.yml
 Dockerfile
 .dockerignore
 tsconfig.tsbuildinfo
+# Mappen die alleen op de server staan en nooit in een image horen: de kaarttegels
+# (2,1 GB; de app leest ze via een ro-volume), de database-dumps en het uitrolslot.
+# Zonder deze regels kopieerde COPY . . ze in elke build (3 nov: schijf 94%).
+# Alleen de hoofdmap (de /): de route app/kaart-data/[...pad] moet blijven, dus nooit **/kaart-data.
+/kaart-data
+/backups
+/.zf-slot
