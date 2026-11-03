@@ -99,6 +99,8 @@ section{padding:72px 0}section.alt{background:var(--soft)}.btn{display:inline-bl
 .split{display:grid;gap:40px;align-items:center}@media (min-width:860px){.split{grid-template-columns:1fr 1fr}.split.flip>:first-child{order:2}}.split img{border-radius:var(--r);width:100%;aspect-ratio:4/3;object-fit:cover}
 .cards{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px;margin:0}.card h3{color:var(--k)}section.alt .card{border-color:transparent}
 .gallery{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}.gallery img{border-radius:var(--r);aspect-ratio:1;object-fit:cover;width:100%}
+.gallery.g2{grid-template-columns:repeat(2,1fr)}.gallery.g3{grid-template-columns:repeat(3,1fr)}.gallery.g4,.gallery.bento{grid-template-columns:repeat(4,1fr)}.gallery.bento img:first-child{grid-column:span 2;grid-row:span 2}
+@media (max-width:760px){.gallery.g3,.gallery.g4,.gallery.bento{grid-template-columns:repeat(2,1fr)}}
 .stars{color:var(--a);letter-spacing:2px;font-size:1.1rem}blockquote{margin:12px 0}.who{font-weight:700;margin:0}
 details.q{border-bottom:1px solid var(--line);padding:16px 0}details.q summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px}details.q summary::after{content:"+";color:var(--k);font-size:1.4rem;line-height:1}details.q[open] summary::after{content:"–"}details.q p{margin:12px 0 0;color:var(--mute)}
 .hours{border-collapse:collapse;width:100%;max-width:520px}.hours td{padding:10px 0;border-bottom:1px solid var(--line)}.hours td+td{text-align:right;font-weight:600}
@@ -131,6 +133,15 @@ function img(ctx: Ctx, id: string | null, sizes: string, eager = false): string 
 
 const href = (ctx: Ctx, raw: string) => (ctx.preview ? "#" : safeHref(raw, ctx.root, ctx.pages));
 
+/** Full rows for 2, 3, 4, 6, 8 or 9 photos; five get a large first photo with four small ones (a closed 4×2 block). */
+export function galleryClass(n: number): string {
+  if (n === 2) return "gallery g2";
+  if (n === 3 || n === 6 || n === 9) return "gallery g3";
+  if (n === 4 || n === 8) return "gallery g4";
+  if (n === 5) return "gallery bento";
+  return "gallery";
+}
+
 function renderBlock(b: Block, i: number, ctx: Ctx): string {
   const alt = i % 2 === 1 ? ' class="alt"' : "";
   switch (b.type) {
@@ -150,7 +161,7 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
     case "galerij": {
       const pics = b.props.fotos.map((f) => img(ctx, f, "(min-width: 760px) 33vw, 100vw")).filter(Boolean);
       if (pics.length === 0) return "";
-      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="gallery">${pics.join("")}</div></div></section>`;
+      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="${galleryClass(pics.length)}">${pics.join("")}</div></div></section>`;
     }
     case "reviews":
       return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items

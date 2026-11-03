@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, textOn, type RenderOptions } from "@/lib/sites/render";
+import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, textOn, type RenderOptions } from "@/lib/sites/render";
 import { SECTOR_TEMPLATES, newBlock, pagesFromTemplate, slugify, type Company, type SiteDoc } from "@/lib/sites/types";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
@@ -132,6 +132,23 @@ describe("een complete, nette website", () => {
     expect(zonderPlaats).not.toContain("de regio en omgeving");
     expect(slugify("Bakkerij Ünal & Zn.")).toBe("bakkerij-unal-en-zn");
     expect(newBlock("galerij", "b1")).toMatchObject({ type: "galerij", props: { fotos: [] } });
+  });
+});
+
+describe("fotogalerij", () => {
+  it("vult altijd hele rijen; vijf foto's krijgen een grote eerste foto", () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].map(galleryClass)).toEqual([
+      "gallery",
+      "gallery g2",
+      "gallery g3",
+      "gallery g4",
+      "gallery bento",
+      "gallery g3",
+      "gallery",
+      "gallery g4",
+      "gallery g3",
+    ]);
+    expect(siteCss(site().theme)).toContain(".gallery.bento img:first-child{grid-column:span 2;grid-row:span 2}");
   });
 });
 
