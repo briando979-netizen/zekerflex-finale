@@ -14,6 +14,9 @@ export const VOORSTELLEN: Record<string, string> = {
   schwarzwald: "/voorstel/schwarzwald",
 };
 
+/** Gedeelde openbare API's die de voorstelpagina's zelf gebruiken. */
+const GEDEELDE_API = ["/api/media/youtube/"];
+
 /**
  * Welk pad de app moet tonen voor een verzoek op het subdomein, of null als
  * het daar niet bestaat. "/" en "/activiteiten" worden het voorstel; paden die
@@ -24,7 +27,10 @@ export function voorstelPad(naam: string | null, pad: string): string | null {
   const basis = naam ? VOORSTELLEN[naam.trim().toLowerCase()] : undefined;
   if (!basis) return null;
   if (pad.startsWith("/_next/")) return pad;
-  if (pad.startsWith("/api/")) return pad === `/api${basis}` || pad.startsWith(`/api${basis}/`) ? pad : null;
+  if (pad.startsWith("/api/")) {
+    const eigen = pad === `/api${basis}` || pad.startsWith(`/api${basis}/`);
+    return eigen || GEDEELDE_API.some((p) => pad.startsWith(p)) ? pad : null;
+  }
   // geen ZekerFlex-service-worker op het voorstel: die zou ZekerFlex-pagina's cachen
   if (pad === "/sw.js") return null;
   if (pad === basis || pad.startsWith(`${basis}/`)) return pad;

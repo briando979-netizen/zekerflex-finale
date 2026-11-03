@@ -13,6 +13,8 @@ describe("voorstel op een eigen subdomein", () => {
     expect(voorstelPad("schwarzwald", "/api/voorstel/schwarzwald/agenda")).toBe("/api/voorstel/schwarzwald/agenda");
     expect(voorstelPad("schwarzwald", "/_next/static/chunks/app.js")).toBe("/_next/static/chunks/app.js");
     expect(voorstelPad("schwarzwald", "/icon.svg")).toBe("/icon.svg");
+    // het videoplaatje van YouTubeEmbed (gedeelde openbare route)
+    expect(voorstelPad("schwarzwald", "/api/media/youtube/noGuN2eDQWo")).toBe("/api/media/youtube/noGuN2eDQWo");
   });
 
   it("houdt de rest van ZekerFlex dicht", () => {
