@@ -32,7 +32,7 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
-import { findOverlappingShift, MIN_REST_HOURS, shortestRest } from "@/lib/shifts/worker-overlap";
+import { findOverlappingShift, restViolation } from "@/lib/shifts/worker-overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -141,8 +141,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     const p = amsterdamParts(o.startsAt);
     return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(o.startsAt)}–${hhmm(o.endsAt)}`;
   };
-  // Less than 11 hours between this klus and your own work before/after it (Arbeidstijdenwet): a heads-up, no block.
-  const restWindow = MIN_REST_HOURS * 3_600_000;
+  // Together with your own work around it, no 11 hours' rest in some 24 hours (Arbeidstijdenwet): a heads-up, no block.
+  const restWindow = 2 * 24 * 3_600_000;
   const nearby =
     myProfile && !overlap && upcoming
       ? await prisma.shiftAssignment.findMany({
@@ -156,10 +156,14 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             },
           },
           select: { shift: { select: { startsAt: true, endsAt: true } } },
-          take: 10,
+          take: 20,
         })
       : [];
-  const rest = shortestRest(nearby.map((n) => n.shift), { startsAt: start, endsAt: new Date(s.endsAt) });
+  const rest = restViolation(nearby.map((n) => n.shift), { startsAt: start, endsAt: new Date(s.endsAt) });
+  const fmtAt = (d: Date) => {
+    const p = amsterdamParts(d);
+    return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(d)}`;
+  };
   const applyDisabled = !s.canApply || Boolean(overlap) || Boolean(missingRequiredCert) || uitzendbureauBlocked;
   const applyBlockReason = !s.canApply
     ? s.blockReason && translateBlockReason(s.blockReason, ft)
@@ -370,7 +374,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         </p>
         {rest && (
           <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
-            ⏳ {D.shortRest(Math.floor(rest.restMs / 3_600_000), whenOf(rest.other))}
+            ⏳ {D.shortRest(`${fmtAt(rest.startsAt)} – ${fmtAt(rest.endsAt)}`)}
           </p>
         )}
 

@@ -52,26 +52,41 @@ export function overlapsAny(
   return windows.some((o) => o.startsAt.getTime() < b && o.endsAt.getTime() > a);
 }
 
-/** De Arbeidstijdenwet vraagt minstens 11 uur rust tussen twee diensten. */
+/** De Arbeidstijdenwet vraagt in elke 24 uur minstens 11 uur aaneengesloten rust. */
 export const MIN_REST_HOURS = 11;
+const HOUR_MS = 3_600_000;
 
 /**
- * De eigen dienst met de kortste rust ervoor of erna, als die rust korter is
- * dan MIN_REST_HOURS. Overlap telt hier niet mee: die wordt al geweigerd.
+ * Past deze klus samen met je eigen diensten binnen de rustregel? Diensten met
+ * minder dan 11 uur ertussen horen bij één werkperiode (zoals een gebroken
+ * dienst: lunch en diner). Duurt die periode van begin tot eind langer dan
+ * 24 − 11 = 13 uur, dan blijft er binnen 24 uur geen 11 uur rust over. Geeft
+ * dan de hele periode terug, anders null. Een lange klus zonder andere eigen
+ * dienst erbij telt hier niet: dat is geen kwestie van je planning.
  */
-export function shortestRest<T extends { startsAt: Date; endsAt: Date }>(
-  windows: readonly T[],
+export function restViolation(
+  windows: readonly { startsAt: Date; endsAt: Date }[],
   w: { startsAt: Date; endsAt: Date },
-): { other: T; restMs: number } | null {
-  const a = w.startsAt.getTime();
-  const b = w.endsAt.getTime();
-  let best: { other: T; restMs: number } | null = null;
-  for (const o of windows) {
-    const gap = o.endsAt.getTime() <= a ? a - o.endsAt.getTime() : o.startsAt.getTime() >= b ? o.startsAt.getTime() - b : null;
-    if (gap === null || gap >= MIN_REST_HOURS * 3_600_000) continue;
-    if (!best || gap < best.restMs) best = { other: o, restMs: gap };
+): { startsAt: Date; endsAt: Date } | null {
+  const rest = MIN_REST_HOURS * HOUR_MS;
+  let from = w.startsAt.getTime();
+  let to = w.endsAt.getTime();
+  const left = [...windows];
+  let joined = 0;
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (let i = left.length - 1; i >= 0; i--) {
+      const o = left[i];
+      if (!o || o.startsAt.getTime() >= to + rest || o.endsAt.getTime() <= from - rest) continue;
+      from = Math.min(from, o.startsAt.getTime());
+      to = Math.max(to, o.endsAt.getTime());
+      left.splice(i, 1);
+      joined += 1;
+      grew = true;
+    }
   }
-  return best;
+  if (joined === 0 || to - from <= (24 - MIN_REST_HOURS) * HOUR_MS) return null;
+  return { startsAt: new Date(from), endsAt: new Date(to) };
 }
 
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];

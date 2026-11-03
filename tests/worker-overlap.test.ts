@@ -33,7 +33,7 @@ import {
   overlapMessageSelf,
   overlapWhen,
   overlapsAny,
-  shortestRest,
+  restViolation,
 } from "@/lib/shifts/worker-overlap";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { applyToShift } from "@/lib/matching/apply";
@@ -102,36 +102,41 @@ describe("overlapsAny (de lijst met klussen)", () => {
   });
 });
 
-describe("shortestRest (Arbeidstijdenwet: 11 uur rust)", () => {
+describe("restViolation (Arbeidstijdenwet: elke 24 uur 11 uur aaneengesloten rust)", () => {
   const at = (from: string, to: string) => ({ startsAt: new Date(from), endsAt: new Date(to) });
-  // avonddienst 16:00–24:00 UTC
-  const klus = at("2026-11-04T16:00:00Z", "2026-11-05T00:00:00Z");
 
-  it("vindt de kortste rust ervoor of erna, onder de 11 uur", () => {
-    const vroeg = at("2026-11-05T06:00:00Z", "2026-11-05T14:00:00Z"); // 6 uur na afloop
-    const ervoor = at("2026-11-04T06:00:00Z", "2026-11-04T08:00:00Z"); // 8 uur ervoor
-    const r = shortestRest([ervoor, vroeg], klus);
-    expect(r?.other).toBe(vroeg);
-    expect(r?.restMs).toBe(6 * 3_600_000);
+  it("laat een gebroken dienst op één dag (lunch en diner) met rust", () => {
+    const lunch = at("2026-11-04T10:00:00Z", "2026-11-04T14:00:00Z");
+    const diner = at("2026-11-04T17:00:00Z", "2026-11-04T22:00:00Z");
+    expect(restViolation([lunch], diner)).toBeNull();
+    expect(restViolation([diner], lunch)).toBeNull();
   });
 
-  it("zwijgt bij 11 uur of meer, en bij overlap (die wordt al geweigerd)", () => {
-    expect(shortestRest([at("2026-11-05T11:00:00Z", "2026-11-05T15:00:00Z")], klus)).toBeNull();
-    expect(shortestRest([at("2026-11-04T20:00:00Z", "2026-11-04T22:00:00Z")], klus)).toBeNull();
-    expect(shortestRest([], klus)).toBeNull();
+  it("meldt een avonddienst gevolgd door een vroege dienst met maar 6 uur rust", () => {
+    const avond = at("2026-11-04T16:00:00Z", "2026-11-05T00:00:00Z");
+    const vroeg = at("2026-11-05T06:00:00Z", "2026-11-05T14:00:00Z");
+    expect(restViolation([avond], vroeg)).toEqual(at("2026-11-04T16:00:00Z", "2026-11-05T14:00:00Z"));
   });
 
-  it("telt een aansluitende dienst als 0 uur rust", () => {
-    expect(shortestRest([at("2026-11-05T00:00:00Z", "2026-11-05T04:00:00Z")], klus)?.restMs).toBe(0);
+  it("volgt een keten van diensten, ook als de klus in het midden zit", () => {
+    const a = at("2026-11-04T08:00:00Z", "2026-11-04T12:00:00Z");
+    const klus = at("2026-11-04T15:00:00Z", "2026-11-04T19:00:00Z"); // 3 uur na a
+    const c = at("2026-11-04T23:00:00Z", "2026-11-05T03:00:00Z"); // 4 uur na de klus
+    expect(restViolation([c, a], klus)).toEqual(at("2026-11-04T08:00:00Z", "2026-11-05T03:00:00Z"));
   });
 
-  it("heeft in elke taal een zin, ook voor minder dan een uur", () => {
-    expect(FREELANCER_DICTS.nl.detail.shortRest(6, "do 5 nov. 07:00–15:00")).toBe(
-      "Maar 6 uur rust tussen deze klus en je dienst van do 5 nov. 07:00–15:00. De Arbeidstijdenwet vraagt minstens 11 uur tussen twee diensten.",
+  it("zwijgt bij precies 11 uur rust, zonder andere diensten en bij een periode van 13 uur", () => {
+    const klus = at("2026-11-04T08:00:00Z", "2026-11-04T16:00:00Z");
+    expect(restViolation([at("2026-11-05T03:00:00Z", "2026-11-05T08:00:00Z")], klus)).toBeNull();
+    expect(restViolation([], at("2026-11-04T06:00:00Z", "2026-11-04T21:00:00Z"))).toBeNull();
+    expect(restViolation([at("2026-11-04T16:00:00Z", "2026-11-04T21:00:00Z")], klus)).toBeNull();
+  });
+
+  it("heeft in elke taal een zin met de periode erin", () => {
+    expect(FREELANCER_DICTS.nl.detail.shortRest("wo 4 nov. 16:00 – do 5 nov. 15:00")).toBe(
+      "Met deze klus werk je wo 4 nov. 16:00 – do 5 nov. 15:00 zonder 11 uur rust ertussen. De Arbeidstijdenwet vraagt in elke 24 uur minstens 11 uur aaneengesloten rust.",
     );
-    expect(FREELANCER_DICTS.nl.detail.shortRest(0, "x")).toMatch(/^Minder dan 1 uur rust/);
-    expect(FREELANCER_DICTS.en.detail.shortRest(1, "x")).toMatch(/^Only 1 hour of rest/);
-    for (const d of Object.values(FREELANCER_DICTS)) expect(d.detail.shortRest(6, "W")).toContain("W");
+    for (const d of Object.values(FREELANCER_DICTS)) expect(d.detail.shortRest("PERIODE")).toContain("PERIODE");
   });
 });
 
