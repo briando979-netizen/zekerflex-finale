@@ -440,6 +440,10 @@ body {
   --a-ok-soft: rgba(21, 128, 61, 0.1);
   --a-warn: #a35f07;
   --a-warn-soft: rgba(217, 119, 6, 0.12);
+  /* tekst in een label op de zachte achtergrond: groen en amber haalden daar 4,38 en
+     4,41:1 (kleine tekst vraagt 4,5:1). Dezelfde kleur, een tint donkerder: 6,2 en 6,0:1 */
+  --a-ok-ink: #166534;
+  --a-warn-ink: #8a4b05;
   --a-crit: #b91c1c;
   --a-crit-soft: rgba(185, 28, 28, 0.09);
   --a-plan: #1e4fc2;
@@ -505,6 +509,9 @@ body {
   --a-ok-soft: rgba(74, 222, 128, 0.13);
   --a-warn: #fbbf24;
   --a-warn-soft: rgba(251, 191, 36, 0.13);
+  /* in donker haalt de gewone kleur het ruim (8,0 en 8,3:1) */
+  --a-ok-ink: #4ade80;
+  --a-warn-ink: #fbbf24;
   --a-crit: #fca5a5;
   --a-crit-soft: rgba(248, 113, 113, 0.14);
   --a-plan: #93b4fb;
@@ -659,8 +666,8 @@ body {
 .admin-scope table tbody tr:hover { background: var(--a-panel-2); }
 
 /* pills */
-.admin-scope .pill-ok { color: var(--a-ok); background: var(--a-ok-soft); }
-.admin-scope .pill-warn { color: var(--a-warn); background: var(--a-warn-soft); }
+.admin-scope .pill-ok { color: var(--a-ok-ink); background: var(--a-ok-soft); }
+.admin-scope .pill-warn { color: var(--a-warn-ink); background: var(--a-warn-soft); }
 .admin-scope .pill-crit { color: var(--a-crit); background: var(--a-crit-soft); }
 .admin-scope .pill-neutral { color: var(--a-dim); background: var(--a-elev); }
 

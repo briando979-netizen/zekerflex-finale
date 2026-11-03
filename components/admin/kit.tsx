@@ -86,10 +86,14 @@ export function Panel({
   );
 }
 
+// Tekst op de zachte labelachtergrond: groen en amber een tint donkerder (globals.css,
+// --a-ok-ink/--a-warn-ink), anders halen ze geen 4,5:1. Grafieken houden TONE_INK.
+const PILL_INK: Record<Tone, string> = { ...TONE_INK, ok: "var(--a-ok-ink)", warn: "var(--a-warn-ink)" };
+
 /** Status: altijd woord plus stip, nooit alleen kleur. */
 export function Pill({ tone = "neutral", children, dot = true }: { tone?: Tone; children: ReactNode; dot?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium" style={{ color: TONE_INK[tone], background: TONE_SOFT[tone] }}>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium" style={{ color: PILL_INK[tone], background: TONE_SOFT[tone] }}>
       {dot && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: "currentColor" }} />}
       {children}
     </span>
