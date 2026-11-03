@@ -3,6 +3,7 @@
 import type { BeheerWeergave } from "@/lib/rijschool/weergave";
 import { euro } from "@/lib/payroll/format";
 import { datumKort, METHODE_LABEL } from "@/lib/rijschool/format";
+import { OnlineBetalen } from "@/components/rijschool/beheer/OnlineBetalen";
 
 // Alle betalingen van de rijschool, nieuwste eerst. Registreren doe je bij de
 // leerling (of de instructeur in de auto).
@@ -20,6 +21,7 @@ export function BetalingenTab({ data, openLeerling }: { data: BeheerWeergave; op
 
   return (
     <div className="space-y-4">
+      <OnlineBetalen />
       <p className="text-sm text-neutralx-600">
         {betaald.length} betalingen, samen <strong className="text-ink">{euro(totaal)}</strong> (laatste 200). Een betaling registreer je bij de leerling; de instructeur kan pin of
         contant ook in de auto vastleggen.

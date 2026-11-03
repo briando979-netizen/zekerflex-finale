@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LeerlingLes, LeerlingWeergave } from "@/lib/rijschool/weergave";
 import { foutVan, stuur } from "@/components/rijschool/api";
@@ -54,6 +54,39 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
       if (/log opnieuw in/i.test(foutVan(e))) router.replace(`/rijschool/${slug}/inloggen`);
     }
   }
+
+  // iDEAL: naar de betaalpagina van Stripe; het tegoed komt erbij zodra Stripe de betaling meldt
+  const [betaalt, setBetaalt] = useState<string | null>(null);
+  async function betaal(wat: { productId: string } | { betalingId: string }) {
+    setFout(null);
+    setOk(null);
+    setBetaalt("productId" in wat ? wat.productId : wat.betalingId);
+    try {
+      const { url } = await stuur<{ url: string }>(api, "POST", { actie: "betaal", ...wat });
+      window.location.assign(url);
+    } catch (e) {
+      setFout(foutVan(e));
+      setBetaalt(null);
+    }
+  }
+
+  // terug van de betaalpagina: melden, en het tegoed nog even verversen (de bevestiging van Stripe kan een paar seconden duren)
+  useEffect(() => {
+    const uitslag = new URLSearchParams(window.location.search).get("betaling");
+    if (!uitslag) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    setTab("tegoed");
+    if (uitslag === "geannuleerd") return setFout("De betaling is niet afgerond. Er is niets afgeschreven.");
+    setOk("Bedankt! Je betaling is gelukt. Je tegoed wordt bijgewerkt.");
+    let n = 0;
+    const t = setInterval(async () => {
+      n++;
+      const bij = await stuur<LeerlingWeergave>(api).catch(() => null);
+      if (bij) setD(bij);
+      if (n >= 4) clearInterval(t);
+    }, 3000);
+    return () => clearInterval(t);
+  }, [api]);
 
   async function uitloggen() {
     await stuur(`/api/rijschool/site/${slug}/account`, "POST", { actie: "uitloggen" }).catch(() => undefined);
@@ -188,21 +221,51 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
             <p className={`font-display text-3xl font-bold ${d.saldoMin < 0 ? "text-crit" : ""}`}>{tegoedTekst(d.saldoMin, d.rijschool.lesMinuten)}</p>
             <p className="mt-1 text-xs text-neutralx-500">Een gereden les gaat van je tegoed af. Proeflessen en examens betaal je los.</p>
           </section>
+          {d.onlineBetalen && d.betalingen.some((b) => b.status === "OPEN") && (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <h2 className="font-semibold text-amber-900">Nog te betalen</h2>
+              <ul className="mt-2 space-y-2">
+                {d.betalingen
+                  .filter((b) => b.status === "OPEN")
+                  .map((b) => (
+                    <li key={b.id} className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-sm">
+                        {b.omschrijving} · <span className="num font-semibold">{euro(b.bedragCent)}</span>
+                      </span>
+                      <button type="button" className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: kleur }} disabled={!!betaalt} onClick={() => void betaal({ betalingId: b.id })}>
+                        {betaalt === b.id ? "Even geduld…" : "Betaal nu met iDEAL"}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          )}
           {d.producten.length > 0 && (
             <section>
               <h2 className="font-semibold">Pakketten</h2>
               <ul className="mt-2 space-y-2">
                 {d.producten.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-hair bg-white p-4">
-                    <span>
-                      <span className="block font-semibold">{p.naam}</span>
-                      <span className="block text-xs text-neutralx-500">{p.omschrijving}</span>
-                    </span>
-                    <span className="num font-semibold">{euro(p.prijsCent)}</span>
+                  <li key={p.id} className="rounded-xl border border-hair bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>
+                        <span className="block font-semibold">{p.naam}</span>
+                        <span className="block text-xs text-neutralx-500">{p.omschrijving}</span>
+                      </span>
+                      <span className="num font-semibold">{euro(p.prijsCent)}</span>
+                    </div>
+                    {d.onlineBetalen && p.prijsCent >= 100 && (
+                      <button type="button" className="mt-3 w-full rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: kleur }} disabled={!!betaalt} onClick={() => void betaal({ productId: p.id })}>
+                        {betaalt === p.id ? "Even geduld…" : "Koop met iDEAL"}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-neutralx-500">Een pakket kopen? Betaal bij je instructeur met pin of vraag je rijschool om een betaalverzoek.</p>
+              <p className="mt-2 text-xs text-neutralx-500">
+                {d.onlineBetalen
+                  ? "Na betaling staan de lessen meteen op je tegoed. Je kunt ook bij je instructeur pinnen."
+                  : "Een pakket kopen? Betaal bij je instructeur met pin of vraag je rijschool om een betaalverzoek."}
+              </p>
             </section>
           )}
           <section>

@@ -59,6 +59,9 @@ export function RijschoolBeheer() {
     stuur<({ aan: true } & BeheerWeergave) | { aan: false; voorstel: Voorstel }>("/api/rijschool/beheer")
       .then((r) => (r.aan ? setData(r) : setVoorstel(r.voorstel)))
       .catch((e) => setFout(foutVan(e)));
+    // ?tab=betalingen (bijv. terug van Stripe): meteen dat tabblad
+    const gevraagd = new URLSearchParams(window.location.search).get("tab");
+    if (gevraagd && TABS.some((t) => t.id === gevraagd)) setTab(gevraagd as TabId);
   }, []);
 
   const doe: Doe = useCallback(async (actie) => {

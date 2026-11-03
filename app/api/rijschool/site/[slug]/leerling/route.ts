@@ -12,6 +12,7 @@ import { isDatum, komendeDagen } from "@/lib/rijschool/planning";
 import { bewaarBeste, leesTheorie } from "@/lib/rijschool/theorie";
 import { lesduur } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { startIdeal } from "@/lib/rijschool/betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   }
 }
 
-// POST — annuleren, zelf een les plannen, een theorieronde bewaren of je gegevens bijwerken.
+// POST — annuleren, zelf een les plannen, een theorieronde bewaren, je gegevens bijwerken
+// of online betalen (geeft dan { url } van de betaalpagina terug).
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }): Promise<NextResponse> {
   try {
     eisZelfdeHerkomst(request);
@@ -88,6 +90,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       case "profiel":
         await prisma.rijschoolLeerling.update({ where: { id: l.id }, data: { telefoon: a.telefoon, adres: a.adres } });
         break;
+      case "betaal": {
+        if (!a.productId === !a.betalingId) throw AppError.validation("Kies een pakket of een betaling.");
+        await enforceRateLimit({ name: "rijschool-ideal", identifier: l.id, limit: 10, windowSeconds: 600 });
+        const wat = a.productId ? { productId: a.productId } : { betalingId: a.betalingId ?? "" };
+        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling") });
+      }
     }
     const bij = await prisma.rijschoolLeerling.findUniqueOrThrow({ where: { id: l.id } });
     return NextResponse.json(await leerlingWeergave(r, bij));

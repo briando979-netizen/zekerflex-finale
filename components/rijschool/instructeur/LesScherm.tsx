@@ -291,7 +291,7 @@ export function LesScherm({ les, d, api, actie, onTerug }: { les: DagLes; d: Ins
       )}
 
       {l && <VolgendeLes les={les} d={d} api={api} actie={actie} />}
-      {l && <Betaling leerlingId={l.id} d={d} actie={actie} />}
+      {l && <Betaling leerlingId={l.id} d={d} api={api} actie={actie} />}
     </div>
   );
 }
@@ -347,12 +347,13 @@ function VolgendeLes({ les, d, api, actie }: { les: DagLes; d: InstructeurWeerga
   );
 }
 
-function Betaling({ leerlingId, d, actie }: { leerlingId: string; d: InstructeurWeergave; actie: Actie }) {
+function Betaling({ leerlingId, d, api, actie }: { leerlingId: string; d: InstructeurWeergave; api: string; actie: Actie }) {
   const [productId, setProductId] = useState("");
   const [bedrag, setBedrag] = useState("");
   const [omschrijving, setOmschrijving] = useState("");
-  const [methode, setMethode] = useState<"PIN" | "CONTANT">("PIN");
+  const [methode, setMethode] = useState<"PIN" | "CONTANT" | "IDEAL">("PIN");
   const [fout, setFout] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
 
   function kies(id: string) {
     setProductId(id);
@@ -366,8 +367,20 @@ function Betaling({ leerlingId, d, actie }: { leerlingId: string; d: Instructeur
   async function bewaar(e: React.FormEvent) {
     e.preventDefault();
     setFout(null);
+    setQr(null);
     const cent = centVan(bedrag);
     if (cent === null) return setFout("Vul een bedrag in, bijvoorbeeld 62,50.");
+    if (methode === "IDEAL") {
+      // de leerling scant de code en betaalt op de eigen telefoon; het tegoed komt erbij na de betaling
+      try {
+        const { url } = await stuur<{ url: string }>(`${api}?datum=${d.datum}`, "POST", { actie: "ideal", leerlingId, productId: productId || null, bedragCent: cent, omschrijving });
+        const QRCode = (await import("qrcode")).default;
+        setQr(await QRCode.toDataURL(url, { margin: 1, width: 320 }));
+      } catch (err) {
+        setFout(foutVan(err));
+      }
+      return;
+    }
     if (await actie({ actie: "betaling", leerlingId, productId: productId || null, bedragCent: cent, methode, omschrijving }, "Betaling vastgelegd.")) {
       setProductId("");
       setBedrag("");
@@ -390,12 +403,13 @@ function Betaling({ leerlingId, d, actie }: { leerlingId: string; d: Instructeur
       </Veld>
       <div className="grid grid-cols-2 gap-3">
         <Veld label="Bedrag (€)">
-          <input className="field-input" inputMode="decimal" value={bedrag} onChange={(e) => setBedrag(e.target.value)} required />
+          <input className="field-input" inputMode="decimal" value={bedrag} onChange={(e) => setBedrag(e.target.value)} required readOnly={methode === "IDEAL" && !!productId} />
         </Veld>
         <Veld label="Betaald met">
-          <select className="field-input" value={methode} onChange={(e) => setMethode(e.target.value as "PIN" | "CONTANT")}>
+          <select className="field-input" value={methode} onChange={(e) => setMethode(e.target.value as "PIN" | "CONTANT" | "IDEAL")}>
             <option value="PIN">Pin</option>
             <option value="CONTANT">Contant</option>
+            {d.onlineBetalen && <option value="IDEAL">iDEAL (QR-code)</option>}
           </select>
         </Veld>
       </div>
@@ -403,8 +417,16 @@ function Betaling({ leerlingId, d, actie }: { leerlingId: string; d: Instructeur
         <input className="field-input" value={omschrijving} onChange={(e) => setOmschrijving(e.target.value)} required minLength={2} maxLength={160} />
       </Veld>
       <Melding fout={fout} />
-      <button type="submit" className="btn-ghost">
-        Betaling vastleggen
+      {qr && (
+        <div className="rounded-xl bg-paper-soft p-4 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- QR-code als data-adres, gemaakt in de browser */}
+          <img src={qr} alt="QR-code om met iDEAL te betalen" width={240} height={240} className="mx-auto h-60 w-60 rounded-lg bg-white" />
+          <p className="mt-2 text-sm text-ink">Laat de leerling deze code scannen met de camera van de telefoon en betalen met iDEAL.</p>
+          <p className="text-xs text-neutralx-500">Na de betaling staat het meteen in de app van de leerling. Een los bedrag blijft anders openstaan; de leerling kan het later in de app betalen.</p>
+        </div>
+      )}
+      <button type="submit" className={methode === "IDEAL" ? "btn-primary" : "btn-ghost"}>
+        {methode === "IDEAL" ? "Toon QR-code" : "Betaling vastleggen"}
       </button>
     </form>
   );

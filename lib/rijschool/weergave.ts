@@ -6,6 +6,7 @@ import { leesTheorie, type TheorieScore } from "@/lib/rijschool/theorie";
 import { websiteBewerkbaar, type RijschoolWebsite } from "@/lib/rijschool/website";
 import { saldiVan, saldoVan } from "@/lib/rijschool/store";
 import { siteUrl } from "@/lib/rijschool/mail";
+import { onlineBetalenAan } from "@/lib/rijschool/betalen";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
@@ -302,6 +303,8 @@ export interface LeerlingWeergave {
   producten: ProductRij[];
   voortgang: Voortgang;
   theorie: Record<string, TheorieScore>;
+  /** de rijschool ontvangt iDEAL via haar eigen Stripe-account (lib/rijschool/betalen.ts) */
+  onlineBetalen: boolean;
 }
 
 export async function leerlingWeergave(r: Rijschool, l: RijschoolLeerling): Promise<LeerlingWeergave> {
@@ -349,6 +352,7 @@ export async function leerlingWeergave(r: Rijschool, l: RijschoolLeerling): Prom
     })),
     voortgang: voortgang(lessen.filter((les) => les.status === "VOLTOOID").map((les) => ({ at: les.start, beoordeling: les.beoordeling }))),
     theorie: leesTheorie(l.theorie),
+    onlineBetalen: await onlineBetalenAan(r),
   };
 }
 
@@ -371,6 +375,8 @@ export interface InstructeurWeergave {
   leerlingen: { id: string; naam: string; saldoMin: number; procent: number; volgende: string | null }[];
   voertuigen: VoertuigRij[];
   producten: ProductRij[];
+  /** iDEAL in de auto (QR-code) kan als de rijschool online betalen heeft aangezet */
+  onlineBetalen: boolean;
 }
 
 export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur, datum: string): Promise<InstructeurWeergave> {
@@ -445,5 +451,6 @@ export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur,
     producten: producten.map(({ id, naam, omschrijving, soort, prijsCent, lessen: n, lesMinuten, examen, zichtbaar, populair, volgorde }) => ({
       id, naam, omschrijving, soort, prijsCent, lessen: n, lesMinuten, examen, zichtbaar, populair, volgorde,
     })),
+    onlineBetalen: await onlineBetalenAan(r),
   };
 }

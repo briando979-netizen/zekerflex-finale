@@ -155,6 +155,24 @@ export function herinneringMail(r: School & Pick<Rijschool, "annuleerUren">, lee
   );
 }
 
+/** Bevestiging van een online (iDEAL-)betaling, met wat er op het tegoed kwam. */
+export function betalingOntvangenMail(r: School, leerling: { naam: string; email: string }, b: { omschrijving: string; bedragCent: number }): MailInput {
+  const bedrag = (b.bedragCent / 100).toLocaleString("nl-NL", { style: "currency", currency: "EUR" });
+  const link = siteUrl(r, "/leerling");
+  return mail(
+    r,
+    leerling.email,
+    `Betaling ontvangen: ${b.omschrijving}`,
+    `Hoi ${voornaam(leerling.naam)},\n\nWe hebben je betaling van ${bedrag} voor ${b.omschrijving} ontvangen. Bedankt! Je tegoed zie je in de app: ${link}`,
+    omlijsting(
+      r,
+      "Betaling ontvangen",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, we hebben je betaling van <strong>${esc(bedrag)}</strong> voor ${esc(b.omschrijving)} ontvangen. Bedankt!`)}
+       ${knop(r, link, "Bekijk je tegoed")}`,
+    ),
+  );
+}
+
 /** Uitnodiging om de Android-app te testen (gesloten test in Google Play). */
 export function testAppMail(r: School, ontvanger: { naam: string; email: string }, links: { groep: string | null; aanmelden: string; winkel: string }): MailInput {
   const stappen = [

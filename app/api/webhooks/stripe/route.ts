@@ -19,6 +19,7 @@ import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
+import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -339,6 +340,12 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
           metadata: { sessionId: session.id, eventType: event.type },
         });
       }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Lesgeld van een rijschool (iDEAL naar haar eigen Stripe-account): lib/rijschool/betalen.ts
+    if (session.metadata?.rijschoolId) {
+      await verwerkRijschoolSessie(session);
       return NextResponse.json({ ok: true });
     }
 

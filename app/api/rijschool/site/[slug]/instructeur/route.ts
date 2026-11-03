@@ -10,6 +10,7 @@ import { bevestigLes, eigenLeerling, eigenLes, planLes, registreerBetaling, vrij
 import { instructeurWeergave } from "@/lib/rijschool/weergave";
 import { isDatum, moment } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { onlineBetalenAan, startIdeal } from "@/lib/rijschool/betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +100,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       case "betaling":
         await registreerBetaling(r, a, i.naam);
         break;
+      case "ideal": {
+        const l = await eigenLeerling(r, a.leerlingId);
+        if (!(await onlineBetalenAan(r))) throw AppError.precondition("Online betalen staat nog niet aan bij je rijschool.");
+        // een pakket tegen de pakketprijs; een los bedrag wordt eerst een openstaande betaling
+        // (die de leerling ook later in de app kan betalen)
+        const wat = a.productId
+          ? { productId: a.productId, ookVerborgen: true }
+          : { betalingId: (await prisma.rijschoolBetaling.create({ data: { rijschoolId: r.id, leerlingId: l.id, omschrijving: a.omschrijving, bedragCent: a.bedragCent, status: "OPEN" } })).id };
+        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling") });
+      }
     }
     return NextResponse.json(await instructeurWeergave(r, i, datum));
   } catch (err) {
