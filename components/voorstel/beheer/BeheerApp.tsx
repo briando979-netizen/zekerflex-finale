@@ -12,6 +12,7 @@ import { Accounts } from "@/components/voorstel/beheer/Accounts";
 import { Reviews } from "@/components/voorstel/beheer/Reviews";
 import { Sollicitaties } from "@/components/voorstel/beheer/Sollicitaties";
 import { Wachtlijst } from "@/components/voorstel/beheer/Wachtlijst";
+import { Nieuws } from "@/components/voorstel/beheer/Nieuws";
 
 // De beheeromgeving van Het Schwarzwald: dashboard, CRM (klanten en
 // aanvragen) en alles wat het personeel zelf regelt. Het gekozen tabblad staat
@@ -29,6 +30,7 @@ const TABS = [
   ["activiteiten", "Activiteiten"],
   ["openingstijden", "Openingstijden"],
   ["paginas", "Pagina's"],
+  ["nieuws", "Nieuws"],
   ["accounts", "Accounts"],
   ["instellingen", "Instellingen"],
 ] as const;
@@ -91,6 +93,7 @@ export function BeheerApp({ namen, duur, vandaag, wie }: { namen: Record<string,
         {tab === "activiteiten" && <Activiteiten namen={namen} />}
         {tab === "openingstijden" && <Openingstijden namen={namen} />}
         {tab === "paginas" && <Paginas />}
+        {tab === "nieuws" && <Nieuws vandaag={vandaag} />}
         {tab === "accounts" && <Accounts />}
         {tab === "instellingen" && <Aankondiging />}
       </div>
