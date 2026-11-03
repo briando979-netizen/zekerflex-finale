@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { amsterdamStartOfDay } from "@/lib/time/amsterdam";
+import { amsterdamDayKey, amsterdamStartOfDay } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Shopify-stijl dashboardcijfers voor de OPDRACHTGEVER, afgeschermd op de eigen
@@ -33,7 +33,8 @@ export interface EmployerDashboardStats {
   activity: { at: string; text: string }[];
 }
 
-const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+// Dutch calendar day: a night shift from 00:30 belongs to that day, not to "yesterday" in UTC.
+const dayKey = (d: Date) => amsterdamDayKey(d);
 
 export async function employerDashboardStats(principal: Principal, now = new Date()): Promise<EmployerDashboardStats> {
   const scope = await resolveEmployerScope(principal);

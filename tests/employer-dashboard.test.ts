@@ -46,6 +46,16 @@ describe("employerDashboardStats", () => {
     expect(s.series).toHaveLength(30);
   });
 
+  it("telt de uren van een nachtdienst vanaf 00:30 op de Nederlandse dag", async () => {
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["t1"], branchIds: null });
+    invoiceAggregate.mockResolvedValue({ _sum: { totalCents: 0 } });
+    // 21 okt 22:30 UTC = 22 okt 00:30 in Nederland (zomertijd)
+    timesheetFindMany.mockResolvedValue([{ billableMinutes: 480, scheduledStart: new Date("2026-10-21T22:30:00Z") }]);
+    const s = await employerDashboardStats(principal, NOW);
+    expect(s.series.find((p) => p.date === "2026-10-22")?.hours).toBe(8);
+    expect(s.series.find((p) => p.date === "2026-10-21")?.hours).toBe(0);
+  });
+
   it("falls back cleanly when scope resolution or queries fail", async () => {
     resolveEmployerScope.mockResolvedValue({ tenantIds: [], branchIds: null });
     invoiceAggregate.mockResolvedValue({ _sum: { totalCents: null } });
