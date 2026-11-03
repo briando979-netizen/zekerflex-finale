@@ -36,6 +36,10 @@ export interface AuthDict {
     title: string;
     subtitle: string;
     haveAccount: string;
+    /** a klus drafted on /klus-plaatsen waits in this browser; {klus} = its title */
+    savedKlus: string;
+    /** a public klus the worker wanted to respond to; {klus} = its title */
+    savedReageren: string;
     login: string;
     seekWork: string;
     seekPeople: string;
@@ -214,6 +218,8 @@ const nl: AuthDict = {
     title: "Maak je account aan",
     subtitle: "Vul je gegevens in.",
     haveAccount: "Heb je al een account?",
+    savedKlus: 'Je klus "{klus}" is bewaard. Na het aanmelden staat hij voor je klaar.',
+    savedReageren: 'We onthouden "{klus}". Na het aanmelden vind je hem terug in je app.',
     login: "Inloggen",
     seekWork: "Ik zoek werk",
     seekPeople: "Ik zoek mensen",
@@ -392,6 +398,8 @@ const en: AuthDict = {
     title: "Create your account",
     subtitle: "Enter your details.",
     haveAccount: "Already have an account?",
+    savedKlus: 'Your job "{klus}" has been saved. It will be waiting for you after you sign up.',
+    savedReageren: 'We\'ll remember "{klus}". After signing up you\'ll find it again in your app.',
     login: "Log in",
     seekWork: "I'm looking for work",
     seekPeople: "I'm looking for people",
@@ -570,6 +578,8 @@ const pl: AuthDict = {
     title: "Załóż konto",
     subtitle: "Wpisz swoje dane.",
     haveAccount: "Masz już konto?",
+    savedKlus: "Twoje zlecenie „{klus}” zostało zapisane. Po rejestracji będzie na Ciebie czekać.",
+    savedReageren: "Zapamiętamy zlecenie „{klus}”. Po rejestracji znajdziesz je w aplikacji.",
     login: "Zaloguj się",
     seekWork: "Szukam pracy",
     seekPeople: "Szukam ludzi",
@@ -748,6 +758,8 @@ const ro: AuthDict = {
     title: "Creează-ți contul",
     subtitle: "Introdu datele tale.",
     haveAccount: "Ai deja un cont?",
+    savedKlus: "Jobul tău „{klus}” a fost salvat. Te așteaptă după ce îți faci contul.",
+    savedReageren: "Reținem jobul „{klus}”. După înregistrare îl găsești în aplicație.",
     login: "Conectare",
     seekWork: "Caut de lucru",
     seekPeople: "Caut oameni",
@@ -926,6 +938,8 @@ const uk: AuthDict = {
     title: "Створи акаунт",
     subtitle: "Введи свої дані.",
     haveAccount: "Вже маєш акаунт?",
+    savedKlus: "Твою роботу «{klus}» збережено. Вона чекатиме на тебе після реєстрації.",
+    savedReageren: "Ми запам'ятаємо роботу «{klus}». Після реєстрації ти знайдеш її в застосунку.",
     login: "Увійти",
     seekWork: "Шукаю роботу",
     seekPeople: "Шукаю людей",

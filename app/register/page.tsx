@@ -3,6 +3,7 @@ import Link from "next/link";
 import { env } from "@/lib/env";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 
@@ -50,6 +51,7 @@ export default async function RegisterPage(
         </>
       }
     >
+      <RegisterBewaard type={defaultType} klusText={t.savedKlus} reagerenText={t.savedReageren} />
       <RegisterForm
         locale={locale}
         defaultType={defaultType}
