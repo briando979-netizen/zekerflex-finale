@@ -46,6 +46,8 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 ### Schermen
 
 - **Werker-app (`/dashboard`) is vijftalig** (NL/EN/PL/RO/UK): nieuwe tekst in `lib/i18n/freelancer.ts`, client via `useFT()`. Importeer nooit `dictionary-en`, `lib/i18n/server` of `FREELANCER_DICTS` in een client-bestand dat de shop laadt (`tests/i18n-bundle.test.ts`). Een onderdeel dat werker én werkgever delen krijgt een `texts`-prop met NL-standaard (zoals `components/auth/two-factor-texts.ts`).
+- **Push aan een werker** gaat in zijn app-taal: `sendLocalizedPush()` (`lib/notifications/localized-push.ts`) met de tekst in `WORKER_PUSH` (`lib/i18n/worker-push.ts`, vijf talen), nooit een losse `sendUserPush` met Nederlandse tekst. Pushes aan opdrachtgevers blijven Nederlands.
+- **Een systeembericht in de chat** (`postMessage(…, "system")`) stuurt géén push. Moet iemand het echt weten (tijd verzet, geannuleerd, claim), stuur dan zelf een push mee.
 - **Client-componenten** importeren nooit iets dat prisma, kv, mail of zod meeneemt; zet gedeelde lijsten/hulpjes in een los, puur bestand.
 - **Geen component binnen een component** definiëren (velden verliezen hun focus) en **geen `<form>` binnen een `<form>`**.
 - **Admin:** elke pagina met de kit (`components/admin/kit.tsx` + `kit-client.tsx`: PageHead, KpiStrip, Panel, Chart, DataTable), opgenomen in `ADMIN_HUBS` (`lib/admin/nav.ts`) en strikt `PLATFORM_ADMIN` (`tests/admin-access.test.ts` en `tests/admin-nav.test.ts` bewaken dat).
