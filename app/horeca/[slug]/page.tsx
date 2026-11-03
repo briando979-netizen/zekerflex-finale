@@ -64,9 +64,10 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
           Wat we serveren
         </h2>
         {groepen.length === 0 && <p className="mt-6 text-[#4B5563]">De menukaart volgt binnenkort.</p>}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* grid-cols-1 en min-w-0: een naam met labels mag krimpen en afbreken (geen horizontale scroll op 390 px) */}
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {groepen.map((g) => (
-            <section key={g.id} className="rounded-[1.75rem] bg-white p-6 shadow-[0_1px_2px_rgba(10,18,14,0.06)] sm:p-8" aria-labelledby={`cat-${g.id}`}>
+            <section key={g.id} className="min-w-0 rounded-[1.75rem] bg-white p-6 shadow-[0_1px_2px_rgba(10,18,14,0.06)] sm:p-8" aria-labelledby={`cat-${g.id}`}>
               <h3 id={`cat-${g.id}`} className="font-display text-2xl font-bold">
                 {g.naam}
               </h3>
@@ -74,7 +75,7 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
                 {g.items.map((i) => (
                   <li key={i.id} className="py-4">
                     <div className="flex items-baseline justify-between gap-4">
-                      <p className={`font-semibold ${i.beschikbaar ? "" : "text-[#4B5563]"}`}>
+                      <p className={`min-w-0 font-semibold ${i.beschikbaar ? "" : "text-[#4B5563]"}`}>
                         {i.naam}
                         {i.veganistisch ? <span className="ml-2 rounded-full bg-[#DCFCE7] px-2 py-0.5 text-xs font-bold text-[#15803D]">veganistisch</span> : i.vegetarisch ? <span className="ml-2 rounded-full bg-[#DCFCE7] px-2 py-0.5 text-xs font-bold text-[#15803D]">vegetarisch</span> : null}
                         {!i.beschikbaar && <span className="ml-2 rounded-full bg-[#F4E9DA] px-2 py-0.5 text-xs font-bold text-[#4B5563]">uitverkocht</span>}
