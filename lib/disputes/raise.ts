@@ -5,6 +5,8 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, hoursCorrectionProposedEmail } from "@/lib/mail";
+import { sendUserPush } from "@/lib/notifications/push";
+import { runAfter } from "@/lib/run-after";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 
 // ---------------------------------------------------------------------------
@@ -97,7 +99,7 @@ export async function proposeHoursCorrection(input: {
       branch: { select: { tenantId: true } },
       dispute: { select: { id: true } },
       assignment: { select: { shift: { select: { title: true } } } },
-      freelancer: { select: { user: { select: { fullName: true, email: true } } } },
+      freelancer: { select: { userId: true, user: { select: { fullName: true, email: true } } } },
     },
   });
   if (!ts) throw AppError.notFound("Urenbriefje niet gevonden");
@@ -160,6 +162,17 @@ export async function proposeHoursCorrection(input: {
       logger.warn("hours correction: notify failed", { timesheetId: ts.id, error: (err as Error).message }),
     );
   }
+  // Also on the phone: a mail is easily missed, and the worker has to react before payout continues.
+  const fmtH = (m: number) => (Math.round((m / 60) * 100) / 100).toString().replace(".", ",");
+  const workerUserId = ts.freelancer.userId;
+  runAfter(() =>
+    sendUserPush([workerUserId], {
+      title: "Correctie op je uren voorgesteld",
+      body: `${ts.assignment?.shift?.title ?? "Je dienst"}: ${fmtH(ts.billableMinutes)} → ${fmtH(input.proposedMinutes)} uur. Bekijk het en reageer in de app.`,
+      data: { type: "SHIFT", url: `/dashboard/uren/${ts.id}`, tag: `correctie-${ts.id}` },
+      ttlSeconds: 3 * 86_400,
+    }),
+  );
 
   return { disputeId: dispute.id };
 }
