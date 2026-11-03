@@ -117,10 +117,10 @@ export function annualSummaryPdf(s: AnnualSummary, generatedAt = new Date()): Bu
   pdf.rule();
 
   pdf.section("Zakelijke kilometers");
-  pdf.row("Ritten naar opdrachtgevers", num(s.mileage.trips));
+  pdf.row("Zakelijke ritten", num(s.mileage.trips));
   pdf.row("Kilometers heen en terug", `${num(s.mileage.km, 1)} km`);
   pdf.row("Aftrek met privéauto (EUR 0,23/km)", euro(s.mileage.amountCents), { bold: true });
-  pdf.line("De ritten zelf staan in de app onder Kilometer-administratie, ook als download.", 9);
+  pdf.paragraph("Inclusief ritten die je zelf toevoegde. De ritten zelf staan in de app onder Kilometer-administratie, ook als download.", 9);
 
   pdf.gap(16);
   pdf.paragraph(
