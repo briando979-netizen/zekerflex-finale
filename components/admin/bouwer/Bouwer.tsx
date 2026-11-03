@@ -138,6 +138,13 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
       setGekozen(t.id);
     });
 
+  // een eerdere wijziging terugdraaien: een nieuwe opdracht die je net zo bekijkt en goedkeurt
+  const ongedaan = (sha: string) =>
+    actie("ongedaan", async () => {
+      const t = await verstuur<TaakKort>("/api/admin/bouwer/taken", "POST", { terugdraaien: sha });
+      setGekozen(t.id);
+    });
+
   const voegAfbeeldingToe = async (bestand: File) => {
     try {
       setAfbeelding(await verkleinAfbeelding(bestand));
@@ -232,7 +239,7 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
             <p className="text-[11px] text-white/45">Rond eerst de open opdracht af: goedkeuren, bijsturen of weggooien.</p>
           )}
           <p className="text-[10px] leading-relaxed text-white/30">
-            Model: {overzicht.instellingen.model}. De Bouwer wijzigt geen database, pakketten, beveiliging of uitrol-scripts.
+            Model: {overzicht.instellingen.model}. De Bouwer breidt de database alleen uit (nooit weghalen) en wijzigt geen pakketten, beveiliging of uitrol-scripts.
           </p>
         </div>
 
@@ -278,6 +285,8 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
             setBijsturing={setBijsturing}
             githubSleutel={overzicht.instellingen.githubSleutel}
             onActie={(naam, body) => void taakActie(naam, body).then(() => naam === "bijsturen" && setBijsturing(""))}
+            kanOngedaan={overzicht.online && !overzicht.bezig && !openTaak && !bezigMet}
+            onOngedaan={(sha) => void ongedaan(sha)}
             {...(onLiveZetten ? { onLiveZetten } : {})}
           />
         )}
@@ -293,6 +302,8 @@ function TaakDetail({
   setBijsturing,
   githubSleutel,
   onActie,
+  kanOngedaan,
+  onOngedaan,
   onLiveZetten,
 }: {
   taak: Detail;
@@ -301,6 +312,8 @@ function TaakDetail({
   setBijsturing: (v: string) => void;
   githubSleutel: boolean;
   onActie: (naam: string, body: Record<string, unknown>) => void;
+  kanOngedaan: boolean;
+  onOngedaan: (sha: string) => void;
   onLiveZetten?: () => void;
 }) {
   const stappenRef = useRef<HTMLOListElement | null>(null);
@@ -445,6 +458,24 @@ function TaakDetail({
             </>
           )}
         </p>
+      )}
+
+      {taak.staat === "gepusht" && taak.sha && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={!kanOngedaan}
+            onClick={() => {
+              const sha = taak.sha;
+              if (sha && window.confirm("Deze wijziging ongedaan maken? De Bouwer maakt een tegenwijziging; die bekijk je eerst en zet je daarna zelf live."))
+                onOngedaan(sha);
+            }}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {bezigMet === "ongedaan" ? "Bezig…" : "Ongedaan maken"}
+          </button>
+          {!kanOngedaan && !bezigMet && <span className="text-[11px] text-white/35">Kan als er geen andere opdracht openstaat.</span>}
+        </div>
       )}
 
       <Wijzigingen diff={taak.diff} bestanden={taak.bestanden} />

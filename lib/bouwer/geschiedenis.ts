@@ -37,7 +37,7 @@ export async function registreerLiveVersie(now = Date.now()): Promise<LiveMoment
   return nieuw;
 }
 
-export type Soort = "nieuw" | "opgelost" | "sneller" | "achter";
+export type Soort = "nieuw" | "opgelost" | "sneller" | "teruggedraaid" | "achter";
 
 /** Een conventionele commitregel in gewone taal; "achter" = achter de schermen (geen eigen regel in de mail). */
 export function leesbaar(onderwerp: string): { soort: Soort; tekst: string } {
@@ -46,6 +46,8 @@ export function leesbaar(onderwerp: string): { soort: Soort; tekst: string } {
   const type = (m[1] ?? "").toLowerCase();
   const tekst = (m[3] ?? "").trim();
   const zin = tekst.charAt(0).toUpperCase() + tekst.slice(1);
+  // "Ongedaan maken" in de Bouwer: revert: <oorspronkelijke regel>
+  if (type === "revert") return { soort: "teruggedraaid", tekst: leesbaar(tekst.replace(/^"|"$/g, "")).tekst };
   if (type === "feat") return { soort: "nieuw", tekst: zin };
   if (type === "fix") return { soort: "opgelost", tekst: zin };
   if (type === "perf") return { soort: "sneller", tekst: zin };
@@ -54,7 +56,7 @@ export function leesbaar(onderwerp: string): { soort: Soort; tekst: string } {
 
 export function dagoverzichtTekst(onderwerpen: string[], live: Versie | null, basisUrl: string): { onderwerp: string; tekst: string } | null {
   const regels = onderwerpen.map(leesbaar);
-  const kopje: Record<Exclude<Soort, "achter">, string> = { nieuw: "Nieuw", opgelost: "Opgelost", sneller: "Sneller" };
+  const kopje: Record<Exclude<Soort, "achter">, string> = { nieuw: "Nieuw", opgelost: "Opgelost", sneller: "Sneller", teruggedraaid: "Teruggedraaid" };
   const blokken = (Object.keys(kopje) as (keyof typeof kopje)[])
     .map((s) => ({ s, items: regels.filter((r) => r.soort === s) }))
     .filter((b) => b.items.length > 0)

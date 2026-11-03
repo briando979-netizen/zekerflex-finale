@@ -6,7 +6,7 @@
 //
 //   GET  /gezond                     → leeft hij, is hij bezig
 //   GET  /taken                      → recente opdrachten
-//   POST /taken                      → { opdracht, door, llm }
+//   POST /taken                      → { opdracht, door, llm } of { terugdraaien: sha, door } (git revert, zonder model)
 //   GET  /taken/:id                  → opdracht + stappen + diff
 //   POST /taken/:id/bijsturen        → { bericht, door, llm }
 //   POST /taken/:id/goedkeuren       → { door, githubToken, liveZetten } commit → bijwerken → controle → push (achtergrond)
@@ -151,6 +151,63 @@ async function werk(taak, llm, messages, afbeelding = null) {
     taak.bestanden = await gewijzigdeBestanden().catch(() => []);
     taak.diff = await huidigeDiff().catch(() => "");
     await schrijfAtomisch(bestand(taak.id, "gesprek.json"), JSON.stringify(messages ?? [])).catch(() => {});
+    actief = null;
+    await bewaar(taak, true);
+  }
+}
+
+/**
+ * Eén eerdere wijziging ongedaan maken (git revert), zonder taalmodel. Daarna de
+ * gewone controle; de eigenaar bekijkt en keurt goed zoals elke opdracht. Faalt de
+ * controle, dan kan bijsturen het met het model oplossen (het gesprek wordt bewaard).
+ */
+async function terugdraaien(taak, sha) {
+  actief = { id: taak.id, abort: new AbortController() };
+  const log = logger(taak);
+  const git = (args) => sh("git", args);
+  if (voorbeeldStand().staat !== "uit") stopVoorbeeld();
+  const messages = [{ role: "system", content: await systeemPrompt() }];
+  try {
+    taak.basis = await nieuweWerkkopie(taak.id, log);
+    if ((await git(["merge-base", "--is-ancestor", sha, "origin/main"])).code !== 0) throw new Error("Deze wijziging staat niet (meer) op main.");
+    const onderwerp = (await git(["log", "-1", "--format=%s", sha])).uit.trim();
+    taak.opdracht = `Maak ongedaan: ${onderwerp} (${sha.slice(0, 7)})`;
+    log("info", taak.opdracht);
+    const ouders = (await git(["rev-list", "--parents", "-n", "1", sha])).uit.trim().split(/\s+/).length - 1;
+    if (ouders !== 1) throw new Error("Dit is een samenvoeging van wijzigingen; die kan niet automatisch ongedaan worden gemaakt.");
+    const paden = (await git(["show", "--name-only", "--format=", sha])).uit.split("\n").filter(Boolean);
+    if (paden.some((p) => p.startsWith("prisma/migrations/")))
+      throw new Error("Deze wijziging bevat een databasewijziging. Die blijft in de database staan, dus automatisch ongedaan maken kan niet. Geef de Bouwer in gewone woorden de opdracht om de functie uit te zetten.");
+    if ((await git(["revert", "--no-commit", sha])).code !== 0) {
+      await git(["revert", "--abort"]);
+      throw new Error("Latere wijzigingen bouwen hierop voort, dus automatisch ongedaan maken lukt niet. Geef de Bouwer in gewone woorden de opdracht om het terug te draaien.");
+    }
+    // uit de index halen, zodat de diff het laat zien zoals bij elke andere opdracht
+    await git(["reset", "-q"]);
+    log("bestand", `${paden.length} bestand(en) teruggezet naar de versie van vóór ${sha.slice(0, 7)}`);
+    taak.controle = await controleer(log);
+    taak.commitbericht = `revert: ${onderwerp}`.slice(0, 200);
+    messages.push({
+      role: "user",
+      content: `De eigenaar wil deze wijziging ongedaan maken: "${onderwerp}" (${sha}). Dat is al gedaan met git revert; de wijzigingen staan in de werkkopie.${taak.controle.ok ? "" : `\nDe controle faalt nog:\n${controleTekst(taak.controle)}`}`,
+    });
+    if (taak.controle.ok) {
+      taak.staat = "klaar";
+      taak.samenvatting = `"${onderwerp}" is ongedaan gemaakt. Bekijk eventueel het voorbeeld en keur goed om het live te zetten.`;
+      log("klaar", taak.samenvatting);
+    } else {
+      taak.staat = "mislukt";
+      taak.fout = "Na het ongedaan maken faalt de controle (zie hieronder). Stuur bij, dan lost de Bouwer het op, of gooi het weg.";
+      log("fout", taak.fout);
+    }
+  } catch (e) {
+    taak.staat = "mislukt";
+    taak.fout = e instanceof Error ? e.message : String(e);
+    log("fout", taak.fout);
+  } finally {
+    taak.bestanden = await gewijzigdeBestanden().catch(() => []);
+    taak.diff = await huidigeDiff().catch(() => "");
+    await schrijfAtomisch(bestand(taak.id, "gesprek.json"), JSON.stringify(messages)).catch(() => {});
     actief = null;
     await bewaar(taak, true);
   }
@@ -309,9 +366,11 @@ const server = http.createServer(async (req, res) => {
 
     if (delen.length === 1 && req.method === "POST") {
       const b = await lichaam(req, 6_000_000);
-      const opdracht = String(b.opdracht ?? "").trim();
+      const terug = b.terugdraaien == null ? null : String(b.terugdraaien);
+      if (terug !== null && !/^[0-9a-f]{7,40}$/.test(terug)) return antwoord(res, 400, { fout: "Ongeldige wijziging om ongedaan te maken" });
+      const opdracht = terug ? `Maak ongedaan: ${terug.slice(0, 7)}` : String(b.opdracht ?? "").trim();
       if (opdracht.length < 5 || opdracht.length > 6000) return antwoord(res, 400, { fout: "Beschrijf de opdracht in 5 tot 6000 tekens" });
-      if (!geldigLlm(b.llm)) return antwoord(res, 400, { fout: "Geen taalmodel ingesteld" });
+      if (!terug && !geldigLlm(b.llm)) return antwoord(res, 400, { fout: "Geen taalmodel ingesteld" });
       const afbeelding = b.afbeelding == null ? null : String(b.afbeelding);
       if (afbeelding && (afbeelding.length > MAX_AFBEELDING || !AFBEELDING.test(afbeelding)))
         return antwoord(res, 400, { fout: "De afbeelding moet een PNG, JPEG of WebP van hooguit 4 MB zijn" });
@@ -322,7 +381,7 @@ const server = http.createServer(async (req, res) => {
         id: `b_${Date.now().toString(36)}${randomBytes(2).toString("hex")}`,
         opdracht,
         door: String(b.door ?? "onbekend").slice(0, 200),
-        model: b.llm.model,
+        model: terug ? "git revert" : b.llm.model,
         staat: "bezig",
         begon: new Date().toISOString(),
         bijgewerkt: new Date().toISOString(),
@@ -338,7 +397,8 @@ const server = http.createServer(async (req, res) => {
         metAfbeelding: Boolean(afbeelding),
       };
       await bewaar(taak, true);
-      void werk(taak, b.llm, null, afbeelding);
+      if (terug) void terugdraaien(taak, terug);
+      else void werk(taak, b.llm, null, afbeelding);
       return antwoord(res, 202, samenvatting(taak));
     }
 

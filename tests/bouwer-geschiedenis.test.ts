@@ -9,6 +9,8 @@ describe("wat er live ging, in gewone taal", () => {
     expect(leesbaar("chore(beheer): opruimen").soort).toBe("achter");
     expect(leesbaar("refactor(live): één script").soort).toBe("achter");
     expect(leesbaar("Gewone zin zonder type").soort).toBe("nieuw");
+    // "Ongedaan maken" in de Bouwer
+    expect(leesbaar("revert: feat(shop): filter op maat")).toEqual({ soort: "teruggedraaid", tekst: "Filter op maat" });
   });
 
   it("maakt een mail met kopjes, en telt kleine wijzigingen apart", () => {

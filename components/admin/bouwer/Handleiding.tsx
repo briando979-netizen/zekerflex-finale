@@ -50,6 +50,16 @@ const TAKEN: Taak[] = [
     naar: { tab: "live", label: "Naar Live zetten" },
   },
   {
+    titel: "Eén wijziging van de Bouwer ongedaan maken",
+    stappen: [
+      "Open het tabblad Bouwer en kies links de opdracht die je terug wilt draaien (die staat op \"Op GitHub\").",
+      "Klik Ongedaan maken. De Bouwer maakt een tegenwijziging en controleert die, net als elke opdracht.",
+      "Klopt het? Klik Goedkeuren en live zetten.",
+    ],
+    tip: "Zat er een databasewijziging bij, dan kan dit niet automatisch. Vraag de Bouwer dan in gewone woorden om de functie uit te zetten.",
+    naar: { tab: "bouwer", label: "Naar de Bouwer" },
+  },
+  {
     titel: "Een fout laten oplossen",
     stappen: [
       "Ga naar Admin → Systeem → Foutmeldingen. Bij elke fout staat Laat de Bouwer dit oplossen.",

@@ -8,7 +8,7 @@ import { bouwer, bouwerGezond, bouwerIngesteld, bouwerInstellingen, bouwerLlm, t
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Admin → ZekerFlex AI → Bouwer: lijst + nieuwe opdracht (zie lib/bouwer/werker.ts).
+// Admin → ZekerFlex AI → Bouwer: lijst + nieuwe opdracht of "ongedaan maken" (zie lib/bouwer/werker.ts).
 
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const [gezond, instellingen] = await Promise.all([bouwerGezond(), bouwerInstellingen()]);
@@ -32,8 +32,26 @@ const schema = z.object({
     .optional(),
 });
 
+// "Ongedaan maken": één eerdere wijziging terugdraaien (git revert in de Bouwer, zonder model)
+const terugSchema = z.object({ terugdraaien: z.string().regex(/^[0-9a-f]{7,40}$/) });
+
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
-  const parsed = schema.safeParse(await request.json().catch(() => ({})));
+  const body: unknown = await request.json().catch(() => ({}));
+  const terug = terugSchema.safeParse(body);
+  if (terug.success) {
+    const taak = await bouwer<TaakKort>("/taken", { method: "POST", body: { terugdraaien: terug.data.terugdraaien, door: principal.email } });
+    await recordAudit({
+      category: "ADMIN",
+      action: "admin.bouwer.terugdraaien",
+      severity: "info",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `${principal.email} liet de Bouwer wijziging ${terug.data.terugdraaien.slice(0, 7)} ongedaan maken`,
+    });
+    return NextResponse.json(taak, { status: 202 });
+  }
+
+  const parsed = schema.safeParse(body);
   if (!parsed.success) throw AppError.validation("Beschrijf de opdracht in 5 tot 6000 tekens (een afbeelding mag een PNG, JPEG of WebP van hooguit 4 MB zijn)");
 
   const llm = await bouwerLlm();
