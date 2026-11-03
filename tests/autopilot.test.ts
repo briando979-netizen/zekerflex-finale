@@ -27,6 +27,14 @@ const fraudForTimesheet = vi.fn(async () => [] as { severity: string }[]);
 vi.mock("@/lib/fraud/timesheet", () => ({ fraudForTimesheet: (...a: unknown[]) => fraudForTimesheet(...(a as [])) }));
 const principalForUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ principalForUser: (...a: unknown[]) => principalForUser(...a) }));
+// websitevoorstellen: the selection itself is tested in website-proposal-engine.test.ts
+const proposals = vi.hoisted(() => ({ list: [] as { id: string; bedrijf: string }[] }));
+const pushReminder = vi.fn(async () => undefined);
+vi.mock("@/lib/sales/website-proposal", () => ({
+  listWebsiteProposals: async () => proposals.list,
+  dueReminders: (list: { id: string; bedrijf: string }[]) => list.map((p) => ({ id: `${p.id}:nabellen`, proposal: p, title: "📞 Even nabellen?", body: "…" })),
+  pushReminder: (...a: unknown[]) => pushReminder(...(a as [])),
+}));
 
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
 
@@ -54,6 +62,19 @@ describe("uren-invullen", () => {
     expect((await action("uren-invullen").run(NOW)).count).toBe(1);
     expect((await action("uren-invullen").run(NOW)).count).toBe(0);
     expect(sendUserPush).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("websitevoorstel-opvolgen", () => {
+  it("reminds the maker once per reminder, only on weekdays during working hours", async () => {
+    proposals.list = [{ id: "p1", bedrijf: "Bakkerij Test" }];
+    const run = (iso: string) => action("websitevoorstel-opvolgen").run(new Date(iso));
+    expect((await run("2026-11-07T11:00:00Z")).count).toBe(0); // zaterdag
+    expect((await run("2026-11-04T06:00:00Z")).count).toBe(0); // woensdag 07:00 in Amsterdam
+    expect((await run("2026-11-04T15:00:00Z")).count).toBe(1); // woensdag 16:00
+    expect((await run("2026-11-05T15:00:00Z")).count).toBe(0); // al herinnerd
+    expect(pushReminder).toHaveBeenCalledTimes(1);
+    proposals.list = [];
   });
 });
 

@@ -301,6 +301,34 @@ describe("ja zeggen en de introductiekorting", () => {
   });
 });
 
+describe("opvolgen door wie het voorstel maakte (autopilot)", () => {
+  it("nabellen 2 tot 14 dagen na het openen, herinnering 3 dagen voor het verloopt, nooit bij concept, ja of zonder maker", async () => {
+    const base = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    const DAY = 86_400_000;
+    const t0 = Date.parse(base.createdAt);
+    const at = (days: number) => new Date(t0 + days * DAY);
+    const end = Date.parse(base.expiresAt);
+    const viewed = { ...base, status: "bekeken" as const, viewedAt: base.createdAt };
+    expect(engine.dueReminders([base], at(5))).toEqual([]); // nog niet verstuurd
+    expect(engine.dueReminders([viewed], at(1))).toEqual([]); // te vroeg
+    const due = engine.dueReminders([viewed], at(3));
+    expect(due).toEqual([expect.objectContaining({ id: `${base.id}:nabellen`, title: "📞 Even nabellen?" })]);
+    expect(due[0]!.body).toMatch(new RegExp(`^${base.bedrijf} opende je websitevoorstel op \\w+dag \\d+ \\w+ en reageerde nog niet`));
+    expect(engine.dueReminders([viewed], at(15))).toEqual([]); // na twee weken niet meer
+    expect(engine.dueReminders([viewed], new Date(end - 2 * DAY))).toEqual([
+      expect.objectContaining({ id: `${base.id}:verloopt:${base.expiresAt}`, title: "⏳ Websitevoorstel verloopt bijna" }),
+    ]);
+    expect(engine.dueReminders([viewed], new Date(end + 1000))).toEqual([]); // verlopen
+    // verstuurd maar nooit geopend: alleen de herinnering voor het verlopen
+    const sent = { ...base, status: "verstuurd" as const };
+    expect(engine.dueReminders([sent], at(3))).toEqual([]);
+    expect(engine.dueReminders([sent], new Date(end - DAY))).toHaveLength(1);
+    const yes = await engine.acceptWebsiteProposal(base.id, { naam: "Jan", email: "jan@devries.test", telefoon: "", pakket: "basis", domein: "houden", opmerking: "", begrepen: true });
+    expect(engine.dueReminders([{ ...viewed, akkoord: yes.proposal.akkoord }], at(3))).toEqual([]);
+    expect(engine.dueReminders([{ ...viewed, createdById: undefined }], at(3))).toEqual([]);
+  });
+});
+
 describe("na een ja: overzetten naar het bedrijfsaccount", () => {
   const ja = { naam: "Jan de Vries", email: "jan@devries.test", telefoon: "", pakket: "basis" as const, domein: "houden" as const, opmerking: "", begrepen: true as const };
 

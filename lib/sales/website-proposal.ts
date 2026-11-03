@@ -366,6 +366,45 @@ export async function recordProposalView(id: string): Promise<void> {
   await pushMaker(p, { title: "👀 Websitevoorstel geopend", body: `${p.bedrijf} opende je websitevoorstel om ${amsterdamClock(now)}. Een goed moment om even te bellen.` });
 }
 
+export interface ProposalReminder {
+  /** ledger id: one reminder of each kind per proposal (and per expiry date) */
+  id: string;
+  proposal: WebsiteProposal;
+  title: string;
+  body: string;
+}
+
+const dayName = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
+
+/**
+ * Follow-ups for the maker of a sent proposal without an answer (autopilot
+ * action "websitevoorstel-opvolgen"): opened 2–14 days ago, or expiring within
+ * 3 days. At most one per proposal per run; expiring wins.
+ */
+export function dueReminders(proposals: WebsiteProposal[], now: Date): ProposalReminder[] {
+  const t = now.getTime();
+  const out: ProposalReminder[] = [];
+  for (const p of proposals) {
+    if (!p.createdById || p.akkoord || (p.status !== "verstuurd" && p.status !== "bekeken")) continue;
+    const left = Date.parse(p.expiresAt) - t;
+    if (!(left > 0)) continue;
+    if (left <= 3 * 86_400_000) {
+      out.push({ id: `${p.id}:verloopt:${p.expiresAt}`, proposal: p, title: "⏳ Websitevoorstel verloopt bijna", body: `Het voorstel voor ${p.bedrijf} verloopt op ${dayName(p.expiresAt)}. Bel even na, of verleng het met 30 dagen.` });
+      continue;
+    }
+    const seen = p.viewedAt ? t - Date.parse(p.viewedAt) : 0;
+    if (p.status === "bekeken" && p.viewedAt && seen >= 2 * 86_400_000 && seen <= 14 * 86_400_000) {
+      out.push({ id: `${p.id}:nabellen`, proposal: p, title: "📞 Even nabellen?", body: `${p.bedrijf} opende je websitevoorstel op ${dayName(p.viewedAt)} en reageerde nog niet. Een kort belletje helpt vaak.` });
+    }
+  }
+  return out;
+}
+
+/** Sends a follow-up from dueReminders to the maker. */
+export async function pushReminder(r: ProposalReminder): Promise<void> {
+  await pushMaker(r.proposal, { title: r.title, body: r.body });
+}
+
 /**
  * A push to whoever made the proposal, opening their own list (Admin or Sales).
  * `skipAdmins` when platform admins already hear it from alertOwner.

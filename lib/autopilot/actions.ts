@@ -103,6 +103,25 @@ export const ACTIONS: AutopilotAction[] = [
     },
   },
   {
+    key: "websitevoorstel-opvolgen",
+    label: "Verkopers herinneren aan websitevoorstellen",
+    description: "Verstuurd voorstel zonder antwoord: 2 dagen na het openen \"even nabellen?\", en 3 dagen voor het verloopt \"bel na of verleng\". Eén pushmelding per keer aan wie het maakte, alleen op werkdagen tussen 8 en 18 uur.",
+    tier: "auto",
+    cap: 50,
+    run: async (now) => {
+      const { amsterdamParts } = await import("@/lib/time/amsterdam");
+      const t = amsterdamParts(now);
+      if (t.weekday === 0 || t.weekday === 6 || t.hour < 8 || t.hour >= 18) return { count: 0, summary: "Buiten werktijd: niets verstuurd" };
+      const { dueReminders, listWebsiteProposals, pushReminder } = await import("@/lib/sales/website-proposal");
+      const due = dueReminders(await listWebsiteProposals(), now);
+      const done = await alreadyDone("websitevoorstel-opvolgen", due.map((r) => r.id));
+      const todo = due.filter((r) => !done.has(r.id)).slice(0, 50);
+      for (const r of todo) await pushReminder(r);
+      await markDone("websitevoorstel-opvolgen", todo.map((r) => r.id));
+      return { count: todo.length, summary: `${todo.length} herinnering(en) aan verkopers`, details: todo.map((r) => `${r.proposal.bedrijf}: ${r.title}`) };
+    },
+  },
+  {
     key: "uren-invullen",
     label: "Werknemers herinneren aan uren invullen",
     description: "Klus 6–72 uur geleden afgelopen en nog geen uren ingediend → pushmelding aan de werknemer (één keer per klus).",
