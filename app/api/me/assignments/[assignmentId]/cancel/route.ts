@@ -11,6 +11,9 @@ import { cancelReplacementRequest, getOpenRequestForShift } from "@/lib/replacem
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
 import { NOTICE_HOURS, LATE_CANCEL_RELIABILITY_PENALTY } from "@/lib/claims/policy";
+import { runMatchingForShift } from "@/lib/matching/engine";
+import { sendUserPush } from "@/lib/notifications/push";
+import { runAfter } from "@/lib/run-after";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +100,29 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
       await cancelReplacementRequest(openReq.id);
     }
 
+    const contact = await resolveShiftContact(assignment.shift.id).catch(() => null);
+    const when = assignment.shift.startsAt.toLocaleString("nl-NL", {
+      timeZone: "Europe/Amsterdam",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    // Look for someone else right away instead of at the next autopilot round (twice a day),
+    // and tell the client now rather than letting them find out on the day.
+    runAfter(() => runMatchingForShift(assignment.shift.id));
+    if (contact) {
+      runAfter(() =>
+        sendUserPush([contact.userId], {
+          title: `Afgezegd: ${assignment.shift.title}`,
+          body: `${principal.fullName} komt niet op ${when}. ZekerFlex zoekt direct een vervanger.`,
+          data: { type: "SHIFT", url: `/werkgever/diensten/${assignment.shift.id}`, tag: `afgezegd-${assignment.id}` },
+          ttlSeconds: 43_200,
+        }),
+      );
+    }
+
     if (late) {
       const hours = Math.max(
         0,
@@ -104,7 +130,6 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
           assignment.shift.breakMinutes / 60,
       );
       const seatValueCents = Math.round(hours * assignment.shift.hourlyRateCents);
-      const contact = await resolveShiftContact(assignment.shift.id);
       await offerEmployerClaim({
         shiftId: assignment.shift.id,
         shiftTitle: assignment.shift.title,
@@ -126,7 +151,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
       kind: "replacement",
       text:
         `${principal.fullName} heeft de dienst "${assignment.shift.title}" bij ${assignment.shift.branch.name} ` +
-        `op ${assignment.shift.startsAt.toLocaleString("nl-NL")} afgezegd zonder vervanger ` +
+        `op ${when} afgezegd zonder vervanger ` +
         `(${late ? "buiten de opzegtermijn — opdrachtgever kan 50% claimen" : "binnen de opzegtermijn"}).\n\n` +
         `Reden: ${reason}\n\nDe dienst staat weer open op het platform.`,
     }).catch(() => undefined);
