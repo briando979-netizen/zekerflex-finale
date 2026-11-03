@@ -19,10 +19,29 @@ export interface IcsBoeking {
 const utc = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
 const tekst = (s: string) => s.replace(/([\\;,])/g, "\\$1").replace(/\n/g, "\\n");
 
-/** Regels langer dan 75 tekens vouwen (RFC 5545): vervolgregel begint met een spatie. */
+const utf8 = new TextEncoder();
+
+/**
+ * Regels langer dan 75 bytes vouwen (RFC 5545): een vervolgregel begint met
+ * een spatie (die telt mee). Per teken, dus een "ë" of emoji gaat nooit doormidden.
+ */
 export function vouw(regel: string): string {
   const delen: string[] = [];
-  for (let i = 0; i < regel.length; i += 70) delen.push(regel.slice(i, i + 70));
+  let deel = "";
+  let bytes = 0;
+  let max = 75;
+  for (const teken of regel) {
+    const n = utf8.encode(teken).length;
+    if (bytes + n > max) {
+      delen.push(deel);
+      deel = "";
+      bytes = 0;
+      max = 74;
+    }
+    deel += teken;
+    bytes += n;
+  }
+  delen.push(deel);
   return delen.join("\r\n ");
 }
 

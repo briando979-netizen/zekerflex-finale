@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { icsVoorBoeking, vouw } from "@/lib/voorstel/ics-bestand";
 
+const bytes = (s: string) => new TextEncoder().encode(s).length;
+
 describe("agendabestand van een reservering", () => {
   const b = { id: "DA7DA27A", datum: "2026-11-04", tijd: "14:00", personen: 8, status: "nieuw" };
 
@@ -20,11 +22,16 @@ describe("agendabestand van een reservering", () => {
     expect(icsVoorBoeking({ ...b, status: "geannuleerd" }, "Buggy rijden", 60)).toContain("STATUS:CANCELLED");
     expect(ics).toContain("UID:schwarzwald-DA7DA27A@zekerflex.com");
     expect(ics).toContain("LOCATION:Het Schwarzwald\\, Markeloseweg 115\\, 7461 PB Rijssen");
-    expect(ics.split("\r\n").every((r) => r.length <= 75)).toBe(true);
+    expect(ics.split("\r\n").every((r) => bytes(r) <= 75)).toBe(true);
     expect(ics.startsWith("BEGIN:VCALENDAR\r\n")).toBe(true);
   });
 
-  it("vouwt lange regels met een spatie aan het begin", () => {
-    expect(vouw("a".repeat(150))).toBe(`${"a".repeat(70)}\r\n ${"a".repeat(70)}\r\n ${"a".repeat(10)}`);
+  it("vouwt op 75 bytes met een spatie aan het begin, zonder tekens doormidden", () => {
+    expect(vouw("a".repeat(150))).toBe(`${"a".repeat(75)}\r\n ${"a".repeat(74)}\r\n a`);
+    for (const lang of ["ë".repeat(80), "😀".repeat(40), `Wensen: ${"crème brûlée ".repeat(12)}`]) {
+      const gevouwen = vouw(lang);
+      expect(gevouwen.split("\r\n").every((r) => bytes(r) <= 75)).toBe(true);
+      expect(gevouwen.replace(/\r\n /g, "")).toBe(lang);
+    }
   });
 });
