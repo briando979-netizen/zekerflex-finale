@@ -48,7 +48,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [internal]
+    networks: [internal, bouwer-toegang]
     # Geen `ports:` — alles loopt via Caddy.
 
   caddy:
@@ -67,7 +67,7 @@ services:
       - caddy-config:/config
     depends_on:
       app: { condition: service_started }
-    networks: [internal]
+    networks: [internal, bouwer-toegang]
 
   postgres:
     image: postgres:18-bookworm
@@ -138,7 +138,7 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
-    networks: [internal]
+    networks: [internal, bouwer-toegang]
 
   # Self-host scheduler: triggert de interne cron-endpoints op schema (zoals
   # Vercel-Cron deed). Zonder deze service draait geen enkele geplande taak.
@@ -203,7 +203,7 @@ services:
     depends_on:
       bouwer-db: { condition: service_started }
       bouwer-redis: { condition: service_started }
-    networks: [internal, bouwer]
+    networks: [bouwer-toegang, bouwer]
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
@@ -264,6 +264,11 @@ networks:
   bouwer:
     driver: bridge
     internal: true
+  # Wie met de Bouwer praat: de app, Caddy (voorbeeld) en het taalmodel. De Bouwer zit
+  # NIET op internal: door de AI gewijzigde code (voorbeeld, tests) en de terminal
+  # kunnen zo niet bij de echte database of Redis (die heeft geen wachtwoord).
+  bouwer-toegang:
+    driver: bridge
 
 volumes:
   app-storage:
