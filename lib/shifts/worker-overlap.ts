@@ -52,6 +52,25 @@ export function overlapsAny(
   return windows.some((o) => o.startsAt.getTime() < b && o.endsAt.getTime() > a);
 }
 
+/** Paren diensten van dezelfde werker die overlappen (dubbel ingepland, van vóór deze controle). */
+export function doubleBookedPairs<T extends { freelancerId: string; shiftId: string; startsAt: Date; endsAt: Date }>(
+  rows: readonly T[],
+): [T, T][] {
+  const byWorker = new Map<string, T[]>();
+  for (const r of rows) byWorker.set(r.freelancerId, [...(byWorker.get(r.freelancerId) ?? []), r]);
+  const pairs: [T, T][] = [];
+  for (const list of byWorker.values()) {
+    const sorted = [...list].sort((x, y) => x.startsAt.getTime() - y.startsAt.getTime());
+    sorted.forEach((a, i) => {
+      for (const b of sorted.slice(i + 1)) {
+        if (b.startsAt.getTime() >= a.endsAt.getTime()) break; // gesorteerd: de rest begint nog later
+        if (b.shiftId !== a.shiftId) pairs.push([a, b]);
+      }
+    });
+  }
+  return pairs;
+}
+
 /** De Arbeidstijdenwet vraagt in elke 24 uur minstens 11 uur aaneengesloten rust. */
 export const MIN_REST_HOURS = 11;
 const HOUR_MS = 3_600_000;

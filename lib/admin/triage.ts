@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { claimsInIncasso } from "@/lib/claims/store";
+import { doubleBookedPairs } from "@/lib/shifts/worker-overlap";
 
 // Unified "needs a human" queue, built from read-only queries + the filesystem
 // replacement requests. No writes anywhere.
@@ -21,7 +22,7 @@ export async function getTriage(): Promise<TriageItem[]> {
   const now = Date.now();
   const items: TriageItem[] = [];
 
-  const [disputes, submitted, failedPayments, dbaHigh, kycPending, staleShifts, replacements, incassoClaims] = await Promise.all([
+  const [disputes, submitted, failedPayments, dbaHigh, kycPending, staleShifts, replacements, incassoClaims, upcomingBooked] = await Promise.all([
     prisma.dispute.findMany({
       where: { status: { in: ["OPEN", "UNDER_REVIEW", "ESCALATED"] } },
       select: { id: true, reason: true, origin: true, createdAt: true, timesheet: { select: { branch: { select: { name: true } } } } },
@@ -60,6 +61,16 @@ export async function getTriage(): Promise<TriageItem[]> {
     }),
     listReplacementRequests(50),
     claimsInIncasso(),
+    prisma.shiftAssignment.findMany({
+      where: { cancelledAt: null, shift: { endsAt: { gte: new Date() }, startsAt: { lte: new Date(now + 14 * DAY) } } },
+      select: {
+        freelancerId: true,
+        shiftId: true,
+        freelancer: { select: { user: { select: { fullName: true } } } },
+        shift: { select: { title: true, startsAt: true, endsAt: true, branch: { select: { name: true } } } },
+      },
+      take: 2000,
+    }),
   ]);
 
   for (const d of disputes) {
@@ -137,6 +148,26 @@ export async function getTriage(): Promise<TriageItem[]> {
       detail: `${c.branchName} · € ${(c.claimedCents / 100).toFixed(2)} + € ${((c.lateFeeCents ?? 0) / 100).toFixed(2)} incassokosten`,
       href: "/admin",
       at: c.overdueEscalatedAt ?? c.filedAt,
+    });
+  }
+  // Dubbel ingepland (geboekt vóór de controle in lib/shifts/worker-overlap.ts): bel de werker, één van de twee moet eraf.
+  const booked = upcomingBooked.map((a) => ({
+    freelancerId: a.freelancerId,
+    shiftId: a.shiftId,
+    startsAt: a.shift.startsAt,
+    endsAt: a.shift.endsAt,
+    name: a.freelancer.user.fullName,
+    label: `${a.shift.title} · ${a.shift.branch.name}`,
+  }));
+  for (const [a, b] of doubleBookedPairs(booked)) {
+    items.push({
+      id: `dubbel-${a.shiftId}-${b.shiftId}-${a.freelancerId}`,
+      kind: "Dubbel",
+      severity: a.startsAt.getTime() - now < 2 * DAY ? "high" : "medium",
+      title: `Dubbel ingepland — ${a.name}`,
+      detail: `${a.label} en ${b.label} · ${a.startsAt.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}`,
+      href: "/admin/gebruikers",
+      at: a.startsAt.toISOString(),
     });
   }
   for (const s of staleShifts.filter((x) => x._count.assignments < x.positions)) {

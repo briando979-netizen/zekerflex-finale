@@ -28,6 +28,7 @@ const recordOfferResponse = vi.fn(async () => ({ status: "ACCEPTED", shiftFilled
 vi.mock("@/lib/notifications/dispatcher", () => ({ recordOfferResponse: () => recordOfferResponse() }));
 
 import {
+  doubleBookedPairs,
   findOverlappingShift,
   overlapMessageOther,
   overlapMessageSelf,
@@ -99,6 +100,33 @@ describe("overlapsAny (de lijst met klussen)", () => {
     expect(overlapsAny(mine, at("2026-11-04T04:00:00Z", "2026-11-04T08:00:00Z"))).toBe(false);
     expect(overlapsAny(mine, at("2026-11-05T08:00:00Z", "2026-11-05T16:00:00Z"))).toBe(false);
     expect(overlapsAny([], at("2026-11-04T08:00:00Z", "2026-11-04T16:00:00Z"))).toBe(false);
+  });
+});
+
+describe("doubleBookedPairs (controlecentrum)", () => {
+  const row = (freelancerId: string, shiftId: string, from: string, to: string) => ({
+    freelancerId,
+    shiftId,
+    startsAt: new Date(from),
+    endsAt: new Date(to),
+  });
+
+  it("vindt per werker de diensten die overlappen, en niet die van verschillende werkers", () => {
+    const a = row("w1", "s1", "2026-11-04T08:00:00Z", "2026-11-04T16:00:00Z");
+    const b = row("w1", "s2", "2026-11-04T12:00:00Z", "2026-11-04T18:00:00Z");
+    const c = row("w1", "s3", "2026-11-04T18:00:00Z", "2026-11-04T22:00:00Z"); // sluit aan op b
+    const d = row("w2", "s4", "2026-11-04T09:00:00Z", "2026-11-04T10:00:00Z"); // andere werker, zelfde tijd
+    expect(doubleBookedPairs([c, d, b, a])).toEqual([[a, b]]);
+  });
+
+  it("ziet ook een lange dienst die twee latere omvat", () => {
+    const lang = row("w1", "s1", "2026-11-04T06:00:00Z", "2026-11-04T22:00:00Z");
+    const x = row("w1", "s2", "2026-11-04T08:00:00Z", "2026-11-04T09:00:00Z");
+    const y = row("w1", "s3", "2026-11-04T20:00:00Z", "2026-11-04T21:00:00Z");
+    expect(doubleBookedPairs([lang, x, y])).toEqual([
+      [lang, x],
+      [lang, y],
+    ]);
   });
 });
 

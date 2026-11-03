@@ -15,6 +15,7 @@ import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import {
@@ -379,6 +380,9 @@ async function autoAssign(
     if (taken >= shift.positions) {
       throw AppError.conflict("Shift filled before auto-assignment committed");
     }
+    // The candidate pool skips busy workers, but they may have taken another shift since.
+    const overlap = await findOverlappingShift(tx, freelancerId, { shiftId: shift.id, startsAt: shift.startsAt, endsAt: shift.endsAt });
+    if (overlap) throw AppError.conflict("Freelancer took an overlapping shift before auto-assignment committed");
 
     const assignment = await tx.shiftAssignment.create({
       data: {
