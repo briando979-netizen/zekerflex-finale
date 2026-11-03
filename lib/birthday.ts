@@ -1,8 +1,10 @@
-// Is a stored geboortedatum (YYYY-MM-DD) today? Month+day match only — the year
-// is irrelevant for a birthday. Returns false for missing/malformed dates.
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { isBirthdayOn } from "@/lib/seasons/calendar";
+
+// Is a stored geboortedatum (YYYY-MM-DD, or just MM-DD) today? Month+day match
+// only — the year is irrelevant for a birthday. "Today" is the Dutch calendar
+// day: the server runs in UTC, so between midnight and 01:00/02:00 the UTC date
+// would still be yesterday. Returns false for missing/malformed dates.
 export function isBirthdayToday(birthDate: string | null | undefined, now = new Date()): boolean {
-  if (!birthDate) return false;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(birthDate);
-  if (!m) return false;
-  return Number(m[2]) === now.getMonth() + 1 && Number(m[3]) === now.getDate();
+  return isBirthdayOn(birthDate, amsterdamDayKey(now));
 }

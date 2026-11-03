@@ -13,6 +13,8 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
+import { birthdayToday } from "@/lib/seasons/settings";
 import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
@@ -55,12 +57,13 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars] = await Promise.all([
+  const [tenant, rating, avatars, birthday] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
     getUserAvatars([principal.userId]),
+    birthdayToday(principal.userId).catch(() => false),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
@@ -83,6 +86,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       >
         {children}
         <ChatDock />
+        {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </EmployerShell>
     </I18nProvider>
   );

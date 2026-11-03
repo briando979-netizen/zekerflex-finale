@@ -6,15 +6,20 @@ import { PageHeader, Panel } from "@/components/app/ui";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
 import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
+import { BirthdayForm } from "@/components/app/BirthdayForm";
+import { getUserBirthday } from "@/lib/seasons/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function WerkgeverAccountPage() {
   const principal = await requirePrincipal();
-  const user = await prisma.user.findUnique({
-    where: { id: principal.userId },
-    select: { fullName: true, email: true, phone: true },
-  });
+  const [user, birthday] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: principal.userId },
+      select: { fullName: true, email: true, phone: true },
+    }),
+    getUserBirthday(principal.userId),
+  ]);
 
   return (
     <>
@@ -52,6 +57,10 @@ export default async function WerkgeverAccountPage() {
           <div className="p-5">
             <TwoFactorSettings recommended />
           </div>
+        </Panel>
+
+        <Panel title="Verjaardag (optioneel)">
+          <BirthdayForm initial={birthday} />
         </Panel>
       </div>
 

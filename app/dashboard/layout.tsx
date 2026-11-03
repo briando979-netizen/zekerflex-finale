@@ -4,6 +4,8 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
+import { birthdayToday } from "@/lib/seasons/settings";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
@@ -22,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   const theme = await getTheme();
   const locale = await getLocale();
-  const avatars = await getUserAvatars([principal.userId]);
+  const [avatars, birthday] = await Promise.all([getUserAvatars([principal.userId]), birthdayToday(principal.userId).catch(() => false)]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
@@ -41,6 +43,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <IbanHoldBanner userId={principal.userId} />
         {children}
         <ChatDock />
+        {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </FreelancerShell>
     </I18nProvider>
   );

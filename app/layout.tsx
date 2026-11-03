@@ -12,6 +12,8 @@ import { Providers } from "@/components/ui/Providers";
 import { CookieConsent } from "@/components/marketing/CookieConsent";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getBranding, brandingCssVars } from "@/lib/branding/settings";
+import { activeSeason } from "@/lib/seasons/settings";
+import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 
 const TITLE = `${SITE.name} — ${SITE.tagline}`;
 
@@ -96,6 +98,8 @@ export default async function RootLayout({
   // heeft aangepast (Admin → Huisstijl). Staat alles op standaard → null → geen
   // injectie, dus identieke look.
   const brandingCss = brandingCssVars(await getBranding().catch(() => ({ primaryHex: "#0E5C4A", mintHex: "#4FE0A0" })));
+  // Feestversiering rond Nederlandse feestdagen (lib/seasons); op gewone dagen laadt er niets.
+  const season = await activeSeason().catch(() => null);
   return (
     <html lang={await getLocale()} className={fontVariables}>
       <body>
@@ -120,6 +124,7 @@ export default async function RootLayout({
         </Suspense>
         <ServiceWorkerRegister />
         <KonamiEasterEgg />
+        <SeasonalLoader theme={season?.id ?? null} countdownTo={season?.countdownTo ?? null} preview />
       </body>
     </html>
   );
