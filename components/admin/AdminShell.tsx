@@ -7,6 +7,7 @@ import { logoutAction } from "@/lib/auth/actions";
 import { locateAdminPage, visibleHubs, type AdminHub, type HubIcon } from "@/lib/admin/nav";
 import { ViewAsSwitcher } from "@/components/admin/ViewAsControls";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { PushSelfHeal } from "@/components/app/PushToggle";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { IGrid, IUsers, IWallet, IRocket, IChat, IPulse, IShield, IBriefcase } from "@/components/app/icons";
 
@@ -202,6 +203,7 @@ export function AdminShell({
                 {theme === "dark" ? <SunIcon /> : <MoonIcon />}
               </IconButton>
               <NotificationsBell />
+              <PushSelfHeal />
               <UserMenu userName={userName} userMeta={userMeta} avatarUrl={avatarUrl ?? null} />
             </div>
           </div>

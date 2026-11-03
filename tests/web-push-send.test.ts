@@ -110,4 +110,22 @@ describe("sendWebPush", () => {
     expect(warn).toHaveBeenLastCalledWith("web push rejected", { pushService: "web.push.apple.com", status: 400, reason: '{"reason":"BadJwtToken"}' });
     warn.mockRestore();
   });
+
+  it("disables a subscription made with another VAPID key (Apple and WNS say so), without a warning", async () => {
+    const { logger } = await import("@/lib/logger");
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = createECDH("prime256v1");
+    client.generateKeys();
+    const target = (endpoint: string) => ({ endpoint, p256dh: client.getPublicKey().toString("base64url"), auth: randomBytes(16).toString("base64url") });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"reason":"VapidPkHashMismatch"}', { status: 400 })) as never);
+    expect(await sendWebPush(target("https://web.push.apple.com/QGabc"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 400, gone: true });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("The public key used to sign JWT does not match with the one included in channel Url.", { status: 401 })) as never);
+    expect(await sendWebPush(target("https://wns2-am3p.notify.windows.com/w/?token=x"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 401, gone: true });
+    expect(warn).not.toHaveBeenCalled();
+    // any other refusal stays a warning and keeps the subscription
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("rate limited", { status: 429 })) as never);
+    expect(await sendWebPush(target("https://fcm.googleapis.com/fcm/send/x"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 429, gone: false });
+    expect(warn).toHaveBeenCalledWith("web push rejected", { pushService: "fcm.googleapis.com", status: 429, reason: "rate limited" });
+    warn.mockRestore();
+  });
 });

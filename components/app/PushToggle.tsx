@@ -25,6 +25,55 @@ function needsIosInstall(): boolean {
   return ios && !standalone;
 }
 
+const sameKey = (raw: ArrayBuffer | null, want: Uint8Array) => {
+  const have = raw ? new Uint8Array(raw) : null;
+  return !!have && have.length === want.length && have.every((b, i) => b === want[i]);
+};
+
+let healing: Promise<boolean> | null = null;
+
+/**
+ * Een aanmelding van dit apparaat met een ANDERE VAPID-sleutel (een oude, of
+ * die van een ontwikkelserver) ontvangt onze meldingen nooit: de pushdienst
+ * weigert ze en de server zet hem uit. Staan meldingen al aan (toestemming
+ * gegeven), dan ruilen we hem hier stil om voor een aanmelding met de huidige
+ * sleutel. Eén keer per pagina. true = opnieuw aangemeld.
+ */
+export function healPushSubscription(vapidKey: string): Promise<boolean> {
+  healing ??= (async () => {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || Notification.permission !== "granted") return false;
+      const reg = await navigator.serviceWorker.getRegistration();
+      const existing = await reg?.pushManager.getSubscription();
+      if (!reg || !existing) return false;
+      const key = urlBase64ToBuffer(vapidKey);
+      if (sameKey(existing.options.applicationServerKey, new Uint8Array(key))) return false;
+      await fetch("/api/me/push", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: existing.endpoint }) }).catch(() => undefined);
+      await existing.unsubscribe().catch(() => undefined);
+      const json = (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })).toJSON();
+      const res = await fetch("/api/me/push", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }) });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  })();
+  return healing;
+}
+
+/** Onzichtbaar: houdt de pushmelding van dit apparaat op de huidige sleutel, voor schermen zonder PushToggle (zoals het beheer). */
+export function PushSelfHeal() {
+  useEffect(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    fetch("/api/me/push", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { configured?: boolean; vapidPublicKey?: string | null } | null) => {
+        if (d?.configured && d.vapidPublicKey) void healPushSubscription(d.vapidPublicKey);
+      })
+      .catch(() => undefined);
+  }, []);
+  return null;
+}
+
 /** Draait dit in de geïnstalleerde app (Play Store-TWA of op het beginscherm)? */
 function inStandaloneApp(): boolean {
   try {
@@ -66,7 +115,10 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
         if (!data.supported) return setState("unsupported");
         if (!data.configured || !data.vapidPublicKey) return setState("unconfigured");
         if (Notification.permission === "denied") return setState("denied");
-        setState(data.subscribed ? "on" : "off");
+        // an old subscription (another key) is swapped quietly when permission is already there
+        const healed = await healPushSubscription(data.vapidPublicKey);
+        if (cancelled) return;
+        setState(healed || data.subscribed ? "on" : "off");
       } catch {
         if (!cancelled) setState("unsupported");
       }
@@ -92,16 +144,9 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
       // Een bestaande subscription van een ANDERE (vorige) VAPID-sleutel kan
       // onze meldingen niet ontvangen — na een sleutelwissel opruimen en
       // opnieuw aanmelden met de huidige sleutel.
-      if (existing) {
-        const want = new Uint8Array(appServerKey);
-        const have = existing.options.applicationServerKey
-          ? new Uint8Array(existing.options.applicationServerKey as ArrayBuffer)
-          : null;
-        const sameKey = !!have && have.length === want.length && have.every((b, i) => b === want[i]);
-        if (!sameKey) {
-          await existing.unsubscribe().catch(() => undefined);
-          existing = null;
-        }
+      if (existing && !sameKey(existing.options.applicationServerKey, new Uint8Array(appServerKey))) {
+        await existing.unsubscribe().catch(() => undefined);
+        existing = null;
       }
       const sub =
         existing ??

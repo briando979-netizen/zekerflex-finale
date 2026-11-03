@@ -87,11 +87,14 @@ export async function sendWebPush(
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
 
-  const gone = res.status === 404 || res.status === 410;
   const ok = res.status >= 200 && res.status < 300;
-  if (!ok && !gone) {
-    // why: Apple answers {"reason":"BadJwtToken"}, FCM a short text, WNS a header
-    const why = ((await res.text().catch(() => "")) || res.headers.get("x-wns-error-description") || "").trim().slice(0, 200);
+  // why: Apple answers {"reason":"BadJwtToken"}, FCM a short text, WNS a header
+  const why = ok ? "" : ((await res.text().catch(() => "")) || res.headers.get("x-wns-error-description") || "").trim().slice(0, 200);
+  // made with another VAPID key (an old one, or a dev server's): it can never receive ours again
+  const otherKey = !ok && OTHER_KEY.test(why);
+  const gone = res.status === 404 || res.status === 410 || otherKey;
+  if (otherKey) logger.info("web push subscription has another VAPID key; disabled", { pushService: pushServiceOf(target.endpoint), status: res.status });
+  else if (!ok && !gone) {
     logger.warn("web push rejected", {
       pushService: pushServiceOf(target.endpoint),
       status: res.status,
@@ -100,3 +103,6 @@ export async function sendWebPush(
   }
   return { ok, statusCode: res.status, gone };
 }
+
+/** How Apple, WNS, FCM and Mozilla say the subscription belongs to another VAPID key (seen live on 3 Nov for Apple and WNS). */
+const OTHER_KEY = /VapidPkHashMismatch|public key used to sign JWT does not match|does not correspond to the sender ID|VAPID public key mismatch/i;
