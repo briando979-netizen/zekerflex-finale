@@ -10,7 +10,9 @@ const h = vi.hoisted(() => ({
   pushes: [] as { ids: string[]; push: { title: string; body: string } }[],
   mails: [] as { text: string }[],
   rematched: [] as string[],
+  standby: [] as string[],
 }));
+vi.mock("@/lib/matching/standby", () => ({ notifyStandby: async (id: string) => void h.standby.push(id) }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => ({ userId: "u1", fullName: "Sanne de Vries" }) }));
@@ -75,6 +77,7 @@ beforeEach(() => {
   h.pushes.length = 0;
   h.mails.length = 0;
   h.rematched.length = 0;
+  h.standby.length = 0;
 });
 
 describe("afzeggen door een werker", () => {
@@ -87,6 +90,7 @@ describe("afzeggen door een werker", () => {
 
     expect(res.status).toBe(200);
     expect(h.rematched).toEqual(["sh1"]);
+    expect(h.standby).toEqual(["sh1"]); // spoed? dan horen standby-werkers het meteen
     expect(h.pushes).toHaveLength(1);
     expect(h.pushes[0]?.ids).toEqual(["mgr1"]);
     expect(h.pushes[0]?.push.title).toBe("Afgezegd: Magazijn");

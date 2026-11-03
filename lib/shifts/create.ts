@@ -10,6 +10,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { notifyJobAlerts } from "@/lib/matching/job-alerts";
+import { isUrgent, notifyStandby } from "@/lib/matching/standby";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
@@ -238,6 +239,12 @@ export async function createShift(
     await notifyJobAlerts(created.map((c) => c.id)).catch((err) =>
       logger.warn("job alert notify after shift create failed (non-fatal)", { shiftId: shift.id, error: (err as Error).message }),
     );
+    // Begint binnen 24 uur: werkers op standby horen het meteen (lib/matching/standby).
+    for (const c of created.filter((_, i) => { const w = windows[i]; return w ? isUrgent(w.startsAt) : false; })) {
+      await notifyStandby(c.id).catch((err) =>
+        logger.warn("standby notify after shift create failed (non-fatal)", { shiftId: c.id, error: (err as Error).message }),
+      );
+    }
   }
 
   return { shiftId: shift.id, matchedCandidates, daysCreated: created.length };

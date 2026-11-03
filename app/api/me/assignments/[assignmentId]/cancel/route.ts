@@ -12,6 +12,7 @@ import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
 import { NOTICE_HOURS, LATE_CANCEL_RELIABILITY_PENALTY } from "@/lib/claims/policy";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { notifyStandby } from "@/lib/matching/standby";
 import { sendUserPush } from "@/lib/notifications/push";
 import { runAfter } from "@/lib/run-after";
 
@@ -112,6 +113,8 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
     // Look for someone else right away instead of at the next autopilot round (twice a day),
     // and tell the client now rather than letting them find out on the day.
     runAfter(() => runMatchingForShift(assignment.shift.id));
+    // Within 24 hours: workers on standby hear it straight away (lib/matching/standby).
+    runAfter(() => notifyStandby(assignment.shift.id));
     if (contact) {
       runAfter(() =>
         sendUserPush([contact.userId], {
