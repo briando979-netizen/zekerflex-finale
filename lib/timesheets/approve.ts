@@ -38,6 +38,8 @@ import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendUserPush } from "@/lib/notifications/push";
+import { pushHoursApproved } from "@/lib/notifications/approved-push";
+import { runAfter } from "@/lib/run-after";
 import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
 import { recipientsFor } from "@/lib/billing/reminders";
 import type { ComputedInvoice } from "@/types/billing";
@@ -125,6 +127,15 @@ function computeBillableMinutes(t: {
  * rolling back the approval.
  */
 export async function approveTimesheet(
+  input: ApproveTimesheetInput,
+): Promise<ApproveTimesheetResult> {
+  const result = await approveTimesheetInner(input);
+  // Tell the worker right away (every caller: employer, bulk, autopilot, dispute).
+  runAfter(() => pushHoursApproved(result));
+  return result;
+}
+
+async function approveTimesheetInner(
   input: ApproveTimesheetInput,
 ): Promise<ApproveTimesheetResult> {
   const { timesheetId, principal } = input;
