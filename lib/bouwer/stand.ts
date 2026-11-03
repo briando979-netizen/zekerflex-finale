@@ -6,7 +6,7 @@ import { bouwer, bouwerGezond, bouwerIngesteld, bouwerInstellingen, type TaakKor
 // ("hoe staat de bouwer?"). Alleen lezen; elk onderdeel dat niet antwoordt wordt
 // gewoon genoemd in plaats van de hele vraag te laten mislukken.
 
-const OPEN = new Set(["bezig", "klaar", "mislukt", "conflict", "goedkeuren"]);
+const OPEN = new Set(["bezig", "vraag", "klaar", "mislukt", "conflict", "goedkeuren"]);
 
 const tijd = (iso: string | undefined) =>
   iso ? new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
@@ -15,6 +15,7 @@ const kort = (t: string, n = 90) => (t.length > n ? `${t.slice(0, n)}…` : t);
 
 const STAAT: Record<string, string> = {
   bezig: "is ermee bezig",
+  vraag: "heeft een vraag voor je en wacht op je antwoord",
   klaar: "is klaar en wacht op jouw oordeel",
   mislukt: "is niet gelukt",
   conflict: "botst met de nieuwste versie",

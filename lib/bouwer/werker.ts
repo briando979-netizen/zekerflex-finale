@@ -23,11 +23,11 @@ const TOKEN = process.env.BOUWER_TOKEN || "";
 const K_INSTELLINGEN = "bouwer:instellingen";
 const DOEL_GITHUB = "bouwer-github";
 
-export type TaakStaat = "bezig" | "klaar" | "mislukt" | "conflict" | "goedkeuren" | "gepusht" | "weggegooid";
+export type TaakStaat = "bezig" | "vraag" | "klaar" | "mislukt" | "conflict" | "goedkeuren" | "gepusht" | "weggegooid";
 
 export interface TaakStap {
   t: string;
-  soort: "info" | "denk" | "tool" | "bestand" | "fout" | "klaar";
+  soort: "info" | "denk" | "tool" | "bestand" | "fout" | "klaar" | "vraag";
   tekst: string;
 }
 
@@ -70,6 +70,8 @@ export interface Taak extends Omit<TaakKort, "bestanden"> {
   liveVerzocht?: boolean;
   /** Gezet zodra iemand op goedkeuren drukte; een mislukte poging mag dan opnieuw. */
   goedgekeurdDoor?: string;
+  /** De Bouwer wacht op een antwoord (staat "vraag"). */
+  vraag?: string | null;
 }
 
 interface Instellingen {

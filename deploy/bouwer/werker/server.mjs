@@ -27,7 +27,7 @@ const POORT = Number(process.env.BOUWER_POORT || 4100);
 const TOKEN = process.env.BOUWER_TOKEN || "";
 const TAKEN = path.join(WERK, "taken");
 const VERSIE = 1;
-const OPEN = new Set(["bezig", "klaar", "mislukt", "conflict", "goedkeuren"]);
+const OPEN = new Set(["bezig", "klaar", "mislukt", "conflict", "goedkeuren", "vraag"]);
 
 /** @type {{ id: string, abort: AbortController } | null} */
 let actief = null;
@@ -129,11 +129,20 @@ async function werk(taak, llm, messages, afbeelding = null) {
         void bewaar(taak);
       },
     });
-    taak.samenvatting = r.samenvatting;
-    taak.commitbericht = r.commitbericht || taak.commitbericht || "feat: wijziging door de ZekerFlex Bouwer";
-    taak.staat = "klaar";
-    taak.fout = null;
-    log("klaar", r.samenvatting || "Klaar.");
+    if (r.vraag) {
+      // de Bouwer wacht op de eigenaar; het antwoord komt als bijsturing in hetzelfde gesprek
+      taak.staat = "vraag";
+      taak.vraag = r.vraag;
+      taak.fout = null;
+      log("vraag", r.vraag);
+    } else {
+      taak.samenvatting = r.samenvatting;
+      taak.commitbericht = r.commitbericht || taak.commitbericht || "feat: wijziging door de ZekerFlex Bouwer";
+      taak.staat = "klaar";
+      taak.vraag = null;
+      taak.fout = null;
+      log("klaar", r.samenvatting || "Klaar.");
+    }
   } catch (e) {
     taak.staat = "mislukt";
     taak.fout = e instanceof Error ? e.message : String(e);
@@ -364,13 +373,16 @@ const server = http.createServer(async (req, res) => {
       const bericht = String(b.bericht ?? "").trim();
       if (!bericht) return antwoord(res, 400, { fout: "Wat moet er anders?" });
       if (!geldigLlm(b.llm)) return antwoord(res, 400, { fout: "Geen taalmodel ingesteld" });
-      if (!["klaar", "mislukt", "conflict"].includes(taak.staat)) return antwoord(res, 409, { fout: "Bijsturen kan nu niet" });
+      if (!["klaar", "mislukt", "conflict", "vraag"].includes(taak.staat)) return antwoord(res, 409, { fout: "Bijsturen kan nu niet" });
       const messages = JSON.parse(await fs.readFile(bestand(taak.id, "gesprek.json"), "utf8").catch(() => "[]"));
       if (!messages.length) return antwoord(res, 409, { fout: "Het gesprek van deze opdracht is niet bewaard; geef een nieuwe opdracht" });
-      messages.push({ role: "user", content: `Bijsturing van ${String(b.door ?? "de eigenaar")}:\n${bericht}` });
+      const wie = String(b.door ?? "de eigenaar");
+      const isAntwoord = taak.staat === "vraag";
+      messages.push({ role: "user", content: isAntwoord ? `Antwoord van ${wie} op je vraag:\n${bericht}` : `Bijsturing van ${wie}:\n${bericht}` });
       taak.staat = "bezig";
+      taak.vraag = null;
       taak.model = b.llm.model;
-      logger(taak)("info", `Bijsturing: ${bericht}`);
+      logger(taak)("info", `${isAntwoord ? "Antwoord" : "Bijsturing"}: ${bericht}`);
       await bewaar(taak, true);
       void werk(taak, b.llm, messages);
       return antwoord(res, 202, samenvatting(taak));

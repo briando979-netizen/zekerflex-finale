@@ -273,6 +273,13 @@ export const GEREEDSCHAP = [
     verplicht: [],
   },
   {
+    naam: "vraag",
+    beschrijving:
+      "Stel de eigenaar één korte vraag in gewone taal, en pauzeer tot het antwoord. Gebruik dit als de opdracht onduidelijk is (welke pagina, welke tekst) of om bij groot werk eerst je plan te laten goedkeuren. Niet voor dingen die je zelf in de code kunt opzoeken.",
+    params: { vraag: { type: "string", description: "De vraag (en eventueel je plan in een paar zinnen)" } },
+    verplicht: ["vraag"],
+  },
+  {
     naam: "klaar",
     beschrijving: "Rond af. Alleen aanroepen als de controle schoon is (of je uitlegt waarom niet).",
     params: {

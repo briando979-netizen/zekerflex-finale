@@ -49,7 +49,7 @@ export function kiesFout(groepen: ErrorGroup[], pogingen: Record<string, string>
   return kandidaten[0] ?? null;
 }
 
-const OPEN = new Set(["bezig", "klaar", "mislukt", "conflict", "goedkeuren"]);
+const OPEN = new Set(["bezig", "vraag", "klaar", "mislukt", "conflict", "goedkeuren"]);
 
 export type AutoUitkomst = "uit" | "niet-geinstalleerd" | "offline" | "bezig" | "limiet" | "niets" | "gestart" | "fout";
 

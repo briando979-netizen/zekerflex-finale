@@ -24,6 +24,7 @@ type Detail = Taak & { live?: "gestart" | "bezig" | null };
 
 const STAAT: Record<TaakStaat, { label: string; kleur: string }> = {
   bezig: { label: "Aan het werk", kleur: "bg-[rgba(124,197,255,0.14)] text-[#7CC5FF]" },
+  vraag: { label: "Heeft een vraag", kleur: "bg-[rgba(255,196,107,0.14)] text-[#FFC46B]" },
   klaar: { label: "Klaar voor jouw oordeel", kleur: "bg-[rgba(79,224,160,0.14)] text-brand-mint" },
   mislukt: { label: "Niet gelukt", kleur: "bg-[rgba(240,124,107,0.14)] text-[#F07C6B]" },
   conflict: { label: "Botst met main", kleur: "bg-[rgba(255,196,107,0.14)] text-[#FFC46B]" },
@@ -32,7 +33,7 @@ const STAAT: Record<TaakStaat, { label: string; kleur: string }> = {
   weggegooid: { label: "Weggegooid", kleur: "bg-white/10 text-white/50" },
 };
 
-const STAP_TEKEN: Record<TaakStap["soort"], string> = { info: "·", denk: "💭", tool: "⚙", bestand: "✎", fout: "!", klaar: "✓" };
+const STAP_TEKEN: Record<TaakStap["soort"], string> = { info: "·", denk: "💭", tool: "⚙", bestand: "✎", fout: "!", klaar: "✓", vraag: "?" };
 
 const GITHUB = "https://github.com/briando979-netizen/zekerflex-finale";
 
@@ -152,7 +153,7 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
     return <div className="grid flex-1 place-items-center text-xs text-white/40">{fout ?? "Bouwer laden…"}</div>;
   }
 
-  const openTaak = overzicht.taken.find((t) => ["bezig", "klaar", "mislukt", "conflict", "goedkeuren"].includes(t.staat));
+  const openTaak = overzicht.taken.find((t) => ["bezig", "vraag", "klaar", "mislukt", "conflict", "goedkeuren"].includes(t.staat));
   const kanStarten = overzicht.online && !overzicht.bezig && !openTaak && opdracht.trim().length >= 5 && !bezigMet;
 
   return (
@@ -309,7 +310,7 @@ function TaakDetail({
   }, [taak.stappen.length]);
 
   const werkt = taak.staat === "bezig" || taak.staat === "goedkeuren";
-  const open = ["klaar", "mislukt", "conflict"].includes(taak.staat);
+  const open = ["klaar", "mislukt", "conflict", "vraag"].includes(taak.staat);
   // een goedkeuring die halverwege misliep (bv. push), mag opnieuw
   const kanGoedkeuren = taak.staat === "klaar" || (taak.staat === "mislukt" && Boolean(taak.goedgekeurdDoor));
 
@@ -343,7 +344,15 @@ function TaakDetail({
 
       {taak.fout && taak.staat !== "bezig" && <p className="whitespace-pre-wrap rounded-lg bg-[rgba(240,124,107,0.08)] px-3 py-2 text-xs text-[#F07C6B]">{taak.fout}</p>}
 
-      {taak.samenvatting && (
+      {taak.staat === "vraag" && taak.vraag && (
+        <div role="status" className="rounded-xl border border-[#FFC46B]/30 bg-[rgba(255,196,107,0.07)] p-3">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#FFC46B]/80">De Bouwer vraagt</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-white/90">{taak.vraag}</p>
+          <p className="mt-1 text-[11px] text-white/45">Typ hieronder je antwoord; hij gaat daarna verder.</p>
+        </div>
+      )}
+
+      {taak.samenvatting && taak.staat !== "vraag" && (
         <div className="rounded-xl border border-brand-mint/20 bg-[rgba(79,224,160,0.05)] p-3">
           <p className="text-[10px] uppercase tracking-[0.16em] text-brand-mint/70">Wat de Bouwer deed</p>
           <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-white/85">{taak.samenvatting}</p>
@@ -351,7 +360,7 @@ function TaakDetail({
         </div>
       )}
 
-      {open && !werkt && <VoorbeeldPaneel />}
+      {open && !werkt && taak.staat !== "vraag" && <VoorbeeldPaneel />}
 
       {taak.controle && (
         <div className="flex flex-wrap gap-2 text-[11px]">
@@ -393,8 +402,8 @@ function TaakDetail({
             value={bijsturing}
             onChange={(e) => setBijsturing(e.target.value)}
             rows={2}
-            placeholder="Bijsturen: wat moet er anders?"
-            aria-label="Bijsturing"
+            placeholder={taak.staat === "vraag" ? "Jouw antwoord op de vraag" : "Bijsturen: wat moet er anders?"}
+            aria-label={taak.staat === "vraag" ? "Antwoord" : "Bijsturing"}
             className="min-w-[220px] flex-1 resize-y rounded-lg border border-white/15 bg-[#0b0e13] p-2 text-xs text-white placeholder:text-white/30 focus:border-brand-mint focus:outline-none"
           />
           <button
@@ -403,7 +412,7 @@ function TaakDetail({
             onClick={() => onActie("bijsturen", { actie: "bijsturen", bericht: bijsturing })}
             className="rounded-lg border border-white/15 px-3 py-2 text-xs text-white/75 hover:bg-white/10 disabled:opacity-40"
           >
-            Bijsturen
+            {taak.staat === "vraag" ? "Antwoorden" : "Bijsturen"}
           </button>
           <button
             type="button"

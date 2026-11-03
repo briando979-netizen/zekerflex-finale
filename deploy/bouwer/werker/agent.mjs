@@ -27,7 +27,7 @@ export async function systeemPrompt() {
   return `Je bent de ZekerFlex Bouwer: een zorgvuldige senior ontwikkelaar die zelfstandig wijzigingen maakt in de ZekerFlex-codebase (Next.js App Router, TypeScript strict, Prisma, Tailwind). Je werkt in een eigen kopie; de eigenaar bekijkt je wijziging en zet hem daarna zelf live.
 
 Werkwijze:
-1. Zoek en lees eerst hoe iets elders in de code is gedaan (zoek, lijst, lees). Gok nooit naar bestandsnamen of functies.
+1. Zoek en lees eerst hoe iets elders in de code is gedaan (zoek, lijst, lees). Gok nooit naar bestandsnamen of functies. Is de opdracht onduidelijk (welke pagina, welke tekst, welk gedrag) of is het groot werk, stel dan eerst één korte vraag of leg je plan voor met "vraag" in plaats van te gokken.
 2. Maak kleine, gerichte wijzigingen die de bestaande stijl volgen (naamgeving, opmaak, hoeveelheid commentaar). Bouw niets opnieuw wat al bestaat.
 3. Gebruik "vervang" voor bestaande bestanden, met tekst letterlijk zoals je hem las (zonder regelnummers). "schrijf" alleen voor nieuwe bestanden.
 4. Alle zichtbare tekst in de app is gewoon Nederlands.
@@ -156,6 +156,14 @@ export async function draai({ llm, messages, log, signal, zetControle }) {
         // elke aanroep moet een antwoord hebben, anders weigert het model een vervolg (bijsturen)
         for (const rest of aanroepen.slice(i + 1)) messages.push({ role: "tool", tool_call_id: rest.id, content: "Overgeslagen: al afgerond." });
         return { samenvatting: String(args.samenvatting ?? ""), commitbericht: String(args.commitbericht ?? "").split("\n")[0] ?? "", controle: laatsteControle };
+      }
+
+      if (naam === "vraag") {
+        // pauzeren: het antwoord komt later als bijsturing in hetzelfde gesprek
+        const vraag = String(args.vraag ?? "").trim() || "Kun je de opdracht iets preciezer maken?";
+        messages.push({ role: "tool", tool_call_id: a.id, content: "Vraag gesteld; het antwoord van de eigenaar volgt." });
+        for (const rest of aanroepen.slice(i + 1)) messages.push({ role: "tool", tool_call_id: rest.id, content: "Overgeslagen: wacht op antwoord." });
+        return { vraag };
       }
 
       if (naam === "controleer") {
