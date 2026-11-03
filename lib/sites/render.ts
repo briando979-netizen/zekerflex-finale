@@ -353,7 +353,8 @@ function firstPhoto(page: Page): string | null {
 function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: string): string {
   const url = `${opts.origin}${page.slug ? `${opts.root}${page.slug}` : homeHref(opts.root)}`;
   const photoId = firstPhoto(page);
-  const photo = photoId ? ctx.media.get(photoId) : undefined;
+  // no photo on the page: the logo is still a better preview in WhatsApp or LinkedIn than none
+  const photo = (photoId ? ctx.media.get(photoId) : undefined) ?? ctx.logo;
   const ogImage = photo ? `${opts.origin}${opts.root}media/${photo.file}` : null;
   const title = page.seoTitel || `${page.titel} | ${ctx.bedrijf.naam}`;
   const initial = esc((ctx.bedrijf.naam.trim()[0] ?? "Z").toUpperCase());

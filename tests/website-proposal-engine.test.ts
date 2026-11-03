@@ -150,6 +150,13 @@ describe("de nieuwe website: puur", () => {
     expect(text).toContain("Wat klanten zeggen (voorbeeld)");
     expect(text).toContain("Openingstijden (voorbeeld)");
     expect(text).toContain("Vraag een offerte aan");
+    // Google toont 50 tot 160 tekens onder de titel; ook een korte openingszin wordt aangevuld
+    for (const page of pages) expect(page.seoOmschrijving.length, page.titel).toBeGreaterThanOrEqual(50);
+    for (const page of pages) expect(page.seoOmschrijving.length, page.titel).toBeLessThanOrEqual(160);
+    expect(pages[0]!.seoOmschrijving.startsWith("Binnenschilderwerk en buitenschilderwerk in Rijssen en omgeving. Schildersbedrijf De Vries verzorgt")).toBe(true);
+    expect(site.homeDescription("Vakwerk, eerlijk en op tijd.", "Al dertig jaar uw schilder in de regio.")).toBe("Vakwerk, eerlijk en op tijd. Al dertig jaar uw schilder in de regio.");
+    const lang = "Binnenschilderwerk, buitenschilderwerk, behangen en glaszetten voor particulieren en bedrijven.";
+    expect(site.homeDescription(lang, "Iets anders.")).toBe(lang);
     expect(site.pickPhotos([{ id: "a", width: 800, height: 800 }, { id: "b", width: 1600, height: 900 }, { id: "c", width: 900, height: 900 }, { id: "d", width: 900, height: 900 }])).toEqual({ hero: "b", over: "a", galerij: ["c", "d"] });
   });
 });

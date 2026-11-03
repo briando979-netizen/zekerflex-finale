@@ -23,6 +23,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [measuring, setMeasuring] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -49,9 +50,11 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   async function act(p: WebsiteProposal, action: ProposalAction | "meten") {
     if (action === "ingetrokken" && !window.confirm(`Het voorstel voor ${p.bedrijf} intrekken? De nieuwe website gaat offline.`)) return;
     setBusy(p.id);
+    if (action === "meten") setMeasuring(p.id);
     const r = await fetch(`/api/sales/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(null);
+    setMeasuring(null);
     if (!r?.ok) return setMessage({ ok: false, text: d?.error?.message ?? "Dat lukte niet." });
     setMessage({ ok: true, text: action === "meten" ? `${p.bedrijf}: de nieuwe website scoort ${d.proposal.nieuw?.score ?? "?"}/100.` : `${p.bedrijf}: ${d.proposal.history?.[0]?.what ?? "bijgewerkt"}.` });
     await load();
@@ -141,7 +144,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
                     {p.status === "concept" && (
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verstuurd")} className="btn-ghost min-h-11">Ik heb hem verstuurd</button>
                     )}
-                    <button type="button" disabled={busy === p.id} onClick={() => void act(p, "meten")} className="btn-ghost min-h-11">{busy === p.id ? "Bezig…" : "Meet nieuwe site"}</button>
+                    <button type="button" disabled={busy === p.id} onClick={() => void act(p, "meten")} className="btn-ghost min-h-11">{measuring === p.id ? "Bezig met meten…" : "Meet nieuwe site"}</button>
                     <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verlengen")} className="btn-ghost min-h-11">Verleng</button>
                     {p.status !== "akkoord" && p.status !== "afgewezen" && (
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "afgewezen")} className="btn-ghost min-h-11">Afgezegd</button>

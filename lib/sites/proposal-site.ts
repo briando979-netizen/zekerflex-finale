@@ -121,6 +121,9 @@ export function listOf(items: string[]): string {
 }
 const hasEn = (s: string) => /\sen\s/i.test(s);
 
+/** What Google shows under the title (50 to 160 characters works best): the hero line, topped up with the first words about the company. */
+export const homeDescription = (heroTekst: string, over: string) => clipSentences(heroTekst.length >= 90 ? heroTekst : `${heroTekst} ${over}`.trim(), 160);
+
 /** The pages of the proposal: home, about, contact. Every text fits the builder's limits (lib/sites/schema.ts). */
 export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, photos: ProposalPhotos, newId: () => string): Page[] {
   const block = <T extends BlockType>(type: T, props: Partial<BlockProps[T]>) => {
@@ -176,7 +179,7 @@ export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, p
       slug: "",
       titel: "Home",
       seoTitel: (c.plaats ? `${c.naam} | ${eerste} in ${c.plaats}` : `${c.naam} | ${eerste}`).slice(0, 70),
-      seoOmschrijving: clipSentences(heroTekst, 165),
+      seoOmschrijving: homeDescription(heroTekst, over),
       blocks: home,
     },
     {
@@ -184,7 +187,7 @@ export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, p
       slug: "over-ons",
       titel: "Over ons",
       seoTitel: `Over ${c.naam}`.slice(0, 70),
-      seoOmschrijving: clipSentences(over, 165),
+      seoOmschrijving: clipSentences(over, 160),
       blocks: [block("tekst", { kop: kop(`Over ${c.naam}`), tekst: over }), block("faq", { items: t.faq.map((q) => ({ vraag: fill(q.vraag, c).slice(0, 200), antwoord: fill(q.antwoord, c) })) })],
     },
     {
@@ -192,7 +195,7 @@ export function proposalPages(c: Company, t: SectorTemplate, f: BusinessFacts, p
       slug: "contact",
       titel: "Contact",
       seoTitel: `Contact | ${c.naam}`.slice(0, 70),
-      seoOmschrijving: `Neem contact op met ${c.naam}${c.plaats ? ` in ${c.plaats}` : ""}.`.slice(0, 165),
+      seoOmschrijving: clipSentences(`Neem contact op met ${c.naam}${c.plaats ? ` in ${c.plaats}` : ""}. ${c.telefoon ? `Bel ${c.telefoon} of stuur` : "Stuur"} een bericht via het formulier, dan reageren we snel.`, 160),
       blocks: [block("contact", { kop: "Neem contact op", tekst: `Heb je een vraag of wil je een afspraak maken? Laat het ${c.naam} weten.`, formulier: true }), uren],
     },
   ];

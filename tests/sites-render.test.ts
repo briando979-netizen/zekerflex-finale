@@ -79,6 +79,14 @@ describe("veilig maken van alles wat de klant typt", () => {
     if (hero.type === "hero") hero.props.foto = "monbekend1";
     expect(renderPage(s, s.pages[0]!, opts)).not.toContain("monbekend1");
   });
+
+  it("zonder foto op de pagina is het logo de preview bij delen", () => {
+    const zonder = site();
+    const contact = zonder.pages.find((p) => p.slug === "contact")!;
+    expect(renderPage(zonder, contact, opts)).not.toContain('property="og:image"');
+    const metLogo = site({ theme: { ...zonder.theme, logo: "mfoto0001" } });
+    expect(renderPage(metLogo, metLogo.pages.find((p) => p.slug === "contact")!, opts)).toContain('<meta property="og:image" content="https://zekerflex.com/site/bakkerij/media/mfoto0001.webp">');
+  });
 });
 
 describe("een complete, nette website", () => {
