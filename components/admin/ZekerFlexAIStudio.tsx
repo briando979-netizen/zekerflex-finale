@@ -259,13 +259,13 @@ export function ZekerFlexAIStudio({
       </div>
 
       {/* ---- editor tab strip ---- */}
-      <div className="flex flex-shrink-0 items-stretch border-b border-white/10 bg-[#0b0e13] text-xs">
+      <div className="flex flex-shrink-0 items-stretch overflow-x-auto border-b border-white/10 bg-[#0b0e13] text-xs">
         {(Object.entries(TAB_LABEL) as [Tab, string][]).map(([id, label]) => (
           <button
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={`border-r border-white/10 px-4 py-2.5 transition ${
+            className={`flex-shrink-0 whitespace-nowrap border-r border-white/10 px-4 py-2.5 transition ${
               tab === id ? "bg-[#141a24] text-white" : "text-white/50 hover:bg-white/5"
             }`}
             style={tab === id ? { boxShadow: "inset 0 2px 0 var(--tw-brand-mint, #4fe0a0)" } : undefined}
@@ -386,12 +386,12 @@ export function ZekerFlexAIStudio({
 
         {/* editor + optional terminal */}
         <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1">
             {/* AI pane keeps its own session rail */}
-            <div className={tab === "ai" ? "flex min-h-0 flex-1" : "hidden"}>
+            <div className={tab === "ai" ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
               <JarvisConsole embedded />
             </div>
-            <div className={tab === "browser" ? "flex min-h-0 flex-1" : "hidden"}>
+            <div className={tab === "browser" ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
               <BrowserPane
                 address={address}
                 setAddress={setAddress}
@@ -402,22 +402,22 @@ export function ZekerFlexAIStudio({
                 onReload={() => setReloadNonce((n) => n + 1)}
               />
             </div>
-            <div className={tab === "sandbox" ? "flex min-h-0 flex-1" : "hidden"}>
+            <div className={tab === "sandbox" ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
               <SandboxPane />
             </div>
             {/* alleen gemount als ze open zijn: ze peilen de server elke paar seconden */}
             {tab === "bouwer" && (
-              <div className="flex min-h-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1">
                 <Bouwer onLiveZetten={() => setTab("live")} />
               </div>
             )}
             {tab === "live" && (
-              <div className="flex min-h-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1">
                 <LiveZetten />
               </div>
             )}
             {tab === "hulp" && (
-              <div className="flex min-h-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1">
                 <Handleiding naarTab={setTab} />
               </div>
             )}
