@@ -4,6 +4,7 @@ import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
+import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
@@ -38,6 +39,9 @@ export const config = {
     // sitemap.xml included, goes to that website — see customerSite() below.
     // A literal, not SITE_HOST_HEADER: Next reads this config statically.
     { source: "/:path*", has: [{ type: "header", key: "x-zf-site-host" }] },
+    // Een ontwerpvoorstel op een eigen subdomein (Caddy zet de kop): ook hier
+    // elk pad, zodat alleen het voorstel bereikbaar is — zie voorstelSite().
+    { source: "/:path*", has: [{ type: "header", key: "x-zf-voorstel" }] },
   ],
 };
 
@@ -173,9 +177,39 @@ function customerSite(req: NextRequest, raw: string): NextResponse {
   return res;
 }
 
+// ---------------------------------------------------------------------------
+// Een ontwerpvoorstel op een eigen subdomein (schwarzwald.zekerflex.com).
+// Caddy zet x-zf-voorstel alleen in dat blok en haalt hem elders weg. Kale
+// paden worden het voorstel (/ → /voorstel/schwarzwald), de rest van ZekerFlex
+// geeft 404 (lib/voorstel/subdomein.ts). Pagina's krijgen dezelfde CSP-nonce
+// als overal; de API van het voorstel controleert toegang zelf.
+// ---------------------------------------------------------------------------
+function voorstelSite(req: NextRequest, naam: string): NextResponse {
+  const pad = req.nextUrl.pathname;
+  if (pad === "/robots.txt") {
+    return new NextResponse("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  const doel = voorstelPad(naam, pad);
+  if (doel === null) return new NextResponse("Niet gevonden", { status: 404 });
+  if (doel.startsWith("/_next/")) return NextResponse.next();
+  const nonce = generateNonce();
+  const ctx: RequestContext = { cid: correlationId(req), nonce, csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname: doel }) };
+  const headers = new Headers(req.headers);
+  headers.set(CORRELATION_HEADER, ctx.cid);
+  headers.set("x-pathname", doel);
+  headers.set(NONCE_HEADER, ctx.nonce);
+  headers.set(CSP_HEADER, ctx.csp);
+  if (doel === pad) return decorate(NextResponse.next({ request: { headers } }), ctx);
+  const url = req.nextUrl.clone();
+  url.pathname = doel;
+  return decorate(NextResponse.rewrite(url, { request: { headers } }), ctx);
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const siteHost = req.headers.get(SITE_HOST_HEADER);
   if (siteHost !== null) return customerSite(req, siteHost);
+  const voorstel = req.headers.get(VOORSTEL_HEADER);
+  if (voorstel !== null) return voorstelSite(req, voorstel);
 
   // Admin "Bekijk als": outside the admin area, serve as the chosen example
   // account (read-only). /admin and /api/admin keep the admin's own session.

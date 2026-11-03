@@ -43,6 +43,18 @@
 	# hem weg, zodat niemand via zekerflex.com een klantwebsite kan laten tonen.
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
+# Ontwerpvoorstel voor Het Schwarzwald op een eigen subdomein. Een vaste naam,
+# dus Caddy haalt het certificaat gewoon zelf op (DNS: A/AAAA naar deze VPS).
+# Met X-ZF-Voorstel toont de middleware hier alleen het voorstel (voorstelSite).
+schwarzwald.zekerflex.com {
+	encode zstd gzip
+	reverse_proxy app:3000 {
+		header_up -X-ZF-Site-Host
+		header_up X-ZF-Voorstel schwarzwald
 	}
 }
 
@@ -56,5 +68,6 @@ https:// {
 	encode zstd gzip
 	reverse_proxy app:3000 {
 		header_up X-ZF-Site-Host {host}
+		header_up -X-ZF-Voorstel
 	}
 }
