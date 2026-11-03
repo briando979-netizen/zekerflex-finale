@@ -93,6 +93,8 @@ export interface LifeState {
   visitors: number;
   weather: WeatherKind;
   mmPerHour: number;
+  /** Echte windsnelheid in Amsterdam: de wolken drijven harder als het harder waait. */
+  windKmh: number;
 }
 
 export interface Life {
@@ -320,7 +322,9 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
   // --- wie er loopt, naar dagdeel, bezoekers en weer ---------------------------------
   let env = "";
   let crowdKey = "";
+  let wind = 12;
   const setState = (s: LifeState) => {
+    wind = s.windKmh;
     const { visitors, residents } = crowdSize(s.phase, s.visitors, s.weather);
     const key = `${s.phase}|${s.weather}|${visitors}|${residents}|${Math.round(s.mmPerHour * 2)}`;
     if (key === crowdKey) return;
@@ -526,7 +530,7 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
 
     // wolken drijven langzaam met de wind mee
     cloudPos.forEach((c, k) => {
-      c.x += dt * 1.2;
+      c.x += dt * (0.3 + wind * 0.08);
       if (c.x > 330) c.x = -330;
       setBase(c.x, c.y, c.z, c.ry, c.s);
       setPart(clouds, k, 0, 0, 0);
@@ -580,7 +584,7 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
     for (const m of [leg, arm, torso, head, hair, umbrella, blobs, dogBody, dogHead, dogLeg, dogTail, duckBody, duckHead, birdBody, wingL, wingR, cowBody, cowHead, cowLeg, cowSpot, sheepBody, sheepHead, sheepLeg, clouds]) m.instanceMatrix.needsUpdate = true;
   };
 
-  setState({ phase: "dag", visitors: 0, weather: "helder", mmPerHour: 0 });
+  setState({ phase: "dag", visitors: 0, weather: "helder", mmPerHour: 0, windKmh: 12 });
   return {
     setState,
     setHoliday(h) {

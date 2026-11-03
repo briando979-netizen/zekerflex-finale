@@ -243,6 +243,12 @@ export function createCity(
   controls.target.set(0, 0, 6);
   controls.autoRotate = !reduced;
   controls.autoRotateSpeed = 0.25;
+  // ook met het toetsenbord te bedienen: Tab naar de stad, dan de pijltjes om te schuiven
+  renderer.domElement.tabIndex = 0;
+  renderer.domElement.setAttribute("role", "application");
+  renderer.domElement.setAttribute("aria-label", "3D-stad: gebruik de pijltjestoetsen om te schuiven");
+  controls.listenToKeyEvents(renderer.domElement);
+  controls.keyPanSpeed = 18;
 
   let fly: { p0: THREE.Vector3; p1: THREE.Vector3; t0: THREE.Vector3; t1: THREE.Vector3; start: number; dur: number } | null = null;
   let touring = false;
@@ -380,7 +386,12 @@ export function createCity(
     return null;
   };
   let down: { t: number; x: number; y: number } | null = null;
-  const onDown = (ev: PointerEvent) => (down = { t: performance.now(), x: ev.clientX, y: ev.clientY });
+  const onDown = (ev: PointerEvent) => {
+    // een muisklik maakt het tekenvlak niet actief, anders schuift de browser de pagina
+    // ernaartoe (sprong); met Tab werkt het toetsenbord gewoon
+    if (ev.pointerType === "mouse") ev.preventDefault();
+    down = { t: performance.now(), x: ev.clientX, y: ev.clientY };
+  };
   const onUp = (ev: PointerEvent) => {
     if (!down) return;
     const click = performance.now() - down.t < 350 && Math.hypot(ev.clientX - down.x, ev.clientY - down.y) < 6; // slepen is draaien
@@ -607,7 +618,7 @@ export function createCity(
   const headlights = kit.mat(0xfff7d6, { emissive: 0xfff2c2, emissiveIntensity: 0.9 });
   const taillights = kit.mat(0x7f1d1d, { emissive: 0xef4444, emissiveIntensity: 0.6 });
   const grassMats = [kit.mat(0x9fcd85, { roughness: 1 }), kit.mat(0x8cc56f, { roughness: 1 })];
-  const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0 });
+  const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0, windKmh: weather?.windKmh ?? 12 });
   const applyDaylight = () => {
     const s = sunAt(new Date());
     hourNow = amsterdamParts(new Date()).hour;
@@ -807,6 +818,11 @@ export function createCity(
     }
     life.update(dt, now, controls.target);
     festive.update(dt, now, hourNow, phase !== "dag");
+    // de vlaggen wapperen op de echte wind in Amsterdam
+    if (!reduced) {
+      const gust = Math.min(0.7, (weather?.windKmh ?? 12) / 55);
+      office.flags.forEach((f, k) => (f.rotation.y = 0.25 + Math.sin(now / (520 - gust * 300) + k * 1.3) * gust));
+    }
     // bij onweer flitst af en toe de bliksem
     if (weather?.kind === "onweer" && !reduced) {
       if (now > nextFlash) {

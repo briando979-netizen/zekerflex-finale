@@ -645,17 +645,23 @@ export function buildOffice(kit: Kit, shadow: THREE.Texture) {
     [0xae1c28, 0xffffff, 0x21468b],
     [0x4f6bed, 0xffffff, 0x4f6bed],
   ];
+  // de vlaggen draaien om hun paal en wapperen op de echte wind (de motor beweegt ze)
+  const flags: THREE.Group[] = [];
   flagColors.forEach((stripes, k) => {
     const fx = 10 + k * 2.6;
     const post = new THREE.Mesh(kit.geo("flagpole", () => new THREE.CylinderGeometry(0.05, 0.06, 5.5, 6)), kit.mat(0xe2e8f0, { metalness: 0.5, roughness: 0.4 }));
     post.position.set(fx, 2.75, FRONT_Z + 0.9);
     post.castShadow = true;
-    G.add(post);
-    stripes.forEach((c, s) => G.add(kit.box(1.6, 0.3, 0.03, kit.mat(c, { roughness: 0.8 }), fx + 0.85, 5.1 - s * 0.3, FRONT_Z + 0.9, false)));
+    const flag = new THREE.Group();
+    flag.position.set(fx, 0, FRONT_Z + 0.9);
+    flag.userData.live = true;
+    stripes.forEach((c, s) => flag.add(kit.box(1.6, 0.3, 0.03, kit.mat(c, { roughness: 0.8 }), 0.85, 5.1 - s * 0.3, 0, false)));
+    flags.push(flag);
+    G.add(post, flag);
   });
   L.anchors.push({ key: "landmark:hq", text: "Hoofdkantoor", pos: new THREE.Vector3(0, SLAB + 6.5, 0), tier: "landmark" });
   bake(kit, G);
-  return { layer: L, staff };
+  return { layer: L, staff, flags };
 }
 
 const PALETTE = [0xe2e8f0, 0xdbeafe, 0xe0e7ff, 0xfef3c7, 0xdcfce7, 0xfce7f3, 0xede9fe, 0xccfbf1, 0xffedd5];

@@ -496,7 +496,7 @@ export function Office3D() {
           ref={host}
           className="relative h-[70vh] min-h-[440px] overflow-hidden rounded-xl border"
           style={{ borderColor: "var(--a-border)" }}
-          role="img"
+          role="group"
           aria-label={`Live ZekerFlex-stad in 3D: het hoofdkantoor met ${ROOMS.length} afdelingen, ${data?.companies.length ?? 0} klantpanden, ${data?.workers.total ?? 0} werkers in de woonwijk en ${events.length} echte gebeurtenissen van de laatste 24 uur`}
         >
           <div ref={labelsRef} className="pointer-events-none absolute inset-0" />
