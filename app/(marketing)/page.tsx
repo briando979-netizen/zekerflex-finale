@@ -9,6 +9,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
+import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
@@ -87,6 +88,9 @@ export default async function HomePage() {
           />
         </div>
       </section>
+
+      {/* ─────────────────────────────────────── AANBOD: WAAR BEN JE NAAR OP ZOEK? */}
+      <AanbodKiezer />
 
       {/* ──────────────────────────────────────────────────── BRANCHES */}
       <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />

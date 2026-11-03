@@ -7,6 +7,7 @@ import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { SPINOFF_PRODUCTS } from "@/lib/products";
+import { eigenPaginas } from "@/lib/marketing/aanbod";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -47,6 +48,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]),
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
+
+    // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders
+    entry("/aanbod", 0.9, "weekly"),
+    ...eigenPaginas().map((a) => entry(`/aanbod/${a.slug}`, 0.7, "monthly")),
 
     // Producten (ontbundeld) + los aanbod voor bureaus
     entry("/producten", 0.8, "weekly"),

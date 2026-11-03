@@ -8,6 +8,10 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Platform",
     links: [
+      { href: "/aanbod", label: "Het hele aanbod" },
+      { href: "/aanbod/horeca", label: "Horecasoftware" },
+      { href: "/aanbod/rijschool", label: "Rijschoolsoftware" },
+      { href: "/aanbod/website", label: "Website laten maken" },
       { href: "/klussen", label: "Open klussen" },
       { href: "/open-diensten", label: "Open diensten op de kaart" },
       { href: "/freelance-werk", label: "Freelance werk per stad" },

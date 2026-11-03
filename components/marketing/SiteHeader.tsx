@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
+import { PIJLERS } from "@/lib/marketing/aanbod";
 
 type Audience = "werknemers" | "bedrijven";
 
@@ -44,7 +45,25 @@ const KENNIS_ITEMS: MenuItem[] = [
   { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
 ];
 
+const AANBOD_MENU: MenuVariant = {
+  eyebrow: "Alles onder één dak",
+  cta: { label: "Het hele aanbod", href: "/aanbod" },
+  items: [
+    ...PIJLERS.map((p) => ({ title: p.naam, desc: p.kort, href: `/aanbod#${p.sleutel}` })),
+    { title: "Ik zoek werk", desc: "Als flexwerker, uitzendkracht of zzp'er. Meedoen is gratis.", href: "/voor-freelancers" },
+  ],
+};
+
 const NAV: NavEntry[] = [
+  {
+    // Al het aanbod (personeel, online, branchepakketten, geld) uit
+    // lib/marketing/aanbod.ts; uitzenden is daar één onderdeel van.
+    key: "aanbod",
+    href: "/aanbod",
+    label: "Aanbod",
+    match: "/aanbod",
+    menu: { werknemers: AANBOD_MENU, bedrijven: AANBOD_MENU },
+  },
   {
     key: "hoe",
     href: "/#hoe-het-werkt",
@@ -71,34 +90,6 @@ const NAV: NavEntry[] = [
           { title: "Facturatie & Wet DBA-monitor", desc: "Geaggregeerde facturatie en vroege risicosignalen per samenwerking.", href: "/voor-bedrijven#facturatie" },
           { title: "Helpcentrum voor opdrachtgevers", desc: "Account, PO-nummers, diensten plaatsen en uren goedkeuren — stap voor stap.", href: "/kennis/werkgevers" },
           { title: "Vraag een demo aan", desc: "30 minuten, vrijblijvend — we laten zien hoe het platform werkt.", href: "/demo" },
-        ],
-      },
-    },
-  },
-  {
-    key: "uitzend",
-    href: "/uitzendbureau",
-    label: "Uitzendbureau",
-    match: "/uitzendbureau",
-    menu: {
-      werknemers: {
-        eyebrow: "Werken als uitzendkracht",
-        cta: CTA_WN,
-        items: [
-          { title: "Wat je krijgt", desc: "De verwachtingen vooraf: loon, toeslagen, zekerheid.", href: "/uitzendbureau#verwachtingen" },
-          { title: "Het ABU-fasensysteem", desc: "Fase A, B en C — hoe je rechten meegroeien.", href: "/uitzendbureau#fasen" },
-          { title: "Drie manieren om te werken", desc: "Uitzendkracht, flexwerker of zzp — je kunt altijd wisselen.", href: "/uitzendbureau#routes" },
-          { title: "Alles terug te lezen", desc: "Loonstrook, StiPP, vakantiegeld en fase — elke week in je dashboard.", href: "/uitzendbureau#verloning" },
-        ],
-      },
-      bedrijven: {
-        eyebrow: "Inhuren via het uitzendbureau",
-        cta: CTA_BV,
-        items: [
-          { title: "Zo werkt uitzenden", desc: "ZekerFlex is de werkgever; jij huurt zonder gedoe in.", href: "/uitzendbureau" },
-          { title: "Geen werkgeversrisico", desc: "Loondoorbetaling, verzuim en cao lopen via ZekerFlex.", href: "/voor-bedrijven#dba" },
-          { title: "Facturatie per kostenplaats", desc: "Eén geaggregeerde factuur, uitgesplitst per vestiging.", href: "/voor-bedrijven#facturatie" },
-          { title: "Compliance & auditspoor", desc: "Wet DBA-monitor en een logboek van elke handeling.", href: "/voor-bedrijven#dba" },
         ],
       },
     },
