@@ -16,7 +16,7 @@ import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
-import { findOverlappingShift, overlapMessageOther } from "@/lib/shifts/worker-overlap";
+import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
 export interface OfferResponse {
@@ -46,7 +46,7 @@ async function assertOwnsShift(shiftId: string) {
       branch: { select: { name: true } },
       assignments: {
         where: { cancelledAt: null },
-        select: { id: true, freelancer: { select: { userId: true, user: { select: { fullName: true } } } } },
+        select: { id: true, freelancer: { select: { id: true, userId: true, user: { select: { fullName: true } } } } },
       },
     },
   });
@@ -98,18 +98,50 @@ export async function updateShiftAction(
       return { ok: false, message: `Er zijn al ${shift.assignments.length} krachten aangenomen.` };
     }
 
-    await prisma.shift.update({
-      where: { id: shift.id },
-      data: {
-        ...(parsed.title ? { title: parsed.title } : {}),
-        ...(parsed.description !== undefined ? { description: parsed.description || null } : {}),
-        ...(parsed.startsAt ? { startsAt: starts } : {}),
-        ...(parsed.endsAt ? { endsAt: ends } : {}),
-        ...(parsed.breakMinutes !== undefined ? { breakMinutes: parsed.breakMinutes } : {}),
-        ...(parsed.hourlyRateCents !== undefined ? { hourlyRateCents: parsed.hourlyRateCents } : {}),
-        ...(parsed.positions !== undefined ? { positions: parsed.positions } : {}),
-      },
-    });
+    // Moving the time of a dienst people are already booked on: it may not land
+    // on another booking of theirs (lib/shifts/worker-overlap), without saying where.
+    const timesChanged = starts.getTime() !== shift.startsAt.getTime() || ends.getTime() !== shift.endsAt.getTime();
+    if (timesChanged && shift.assignments.length) {
+      let clashes = 0;
+      for (const a of shift.assignments) {
+        if (await findOverlappingShift(prisma, a.freelancer.id, { shiftId: shift.id, startsAt: starts, endsAt: ends })) clashes += 1;
+      }
+      if (clashes) {
+        return {
+          ok: false,
+          message: `Op het nieuwe tijdstip werkt ${clashes === 1 ? "een van je ingeplande krachten" : `${clashes} van je ingeplande krachten`} al elders. Kies een ander tijdstip of overleg eerst met ${clashes === 1 ? "die kracht" : "hen"}.`,
+        };
+      }
+    }
+
+    await prisma.$transaction([
+      prisma.shift.update({
+        where: { id: shift.id },
+        data: {
+          ...(parsed.title ? { title: parsed.title } : {}),
+          ...(parsed.description !== undefined ? { description: parsed.description || null } : {}),
+          ...(parsed.startsAt ? { startsAt: starts } : {}),
+          ...(parsed.endsAt ? { endsAt: ends } : {}),
+          ...(parsed.breakMinutes !== undefined ? { breakMinutes: parsed.breakMinutes } : {}),
+          ...(parsed.hourlyRateCents !== undefined ? { hourlyRateCents: parsed.hourlyRateCents } : {}),
+          ...(parsed.positions !== undefined ? { positions: parsed.positions } : {}),
+        },
+      }),
+      // The booked people's draft timesheets snapshot the planned times: keep them in step,
+      // or hours handed in without own times would use the old ones. (The rate they accepted stays.)
+      ...(shift.assignments.length && (timesChanged || parsed.breakMinutes !== undefined)
+        ? [
+            prisma.timesheet.updateMany({
+              where: { assignmentId: { in: shift.assignments.map((a) => a.id) }, status: "DRAFT" },
+              data: {
+                scheduledStart: starts,
+                scheduledEnd: ends,
+                ...(parsed.breakMinutes !== undefined ? { breakMinutes: parsed.breakMinutes } : {}),
+              },
+            }),
+          ]
+        : []),
+    ]);
 
     await recordAudit({
       category: "MATCHING",
@@ -129,7 +161,14 @@ export async function updateShiftAction(
           shiftId: shift.id,
           shiftTitle: parsed.title ?? shift.title,
         });
-        await postMessage(t.id, "system", "De opdrachtgever heeft de details van deze dienst aangepast. Bekijk de klus opnieuw.", "system");
+        await postMessage(
+          t.id,
+          "system",
+          timesChanged
+            ? `De opdrachtgever heeft de tijd van deze dienst aangepast: nu ${overlapWhen({ startsAt: starts, endsAt: ends })}. Bekijk de klus opnieuw.`
+            : "De opdrachtgever heeft de details van deze dienst aangepast. Bekijk de klus opnieuw.",
+          "system",
+        );
       } catch {
         /* non-fatal */
       }
