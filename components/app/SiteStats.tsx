@@ -28,6 +28,8 @@ interface Column {
 // the app's dark theme is a data attribute (EmployerShell), not Tailwind's dark: (that follows the OS)
 const BAR = "bg-brand-500 [.app-scope[data-theme=dark]_&]:bg-brand-300";
 const LINK = "text-brand-600 [.app-scope[data-theme=dark]_&]:text-brand-300";
+// the chosen period: ink in light; ink on a dark card is invisible, so a light pill in dark
+const PICKED = "bg-ink text-white [.app-scope[data-theme=dark]_&]:bg-[#F2F3F0] [.app-scope[data-theme=dark]_&]:text-[#0B0D11]";
 const MONTHS = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 const WEEKDAYS = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const nf = new Intl.NumberFormat("nl-NL");
@@ -106,7 +108,7 @@ export default function SiteStats({ published }: { published: boolean }) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1" role="group" aria-label="Periode">
         {RANGES.map((r) => (
-          <button key={r} type="button" aria-pressed={range === r} onClick={() => pick(r)} className={`rounded-lg px-2 py-1 text-xs font-semibold ${range === r ? "bg-ink text-white" : "text-neutralx-600 hover:bg-paper-soft"}`}>
+          <button key={r} type="button" aria-pressed={range === r} onClick={() => pick(r)} className={`rounded-lg px-2 py-1 text-xs font-semibold ${range === r ? PICKED : "text-neutralx-600 hover:bg-paper-soft"}`}>
             {r} dagen
           </button>
         ))}
@@ -177,17 +179,7 @@ function BarChart({ cols, active, onActive, perWeek }: { cols: Column[]; active:
   return (
     <figure className="space-y-1">
       <figcaption className="text-xs font-semibold text-ink">{perWeek ? "Bekeken pagina's per week" : "Bekeken pagina's per dag"}</figcaption>
-      <div className="relative pt-14">
-        {shown && active !== null && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-hair bg-white px-2 py-1 text-xs shadow-sm"
-            style={{ left: `${Math.min(80, Math.max(20, ((active + 0.5) / cols.length) * 100))}%` }}
-          >
-            <p><strong className="text-ink">{nf.format(shown.views)}</strong> <span className="text-neutralx-500">bekeken</span> · <strong className="text-ink">{nf.format(shown.entries)}</strong> <span className="text-neutralx-500">binnenkomsten</span></p>
-            <p className="text-neutralx-400">{shown.long}</p>
-          </div>
-        )}
+      <div className="relative pt-2">
         <div className="flex gap-1.5">
           <div className="flex h-28 flex-col justify-between text-right text-[10px] tabular-nums leading-none text-neutralx-400" aria-hidden>
             <span>{nf.format(top)}</span>
@@ -212,6 +204,17 @@ function BarChart({ cols, active, onActive, perWeek }: { cols: Column[]; active:
                 </button>
               ))}
             </div>
+            {/* floats over the top of the plot, next to the bar: no empty band reserved for it */}
+            {shown && active !== null && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-hair bg-white px-2 py-1 text-xs shadow-sm"
+                style={{ left: `${Math.min(75, Math.max(25, ((active + 0.5) / cols.length) * 100))}%` }}
+              >
+                <p><strong className="text-ink">{nf.format(shown.views)}</strong> <span className="text-neutralx-500">bekeken</span> · <strong className="text-ink">{nf.format(shown.entries)}</strong> <span className="text-neutralx-500">binnenkomsten</span></p>
+                <p className="text-neutralx-400">{shown.long}</p>
+              </div>
+            )}
           </div>
         </div>
         {first && last && (
