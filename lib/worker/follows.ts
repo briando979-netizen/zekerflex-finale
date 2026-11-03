@@ -3,8 +3,8 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
-import { sendUserPush } from "@/lib/notifications/push";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { pushDayMonth, pushRate } from "@/lib/i18n/worker-push";
 
 // ---------------------------------------------------------------------------
 // Favoriete opdrachtgevers: een werker volgt een bedrijf (❤️ op de dienstpagina)
@@ -18,7 +18,6 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
 const MAX_FOLLOWS = 50;
 const MAX_FOLLOWERS = 5000;
-const MONTHS = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 const followsKey = (userId: string) => `volgt:${userId}`;
 const followersKey = (tenantId: string) => `volgers:${tenantId}`;
@@ -134,11 +133,6 @@ export async function followerCount(tenantIds: string[]): Promise<number> {
   return unique.size;
 }
 
-function whenLabel(d: Date): string {
-  const p = amsterdamParts(d);
-  return `${p.day} ${MONTHS[p.month - 1]} ${amsterdamClock(d)}`;
-}
-
 /**
  * Push naar de volgers van het bedrijf achter deze (net geplaatste of
  * gepubliceerde) diensten. Eén push per werker per bedrijf, ook als het een
@@ -168,14 +162,13 @@ export async function notifyFollowersOfShifts(shiftIds: string[], now = new Date
     }
     if (!recipients.length) continue;
 
-    const rate = `€ ${(first.hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`;
-    const more = list.length > 1 ? ` (+${list.length - 1} ${list.length === 2 ? "dag" : "dagen"})` : "";
-    await sendUserPush(recipients, {
-      title: `❤️ Nieuwe dienst bij ${first.branch.tenant.name}`,
-      body: `${first.title} · ${whenLabel(first.startsAt)}${more} · ${first.branch.city} · ${rate}`.slice(0, 180),
+    // In each follower's own app language (lib/i18n/worker-push.ts).
+    await sendLocalizedPush(recipients, (t, locale) => ({
+      title: t.followTitle(first.branch.tenant.name),
+      body: `${first.title} · ${pushDayMonth(locale, first.startsAt)}${list.length > 1 ? t.followMore(list.length - 1) : ""} · ${first.branch.city} · ${pushRate(t, first.hourlyRateCents)}`.slice(0, 180),
       data: { type: "SHIFT_OFFER", url: `/dashboard/klussen/${first.id}`, tag: `volg-${first.id}` },
       ttlSeconds: 12 * 3600,
-    }).catch((err) => logger.warn("follower push failed", { tenantId, error: (err as Error).message }));
+    })).catch((err) => logger.warn("follower push failed", { tenantId, error: (err as Error).message }));
     notified += recipients.length;
   }
   return { notified };

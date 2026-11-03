@@ -48,6 +48,10 @@ export interface WorkerPushTexts {
   profileBody: string;
   declinedTitle: string;
   declinedBody: (title: string) => string;
+  followTitle: (company: string) => string;
+  followMore: (extraDays: number) => string;
+  geoTitle: (hours: number) => string;
+  geoBody: (title: string, city: string, km: string, time: string, amount: string) => string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -90,6 +94,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Vul je gegevens in om te beginnen — daarna kun je direct op klussen reageren.",
     declinedTitle: "Reactie niet gekozen",
     declinedBody: (t) => `Voor "${t}" is iemand anders gekozen. Er staan nog genoeg andere klussen voor je klaar.`,
+    followTitle: (c) => `❤️ Nieuwe dienst bij ${c}`,
+    followMore: (n) => ` (+${n} ${n === 1 ? "dag" : "dagen"})`,
+    geoTitle: (h) => `📍 Klus dichtbij — begint over ${h} uur`,
+    geoBody: (t, c, km, tm, a) => `${t} in ${c} (±${km} km), start ${tm} · €${a}/uur. Reageer snel in de app.`,
   },
   en: {
     hours: "hours",
@@ -130,6 +138,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Fill in your details to get started — then you can respond to jobs right away.",
     declinedTitle: "Response not chosen",
     declinedBody: (t) => `Someone else was chosen for "${t}". There are plenty of other jobs waiting for you.`,
+    followTitle: (c) => `❤️ New shift at ${c}`,
+    followMore: (n) => ` (+${n} ${n === 1 ? "day" : "days"})`,
+    geoTitle: (h) => `📍 Job nearby — starts in ${h} ${h === 1 ? "hour" : "hours"}`,
+    geoBody: (t, c, km, tm, a) => `${t} in ${c} (±${km} km), starts ${tm} · €${a}/hour. Respond quickly in the app.`,
   },
   pl: {
     hours: "godz.",
@@ -170,6 +182,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Uzupełnij swoje dane, aby zacząć — potem od razu możesz reagować na zlecenia.",
     declinedTitle: "Twoja odpowiedź nie została wybrana",
     declinedBody: (t) => `Do „${t}” wybrano kogoś innego. Czeka na Ciebie wiele innych zleceń.`,
+    followTitle: (c) => `❤️ Nowa zmiana w ${c}`,
+    followMore: (n) => ` (+${n} ${n === 1 ? "dzień" : "dni"})`,
+    geoTitle: (h) => `📍 Zlecenie w pobliżu — zaczyna się za ${h} godz.`,
+    geoBody: (t, c, km, tm, a) => `${t} w ${c} (±${km} km), start ${tm} · €${a}/godz. Odpowiedz szybko w aplikacji.`,
   },
   ro: {
     hours: "ore",
@@ -210,6 +226,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Completează-ți datele ca să începi — apoi poți răspunde imediat la joburi.",
     declinedTitle: "Răspunsul tău nu a fost ales",
     declinedBody: (t) => `Pentru „${t}” a fost ales altcineva. Te așteaptă multe alte joburi.`,
+    followTitle: (c) => `❤️ Tură nouă la ${c}`,
+    followMore: (n) => ` (+${n} ${n === 1 ? "zi" : "zile"})`,
+    geoTitle: (h) => `📍 Job în apropiere — începe în ${h} ${h === 1 ? "oră" : "ore"}`,
+    geoBody: (t, c, km, tm, a) => `${t} în ${c} (±${km} km), start ${tm} · €${a}/oră. Răspunde rapid în aplicație.`,
   },
   uk: {
     hours: "год",
@@ -250,6 +270,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Заповніть свої дані, щоб почати — потім одразу зможете відгукуватися на роботи.",
     declinedTitle: "Вашу відповідь не обрано",
     declinedBody: (t) => `На «${t}» обрали іншу людину. На вас чекає багато інших робіт.`,
+    followTitle: (c) => `❤️ Нова зміна в ${c}`,
+    followMore: (n) => ` (+${n} дн.)`,
+    geoTitle: (h) => `📍 Робота поруч — починається через ${h} год`,
+    geoBody: (t, c, km, tm, a) => `${t} у ${c} (±${km} км), початок ${tm} · €${a}/год. Відповідайте швидко в застосунку.`,
   },
 };
 
@@ -257,6 +281,12 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
 export function pushDay(locale: Locale, d: Date): string {
   const p = amsterdamParts(d);
   return `${FREELANCER_DICTS[locale].date.wd[p.weekday] ?? ""} ${p.day}/${p.month} ${amsterdamClock(d)}`;
+}
+
+/** "5 nov 09:00" in the worker's language, Dutch time. */
+export function pushDayMonth(locale: Locale, d: Date): string {
+  const p = amsterdamParts(d);
+  return `${p.day} ${FREELANCER_DICTS[locale].date.mon[p.month - 1] ?? ""} ${amsterdamClock(d)}`;
 }
 
 /** "€ 19,00/u" with the worker's own per-hour unit. */

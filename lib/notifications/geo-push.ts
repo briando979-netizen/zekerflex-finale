@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { isMatchEligibleWorker } from "@/lib/matching/engine";
 import { blockedUserIdsForTenants } from "@/lib/employer/relations";
@@ -85,12 +85,13 @@ export async function notifyNearbyOpenShifts(now = new Date(), radiusKm = DEFAUL
     for (const { c, km } of near) {
       if (!(await isMatchEligibleWorker(c, shift.viaUitzendbureau))) continue;
       if (!(await claimGeo(shift.id, c.userId))) continue;
-      await sendUserPush([c.userId], {
-        title: `📍 Klus dichtbij — begint over ${hoursOut} uur`,
-        body: `${shift.title} in ${shift.branch.city} (±${km.toFixed(0)} km), start ${timeFmt.format(shift.startsAt)} · €${(shift.hourlyRateCents / 100).toFixed(2).replace(".", ",")}/uur. Reageer snel in de app.`,
+      // In the worker's own app language (lib/i18n/worker-push.ts).
+      await sendLocalizedPush([c.userId], (t) => ({
+        title: t.geoTitle(hoursOut),
+        body: t.geoBody(shift.title, shift.branch.city, km.toFixed(0), timeFmt.format(shift.startsAt), (shift.hourlyRateCents / 100).toFixed(2).replace(".", ",")),
         data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `geo-${shift.id}` },
         ttlSeconds: Math.max(600, hoursOut * H / 1000),
-      }).catch(() => 0);
+      })).catch(() => 0);
       sent += 1;
     }
   }
