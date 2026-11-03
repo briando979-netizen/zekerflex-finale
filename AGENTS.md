@@ -20,7 +20,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 
 ### Tijd en gegevens
 
-- **Tijd:** de server draait in UTC. Gebruik `lib/time/amsterdam.ts` (`amsterdamDayKey`, `amsterdamClock`, `amsterdamStartOfDay`, …); nooit `getHours()`/`toLocale*` zonder `timeZone: "Europe/Amsterdam"`. Ook in client-componenten die op de server renderen (anders hydratiefout #418). Tijden in `.ics` altijd UTC met `Z` (`toISOString`).
+- **Tijd:** de server draait in UTC. Gebruik `lib/time/amsterdam.ts` (`amsterdamDayKey`, `amsterdamClock`, `amsterdamStartOfDay`, …); nooit `getHours()`/`toLocale*` zonder `timeZone: "Europe/Amsterdam"`. Ook in client-componenten die op de server renderen (anders hydratiefout #418). Tijden in `.ics` altijd UTC met `Z` (`toISOString`). Een `datetime-local`-waarde ("2026-11-05T09:00", zonder zone) op de server nooit met `new Date()` inlezen, maar met `parseAmsterdamLocal()`. Dagen optellen met `Date.UTC(y, m - 1, d + n)` + `amsterdamToUtc()`, niet met `setDate` op een tijdstip.
 - **Annuleringen** tellen alleen tegen een werker via het begin van `cancelReason` ("Afgezegd door flexwerker…", "Niet opgekomen…"; `lib/profile/card.ts`). Een nieuw annuleringspad krijgt dus een herkenbaar begin.
 - **Promise.all uitbreiden:** controleer de volgorde van de destructuring.
 - **Na een PATCH** de teruggegeven serverversie overnemen in de lijst, niet lokaal één veld bijwerken (de server kan bijeffecten hebben).
