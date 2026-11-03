@@ -120,6 +120,13 @@ export function parseConcept(raw: string | null, now = Date.now(), today = ""): 
   return c as KlusConcept;
 }
 
+/** Roles that may put out a dienst (lib/auth/rbac.ts, /werkgever/diensten): they skip sign-up and go straight to the form. */
+const SHIFT_CREATOR_ROLES = ["LOCAL_MANAGER", "HQ_ADMIN"];
+
+export function canPostShift(roles: unknown): boolean {
+  return Array.isArray(roles) && roles.some((r) => SHIFT_CREATOR_ROLES.includes(String(r)));
+}
+
 // --- krachten in de buurt -------------------------------------------------
 
 const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {

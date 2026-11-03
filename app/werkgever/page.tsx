@@ -21,6 +21,7 @@ import {
 import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
+import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
@@ -70,6 +71,7 @@ export default async function WerkgeverStartPage() {
     <>
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       <EmployerDashboardHero />
+      <KlusConceptNudge />
       {!companyVerified && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">Je bedrijf is nog niet geverifieerd</p>

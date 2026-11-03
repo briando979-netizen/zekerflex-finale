@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conceptCost, conceptHours, parseConcept, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
+import { canPostShift, conceptCost, conceptHours, parseConcept, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
 
 const base: KlusConcept = {
   v: 1,
@@ -71,6 +71,17 @@ describe("klusconcept: bewaren in de browser", () => {
     expect(parseConcept(raw, base.savedAt, "2026-11-21")).toBeNull();
     expect(parseConcept(JSON.stringify({ ...base, rateCents: -5 }), base.savedAt)).toBeNull();
     expect(parseConcept(JSON.stringify({ ...base, positions: 500 }), base.savedAt)).toBeNull();
+  });
+});
+
+describe("klusconcept: ingelogde werkgever", () => {
+  it("sends only roles that may put out a dienst straight to the form", () => {
+    expect(canPostShift(["HQ_ADMIN"])).toBe(true);
+    expect(canPostShift(["FREELANCER", "LOCAL_MANAGER"])).toBe(true);
+    expect(canPostShift(["FREELANCER"])).toBe(false);
+    expect(canPostShift(["DISPUTE_MANAGER"])).toBe(false);
+    expect(canPostShift(undefined)).toBe(false);
+    expect(canPostShift("HQ_ADMIN")).toBe(false);
   });
 });
 

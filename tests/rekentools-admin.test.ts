@@ -22,7 +22,7 @@ describe("rekentools in Admin → Sales", () => {
   });
 
   it("uses the same event labels as useEersteGebruik in the tools", () => {
-    // components/marketing/rekentools/*: useEersteGebruik("kosten-uitzendkracht" | "wet-dba-check" | "zzp-uurtarief")
-    expect(REKENTOOLS.map((t) => t.key).sort()).toEqual(["kosten-uitzendkracht", "wet-dba-check", "zzp-uurtarief"]);
+    // components/marketing/rekentools/* and KlusConcept: useEersteGebruik("<key>")
+    expect(REKENTOOLS.map((t) => t.key).sort()).toEqual(["klus-concept", "kosten-uitzendkracht", "wet-dba-check", "zzp-uurtarief"]);
   });
 });

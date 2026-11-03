@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CONCEPT_KEY, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { CONCEPT_KEY, canPostShift, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
 import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 
@@ -25,7 +25,7 @@ const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad
 function dateNl(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return "";
-  return new Date(y, m - 1, d).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
 }
 
 const field = "w-full rounded-xl border border-hair bg-paper px-4 py-2.5 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500";
@@ -54,12 +54,21 @@ export function KlusConcept({
   const [positions, setPositions] = useState("1");
   const [rate, setRate] = useState(((first?.rateCents ?? minRateCents) / 100).toFixed(2).replace(".", ","));
   const [saving, setSaving] = useState(false);
+  const [employer, setEmployer] = useState(false);
 
   // Dates in the browser's own (Dutch) time: the server runs in UTC.
   useEffect(() => {
     const now = new Date();
     setToday(localDay(now));
     setDate(localDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)));
+  }, []);
+
+  // Already signed in as a werkgever: skip sign-up and go straight to Nieuwe dienst (/api/me is 401 when logged out).
+  useEffect(() => {
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me: { authenticated?: boolean; roles?: unknown } | null) => setEmployer(Boolean(me?.authenticated && canPostShift(me.roles))))
+      .catch(() => undefined);
   }, []);
 
   function pickTemplate(key: string) {
@@ -104,7 +113,7 @@ export function KlusConcept({
     } catch {
       /* private mode: sign-up still works, the form just starts empty */
     }
-    router.push("/register?type=bedrijf");
+    router.push(employer ? "/werkgever/diensten/nieuw" : "/register?type=bedrijf");
   }
 
   return (
@@ -210,12 +219,14 @@ export function KlusConcept({
         ) : null}
 
         <button type="button" onClick={save} disabled={!ready || saving} className="btn-primary mt-6 w-full disabled:opacity-50">
-          {saving ? "Even geduld…" : "Plaats deze klus met een gratis account"}
+          {saving ? "Even geduld…" : employer ? "Zet deze klus klaar in je account" : "Plaats deze klus met een gratis account"}
         </button>
         <p className="mt-3 text-xs leading-relaxed text-neutralx-500">
-          {ready
-            ? "Je klus wacht in deze browser. Na het aanmelden staat hij klaar bij Diensten → Nieuwe dienst. Je betaalt pas als er gewerkt is."
-            : "Vul de functie, de plaats en een datum vanaf vandaag in."}
+          {!ready
+            ? "Vul de functie, de plaats en een datum vanaf vandaag in."
+            : employer
+              ? "Je komt meteen bij Nieuwe dienst, met deze klus al ingevuld. Kies daar je vestiging."
+              : "Je klus wacht in deze browser. Na het aanmelden staat hij klaar bij Diensten → Nieuwe dienst. Je betaalt pas als er gewerkt is."}
         </p>
       </div>
     </div>

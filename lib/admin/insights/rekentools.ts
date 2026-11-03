@@ -9,6 +9,8 @@ export const REKENTOOLS = [
   { key: "kosten-uitzendkracht", label: "Kosten uitzendkracht of zzp'er", path: "/rekentools/kosten-uitzendkracht-berekenen", leads: true },
   { key: "wet-dba-check", label: "Wet DBA-check", path: "/rekentools/wet-dba-check", leads: true },
   { key: "zzp-uurtarief", label: "Zzp-uurtarief", path: "/rekentools/zzp-uurtarief-berekenen", leads: false },
+  // Not a rekentool, but the same funnel: draft a klus, then sign up (components/marketing/KlusConcept.tsx).
+  { key: "klus-concept", label: "Klus samenstellen", path: "/klus-plaatsen", leads: false },
 ] as const;
 
 export interface RekentoolRow {
