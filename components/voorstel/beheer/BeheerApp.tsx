@@ -153,15 +153,6 @@ export function BeheerApp({
             ))}
           </div>
         </nav>
-        <div className="hidden border-t border-white/10 px-6 py-5 lg:block">
-          <p className="truncate text-sm text-schw-cream/70">Ingelogd als {wie}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link href={BASE} className="rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-white/25 hover:bg-white/10">
-              Naar de website
-            </Link>
-            <Uitloggen via={via} licht />
-          </div>
-        </div>
       </aside>
 
       <div className="min-w-0">
@@ -170,7 +161,16 @@ export function BeheerApp({
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-schw-mute">Het Schwarzwald · beheer</p>
             <h1 className="font-display text-2xl font-bold">{titel}</h1>
           </div>
-          <p className="text-sm text-schw-mute lg:hidden">Ingelogd als {wie}</p>
+          {/* altijd in beeld, ook op een laag laptopscherm */}
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-schw-mute">Ingelogd als {wie}</p>
+            <Link href={BASE} className="hidden rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15 hover:bg-schw-sand lg:inline-block">
+              Naar de website
+            </Link>
+            <span className="hidden lg:inline">
+              <Uitloggen via={via} />
+            </span>
+          </div>
         </header>
         <div id={`paneel-${tab}`} role="tabpanel" aria-label={titel} className="px-4 py-6 sm:px-8">
           {tab === "dashboard" && <Dashboard namen={namen} naar={naar} openKlant={openKlant} />}
