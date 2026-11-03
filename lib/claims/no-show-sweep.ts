@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
+import { sendUserPush } from "@/lib/notifications/push";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
 import { NO_SHOW_GRACE_MINUTES, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
@@ -97,6 +98,14 @@ export async function sweepNoShows(): Promise<NoShowSweepResult> {
         targetId: a.id,
         metadata: { shiftId: a.shift.id, seatValueCents },
       });
+
+      // Tell the worker straight away: "no check-in" can also mean "forgot to check in".
+      await sendUserPush([a.freelancer.userId], {
+        title: `Niet ingecheckt: ${a.shift.title}`,
+        body: `Je staat als niet opgekomen voor ${a.shift.title} bij ${a.shift.branch.name}. Was je er wel? Stuur de opdrachtgever direct een bericht in de app.`,
+        data: { type: "SHIFT", url: `/dashboard/klussen/${a.shift.id}`, tag: `noshow-${a.id}` },
+        ttlSeconds: 86_400,
+      }).catch(() => 0);
 
       await sendMail({
         to: env.MAIL_ADMIN,
