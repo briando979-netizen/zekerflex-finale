@@ -5,6 +5,14 @@ type Level = "debug" | "info" | "warn" | "error";
 const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 const MIN_LEVEL: Level = env.NODE_ENV === "production" ? "info" : "debug";
 
+type LogSink = (level: "warn" | "error", message: string, context: Record<string, unknown>) => void;
+let sink: LogSink | null = null;
+
+/** Where warnings and errors also go, so they outlive a container restart (lib/ops/error-journal.ts, Node server only). */
+export function setLogSink(next: LogSink | null): void {
+  sink = next;
+}
+
 function emit(level: Level, message: string, context?: Record<string, unknown>) {
   if (ORDER[level] < ORDER[MIN_LEVEL]) return;
   const entry = {
@@ -13,10 +21,23 @@ function emit(level: Level, message: string, context?: Record<string, unknown>) 
     message,
     ...context,
   };
-  const line = JSON.stringify(entry);
+  let line: string;
+  try {
+    // an Error would print as {} and lose its message
+    line = JSON.stringify(entry, (_key, value: unknown) => (value instanceof Error ? { name: value.name, message: value.message, stack: value.stack?.split("\n").slice(0, 6).join("\n") } : typeof value === "bigint" ? String(value) : value));
+  } catch {
+    line = JSON.stringify({ ts: entry.ts, level, message, note: "context not serialisable" });
+  }
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);
   else console.log(line);
+  if (sink && (level === "warn" || level === "error")) {
+    try {
+      sink(level, message, context ?? {});
+    } catch {
+      // logging may never break the request that logs
+    }
+  }
 }
 
 export interface BoundLogger {

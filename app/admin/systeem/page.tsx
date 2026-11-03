@@ -20,6 +20,8 @@ import { Empty, InfoList, KpiStrip, Meter, Notice, PageHead, Panel, Pill } from 
 import { Tabs } from "@/components/admin/kit-client";
 import { OpsAlerts } from "@/components/admin/OpsAlerts";
 import { UsagePanel } from "@/components/admin/UsagePanel";
+import { ErrorJournalPanel } from "@/components/admin/ErrorJournalPanel";
+import { listErrorGroups } from "@/lib/ops/error-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +62,7 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons, backup] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
@@ -68,8 +70,10 @@ export default async function SysteemPage() {
     whisperReachable(),
     cronHeartbeats().catch(() => []),
     readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null })),
+    listErrorGroups(500).catch(() => []),
   ]);
   const now = new Date();
+  const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
   const channels = pushChannels();
 
   // "off" = a deliberately optional feature that's simply not switched on —
@@ -273,6 +277,7 @@ export default async function SysteemPage() {
               </>
             ),
           },
+          { id: "fouten", label: "Foutmeldingen", badge: recentErrors || null, content: <ErrorJournalPanel /> },
           { id: "functies", label: "Functies aan en uit", content: <FeatureFlagsPanel /> },
           {
             id: "gebruik",

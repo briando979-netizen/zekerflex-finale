@@ -104,7 +104,20 @@ function isZodError(err: unknown): err is ZodLikeError {
   return e.name === "ZodError" || typeof e.flatten === "function";
 }
 
-export function toErrorBody(err: unknown): {
+type UnexpectedErrorReporter = (err: unknown) => void;
+let reportUnexpected: UnexpectedErrorReporter | null = null;
+
+/**
+ * Node server only (lib/ops/error-journal.ts, started from instrumentation.ts):
+ * who hears about an error that becomes a bare 500. Without it such an error
+ * left no trace in routes that aren't wrapped by withAuth.
+ */
+export function setUnexpectedErrorReporter(fn: UnexpectedErrorReporter | null): void {
+  reportUnexpected = fn;
+}
+
+/** `logged`: the caller logs the 500 itself (withAuth's boundary), so don't report it twice. */
+export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
   status: number;
   body: ErrorBody;
   headers: Record<string, string>;
@@ -128,6 +141,13 @@ export function toErrorBody(err: unknown): {
       },
       headers: {},
     };
+  }
+  if (!opts.logged) {
+    try {
+      reportUnexpected?.(err);
+    } catch {
+      // reporting may never change the response
+    }
   }
   return {
     status: 500,
