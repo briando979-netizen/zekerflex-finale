@@ -273,7 +273,14 @@ export function SiteHeader() {
           <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
-        <nav aria-label="Hoofdnavigatie" ref={navRef} className="ml-6 hidden items-center gap-6 lg:flex">
+        {/* The full bar needs ~1.370px at the roomy spacing: below 1280 the
+            menu button takes over (at 1024 Inloggen fell off-screen), and
+            1280–1365 gets tighter gaps. From 1366 it looks as it always did. */}
+        <nav
+          aria-label="Hoofdnavigatie"
+          ref={navRef}
+          className="ml-2 hidden items-center gap-3 xl:flex min-[1366px]:ml-6 min-[1366px]:gap-6"
+        >
           {NAV.map((n) => {
             const active =
               n.match.startsWith("/") &&
@@ -370,7 +377,7 @@ export function SiteHeader() {
         </nav>
 
         {/* audience toggle */}
-        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 lg:flex">
+        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 xl:flex">
           <Link
             href="/voor-freelancers"
             onClick={() => pick("werknemers")}
@@ -391,7 +398,7 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-3 xl:flex">
           <Link
             href="/login"
             className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-white/90"
@@ -409,7 +416,7 @@ export function SiteHeader() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 lg:hidden"
+          className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 xl:hidden"
           aria-label="Menu"
           aria-expanded={open}
         >
@@ -419,7 +426,7 @@ export function SiteHeader() {
 
       {/* mobile panel */}
       {open && (
-        <div className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-[#0C0E12] lg:hidden">
+        <div className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-[#0C0E12] xl:hidden">
           <div className="shell flex flex-col gap-1 py-4">
             <div className="mb-2 flex rounded-full border border-white/15 bg-white/[0.06] p-1">
               <Link
