@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
 import { websiteVan } from "@/lib/rijschool/website";
+import { siteKleuren } from "@/lib/rijschool/kleuren";
 
 // De omlijsting van alles onder /rijschool/<slug>: de kleuren van de rijschool
 // als CSS-variabelen, en de naam van de rijschool in de titel. Niet in Google
@@ -35,7 +36,8 @@ export async function generateViewport({ params }: { params: Promise<{ slug: str
 export default async function RijschoolLayout({ children, params }: Props) {
   const r = await laadRijschool((await params).slug);
   if (!r) notFound();
-  const stijl = { "--rs-kleur": r.kleur, "--rs-accent": r.accent } as CSSProperties;
+  // de kleuren van de rijschool, met leesbare tekstkleuren erbij (lib/rijschool/kleuren.ts)
+  const stijl = siteKleuren(r) as CSSProperties;
   return (
     <div style={stijl} className="min-h-screen bg-paper text-ink">
       {children}
