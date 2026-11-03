@@ -3,9 +3,11 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, VELD, VELD_BASIS, dagNaam, useBeheerData, vraag } from "@/components/voorstel/beheer/api";
 import { BASE } from "@/lib/voorstel/schwarzwald";
+import { AANWEZIG_LABEL, aanmeldFout, balieStand, type Aanwezig } from "@/lib/voorstel/aanwezig-regels";
 
 // Reserveringen: overzicht per dag met zoeken en filters, bevestigen,
-// annuleren, verwijderen, zelf inboeken (telefoon/balie) en Excel-export.
+// annuleren, verwijderen, zelf inboeken (telefoon/balie), gasten aanmelden
+// bij de balie (vanaf de dag zelf) en Excel-export.
 
 export type Status = "nieuw" | "bevestigd" | "geannuleerd";
 export interface BeheerBoeking {
@@ -24,6 +26,7 @@ export interface BeheerBoeking {
   verzetVan?: string;
   /** aantal personen voordat de gast het zelf wijzigde */
   aantalVan?: number;
+  aanwezig?: Aanwezig;
   prijs: number | null;
 }
 
@@ -35,6 +38,10 @@ const PIL: Record<Status, string> = {
   nieuw: "bg-schw-sun text-schw-night",
   bevestigd: "bg-[#DCFCE7] text-[#15803D]",
   geannuleerd: "bg-schw-sand text-schw-mute line-through",
+};
+const AANWEZIG_PIL: Record<Aanwezig, string> = {
+  ja: "bg-[#DCFCE7] text-[#15803D]",
+  nee: "bg-[#FEE2E2] text-[#B91C1C]",
 };
 
 function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; klaar: () => void }) {
@@ -126,7 +133,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
   const perDag = useMemo(() => {
     const m = new Map<string, BeheerBoeking[]>();
     for (const b of lijst) m.set(b.datum, [...(m.get(b.datum) ?? []), b]);
-    return [...m.entries()];
+    return [...m.entries()].map(([datum, items]) => ({ datum, items, stand: balieStand(items) }));
   }, [lijst]);
 
   async function zet(b: BeheerBoeking, s: Status) {
@@ -134,6 +141,30 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
     try {
       await vraag(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, status: s } });
       setData((d) => (d ? { boekingen: d.boekingen.map((x) => (x.id === b.id && x.datum === b.datum ? { ...x, status: s } : x)) } : d));
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : "Opslaan mislukt.");
+    } finally {
+      setBezig("");
+    }
+  }
+
+  async function meld(b: BeheerBoeking, w: Aanwezig | null) {
+    setBezig(b.id);
+    try {
+      await vraag(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, aanwezig: w } });
+      setData((d) =>
+        d
+          ? {
+              boekingen: d.boekingen.map((x) => {
+                if (x.id !== b.id || x.datum !== b.datum) return x;
+                const nieuw = { ...x };
+                if (w) nieuw.aanwezig = w;
+                else delete nieuw.aanwezig;
+                return nieuw;
+              }),
+            }
+          : d,
+      );
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Opslaan mislukt.");
     } finally {
@@ -193,12 +224,18 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
       </div>
       {data && perDag.length === 0 && <p className="mt-8 text-schw-mute">Geen reserveringen gevonden.</p>}
       <div className="mt-6 space-y-8">
-        {perDag.map(([datum, items]) => (
+        {perDag.map(({ datum, items, stand }) => (
           <section key={datum}>
             <h3 className="font-display text-xl font-bold first-letter:uppercase">
               {dagNaam(datum)}
               <span className="ml-3 text-sm font-semibold text-schw-mute">
-                {items.filter((b) => b.status !== "geannuleerd").reduce((s, b) => s + b.personen, 0)} gasten
+                {stand.verwacht} gasten
+                {datum <= vandaag && stand.verwacht > 0 && (
+                  <>
+                    {" "}
+                    · {stand.binnen} binnen{stand.nietGekomen > 0 && <> · {stand.nietGekomen} niet gekomen</>}
+                  </>
+                )}
               </span>
               <a href={`${BASE}/beheer/dag/${datum}`} target="_blank" rel="noopener" className="ml-3 text-sm font-semibold underline">
                 Dagplanning printen
@@ -212,6 +249,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                     <p className="font-bold">
                       {namen[b.activiteit] ?? b.activiteit} · {b.personen} personen
                       <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-bold ${PIL[b.status]}`}>{b.status}</span>
+                      {b.aanwezig && <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-bold ${AANWEZIG_PIL[b.aanwezig]}`}>{AANWEZIG_LABEL[b.aanwezig]}</span>}
                       {b.door === "beheer" && <span className="ml-2 rounded-full bg-schw-sand px-2.5 py-0.5 text-xs font-bold">ingeboekt</span>}
                     </p>
                     <p className="truncate text-sm text-schw-mute">
@@ -223,12 +261,27 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                     {b.aantalVan !== undefined && <p className="mt-1 text-sm font-semibold text-schw-rust">aantal gewijzigd door de gast, was {b.aantalVan}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {b.status !== "bevestigd" && (
+                    {!aanmeldFout(b, vandaag) &&
+                      (b.aanwezig ? (
+                        <button type="button" disabled={bezig === b.id} onClick={() => void meld(b, null)} aria-label={`Ongedaan maken: ${b.naam} ${AANWEZIG_LABEL[b.aanwezig]}`} className={KNOP_LICHT}>
+                          Ongedaan maken
+                        </button>
+                      ) : (
+                        <>
+                          <button type="button" disabled={bezig === b.id} onClick={() => void meld(b, "ja")} aria-label={`Aangekomen: ${b.naam}`} className={KNOP}>
+                            Aangekomen
+                          </button>
+                          <button type="button" disabled={bezig === b.id} onClick={() => void meld(b, "nee")} aria-label={`Niet gekomen: ${b.naam}`} className={KNOP_LICHT}>
+                            Niet gekomen
+                          </button>
+                        </>
+                      ))}
+                    {b.status !== "bevestigd" && !b.aanwezig && (
                       <button type="button" disabled={bezig === b.id} onClick={() => void zet(b, "bevestigd")} className={KNOP}>
                         Bevestig
                       </button>
                     )}
-                    {b.status !== "geannuleerd" && (
+                    {b.status !== "geannuleerd" && b.aanwezig !== "ja" && (
                       <button type="button" disabled={bezig === b.id} onClick={() => void zet(b, "geannuleerd")} className={KNOP_LICHT}>
                         Annuleer
                       </button>

@@ -16,6 +16,7 @@ interface Som {
 interface Cijfers {
   vandaag: string;
   vandaagCijfers: Som;
+  balie: { verwacht: number; binnen: number; nietGekomen: number; open: number };
   week: Som;
   maand: Som;
   teBevestigen: number;
@@ -98,6 +99,12 @@ export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, st
                 <p className="text-xs text-schw-mute">omzetindicatie</p>
               </div>
             </div>
+            {titel === "Vandaag" && data.balie.verwacht > 0 && (
+              <button type="button" onClick={() => naar("reserveringen")} className="mt-3 text-left text-sm font-semibold hover:text-schw-rust">
+                Bij de balie: {data.balie.binnen} van {data.balie.verwacht} gasten binnen
+                {data.balie.nietGekomen > 0 && <> · {data.balie.nietGekomen} niet gekomen</>} ›
+              </button>
+            )}
           </div>
         ))}
       </div>

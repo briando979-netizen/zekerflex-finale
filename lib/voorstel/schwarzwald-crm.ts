@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { kvDelete, kvFindByField, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { balieStand } from "@/lib/voorstel/aanwezig-regels";
 import { prijsIndicatie } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { alleAccounts, type PubliekAccount } from "@/lib/voorstel/schwarzwald-accounts";
@@ -196,6 +197,8 @@ export interface KlantRegel {
   gasten: number;
   omzet: number;
   aanvragen: number;
+  /** keren dat de gast bij de balie als "niet gekomen" is gemeld */
+  nietGekomen: number;
   openTaken: number;
   /** laatste bericht kwam van de klant en is nog niet beantwoord */
   wachtOpAntwoord: boolean;
@@ -219,7 +222,7 @@ export async function klanten(): Promise<KlantRegel[]> {
     const e = norm(email);
     let r = regels.get(e);
     if (!r) {
-      r = { email: e, naam: "", telefoon: "", bedrijf: "", soort: "particulier", status: "lead", tags: [], wensen: "", account: false, reserveringen: 0, gasten: 0, omzet: 0, aanvragen: 0, openTaken: 0, wachtOpAntwoord: false, laatsteContact: "" };
+      r = { email: e, naam: "", telefoon: "", bedrijf: "", soort: "particulier", status: "lead", tags: [], wensen: "", account: false, reserveringen: 0, gasten: 0, omzet: 0, aanvragen: 0, nietGekomen: 0, openTaken: 0, wachtOpAntwoord: false, laatsteContact: "" };
       regels.set(e, r);
     }
     return r;
@@ -243,6 +246,7 @@ export async function klanten(): Promise<KlantRegel[]> {
       r.reserveringen++;
       r.gasten += b.personen;
       r.omzet += prijsIndicatie(b.activiteit, b.personen, b.datum, cfg) ?? 0;
+      if (b.aanwezig === "nee") r.nietGekomen++;
     }
     contact(r, b.aangemaakt);
   }
@@ -369,6 +373,7 @@ export async function dashboardCijfers() {
   return {
     vandaag,
     vandaagCijfers: som(binnen(vandaag, plus(vandaag, 1))),
+    balie: balieStand(geldig.filter((b) => b.datum === vandaag)),
     week: som(binnen(vandaag, plus(vandaag, 7))),
     maand: som(binnen(maandStart, maandEind)),
     teBevestigen: geldig.filter((b) => b.status === "nieuw" && b.datum >= vandaag).length,

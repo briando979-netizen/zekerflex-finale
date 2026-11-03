@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AANVRAAG_STATUS, BEHEER_API, KAART, KLANT_STATUS, KNOP, KNOP_LICHT, Melding, Pil, VELD, dagNaam, euro, useBeheerData, vraag, type AanvraagStatus, type KlantStatus } from "@/components/voorstel/beheer/api";
+import { AANWEZIG_LABEL, type Aanwezig } from "@/lib/voorstel/aanwezig-regels";
 
 // CRM: klantenlijst met zoeken en filters, en per klant een dossier met
 // klantkaart, tijdlijn (notities, taken, berichten), reserveringen en aanvragen.
@@ -22,6 +23,7 @@ interface Regel {
   gasten: number;
   omzet: number;
   aanvragen: number;
+  nietGekomen: number;
   openTaken: number;
   wachtOpAntwoord: boolean;
   laatsteContact: string;
@@ -39,7 +41,7 @@ interface Dossier {
   regel: Regel;
   kaart: { naam: string; telefoon: string; bedrijf: string; soort: "particulier" | "zakelijk"; status: KlantStatus | ""; tags: string[]; wensen: string; notitie: string };
   account: { email: string; aangemaakt: string; laatstIngelogd?: string; google?: boolean } | null;
-  reserveringen: { id: string; datum: string; tijd: string; activiteit: string; personen: number; status: string; prijs: number | null; opmerking: string }[];
+  reserveringen: { id: string; datum: string; tijd: string; activiteit: string; personen: number; status: string; prijs: number | null; opmerking: string; aanwezig?: Aanwezig }[];
   aanvragen: { id: string; programma: string; gelegenheid: string; personen: number; datum: string; status: AanvraagStatus; bedrag: number | null; bericht: string; aangemaakt: string }[];
   tijdlijn: Item[];
 }
@@ -134,6 +136,7 @@ function DossierPaneel({ email, namen, vandaag, terug }: { email: string; namen:
               <Pil label={KLANT_STATUS[r.status][0]} kleur={KLANT_STATUS[r.status][1]} />
               <Pil label={r.soort === "zakelijk" ? "Zakelijk" : "Particulier"} kleur="bg-schw-sand text-schw-night" />
               {d.account && <Pil label={d.account.google ? "Account (Google)" : "Account"} kleur="bg-white text-schw-night ring-1 ring-schw-night/15" />}
+              {r.nietGekomen > 0 && <Pil label={`${r.nietGekomen}× niet gekomen`} kleur="bg-[#FEE2E2] text-[#B91C1C]" />}
               {r.tags.map((t) => (
                 <Pil key={t} label={`#${t}`} kleur="bg-schw-cream text-schw-mute" />
               ))}
@@ -302,6 +305,7 @@ function DossierPaneel({ email, namen, vandaag, terug }: { email: string; namen:
                 <p className={b.status === "geannuleerd" ? "line-through opacity-60" : ""}>
                   <strong className="first-letter:uppercase">{dagNaam(b.datum, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</strong> {b.tijd} ·{" "}
                   {namen[b.activiteit] ?? b.activiteit} · {b.personen} pers. · {b.status}
+                  {b.aanwezig && <> · {AANWEZIG_LABEL[b.aanwezig]}</>}
                   {b.prijs !== null && <> · {euro(b.prijs)}</>}
                 </p>
                 {b.opmerking && <p className="text-schw-mute">&ldquo;{b.opmerking}&rdquo;</p>}
@@ -415,6 +419,7 @@ export function Klanten({ namen, vandaag, start }: { namen: Record<string, strin
                   {k.reserveringen} res. · {k.gasten} gasten · {euro(k.omzet)}
                   {k.wachtOpAntwoord && <strong className={`ml-2 ${gekozen === k.email ? "text-schw-orange" : "text-schw-rust"}`}>● wacht op antwoord</strong>}
                   {k.openTaken > 0 && <span className="ml-2">· {k.openTaken} taak/taken</span>}
+                  {k.nietGekomen > 0 && <span className="ml-2">· {k.nietGekomen}× niet gekomen</span>}
                 </p>
               </button>
             </li>

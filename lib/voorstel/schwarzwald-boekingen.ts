@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { kvDelete, kvFindByField, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { aanmeldFout, type Aanwezig } from "@/lib/voorstel/aanwezig-regels";
 import { groepFout, inVenster, isDatum, isTijd, slotFout, wijzigFout, type BezetteTijd } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 
@@ -38,6 +39,8 @@ export interface Boeking {
   verzetVan?: string;
   /** aantal personen voordat de gast het zelf wijzigde */
   aantalVan?: number;
+  /** aangemeld bij de balie: gekomen of niet (leeg = nog niet aangemeld) */
+  aanwezig?: Aanwezig;
 }
 
 const sleutel = (datum: string, id: string) => `${PREFIX}${datum}:${id}`;
@@ -110,7 +113,23 @@ export async function zetStatus(datum: string, id: string, status: BoekingStatus
   if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
   const b = await kvGet<Boeking>(sleutel(datum, id));
   if (!b) throw AppError.notFound("Boeking niet gevonden.");
-  const nieuw = { ...b, status };
+  const nieuw: Boeking = { ...b, status };
+  // wie geannuleerd is, komt niet: een eerdere aanmelding vervalt
+  if (status === "geannuleerd") delete nieuw.aanwezig;
+  await kvSet(sleutel(datum, id), nieuw);
+  return nieuw;
+}
+
+/** Het personeel meldt de gast aan bij de balie (ja/nee), of maakt dat ongedaan (null). */
+export async function zetAanwezig(datum: string, id: string, waarde: Aanwezig | null): Promise<Boeking> {
+  if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
+  const b = await kvGet<Boeking>(sleutel(datum, id));
+  if (!b) throw AppError.notFound("Boeking niet gevonden.");
+  const fout = waarde ? aanmeldFout(b, amsterdamDayKey(new Date())) : null;
+  if (fout) throw AppError.validation(fout);
+  const nieuw: Boeking = { ...b };
+  if (waarde) nieuw.aanwezig = waarde;
+  else delete nieuw.aanwezig;
   await kvSet(sleutel(datum, id), nieuw);
   return nieuw;
 }

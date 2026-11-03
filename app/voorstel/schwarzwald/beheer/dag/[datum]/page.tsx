@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ACTIVITEITEN, BASE } from "@/lib/voorstel/schwarzwald";
+import { AANWEZIG_LABEL } from "@/lib/voorstel/aanwezig-regels";
 import { beheerder } from "@/lib/voorstel/schwarzwald-accounts";
 import { AGENDA, isDatum } from "@/lib/voorstel/schwarzwald-agenda";
 import { boekingenOp } from "@/lib/voorstel/schwarzwald-boekingen";
@@ -151,7 +152,14 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
                       <span className="text-xs text-schw-mute">nr. {b.id}</span>
                     </td>
                     <td className="py-2.5 text-center">
-                      <span aria-hidden="true" className="inline-block h-5 w-5 rounded border-2 border-schw-night/40" />
+                      {b.aanwezig ? (
+                        <span className="font-bold">
+                          <span aria-hidden="true">{b.aanwezig === "ja" ? "✓" : "✗"}</span>
+                          <span className="sr-only">{AANWEZIG_LABEL[b.aanwezig]}</span>
+                        </span>
+                      ) : (
+                        <span aria-hidden="true" className="inline-block h-5 w-5 rounded border-2 border-schw-night/40" />
+                      )}
                     </td>
                   </tr>
                 );
