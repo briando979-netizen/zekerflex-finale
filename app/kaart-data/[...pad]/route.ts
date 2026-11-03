@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 // bestanden; geen mappen, geen ../.
 // ---------------------------------------------------------------------------
 
-const MAP = process.env.KAART_DATA_DIR || path.join(process.cwd(), "kaart-data");
+// Alleen uit de omgeving (docker-compose.vps.yml zet /app/kaart-data), bewust zonder
+// letterlijk pad: anders neemt de standalone-trace van Next de 2 GB mee in de image.
+const MAP = process.env.KAART_DATA_DIR ?? "";
 
 const TOEGESTAAN: { patroon: RegExp; type: string; cache: string }[] = [
   { patroon: /^nl\.pmtiles$/, type: "application/octet-stream", cache: "public, max-age=86400" },
@@ -27,7 +29,7 @@ const TOEGESTAAN: { patroon: RegExp; type: string; cache: string }[] = [
 export async function GET(request: Request, { params }: { params: Promise<{ pad: string[] }> }): Promise<Response> {
   const rel = (await params).pad.map((d) => decodeURIComponent(d)).join("/");
   const regel = TOEGESTAAN.find((t) => t.patroon.test(rel));
-  if (!regel || rel.includes("..")) return new Response("Niet gevonden", { status: 404 });
+  if (!MAP || !regel || rel.includes("..")) return new Response("Niet gevonden", { status: 404 });
   const bestand = path.join(MAP, rel);
   let grootte: number;
   try {
