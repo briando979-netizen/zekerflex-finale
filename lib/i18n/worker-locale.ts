@@ -16,13 +16,23 @@ export async function setUserLocale(userId: string, locale: Locale): Promise<voi
 }
 
 export async function userLocale(userId: string): Promise<Locale> {
-  const row = await kvGet<{ locale?: unknown }>(key(userId)).catch(() => null);
+  let row: { locale?: unknown } | null = null;
+  try {
+    row = await kvGet<{ locale?: unknown }>(key(userId));
+  } catch {
+    /* KV unavailable: Dutch */
+  }
   return isLocale(row?.locale) ? row.locale : DEFAULT_LOCALE;
 }
 
-/** Locales for many users in one query; users without a stored choice get Dutch. */
+/** Locales for many users in one query; users without a stored choice get Dutch. Never throws: a push must not fail on this. */
 export async function userLocales(userIds: string[]): Promise<Map<string, Locale>> {
-  const rows = await kvGetMany<{ locale?: unknown }>(userIds.map(key)).catch(() => new Map<string, { locale?: unknown }>());
+  let rows = new Map<string, { locale?: unknown }>();
+  try {
+    rows = await kvGetMany<{ locale?: unknown }>(userIds.map(key));
+  } catch {
+    /* KV unavailable: everyone gets Dutch */
+  }
   return new Map(userIds.map((id) => {
     const l = rows.get(key(id))?.locale;
     return [id, isLocale(l) ? l : DEFAULT_LOCALE] as const;

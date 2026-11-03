@@ -36,6 +36,18 @@ export interface WorkerPushTexts {
   correctionBody: (title: string, from: string, to: string) => string;
   noShowTitle: (title: string) => string;
   noShowBody: (title: string, branch: string) => string;
+  selectedTitle: string;
+  selectedBody: (title: string, branch: string, when: string) => string;
+  dayTitle: string;
+  dayBody: (title: string, branch: string, time: string) => string;
+  soonTitle: string;
+  soonBody: (title: string, branch: string, time: string) => string;
+  startTitle: string;
+  startBody: (title: string, branch: string) => string;
+  profileTitle: string;
+  profileBody: string;
+  declinedTitle: string;
+  declinedBody: (title: string) => string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -66,6 +78,18 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     correctionBody: (t, f, to) => `${t}: ${f} → ${to} uur. Bekijk het en reageer in de app.`,
     noShowTitle: (t) => `Niet ingecheckt: ${t}`,
     noShowBody: (t, b) => `Je staat als niet opgekomen voor ${t} bij ${b}. Was je er wel? Stuur de opdrachtgever direct een bericht in de app.`,
+    selectedTitle: "🎉 Je bent uitgekozen!",
+    selectedBody: (t, b, w) => `${t} bij ${b}, ${w}. Bekijk de klus in de app.`,
+    dayTitle: "📅 Morgen werken",
+    dayBody: (t, b, tm) => `${t} bij ${b} begint morgen om ${tm}. Bereid je goed voor: check de route en je werkkleding.`,
+    soonTitle: "⏰ Over 2 uur begint je klus",
+    soonBody: (t, b, tm) => `${t} bij ${b} om ${tm}. Vertrek op tijd!`,
+    startTitle: "▶️ Je klus begint nu",
+    startBody: (t, b) => `${t} bij ${b}. Vergeet niet in te checken in de app.`,
+    profileTitle: "Je bent er bijna 👋",
+    profileBody: "Vul je gegevens in om te beginnen — daarna kun je direct op klussen reageren.",
+    declinedTitle: "Reactie niet gekozen",
+    declinedBody: (t) => `Voor "${t}" is iemand anders gekozen. Er staan nog genoeg andere klussen voor je klaar.`,
   },
   en: {
     hours: "hours",
@@ -94,6 +118,18 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     correctionBody: (t, f, to) => `${t}: ${f} → ${to} hours. Review it and respond in the app.`,
     noShowTitle: (t) => `Not checked in: ${t}`,
     noShowBody: (t, b) => `You're marked as a no-show for ${t} at ${b}. Were you there? Message the client right away in the app.`,
+    selectedTitle: "🎉 You've been selected!",
+    selectedBody: (t, b, w) => `${t} at ${b}, ${w}. Open the job in the app.`,
+    dayTitle: "📅 Working tomorrow",
+    dayBody: (t, b, tm) => `${t} at ${b} starts tomorrow at ${tm}. Get ready: check your route and work clothes.`,
+    soonTitle: "⏰ Your job starts in 2 hours",
+    soonBody: (t, b, tm) => `${t} at ${b} at ${tm}. Leave on time!`,
+    startTitle: "▶️ Your job starts now",
+    startBody: (t, b) => `${t} at ${b}. Don't forget to check in in the app.`,
+    profileTitle: "Almost there 👋",
+    profileBody: "Fill in your details to get started — then you can respond to jobs right away.",
+    declinedTitle: "Response not chosen",
+    declinedBody: (t) => `Someone else was chosen for "${t}". There are plenty of other jobs waiting for you.`,
   },
   pl: {
     hours: "godz.",
@@ -122,6 +158,18 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     correctionBody: (t, f, to) => `${t}: ${f} → ${to} godz. Sprawdź i odpowiedz w aplikacji.`,
     noShowTitle: (t) => `Brak zameldowania: ${t}`,
     noShowBody: (t, b) => `Masz status nieobecności na ${t} w ${b}. Byłeś(-aś) na miejscu? Napisz od razu do zleceniodawcy w aplikacji.`,
+    selectedTitle: "🎉 Zostałeś(-aś) wybrany(-a)!",
+    selectedBody: (t, b, w) => `${t} w ${b}, ${w}. Zobacz zlecenie w aplikacji.`,
+    dayTitle: "📅 Jutro pracujesz",
+    dayBody: (t, b, tm) => `${t} w ${b} zaczyna się jutro o ${tm}. Przygotuj się: sprawdź trasę i strój roboczy.`,
+    soonTitle: "⏰ Twoje zlecenie zaczyna się za 2 godziny",
+    soonBody: (t, b, tm) => `${t} w ${b} o ${tm}. Wyjdź na czas!`,
+    startTitle: "▶️ Twoje zlecenie zaczyna się teraz",
+    startBody: (t, b) => `${t} w ${b}. Nie zapomnij zameldować się w aplikacji.`,
+    profileTitle: "Już prawie 👋",
+    profileBody: "Uzupełnij swoje dane, aby zacząć — potem od razu możesz reagować na zlecenia.",
+    declinedTitle: "Twoja odpowiedź nie została wybrana",
+    declinedBody: (t) => `Do „${t}” wybrano kogoś innego. Czeka na Ciebie wiele innych zleceń.`,
   },
   ro: {
     hours: "ore",
@@ -150,6 +198,18 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     correctionBody: (t, f, to) => `${t}: ${f} → ${to} ore. Verifică și răspunde în aplicație.`,
     noShowTitle: (t) => `Fără check-in: ${t}`,
     noShowBody: (t, b) => `Ești marcat ca absent la ${t} la ${b}. Ai fost acolo? Scrie-i imediat clientului în aplicație.`,
+    selectedTitle: "🎉 Ai fost ales!",
+    selectedBody: (t, b, w) => `${t} la ${b}, ${w}. Vezi jobul în aplicație.`,
+    dayTitle: "📅 Lucrezi mâine",
+    dayBody: (t, b, tm) => `${t} la ${b} începe mâine la ${tm}. Pregătește-te: verifică traseul și hainele de lucru.`,
+    soonTitle: "⏰ Jobul tău începe în 2 ore",
+    soonBody: (t, b, tm) => `${t} la ${b} la ${tm}. Pleacă la timp!`,
+    startTitle: "▶️ Jobul tău începe acum",
+    startBody: (t, b) => `${t} la ${b}. Nu uita să faci check-in în aplicație.`,
+    profileTitle: "Aproape gata 👋",
+    profileBody: "Completează-ți datele ca să începi — apoi poți răspunde imediat la joburi.",
+    declinedTitle: "Răspunsul tău nu a fost ales",
+    declinedBody: (t) => `Pentru „${t}” a fost ales altcineva. Te așteaptă multe alte joburi.`,
   },
   uk: {
     hours: "год",
@@ -178,6 +238,18 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     correctionBody: (t, f, to) => `${t}: ${f} → ${to} год. Перегляньте та дайте відповідь у застосунку.`,
     noShowTitle: (t) => `Без відмітки: ${t}`,
     noShowBody: (t, b) => `Вас позначено як відсутнього на ${t} у ${b}. Ви були там? Одразу напишіть замовнику в застосунку.`,
+    selectedTitle: "🎉 Вас обрано!",
+    selectedBody: (t, b, w) => `${t} у ${b}, ${w}. Перегляньте роботу в застосунку.`,
+    dayTitle: "📅 Завтра на роботу",
+    dayBody: (t, b, tm) => `${t} у ${b} починається завтра о ${tm}. Підготуйтеся: перевірте маршрут і робочий одяг.`,
+    soonTitle: "⏰ Ваша робота починається через 2 години",
+    soonBody: (t, b, tm) => `${t} у ${b} о ${tm}. Вирушайте вчасно!`,
+    startTitle: "▶️ Ваша робота починається зараз",
+    startBody: (t, b) => `${t} у ${b}. Не забудьте відмітитися в застосунку.`,
+    profileTitle: "Майже готово 👋",
+    profileBody: "Заповніть свої дані, щоб почати — потім одразу зможете відгукуватися на роботи.",
+    declinedTitle: "Вашу відповідь не обрано",
+    declinedBody: (t) => `На «${t}» обрали іншу людину. На вас чекає багато інших робіт.`,
   },
 };
 

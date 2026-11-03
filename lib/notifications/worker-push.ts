@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { sendUserPush } from "@/lib/notifications/push";
 import { notifyNearbyOpenShifts } from "@/lib/notifications/geo-push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { pushDay, type WorkerPushTexts } from "@/lib/i18n/worker-push";
+import type { Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Push notifications for werknemers (app + web). Each one is sent at most
@@ -41,9 +43,19 @@ interface Row {
   shift: { id: string; title: string; startsAt: Date; branch: { name: string } };
 }
 
-async function send(userId: string, title: string, body: string, shiftId: string, tag: string, ttlSeconds: number): Promise<void> {
-  await sendUserPush([userId], { title, body, data: { type: "SHIFT", url: shiftUrl(shiftId), tag }, ttlSeconds });
+/** One push in the worker's own app language (lib/i18n/worker-push.ts); Dutch when none is stored. */
+async function send(
+  userId: string,
+  build: (t: WorkerPushTexts, locale: Locale) => { title: string; body: string },
+  shiftId: string,
+  tag: string,
+  ttlSeconds: number,
+): Promise<void> {
+  await sendLocalizedPush([userId], (t, locale) => ({ ...build(t, locale), data: { type: "SHIFT", url: shiftUrl(shiftId), tag }, ttlSeconds }));
 }
+
+/** Dutch keeps the long form ("donderdag 5 november om 09:00"); other languages the short "cz 5/11 09:00". */
+const whenFor = (locale: Locale, d: Date) => (locale === "nl" ? `${dayFmt.format(d)} om ${timeFmt.format(d)}` : pushDay(locale, d));
 
 /** "Je bent uitgekozen" for assignments made in the last 6 hours. */
 async function selectedPushes(now: Date): Promise<number> {
@@ -55,17 +67,22 @@ async function selectedPushes(now: Date): Promise<number> {
   let n = 0;
   for (const a of rows) {
     if (!(await claim("selected", a.id))) continue;
-    const when = `${dayFmt.format(a.shift.startsAt)} om ${timeFmt.format(a.shift.startsAt)}`;
-    await send(a.freelancer.userId, "🎉 Je bent uitgekozen!", `${a.shift.title} bij ${a.shift.branch.name}, ${when}. Bekijk de klus in de app.`, a.shift.id, `selected-${a.id}`, 24 * 3600);
+    await send(
+      a.freelancer.userId,
+      (t, locale) => ({ title: t.selectedTitle, body: t.selectedBody(a.shift.title, a.shift.branch.name, whenFor(locale, a.shift.startsAt)) }),
+      a.shift.id,
+      `selected-${a.id}`,
+      24 * 3600,
+    );
     n += 1;
   }
   return n;
 }
 
 const REMINDERS = [
-  { kind: "day", before: 24 * H, window: 10 * H, title: () => "📅 Morgen werken", body: (r: Row) => `${r.shift.title} bij ${r.shift.branch.name} begint morgen om ${timeFmt.format(r.shift.startsAt)}. Bereid je goed voor: check de route en je werkkleding.` },
-  { kind: "soon", before: 2 * H, window: 90 * 60_000, title: () => "⏰ Over 2 uur begint je klus", body: (r: Row) => `${r.shift.title} bij ${r.shift.branch.name} om ${timeFmt.format(r.shift.startsAt)}. Vertrek op tijd!` },
-  { kind: "start", before: 0, window: 30 * 60_000, title: () => "▶️ Je klus begint nu", body: (r: Row) => `${r.shift.title} bij ${r.shift.branch.name}. Vergeet niet in te checken in de app.` },
+  { kind: "day", before: 24 * H, window: 10 * H, title: (t: WorkerPushTexts) => t.dayTitle, body: (t: WorkerPushTexts, r: Row) => t.dayBody(r.shift.title, r.shift.branch.name, timeFmt.format(r.shift.startsAt)) },
+  { kind: "soon", before: 2 * H, window: 90 * 60_000, title: (t: WorkerPushTexts) => t.soonTitle, body: (t: WorkerPushTexts, r: Row) => t.soonBody(r.shift.title, r.shift.branch.name, timeFmt.format(r.shift.startsAt)) },
+  { kind: "start", before: 0, window: 30 * 60_000, title: (t: WorkerPushTexts) => t.startTitle, body: (t: WorkerPushTexts, r: Row) => t.startBody(r.shift.title, r.shift.branch.name) },
 ] as const;
 
 /** Reminders before/at the start of upcoming klussen. */
@@ -87,7 +104,7 @@ async function reminderPushes(now: Date): Promise<number> {
     // skip "day" when the assignment was made less than 12h ago — they just got "uitgekozen"
     if (due.kind === "day" && now.getTime() - r.acceptedAt.getTime() < 12 * H) continue;
     if (!(await claim(due.kind, r.id))) continue;
-    await send(r.freelancer.userId, due.title(), due.body(r), r.shift.id, `${due.kind}-${r.id}`, Math.max(600, Math.round(due.window / 1000)));
+    await send(r.freelancer.userId, (t) => ({ title: due.title(t), body: due.body(t, r) }), r.shift.id, `${due.kind}-${r.id}`, Math.max(600, Math.round(due.window / 1000)));
     n += 1;
   }
   return n;
@@ -112,12 +129,12 @@ async function profilePushes(now: Date): Promise<number> {
     const st = (await kvGet<{ count: number; last: string }>(key)) ?? { count: 0, last: "1970-01-01T00:00:00Z" };
     if (st.count >= 3 || now.getTime() - new Date(st.last).getTime() < 3 * 24 * H) continue;
     await kvSet(key, { count: st.count + 1, last: now.toISOString() });
-    await sendUserPush([u.id], {
-      title: "Je bent er bijna 👋",
-      body: "Vul je gegevens in om te beginnen — daarna kun je direct op klussen reageren.",
+    await sendLocalizedPush([u.id], (t) => ({
+      title: t.profileTitle,
+      body: t.profileBody,
       data: { type: "PROFILE", url: "/dashboard/verificatie", tag: "profile-nudge" },
       ttlSeconds: 24 * 3600,
-    });
+    }));
     n += 1;
   }
   return n;
@@ -149,10 +166,10 @@ export async function maybeSweepWorkerPushes(): Promise<void> {
 
 /** Direct push when a reaction is declined (the accept case is covered by selectedPushes). */
 export async function pushOfferDeclined(userId: string, shift: { id: string; title: string }): Promise<void> {
-  await sendUserPush([userId], {
-    title: "Reactie niet gekozen",
-    body: `Voor "${shift.title}" is iemand anders gekozen. Er staan nog genoeg andere klussen voor je klaar.`,
+  await sendLocalizedPush([userId], (t) => ({
+    title: t.declinedTitle,
+    body: t.declinedBody(shift.title),
     data: { type: "SHIFT", url: "/dashboard/klussen", tag: `declined-${shift.id}` },
     ttlSeconds: 24 * 3600,
-  }).catch(() => 0);
+  })).catch(() => 0);
 }
