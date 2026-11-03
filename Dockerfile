@@ -52,6 +52,9 @@ COPY --from=build --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/
 # so `npx prisma migrate deploy` works in this runtime image.
 RUN mkdir -p ./node_modules/.bin && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma
 COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
+# Welke commit dit image is (git archive vult hem in, zie .gitattributes); de app
+# toont hem in Admin → ZekerFlex AI → Live zetten (lib/bouwer/versie.ts).
+COPY --from=build --chown=nextjs:nodejs /app/lib/bouwer/VERSIE.txt ./VERSIE
 
 # Local storage (uploads, mailbox, prefs, fiscal) — mount a volume over this.
 RUN mkdir -p /app/storage && chown -R nextjs:nodejs /app/storage

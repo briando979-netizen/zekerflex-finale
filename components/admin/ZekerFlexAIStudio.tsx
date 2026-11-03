@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JarvisConsole } from "@/components/jarvis/JarvisConsole";
 import { ConsoleTerminal } from "@/components/admin/ConsoleTerminal";
+import { LiveZetten } from "@/components/admin/bouwer/LiveZetten";
 import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.generated";
 
 // ---------------------------------------------------------------------------
@@ -17,11 +18,15 @@ import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.gen
 //   · Sandbox       : a live HTML/CSS/JS playground rendered in an isolated
 //                     sandbox iframe (/admin/zekerflex-ai/sandbox-frame)
 //   · Terminal      : the safe in-app console (read-only command set)
+//   · Live zetten   : one click puts the newest GitHub main live via the
+//                     server-side live-zetter (components/admin/bouwer/LiveZetten)
 // All panes stay mounted and toggle with `hidden`, so a running chat turn or a
 // loaded page survives tab switches.
 // ---------------------------------------------------------------------------
 
-type Tab = "ai" | "browser" | "sandbox";
+type Tab = "ai" | "browser" | "sandbox" | "live";
+
+const TAB_LABEL: Record<Tab, string> = { ai: "ZekerFlex AI", browser: "Pagina's", sandbox: "Sandbox", live: "Live zetten" };
 type PanelMode = "explorer" | "search";
 
 const AREA_ORDER = ["Admin", "Marketing", "Werkgever", "Freelancer", "Webshop", "Account & overig"];
@@ -243,11 +248,7 @@ export function ZekerFlexAIStudio({
 
       {/* ---- editor tab strip ---- */}
       <div className="flex flex-shrink-0 items-stretch border-b border-white/10 bg-[#0b0e13] text-xs">
-        {([
-          ["ai", "ZekerFlex AI"],
-          ["browser", "Pagina's"],
-          ["sandbox", "Sandbox"],
-        ] as [Tab, string][]).map(([id, label]) => (
+        {(Object.entries(TAB_LABEL) as [Tab, string][]).map(([id, label]) => (
           <button
             key={id}
             type="button"
@@ -291,6 +292,9 @@ export function ZekerFlexAIStudio({
           </ActivityButton>
           <ActivityButton label="Sandbox" active={tab === "sandbox"} onClick={() => setTab("sandbox")}>
             <IBeakerIcon />
+          </ActivityButton>
+          <ActivityButton label="Live zetten" active={tab === "live"} onClick={() => setTab("live")}>
+            <IRocketIcon />
           </ActivityButton>
           <div className="mt-auto" />
           <ActivityButton label="Terminal" active={terminalOpen} onClick={() => setTerminalOpen((o) => !o)}>
@@ -383,6 +387,12 @@ export function ZekerFlexAIStudio({
             <div className={tab === "sandbox" ? "flex min-h-0 flex-1" : "hidden"}>
               <SandboxPane />
             </div>
+            {/* alleen gemount als hij open is: hij peilt de server elke paar seconden */}
+            {tab === "live" && (
+              <div className="flex min-h-0 flex-1">
+                <LiveZetten />
+              </div>
+            )}
           </div>
 
           {terminalOpen && (
@@ -410,7 +420,7 @@ export function ZekerFlexAIStudio({
         <span className="text-white/20">|</span>
         <span>{APP_PAGE_COUNT} pagina&apos;s</span>
         <span className="text-white/20">|</span>
-        <span className="capitalize">{tab === "ai" ? "ZekerFlex AI" : tab === "browser" ? "Pagina's" : "Sandbox"}</span>
+        <span className="capitalize">{TAB_LABEL[tab]}</span>
         <span className="ml-auto font-mono">{clock}</span>
       </div>
     </div>
@@ -668,6 +678,15 @@ function IBeakerIcon() {
   return (
     <svg {...IS}>
       <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IRocketIcon() {
+  return (
+    <svg {...IS}>
+      <path d="M12 3c3.5 2 5 5.5 5 9l-2.5 3h-5L7 12c0-3.5 1.5-7 5-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9.5 15 8 20l4-2 4 2-1.5-5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="9.5" r="1.5" fill="currentColor" />
     </svg>
   );
 }

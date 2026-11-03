@@ -1,1 +1,4 @@
 *.sh text eol=lf
+*.py text eol=lf
+# git archive vult hier de commit in, zodat de draaiende app weet welke versie live staat
+lib/bouwer/VERSIE.txt export-subst
