@@ -26,7 +26,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/admin/websitevoorstellen", { cache: "no-store" }).catch(() => null);
+    const r = await fetch("/api/sales/websitevoorstellen", { cache: "no-store" }).catch(() => null);
     if (!r?.ok) return setMessage({ ok: false, text: "Kon de voorstellen niet laden." });
     setData((await r.json()) as Data);
   }, []);
@@ -37,7 +37,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   async function create() {
     setBusy("nieuw");
     setMessage(null);
-    const r = await fetch("/api/admin/websitevoorstellen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: url.trim() }) }).catch(() => null);
+    const r = await fetch("/api/sales/websitevoorstellen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: url.trim() }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(null);
     if (!r?.ok) return setMessage({ ok: false, text: d?.error?.message ?? "Het voorstel maken lukte niet." });
@@ -49,7 +49,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   async function act(p: WebsiteProposal, action: ProposalAction) {
     if (action === "ingetrokken" && !window.confirm(`Het voorstel voor ${p.bedrijf} intrekken? De nieuwe website gaat offline.`)) return;
     setBusy(p.id);
-    const r = await fetch(`/api/admin/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
+    const r = await fetch(`/api/sales/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(null);
     if (!r?.ok) return setMessage({ ok: false, text: d?.error?.message ?? "Dat lukte niet." });
