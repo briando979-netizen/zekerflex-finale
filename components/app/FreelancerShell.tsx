@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { PushToggle } from "@/components/app/PushToggle";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
@@ -26,6 +26,25 @@ const TABS = [
   { href: "/dashboard/berichten", key: "chat", icon: <IChat /> },
   { href: "/dashboard/account", key: "account", icon: <IUser /> },
 ] as const;
+
+/**
+ * Pushes are written in the language stored on the server (lib/i18n/worker-locale.ts),
+ * set when the language is changed. Workers who picked theirs before that existed
+ * have no server copy yet: send it once per browser session. Dutch is the default anyway.
+ */
+function useLocaleSync() {
+  const { locale } = useI18n();
+  useEffect(() => {
+    if (locale === "nl") return;
+    try {
+      if (sessionStorage.getItem("zf-taal-sync") === locale) return;
+      sessionStorage.setItem("zf-taal-sync", locale);
+      navigator.sendBeacon?.("/api/me/taal", new Blob([JSON.stringify({ locale })], { type: "application/json" }));
+    } catch {
+      /* private mode / no beacon: the next language change stores it */
+    }
+  }, [locale]);
+}
 
 /** Compact language picker (flexworkers: NL/EN/PL/RO/UK). */
 function LanguageButton() {
@@ -67,6 +86,7 @@ export function FreelancerShell({
   canSwitchToEmployer?: boolean;
   children: ReactNode;
 }) {
+  useLocaleSync();
   const tabs = inApp ? TABS.filter((t) => t.key !== "bank") : TABS;
   const pathname = usePathname();
   const ft = useFT();
