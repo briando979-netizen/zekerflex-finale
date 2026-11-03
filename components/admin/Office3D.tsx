@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
-import { dayPhase, type Origin, sunAt, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
+import { dayPhase, moonName, moonPhase, type Origin, sunAt, sunTimes, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
 import { WEATHER_NL } from "@/lib/admin/city-life";
 import { isThemeId } from "@/lib/seasons/calendar";
 import { count, euro } from "@/lib/admin/format";
@@ -53,7 +53,7 @@ const LEGEND: [string, string][] = [
 ];
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
-const pickFor = (v: View): Pick | null => (v === "stad" || v === "polder" ? null : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+const pickFor = (v: View): Pick | null => (v === "stad" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
 
 const ORIGIN_NL: Record<string, string> = {
@@ -418,6 +418,28 @@ export function Office3D() {
         ) : (
           <Empty title="Nog geen klanten" body="Het eerste pand verschijnt zodra er een klant is." />
         )}
+      </>
+    );
+  } else if (selected?.kind === "polder") {
+    const w = data?.weather;
+    const now = new Date();
+    const sun = sunTimes(now);
+    const moon = moonPhase(now);
+    title = "Polder, weer en natuur";
+    subtitle = "Het weer, de zon en de maan boven Amsterdam, nu";
+    body = (
+      <>
+        <InfoList
+          rows={[
+            { label: "Weer", value: w ? `${WEATHER_NL[w.kind]}, ${w.tempC} °C` : "nog niet bekend" },
+            { label: "Wind", value: w ? `${w.windKmh} km/u` : "—" },
+            { label: "Bewolking", value: w ? `${w.cloud}%` : "—" },
+            { label: "Neerslag komend uur", value: w ? `${w.mmPerHour.toLocaleString("nl-NL")} mm` : "—" },
+            { label: "Zon", value: sun.rise && sun.set ? `op ${amsterdamClock(sun.rise)}, onder ${amsterdamClock(sun.set)}` : "—" },
+            { label: "Maan", value: `${moonName(moon.phase)}, ${Math.round(moon.lit * 100)}% verlicht` },
+          ]}
+        />
+        <Note>Het weer, de zon en de maan zijn echt (weer: MET Norway, CC BY 4.0) en sturen de lucht, het licht, de wolken en de neerslag in de stad. De koeien, schapen en de boerderij zijn sfeer.</Note>
       </>
     );
   } else if (selected?.kind === "event") {

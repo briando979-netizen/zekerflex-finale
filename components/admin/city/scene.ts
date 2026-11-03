@@ -393,6 +393,8 @@ export function createCity(
     } else if (p.kind === "bedrijventerrein") {
       [x, z, r] = [0, -48, 30];
       selectedKey = "bedrijventerrein";
+    } else if (p.kind === "polder") {
+      [x, z, r] = [0, -110, 16];
     } else {
       const s = COMPANY_SLOTS[data?.companies.length ?? 0];
       if (s) [x, z, r] = [s.x, s.z, 8.5];

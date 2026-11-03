@@ -273,16 +273,20 @@ const LAT = (52.37 * Math.PI) / 180;
 const LON = 4.9;
 
 /**
- * Echte zonnestand boven Amsterdam op dit moment (op ±15 minuten, zonder
- * tijdzone: alles in UTC). `elevation` in radialen (negatief = onder de
+ * Echte zonnestand boven Amsterdam op dit moment (op ongeveer een minuut,
+ * zonder tijdzone: alles in UTC). `elevation` in radialen (negatief = onder de
  * horizon); `dir` is de richting naar de zon in het grondvlak, met +x = oost
  * en +z = zuid, zoals in de stad.
  */
 export function sunAt(d: Date): { elevation: number; dir: Pt } {
-  const dayOfYear = (d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86_400_000;
-  const decl = ((23.44 * Math.PI) / 180) * Math.sin((2 * Math.PI * (284 + dayOfYear)) / 365);
-  const solarHours = d.getUTCHours() + d.getUTCMinutes() / 60 + LON / 15;
-  const ha = ((solarHours - 12) * 15 * Math.PI) / 180;
+  // NOAA-benadering: declinatie en tijdvereffening uit de dag van het jaar (op ongeveer een minuut)
+  const dayOfYear = Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86_400_000);
+  const hours = d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600;
+  const g = ((2 * Math.PI) / 365) * (dayOfYear + (hours - 12) / 24);
+  const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const trueSolarMinutes = hours * 60 + eqTime + 4 * LON;
+  const ha = ((trueSolarMinutes / 4 - 180) * Math.PI) / 180;
   const elevation = Math.asin(Math.sin(LAT) * Math.sin(decl) + Math.cos(LAT) * Math.cos(decl) * Math.cos(ha));
   // azimut vanaf het zuiden, positief richting west
   const az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(LAT) - Math.tan(decl) * Math.cos(LAT));
@@ -299,6 +303,39 @@ export function moonPhase(d: Date): { phase: number; lit: number } {
   const days = (d.getTime() - ref) / 86_400_000;
   const phase = (((days / SYNODIC) % 1) + 1) % 1;
   return { phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2 };
+}
+
+/** Naam van de maanfase in gewone woorden. */
+export function moonName(phase: number): string {
+  if (phase < 0.03 || phase >= 0.97) return "nieuwe maan";
+  if (phase < 0.22) return "wassende sikkel";
+  if (phase < 0.28) return "eerste kwartier";
+  if (phase < 0.47) return "wassende maan";
+  if (phase < 0.53) return "volle maan";
+  if (phase < 0.72) return "afnemende maan";
+  if (phase < 0.78) return "laatste kwartier";
+  return "afnemende sikkel";
+}
+
+/**
+ * Zonsopkomst en -ondergang boven Amsterdam op de (UTC-)dag van `day`: het
+ * moment waarop de zon 0,833° onder de horizon komt (met de lichtbreking).
+ * In Nederland liggen beide altijd binnen dezelfde UTC-dag.
+ */
+export function sunTimes(day: Date): { rise: Date | null; set: Date | null } {
+  const start = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
+  const h = (-0.833 * Math.PI) / 180;
+  const at = (ms: number) => sunAt(new Date(ms)).elevation - h;
+  let rise: Date | null = null;
+  let set: Date | null = null;
+  const step = 5 * 60_000;
+  for (let t = start; t < start + 86_400_000; t += step) {
+    const a = at(t);
+    const b = at(t + step);
+    if (a <= 0 && b > 0 && !rise) rise = new Date(t + (step * -a) / (b - a));
+    if (a > 0 && b <= 0 && !set) set = new Date(t + (step * a) / (a - b));
+  }
+  return { rise, set };
 }
 
 // --- verkeerslichten ------------------------------------------------------

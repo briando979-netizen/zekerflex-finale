@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   COMPANY_SLOTS,
   companyFloors,
@@ -12,8 +12,10 @@ import {
   laneOffset,
   LINES,
   millSpeed,
+  moonName,
   moonPhase,
   mustStop,
+  sunTimes,
   SIGNAL_CYCLE,
   signalColor,
   SIGNALS,
@@ -37,7 +39,7 @@ const plots: [string, Plot][] = [
 
 const onLine = (v: number) => LINES.some((l) => Math.abs(l - v) < 1e-9);
 
-/** Ligt het stuk a→b op één weg, binnen de lengte van die weg? */
+/** Ligt het stuk aâ†’b op Ã©Ã©n weg, binnen de lengte van die weg? */
 function onRoad(a: Pt, b: Pt): boolean {
   if (Math.abs(a[1] - b[1]) < 1e-9 && onLine(a[1])) {
     const [lo, hi] = roadSpan("h", a[1]);
@@ -104,7 +106,7 @@ describe("indeling van de stad", () => {
 describe("ritten", () => {
   it("rijden van elke herkomst naar het kantoor alleen over wegen", () => {
     for (const [name, from] of origins) {
-      // de opritten (deur ↔ weg) liggen per definitie naast de weg
+      // de opritten (deur â†” weg) liggen per definitie naast de weg
       const trips: [Pt[], boolean, boolean][] = [
         [tripCenter(from, LANDMARKS.hq), Boolean(from.door), true],
         [tripCenter(LANDMARKS.hq, from), true, Boolean(from.door)],
@@ -113,7 +115,7 @@ describe("ritten", () => {
         for (let i = skipFirst ? 1 : 0; i < trip.length - (skipLast ? 2 : 1); i++) {
           const a = trip[i]!;
           const b = trip[i + 1]!;
-          expect(onRoad(a, b), `${name}: stuk ${i} ${a} → ${b}`).toBe(true);
+          expect(onRoad(a, b), `${name}: stuk ${i} ${a} â†’ ${b}`).toBe(true);
         }
       }
     }
@@ -203,6 +205,24 @@ describe("verkeerslichten en maan", () => {
     expect(mustStop(60, 48 + LANE_CAR, 1, 0, SIGNAL_CYCLE / 2 + 1)).toBe(false);
   });
 
+  it("rekent zonsopkomst en -ondergang uit zoals in Amsterdam (op een paar minuten)", () => {
+    // 3 november 2026 volgens MET Norway (api.met.no sunrise): op 07:39, onder 17:07 Nederlandse tijd (06:39 en 16:07 UTC)
+    const { rise, set } = sunTimes(new Date("2026-11-03T12:00:00Z"));
+    const minutes = (d: Date | null) => (d ? d.getUTCHours() * 60 + d.getUTCMinutes() : -1);
+    expect(Math.abs(minutes(rise) - (6 * 60 + 39))).toBeLessThan(5);
+    expect(Math.abs(minutes(set) - (16 * 60 + 7))).toBeLessThan(5);
+    // midzomer: lange dag
+    const summer = sunTimes(new Date("2026-06-21T12:00:00Z"));
+    expect(minutes(summer.set) - minutes(summer.rise)).toBeGreaterThan(16 * 60);
+  });
+
+  it("noemt de maanfase in gewone woorden", () => {
+    expect(moonName(0)).toBe("nieuwe maan");
+    expect(moonName(0.5)).toBe("volle maan");
+    expect(moonName(0.25)).toBe("eerste kwartier");
+    expect(moonName(0.6)).toBe("afnemende maan");
+  });
+
   it("kent de maanfase: volle maan op 5 november 2025, nieuwe maan op 20 oktober 2025", () => {
     expect(moonPhase(new Date("2025-11-05T13:19:00Z")).lit).toBeGreaterThan(0.97);
     expect(moonPhase(new Date("2025-10-21T12:25:00Z")).lit).toBeLessThan(0.03);
@@ -210,7 +230,7 @@ describe("verkeerslichten en maan", () => {
 });
 
 describe("cijfers naar gebouwen", () => {
-  it("bouwt één huis per werker, tot de wijk vol is", () => {
+  it("bouwt Ã©Ã©n huis per werker, tot de wijk vol is", () => {
     expect(houseCount(0)).toBe(0);
     expect(houseCount(7)).toBe(7);
     expect(houseCount(10_000)).toBe(HOUSE_SLOTS.length);

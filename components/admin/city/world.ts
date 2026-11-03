@@ -13,7 +13,7 @@ import { robot, vehicle } from "@/components/admin/city/vehicles";
 // gebouwd worden als de echte cijfers veranderen. Hoogtes: gras op 0, wegen
 // tot ROAD_TOP, stoepen en bouwgrond tot SLAB.
 
-export type Pick = { kind: "room"; id: RoomId } | { kind: "landmark"; id: LandmarkId } | { kind: "woonwijk" } | { kind: "bedrijventerrein" } | { kind: "company"; id: string } | { kind: "kavel" } | { kind: "event"; id: string };
+export type Pick = { kind: "room"; id: RoomId } | { kind: "landmark"; id: LandmarkId } | { kind: "woonwijk" } | { kind: "bedrijventerrein" } | { kind: "company"; id: string } | { kind: "kavel" } | { kind: "event"; id: string } | { kind: "polder" };
 
 /** Materiaal dat met het dagdeel meegloeit (ramen, lantaarns, schermen). */
 export interface Glow {
@@ -322,7 +322,11 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
   for (const d of DITCHES) G.add(flat(kit, d.x1 - d.x0, d.z1 - d.z0, water, (d.x0 + d.x1) / 2, 0.03, (d.z0 + d.z1) / 2));
   {
     const [fx, fz] = FARM;
-    // stolpboerderij met piramidedak, een rode schuur en een silo
+    // stolpboerderij met piramidedak, een rode schuur en een silo; aanklikbaar voor het weerpaneel
+    const farm = new THREE.Group();
+    pickable(L, farm, { kind: "polder" });
+    const G = farm;
+    L.group.add(farm);
     const brickFarm = kit.mat(0x9a4a32, { roughness: 0.9 });
     G.add(kit.box(7, 3.2, 7, brickFarm, fx, 1.6, fz));
     const stolp = new THREE.Mesh(
