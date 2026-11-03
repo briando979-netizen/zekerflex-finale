@@ -40,6 +40,9 @@ for i in 1 2 3; do
     # De Bouwer (AI-programmeur, deploy/bouwer/werker) leest zijn code via een map-mount:
     # alleen herstarten als die code veranderde, want een herstart breekt lopend werk af.
     if [ -f deploy/bouwer/werker/server.mjs ]; then
+      # gecachte build (seconden): alleen echt werk als deploy/bouwer/werker/Dockerfile veranderde,
+      # anders bleef een gewijzigd image stil hangen; een nieuw image maakt de container opnieuw
+      sudo $C build -q bouwer > /dev/null 2>&1 || echo "bouwer: image bouwen mislukt, het oude blijft"
       sudo $C up -d bouwer
       # zonder \r: een archief van een Windows-pc heeft CRLF, de live-zetter LF; dezelfde code
       BOUWER_HASH="$(cat deploy/bouwer/werker/*.mjs | tr -d '\r' | sha256sum)"
@@ -54,6 +57,16 @@ for i in 1 2 3; do
       ANDROID_HASH="$(cat deploy/android-bouwer/*.mjs | tr -d '\r' | sha256sum)"
       if [ "$ANDROID_HASH" != "$(cat .zf-android-bouwer.hash 2>/dev/null)" ]; then
         sudo $C restart android-bouwer && echo "$ANDROID_HASH" > .zf-android-bouwer.hash
+      fi
+    fi
+    # De live-zetter (deploy/bouwer/zf-live.py) laadt nieuwe code pas bij een herstart. Na een
+    # uitrol via de knop doet hij dat zelf; bij een handmatige uitrol doet dit script het, als
+    # zijn code veranderde. Nooit als dit script ín de live-zetter draait (ouderproces), want
+    # dan zou hij zichzelf midden in de uitrol afbreken.
+    if systemctl is-active -q zf-live 2>/dev/null && ! ps -o args= -p "$PPID" 2>/dev/null | grep -q "zf-live.py"; then
+      LIVE_HASH="$(tr -d '\r' < deploy/bouwer/zf-live.py | sha256sum)"
+      if [ "$LIVE_HASH" != "$(cat .zf-live.hash 2>/dev/null)" ]; then
+        sudo systemctl restart zf-live && echo "$LIVE_HASH" > .zf-live.hash && echo "live-zetter: nieuwe versie geladen"
       fi
     fi
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
