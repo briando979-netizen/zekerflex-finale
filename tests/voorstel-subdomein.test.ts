@@ -13,6 +13,8 @@ describe("voorstel op een eigen subdomein", () => {
     expect(voorstelPad("schwarzwald", "/api/voorstel/schwarzwald/agenda")).toBe("/api/voorstel/schwarzwald/agenda");
     expect(voorstelPad("schwarzwald", "/_next/static/chunks/app.js")).toBe("/_next/static/chunks/app.js");
     expect(voorstelPad("schwarzwald", "/icon.svg")).toBe("/icon.svg");
+    // zelf gehoste lettertypes (sessie 1f verhuist ze van /_next/static/media naar /fonts)
+    expect(voorstelPad("schwarzwald", "/fonts/inter-latin.woff2")).toBe("/fonts/inter-latin.woff2");
     // het videoplaatje van YouTubeEmbed (gedeelde openbare route)
     expect(voorstelPad("schwarzwald", "/api/media/youtube/noGuN2eDQWo")).toBe("/api/media/youtube/noGuN2eDQWo");
   });
