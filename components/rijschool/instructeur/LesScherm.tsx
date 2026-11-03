@@ -11,6 +11,8 @@ import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { plusDagen } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { whatsappNummer } from "@/lib/rijschool/website";
+import { afstandTekst } from "@/lib/kaart/geo";
+import { RouteOpnemen } from "@/components/rijschool/instructeur/RouteOpnemen";
 
 // Het scherm van één les in de instructeur-app: alles wat je in de auto
 // nodig hebt, van route en klok tot leskaart, huiswerk, afronden, de volgende
@@ -119,6 +121,14 @@ export function LesScherm({ les, d, api, actie, onTerug }: { les: DagLes; d: Ins
             ))}
         </div>
       </section>
+
+      {/* lesroute: opnemen tijdens de gestarte les (lib/rijschool/lesroute.ts) */}
+      {l && les.status === "GEPLAND" && les.gestartOm && <RouteOpnemen api={api} datum={d.datum} lesId={les.id} meters={les.routeMeters} />}
+      {l && les.status === "VOLTOOID" && les.routeMeters > 0 && (
+        <p className="rounded-2xl border border-hair bg-white p-4 text-sm">
+          <span className="font-semibold">Lesroute:</span> {afstandTekst(les.routeMeters)} opgenomen. De leerling ziet hem in de app.
+        </p>
+      )}
 
       {l && (
         <section className="grid gap-3 sm:grid-cols-2">

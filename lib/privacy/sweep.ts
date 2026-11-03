@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
@@ -34,6 +35,13 @@ export async function runRetentionSweep(
   cleared.gps_events = dryRun
     ? await prisma.gpsEvent.count({ where: { recordedAt: { lt: gpsCut } } })
     : (await prisma.gpsEvent.deleteMany({ where: { recordedAt: { lt: gpsCut } } })).count;
+
+  // Lesroutes van rijscholen: na 2 jaar alleen de route weg, de les zelf blijft.
+  const routeCut = retentionCutoff("rijschool_lesroutes", now)!;
+  const routeWhere = { start: { lt: routeCut }, NOT: { route: { equals: Prisma.DbNull } } };
+  cleared.rijschool_lesroutes = dryRun
+    ? await prisma.rijschoolLes.count({ where: routeWhere })
+    : (await prisma.rijschoolLes.updateMany({ where: routeWhere, data: { route: Prisma.DbNull } })).count;
 
   const deviceCut = retentionCutoff("device_fingerprint", now)!;
   cleared.device_fingerprint = dryRun

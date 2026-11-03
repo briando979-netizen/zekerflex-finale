@@ -10,6 +10,7 @@ import { onlineBetalenAan } from "@/lib/rijschool/betalen";
 import { automailInstellingen } from "@/lib/rijschool/automailer";
 import type { AutomailInstellingen } from "@/lib/rijschool/automail-soorten";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { routeWeergave, type RouteWeergave } from "@/lib/rijschool/lesroute";
 
 // ---------------------------------------------------------------------------
 // Wat elk scherm van het rijschool-pakket te zien krijgt, als platte JSON
@@ -297,6 +298,8 @@ export interface LeerlingLes extends LesRij {
   verslag: string;
   huiswerk: string[];
   beoordeling: Beoordelingen;
+  /** de gereden route (lib/rijschool/lesroute.ts), alleen bij een gereden les */
+  route: RouteWeergave | null;
 }
 
 export interface LeerlingWeergave {
@@ -340,6 +343,7 @@ export async function leerlingWeergave(r: Rijschool, l: RijschoolLeerling): Prom
       verslag: les.status === "VOLTOOID" ? les.verslag : "",
       huiswerk: les.huiswerk,
       beoordeling: les.status === "VOLTOOID" ? leesBeoordelingen(les.beoordeling) : {},
+      route: les.status === "VOLTOOID" ? routeWeergave(les.route) : null,
     })),
     saldoMin,
     betalingen: betalingen.map((b) => ({
@@ -370,6 +374,8 @@ export interface DagLes extends LesRij {
   beoordeling: Beoordelingen;
   interneNotitie: string;
   gestartOm: string | null;
+  /** meters lesroute die al is opgeslagen (0 = nog geen) */
+  routeMeters: number;
   leerling: { id: string; naam: string; telefoon: string; adres: string; automaat: boolean; saldoMin: number; voortgang: Voortgang; vorigVerslag: string } | null;
 }
 
@@ -435,6 +441,7 @@ export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur,
         beoordeling: leesBeoordelingen(les.beoordeling),
         interneNotitie: les.interneNotitie,
         gestartOm: les.gestartOm?.toISOString() ?? null,
+        routeMeters: routeWeergave(les.route)?.meters ?? 0,
         leerling: info
           ? {
               ...info,

@@ -24,6 +24,7 @@ const h = vi.hoisted(() => {
       engagementEvent: mk("engagementEvent", 9),
       passwordResetToken: mk("passwordResetToken", 1),
       identityVerification: mk("identityVerification", 3),
+      rijschoolLes: mk("rijschoolLes", 4),
     },
     audits: [] as unknown[],
   };
@@ -57,7 +58,12 @@ describe("runRetentionSweep", () => {
       engagement_events: 9,
       password_reset_tokens: 1,
       kyc: 3,
+      rijschool_lesroutes: 4,
     });
+
+    // lesroutes: alleen de route weg (updateMany), de les zelf blijft
+    const route = h.calls.find((c) => c.model === "rijschoolLes");
+    expect(route?.op).toBe("updateMany");
 
     const kyc = h.calls.find((c) => c.model === "identityVerification");
     expect(kyc?.op).toBe("updateMany");

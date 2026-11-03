@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import { GEBOUWEN_3D, KAART_STIJLEN, kaartStijl, NL_GRENZEN, type KaartStijl } from "@/lib/kaart/stijl";
 import { afstandTekst, bewaarPunt, duurTekst, gpx, lijnLengte, ritStand, type Punt, type RitPunt, type ZoekResultaat } from "@/lib/kaart/geo";
+import { laadKaartMotor } from "@/components/kaart/motor";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Kaart: een eigen kaart van Nederland (zelf gehoste OpenStreetMap-
@@ -86,15 +87,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
     let weg = false;
     void (async () => {
       try {
-        const [mod, { Protocol }] = await Promise.all([import("maplibre-gl"), import("pmtiles")]);
+        const mod = await laadKaartMotor();
         if (weg || !houder.current) return;
         ml.current = mod;
-        mod.setWorkerUrl(new URL("../../node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString());
-        const g = globalThis as typeof globalThis & { __zfPmtiles?: boolean };
-        if (!g.__zfPmtiles) {
-          mod.addProtocol("pmtiles", new Protocol().tile);
-          g.__zfPmtiles = true;
-        }
         const map = new mod.Map({
           container: houder.current,
           style: kaartStijl(window.location.origin, stand.current.stijl, stand.current.drie),

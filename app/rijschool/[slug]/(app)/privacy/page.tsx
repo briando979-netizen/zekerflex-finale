@@ -33,6 +33,10 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
       <ul className={`${tekst} list-disc space-y-1 pl-5`}>
         <li>Je naam, e-mailadres, telefoonnummer en, als je die opgeeft, je ophaaladres en geboortedatum.</li>
         <li>Je lessen: wanneer, met welke instructeur en auto, en of de les doorging.</li>
+        <li>
+          De route van een les, als je instructeur die opneemt: alleen tijdens de les, met de telefoon van de instructeur, als grove lijn (op ongeveer 10 meter). Alleen jij, je
+          instructeur en {r.naam} zien hem. Na 2 jaar wordt de route gewist.
+        </li>
         <li>Je voortgang: de beoordeling per onderdeel en de opmerkingen van je instructeur.</li>
         <li>Je tegoed en betalingen voor lessen en pakketten.</li>
         <li>Je oefenresultaten bij theorie oefenen.</li>

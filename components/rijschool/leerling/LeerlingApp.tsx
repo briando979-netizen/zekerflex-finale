@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import type { LeerlingLes, LeerlingWeergave } from "@/lib/rijschool/weergave";
 import { foutVan, stuur } from "@/components/rijschool/api";
@@ -12,6 +13,8 @@ import { onderdeelVan } from "@/lib/rijschool/leskaart";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { komendeDagen } from "@/lib/rijschool/planning";
 import { euro } from "@/lib/payroll/format";
+import { afstandTekst, duurTekst } from "@/lib/kaart/geo";
+import type { RouteWeergave } from "@/lib/rijschool/lesroute";
 
 // De app van een leerling: volgende les, lessen (annuleren en zelf plannen),
 // voortgang per onderdeel, oefenen (lesvoorbereiding en theorie) en tegoed.
@@ -202,6 +205,7 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
                 {geweest.map((l) => (
                   <LesRegel key={l.id} les={l}>
                     {l.verslag && <p className="mt-2 whitespace-pre-line text-sm text-neutralx-700">{l.verslag}</p>}
+                    {l.route && <Lesroute route={l.route} kleur={kleur} />}
                   </LesRegel>
                 ))}
               </ul>
@@ -472,5 +476,21 @@ function Profiel({ d, onBewaar, onUitloggen }: { d: LeerlingWeergave; onBewaar: 
         </form>
       )}
     </section>
+  );
+}
+
+// De kaart komt pas als je hem openklapt (eigen bundel met de kaartmotor).
+const RouteKaart = dynamic(() => import("@/components/kaart/RouteKaart"), { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-xl bg-paper-soft" /> });
+
+/** De gereden route van een les (lib/rijschool/lesroute.ts), opgenomen door je instructeur. */
+function Lesroute({ route, kleur }: { route: RouteWeergave; kleur: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <button type="button" aria-expanded={open} className="text-sm font-semibold underline underline-offset-2" onClick={() => setOpen(!open)}>
+        {open ? "Lesroute verbergen" : `Bekijk je lesroute (${afstandTekst(route.meters)}, ${duurTekst(route.seconden)})`}
+      </button>
+      {open && <RouteKaart punten={route.punten} kleur={kleur} className="mt-2 h-64 rounded-xl ring-1 ring-hair" />}
+    </div>
   );
 }

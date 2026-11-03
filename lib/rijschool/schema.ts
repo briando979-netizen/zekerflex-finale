@@ -232,6 +232,8 @@ export const instructeurActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("afronden"), lesId: id, status: z.enum(["VOLTOOID", "NIET_VERSCHENEN"]) }),
   z.object({ actie: z.literal("plan"), leerlingId: id, datum, tijd: tijdVeld, duurMin: z.number().int().min(15).max(300), voertuigId: id.nullable() }),
   z.object({ actie: z.literal("betaling"), leerlingId: id, productId: id.nullable(), bedragCent: z.number().int().min(0).max(1_000_000), methode: z.enum(["PIN", "CONTANT"]), omschrijving: tekst(160).min(2) }),
+  // lesroute: punten [lengte, breedte, unix-seconden] van de telefoon van de instructeur (lib/rijschool/lesroute.ts)
+  z.object({ actie: z.literal("route"), lesId: id, punten: z.array(z.tuple([z.number(), z.number(), z.number()])).max(600) }),
   // iDEAL in de auto: geeft de betaalpagina terug, de instructeur toont die als QR-code
   z.object({ actie: z.literal("ideal"), leerlingId: id, productId: id.nullable(), bedragCent: z.number().int().min(100).max(1_000_000), omschrijving: tekst(160).min(2) }),
 ]);

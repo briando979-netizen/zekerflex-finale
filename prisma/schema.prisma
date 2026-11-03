@@ -2381,6 +2381,9 @@ model RijschoolLes {
   interneNotitie String               @default("")
   gestartOm      DateTime?
   afgerondOm     DateTime?
+  // Lesroute: de gereden route, opgenomen met de telefoon van de instructeur
+  // (lib/rijschool/lesroute.ts). Alleen de leerling van deze les en de rijschool zien hem.
+  route          Json?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 

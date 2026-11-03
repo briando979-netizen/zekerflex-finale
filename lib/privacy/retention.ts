@@ -96,6 +96,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: true,
   },
   {
+    key: "rijschool_lesroutes",
+    label: "Lesroutes van rijlessen (uitgedunde GPS-lijn, opgenomen door de instructeur)",
+    days: 2 * YEAR,
+    anchor: "les gereden",
+    basis: "Inzicht in de rijopleiding voor de leerling; daarna niet meer nodig",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "timesheets",
     label: "Urenstaten",
     days: 7 * YEAR,

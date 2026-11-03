@@ -11,6 +11,7 @@ import { instructeurWeergave } from "@/lib/rijschool/weergave";
 import { isDatum, moment } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { onlineBetalenAan, startIdeal } from "@/lib/rijschool/betalen";
+import { leesRoute, routeWeergave, voegRouteToe } from "@/lib/rijschool/lesroute";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +76,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           data: { beoordeling: a.beoordeling as unknown as Prisma.InputJsonValue, verslag: a.verslag, huiswerk: a.huiswerk, interneNotitie: a.interneNotitie },
         });
         break;
+      }
+      case "route": {
+        // alleen tijdens (of net na) de eigen les; klein antwoord, dit gaat elke halve minuut
+        const les = await eigen(a.lesId);
+        if (!les.gestartOm && les.status !== "VOLTOOID") throw AppError.precondition("Start eerst de les; pas dan wordt de route opgenomen.");
+        const route = voegRouteToe(leesRoute(les.route), a.punten, les);
+        await prisma.rijschoolLes.update({ where: { id: les.id }, data: { route: route as unknown as Prisma.InputJsonValue } });
+        return NextResponse.json({ ok: true, meters: routeWeergave(route)?.meters ?? 0 });
       }
       case "afronden": {
         const les = await eigen(a.lesId);
