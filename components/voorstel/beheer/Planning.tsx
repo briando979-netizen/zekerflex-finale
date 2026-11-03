@@ -5,10 +5,14 @@ import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, dagNaam, euro, useBeheerD
 import { verzetTekst, type BeheerBoeking, type Status } from "@/components/voorstel/beheer/Reserveringen";
 import { indelen, maandagVan, minuten, plusDagen, weekDagen } from "@/lib/voorstel/schwarzwald-planning";
 import { BASE } from "@/lib/voorstel/schwarzwald";
+import type { Blokkade } from "@/lib/voorstel/schwarzwald-agenda";
 
 // Weekplanning: één kolom per dag, een blok per reservering op zijn tijd en
 // met zijn duur. Wat tegelijk loopt staat naast elkaar. Klik op een blok voor
-// de details, bevestigen/annuleren en het klantdossier.
+// de details, bevestigen/annuleren en het klantdossier. Blokkades (Openingstijden)
+// staan er als gestreepte band achter.
+
+const STREPEN = "repeating-linear-gradient(135deg, rgba(10,18,14,0.10) 0 6px, rgba(10,18,14,0.03) 6px 12px)";
 
 const VAN = 10 * 60;
 const TOT = 23 * 60;
@@ -43,6 +47,7 @@ export function Planning({
   openKlant: (email: string) => void;
 }) {
   const { data, setData, fout, setFout, laad } = useBeheerData<{ boekingen: BeheerBoeking[] }>(BEHEER_API);
+  const inst = useBeheerData<{ instellingen: { blokkades?: Blokkade[] } }>(`${BEHEER_API}/instellingen`);
   const [maandag, setMaandag] = useState(maandagVan(vandaag));
   const [geannuleerd, setGeannuleerd] = useState(false);
   const [gekozen, setGekozen] = useState<string | null>(null);
@@ -73,6 +78,8 @@ export function Planning({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, maandag, geannuleerd, duur]);
 
+  const blokkades = inst.data?.instellingen.blokkades ?? [];
+  const blokkadesWeek = blokkades.filter((k) => dagen.includes(k.datum));
   const weekBoekingen = dagen.flatMap((d) => perDag.get(d) ?? []).map((g) => g.item);
   const inDezeWeek = new Set(weekBoekingen.map((b) => b.activiteit));
   const keuze = weekBoekingen.find((b) => `${b.datum}-${b.id}` === gekozen) ?? null;
@@ -142,6 +149,23 @@ export function Planning({
               {Array.from({ length: (TOT - VAN) / 60 }, (_, i) => (
                 <div key={i} className="absolute inset-x-0 border-t border-schw-night/5" style={{ top: px(i * 60) }} />
               ))}
+              {blokkadesWeek
+                .filter((k) => k.datum === d && minuten(k.tot) > VAN && minuten(k.van) < TOT)
+                .map((k, i) => {
+                  const wat = k.activiteit ? (namen[k.activiteit] ?? k.activiteit) : "alles";
+                  return (
+                    <div
+                      key={`${k.van}-${k.activiteit}-${i}`}
+                      role="note"
+                      aria-label={`Geblokkeerd ${k.van}–${k.tot}: ${wat}${k.reden ? `, ${k.reden}` : ""}`}
+                      title={`Geblokkeerd ${k.van}–${k.tot}: ${wat}${k.reden ? ` (${k.reden})` : ""}`}
+                      className="absolute inset-x-0 overflow-hidden border-y border-schw-night/20 px-1 text-[10px] font-semibold text-schw-night/70"
+                      style={{ top: px(Math.max(0, minuten(k.van) - VAN)), height: px(Math.max(15, Math.min(TOT, minuten(k.tot)) - Math.max(VAN, minuten(k.van)))), background: STREPEN }}
+                    >
+                      Geblokkeerd · {wat}
+                    </div>
+                  );
+                })}
               {d === vandaag && nu !== null && nu > VAN && nu < TOT && (
                 <div className="absolute inset-x-0 z-20 border-t-2 border-[#B91C1C]" style={{ top: px(nu - VAN) }} aria-hidden="true" />
               )}
@@ -179,6 +203,11 @@ export function Planning({
         </div>
       </div>
 
+      {blokkadesWeek.length > 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-schw-mute">
+          <span className="h-3 w-5 rounded border border-schw-night/20" style={{ background: STREPEN }} /> geblokkeerd voor online boeken (aanpassen onder Openingstijden)
+        </p>
+      )}
       {inDezeWeek.size > 0 && (
         <ul className="flex flex-wrap gap-3 text-xs text-schw-mute" aria-label="Kleuren per activiteit">
           {[...inDezeWeek].map((slug) => (

@@ -52,6 +52,7 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
   const namen: Record<string, string> = Object.fromEntries(ACTIVITEITEN.map((a) => [a.slug, a.naam]));
   const { regels, perActiviteit, gasten, geannuleerd } = dagOverzicht(boekingen, duur);
   const kaarten = await Promise.all(regels.map((r) => klantkaart(r.b.account ?? r.b.email).catch(() => null)));
+  const blokkades = (cfg.blokkades ?? []).filter((k) => k.datum === datum).sort((a, b) => a.van.localeCompare(b.van));
 
   return (
     <section className="mx-auto max-w-[1280px] px-4 py-8 sm:px-8">
@@ -91,6 +92,20 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
               </li>
             ))}
           </ul>
+        )}
+
+        {blokkades.length > 0 && (
+          <div className="mt-4 rounded-xl border border-dashed border-schw-night/30 px-4 py-3 text-sm">
+            <p className="font-bold">Geblokkeerd voor online boeken</p>
+            <ul className="mt-1 space-y-0.5">
+              {blokkades.map((k, i) => (
+                <li key={`${k.van}-${k.activiteit}-${i}`}>
+                  {k.van}–{k.tot} · {k.activiteit ? (namen[k.activiteit] ?? k.activiteit) : "alle activiteiten"}
+                  {k.reden && <span className="text-schw-mute"> · {k.reden}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {regels.length === 0 ? (
