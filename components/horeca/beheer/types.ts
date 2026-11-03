@@ -1,4 +1,5 @@
 import type { ZaakWeergave } from "@/lib/horeca/weergave";
+import type { ReserveerInstellingen } from "@/lib/horeca/reserveren";
 
 // Wat /api/horeca/beheer teruggeeft, zoals de browser het ziet.
 
@@ -38,6 +39,7 @@ export interface BeheerData {
   items: Item[];
   tafels: Tafel[];
   maand: { totaalCent: number; losCent: number; bundel: boolean };
+  reserveren: ReserveerInstellingen;
 }
 
 export type Antwoord = BeheerData | { aan: false; voorstel: { naam: string; plaats: string; telefoon: string; email: string } };

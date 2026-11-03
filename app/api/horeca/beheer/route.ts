@@ -20,6 +20,8 @@ import {
 import { heeftModule, maandbedrag, MODULES, type ModuleSleutel } from "@/lib/horeca/modules";
 import { zaakWeergave } from "@/lib/horeca/weergave";
 import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
+import { bewaarReserveerInstellingen, maakReservering, reserveringenOp, zetReserveringStatus, zetReserveringTafel } from "@/lib/horeca/reserveringen";
+import { isDatum, leesInstellingen } from "@/lib/horeca/reserveren";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -36,7 +38,7 @@ const fout = (err: unknown) => {
 
 async function alles(zaak: HorecaZaak) {
   const [kaart, tafels] = await Promise.all([menukaart(zaak.id), tafelsVan(zaak.id)]);
-  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules) };
+  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules), reserveren: leesInstellingen(zaak.reserveren) };
 }
 
 const eisModule = (zaak: HorecaZaak, m: ModuleSleutel) => {
@@ -51,9 +53,17 @@ export async function GET(request: Request): Promise<NextResponse> {
       const d = await companyDefaults(tenantId, p);
       return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
     }
-    if (new URL(request.url).searchParams.get("alleen") === "bestellingen") {
+    const q = new URL(request.url).searchParams;
+    if (q.get("alleen") === "bestellingen") {
       eisModule(zaak, "bestellen");
       return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
+    }
+    // ?alleen=reserveringen&datum=JJJJ-MM-DD → het reserveringsboek van die dag
+    if (q.get("alleen") === "reserveringen") {
+      eisModule(zaak, "reserveren");
+      const datum = q.get("datum") ?? "";
+      if (!isDatum(datum)) throw AppError.validation("Kies een datum.");
+      return NextResponse.json({ datum, reserveringen: await reserveringenOp(zaak.id, datum) });
     }
     return NextResponse.json(await alles(zaak));
   } catch (err) {
@@ -125,6 +135,24 @@ export async function POST(request: Request): Promise<NextResponse> {
         eisModule(zaak, "bestellen");
         await zetBestelStatus(zaak, a.id, a.status);
         return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
+      case "reservering": {
+        eisModule(zaak, "reserveren");
+        const { actie: _a, ...r } = a;
+        await maakReservering(zaak, r, "bediening");
+        return NextResponse.json({ datum: a.datum, reserveringen: await reserveringenOp(zaak.id, a.datum) });
+      }
+      case "reservering-status":
+      case "reservering-tafel": {
+        eisModule(zaak, "reserveren");
+        if (a.actie === "reservering-status") await zetReserveringStatus(zaak, a.id, a.status);
+        else await zetReserveringTafel(zaak, a.id, a.tafelId);
+        return NextResponse.json({ ok: true });
+      }
+      case "reserveer-instellingen": {
+        const { actie: _a, ...inst } = a;
+        nu = await bewaarReserveerInstellingen(zaak, inst);
+        break;
+      }
     }
     return NextResponse.json(await alles(nu));
   } catch (err) {

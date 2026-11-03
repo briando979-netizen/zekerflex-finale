@@ -10,6 +10,7 @@ import { ModulesTab } from "@/components/horeca/beheer/ModulesTab";
 import { GegevensTab } from "@/components/horeca/beheer/GegevensTab";
 import { BestellingenTab } from "@/components/horeca/beheer/BestellingenTab";
 import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
+import { ReserveringenTab } from "@/components/horeca/beheer/ReserveringenTab";
 import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types";
 
 // ---------------------------------------------------------------------------
@@ -19,10 +20,11 @@ import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-type Tab = "overzicht" | "bestellingen" | "tafels" | "menukaart" | "modules" | "gegevens";
+type Tab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "menukaart" | "modules" | "gegevens";
 /** De tabbladen; die van een module alleen als die module aan staat. */
 const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
   { id: "overzicht", label: "Overzicht" },
+  ...(modules.includes("reserveren") ? [{ id: "reserveringen" as const, label: "Reserveringen" }] : []),
   ...(modules.includes("bestellen")
     ? [
         { id: "bestellingen" as const, label: "Bestellingen" },
@@ -97,6 +99,7 @@ export function HorecaBeheer() {
       <Melding fout={fout} ok={ok} />
 
       {tab === "overzicht" && <Overzicht data={data} naar={setTab} />}
+      {tab === "reserveringen" && z.modules.includes("reserveren") && <ReserveringenTab data={data} doe={doe} />}
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}

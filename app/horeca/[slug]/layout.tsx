@@ -46,10 +46,16 @@ export default async function HorecaSiteLayout({ children, params }: { children:
             <a href={`${basis}#openingstijden`} className="hidden rounded-full px-3 py-2 hover:bg-white/10 sm:inline">
               Openingstijden
             </a>
-            {z.telefoon && (
-              <a href={telefoonLink(z.telefoon)} className="rounded-full bg-[var(--rs-accent-knop)] px-4 py-2 font-bold text-[var(--rs-op-accent)]">
-                Bel ons
+            {z.modules.includes("reserveren") ? (
+              <a href={`${basis}/reserveren`} className="rounded-full bg-[var(--rs-accent-knop)] px-4 py-2 font-bold text-[var(--rs-op-accent)]">
+                Reserveren
               </a>
+            ) : (
+              z.telefoon && (
+                <a href={telefoonLink(z.telefoon)} className="rounded-full bg-[var(--rs-accent-knop)] px-4 py-2 font-bold text-[var(--rs-op-accent)]">
+                  Bel ons
+                </a>
+              )
             )}
           </nav>
         </div>

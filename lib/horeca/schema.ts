@@ -76,7 +76,38 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("tafel-code"), id }),
   z.object({ actie: z.literal("bestelling"), tafelId: id.nullable(), mand: mandSchema, opmerking: tekst(300), naam: tekst(60) }),
   z.object({ actie: z.literal("bestelstatus"), id, status: z.enum(["NIEUW", "IN_BEREIDING", "KLAAR", "GESERVEERD", "GEANNULEERD"]) }),
+  z.object({
+    actie: z.literal("reservering"),
+    datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Kies een datum."),
+    tijd,
+    personen: z.number().int().min(1).max(500),
+    naam: tekst(80).pipe(z.string().min(2, "Vul de naam in.")),
+    email: z.union([z.literal(""), z.string().trim().email().max(200)]),
+    telefoon: tekst(40),
+    opmerking: tekst(500),
+  }),
+  z.object({ actie: z.literal("reservering-status"), id, status: z.enum(["BEVESTIGD", "AANGEKOMEN", "NIET_GEKOMEN", "GEANNULEERD"]) }),
+  z.object({ actie: z.literal("reservering-tafel"), id, tafelId: id.nullable() }),
+  z.object({
+    actie: z.literal("reserveer-instellingen"),
+    slotMinuten: z.union([z.literal(15), z.literal(30), z.literal(60)]),
+    verblijfMinuten: z.number().int().min(30).max(360),
+    maxGroep: z.number().int().min(1).max(100),
+    dagenVooruit: z.number().int().min(1).max(365),
+    maxGasten: z.number().int().min(0).max(2000),
+  }),
 ]);
+
+/** Een gast reserveert online (/api/horeca/site/<slug>/reserveren). */
+export const gastReserveringSchema = z.object({
+  datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Kies een datum."),
+  tijd,
+  personen: z.number().int().min(1).max(100),
+  naam: tekst(80).pipe(z.string().min(2, "Vul je naam in.")),
+  email: z.string().trim().email("Vul een geldig e-mailadres in.").max(200),
+  telefoon: tekst(40).pipe(z.string().min(6, "Vul je telefoonnummer in.")),
+  opmerking: tekst(500).default(""),
+});
 
 /** Een gast bestelt via de QR-code op tafel (/api/horeca/site/<slug>/bestellen). */
 export const gastBestellingSchema = z.object({ code: z.string().min(6).max(40), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") });

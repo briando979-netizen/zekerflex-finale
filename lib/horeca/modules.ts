@@ -39,7 +39,7 @@ export const MODULES: Record<ModuleSleutel, Module> = {
     punten: ["Vrije tijden live op de site", "Reserveringsboek per dag", "Telefonische reserveringen er zelf bij zetten"],
     prijsCentPerMaand: 1900,
     vereist: [],
-    klaar: false,
+    klaar: true,
   },
   bestellen: {
     sleutel: "bestellen",

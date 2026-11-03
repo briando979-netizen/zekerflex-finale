@@ -7,6 +7,7 @@ import { soortLabel } from "@/lib/horeca/soorten";
 import { euro, zaakWeergave } from "@/lib/horeca/weergave";
 import { telefoonLink } from "@/lib/rijschool/format";
 import { leesbaarOpLicht, ZAND } from "@/lib/rijschool/kleuren";
+import { heeftModule } from "@/lib/horeca/modules";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +50,16 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
             <a href="#menukaart" className="rounded-full bg-[var(--rs-accent-knop)] px-6 py-3 font-bold text-[var(--rs-op-accent)]">
               Bekijk de menukaart
             </a>
-            {z.telefoon && (
-              <a href={telefoonLink(z.telefoon)} className="rounded-full px-6 py-3 font-semibold ring-1 ring-white/30 hover:bg-white/10">
-                Bel om te reserveren
+            {heeftModule(z, "reserveren") ? (
+              <a href={`/horeca/${z.slug}/reserveren`} className="rounded-full px-6 py-3 font-semibold ring-1 ring-white/30 hover:bg-white/10">
+                Reserveer een tafel
               </a>
+            ) : (
+              z.telefoon && (
+                <a href={telefoonLink(z.telefoon)} className="rounded-full px-6 py-3 font-semibold ring-1 ring-white/30 hover:bg-white/10">
+                  Bel om te reserveren
+                </a>
+              )
             )}
           </div>
         </div>
