@@ -367,10 +367,13 @@ export function SchwarzwaldAccount(props: {
     description: `Reservering ${b.id} voor ${b.personen} personen.`,
   });
 
-  const BoekingRij = ({ b }: { b: MijnBoeking }) => {
+  // een functie, geen component: een component die hier gedefinieerd wordt is
+  // bij elke render een nieuw type, en dan verliest het beoordelingsformulier
+  // zijn ingetypte tekst zodra er een melding verschijnt
+  const boekingRij = (b: MijnBoeking) => {
     const [label, kleur] = BOEK_STATUS[b.status];
     return (
-      <li className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-schw-cream p-4">
+      <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-schw-cream p-4">
         <div>
           <p className="font-bold">
             {namen[b.activiteit] ?? b.activiteit} · {b.personen} personen
@@ -519,13 +522,13 @@ export function SchwarzwaldAccount(props: {
             {komend.length > 0 && (
               <>
                 <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-schw-mute">Komend</h3>
-                <ul className="mt-3 space-y-3">{komend.map((b) => <BoekingRij key={b.id} b={b} />)}</ul>
+                <ul className="mt-3 space-y-3">{komend.map((b) => boekingRij(b))}</ul>
               </>
             )}
             {eerder.length > 0 && (
               <>
                 <h3 className="mt-8 text-sm font-bold uppercase tracking-wide text-schw-mute">Eerder</h3>
-                <ul className="mt-3 space-y-3">{eerder.map((b) => <BoekingRij key={b.id} b={b} />)}</ul>
+                <ul className="mt-3 space-y-3">{eerder.map((b) => boekingRij(b))}</ul>
               </>
             )}
           </>

@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 // Klantaccount van de Schwarzwald-site (eigen sessie-cookie, los van
 // ZekerFlex-login; openbaar in lib/auth/public-routes.ts).
 // GET  → ingelogd account + eigen reserveringen, aanvragen, berichten en wensen
-// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | wensen | bericht}
+// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | wensen | bericht | review}
 
 export async function GET(): Promise<NextResponse> {
   try {
