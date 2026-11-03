@@ -56,9 +56,10 @@ export async function koppelStripe(r: Rijschool): Promise<string> {
     if (err instanceof AppError) throw err;
     const m = err instanceof Error ? err.message : String(err);
     logger.warn("rijschool: Stripe koppelen mislukt", { rijschoolId: r.id, error: m });
+    // "You must complete your platform profile to use Connect" / "signed up for Connect": eigenaarstap (Admin → Te doen)
     throw AppError.upstream(
-      /signed up for Connect|connect/i.test(m)
-        ? "Online betalen kan nog niet: Stripe Connect staat nog niet aan bij ZekerFlex. We hebben het doorgegeven; probeer het later opnieuw."
+      /platform profile|signed up for Connect|\bConnect\b/.test(m)
+        ? "Online betalen kan nog niet: ZekerFlex moet dit eerst bij Stripe aanzetten. Dat staat op de lijst; probeer het later opnieuw."
         : "Stripe gaf een fout bij het koppelen. Probeer het over een paar minuten opnieuw.",
     );
   }
