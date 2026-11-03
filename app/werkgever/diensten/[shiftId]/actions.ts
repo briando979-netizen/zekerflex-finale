@@ -17,7 +17,8 @@ import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { pushWhen } from "@/lib/i18n/worker-push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
@@ -179,12 +180,12 @@ export async function updateShiftAction(
     if (timesChanged && shift.assignments.length) {
       const booked = shift.assignments.map((a) => a.freelancer.userId);
       runAfter(() =>
-        sendUserPush(booked, {
-          title: `Nieuwe tijd: ${parsed.title ?? shift.title}`,
-          body: `De opdrachtgever heeft je dienst verzet naar ${overlapWhen({ startsAt: starts, endsAt: ends })}.`,
+        sendLocalizedPush(booked, (t, locale) => ({
+          title: t.timeChangedTitle(parsed.title ?? shift.title),
+          body: t.timeChangedBody(pushWhen(locale, { startsAt: starts, endsAt: ends })),
           data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `tijd-${shift.id}` },
           ttlSeconds: 86_400,
-        }),
+        })),
       );
     }
 
@@ -256,12 +257,12 @@ export async function cancelShiftAction(shiftId: string, reason: string): Promis
     if (hadAssignees) {
       const booked = shift.assignments.map((a) => a.freelancer.userId);
       runAfter(() =>
-        sendUserPush(booked, {
-          title: `Geannuleerd: ${shift.title}`,
-          body: `De opdrachtgever heeft je dienst van ${overlapWhen(shift)} geannuleerd. Bekijk de klus voor de vergoeding.`,
+        sendLocalizedPush(booked, (t, locale) => ({
+          title: t.cancelledTitle(shift.title),
+          body: t.cancelledBody(pushWhen(locale, shift)),
           data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `geannuleerd-${shift.id}` },
           ttlSeconds: 86_400,
-        }),
+        })),
       );
     }
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { WORKER_PUSH, type WorkerPushTexts } from "@/lib/i18n/worker-push";
 
 // "✅ Je uren zijn goedgekeurd" — het moment waarop een werker op zijn geld
 // wacht. Eén bericht per goedkeuring (ook bij een automatische via de autopilot),
@@ -16,18 +17,19 @@ export interface ApprovedSummary {
   advance: { netCents: number } | null;
 }
 
-/** De tekst van het bericht; puur, zodat het te testen is. */
-export function approvedPushText(r: ApprovedSummary, shiftTitle: string): { title: string; body: string } {
+/** De tekst van het bericht, in de taal van `t` (standaard Nederlands); puur, zodat het te testen is. */
+export function approvedPushText(r: ApprovedSummary, shiftTitle: string, t: WorkerPushTexts = WORKER_PUSH.nl): { title: string; body: string } {
   const hours = (Math.round((r.billableMinutes / 60) * 100) / 100).toString().replace(".", ",");
+  const week = r.payroll?.weekLabel ?? "";
   const next =
     r.track === "payroll"
       ? r.advance && r.advance.netCents > 0
-        ? `Je voorschot van ${euro(r.advance.netCents)} is onderweg; de rest volgt met de verloning van ${r.payroll?.weekLabel ?? "deze week"}.`
-        : `Je loon volgt met de verloning van ${r.payroll?.weekLabel ?? "deze week"}.`
+        ? t.approvedAdvance(euro(r.advance.netCents), week)
+        : t.approvedPayroll(week)
       : r.payout && r.payout.amountCents > 0
-        ? `${euro(r.payout.amountCents)} is onderweg naar je rekening.`
-        : "Je uitbetaling volgt volgens de snelheid die je koos.";
-  return { title: "✅ Je uren zijn goedgekeurd", body: `${shiftTitle}: ${hours} uur. ${next}` };
+        ? t.approvedPaid(euro(r.payout.amountCents))
+        : t.approvedSpeed;
+  return { title: t.approvedTitle, body: `${shiftTitle}: ${hours} ${t.hours}. ${next}` };
 }
 
 export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {
@@ -36,11 +38,10 @@ export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {
     select: { freelancer: { select: { userId: true } }, assignment: { select: { shift: { select: { title: true } } } } },
   });
   if (!ts) return;
-  const { title, body } = approvedPushText(r, ts.assignment?.shift.title ?? "Je klus");
-  await sendUserPush([ts.freelancer.userId], {
-    title,
-    body,
+  const shiftTitle = ts.assignment?.shift.title ?? "ZekerFlex";
+  await sendLocalizedPush([ts.freelancer.userId], (t) => ({
+    ...approvedPushText(r, shiftTitle, t),
     data: { type: "SHIFT", url: r.track === "payroll" ? "/dashboard/verloning" : "/dashboard/uitbetalingen", tag: `goedgekeurd-${r.timesheetId}` },
     ttlSeconds: 3 * 86_400,
-  });
+  }));
 }

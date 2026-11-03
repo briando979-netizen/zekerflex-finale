@@ -44,5 +44,12 @@ export function setLocale(locale: Locale): void {
   } catch {
     /* ignore */
   }
+  // Also on the server, for pushes in this language (/api/me/taal). sendBeacon survives the reload;
+  // a visitor without an account just gets a 401, which is fine.
+  try {
+    navigator.sendBeacon?.("/api/me/taal", new Blob([JSON.stringify({ locale })], { type: "application/json" }));
+  } catch {
+    /* ignore */
+  }
   window.location.reload();
 }
