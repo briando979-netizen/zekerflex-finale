@@ -193,6 +193,45 @@ export const GUIDES: Article[] = [
       },
     ],
   },
+  {
+    slug: "kilometers-en-rittenadministratie-zzp",
+    category: "Geld",
+    title: "Kilometers aftrekken als zzp'er: zo houd je je ritten bij",
+    excerpt:
+      "Rij je met je eigen auto naar je opdrachtgever? Dan mag je € 0,23 per zakelijke kilometer aftrekken. Wat je moet bijhouden, wat niet mag, en hoe ZekerFlex je ritten vanzelf noteert.",
+    readMinutes: 4,
+    updated: "2026-11-03",
+    body: [
+      {
+        heading: "€ 0,23 per zakelijke kilometer",
+        paragraphs: [
+          "Als ondernemer voor de inkomstenbelasting mag je voor elke zakelijke kilometer met je privé-auto € 0,23 van je winst aftrekken. Een rit naar een opdrachtgever is zakelijk. Brandstof, verzekering en parkeren van die auto trek je niet los af: die zitten al in het kilometerbedrag.",
+          "Een voorbeeld: werk je 120 diensten op 18 kilometer van huis, dan rijd je 120 × 36 = 4.320 kilometer heen en terug. Dat is € 993,60 aftrek. Hoeveel belasting je daardoor minder betaalt, hangt af van je inkomen.",
+        ],
+      },
+      {
+        heading: "Wat je per rit bijhoudt",
+        paragraphs: [
+          "De Belastingdienst kan vragen hoe je aan je kilometers komt. Noteer daarom per rit de datum, waar je vertrok, waar je naartoe ging, het doel van de rit en het aantal kilometers. Een lijst die je achteraf uit je hoofd invult, is lastig te onderbouwen.",
+          "Reis je met het openbaar vervoer, dan trek je de echte kosten van je kaartje af. Heeft je opdrachtgever de reiskosten al vergoed, dan trek je die rit niet óók nog af.",
+        ],
+      },
+      {
+        heading: "Zo noteert ZekerFlex je ritten vanzelf",
+        paragraphs: [
+          "Werk je via ZekerFlex, dan staat elke dienst waarvoor je uren indient automatisch in je kilometer-administratie: van je eigen postcode naar het adres van de opdrachtgever en terug, met een geschatte afstand over de weg. Je past de kilometers per rit aan als ze niet kloppen, en zet een rit uit als je met de fiets of het OV ging of de reiskosten al vergoed kreeg.",
+          "Werk je ook buiten ZekerFlex, dan voeg je die ritten zelf toe. Aan het eind van het jaar download je de complete lijst voor je boekhouder, en staan je kilometers samen met je omzet, btw en uren in je jaaroverzicht voor de aangifte. Je vindt het in de app onder Account → Kilometer-administratie.",
+        ],
+      },
+      {
+        heading: "En als uitzendkracht?",
+        paragraphs: [
+          "Werk je als uitzendkracht, dan trek je reiskosten niet zelf af. Je werkgever mag je reiskosten onbelast vergoeden tot € 0,23 per kilometer. Met het rittenoverzicht in de app controleer je of de vergoeding op je loonstrook klopt.",
+          "Alle bedragen zijn indicatief en geen belastingadvies. Twijfel je, vraag het dan na bij je boekhouder of de Belastingdienst.",
+        ],
+      },
+    ],
+  },
 ];
 
 export const POSTS: Post[] = [

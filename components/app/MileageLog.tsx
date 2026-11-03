@@ -159,7 +159,8 @@ export function MileageLog({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-neutralx-600">
-          Klopt een afstand niet? Pas de kilometers aan. Niet met je eigen auto gegaan? Zet de rit uit.
+          Klopt een afstand niet? Pas de kilometers aan. Niet met je eigen auto gegaan, of reiskosten al vergoed gekregen? Zet de
+          rit uit.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
