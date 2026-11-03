@@ -149,6 +149,12 @@ export async function verzetEigen(datum: string, id: string, email: string, naar
   return { oud: b, nieuw };
 }
 
+/** Eén boeking op datum en nummer, of null. */
+export async function zoekBoeking(datum: string, id: string): Promise<Boeking | null> {
+  if (!geldigId(datum, id)) return null;
+  return kvGet<Boeking>(sleutel(datum, id));
+}
+
 export async function verwijderBoeking(datum: string, id: string): Promise<void> {
   if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
   await kvDelete(sleutel(datum, id));

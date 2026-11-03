@@ -19,7 +19,7 @@ export interface AgendaActiviteit {
 
 type DagStatus = "verleden" | "gesloten" | "vrij" | "vol";
 type SlotStatus = "vrij" | "bijna-vol" | "vol";
-interface Bevestiging { id: string; activiteit: string; datum: string; tijd: string; personen: number; prijs: number | null }
+interface Bevestiging { id: string; activiteit: string; datum: string; tijd: string; personen: number; prijs: number | null; ics: string }
 
 const API = "/api/voorstel/schwarzwald/agenda";
 const WEEKDAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
@@ -177,6 +177,9 @@ export function SchwarzwaldAgenda({
         <div className="mt-7 flex flex-wrap gap-3">
           <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-schw-orange px-6 py-3 font-bold text-schw-night">
             Zet in Google Agenda
+          </a>
+          <a href={klaar.ics} className="rounded-full border border-white/20 px-6 py-3 font-semibold">
+            Zet in Apple Agenda (iPhone)
           </a>
           <a href={outlookCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-6 py-3 font-semibold">
             Zet in Outlook

@@ -28,6 +28,8 @@ export interface MijnBoeking {
   tijd: string;
   personen: number;
   status: "nieuw" | "bevestigd" | "geannuleerd";
+  /** adres van het agendabestand (.ics) */
+  ics: string;
 }
 export interface MijnAanvraag {
   id: string;
@@ -555,9 +557,14 @@ export function SchwarzwaldAccount(props: {
         </div>
         <div className="flex flex-wrap gap-2">
           {b.status !== "geannuleerd" && b.datum >= vandaag && (
-            <a href={googleCalendarUrl(agendaEvent(b))} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
-              In agenda
-            </a>
+            <>
+              <a href={googleCalendarUrl(agendaEvent(b))} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                Google Agenda
+              </a>
+              <a href={b.ics} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                Apple Agenda
+              </a>
+            </>
           )}
           {b.status !== "geannuleerd" && b.datum > vandaag && verzetId !== b.id && (
             <button type="button" disabled={bezig} onClick={() => setVerzetId(b.id)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
