@@ -16,6 +16,7 @@ import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
+import { loadWorkerPrefs, prefsAllowShift, prefsAllowTravel, type WorkerPrefs } from "@/lib/matching/worker-prefs";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import {
@@ -256,7 +257,7 @@ export async function runMatchingForShift(
     const restrictToUserIds =
       shift.visibility === "POOL_ONLY" ? await invitedPoolMemberUserIds(shift.id) : null;
 
-    const pool = await loadCandidatePool({
+    const loaded = await loadCandidatePool({
       id: shift.id,
       requiredSkillId: shift.requiredSkillId,
       startsAt: shift.startsAt,
@@ -264,7 +265,10 @@ export async function runMatchingForShift(
       restrictToUserIds,
       viaUitzendbureau: shift.viaUitzendbureau,
     });
-    log.info("candidate pool loaded", { size: pool.length });
+    // The worker's own settings (min rate, available dayparts, max travel): no offer outside them.
+    const prefsByUser = await loadWorkerPrefs(loaded.map((c) => c.userId)).catch(() => new Map<string, Partial<WorkerPrefs>>());
+    const pool = loaded.filter((c) => prefsAllowShift(prefsByUser.get(c.userId), shift));
+    log.info("candidate pool loaded", { size: pool.length, outsidePrefs: loaded.length - pool.length });
 
     const scored = await Promise.all(
       pool.map((c) => scoreCandidate(c, scoringContext, config)),
@@ -288,7 +292,7 @@ export async function runMatchingForShift(
     }
 
     const ranked = scored
-      .filter((c) => c.eligible)
+      .filter((c) => c.eligible && prefsAllowTravel(prefsByUser.get(c.userId), c.travel.durationMinutes))
       .sort((a, b) => b.score - a.score);
 
     // ---- Auto-assignment -------------------------------------------------

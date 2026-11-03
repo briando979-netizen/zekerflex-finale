@@ -14,6 +14,13 @@ export async function kvGet<T>(key: string): Promise<T | null> {
   return row ? (row.value as T) : null;
 }
 
+/** Values for several keys in one query; keys without a row are simply absent from the map. */
+export async function kvGetMany<T>(keys: string[]): Promise<Map<string, T>> {
+  if (keys.length === 0) return new Map();
+  const rows = await prisma.keyValueStore.findMany({ where: { key: { in: keys } }, select: { key: true, value: true } });
+  return new Map(rows.map((r) => [r.key, r.value as T]));
+}
+
 export async function kvSet(key: string, value: unknown): Promise<void> {
   const json = value as Prisma.InputJsonValue;
   await prisma.keyValueStore.upsert({
