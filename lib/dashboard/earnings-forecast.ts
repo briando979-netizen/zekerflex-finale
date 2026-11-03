@@ -16,11 +16,16 @@ import { amsterdamParts, amsterdamStartOfMonth } from "@/lib/time/amsterdam";
 export interface TrendPoint {
   ym: string; // "2026-10"
   label: string; // "okt"
+  /** maand 0–11, zodat de pagina het label in de app-taal kan zetten */
+  month0: number;
   cents: number;
 }
 
 export interface EarningsForecast {
   monthLabel: string;
+  /** huidige maand (0–11) en jaar, voor een label in de app-taal */
+  month0: number;
+  year: number;
   workedCents: number; // diensten deze maand die al voorbij zijn
   plannedCents: number; // komende diensten deze maand
   expectedCents: number; // worked + planned
@@ -87,7 +92,7 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
     }
   }
 
-  const trend: TrendPoint[] = months.map((m) => ({ ym: m.key, label: MONTHS_NL[m.month0]!, cents: buckets.get(m.key) ?? 0 }));
+  const trend: TrendPoint[] = months.map((m) => ({ ym: m.key, label: MONTHS_NL[m.month0]!, month0: m.month0, cents: buckets.get(m.key) ?? 0 }));
 
   const expectedCents = workedCents + plannedCents;
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
@@ -95,6 +100,8 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
 
   return {
     monthLabel: `${MONTHS_NL[ym(now).month0]} ${ym(now).year}`,
+    month0: ym(now).month0,
+    year: ym(now).year,
     workedCents,
     plannedCents,
     expectedCents,

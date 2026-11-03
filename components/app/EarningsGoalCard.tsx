@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { goalProgress } from "@/lib/dashboard/goal-progress";
+import { useFT } from "@/components/i18n/useFT";
 
 const euro = (cents: number) => `€ ${Math.round(cents / 100).toLocaleString("nl-NL")}`;
 
@@ -18,6 +19,7 @@ export function EarningsGoalCard({
   expectedCents: number;
   monthLabel: string;
 }) {
+  const t = useFT().goal;
   const [goal, setGoal] = useState(initialGoalCents);
   const [editing, setEditing] = useState(initialGoalCents === null);
   const [draft, setDraft] = useState(initialGoalCents ? String(Math.round(initialGoalCents / 100)) : "");
@@ -35,7 +37,7 @@ export function EarningsGoalCard({
       });
       const body = (await r.json().catch(() => null)) as { monthlyCents?: number | null; error?: { message?: string } } | null;
       if (!r.ok) {
-        setError(body?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+        setError(body?.error?.message ?? t.saveFailed);
         return;
       }
       setGoal(body?.monthlyCents ?? null);
@@ -49,7 +51,7 @@ export function EarningsGoalCard({
     e.preventDefault();
     const euros = Number(draft.replace(/[.\s]/g, "").replace(",", "."));
     if (!Number.isFinite(euros) || euros <= 0) {
-      setError("Vul een bedrag in euro's in, bijvoorbeeld 2000.");
+      setError(t.invalid);
       return;
     }
     void save(Math.round(euros) * 100);
@@ -58,11 +60,11 @@ export function EarningsGoalCard({
   if (editing || goal === null) {
     return (
       <form onSubmit={submit} className="rounded-2xl border border-neutralx-200 bg-white p-5">
-        <h2 className="font-display text-lg font-semibold">🎯 Jouw doel voor {monthLabel}</h2>
-        <p className="mt-1 text-sm text-neutralx-600">Hoeveel wil je deze maand bruto verdienen? Dan zie je hoe ver je bent.</p>
+        <h2 className="font-display text-lg font-semibold">{t.setTitle(monthLabel)}</h2>
+        <p className="mt-1 text-sm text-neutralx-600">{t.setBody}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label htmlFor="verdiendoel" className="sr-only">
-            Doel in euro per maand
+            {t.inputLabel}
           </label>
           <span className="text-sm font-semibold text-ink">€</span>
           <input
@@ -74,11 +76,11 @@ export function EarningsGoalCard({
             className="w-32 rounded-lg border border-neutralx-200 px-3 py-2 text-sm"
           />
           <button type="submit" disabled={busy} className="btn-primary text-sm disabled:opacity-50">
-            Doel opslaan
+            {t.save}
           </button>
           {goal !== null && (
             <button type="button" onClick={() => setEditing(false)} className="px-2 text-sm text-neutralx-500 hover:text-ink">
-              Annuleren
+              {t.cancel}
             </button>
           )}
         </div>
@@ -96,11 +98,11 @@ export function EarningsGoalCard({
     <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold">🎯 Doel {monthLabel}: {euro(goal)}</h2>
+          <h2 className="font-display text-lg font-semibold">{t.title(monthLabel, euro(goal))}</h2>
           <p className="mt-1 text-sm text-neutralx-600">
             {p.reached
-              ? "Je haalt je doel met wat je gewerkt en gepland hebt. Goed bezig! 🎉"
-              : `Met wat je gewerkt en gepland hebt, zit je op ${p.expectedPct}%. Nog ${euro(p.remainingCents)} te gaan.`}
+              ? t.reached
+              : t.progress(p.expectedPct, euro(p.remainingCents))}
           </p>
         </div>
         <button
@@ -111,23 +113,23 @@ export function EarningsGoalCard({
           }}
           className="shrink-0 text-xs font-medium text-brand-600 hover:underline"
         >
-          Wijzig
+          {t.edit}
         </button>
       </div>
-      <div className="relative mt-4 h-3 w-full overflow-hidden rounded-full bg-neutralx-200" role="img" aria-label={`${p.workedPct}% gewerkt en ${p.expectedPct}% inclusief gepland van je doel`}>
+      <div className="relative mt-4 h-3 w-full overflow-hidden rounded-full bg-neutralx-200" role="img" aria-label={t.aria(p.workedPct, p.expectedPct)}>
         <div className="absolute inset-y-0 left-0 rounded-full bg-brand-300" style={{ width: `${p.expectedPct}%` }} />
         <div className="absolute inset-y-0 left-0 rounded-full bg-brand-600" style={{ width: `${p.workedPct}%` }} />
       </div>
       <p className="mt-2 text-xs text-neutralx-500">
-        <span className="font-semibold text-brand-700">■</span> al gewerkt · <span className="font-semibold text-brand-400">■</span> gepland
+        <span className="font-semibold text-brand-700">■</span> {t.legendWorked} · <span className="font-semibold text-brand-400">■</span> {t.legendPlanned}
       </p>
       {!p.reached && (
         <Link href="/dashboard" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
-          Zoek diensten bij Ontdekken →
+          {t.find}
         </Link>
       )}
       <button type="button" onClick={() => void save(null)} disabled={busy} className="ml-4 mt-3 text-xs text-neutralx-400 hover:text-crit">
-        Doel verwijderen
+        {t.remove}
       </button>
     </div>
   );
