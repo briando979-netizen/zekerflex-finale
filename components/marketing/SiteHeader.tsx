@@ -274,9 +274,12 @@ export function SiteHeader() {
           <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
-        {/* The full bar needs ~1.370px at the roomy spacing: below 1280 the
-            menu button takes over (at 1024 Inloggen fell off-screen), and
-            1280–1365 gets tighter gaps. From 1366 it looks as it always did. */}
+        {/* With every label on one line the full bar needs ~1.500px. Below
+            1280 the menu button takes over (at 1024 Inloggen fell off-screen),
+            1280–1365 gets tighter gaps, and the Werknemers/Bedrijven switch
+            only shows from 1600 (at 1536 only ~20px was left, less than a
+            Windows scrollbar; the audience still follows the URL and the last
+            choice). */}
         <nav
           aria-label="Hoofdnavigatie"
           ref={navRef}
@@ -298,7 +301,7 @@ export function SiteHeader() {
                 <Link
                   href={n.href}
                   onFocus={() => hasMenu && showMenu(n.key)}
-                  className={`flex items-center py-2 text-sm font-semibold transition-colors ${
+                  className={`flex items-center whitespace-nowrap py-2 text-sm font-semibold transition-colors ${
                     active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
@@ -378,7 +381,7 @@ export function SiteHeader() {
         </nav>
 
         {/* audience toggle */}
-        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 xl:flex">
+        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 min-[1600px]:flex">
           <Link
             href="/voor-freelancers"
             onClick={() => pick("werknemers")}
@@ -399,16 +402,16 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        <div className="hidden items-center gap-3 xl:flex">
+        <div className="ml-auto hidden items-center gap-3 xl:flex min-[1600px]:ml-0">
           <Link
             href="/login"
-            className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-white/90"
+            className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-white/90"
           >
             Inloggen
           </Link>
           <Link
             href={startHref}
-            className="rounded-full bg-brand-mint px-4 py-2 text-sm font-bold text-ink transition hover:brightness-105"
+            className="whitespace-nowrap rounded-full bg-brand-mint px-4 py-2 text-sm font-bold text-ink transition hover:brightness-105"
           >
             Start vandaag
           </Link>
