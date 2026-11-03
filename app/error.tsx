@@ -2,15 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-
-// Herkent fouten die ontstaan doordat een oude browser-tab na een nieuwe deploy
-// een server-actie of code-chunk opvraagt die niet meer bestaat. Eén harde
-// herlaadt haalt de nieuwe build op en lost dat op.
-function isStaleDeployment(error: { message?: string; name?: string }): boolean {
-  return /Failed to find Server Action|ChunkLoadError|Loading chunk|Loading CSS chunk|from an older or newer deployment/i.test(
-    `${error?.name ?? ""} ${error?.message ?? ""}`,
-  );
-}
+import { isStaleDeployment } from "@/lib/ops/stale-deployment";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const stale = isStaleDeployment(error);

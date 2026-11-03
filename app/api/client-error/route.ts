@@ -3,6 +3,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
+import { isStaleDeployment } from "@/lib/ops/stale-deployment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 // echte client-side fout naartoe (bericht + stacktrace + scherm), zodat die in
 // de serverlogs terechtkomt en te diagnosticeren is. Publiek + IP-begrensd;
 // best-effort, geeft altijd 200 terug (rapporteren mag nooit zelf crashen).
+// Een tabblad van vóór een uitrol herlaadt zichzelf: dat wordt een waarschuwing,
+// onder dezelfde melding (de Bouwer-knop blijft weg, lib/bouwer/fout-opdracht.ts).
 const schema = z.object({
   message: z.string().max(2000).optional(),
   stack: z.string().max(8000).optional(),
@@ -30,13 +33,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (parsed.success) {
-      logger.error("client error boundary", {
+      const fields = {
         clientMessage: parsed.data.message ?? "",
         digest: parsed.data.digest ?? "",
         url: parsed.data.url ?? "",
         userAgent: parsed.data.userAgent ?? "",
         stack: (parsed.data.stack ?? "").slice(0, 4000),
-      });
+      };
+      if (isStaleDeployment({ message: parsed.data.message })) logger.warn("client error boundary", fields);
+      else logger.error("client error boundary", fields);
     }
   } catch {
     /* rate-limited of ongeldig — stil negeren */
