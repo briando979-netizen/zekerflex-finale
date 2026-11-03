@@ -158,6 +158,12 @@ export function ZekerFlexAIStudio({
   const [browserUrl, setBrowserUrl] = useState("/admin");
   const [reloadNonce, setReloadNonce] = useState(0);
 
+  // een pushmelding opent meteen het juiste tabblad: /admin/zekerflex-ai?tab=bouwer
+  useEffect(() => {
+    const gevraagd = new URLSearchParams(window.location.search).get("tab");
+    if (gevraagd && gevraagd in TAB_LABEL) setTab(gevraagd as Tab);
+  }, []);
+
   useEffect(() => {
     const t = () => setClock(new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }));
     t();

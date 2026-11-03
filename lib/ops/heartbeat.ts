@@ -47,6 +47,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "rijschool-herinneringen", label: "Rijschool: lesherinneringen", maxAgeHours: 26 },
   // elke 30 min (draait ook als de automatische reparaties uit staan; dan doet hij niets)
   { job: "bouwer-auto", label: "Bouwer: automatische reparaties", maxAgeHours: 2 },
+  // elke 2 min: pushmeldingen over de Bouwer en het live zetten
+  { job: "bouwer-meldingen", label: "Bouwer: meldingen", maxAgeHours: 1 },
 ];
 
 interface Beat {
