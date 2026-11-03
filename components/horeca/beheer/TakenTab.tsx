@@ -46,6 +46,8 @@ export function TakenTab() {
   const [ok, setOk] = useState<string | null>(null);
   const [bewerk, setBewerk] = useState<{ id?: string; naam: string; moment: string; regels: string } | null>(null);
   const [waarden, setWaarden] = useState<Record<string, string>>({});
+  // het vinkje staat meteen aan zodra je tikt, ook al is de server nog bezig
+  const [bezig, setBezig] = useState("");
 
   useEffect(() => setWie(leesNaam()), []);
   const laad = useCallback(async (d: string) => {
@@ -75,7 +77,11 @@ export function TakenTab() {
     }
   }
 
-  const vink = (l: Lijst, i: number, waarde = "") => post({ actie: "afvinken", lijstId: l.id, datum, taak: i, waarde, door: wie }, null);
+  const vink = async (l: Lijst, i: number, waarde = "") => {
+    setBezig(`${l.id}-${i}`);
+    await post({ actie: "afvinken", lijstId: l.id, datum, taak: i, waarde, door: wie }, null);
+    setBezig("");
+  };
 
   return (
     <div className="space-y-5">
@@ -252,7 +258,7 @@ export function TakenTab() {
                         </>
                       ) : (
                         <label className="flex cursor-pointer items-center gap-3 text-sm text-ink">
-                          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={false} onChange={() => void vink(l, i)} />
+                          <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={bezig === sleutel} disabled={bezig === sleutel} onChange={() => void vink(l, i)} />
                           {t.tekst}
                         </label>
                       )}
