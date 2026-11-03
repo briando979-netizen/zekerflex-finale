@@ -52,6 +52,19 @@ export interface AgendaConfig {
   open: Record<number, { van: number; tot: number } | null>;
   /** extra gesloten datums (feestdagen, besloten feest) */
   gesloten: string[];
+  /** een deel van een dag niet online te boeken (per activiteit of alles) */
+  blokkades?: Blokkade[] | undefined;
+}
+
+/** Een activiteit (of alles) een deel van een dag dicht voor online boeken: besloten feest, onderhoud. */
+export interface Blokkade {
+  datum: string;
+  /** "HH:MM" */
+  van: string;
+  tot: string;
+  /** slug van de activiteit, of "" = alle activiteiten */
+  activiteit: string;
+  reden: string;
 }
 
 export const boekbaar = (a: Activiteit, cfg: AgendaConfig = STANDAARD) => Object.prototype.hasOwnProperty.call(cfg.regels, a.slug);
@@ -126,6 +139,7 @@ export function tijdsloten(slug: string, datum: string, personen: number, bezet:
   const open = openOp(datum, personen, cfg);
   if (!regel || !open) return [];
   const eigen = bezet.filter((b) => b.activiteit === slug && isTijd(b.tijd));
+  const blokkades = (cfg.blokkades ?? []).filter((k) => k.datum === datum && (!k.activiteit || k.activiteit === slug));
   const sloten: Slot[] = [];
   for (let start = Math.ceil(open.van / 60) * 60; start + regel.duurMin <= open.tot; start += 60) {
     const eind = start + regel.duurMin;
@@ -136,7 +150,9 @@ export function tijdsloten(slug: string, datum: string, personen: number, bezet:
         return s < eind && s + regel.duurMin > start;
       })
       .reduce((som, b) => som + b.personen, 0);
-    const plek = Math.max(0, regel.capaciteit - bezetNu);
+    // een blokkade die het slot raakt maakt het vol
+    const dicht = blokkades.some((k) => minuten(k.van) < eind && minuten(k.tot) > start);
+    const plek = dicht ? 0 : Math.max(0, regel.capaciteit - bezetNu);
     const status: SlotStatus = plek < personen ? "vol" : plek - personen < regel.capaciteit * 0.25 ? "bijna-vol" : "vrij";
     sloten.push({ tijd: klok(start), status, plek });
   }

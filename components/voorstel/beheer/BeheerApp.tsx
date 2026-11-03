@@ -86,7 +86,7 @@ export function BeheerApp({ namen, duur, vandaag, wie }: { namen: Record<string,
         {tab === "reviews" && <Reviews namen={namen} openKlant={openKlant} />}
         {tab === "sollicitaties" && <Sollicitaties />}
         {tab === "activiteiten" && <Activiteiten namen={namen} />}
-        {tab === "openingstijden" && <Openingstijden />}
+        {tab === "openingstijden" && <Openingstijden namen={namen} />}
         {tab === "paginas" && <Paginas />}
         {tab === "accounts" && <Accounts />}
         {tab === "instellingen" && <Aankondiging />}

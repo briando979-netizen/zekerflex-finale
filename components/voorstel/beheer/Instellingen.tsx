@@ -9,10 +9,12 @@ import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, VELD, VELD_BASIS, dagNaam
 type Regel = { duurMin: number; capaciteit: number; min: number; max: number; prijsPP?: number; prijsPPZondag?: number };
 type ActInst = { online?: boolean; duurMin?: number; capaciteit?: number; min?: number; max?: number; prijsPP?: number; prijsPPZondag?: number };
 type Tijden = { van: number; tot: number } | null;
+type Blokkade = { datum: string; van: string; tot: string; activiteit: string; reden: string };
 interface Inst {
   activiteiten: Record<string, ActInst>;
   open: Record<string, Tijden>;
   gesloten: string[];
+  blokkades: Blokkade[];
   aankondiging: string;
 }
 interface Antwoord {
@@ -121,10 +123,12 @@ export function Activiteiten({ namen }: { namen: Record<string, string> }) {
   );
 }
 
-export function Openingstijden() {
+export function Openingstijden({ namen }: { namen: Record<string, string> }) {
   const { standaard, inst, setInst, bewaar, ok, fout, bezig } = useInstellingen();
   const [nieuweDatum, setNieuweDatum] = useState("");
+  const [blok, setBlok] = useState<Blokkade>({ datum: "", van: "14:00", tot: "17:00", activiteit: "", reden: "" });
   if (!standaard || !inst) return <Melding fout={fout} />;
+  const blokGoed = !!blok.datum && blok.tot > blok.van;
 
   const tijdenVan = (dag: string): Tijden => (dag in inst.open ? (inst.open[dag] ?? null) : (standaard.open[dag] ?? null));
   const zet = (dag: string, t: Tijden) => setInst({ ...inst, open: { ...inst.open, [dag]: t } });
@@ -182,6 +186,68 @@ export function Openingstijden() {
               <span className="first-letter:uppercase">{dagNaam(d, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               <button type="button" onClick={() => setInst({ ...inst, gesloten: inst.gesloten.filter((x) => x !== d) })} className="text-sm font-semibold text-[#B91C1C]">
                 Weer open
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className={`${KAART} lg:col-span-2`}>
+        <h3 className="font-display text-lg font-bold">Blokkades (deel van een dag)</h3>
+        <p className="mt-1 text-sm text-schw-mute">
+          Een besloten feest of onderhoud: in dit blok is de activiteit (of alles) online niet te boeken. Reserveringen die er al staan blijven staan; kijk die na in de Planning.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[auto_auto_auto_1fr_1fr_auto] sm:items-end">
+          <label className="text-sm font-semibold">
+            Datum
+            <input type="date" value={blok.datum} onChange={(e) => setBlok({ ...blok, datum: e.target.value })} className={`${VELD_BASIS} mt-1 block w-auto`} />
+          </label>
+          <label className="text-sm font-semibold">
+            Van
+            <input type="time" step={900} value={blok.van} onChange={(e) => setBlok({ ...blok, van: e.target.value })} className={`${VELD_BASIS} mt-1 block w-28`} />
+          </label>
+          <label className="text-sm font-semibold">
+            Tot
+            <input type="time" step={900} value={blok.tot} onChange={(e) => setBlok({ ...blok, tot: e.target.value })} className={`${VELD_BASIS} mt-1 block w-28`} />
+          </label>
+          <label className="text-sm font-semibold">
+            Activiteit
+            <select value={blok.activiteit} onChange={(e) => setBlok({ ...blok, activiteit: e.target.value })} className={`${VELD} mt-1`}>
+              <option value="">Alle activiteiten</option>
+              {Object.keys(standaard.activiteiten).map((slug) => (
+                <option key={slug} value={slug}>
+                  {namen[slug] ?? slug}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-semibold">
+            Reden (intern)
+            <input value={blok.reden} maxLength={120} onChange={(e) => setBlok({ ...blok, reden: e.target.value })} placeholder="Bijv. besloten feest Bakker BV" className={`${VELD} mt-1`} />
+          </label>
+          <button
+            type="button"
+            disabled={!blokGoed}
+            onClick={() => {
+              setInst({ ...inst, blokkades: [...inst.blokkades, blok].sort((a, b) => `${a.datum}${a.van}`.localeCompare(`${b.datum}${b.van}`)) });
+              setBlok({ ...blok, reden: "" });
+            }}
+            className={KNOP_LICHT}
+          >
+            Toevoegen
+          </button>
+        </div>
+        {blok.datum && !blokGoed && <p className="mt-2 text-sm font-semibold text-[#B91C1C]">De eindtijd moet na de begintijd liggen.</p>}
+        <ul className="mt-4 space-y-2">
+          {inst.blokkades.length === 0 && <li className="text-sm text-schw-mute">Geen blokkades.</li>}
+          {inst.blokkades.map((k, i) => (
+            <li key={`${k.datum}-${k.van}-${k.activiteit}-${i}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-schw-cream px-3 py-2">
+              <span>
+                <span className="font-semibold first-letter:uppercase">{dagNaam(k.datum, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span> · {k.van}–{k.tot} ·{" "}
+                {k.activiteit ? (namen[k.activiteit] ?? k.activiteit) : "alle activiteiten"}
+                {k.reden && <span className="text-schw-mute"> · {k.reden}</span>}
+              </span>
+              <button type="button" onClick={() => setInst({ ...inst, blokkades: inst.blokkades.filter((_, j) => j !== i) })} className="text-sm font-semibold text-[#B91C1C]">
+                Weghalen
               </button>
             </li>
           ))}

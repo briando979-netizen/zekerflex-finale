@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITEITEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten, wijzigFout } from "@/lib/voorstel/schwarzwald-agenda";
+import { AGENDA, STANDAARD, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten, wijzigFout } from "@/lib/voorstel/schwarzwald-agenda";
 
 // 2026-11-04 = woensdag, 11-07 = zaterdag, 11-08 = zondag, 11-09 = maandag
 describe("Schwarzwald-agenda", () => {
@@ -32,6 +32,26 @@ describe("Schwarzwald-agenda", () => {
     const kever = tijdsloten("kever-rally", "2026-11-04", 8, [{ activiteit: "kever-rally", tijd: "14:00", personen: 20 }]);
     expect(kever.find((x) => x.tijd === "15:00")?.status).toBe("vol");
     expect(kever.find((x) => x.tijd === "16:00")?.status).toBe("vrij");
+  });
+
+  it("maakt geblokkeerde tijden vol, per activiteit of voor alles", () => {
+    const cfg = { ...STANDAARD, blokkades: [{ datum: "2026-11-07", van: "14:00", tot: "17:00", activiteit: "buggy-rijden", reden: "Besloten feest" }] };
+    const buggy = tijdsloten("buggy-rijden", "2026-11-07", 8, [], cfg);
+    // buggy duurt 1 uur: 13:00 eindigt om 14:00 en mag nog, 14:00 t/m 16:00 zijn dicht, 17:00 weer open
+    expect(buggy.filter((s) => s.status === "vol").map((s) => s.tijd)).toEqual(["14:00", "15:00", "16:00"]);
+    expect(buggy.find((s) => s.tijd === "13:00")?.status).toBe("vrij");
+    expect(buggy.find((s) => s.tijd === "17:00")?.status).toBe("vrij");
+    // een andere activiteit en een andere dag merken er niets van
+    expect(tijdsloten("escaperoom", "2026-11-07", 4, [], cfg).every((s) => s.status !== "vol")).toBe(true);
+    expect(tijdsloten("buggy-rijden", "2026-11-08", 8, [], cfg).every((s) => s.status !== "vol")).toBe(true);
+    // zonder activiteit geldt het voor alles; boeken en verzetten weigeren het slot
+    const alles = { ...STANDAARD, blokkades: [{ datum: "2026-11-07", van: "18:00", tot: "23:00", activiteit: "", reden: "Bedrijfsfeest" }] };
+    expect(tijdsloten("escaperoom", "2026-11-07", 4, [], alles).find((s) => s.tijd === "19:00")?.status).toBe("vol");
+    expect(slotFout("buggy-rijden", "2026-11-07", "15:00", 8, [], cfg)).toMatch(/vol/);
+    // kever duurt 90 min: om 17:00 beginnen loopt door tot 18:30 en raakt het blok vanaf 18:00, om 16:00 niet
+    const kever = tijdsloten("kever-rally", "2026-11-07", 8, [], alles);
+    expect(kever.find((s) => s.tijd === "17:00")?.status).toBe("vol");
+    expect(kever.find((s) => s.tijd === "16:00")?.status).toBe("vrij");
   });
 
   it("controleert dag en tijdstip bij boeken en verzetten", () => {
