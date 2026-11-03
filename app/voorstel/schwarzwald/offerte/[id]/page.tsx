@@ -78,7 +78,7 @@ export default async function OffertePage({ params }: { params: Promise<{ id: st
 
         <div className="mt-6 flex flex-wrap justify-between gap-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Offerte</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Offerte</p>
             <h1 className="mt-1 font-display text-3xl font-bold">{wat}</h1>
           </div>
           <dl className="grid grid-cols-[auto_auto] gap-x-4 text-sm">

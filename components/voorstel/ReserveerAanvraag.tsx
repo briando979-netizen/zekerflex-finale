@@ -60,7 +60,7 @@ export function ReserveerAanvraag({
   if (klaar) {
     return (
       <div id="aanvraag" role="status" className="scroll-mt-28 rounded-xl3 bg-schw-sand p-6 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Ontvangen</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Ontvangen</p>
         <h2 className="mt-2 font-display text-2xl font-bold">Dank je, {naam.split(" ")[0]}!</h2>
         <p className="mt-3 text-schw-night/80">
           We hebben je aanvraag voor {aantal} personen ontvangen en nemen snel contact op met een voorstel op maat.

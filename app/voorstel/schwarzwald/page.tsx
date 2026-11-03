@@ -120,7 +120,7 @@ export default async function SchwarzwaldHome() {
       {(intro || trending) && (
         <section className="mx-auto grid max-w-[1280px] gap-8 px-4 pt-20 sm:px-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Over ons</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Over ons</p>
             <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{home?.titel}</h2>
             {intro && (
               <p className="mt-5 text-lg leading-relaxed text-schw-night/85">
@@ -143,7 +143,7 @@ export default async function SchwarzwaldHome() {
       <section className="mx-auto max-w-[1280px] px-4 pb-20 pt-20 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Voor elke groep</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Voor elke groep</p>
             <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Wat vieren jullie?</h2>
           </div>
           <p className="max-w-md text-schw-mute">Kies je gelegenheid en je ziet meteen wat erbij past, inclusief prijzen en arrangementen.</p>
@@ -180,7 +180,7 @@ export default async function SchwarzwaldHome() {
         <div className="mx-auto max-w-[1280px] px-4 sm:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Activiteiten</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Activiteiten</p>
               <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Kies je avontuur</h2>
             </div>
             <Link href={`${BASE}/activiteiten`} className="rounded-full bg-schw-night px-6 py-3 text-sm font-bold text-schw-cream">
@@ -198,7 +198,7 @@ export default async function SchwarzwaldHome() {
       {/* Zo werkt het */}
       <section className="mx-auto grid max-w-[1280px] gap-12 px-4 py-20 sm:px-8 lg:grid-cols-2 lg:items-center">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Zo simpel is het</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Zo simpel is het</p>
           <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Eén dag vol FUN, wij regelen de rest</h2>
           <ol className="mt-10 space-y-8">
             {[
@@ -207,7 +207,7 @@ export default async function SchwarzwaldHome() {
               ["Reserveer en beleef", "Online in een paar klikken. Jullie hoeven alleen nog te komen."],
             ].map(([kop, tekst], i) => (
               <li key={kop} className="flex gap-5">
-                <span className="font-display text-5xl font-bold leading-none text-schw-orange">{i + 1}</span>
+                <span className="font-display text-5xl font-bold leading-none text-schw-rust">{i + 1}</span>
                 <div>
                   <h3 className="font-display text-xl font-bold">{kop}</h3>
                   <p className="mt-1 text-schw-mute">{tekst}</p>
@@ -249,7 +249,7 @@ export default async function SchwarzwaldHome() {
       <section className="py-20">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-4 px-4 sm:px-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Themafeesten</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Themafeesten</p>
             <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Feesten met een verhaal</h2>
           </div>
           <Link href={`${BASE}/themafeesten`} className="font-semibold text-schw-night underline decoration-schw-orange decoration-2 underline-offset-4">
@@ -267,7 +267,7 @@ export default async function SchwarzwaldHome() {
                 <Beeld src={t.foto} alt={t.naam} sizes="340px" className="transition-transform duration-700 ease-spring group-hover:scale-105" />
               </div>
               <div className="p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-schw-orange">{t.kort}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-schw-rust">{t.kort}</p>
                 <h3 className="mt-1 font-display text-xl font-bold">{t.naam}</h3>
               </div>
             </Link>

@@ -219,8 +219,8 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                       {b.prijs !== null && <> · € {b.prijs.toLocaleString("nl-NL")}</>}
                     </p>
                     {b.opmerking && <p className="mt-1 text-sm">&ldquo;{b.opmerking}&rdquo;</p>}
-                    {b.verzetVan && <p className="mt-1 text-sm font-semibold text-schw-orange">{verzetTekst(b.verzetVan)}</p>}
-                    {b.aantalVan !== undefined && <p className="mt-1 text-sm font-semibold text-schw-orange">aantal gewijzigd door de gast, was {b.aantalVan}</p>}
+                    {b.verzetVan && <p className="mt-1 text-sm font-semibold text-schw-rust">{verzetTekst(b.verzetVan)}</p>}
+                    {b.aantalVan !== undefined && <p className="mt-1 text-sm font-semibold text-schw-rust">aantal gewijzigd door de gast, was {b.aantalVan}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {b.status !== "bevestigd" && (

@@ -60,7 +60,8 @@ const config: Config = {
         // De webshop (/shop): warm ivoor, antraciet, dunne lijnen en een vleugje goud.
         lux: { bg: "#FAF8F4", stone: "#F1EDE6", ink: "#151412", mute: "#6E675E", line: "#E6E0D6", gold: "#A8834F" },
         // Ontwerpvoorstel Het Schwarzwald (/voorstel/schwarzwald): bosnacht, hun oranje en een zonnig accent.
-        schw: { night: "#0A120E", forest: "#11221A", moss: "#1C3A2B", orange: "#FF5F1F", flame: "#FF8A3D", sun: "#FFD23F", cream: "#FFF6EA", sand: "#F4E9DA", mute: "#5C6B62" },
+        // rust = hun oranje donker genoeg voor kleine tekst op licht (WCAG AA, ≥ 4,8:1 op crème/zand/wit).
+        schw: { night: "#0A120E", forest: "#11221A", moss: "#1C3A2B", orange: "#FF5F1F", rust: "#B83A0A", flame: "#FF8A3D", sun: "#FFD23F", cream: "#FFF6EA", sand: "#F4E9DA", mute: "#5C6B62" },
         risk: {
           low: "#15803D",
           medium: "#B45309",

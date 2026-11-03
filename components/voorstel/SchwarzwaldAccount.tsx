@@ -80,7 +80,7 @@ function ReviewBlok({ review, plaats }: { review: MijnReview | undefined; plaats
     return (
       <div className="w-full rounded-xl bg-white p-3 text-sm">
         <p>
-          <span className="text-schw-orange" aria-label={`${review.score} van 5 sterren`}>
+          <span className="text-schw-rust" aria-label={`${review.score} van 5 sterren`}>
             {sterren(review.score)}
           </span>{" "}
           <span className="text-schw-mute">· jouw beoordeling · {REVIEW_STATUS[review.status]}</span>

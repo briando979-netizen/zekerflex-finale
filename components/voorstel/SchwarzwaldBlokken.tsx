@@ -10,7 +10,7 @@ import type { Blok, Pakket, Run } from "@/lib/voorstel/schwarzwald-paginas";
 // voordelen krijgen de volle breedte. Foto's die direct na elkaar komen worden
 // één galerij.
 
-const LINK = "font-semibold underline decoration-schw-orange decoration-2 underline-offset-4 hover:text-schw-orange";
+const LINK = "font-semibold underline decoration-schw-orange decoration-2 underline-offset-4 hover:text-schw-rust";
 
 function Linkje({ href, children }: { href: string; children: ReactNode }) {
   if (href.startsWith("/")) return <Link href={href} className={LINK}>{children}</Link>;

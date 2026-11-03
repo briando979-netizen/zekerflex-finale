@@ -30,7 +30,7 @@ export default function ThemafeestenPage() {
               <Beeld src={t.foto} alt={t.naam} sizes="(max-width: 768px) 100vw, 640px" />
             </div>
             <div className="flex flex-col justify-center p-7 sm:p-10">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-schw-orange">{t.kort}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-schw-rust">{t.kort}</p>
               <h2 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">{t.naam}</h2>
               <p className="mt-4 text-lg leading-relaxed text-schw-mute">{t.tekst}</p>
               {t.prijs && <p className="mt-4 font-bold">{t.prijs}</p>}

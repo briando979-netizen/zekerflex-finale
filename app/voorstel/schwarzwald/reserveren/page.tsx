@@ -55,8 +55,8 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
             <h2 className="font-display text-xl font-bold">Themafeest, bruiloft of grote groep?</h2>
             <p className="mt-3 text-schw-mute">Daarvoor maken we graag een programma op maat. Vraag een voorstel aan of bel ons.</p>
             <p className="mt-5 space-y-1">
-              <a href={CONTACT.telefoonHref} className="block text-lg font-bold hover:text-schw-orange">{CONTACT.telefoon}</a>
-              <a href={`mailto:${CONTACT.email}`} className="block font-semibold hover:text-schw-orange">{CONTACT.email}</a>
+              <a href={CONTACT.telefoonHref} className="block text-lg font-bold hover:text-schw-rust">{CONTACT.telefoon}</a>
+              <a href={`mailto:${CONTACT.email}`} className="block font-semibold hover:text-schw-rust">{CONTACT.email}</a>
             </p>
             <p className="mt-5 text-sm text-schw-mute">{CONTACT.adres}, {CONTACT.postcode}</p>
           </div>

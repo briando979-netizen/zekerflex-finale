@@ -75,7 +75,7 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
       <div id="dagplanning" className="rounded-xl3 bg-white p-6 text-schw-night shadow-[0_1px_2px_rgba(10,18,14,0.06)] print:p-0 print:shadow-none">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-schw-night/15 pb-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Dagplanning Het Schwarzwald</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Dagplanning Het Schwarzwald</p>
             <h1 className="mt-1 font-display text-3xl font-bold first-letter:uppercase">{dagNaam(datum, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h1>
           </div>
           <p className="text-sm">

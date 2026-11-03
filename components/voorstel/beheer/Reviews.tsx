@@ -102,7 +102,7 @@ export function Reviews({ namen, openKlant }: { namen: Record<string, string>; o
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p>
-                  <span className="text-lg text-schw-orange" aria-label={`${r.score} van 5 sterren`}>
+                  <span className="text-lg text-schw-rust" aria-label={`${r.score} van 5 sterren`}>
                     {sterren(r.score)}
                   </span>{" "}
                   <Pil label={STATUS[r.status][0]} kleur={STATUS[r.status][1]} />

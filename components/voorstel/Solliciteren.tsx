@@ -53,7 +53,7 @@ export function Solliciteren({
   if (klaar) {
     return (
       <div id="solliciteren" role="status" className="scroll-mt-28 rounded-xl3 bg-schw-sand p-6 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Ontvangen</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Ontvangen</p>
         <h2 className="mt-2 font-display text-2xl font-bold">Dank je, {naam.split(" ")[0]}!</h2>
         <p className="mt-3 text-schw-night/80">
           Je sollicitatie als {functie.toLowerCase()} is binnen. We bekijken hem en nemen contact met je op via {email}.
@@ -65,7 +65,7 @@ export function Solliciteren({
 
   return (
     <form id="solliciteren" onSubmit={(e) => void verstuur(e)} className="scroll-mt-28 rounded-xl3 bg-schw-sand p-6 sm:p-8">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Direct solliciteren</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-rust">Direct solliciteren</p>
       <h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">{functie}</h2>
       <p className="mt-1 text-schw-mute">Geen brief nodig: vertel kort wie je bent, dan nemen wij contact op.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">

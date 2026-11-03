@@ -413,7 +413,7 @@ export function Klanten({ namen, vandaag, start }: { namen: Record<string, strin
                 <p className={`truncate text-sm ${gekozen === k.email ? "text-schw-cream/70" : "text-schw-mute"}`}>{k.bedrijf || k.email}</p>
                 <p className={`mt-1 text-xs ${gekozen === k.email ? "text-schw-cream/70" : "text-schw-mute"}`}>
                   {k.reserveringen} res. · {k.gasten} gasten · {euro(k.omzet)}
-                  {k.wachtOpAntwoord && <strong className="ml-2 text-schw-orange">● wacht op antwoord</strong>}
+                  {k.wachtOpAntwoord && <strong className={`ml-2 ${gekozen === k.email ? "text-schw-orange" : "text-schw-rust"}`}>● wacht op antwoord</strong>}
                   {k.openTaken > 0 && <span className="ml-2">· {k.openTaken} taak/taken</span>}
                 </p>
               </button>
