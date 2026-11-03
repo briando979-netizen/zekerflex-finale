@@ -45,6 +45,29 @@ export const VELD = `w-full ${VELD_BASIS}`;
 export const KNOP = "rounded-full bg-schw-night px-5 py-2.5 text-sm font-bold text-schw-cream disabled:opacity-50";
 export const KNOP_LICHT = "rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15 disabled:opacity-50";
 
+export const euro = (n: number) => `€ ${Math.round(n).toLocaleString("nl-NL")}`;
+
+export const AANVRAAG_STATUS = {
+  nieuw: ["Nieuw", "bg-schw-sun text-schw-night"],
+  "in-behandeling": ["In behandeling", "bg-[#E0E7FF] text-[#3730A3]"],
+  offerte: ["Offerte verstuurd", "bg-[#FFEDD5] text-[#9A3412]"],
+  geboekt: ["Geboekt", "bg-[#DCFCE7] text-[#15803D]"],
+  verloren: ["Verloren", "bg-schw-sand text-schw-mute"],
+} as const;
+export type AanvraagStatus = keyof typeof AANVRAAG_STATUS;
+
+export const KLANT_STATUS = {
+  lead: ["Lead", "bg-schw-sun text-schw-night"],
+  klant: ["Klant", "bg-[#DCFCE7] text-[#15803D]"],
+  "vaste-klant": ["Vaste klant", "bg-schw-night text-schw-cream"],
+  inactief: ["Inactief", "bg-schw-sand text-schw-mute"],
+} as const;
+export type KlantStatus = keyof typeof KLANT_STATUS;
+
+export function Pil({ label, kleur }: { label: string; kleur: string }) {
+  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${kleur}`}>{label}</span>;
+}
+
 export function Melding({ fout, ok }: { fout?: string; ok?: string }) {
   if (fout) return <p role="alert" className="rounded-2xl bg-[#FDE2E2] p-3 text-sm font-semibold text-[#B91C1C]">{fout}</p>;
   if (ok) return <p role="status" className="rounded-2xl bg-[#DCFCE7] p-3 text-sm font-semibold text-[#15803D]">{ok}</p>;

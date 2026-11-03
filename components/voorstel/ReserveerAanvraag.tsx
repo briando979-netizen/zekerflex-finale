@@ -1,45 +1,83 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ACTIVITEITEN, CONTACT, DOELGROEPEN, THEMAFEESTEN } from "@/lib/voorstel/schwarzwald";
+import Link from "next/link";
+import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, THEMAFEESTEN } from "@/lib/voorstel/schwarzwald";
 
-// Aanvraagformulier voor groepen. Er is (nog) geen eigen backend: het formulier
-// zet de aanvraag netjes in een e-mail aan info@. Direct boeken gaat via hun
-// bestaande reserveringssysteem (Stackbase), dat staat ernaast.
+// Aanvraagformulier voor themafeesten, bruiloften en grote groepen. De
+// aanvraag komt als lead in het CRM van Het Schwarzwald (Beheer → Aanvragen);
+// ingelogd zie je hem terug onder Mijn account.
 
 const VELD = "mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3.5 text-schw-night ring-1 ring-schw-night/15 focus:outline-none focus:ring-2 focus:ring-schw-orange";
 const LABEL = "text-sm font-semibold text-schw-night";
 
-export function ReserveerAanvraag({ activiteit = "", thema = "", voor = "" }: { activiteit?: string; thema?: string; voor?: string }) {
+export function ReserveerAanvraag({
+  activiteit = "",
+  thema = "",
+  voor = "",
+  gegevens = null,
+}: {
+  activiteit?: string;
+  thema?: string;
+  voor?: string;
+  gegevens?: { naam: string; email: string; telefoon: string } | null;
+}) {
   const [programma, setProgramma] = useState(activiteit ? `a:${activiteit}` : thema ? `t:${thema}` : "");
   const [gelegenheid, setGelegenheid] = useState(voor);
   const [datum, setDatum] = useState("");
   const [aantal, setAantal] = useState("");
-  const [naam, setNaam] = useState("");
-  const [telefoon, setTelefoon] = useState("");
+  const [naam, setNaam] = useState(gegevens?.naam ?? "");
+  const [email, setEmail] = useState(gegevens?.email ?? "");
+  const [telefoon, setTelefoon] = useState(gegevens?.telefoon ?? "");
+  const [bericht, setBericht] = useState("");
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState("");
   const [klaar, setKlaar] = useState(false);
 
-  const programmaNaam =
-    ACTIVITEITEN.find((a) => `a:${a.slug}` === programma)?.naam ?? THEMAFEESTEN.find((t) => `t:${t.slug}` === programma)?.naam ?? "Nog niet gekozen";
-  const gelegenheidNaam = DOELGROEPEN.find((d) => d.slug === gelegenheid)?.naam ?? "Anders";
+  const programmaNaam = ACTIVITEITEN.find((a) => `a:${a.slug}` === programma)?.naam ?? THEMAFEESTEN.find((t) => `t:${t.slug}` === programma)?.naam ?? "";
+  const gelegenheidNaam = DOELGROEPEN.find((d) => d.slug === gelegenheid)?.naam ?? "";
 
-  function verstuur(e: FormEvent) {
+  async function verstuur(e: FormEvent) {
     e.preventDefault();
-    const body = [
-      `Naam: ${naam}`,
-      `Telefoon: ${telefoon}`,
-      `Gelegenheid: ${gelegenheidNaam}`,
-      `Activiteit of feest: ${programmaNaam}`,
-      `Datum: ${datum || "nog flexibel"}`,
-      `Aantal personen: ${aantal}`,
-    ].join("\n");
-    const onderwerp = `Aanvraag ${gelegenheidNaam.toLowerCase()} voor ${aantal} personen`;
-    window.location.href = `mailto:${CONTACT.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(body)}`;
-    setKlaar(true);
+    setBezig(true);
+    setFout("");
+    try {
+      const r = await fetch("/api/voorstel/schwarzwald/aanvraag", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ naam, email, telefoon, gelegenheid: gelegenheidNaam, programma: programmaNaam, datum, personen: Number(aantal), bericht }),
+      });
+      const d = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
+      if (!r.ok) throw new Error(d.error?.message ?? "Versturen is niet gelukt.");
+      setKlaar(true);
+    } catch (err) {
+      setFout(err instanceof Error ? err.message : "Versturen is niet gelukt.");
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  if (klaar) {
+    return (
+      <div id="aanvraag" role="status" className="scroll-mt-28 rounded-xl3 bg-schw-sand p-6 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-orange">Ontvangen</p>
+        <h2 className="mt-2 font-display text-2xl font-bold">Dank je, {naam.split(" ")[0]}!</h2>
+        <p className="mt-3 text-schw-night/80">
+          We hebben je aanvraag voor {aantal} personen ontvangen en nemen snel contact op met een voorstel op maat.
+          {gegevens ? (
+            <>
+              {" "}
+              Je ziet de status onder <Link href={`${BASE}/account`} className="font-semibold underline">Mijn account</Link>.
+            </>
+          ) : null}
+        </p>
+        <p className="mt-3 text-sm text-schw-mute">Liever direct even bellen? {CONTACT.telefoon}</p>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={verstuur} className="rounded-xl3 bg-schw-sand p-6 sm:p-8">
+    <form id="aanvraag" onSubmit={(e) => void verstuur(e)} className="scroll-mt-28 rounded-xl3 bg-schw-sand p-6 sm:p-8">
       <h2 className="font-display text-2xl font-bold">Vraag een voorstel aan</h2>
       <p className="mt-1 text-schw-mute">Vertel wat jullie zoeken, dan stellen wij een programma op maat voor.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -76,7 +114,7 @@ export function ReserveerAanvraag({ activiteit = "", thema = "", voor = "" }: { 
         </label>
         <label className="block">
           <span className={LABEL}>Aantal personen</span>
-          <input type="number" inputMode="numeric" min={2} max={500} required value={aantal} onChange={(e) => setAantal(e.target.value)} className={VELD} />
+          <input type="number" inputMode="numeric" min={2} max={1000} required value={aantal} onChange={(e) => setAantal(e.target.value)} className={VELD} />
         </label>
         <label className="block">
           <span className={LABEL}>Datum (mag ook later)</span>
@@ -86,19 +124,27 @@ export function ReserveerAanvraag({ activiteit = "", thema = "", voor = "" }: { 
           <span className={LABEL}>Je naam</span>
           <input type="text" autoComplete="name" required value={naam} onChange={(e) => setNaam(e.target.value)} className={VELD} />
         </label>
-        <label className="block sm:col-span-2">
+        <label className="block">
+          <span className={LABEL}>E-mailadres</span>
+          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={VELD} />
+        </label>
+        <label className="block">
           <span className={LABEL}>Telefoonnummer</span>
           <input type="tel" autoComplete="tel" required value={telefoon} onChange={(e) => setTelefoon(e.target.value)} className={VELD} />
         </label>
+        <label className="block sm:col-span-2">
+          <span className={LABEL}>Wensen of vragen (mag leeg)</span>
+          <textarea rows={3} value={bericht} onChange={(e) => setBericht(e.target.value)} placeholder="Bijvoorbeeld: met diner, een DJ, of rekening houden met allergieën." className={VELD} />
+        </label>
       </div>
-      <button type="submit" className="mt-6 w-full rounded-full bg-schw-orange py-4 font-bold text-schw-night transition-transform hover:-translate-y-0.5">
-        Verstuur aanvraag
-      </button>
-      {klaar && (
-        <p role="status" className="mt-4 rounded-2xl bg-white p-4 text-sm">
-          Je mailprogramma opent met de aanvraag. Opent er niets? Mail naar {CONTACT.email} of bel {CONTACT.telefoon}.
+      {fout && (
+        <p role="alert" className="mt-4 rounded-2xl bg-[#FDE2E2] p-3 text-sm font-semibold text-[#B91C1C]">
+          {fout}
         </p>
       )}
+      <button type="submit" disabled={bezig} className="mt-6 w-full rounded-full bg-schw-orange py-4 font-bold text-schw-night transition-transform hover:-translate-y-0.5 disabled:opacity-50">
+        {bezig ? "Bezig…" : "Verstuur aanvraag"}
+      </button>
     </form>
   );
 }

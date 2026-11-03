@@ -73,7 +73,12 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
             <p className="mt-3 text-sm text-schw-cream/60">Groepen vanaf 12 personen kunnen ook op andere dagen, op reservering.</p>
           </div>
         </div>
-        <ReserveerAanvraag activiteit={tekst(sp.activiteit)} thema={tekst(sp.thema)} voor={tekst(sp.voor)} />
+        <ReserveerAanvraag
+          activiteit={tekst(sp.activiteit)}
+          thema={tekst(sp.thema)}
+          voor={tekst(sp.voor)}
+          gegevens={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
+        />
       </section>
     </>
   );

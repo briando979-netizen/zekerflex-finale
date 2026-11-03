@@ -31,7 +31,10 @@ export interface Account {
   geblokkeerd: boolean;
   aangemaakt: string;
   laatstIngelogd?: string;
+  /** leeg bij een account dat alleen via Google inlogt */
   hash: string;
+  /** ooit ingelogd met Google */
+  google?: boolean;
 }
 
 export type PubliekAccount = Omit<Account, "hash">;
@@ -80,14 +83,51 @@ export function eisZelfdeHerkomst(request: Request): void {
   if (!zelfdeHerkomst(request.headers, request.url)) throw AppError.forbidden("Verzoek van een andere website.");
 }
 
+/** Het sessie-cookie, om op een eigen antwoord te zetten (bv. de doorstuur na Google). */
+export function sessieCookie(email: string) {
+  return {
+    name: SESSIE_COOKIE,
+    value: teken(email),
+    options: { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: SESSIE_DAGEN * 86_400 },
+  };
+}
+
 async function zetSessie(email: string): Promise<void> {
-  (await cookies()).set(SESSIE_COOKIE, teken(email), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSIE_DAGEN * 86_400,
-  });
+  const c = sessieCookie(email);
+  (await cookies()).set(c.name, c.value, c.options);
+}
+
+/** Kort ondertekend pakketje (bv. de OAuth-state in een cookie), zelfde sleutel als de sessie. */
+export function onderteken(inhoud: object): string {
+  const data = Buffer.from(JSON.stringify(inhoud)).toString("base64url");
+  return `${data}.${createHmac("sha256", geheim()).update(data).digest("base64url")}`;
+}
+
+export function leesOndertekend<T>(token: string | undefined): T | null {
+  if (!token) return null;
+  const [data, handtekening] = token.split(".");
+  if (!data || !handtekening) return null;
+  const verwacht = createHmac("sha256", geheim()).update(data).digest();
+  const gekregen = Buffer.from(handtekening, "base64url");
+  if (gekregen.length !== verwacht.length || !timingSafeEqual(gekregen, verwacht)) return null;
+  try {
+    return JSON.parse(Buffer.from(data, "base64url").toString()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Inloggen met een door Google bevestigd e-mailadres: bestaand account, of een nieuw klantaccount. */
+export async function viaGoogle(input: { email: string; naam: string }): Promise<Account> {
+  const email = input.email.trim().toLowerCase();
+  const bestaand = await kvGet<Account>(sleutel(email));
+  if (bestaand?.geblokkeerd) throw AppError.forbidden("Dit account is geblokkeerd. Neem contact op met Het Schwarzwald.");
+  const nu = new Date().toISOString();
+  const account: Account = bestaand
+    ? { ...bestaand, google: true, laatstIngelogd: nu }
+    : { email, naam: input.naam.trim() || email.split("@")[0] || email, telefoon: "", rol: "klant", geblokkeerd: false, aangemaakt: nu, laatstIngelogd: nu, hash: "", google: true };
+  await kvSet(sleutel(email), account);
+  return account;
 }
 
 export async function uitloggen(): Promise<void> {

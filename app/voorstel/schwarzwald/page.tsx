@@ -6,6 +6,7 @@ import type { Blok } from "@/lib/voorstel/schwarzwald-paginas";
 import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { ActiviteitKaart, ArrangementBlok, Beeld, CtaBand, Sterren } from "@/components/voorstel/SchwarzwaldCards";
 import { RunsWeergave } from "@/components/voorstel/SchwarzwaldBlokken";
+import { HeroVideo } from "@/components/voorstel/HeroVideo";
 
 type Alinea = Extract<Blok, { type: "alinea" }>;
 const alineaDieBegintMet = (blokken: Blok[], begin: string) =>
@@ -63,7 +64,8 @@ export default async function SchwarzwaldHome() {
 
           <div className="relative mx-auto aspect-square w-full max-w-[560px]">
             <div className="absolute inset-[6%_10%_18%_0] -rotate-3 overflow-hidden rounded-[2rem] shadow-2xl ring-4 ring-schw-cream/10">
-              <Image src="/voorstel/schwarzwald/groep.webp" alt="Een grote groep in rode overalls juicht bij de buggy's" fill priority sizes="(max-width: 1024px) 90vw, 520px" className="object-cover" />
+              {/* hun eigen sfeervideo van hetschwarzwald.nl, lichter gemaakt (540p, zonder geluid) */}
+              <HeroVideo src="/voorstel/schwarzwald/sfeer.mp4" poster="/voorstel/schwarzwald/sfeer-poster.webp" label="Sfeervideo: het perfecte kerst-bedrijfsfeest bij Het Schwarzwald" />
             </div>
             <div className="absolute bottom-0 right-0 aspect-[4/3] w-[48%] rotate-[5deg] animate-float overflow-hidden rounded-3xl shadow-2xl ring-4 ring-schw-night">
               <Image src="/voorstel/schwarzwald/quad.webp" alt="Quads door de modder op de crossbaan" fill sizes="280px" className="object-cover" />

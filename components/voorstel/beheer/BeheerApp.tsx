@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { BEHEER_API, KAART, dagNaam, useBeheerData } from "@/components/voorstel/beheer/api";
-import { Reserveringen, type BeheerBoeking } from "@/components/voorstel/beheer/Reserveringen";
+import { useEffect, useState } from "react";
+import { Dashboard } from "@/components/voorstel/beheer/Dashboard";
+import { Klanten } from "@/components/voorstel/beheer/Klanten";
+import { Aanvragen } from "@/components/voorstel/beheer/Aanvragen";
+import { Reserveringen } from "@/components/voorstel/beheer/Reserveringen";
 import { Aankondiging, Activiteiten, Openingstijden } from "@/components/voorstel/beheer/Instellingen";
 import { Paginas } from "@/components/voorstel/beheer/Paginas";
 import { Accounts } from "@/components/voorstel/beheer/Accounts";
 
-// De beheeromgeving van Het Schwarzwald: tabbladen voor alles wat het
-// personeel zelf regelt. Het gekozen tabblad staat in de adresbalk (#tab).
+// De beheeromgeving van Het Schwarzwald: dashboard, CRM (klanten en
+// aanvragen) en alles wat het personeel zelf regelt. Het gekozen tabblad staat
+// in de adresbalk (#tab, of #klanten=<e-mail> voor een klantdossier).
 
 const TABS = [
-  ["overzicht", "Overzicht"],
+  ["dashboard", "Dashboard"],
+  ["klanten", "Klanten (CRM)"],
+  ["aanvragen", "Aanvragen"],
   ["reserveringen", "Reserveringen"],
   ["activiteiten", "Activiteiten"],
   ["openingstijden", "Openingstijden"],
@@ -21,87 +26,15 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
-function Overzicht({ namen, vandaag, naar }: { namen: Record<string, string>; vandaag: string; naar: (t: Tab) => void }) {
-  const { data, fout } = useBeheerData<{ boekingen: BeheerBoeking[] }>(BEHEER_API);
-  const cijfers = useMemo(() => {
-    const geldig = (data?.boekingen ?? []).filter((b) => b.status !== "geannuleerd");
-    const week = new Date(`${vandaag}T00:00:00Z`);
-    week.setUTCDate(week.getUTCDate() + 7);
-    const weekTot = week.toISOString().slice(0, 10);
-    const dezeWeek = geldig.filter((b) => b.datum >= vandaag && b.datum < weekTot);
-    return {
-      vandaag: geldig.filter((b) => b.datum === vandaag),
-      dezeWeek,
-      teBevestigen: (data?.boekingen ?? []).filter((b) => b.status === "nieuw" && b.datum >= vandaag),
-      omzet: dezeWeek.reduce((s, b) => s + (b.prijs ?? 0), 0),
-      komend: geldig.filter((b) => b.datum >= vandaag).slice(0, 6),
-    };
-  }, [data, vandaag]);
-
-  const tegels = [
-    ["Gasten vandaag", cijfers.vandaag.reduce((s, b) => s + b.personen, 0)],
-    ["Reserveringen komende 7 dagen", cijfers.dezeWeek.length],
-    ["Te bevestigen", cijfers.teBevestigen.length],
-    ["Omzetindicatie 7 dagen", `€ ${cijfers.omzet.toLocaleString("nl-NL")}`],
-  ] as const;
-
-  return (
-    <div className="space-y-6">
-      {fout && <p className="text-sm text-[#B91C1C]">{fout}</p>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {tegels.map(([k, v]) => (
-          <div key={k} className={KAART}>
-            <p className="text-sm text-schw-mute">{k}</p>
-            <p className="mt-1 font-display text-3xl font-bold">{data ? v : "–"}</p>
-          </div>
-        ))}
-      </div>
-      <div className={KAART}>
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-display text-lg font-bold">Eerstvolgende reserveringen</h3>
-          <button type="button" onClick={() => naar("reserveringen")} className="text-sm font-semibold underline decoration-schw-orange decoration-2 underline-offset-4">
-            Alle reserveringen
-          </button>
-        </div>
-        {data && cijfers.komend.length === 0 && <p className="mt-3 text-schw-mute">Nog niets gepland.</p>}
-        <ul className="mt-3 divide-y divide-schw-night/5">
-          {cijfers.komend.map((b) => (
-            <li key={`${b.datum}-${b.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-              <span>
-                <strong className="first-letter:uppercase">{dagNaam(b.datum, { weekday: "short", day: "numeric", month: "short" })}</strong> {b.tijd} · {namen[b.activiteit] ?? b.activiteit} · {b.personen} pers.
-              </span>
-              <span className="text-schw-mute">
-                {b.naam}
-                {b.status === "nieuw" && <span className="ml-2 rounded-full bg-schw-sun px-2 py-0.5 text-xs font-bold text-schw-night">nieuw</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(
-          [
-            ["activiteiten", "Prijzen en capaciteit aanpassen"],
-            ["openingstijden", "Openingstijden en gesloten dagen"],
-            ["paginas", "Teksten op de site wijzigen"],
-          ] as const
-        ).map(([t, label]) => (
-          <button key={t} type="button" onClick={() => naar(t)} className={`${KAART} text-left font-semibold hover:ring-2 hover:ring-schw-orange`}>
-            {label} →
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, string>; vandaag: string; wie: string }) {
-  const [tab, setTab] = useState<Tab>("overzicht");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [klant, setKlant] = useState("");
 
   useEffect(() => {
     const lees = () => {
-      const h = window.location.hash.slice(1);
+      const [h, email] = decodeURIComponent(window.location.hash.slice(1)).split("=");
       if (TABS.some(([k]) => k === h)) setTab(h as Tab);
+      if (h === "klanten" && email) setKlant(email);
     };
     lees();
     window.addEventListener("hashchange", lees);
@@ -111,6 +44,13 @@ export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, strin
   const naar = (t: Tab) => {
     setTab(t);
     window.history.replaceState(null, "", `#${t}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const openKlant = (email: string) => {
+    setKlant(email);
+    setTab("klanten");
+    window.history.replaceState(null, "", `#klanten=${encodeURIComponent(email)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -132,7 +72,9 @@ export function BeheerApp({ namen, vandaag, wie }: { namen: Record<string, strin
         ))}
       </div>
       <div id={`paneel-${tab}`} role="tabpanel" className="mt-6">
-        {tab === "overzicht" && <Overzicht namen={namen} vandaag={vandaag} naar={naar} />}
+        {tab === "dashboard" && <Dashboard namen={namen} naar={naar} openKlant={openKlant} />}
+        {tab === "klanten" && <Klanten namen={namen} vandaag={vandaag} start={klant} />}
+        {tab === "aanvragen" && <Aanvragen openKlant={openKlant} />}
         {tab === "reserveringen" && <Reserveringen namen={namen} vandaag={vandaag} />}
         {tab === "activiteiten" && <Activiteiten namen={namen} />}
         {tab === "openingstijden" && <Openingstijden />}
