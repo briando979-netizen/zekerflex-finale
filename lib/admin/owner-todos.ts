@@ -224,6 +224,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(webhookEvents === null ? m("stripe-expired") : {}),
     },
     {
+      id: "stripe-btw",
+      group: "Geld & bank",
+      title: "Btw op abonnementen: kies exclusief of inclusief",
+      why: "Op de site staan de abonnementen Pro/Business en Website-beheer als exclusief btw, maar het betaalscherm van Stripe rekent het kale bedrag zonder btw: € 49 in plaats van € 59,29. Bij de API-abonnementen staat niets over btw, en ook daar komt geen btw bij. Dan draag je de btw zelf af uit dat bedrag, en is de Stripe-bon geen geldige btw-factuur voor een zakelijke klant. Er betaalt nog niemand een abonnement via Stripe, dus er is niets misgegaan.",
+      how: [
+        "Aangeraden: prijzen blijven exclusief btw, net als de platformfee. Zet dan Stripe Tax aan: dashboard.stripe.com → Instellingen → Belastingen, Nederland als registratie en je btw-nummer invullen.",
+        "Zeg daarna tegen Claude dat Stripe Tax aanstaat; die zet de btw-berekening aan op de betaalschermen en test dat in de testomgeving van Stripe.",
+        "Wil je liever prijzen inclusief btw, zeg dat tegen Claude; die past de teksten op de site aan.",
+        "Daarna kan ook de eenmalige websiteprijs uit een geaccepteerd websitevoorstel via hetzelfde betaalscherm worden afgerekend. Nu factureert het team die met de hand.",
+      ],
+      auto: false,
+      ...m("stripe-btw"),
+    },
+    {
       id: "terms-review",
       group: "Juridisch",
       title: "Voorwaarden snelle uitbetaling laten nakijken",
