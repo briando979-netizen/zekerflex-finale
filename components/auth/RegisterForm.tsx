@@ -44,7 +44,7 @@ export function RegisterForm({
   locale?: Locale;
   defaultType: "freelancer" | "bedrijf";
   defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
-  prefill?: { company?: string; kvk?: string; email?: string };
+  prefill?: { company?: string; kvk?: string; email?: string; name?: string };
   googleEnabled: boolean;
 }) {
   const t = AUTH_DICTS[locale].register;
@@ -330,7 +330,7 @@ export function RegisterForm({
 
         <label className="block">
           <span className="field-label">{type === "bedrijf" ? t.yourName : t.fullName}</span>
-          <input name="fullName" required autoComplete="name" className="field-input" />
+          <input name="fullName" required autoComplete="name" defaultValue={prefill?.name} className="field-input" />
         </label>
 
         <label className="block">

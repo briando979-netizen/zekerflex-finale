@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Account aanmaken" };
 
 export default async function RegisterPage(
   props: {
-    searchParams: Promise<{ type?: string; company?: string; kvk?: string; email?: string }>;
+    searchParams: Promise<{ type?: string; company?: string; kvk?: string; email?: string; name?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -20,12 +20,15 @@ export default async function RegisterPage(
     searchParams.type === "uitzendkracht" || searchParams.type === "zzp" || searchParams.type === "flexwerker"
       ? searchParams.type
       : undefined;
+  // the person's own name, e.g. from the "ja" on a website proposal (components/websitevoorstel/ProposalClient.tsx)
+  const name = typeof searchParams.name === "string" ? searchParams.name.trim().slice(0, 100) : "";
   const prefill =
-    searchParams.company || searchParams.kvk || searchParams.email
+    searchParams.company || searchParams.kvk || searchParams.email || name
       ? {
           ...(searchParams.company ? { company: searchParams.company } : {}),
           ...(searchParams.kvk && /^\d{8}$/.test(searchParams.kvk) ? { kvk: searchParams.kvk } : {}),
           ...(searchParams.email ? { email: searchParams.email } : {}),
+          ...(name ? { name } : {}),
         }
       : undefined;
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);

@@ -35,7 +35,7 @@ export function AcceptForm({ id, plans, bedrijf, websitePrijs }: { id: string; p
   const [domein, setDomein] = useState<(typeof DOMEIN)[number]["id"]>("houden");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ plek: number | null; kortingPct: number; email: string } | null>(null);
+  const [done, setDone] = useState<{ plek: number | null; kortingPct: number; email: string; naam: string } | null>(null);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -59,13 +59,13 @@ export function AcceptForm({ id, plans, bedrijf, websitePrijs }: { id: string; p
     const d = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
     if (!res?.ok) return setError(d?.error?.message ?? "Versturen lukte niet. Probeer het opnieuw of mail ons.");
-    setDone({ plek: d.plek ?? null, kortingPct: d.kortingPct ?? 0, email: String(f.get("email") ?? "").trim() });
+    setDone({ plek: d.plek ?? null, kortingPct: d.kortingPct ?? 0, email: String(f.get("email") ?? "").trim(), naam: String(f.get("naam") ?? "").trim() });
   }
 
   if (done) {
     // the website moves into the company's own account (Admin → Websitevoorstellen → overzetten),
-    // so an account made now saves a step; name and e-mail come prefilled (app/register/page.tsx)
-    const register = `/register?type=bedrijf&company=${encodeURIComponent(bedrijf)}${done.email ? `&email=${encodeURIComponent(done.email)}` : ""}`;
+    // so an account made now saves a step; company, e-mail and their own name come prefilled (app/register/page.tsx)
+    const register = `/register?type=bedrijf&company=${encodeURIComponent(bedrijf)}${done.email ? `&email=${encodeURIComponent(done.email)}` : ""}${done.naam ? `&name=${encodeURIComponent(done.naam)}` : ""}`;
     return (
       <div role="status" className="border border-lux-line bg-white p-8">
         <p className="font-serif text-3xl">Bedankt, we gaan voor je aan de slag</p>
