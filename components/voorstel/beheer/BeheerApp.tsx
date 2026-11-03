@@ -131,7 +131,7 @@ export function BeheerApp({
           <div role="tablist" aria-label="Beheer" className="flex gap-1 overflow-x-auto px-4 pb-3 lg:flex-col lg:gap-0 lg:overflow-visible lg:px-3">
             {GROEPEN.map(([groep, tabs]) => (
               <div key={groep} className="contents lg:block lg:pb-4">
-                <p aria-hidden="true" className="hidden px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-schw-cream/45 lg:block">
+                <p aria-hidden="true" className="hidden px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-schw-cream/60 lg:block">
                   {groep}
                 </p>
                 {tabs.map((k) => (
