@@ -50,6 +50,16 @@ const TAKEN: Taak[] = [
     naar: { tab: "live", label: "Naar Live zetten" },
   },
   {
+    titel: "Als de server hapert",
+    stappen: [
+      "Open Live zetten en klap onderaan Serveronderhoud open.",
+      "Klik eerst Serverstand bekijken: je ziet welke onderdelen draaien, hoeveel schijf en geheugen er vrij is.",
+      "Hangt één onderdeel, herstart dan alleen dat (App, Bouwer, Webserver of Planner). Is de schijf bijna vol, klik Schijfruimte vrijmaken.",
+    ],
+    tip: "De database herstart je hier bewust niet. Werkt Admin zelf niet meer, zie dan \"Noodgeval\" onderaan.",
+    naar: { tab: "live", label: "Naar Live zetten" },
+  },
+  {
     titel: "Eén wijziging van de Bouwer ongedaan maken",
     stappen: [
       "Open het tabblad Bouwer en kies links de opdracht die je terug wilt draaien (die staat op \"Op GitHub\").",

@@ -80,7 +80,8 @@ export function nieuweMeldingen(
     if (!vorige || t.door === AUTO_DOOR || !MELD_TAAK.has(t.staat) || vorige.taken[t.id] === t.staat) continue;
     meldingen.push(taakMelding(t));
   }
-  if (vorige && live && MELD_LIVE.has(live.staat) && stand.live !== vorige.live) meldingen.push(liveMelding(live));
+  // serveronderhoud start de eigenaar zelf en ziet hij meteen op het scherm: geen push
+  if (vorige && live && live.actie !== "onderhoud" && MELD_LIVE.has(live.staat) && stand.live !== vorige.live) meldingen.push(liveMelding(live));
   return { meldingen, stand };
 }
 

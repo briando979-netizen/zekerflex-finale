@@ -84,5 +84,7 @@ describe("Bouwer-meldingen: wanneer krijgt de eigenaar een push", () => {
     expect(nieuweMeldingen([], live({ staat: "mislukt" }), stand()).meldingen[0]?.titel).toBe("Live zetten mislukt");
     expect(nieuweMeldingen([], live({ staat: "bezig" }), stand()).meldingen).toEqual([]);
     expect(nieuweMeldingen([], live({ actie: "terug", staat: "klaar" }), stand()).meldingen[0]?.titel).toBe("De vorige versie staat weer live");
+    // serveronderhoud ziet de eigenaar zelf op het scherm
+    expect(nieuweMeldingen([], live({ actie: "onderhoud", staat: "klaar" }), stand()).meldingen).toEqual([]);
   });
 });

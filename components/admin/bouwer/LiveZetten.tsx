@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Versie } from "@/lib/bouwer/versie";
-import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek } from "@/lib/bouwer/live";
+import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek, OnderhoudTaak } from "@/lib/bouwer/live";
 import type { LiveMoment } from "@/lib/bouwer/geschiedenis";
 import { VoorbeeldPaneel } from "@/components/admin/bouwer/VoorbeeldPaneel";
 
@@ -211,7 +211,7 @@ export function LiveZetten() {
               <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAAT[status.staat].kleur}`}>{STAAT[status.staat].label}</span>
               <span className="text-xs text-white/80">{status.stap}</span>
               <span className="ml-auto text-[11px] text-white/35">
-                {status.actie === "terug" ? "terugzetten" : "uitrol"} door {status.door} · {tijd(status.begon)}
+                {status.actie === "terug" ? "terugzetten" : status.actie === "onderhoud" ? "onderhoud" : "uitrol"} door {status.door} · {tijd(status.begon)}
               </span>
             </div>
             {status.bericht && <p className="mt-2 text-xs leading-relaxed text-white/70">{status.bericht}</p>}
@@ -319,10 +319,44 @@ export function LiveZetten() {
             </ul>
           </section>
         )}
+
+        {/* serveronderhoud: vaste taken die de live-zetter mag doen, zonder ssh */}
+        <details className="rounded-xl border border-white/10 bg-[#0e1116]">
+          <summary className="cursor-pointer px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-white/40">Serveronderhoud</summary>
+          <div className="space-y-2 border-t border-white/10 px-4 py-3">
+            <p className="text-[11px] leading-relaxed text-white/45">
+              Voor als iets hapert. Elke knop doet één vaste taak op de server; de uitkomst verschijnt hierboven bij de status.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ONDERHOUD.map((o) => (
+                <button
+                  key={o.taak}
+                  type="button"
+                  disabled={!kanKlikken}
+                  onClick={() => {
+                    if (!o.waarschuwing || window.confirm(o.waarschuwing)) void stuur({ actie: "onderhoud", taak: o.taak });
+                  }}
+                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
 }
+
+const ONDERHOUD: { taak: OnderhoudTaak; label: string; waarschuwing?: string }[] = [
+  { taak: "status", label: "Serverstand bekijken" },
+  { taak: "herstart-app", label: "App herstarten", waarschuwing: "De app herstarten? De site is ongeveer een minuut onbereikbaar." },
+  { taak: "herstart-bouwer", label: "Bouwer herstarten", waarschuwing: "De Bouwer herstarten? Een opdracht waar hij nu aan werkt, stopt." },
+  { taak: "herstart-caddy", label: "Webserver herstarten", waarschuwing: "De webserver (Caddy) herstarten? De site is een paar seconden onbereikbaar." },
+  { taak: "herstart-cron", label: "Planner herstarten" },
+  { taak: "opruimen", label: "Schijfruimte vrijmaken" },
+];
 
 function VersieKaart({ titel, sha, onderwerp, datum }: { titel: string; sha: string | undefined; onderwerp: string; datum: string | undefined }) {
   return (

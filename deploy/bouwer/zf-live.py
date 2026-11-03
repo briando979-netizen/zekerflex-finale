@@ -46,6 +46,9 @@ K_STATUS = "bouwer:live:status"
 K_LOG = "bouwer:live:log"
 K_HARTSLAG = "bouwer:live:hartslag"
 
+# Serveronderhoud: alleen deze diensten mag de knop herstarten (database en redis bewust niet).
+ONDERHOUD_HERSTART = {"herstart-app": "app", "herstart-bouwer": "bouwer", "herstart-caddy": "caddy", "herstart-cron": "cron"}
+
 # Een migratie die data of kolommen weggooit vraagt een extra, expliciet akkoord.
 DESTRUCTIEF = re.compile(
     r"\b(DROP\s+(TABLE|COLUMN|SCHEMA|INDEX|TYPE)|TRUNCATE|DELETE\s+FROM|ALTER\s+COLUMN\s+\S+\s+(SET\s+DATA\s+)?TYPE)\b",
@@ -194,6 +197,8 @@ class Uitrol:
                 return
             if self.status["actie"] == "terug":
                 self.terugzetten(automatisch=False)
+            elif self.status["actie"] == "onderhoud":
+                self.onderhoud(str(self.v.get("taak", "")))
             else:
                 self.uitrollen()
         except Exception as e:
@@ -390,6 +395,45 @@ class Uitrol:
             time.sleep(5)
         return False
 
+    def onderhoud(self, taak: str) -> None:
+        """Vaste onderhoudstaken (Live zetten → Serveronderhoud); nooit een vrij commando."""
+        if taak == "status":
+            self.stap("Serverstand bekijken")
+            for titel, args in (
+                ("diensten", [*COMPOSE, "ps", "--format", "{{.Service}}: {{.Status}}"]),
+                ("schijf", ["df", "-h", "/"]),
+                ("geheugen", ["free", "-m"]),
+                ("docker-opslag", ["sudo", "docker", "system", "df"]),
+                ("belasting", ["uptime"]),
+            ):
+                code, out = run(args, cwd=ZF_DIR, timeout=60)
+                self.schrijf(f"--- {titel}")
+                for regel in out.splitlines()[:40]:
+                    self.schrijf(regel)
+            self.zet(staat="klaar", stap="Serverstand", bericht="De stand van de server staat in het log hieronder.")
+            return
+        if taak in ONDERHOUD_HERSTART:
+            dienst = ONDERHOUD_HERSTART[taak]
+            self.stap(f"{dienst} herstarten")
+            code, _ = self.stroom([*COMPOSE, "restart", dienst], timeout=300)
+            ok = code == 0 and (self.gezond() if dienst == "app" else True)
+            self.zet(
+                staat="klaar" if ok else "mislukt",
+                stap=f"{dienst} herstart",
+                bericht=f"{dienst} is herstart." if ok else f"Herstarten van {dienst} lukte niet of hij meldt zich niet gezond. Kijk in het log.",
+            )
+            return
+        if taak == "opruimen":
+            self.stap("Schijfruimte vrijmaken")
+            voor = vrije_ruimte()
+            # dezelfde opruiming als na elke uitrol (vps-update.sh): geen draaiende images of volumes
+            self.stroom(["sudo", "docker", "image", "prune", "-f"], timeout=600)
+            self.stroom(["sudo", "docker", "builder", "prune", "-af", "--filter", "until=2h"], timeout=900)
+            na = vrije_ruimte()
+            self.zet(staat="klaar", stap="Opgeruimd", bericht=f"Vrije schijfruimte: eerst {voor}, nu {na}.")
+            return
+        self.zet(staat="mislukt", bericht=f"Onbekende onderhoudstaak: {taak[:40]}")
+
     def terugzetten(self, automatisch: bool) -> None:
         self.stap("Vorige versie terugzetten")
         code, out = run(["sudo", "docker", "tag", "zekerflex-app:rollback", "zekerflex-app:latest"])
@@ -404,6 +448,12 @@ class Uitrol:
         if not ok:
             bericht = "Terugzetten is gestart, maar de app meldt zich nog niet gezond. Kijk in het log."
         self.zet(staat="teruggezet" if ok else "mislukt", stap="Vorige versie", bericht=bericht)
+
+
+def vrije_ruimte() -> str:
+    code, out = run(["df", "-h", "--output=avail", "/"], timeout=20)
+    regels = out.splitlines()
+    return regels[-1].strip() if code == 0 and len(regels) > 1 else "?"
 
 
 def hartslag(bezig: bool = False) -> None:

@@ -22,11 +22,17 @@ export const K_HARTSLAG = "bouwer:live:hartslag";
 
 export const GITHUB_REPO = process.env.ZF_GITHUB_REPO || "briando979-netizen/zekerflex-finale";
 
-export type LiveActie = "uitrollen" | "terug";
+export type LiveActie = "uitrollen" | "terug" | "onderhoud";
+
+/** Vaste onderhoudstaken die de live-zetter mag doen (zf-live.py, ONDERHOUD); nooit een vrij commando. */
+export const ONDERHOUD_TAKEN = ["status", "herstart-app", "herstart-bouwer", "herstart-caddy", "herstart-cron", "opruimen"] as const;
+export type OnderhoudTaak = (typeof ONDERHOUD_TAKEN)[number];
 
 export interface LiveVerzoek {
   id: string;
   actie: LiveActie;
+  /** alleen bij actie "onderhoud" */
+  taak?: OnderhoudTaak;
   /** Namen van de migraties waarvoor akkoord is gegeven (moet exact de wachtende set zijn). */
   migraties: string[];
   destructiefAkkoord: boolean;

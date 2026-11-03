@@ -5,7 +5,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { liveVersie } from "@/lib/bouwer/versie";
 import { registreerLiveVersie } from "@/lib/bouwer/geschiedenis";
-import { agentLeeft, githubOverzicht, isBezig, leesLive, plaatsVerzoek, trekVerzoekIn } from "@/lib/bouwer/live";
+import { ONDERHOUD_TAKEN, agentLeeft, githubOverzicht, isBezig, leesLive, plaatsVerzoek, trekVerzoekIn, type OnderhoudTaak } from "@/lib/bouwer/live";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,8 +46,18 @@ const schema = z.discriminatedUnion("actie", [
     forceer: z.boolean().default(false),
   }),
   z.object({ actie: z.literal("terug") }),
+  z.object({ actie: z.literal("onderhoud"), taak: z.enum(ONDERHOUD_TAKEN) }),
   z.object({ actie: z.literal("intrekken") }),
 ]);
+
+const ONDERHOUD_TEKST: Record<OnderhoudTaak, string> = {
+  status: "bekeek de serverstand",
+  "herstart-app": "herstartte de app",
+  "herstart-bouwer": "herstartte de Bouwer",
+  "herstart-caddy": "herstartte de webserver (Caddy)",
+  "herstart-cron": "herstartte de planner (cron)",
+  opruimen: "maakte schijfruimte vrij",
+};
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
@@ -62,6 +72,19 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const stand = await leesLive();
   if (stand.verzoek) throw AppError.conflict("Er ligt al een verzoek klaar voor de server");
   if (isBezig(stand.status)) throw AppError.conflict("Er loopt al een uitrol");
+
+  if (body.actie === "onderhoud") {
+    const verzoek = await plaatsVerzoek({ actie: "onderhoud", taak: body.taak, migraties: [], destructiefAkkoord: false, forceer: false, door: principal.email });
+    await recordAudit({
+      category: "ADMIN",
+      action: "admin.live.onderhoud",
+      severity: body.taak === "status" ? "info" : "warning",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `${principal.email} ${ONDERHOUD_TEKST[body.taak]} (serveronderhoud)`,
+    });
+    return NextResponse.json({ ok: true, verzoek });
+  }
 
   const verzoek = await plaatsVerzoek(
     body.actie === "uitrollen"
