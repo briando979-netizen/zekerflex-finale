@@ -51,7 +51,7 @@ export const GUIDES: Article[] = [
       {
         heading: "Wat betekent dit in de praktijk?",
         paragraphs: [
-          "Voor jou als kracht: je hoeft zelf geen overeenkomsten op te stellen en je krijgt een seintje als je te afhankelijk dreigt te worden van één klant.",
+          "Voor jou als kracht: je hoeft zelf geen overeenkomsten op te stellen en je krijgt een seintje als je te afhankelijk dreigt te worden van één klant. Onder Account → Je administratie zie je altijd welk deel van je ZekerFlex-omzet van je grootste opdrachtgever komt.",
           "Voor opdrachtgevers: je ziet de risicosignalen per samenwerking in het compliance-overzicht, met een uitleg en een advies. Geen verrassingen achteraf.",
         ],
       },
