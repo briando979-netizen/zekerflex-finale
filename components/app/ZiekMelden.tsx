@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 /** Uitzendkracht: ziek melden — zoekt automatisch vervanging voor je geplande diensten. */
 export function ZiekMelden() {
   const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
+  // Today in Dutch time (toISOString is UTC: between midnight and 01:00/02:00 that is still yesterday).
+  const [from, setFrom] = useState(() => amsterdamDayKey(new Date()));
   const [to, setTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ shifts: number } | null>(null);

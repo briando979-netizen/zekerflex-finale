@@ -6,6 +6,7 @@ import { createReplacementRequest, getOpenRequestForShift } from "@/lib/replacem
 import { sendUserPush } from "@/lib/notifications/push";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { getFiscal } from "@/lib/fiscal/store";
+import { amsterdamToUtc } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Ziekmelding voor de uitzendtak.
@@ -57,8 +58,13 @@ export async function reportSick(input: { userId: string; from: string; to?: str
   const naam = user?.fullName ?? "Onbekend";
   const isUitzend = fiscal?.workerKind === "uitzendkracht";
 
-  const fromDate = new Date(`${input.from}T00:00:00Z`);
-  const toDate = input.to ? new Date(`${input.to}T23:59:59Z`) : new Date(fromDate.getTime() + 14 * DAY);
+  // Whole Dutch days: from 00:00 on `from` up to (not including) 00:00 the day after `to`.
+  const dayStart = (iso: string, addDays = 0) => {
+    const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+    return amsterdamToUtc(y, m, d + addDays);
+  };
+  const fromDate = dayStart(input.from);
+  const toDate = input.to ? new Date(dayStart(input.to, 1).getTime() - 1) : new Date(fromDate.getTime() + 14 * DAY);
   const now = new Date();
 
   // the worker's upcoming assigned shifts that fall in the sickness window

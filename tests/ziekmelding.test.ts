@@ -68,6 +68,19 @@ describe("reportSick", () => {
     expect(alertOwnerLater).not.toHaveBeenCalled();
   });
 
+  it("telt hele Nederlandse dagen: van 00:00 op de eerste dag tot 00:00 na de laatste", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-18T12:00:00Z"));
+    userFindUnique.mockResolvedValue({ fullName: "Jan", freelancerProfile: { id: "f1" } });
+    getFiscal.mockResolvedValue({ workerKind: "zzp" });
+    await reportSick({ userId: "u1", from: "2026-11-20", to: "2026-11-21" });
+    vi.useRealTimers();
+    const where = (assignmentFindMany.mock.calls[0]?.[0] as { where: { shift: { startsAt: { gte: Date; lte: Date } } } }).where;
+    // 20 nov 00:00 NL = 19 nov 23:00 UTC; tot en met 21 nov 23:59:59,999 NL = 22:59:59,999 UTC
+    expect(where.shift.startsAt.gte.toISOString()).toBe("2026-11-19T23:00:00.000Z");
+    expect(where.shift.startsAt.lte.toISOString()).toBe("2026-11-21T22:59:59.999Z");
+  });
+
   it("reuses an existing open replacement instead of making a second one", async () => {
     userFindUnique.mockResolvedValue({ fullName: "Jan", freelancerProfile: { id: "f1" } });
     getFiscal.mockResolvedValue({ workerKind: "uitzendkracht" });

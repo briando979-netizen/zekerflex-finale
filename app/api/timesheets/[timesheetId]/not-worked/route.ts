@@ -39,7 +39,7 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     const key = `timesheet-not-worked:${ts.id}`;
     if (await kvGet(key)) return NextResponse.json({ ok: true, duplicate: true });
     await kvSet(key, { reason, note, by: principal.userId, at: new Date().toISOString() });
-    const summary = `${principal.fullName} meldt: niet gewerkt bij ${ts.branch.tenant.name} (${ts.branch.name}) op ${ts.scheduledStart.toLocaleString("nl-NL")} — ${REASONS[reason]}${note ? `: ${note}` : ""}`;
+    const summary = `${principal.fullName} meldt: niet gewerkt bij ${ts.branch.tenant.name} (${ts.branch.name}) op ${ts.scheduledStart.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })} —${REASONS[reason]}${note ? `: ${note}` : ""}`;
     await recordAudit({ category: "TIMESHEET", action: "timesheet.not_worked", actorUserId: principal.userId, summary, targetType: "timesheet", targetId: ts.id });
     await sendMail({ to: env.MAIL_ADMIN, subject: `Niet gewerkt gemeld — ${ts.branch.tenant.name}`, text: `${summary}\n\nUrenbriefje: ${ts.id}\nHandel af in de admin (annulering / no-show / uren op nul).`, kind: "timesheet-not-worked" }).catch(() => undefined);
     return NextResponse.json({ ok: true });

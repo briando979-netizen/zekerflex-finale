@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       kind: "replacement",
       text:
         `${principal.fullName} kan de dienst "${assignment.shift.title}" bij ${assignment.shift.branch.name} ` +
-        `op ${assignment.shift.startsAt.toLocaleString("nl-NL")} niet doen.\n\n` +
+        `op ${assignment.shift.startsAt.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })} niet doen.\n\n` +
         `${note ? `Toelichting: ${note}\n\n` : ""}` +
         `Verzoek-id: ${rec.id}. Herplaats de dienst of wijs een vervanger toe via de matching.`,
     }).catch(() => undefined);
