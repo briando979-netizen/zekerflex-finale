@@ -57,6 +57,17 @@ export async function sweepMilestoneReminders(now = new Date()): Promise<{ users
             });
             sent += 1;
           }
+        } else if (m.id === "spreiding" && m.status === "action") {
+          // Wet DBA: één seintje per kwartaal zolang één opdrachtgever te groot is.
+          if (await claim(`spreiding:${u.id}:${year}Q${quarter}`)) {
+            await sendUserPush([u.id], {
+              title: "⚖️ Let op je spreiding over opdrachtgevers",
+              body: `Je omzet: ${m.headline}. Werk ook voor andere opdrachtgevers, zodat je in lijn blijft met de Wet DBA.`.slice(0, 180),
+              data: { type: "ADMIN", url: URL, tag: `spreiding-${year}Q${quarter}` },
+              ttlSeconds: 14 * 24 * 3600,
+            });
+            sent += 1;
+          }
         } else if (m.id === "kor" && (m.status === "action" || m.status === "soon")) {
           if (await claim(`kor:${u.id}:${year}`)) {
             await sendUserPush([u.id], {

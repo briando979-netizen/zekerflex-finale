@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor, type WorkerKind } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
+import { env } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
 // "Je administratie, zonder gedoe": mijlpalen, drempels en deadlines die een
@@ -41,6 +42,55 @@ export interface WorkerMilestones {
 const euro = (cents: number) => `€ ${Math.round(cents / 100).toLocaleString("nl-NL")}`;
 const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 const QUARTER_RANGE = ["jan–mrt", "apr–jun", "jul–sep", "okt–dec"];
+
+/** Onder zoveel uur zegt de verdeling nog niets — zelfde grens als REVENUE_SHARE_MIN_HOURS in lib/compliance/dba.ts. */
+const SPREAD_MIN_HOURS = 60;
+
+export interface ClientWork {
+  tenantId: string;
+  name: string;
+  minutes: number;
+  grossCents: number;
+}
+
+/**
+ * Wet DBA: hoe sterk hangt je ZekerFlex-omzet af van één opdrachtgever? Zelfde
+ * grens als de DBA-bewaking van het platform (env.DBA_MAX_CLIENT_REVENUE_SHARE),
+ * zodat je het seintje krijgt vóórdat de matching bij die opdrachtgever beperkt.
+ */
+export function spreadMilestone(work: ClientWork[], maxShare: number): Milestone {
+  const base = { id: "spreiding", icon: "⚖️", title: "Spreiding over opdrachtgevers" };
+  const totalMinutes = work.reduce((s, w) => s + w.minutes, 0);
+  const totalCents = work.reduce((s, w) => s + w.grossCents, 0);
+  if (totalMinutes / 60 < SPREAD_MIN_HOURS || totalCents <= 0) {
+    return {
+      ...base,
+      status: "info",
+      headline: "Nog te weinig uren",
+      detail: `Zodra je ruim ${SPREAD_MIN_HOURS} uur via ZekerFlex hebt gewerkt, zie je hier hoe je omzet over je opdrachtgevers verdeeld is.`,
+    };
+  }
+  const top = [...work].sort((a, b) => b.grossCents - a.grossCents)[0]!;
+  const share = top.grossCents / totalCents;
+  const pct = Math.round(share * 100);
+  const maxPct = Math.round(maxShare * 100);
+  const status: MilestoneStatus = share >= maxShare ? "action" : share >= maxShare - 0.15 ? "soon" : "ok";
+  const clients = work.filter((w) => w.grossCents > 0).length;
+  return {
+    ...base,
+    status,
+    headline: `${pct}% bij ${top.name}`,
+    detail:
+      status === "action"
+        ? `${pct}% van je ZekerFlex-omzet van het afgelopen jaar komt van ${top.name}. Voor de Wet DBA is zo'n sterke afhankelijkheid van één opdrachtgever een signaal van schijnzelfstandigheid; ZekerFlex kan nieuwe diensten bij die opdrachtgever dan beperken.`
+        : status === "soon"
+          ? `${pct}% van je ZekerFlex-omzet komt van ${top.name}. Werk je ook voor andere opdrachtgevers, dan blijf je ruim onder de grens van ${maxPct}%.`
+          : `Je omzet is goed verdeeld over ${clients} ${clients === 1 ? "opdrachtgever" : "opdrachtgevers"}; de grootste is goed voor ${pct}%.`,
+    progress: { value: pct, max: 100, unit: "%", label: `van je omzet bij je grootste opdrachtgever (grens ${maxPct}%)` },
+    impact:
+      "Alleen je ZekerFlex-werk van de afgelopen 12 maanden telt hier mee; omzet buiten ZekerFlex weegt bij de Belastingdienst ook mee. Afhankelijkheid is één signaal: ook gezag, vervangbaarheid en hoe je feitelijk werkt tellen.",
+  };
+}
 
 /** Jaar en kwartaal zoals in Nederland (de server draait in UTC). */
 export function amsterdamYearQuarter(d: Date): { year: number; quarter: number } {
@@ -111,10 +161,15 @@ export async function getWorkerMilestones(userId: string, now = new Date()): Pro
   }
 
   // zzp / flexwerker: uren, facturen en btw uit de echte data van dit jaar.
-  const [timesheets, invoices] = await Promise.all([
+  const [timesheets, lastYear, invoices] = await Promise.all([
     prisma.timesheet.findMany({
       where: { freelancerId: profile.id, status: { in: ["APPROVED", "PAID"] }, scheduledStart: { gte: yearStart, lt: yearEnd } },
       select: { billableMinutes: true },
+    }),
+    // Voor de spreiding: de afgelopen 12 maanden, zoals de DBA-bewaking (ROLLING_WINDOW_DAYS).
+    prisma.timesheet.findMany({
+      where: { freelancerId: profile.id, status: { in: ["APPROVED", "PAID"] }, scheduledStart: { gte: new Date(now.getTime() - 365 * 864e5), lte: now } },
+      select: { billableMinutes: true, hourlyRateCents: true, branch: { select: { tenantId: true, tenant: { select: { name: true } } } } },
     }),
     prisma.invoice.findMany({
       where: { issuerFreelancerId: profile.id, type: "SELF_BILL_FREELANCER", status: { in: ["ISSUED", "PAID"] }, createdAt: { gte: yearStart, lt: yearEnd } },
@@ -146,6 +201,16 @@ export async function getWorkerMilestones(userId: string, now = new Date()): Pro
       ? `Je komt in aanmerking voor de zelfstandigenaftrek (± ${euro(ZELFSTANDIGENAFTREK_CENTS)} aftrek, indicatief) plus de MKB-winstvrijstelling — samen al snel enkele honderden euro's minder belasting.`
       : `Haal je de 1.225 uur, dan krijg je recht op de zelfstandigenaftrek (± ${euro(ZELFSTANDIGENAFTREK_CENTS)} aftrek, indicatief) en de MKB-winstvrijstelling. Alleen ZekerFlex-uren tellen hier mee; uren bij andere opdrachtgevers komen daar nog bij.`,
   });
+
+  // 1b) Spreiding over opdrachtgevers (Wet DBA)
+  const perClient = new Map<string, ClientWork>();
+  for (const t of lastYear) {
+    const w = perClient.get(t.branch.tenantId) ?? { tenantId: t.branch.tenantId, name: t.branch.tenant.name, minutes: 0, grossCents: 0 };
+    w.minutes += t.billableMinutes;
+    w.grossCents += Math.round((t.billableMinutes / 60) * t.hourlyRateCents);
+    perClient.set(t.branch.tenantId, w);
+  }
+  milestones.push(spreadMilestone([...perClient.values()], env.DBA_MAX_CLIENT_REVENUE_SHARE));
 
   // 2) KOR-omzetgrens € 20.000
   const korPct = Math.min(100, Math.round((omzetCents / KOR_LIMIT_CENTS) * 100));
