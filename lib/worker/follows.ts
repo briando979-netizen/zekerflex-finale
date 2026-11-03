@@ -78,6 +78,17 @@ export async function listFollows(userId: string, now = new Date()): Promise<Fol
     .map((id) => ({ tenantId: id, name: name.get(id)!, openShifts: counts.get(id) ?? 0 }));
 }
 
+/** Hoeveel werkers volgen (een van) deze bedrijven — voor het werkgeversdashboard. Telt alleen echte volgers. */
+export async function followerCount(tenantIds: string[]): Promise<number> {
+  const unique = new Set<string>();
+  for (const tenantId of tenantIds) {
+    for (const userId of (await getList(followersKey(tenantId))).slice(-500)) {
+      if (!unique.has(userId) && (await isFollowing(userId, tenantId))) unique.add(userId);
+    }
+  }
+  return unique.size;
+}
+
 function whenLabel(d: Date): string {
   const p = amsterdamParts(d);
   return `${p.day} ${MONTHS[p.month - 1]} ${amsterdamClock(d)}`;

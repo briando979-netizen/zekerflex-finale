@@ -27,7 +27,7 @@ vi.mock("@/lib/fiscal/store", () => ({
 const sendUserPush = vi.fn().mockResolvedValue(1);
 vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...a) }));
 
-import { isFollowing, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
+import { followerCount, isFollowing, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
 
 const NOW = new Date("2026-11-03T10:00:00Z");
 
@@ -57,6 +57,18 @@ describe("setFollow", () => {
   it("weigert een onbekend bedrijf", async () => {
     tenantFindUnique.mockResolvedValue(null);
     await expect(setFollow("u1", "nope", true)).rejects.toThrow(/bestaat niet/);
+  });
+});
+
+describe("followerCount", () => {
+  it("telt unieke echte volgers over alle vestigingen van een bedrijf", async () => {
+    store.set("volgers:t1", ["u1", "u2", "weg"]);
+    store.set("volgers:t2", ["u1"]);
+    store.set("volgt:u1", ["t1", "t2"]);
+    store.set("volgt:u2", ["t1"]);
+    store.set("volgt:weg", []);
+    expect(await followerCount(["t1", "t2"])).toBe(2);
+    expect(await followerCount([])).toBe(0);
   });
 });
 

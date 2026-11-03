@@ -23,6 +23,7 @@ import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { followerCount } from "@/lib/worker/follows";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +33,14 @@ export default async function WerkgeverStartPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
-  const [kvkDone, extra, o, threads, companyVerified, pendingReviews] = await Promise.all([
+  const [kvkDone, extra, o, threads, companyVerified, pendingReviews, followers] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
     tenantId ? isTenantVerified(tenantId) : Promise.resolve(true),
     pendingEmployerReviews(principal).catch(() => []),
+    followerCount(scope.tenantIds).catch(() => 0),
   ]);
 
   const ob = extra.onboarding ?? {};
@@ -123,6 +125,21 @@ export default async function WerkgeverStartPage() {
         <KpiCard label={t.start.kpiSpent} value={money(o.kpis.spentThisMonthCents)} tone="brand" />
         <KpiCard label={t.start.kpiActive} value={String(o.kpis.activeFreelancers)} hint={t.start.kpiActiveHint} />
       </div>
+
+      {followers > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-crit/20 bg-crit/5 px-4 py-3 text-sm text-neutralx-700">
+          <p>
+            <span aria-hidden>❤️ </span>
+            <span className="font-semibold text-ink">
+              {followers} {followers === 1 ? "werker volgt" : "werkers volgen"} {o.orgName}.
+            </span>{" "}
+            Zij krijgen meteen een melding zodra je een nieuwe dienst plaatst.
+          </p>
+          <Link href="/werkgever/diensten/nieuw" className="text-sm font-semibold text-brand-600 hover:underline">
+            Plaats een dienst →
+          </Link>
+        </div>
+      )}
 
       {pendingReviews.length > 0 && (
         <div className="mt-8">
