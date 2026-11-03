@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { blockSummary, renderPage } from "@/lib/sites/render";
 import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
+import SiteStats from "@/components/app/SiteStats";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -168,7 +169,7 @@ function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDo
 
 // ---- the editor --------------------------------------------------------------
 
-type Tab = "paginas" | "blokken" | "stijl" | "bedrijf" | "fotos" | "berichten" | "domein";
+type Tab = "paginas" | "blokken" | "stijl" | "bedrijf" | "fotos" | "berichten" | "bezoekers" | "domein";
 const TABS: { id: Tab; label: string }[] = [
   { id: "blokken", label: "Blokken" },
   { id: "paginas", label: "Pagina's" },
@@ -176,6 +177,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "bedrijf", label: "Bedrijf" },
   { id: "fotos", label: "Foto's" },
   { id: "berichten", label: "Berichten" },
+  { id: "bezoekers", label: "Bezoekers" },
   { id: "domein", label: "Domein" },
 ];
 // The preview renders at the device's real width and is scaled down to fit, so
@@ -265,7 +267,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
   };
 
   const live = Boolean(site.liveBuild);
-  const tabs = proposal ? TABS.filter((t) => t.id !== "berichten" && t.id !== "domein") : TABS;
+  const tabs = proposal ? TABS.filter((t) => t.id !== "berichten" && t.id !== "bezoekers" && t.id !== "domein") : TABS;
   return (
     <div className="space-y-4">
       <header className="card flex flex-wrap items-center gap-3 p-4">
@@ -314,6 +316,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
             {tab === "bedrijf" && <CompanyTab bedrijf={site.bedrijf} onChange={(bedrijf) => change((s) => ({ ...s, bedrijf }))} />}
             {tab === "fotos" && <PhotosTab site={site} onMedia={(media) => setSite((s) => ({ ...s, media: [...s.media, media] }))} onAlt={(id, alt) => change((s) => ({ ...s, media: s.media.map((m) => (m.id === id ? { ...m, alt } : m)) }))} />}
             {tab === "berichten" && <MessagesTab />}
+            {tab === "bezoekers" && <SiteStats published={Boolean(site.liveBuild)} />}
             {tab === "domein" && <DomainTab canPublish={data.canPublish} onAddress={(own) => setAddress(own ?? `${origin}/site/${site.slug}`)} />}
           </div>
           {site.builds.length > 0 && (

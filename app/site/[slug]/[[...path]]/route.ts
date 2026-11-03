@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     const to = `https://${live.domein.host}/${path.map(encodeURIComponent).join("/")}${new URL(request.url).search}`;
     return new Response(null, { status: 308, headers: { Location: to, "Cache-Control": "public, max-age=300" } });
   }
-  return serveSitePath(live, path, { ...BASE, root: `/site/${slug}/`, version: live.buildId });
+  return serveSitePath(live, path, { ...BASE, root: `/site/${slug}/`, version: live.buildId }, request);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string; path?: string[] }> }): Promise<Response> {

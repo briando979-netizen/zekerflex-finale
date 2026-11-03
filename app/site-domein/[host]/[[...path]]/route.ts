@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ host
     return new Response(null, { status: 308, headers: { Location: to, "Cache-Control": "public, max-age=300" } });
   }
   if (path.join("/") === ".well-known/zekerflex-site") return siteText(verificationRecord(live.siteId), 200, opts);
-  return serveSitePath(live, path, { ...opts, root: "/", version: live.buildId });
+  return serveSitePath(live, path, { ...opts, root: "/", version: live.buildId }, request);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ host: string; path?: string[] }> }): Promise<Response> {

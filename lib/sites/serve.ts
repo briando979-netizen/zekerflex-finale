@@ -7,6 +7,8 @@ import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
 import { SITE_FONT_FILES, renderPage, renderRobots, renderSitemap, renderSystemPage, siteCss, type RenderOptions } from "@/lib/sites/render";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
+import { recordSiteView } from "@/lib/sites/stats";
+import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
 import { siteVacancies, vacancyCount } from "@/lib/sites/vacancies";
 import type { Page } from "@/lib/sites/types";
 
@@ -39,8 +41,11 @@ export function siteText(body: string, status: number, opts: Pick<ServeOptions, 
 /** A design proposal past its date shows nothing any more. */
 export const proposalExpired = (snapshot: LiveSite["snapshot"], now = Date.now()) => Boolean(snapshot.voorstel && !(Date.parse(snapshot.voorstel.verloopt) > now));
 
-/** GET one path of a live site: a page, the stylesheet, a photo, the sitemap or robots.txt. */
-export async function serveSitePath(live: LiveSite, path: string[], given: ServeOptions): Promise<Response> {
+/**
+ * GET one path of a live site: a page, the stylesheet, a photo, the sitemap or robots.txt.
+ * With the `request`, a page view counts toward the company's visitor figures.
+ */
+export async function serveSitePath(live: LiveSite, path: string[], given: ServeOptions, request?: Request): Promise<Response> {
   const { snapshot, siteId } = live;
   // a proposal stays out of search engines wherever it is shown
   const opts: ServeOptions = snapshot.voorstel ? { ...given, noindex: true } : given;
@@ -52,10 +57,19 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     if (!n || snapshot.voorbeeld || snapshot.voorstel) return opts;
     return { ...opts, vacatures: await siteVacancies(snapshot.tenantId, n) };
   };
+  // a page view of a real site counts (lib/sites/stats.ts); never for an example or a proposal,
+  // and never in the way of the page itself
+  const count = (page: Page) => {
+    if (!request || snapshot.voorbeeld || snapshot.voorstel) return;
+    const visit = classifyVisit(visitHeadersOf(request), [new URL(opts.origin).hostname]);
+    if (visit) void recordSiteView(siteId, page.slug, visit).catch(() => undefined);
+  };
   const [first, second, ...rest] = path;
   if (!first) {
     const home = snapshot.pages.find((p) => p.slug === "");
-    return home ? html(renderPage(snapshot, home, await withVacancies(home))) : siteText("Deze website bestaat niet (meer).", 404, opts);
+    if (!home) return siteText("Deze website bestaat niet (meer).", 404, opts);
+    count(home);
+    return html(renderPage(snapshot, home, await withVacancies(home)));
   }
   if (first === "assets" && second === "site.css" && rest.length === 0) {
     return new Response(siteCss(snapshot.theme), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
@@ -83,7 +97,10 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   if (first === "robots.txt" && !second) return new Response(renderRobots(opts), { headers: siteHeaders("text/plain; charset=utf-8", "public, max-age=300", opts) });
   if (!second) {
     const page = snapshot.pages.find((p) => p.slug === first);
-    if (page) return html(renderPage(snapshot, page, await withVacancies(page)));
+    if (page) {
+      count(page);
+      return html(renderPage(snapshot, page, await withVacancies(page)));
+    }
     if (first === "privacy" || first === "bedankt") return html(renderSystemPage(snapshot, first, opts));
   }
   return html(renderSystemPage(snapshot, "404", opts), 404);
