@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { deelTekst } from "@/lib/voorstel/uitje-tekst";
 import { DeelUitje } from "@/components/voorstel/DeelUitje";
+import { WachtlijstAanmelding } from "@/components/voorstel/WachtlijstAanmelding";
 
 // Eigen reserveringsagenda: activiteit + groep kiezen, dag in de maandkalender,
 // tijdslot, gegevens, bevestigen. Beschikbaarheid en boeken via
@@ -283,10 +284,10 @@ export function SchwarzwaldAgenda({
                 <button
                   key={d.datum}
                   type="button"
-                  disabled={d.status !== "vrij" || !groepOk}
+                  disabled={(d.status !== "vrij" && d.status !== "vol") || !groepOk}
                   onClick={() => setDatum(d.datum)}
                   aria-pressed={datum === d.datum}
-                  aria-label={`${dagNaam(d.datum, { weekday: "long", day: "numeric", month: "long" })}: ${d.status === "vrij" ? "beschikbaar" : d.status === "vol" ? "vol" : "niet beschikbaar"}`}
+                  aria-label={`${dagNaam(d.datum, { weekday: "long", day: "numeric", month: "long" })}: ${d.status === "vrij" ? "beschikbaar" : d.status === "vol" ? "vol, wachtlijst mogelijk" : "niet beschikbaar"}`}
                   className={`aspect-square rounded-xl text-sm font-semibold transition-colors ${
                     datum === d.datum
                       ? "bg-schw-orange text-schw-night"
@@ -306,7 +307,7 @@ export function SchwarzwaldAgenda({
           </div>
           <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-schw-mute">
             <span><span className="mr-1.5 inline-block h-3 w-3 rounded bg-schw-cream ring-1 ring-schw-night/15 align-middle" />beschikbaar</span>
-            <span><span className="mr-1.5 inline-block h-3 w-3 rounded bg-[#FDE2E2] align-middle" />vol</span>
+            <span><span className="mr-1.5 inline-block h-3 w-3 rounded bg-[#FDE2E2] align-middle" />vol (wachtlijst mogelijk)</span>
             <span>Grijs: gesloten. Ma en di alleen voor groepen vanaf 12 personen.</span>
           </p>
         </section>
@@ -337,6 +338,17 @@ export function SchwarzwaldAgenda({
                 </button>
               ))}
             </div>
+          )}
+          {act && datum && sloten && sloten.some((s) => s.status === "vol") && (
+            <WachtlijstAanmelding
+              key={`${slug}-${datum}-${personen}`}
+              activiteit={slug}
+              naam={act.naam}
+              datum={datum}
+              personen={personen}
+              volleTijden={sloten.filter((s) => s.status === "vol").map((s) => s.tijd)}
+              bekend={bekend}
+            />
           )}
         </section>
 

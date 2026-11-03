@@ -54,6 +54,15 @@ export interface MijnBericht {
   door: string;
   datum: string;
 }
+export interface MijnWachtplek {
+  id: string;
+  activiteit: string;
+  datum: string;
+  tijd: string;
+  personen: number;
+  /** live: is er inmiddels weer plek? */
+  plekVrij: boolean;
+}
 export interface MijnReview {
   id: string;
   boekingId: string;
@@ -479,7 +488,7 @@ function MijnGegevens({ heeftWachtwoord, gewist }: { heeftWachtwoord: boolean; g
       {open && (
         <form onSubmit={(e) => void wis(e)} className="mt-4 space-y-3 rounded-xl bg-white p-4">
           <p className="text-sm">
-            Dit verwijdert je account, reserveringen, aanvragen, berichten, wensen, beoordelingen en sollicitaties. Dit kun je niet ongedaan maken.
+            Dit verwijdert je account, reserveringen, aanvragen, berichten, wensen, beoordelingen, sollicitaties en wachtlijstplekken. Dit kun je niet ongedaan maken.
           </p>
           {heeftWachtwoord && (
             <label className="block">
@@ -522,6 +531,7 @@ export function SchwarzwaldAccount(props: {
   duur: Record<string, number>;
   suggesties: Suggestie[];
   reviews: MijnReview[];
+  wachtlijst: MijnWachtplek[];
   vandaag: string;
   googleAan: boolean;
   fout: string;
@@ -570,6 +580,23 @@ export function SchwarzwaldAccount(props: {
     } catch (err) {
       setFout(err instanceof Error ? err.message : "Er ging iets mis.");
       return false;
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  async function vanWachtlijst(id: string) {
+    setBezig(true);
+    setFout("");
+    setOk("");
+    try {
+      const r = await fetch("/api/voorstel/schwarzwald/wachtlijst", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+      const d = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
+      if (!r.ok) throw new Error(d.error?.message ?? "Er ging iets mis.");
+      setOk("Je staat niet meer op de wachtlijst.");
+      router.refresh();
+    } catch (err) {
+      setFout(err instanceof Error ? err.message : "Er ging iets mis.");
     } finally {
       setBezig(false);
     }
@@ -780,6 +807,38 @@ export function SchwarzwaldAccount(props: {
               <>
                 <h3 className="mt-8 text-sm font-bold uppercase tracking-wide text-schw-mute">Eerder</h3>
                 <ul className="mt-3 space-y-3">{eerder.map((b) => boekingRij(b))}</ul>
+              </>
+            )}
+            {props.wachtlijst.length > 0 && (
+              <>
+                <h3 className="mt-8 text-sm font-bold uppercase tracking-wide text-schw-mute">Op de wachtlijst</h3>
+                <ul className="mt-3 space-y-3">
+                  {props.wachtlijst.map((w) => (
+                    <li key={w.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 ${w.plekVrij ? "bg-[#DCFCE7]" : "bg-schw-cream"}`}>
+                      <div>
+                        <p className="font-bold">
+                          {namen[w.activiteit] ?? w.activiteit} · {w.personen} personen
+                        </p>
+                        <p className="text-sm text-schw-mute first-letter:uppercase">
+                          {dagNaam(w.datum)} om {w.tijd}
+                        </p>
+                        <p className={`mt-1 text-sm font-semibold ${w.plekVrij ? "text-[#15803D]" : ""}`}>
+                          {w.plekVrij ? "Er is weer plek! Boek snel, of bel ons." : "Nog vol. Komt er plek vrij, dan zie je het hier en belt het team je."}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {w.plekVrij && (
+                          <Link href={`${BASE}/reserveren?activiteit=${w.activiteit}`} className="rounded-full bg-schw-night px-4 py-2 text-sm font-bold text-schw-cream">
+                            Boek nu
+                          </Link>
+                        )}
+                        <button type="button" disabled={bezig} onClick={() => void vanWachtlijst(w.id)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                          Van de wachtlijst
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </>
             )}
           </>

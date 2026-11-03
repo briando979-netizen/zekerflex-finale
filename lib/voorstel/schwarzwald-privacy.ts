@@ -7,6 +7,7 @@ import type { Boeking } from "@/lib/voorstel/schwarzwald-boekingen";
 import type { Aanvraag, CrmItem, Klantkaart } from "@/lib/voorstel/schwarzwald-crm";
 import type { GastReview } from "@/lib/voorstel/schwarzwald-reviews";
 import type { Sollicitatie } from "@/lib/voorstel/schwarzwald-sollicitaties";
+import type { Wachtplek } from "@/lib/voorstel/schwarzwald-wachtlijst";
 
 // ---------------------------------------------------------------------------
 // Inzage en verwijdering (AVG) voor gasten: alles wat onder hun e-mailadres
@@ -24,7 +25,7 @@ async function rijenVan<T extends { email?: unknown; account?: unknown }>(prefix
 /** Alles wat de gast zelf ook in zijn account ziet, plus sollicitaties. */
 export async function gegevensVan(email: string) {
   const e = norm(email);
-  const [account, kaart, items, boekingen, aanvragen, reviews, sollicitaties] = await Promise.all([
+  const [account, kaart, items, boekingen, aanvragen, reviews, sollicitaties, wachtlijst] = await Promise.all([
     kvGet<{ hash?: string } & Record<string, unknown>>(`${P}account:${e}`),
     kvGet<Klantkaart>(`${P}klant:${e}`),
     kvListEntries<CrmItem>(`${P}crm:${e}:`, 5000),
@@ -32,6 +33,7 @@ export async function gegevensVan(email: string) {
     rijenVan<Aanvraag>("aanvraag:", e),
     rijenVan<GastReview>("review:", e),
     rijenVan<Sollicitatie>("sollicitatie:", e),
+    rijenVan<Wachtplek>("wachtlijst:", e),
   ]);
   const { hash: _hash, ...accountZonderHash } = account ?? {};
   return {
@@ -43,6 +45,7 @@ export async function gegevensVan(email: string) {
     aanvragen: aanvragen.map((r) => r.value),
     beoordelingen: reviews.map((r) => r.value),
     sollicitaties: sollicitaties.map((r) => r.value),
+    wachtlijst: wachtlijst.map((r) => r.value),
   };
 }
 
@@ -61,17 +64,25 @@ export async function wisGast(email: string): Promise<Record<string, number>> {
     const dag = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${komend.datum}T12:00:00Z`));
     throw AppError.validation(`Je hebt nog een reservering op ${dag}. Annuleer die eerst onder Reserveringen, of bel ons op ${CONTACT.telefoon}.`);
   }
-  const [items, aanvragen, reviews, sollicitaties] = await Promise.all([
+  const [items, aanvragen, reviews, sollicitaties, wachtlijst] = await Promise.all([
     kvListEntries<CrmItem>(`${P}crm:${e}:`, 5000),
     rijenVan<Aanvraag>("aanvraag:", e),
     rijenVan<GastReview>("review:", e),
     rijenVan<Sollicitatie>("sollicitatie:", e),
+    rijenVan<Wachtplek>("wachtlijst:", e),
   ]);
   const sleutels = [
     `${P}account:${e}`,
     `${P}klant:${e}`,
-    ...[boekingen, items, aanvragen, reviews, sollicitaties].flatMap((rijen) => rijen.map((r) => r.key)),
+    ...[boekingen, items, aanvragen, reviews, sollicitaties, wachtlijst].flatMap((rijen) => rijen.map((r) => r.key)),
   ];
   await Promise.all(sleutels.map((k) => kvDelete(k)));
-  return { reserveringen: boekingen.length, berichten: items.length, aanvragen: aanvragen.length, beoordelingen: reviews.length, sollicitaties: sollicitaties.length };
+  return {
+    reserveringen: boekingen.length,
+    berichten: items.length,
+    aanvragen: aanvragen.length,
+    beoordelingen: reviews.length,
+    sollicitaties: sollicitaties.length,
+    wachtlijst: wachtlijst.length,
+  };
 }

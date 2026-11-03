@@ -8,6 +8,7 @@ import { aanvragenVan, klantkaart, tijdlijn } from "@/lib/voorstel/schwarzwald-c
 import { googleAan } from "@/lib/voorstel/google";
 import { reviewsVan } from "@/lib/voorstel/schwarzwald-reviews";
 import { icsAdres, icsToken, uitjePad } from "@/lib/voorstel/schwarzwald-ics";
+import { wachtplekkenVan } from "@/lib/voorstel/schwarzwald-wachtlijst";
 import { SchwarzwaldAccount } from "@/components/voorstel/SchwarzwaldAccount";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,16 @@ export const metadata: Metadata = { title: "Mijn account" };
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [sp, account] = await Promise.all([searchParams, huidigAccount()]);
-  const [boekingen, aanvragen, lijn, kaart, reviews] = account
-    ? await Promise.all([boekingenVanAccount(account.email), aanvragenVan(account.email), tijdlijn(account.email), klantkaart(account.email), reviewsVan(account.email)])
-    : [[], [], [], null, []];
+  const [boekingen, aanvragen, lijn, kaart, reviews, wachtlijst] = account
+    ? await Promise.all([
+        boekingenVanAccount(account.email),
+        aanvragenVan(account.email),
+        tijdlijn(account.email),
+        klantkaart(account.email),
+        reviewsVan(account.email),
+        wachtplekkenVan(account.email),
+      ])
+    : [[], [], [], null, [], []];
 
   return (
     <>
@@ -43,6 +51,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           duur={Object.fromEntries(Object.entries(AGENDA).map(([slug, r]) => [slug, r.duurMin]))}
           suggesties={ACTIVITEITEN.map((a) => ({ slug: a.slug, naam: a.naam, kort: a.kort, foto: a.foto, duurMin: AGENDA[a.slug]?.duurMin ?? 60 }))}
           reviews={reviews.map(({ id, boekingId, score, tekst, status, antwoord }) => ({ id, boekingId, score, tekst, status, antwoord }))}
+          wachtlijst={wachtlijst.map(({ id, activiteit, datum, tijd, personen, plekVrij }) => ({ id, activiteit, datum, tijd, personen, plekVrij }))}
           vandaag={amsterdamDayKey(new Date())}
           googleAan={googleAan()}
           fout={typeof sp.fout === "string" ? sp.fout : ""}
