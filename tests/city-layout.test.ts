@@ -12,6 +12,11 @@ import {
   laneOffset,
   LINES,
   millSpeed,
+  moonPhase,
+  mustStop,
+  SIGNAL_CYCLE,
+  signalColor,
+  SIGNALS,
   type Plot,
   type Pt,
   ROAD_W,
@@ -172,6 +177,35 @@ describe("herkomst van gebeurtenissen", () => {
     expect(trafficFor({ room: "ai", action: "orchestration.run" }, companies).from).toBe("datacenter");
     expect(trafficFor({ room: "legal", action: "kyc.decision" }, companies).from).toBe("woonwijk");
     expect(trafficFor({ room: "hq", action: "admin.setting" }, companies).from).toBe("oost");
+  });
+});
+
+describe("verkeerslichten en maan", () => {
+  it("geven nooit allebei tegelijk groen", () => {
+    for (let t = 0; t < 60; t += 0.25) {
+      const h = signalColor("h", t);
+      const v = signalColor("v", t);
+      expect(h !== "rood" && v !== "rood", `t = ${t}`).toBe(false);
+    }
+    expect(signalColor("h", 1)).toBe("groen");
+    expect(signalColor("v", 1)).toBe("rood");
+    expect(signalColor("h", SIGNAL_CYCLE / 2 - 1)).toBe("oranje");
+  });
+
+  it("laten een auto voor rood wachten, maar niet als hij al op het kruispunt staat of groen heeft", () => {
+    const [sx, sz] = SIGNALS[3]!; // (24, 24)
+    // van het westen naar het oosten (dx = 1) over z = 24 + rijstrook; op t = 1 heeft oost-west groen
+    expect(mustStop(sx - 3.5, sz + LANE_CAR, 1, 0, 1)).toBe(false);
+    expect(mustStop(sx - 3.5, sz + LANE_CAR, 1, 0, SIGNAL_CYCLE / 2 + 1)).toBe(true);
+    // al op het kruispunt: doorrijden
+    expect(mustStop(sx - 1, sz + LANE_CAR, 1, 0, SIGNAL_CYCLE / 2 + 1)).toBe(false);
+    // ver van een kruispunt met lichten: nooit wachten
+    expect(mustStop(60, 48 + LANE_CAR, 1, 0, SIGNAL_CYCLE / 2 + 1)).toBe(false);
+  });
+
+  it("kent de maanfase: volle maan op 5 november 2025, nieuwe maan op 20 oktober 2025", () => {
+    expect(moonPhase(new Date("2025-11-05T13:19:00Z")).lit).toBeGreaterThan(0.97);
+    expect(moonPhase(new Date("2025-10-21T12:25:00Z")).lit).toBeLessThan(0.03);
   });
 });
 

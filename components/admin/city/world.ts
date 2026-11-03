@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { blockRect, CANAL_Z, COMPANY_SLOTS, companyFloors, EXITS, HOUSE_SLOTS, LANDMARKS, type LandmarkId, LINES, type Plot, type Pt, ROAD_W, roadSpan } from "@/lib/admin/city-layout";
+import { blockRect, CANAL_Z, COMPANY_SLOTS, companyFloors, EXITS, HOUSE_SLOTS, LANDMARKS, type LandmarkId, LINES, type Plot, type Pt, ROAD_W, roadSpan, SIGNALS } from "@/lib/admin/city-layout";
 import { FRONT_Z, RD, roomCenter, RW } from "@/lib/admin/office3d-layout";
 import type { CityCompany } from "@/lib/admin/city-data";
 import { DITCHES, FARM, inRect, MEADOW_COWS, MEADOW_SHEEP, treeLook, type YearSeason } from "@/lib/admin/city-life";
@@ -159,8 +159,12 @@ const baseAt = (x: number, z: number) => (Math.abs(x) < 74 && Math.abs(z) < 74 ?
 const DOORS: Pt[] = [...Object.values(LANDMARKS).map((p) => p.door), ...COMPANY_SLOTS.map((p) => p.door)];
 const HOUSE_DOORS: Pt[] = HOUSE_SLOTS.map((p) => p.door);
 
+export type SignalLamps = Record<"h" | "v", Record<"rood" | "oranje" | "groen", THREE.MeshStandardMaterial>>;
+
 export interface StaticWorld {
   layer: Layer;
+  /** Lampen van de verkeerslichten per richting; de motor zet ze aan en uit. */
+  signals: SignalLamps;
   sails: THREE.Object3D;
   fans: THREE.Object3D[];
   coin: THREE.Mesh;
@@ -554,8 +558,41 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
     G.add(post);
   }
 
+  // --- verkeerslichten op de kruispunten rond het kantoor -----------------
+  const lampColor = { rood: 0xef4444, oranje: 0xf59e0b, groen: 0x22c55e } as const;
+  const lamp = (c: number) => kit.own({ color: 0x1f2937, emissive: c, emissiveIntensity: 0.1, roughness: 0.4 });
+  const signals: SignalLamps = {
+    h: { rood: lamp(lampColor.rood), oranje: lamp(lampColor.oranje), groen: lamp(lampColor.groen) },
+    v: { rood: lamp(lampColor.rood), oranje: lamp(lampColor.oranje), groen: lamp(lampColor.groen) },
+  };
+  const housing = kit.mat(0x111827, { roughness: 0.5 });
+  const bulbGeo = kit.geo("signal-bulb", () => new THREE.SphereGeometry(0.11, 10, 8));
+  for (const [sx, sz] of SIGNALS) {
+    // paal op de zuidwesthoek voor oost-westverkeer, op de noordoosthoek voor noord-zuidverkeer
+    // (op de zuidoosthoek staat al een lantaarnpaal)
+    for (const [axis, px, pz] of [
+      ["h", sx - 2.6, sz + 2.6],
+      ["v", sx + 2.6, sz - 2.6],
+    ] as const) {
+      const post = new THREE.Mesh(kit.geo("signal-post", () => new THREE.CylinderGeometry(0.06, 0.07, 3, 6)), pole);
+      post.position.set(px, SLAB + 1.5, pz);
+      const head = kit.box(0.34, 1, 0.26, housing, px, SLAB + 3.2, pz, false);
+      G.add(post, head);
+      (["rood", "oranje", "groen"] as const).forEach((c, k) => {
+        for (const face of [-1, 1]) {
+          const b = new THREE.Mesh(bulbGeo, signals[axis][c]);
+          // lampen aan beide kanten van de kast, zodat je ze uit beide richtingen ziet
+          if (axis === "h") b.position.set(px + face * 0.14, SLAB + 3.5 - k * 0.3, pz);
+          else b.position.set(px, SLAB + 3.5 - k * 0.3, pz + face * 0.14);
+          b.userData.live = true;
+          G.add(b);
+        }
+      });
+    }
+  }
+
   bake(kit, G);
-  return { layer: L, sails, fans, coin, coinMat, leds, antenna, water };
+  return { layer: L, signals, sails, fans, coin, coinMat, leds, antenna, water };
 }
 
 /** Het hoofdkantoor in het midden: de negen afdelingen uit het oude 3D-kantoor. */

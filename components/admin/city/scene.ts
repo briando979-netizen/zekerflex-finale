@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { COMPANY_SLOTS, companyFloors, dayPhase, EXITS, houseCount, LANDMARKS, LANE_BIKE, LANE_CAR, laneOffset, millSpeed, type Origin, type Plot, type Pt, type RoadPt, sunAt, trafficFor, tripCenter } from "@/lib/admin/city-layout";
+import { COMPANY_SLOTS, companyFloors, dayPhase, EXITS, houseCount, LANDMARKS, moonPhase, mustStop, signalColor, LANE_BIKE, LANE_CAR, laneOffset, millSpeed, type Origin, type Plot, type Pt, type RoadPt, sunAt, trafficFor, tripCenter } from "@/lib/admin/city-layout";
 import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
 import type { CityData, CityWeather } from "@/lib/admin/city-data";
 import { createLife } from "@/components/admin/city/life";
@@ -603,6 +603,9 @@ export function createCity(
   // --- dag en nacht, en het echte weer -------------------------------------
   let phase: "dag" | "schemer" | "nacht" = "dag";
   let hemiBase = 1.25;
+  // dezelfde gedeelde materialen als in vehicles.ts (zelfde kleur en instellingen = zelfde materiaal)
+  const headlights = kit.mat(0xfff7d6, { emissive: 0xfff2c2, emissiveIntensity: 0.9 });
+  const taillights = kit.mat(0x7f1d1d, { emissive: 0xef4444, emissiveIntensity: 0.6 });
   const grassMats = [kit.mat(0x9fcd85, { roughness: 1 }), kit.mat(0x8cc56f, { roughness: 1 })];
   const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0 });
   const applyDaylight = () => {
@@ -617,7 +620,12 @@ export function createCity(
     // bewolking en neerslag dimmen de zon; bij mist en regen is de lucht grijs
     const dim = { helder: 1, bewolkt: 0.62, mist: 0.5, motregen: 0.5, regen: 0.4, sneeuw: 0.55, onweer: 0.3 }[w];
     sun.intensity = (phase === "dag" ? 0.7 + 0.9 * Math.min(1, s.elevation / 0.8) : phase === "schemer" ? 0.45 : 0) * dim;
-    moon.intensity = (phase === "nacht" ? 0.35 : phase === "schemer" ? 0.12 : 0) * (w === "helder" ? 1 : 0.6);
+    // het maanlicht volgt de echte maanfase: bij volle maan is de nacht lichter
+    const lit = moonPhase(new Date()).lit;
+    moon.intensity = (phase === "nacht" ? 0.12 + 0.38 * lit : phase === "schemer" ? 0.12 : 0) * (w === "helder" ? 1 : 0.6);
+    // koplampen en achterlichten branden feller als het donker is
+    headlights.emissiveIntensity = phase === "nacht" ? 2.2 : phase === "schemer" ? 1.4 : 0.6;
+    taillights.emissiveIntensity = phase === "nacht" ? 1.6 : phase === "schemer" ? 1 : 0.5;
     hemiBase = (phase === "dag" ? 1.25 : phase === "schemer" ? 0.75 : 0.32) * (w === "helder" ? 1 : 0.92);
     hemi.intensity = hemiBase;
     hemi.color.setHex(phase === "nacht" ? 0x8ea2d8 : 0xffffff);
@@ -711,6 +719,13 @@ export function createCity(
 
     spawnTrip(now);
     const cars = [...trips.map((t) => t.mover), ...ambient.map((a) => a.mover)];
+    // verkeerslichten: lampen omzetten, en wie voor rood of oranje aankomt, wacht
+    const sec = now / 1000;
+    for (const axis of ["h", "v"] as const) {
+      const on = signalColor(axis, sec);
+      for (const c of ["rood", "oranje", "groen"] as const) world.signals[axis][c].emissiveIntensity = c === on ? 2.2 : 0.08;
+    }
+    const redLight = (m: Mover) => mustStop(m.obj.position.x, m.obj.position.z, Math.sin(m.obj.rotation.y), Math.cos(m.obj.rotation.y), sec);
     for (let i = trips.length - 1; i >= 0; i--) {
       const t = trips[i];
       if (!t) continue;
@@ -718,7 +733,7 @@ export function createCity(
         t.wait -= dt;
         continue;
       }
-      if (tooClose(t.mover, cars) || !t.mover.step(dt)) continue;
+      if (tooClose(t.mover, cars) || redLight(t.mover) || !t.mover.step(dt)) continue;
       // aangekomen bij het hoofdkantoor: de robot neemt het pakketje over
       if (!t.back) spawnCourier(t.ev);
       if (!t.back && !t.replay) {
@@ -759,7 +774,7 @@ export function createCity(
     }
     for (let i = ambient.length - 1; i >= 0; i--) {
       const a = ambient[i];
-      if (!a || tooClose(a.mover, cars) || !a.mover.step(dt)) continue;
+      if (!a || tooClose(a.mover, cars) || redLight(a.mover) || !a.mover.step(dt)) continue;
       if (ambient.length > ambientWanted()) {
         a.g.removeFromParent();
         ambient.splice(i, 1);

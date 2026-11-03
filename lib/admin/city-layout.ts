@@ -289,6 +289,55 @@ export function sunAt(d: Date): { elevation: number; dir: Pt } {
   return { elevation, dir: [-Math.sin(az), Math.cos(az)] };
 }
 
+/**
+ * Maanfase op dit moment: 0 = nieuwe maan, 0,5 = volle maan; `lit` is het
+ * verlichte deel (0..1). Gemiddelde synodische maand, op een paar uur nauwkeurig.
+ */
+export function moonPhase(d: Date): { phase: number; lit: number } {
+  const SYNODIC = 29.530588853;
+  const ref = Date.UTC(2000, 0, 6, 18, 14); // een nieuwe maan
+  const days = (d.getTime() - ref) / 86_400_000;
+  const phase = (((days / SYNODIC) % 1) + 1) % 1;
+  return { phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2 };
+}
+
+// --- verkeerslichten ------------------------------------------------------
+
+/** Kruispunten met verkeerslichten: de vier hoeken rond het hoofdkantoor. */
+export const SIGNALS: Pt[] = [
+  [-24, -24],
+  [24, -24],
+  [-24, 24],
+  [24, 24],
+];
+/** Een volle cyclus: groen voor oost-west, dan groen voor noord-zuid, telkens met een korte oranjefase. */
+export const SIGNAL_CYCLE = 18;
+
+/** Kleur van het licht voor verkeer langs x ("h") of langs z ("v") op tijdstip t (seconden). */
+export function signalColor(axis: "h" | "v", t: number): "groen" | "oranje" | "rood" {
+  const k = ((t % SIGNAL_CYCLE) + SIGNAL_CYCLE) % SIGNAL_CYCLE;
+  const half = SIGNAL_CYCLE / 2;
+  const mine = axis === "h" ? k < half : k >= half;
+  if (!mine) return "rood";
+  const into = axis === "h" ? k : k - half;
+  return into > half - 2 ? "oranje" : "groen";
+}
+
+/**
+ * Moet een auto op (x, z) met rijrichting (dx, dz) wachten voor een stoplicht?
+ * Ja als hij op 2,5 tot 5 vóór het midden van een kruispunt met lichten rijdt
+ * en zijn licht rood of oranje is. Wie al op het kruispunt staat, rijdt door.
+ */
+export function mustStop(x: number, z: number, dx: number, dz: number, t: number): boolean {
+  const axis = Math.abs(dx) > Math.abs(dz) ? "h" : "v";
+  for (const [sx, sz] of SIGNALS) {
+    const ahead = (sx - x) * dx + (sz - z) * dz;
+    const side = Math.abs((sx - x) * dz - (sz - z) * dx);
+    if (ahead > 2.5 && ahead < 5 && side < 2.2) return signalColor(axis, t) !== "groen";
+  }
+  return false;
+}
+
 /** Dagdeel uit de zonnestand: schemering tussen 6° onder en 6° boven de horizon. */
 export function dayPhase(elevation: number): "dag" | "schemer" | "nacht" {
   const deg = (elevation * 180) / Math.PI;
