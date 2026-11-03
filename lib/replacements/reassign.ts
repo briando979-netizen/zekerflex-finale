@@ -7,7 +7,10 @@ import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
-import { findOverlappingShift, overlapMessageOther } from "@/lib/shifts/worker-overlap";
+import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
+import { sendUserPush } from "@/lib/notifications/push";
+import { resolveShiftContact } from "@/lib/messaging/contacts";
+import { runAfter } from "@/lib/run-after";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
 // ---------------------------------------------------------------------------
@@ -203,6 +206,8 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
       shiftTitle: original.shift.title,
       shiftId: original.shift.id,
       tenantId: original.shift.branch.tenantId,
+      startsAt: original.shift.startsAt,
+      endsAt: original.shift.endsAt,
     };
   });
 
@@ -215,6 +220,26 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
   await markReplacementResolved(input.requestId, {
     userId: input.substituteUserId,
     name: substitute.user.fullName,
+  });
+
+  // The substitute is now booked and the client gets someone else: both should hear it now.
+  const when = overlapWhen(result);
+  runAfter(async () => {
+    await sendUserPush([input.substituteUserId], {
+      title: `Jij neemt de klus over: ${result.shiftTitle}`,
+      body: `${req.freelancerName} heeft jou gekozen als vervanger: ${when} bij ${req.branch}. Bevestig je komst in de app.`,
+      data: { type: "SHIFT", url: `/dashboard/klussen/${result.shiftId}`, tag: `vervanging-${input.requestId}` },
+      ttlSeconds: 86_400,
+    });
+    const contact = await resolveShiftContact(result.shiftId);
+    if (contact) {
+      await sendUserPush([contact.userId], {
+        title: `Vervanging: ${result.shiftTitle}`,
+        body: `${substitute.user.fullName} komt in plaats van ${req.freelancerName} (${when}).`,
+        data: { type: "SHIFT", url: `/werkgever/diensten/${result.shiftId}`, tag: `vervanging-${input.requestId}` },
+        ttlSeconds: 86_400,
+      });
+    }
   });
 
   logger.info("replacement reassigned", {
