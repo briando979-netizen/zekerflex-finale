@@ -50,6 +50,11 @@ export interface MailResult {
   suppressed?: string;
 }
 
+/** An address on a domain reserved for tests and documentation, which no mail server delivers. */
+export function isReservedTestAddress(address: string): boolean {
+  return /@(?:[^@\s]+\.)?(?:[^@\s.]+)\.(test|example|invalid|localhost)$/i.test(address.trim()) || /@localhost$/i.test(address.trim());
+}
+
 export function smtpConfigured(): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_HOST.trim());
 }
@@ -310,7 +315,9 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   let error: string | undefined;
 
   const cfg = smtpConfig();
-  if (cfg && !suppressed) {
+  // .test/.example/.invalid/.localhost can never be delivered (RFC 2606/6761): keep it in the local
+  // mailbox instead of bouncing at the mail server — and a test can never reach a real inbox
+  if (cfg && !suppressed && !isReservedTestAddress(input.to)) {
     transport = "smtp";
     ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
     if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { to: input.to, error });
