@@ -16,7 +16,7 @@ import { normalizeInput, runWebsiteCheck } from "@/lib/website-check/run";
 import { leadWebsiteUrl } from "@/lib/sales/website-score-shared";
 import { markLeadReplied } from "@/lib/sales/reply";
 import { buildProposalSite } from "@/lib/sites/proposal-site";
-import { freeSlug, getSite, markProposal, publishSite, setLiveBuild } from "@/lib/sites/store";
+import { freeSlug, getSite, markProposal, publishSite, setLiveBuild, transferSite } from "@/lib/sites/store";
 import { pricingFor } from "@/lib/telephony/lines";
 import { WEBSITE_PLANS, type WebsitePlanKey } from "@/lib/website/manage";
 
@@ -36,7 +36,7 @@ import { WEBSITE_PLANS, type WebsitePlanKey } from "@/lib/website/manage";
 //   KV "wvoorstel-prijzen"      — prices and discount (Admin → Websitevoorstellen)
 // ---------------------------------------------------------------------------
 
-export type ProposalStatus = "concept" | "verstuurd" | "bekeken" | "akkoord" | "afgewezen" | "ingetrokken";
+export type ProposalStatus = "concept" | "verstuurd" | "bekeken" | "akkoord" | "afgewezen" | "ingetrokken" | "overgezet";
 export type DomainChoice = "houden" | "verhuizen" | "geen" | "weet-niet";
 
 export interface ProposalScore {
@@ -91,6 +91,8 @@ export interface WebsiteProposal {
   viewedAt: string | null;
   views: number;
   akkoord: ProposalAcceptance | null;
+  /** handed to the company's own account: the site is theirs in the builder now */
+  overgezet?: { at: string; tenantId: string; bedrijf: string } | undefined;
   history: { at: string; what: string; by: string }[];
 }
 
@@ -306,6 +308,8 @@ export type ProposalAction = "verstuurd" | "afgewezen" | "ingetrokken" | "verlen
 export async function updateWebsiteProposal(id: string, action: ProposalAction, by: { userId: string; name: string }): Promise<WebsiteProposal> {
   const p = await getWebsiteProposal(id);
   if (!p) throw AppError.notFound("Dit voorstel bestaat niet.");
+  // the site belongs to the company now: withdrawing or extending would touch their website
+  if (p.status === "overgezet") throw AppError.validation("Dit voorstel is al overgezet; de website is nu van het bedrijf.");
   let next: WebsiteProposal;
   if (action === "verstuurd") {
     next = await save(p, "Gemarkeerd als verstuurd", by.name, { sentAt: new Date().toISOString(), status: p.status === "concept" ? "verstuurd" : p.status });
@@ -333,6 +337,29 @@ export async function updateWebsiteProposal(id: string, action: ProposalAction, 
     next = await save(p, `Introductieplek ${p.akkoord.plek} vrijgegeven`, by.name, { akkoord: { ...p.akkoord, plek: null } });
   }
   await recordAudit({ category: "SALES", action: `website-proposal.${action}`, actorUserId: by.userId, summary: `Websitevoorstel ${p.bedrijf}: ${next.history[0]?.what ?? action}`, targetType: "website-proposal", targetId: id });
+  return next;
+}
+
+/**
+ * After a yes: hand the site to the company's own account (the admin of that
+ * company, found by e-mail address). In the builder it is then their site,
+ * offline until they publish it with Website-beheer; their launch place stays.
+ */
+export async function transferWebsiteProposal(id: string, email: string, by: { userId: string; name: string }): Promise<WebsiteProposal> {
+  const p = await getWebsiteProposal(id);
+  if (!p) throw AppError.notFound("Dit voorstel bestaat niet.");
+  if (p.status !== "akkoord") throw AppError.validation("Zet een voorstel pas over als het bedrijf ja heeft gezegd.");
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
+    select: { memberships: { where: { role: "HQ_ADMIN" }, select: { tenantId: true, tenant: { select: { name: true } } } } },
+  });
+  const admin = user?.memberships ?? [];
+  if (admin.length === 0) throw AppError.validation("Geen beheerder van een bedrijf gevonden met dit e-mailadres. Zet eerst een account voor het bedrijf klaar (Buitendienst) en probeer het daarna opnieuw.");
+  if (admin.length > 1) throw AppError.validation(`Dit account beheert meer dan één bedrijf (${admin.map((m) => m.tenant.name).join(", ")}). Gebruik het e-mailadres van de beheerder van het juiste bedrijf.`);
+  const target = admin[0]!;
+  await transferSite(p.siteId, target.tenantId, by);
+  const next = await save(p, `Overgezet naar ${target.tenant.name}`, by.name, { status: "overgezet", overgezet: { at: new Date().toISOString(), tenantId: target.tenantId, bedrijf: target.tenant.name } });
+  await recordAudit({ category: "SALES", action: "website-proposal.transferred", actorUserId: by.userId, summary: `Websitevoorstel ${p.bedrijf} overgezet naar ${target.tenant.name}`, targetType: "website-proposal", targetId: id });
   return next;
 }
 

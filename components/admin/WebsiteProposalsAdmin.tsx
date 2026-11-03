@@ -20,7 +20,7 @@ interface Data {
   pricingSet: boolean;
 }
 
-const TONE: Record<ProposalStatus, Tone> = { concept: "neutral", verstuurd: "plan", bekeken: "trust", akkoord: "ok", afgewezen: "warn", ingetrokken: "neutral" };
+const TONE: Record<ProposalStatus, Tone> = { concept: "neutral", verstuurd: "plan", bekeken: "trust", akkoord: "ok", afgewezen: "warn", ingetrokken: "neutral", overgezet: "ok" };
 const STATUS = Object.fromEntries((Object.keys(TONE) as ProposalStatus[]).map((s) => [s, { label: STATUS_LABEL[s], tone: TONE[s] }])) as Record<ProposalStatus, { label: string; tone: Tone }>;
 
 export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: string }) {
@@ -63,6 +63,19 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
 
   async function copy(text: string, what: string) {
     setMessage((await copyText(text)) ? { tone: "ok", text: `${what} gekopieerd.` } : { tone: "warn", text: "Kopiëren lukte niet in deze browser; selecteer de tekst zelf." });
+  }
+
+  // after a yes: the site becomes the company's own, by the e-mail address of its admin
+  const [transferTo, setTransferTo] = useState<Record<string, string>>({});
+  async function transfer(p: WebsiteProposal, email: string) {
+    if (!window.confirm(`De website overzetten naar het bedrijfsaccount van ${email}? Hij wordt dan van dat bedrijf, staat offline tot zij hem online zetten met Website-beheer, en het voorstel is afgerond.`)) return;
+    setBusy(p.id);
+    const r = await fetch(`/api/admin/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "overzetten", email }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(null);
+    if (!r?.ok) return setMessage({ tone: "crit", text: d?.error?.message ?? "Overzetten lukte niet." });
+    setMessage({ tone: "ok", text: `De website van ${p.bedrijf} staat nu bij ${d.proposal.overgezet?.bedrijf ?? "het bedrijf"}, onder Website → Website bouwen. Online zetten doen ze zelf met Website-beheer.` });
+    await load();
   }
 
   const now = Date.now();
@@ -110,7 +123,7 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
               const expired = isProposalExpired(p, now);
               const st = STATUS[p.status];
               const link = `${origin}/websitevoorstel/${p.id}`;
-              const open = p.status !== "ingetrokken";
+              const open = p.status !== "ingetrokken" && p.status !== "overgezet";
               return (
                 <li key={p.id} className="space-y-2 px-4 py-4 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                   <div className="flex flex-wrap items-center gap-2">
@@ -133,6 +146,33 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                       {p.akkoord.plek ? ` (introductieplek ${p.akkoord.plek}, ${p.akkoord.prijs.kortingPct}% korting)` : ""} · {DOMEIN[p.akkoord.domein] ?? p.akkoord.domein}
                       {p.akkoord.opmerking ? ` · “${p.akkoord.opmerking}”` : ""}
                     </p>
+                  )}
+                  {p.overgezet && (
+                    <p className="text-[0.8125rem]" style={{ color: "var(--a-text)" }}>
+                      Overgezet op {day(p.overgezet.at)} naar {p.overgezet.bedrijf}: de website staat in hun websitebouwer en gaat online zodra zij Website-beheer nemen.
+                    </p>
+                  )}
+                  {p.status === "akkoord" && (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="a-label min-w-[16rem] flex-1">
+                        E-mailadres van de beheerder van het bedrijfsaccount
+                        <input
+                          className="a-input"
+                          type="email"
+                          value={transferTo[p.id] ?? p.akkoord?.email ?? ""}
+                          onChange={(e) => setTransferTo((t) => ({ ...t, [p.id]: e.target.value }))}
+                          placeholder="naam@bedrijf.nl"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={busy === p.id || !(transferTo[p.id] ?? p.akkoord?.email ?? "").includes("@")}
+                        onClick={() => void transfer(p, (transferTo[p.id] ?? p.akkoord?.email ?? "").trim())}
+                        className="a-button a-button-primary text-xs disabled:opacity-50"
+                      >
+                        Zet over naar bedrijf
+                      </button>
+                    </div>
                   )}
                   {open && (
                     <div className="flex flex-wrap gap-2">

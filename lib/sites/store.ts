@@ -178,6 +178,27 @@ export async function markProposal(id: string, mark: SiteProposalMark | null): P
   await kvSet(siteKey(id), mark ? { ...rest, voorstel: mark } : rest);
 }
 
+/**
+ * Hand a site to a company (an accepted website proposal): it becomes that
+ * company's site in the builder, without the proposal mark, and offline until
+ * they publish it themselves (publishing needs Website-beheer). The old
+ * snapshots go: rolling back to one would bring the proposal banner back.
+ */
+export async function transferSite(siteId: string, toTenantId: string, by: { userId: string; name: string }): Promise<SiteDoc> {
+  const site = await getSite(siteId);
+  if (!site) throw AppError.notFound("Deze website bestaat niet.");
+  if (await siteOfTenant(toTenantId)) throw AppError.conflict("Dit bedrijf heeft al een website. Zet het voorstel niet over, maar neem de inhoud samen met ze door.");
+  const { voorstel, builds, ...rest } = site;
+  void voorstel;
+  const next: SiteDoc = { ...rest, tenantId: toTenantId, liveBuild: null, builds: [], updatedAt: new Date().toISOString() };
+  await kvSet(siteKey(siteId), next);
+  await kvSet(tenantKey(toTenantId), siteId);
+  if ((await kvGet<string>(tenantKey(site.tenantId))) === siteId) await kvDelete(tenantKey(site.tenantId));
+  for (const b of builds) await kvDelete(buildKey(siteId, b.id));
+  await recordAudit({ category: "SALES", action: "site.transferred", actorUserId: by.userId, summary: `Website ${site.slug} overgezet naar een bedrijf`, targetType: "site", targetId: siteId, metadata: { from: site.tenantId, to: toTenantId } });
+  return next;
+}
+
 /** Give a site's address back (a withdrawn proposal), so a real company or a new proposal can have it. The site keeps its data. */
 export async function freeSlug(siteId: string): Promise<void> {
   const site = await getSite(siteId);

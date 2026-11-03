@@ -17,7 +17,7 @@ interface Data {
   offer: ProposalOfferView;
 }
 
-const PILL: Record<ProposalStatus, string> = { concept: "pill-neutral", verstuurd: "pill-neutral", bekeken: "pill-warn", akkoord: "pill-ok", afgewezen: "pill-crit", ingetrokken: "pill-neutral" };
+const PILL: Record<ProposalStatus, string> = { concept: "pill-neutral", verstuurd: "pill-neutral", bekeken: "pill-warn", akkoord: "pill-ok", afgewezen: "pill-crit", ingetrokken: "pill-neutral", overgezet: "pill-ok" };
 
 export function SalesProposals({ origin, me }: { origin: string; me: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -105,8 +105,8 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
       ) : (
         <ul className="space-y-3">
           {data.proposals.map((p) => {
-            const expired = isProposalExpired(p, now) && p.status !== "akkoord" && p.status !== "ingetrokken";
-            const open = p.status !== "ingetrokken";
+            const expired = isProposalExpired(p, now) && p.status !== "akkoord" && p.status !== "ingetrokken" && p.status !== "overgezet";
+            const open = p.status !== "ingetrokken" && p.status !== "overgezet";
             return (
               <li key={p.id} className="card space-y-2 p-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -128,6 +128,10 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
                     {p.akkoord.opmerking ? ` · “${p.akkoord.opmerking}”` : ""}
                   </p>
                 )}
+                {p.overgezet && (
+                  <p className="text-sm text-neutralx-600">Overgezet op {shortDay(p.overgezet.at)} naar {p.overgezet.bedrijf}: de website staat in hun websitebouwer.</p>
+                )}
+                {p.status === "akkoord" && <p className="text-sm text-neutralx-600">Een platformbeheerder zet de website over naar het account van het bedrijf zodra dat klaarstaat.</p>}
                 {open && offer && (
                   <div className="flex flex-wrap gap-2 text-sm">
                     <a href={`/site/${p.slug}`} target="_blank" rel="noopener" className="btn-ghost min-h-11">Nieuwe website</a>

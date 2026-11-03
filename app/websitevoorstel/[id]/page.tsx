@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { CONTACTS } from "@/lib/seo";
@@ -54,6 +55,21 @@ export default async function WebsiteProposalPage({ params }: Props) {
   const principal = await getPrincipal().catch(() => null);
   const staff = Boolean(principal && (hasRole(principal, "PLATFORM_ADMIN") || hasRole(principal, "SALES")));
   const siteUrl = `/site/${p.slug}`;
+
+  if (p.status === "overgezet") {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-24 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lux-mute">Websitevoorstel</p>
+        <h1 className="mt-4 font-serif text-4xl">De website van {p.bedrijf} staat in je account</h1>
+        <p className="mt-4 text-lux-mute">
+          Log in bij ZekerFlex en ga naar Website → Website bouwen. Daar pas je hem aan, koppel je je eigen domein en zet je hem online met Website-beheer. Vragen? Mail ons op <a className="underline" href={`mailto:${CONTACTS.sales}`}>{CONTACTS.sales}</a>.
+        </p>
+        <p className="mt-8">
+          <Link href="/login" className="inline-block bg-lux-ink px-7 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-black">Inloggen</Link>
+        </p>
+      </main>
+    );
+  }
 
   if (isExpired(p)) {
     return (

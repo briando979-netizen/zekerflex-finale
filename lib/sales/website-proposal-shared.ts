@@ -19,6 +19,7 @@ export const STATUS_LABEL: Record<ProposalStatus, string> = {
   akkoord: "Ja gezegd",
   afgewezen: "Afgezegd",
   ingetrokken: "Ingetrokken",
+  overgezet: "Overgezet naar het bedrijf",
 };
 
 export const DOMAIN_LABEL: Record<string, string> = {

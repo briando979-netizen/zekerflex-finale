@@ -27,6 +27,15 @@ vi.mock("@/lib/prisma", () => ({
         return data;
       },
     },
+    user: {
+      findFirst: async ({ where }: { where: { email: { equals: string } } }) => {
+        const e = where.email.equals.toLowerCase();
+        if (e === "beheer@echtbedrijf.nl") return { memberships: [{ tenantId: "t-echt", tenant: { name: "De Vries Schilders" } }] };
+        if (e === "twee@bedrijven.nl") return { memberships: [{ tenantId: "t-a", tenant: { name: "A" } }, { tenantId: "t-b", tenant: { name: "B" } }] };
+        if (e === "werker@example.nl") return { memberships: [] };
+        return null;
+      },
+    },
     salesLead: {
       findUnique: async ({ where }: { where: { id: string } }) => (where.id === lead.id ? { ...lead } : null),
       update: async ({ data }: { data: { notes?: string } }) => {
@@ -238,6 +247,42 @@ describe("ja zeggen en de introductiekorting", () => {
     const longer = await engine.updateWebsiteProposal(p.id, "verlengen", BY);
     expect(engine.isExpired(longer)).toBe(false);
     expect((await liveSiteBySlug(p.slug))!.snapshot.voorstel?.verloopt).toBe(longer.expiresAt);
+  });
+});
+
+describe("na een ja: overzetten naar het bedrijfsaccount", () => {
+  const ja = { naam: "Jan de Vries", email: "jan@devries.test", telefoon: "", pakket: "basis" as const, domein: "houden" as const, opmerking: "", begrepen: true as const };
+
+  it("de site wordt van het bedrijf: zonder band, offline tot zij publiceren, zonder oude versies", async () => {
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    await expect(engine.transferWebsiteProposal(p.id, "beheer@echtbedrijf.nl", BY)).rejects.toThrow(/pas over als het bedrijf ja heeft gezegd/);
+    await engine.acceptWebsiteProposal(p.id, ja);
+    const done = await engine.transferWebsiteProposal(p.id, "Beheer@EchtBedrijf.nl", BY);
+    expect(done).toMatchObject({ status: "overgezet", overgezet: { tenantId: "t-echt", bedrijf: "De Vries Schilders" } });
+    expect(done.akkoord?.plek).toBe(1); // de introductieplek blijft van hen
+    const s = (await getSite(p.siteId))!;
+    expect(s).toMatchObject({ tenantId: "t-echt", liveBuild: null, builds: [] });
+    expect(s.voorstel).toBeUndefined();
+    expect(store.get("site-tenant:t-echt")).toBe(p.siteId);
+    expect(store.has(`site-tenant:voorstel:${p.id}`)).toBe(false);
+    expect([...store.keys()].some((k) => k.startsWith(`site-build:${p.siteId}:`))).toBe(false);
+    expect(await liveSiteBySlug(p.slug)).toBeNull();
+    // daarna raakt niets uit het voorstel hun website meer
+    await expect(engine.updateWebsiteProposal(p.id, "ingetrokken", BY)).rejects.toThrow(/al overgezet/);
+    await expect(engine.updateWebsiteProposal(p.id, "verlengen", BY)).rejects.toThrow(/al overgezet/);
+    expect(store.get("site-slug:schildersbedrijf-de-vries")).toBe(p.siteId);
+  });
+
+  it("alleen naar precies één bedrijf, en nooit over een bestaande website heen", async () => {
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    await engine.acceptWebsiteProposal(p.id, ja);
+    await expect(engine.transferWebsiteProposal(p.id, "onbekend@nergens.nl", BY)).rejects.toThrow(/Geen beheerder van een bedrijf/);
+    await expect(engine.transferWebsiteProposal(p.id, "werker@example.nl", BY)).rejects.toThrow(/Geen beheerder van een bedrijf/);
+    await expect(engine.transferWebsiteProposal(p.id, "twee@bedrijven.nl", BY)).rejects.toThrow(/meer dan één bedrijf \(A, B\)/);
+    store.set("site-tenant:t-echt", "sbestaand1");
+    store.set("site:sbestaand1", { id: "sbestaand1", tenantId: "t-echt" });
+    await expect(engine.transferWebsiteProposal(p.id, "beheer@echtbedrijf.nl", BY)).rejects.toThrow(/heeft al een website/);
+    expect((await engine.getWebsiteProposal(p.id))!.status).toBe("akkoord");
   });
 });
 
