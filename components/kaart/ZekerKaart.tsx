@@ -43,6 +43,7 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
   const plekMarker = useRef<Marker | null>(null);
   const zoekMarker = useRef<Marker | null>(null);
   const wakker = useRef<{ release: () => Promise<void> } | null>(null);
+  const gekozen = useRef("");
 
   const [klaar, setKlaar] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -256,7 +257,8 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
 
   useEffect(() => {
     const q = zoek.trim();
-    if (q.length < 2) {
+    // na een keuze staat de gekozen naam in het veld: dan niet opnieuw zoeken
+    if (q.length < 2 || q === gekozen.current) {
       setResultaten([]);
       return;
     }
@@ -276,6 +278,7 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
   function kies(r: ZoekResultaat) {
     const map = kaart.current;
     const mod = ml.current;
+    gekozen.current = r.naam;
     setResultaten([]);
     setZoek(r.naam);
     if (!map || !mod) return;
@@ -293,7 +296,8 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <div ref={houder} className="absolute inset-0" role="region" aria-label="Kaart van Nederland" />
+      {/* h-full/w-full, geen absolute: de CSS van MapLibre zet .maplibregl-map op position: relative */}
+      <div ref={houder} className="h-full w-full" role="region" aria-label="Kaart van Nederland" />
 
       {fout && (
         <div role="alert" className="absolute inset-0 grid place-items-center bg-paper-soft p-6 text-center text-sm text-ink">
@@ -313,6 +317,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
               type="search"
               value={zoek}
               onChange={(e) => setZoek(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setResultaten([]);
+              }}
               placeholder="Zoek een adres, straat of plaats"
               autoComplete="off"
               className="field-input w-full"
