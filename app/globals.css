@@ -856,6 +856,22 @@ body {
   color: var(--app-fg-muted);
 }
 
+/* Merkgroen en de rest van de tekst in het donker (gemeten 3 nov, layout-QA): donkergroene tekst
+   (brand-500/600/700) haalde op de donkere kaart maar 1,4–1,8:1; mint haalt ±10:1, zoals de donkere
+   beheeromgeving. Lichte merkvlakken worden een donkere mint-tint, zodat de lichte tekst erop
+   (text-ink → --app-fg) leesbaar blijft (was 1,0:1). neutralx-700/800 werden niet omgezet (1,6:1).
+   Op een mint knop blijft de tekst donker (wit op mint was 1,5:1). */
+.app-scope[data-theme="dark"] .text-brand-500,
+.app-scope[data-theme="dark"] .text-brand-600,
+.app-scope[data-theme="dark"] .text-brand-700 { color: rgb(var(--brand-mint-rgb)) !important; }
+.app-scope[data-theme="dark"] .bg-brand-50,
+.app-scope[data-theme="dark"] .bg-brand-100 { background-color: rgb(var(--brand-mint-rgb) / 0.12) !important; }
+.app-scope[data-theme="dark"] .text-neutralx-700,
+.app-scope[data-theme="dark"] .text-neutralx-800 { color: var(--app-fg) !important; }
+.app-scope[data-theme="dark"] .bg-brand-mint,
+.app-scope[data-theme="dark"] .bg-brand-mint.text-ink,
+.app-scope[data-theme="dark"] .bg-brand-mint .text-ink { color: #0C0E12 !important; }
+
 /* Beheeromgeving: een oneven laatste kerncijfer loopt op de telefoon over de hele breedte. */
 .admin-scope .a-kpis > :last-child:nth-child(odd) { grid-column: span 2; }
 @media (min-width: 1024px) {
