@@ -367,6 +367,7 @@ function TaakDetail({
           <ControleChip label="TypeScript" ok={taak.controle.tsc.ok} uit={taak.controle.tsc.uit} />
           <ControleChip label="eslint" ok={taak.controle.eslint.ok} uit={taak.controle.eslint.uit} />
           {taak.controle.tests && <ControleChip label="tests" ok={taak.controle.tests.ok} uit={taak.controle.tests.uit} />}
+          {taak.controle.database && <ControleChip label="database" ok={taak.controle.database.ok} uit={taak.controle.database.uit} />}
         </div>
       )}
 

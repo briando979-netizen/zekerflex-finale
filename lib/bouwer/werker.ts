@@ -37,6 +37,8 @@ export interface Controle {
   eslint: { ok: boolean; uit: string };
   /** de bestaande tests die de wijziging raken (vitest related); ontbreekt bij oudere opdrachten */
   tests?: { ok: boolean; uit: string };
+  /** alleen als prisma/schema.prisma veranderde: is er voor elke schemawijziging een migratie */
+  database?: { ok: boolean; uit: string };
   op: string;
 }
 

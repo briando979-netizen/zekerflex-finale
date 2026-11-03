@@ -26,6 +26,7 @@ const TAKEN: Taak[] = [
       "Kijk mee: je ziet elke stap die de Bouwer zet. Na een paar minuten staat er \"Klaar voor jouw oordeel\". Je hoeft niet te wachten: als hij klaar is, iets wil vragen of vastloopt, krijg je een melding op je telefoon.",
       "Bekijk onderaan precies welke regels veranderen. Klik op Start voorbeeld en dan Open voorbeeld om de gewijzigde site echt te zien (inloggen met admin@zekerflex.nl / Zeker!2026, alleen demogegevens).",
       "Goed? Klik Goedkeuren en live zetten. Niet goed? Typ bij Bijsturen wat er anders moet, of klik Weggooien.",
+      "Is er een nieuwe tabel of kolom nodig, dan maakt de Bouwer die zelf (alleen toevoegen, nooit iets weghalen). Bij het live zetten zie je die databasewijziging apart en geef je er akkoord op.",
     ],
     tip: "Je kunt het ook in de chat vragen: begin je bericht met \"bouw:\".",
     naar: { tab: "bouwer", label: "Naar de Bouwer" },

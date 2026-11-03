@@ -1,7 +1,8 @@
 // De werkkopie van de ZekerFlex Bouwer: een eigen git-kopie van GitHub main in
 // /werk/repo, met de gereedschappen die het model mag gebruiken. Lezen mag bijna
-// overal; schrijven niet in de beveiliging, de database, de pakketlijst of de
-// uitrol-scripts. Die blijven mensenwerk.
+// overal; schrijven niet in de beveiliging, de pakketlijst, de uitrol-scripts of
+// bestaande migraties. Die blijven mensenwerk. Het databaseschema mag alleen
+// uitbreiden, via het gereedschap "migratie" (maakMigratie).
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -150,6 +151,20 @@ export async function huidigeDiff() {
 export async function controleer(log) {
   const bestanden = (await gewijzigdeBestanden()).filter((b) => b.status !== "D").map((b) => b.pad);
   await wachtOpUitrol(log);
+  // na bijwerken met main (of een eigen schemawijziging) moet de Prisma-client mee
+  await zorgVoorPakketten(log);
+  // een schemawijziging zonder migratie zou op de echte site kolommen missen
+  let database;
+  if (bestanden.includes("prisma/schema.prisma")) {
+    log("info", "Controle: hoort er bij elke schemawijziging een migratie");
+    const verschil = await schemaVerschil().catch((e) => ({ fout: e instanceof Error ? e.message : String(e) }));
+    database =
+      typeof verschil === "string"
+        ? verschil
+          ? { ok: false, uit: `Het schema wijkt af van de migraties. Roep "migratie" aan. Nog nodig:\n${verschil.slice(0, 3000)}` }
+          : { ok: true, uit: "" }
+        : { ok: false, uit: verschil.fout };
+  }
   log("info", "Controle: TypeScript (hele project)");
   const tsc = await sh("npx", ["tsc", "--noEmit", "-p", "."], { timeout: 1_200_000 });
   const lintbaar = bestanden.filter((p) => /\.(tsx?|mjs|js)$/.test(p));
@@ -175,10 +190,11 @@ export async function controleer(log) {
   // bij tests staat de samenvatting onderaan
   const staart = (t) => t.trim().split("\n").slice(-80).join("\n");
   return {
-    ok: tsc.code === 0 && eslint.code === 0 && tests.code === 0,
+    ok: tsc.code === 0 && eslint.code === 0 && tests.code === 0 && (database?.ok ?? true),
     tsc: { ok: tsc.code === 0, uit: kort(tsc.uit) },
     eslint: { ok: eslint.code === 0, uit: kort(eslint.uit) },
     tests: { ok: tests.code === 0, uit: staart(tests.uit) },
+    ...(database ? { database } : {}),
     op: new Date().toISOString(),
   };
 }
@@ -201,7 +217,8 @@ const ALLEEN_LEZEN = [
   /^\.git(\/|$)/,
   /^node_modules(\/|$)/,
   /(^|\/)\.env/,
-  /^prisma\//,
+  // het schema mag (alleen uitbreiden, zie maakMigratie); migraties maakt alleen het gereedschap
+  /^prisma\/(?!schema\.prisma$)/,
   /^package(-lock)?\.json$/,
   /^deploy\//,
   /^\.github\//,
@@ -271,6 +288,13 @@ export const GEREEDSCHAP = [
     beschrijving: "Draai de verplichte controles: TypeScript op het hele project, eslint op je gewijzigde bestanden en de bestaande tests die je wijziging raken. Duurt een paar minuten.",
     params: {},
     verplicht: [],
+  },
+  {
+    naam: "migratie",
+    beschrijving:
+      "Na een wijziging in prisma/schema.prisma: maak de databasewijziging (migratie), pas hem toe op de demodatabase en werk de Prisma-client bij. Alleen uitbreiden: nieuwe tabellen, nieuwe kolommen die optioneel zijn of een standaardwaarde hebben, nieuwe indexen. Weghalen, hernoemen, van type veranderen of verplicht maken weigert hij. De eigenaar keurt de SQL goed bij het live zetten.",
+    params: { naam: { type: "string", description: "Korte naam met underscores, bv. 'klant_notities'" } },
+    verplicht: ["naam"],
   },
   {
     naam: "vraag",
@@ -346,7 +370,119 @@ export async function voerUit(naam, args, { log, signal } = {}) {
       log?.("bestand", `${nieuw ? "nieuw" : "overschreven"} ${doel.rel}`);
       return `${nieuw ? "Aangemaakt" : "Overschreven"}: ${doel.rel}`;
     }
+    case "migratie": {
+      const korteNaam = String(args.naam ?? "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 60);
+      if (!korteNaam) throw new Error("Geef de migratie een korte naam, bv. 'klant_notities'");
+      return await maakMigratie(korteNaam, log);
+    }
     default:
       throw new Error(`Onbekend gereedschap: ${naam}`);
   }
+}
+
+// ---- databasewijzigingen ----------------------------------------------------------
+
+// Wat een migratie van de Bouwer nooit mag: alles wat gegevens kan kwijtraken of op
+// een gevulde productietabel mislukt. De live-zetter vraagt daarna nog akkoord op de SQL.
+const VERBODEN_SQL = [
+  [/\bDROP\s+(TABLE|COLUMN|SCHEMA|TYPE|INDEX|CONSTRAINT|VIEW|DEFAULT)\b/i, "iets weghalen"],
+  [/\b(TRUNCATE|DELETE\s+FROM|UPDATE\s+"|INSERT\s+INTO)\b/i, "gegevens wissen, wijzigen of toevoegen"],
+  [/\bRENAME\b/i, "iets hernoemen"],
+  [/\bALTER\s+COLUMN\s+\S+\s+(SET\s+DATA\s+)?TYPE\b/i, "een kolom van type veranderen"],
+  [/\bSET\s+NOT\s+NULL\b/i, "een bestaande kolom verplicht maken"],
+];
+
+/** Waarom deze SQL niet mag (lege lijst = in orde). Exporteert voor de tests. */
+export function bezwarenTegenSql(sql) {
+  const bezwaren = VERBODEN_SQL.filter(([re]) => re.test(sql)).map(([, wat]) => wat);
+  // een verplichte nieuwe kolom zonder standaardwaarde mislukt op een tabel met rijen
+  for (const stmt of sql.split(";")) {
+    if (!/^\s*ALTER\s+TABLE/i.test(stmt.replace(/^\s*--.*$/gm, ""))) continue;
+    for (const deel of stmt.split(/,\s*\n/)) {
+      if (/\bADD\s+COLUMN\b/i.test(deel) && /\bNOT\s+NULL\b/i.test(deel) && !/\bDEFAULT\b/i.test(deel)) {
+        bezwaren.push("een verplichte kolom zonder standaardwaarde toevoegen aan een bestaande tabel");
+        break;
+      }
+    }
+  }
+  return [...new Set(bezwaren)];
+}
+
+/** Lege hulpdatabase op de demoserver waarin Prisma de bestaande migraties naspeelt. */
+function schaduwUrl(db) {
+  const u = new URL(db);
+  u.pathname = "/schaduw";
+  return u.toString();
+}
+
+async function prismaSql(url, sql) {
+  const bestand = path.join(WERK, "bouwer-sql.sql");
+  await fs.writeFile(bestand, sql);
+  return sh("npx", ["prisma", "db", "execute", "--url", url, "--file", bestand], { timeout: 120_000, zonderSleutel: true });
+}
+
+/**
+ * De SQL die nog nodig is om van de bestaande migraties naar prisma/schema.prisma te
+ * komen ("" = niets). Prisma speelt de migraties daarvoor na in de schaduwdatabase.
+ */
+async function schemaVerschil() {
+  const db = testOmgeving().DATABASE_URL;
+  if (!db) throw new Error("Er is geen demodatabase ingesteld (BOUWER_VOORBEELD_DB); een databasewijziging kan hier niet.");
+  // bestaat de schaduw al, dan meldt Postgres dat alleen; Prisma maakt hem zelf leeg
+  await prismaSql(db, "CREATE DATABASE schaduw;");
+  // aparte uitvoer: de SQL op stdout, meldingen (en de updatemelding) niet
+  const uitBestand = path.join(WERK, "bouwer-diff.sql");
+  const diff = await sh(
+    "sh",
+    [
+      "-c",
+      'npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$1" --script > "$2"',
+      "sh",
+      schaduwUrl(db),
+      uitBestand,
+    ],
+    { timeout: 300_000, zonderSleutel: true, env: { PRISMA_HIDE_UPDATE_MESSAGE: "1" } },
+  );
+  if (diff.code !== 0) throw new Error(`Het schema klopt niet: ${diff.uit.trim().slice(-1500)}`);
+  const sql = (await fs.readFile(uitBestand, "utf8")).trim();
+  return !sql || /^--\s*This is an empty migration\.?$/im.test(sql) ? "" : sql;
+}
+
+async function maakMigratie(naam, log) {
+  const env = testOmgeving();
+  await wachtOpUitrol(log);
+  log?.("info", "Databasewijziging berekenen");
+  const sql = await schemaVerschil();
+  if (!sql) return "Er is geen databasewijziging nodig: het schema is gelijk aan de bestaande migraties.";
+  const bezwaren = bezwarenTegenSql(sql);
+  if (bezwaren.length)
+    throw new Error(
+      `Deze wijziging mag niet (${bezwaren.join(", ")}). Alleen uitbreiden: nieuwe tabellen, optionele kolommen of kolommen met een standaardwaarde, nieuwe indexen. Pas prisma/schema.prisma aan en probeer opnieuw.\n\n${sql.slice(0, 3000)}`,
+    );
+
+  // map met tijdstempel ná de laatste bestaande migratie
+  const mappen = (await fs.readdir(path.join(REPO_DIR, "prisma", "migrations"))).filter((m) => /^\d{14}_/.test(m)).sort();
+  const laatste = Number((mappen.at(-1) ?? "0").slice(0, 14));
+  const nu = Number(new Date().toISOString().replace(/\D/g, "").slice(0, 14));
+  const map = `${Math.max(nu, laatste + 1)}_${naam}`;
+  const abs = path.join(REPO_DIR, "prisma", "migrations", map);
+  await fs.mkdir(abs, { recursive: true });
+  await fs.writeFile(path.join(abs, "migration.sql"), `${sql}\n`);
+  log?.("bestand", `nieuw prisma/migrations/${map}/migration.sql`);
+
+  const toepassen = await sh("npx", ["prisma", "migrate", "deploy"], { env, timeout: 300_000, zonderSleutel: true });
+  if (toepassen.code !== 0) {
+    await fs.rm(abs, { recursive: true, force: true });
+    throw new Error(`De wijziging lukte niet op de demodatabase (weer weggehaald): ${toepassen.uit.trim().slice(-1200)}`);
+  }
+  const gen = await sh("npx", ["prisma", "generate"], { timeout: 300_000 });
+  if (gen.code !== 0) throw new Error(`prisma generate mislukt: ${gen.uit.slice(-600)}`);
+  // de volgende opdracht (weer op main) ziet zo dat de client opnieuw moet
+  const schema = await fs.readFile(path.join(REPO_DIR, "prisma", "schema.prisma"));
+  await fs.writeFile(path.join(WERK, "schema.hash"), createHash("sha256").update(schema).digest("hex"));
+  return `Migratie prisma/migrations/${map} gemaakt, toegepast op de demodatabase en de Prisma-client is bijgewerkt. De SQL:\n${sql.slice(0, 3000)}`;
 }

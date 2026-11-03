@@ -2115,6 +2115,9 @@ model BankAccount {
   entries BankEntry[]
   cards   BankCard[]
   pots    BankPot[]
+
+  // bestaat al sinds migratie 20261018120000_scale_indexes; hier opgenomen zodat Prisma hem niet weg wil halen
+  @@index([nextFeeAt])
 }
 
 model BankEntry {
@@ -2134,6 +2137,8 @@ model BankEntry {
   createdAt         DateTime    @default(now())
 
   @@index([accountId, createdAt])
+  // bestaat al sinds migratie 20261018120000_scale_indexes
+  @@index([createdAt])
 }
 
 model BankCard {
