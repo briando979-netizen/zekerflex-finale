@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { AANVRAAG_STATUS, BEHEER_API, KAART, Melding, Pil, dagNaam, euro, useBeheerData, vraag, type AanvraagStatus } from "@/components/voorstel/beheer/api";
 
-// Het dashboard van het beheer: cijfers, drukte per dag, populaire
+// Het dashboard van het beheer: bovenaan "Te doen" (alles wat aandacht vraagt,
+// klik = naar het tabblad), dan cijfers, drukte per dag, populaire
 // activiteiten, de aanvragen-pijplijn, en wat het team vandaag moet weten
 // (wensen van gasten, taken, onbeantwoorde berichten, nieuwe aanvragen).
 
@@ -26,9 +27,11 @@ interface Cijfers {
   klanten: { totaal: number; metAccount: number; vast: number; wachtOpAntwoord: { email: string; naam: string }[] };
   wensen: { id: string; datum: string; tijd: string; activiteit: string; personen: number; naam: string; opmerking: string; klantwens: string }[];
   taken: { id: string; email: string; naam: string; tekst: string; vervalt?: string }[];
+  teDoen: { sleutel: string; aantal: number; tekst: string; tab: string }[];
 }
 
-type Doel = "reserveringen" | "aanvragen" | "klanten" | "activiteiten";
+type Doel = "reserveringen" | "aanvragen" | "klanten" | "activiteiten" | "wachtlijst" | "sollicitaties" | "reviews";
+const DOELEN: readonly string[] = ["reserveringen", "aanvragen", "klanten", "activiteiten", "wachtlijst", "sollicitaties", "reviews"];
 
 export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, string>; naar: (t: Doel) => void; openKlant: (email: string) => void }) {
   const { data, fout, setFout, laad } = useBeheerData<Cijfers>(`${BEHEER_API}/dashboard`);
@@ -54,6 +57,29 @@ export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, st
 
   return (
     <div className="space-y-6">
+      <section className={KAART} aria-labelledby="dash-te-doen">
+        <h3 id="dash-te-doen" className="font-display text-lg font-bold">
+          Te doen
+        </h3>
+        {data.teDoen.length === 0 ? (
+          <p className="mt-2 text-schw-mute">Alles bijgewerkt: er wacht niets op je.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-schw-night/10">
+            {data.teDoen.map((p) => (
+              <li key={p.sleutel}>
+                <button
+                  type="button"
+                  onClick={() => (DOELEN.includes(p.tab) ? naar(p.tab as Doel) : document.getElementById("dash-taken")?.scrollIntoView({ behavior: "smooth" }))}
+                  className="flex w-full items-center justify-between gap-3 py-2.5 text-left font-semibold hover:text-schw-rust"
+                >
+                  <span>{p.tekst}</span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <div className="grid gap-3 lg:grid-cols-3">
         {blokken.map(([titel, s]) => (
           <div key={titel} className={KAART}>
@@ -165,7 +191,7 @@ export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, st
             ))}
           </ul>
         </section>
-        <section className={KAART}>
+        <section id="dash-taken" className={`${KAART} scroll-mt-24`}>
           <h3 className="font-display text-lg font-bold">Taken</h3>
           {data.taken.length === 0 && <p className="mt-3 text-sm text-schw-mute">Geen open taken.</p>}
           <ul className="mt-4 space-y-2">
