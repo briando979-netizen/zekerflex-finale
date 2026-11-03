@@ -53,6 +53,12 @@ export default function WetDbaPage() {
               Organisatie aanmelden
             </Link>
           </div>
+          <p className="mt-5 text-sm text-white/70">
+            Twijfel je over een samenwerking?{" "}
+            <Link href="/rekentools/wet-dba-check" className="font-semibold text-brand-mint underline">
+              Doe de gratis Wet DBA-check
+            </Link>
+          </p>
         </div>
       </div>
 

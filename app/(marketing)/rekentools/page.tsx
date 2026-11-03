@@ -26,6 +26,12 @@ const TOOLS = [
     body: "Zet een uitzendbureau naast een zzp'er via ZekerFlex, per uur en voor de hele periode.",
   },
   {
+    href: "/rekentools/wet-dba-check",
+    who: "Voor opdrachtgevers en zzp'ers",
+    title: "Wet DBA-check",
+    body: "Tien vragen over hoe je samenwerkt. Zie waar het op loondienst lijkt en wat je eraan kunt doen.",
+  },
+  {
     href: "/prijzen#bedrijven",
     who: "Voor bedrijven",
     title: "Platformkosten per maand",
