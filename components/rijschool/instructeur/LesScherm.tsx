@@ -10,6 +10,7 @@ import { datumLang, SOORT_LABEL, tijd } from "@/lib/rijschool/format";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { plusDagen } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { whatsappNummer } from "@/lib/rijschool/website";
 
 // Het scherm van één les in de instructeur-app: alles wat je in de auto
 // nodig hebt, van route en klok tot leskaart, huiswerk, afronden, de volgende
@@ -72,6 +73,7 @@ export function LesScherm({ les, d, api, actie, onTerug }: { les: DagLes; d: Ins
 
   const route = les.ophaaladres ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(les.ophaaladres)}` : null;
   const tel = l?.telefoon ? `tel:${l.telefoon.replace(/[^0-9+]/g, "")}` : null;
+  const wa = l?.telefoon ? whatsappNummer(l.telefoon) : null;
   const aandacht = l?.voortgang.aandacht.slice(0, 5) ?? [];
 
   return (
@@ -100,6 +102,11 @@ export function LesScherm({ les, d, api, actie, onTerug }: { les: DagLes; d: Ins
           {tel && (
             <a href={tel} className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
               Bellen
+            </a>
+          )}
+          {wa && (
+            <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener" className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
+              WhatsApp
             </a>
           )}
           {les.status === "GEPLAND" &&

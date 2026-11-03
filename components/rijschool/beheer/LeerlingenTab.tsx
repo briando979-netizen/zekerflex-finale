@@ -9,6 +9,7 @@ import { Melding, Schakelaar, Veld, Voortgangsbalk } from "@/components/rijschoo
 import { LEERLING_STATUS_LABEL } from "@/lib/rijschool/format";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { whatsappNummer } from "@/lib/rijschool/website";
 
 // Leerlingen van de rijschool: zoeken, toevoegen en bewerken, een account
 // klaarzetten (uitnodiging per mail), betalingen en tegoed, en meteen een les
@@ -182,7 +183,10 @@ function LeerlingDetail({
       </button>
       <div className="grid gap-4 lg:grid-cols-3">
         <form onSubmit={bewaar} className="card grid gap-4 p-5 sm:grid-cols-2 lg:col-span-2">
-          <h2 className="font-display text-lg font-bold text-ink sm:col-span-2">{leerling ? leerling.naam : "Nieuwe leerling"}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+            <h2 className="font-display text-lg font-bold text-ink">{leerling ? leerling.naam : "Nieuwe leerling"}</h2>
+            {leerling && <Contact telefoon={leerling.telefoon} email={leerling.email} />}
+          </div>
           <Veld label="Naam">
             <input className="field-input" value={v.naam} onChange={(e) => zet("naam", e.target.value)} required minLength={2} maxLength={100} />
           </Veld>
@@ -390,5 +394,31 @@ function CorrectieFormulier({ doe, leerlingId }: { doe: Doe; leerlingId: string 
         Aanpassen
       </button>
     </form>
+  );
+}
+
+/** Contact met de leerling vanaf je eigen telefoon of mail: bellen, WhatsApp, mailen. */
+function Contact({ telefoon, email }: { telefoon: string; email: string }) {
+  const tel = telefoon.replace(/[^0-9+]/g, "");
+  const wa = whatsappNummer(telefoon);
+  const stijl = "btn-ghost !px-3 !py-1.5 text-xs";
+  return (
+    <div className="flex flex-wrap gap-2">
+      {tel && (
+        <a href={`tel:${tel}`} className={stijl}>
+          Bellen
+        </a>
+      )}
+      {wa && (
+        <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener" className={stijl}>
+          WhatsApp
+        </a>
+      )}
+      {email && (
+        <a href={`mailto:${email}`} className={stijl}>
+          Mailen
+        </a>
+      )}
+    </div>
   );
 }
