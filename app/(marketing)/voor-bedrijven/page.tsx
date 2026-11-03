@@ -45,6 +45,19 @@ const BLOCKS = [
   },
 ];
 
+const TOOLS = [
+  {
+    href: "/rekentools/kosten-uitzendkracht-berekenen",
+    title: "Wat kost een flexkracht?",
+    body: "Zet een uitzendbureau naast een zzp'er via ZekerFlex, met jouw uurloon, omrekenfactor en uren.",
+  },
+  {
+    href: "/rekentools/wet-dba-check",
+    title: "Wet DBA-check",
+    body: "Tien vragen over hoe je met een zzp'er samenwerkt. Zie direct waar het op loondienst lijkt.",
+  },
+];
+
 const FAQ = [
   { q: "Wat kost het?", a: "€ 3,50 platformkosten per gewerkt uur. Je betaalt alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstart- of plaatsingskosten." },
   { q: "Hoe snel kan ik iemand hebben?", a: "Bij bekende functies met automatische toewijzing gaat het aanbod in golven naar passende krachten. Je ziet reacties live binnenkomen; de invulling hangt af van wie beschikbaar is." },
@@ -111,6 +124,27 @@ export default function VoorBedrijvenPage() {
           </div>
         </div>
       </div>
+
+      <Section tone="paper">
+        <SectionHead
+          eyebrow="Reken het zelf uit"
+          title="Twee gratis rekentools voor werkgevers"
+          intro="Zonder account, en alles wordt in je eigen browser berekend."
+        />
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {TOOLS.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="card group flex flex-col p-7 transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <span className="font-display text-xl font-semibold text-ink">{t.title}</span>
+              <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{t.body}</span>
+              <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">Naar de rekentool →</span>
+            </Link>
+          ))}
+        </div>
+      </Section>
 
       <Section tone="soft">
         <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
