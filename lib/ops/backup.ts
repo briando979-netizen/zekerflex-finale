@@ -1,7 +1,7 @@
 import { readFile, readdir, stat, statfs } from "node:fs/promises";
 import path from "node:path";
 import { logger } from "@/lib/logger";
-import { alertOwner } from "@/lib/ops/alert";
+import { alertOwner, type OpsAlert } from "@/lib/ops/alert";
 import { recordCronRun } from "@/lib/metrics";
 
 // ---------------------------------------------------------------------------
@@ -162,17 +162,36 @@ export async function checkBackup(now = Date.now(), dir = BACKUP_DIR): Promise<B
     });
   }
 
-  const disk = report.disk;
-  if (disk && disk.usedPercent >= DISK_WARN_PERCENT) {
-    await alertOwner({
-      key: "disk:server",
-      title: `Serverschijf ${disk.usedPercent}% vol`,
-      detail: `Er is nog ${Math.round(disk.freeBytes / 1024 ** 3)} GB vrij. Bij een volle schijf kan de database niets meer opslaan. Ruim oude images op: docker image prune -f && docker builder prune -f --filter until=72h.`,
-      severity: disk.usedPercent >= DISK_CRIT_PERCENT ? "critical" : "warning",
-      url: "/admin/systeem#backups",
-    });
-  }
+  const alert = diskAlert(report.disk);
+  if (alert) await alertOwner(alert);
 
-  logger.info("backup check", { state: report.state, diskUsed: disk?.usedPercent ?? null });
+  logger.info("backup check", { state: report.state, diskUsed: report.disk?.usedPercent ?? null });
   return report;
+}
+
+/** The owner alert for a filling disk, or null below DISK_WARN_PERCENT. */
+export function diskAlert(disk: DiskUsage | null): OpsAlert | null {
+  if (!disk || disk.usedPercent < DISK_WARN_PERCENT) return null;
+  return {
+    key: "disk:server",
+    title: `Serverschijf ${disk.usedPercent}% vol`,
+    // 3 Nov 2026: a plain `builder prune -f` freed 0 B (BuildKit marks the per-build cache shared); -a freed 54 GB
+    detail: `Er is nog ${Math.round(disk.freeBytes / 1024 ** 3)} GB vrij. Bij een volle schijf kan de database niets meer opslaan. Meestal is het de bouwcache van de uitrollen: vraag Claude de server op te ruimen (docker builder prune -af --filter until=2h).`,
+    severity: disk.usedPercent >= DISK_CRIT_PERCENT ? "critical" : "warning",
+    url: "/admin/systeem#backups",
+  };
+}
+
+/** Elk uur (cron): alleen de schijf. Uitrollen vullen hem overdag, de back-upcontrole draait maar één keer per nacht. */
+export async function checkDisk(dir = BACKUP_DIR): Promise<DiskUsage | null> {
+  let disk: DiskUsage;
+  try {
+    const s = await statfs(dir);
+    disk = diskUsage(s.blocks, s.bfree, s.bavail, s.bsize);
+  } catch {
+    return null; // no backup mount here (dev): nothing to measure
+  }
+  const alert = diskAlert(disk);
+  if (alert) await alertOwner(alert);
+  return disk;
 }

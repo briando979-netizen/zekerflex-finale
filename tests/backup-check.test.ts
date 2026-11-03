@@ -11,7 +11,7 @@ vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(
 const recordCronRun = vi.fn();
 vi.mock("@/lib/metrics", () => ({ recordCronRun: (...a: unknown[]) => recordCronRun(...a) }));
 
-const { checkBackup, diskUsage, evaluateBackup, parseBackupStatus, readBackupReport } = await import("@/lib/ops/backup");
+const { checkBackup, diskAlert, diskUsage, evaluateBackup, parseBackupStatus, readBackupReport } = await import("@/lib/ops/backup");
 
 const NOW = new Date("2026-11-03T04:00:00Z").getTime();
 const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
@@ -65,6 +65,17 @@ describe("back-up beoordelen", () => {
     expect(d.usedPercent).toBe(79);
     expect(d.freeBytes).toBe(20 * 4096);
     expect(d.totalBytes).toBe(100 * 4096);
+  });
+
+  it("waarschuwt vanaf 85% vol, kritiek vanaf 95%, met een opruimtip die echt werkt", () => {
+    const disk = (usedPercent: number) => ({ usedPercent, freeBytes: 11 * 1024 ** 3, totalBytes: 96 * 1024 ** 3 });
+    expect(diskAlert(null)).toBeNull();
+    expect(diskAlert(disk(84))).toBeNull();
+    expect(diskAlert(disk(89))).toMatchObject({ key: "disk:server", severity: "warning", title: "Serverschijf 89% vol" });
+    expect(diskAlert(disk(96))?.severity).toBe("critical");
+    // a plain `builder prune -f` freed nothing on 3 Nov 2026; the tip must be the -a variant
+    expect(diskAlert(disk(89))?.detail).toContain("builder prune -af");
+    expect(diskAlert(disk(89))?.detail).toContain("11 GB vrij");
   });
 });
 

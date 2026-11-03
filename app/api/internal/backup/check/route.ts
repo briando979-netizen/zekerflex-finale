@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
-import { checkBackup } from "@/lib/ops/backup";
+import { checkBackup, checkDisk } from "@/lib/ops/backup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,10 +9,15 @@ export const dynamic = "force-dynamic";
 // Dagelijks na de nachtelijke back-up (deploy/cron/entrypoint.sh): controleert
 // of de dump vers, compleet en proef-teruggezet is, en hoe vol de serverschijf
 // is. Waarschuwt de eigenaar als iets niet klopt (lib/ops/backup.ts).
+// ?alleen=schijf (elk uur): alleen de schijf, want uitrollen vullen hem overdag.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   try {
+    if (new URL(request.url).searchParams.get("alleen") === "schijf") {
+      const disk = await checkDisk();
+      return NextResponse.json({ diskUsedPercent: disk?.usedPercent ?? null });
+    }
     const report = await checkBackup();
     return NextResponse.json({
       available: report.available,
