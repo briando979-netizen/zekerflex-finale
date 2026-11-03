@@ -2,6 +2,26 @@ import { describe, expect, it } from "vitest";
 import { conflict, komendeDagen, leesWerktijden, moment, vrijeTijden, weekdagVan } from "@/lib/rijschool/planning";
 import { tegoedTekst, lesduur, saldo } from "@/lib/rijschool/tegoed";
 import { amsterdamClock } from "@/lib/time/amsterdam";
+import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
+
+describe("rijschool herkomst achter de proxy", () => {
+  const intern = "http://app:3000/api/rijschool/site/x/account";
+  const koppen = (h: Record<string, string>) => new Headers(h);
+
+  it("de eigen site achter Caddy: request.url is intern, de Host is zekerflex.com", () => {
+    expect(zelfdeHerkomst(koppen({ origin: "https://zekerflex.com", host: "zekerflex.com" }), intern)).toBe(true);
+    expect(zelfdeHerkomst(koppen({ origin: "https://zekerflex.com", host: "app:3000", "x-forwarded-host": "zekerflex.com" }), intern)).toBe(true);
+  });
+
+  it("een andere website wordt geweigerd", () => {
+    expect(zelfdeHerkomst(koppen({ origin: "https://kwaadwillend.example", host: "zekerflex.com" }), intern)).toBe(false);
+    expect(zelfdeHerkomst(koppen({ origin: "geen-url", host: "zekerflex.com" }), intern)).toBe(false);
+  });
+
+  it("zonder Origin (geen browser-post van een andere site) mag het", () => {
+    expect(zelfdeHerkomst(koppen({ host: "zekerflex.com" }), intern)).toBe(true);
+  });
+});
 
 const klok = (ds: Date[]) => ds.map((d) => amsterdamClock(d));
 

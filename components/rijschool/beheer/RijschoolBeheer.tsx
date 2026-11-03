@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { BeheerWeergave } from "@/lib/rijschool/weergave";
 import type { BeheerActie } from "@/lib/rijschool/schema";
 import { foutVan, stuur } from "@/components/rijschool/api";
@@ -47,6 +48,7 @@ interface Voorstel {
 }
 
 export function RijschoolBeheer() {
+  const router = useRouter();
   const [data, setData] = useState<BeheerWeergave | null>(null);
   const [voorstel, setVoorstel] = useState<Voorstel | null>(null);
   const [fout, setFout] = useState<string | null>(null);
@@ -66,7 +68,18 @@ export function RijschoolBeheer() {
   }, []);
 
   if (!data) {
-    if (voorstel) return <Aanzetten voorstel={voorstel} onAan={setData} />;
+    if (voorstel) {
+      return (
+        <Aanzetten
+          voorstel={voorstel}
+          onAan={(d) => {
+            setData(d);
+            // het menu (servercomponent) krijgt nu het onderdeel Rijschool erbij
+            router.refresh();
+          }}
+        />
+      );
+    }
     return fout ? <Melding fout={fout} /> : <p className="text-sm text-neutralx-500">Laden…</p>;
   }
 

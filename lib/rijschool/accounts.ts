@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 
 // ---------------------------------------------------------------------------
 // Accounts van leerlingen en instructeurs van een rijschool. Bewust los van de
@@ -77,8 +78,7 @@ function leesToken(token: string | undefined): Sessie | null {
 /** Wijzigende verzoeken alleen als JSON en vanaf deze site (geen formulier-post van een andere site). */
 export function eisZelfdeHerkomst(request: Request): void {
   if (!(request.headers.get("content-type") ?? "").includes("application/json")) throw AppError.validation("Verwacht JSON.");
-  const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) throw AppError.forbidden("Verzoek van een andere website.");
+  if (!zelfdeHerkomst(request.headers, request.url)) throw AppError.forbidden("Verzoek van een andere website.");
 }
 
 async function zetSessie(s: Sessie): Promise<void> {
