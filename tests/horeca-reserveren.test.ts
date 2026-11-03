@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STANDAARD_RESERVEREN, beschikbaarheid, capaciteit, klok, leesInstellingen, pastOp, reserveerFout, slotsOp, weekdag } from "@/lib/horeca/reserveren";
+import { STANDAARD_RESERVEREN, beschikbaarheid, capaciteit, klok, leesInstellingen, magAnnuleren, pastOp, reserveerFout, slotsOp, weekdag } from "@/lib/horeca/reserveren";
 
 // 2026-11-10 is een dinsdag, 2026-11-09 een maandag
 const tijden = { "2": { van: "12:00", tot: "22:00" }, "1": null, "5": { van: "17:00", tot: "01:00" } };
@@ -36,6 +36,15 @@ describe("horeca-reserveren", () => {
   it("vandaag alleen tijden minstens een half uur vooruit", () => {
     const s = beschikbaarheid("2026-11-03", 2, { "2": { van: "09:00", tot: "22:00" } }, inst, 40, [], { datum: "2026-11-03", minuten: 600 });
     expect(s[0]?.tijd).toBe("10:30");
+  });
+
+  it("zelf annuleren: alleen bevestigd en nog niet begonnen", () => {
+    const nu = { datum: "2026-11-03", minuten: 18 * 60 };
+    expect(magAnnuleren({ status: "BEVESTIGD", datum: "2026-11-04", tijd: "12:00" }, nu)).toBe(true);
+    expect(magAnnuleren({ status: "BEVESTIGD", datum: "2026-11-03", tijd: "19:00" }, nu)).toBe(true);
+    expect(magAnnuleren({ status: "BEVESTIGD", datum: "2026-11-03", tijd: "17:30" }, nu)).toBe(false);
+    expect(magAnnuleren({ status: "BEVESTIGD", datum: "2026-11-02", tijd: "20:00" }, nu)).toBe(false);
+    expect(magAnnuleren({ status: "AANGEKOMEN", datum: "2026-11-04", tijd: "12:00" }, nu)).toBe(false);
   });
 
   it("reserveerFout: verleden, te ver, groep, dicht, vol en goed", () => {

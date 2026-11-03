@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { bevestigingGast, verstuur } from "@/lib/horeca/mail";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
@@ -175,7 +176,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       case "reservering": {
         eisModule(zaak, "reserveren");
         const { actie: _a, ...r } = a;
-        await maakReservering(zaak, r, "bediening");
+        const res = await maakReservering(zaak, r, "bediening");
+        // telefonisch ingeboekt met e-mailadres: de gast krijgt ook een bevestiging met annuleerlink
+        if (res.email) after(() => verstuur(bevestigingGast(zaak, res)).then(() => undefined));
         return NextResponse.json({ datum: a.datum, reserveringen: await reserveringenOp(zaak.id, a.datum) });
       }
       case "reservering-status":

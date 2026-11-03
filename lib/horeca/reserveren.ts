@@ -103,6 +103,13 @@ export function beschikbaarheid(
     .map((m) => ({ tijd: klok(m), vrij: pastOp(m, personen, bezet, inst, cap) }));
 }
 
+/** Kan de gast nog zelf annuleren? Alleen een bevestigde reservering die nog niet begonnen is. */
+export function magAnnuleren(r: { status: string; datum: string; tijd: string }, nu: { datum: string; minuten: number }): boolean {
+  if (r.status !== "BEVESTIGD") return false;
+  if (r.datum !== nu.datum) return r.datum > nu.datum;
+  return minuten(r.tijd) > nu.minuten;
+}
+
 /** Waarom een online reservering niet kan, of null. */
 export function reserveerFout(
   r: { datum: string; tijd: string; personen: number },

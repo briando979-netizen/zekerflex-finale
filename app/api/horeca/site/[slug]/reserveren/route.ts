@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -7,6 +7,7 @@ import { gastReserveringSchema, lees } from "@/lib/horeca/schema";
 import { publiekeZaak } from "@/lib/horeca/toegang";
 import { heeftModule } from "@/lib/horeca/modules";
 import { maakReservering } from "@/lib/horeca/reserveringen";
+import { bevestigingGast, nieuweReserveringZaak, verstuur } from "@/lib/horeca/mail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     if (!heeftModule(zaak, "reserveren")) throw AppError.precondition("Online reserveren staat bij deze zaak uit. Bel ons gerust.");
     const r = lees(gastReserveringSchema, await request.json().catch(() => null));
     const res = await maakReservering(zaak, r, "online");
+    // bevestiging aan de gast (met annuleerlink) en een seintje aan de zaak, na het antwoord
+    after(async () => {
+      await verstuur(bevestigingGast(zaak, res));
+      await verstuur(nieuweReserveringZaak(zaak, res));
+    });
     return NextResponse.json({ id: res.id, datum: res.datum, tijd: res.tijd, personen: res.personen });
   } catch (err) {
     const { status, body, headers } = toErrorBody(err);

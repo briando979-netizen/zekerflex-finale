@@ -2,7 +2,7 @@ import type { HorecaReserveringStatus, HorecaZaak, Prisma } from "@prisma/client
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
-import { beschikbaarheid, capaciteit, isDatum, leesInstellingen, reserveerFout, type ReserveerInstellingen } from "@/lib/horeca/reserveren";
+import { beschikbaarheid, capaciteit, isDatum, leesInstellingen, magAnnuleren, reserveerFout, type ReserveerInstellingen } from "@/lib/horeca/reserveren";
 
 // ---------------------------------------------------------------------------
 // Reserveringen van een zaak. Een online reservering wordt onder een slot per
@@ -75,6 +75,20 @@ export async function zetReserveringTafel(zaak: HorecaZaak, id: string, tafelId:
   if (tafelId && !(await prisma.horecaTafel.findFirst({ where: { id: tafelId, zaakId: zaak.id }, select: { id: true } }))) throw AppError.validation("Kies een bestaande tafel.");
   const r = await prisma.horecaReservering.updateMany({ where: { id, zaakId: zaak.id }, data: { tafelId } });
   if (!r.count) throw AppError.notFound("Reservering niet gevonden.");
+}
+
+/** De reservering achter een annuleerlink (of null), om de gast te laten zien wat hij annuleert. */
+export const reserveringVoorGast = (zaakId: string, id: string) =>
+  prisma.horecaReservering.findFirst({ where: { id, zaakId }, select: { id: true, datum: true, tijd: true, personen: true, naam: true, email: true, telefoon: true, opmerking: true, status: true } });
+
+/** De gast annuleert zelf (via de ondertekende link). */
+export async function annuleerDoorGast(zaak: HorecaZaak, id: string) {
+  const r = await reserveringVoorGast(zaak.id, id);
+  if (!r) throw AppError.notFound("Deze reservering bestaat niet (meer).");
+  if (r.status === "GEANNULEERD") throw AppError.conflict("Deze reservering is al geannuleerd.");
+  if (!magAnnuleren(r, nuNL())) throw AppError.precondition("Deze reservering kun je niet meer online annuleren. Bel ons even.");
+  await prisma.horecaReservering.update({ where: { id: r.id }, data: { status: "GEANNULEERD" } });
+  return r;
 }
 
 export const bewaarReserveerInstellingen = (zaak: HorecaZaak, inst: ReserveerInstellingen) =>
