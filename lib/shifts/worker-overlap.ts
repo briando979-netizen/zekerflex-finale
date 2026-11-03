@@ -1,5 +1,5 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Dubbel geboekt? Eén werker kan niet op twee plekken tegelijk zijn. De
@@ -106,6 +106,27 @@ export function restViolation(
   }
   if (joined === 0 || to - from <= (24 - MIN_REST_HOURS) * HOUR_MS) return null;
   return { startsAt: new Date(from), endsAt: new Date(to) };
+}
+
+/** De Arbeidstijdenwet staat werknemers maximaal 60 uur per week toe. */
+export const MAX_WEEK_HOURS = 60;
+
+/** Maandag 00:00 en de maandag erna, in Nederlandse tijd, van de week waarin `d` valt. */
+export function amsterdamWeek(d: Date): { from: Date; to: Date } {
+  const back = (amsterdamParts(d).weekday + 6) % 7; // ma = 0 … zo = 6
+  return { from: amsterdamStartOfDay(d, -back), to: amsterdamStartOfDay(d, 7 - back) };
+}
+
+/** Uren werk (zonder pauze) in de week van deze klus, de klus zelf meegerekend. */
+export function weekHoursWith(
+  windows: readonly { startsAt: Date; endsAt: Date; breakMinutes: number }[],
+  w: { startsAt: Date; endsAt: Date; breakMinutes: number },
+): number {
+  const { from, to } = amsterdamWeek(w.startsAt);
+  const hours = (o: { startsAt: Date; endsAt: Date; breakMinutes: number }) =>
+    Math.max(0, (o.endsAt.getTime() - o.startsAt.getTime()) / HOUR_MS - o.breakMinutes / 60);
+  const inWeek = windows.filter((o) => o.startsAt >= from && o.startsAt < to);
+  return Math.round((hours(w) + inWeek.reduce((sum, o) => sum + hours(o), 0)) * 10) / 10;
 }
 
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];

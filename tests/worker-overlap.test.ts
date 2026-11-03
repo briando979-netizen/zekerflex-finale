@@ -28,6 +28,8 @@ const recordOfferResponse = vi.fn(async () => ({ status: "ACCEPTED", shiftFilled
 vi.mock("@/lib/notifications/dispatcher", () => ({ recordOfferResponse: () => recordOfferResponse() }));
 
 import {
+  amsterdamWeek,
+  weekHoursWith,
   doubleBookedPairs,
   findOverlappingShift,
   overlapMessageOther,
@@ -130,6 +132,32 @@ describe("doubleBookedPairs (controlecentrum)", () => {
   });
 });
 
+describe("weekHoursWith (Arbeidstijdenwet: maximaal 60 uur per week)", () => {
+  const sh = (from: string, to: string, breakMinutes = 0) => ({ startsAt: new Date(from), endsAt: new Date(to), breakMinutes });
+
+  it("de week loopt van maandag 00:00 tot maandag 00:00 in Nederlandse tijd", () => {
+    // wo 4 nov 2026 → ma 2 nov 00:00 CET = zo 1 nov 23:00 UTC
+    expect(amsterdamWeek(new Date("2026-11-04T12:00:00Z"))).toEqual({
+      from: new Date("2026-11-01T23:00:00Z"),
+      to: new Date("2026-11-08T23:00:00Z"),
+    });
+    // zo 8 nov 23:30 NL hoort nog bij dezelfde week, ma 9 nov 00:30 NL niet
+    expect(amsterdamWeek(new Date("2026-11-08T22:30:00Z")).from).toEqual(new Date("2026-11-01T23:00:00Z"));
+    expect(amsterdamWeek(new Date("2026-11-08T23:30:00Z")).from).toEqual(new Date("2026-11-08T23:00:00Z"));
+  });
+
+  it("telt de klus mee, trekt pauzes af en negeert andere weken", () => {
+    const klus = sh("2026-11-06T07:00:00Z", "2026-11-06T19:00:00Z", 60); // 11 uur
+    const eigen = [
+      sh("2026-11-02T07:00:00Z", "2026-11-02T19:00:00Z", 30), // 11,5 uur
+      sh("2026-11-03T07:00:00Z", "2026-11-03T19:00:00Z", 30), // 11,5 uur
+      sh("2026-11-09T07:00:00Z", "2026-11-09T19:00:00Z"), // volgende week
+      sh("2026-11-01T07:00:00Z", "2026-11-01T19:00:00Z"), // vorige week (zondag)
+    ];
+    expect(weekHoursWith(eigen, klus)).toBe(34);
+  });
+});
+
 describe("restViolation (Arbeidstijdenwet: elke 24 uur 11 uur aaneengesloten rust)", () => {
   const at = (from: string, to: string) => ({ startsAt: new Date(from), endsAt: new Date(to) });
 
@@ -165,6 +193,10 @@ describe("restViolation (Arbeidstijdenwet: elke 24 uur 11 uur aaneengesloten rus
       "Met deze klus werk je wo 4 nov. 16:00 – do 5 nov. 15:00 zonder 11 uur rust ertussen. De Arbeidstijdenwet vraagt in elke 24 uur minstens 11 uur aaneengesloten rust.",
     );
     for (const d of Object.values(FREELANCER_DICTS)) expect(d.detail.shortRest("PERIODE")).toContain("PERIODE");
+    expect(FREELANCER_DICTS.nl.detail.longWeek(62)).toBe(
+      "Met deze klus werk je die week 62 uur. De Arbeidstijdenwet staat werknemers maximaal 60 uur per week toe.",
+    );
+    for (const d of Object.values(FREELANCER_DICTS)) expect(d.detail.longWeek(62)).toContain("62");
   });
 });
 

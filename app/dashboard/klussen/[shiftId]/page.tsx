@@ -32,7 +32,7 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
-import { findOverlappingShift, restViolation } from "@/lib/shifts/worker-overlap";
+import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +160,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         })
       : [];
   const rest = restViolation(nearby.map((n) => n.shift), { startsAt: start, endsAt: new Date(s.endsAt) });
+  // More than 60 hours in that Dutch week with this klus (Arbeidstijdenwet): also only a heads-up.
+  const week = amsterdamWeek(start);
+  const weekShifts =
+    myProfile && !overlap && upcoming
+      ? await prisma.shiftAssignment.findMany({
+          where: { freelancerId: myProfile.id, cancelledAt: null, shiftId: { not: s.id }, shift: { startsAt: { gte: week.from, lt: week.to } } },
+          select: { shift: { select: { startsAt: true, endsAt: true, breakMinutes: true } } },
+          take: 30,
+        })
+      : [];
+  const weekHours = weekShifts.length
+    ? weekHoursWith(weekShifts.map((w) => w.shift), { startsAt: start, endsAt: new Date(s.endsAt), breakMinutes: s.breakMinutes })
+    : 0;
   const fmtAt = (d: Date) => {
     const p = amsterdamParts(d);
     return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(d)}`;
@@ -375,6 +388,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         {rest && (
           <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
             ⏳ {D.shortRest(`${fmtAt(rest.startsAt)} – ${fmtAt(rest.endsAt)}`)}
+          </p>
+        )}
+        {weekHours > MAX_WEEK_HOURS && (
+          <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
+            📅 {D.longWeek(Math.round(weekHours))}
           </p>
         )}
 
