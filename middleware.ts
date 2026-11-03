@@ -189,6 +189,17 @@ function voorstelSite(req: NextRequest, naam: string): NextResponse {
   if (pad === "/robots.txt") {
     return new NextResponse("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
+  // De ZekerFlex-bezoekersstatistiek draait in de root-layout mee; bezoekers van
+  // het voorstel horen daar niet in. Stil aannemen in plaats van een 404.
+  if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
+  // De root-layout registreert ook de ZekerFlex-service-worker. Hier een lege die
+  // zichzelf meteen uitschakelt: geen ZekerFlex-cache op het voorstel, geen 404.
+  if (pad === "/sw.js") {
+    return new NextResponse(
+      "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>self.registration.unregister());",
+      { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" } },
+    );
+  }
   const doel = voorstelPad(naam, pad);
   if (doel === null) return new NextResponse("Niet gevonden", { status: 404 });
   if (doel.startsWith("/_next/")) return NextResponse.next();
