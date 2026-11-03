@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { UserPrefs } from "@/lib/prefs/store";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { pushDay, pushRate } from "@/lib/i18n/worker-push";
 import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isBlockedByAny } from "@/lib/employer/relations";
@@ -23,8 +23,6 @@ export function isUrgent(startsAt: Date, now = new Date()): boolean {
   const ms = startsAt.getTime() - now.getTime();
   return ms > 0 && ms <= URGENT_WITHIN_MS;
 }
-
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 
 export async function notifyStandby(shiftId: string, now = new Date()): Promise<{ notified: number }> {
   const s = await prisma.shift.findUnique({
@@ -65,13 +63,11 @@ export async function notifyStandby(shiftId: string, now = new Date()): Promise<
   }
   if (!recipients.length) return { notified: 0 };
 
-  const p = amsterdamParts(s.startsAt);
-  const rate = `€ ${(s.hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`;
-  await sendUserPush(recipients, {
-    title: `⚡ Spoeddienst: ${s.title}`,
-    body: `${WD[p.weekday] ?? ""} ${p.day}/${p.month} ${amsterdamClock(s.startsAt)} · ${s.branch.city} · ${rate}. Je staat op standby: wie het eerst aanneemt, heeft hem.`.slice(0, 180),
+  await sendLocalizedPush(recipients, (t, locale) => ({
+    title: t.standbyTitle(s.title),
+    body: t.standbyBody(`${pushDay(locale, s.startsAt)} · ${s.branch.city} · ${pushRate(t, s.hourlyRateCents)}`).slice(0, 180),
     data: { type: "SHIFT_OFFER", url: `/dashboard/klussen/${s.id}`, tag: `spoed-${s.id}` },
     ttlSeconds: 6 * 3600,
-  }).catch((err) => logger.warn("standby push failed", { shiftId, error: (err as Error).message }));
+  })).catch((err) => logger.warn("standby push failed", { shiftId, error: (err as Error).message }));
   return { notified: recipients.length };
 }

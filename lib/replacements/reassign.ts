@@ -9,6 +9,8 @@ import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { pushWhen } from "@/lib/i18n/worker-push";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { runAfter } from "@/lib/run-after";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -225,12 +227,12 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
   // The substitute is now booked and the client gets someone else: both should hear it now.
   const when = overlapWhen(result);
   runAfter(async () => {
-    await sendUserPush([input.substituteUserId], {
-      title: `Jij neemt de klus over: ${result.shiftTitle}`,
-      body: `${req.freelancerName} heeft jou gekozen als vervanger: ${when} bij ${req.branch}. Bevestig je komst in de app.`,
+    await sendLocalizedPush([input.substituteUserId], (t, locale) => ({
+      title: t.replacementTitle(result.shiftTitle),
+      body: t.replacementBody(req.freelancerName, pushWhen(locale, result), req.branch),
       data: { type: "SHIFT", url: `/dashboard/klussen/${result.shiftId}`, tag: `vervanging-${input.requestId}` },
       ttlSeconds: 86_400,
-    });
+    }));
     const contact = await resolveShiftContact(result.shiftId);
     if (contact) {
       await sendUserPush([contact.userId], {

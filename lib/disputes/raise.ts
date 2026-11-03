@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, hoursCorrectionProposedEmail } from "@/lib/mail";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { runAfter } from "@/lib/run-after";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 
@@ -166,12 +166,12 @@ export async function proposeHoursCorrection(input: {
   const fmtH = (m: number) => (Math.round((m / 60) * 100) / 100).toString().replace(".", ",");
   const workerUserId = ts.freelancer.userId;
   runAfter(() =>
-    sendUserPush([workerUserId], {
-      title: "Correctie op je uren voorgesteld",
-      body: `${ts.assignment?.shift?.title ?? "Je dienst"}: ${fmtH(ts.billableMinutes)} → ${fmtH(input.proposedMinutes)} uur. Bekijk het en reageer in de app.`,
+    sendLocalizedPush([workerUserId], (t) => ({
+      title: t.correctionTitle,
+      body: t.correctionBody(ts.assignment?.shift?.title ?? "ZekerFlex", fmtH(ts.billableMinutes), fmtH(input.proposedMinutes)),
       data: { type: "SHIFT", url: `/dashboard/uren/${ts.id}`, tag: `correctie-${ts.id}` },
       ttlSeconds: 3 * 86_400,
-    }),
+    })),
   );
 
   return { disputeId: dispute.id };

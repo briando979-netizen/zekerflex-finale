@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { JobAlert, UserPrefs } from "@/lib/prefs/store";
 import { shiftCategory } from "@/lib/shifts/category";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { amsterdamParts } from "@/lib/time/amsterdam";
+import { userLocales } from "@/lib/i18n/worker-locale";
+import { WORKER_PUSH, pushDay, pushRate } from "@/lib/i18n/worker-push";
 import { sendUserPush } from "@/lib/notifications/push";
 import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -78,6 +80,7 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
     WHERE key LIKE 'prefs:%' AND jsonb_typeof(value->'jobAlerts') = 'array' AND jsonb_array_length(value->'jobAlerts') > 0
     LIMIT 5000`;
 
+  const locales = await userLocales(rows.map((r) => r.key.slice("prefs:".length)));
   let notified = 0;
   for (const row of rows) {
     const userId = row.key.slice("prefs:".length);
@@ -97,12 +100,11 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
       break;
     }
     if (!hit) continue;
-    const p = amsterdamParts(hit.s.startsAt);
-    const when = `${WEEKDAY_NL[p.weekday]?.slice(0, 2) ?? ""} ${p.day}/${p.month} ${amsterdamClock(hit.s.startsAt)}`;
-    const rate = `€ ${(hit.s.hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`;
+    const locale = locales.get(userId) ?? "nl";
+    const t = WORKER_PUSH[locale];
     await sendUserPush([userId], {
       title: `🔔 ${hit.label}`,
-      body: `${hit.s.title} · ${when} · ${hit.s.branch.city} · ${rate}`.slice(0, 180),
+      body: `${hit.s.title} · ${pushDay(locale, hit.s.startsAt)} · ${hit.s.branch.city} · ${pushRate(t, hit.s.hourlyRateCents)}`.slice(0, 180),
       data: { type: "SHIFT_OFFER", url: `/dashboard/klussen/${hit.s.id}`, tag: `alert-${hit.s.id}` },
       ttlSeconds: 12 * 3600,
     }).catch((err) => logger.warn("job alert push failed", { error: (err as Error).message }));
