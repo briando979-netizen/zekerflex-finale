@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "zzp'er inhuren kosten",
     "flexkracht kosten per uur",
   ],
-  ...canonical(PATH),
+  ...canonical(PATH, { fileImage: true }),
 };
 
 const FAQ = [

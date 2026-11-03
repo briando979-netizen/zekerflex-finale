@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     "Bereken je zzp-uurtarief, zet de kosten van een uitzendkracht naast die van een zzp'er, of reken je platformkosten uit. Gratis, zonder account.",
   keywords: ["rekentool zzp", "uurtarief berekenen", "kosten uitzendkracht", "rekentools werkgever", "zzp calculator"],
-  ...canonical("/rekentools"),
+  ...canonical("/rekentools", { fileImage: true }),
 };
 
 const TOOLS = [

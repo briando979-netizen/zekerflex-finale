@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description:
     "Bereken welk uurtarief je als zzp'er nodig hebt voor het netto inkomen dat je wilt. Met vakantie, ziekte, pensioen, AOV, zakelijke kosten en belasting. Of reken andersom: wat houd je over?",
   keywords: ["zzp uurtarief berekenen", "uurtarief berekenen zzp", "zzp tarief", "uurtarief freelancer", "wat houd ik over als zzp'er", "netto inkomen zzp"],
-  ...canonical(PATH),
+  ...canonical(PATH, { fileImage: true }),
 };
 
 const FAQ = [

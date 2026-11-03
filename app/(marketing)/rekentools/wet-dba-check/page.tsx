@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description:
     "Doe gratis de Wet DBA-check: tien vragen over gezag, inbedding, duur, vervanging en ondernemerschap. Je ziet direct waar je opdracht op loondienst lijkt en wat je eraan kunt doen.",
   keywords: ["wet dba check", "schijnzelfstandigheid check", "dba check zzp", "zzp'er inhuren risico", "beoordeling arbeidsrelatie", "verkapt dienstverband"],
-  ...canonical(PATH),
+  ...canonical(PATH, { fileImage: true }),
 };
 
 const FAQ = [

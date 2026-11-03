@@ -247,10 +247,14 @@ const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630,
  * indexable page calls this with its own path (and optionally a page-specific
  * OG title/description) so the full block survives on every page, not just
  * the root.
+ *
+ * `fileImage: true` leaves `images` out, for a segment with its own
+ * opengraph-image file: Next only uses that file when the page's metadata
+ * doesn't set openGraph.images itself.
  */
 export function canonical(
   path: string,
-  og?: { title?: string; description?: string; image?: string },
+  og?: { title?: string; description?: string; image?: string; fileImage?: boolean },
 ): { alternates: { canonical: string }; openGraph: Record<string, unknown> } {
   return {
     alternates: { canonical: path },
@@ -259,7 +263,9 @@ export function canonical(
       type: "website",
       siteName: SITE.name,
       locale: SITE.locale,
-      images: [og?.image ? { url: og.image, width: 1200, height: 1200, alt: og.title ?? SITE.name } : OG_IMAGE],
+      ...(og?.fileImage
+        ? {}
+        : { images: [og?.image ? { url: og.image, width: 1200, height: 1200, alt: og.title ?? SITE.name } : OG_IMAGE] }),
       ...(og?.title ? { title: og.title } : {}),
       ...(og?.description ? { description: og.description } : {}),
     },
