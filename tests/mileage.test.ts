@@ -1,0 +1,164 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const profileFindUnique = vi.fn();
+const timesheetFindMany = vi.fn();
+const timesheetFindFirst = vi.fn();
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    freelancerProfile: { findUnique: (...a: unknown[]) => profileFindUnique(...a) },
+    timesheet: {
+      findMany: (...a: unknown[]) => timesheetFindMany(...a),
+      findFirst: (...a: unknown[]) => timesheetFindFirst(...a),
+    },
+  },
+}));
+
+const kvGet = vi.fn();
+const kvSet = vi.fn();
+vi.mock("@/lib/storage/kv", () => ({
+  kvGet: (...a: unknown[]) => kvGet(...a),
+  kvSet: (...a: unknown[]) => kvSet(...a),
+}));
+
+const getFiscal = vi.fn();
+const invoiceModeFor = vi.fn();
+vi.mock("@/lib/fiscal/store", () => ({
+  getFiscal: (...a: unknown[]) => getFiscal(...a),
+  invoiceModeFor: (...a: unknown[]) => invoiceModeFor(...a),
+}));
+
+import { getMileageLog, mileageCsv, roundTripKm, setTripOverride, totalsFor } from "@/lib/worker/mileage";
+
+const DAM = { latitude: 52.3731, longitude: 4.8926 };
+const UTRECHT = { latitude: 52.0907, longitude: 5.1214 };
+
+function sheet(id: string, iso: string, branch = UTRECHT) {
+  return {
+    id,
+    scheduledStart: new Date(iso),
+    actualStart: null,
+    assignment: { shift: { title: "Bediening" } },
+    branch: { addressLine: "Oudegracht 1", postalCode: "3511 AA", city: "Utrecht", ...branch, tenant: { name: "Café De Brug" } },
+  };
+}
+
+afterEach(() => vi.clearAllMocks());
+
+describe("roundTripKm", () => {
+  it("schat heen en terug over de weg (hemelsbreed × omrijfactor × 2)", () => {
+    const km = roundTripKm(DAM, UTRECHT);
+    // ~35 km hemelsbreed → ~94 km heen en terug
+    expect(km).toBeGreaterThan(85);
+    expect(km).toBeLessThan(105);
+    expect(roundTripKm(DAM, DAM)).toBe(0);
+  });
+});
+
+describe("totalsFor", () => {
+  it("telt uitgezette ritten niet mee en rekent € 0,23 per km", () => {
+    const t = totalsFor([
+      { km: 10, excluded: false },
+      { km: 20.5, excluded: false },
+      { km: 100, excluded: true },
+    ]);
+    expect(t).toEqual({ trips: 2, km: 30.5, amountCents: 702 });
+  });
+});
+
+describe("getMileageLog", () => {
+  it("maakt per dienst een rit en past eigen km en uitzetten toe", async () => {
+    profileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: DAM.latitude, homeLongitude: DAM.longitude, homePostalCode: "1012 JS" });
+    getFiscal.mockResolvedValue({});
+    invoiceModeFor.mockReturnValue("reverse-billing");
+    kvGet.mockResolvedValue({ t2: { km: 50 }, t3: { excluded: true } });
+    // 23:30 UTC op 31 dec = 1 jan in Amsterdam: de dag volgt de Nederlandse kalender
+    timesheetFindMany.mockResolvedValue([sheet("t1", "2026-03-02T08:00:00Z"), sheet("t2", "2026-03-03T08:00:00Z"), sheet("t3", "2025-12-31T23:30:00Z")]);
+
+    const log = await getMileageLog("u1", 2026);
+    expect(log).not.toBeNull();
+    expect(log!.isPayroll).toBe(false);
+    expect(log!.homeKnown).toBe(true);
+    const [t1, t2, t3] = log!.trips;
+    expect(t1!.edited).toBe(false);
+    expect(t1!.km).toBe(t1!.estimatedKm);
+    expect(t2!.km).toBe(50);
+    expect(t2!.edited).toBe(true);
+    expect(t3!.excluded).toBe(true);
+    expect(t3!.day).toBe("2026-01-01");
+    expect(log!.totals.trips).toBe(2);
+    expect(log!.totals.km).toBeCloseTo((t1!.estimatedKm ?? 0) + 50, 1);
+
+    const where = timesheetFindMany.mock.calls[0]![0].where;
+    expect(where.freelancerId).toBe("fp1");
+    expect(where.status.in).toEqual(["SUBMITTED", "APPROVED", "PAID"]);
+    // jaargrens in Amsterdamse tijd: 1 jan 00:00 CET = 31 dec 23:00 UTC
+    expect(where.scheduledStart.gte.toISOString()).toBe("2025-12-31T23:00:00.000Z");
+  });
+
+  it("schat niets zonder thuisadres", async () => {
+    profileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: 0, homeLongitude: 0, homePostalCode: "" });
+    getFiscal.mockResolvedValue({});
+    invoiceModeFor.mockReturnValue("payroll");
+    kvGet.mockResolvedValue(null);
+    timesheetFindMany.mockResolvedValue([sheet("t1", "2026-03-02T08:00:00Z")]);
+
+    const log = await getMileageLog("u1", 2026);
+    expect(log!.homeKnown).toBe(false);
+    expect(log!.isPayroll).toBe(true);
+    expect(log!.trips[0]!.estimatedKm).toBeNull();
+    expect(log!.trips[0]!.km).toBe(0);
+  });
+
+  it("geeft null zonder professional-profiel", async () => {
+    profileFindUnique.mockResolvedValue(null);
+    expect(await getMileageLog("u1", 2026)).toBeNull();
+  });
+});
+
+describe("setTripOverride", () => {
+  it("weigert een rit van iemand anders", async () => {
+    timesheetFindFirst.mockResolvedValue(null);
+    await expect(setTripOverride("u1", "t9", { km: 10 })).rejects.toThrow(/hoort niet bij jouw diensten/);
+    expect(timesheetFindFirst.mock.calls[0]![0].where).toEqual({ id: "t9", freelancer: { userId: "u1" } });
+    expect(kvSet).not.toHaveBeenCalled();
+  });
+
+  it("weigert een onzinnige afstand", async () => {
+    timesheetFindFirst.mockResolvedValue({ id: "t1" });
+    await expect(setTripOverride("u1", "t1", { km: -3 })).rejects.toThrow(/tussen 0 en/);
+    await expect(setTripOverride("u1", "t1", { km: 99999 })).rejects.toThrow(/tussen 0 en/);
+  });
+
+  it("slaat km op, en ruimt de regel op als alles terug naar standaard is", async () => {
+    timesheetFindFirst.mockResolvedValue({ id: "t1" });
+    kvGet.mockResolvedValue({ t1: { excluded: true }, t2: { km: 5 } });
+    await setTripOverride("u1", "t1", { km: 12.34 });
+    expect(kvSet).toHaveBeenLastCalledWith("ritten:u1", { t1: { excluded: true, km: 12.3 }, t2: { km: 5 } });
+
+    kvGet.mockResolvedValue({ t1: { km: 12.3 }, t2: { km: 5 } });
+    await setTripOverride("u1", "t1", { km: null, excluded: false });
+    expect(kvSet).toHaveBeenLastCalledWith("ritten:u1", { t2: { km: 5 } });
+  });
+});
+
+describe("mileageCsv", () => {
+  it("maakt een Excel-vriendelijke rittenlijst met totaal", () => {
+    const csv = mileageCsv({
+      year: 2026,
+      isPayroll: false,
+      homeKnown: true,
+      homePostalCode: "1012 JS",
+      ratePerKmCents: 23,
+      trips: [
+        { timesheetId: "t1", day: "2026-03-02", company: "Café; De Brug", shiftTitle: "Bediening", destination: "Oudegracht 1, 3511 AA Utrecht", estimatedKm: 94.2, km: 94.2, edited: false, excluded: false },
+        { timesheetId: "t2", day: "2026-03-03", company: "X", shiftTitle: "Afwas", destination: "Y", estimatedKm: 10, km: 10, edited: false, excluded: true },
+      ],
+      totals: { trips: 1, km: 94.2, amountCents: 2167 },
+    });
+    expect(csv.startsWith("﻿Datum;")).toBe(true);
+    const lines = csv.trim().split("\r\n");
+    expect(lines[1]).toBe('2026-03-02;1012 JS;Oudegracht 1, 3511 AA Utrecht;"Café; De Brug";Dienst: Bediening;94,2;21,67;ja');
+    expect(lines[2]).toBe("2026-03-03;1012 JS;Y;X;Dienst: Afwas;10,0;0,00;nee");
+    expect(lines[3]).toBe("Totaal;;;;1 rit;94,2;21,67;");
+  });
+});

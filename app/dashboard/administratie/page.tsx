@@ -100,6 +100,9 @@ export default async function AdministratiePage() {
         <Link href="/dashboard/vooruitblik" className="font-semibold text-brand-600 hover:underline">
           → Loon-vooruitblik
         </Link>
+        <Link href="/dashboard/ritten" className="font-semibold text-brand-600 hover:underline">
+          → Kilometer-administratie
+        </Link>
       </div>
 
       <p className="mt-5 text-xs text-neutralx-400">
