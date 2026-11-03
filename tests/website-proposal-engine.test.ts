@@ -194,6 +194,45 @@ describe("een voorstel maken", () => {
   });
 });
 
+describe("de nieuwe website meten", () => {
+  const finding = (id: string, status: "goed" | "let-op" | "probleem") => ({ id, category: "google", status, title: id, detail: "…" });
+
+  it("meet de nieuwe site met dezelfde check, zonder wat alleen bij een voorstel bewust anders is", async () => {
+    runWebsiteCheck.mockImplementation(async (url: string) => {
+      const u = new URL(url);
+      if (u.hostname !== "localhost") return check(u.hostname);
+      return { ...check(u.hostname), url, finalUrl: url, findings: [finding("noindex", "probleem"), finding("robots", "probleem"), finding("jsonld", "let-op"), finding("og", "let-op")] };
+    });
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    const urls = runWebsiteCheck.mock.calls.map(([u]) => String(u));
+    expect(urls.some((u) => u.startsWith("http://localhost:3000/site/schildersbedrijf-de-vries?meting="))).toBe(true);
+    // alleen "og" telt mee: Google 100 - 12 = 88, de rest 100, gemiddeld 97,6
+    expect(p.nieuw).toMatchObject({ score: 98, checkId: "abcdef0123456789" });
+    expect(p.nieuw?.categorieen.find((c) => c.id === "google")?.score).toBe(88);
+    expect((await engine.getWebsiteProposal(p.id))?.nieuw?.score).toBe(98);
+  });
+
+  it("lukt meten niet, dan staat het voorstel er gewoon, zonder nieuwe score", async () => {
+    runWebsiteCheck.mockImplementation(async (url: string) => {
+      const u = new URL(url);
+      if (u.hostname === "localhost") throw new Error("time-out");
+      return check(u.hostname);
+    });
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    expect(p.status).toBe("concept");
+    expect(p.nieuw).toBeUndefined();
+    expect(await engine.measureNewSite(p.id)).toBeNull();
+  });
+
+  it("een ingetrokken voorstel wordt niet meer gemeten", async () => {
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    await engine.updateWebsiteProposal(p.id, "ingetrokken", BY);
+    runWebsiteCheck.mockClear();
+    expect(await engine.measureNewSite(p.id)).toBeNull();
+    expect(runWebsiteCheck).not.toHaveBeenCalled();
+  });
+});
+
 describe("ja zeggen en de introductiekorting", () => {
   const ja = { naam: "Jan de Vries", email: "jan@devries.test", telefoon: "", pakket: "basis" as const, domein: "houden" as const, opmerking: "", begrepen: true as const };
 

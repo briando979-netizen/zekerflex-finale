@@ -31,6 +31,12 @@ describe("mailtekst voor een websitevoorstel", () => {
     expect(text.trim().endsWith("Sanne\nZekerFlex")).toBe(true);
   });
 
+  it("noemt de score van de nieuwe site zodra die gemeten is", () => {
+    expect(proposalMailText(p, offer(12), "https://zekerflex.com", "Sanne")).toContain("scoort 48 van de 100 in onze website-check.");
+    const gemeten = { ...p, nieuw: { at: "2026-11-03T10:00:00.000Z", checkId: "abcdef0123456789", score: 94, categorieen: [], extra: [] } };
+    expect(proposalMailText(gemeten, offer(12), "https://zekerflex.com", "Sanne")).toContain("scoort 48 van de 100 in onze website-check, de nieuwe 94.");
+  });
+
   it("noemt geen korting meer als de plekken op zijn", () => {
     expect(proposalMailText(p, offer(0), "https://zekerflex.com", "Sanne")).not.toContain("introductiekorting");
   });

@@ -27,15 +27,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const euro = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const datum = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
-function ScoreRow({ s }: { s: ProposalScore }) {
-  const tone = s.score < 50 ? "#9A3B2E" : s.score < 75 ? "#A8834F" : "#3E6B4F";
+const toneOf = (score: number) => (score < 50 ? "#9A3B2E" : score < 75 ? "#A8834F" : "#3E6B4F");
+
+/** One category: the current site's score, and the new site's under it when it was measured. */
+function ScoreRow({ s, after }: { s: ProposalScore; after?: number | undefined }) {
   return (
-    <li className="grid grid-cols-[8.5rem_1fr_2.5rem] items-center gap-3 text-sm">
+    <li className="grid grid-cols-[8.5rem_1fr_4.5rem] items-center gap-3 text-sm">
       <span>{s.label}</span>
-      <span className="h-1.5 bg-lux-line" aria-hidden>
-        <span className="block h-full" style={{ width: `${Math.max(3, s.score)}%`, background: tone }} />
+      <span className="space-y-1" aria-hidden>
+        <span className="block h-1.5 bg-lux-line">
+          <span className="block h-full" style={{ width: `${Math.max(3, s.score)}%`, background: toneOf(s.score) }} />
+        </span>
+        {after !== undefined && (
+          <span className="block h-1.5 bg-lux-line">
+            <span className="block h-full" style={{ width: `${Math.max(3, after)}%`, background: toneOf(after) }} />
+          </span>
+        )}
       </span>
-      <span className="text-right tabular-nums">{s.score}</span>
+      <span className="text-right tabular-nums">
+        {s.score}
+        {after !== undefined && <span className="font-semibold" style={{ color: toneOf(after) }}> → {after}</span>}
+      </span>
     </li>
   );
 }
@@ -156,23 +168,30 @@ export default async function WebsiteProposalPage({ params }: Props) {
         <section className="border-y border-lux-line bg-white">
           <div className="mx-auto grid max-w-6xl gap-12 px-5 py-16 lg:grid-cols-[1fr_1.4fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lux-mute">Je huidige website</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lux-mute">{p.nieuw ? "Je huidige website en je nieuwe" : "Je huidige website"}</p>
               <p className="mt-4 font-serif text-7xl tabular-nums">
                 {p.check.score}
+                {p.nieuw ? (
+                  <>
+                    <span className="mx-3 text-4xl text-lux-mute">→</span>
+                    <span style={{ color: toneOf(p.nieuw.score) }}>{p.nieuw.score}</span>
+                  </>
+                ) : null}
                 <span className="text-3xl text-lux-mute">/100</span>
               </p>
               <p className="mt-3 max-w-sm text-lux-mute">
                 Gemeten op {datum(p.check.at)} met de website-check van ZekerFlex: {problems === 1 ? "1 probleem" : `${problems} problemen`} en {p.punten.length - problems} aandachtspunten op {p.host}.
+                {p.nieuw ? ` Je nieuwe website is met dezelfde check gemeten. Alleen dat hij nu nog buiten Google blijft en Google nog geen bedrijfsgegevens geeft, tellen we niet mee: dat gaat aan zodra hij van jou is.` : ""}
               </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2">
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-lux-mute">Techniek</p>
-                <ul className="space-y-3">{p.check.categorieen.map((s) => <ScoreRow key={s.id} s={s} />)}</ul>
+                <ul className="space-y-3">{p.check.categorieen.map((s) => <ScoreRow key={s.id} s={s} after={p.nieuw?.categorieen.find((n) => n.id === s.id)?.score} />)}</ul>
               </div>
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-lux-mute">Klanten overtuigen</p>
-                <ul className="space-y-3">{p.check.extra.map((s) => <ScoreRow key={s.id} s={s} />)}</ul>
+                <ul className="space-y-3">{p.check.extra.map((s) => <ScoreRow key={s.id} s={s} after={p.nieuw?.extra.find((n) => n.id === s.id)?.score} />)}</ul>
               </div>
             </div>
           </div>

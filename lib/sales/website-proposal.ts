@@ -9,7 +9,7 @@ import { recordAudit } from "@/lib/audit";
 import { alertOwner } from "@/lib/ops/alert";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { CATEGORY_LABEL } from "@/lib/website-check/analyze";
+import { CATEGORY_LABEL, scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { extractBusiness, extraScores, improvementPlan, proposalFindings } from "@/lib/website-check/proposal";
 import { normalizeInput, runWebsiteCheck } from "@/lib/website-check/run";
@@ -94,8 +94,25 @@ export interface WebsiteProposal {
   akkoord: ProposalAcceptance | null;
   /** handed to the company's own account: the site is theirs in the builder now */
   overgezet?: { at: string; tenantId: string; bedrijf: string } | undefined;
+  /** the new site measured with the same check (measureNewSite); absent when measuring failed */
+  nieuw?: ProposalMeasurement | undefined;
   history: { at: string; what: string; by: string }[];
 }
+
+export interface ProposalMeasurement {
+  at: string;
+  checkId: string;
+  score: number;
+  categorieen: ProposalScore[];
+  extra: ProposalScore[];
+}
+
+/**
+ * On a proposal site these differ on purpose and are not counted in its score:
+ * it stays out of search engines and gives Google no business data until the
+ * site is the company's own.
+ */
+export const PROPOSAL_ONLY_FINDINGS = new Set(["noindex", "robots", "jsonld"]);
 
 export interface ProposalPricing {
   /** one-time price of the new website, excluding VAT */
@@ -292,7 +309,35 @@ export async function createWebsiteProposal(input: { leadId?: string | undefined
   if (lead) await kvSet(leadKey(lead.id), id);
   await kvSet(hostKey(check.host), id);
   await recordAudit({ category: "SALES", action: "website-proposal.created", actorUserId: by.userId, summary: `Websitevoorstel voor ${proposal.bedrijf} gemaakt (huidige site ${check.score}/100)`, targetType: "website-proposal", targetId: id });
-  return proposal;
+  // the new site measured the same way, for an honest before and after
+  return (await measureNewSite(id)) ?? proposal;
+}
+
+/**
+ * Measure the proposal's new site with the same public website check as the
+ * company's current one (fresh, not the hour-long cache), leaving out what a
+ * proposal does differently on purpose (PROPOSAL_ONLY_FINDINGS). Null when the
+ * site can't be measured right now; the proposal simply shows no "after" then.
+ */
+export async function measureNewSite(id: string): Promise<WebsiteProposal | null> {
+  const p = await getWebsiteProposal(id);
+  if (!p || p.status === "ingetrokken" || p.status === "overgezet") return null;
+  try {
+    const url = `${env.APP_BASE_URL.replace(/\/+$/, "")}/site/${p.slug}?meting=${Date.now().toString(36)}`;
+    const r = await runWebsiteCheck(url);
+    const { score, categories } = scoreFindings(r.findings.filter((f) => !PROPOSAL_ONLY_FINDINGS.has(f.id)));
+    const page = await fetchPage(r.finalUrl, { timeoutMs: 12_000 });
+    const extra = extraScores(proposalFindings(extractBusiness(page.body, page.finalUrl), r.metrics.images));
+    const nieuw: ProposalMeasurement = { at: r.at, checkId: r.id, score, categorieen: categories, extra };
+    // the proposal may have changed meanwhile: write only the measurement onto the latest version
+    const latest = (await getWebsiteProposal(id)) ?? p;
+    const next: WebsiteProposal = { ...latest, nieuw };
+    await kvSet(key(id), next);
+    return next;
+  } catch (err) {
+    logger.info("proposal site not measured", { id, reason: String(err) });
+    return null;
+  }
 }
 
 // ---- what happens to it afterwards ------------------------------------------

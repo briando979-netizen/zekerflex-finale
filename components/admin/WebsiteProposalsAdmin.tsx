@@ -51,14 +51,14 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
     await load();
   }
 
-  async function act(p: WebsiteProposal, action: ProposalAction) {
+  async function act(p: WebsiteProposal, action: ProposalAction | "meten") {
     if (action === "ingetrokken" && !window.confirm(`Het voorstel voor ${p.bedrijf} intrekken? De nieuwe website gaat offline en het webadres komt weer vrij.`)) return;
     setBusy(p.id);
     const r = await fetch(`/api/admin/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(null);
     if (!r?.ok) return setMessage({ tone: "crit", text: d?.error?.message ?? "Dat lukte niet." });
-    setMessage({ tone: "ok", text: `${p.bedrijf}: ${d.proposal.history?.[0]?.what ?? "bijgewerkt"}.` });
+    setMessage({ tone: "ok", text: action === "meten" ? `${p.bedrijf}: de nieuwe site scoort ${d.proposal.nieuw?.score ?? "?"}/100.` : `${p.bedrijf}: ${d.proposal.history?.[0]?.what ?? "bijgewerkt"}.` });
     await load();
   }
 
@@ -131,7 +131,7 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                     <p className="min-w-0 flex-1 truncate text-[0.875rem] font-medium" style={{ color: "var(--a-text)" }}>
                       {p.bedrijf}
                       <span className="font-normal" style={{ color: "var(--a-mute)" }}>
-                        {" "}· {p.host} · huidige site {p.check.score}/100
+                        {" "}· {p.host} · huidige site {p.check.score}/100{p.nieuw ? ` → nieuwe site ${p.nieuw.score}/100` : ""}
                       </span>
                     </p>
                     {expired && open && p.status !== "akkoord" ? <Pill tone="crit">Verlopen</Pill> : <Pill tone={st.tone}>{st.label}</Pill>}
@@ -185,6 +185,7 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                       {p.status === "concept" && (
                         <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verstuurd")} className="a-button text-xs">Ik heb hem verstuurd</button>
                       )}
+                      <button type="button" disabled={busy === p.id} onClick={() => void act(p, "meten")} className="a-button text-xs">{busy === p.id ? "Bezig…" : "Meet nieuwe site"}</button>
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verlengen")} className="a-button text-xs">Verleng {data.offer.pricing.geldigDagen} dagen</button>
                       {p.status !== "akkoord" && p.status !== "afgewezen" && (
                         <button type="button" disabled={busy === p.id} onClick={() => void act(p, "afgewezen")} className="a-button text-xs">Afgezegd</button>

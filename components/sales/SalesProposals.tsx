@@ -46,14 +46,14 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
     await load();
   }
 
-  async function act(p: WebsiteProposal, action: ProposalAction) {
+  async function act(p: WebsiteProposal, action: ProposalAction | "meten") {
     if (action === "ingetrokken" && !window.confirm(`Het voorstel voor ${p.bedrijf} intrekken? De nieuwe website gaat offline.`)) return;
     setBusy(p.id);
     const r = await fetch(`/api/sales/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(null);
     if (!r?.ok) return setMessage({ ok: false, text: d?.error?.message ?? "Dat lukte niet." });
-    setMessage({ ok: true, text: `${p.bedrijf}: ${d.proposal.history?.[0]?.what ?? "bijgewerkt"}.` });
+    setMessage({ ok: true, text: action === "meten" ? `${p.bedrijf}: de nieuwe website scoort ${d.proposal.nieuw?.score ?? "?"}/100.` : `${p.bedrijf}: ${d.proposal.history?.[0]?.what ?? "bijgewerkt"}.` });
     await load();
   }
 
@@ -112,7 +112,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="min-w-0 flex-1 font-semibold text-ink">
                     {p.bedrijf}
-                    <span className="font-normal text-neutralx-500"> · {p.host} · huidige site {p.check.score}/100</span>
+                    <span className="font-normal text-neutralx-500"> · {p.host} · huidige site {p.check.score}/100{p.nieuw ? ` → nieuwe site ${p.nieuw.score}/100` : ""}</span>
                   </p>
                   <span className={expired ? "pill-crit" : PILL[p.status]}>{expired ? "Verlopen" : STATUS_LABEL[p.status]}</span>
                 </div>
@@ -141,6 +141,7 @@ export function SalesProposals({ origin, me }: { origin: string; me: string }) {
                     {p.status === "concept" && (
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verstuurd")} className="btn-ghost min-h-11">Ik heb hem verstuurd</button>
                     )}
+                    <button type="button" disabled={busy === p.id} onClick={() => void act(p, "meten")} className="btn-ghost min-h-11">{busy === p.id ? "Bezig…" : "Meet nieuwe site"}</button>
                     <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verlengen")} className="btn-ghost min-h-11">Verleng</button>
                     {p.status !== "akkoord" && p.status !== "afgewezen" && (
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "afgewezen")} className="btn-ghost min-h-11">Afgezegd</button>

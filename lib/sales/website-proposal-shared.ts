@@ -45,7 +45,7 @@ export function proposalMailText(p: WebsiteProposal, offer: ProposalOfferView, o
 
 Hallo,
 
-Ik heb de website van ${p.bedrijf} (${p.host}) bekeken en er alvast een nieuwe voor gemaakt: sneller, veiliger, beter te vinden in Google en met een luxe uitstraling. Je huidige site scoort ${p.check.score} van de 100 in onze website-check.
+Ik heb de website van ${p.bedrijf} (${p.host}) bekeken en er alvast een nieuwe voor gemaakt: sneller, veiliger, beter te vinden in Google en met een luxe uitstraling. Je huidige site scoort ${p.check.score} van de 100 in onze website-check${p.nieuw ? `, de nieuwe ${p.nieuw.score}` : ""}.
 
 Je nieuwe website en alle verbeteringen staan hier, alleen voor jou:
 ${origin}/websitevoorstel/${p.id}
