@@ -4,8 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BASE, DOELGROEPEN, activiteitenVoor } from "@/lib/voorstel/schwarzwald";
 import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
+import { huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
+import { OPEN_SOLLICITATIE, isVacaturePad } from "@/lib/voorstel/sollicitatie-regels";
 import { SchwarzwaldBlokken } from "@/components/voorstel/SchwarzwaldBlokken";
 import { ActiviteitKaart, CtaBand } from "@/components/voorstel/SchwarzwaldCards";
+import { Solliciteren } from "@/components/voorstel/Solliciteren";
 
 // Alle overige pagina's uit hun menu (bedrijfsfeest, trouwen, restaurant,
 // vacatures, contact, …) met hun eigen tekst. Het pad is gelijk aan hun pad,
@@ -27,6 +30,8 @@ export default async function SchwarzwaldPagina({ params }: Props) {
 
   const doelgroep = DOELGROEPEN.find((d) => d.bron === key);
   const populair = doelgroep ? activiteitenVoor(doelgroep.slug).slice(0, 6) : [];
+  const vacature = isVacaturePad(key);
+  const account = vacature ? await huidigAccount().catch(() => null) : null;
 
   return (
     <>
@@ -67,6 +72,16 @@ export default async function SchwarzwaldPagina({ params }: Props) {
       <div className="py-14">
         <SchwarzwaldBlokken blokken={p.blokken} />
       </div>
+
+      {vacature && (
+        <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-8">
+          <Solliciteren
+            vacature={key}
+            functie={key === "/vacatures" ? OPEN_SOLLICITATIE : p.titel}
+            gegevens={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
+          />
+        </section>
+      )}
 
       {populair.length > 0 && doelgroep && (
         <section className="bg-schw-sand py-16">
