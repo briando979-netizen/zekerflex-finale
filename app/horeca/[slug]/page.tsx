@@ -6,6 +6,7 @@ import { DAGEN, leesTijden, tijdTekst } from "@/lib/horeca/tijden";
 import { soortLabel } from "@/lib/horeca/soorten";
 import { euro, zaakWeergave } from "@/lib/horeca/weergave";
 import { telefoonLink } from "@/lib/rijschool/format";
+import { leesbaarOpLicht, ZAND } from "@/lib/rijschool/kleuren";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,10 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
       <section id="openingstijden" className="bg-[var(--rs-zand)] py-14" aria-labelledby="tijden-kop">
         <div className="mx-auto grid max-w-[1280px] gap-8 px-4 sm:px-8 md:grid-cols-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--rs-accent-tekst)]">Openingstijden</p>
+            {/* op zand, niet op crème: de accentkleur daarop afgestemd, zodat hij leesbaar blijft */}
+            <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: leesbaarOpLicht(z.accent, ZAND) }}>
+              Openingstijden
+            </p>
             <h2 id="tijden-kop" className="mt-2 font-display text-3xl font-bold tracking-tight">
               Wanneer we open zijn
             </h2>

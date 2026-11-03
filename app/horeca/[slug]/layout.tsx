@@ -35,10 +35,11 @@ export default async function HorecaSiteLayout({ children, params }: { children:
       )}
       <header className="sticky top-0 z-30 bg-[var(--rs-nacht)] text-[var(--rs-creme)]">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 py-3 sm:px-8">
-          <Link href={basis} className="font-display text-xl font-bold tracking-tight">
+          {/* een lange naam wordt ingekort, de knoppen houden hun plek (390 px) */}
+          <Link href={basis} className="min-w-0 truncate font-display text-xl font-bold tracking-tight">
             {z.naam}
           </Link>
-          <nav aria-label="Hoofdmenu" className="flex items-center gap-1 text-sm font-semibold sm:gap-4">
+          <nav aria-label="Hoofdmenu" className="flex flex-shrink-0 items-center gap-1 text-sm font-semibold sm:gap-4">
             <a href={`${basis}#menukaart`} className="rounded-full px-3 py-2 hover:bg-white/10">
               Menukaart
             </a>
