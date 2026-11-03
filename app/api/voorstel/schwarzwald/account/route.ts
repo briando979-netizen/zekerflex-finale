@@ -4,7 +4,8 @@ import { AppError } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
-import { eisZelfdeHerkomst, huidigAccount, inloggen, registreer, uitloggen, wijzigProfiel } from "@/lib/voorstel/schwarzwald-accounts";
+import { bevestigWachtwoord, eisZelfdeHerkomst, huidigAccount, inloggen, registreer, uitloggen, wijzigProfiel } from "@/lib/voorstel/schwarzwald-accounts";
+import { wisGast } from "@/lib/voorstel/schwarzwald-privacy";
 import { annuleerEigen, boekingenVanAccount } from "@/lib/voorstel/schwarzwald-boekingen";
 import { aanvragenVan, klantkaart, tijdlijn, voegItemToe, wijzigKlantkaart } from "@/lib/voorstel/schwarzwald-crm";
 import { plaatsReview, reviewsVan } from "@/lib/voorstel/schwarzwald-reviews";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 // Klantaccount van de Schwarzwald-site (eigen sessie-cookie, los van
 // ZekerFlex-login; openbaar in lib/auth/public-routes.ts).
 // GET  → ingelogd account + eigen reserveringen, aanvragen, berichten en wensen
-// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | wensen | bericht | review}
+// POST {actie: registreren | inloggen | uitloggen | profiel | annuleren | wensen | bericht | review | verwijderen}
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -65,6 +66,7 @@ const schema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("wensen"), wensen: z.string().trim().max(1000) }),
   z.object({ actie: z.literal("bericht"), tekst: z.string().trim().min(1, "Schrijf eerst een bericht.").max(2000) }),
   z.object({ actie: z.literal("review"), boekingId: z.string().max(8), score: z.number().int().min(1).max(5), tekst: z.string().trim().max(1500) }),
+  z.object({ actie: z.literal("verwijderen"), wachtwoord: z.string().max(200).default(""), bevestig: z.literal(true, { errorMap: () => ({ message: "Vink aan dat je alles wilt verwijderen." }) }) }),
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -102,6 +104,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (d.actie === "review") {
       const r = await plaatsReview(account, { boekingId: d.boekingId, score: d.score, tekst: d.tekst });
       return NextResponse.json({ review: { id: r.id, boekingId: r.boekingId, score: r.score, tekst: r.tekst, status: r.status, antwoord: r.antwoord } });
+    }
+    if (d.actie === "verwijderen") {
+      await enforceRateLimit({ name: "voorstel-schwarzwald-verwijderen", identifier: account.email, limit: 5, windowSeconds: 600, message: "Te veel pogingen. Wacht even en probeer het opnieuw." });
+      await bevestigWachtwoord(account.email, d.wachtwoord);
+      const gewist = await wisGast(account.email);
+      await uitloggen();
+      return NextResponse.json({ ok: true, gewist });
     }
     if (d.actie === "bericht") {
       await enforceRateLimit({ name: "voorstel-schwarzwald-bericht", identifier: account.email, limit: 20, windowSeconds: 3600, message: "Je hebt veel berichten gestuurd. Probeer het later opnieuw." });

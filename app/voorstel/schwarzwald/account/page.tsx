@@ -31,7 +31,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       </section>
       <section className="mx-auto max-w-[1280px] px-4 py-10 sm:px-8">
         <SchwarzwaldAccount
-          account={account ? { email: account.email, naam: account.naam, telefoon: account.telefoon, rol: account.rol, google: !!account.google } : null}
+          account={account ? { email: account.email, naam: account.naam, telefoon: account.telefoon, rol: account.rol, google: !!account.google, heeftWachtwoord: account.heeftWachtwoord } : null}
           boekingen={boekingen.map(({ id, activiteit, datum, tijd, personen, status }) => ({ id, activiteit, datum, tijd, personen, status }))}
           aanvragen={aanvragen.map(({ id, programma, gelegenheid, datum, personen, status, aangemaakt }) => ({ id, programma, gelegenheid, datum, personen, status, aangemaakt }))}
           berichten={lijn

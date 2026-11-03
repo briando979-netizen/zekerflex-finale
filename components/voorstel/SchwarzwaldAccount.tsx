@@ -18,6 +18,7 @@ export interface AccountGegevens {
   telefoon: string;
   rol: "klant" | "beheerder";
   google: boolean;
+  heeftWachtwoord: boolean;
 }
 export interface MijnBoeking {
   id: string;
@@ -307,6 +308,76 @@ function Inloggen({ googleAan, fout: startFout }: { googleAan: boolean; fout: st
   );
 }
 
+/** Inzage (download) en zelf je account met alle gegevens wissen (AVG). */
+function MijnGegevens({ heeftWachtwoord, gewist }: { heeftWachtwoord: boolean; gewist: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [wachtwoord, setWachtwoord] = useState("");
+  const [zeker, setZeker] = useState(false);
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState("");
+
+  async function wis(e: FormEvent) {
+    e.preventDefault();
+    setBezig(true);
+    setFout("");
+    try {
+      await post({ actie: "verwijderen", wachtwoord, bevestig: zeker });
+      gewist();
+    } catch (err) {
+      setFout(err instanceof Error ? err.message : "Verwijderen is niet gelukt.");
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-schw-cream p-4">
+      <h3 className="font-bold">Je gegevens</h3>
+      <p className="mt-1 text-sm text-schw-mute">Download alles wat bij je account staat, of verwijder je account met al je gegevens.</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <a href={`${API}/gegevens`} download className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold ring-1 ring-schw-night/15">
+          Download mijn gegevens
+        </a>
+        {!open && (
+          <button type="button" onClick={() => setOpen(true)} className="rounded-full px-5 py-2.5 text-sm font-semibold text-[#B91C1C] ring-1 ring-[#B91C1C]/30">
+            Account verwijderen
+          </button>
+        )}
+      </div>
+      {open && (
+        <form onSubmit={(e) => void wis(e)} className="mt-4 space-y-3 rounded-xl bg-white p-4">
+          <p className="text-sm">
+            Dit verwijdert je account, reserveringen, aanvragen, berichten, wensen, beoordelingen en sollicitaties. Dit kun je niet ongedaan maken.
+          </p>
+          {heeftWachtwoord && (
+            <label className="block">
+              <span className="text-sm font-semibold">Je wachtwoord</span>
+              <input type="password" required autoComplete="current-password" value={wachtwoord} onChange={(e) => setWachtwoord(e.target.value)} className={VELD} />
+            </label>
+          )}
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" required checked={zeker} onChange={(e) => setZeker(e.target.checked)} className="mt-1" />
+            Ja, verwijder mijn account en al mijn gegevens.
+          </label>
+          {fout && (
+            <p role="alert" className="rounded-xl bg-[#FDE2E2] p-3 text-sm font-semibold text-[#B91C1C]">
+              {fout}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button type="submit" disabled={bezig || !zeker} className="rounded-full bg-[#B91C1C] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40">
+              {bezig ? "Bezig…" : "Definitief verwijderen"}
+            </button>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-schw-night/15">
+              Annuleren
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 type Tab = "reserveringen" | "aanvragen" | "berichten" | "wensen" | "gegevens";
 
 export function SchwarzwaldAccount(props: {
@@ -332,6 +403,7 @@ export function SchwarzwaldAccount(props: {
   const [bezig, setBezig] = useState(false);
   const [wensen, setWensen] = useState(props.wensen);
   const [bericht, setBericht] = useState("");
+  const [gewist, setGewist] = useState(false);
 
   const komend = useMemo(() => boekingen.filter((b) => b.datum >= vandaag).sort((a, b) => `${a.datum}${a.tijd}`.localeCompare(`${b.datum}${b.tijd}`)), [boekingen, vandaag]);
   const eerder = useMemo(() => boekingen.filter((b) => b.datum < vandaag).sort((a, b) => `${b.datum}${b.tijd}`.localeCompare(`${a.datum}${a.tijd}`)), [boekingen, vandaag]);
@@ -340,6 +412,17 @@ export function SchwarzwaldAccount(props: {
   const gedaan = new Set(boekingen.map((b) => b.activiteit));
   const ontdek = suggesties.filter((s) => !gedaan.has(s.slug)).slice(0, 3);
 
+  if (gewist) {
+    return (
+      <div role="status" className="mx-auto max-w-xl rounded-xl3 bg-white p-7 text-center shadow-[0_1px_2px_rgba(10,18,14,0.06)] sm:p-10">
+        <h2 className="font-display text-3xl font-bold">Je account is verwijderd</h2>
+        <p className="mt-3 text-schw-mute">Je account en al je gegevens zijn gewist en je bent uitgelogd. Je bent altijd weer welkom!</p>
+        <Link href={BASE} className="mt-6 inline-block rounded-full bg-schw-orange px-6 py-3 font-bold text-schw-night">
+          Naar de homepage
+        </Link>
+      </div>
+    );
+  }
   if (!account) return <Inloggen googleAan={props.googleAan} fout={props.fout} />;
 
   async function actie(body: Record<string, unknown>, melding: string) {
@@ -662,6 +745,7 @@ export function SchwarzwaldAccount(props: {
                   Uitloggen
                 </button>
               </div>
+              <MijnGegevens heeftWachtwoord={account.heeftWachtwoord} gewist={() => setGewist(true)} />
               <p className="text-sm text-schw-mute">Vragen over je gegevens? Stuur een bericht of bel {CONTACT.telefoon}.</p>
             </div>
           </div>

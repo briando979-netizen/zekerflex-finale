@@ -37,9 +37,9 @@ export interface Account {
   google?: boolean;
 }
 
-export type PubliekAccount = Omit<Account, "hash">;
+export type PubliekAccount = Omit<Account, "hash"> & { heeftWachtwoord: boolean };
 
-const publiek = ({ hash: _hash, ...rest }: Account): PubliekAccount => rest;
+const publiek = ({ hash, ...rest }: Account): PubliekAccount => ({ ...rest, heeftWachtwoord: !!hash });
 const sleutel = (email: string) => `${PREFIX}${email.trim().toLowerCase()}`;
 const geheim = () => createHmac("sha256", env.AUTH_SECRET).update("voorstel-schwarzwald-sessie").digest();
 
@@ -182,6 +182,13 @@ export async function inloggen(emailRuw: string, wachtwoord: string): Promise<Pu
   await kvSet(sleutel(a.email), bij);
   await zetSessie(a.email);
   return publiek(bij);
+}
+
+/** Wachtwoord opnieuw controleren voor een onomkeerbare stap; een account dat alleen via Google inlogt heeft er geen. */
+export async function bevestigWachtwoord(email: string, wachtwoord: string): Promise<void> {
+  const a = await kvGet<Account>(sleutel(email));
+  if (!a) throw AppError.notFound("Account niet gevonden.");
+  if (a.hash && !(await klopt(wachtwoord, a.hash))) throw AppError.validation("Dat wachtwoord klopt niet.");
 }
 
 export async function wijzigProfiel(email: string, input: { naam: string; telefoon: string; nieuwWachtwoord?: string | undefined }): Promise<PubliekAccount> {
