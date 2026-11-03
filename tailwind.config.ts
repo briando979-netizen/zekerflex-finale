@@ -68,11 +68,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Variables set by next/font on <html> (lib/fonts.ts).
+        // Variables set on <html> by .zf-fonts (app/fonts.css, lib/fonts.ts).
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-        // Alleen in de webshop geladen (lib/fonts-shop.ts).
+        // Alleen in de webshop en de websitevoorstellen geladen (.zf-font-serif, lib/fonts-shop.ts).
         serif: ["var(--font-serif)", "Georgia", "Cambria", "serif"],
       },
       borderRadius: {
