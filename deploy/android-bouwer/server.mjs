@@ -45,6 +45,15 @@ async function leesTaak(id) {
 }
 
 async function opruimen() {
+  // de logboeken van gradle groeien per bouw; de caches ruimt gradle zelf op (na 30 dagen ongebruikt)
+  const daemon = path.join(process.env.GRADLE_USER_HOME || "/opt/gradle", "daemon");
+  for (const versie of await fs.readdir(daemon).catch(() => [])) {
+    for (const naam of await fs.readdir(path.join(daemon, versie)).catch(() => [])) {
+      const p = path.join(daemon, versie, naam);
+      const st = await fs.stat(p).catch(() => null);
+      if (st?.isFile() && naam.endsWith(".log") && Date.now() - st.mtimeMs > 2 * 86_400_000) await fs.rm(p, { force: true });
+    }
+  }
   const map = path.join(WERK, "bouw");
   for (const naam of await fs.readdir(map).catch(() => [])) {
     const t = await leesTaak(naam);
