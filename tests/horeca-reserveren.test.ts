@@ -12,6 +12,8 @@ describe("horeca-reserveren", () => {
     expect(leesInstellingen({ slotMinuten: 45, maxGroep: 500, verblijfMinuten: 90 })).toEqual({ ...STANDAARD_RESERVEREN, verblijfMinuten: 90 });
     expect(capaciteit({ ...STANDAARD_RESERVEREN, maxGasten: 0 }, 36)).toBe(36);
     expect(capaciteit({ ...STANDAARD_RESERVEREN, maxGasten: 20 }, 36)).toBe(20);
+    // nieuwe zaak zonder tafels: niet 1 (dan kan niemand met 2 reserveren), maar de standaard
+    expect(capaciteit({ ...STANDAARD_RESERVEREN, maxGasten: 0 }, 0)).toBe(40);
   });
 
   it("tijden: verblijf eindigt vóór sluiting, dicht = geen tijden, ook na middernacht", () => {

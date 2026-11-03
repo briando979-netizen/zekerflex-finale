@@ -38,8 +38,11 @@ export function leesInstellingen(json: unknown): ReserveerInstellingen {
   };
 }
 
-/** De capaciteit: ingesteld, of anders de plaatsen van de actieve tafels (minimaal 1). */
-export const capaciteit = (inst: ReserveerInstellingen, tafelPlaatsen: number) => Math.max(1, inst.maxGasten || tafelPlaatsen);
+/** Zonder tafels en zonder eigen instelling: zoveel gasten tegelijk (de zaak past het aan). */
+export const STANDAARD_CAPACITEIT = 40;
+
+/** De capaciteit: ingesteld, anders de plaatsen van de actieve tafels, anders de standaard. */
+export const capaciteit = (inst: ReserveerInstellingen, tafelPlaatsen: number) => inst.maxGasten || tafelPlaatsen || STANDAARD_CAPACITEIT;
 
 export const minuten = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 export const klok = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;

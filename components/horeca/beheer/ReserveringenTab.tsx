@@ -254,7 +254,7 @@ function Instellingen({ data, doe }: { data: BeheerData; doe: Doe }) {
       <Veld label="Dagen vooruit">
         <input className="field-input" type="number" min={1} max={365} value={v.dagenVooruit} onChange={zet("dagenVooruit")} required />
       </Veld>
-      <Veld label="Gasten tegelijk" uitleg={`0 = de plaatsen van je tafels (nu ${plaatsen || "geen tafels"}).`}>
+      <Veld label="Gasten tegelijk" uitleg={plaatsen ? `0 = de plaatsen van je tafels (nu ${plaatsen}).` : "0 = 40, of de plaatsen van je tafels zodra je die aanmaakt."}>
         <input className="field-input" type="number" min={0} max={2000} value={v.maxGasten} onChange={zet("maxGasten")} required />
       </Veld>
       <div className="sm:col-span-5">
