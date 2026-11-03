@@ -41,7 +41,8 @@ for i in 1 2 3; do
     # alleen herstarten als die code veranderde, want een herstart breekt lopend werk af.
     if [ -f deploy/bouwer/werker/server.mjs ]; then
       sudo $C up -d bouwer
-      BOUWER_HASH="$(cat deploy/bouwer/werker/*.mjs | sha256sum)"
+      # zonder \r: een archief van een Windows-pc heeft CRLF, de live-zetter LF; dezelfde code
+      BOUWER_HASH="$(cat deploy/bouwer/werker/*.mjs | tr -d '\r' | sha256sum)"
       if [ "$BOUWER_HASH" != "$(cat .zf-bouwer.hash 2>/dev/null)" ]; then
         sudo $C restart bouwer && echo "$BOUWER_HASH" > .zf-bouwer.hash
       fi

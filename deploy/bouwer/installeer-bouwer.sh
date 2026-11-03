@@ -34,7 +34,7 @@ fi
 # van de gewone gebruiker, want vps-update.sh (zonder sudo) schrijft hier ook
 install -d -o "$GEBRUIKER" -g "$GEBRUIKER" .zf-slot
 $C up -d --build bouwer
-cat deploy/bouwer/werker/*.mjs | sha256sum > .zf-bouwer.hash
+cat deploy/bouwer/werker/*.mjs | tr -d '\r' | sha256sum > .zf-bouwer.hash
 chown "$GEBRUIKER:$GEBRUIKER" .zf-bouwer.hash
 if [ "${1:-}" = "--app" ]; then
   $C up -d app
