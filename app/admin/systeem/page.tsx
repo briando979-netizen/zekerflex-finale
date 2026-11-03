@@ -64,7 +64,7 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet, adminPush] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
@@ -76,6 +76,10 @@ export default async function SysteemPage() {
     leesLive().catch(() => null),
     bouwerGezond(),
     bouwerInstellingen().catch(() => null),
+    // devices of platform admins that still take our pushes (owner alerts go there)
+    prisma.webPushSubscription
+      .count({ where: { disabledAt: null, user: { disabledAt: null, memberships: { some: { role: "PLATFORM_ADMIN" } } } } })
+      .catch(() => null),
   ]);
   const now = new Date();
   const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
@@ -101,8 +105,15 @@ export default async function SysteemPage() {
     },
     {
       label: "Web Push (VAPID)",
-      state: channels.webPush ? "ok" : "crit",
-      meta: channels.webPush ? "geconfigureerd" : "niet ingesteld",
+      // configured is not enough: on 3 Nov the admins had no device that accepted our key, for weeks, unnoticed
+      state: !channels.webPush || adminPush === 0 ? "crit" : "ok",
+      meta: !channels.webPush
+        ? "niet ingesteld"
+        : adminPush === null
+          ? "geconfigureerd"
+          : adminPush === 0
+            ? "geen werkend apparaat bij de beheerders: open ZekerFlex op je telefoon of laptop en zet meldingen aan"
+            : `geconfigureerd, ${adminPush} ${adminPush === 1 ? "apparaat" : "apparaten"} van beheerders`,
     },
     {
       label: "Spraakherkenning (Whisper)",
