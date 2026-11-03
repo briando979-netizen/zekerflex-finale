@@ -88,6 +88,7 @@ model Tenant {
   credits              TenantCredit[]
   managedWebsite       ManagedWebsite?
   rijschool            Rijschool?
+  horecaZaak           HorecaZaak?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2458,4 +2459,215 @@ model RijschoolApp {
   logboek            Json      @default("[]") // wat er gebeurde, nieuwste eerst
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Horeca-pakket. Een horecazaak is een gewoon ZekerFlex-bedrijf (Tenant) met de
+// Horeca-module aan: eigen site met menukaart en reserveren op /horeca/<slug>,
+// bestellen en afrekenen aan tafel via een QR-code, keuken- en barscherm en
+// takenlijsten. Losse modules staan per zaak aan of uit (lib/horeca/modules.ts).
+// De eigenaar beheert alles vanuit /werkgever/horeca. Zie lib/horeca.
+// ---------------------------------------------------------------------------
+
+enum HorecaBestellingStatus {
+  NIEUW
+  IN_BEREIDING
+  KLAAR
+  GESERVEERD
+  GEANNULEERD
+}
+
+enum HorecaReserveringStatus {
+  BEVESTIGD
+  AANGEKOMEN
+  NIET_GEKOMEN
+  GEANNULEERD
+}
+
+enum HorecaBetalingStatus {
+  OPEN
+  BETAALD
+  MISLUKT
+}
+
+model HorecaZaak {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug            String   @unique
+  naam            String
+  soort           String   @default("restaurant") // restaurant, cafe, lunchroom, bar, hotel
+  plaats          String   @default("")
+  adres           String   @default("")
+  telefoon        String   @default("")
+  email           String   @default("")
+  kvk             String   @default("")
+  kleur           String   @default("#0A120E")
+  accent          String   @default("#FF5F1F")
+  online          Boolean  @default(false) // site publiek; anders alleen zichtbaar voor de eigenaar
+  // aangezette losse modules (lib/horeca/modules.ts)
+  modules         String[] @default([])
+  // weekdag (0 = zondag) -> { van, tot } in "UU:MM", of null = dicht
+  openingstijden  Json     @default("{}")
+  // reserveren: slotminuten, verblijfsduur, max. groep, dagen vooruit, couverts per slot
+  reserveren      Json     @default("{}")
+  // teksten van de website (kop, intro)
+  website         Json     @default("{}")
+  // Stripe Connect: het geld gaat rechtstreeks naar de zaak, niet via ZekerFlex.
+  stripeAccountId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tafels        HorecaTafel[]
+  categorieen   HorecaCategorie[]
+  items         HorecaItem[]
+  bestellingen  HorecaBestelling[]
+  betalingen    HorecaBetaling[]
+  reserveringen HorecaReservering[]
+  takenlijsten  HorecaTakenlijst[]
+}
+
+model HorecaTafel {
+  id        String     @id @default(cuid())
+  zaakId    String
+  zaak      HorecaZaak @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  naam      String
+  plaatsen  Int        @default(4)
+  zone      String     @default("") // terras, binnen, bar
+  // willekeurige code in de QR-link (/horeca/<slug>/tafel/<code>); nieuwe code = oude QR ongeldig
+  code      String     @unique
+  actief    Boolean    @default(true)
+  volgorde  Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  bestellingen  HorecaBestelling[]
+  reserveringen HorecaReservering[]
+  betalingen    HorecaBetaling[]
+
+  @@index([zaakId])
+}
+
+model HorecaCategorie {
+  id       String       @id @default(cuid())
+  zaakId   String
+  zaak     HorecaZaak   @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  naam     String
+  volgorde Int          @default(0)
+  items    HorecaItem[]
+
+  @@index([zaakId])
+}
+
+model HorecaItem {
+  id           String           @id @default(cuid())
+  zaakId       String
+  zaak         HorecaZaak       @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  categorieId  String?
+  categorie    HorecaCategorie? @relation(fields: [categorieId], references: [id], onDelete: SetNull)
+  naam         String
+  omschrijving String           @default("")
+  prijsCent    Int
+  // de 14 wettelijke allergenen (lib/horeca/allergenen.ts)
+  allergenen   String[]         @default([])
+  vegetarisch  Boolean          @default(false)
+  veganistisch Boolean          @default(false)
+  beschikbaar  Boolean          @default(true) // uitverkocht = false
+  station      String           @default("keuken") // keuken of bar: waar de bestelling heen gaat
+  volgorde     Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([zaakId])
+}
+
+model HorecaBestelling {
+  id         String                 @id @default(cuid())
+  zaakId     String
+  zaak       HorecaZaak             @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  tafelId    String?
+  tafel      HorecaTafel?           @relation(fields: [tafelId], references: [id], onDelete: SetNull)
+  // volgnummer per zaak, voor keuken en gast ("bestelling 42")
+  nummer     Int
+  status     HorecaBestellingStatus @default(NIEUW)
+  // vastgelegd bij het bestellen: [{ itemId, naam, prijsCent, aantal, opmerking, station }]
+  regels     Json
+  totaalCent Int
+  opmerking  String                 @default("")
+  bron       String                 @default("qr") // qr (gast) of bediening
+  naam       String                 @default("")
+  betaald    Boolean                @default(false)
+  betalingId String?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  @@unique([zaakId, nummer])
+  @@index([zaakId, status])
+  @@index([zaakId, createdAt])
+}
+
+model HorecaBetaling {
+  id              String               @id @default(cuid())
+  zaakId          String
+  zaak            HorecaZaak           @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  tafelId         String?
+  tafel           HorecaTafel?         @relation(fields: [tafelId], references: [id], onDelete: SetNull)
+  bedragCent      Int
+  fooiCent        Int                  @default(0)
+  status          HorecaBetalingStatus @default(OPEN)
+  stripeSessionId String?              @unique
+  // welke bestellingen met deze betaling zijn afgerekend
+  bestellingIds   String[]             @default([])
+  createdAt       DateTime             @default(now())
+  betaaldOp       DateTime?
+
+  @@index([zaakId, createdAt])
+}
+
+model HorecaReservering {
+  id        String                  @id @default(cuid())
+  zaakId    String
+  zaak      HorecaZaak              @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  tafelId   String?
+  tafel     HorecaTafel?            @relation(fields: [tafelId], references: [id], onDelete: SetNull)
+  datum     String // JJJJ-MM-DD (Nederlandse dag)
+  tijd      String // UU:MM
+  personen  Int
+  naam      String
+  email     String
+  telefoon  String
+  opmerking String                  @default("")
+  status    HorecaReserveringStatus @default(BEVESTIGD)
+  bron      String                  @default("online") // online of bediening
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@index([zaakId, datum])
+}
+
+model HorecaTakenlijst {
+  id          String            @id @default(cuid())
+  zaakId      String
+  zaak        HorecaZaak        @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  naam        String
+  moment      String            @default("dagelijks") // opening, sluiting, dagelijks, wekelijks
+  // [{ tekst, meten }]: meten = true vraagt een waarde (bv. temperatuur)
+  taken       Json              @default("[]")
+  volgorde    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  afvinkingen HorecaAfvinking[]
+
+  @@index([zaakId])
+}
+
+model HorecaAfvinking {
+  id      String           @id @default(cuid())
+  lijstId String
+  lijst   HorecaTakenlijst @relation(fields: [lijstId], references: [id], onDelete: Cascade)
+  datum   String // JJJJ-MM-DD
+  taak    Int // plek in de lijst
+  door    String
+  waarde  String           @default("") // bv. "4,5 °C"
+  op      DateTime         @default(now())
+
+  @@unique([lijstId, datum, taak])
 }

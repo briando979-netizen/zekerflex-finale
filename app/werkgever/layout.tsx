@@ -15,7 +15,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, rijschool] = await Promise.all([
+  const [tenant, rating, avatars, birthday, rijschool, horecaZaak] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
@@ -67,10 +67,13 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     birthdayToday(principal.userId).catch(() => false),
     // los en foutbestendig: een ontbrekende tabel (migratie nog niet gedraaid) mag het menu niet breken
     tenantId ? prisma.rijschool.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null) : Promise.resolve(null),
+    tenantId ? prisma.horecaZaak.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null) : Promise.resolve(null),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
   // het rijschool-pakket staat alleen in het menu als het aan staat (aanzetten via Website-beheer)
   if (rijschool) nav.splice(1, 0, { href: "/werkgever/rijschool", label: "Rijschool", icon: <ICar /> });
+  // net zo het horeca-pakket (aanzetten via Website-beheer of /werkgever/horeca)
+  if (horecaZaak) nav.splice(1, 0, { href: "/werkgever/horeca", label: "Horeca", icon: <IList /> });
 
   return (
     <I18nProvider locale={locale} t={clientDict(locale)}>
