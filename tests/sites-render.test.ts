@@ -162,6 +162,16 @@ describe("luxe stijl, logo, WhatsApp en sociale media", () => {
     expect(siteCss({ ...base, stijl: "luxe", lettertype: "modern" })).not.toContain("Palatino");
   });
 
+  it("tekst met foto zonder foto krijgt de leesbreedte, geen halve rij", () => {
+    const s = site();
+    const html = renderPage(s, s.pages[0]!, opts);
+    expect(html).toContain('<div class="wrap narrow"><h2>Over Bakkerij');
+    expect(html).not.toContain('<div class="wrap split"><div><h2>Over Bakkerij');
+    const hero = s.pages[0]!.blocks.find((b) => b.type === "tekstFoto")!;
+    if (hero.type === "tekstFoto") hero.props.foto = "mfoto0001";
+    expect(renderPage(s, s.pages[0]!, opts)).toContain('<div class="wrap split"><div><h2>Over Bakkerij');
+  });
+
   it("toont een eigen foto als logo, en anders de naam", () => {
     const s = site({ theme: { ...site().theme, logo: "mfoto0001" } });
     const html = renderPage(s, s.pages[0]!, opts);

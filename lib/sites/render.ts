@@ -208,7 +208,9 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
     case "tekstFoto": {
       const p = b.props;
       const pic = img(ctx, p.foto, "(min-width: 860px) 50vw, 100vw");
-      return `<section${alt}><div class="wrap split${p.fotoLinks ? " flip" : ""}"><div><h2>${esc(p.kop)}</h2>${paras(p.tekst)}</div>${pic ? `<div>${pic}</div>` : ""}</div></section>`;
+      // no photo (yet): the text gets the reading width, not half a row next to an empty column
+      if (!pic) return `<section${alt}><div class="wrap narrow"><h2>${esc(p.kop)}</h2>${paras(p.tekst)}</div></section>`;
+      return `<section${alt}><div class="wrap split${p.fotoLinks ? " flip" : ""}"><div><h2>${esc(p.kop)}</h2>${paras(p.tekst)}</div><div>${pic}</div></div></section>`;
     }
     case "diensten":
       return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items.map((it) => `<div class="card"><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</div>`).join("")}</div></div></section>`;
