@@ -90,7 +90,7 @@ export default async function AccountPage() {
           href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex-app",
           external: true,
         },
-        { label: t.favorites, href: "/dashboard/klussen" },
+        { label: t.favorites, href: "/dashboard/favorieten" },
         { label: t.hidden, href: "/dashboard/account/verborgen" },
       ],
     },

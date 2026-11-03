@@ -29,6 +29,8 @@ import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { isFollowing } from "@/lib/worker/follows";
+import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +56,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
   const cat = shiftCategory(s.title, s.skill);
 
-  const [offers, orgReviews, orgExtra, otherShifts, fiscal] = await Promise.all([
+  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient] = await Promise.all([
     listCounterOffers(500),
     reviewSummary("company", s.clientTenantId),
     getOrgProfileExtra(s.clientTenantId),
@@ -79,6 +81,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       take: 6,
     }),
     getFiscal(principal.userId),
+    isFollowing(principal.userId, s.clientTenantId),
   ]);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
   const reactionCount = offers.filter((o) => o.shiftId === s.id && o.status === "pending").length;
@@ -570,7 +573,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {/* Over de opdrachtgever */}
         <section className="mt-8 border-t border-hair pt-5">
-          <h2 className="font-display text-base font-bold text-ink">{D.about(s.branch)}</h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-display text-base font-bold text-ink">{D.about(s.branch)}</h2>
+            <FollowEmployerButton tenantId={s.clientTenantId} name={s.clientName || s.branch} initialFollowing={followsClient} />
+          </div>
           {orgReviews.count > 0 && (
             <p className="mt-1.5 flex items-center gap-2 text-sm">
               <span className="text-amber-500">

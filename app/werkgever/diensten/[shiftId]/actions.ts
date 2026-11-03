@@ -12,6 +12,7 @@ import { applyToShift } from "@/lib/matching/apply";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
@@ -220,6 +221,8 @@ export async function publishShiftAction(shiftId: string): Promise<OfferResponse
     } catch {
       /* non-fatal — the shift is public either way; matching retries on the next tick */
     }
+    // Now public: workers who follow this employer get a push.
+    await notifyFollowersOfShifts([shift.id]).catch(() => undefined);
 
     revalidatePath(`/werkgever/diensten/${shift.id}`);
     revalidatePath("/werkgever/diensten");

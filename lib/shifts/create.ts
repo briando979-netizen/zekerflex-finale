@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
 
@@ -219,6 +220,13 @@ export async function createShift(
         error: (err as Error).message,
       });
     }
+  }
+
+  // Volgers van dit bedrijf krijgen een seintje (alleen bij een openbare dienst).
+  if (!pool) {
+    await notifyFollowersOfShifts(created.map((c) => c.id)).catch((err) =>
+      logger.warn("follower notify after shift create failed (non-fatal)", { shiftId: shift.id, error: (err as Error).message }),
+    );
   }
 
   return { shiftId: shift.id, matchedCandidates, daysCreated: created.length };

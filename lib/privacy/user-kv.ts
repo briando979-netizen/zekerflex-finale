@@ -37,6 +37,7 @@ export const ERASABLE_KV_PREFIXES = [
   "ritten:",
   "ritten-eigen:",
   "user-birthday:",
+  "volgt:",
   "wa-chat:",
   "wa-contacts:",
   "wa-msgs:",
