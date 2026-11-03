@@ -29,6 +29,14 @@ export interface CityHandle {
 }
 
 type Place = { door?: Pt; road: RoadPt };
+interface Trip {
+  mover: Mover;
+  g: THREE.Object3D;
+  ev: CityEvent;
+  from: Place;
+  back: boolean;
+  wait: number;
+}
 
 const SPEED_CAR = 9;
 const SPEED_BIKE = 3.6;
@@ -36,6 +44,23 @@ const SPEED_WALK = 3.2;
 const MAX_TRIPS = 8;
 
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+
+/** Rijdt er vlak voor deze auto iemand in dezelfde richting op dezelfde rijstrook? Dan even wachten. */
+function tooClose(m: Mover, all: Mover[]): boolean {
+  const p = m.obj.position;
+  const hx = Math.sin(m.obj.rotation.y);
+  const hz = Math.cos(m.obj.rotation.y);
+  for (const o of all) {
+    if (o === m || o.done) continue;
+    const dx = o.obj.position.x - p.x;
+    const dz = o.obj.position.z - p.z;
+    const ahead = dx * hx + dz * hz;
+    if (ahead <= 0.05 || ahead > 3.6) continue;
+    if (Math.abs(dx * hz - dz * hx) > 0.9) continue;
+    if (Math.sin(o.obj.rotation.y) * hx + Math.cos(o.obj.rotation.y) * hz > 0.5) return true;
+  }
+  return false;
+}
 const sevColor = (s: string) => (s === "critical" ? 0xdc2626 : s === "warning" ? 0xf59e0b : 0x334155);
 
 export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts: { reduced: boolean; onPick: (p: Pick | null) => void; onTourEnd: () => void }): CityHandle {
@@ -105,8 +130,10 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   let sigDock = "";
 
   const layers = () => [world.layer, office.layer, companies.layer, houses.layer, dock];
+  // voertuigen met een echte gebeurtenis; aanklikbaar, dan toont het paneel die gebeurtenis
+  const trips: Trip[] = [];
   let pickables: THREE.Object3D[] = [];
-  const refreshPickables = () => (pickables = layers().flatMap((l) => l.pickables));
+  const refreshPickables = () => (pickables = [...layers().flatMap((l) => l.pickables), ...trips.map((t) => t.g)]);
   refreshPickables();
 
   // --- naamkaartjes -------------------------------------------------------
@@ -186,6 +213,9 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   let touring = false;
   let tourStep = 0;
   let nextTourAt = 0;
+  // gekozen voertuig: de ring rijdt mee; de camera alleen tot je zelf draait of schuift
+  let follow: THREE.Object3D | null = null;
+  let followCam = false;
   const stopTour = () => {
     if (!touring) return;
     touring = false;
@@ -194,6 +224,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   controls.addEventListener("start", () => {
     controls.autoRotate = false;
     fly = null;
+    followCam = false;
     stopTour();
   });
 
@@ -221,16 +252,19 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       }
     }
   };
-  const flyTo = (to: View | { company: string }) => {
-    const v = viewFor(to);
+  const flyToPoints = (pos: THREE.Vector3, target: THREE.Vector3) => {
     controls.autoRotate = false;
     if (reduced) {
-      camera.position.copy(v.pos);
-      controls.target.copy(v.target);
+      camera.position.copy(pos);
+      controls.target.copy(target);
       controls.update();
       return;
     }
-    fly = { p0: camera.position.clone(), p1: v.pos, t0: controls.target.clone(), t1: v.target, start: performance.now(), dur: 1700 };
+    fly = { p0: camera.position.clone(), p1: pos, t0: controls.target.clone(), t1: target, start: performance.now(), dur: 1700 };
+  };
+  const flyTo = (to: View | { company: string }) => {
+    const v = viewFor(to);
+    flyToPoints(v.pos, v.target);
   };
 
   // --- selectie: ring op de grond onder wat gekozen is ---------------------
@@ -241,8 +275,23 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   scene.add(ring);
   const select = (p: Pick | null) => {
     selectedKey = "";
+    follow = null;
+    followCam = false;
     ring.visible = Boolean(p);
     if (!p) return refreshLabels();
+    if (p.kind === "event") {
+      // het voertuig van deze gebeurtenis, als het nog rijdt: erheen vliegen en meekijken
+      const t = trips.find((x) => x.ev.id === p.id);
+      ring.visible = Boolean(t);
+      if (t) {
+        follow = t.g;
+        followCam = true;
+        ring.scale.setScalar(2.6);
+        const at = t.g.position;
+        flyToPoints(new THREE.Vector3(at.x + 8, 28, at.z + 22), new THREE.Vector3(at.x, 0, at.z));
+      }
+      return refreshLabels();
+    }
     let x = 0;
     let z = 0;
     let r = 8;
@@ -334,7 +383,6 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
 
   // --- echte gebeurtenissen: voertuig → hoofdkantoor → robot naar de afdeling
   const queue: CityEvent[] = [];
-  const trips: { mover: Mover; g: THREE.Object3D; ev: CityEvent; from: Place; back: boolean; wait: number }[] = [];
   const couriers: { mover: Mover; g: THREE.Object3D }[] = [];
   let nextSpawn = 0;
   const spawnTrip = (now: number) => {
@@ -345,9 +393,11 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
     const t = trafficFor(ev, companyIds);
     const from = placeOf(t.from);
     const { g } = vehicle(kit, t.kind, shadow, { severity: ev.severity });
+    g.userData.pick = { kind: "event", id: ev.id } satisfies Pick;
     const mover = new Mover(g, laneOffset(tripCenter(from, LANDMARKS.hq), LANE_CAR), SPEED_CAR, ROAD_TOP);
     scene.add(g);
     trips.push({ mover, g, ev, from, back: false, wait: 0 });
+    refreshPickables();
   };
   const spawnCourier = (ev: CityEvent) => {
     if (couriers.length >= 6) return;
@@ -557,6 +607,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
     }
 
     spawnTrip(now);
+    const cars = [...trips.map((t) => t.mover), ...ambient.map((a) => a.mover)];
     for (let i = trips.length - 1; i >= 0; i--) {
       const t = trips[i];
       if (!t) continue;
@@ -564,7 +615,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
         t.wait -= dt;
         continue;
       }
-      if (!t.mover.step(dt)) continue;
+      if (tooClose(t.mover, cars) || !t.mover.step(dt)) continue;
       if (!t.back) {
         // aangekomen bij het hoofdkantoor: de robot neemt het pakketje over
         spawnCourier(t.ev);
@@ -574,6 +625,25 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       } else {
         t.g.removeFromParent();
         trips.splice(i, 1);
+        refreshPickables();
+      }
+    }
+    // een gekozen voertuig: de ring rijdt mee en de camera schuift mee
+    if (follow) {
+      if (!follow.parent) {
+        follow = null;
+        ring.visible = false;
+      } else {
+        ring.position.set(follow.position.x, ROAD_TOP + 0.05, follow.position.z);
+        if (followCam && !fly) {
+          const k = Math.min(1, dt * 3);
+          const dx = (follow.position.x - controls.target.x) * k;
+          const dz = (follow.position.z - controls.target.z) * k;
+          controls.target.x += dx;
+          controls.target.z += dz;
+          camera.position.x += dx;
+          camera.position.z += dz;
+        }
       }
     }
     for (let i = couriers.length - 1; i >= 0; i--) {
@@ -586,7 +656,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
     }
     for (let i = ambient.length - 1; i >= 0; i--) {
       const a = ambient[i];
-      if (!a || !a.mover.step(dt)) continue;
+      if (!a || tooClose(a.mover, cars) || !a.mover.step(dt)) continue;
       if (ambient.length > ambientWanted()) {
         a.g.removeFromParent();
         ambient.splice(i, 1);

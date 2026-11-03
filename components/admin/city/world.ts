@@ -12,7 +12,7 @@ import { robot, vehicle } from "@/components/admin/city/vehicles";
 // gebouwd worden als de echte cijfers veranderen. Hoogtes: gras op 0, wegen
 // tot ROAD_TOP, stoepen en bouwgrond tot SLAB.
 
-export type Pick = { kind: "room"; id: RoomId } | { kind: "landmark"; id: LandmarkId } | { kind: "woonwijk" } | { kind: "bedrijventerrein" } | { kind: "company"; id: string } | { kind: "kavel" };
+export type Pick = { kind: "room"; id: RoomId } | { kind: "landmark"; id: LandmarkId } | { kind: "woonwijk" } | { kind: "bedrijventerrein" } | { kind: "company"; id: string } | { kind: "kavel" } | { kind: "event"; id: string };
 
 /** Materiaal dat met het dagdeel meegloeit (ramen, lantaarns, schermen). */
 export interface Glow {

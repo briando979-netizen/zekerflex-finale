@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
+import { dayPhase, type Origin, sunAt, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
 import { count, euro } from "@/lib/admin/format";
+import { amsterdamClock } from "@/lib/time/amsterdam";
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
 import type { CityHandle, View } from "@/components/admin/city/scene";
 import type { Pick } from "@/components/admin/city/world";
@@ -46,24 +48,47 @@ const LEGEND: [string, string][] = [
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
 const pickFor = (v: View): Pick | null => (v === "stad" ? null : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
 
-function EventList({ list, showRoom }: { list: CityEvent[]; showRoom: boolean }) {
+const ORIGIN_NL: Record<string, string> = {
+  bank: "ZekerFlex Bank",
+  datacenter: "Datacenter",
+  magazijn: "Webshop-magazijn",
+  opleiding: "Opleidingscentrum",
+  woonwijk: "Woonwijk",
+  oost: "Afrit oost (van buiten de stad)",
+  west: "Afrit west (van buiten de stad)",
+};
+const KIND_NL: Record<VehicleKind, string> = { bus: "Bus", bestelbus: "Bestelbus", geldwagen: "Geldwagen", postauto: "Postauto", auto: "Auto", stroomauto: "Stroomauto" };
+/** Wie het deed, in gewone woorden ("system:invoice-reminders" → "systeem (invoice-reminders)"). */
+const actorNl = (by: string) => {
+  const i = by.indexOf(":");
+  const kind = i < 0 ? by : by.slice(0, i);
+  const rest = i < 0 ? "" : by.slice(i + 1);
+  const word = kind === "system" ? "systeem" : kind === "user" ? "gebruiker" : kind === "integration" ? "koppeling" : null;
+  if (!word) return by;
+  return rest ? `${word} (${rest})` : word;
+};
+
+function EventList({ list, showRoom, onPick }: { list: CityEvent[]; showRoom: boolean; onPick: (id: string) => void }) {
   if (list.length === 0) return <Empty title="Hier gebeurde nog niets" body="De laatste 24 uur." />;
   return (
-    <ul className="max-h-[44vh] space-y-2 overflow-y-auto pr-1">
+    <ul className="max-h-[44vh] space-y-1 overflow-y-auto pr-1">
       {list.slice(0, 30).map((e) => (
         <li key={e.id} className="text-[0.8125rem]">
-          <div className="flex items-center gap-2">
-            <Pill tone={e.severity === "critical" ? "crit" : e.severity === "warning" ? "warn" : "neutral"}>{timeNl(e.at)}</Pill>
-            {showRoom && (
-              <span className="truncate text-xs" style={{ color: "var(--a-mute)" }}>
-                {roomOf(e.room).name}
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5" style={{ color: "var(--a-text)" }}>
-            {e.summary}
-          </p>
+          <button type="button" onClick={() => onPick(e.id)} className="w-full rounded-lg px-1.5 py-1 text-left transition hover:bg-[var(--a-elev)]">
+            <span className="flex items-center gap-2">
+              <Pill tone={toneOf(e.severity)}>{timeNl(e.at)}</Pill>
+              {showRoom && (
+                <span className="truncate text-xs" style={{ color: "var(--a-mute)" }}>
+                  {roomOf(e.room).name}
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block" style={{ color: "var(--a-text)" }}>
+              {e.summary}
+            </span>
+          </button>
         </li>
       ))}
     </ul>
@@ -96,6 +121,19 @@ export function Office3D() {
   const [selected, setSelected] = useState<Pick | null>(null);
   const [touring, setTouring] = useState(false);
   const [legend, setLegend] = useState(false);
+  const [clock, setClock] = useState("");
+
+  // Klokje in beeld: de tijd en het dagdeel in Amsterdam, zoals de stad ze toont.
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const phase = dayPhase(sunAt(now).elevation);
+      setClock(`${amsterdamClock(now)} · ${phase === "dag" ? "dag" : phase === "schemer" ? "schemering" : "nacht"} in Amsterdam`);
+    };
+    tick();
+    const t = setInterval(tick, 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Echte gebeurtenissen: elke 10 seconden ophalen; nieuwe gaan als voertuig de wachtrij in.
   useEffect(() => {
@@ -197,17 +235,19 @@ export function Office3D() {
     city.current?.fly({ company: id });
     choose({ kind: "company", id });
   };
+  const pickEvent = (id: string) => choose({ kind: "event", id });
+  const originNl = (from: Origin) => (from.startsWith("bedrijf:") ? (data?.companies.find((c) => `bedrijf:${c.id}` === from)?.name ?? "Klantpand") : (ORIGIN_NL[from] ?? from));
 
   const byRooms = (...rooms: string[]) => events.filter((e) => rooms.includes(e.room));
   let title = "Laatste gebeurtenissen";
   let subtitle = "Echte gebeurtenissen; elk voertuig brengt er één naar het hoofdkantoor";
-  let body: ReactNode = <EventList list={events} showRoom />;
+  let body: ReactNode = <EventList list={events} showRoom onPick={pickEvent} />;
 
   if (selected?.kind === "room") {
     const room = roomOf(selected.id);
     title = room.name;
     subtitle = `${counts[room.id] ?? 0} in de laatste 24 uur`;
-    body = <EventList list={events.filter((e) => roomOf(e.room).id === room.id)} showRoom={false} />;
+    body = <EventList list={events.filter((e) => roomOf(e.room).id === room.id)} showRoom={false} onPick={pickEvent} />;
   } else if (selected?.kind === "landmark") {
     const id = selected.id;
     if (id === "hq") {
@@ -222,7 +262,7 @@ export function Office3D() {
             ]}
           />
           <Note>Elk voertuig dat hier stopt, geeft zijn gebeurtenis aan een robot. Die loopt ermee naar de afdeling die hem afhandelde. Nieuwe leads komen als auto binnen via de afrit in het westen.</Note>
-          <EventList list={events} showRoom />
+          <EventList list={events} showRoom onPick={pickEvent} />
         </>
       );
     } else if (id === "bank") {
@@ -237,7 +277,7 @@ export function Office3D() {
             ]}
           />
           <Note>De gouden munt op het dak gloeit feller naarmate er vandaag meer betaald is. Geldwagens rijden voor elke factuur- of bankgebeurtenis.</Note>
-          <EventList list={byRooms("bank", "finance")} showRoom={false} />
+          <EventList list={byRooms("bank", "finance")} showRoom={false} onPick={pickEvent} />
           <More href="/admin/facturen">Naar facturen</More>
         </>
       );
@@ -248,7 +288,7 @@ export function Office3D() {
         <>
           <InfoList rows={[{ label: "AI-verzoeken vandaag", value: data ? count(data.ai.callsToday) : "—" }]} />
           <Note>De serverlampjes knipperen en de koelers draaien sneller bij meer AI-verzoeken.</Note>
-          <EventList list={byRooms("ai")} showRoom={false} />
+          <EventList list={byRooms("ai")} showRoom={false} onPick={pickEvent} />
         </>
       );
     } else if (id === "magazijn") {
@@ -263,7 +303,7 @@ export function Office3D() {
             ]}
           />
           <Note>Bij het laadperron staat een busje per bestelling die nog weg moet (tot drie), en een doos per bestelling van vandaag.</Note>
-          <EventList list={byRooms("shop")} showRoom={false} />
+          <EventList list={byRooms("shop")} showRoom={false} onPick={pickEvent} />
           <More href="/admin/shop">Naar de webshop</More>
         </>
       );
@@ -278,7 +318,7 @@ export function Office3D() {
               { label: "Wachten op controle", value: data ? count(data.certificates.pending) : "—" },
             ]}
           />
-          <EventList list={events.filter((e) => e.action.startsWith("certificate"))} showRoom={false} />
+          <EventList list={events.filter((e) => e.action.startsWith("certificate"))} showRoom={false} onPick={pickEvent} />
         </>
       );
     } else {
@@ -335,6 +375,30 @@ export function Office3D() {
         )}
       </>
     );
+  } else if (selected?.kind === "event") {
+    const e = events.find((x) => x.id === selected.id);
+    title = "Gebeurtenis";
+    subtitle = e ? `${timeNl(e.at)} · ${roomOf(e.room).name}` : "Niet meer in de lijst";
+    if (e) {
+      const t = trafficFor(e, new Set(data?.companies.map((c) => c.id) ?? []));
+      body = (
+        <>
+          <p className="mb-3 text-[0.875rem]" style={{ color: "var(--a-text)" }}>
+            {e.summary}
+          </p>
+          <InfoList
+            rows={[
+              { label: "Afdeling", value: roomOf(e.room).name },
+              { label: "Ernst", value: <Pill tone={toneOf(e.severity)}>{e.severity === "critical" ? "kritiek" : e.severity === "warning" ? "waarschuwing" : "gewoon"}</Pill> },
+              { label: "Door", value: actorNl(e.by) },
+              { label: "Vertrekt uit", value: originNl(t.from) },
+              { label: "Voertuig", value: KIND_NL[t.kind] },
+            ]}
+          />
+          <Note>Rijdt het voertuig nog, dan rijdt de blauwe ring mee en volgt de camera het, tot je zelf draait of schuift.</Note>
+        </>
+      );
+    } else body = <Empty title="Deze gebeurtenis staat niet meer in de lijst" body="De lijst toont de laatste 40 gebeurtenissen van de laatste 24 uur." />;
   } else if (selected?.kind === "company") {
     const c = data?.companies.find((x) => x.id === selected.id);
     title = c?.name ?? "Klant";
@@ -349,7 +413,7 @@ export function Office3D() {
             { label: "Nu aan het werk", value: `${count(c.workingNow)} (fietsen in het rek)` },
           ]}
         />
-        <EventList list={events.filter((e) => e.tenantId === c.id)} showRoom />
+        <EventList list={events.filter((e) => e.tenantId === c.id)} showRoom onPick={pickEvent} />
         <More href={`/admin/bedrijven/${c.id}`}>Naar dit bedrijf</More>
       </>
     ) : (
@@ -411,8 +475,13 @@ export function Office3D() {
             </button>
           </div>
           <p className="pointer-events-none absolute bottom-3 right-3 hidden rounded-full px-3 py-1 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
-            Sleep om te draaien · scroll om te zoomen · klik een gebouw
+            Sleep om te draaien · scroll om te zoomen · klik een gebouw of voertuig
           </p>
+          {clock && (
+            <p className="pointer-events-none absolute right-3 top-3 rounded-full px-3 py-1 text-[11px] font-medium shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
+              {clock}
+            </p>
+          )}
         </div>
         <Panel title={title} subtitle={subtitle} {...(selected ? { actions: <button type="button" className="a-button text-xs" onClick={() => choose(null)}>Alles</button> } : {})}>
           {body}
