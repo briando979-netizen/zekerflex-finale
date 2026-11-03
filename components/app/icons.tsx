@@ -175,6 +175,13 @@ export function IHeart(_: P) {
     </svg>
   );
 }
+export function IStar(_: P) {
+  return (
+    <svg {...s}>
+      <path d="m12 3.5 2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9L12 3.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
 export function IBan(_: P) {
   return (
     <svg {...s}>

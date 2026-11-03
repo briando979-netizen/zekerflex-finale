@@ -15,7 +15,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +53,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid />, section: t.nav.beheer },
     { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe />, section: t.nav.beheer },
     { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone />, section: t.nav.beheer },
+    { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar />, section: t.nav.beheer },
   ];
 
   const scope = await resolveEmployerScope(principal);

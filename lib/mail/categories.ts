@@ -25,7 +25,7 @@ export const OPTIONAL_CATEGORIES: MailCategory[] = [
   {
     slug: "reviews",
     label: "Review-verzoeken",
-    desc: "Een vraag om een beoordeling achter te laten na een afgeronde dienst.",
+    desc: "Een vraag om een beoordeling achter te laten: na een afgeronde dienst, of namens een bedrijf waar je klant bent.",
   },
   {
     slug: "updates",
@@ -57,6 +57,7 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   herinnering: "herinneringen",
   "review-verzoek": "reviews",
   "review-request": "reviews",
+  "google-review-verzoek": "reviews",
   "product-update": "updates",
   update: "updates",
   tip: "tips",
@@ -121,6 +122,10 @@ const REPLIABLE_KINDS = new Set([
   "admin-bericht",
   // Mail namens een rijschool aan haar leerlingen: antwoorden gaan naar de rijschool (lib/rijschool/mail.ts).
   "rijschool",
+  // Google-reviews verzamelen (lib/review-requests/store.ts): een antwoord op het verzoek gaat naar het
+  // bedrijf, een antwoord op de feedbackmail naar de klant die de feedback gaf.
+  "google-review-verzoek",
+  "review-feedback",
 ]);
 
 export function isAutomatedKind(kind?: string): boolean {
