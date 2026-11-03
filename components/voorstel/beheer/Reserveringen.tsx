@@ -230,19 +230,19 @@ export function Reserveringen({
     <div>
       <div className="flex flex-wrap items-center gap-2">
         <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op naam, e-mail, nummer of begeleider" aria-label="Zoeken" className={`${VELD} max-w-xs`} />
-        <select value={activiteit} onChange={(e) => setActiviteit(e.target.value)} aria-label="Activiteit" className={`${VELD_BASIS} w-auto`}>
+        <select value={activiteit} onChange={(e) => setActiviteit(e.target.value)} aria-label="Filter op activiteit" className={`${VELD_BASIS} w-auto`}>
           <option value="">Alle activiteiten</option>
           {Object.entries(namen).map(([slug, naam]) => (
             <option key={slug} value={slug}>{naam}</option>
           ))}
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as "" | Status)} aria-label="Status" className={`${VELD_BASIS} w-auto`}>
+        <select value={status} onChange={(e) => setStatus(e.target.value as "" | Status)} aria-label="Filter op status" className={`${VELD_BASIS} w-auto`}>
           <option value="">Alle statussen</option>
           <option value="nieuw">Nieuw</option>
           <option value="bevestigd">Bevestigd</option>
           <option value="geannuleerd">Geannuleerd</option>
         </select>
-        <select value={beg} onChange={(e) => setBeg(e.target.value as BegeleiderFilter)} aria-label="Begeleider" className={`${VELD_BASIS} w-auto`}>
+        <select value={beg} onChange={(e) => setBeg(e.target.value as BegeleiderFilter)} aria-label="Filter op begeleider" className={`${VELD_BASIS} w-auto`}>
           <option value="">Alle begeleiders</option>
           <option value="zonder-begeleider">Zonder begeleider</option>
           <option value="dubbel">Dubbel ingepland</option>
