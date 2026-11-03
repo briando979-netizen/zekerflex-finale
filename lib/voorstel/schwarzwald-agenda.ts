@@ -170,6 +170,26 @@ export function groepFout(slug: string, personen: number, cfg: AgendaConfig = ST
   return null;
 }
 
+/**
+ * Waarom een gast zijn eigen reservering niet zo kan wijzigen (andere dag,
+ * tijd en/of aantal), of null als het kan. `bezet` = de andere boekingen op
+ * de nieuwe dag, zonder deze boeking zelf.
+ */
+export function wijzigFout(
+  b: { activiteit: string; datum: string; tijd: string; personen: number; status: string },
+  naar: { datum: string; tijd: string; personen: number },
+  vandaag: string,
+  bezet: BezetteTijd[],
+  cfg: AgendaConfig = STANDAARD,
+): string | null {
+  if (b.status === "geannuleerd") return "Deze reservering is geannuleerd.";
+  if (b.datum <= vandaag) return "Wijzigen kan tot de dag ervoor. Bel ons voor vandaag.";
+  if (!isDatum(naar.datum) || !isTijd(naar.tijd)) return "Kies een geldige datum en tijd.";
+  if (naar.datum === b.datum && naar.tijd === b.tijd && naar.personen === b.personen) return "Er is niets gewijzigd.";
+  if (!inVenster(naar.datum, vandaag)) return "Deze datum is niet (meer) te boeken.";
+  return groepFout(b.activiteit, naar.personen, cfg) ?? slotFout(b.activiteit, naar.datum, naar.tijd, naar.personen, bezet, cfg);
+}
+
 /** Waarom deze activiteit niet op die dag en dat tijdstip kan (boeken of verzetten), of null als het kan. */
 export function slotFout(slug: string, datum: string, tijd: string, personen: number, bezet: BezetteTijd[], cfg: AgendaConfig = STANDAARD): string | null {
   if (!openOp(datum, personen, cfg)) return "Op deze dag zijn we gesloten. Op maandag en dinsdag alleen voor groepen vanaf 12 personen.";

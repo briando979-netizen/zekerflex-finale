@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import { kvDelete, kvFindByField, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { groepFout, inVenster, isDatum, isTijd, slotFout, type BezetteTijd } from "@/lib/voorstel/schwarzwald-agenda";
+import { groepFout, inVenster, isDatum, isTijd, slotFout, wijzigFout, type BezetteTijd } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 
 // ---------------------------------------------------------------------------
@@ -36,6 +36,8 @@ export interface Boeking {
   door?: "online" | "beheer";
   /** "JJJJ-MM-DD HH:MM" waarvandaan de gast de boeking zelf verzette */
   verzetVan?: string;
+  /** aantal personen voordat de gast het zelf wijzigde */
+  aantalVan?: number;
 }
 
 const sleutel = (datum: string, id: string) => `${PREFIX}${datum}:${id}`;
@@ -123,27 +125,33 @@ export async function annuleerEigen(datum: string, id: string, email: string): P
 }
 
 /**
- * De klant verzet zijn eigen, toekomstige boeking naar een andere dag of tijd.
- * Zelfde regels als boeken; de boeking zelf telt niet mee voor de bezetting.
- * Het team bevestigt daarna opnieuw (status terug naar nieuw).
+ * De klant wijzigt zijn eigen, toekomstige boeking: andere dag of tijd
+ * (verzetten) en/of een ander aantal personen. Zelfde regels als boeken
+ * (wijzigFout); de boeking zelf telt niet mee voor de bezetting. Het team
+ * bevestigt daarna opnieuw (status terug naar nieuw).
  */
-export async function verzetEigen(datum: string, id: string, email: string, naar: { datum: string; tijd: string }): Promise<{ oud: Boeking; nieuw: Boeking }> {
+export async function wijzigEigen(
+  datum: string,
+  id: string,
+  email: string,
+  w: { datum?: string | undefined; tijd?: string | undefined; personen?: number | undefined },
+): Promise<{ oud: Boeking; nieuw: Boeking }> {
   if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
   const b = await kvGet<Boeking>(sleutel(datum, id));
-  if (!b || b.account !== email.toLowerCase() || b.status === "geannuleerd") throw AppError.notFound("Boeking niet gevonden.");
-  const cfg = await agendaConfig();
-  const vandaag = amsterdamDayKey(new Date());
-  if (b.datum <= vandaag) throw AppError.validation("Verzetten kan tot de dag ervoor. Bel ons voor vandaag.");
-  if (!isDatum(naar.datum) || !isTijd(naar.tijd)) throw AppError.validation("Kies een geldige datum en tijd.");
-  if (naar.datum === b.datum && naar.tijd === b.tijd) throw AppError.validation("Kies een andere dag of tijd.");
-  if (!inVenster(naar.datum, vandaag)) throw AppError.validation("Deze datum is niet (meer) te boeken.");
-  const groep = groepFout(b.activiteit, b.personen, cfg);
-  if (groep) throw AppError.validation(groep);
-  const anderen = (await boekingenOp(naar.datum)).filter((x) => x.id !== b.id);
-  const slot = slotFout(b.activiteit, naar.datum, naar.tijd, b.personen, bezetVan(anderen), cfg);
-  if (slot) throw AppError.validation(slot);
+  if (!b || b.account !== email.toLowerCase()) throw AppError.notFound("Boeking niet gevonden.");
+  const naar = { datum: w.datum ?? b.datum, tijd: w.tijd ?? b.tijd, personen: w.personen ?? b.personen };
+  const anderen = isDatum(naar.datum) ? (await boekingenOp(naar.datum)).filter((x) => x.id !== b.id) : [];
+  const fout = wijzigFout(b, naar, amsterdamDayKey(new Date()), bezetVan(anderen), await agendaConfig());
+  if (fout) throw AppError.validation(fout);
 
-  const nieuw: Boeking = { ...b, datum: naar.datum, tijd: naar.tijd, status: "nieuw", verzetVan: `${b.datum} ${b.tijd}` };
+  const verzet = naar.datum !== b.datum || naar.tijd !== b.tijd;
+  const nieuw: Boeking = {
+    ...b,
+    ...naar,
+    status: "nieuw",
+    ...(verzet ? { verzetVan: `${b.datum} ${b.tijd}` } : {}),
+    ...(naar.personen !== b.personen ? { aantalVan: b.personen } : {}),
+  };
   await kvSet(sleutel(nieuw.datum, nieuw.id), nieuw);
   if (nieuw.datum !== b.datum) await kvDelete(sleutel(b.datum, b.id));
   return { oud: b, nieuw };

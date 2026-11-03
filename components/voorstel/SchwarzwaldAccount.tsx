@@ -396,6 +396,43 @@ function Verzetten({ b, naam, vandaag, verzet, sluit }: { b: MijnBoeking; naam: 
   );
 }
 
+/** Het aantal personen van een eigen reservering aanpassen; de server controleert groepsgrootte en plek. */
+function AantalWijzigen({ b, naam, wijzig, sluit }: { b: MijnBoeking; naam: string; wijzig: (personen: number) => Promise<boolean>; sluit: () => void }) {
+  const [aantal, setAantal] = useState(String(b.personen));
+  const [bezig, setBezig] = useState(false);
+  const n = Number(aantal);
+  const geldig = Number.isInteger(n) && n >= 1 && n !== b.personen;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!geldig) return;
+        setBezig(true);
+        void wijzig(n).then((gelukt) => {
+          setBezig(false);
+          if (gelukt) sluit();
+        });
+      }}
+      className="w-full space-y-3 rounded-xl bg-white p-4"
+    >
+      <label className="block text-sm font-semibold">
+        Met hoeveel personen komen jullie naar {naam}? (nu {b.personen})
+        <input type="number" inputMode="numeric" min={1} max={500} required value={aantal} onChange={(e) => setAantal(e.target.value)} className={`${VELD} max-w-40`} />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" disabled={!geldig || bezig} className="rounded-full bg-schw-night px-5 py-2.5 text-sm font-bold text-schw-cream disabled:opacity-40">
+          {geldig ? `Wijzig naar ${n} personen` : "Kies een ander aantal"}
+        </button>
+        <button type="button" onClick={sluit} className="rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-schw-night/15">
+          Annuleren
+        </button>
+      </div>
+      <p className="text-xs text-schw-mute">We kijken of er plek is op dit tijdstip. Het team bevestigt de wijziging.</p>
+    </form>
+  );
+}
+
 /** Inzage (download) en zelf je account met alle gegevens wissen (AVG). */
 function MijnGegevens({ heeftWachtwoord, gewist }: { heeftWachtwoord: boolean; gewist: () => void }) {
   const [open, setOpen] = useState(false);
@@ -492,7 +529,7 @@ export function SchwarzwaldAccount(props: {
   const [wensen, setWensen] = useState(props.wensen);
   const [bericht, setBericht] = useState("");
   const [gewist, setGewist] = useState(false);
-  const [verzetId, setVerzetId] = useState<string | null>(null);
+  const [bewerk, setBewerk] = useState<{ id: string; wat: "verzetten" | "aantal" } | null>(null);
 
   const komend = useMemo(() => boekingen.filter((b) => b.datum >= vandaag).sort((a, b) => `${a.datum}${a.tijd}`.localeCompare(`${b.datum}${b.tijd}`)), [boekingen, vandaag]);
   const eerder = useMemo(() => boekingen.filter((b) => b.datum < vandaag).sort((a, b) => `${b.datum}${b.tijd}`.localeCompare(`${a.datum}${a.tijd}`)), [boekingen, vandaag]);
@@ -566,10 +603,15 @@ export function SchwarzwaldAccount(props: {
               </a>
             </>
           )}
-          {b.status !== "geannuleerd" && b.datum > vandaag && verzetId !== b.id && (
-            <button type="button" disabled={bezig} onClick={() => setVerzetId(b.id)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
-              Verzetten
-            </button>
+          {b.status !== "geannuleerd" && b.datum > vandaag && bewerk?.id !== b.id && (
+            <>
+              <button type="button" disabled={bezig} onClick={() => setBewerk({ id: b.id, wat: "verzetten" })} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                Verzetten
+              </button>
+              <button type="button" disabled={bezig} onClick={() => setBewerk({ id: b.id, wat: "aantal" })} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                Aantal wijzigen
+              </button>
+            </>
           )}
           {b.status !== "geannuleerd" && b.datum > vandaag && (
             <button
@@ -589,7 +631,7 @@ export function SchwarzwaldAccount(props: {
             </Link>
           )}
         </div>
-        {verzetId === b.id && (
+        {bewerk?.id === b.id && bewerk.wat === "verzetten" && (
           <Verzetten
             b={b}
             naam={namen[b.activiteit] ?? b.activiteit}
@@ -597,7 +639,15 @@ export function SchwarzwaldAccount(props: {
             verzet={(datum, tijd) =>
               actie({ actie: "verzetten", datum: b.datum, id: b.id, naarDatum: datum, naarTijd: tijd }, `Verzet naar ${dagNaam(datum)} om ${tijd}. Het team bevestigt de nieuwe tijd.`)
             }
-            sluit={() => setVerzetId(null)}
+            sluit={() => setBewerk(null)}
+          />
+        )}
+        {bewerk?.id === b.id && bewerk.wat === "aantal" && (
+          <AantalWijzigen
+            b={b}
+            naam={namen[b.activiteit] ?? b.activiteit}
+            wijzig={(personen) => actie({ actie: "aantal", datum: b.datum, id: b.id, personen }, `Aantal aangepast naar ${personen} personen. Het team bevestigt de wijziging.`)}
+            sluit={() => setBewerk(null)}
           />
         )}
         {b.status !== "geannuleerd" && b.datum <= vandaag && (

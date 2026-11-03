@@ -127,7 +127,8 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
                       {b.opmerking && <p>&ldquo;{b.opmerking}&rdquo;</p>}
                       {wensen && <p className="font-semibold">Wensen: {wensen}</p>}
                       {b.verzetVan && <p className="text-schw-mute">Verzet door de gast</p>}
-                      {!b.opmerking && !wensen && !b.verzetVan && <span className="text-schw-mute">–</span>}
+                      {b.aantalVan !== undefined && <p className="text-schw-mute">Aantal gewijzigd, was {b.aantalVan}</p>}
+                      {!b.opmerking && !wensen && !b.verzetVan && b.aantalVan === undefined && <span className="text-schw-mute">–</span>}
                     </td>
                     <td className="py-2.5 pr-3">
                       {STATUS[b.status] ?? b.status}

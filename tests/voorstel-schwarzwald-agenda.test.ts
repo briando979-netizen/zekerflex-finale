@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITEITEN } from "@/lib/voorstel/schwarzwald";
-import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten } from "@/lib/voorstel/schwarzwald-agenda";
+import { AGENDA, STANDAARD_OPEN, boekbaar, dagStatus, groepFout, inVenster, openOp, prijsIndicatie, slotFout, tijdsloten, wijzigFout } from "@/lib/voorstel/schwarzwald-agenda";
 
 // 2026-11-04 = woensdag, 11-07 = zaterdag, 11-08 = zondag, 11-09 = maandag
 describe("Schwarzwald-agenda", () => {
@@ -39,6 +39,22 @@ describe("Schwarzwald-agenda", () => {
     expect(slotFout("buggy-rijden", "2026-11-09", "14:00", 8, [])).toMatch(/gesloten/);
     expect(slotFout("buggy-rijden", "2026-11-04", "11:00", 8, [])).toMatch(/kan deze activiteit niet beginnen/);
     expect(slotFout("f1-sim-race", "2026-11-04", "14:00", 4, [{ activiteit: "f1-sim-race", tijd: "14:00", personen: 8 }])).toMatch(/vol/);
+  });
+
+  it("laat een gast zijn reservering wijzigen binnen dezelfde regels", () => {
+    const b = { activiteit: "f1-sim-race", datum: "2026-11-04", tijd: "14:00", personen: 4, status: "nieuw" };
+    const zo = (w: Partial<{ datum: string; tijd: string; personen: number }>) => ({ datum: b.datum, tijd: b.tijd, personen: b.personen, ...w });
+    expect(wijzigFout(b, zo({ personen: 6 }), "2026-11-02", [])).toBeNull();
+    expect(wijzigFout(b, zo({}), "2026-11-02", [])).toBe("Er is niets gewijzigd.");
+    expect(wijzigFout(b, zo({ personen: 6 }), "2026-11-04", [])).toMatch(/tot de dag ervoor/);
+    expect(wijzigFout({ ...b, status: "geannuleerd" }, zo({ personen: 6 }), "2026-11-02", [])).toMatch(/geannuleerd/);
+    // F1 heeft 10 plekken: met 4 anderen erbij past 8 niet meer, 6 wel
+    const anderen = [{ activiteit: "f1-sim-race", tijd: "14:00", personen: 4 }];
+    expect(wijzigFout(b, zo({ personen: 8 }), "2026-11-02", anderen)).toMatch(/vol/);
+    expect(wijzigFout(b, zo({ personen: 6 }), "2026-11-02", anderen)).toBeNull();
+    // groepsgrenzen en maandag (alleen groepen vanaf 12)
+    expect(wijzigFout(b, zo({ personen: 11 }), "2026-11-02", [])).toMatch(/maximaal/);
+    expect(wijzigFout({ ...b, activiteit: "buggy-rijden", personen: 12, datum: "2026-11-09" }, { datum: "2026-11-09", tijd: "14:00", personen: 8 }, "2026-11-02", [])).toMatch(/gesloten/);
   });
 
   it("geeft een dagstatus binnen het boekbare venster", () => {

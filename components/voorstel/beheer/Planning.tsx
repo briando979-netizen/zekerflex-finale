@@ -212,6 +212,7 @@ export function Planning({
               </p>
               {keuze.opmerking && <p className="mt-2">&ldquo;{keuze.opmerking}&rdquo;</p>}
               {keuze.verzetVan && <p className="mt-2 font-semibold text-schw-orange">{verzetTekst(keuze.verzetVan)}</p>}
+              {keuze.aantalVan !== undefined && <p className="mt-2 font-semibold text-schw-orange">aantal gewijzigd door de gast, was {keuze.aantalVan}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
               {keuze.status !== "bevestigd" && (
