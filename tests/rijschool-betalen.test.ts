@@ -94,3 +94,11 @@ describe("iDEAL-betaling van een rijschool verwerken", () => {
     expect(await verwerkRijschoolSessie(sessie("cs_4", { invoiceId: "x" }))).toBe(false);
   });
 });
+
+describe("testadressen maken nooit een live Stripe-account", () => {
+  it("herkent gereserveerde testadressen", async () => {
+    const { isTestAdres } = await import("@/lib/rijschool/betalen");
+    for (const a of ["pay-e2e-1@example.com", "x@example.net", "x@school.test", "x@a.example", "x@a.invalid", "x@localhost.localhost"]) expect(isTestAdres(a)).toBe(true);
+    for (const a of ["info@rijschooljansen.nl", "testbedrijven@gmail.com", "x@example-rijschool.nl", "x@mijnexample.com"]) expect(isTestAdres(a)).toBe(false);
+  });
+});

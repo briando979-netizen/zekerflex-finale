@@ -48,8 +48,15 @@ export async function stripeStand(r: Pick<Rijschool, "stripeAccountId">, vers = 
 
 export const onlineBetalenAan = async (r: Pick<Rijschool, "stripeAccountId">) => (await stripeStand(r)).klaar;
 
-/** Maakt (eenmalig) het Stripe-account van de rijschool en geeft de link om het in te vullen. */
-export async function koppelStripe(r: Rijschool): Promise<string> {
+/** Gereserveerde testadressen (RFC 2606/6761): daarvoor nooit een echt (live) Stripe-object. */
+export const isTestAdres = (email: string) => /@(?:[^@\s]+\.)*(?:[^@\s.]+\.(?:test|example|invalid|localhost)|example\.(?:com|net|org))$/i.test(email.trim());
+
+/** Maakt (eenmalig) het Stripe-account van de rijschool en geeft de link om het in te vullen. Alleen na een klik van de beheerder. */
+export async function koppelStripe(r: Rijschool, door: { email: string }): Promise<string> {
+  // een test (tijdelijk bedrijf, .test/.example-adressen) maakt nooit een live Stripe-account aan
+  if (isTestAdres(door.email) || (r.email && isTestAdres(r.email))) {
+    throw AppError.precondition("Dit is een testaccount: ZekerFlex maakt hiervoor geen Stripe-account aan.");
+  }
   try {
     return await koppel(r);
   } catch (err) {

@@ -29,9 +29,9 @@ const schema = z.object({ actie: z.enum(["koppelen", "dashboard"]) });
 // { actie: "dashboard" } de link naar het eigen Stripe-dashboard (uitbetalingen).
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const { rijschool } = await eisBeheer();
+    const { p, rijschool } = await eisBeheer();
     const { actie } = lees(schema, await request.json().catch(() => ({})));
-    return NextResponse.json({ url: actie === "koppelen" ? await koppelStripe(rijschool) : await stripeDashboard(rijschool) });
+    return NextResponse.json({ url: actie === "koppelen" ? await koppelStripe(rijschool, { email: p.email }) : await stripeDashboard(rijschool) });
   } catch (err) {
     return fout(err);
   }
