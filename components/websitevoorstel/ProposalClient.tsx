@@ -35,7 +35,7 @@ export function AcceptForm({ id, plans, bedrijf, websitePrijs }: { id: string; p
   const [domein, setDomein] = useState<(typeof DOMEIN)[number]["id"]>("houden");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ plek: number | null; kortingPct: number } | null>(null);
+  const [done, setDone] = useState<{ plek: number | null; kortingPct: number; email: string } | null>(null);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -59,10 +59,13 @@ export function AcceptForm({ id, plans, bedrijf, websitePrijs }: { id: string; p
     const d = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
     if (!res?.ok) return setError(d?.error?.message ?? "Versturen lukte niet. Probeer het opnieuw of mail ons.");
-    setDone({ plek: d.plek ?? null, kortingPct: d.kortingPct ?? 0 });
+    setDone({ plek: d.plek ?? null, kortingPct: d.kortingPct ?? 0, email: String(f.get("email") ?? "").trim() });
   }
 
   if (done) {
+    // the website moves into the company's own account (Admin → Websitevoorstellen → overzetten),
+    // so an account made now saves a step; name and e-mail come prefilled (app/register/page.tsx)
+    const register = `/register?type=bedrijf&company=${encodeURIComponent(bedrijf)}${done.email ? `&email=${encodeURIComponent(done.email)}` : ""}`;
     return (
       <div role="status" className="border border-lux-line bg-white p-8">
         <p className="font-serif text-3xl">Bedankt, we gaan voor je aan de slag</p>
@@ -70,6 +73,12 @@ export function AcceptForm({ id, plans, bedrijf, websitePrijs }: { id: string; p
           {done.plek ? `Je hebt introductieplek ${done.plek}, met ${done.kortingPct}% korting op de website. ` : ""}
           We nemen binnen één werkdag contact met je op om alles door te nemen. Er is nog niets betaald of afgesloten.
         </p>
+        <p className="mt-6 border-t border-lux-line pt-6 text-lux-mute">
+          Alvast een stap verder? Maak een gratis bedrijfsaccount aan bij ZekerFlex. Daarin zetten we je nieuwe website klaar, zodat je hem na ons gesprek zelf kunt bekijken en aanpassen.
+        </p>
+        <a href={register} className="mt-4 inline-block bg-lux-ink px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-black">
+          Maak je bedrijfsaccount aan
+        </a>
       </div>
     );
   }
