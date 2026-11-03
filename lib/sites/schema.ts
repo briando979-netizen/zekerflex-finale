@@ -15,7 +15,7 @@ const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("hero"), props: z.object({ kop, tekst, knop: short, knopLink: link, foto: mediaId }) }),
   z.object({ id: z.string().max(40), type: z.literal("tekst"), props: z.object({ kop, tekst }) }),
   z.object({ id: z.string().max(40), type: z.literal("tekstFoto"), props: z.object({ kop, tekst, foto: mediaId, fotoLinks: z.boolean() }) }),
-  z.object({ id: z.string().max(40), type: z.literal("diensten"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(12) }) }),
+  z.object({ id: z.string().max(40), type: z.literal("diensten"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst, foto: mediaId.optional() })).max(12) }) }),
   z.object({ id: z.string().max(40), type: z.literal("galerij"), props: z.object({ kop, fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(24) }) }),
   z.object({ id: z.string().max(40), type: z.literal("reviews"), props: z.object({ kop, items: z.array(z.object({ naam: short, tekst, sterren: z.number().int().min(1).max(5) })).max(12) }) }),
   z.object({ id: z.string().max(40), type: z.literal("faq"), props: z.object({ kop, items: z.array(z.object({ vraag: short, antwoord: tekst })).max(20) }) }),

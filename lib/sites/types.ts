@@ -26,11 +26,16 @@ export interface Item {
   tekst: string;
 }
 
+/** A card in the diensten block: an item with an optional photo on top (media id). */
+export interface Dienst extends Item {
+  foto?: string | null | undefined;
+}
+
 export interface BlockProps {
   hero: { kop: string; tekst: string; knop: string; knopLink: string; foto: string | null };
   tekst: { kop: string; tekst: string };
   tekstFoto: { kop: string; tekst: string; foto: string | null; fotoLinks: boolean };
-  diensten: { kop: string; items: Item[] };
+  diensten: { kop: string; items: Dienst[] };
   galerij: { kop: string; fotos: string[] };
   reviews: { kop: string; items: { naam: string; tekst: string; sterren: number }[] };
   faq: { kop: string; items: { vraag: string; antwoord: string }[] };

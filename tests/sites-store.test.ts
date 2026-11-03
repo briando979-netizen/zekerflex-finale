@@ -59,6 +59,11 @@ describe("website maken", () => {
     const hero = pages[0]!.blocks[0]!;
     if (hero.type === "hero") hero.props.foto = "mvanander1";
     await expect(save(s, { pages })).rejects.toThrow(/hoort niet bij deze website/);
+    // ook de foto op een aanbodkaart
+    const kaarten = structuredClone(s.pages);
+    const diensten = kaarten[0]!.blocks.find((b) => b.type === "diensten")!;
+    if (diensten.type === "diensten") diensten.props.items[0]!.foto = "mvanander1";
+    await expect(save(s, { pages: kaarten })).rejects.toThrow(/hoort niet bij deze website/);
   });
 
   it("bewaart een foto op schijf en geeft hem terug", async () => {

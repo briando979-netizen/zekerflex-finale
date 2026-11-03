@@ -152,7 +152,7 @@ section{padding:96px 0}@media (max-width:760px){section{padding:64px 0}}section.
 .hero.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,${night(0.2)} 0%,${night(0.45)} 45%,${night(0.92)} 100%)}.hero h1{color:#fff;max-width:16ch}.hero p{font-size:1.2rem;max-width:620px;opacity:.92}
 .eyebrow{margin:0 0 18px;font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--sun);opacity:1}
 @media (max-width:760px){.hero{min-height:76vh;padding:128px 0 64px}}
-.cards{gap:24px}.card{background:#fff;border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.card h3{color:var(--night)}section.alt .card{background:#fff}
+.cards{gap:24px}.card{background:#fff;border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.card h3{color:var(--night)}section.alt .card{background:#fff}.card.photo .body{padding:26px 32px 32px}
 .steps li{border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.steps li::before{width:52px;height:52px;background:var(--night);color:var(--sun);font:700 1.35rem/1 ${DISPLAY}}
 .split{gap:56px}.split img,.gallery img{border-radius:28px}details.q{border-color:var(--line)}details.q summary::after{color:var(--a-d)}.hours td{border-color:var(--line)}
 .band{background:var(--night);color:var(--cream);padding:112px 0}.band h2{color:#fff;max-width:18ch;margin-left:auto;margin-right:auto}
@@ -174,7 +174,7 @@ nav a{border-radius:0;padding:10px 14px;font-size:.76rem;letter-spacing:.14em;te
 .hero{min-height:min(86vh,860px);display:flex;align-items:flex-end;padding:160px 0 104px}.hero .wrap{z-index:1;width:100%}.hero p{font-size:1.22rem;max-width:600px}
 .hero.photo{background:#0f0f0e;color:#fff}.hero.photo img{opacity:1}.hero.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,9,.18) 0%,rgba(10,10,9,.32) 42%,rgba(10,10,9,.82) 100%)}
 @media (max-width:760px){.hero{min-height:72vh;padding:120px 0 64px}}
-.cards{gap:48px 40px}.card{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:28px 0 0}.card h3{color:var(--ink)}section.alt .card{border-color:#ddd6ca}
+.cards{gap:48px 40px}.card{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:28px 0 0}.card h3{color:var(--ink)}section.alt .card{border-color:#ddd6ca}.card.photo{border-top:0}.card.photo .body{padding:22px 0 0}
 .split{gap:64px}.split img{border-radius:0;aspect-ratio:4/5}.gallery{gap:8px}.gallery img{border-radius:0}.stars{letter-spacing:4px}
 .band{background:#151412;color:#f3eee6}.band p{opacity:.85}form.contact input,form.contact textarea{border-radius:0;border-color:#d8d2c7}.hours td{padding:14px 0}footer{background:#121110}`;
 }
@@ -219,6 +219,7 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 .logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
 .vac{display:flex;flex-direction:column;gap:6px}.vac .meta{color:var(--mute);font-size:.95rem}.vac .btn{padding:10px 18px;font-size:.9rem}
 .wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}
+.card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
 .steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
 .steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
 .usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${luxe}`;
@@ -308,7 +309,13 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       return `<section${alt}><div class="wrap split${p.fotoLinks ? " flip" : ""}"><div><h2>${esc(p.kop)}</h2>${paras(p.tekst)}</div><div>${pic}</div></div></section>`;
     }
     case "diensten":
-      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items.map((it) => `<div class="card"><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</div>`).join("")}</div></div></section>`;
+      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items
+        .map((it) => {
+          // a card with its own photo on top ("aanbodkaart"); without one, as before
+          const pic = img(ctx, it.foto ?? null, "(min-width: 760px) 33vw, 100vw");
+          return pic ? `<div class="card photo">${pic}<div class="body"><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</div></div>` : `<div class="card"><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</div>`;
+        })
+        .join("")}</div></div></section>`;
     // role="list": without list bullets Safari would otherwise stop announcing these as a list
     case "stappen":
       return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><ol class="steps" role="list">${b.props.items.map((it) => `<li><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</li>`).join("")}</ol></div></section>`;

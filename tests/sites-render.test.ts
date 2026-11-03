@@ -209,6 +209,25 @@ describe("luxe stijl, logo, WhatsApp en sociale media", () => {
   });
 });
 
+describe("aanbodkaarten met foto", () => {
+  it("een dienst met eigen foto krijgt de foto bovenaan de kaart, zonder foto blijft hij zoals hij was", () => {
+    const s = site();
+    const home = s.pages[0]!;
+    const diensten = home.blocks.find((b) => b.type === "diensten")!;
+    const before = renderPage(s, home, opts);
+    if (diensten.type === "diensten") diensten.props.items[0]!.foto = "mfoto0001";
+    const html = renderPage(s, home, opts);
+    expect(html).toMatch(/<div class="card photo"><img src="\/site\/bakkerij\/media\/mfoto0001\.webp" alt="Onze &quot;winkel&quot;"[^>]*loading="lazy"[^>]*><div class="body"><h3>/);
+    // de andere kaarten zijn gelijk gebleven
+    if (diensten.type === "diensten") expect(html).toContain(`<div class="card"><h3>${diensten.props.items[1]!.titel}</h3>`);
+    expect(before).not.toContain("card photo");
+    // een onbekende foto (bijv. van een andere site) toont gewoon de kaart zonder foto
+    if (diensten.type === "diensten") diensten.props.items[0]!.foto = "monbekend1";
+    expect(renderPage(s, home, opts)).not.toContain("card photo");
+    expect(siteCss(s.theme)).toContain(".card.photo{padding:0;overflow:hidden}");
+  });
+});
+
 describe("stappen en voordelen", () => {
   it("stappen zijn een genummerde lijst, voordelen een lijst met vinkjes, alles onschadelijk gemaakt", () => {
     const s = site();

@@ -111,7 +111,7 @@ export async function saveSite(id: string, input: z.infer<typeof siteSaveSchema>
   if (input.theme.logo && !known.has(input.theme.logo)) throw AppError.validation("Het logo hoort niet bij deze website.");
   for (const p of input.pages)
     for (const b of p.blocks) {
-      const ids = b.type === "hero" || b.type === "tekstFoto" ? [b.props.foto] : b.type === "galerij" ? b.props.fotos : [];
+      const ids = b.type === "hero" || b.type === "tekstFoto" ? [b.props.foto] : b.type === "galerij" ? b.props.fotos : b.type === "diensten" ? b.props.items.map((it) => it.foto ?? null) : [];
       if (ids.some((m) => m && !known.has(m))) throw AppError.validation("Een foto hoort niet bij deze website.");
     }
   if (input.altTexts) site.media = site.media.map((m) => (input.altTexts?.[m.id] !== undefined ? { ...m, alt: input.altTexts[m.id]! } : m));

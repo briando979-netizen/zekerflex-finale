@@ -879,7 +879,22 @@ function LinkField({ value, onChange, site }: { value: string; onChange: (v: str
   );
 }
 
-function ItemsEditor<T extends Record<string, string | number>>({ items, fields, blank, max, onChange }: { items: T[]; fields: { key: keyof T; label: string; area?: boolean; stars?: boolean }[]; blank: T; max: number; onChange: (items: T[]) => void }) {
+function ItemsEditor<T extends Record<string, string | number | null | undefined>>({
+  items,
+  fields,
+  blank,
+  max,
+  onChange,
+  extra,
+}: {
+  items: T[];
+  fields: { key: keyof T; label: string; area?: boolean; stars?: boolean }[];
+  blank: T;
+  max: number;
+  onChange: (items: T[]) => void;
+  /** more fields per item, e.g. a photo picker on a diensten card */
+  extra?: (item: T, set: (patch: Partial<T>) => void) => ReactNode;
+}) {
   return (
     <div className="space-y-3">
       {items.map((it, i) => (
@@ -896,13 +911,14 @@ function ItemsEditor<T extends Record<string, string | number>>({ items, fields,
             ) : (
               <Field key={String(f.key)} label={f.label}>
                 {f.area ? (
-                  <textarea className="field-input" rows={3} value={String(it[f.key])} maxLength={4000} onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, [f.key]: e.target.value } : x)))} />
+                  <textarea className="field-input" rows={3} value={String(it[f.key] ?? "")} maxLength={4000} onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, [f.key]: e.target.value } : x)))} />
                 ) : (
-                  <input className="field-input" value={String(it[f.key])} maxLength={200} onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, [f.key]: e.target.value } : x)))} />
+                  <input className="field-input" value={String(it[f.key] ?? "")} maxLength={200} onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, [f.key]: e.target.value } : x)))} />
                 )}
               </Field>
             ),
           )}
+          {extra?.(it, (patch) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x))))}
           <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-xs font-semibold text-crit hover:underline">Verwijderen</button>
         </div>
       ))}
@@ -967,7 +983,15 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
       fields = (
         <>
           {kop}
-          <ItemsEditor items={block.props.items} max={12} blank={{ titel: "Nieuwe dienst", tekst: "Korte uitleg." }} fields={[{ key: "titel", label: "Titel" }, { key: "tekst", label: "Uitleg", area: true }]} onChange={(items) => onChange({ ...block, props: { ...block.props, items } })} />
+          <ItemsEditor<{ titel: string; tekst: string; foto?: string | null | undefined }>
+            items={block.props.items}
+            max={12}
+            blank={{ titel: "Nieuwe dienst", tekst: "Korte uitleg.", foto: null }}
+            fields={[{ key: "titel", label: "Titel" }, { key: "tekst", label: "Uitleg", area: true }]}
+            extra={(it, set) => <PhotoPicker value={it.foto ?? null} site={site} onMedia={onMedia} onPick={(foto) => set({ foto })} />}
+            onChange={(items) => onChange({ ...block, props: { ...block.props, items } })}
+          />
+          <p className="text-xs text-neutralx-500">Met een foto wordt een dienst een aanbodkaart met de foto bovenaan.</p>
         </>
       );
       break;
