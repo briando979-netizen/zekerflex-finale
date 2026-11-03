@@ -22,8 +22,11 @@ const CSS = `
 .zfs-pill.dk{background:rgba(22,25,29,.95);color:#f3f4f6;border-color:rgba(255,255,255,.1)}
 .zfs-pill button{border:0;border-radius:999px;padding:.32rem .65rem;background:rgba(0,0,0,.07);color:inherit;font:inherit;font-size:12px;cursor:pointer}
 .zfs-pill.dk button{background:rgba(255,255,255,.12)}
-.zfs-pill button:focus-visible{outline:2px solid #4FE0A0;outline-offset:2px}
+.zfs-pill button:focus-visible,.zfs-badge:focus-visible{outline:2px solid #4FE0A0;outline-offset:2px}
+.zfs-pill.zfs-badge{width:38px;height:38px;padding:0;justify-content:center;font-size:18px;cursor:pointer}
 .zfs-num{font-variant-numeric:tabular-nums}
+.zfs-wide{display:none}
+@media (min-width:768px){.zfs-wide{display:inline}}
 .zfs-go .zfs-fall{animation:zfs-fall linear infinite}
 .zfs-go .zfs-rise{animation:zfs-rise ease-in infinite}
 .zfs-go .zfs-fly{animation:zfs-fly linear infinite}
@@ -100,19 +103,20 @@ function fireworks(ms = 7000): void {
   requestAnimationFrame(frame);
 }
 
+/** Small flags along the very top edge, short enough to stay clear of the menu text. */
 function Bunting({ id, colors }: { id: string; colors: string[] }) {
-  const w = 30;
+  const w = 24;
   return (
-    <svg width="100%" height="26" style={{ position: "absolute", top: 0, left: 0 }}>
+    <svg width="100%" height="18" style={{ position: "absolute", top: 0, left: 0 }}>
       <defs>
-        <pattern id={id} width={w * colors.length} height="26" patternUnits="userSpaceOnUse">
+        <pattern id={id} width={w * colors.length} height="18" patternUnits="userSpaceOnUse">
           {colors.map((c, i) => (
-            <path key={c + i} d={`M${i * w + 2} 3 L${i * w + w / 2} 23 L${i * w + w - 2} 3 Z`} fill={c} stroke="rgba(0,0,0,.12)" strokeWidth="0.6" />
+            <path key={c + i} d={`M${i * w + 2} 2 L${i * w + w / 2} 16 L${i * w + w - 2} 2 Z`} fill={c} stroke="rgba(0,0,0,.12)" strokeWidth="0.6" />
           ))}
         </pattern>
       </defs>
-      <rect width="100%" height="26" fill={`url(#${id})`} />
-      <line x1="0" y1="3" x2="100%" y2="3" stroke="#8a6a46" strokeWidth="1.5" />
+      <rect width="100%" height="18" fill={`url(#${id})`} />
+      <line x1="0" y1="2" x2="100%" y2="2" stroke="#8a6a46" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -230,6 +234,15 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
   const left = useCountdown(target);
   const midnight = left !== null && left <= 0;
   const info = themeInfo(theme);
+  const counting = theme === "oudjaar" && !midnight;
+  // The greeting folds into a small round badge after a few seconds, so it never
+  // sits on a button for long; the countdown on 31 December stays open.
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (!open || counting) return;
+    const timer = window.setTimeout(() => setOpen(false), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [open, counting]);
 
   // one burst per visitor per day (not on every reload), or at midnight on 31 December
   useEffect(() => {
@@ -268,7 +281,9 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
     if (midnight) text = `Gelukkig nieuwjaar ${next}!`;
     else if (left !== null) {
       const s = Math.max(0, Math.floor(left / 1000));
-      text = `Nog ${two(Math.floor(s / 3600))}:${two(Math.floor((s % 3600) / 60))}:${two(s % 60)} tot ${next}`;
+      const days = Math.floor(s / 86_400);
+      const clock = `${two(Math.floor((s % 86_400) / 3600))}:${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
+      text = `Nog ${days > 0 ? `${days} ${days === 1 ? "dag" : "dagen"} en ` : ""}${clock} tot ${next}`;
     }
   }
 
@@ -312,7 +327,7 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
         {theme === "valentijn" && <Particles count={10} kind="hart" still={still} />}
         {(theme === "nieuwjaar" || theme === "oudjaar") &&
           [6, 14, 82, 91].map((x, i) => (
-            <span key={x} className="zfs-twinkle" style={{ position: "absolute", top: 14 + (i % 2) * 22, left: `${x}%`, color: "#F5C451", fontSize: 18 + (i % 2) * 6, animationDelay: `${i * 0.6}s` }}>
+            <span key={x} className="zfs-twinkle zfs-wide" style={{ position: "absolute", top: 14 + (i % 2) * 22, left: `${x}%`, color: "#F5C451", fontSize: 18 + (i % 2) * 6, animationDelay: `${i * 0.6}s` }}>
               ✦
             </span>
           ))}
@@ -326,13 +341,19 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
           </div>
         )}
       </div>
-      <div className={`zfs-pill ${theme === "verjaardag" ? "r" : "l"}${dark ? " dk" : ""}`}>
-        <span aria-hidden="true">{midnight ? "🎆" : info.emoji}</span>
-        <span className={theme === "oudjaar" && !midnight ? "zfs-num" : undefined}>{text}</span>
-        <button type="button" onClick={hide} aria-label="Feestversiering vandaag verbergen">
-          Verbergen
+      {open ? (
+        <div className={`zfs-pill ${theme === "verjaardag" ? "r" : "l"}${dark ? " dk" : ""}`}>
+          <span aria-hidden="true">{midnight ? "🎆" : info.emoji}</span>
+          <span className={counting ? "zfs-num" : undefined}>{text}</span>
+          <button type="button" onClick={hide} aria-label="Feestversiering vandaag verbergen">
+            Verbergen
+          </button>
+        </div>
+      ) : (
+        <button type="button" className={`zfs-pill zfs-badge ${theme === "verjaardag" ? "r" : "l"}${dark ? " dk" : ""}`} onClick={() => setOpen(true)} aria-label={`${text} Groet tonen`}>
+          <span aria-hidden="true">{info.emoji}</span>
         </button>
-      </div>
+      )}
     </>
   );
 }
