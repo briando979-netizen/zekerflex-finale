@@ -9,6 +9,7 @@ import { afstandTekst } from "@/lib/kaart/geo";
 // sluiten de rest. Het scherm blijft aan zolang er wordt opgenomen.
 
 type Punt = [number, number, number];
+const GEEN_LOCATIE = "Je locatie is even niet te bepalen.";
 
 export function RouteOpnemen({ api, datum, lesId, meters: beginMeters }: { api: string; datum: string; lesId: string; meters: number }) {
   const [aan, setAan] = useState(false);
@@ -53,13 +54,16 @@ export function RouteOpnemen({ api, datum, lesId, meters: beginMeters }: { api: 
   async function start() {
     if (!("geolocation" in navigator)) return setMelding("Deze telefoon geeft geen locatie door.");
     setMelding(null);
+    // Geen timeout: stilstaan (stoplicht) is geen fout, de wachter loopt gewoon door.
+    // Komt er weer een plaats binnen, dan verdwijnt een oude locatiemelding.
     watch.current = navigator.geolocation.watchPosition(
       (pos) => {
+        setMelding((m) => (m === GEEN_LOCATIE ? null : m));
         if (pos.coords.accuracy > 50) return;
         buffer.current.push([pos.coords.longitude, pos.coords.latitude, Math.round(pos.timestamp / 1000)]);
       },
-      (err) => setMelding(err.code === err.PERMISSION_DENIED ? "Geef de app toestemming voor je locatie (instellingen van je browser)." : "Je locatie is even niet te bepalen."),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 30_000 },
+      (err) => setMelding(err.code === err.PERMISSION_DENIED ? "Geef de app toestemming voor je locatie (instellingen van je browser)." : GEEN_LOCATIE),
+      { enableHighAccuracy: true, maximumAge: 3000 },
     );
     setAan(true);
     try {
@@ -77,10 +81,9 @@ export function RouteOpnemen({ api, datum, lesId, meters: beginMeters }: { api: 
     return () => clearInterval(t);
   }, [aan, stuur]);
   useEffect(() => () => {
-    if (watch.current !== null) {
-      navigator.geolocation.clearWatch(watch.current);
-      void stuur(true);
-    }
+    if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+    // ook punten van een mislukte laatste poging (bij stoppen) nog meesturen
+    if (buffer.current.length > 0) void stuur(true);
   }, [stuur]);
 
   return (
