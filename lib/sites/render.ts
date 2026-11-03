@@ -54,8 +54,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones, 4 Nov 2026). */
-const CSS_REV = 3;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1, 4 Nov 2026). */
+const CSS_REV = 4;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
@@ -169,7 +169,7 @@ section{padding:96px 0}@media (max-width:760px){section{padding:64px 0}}section.
 @media (max-width:760px){.hero{min-height:76vh;padding:128px 0 64px}}
 .cards{gap:24px}.card{background:#fff;border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.card h3{color:var(--night)}section.alt .card{background:#fff}.card.photo .body{padding:26px 32px 32px}
 .steps li{border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.steps li::before{width:52px;height:52px;background:var(--night);color:var(--sun);font:700 1.35rem/1 ${DISPLAY}}
-.split{gap:56px}.split img,.gallery img{border-radius:28px}details.q{border-color:var(--line)}details.q summary::after{color:var(--a-d)}.hours td{border-color:var(--line)}
+.split{gap:56px}.split img,.gallery img{border-radius:28px}.stars{color:var(--a-d)}details.q{border-color:var(--line)}details.q summary::after{color:var(--a-d)}.hours td{border-color:var(--line)}
 .band{background:var(--night);color:var(--cream);padding:112px 0}.band h2{color:#fff;max-width:18ch;margin-left:auto;margin-right:auto}
 form.contact input,form.contact textarea{border-radius:14px;border-color:rgba(10,18,14,.2)}
 footer{background:var(--night);color:rgba(255,246,234,.8);padding:72px 0 32px}footer a{color:var(--cream)}footer h3{font:700 .78rem/1.4 ${TEXT};letter-spacing:.18em;text-transform:uppercase;color:var(--sun);margin:0 0 14px}footer p{margin:0 0 6px}footer small{color:rgba(255,246,234,.6)}
@@ -232,7 +232,8 @@ form.contact{display:grid;gap:14px;max-width:620px}form.contact label{display:gr
 .contact-grid{display:grid;gap:40px}@media (min-width:860px){.contact-grid{grid-template-columns:1.3fr 1fr}}.facts{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}footer a{color:#fff}footer .cols{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}footer small{display:block;margin-top:28px;color:#9aa3ad}
 :focus-visible{outline:3px solid var(--a);outline-offset:3px}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-.demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.demo-bar{display:block;background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
 .logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
 .vac{display:flex;flex-direction:column;gap:6px}.vac .meta{color:var(--mute);font-size:.95rem}.vac .btn{padding:10px 18px;font-size:.9rem}
 .wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}
@@ -559,10 +560,11 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const business = page.slug === "" && !ctx.voorbeeld && !ctx.voorstel ? localBusiness(ctx.bedrijf, url, ogImage) : "";
   const naam = esc(ctx.bedrijf.naam);
   const officieel = ctx.voorstel?.officieel;
+  // een aside met een naam: alle inhoud hoort in een landmark (toegankelijkheid)
   const bar = ctx.voorstel
-    ? `<div class="demo-bar">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}${officieel ? `; die staat op <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">${esc(officieel)}</a>` : ""}.</div>`
+    ? `<aside class="demo-bar" aria-label="Over deze website">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}${officieel ? `; die staat op <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">${esc(officieel)}</a>` : ""}.</aside>`
     : ctx.voorbeeld
-      ? `<div class="demo-bar">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></div>`
+      ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
       : "";
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}</body></html>`;
 }
@@ -592,7 +594,9 @@ const PREVIEW_FONTS = "/fonts/";
 /** One of the site's own pages as a full HTML document. */
 export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions): string {
   const ctx = context(site, opts);
-  return htmlDoc(ctx, page, page.blocks.map((b, i) => renderBlock(b, i, ctx)).join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
+  // only the opening block has a visible h1; without one, an invisible h1 with the page title (screen readers, search engines)
+  const h1 = page.blocks.some((b) => b.type === "hero") ? "" : `<h1 class="vh">${esc(page.titel)}</h1>`;
+  return htmlDoc(ctx, page, h1 + page.blocks.map((b, i) => renderBlock(b, i, ctx)).join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
 const fixedPage = (id: string, slug: string, titel: string): Page => ({ id: `__${id}`, slug, titel, seoTitel: titel, seoOmschrijving: titel, blocks: [] });

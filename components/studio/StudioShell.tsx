@@ -42,9 +42,10 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-[#f1f1f1] text-[#303030]">
       <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} />
       <div className="flex">
-        <aside className={`${menu ? "fixed inset-x-0 top-14 z-30 block border-b border-[#e3e3e3] shadow-lg" : "hidden"} w-full bg-[#ebebeb] md:sticky md:top-14 md:block md:h-[calc(100dvh-3.5rem)] md:w-60 md:flex-shrink-0 md:border-0 md:shadow-none`}>
+        {/* een div, geen aside: de nav erin is het (benoemde) landmark */}
+        <div className={`${menu ? "fixed inset-x-0 top-14 z-30 block border-b border-[#e3e3e3] shadow-lg" : "hidden"} w-full bg-[#ebebeb] md:sticky md:top-14 md:block md:h-[calc(100dvh-3.5rem)] md:w-60 md:flex-shrink-0 md:border-0 md:shadow-none`}>
           <SideNav path={path} />
-        </aside>
+        </div>
         <main className={`min-w-0 flex-1 px-4 py-6 sm:px-6 ${wide ? "" : "lg:px-10"}`}>
           <div className={wide ? "" : "mx-auto max-w-[1100px]"}>
             <Body path={path}>{children}</Body>

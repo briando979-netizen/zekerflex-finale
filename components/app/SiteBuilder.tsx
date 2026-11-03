@@ -303,7 +303,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
       )}
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr_340px]">
-        <aside className="card min-w-0 p-3">
+        <aside className="card min-w-0 p-3" aria-label="Pagina's, blokken en instellingen">
           <div className="flex flex-wrap gap-1 border-b border-hair pb-2" role="tablist">
             {tabs.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${tab === t.id ? "bg-ink text-white" : "text-neutralx-600 hover:bg-paper-soft"}`}>
@@ -357,7 +357,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
           </div>
         </section>
 
-        <aside className="card min-w-0 p-4">
+        <aside className="card min-w-0 p-4" aria-label="Blok bewerken">
           {block ? (
             <BlockEditor key={block.id} block={block} site={site} onChange={(b) => updateBlock(block.id, () => b)} onClose={() => setBlockId(null)} onMedia={(media) => setSite((s) => ({ ...s, media: [...s.media, media] }))} />
           ) : (

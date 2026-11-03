@@ -63,7 +63,8 @@ export default function Ontwerp({ origin }: { origin: string }) {
       />
       {melding && <p role={melding.ok ? "status" : "alert"} className={`mb-4 rounded-xl px-4 py-2.5 text-sm ${melding.ok ? "bg-[#cdfed4] text-[#014b1a]" : "bg-[#fed1d7] text-[#8e0b21]"}`}>{melding.text}</p>}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+      {/* grid-cols-1 onder xl: anders neemt de kolom de 1280 px van het voorbeeld over en loopt de pagina buiten beeld */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-4">
           <Card title="Stijl">
             <div className="space-y-2" role="radiogroup" aria-label="Stijl">

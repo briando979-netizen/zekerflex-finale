@@ -62,7 +62,8 @@ export function renderUitgelichtBlok(ctx: WinkelCtx, w: Winkel, p: BlockProps["u
   const x = zichtbareProducten(w).find((y) => y.id === p.productId);
   if (!x) return leegInBouwer(ctx, alt, p.kop || "Uitgelicht product", "Kies in dit blok welk product je wilt uitlichten.");
   const tekst = p.tekst || x.korteTekst || x.omschrijving.split(/\n\s*\n/)[0] || "";
-  return `<section${alt}><div class="wrap split feat${p.fotoLinks ? " flip" : ""}"><div>${p.kop ? `<p class="eyebrow">${ctx.esc(p.kop)}</p>` : ""}<h2>${ctx.esc(x.naam)}</h2><p class="pprice big">${prijs(ctx, x)}</p>${x.uitverkocht ? `<p class="psold">Uitverkocht</p>` : ""}${ctx.paras(tekst)}<p><a class="btn" href="${ctx.esc(pad(ctx, `p/${x.slug}`))}">Bekijk ${ctx.esc(x.naam)}</a></p></div><div class="pimg feat-img">${foto(ctx, x, "(min-width: 860px) 50vw, 100vw")}</div></div></section>`;
+  // het kleine label in de gedempte kleur: het gele "eyebrow" van premium is voor de donkere opening
+  return `<section${alt}><div class="wrap split feat${p.fotoLinks ? " flip" : ""}"><div>${p.kop ? `<p class="pcat feat-label">${ctx.esc(p.kop)}</p>` : ""}<h2>${ctx.esc(x.naam)}</h2><p class="pprice big">${prijs(ctx, x)}</p>${x.uitverkocht ? `<p class="psold">Uitverkocht</p>` : ""}${ctx.paras(tekst)}<p><a class="btn" href="${ctx.esc(pad(ctx, `p/${x.slug}`))}">Bekijk ${ctx.esc(x.naam)}</a></p></div><div class="pimg feat-img">${foto(ctx, x, "(min-width: 860px) 50vw, 100vw")}</div></div></section>`;
 }
 
 /** Schema.org Product, zodat zoekmachines prijs en voorraad kunnen tonen. */
@@ -97,7 +98,7 @@ export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, met
     : w.bestellen
       ? `<form class="buy" method="get" action="${ctx.esc(pad(ctx, "bestellen"))}"><input type="hidden" name="p" value="${ctx.esc(p.id)}"><label for="aantal">Aantal</label><input id="aantal" name="aantal" type="number" inputmode="numeric" min="1" max="99" value="1"${uit}><button class="btn" type="submit"${uit}>Bestellen</button></form>${ctx.inert ? `<p class="small">Dit is een voorbeeld: bestellen kan hier niet.</p>` : ""}`
       : `<p><a class="btn" href="${ctx.esc(ctx.href("contact"))}">Neem contact op om te bestellen</a></p>`;
-  return `<section><div class="wrap">${kruimel}<div class="product"><div>${galerij}</div><div class="pinfo">${p.categorie ? `<p class="pcat">${ctx.esc(p.categorie)}</p>` : ""}<h1>${ctx.esc(p.naam)}</h1><p class="pprice big">${prijs(ctx, p)}</p>${p.korteTekst ? `<p class="lead">${ctx.esc(p.korteTekst)}</p>` : ""}${bestel}<div class="pdesc">${ctx.paras(p.omschrijving)}</div></div></div></div></section>${meta.seo ? productLd(p, meta.url, meta.beeld, ctx.bedrijfNaam) : ""}`;
+  return `<section><div class="wrap">${kruimel}<div class="product"><div>${galerij}</div><div class="pinfo">${p.categorie ? `<p class="pcat">${ctx.esc(p.categorie)}</p>` : ""}<h1>${ctx.esc(p.naam)}</h1><p class="pprice big">${prijs(ctx, p)}</p>${p.korteTekst ? `<p class="lead">${ctx.esc(p.korteTekst)}</p>` : ""}${bestel}<div class="pdesc"><h2 class="pdesc-kop">Over dit product</h2>${ctx.paras(p.omschrijving)}</div></div></div></div></section>${meta.seo ? productLd(p, meta.url, meta.beeld, ctx.bedrijfNaam) : ""}`;
 }
 
 export function winkelPaginaBody(ctx: WinkelCtx, w: Winkel): string {
@@ -128,7 +129,7 @@ export function bestelPaginaBody(ctx: WinkelCtx, w: Winkel, opts: { invoer?: Bes
     return `<li class="orow${p.uitverkocht ? " sold" : ""}"><label for="${id}"><span class="oname">${ctx.esc(p.naam)}</span>${p.uitverkocht ? ` <span class="psold">Uitverkocht</span>` : ""}<span class="oprice">${prijs(ctx, p)}</span></label><input id="${id}" name="${id}" type="number" inputmode="numeric" min="0" max="99" value="${n}"${p.uitverkocht ? " disabled" : uit}></li>`;
   };
   const lijst = cats.length
-    ? [...cats.map((c) => `<h3>${ctx.esc(c)}</h3><ul class="olist" role="list">${producten.filter((p) => p.categorie === c).map(rij).join("")}</ul>`), producten.some((p) => !p.categorie) ? `<h3>Overig</h3><ul class="olist" role="list">${producten.filter((p) => !p.categorie).map(rij).join("")}</ul>` : ""].join("")
+    ? [...cats.map((c) => `<h2 class="ocat">${ctx.esc(c)}</h2><ul class="olist" role="list">${producten.filter((p) => p.categorie === c).map(rij).join("")}</ul>`), producten.some((p) => !p.categorie) ? `<h2 class="ocat">Overig</h2><ul class="olist" role="list">${producten.filter((p) => !p.categorie).map(rij).join("")}</ul>` : ""].join("")
     : `<ul class="olist" role="list">${producten.map(rij).join("")}</ul>`;
   const l = w.levering;
   const bezorgUitleg = l.bezorgen
@@ -191,7 +192,8 @@ form.order{max-width:none}.ocols{display:grid;gap:20px}.oside{display:grid;gap:1
 .pinfo h1{font-size:clamp(2rem,4vw,3.2rem);margin-bottom:12px}.lead{font-size:1.15rem;color:var(--mute)}.pdesc{margin-top:28px;border-top:1px solid var(--line);padding-top:24px}
 form.buy{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:8px 0 6px}form.buy label{font-weight:600}form.buy input{width:88px;font:inherit;padding:12px 14px;border:1px solid #cfd4da;border-radius:10px}
 .feat .pimg{border-radius:var(--r);aspect-ratio:4/3}.feat .pimg img{transition:none}
-form.order fieldset{border:1px solid var(--line);border-radius:var(--r);padding:18px 20px 22px;margin:0;display:grid;gap:14px;background:#fff}form.order legend{font-weight:700;padding:0 6px}form.order h3{margin:10px 0 0;font-size:1rem}
+form.order fieldset{border:1px solid var(--line);border-radius:var(--r);padding:18px 20px 22px;margin:0;display:grid;gap:14px;background:#fff}form.order legend{font-weight:700;padding:0 6px}form.order h2.ocat{margin:10px 0 0;font-size:1rem;letter-spacing:0}
+.pdesc-kop{margin:0 0 12px;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}.feat-label{margin:0 0 14px}
 .olist{list-style:none;margin:0;padding:0;display:grid;gap:0}.orow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.orow:last-child{border-bottom:0}.orow label{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-weight:600}.oprice{color:var(--mute);font-weight:400}.orow input{width:84px}.orow.sold{opacity:.75}
 form.order .radio{display:flex;align-items:center;gap:10px;font-weight:600}form.order .radio input{width:auto}
 .alert{background:#fdeeee;border:1px solid #f1b8b8;color:#7a1414;border-radius:12px;padding:14px 18px;margin:0 0 24px}.alert p,.alert ul{margin:0}.alert ul{padding-left:20px}
