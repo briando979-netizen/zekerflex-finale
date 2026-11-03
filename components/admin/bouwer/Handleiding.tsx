@@ -23,7 +23,7 @@ const TAKEN: Taak[] = [
     titel: "Iets laten bouwen of veranderen",
     stappen: [
       "Open het tabblad Bouwer en beschrijf in gewone taal wat er moet veranderen. Hoe preciezer (welke pagina, wat moet er staan), hoe beter.",
-      "Kijk mee: je ziet elke stap die de Bouwer zet. Na een paar minuten staat er \"Klaar voor jouw oordeel\".",
+      "Kijk mee: je ziet elke stap die de Bouwer zet. Na een paar minuten staat er \"Klaar voor jouw oordeel\". Je hoeft niet te wachten: als hij klaar is, iets wil vragen of vastloopt, krijg je een melding op je telefoon.",
       "Bekijk onderaan precies welke regels veranderen. Klik op Start voorbeeld en dan Open voorbeeld om de gewijzigde site echt te zien (inloggen met admin@zekerflex.nl / Zeker!2026, alleen demogegevens).",
       "Goed? Klik Goedkeuren en live zetten. Niet goed? Typ bij Bijsturen wat er anders moet, of klik Weggooien.",
     ],
@@ -34,7 +34,7 @@ const TAKEN: Taak[] = [
     titel: "De nieuwste versie live zetten",
     stappen: [
       "Open het tabblad Live zetten. Links zie je wat er nu live staat, rechts het nieuwste op GitHub, en daaronder wat er nieuw is.",
-      "Klik Zet nieuwste versie live. Na een paar minuten staat er Klaar.",
+      "Klik Zet nieuwste versie live. Na een paar minuten staat er Klaar, en je krijgt een melding op je telefoon.",
       "Verandert de nieuwe versie de database, dan stopt hij eerst en laat hij die wijzigingen zien. Lees ze, vink aan dat je ze bekeken hebt en klik Akkoord.",
     ],
     tip: "Start de nieuwe versie niet goed, dan zet de server zelf de vorige terug. In de chat kan het ook: typ \"zet live\".",
