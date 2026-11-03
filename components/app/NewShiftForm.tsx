@@ -10,6 +10,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { extraDayOptions } from "@/lib/shifts/extra-days";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
+import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/concept";
 
 const initial: NewShiftState = { error: null };
 
@@ -77,6 +78,29 @@ export function NewShiftForm({
   const [adHocPostalCode, setAdHocPostalCode] = useState("");
   const [adHocCity, setAdHocCity] = useState("");
   const [ownTemplates, setOwnTemplates] = useState<OwnTemplate[]>([]);
+  const [fromWebsite, setFromWebsite] = useState(false);
+
+  // A klus drafted on /klus-plaatsen before sign-up: fill it in once, then forget it.
+  useEffect(() => {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(CONCEPT_KEY);
+      if (raw) localStorage.removeItem(CONCEPT_KEY);
+    } catch {
+      return;
+    }
+    const concept = parseConcept(raw, Date.now(), amsterdamDayKey(new Date()));
+    if (!concept) return;
+    const v = toShiftFormValues(concept);
+    setTitle(v.title);
+    setDescription(v.description);
+    setRateEuro(v.rateEuro);
+    setBreakMin(v.breakMin);
+    setPositions(v.positions);
+    setStartsAt(v.startsAt);
+    setEndsAt(v.endsAt);
+    setFromWebsite(true);
+  }, []);
 
   useEffect(() => {
     fetch("/api/werkgever/templates", { cache: "no-store" })
@@ -141,6 +165,11 @@ export function NewShiftForm({
     <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
       <form action={formAction} className="space-y-7">
         {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+        {fromWebsite && (
+          <p role="status" className="rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
+            We hebben de klus die je op de website samenstelde al ingevuld. Kies je vestiging en controleer de gegevens voordat je hem uitzet.
+          </p>
+        )}
 
         <div>
           <p className="field-label mb-2">Kies een sjabloon (optioneel)</p>

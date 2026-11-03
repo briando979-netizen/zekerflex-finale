@@ -87,6 +87,12 @@ export default function VoorBedrijvenPage() {
                 Bekijk de prijzen
               </Link>
             </div>
+            <p className="mt-4 text-sm text-white/70">
+              Eerst kijken?{" "}
+              <Link href="/klus-plaatsen" className="font-semibold text-brand-mint underline">
+                Stel je klus samen zonder account
+              </Link>
+            </p>
             <HeroChecks items={["Diensten plaatsen wanneer het jou uitkomt", "Inzicht en controle per dienst", "Snel, makkelijk, flexibel"]} />
           </div>
           <Photo name="employerHero" fallback={<SceneApprove />} className="mx-auto w-full max-w-sm shadow-lift" />
