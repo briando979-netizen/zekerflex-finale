@@ -63,10 +63,13 @@ for i in 1 2 3; do
     else
       echo "CADDY_ONGELDIG: de vorige Caddyfile blijft actief"; tail -3 /tmp/zf-caddy-validate.log
     fi
-    # Elke build laat oude lagen achter; in nov 2026 stond de schijf zo op 79%
-    # (52 GB build-cache). Getagde images (latest + rollback) blijven staan.
+    # Elke build laat ~1,7 GB cache achter. BuildKit markeert die als "gedeeld",
+    # en een gewone prune (ook met until=72h of --keep-storage) slaat die over:
+    # op 3 nov 2026 stond de schijf zo op 89% (68 GB cache). Daarom -a: alle
+    # cache die 2 uur niet gebruikt is gaat weg; wat deze build net gebruikte
+    # (npm ci) blijft. Getagde images (latest + rollback) blijven staan.
     sudo docker image prune -f > /dev/null
-    sudo docker builder prune -f --filter until=72h > /dev/null 2>&1
+    sudo docker builder prune -af --filter until=2h > /dev/null 2>&1
     echo "DEPLOY_EXIT=0 (poging $i)"
     exit 0
   fi
