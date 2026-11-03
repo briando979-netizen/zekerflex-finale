@@ -44,6 +44,12 @@
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up -X-ZF-Voorstel
+		# Bij een uitrol is de app een paar seconden weg (nieuwe container). Lukt de
+		# verbinding niet, probeer dan tot 15 s opnieuw in plaats van meteen een 502:
+		# de bezoeker merkt een korte vertraging. Alleen bij een mislukte verbinding,
+		# dus het verzoek was nog niet bij de app (ook een POST is dan veilig).
+		lb_try_duration 15s
+		lb_try_interval 250ms
 	}
 }
 
@@ -55,6 +61,9 @@ schwarzwald.zekerflex.com {
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up X-ZF-Voorstel schwarzwald
+		# uitrol: opnieuw verbinden in plaats van een 502 (zie het eerste blok)
+		lb_try_duration 15s
+		lb_try_interval 250ms
 	}
 }
 
@@ -83,5 +92,8 @@ https:// {
 	reverse_proxy app:3000 {
 		header_up X-ZF-Site-Host {host}
 		header_up -X-ZF-Voorstel
+		# uitrol: opnieuw verbinden in plaats van een 502 (zie het eerste blok)
+		lb_try_duration 15s
+		lb_try_interval 250ms
 	}
 }
