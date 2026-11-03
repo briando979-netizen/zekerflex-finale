@@ -1,6 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
+import { trackEvent } from "@/components/analytics/AnalyticsBeacon";
+
+/**
+ * Reports once per page visit that someone actually used a rekentool, so
+ * Admin → Analytics can tell readers from users. Only the tool name is sent,
+ * never what was typed.
+ */
+export function useEersteGebruik(tool: string): () => void {
+  const sent = useRef(false);
+  return useCallback(() => {
+    if (sent.current) return;
+    sent.current = true;
+    trackEvent("INTERACTION", `rekentool:${tool}`);
+  }, [tool]);
+}
 
 // One labelled number field for the rekentools. Text + inputMode="decimal" so
 // "15,50" works on every phone keyboard (type="number" rejects the comma in

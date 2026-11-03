@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { nettoFromRate, requiredRate, URENCRITERIUM_HOURS } from "@/lib/rekentools/uurtarief";
 import { centsFrom, euroCents, euroWhole, hoursNl, numberFrom } from "@/lib/rekentools/invoer";
-import { Groep, Veld } from "@/components/marketing/rekentools/Veld";
+import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 
 type Mode = "tarief" | "netto";
 
 export function ZzpUurtarief() {
+  const used = useEersteGebruik("zzp-uurtarief");
   const [mode, setMode] = useState<Mode>("tarief");
   const [netto, setNetto] = useState("3.000");
   const [rate, setRate] = useState("45,00");
@@ -49,7 +50,7 @@ export function ZzpUurtarief() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-      <div className="space-y-5">
+      <div className="space-y-5" onInput={used}>
         <div
           role="group"
           aria-label="Wat wil je berekenen?"
@@ -65,7 +66,10 @@ export function ZzpUurtarief() {
               key={key}
               type="button"
               aria-pressed={mode === key}
-              onClick={() => setMode(key)}
+              onClick={() => {
+                setMode(key);
+                used();
+              }}
               className={`rounded-full px-3 py-2 text-sm font-semibold leading-tight transition-colors sm:px-4 ${
                 mode === key ? "bg-ink text-white" : "text-neutralx-600 hover:text-ink"
               }`}

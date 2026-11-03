@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { compareFlexCost } from "@/lib/rekentools/kosten";
 import { centsFrom, euroCents, euroWhole, hoursNl, numberFrom } from "@/lib/rekentools/invoer";
-import { Groep, Veld } from "@/components/marketing/rekentools/Veld";
+import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 
 export function KostenFlexkracht() {
+  const used = useEersteGebruik("kosten-uitzendkracht");
   const [workers, setWorkers] = useState("1");
   const [hoursPerWeek, setHoursPerWeek] = useState("24");
   const [weeks, setWeeks] = useState("12");
@@ -39,7 +40,7 @@ export function KostenFlexkracht() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-      <div className="space-y-5">
+      <div className="space-y-5" onInput={used}>
         <Groep title="Wat heb je nodig?">
           <Veld id="kf-workers" label="Aantal krachten" value={workers} onChange={setWorkers} />
           <Veld id="kf-hours" label="Uren per week" value={hoursPerWeek} onChange={setHoursPerWeek} suffix="per kracht" />
