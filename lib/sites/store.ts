@@ -27,7 +27,8 @@ import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 
 export const SITE_BUILDER_DIR = process.env.SITE_BUILDER_DIR || path.join(process.cwd(), "storage", "sitebuilder");
 const KEEP_BUILDS = 10;
-const MAX_MEDIA = 200;
+// a shop with photos per product needs room (lib/sites/winkel.ts: up to 300 products)
+const MAX_MEDIA = 600;
 
 const siteKey = (id: string) => `site:${id}`;
 const tenantKey = (tenantId: string) => `site-tenant:${tenantId}`;
@@ -37,7 +38,8 @@ const contactPrefix = (id: string) => `site-contact:${id}:`;
 
 const rid = (prefix: string, n = 10) => `${prefix}${randomBytes(n).toString("hex").slice(0, n)}`;
 export const isSiteId = (id: string) => /^s[a-z0-9]{6,20}$/.test(id);
-const isMediaFile = (file: string) => /^m[a-z0-9]{6,20}\.webp$/.test(file);
+// "-k": the small copy of a 4K photo (Media.klein)
+const isMediaFile = (file: string) => /^m[a-z0-9]{6,20}(-k)?\.webp$/.test(file);
 
 /** Snapshot of a published site (what visitors see). */
 export type SiteSnapshot = Omit<SiteDoc, "builds" | "liveBuild">;
@@ -114,8 +116,17 @@ export async function saveSite(id: string, input: z.infer<typeof siteSaveSchema>
       const ids = b.type === "hero" || b.type === "tekstFoto" ? [b.props.foto] : b.type === "galerij" ? b.props.fotos : b.type === "diensten" ? b.props.items.map((it) => it.foto ?? null) : [];
       if (ids.some((m) => m && !known.has(m))) throw AppError.validation("Een foto hoort niet bij deze website.");
     }
+  if (input.winkel?.producten.some((p) => p.fotos.some((m) => !known.has(m)))) throw AppError.validation("Een productfoto hoort niet bij deze website.");
   if (input.altTexts) site.media = site.media.map((m) => (input.altTexts?.[m.id] !== undefined ? { ...m, alt: input.altTexts[m.id]! } : m));
-  const next: SiteDoc = { ...site, theme: input.theme, bedrijf: input.bedrijf, pages: input.pages as SiteDoc["pages"], updatedAt: new Date().toISOString() };
+  const next: SiteDoc = {
+    ...site,
+    theme: input.theme,
+    bedrijf: input.bedrijf,
+    pages: input.pages as SiteDoc["pages"],
+    // the shop (lib/sites/winkel.ts): only when the builder sends it, so an older builder tab never wipes it
+    ...(input.winkel ? { winkel: input.winkel } : {}),
+    updatedAt: new Date().toISOString(),
+  };
   await kvSet(siteKey(id), next);
   return next;
 }
@@ -125,7 +136,8 @@ function mediaPath(siteId: string, file: string): string {
   return path.join(SITE_BUILDER_DIR, siteId, "media", file);
 }
 
-export async function addMedia(siteId: string, image: CleanImage, meta: { alt: string; bron: Media["bron"]; sourceUrl?: string | undefined }): Promise<Media> {
+/** `klein`: a smaller copy of a large (up to 4K) photo, stored as <id>-k.webp for phones. */
+export async function addMedia(siteId: string, image: CleanImage, meta: { alt: string; bron: Media["bron"]; sourceUrl?: string | undefined }, klein?: CleanImage | null): Promise<Media> {
   const site = await getSite(siteId);
   if (!site) throw AppError.notFound("Deze website bestaat niet.");
   if (site.media.length >= MAX_MEDIA) throw AppError.validation(`Een website kan ${MAX_MEDIA} foto's hebben; verwijder er eerst een paar.`);
@@ -134,7 +146,17 @@ export async function addMedia(siteId: string, image: CleanImage, meta: { alt: s
   const dir = path.join(SITE_BUILDER_DIR, siteId, "media");
   await mkdir(dir, { recursive: true });
   await writeFile(mediaPath(siteId, file), image.bytes);
-  const media: Media = { id, file, width: image.width, height: image.height, alt: meta.alt.slice(0, 200), bron: meta.bron, ...(meta.sourceUrl ? { sourceUrl: meta.sourceUrl.slice(0, 500) } : {}) };
+  if (klein) await writeFile(mediaPath(siteId, `${id}-k.webp`), klein.bytes);
+  const media: Media = {
+    id,
+    file,
+    width: image.width,
+    height: image.height,
+    alt: meta.alt.slice(0, 200),
+    bron: meta.bron,
+    ...(meta.sourceUrl ? { sourceUrl: meta.sourceUrl.slice(0, 500) } : {}),
+    ...(klein ? { klein: { width: klein.width, height: klein.height } } : {}),
+  };
   site.media = [...site.media, media];
   site.updatedAt = new Date().toISOString();
   await kvSet(siteKey(siteId), site);
@@ -217,11 +239,28 @@ export async function setLiveBuild(id: string, buildId: string | null, by: { use
   return next;
 }
 
-/** The live snapshot of a site, or null while it is offline. */
+/**
+ * The live snapshot of a site, or null while it is offline. The shop is the
+ * exception to "visitors see the last publish": products, prices and stock come
+ * from the site as it is now (Websitestudio → Producten), like any webshop.
+ */
 export async function liveSiteOf(site: SiteDoc | null): Promise<LiveSite | null> {
   if (!site?.liveBuild) return null;
   const [snapshot, domein] = await Promise.all([kvGet<SiteSnapshot>(buildKey(site.id, site.liveBuild)), kvGet<SiteDomain>(domainKey(site.id))]);
-  return snapshot ? { snapshot, buildId: site.liveBuild, siteId: site.id, domein } : null;
+  if (!snapshot) return null;
+  return { snapshot: site.winkel ? { ...snapshot, winkel: site.winkel } : snapshot, buildId: site.liveBuild, siteId: site.id, domein };
+}
+
+/** Only the shop (Websitestudio → Producten, Instellingen): live at once, the pages wait for a publish. */
+export async function saveWinkel(id: string, winkel: NonNullable<SiteDoc["winkel"]>): Promise<SiteDoc> {
+  const site = await getSite(id);
+  if (!site) throw AppError.notFound("Deze website bestaat niet.");
+  const known = new Set(site.media.map((m) => m.id));
+  if (winkel.producten.some((p) => p.fotos.some((m) => !known.has(m)))) throw AppError.validation("Een productfoto hoort niet bij deze website.");
+  // updatedAt stays: it tells the studio whether the pages have changes waiting for a publish
+  const next: SiteDoc = { ...site, winkel };
+  await kvSet(siteKey(id), next);
+  return next;
 }
 
 /** The site that owns an address part, published or not. */

@@ -1,5 +1,17 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme } from "@/lib/sites/types";
+import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
+import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
+import {
+  besteldPaginaBody,
+  bestelPaginaBody,
+  controlePaginaBody,
+  productPaginaBody,
+  renderProductenBlok,
+  renderUitgelichtBlok,
+  winkelCss,
+  winkelPaginaBody,
+  type WinkelCtx,
+} from "@/lib/sites/winkel-render";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Sites renderer: site data → HTML pages + one stylesheet. Pure, so
@@ -12,7 +24,7 @@ import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Pa
 // ---------------------------------------------------------------------------
 
 /** What rendering needs: the site being edited or a published snapshot. */
-export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld" | "voorstel">;
+export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld" | "voorstel" | "winkel">;
 
 export interface RenderOptions {
   /** absolute path of the site root, ending in "/": "/site/bakker/" or "/" */
@@ -42,8 +54,11 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Pages every published site has besides its own. */
-export const SYSTEM_PAGES = ["privacy", "bedankt"];
+/** Raise when siteCss gains rules a published site needs (2: the shop, 4 Nov 2026). */
+const CSS_REV = 2;
+
+/** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
+export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
 
 /** The site's home address without a trailing slash ("/site/bakker"), or "/" on an own domain. */
 export const homeHref = (root: string) => (root.length > 1 ? root.slice(0, -1) : "/");
@@ -190,6 +205,8 @@ export function siteCss(theme: Theme, fontBase = "fonts/"): string {
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
   const r = theme.hoeken === "strak" ? "4px" : "16px";
   const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : theme.stijl === "premium" ? `\n${premiumCss(kleur, accent, fontBase)}` : "";
+  // de winkel (lib/sites/winkel-render.ts) staat tussen de basis en de stijl, zodat luxe/premium hem kunnen bijstellen
+  const winkel = `\n${winkelCss(theme.stijl === "premium")}`;
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:17px/1.65 ${f.tekst};color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}a{color:var(--k)}h1,h2,h3{font-family:${f.kop};line-height:1.15;margin:0 0 .6em;letter-spacing:-.01em}
@@ -222,7 +239,7 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 .card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
 .steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
 .steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
-.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${luxe}`;
+.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${winkel}${luxe}`;
 }
 
 /** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
@@ -271,12 +288,31 @@ interface Ctx {
   origin: string;
   /** the premium house style: a label above the opening heading, a bar with phone/e-mail, a button in the header, a full footer */
   premium: boolean;
+  /** the site's shop (an empty one when it has none) */
+  winkel: Winkel;
+}
+
+/** What the shop's rendering (lib/sites/winkel-render.ts) needs from a page context. */
+function winkelCtx(ctx: Ctx): WinkelCtx {
+  return {
+    root: ctx.root,
+    preview: ctx.preview,
+    inert: ctx.voorbeeld || Boolean(ctx.voorstel),
+    premium: ctx.premium,
+    bedrijfNaam: ctx.bedrijf.naam,
+    esc,
+    paras,
+    img: (id, sizes, eager) => img(ctx, id, sizes, eager),
+    href: (raw) => href(ctx, raw),
+  };
 }
 
 function img(ctx: Ctx, id: string | null, sizes: string, eager = false): string {
   const m = id ? ctx.media.get(id) : undefined;
   if (!m) return "";
-  return `<img src="${esc(ctx.mediaSrc(m.file))}" alt="${esc(m.alt)}" width="${m.width}" height="${m.height}" sizes="${esc(sizes)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
+  // a photo of up to 4K with a 1600 px copy: the browser picks by screen size and sharpness (Media.klein)
+  const srcset = m.klein ? ` srcset="${esc(`${ctx.mediaSrc(m.file.replace(/\.webp$/, "-k.webp"))} ${m.klein.width}w, ${ctx.mediaSrc(m.file)} ${m.width}w`)}"` : "";
+  return `<img src="${esc(ctx.mediaSrc(m.file))}"${srcset} alt="${esc(m.alt)}" width="${m.width}" height="${m.height}" sizes="${esc(sizes)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
 }
 
 const href = (ctx: Ctx, raw: string) => (ctx.preview ? "#" : safeHref(raw, ctx.root, ctx.pages));
@@ -377,6 +413,10 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
         : `<div class="cards">${cards}</div>${live ? "" : `<p class="small">Voorbeeld: op je website staan hier vanzelf je open diensten op ZekerFlex.</p>`}`;
       return `<section${alt}><div class="wrap"><h2>${esc(p.kop)}</h2>${paras(p.tekst)}${body}</div></section>`;
     }
+    case "producten":
+      return renderProductenBlok(winkelCtx(ctx), ctx.winkel, b.props, alt);
+    case "uitgelicht":
+      return renderUitgelichtBlok(winkelCtx(ctx), ctx.winkel, b.props, alt);
   }
 }
 
@@ -502,16 +542,18 @@ function firstPhoto(page: Page): string | null {
   return null;
 }
 
-function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: string): string {
+function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: string, foto?: string | null): string {
   const url = `${opts.origin}${page.slug ? `${opts.root}${page.slug}` : homeHref(opts.root)}`;
-  const photoId = firstPhoto(page);
+  // a product page shares its own photo; other pages the first photo on them
+  const photoId = foto ?? firstPhoto(page);
   // no photo on the page: the logo is still a better preview in WhatsApp or LinkedIn than none
   const photo = (photoId ? ctx.media.get(photoId) : undefined) ?? ctx.logo;
   const ogImage = photo ? `${opts.origin}${opts.root}media/${photo.file}` : null;
   const title = page.seoTitel || `${page.titel} | ${ctx.bedrijf.naam}`;
   const initial = esc((ctx.bedrijf.naam.trim()[0] ?? "Z").toUpperCase());
   const favicon = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><text x="32" y="44" font-family="Arial" font-size="36" font-weight="700" text-anchor="middle" fill="#fff">${initial}</text></svg>`)}`;
-  const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(`${opts.root}assets/site.css${opts.version ? `?v=${opts.version}` : ""}`)}">`;
+  // CSS_REV: the stylesheet is cached for a year per build; a new revision of the code (the shop's styles) gets a new address
+  const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(`${opts.root}assets/site.css${opts.version ? `?v=${opts.version}.${CSS_REV}` : ""}`)}">`;
   const robots = opts.noindex || ctx.voorstel || page.id.startsWith("__") ? '<meta name="robots" content="noindex">' : "";
   // a proposal or an example says nothing to search engines about a business
   const business = page.slug === "" && !ctx.voorbeeld && !ctx.voorstel ? localBusiness(ctx.bedrijf, url, ogImage) : "";
@@ -540,6 +582,7 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     vacatures: opts.vacatures,
     origin: opts.origin,
     premium: site.theme.stijl === "premium",
+    winkel: winkelVan(site),
   };
 }
 
@@ -570,8 +613,47 @@ export function renderSystemPage(site: RenderableSite, kind: "privacy" | "bedank
   return htmlDoc(ctx, fixedPage("404", "niet-gevonden", `Pagina niet gevonden | ${c.naam}`), wrap(`<h1>Deze pagina bestaat niet</h1>${paras("Misschien is hij verhuisd. Ga terug naar de homepagina.")}<p><a class="btn" href="${home}">Naar de homepagina</a></p>`), opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
+/** A page of the site's shop: a product, the overview, the order form, the check before ordering, the thank-you page. */
+export type WinkelPagina =
+  | { soort: "product"; slug: string }
+  | { soort: "winkel" }
+  | { soort: "bestellen"; invoer?: BestelInvoer | undefined; fouten?: string[] | undefined }
+  | { soort: "controle"; concept: Bestelconcept }
+  | { soort: "besteld"; nr: string };
+
+/** A shop page as a full HTML document; null when the product does not exist (or is hidden). */
+export function renderWinkelPagina(site: RenderableSite, w: WinkelPagina, opts: RenderOptions): string | null {
+  const ctx = context(site, opts);
+  const wc = winkelCtx(ctx);
+  const css = siteCss(site.theme, PREVIEW_FONTS);
+  const naam = site.bedrijf.naam;
+  switch (w.soort) {
+    case "product": {
+      const p = zichtbareProducten(ctx.winkel).find((x) => x.slug === w.slug);
+      if (!p) return null;
+      const m = p.fotos[0] ? ctx.media.get(p.fotos[0]) : undefined;
+      const page: Page = { id: `product-${p.id}`, slug: `p/${p.slug}`, titel: p.naam, seoTitel: `${p.naam} | ${naam}`.slice(0, 70), seoOmschrijving: (p.korteTekst || p.omschrijving).replace(/\s+/g, " ").slice(0, 160), blocks: [] };
+      const meta = { url: `${opts.origin}${opts.root}p/${p.slug}`, beeld: m ? `${opts.origin}${opts.root}media/${m.file}` : null, seo: !ctx.voorbeeld && !ctx.voorstel };
+      return htmlDoc(ctx, page, productPaginaBody(wc, ctx.winkel, p, meta), opts, css, m?.id ?? null);
+    }
+    case "winkel":
+      return htmlDoc(ctx, { id: "winkel", slug: "winkel", titel: "Winkel", seoTitel: `Winkel | ${naam}`, seoOmschrijving: `Bekijk en bestel het assortiment van ${naam}.`.slice(0, 160), blocks: [] }, winkelPaginaBody(wc, ctx.winkel), opts, css, zichtbareProducten(ctx.winkel)[0]?.fotos[0] ?? null);
+    case "bestellen":
+      return htmlDoc(ctx, fixedPage("bestellen", "bestellen", `Bestellen | ${naam}`), bestelPaginaBody(wc, ctx.winkel, { invoer: w.invoer, fouten: w.fouten }), opts, css);
+    case "controle":
+      return htmlDoc(ctx, fixedPage("controle", "bestellen", `Klopt je bestelling? | ${naam}`), controlePaginaBody(wc, ctx.winkel, w.concept), opts, css);
+    case "besteld":
+      return htmlDoc(ctx, fixedPage("besteld", "besteld", `Bedankt voor je bestelling | ${naam}`), besteldPaginaBody(wc, ctx.winkel, w.nr), opts, css);
+  }
+}
+
 export function renderSitemap(site: RenderableSite, opts: RenderOptions): string {
-  const urls = site.pages.map((p) => `${opts.origin}${p.slug ? `${opts.root}${p.slug}` : homeHref(opts.root)}`);
+  const winkel = zichtbareProducten(winkelVan(site));
+  const urls = [
+    ...site.pages.map((p) => `${opts.origin}${p.slug ? `${opts.root}${p.slug}` : homeHref(opts.root)}`),
+    // the shop: the overview and every visible product page
+    ...(winkel.length ? [`${opts.origin}${opts.root}winkel`, ...winkel.map((p) => `${opts.origin}${opts.root}p/${p.slug}`)] : []),
+  ];
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(u)}</loc></url>`).join("")}</urlset>`;
 }
 

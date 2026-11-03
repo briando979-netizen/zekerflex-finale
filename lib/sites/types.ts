@@ -19,7 +19,9 @@ export type BlockType =
   | "contact"
   | "vacatures"
   | "stappen"
-  | "usps";
+  | "usps"
+  | "producten"
+  | "uitgelicht";
 
 export interface Item {
   titel: string;
@@ -48,7 +50,53 @@ export interface BlockProps {
   stappen: { kop: string; items: Item[] };
   /** reasons to choose the company, each with a check mark */
   usps: { kop: string; items: Item[] };
+  /** products from the site's shop (SiteDoc.winkel) as cards; categorie "" = all */
+  producten: { kop: string; tekst: string; categorie: string; aantal: number };
+  /** one product of the shop, big, with photo and price */
+  uitgelicht: { productId: string; kop: string; tekst: string; fotoLinks: boolean };
 }
+
+/**
+ * A product in a site's own shop. Prices in euro cents including VAT. Photos are
+ * media ids of the site, like every other photo. Rendering: lib/sites/winkel-render.ts.
+ */
+export interface SiteProduct {
+  id: string;
+  naam: string;
+  /** address part of the product page: /p/<slug> */
+  slug: string;
+  prijsCents: number;
+  /** the old price when on offer ("van € 12,50 voor € 9,95"); null = no offer */
+  oudePrijsCents?: number | null | undefined;
+  /** one line on the card */
+  korteTekst: string;
+  /** the product page */
+  omschrijving: string;
+  fotos: string[];
+  /** "" = no category */
+  categorie: string;
+  zichtbaar: boolean;
+  uitverkocht: boolean;
+  /** copied from the ZekerFlex webshop (ShopProduct id), so the builder can show where it came from */
+  bron?: { zekerflex: string } | undefined;
+}
+
+/** A site's shop: products and how ordering works (no online payment yet: the company settles it). */
+export interface Winkel {
+  producten: SiteProduct[];
+  /** the order form (/bestellen) is open */
+  bestellen: boolean;
+  levering: { afhalen: boolean; bezorgen: boolean; bezorgkostenCents: number; gratisVanafCents: number | null };
+  /** how paying works, shown with every order ("Je betaalt bij het afhalen, contant of met pin.") */
+  betaalTekst: string;
+}
+
+export const LEGE_WINKEL: Winkel = {
+  producten: [],
+  bestellen: true,
+  levering: { afhalen: true, bezorgen: false, bezorgkostenCents: 0, gratisVanafCents: null },
+  betaalTekst: "Je betaalt bij het afhalen of bij de bezorging. We nemen na je bestelling contact met je op.",
+};
 
 /** One open shift as a company's own website shows it (lib/sites/vacancies.ts fills these in). */
 export interface SiteVacancy {
@@ -125,6 +173,8 @@ export interface Media {
   alt: string;
   bron: "upload" | "internet" | "ai";
   sourceUrl?: string;
+  /** a smaller copy (<id>-k.webp, 1600 px) next to an original of up to 4K: phones load that one (srcset) */
+  klein?: { width: number; height: number } | undefined;
 }
 
 /** The result of the last DNS + https check of an own domain (lib/sites/domain.ts). */
@@ -176,6 +226,8 @@ export interface SiteDoc {
   voorbeeld?: boolean;
   /** a design proposal to a company that is not (yet) a customer */
   voorstel?: SiteProposalMark | undefined;
+  /** the site's own shop; absent until the company adds a first product */
+  winkel?: Winkel | undefined;
   createdAt: string;
   updatedAt: string;
 }
@@ -203,6 +255,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   cta: "Oproep met knop",
   contact: "Contact en formulier",
   vacatures: "Vacatures (je open diensten)",
+  producten: "Producten uit je winkel",
+  uitgelicht: "Uitgelicht product",
 };
 
 /** A fresh block of a type, with sensible example content. */
@@ -243,6 +297,10 @@ export function newBlock(type: BlockType, id: string): Block {
           ],
         },
       };
+    case "producten":
+      return { id, type, props: { kop: "Ons assortiment", tekst: "", categorie: "", aantal: 8 } };
+    case "uitgelicht":
+      return { id, type, props: { productId: "", kop: "Uitgelicht", tekst: "", fotoLinks: false } };
     case "usps":
       return {
         id,

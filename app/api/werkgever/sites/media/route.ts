@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { cleanImage, importRemoteImage, IMAGE_MAX_INPUT_BYTES } from "@/lib/media/clean-image";
+import { cleanImage, importRemoteImage, IMAGE_MAX_INPUT_BYTES, SITE_IMAGE_MAX_PX, SITE_IMAGE_SMALL_PX } from "@/lib/media/clean-image";
 import { siteTenantOf } from "@/lib/sites/access";
 import { addMedia, siteOfTenant } from "@/lib/sites/store";
 
@@ -28,9 +28,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       const file = form.get("file");
       if (!(file instanceof File)) throw AppError.validation("Kies een foto.");
       if (file.size > IMAGE_MAX_INPUT_BYTES) throw AppError.validation("Deze foto is groter dan 15 MB.");
-      const image = await cleanImage(Buffer.from(await file.arrayBuffer()));
+      // up to 4K for sharp photos on large screens, plus a 1600 px copy so phones stay fast (srcset in lib/sites/render.ts)
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const image = await cleanImage(bytes, SITE_IMAGE_MAX_PX);
+      const klein = Math.max(image.width, image.height) > SITE_IMAGE_SMALL_PX ? await cleanImage(bytes, SITE_IMAGE_SMALL_PX) : null;
       const alt = String(form.get("alt") ?? "").trim() || file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").slice(0, 200);
-      return NextResponse.json({ media: await addMedia(site.id, image, { alt, bron: "upload" }) }, { status: 201 });
+      return NextResponse.json({ media: await addMedia(site.id, image, { alt, bron: "upload" }, klein) }, { status: 201 });
     }
 
     const input = urlSchema.parse(await request.json().catch(() => ({})));

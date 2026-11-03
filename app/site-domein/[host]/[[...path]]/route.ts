@@ -1,6 +1,7 @@
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { siteForHost, verificationRecord } from "@/lib/sites/domain";
 import { handleSiteContact, serveSitePath, siteText, type ServeOptions } from "@/lib/sites/serve";
+import { handleSiteOrder } from "@/lib/sites/bestellingen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,8 +46,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ hos
   const { host: param, path = [] } = await params;
   const host = hostOf(request, param);
   if (!host) return new Response("Niet gevonden", { status: 404 });
-  if (path.join("/") !== "_zf/contact") return new Response("Niet toegestaan", { status: 405 });
+  const doel = path.join("/");
+  if (doel !== "_zf/contact" && doel !== "_zf/bestelling") return new Response("Niet toegestaan", { status: 405 });
   const found = await siteForHost(host).catch(() => null);
   if (!found) return notLinked(host);
+  // the shop's order form (lib/sites/bestellingen.ts)
+  if (doel === "_zf/bestelling") return handleSiteOrder(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, besteld: "/besteld", address: `https://${found.primary}` });
   return handleSiteContact(request, found.live, { ...optsFor(found.primary), thanks: "/bedankt", address: `https://${found.primary}` });
 }

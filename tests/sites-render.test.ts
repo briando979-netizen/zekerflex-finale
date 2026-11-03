@@ -106,7 +106,8 @@ describe("een complete, nette website", () => {
     const html = renderPage(s, s.pages[1]!, opts);
     expect(html).toContain('href="/site/bakkerij/contact"');
     expect(html).toContain('<a class="logo" href="/site/bakkerij">');
-    expect(html).toContain('href="/site/bakkerij/assets/site.css?v=v1"');
+    // build + CSS_REV (render.ts): new style rules get a new address despite the year-long cache
+    expect(html).toContain('href="/site/bakkerij/assets/site.css?v=v1.2"');
     expect(renderSystemPage(s, "404", opts)).toContain('href="/site/bakkerij"');
   });
 

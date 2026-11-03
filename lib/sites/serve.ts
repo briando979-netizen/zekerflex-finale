@@ -5,7 +5,8 @@ import { sendMail } from "@/lib/mail";
 import { clientIp } from "@/lib/http/request";
 import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
-import { SITE_FONT_FILES, renderPage, renderRobots, renderSitemap, renderSystemPage, siteCss, type RenderOptions } from "@/lib/sites/render";
+import { SITE_FONT_FILES, renderPage, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
+import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer } from "@/lib/sites/winkel";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
 import { recordSiteView } from "@/lib/sites/stats";
 import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
@@ -59,7 +60,7 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   };
   // a page view of a real site counts (lib/sites/stats.ts); never for an example or a proposal,
   // and never in the way of the page itself
-  const count = (page: Page) => {
+  const count = (page: Pick<Page, "slug">) => {
     if (!request || snapshot.voorbeeld || snapshot.voorstel) return;
     const visit = classifyVisit(visitHeadersOf(request), [new URL(opts.origin).hostname]);
     if (visit) void recordSiteView(siteId, page.slug, visit).catch(() => undefined);
@@ -95,6 +96,14 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   }
   if (first === "sitemap.xml" && !second) return new Response(renderSitemap(snapshot, opts), { headers: siteHeaders("application/xml; charset=utf-8", "public, max-age=300", opts) });
   if (first === "robots.txt" && !second) return new Response(renderRobots(opts), { headers: siteHeaders("text/plain; charset=utf-8", "public, max-age=300", opts) });
+  // the shop (lib/sites/winkel-render.ts): a product page counts as "p/<slug>" in the visitor figures
+  if (first === "p" && second && rest.length === 0) {
+    const doc = renderWinkelPagina(snapshot, { soort: "product", slug: second }, opts);
+    if (doc) {
+      count({ slug: `p/${second}` });
+      return html(doc);
+    }
+  }
   if (!second) {
     const page = snapshot.pages.find((p) => p.slug === first);
     if (page) {
@@ -102,6 +111,22 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
       return html(renderPage(snapshot, page, await withVacancies(page)));
     }
     if (first === "privacy" || first === "bedankt") return html(renderSystemPage(snapshot, first, opts));
+    const q = new URL(request?.url ?? "http://zf/").searchParams;
+    if (first === "winkel") {
+      count({ slug: "winkel" });
+      return html(renderWinkelPagina(snapshot, { soort: "winkel" }, opts) ?? "");
+    }
+    if (first === "bestellen") {
+      // from a product page: ?p=<id>&aantal=<n> fills in that product
+      const p = q.get("p") ?? "";
+      const n = Math.max(1, Math.min(MAX_PER_PRODUCT, Math.floor(Number(q.get("aantal") ?? 1)) || 1));
+      const invoer = /^p[a-z0-9]{6,20}$/.test(p) ? { ...LEGE_INVOER, aantallen: { [p]: n } } : undefined;
+      return new Response(renderWinkelPagina(snapshot, { soort: "bestellen", invoer }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+    }
+    if (first === "besteld") {
+      const nr = q.get("nr") ?? "";
+      return new Response(renderWinkelPagina(snapshot, { soort: "besteld", nr: isBestelnummer(nr) ? nr : "" }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+    }
   }
   return html(renderSystemPage(snapshot, "404", opts), 404);
 }

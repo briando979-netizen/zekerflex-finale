@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { blockSummary, renderPage } from "@/lib/sites/render";
 import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
 import SiteStats from "@/components/app/SiteStats";
+import { categorieen } from "@/lib/sites/winkel";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -32,7 +33,7 @@ interface Message {
   bericht: string;
 }
 
-const RESERVED = ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots"];
+const RESERVED = ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld"];
 const nid = (p: string) => `${p}${Math.random().toString(36).slice(2, 10)}`;
 
 /**
@@ -239,6 +240,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
       const res = await fetch(base, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        // the shop is saved by the Websitestudio itself (/api/werkgever/sites/winkel), never from here
         body: JSON.stringify({ theme: site.theme, bedrijf: site.bedrijf, pages: site.pages, altTexts: Object.fromEntries(site.media.map((m) => [m.id, m.alt])) }),
       }).catch(() => null);
       if (!res?.ok) return setSave({ state: "fout", text: await errorText(res, "Opslaan lukte niet.") });
@@ -867,13 +869,18 @@ function PhotoPicker({ value, site, onPick, onMedia }: { value: string | null; s
 }
 
 function LinkField({ value, onChange, site }: { value: string; onChange: (v: string) => void; site: SiteDoc }) {
-  const pageValues = site.pages.map((p) => p.slug || "home");
+  // met producten kan een knop ook naar de winkel of het bestelformulier (lib/sites/winkel-render.ts)
+  const winkel = site.winkel?.producten.some((p) => p.zichtbaar) ? [{ value: "winkel", label: "Winkel (alle producten)" }, ...(site.winkel.bestellen ? [{ value: "bestellen", label: "Bestellen" }] : [])] : [];
+  const pageValues = [...site.pages.map((p) => p.slug || "home"), ...winkel.map((w) => w.value)];
   const custom = !pageValues.includes(value) && value !== "";
   return (
     <Field label="Knop gaat naar">
       <select className="field-input" value={custom ? "__eigen" : value} onChange={(e) => onChange(e.target.value === "__eigen" ? "https://" : e.target.value)}>
         {site.pages.map((p) => (
           <option key={p.id} value={p.slug || "home"}>Pagina: {p.titel}</option>
+        ))}
+        {winkel.map((w) => (
+          <option key={w.value} value={w.value}>{w.label}</option>
         ))}
         <option value="__eigen">Een ander adres (https://, tel: of mailto:)</option>
       </select>
@@ -1094,6 +1101,53 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         </>
       );
       break;
+    case "producten": {
+      const cats = categorieen(site.winkel?.producten ?? []);
+      fields = (
+        <>
+          {kop}
+          {tekst(block.props.tekst, (v) => onChange({ ...block, props: { ...block.props, tekst: v } }), "Tekst onder de kop (mag leeg)")}
+          <Field label="Welke producten">
+            <select className="field-input" value={block.props.categorie} onChange={(e) => onChange({ ...block, props: { ...block.props, categorie: e.target.value } })}>
+              <option value="">Alle producten</option>
+              {cats.map((c) => (
+                <option key={c} value={c}>Categorie: {c}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Hoeveel tonen (1 tot 48)">
+            <input className="field-input" type="number" min={1} max={48} value={block.props.aantal} onChange={(e) => onChange({ ...block, props: { ...block.props, aantal: Math.max(1, Math.min(48, Math.round(Number(e.target.value)) || 1)) } })} />
+          </Field>
+          <p className="text-xs text-neutralx-500">De producten zelf beheer je in het tabblad Winkel. Zijn er meer dan je toont, dan komt er een knop naar de hele winkel.</p>
+        </>
+      );
+      break;
+    }
+    case "uitgelicht": {
+      const producten = site.winkel?.producten ?? [];
+      fields = (
+        <>
+          <Field label="Welk product">
+            <select className="field-input" value={block.props.productId} onChange={(e) => onChange({ ...block, props: { ...block.props, productId: e.target.value } })}>
+              <option value="">Kies een product</option>
+              {producten.map((p) => (
+                <option key={p.id} value={p.id}>{p.naam}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Klein label boven de naam (mag leeg)">
+            <input className="field-input" value={block.props.kop} maxLength={160} onChange={(e) => onChange({ ...block, props: { ...block.props, kop: e.target.value } })} />
+          </Field>
+          {tekst(block.props.tekst, (v) => onChange({ ...block, props: { ...block.props, tekst: v } }), "Tekst (leeg = de korte zin van het product)")}
+          <label className="flex items-center gap-2 text-sm text-neutralx-700">
+            <input type="checkbox" checked={block.props.fotoLinks} onChange={(e) => onChange({ ...block, props: { ...block.props, fotoLinks: e.target.checked } })} className="h-4 w-4 accent-brand-600" />
+            Foto links van de tekst
+          </label>
+          {producten.length === 0 && <p className="text-xs text-neutralx-500">Voeg eerst een product toe in het tabblad Winkel.</p>}
+        </>
+      );
+      break;
+    }
   }
   return (
     <div className="space-y-3">

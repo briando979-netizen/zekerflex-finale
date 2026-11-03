@@ -14,6 +14,9 @@ import { FetchError, fetchResource } from "@/lib/website-check/fetch";
 
 export const IMAGE_MAX_INPUT_BYTES = 15_000_000;
 export const IMAGE_MAX_PX = 2400;
+/** Photos for a customer's website (lib/sites): sharp on a 4K screen; the site also gets a SITE_IMAGE_SMALL_PX copy for phones. */
+export const SITE_IMAGE_MAX_PX = 3840;
+export const SITE_IMAGE_SMALL_PX = 1600;
 
 const RASTER = new Set(["jpeg", "png", "webp", "gif", "avif", "heif", "tiff"]);
 

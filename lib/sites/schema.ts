@@ -25,7 +25,41 @@ const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("vacatures"), props: z.object({ kop, tekst, aantal: z.number().int().min(1).max(12) }) }),
   z.object({ id: z.string().max(40), type: z.literal("stappen"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
   z.object({ id: z.string().max(40), type: z.literal("usps"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
+  z.object({ id: z.string().max(40), type: z.literal("producten"), props: z.object({ kop, tekst, categorie: z.string().trim().max(60), aantal: z.number().int().min(1).max(48) }) }),
+  z.object({ id: z.string().max(40), type: z.literal("uitgelicht"), props: z.object({ productId: z.string().regex(/^$|^p[a-z0-9]{6,20}$/), kop, tekst, fotoLinks: z.boolean() }) }),
 ]);
+
+const cents = z.number().int().min(0).max(10_000_000);
+
+/** A product of the site's own shop (lib/sites/types.ts SiteProduct). */
+export const productSchema = z.object({
+  id: z.string().regex(/^p[a-z0-9]{6,20}$/),
+  naam: z.string().trim().min(1).max(120),
+  slug: z.string().regex(/^[a-z0-9-]{1,60}$/),
+  prijsCents: cents,
+  oudePrijsCents: cents.nullable().optional(),
+  korteTekst: z.string().trim().max(200),
+  omschrijving: tekst,
+  fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(8),
+  categorie: z.string().trim().max(60),
+  zichtbaar: z.boolean(),
+  uitverkocht: z.boolean(),
+  bron: z.object({ zekerflex: z.string().max(60) }).optional(),
+});
+
+export const winkelSchema = z
+  .object({
+    producten: z.array(productSchema).max(300),
+    bestellen: z.boolean(),
+    levering: z.object({ afhalen: z.boolean(), bezorgen: z.boolean(), bezorgkostenCents: cents, gratisVanafCents: cents.nullable() }),
+    betaalTekst: z.string().trim().max(600),
+  })
+  .superRefine((w, ctx) => {
+    const slugs = w.producten.map((p) => p.slug);
+    if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee producten hebben hetzelfde webadres." });
+    if (new Set(w.producten.map((p) => p.id)).size !== w.producten.length) ctx.addIssue({ code: "custom", message: "Een product staat er twee keer in." });
+    if (w.bestellen && !w.levering.afhalen && !w.levering.bezorgen) ctx.addIssue({ code: "custom", message: "Kies of klanten hun bestelling afhalen, laten bezorgen of allebei." });
+  });
 
 const page = z.object({
   id: z.string().max(40),
@@ -65,12 +99,14 @@ export const siteSaveSchema = z
     pages: z.array(page).min(1).max(12),
     /** alt texts of existing photos (the photos themselves are added via upload/import) */
     altTexts: z.record(z.string().regex(/^m[a-z0-9]{6,20}$/), z.string().trim().max(200)).optional(),
+    /** the site's shop (lib/sites/winkel.ts); absent = leave it as it is */
+    winkel: winkelSchema.optional(),
   })
   .superRefine((v, ctx) => {
     const slugs = v.pages.map((p) => p.slug);
     if (!slugs.includes("")) ctx.addIssue({ code: "custom", message: "Er moet een homepagina zijn." });
     if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee pagina's hebben hetzelfde webadres." });
-    if (slugs.some((s) => ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots"].includes(s))) {
+    if (slugs.some((s) => ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld"].includes(s))) {
       ctx.addIssue({ code: "custom", message: "Dit webadres voor een pagina is gereserveerd." });
     }
   });

@@ -22,18 +22,14 @@ export default async function WebsiteBeheerPage() {
 
   return (
     <>
-      <Link href="/werkgever/website/bouwer" className="card mb-6 flex flex-wrap items-center gap-4 p-5 transition hover:border-brand-300">
-        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-brand-600 text-white" aria-hidden>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M3 9h18M8 13h5M8 16h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </span>
+      {/* de Websitestudio (/studio): website en webshop beheren op een eigen scherm */}
+      <Link href="/studio" className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl bg-[#1a1a1a] p-5 text-white shadow-lg transition hover:bg-black">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-white text-lg font-black text-[#1a1a1a]" aria-hidden>Z</span>
         <span className="min-w-0 flex-1">
-          <span className="block font-display text-lg font-bold text-ink">Bouw je website met ZekerFlex</span>
-          <span className="block text-sm text-neutralx-600">Kies je branche en je hebt meteen een complete, snelle website. Wij hosten hem, met je eigen foto&apos;s en een contactformulier.</span>
+          <span className="block font-display text-lg font-bold">Websitestudio: je website en webshop</span>
+          <span className="block text-sm text-white/70">Producten met foto&apos;s en prijzen, bestellingen, ontwerp en pagina&apos;s, alles op één plek. Wij hosten je site, met je eigen domein.</span>
         </span>
-        <span className="btn-primary">Website bouwen</span>
+        <span className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#1a1a1a]">Open de studio</span>
       </Link>
       <Link href="/werkgever/rijschool" className="card mb-6 flex flex-wrap items-center gap-4 p-5 transition hover:border-brand-300">
         <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-ink text-white" aria-hidden>
