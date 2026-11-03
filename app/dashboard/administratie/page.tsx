@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { PageHeader, EmptyState } from "@/components/app/ui";
 import { getWorkerMilestones, type Milestone } from "@/lib/worker/milestones";
 import { inAndroidApp } from "@/lib/app-mode-server";
+import { currentYear } from "@/lib/worker/mileage";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ function Card({ m }: { m: Milestone }) {
 export default async function AdministratiePage() {
   const principal = await requirePrincipal();
   const [data, inApp] = await Promise.all([getWorkerMilestones(principal.userId), inAndroidApp()]);
+  const year = currentYear();
 
   if (!data) {
     return (
@@ -90,6 +92,33 @@ export default async function AdministratiePage() {
           <Card key={m.id} m={m} />
         ))}
       </div>
+
+      {data.workerKind !== "uitzendkracht" && data.fiscalComplete && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutralx-200 bg-white p-5">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl" aria-hidden>🧾</span>
+            <div>
+              <h2 className="font-display text-base font-semibold">Jaaroverzicht voor je aangifte</h2>
+              <p className="mt-0.5 text-sm text-neutralx-600">
+                Omzet en btw per kwartaal, je uren, opdrachtgevers en kilometers op één A4. Handig voor jou of je boekhouder.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[year, year - 1].map((y) => (
+              <a
+                key={y}
+                href={`/api/me/jaaroverzicht?jaar=${y}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={y === year ? "btn-primary text-sm" : "rounded-lg border border-neutralx-200 px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"}
+              >
+                {y} (PDF)
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-3 text-sm">
         {!inApp && (
