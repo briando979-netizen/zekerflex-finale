@@ -8,6 +8,7 @@ import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar/links";
 import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { sterren } from "@/lib/voorstel/review-weergave";
 import { VOORUIT_DAGEN, plusDagen } from "@/lib/voorstel/schwarzwald-agenda";
+import { offerteKlaar } from "@/lib/voorstel/offerte-regels";
 
 // Klantaccount: inloggen/registreren (ook met Google), en ingelogd een
 // dashboard met je volgende uitje, reserveringen, aanvragen, berichten met het
@@ -39,6 +40,8 @@ export interface MijnAanvraag {
   personen: number;
   status: "nieuw" | "in-behandeling" | "offerte" | "geboekt" | "verloren";
   aangemaakt: string;
+  /** offertebedrag, zodra het team het heeft ingevuld */
+  bedrag: number | null;
 }
 export interface MijnBericht {
   id: string;
@@ -800,7 +803,14 @@ export function SchwarzwaldAccount(props: {
                           {a.datum ? `Voor ${dagNaam(a.datum)}` : "Datum nog open"} · aangevraagd op {dagNaam(a.aangemaakt.slice(0, 10), { day: "numeric", month: "long" })}
                         </p>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${kleur}`}>{label}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        {offerteKlaar(a) && (
+                          <Link href={`${BASE}/offerte/${a.id}`} className="rounded-full bg-schw-night px-4 py-2 text-sm font-bold text-schw-cream">
+                            Bekijk offerte
+                          </Link>
+                        )}
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${kleur}`}>{label}</span>
+                      </span>
                     </li>
                   );
                 })}

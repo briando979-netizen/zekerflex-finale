@@ -147,6 +147,12 @@ export async function maakAanvraag(input: Omit<Aanvraag, "id" | "status" | "bedr
   return a;
 }
 
+/** Eén aanvraag op nummer, of null. */
+export async function zoekAanvraag(aanvraagId: string): Promise<Aanvraag | null> {
+  if (!/^[a-z0-9]{6,24}$/.test(aanvraagId)) return null;
+  return kvGet<Aanvraag>(`${P_AANVRAAG}${aanvraagId}`);
+}
+
 export async function alleAanvragen(): Promise<Aanvraag[]> {
   return (await kvListValues<Aanvraag>(P_AANVRAAG, 5000)).sort((a, b) => b.aangemaakt.localeCompare(a.aangemaakt));
 }

@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { AANVRAAG_STATUS, BEHEER_API, VELD_BASIS, Melding, dagNaam, euro, useBeheerData, vraag, type AanvraagStatus } from "@/components/voorstel/beheer/api";
+import { BASE } from "@/lib/voorstel/schwarzwald";
 
 // Aanvragen (leads) als pijplijn: één kolom per stap. Status en offertebedrag
-// zijn per kaart aan te passen; "Klant" opent het klantdossier in het CRM.
+// zijn per kaart aan te passen; "Klant" opent het klantdossier in het CRM,
+// "Offerte" de printbare offerte (die de gast ziet zodra de status offerte is).
 
 interface Aanvraag {
   id: string;
@@ -111,6 +113,9 @@ export function Aanvragen({ openKlant }: { openKlant: (email: string) => void })
                       </a>
                       <a href={`mailto:${a.email}`} className="underline">
                         Mail
+                      </a>
+                      <a href={`${BASE}/offerte/${a.id}`} target="_blank" rel="noopener" className="underline">
+                        Offerte
                       </a>
                       <button type="button" onClick={() => void verwijder(a)} className="ml-auto text-[#B91C1C]">
                         Verwijder

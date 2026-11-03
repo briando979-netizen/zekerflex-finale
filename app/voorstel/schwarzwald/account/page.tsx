@@ -34,7 +34,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <SchwarzwaldAccount
           account={account ? { email: account.email, naam: account.naam, telefoon: account.telefoon, rol: account.rol, google: !!account.google, heeftWachtwoord: account.heeftWachtwoord } : null}
           boekingen={boekingen.map(({ id, activiteit, datum, tijd, personen, status }) => ({ id, activiteit, datum, tijd, personen, status, ics: icsAdres(icsToken({ datum, id })) }))}
-          aanvragen={aanvragen.map(({ id, programma, gelegenheid, datum, personen, status, aangemaakt }) => ({ id, programma, gelegenheid, datum, personen, status, aangemaakt }))}
+          aanvragen={aanvragen.map(({ id, programma, gelegenheid, datum, personen, status, aangemaakt, bedrag }) => ({ id, programma, gelegenheid, datum, personen, status, aangemaakt, bedrag }))}
           berichten={lijn
             .filter((i) => i.soort === "bericht-klant" || i.soort === "bericht-team")
             .map((i) => ({ id: i.id, soort: i.soort as "bericht-klant" | "bericht-team", tekst: i.tekst, door: i.door, datum: i.datum }))}
