@@ -88,10 +88,16 @@ for i in 1 2 3; do
     # Elke build laat ~1,7 GB cache achter. BuildKit markeert die als "gedeeld",
     # en een gewone prune (ook met until=72h of --keep-storage) slaat die over:
     # op 3 nov 2026 stond de schijf zo op 89% (68 GB cache). Daarom -a: alle
-    # cache die 2 uur niet gebruikt is gaat weg; wat deze build net gebruikte
+    # cache die 20 minuten niet gebruikt is gaat weg; wat deze build net gebruikte
     # (npm ci) blijft. Getagde images (latest + rollback) blijven staan.
+    # Eerst was dat 2 uur, maar met uitrollen om de 10-20 minuten werd cache nooit
+    # zo oud: dezelfde avond weer 94% (59 GB). Blijft de schijf daarna op 85% of
+    # hoger, dan gaat alle buildcache weg (de volgende build duurt dan wat langer).
     sudo docker image prune -f > /dev/null
-    sudo docker builder prune -af --filter until=2h > /dev/null 2>&1
+    sudo docker builder prune -af --filter until=20m > /dev/null 2>&1
+    if [ "$(df --output=pcent / | tail -n 1 | tr -dc '0-9')" -ge 85 ]; then
+      sudo docker builder prune -af > /dev/null 2>&1
+    fi
     echo "DEPLOY_EXIT=0 (poging $i)"
     exit 0
   fi
