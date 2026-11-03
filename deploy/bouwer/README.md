@@ -17,6 +17,12 @@ verzoek in de database; de dienst pakt het binnen enkele seconden op en doet dit
 4. Hij wacht tot de app gezond is. Is ze dat niet, dan zet hij zelf
    `zekerflex-app:rollback` terug.
 
+`git archive` voegt bestanden toe, maar wist niets. Na het uitpakken zet de
+live-zetter daarom elk bestand in `app/`, `components/`, `lib/`, `public/`,
+`prisma/` of `types/` dat niet in git staat in quarantaine, in
+`~/zekerflex-weg/<tijd>/`. Terugzetten is terugverplaatsen. Zijn het er meer dan
+50, dan doet hij niets en meldt hij het in het log.
+
 Installeren (eenmalig): `sudo bash deploy/bouwer/installeer-live.sh`
 Logboek: `journalctl -u zf-live -f`
 
