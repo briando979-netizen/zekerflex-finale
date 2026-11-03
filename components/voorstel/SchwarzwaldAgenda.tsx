@@ -7,6 +7,7 @@ import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { deelTekst } from "@/lib/voorstel/uitje-tekst";
 import { DeelUitje } from "@/components/voorstel/DeelUitje";
 import { WachtlijstAanmelding } from "@/components/voorstel/WachtlijstAanmelding";
+import { BlijfEten } from "@/components/voorstel/BlijfEten";
 
 // Eigen reserveringsagenda: activiteit + groep kiezen, dag in de maandkalender,
 // tijdslot, gegevens, bevestigen. Beschikbaarheid en boeken via
@@ -170,42 +171,45 @@ export function SchwarzwaldAgenda({
       description: `Reservering ${klaar.id} voor ${klaar.personen} personen.`,
     };
     return (
-      <div role="status" className="rounded-xl3 bg-schw-night p-7 text-schw-cream sm:p-10">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-sun">Gelukt</p>
-        <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Jullie staan in de agenda!</h2>
-        <p className="mt-4 text-lg text-schw-cream/85">
-          {act.naam} op {dagNaam(klaar.datum, { weekday: "long", day: "numeric", month: "long" })} om {klaar.tijd} uur, {klaar.personen} personen.
-          {klaar.prijs !== null && <> Indicatie: {euro(klaar.prijs)}.</>}
-        </p>
-        <p className="mt-2 text-schw-cream/70">
-          Reserveringsnummer <strong className="font-mono text-schw-sun">{klaar.id}</strong>. Het Schwarzwald bevestigt de reservering.
-          {bekend && <> Je vindt hem terug onder <Link href={`${BASE}/account`} className="underline">Mijn account</Link>.</>}
-        </p>
-        <div className="mt-7 flex flex-wrap gap-3">
-          <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-schw-orange px-6 py-3 font-bold text-schw-night">
-            Zet in Google Agenda
-          </a>
-          <a href={klaar.ics} className="rounded-full border border-white/20 px-6 py-3 font-semibold">
-            Zet in Apple Agenda (iPhone)
-          </a>
-          <a href={outlookCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-6 py-3 font-semibold">
-            Zet in Outlook
-          </a>
-          <DeelUitje pad={klaar.deel} tekst={deelTekst(act.naam, klaar.datum, klaar.tijd)} licht />
-          <button
-            type="button"
-            onClick={() => {
-              setKlaar(null);
-              setDatum("");
-              setVervers((v) => v + 1);
-              setGegevens((g) => ({ ...g, opmerking: "", akkoord: false }));
-            }}
-            className="rounded-full px-6 py-3 font-semibold text-schw-cream/80 underline underline-offset-4"
-          >
-            Nog een reservering
-          </button>
+      <div>
+        <div role="status" className="rounded-xl3 bg-schw-night p-7 text-schw-cream sm:p-10">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-schw-sun">Gelukt</p>
+          <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Jullie staan in de agenda!</h2>
+          <p className="mt-4 text-lg text-schw-cream/85">
+            {act.naam} op {dagNaam(klaar.datum, { weekday: "long", day: "numeric", month: "long" })} om {klaar.tijd} uur, {klaar.personen} personen.
+            {klaar.prijs !== null && <> Indicatie: {euro(klaar.prijs)}.</>}
+          </p>
+          <p className="mt-2 text-schw-cream/70">
+            Reserveringsnummer <strong className="font-mono text-schw-sun">{klaar.id}</strong>. Het Schwarzwald bevestigt de reservering.
+            {bekend && <> Je vindt hem terug onder <Link href={`${BASE}/account`} className="underline">Mijn account</Link>.</>}
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-schw-orange px-6 py-3 font-bold text-schw-night">
+              Zet in Google Agenda
+            </a>
+            <a href={klaar.ics} className="rounded-full border border-white/20 px-6 py-3 font-semibold">
+              Zet in Apple Agenda (iPhone)
+            </a>
+            <a href={outlookCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-6 py-3 font-semibold">
+              Zet in Outlook
+            </a>
+            <DeelUitje pad={klaar.deel} tekst={deelTekst(act.naam, klaar.datum, klaar.tijd)} licht />
+            <button
+              type="button"
+              onClick={() => {
+                setKlaar(null);
+                setDatum("");
+                setVervers((v) => v + 1);
+                setGegevens((g) => ({ ...g, opmerking: "", akkoord: false }));
+              }}
+              className="rounded-full px-6 py-3 font-semibold text-schw-cream/80 underline underline-offset-4"
+            >
+              Nog een reservering
+            </button>
+          </div>
+          <p className="mt-6 text-xs text-schw-cream/50">Dit is een ontwerpvoorstel: de reservering is een proefboeking en wordt na 30 dagen gewist.</p>
         </div>
-        <p className="mt-6 text-xs text-schw-cream/50">Dit is een ontwerpvoorstel: de reservering is een proefboeking en wordt na 30 dagen gewist.</p>
+        <BlijfEten boeking={{ id: klaar.id, activiteit: klaar.activiteit, datum: klaar.datum, tijd: klaar.tijd, personen: klaar.personen }} />
       </div>
     );
   }

@@ -3,10 +3,12 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, THEMAFEESTEN } from "@/lib/voorstel/schwarzwald";
+import type { EtenInvulling } from "@/lib/voorstel/eten-regels";
 
 // Aanvraagformulier voor themafeesten, bruiloften en grote groepen. De
 // aanvraag komt als lead in het CRM van Het Schwarzwald (Beheer → Aanvragen);
-// ingelogd zie je hem terug onder Mijn account.
+// ingelogd zie je hem terug onder Mijn account. Via "Blijf je eten?" na een
+// reservering komt het alvast ingevuld binnen (invulling).
 
 const VELD = "mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3.5 text-schw-night ring-1 ring-schw-night/15 focus:outline-none focus:ring-2 focus:ring-schw-orange";
 const LABEL = "text-sm font-semibold text-schw-night";
@@ -16,20 +18,22 @@ export function ReserveerAanvraag({
   thema = "",
   voor = "",
   gegevens = null,
+  invulling = null,
 }: {
   activiteit?: string;
   thema?: string;
   voor?: string;
   gegevens?: { naam: string; email: string; telefoon: string } | null;
+  invulling?: EtenInvulling | null;
 }) {
   const [programma, setProgramma] = useState(activiteit ? `a:${activiteit}` : thema ? `t:${thema}` : "");
   const [gelegenheid, setGelegenheid] = useState(voor);
-  const [datum, setDatum] = useState("");
-  const [aantal, setAantal] = useState("");
+  const [datum, setDatum] = useState(invulling?.datum ?? "");
+  const [aantal, setAantal] = useState(invulling?.aantal ?? "");
   const [naam, setNaam] = useState(gegevens?.naam ?? "");
   const [email, setEmail] = useState(gegevens?.email ?? "");
   const [telefoon, setTelefoon] = useState(gegevens?.telefoon ?? "");
-  const [bericht, setBericht] = useState("");
+  const [bericht, setBericht] = useState(invulling?.bericht ?? "");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState("");
   const [klaar, setKlaar] = useState(false);

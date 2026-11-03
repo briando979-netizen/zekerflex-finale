@@ -4,6 +4,7 @@ import { ACTIVITEITEN, BASE, CONTACT, OPENINGSTIJDEN } from "@/lib/voorstel/schw
 import { boekbaar, isDatum } from "@/lib/voorstel/schwarzwald-agenda";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
+import { leesEtenInvulling } from "@/lib/voorstel/eten-regels";
 import { ReserveerAanvraag } from "@/components/voorstel/ReserveerAanvraag";
 import { SchwarzwaldAgenda, type AgendaActiviteit } from "@/components/voorstel/SchwarzwaldAgenda";
 
@@ -21,6 +22,11 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
     const r = cfg.regels[a.slug];
     return r ? [{ slug: a.slug, naam: a.naam, min: r.min, max: r.max, duurMin: r.duurMin }] : [];
   });
+  // "Blijf je eten?" na een reservering: formulier alvast ingevuld
+  const invulling = leesEtenInvulling(
+    Object.fromEntries(["voor", "datum", "personen", "na", "tijd", "nr"].map((k) => [k, tekst(sp[k])])),
+    Object.fromEntries(ACTIVITEITEN.map((a) => [a.slug, a.naam])),
+  );
 
   return (
     <>
@@ -75,10 +81,13 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
           </div>
         </div>
         <ReserveerAanvraag
+          // nieuwe invulling (bv. vanuit de bevestiging hierboven) = formulier opnieuw opbouwen
+          key={JSON.stringify([tekst(sp.voor), invulling])}
           activiteit={tekst(sp.activiteit)}
           thema={tekst(sp.thema)}
           voor={tekst(sp.voor)}
           gegevens={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
+          invulling={invulling}
         />
       </section>
     </>

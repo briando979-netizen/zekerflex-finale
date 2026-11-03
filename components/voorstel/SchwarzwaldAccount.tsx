@@ -10,6 +10,7 @@ import { sterren } from "@/lib/voorstel/review-weergave";
 import { VOORUIT_DAGEN, plusDagen } from "@/lib/voorstel/schwarzwald-agenda";
 import { offerteKlaar } from "@/lib/voorstel/offerte-regels";
 import { deelTekst } from "@/lib/voorstel/uitje-tekst";
+import { etenAanvraagPad } from "@/lib/voorstel/eten-regels";
 import { DeelUitje } from "@/components/voorstel/DeelUitje";
 
 // Klantaccount: inloggen/registreren (ook met Google), en ingelogd een
@@ -636,6 +637,9 @@ export function SchwarzwaldAccount(props: {
                 Apple Agenda
               </a>
               <DeelUitje pad={b.deel} tekst={deelTekst(namen[b.activiteit] ?? b.activiteit, b.datum, b.tijd)} />
+              <Link href={etenAanvraagPad(BASE, b)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
+                Blijf je eten?
+              </Link>
             </>
           )}
           {b.status !== "geannuleerd" && b.datum > vandaag && bewerk?.id !== b.id && (
