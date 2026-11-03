@@ -971,6 +971,23 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         </>
       );
       break;
+    case "stappen":
+      fields = (
+        <>
+          {kop}
+          <ItemsEditor items={block.props.items} max={8} blank={{ titel: "Nieuwe stap", tekst: "Korte uitleg." }} fields={[{ key: "titel", label: "Stap" }, { key: "tekst", label: "Uitleg", area: true }]} onChange={(items) => onChange({ ...block, props: { ...block.props, items } })} />
+          <p className="text-xs text-neutralx-500">De stappen worden op de website vanzelf genummerd, in deze volgorde.</p>
+        </>
+      );
+      break;
+    case "usps":
+      fields = (
+        <>
+          {kop}
+          <ItemsEditor items={block.props.items} max={8} blank={{ titel: "Nieuw voordeel", tekst: "Korte uitleg." }} fields={[{ key: "titel", label: "Voordeel" }, { key: "tekst", label: "Uitleg", area: true }]} onChange={(items) => onChange({ ...block, props: { ...block.props, items } })} />
+        </>
+      );
+      break;
     case "galerij":
       fields = (
         <>

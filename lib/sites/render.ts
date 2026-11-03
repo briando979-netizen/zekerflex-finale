@@ -153,6 +153,7 @@ section{padding:96px 0}@media (max-width:760px){section{padding:64px 0}}section.
 .eyebrow{margin:0 0 18px;font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--sun);opacity:1}
 @media (max-width:760px){.hero{min-height:76vh;padding:128px 0 64px}}
 .cards{gap:24px}.card{background:#fff;border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.card h3{color:var(--night)}section.alt .card{background:#fff}
+.steps li{border:0;border-radius:28px;padding:32px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.steps li::before{width:52px;height:52px;background:var(--night);color:var(--sun);font:700 1.35rem/1 ${DISPLAY}}
 .split{gap:56px}.split img,.gallery img{border-radius:28px}details.q{border-color:var(--line)}details.q summary::after{color:var(--a-d)}.hours td{border-color:var(--line)}
 .band{background:var(--night);color:var(--cream);padding:112px 0}.band h2{color:#fff;max-width:18ch;margin-left:auto;margin-right:auto}
 form.contact input,form.contact textarea{border-radius:14px;border-color:rgba(10,18,14,.2)}
@@ -217,7 +218,10 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 .demo-bar{background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
 .logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
 .vac{display:flex;flex-direction:column;gap:6px}.vac .meta{color:var(--mute);font-size:.95rem}.vac .btn{padding:10px 18px;font-size:.9rem}
-.wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}${luxe}`;
+.wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}
+.steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
+.steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
+.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${luxe}`;
 }
 
 /** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
@@ -305,6 +309,11 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
     }
     case "diensten":
       return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items.map((it) => `<div class="card"><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</div>`).join("")}</div></div></section>`;
+    // role="list": without list bullets Safari would otherwise stop announcing these as a list
+    case "stappen":
+      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><ol class="steps" role="list">${b.props.items.map((it) => `<li><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</li>`).join("")}</ol></div></section>`;
+    case "usps":
+      return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><ul class="usps" role="list">${b.props.items.map((it) => `<li><h3>${esc(it.titel)}</h3>${paras(it.tekst)}</li>`).join("")}</ul></div></section>`;
     case "galerij": {
       const pics = b.props.fotos.map((f) => img(ctx, f, "(min-width: 760px) 33vw, 100vw")).filter(Boolean);
       if (pics.length === 0) return "";

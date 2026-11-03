@@ -17,7 +17,9 @@ export type BlockType =
   | "openingstijden"
   | "cta"
   | "contact"
-  | "vacatures";
+  | "vacatures"
+  | "stappen"
+  | "usps";
 
 export interface Item {
   titel: string;
@@ -37,6 +39,10 @@ export interface BlockProps {
   contact: { kop: string; tekst: string; formulier: boolean };
   /** the company's open shifts on ZekerFlex, filled in live when a visitor opens the page */
   vacatures: { kop: string; tekst: string; aantal: number };
+  /** "how it works": steps, numbered by the page itself */
+  stappen: { kop: string; items: Item[] };
+  /** reasons to choose the company, each with a check mark */
+  usps: { kop: string; items: Item[] };
 }
 
 /** One open shift as a company's own website shows it (lib/sites/vacancies.ts fills these in). */
@@ -183,6 +189,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   tekst: "Tekst",
   tekstFoto: "Tekst met foto",
   diensten: "Diensten",
+  stappen: "Zo werkt het (stappen)",
+  usps: "Waarom wij (voordelen)",
   galerij: "Fotogalerij",
   reviews: "Reviews",
   faq: "Veelgestelde vragen",
@@ -217,6 +225,32 @@ export function newBlock(type: BlockType, id: string): Block {
       return { id, type, props: { kop: "Contact", tekst: "Stuur ons een bericht; we reageren binnen één werkdag.", formulier: true } };
     case "vacatures":
       return { id, type, props: { kop: "Werken bij ons", tekst: "Kom ons team versterken. Kies een dienst die bij je past en reageer direct via ZekerFlex.", aantal: 6 } };
+    case "stappen":
+      return {
+        id,
+        type,
+        props: {
+          kop: "Zo werkt het",
+          items: [
+            { titel: "Neem contact op", tekst: "Bel, mail of stuur een bericht via de website." },
+            { titel: "Afspraak op maat", tekst: "We bespreken wat je nodig hebt. Je weet vooraf waar je aan toe bent." },
+            { titel: "Wij gaan aan de slag", tekst: "Netjes, op tijd en volgens afspraak." },
+          ],
+        },
+      };
+    case "usps":
+      return {
+        id,
+        type,
+        props: {
+          kop: "Waarom kiezen voor ons",
+          items: [
+            { titel: "Persoonlijk", tekst: "Eén vast aanspreekpunt, van begin tot eind." },
+            { titel: "Duidelijke afspraken", tekst: "Vooraf weten waar je aan toe bent." },
+            { titel: "Dichtbij", tekst: "Uit de buurt, dus snel ter plaatse." },
+          ],
+        },
+      };
   }
 }
 
@@ -369,6 +403,7 @@ export function pagesFromTemplate(t: SectorTemplate, c: Company, newId: () => st
         block("hero", { kop: f(t.heroKop), tekst: f(t.heroTekst) }),
         block("diensten", { kop: "Wat we doen", items: t.diensten.map((d) => ({ titel: f(d.titel), tekst: f(d.tekst) })) }),
         block("tekstFoto", { kop: f("Over {bedrijf}"), tekst: f(t.over) }),
+        block("stappen", {}),
         block("reviews", {}),
         block("cta", {}),
       ],

@@ -209,6 +209,37 @@ describe("luxe stijl, logo, WhatsApp en sociale media", () => {
   });
 });
 
+describe("stappen en voordelen", () => {
+  it("stappen zijn een genummerde lijst, voordelen een lijst met vinkjes, alles onschadelijk gemaakt", () => {
+    const s = site();
+    const home = s.pages[0]!;
+    home.blocks.push(newBlock("usps", "busps0001"));
+    const steps = home.blocks.find((b) => b.type === "stappen");
+    if (steps?.type === "stappen") steps.props.items[0]!.titel = "Bel <b>ons</b>";
+    const html = renderPage(s, home, opts);
+    expect(html).toContain('<ol class="steps" role="list"><li><h3>Bel &lt;b&gt;ons&lt;/b&gt;</h3>');
+    expect(html).toContain('<ul class="usps" role="list"><li><h3>Persoonlijk</h3>');
+    const css = siteCss(s.theme);
+    expect(css).toContain(".steps{counter-reset:stap}");
+    expect(css).toContain('.usps li::before{content:"✓"');
+    expect(siteCss({ ...s.theme, stijl: "premium" })).toContain(".steps li::before{width:52px;height:52px;background:var(--night);color:var(--sun)");
+  });
+
+  it("een nieuwe site krijgt 'Zo werkt het' op de homepagina, en de bouwer bewaart hooguit 8 stappen", () => {
+    const home = site().pages[0]!;
+    expect(home.blocks.map((b) => b.type)).toEqual(["hero", "diensten", "tekstFoto", "stappen", "reviews", "cta"]);
+    const s = site();
+    const save = (n: number) =>
+      siteSaveSchema.safeParse({
+        theme: s.theme,
+        bedrijf: { ...company, naam: "Bakkerij" },
+        pages: s.pages.map((p, i) => (i === 0 ? { ...p, blocks: [{ id: "bst000001", type: "stappen", props: { kop: "Zo werkt het", items: Array.from({ length: n }, (_, j) => ({ titel: `Stap ${j + 1}`, tekst: "" })) } }] } : p)),
+      }).success;
+    expect(save(8)).toBe(true);
+    expect(save(9)).toBe(false);
+  });
+});
+
 describe("vacatureblok: open diensten van het bedrijf", () => {
   const withBlock = (aantal = 6) => {
     const s = site();
