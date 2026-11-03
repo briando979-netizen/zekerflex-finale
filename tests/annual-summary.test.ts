@@ -31,10 +31,10 @@ describe("getAnnualSummary", () => {
     getFiscal.mockResolvedValue({ kvkNumber: "12345678", vatNumber: "NL001234567B01" });
     invoiceModeFor.mockReturnValue("reverse-billing");
     invoiceFindMany.mockResolvedValue([
-      { subtotalCents: 10_000, vatCents: 2_100, createdAt: new Date("2026-02-10T10:00:00Z") },
+      { subtotalCents: 10_000, vatCents: 2_100, createdAt: new Date("2026-02-10T10:00:00Z"), recipientTenantId: "a", recipientTenant: { name: "Café A" } },
       // 31 maart 23:30 UTC = 1 april in Amsterdam → kwartaal 2
-      { subtotalCents: 20_000, vatCents: 4_200, createdAt: new Date("2026-03-31T23:30:00Z") },
-      { subtotalCents: 5_000, vatCents: 0, createdAt: new Date("2026-11-01T10:00:00Z") },
+      { subtotalCents: 20_000, vatCents: 4_200, createdAt: new Date("2026-03-31T23:30:00Z"), recipientTenantId: "b", recipientTenant: { name: "Hotel B" } },
+      { subtotalCents: 5_000, vatCents: 0, createdAt: new Date("2026-11-01T10:00:00Z"), recipientTenantId: "a", recipientTenant: { name: "Café A" } },
     ]);
     timesheetFindMany.mockResolvedValue([
       { billableMinutes: 480, branch: { tenantId: "a" } },
@@ -56,6 +56,10 @@ describe("getAnnualSummary", () => {
     expect(s.shifts).toBe(3);
     expect(s.clients).toBe(2);
     expect(s.mileage).toEqual({ trips: 3, km: 120.5, amountCents: 2772 });
+    expect(s.byClient).toEqual([
+      { name: "Hotel B", revenueCents: 20_000, share: 20_000 / 35_000 },
+      { name: "Café A", revenueCents: 15_000, share: 15_000 / 35_000 },
+    ]);
 
     const where = invoiceFindMany.mock.calls[0]![0].where;
     expect(where.type).toBe("SELF_BILL_FREELANCER");
@@ -90,11 +94,17 @@ describe("annualSummaryPdf", () => {
       hours: 1300,
       shifts: 160,
       clients: 5,
+      byClient: [
+        { name: "Hotel B", revenueCents: 2_400_00, share: 0.6 },
+        { name: "Café A", revenueCents: 1_600_00, share: 0.4 },
+      ],
       mileage: { trips: 160, km: 3200, amountCents: 73_600 },
     });
     const text = buf.toString("latin1");
     expect(text.startsWith("%PDF-")).toBe(true);
     expect(text).toContain("Jaaroverzicht 2026");
+    expect(text).toContain("Omzet per opdrachtgever");
+    expect(text).toContain("Hotel B");
     expect(text).toContain("privéauto");
     expect(text.trimEnd().endsWith("%%EOF")).toBe(true);
   });

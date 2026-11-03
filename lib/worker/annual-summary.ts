@@ -27,6 +27,8 @@ export interface AnnualSummary {
   hours: number;
   shifts: number;
   clients: number;
+  /** omzet excl. btw per opdrachtgever (uit de facturen), grootste eerst */
+  byClient: { name: string; revenueCents: number; share: number }[];
   mileage: { trips: number; km: number; amountCents: number };
 }
 
@@ -46,7 +48,7 @@ export async function getAnnualSummary(userId: string, year: number): Promise<An
   const [invoices, timesheets, mileage] = await Promise.all([
     prisma.invoice.findMany({
       where: { issuerFreelancerId: profile.id, type: "SELF_BILL_FREELANCER", status: { in: ["ISSUED", "PAID"] }, createdAt: { gte: from, lt: to } },
-      select: { subtotalCents: true, vatCents: true, createdAt: true },
+      select: { subtotalCents: true, vatCents: true, createdAt: true, recipientTenantId: true, recipientTenant: { select: { name: true } } },
     }),
     prisma.timesheet.findMany({
       where: { freelancerId: profile.id, status: { in: ["APPROVED", "PAID"] }, scheduledStart: { gte: from, lt: to } },
@@ -63,6 +65,19 @@ export async function getAnnualSummary(userId: string, year: number): Promise<An
     q.invoices++;
   }
 
+  // Per opdrachtgever: handig voor de boekhouder en om bij de Wet DBA te laten zien dat je voor meerdere klanten werkt.
+  const perClient = new Map<string, { name: string; revenueCents: number }>();
+  for (const inv of invoices) {
+    const id = inv.recipientTenantId ?? "onbekend";
+    const c = perClient.get(id) ?? { name: inv.recipientTenant?.name ?? "Onbekende opdrachtgever", revenueCents: 0 };
+    c.revenueCents += inv.subtotalCents;
+    perClient.set(id, c);
+  }
+  const revenueCents = quarters.reduce((s, q) => s + q.revenueCents, 0);
+  const byClient = [...perClient.values()]
+    .sort((a, b) => b.revenueCents - a.revenueCents)
+    .map((c) => ({ ...c, share: revenueCents > 0 ? c.revenueCents / revenueCents : 0 }));
+
   return {
     kind: "ok",
     summary: {
@@ -71,12 +86,13 @@ export async function getAnnualSummary(userId: string, year: number): Promise<An
       kvkNumber: fiscal.kvkNumber ?? null,
       vatNumber: fiscal.vatNumber ?? null,
       quarters,
-      revenueCents: quarters.reduce((s, q) => s + q.revenueCents, 0),
+      revenueCents,
       vatCents: quarters.reduce((s, q) => s + q.vatCents, 0),
       invoices: invoices.length,
       hours: Math.round((timesheets.reduce((s, t) => s + t.billableMinutes, 0) / 60) * 10) / 10,
       shifts: timesheets.length,
       clients: new Set(timesheets.map((t) => t.branch.tenantId)).size,
+      byClient,
       mileage: mileage?.totals ?? { trips: 0, km: 0, amountCents: 0 },
     },
   };
@@ -115,6 +131,19 @@ export function annualSummaryPdf(s: AnnualSummary, generatedAt = new Date()): Bu
   pdf.row("Verschillende opdrachtgevers", num(s.clients));
   pdf.gap(6);
   pdf.rule();
+
+  if (s.byClient.length) {
+    pdf.section("Omzet per opdrachtgever");
+    const shown = s.byClient.slice(0, 10);
+    for (const c of shown) pdf.row(c.name, `${euro(c.revenueCents)} · ${num(Math.round(c.share * 100))}%`);
+    const rest = s.byClient.slice(10);
+    if (rest.length) {
+      const restCents = rest.reduce((sum, c) => sum + c.revenueCents, 0);
+      pdf.row(`Overige ${rest.length} opdrachtgevers`, euro(restCents));
+    }
+    pdf.gap(6);
+    pdf.rule();
+  }
 
   pdf.section("Zakelijke kilometers");
   pdf.row("Zakelijke ritten", num(s.mileage.trips));
