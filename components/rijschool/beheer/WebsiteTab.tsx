@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { BeheerWeergave } from "@/lib/rijschool/weergave";
 import type { Doe } from "@/components/rijschool/beheer/RijschoolBeheer";
 import type { RijschoolWebsite } from "@/lib/rijschool/website";
-import { foutVan } from "@/components/rijschool/api";
+import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
 
 // De teksten van de rijschoolwebsite. {naam} en {plaats} worden op de site
@@ -50,6 +50,7 @@ export function WebsiteTab({ data, doe }: { data: BeheerWeergave; doe: Doe }) {
 
   return (
     <form onSubmit={bewaar} className="space-y-4">
+      <Heldfoto />
       <section className="card grid gap-4 p-5">
         <h2 className="font-display text-lg font-bold text-ink">Bovenaan de website</h2>
         <Veld label="Kop" uitleg="{naam} en {plaats} worden automatisch ingevuld.">
@@ -150,5 +151,85 @@ export function WebsiteTab({ data, doe }: { data: BeheerWeergave; doe: Doe }) {
         </a>
       </div>
     </form>
+  );
+}
+
+// De foto bovenaan de website (lib/rijschool/heldfoto.ts): los van de teksten,
+// want hij wordt meteen opgeslagen.
+function Heldfoto() {
+  const [url, setUrl] = useState<string | null>(null);
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+
+  useEffect(() => {
+    stuur<{ url: string | null }>("/api/rijschool/beheer/foto")
+      .then((d) => setUrl(d.url))
+      .catch((e) => setFout(foutVan(e)));
+  }, []);
+
+  async function kies(bestand: File | undefined) {
+    if (!bestand) return;
+    setFout(null);
+    if (bestand.size > 15_000_000) return setFout("Deze foto is groter dan 15 MB.");
+    setBezig(true);
+    try {
+      const foto = await new Promise<string>((klaar, mis) => {
+        const lezer = new FileReader();
+        lezer.onload = () => klaar(String(lezer.result));
+        lezer.onerror = () => mis(new Error("De foto kon niet worden gelezen."));
+        lezer.readAsDataURL(bestand);
+      });
+      setUrl((await stuur<{ url: string | null }>("/api/rijschool/beheer/foto", "POST", { foto })).url);
+    } catch (e) {
+      setFout(foutVan(e));
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  async function weg() {
+    setFout(null);
+    setBezig(true);
+    try {
+      const res = await fetch("/api/rijschool/beheer/foto", { method: "DELETE" });
+      if (!res.ok) throw new Error("Verwijderen lukte niet.");
+      setUrl(null);
+    } catch (e) {
+      setFout(foutVan(e));
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <section className="card grid gap-4 p-5 sm:grid-cols-[1fr_16rem] sm:items-center">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">Foto bovenaan je website</h2>
+        <p className="mt-1 text-sm text-neutralx-600">
+          Bijvoorbeeld je lesauto of je instructeurs. De foto komt onder een donkere laag, zodat de tekst leesbaar blijft. Liggend werkt het best. Wat er aan
+          locatiegegevens in de foto zit, halen we eruit.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="btn-ghost cursor-pointer">
+            {bezig ? "Bezig…" : url ? "Andere foto kiezen" : "Foto kiezen"}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={bezig} onChange={(e) => void kies(e.target.files?.[0])} />
+          </label>
+          {url && (
+            <button type="button" className="btn-ghost" disabled={bezig} onClick={() => void weg()}>
+              Foto weghalen
+            </button>
+          )}
+        </div>
+        <Melding fout={fout} />
+      </div>
+      <div className="aspect-video overflow-hidden rounded-xl bg-paper-soft ring-1 ring-hair">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- eigen, opgeschoonde foto
+          <img src={url} alt="Foto bovenaan je website" className="h-full w-full object-cover" />
+        ) : (
+          <p className="grid h-full place-items-center px-3 text-center text-xs text-neutralx-500">Nog geen foto</p>
+        )}
+      </div>
+    </section>
   );
 }

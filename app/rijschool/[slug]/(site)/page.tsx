@@ -10,6 +10,7 @@ import { siteUrl } from "@/lib/rijschool/mail";
 import { winkelLink } from "@/lib/play/api";
 import { Stuur } from "@/components/rijschool/site/Stuur";
 import { telefoonWeergave } from "@/lib/rijschool/format";
+import { heldfotoUrl } from "@/lib/rijschool/heldfoto";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +38,11 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
   const basis = `/rijschool/${r.slug}`;
-  const [producten, instructeurs, playApp] = await Promise.all([
+  const [producten, instructeurs, playApp, foto] = await Promise.all([
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id, zichtbaar: true }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id, actief: true }, select: { id: true, naam: true, bio: true, categorieen: true }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolApp.findUnique({ where: { rijschoolId: r.id }, select: { pakketnaam: true, liveSinds: true } }).catch(() => null),
+    heldfotoUrl(r),
   ]);
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const ld = {
@@ -65,6 +67,15 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
 
       {/* Hero */}
       <section className="relative overflow-hidden text-schw-cream" style={{ background: "var(--rs-nacht)" }}>
+        {foto && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- eigen, al opgeschoonde WebP (lib/rijschool/heldfoto.ts) */}
+            <img src={foto} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
+            {/* donkere laag: tekst blijft leesbaar op elke foto; links (waar de tekst staat) het donkerst */}
+            <div aria-hidden="true" className="absolute inset-0 opacity-80" style={{ background: "var(--rs-nacht)" }} />
+            <div aria-hidden="true" className="absolute inset-0 hidden lg:block" style={{ background: "linear-gradient(90deg, var(--rs-nacht) 0%, transparent 65%)" }} />
+          </>
+        )}
         <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-10 h-[420px] w-[420px] animate-aurora-drift rounded-full opacity-30 blur-3xl" style={{ background: "var(--rs-accent)" }} />
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-0 h-[380px] w-[380px] animate-aurora-drift rounded-full opacity-40 blur-3xl [animation-delay:-6s]" style={{ background: "var(--rs-kleur)" }} />
         <div className="relative mx-auto grid max-w-[1280px] items-center gap-12 px-4 pb-24 pt-12 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:pb-32 lg:pt-20">
