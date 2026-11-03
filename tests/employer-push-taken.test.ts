@@ -26,7 +26,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { pushShiftTaken } from "@/lib/notifications/employer-push";
+import { pushHoursSubmitted, pushShiftTaken } from "@/lib/notifications/employer-push";
 
 beforeEach(() => {
   h.pushes.length = 0;
@@ -48,6 +48,13 @@ describe("pushShiftTaken", () => {
     h.assigned = 2;
     await pushShiftTaken("sh1", "Sanne", 3);
     expect(h.pushes[0]?.push.body).toMatch(/^Magazijn, 3 dagen vanaf do 5 nov\.? 09:00\. De klus is nu vol\.$/);
+  });
+
+  it("meldt ingediende uren met het aantal uur, en verwijst naar het goedkeuren", async () => {
+    await pushHoursSubmitted("sh1", "ts1", "Sanne", 450);
+    expect(h.pushes[0]?.push.title).toBe("🕒 Uren ingediend: Sanne");
+    expect(h.pushes[0]?.push.body).toBe("Magazijn, do 5 nov 09:00: 7,5 uur. Keur ze goed, dan wordt er uitbetaald.");
+    expect(h.pushes[0]?.push.data.url).toBe("/werkgever/uren");
   });
 
   it("stuurt niets als er geen contactpersoon is", async () => {

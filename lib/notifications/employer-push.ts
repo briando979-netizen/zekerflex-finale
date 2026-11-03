@@ -16,6 +16,22 @@ const when = (d: Date) => {
   return `${WD[p.weekday] ?? ""} ${p.day} ${MON[p.month - 1] ?? ""} ${amsterdamClock(d)}`;
 };
 
+/** "🕒 Uren ingediend" — sneller goedkeuren betekent sneller uitbetalen aan de werker. */
+export async function pushHoursSubmitted(shiftId: string, timesheetId: string, workerName: string, billableMinutes: number): Promise<void> {
+  const [contact, shift] = await Promise.all([
+    resolveShiftContact(shiftId),
+    prisma.shift.findUnique({ where: { id: shiftId }, select: { title: true, startsAt: true } }),
+  ]);
+  if (!contact || !shift) return;
+  const hours = (Math.round((billableMinutes / 60) * 100) / 100).toString().replace(".", ",");
+  await sendUserPush([contact.userId], {
+    title: `🕒 Uren ingediend: ${workerName}`,
+    body: `${shift.title}, ${when(shift.startsAt)}: ${hours} uur. Keur ze goed, dan wordt er uitbetaald.`,
+    data: { type: "SHIFT", url: "/werkgever/uren", tag: `uren-${timesheetId}` },
+    ttlSeconds: 86_400,
+  });
+}
+
 export async function pushShiftTaken(shiftId: string, workerName: string, days = 1): Promise<void> {
   const [contact, shift] = await Promise.all([
     resolveShiftContact(shiftId),

@@ -5,6 +5,8 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { pushHoursSubmitted } from "@/lib/notifications/employer-push";
+import { runAfter } from "@/lib/run-after";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +42,7 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     const input = schema.parse(await request.json());
     const profile = await prisma.freelancerProfile.findUnique({ where: { userId: principal.userId }, select: { id: true } });
     if (!profile) throw AppError.forbidden("Geen werknemersprofiel gevonden");
-    const timesheet = await prisma.timesheet.findFirst({ where: { id: params.timesheetId, freelancerId: profile.id }, select: { id: true, status: true, scheduledStart: true, scheduledEnd: true, actualStart: true, actualEnd: true, breakMinutes: true } });
+    const timesheet = await prisma.timesheet.findFirst({ where: { id: params.timesheetId, freelancerId: profile.id }, select: { id: true, status: true, scheduledStart: true, scheduledEnd: true, actualStart: true, actualEnd: true, breakMinutes: true, assignment: { select: { shiftId: true } } } });
     if (!timesheet) throw AppError.notFound("Urenstaat niet gevonden");
     if (timesheet.status !== "DRAFT") throw AppError.precondition(`Deze urenstaat kan niet meer worden ingediend (${timesheet.status})`);
     const start = input.actualStart ? new Date(input.actualStart) : timesheet.actualStart ?? timesheet.scheduledStart;
@@ -50,6 +52,9 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     if (billableMinutes <= 0) throw AppError.validation("De urenstaat moet minstens één betaalbaar uur bevatten");
     const updated = await prisma.timesheet.update({ where: { id: timesheet.id }, data: { status: "SUBMITTED", actualStart: start, actualEnd: end, breakMinutes: input.breakMinutes, billableMinutes, submittedAt: new Date(), extraCostsCents: input.extraCostsCents ?? null, extraCostsNote: input.extraCostsCents ? (input.extraCostsNote ?? null) : null }, select: { id: true, status: true, billableMinutes: true } });
     await recordAudit({ category: "TIMESHEET", action: "timesheet.submitted", actorUserId: principal.userId, actorLabel: "user", summary: `Urenstaat ingediend: ${billableMinutes} minuten`, targetType: "timesheet", targetId: timesheet.id, metadata: { note: input.note ?? null, breakMinutes: input.breakMinutes, extraCostsCents: input.extraCostsCents ?? null } });
+    // Tell the client now (the autopilot only reminds twice a day): approving sooner pays the worker sooner.
+    const shiftId = timesheet.assignment?.shiftId;
+    if (shiftId) runAfter(() => pushHoursSubmitted(shiftId, timesheet.id, principal.fullName, billableMinutes));
     return NextResponse.json({ timesheet: updated });
   } catch (err) {
     const { status, body } = toErrorBody(err);
