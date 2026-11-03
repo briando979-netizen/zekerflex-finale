@@ -5,6 +5,8 @@ import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, activiteit, doelgroepHref } f
 import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { SchwarzwaldBlokken } from "@/components/voorstel/SchwarzwaldBlokken";
 import { ActiviteitKaart, Beeld, CtaBand } from "@/components/voorstel/SchwarzwaldCards";
+import { goedgekeurdeReviews } from "@/lib/voorstel/schwarzwald-reviews";
+import { gemiddelde, sterren } from "@/lib/voorstel/review-weergave";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const a = activiteit((await params).slug);
@@ -17,6 +19,7 @@ export default async function ActiviteitPage({ params }: { params: Promise<{ slu
 
   // hun eigen tekst over deze activiteit, letterlijk
   const bron = await paginaVoorSite(a.bron);
+  const reviews = await goedgekeurdeReviews(a.slug).catch(() => []);
   const ookLeuk = ACTIVITEITEN.filter((x) => x.slug !== a.slug && x.categorie === a.categorie).slice(0, 3);
   const doelgroepen = DOELGROEPEN.filter((d) => a.voor.includes(d.slug));
 
@@ -83,6 +86,30 @@ export default async function ActiviteitPage({ params }: { params: Promise<{ slu
           </ul>
         )}
       </div>
+
+      {reviews.length > 0 && (
+        <section className="bg-schw-forest py-16 text-schw-cream">
+          <div className="mx-auto max-w-[1280px] px-4 sm:px-8">
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Wat gasten zeggen</h2>
+            <p className="mt-2 text-schw-cream/80">
+              <span className="text-schw-sun">{sterren(Math.round(gemiddelde(reviews) ?? 0))}</span> {gemiddelde(reviews)?.toLocaleString("nl-NL")} uit {reviews.length}{" "}
+              {reviews.length === 1 ? "beoordeling" : "beoordelingen"}
+            </p>
+            <ul className="mt-8 grid gap-5 md:grid-cols-3">
+              {reviews.slice(0, 6).map((r) => (
+                <li key={r.id} className="flex flex-col rounded-xl3 bg-white/5 p-6 ring-1 ring-white/10">
+                  <p className="text-schw-sun" aria-label={`${r.score} van 5 sterren`}>
+                    {sterren(r.score)}
+                  </p>
+                  <blockquote className="mt-2 flex-1 leading-relaxed text-schw-cream/90">&ldquo;{r.tekst}&rdquo;</blockquote>
+                  {r.antwoord && <p className="mt-3 border-l-2 border-schw-orange pl-3 text-sm text-schw-cream/70">Het Schwarzwald: {r.antwoord}</p>}
+                  <p className="mt-4 text-sm font-bold">{r.naam}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       {ookLeuk.length > 0 && (
         <section className="bg-schw-sand py-16">

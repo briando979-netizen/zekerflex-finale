@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar/links";
 import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
+import { sterren } from "@/lib/voorstel/review-weergave";
 
 // Klantaccount: inloggen/registreren (ook met Google), en ingelogd een
 // dashboard met je volgende uitje, reserveringen, aanvragen, berichten met het
@@ -42,6 +43,90 @@ export interface MijnBericht {
   door: string;
   datum: string;
 }
+export interface MijnReview {
+  id: string;
+  boekingId: string;
+  score: number;
+  tekst: string;
+  status: "nieuw" | "goedgekeurd" | "verborgen";
+  antwoord: string;
+}
+
+const REVIEW_STATUS: Record<MijnReview["status"], string> = {
+  nieuw: "wacht op goedkeuring",
+  goedgekeurd: "staat op de site",
+  verborgen: "niet gepubliceerd",
+};
+
+/** Beoordelen na een bezoek, of je beoordeling (met antwoord van het team) terugzien. */
+function ReviewBlok({ review, plaats }: { review: MijnReview | undefined; plaats: (score: number, tekst: string) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [score, setScore] = useState(0);
+  const [tekst, setTekst] = useState("");
+  const [bezig, setBezig] = useState(false);
+
+  if (review) {
+    return (
+      <div className="w-full rounded-xl bg-white p-3 text-sm">
+        <p>
+          <span className="text-schw-orange" aria-label={`${review.score} van 5 sterren`}>
+            {sterren(review.score)}
+          </span>{" "}
+          <span className="text-schw-mute">· jouw beoordeling · {REVIEW_STATUS[review.status]}</span>
+        </p>
+        <p className="mt-1">&ldquo;{review.tekst}&rdquo;</p>
+        {review.antwoord && <p className="mt-2 border-l-2 border-schw-orange pl-3 text-schw-mute">Het Schwarzwald: {review.antwoord}</p>}
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="rounded-full bg-schw-sun px-4 py-2 text-sm font-bold text-schw-night">
+        ★ Beoordeel dit uitje
+      </button>
+    );
+  }
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setBezig(true);
+        void plaats(score, tekst).finally(() => setBezig(false));
+      }}
+      className="w-full space-y-3 rounded-xl bg-white p-4"
+    >
+      <div role="radiogroup" aria-label="Aantal sterren" className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={score === n}
+            aria-label={`${n} ${n === 1 ? "ster" : "sterren"}`}
+            onClick={() => setScore(n)}
+            className={`text-3xl leading-none ${n <= score ? "text-schw-orange" : "text-schw-night/20"}`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+      <label className="block text-sm font-semibold">
+        Hoe was het?
+        <textarea required minLength={10} maxLength={1500} rows={3} value={tekst} onChange={(e) => setTekst(e.target.value)} className={VELD} />
+      </label>
+      <div className="flex gap-2">
+        <button type="submit" disabled={bezig || score === 0} className="rounded-full bg-schw-night px-5 py-2.5 text-sm font-bold text-schw-cream disabled:opacity-40">
+          Plaats beoordeling
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-schw-night/15">
+          Annuleren
+        </button>
+      </div>
+      <p className="text-xs text-schw-mute">Op de site staat alleen je voornaam en de eerste letter van je achternaam.</p>
+    </form>
+  );
+}
+
 export interface Suggestie {
   slug: string;
   naam: string;
@@ -233,11 +318,13 @@ export function SchwarzwaldAccount(props: {
   namen: Record<string, string>;
   duur: Record<string, number>;
   suggesties: Suggestie[];
+  reviews: MijnReview[];
   vandaag: string;
   googleAan: boolean;
   fout: string;
 }) {
   const { account, boekingen, aanvragen, berichten, namen, duur, suggesties, vandaag } = props;
+  const reviewPer = useMemo(() => new Map(props.reviews.map((r) => [r.boekingId, r])), [props.reviews]);
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("reserveringen");
   const [fout, setFout] = useState("");
@@ -317,6 +404,12 @@ export function SchwarzwaldAccount(props: {
             </Link>
           )}
         </div>
+        {b.status !== "geannuleerd" && b.datum <= vandaag && (
+          <ReviewBlok
+            review={reviewPer.get(b.id)}
+            plaats={(score, tekst) => actie({ actie: "review", boekingId: b.id, score, tekst }, "Dank je voor je beoordeling! Het team bekijkt hem en zet hem daarna op de site.")}
+          />
+        )}
       </li>
     );
   };

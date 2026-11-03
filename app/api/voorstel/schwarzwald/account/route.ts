@@ -7,6 +7,7 @@ import { jsonError } from "@/lib/http/errors";
 import { eisZelfdeHerkomst, huidigAccount, inloggen, registreer, uitloggen, wijzigProfiel } from "@/lib/voorstel/schwarzwald-accounts";
 import { annuleerEigen, boekingenVanAccount } from "@/lib/voorstel/schwarzwald-boekingen";
 import { aanvragenVan, klantkaart, tijdlijn, voegItemToe, wijzigKlantkaart } from "@/lib/voorstel/schwarzwald-crm";
+import { plaatsReview, reviewsVan } from "@/lib/voorstel/schwarzwald-reviews";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,11 +21,12 @@ export async function GET(): Promise<NextResponse> {
   try {
     const account = await huidigAccount();
     if (!account) return NextResponse.json({ account: null, boekingen: [] });
-    const [boekingen, aanvragen, lijn, kaart] = await Promise.all([
+    const [boekingen, aanvragen, lijn, kaart, reviews] = await Promise.all([
       boekingenVanAccount(account.email),
       aanvragenVan(account.email),
       tijdlijn(account.email),
       klantkaart(account.email),
+      reviewsVan(account.email),
     ]);
     // de klant ziet alleen berichten, nooit interne notities of taken
     const berichten = lijn.filter((i) => i.soort === "bericht-klant" || i.soort === "bericht-team").map(({ id, soort, tekst, door, datum }) => ({ id, soort, tekst, door, datum }));
@@ -34,6 +36,7 @@ export async function GET(): Promise<NextResponse> {
       aanvragen: aanvragen.map(({ id, programma, gelegenheid, datum, personen, status, aangemaakt }) => ({ id, programma, gelegenheid, datum, personen, status, aangemaakt })),
       berichten,
       wensen: kaart?.wensen ?? "",
+      reviews: reviews.map(({ id, boekingId, score, tekst, status, antwoord }) => ({ id, boekingId, score, tekst, status, antwoord })),
     });
   } catch (err) {
     return jsonError(err);
@@ -61,6 +64,7 @@ const schema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("annuleren"), datum: z.string().max(10), id: z.string().max(8) }),
   z.object({ actie: z.literal("wensen"), wensen: z.string().trim().max(1000) }),
   z.object({ actie: z.literal("bericht"), tekst: z.string().trim().min(1, "Schrijf eerst een bericht.").max(2000) }),
+  z.object({ actie: z.literal("review"), boekingId: z.string().max(8), score: z.number().int().min(1).max(5), tekst: z.string().trim().max(1500) }),
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -94,6 +98,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     if (d.actie === "wensen") {
       return NextResponse.json({ wensen: (await wijzigKlantkaart(account.email, { wensen: d.wensen })).wensen });
+    }
+    if (d.actie === "review") {
+      const r = await plaatsReview(account, { boekingId: d.boekingId, score: d.score, tekst: d.tekst });
+      return NextResponse.json({ review: { id: r.id, boekingId: r.boekingId, score: r.score, tekst: r.tekst, status: r.status, antwoord: r.antwoord } });
     }
     if (d.actie === "bericht") {
       await enforceRateLimit({ name: "voorstel-schwarzwald-bericht", identifier: account.email, limit: 20, windowSeconds: 3600, message: "Je hebt veel berichten gestuurd. Probeer het later opnieuw." });

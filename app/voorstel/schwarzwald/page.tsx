@@ -7,6 +7,8 @@ import { paginaVoorSite } from "@/lib/voorstel/schwarzwald-cms";
 import { ActiviteitKaart, ArrangementBlok, Beeld, CtaBand, Sterren } from "@/components/voorstel/SchwarzwaldCards";
 import { RunsWeergave } from "@/components/voorstel/SchwarzwaldBlokken";
 import { HeroVideo } from "@/components/voorstel/HeroVideo";
+import { goedgekeurdeReviews } from "@/lib/voorstel/schwarzwald-reviews";
+import { sterren } from "@/lib/voorstel/review-weergave";
 
 type Alinea = Extract<Blok, { type: "alinea" }>;
 const alineaDieBegintMet = (blokken: Blok[], begin: string) =>
@@ -22,6 +24,12 @@ export default async function SchwarzwaldHome() {
   const uitgelicht = UITGELICHT.map(activiteit).filter((a): a is Activiteit => a !== undefined);
   const buggy = activiteit("buggy-rijden");
   const home = await paginaVoorSite("/");
+  // beoordelingen van eigen gasten eerst, aangevuld met die van hun huidige site
+  const gasten = (await goedgekeurdeReviews().catch(() => [])).slice(0, 3);
+  const getoond = [
+    ...gasten.map((r) => ({ sleutel: r.id, tekst: r.tekst, naam: r.naam, bij: activiteit(r.activiteit)?.naam ?? "", score: r.score as number | null, antwoord: r.antwoord })),
+    ...REVIEWS.map((r) => ({ sleutel: r.naam, tekst: r.tekst, naam: r.naam, bij: r.bij, score: null as number | null, antwoord: "" })),
+  ].slice(0, 3);
   const trending = home && alineaDieBegintMet(home.blokken, "Trending");
   const intro = home && alineaDieBegintMet(home.blokken, "Het Schwarzwald in Rijssen");
 
@@ -276,9 +284,15 @@ export default async function SchwarzwaldHome() {
             <p className="mt-3 text-schw-cream/80">gemiddeld uit {CONTACT.aantalReviews} beoordelingen</p>
           </div>
           <ul className="grid gap-5 md:grid-cols-3">
-            {REVIEWS.map((r) => (
-              <li key={r.naam} className="flex flex-col rounded-xl3 bg-white/5 p-6 ring-1 ring-white/10">
+            {getoond.map((r) => (
+              <li key={r.sleutel} className="flex flex-col rounded-xl3 bg-white/5 p-6 ring-1 ring-white/10">
+                {r.score !== null && (
+                  <p className="mb-2 text-schw-sun" aria-label={`${r.score} van 5 sterren`}>
+                    {sterren(r.score)}
+                  </p>
+                )}
                 <blockquote className="flex-1 leading-relaxed text-schw-cream/90">&ldquo;{r.tekst}&rdquo;</blockquote>
+                {r.antwoord && <p className="mt-3 border-l-2 border-schw-orange pl-3 text-sm text-schw-cream/70">Het Schwarzwald: {r.antwoord}</p>}
                 <p className="mt-5 text-sm font-bold">{r.naam}</p>
                 <p className="text-sm text-schw-cream/60">{r.bij}</p>
               </li>
