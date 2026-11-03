@@ -114,14 +114,15 @@ const kortArg = (v) => {
  * Draai de lus tot "klaar", het stappenmaximum, of stop.
  * messages wordt aangevuld (zodat bijsturen later verder kan in hetzelfde gesprek).
  */
-export async function draai({ llm, messages, log, signal, zetControle }) {
+export async function draai({ llm, messages, log, signal, zetControle, telVerbruik }) {
   let controles = 0;
   let laatsteControle = null;
   let duwtjes = 0;
   for (let stap = 0; stap < MAX_STAPPEN; stap++) {
     if (signal?.aborted) throw new Error("Gestopt");
     kortIn(messages);
-    const { bericht } = await vraagModelMetReserve(llm, messages, signal, log);
+    const { bericht, verbruik } = await vraagModelMetReserve(llm, messages, signal, log);
+    if (verbruik) telVerbruik?.(verbruik);
     messages.push(bericht);
     const tekst = typeof bericht.content === "string" ? bericht.content.trim() : "";
     if (tekst) log("denk", tekst);

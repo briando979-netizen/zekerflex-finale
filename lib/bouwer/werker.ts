@@ -74,6 +74,8 @@ export interface Taak extends Omit<TaakKort, "bestanden"> {
   goedgekeurdDoor?: string;
   /** De Bouwer wacht op een antwoord (staat "vraag"). */
   vraag?: string | null;
+  /** Tokens die het model voor deze opdracht gebruikte (ook over bijsturen heen). */
+  verbruik?: { invoer: number; uitvoer: number; aanroepen: number };
 }
 
 interface Instellingen {

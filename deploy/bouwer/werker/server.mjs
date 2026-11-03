@@ -128,6 +128,13 @@ async function werk(taak, llm, messages, afbeelding = null) {
         taak.controle = c;
         void bewaar(taak);
       },
+      // tokens per opdracht (ook over bijsturen heen), zodat de eigenaar de kosten ziet
+      telVerbruik: (v) => {
+        const t = (taak.verbruik ??= { invoer: 0, uitvoer: 0, aanroepen: 0 });
+        t.invoer += Number(v.prompt_tokens) || 0;
+        t.uitvoer += Number(v.completion_tokens) || 0;
+        t.aanroepen += 1;
+      },
     });
     if (r.vraag) {
       // de Bouwer wacht op de eigenaar; het antwoord komt als bijsturing in hetzelfde gesprek

@@ -36,6 +36,13 @@ const STAAT: Record<TaakStaat, { label: string; kleur: string }> = {
 const STAP_TEKEN: Record<TaakStap["soort"], string> = { info: "·", denk: "💭", tool: "⚙", bestand: "✎", fout: "!", klaar: "✓", vraag: "?" };
 
 const GITHUB = "https://github.com/briando979-netizen/zekerflex-finale";
+/** 1234567 → "1,2 miljoen", 45300 → "45 duizend": kort genoeg voor de kopregel van een opdracht */
+function tokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("nl-NL", { maximumFractionDigits: 1 })} miljoen`;
+  if (n >= 1_000) return `${Math.round(n / 1_000).toLocaleString("nl-NL")} duizend`;
+  return n.toLocaleString("nl-NL");
+}
+
 // GitHub vult het sleutelformulier vooraf in (template-URL voor fine-grained tokens): naam, eigenaar, 1 jaar, Contents schrijven
 const GITHUB_SLEUTEL_MAKEN =
   "https://github.com/settings/personal-access-tokens/new?name=ZekerFlex%20Bouwer&description=Goedgekeurde%20wijzigingen%20van%20de%20ZekerFlex%20Bouwer%20naar%20main&target_name=briando979-netizen&expires_in=366&contents=write";
@@ -337,6 +344,12 @@ function TaakDetail({
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAAT[taak.staat].kleur}`}>{STAAT[taak.staat].label}</span>
           <span className="text-[11px] text-white/35">
             {taak.door} · {tijd(taak.begon)} · {taak.model}
+            {taak.verbruik && (
+              <span title={`${taak.verbruik.aanroepen} aanroepen: ${taak.verbruik.invoer.toLocaleString("nl-NL")} tokens in, ${taak.verbruik.uitvoer.toLocaleString("nl-NL")} uit`}>
+                {" "}
+                · {tokens(taak.verbruik.invoer + taak.verbruik.uitvoer)} tokens
+              </span>
+            )}
           </span>
           {werkt && taak.staat === "bezig" && (
             <button type="button" onClick={() => onActie("stop", { actie: "stop" })} className="ml-auto rounded-md border border-white/15 px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/10">
