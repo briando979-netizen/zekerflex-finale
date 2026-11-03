@@ -187,6 +187,11 @@ services:
     restart: unless-stopped
     environment:
       BOUWER_TOKEN: ${BOUWER_TOKEN:-}
+      # Live voorbeeld (deploy/bouwer/werker/voorbeeld.mjs): next dev op de werkkopie,
+      # met alleen demogegevens in een eigen database, via Caddy op dit adres.
+      BOUWER_VOORBEELD_DB: postgresql://voorbeeld:voorbeeld@bouwer-db:5432/voorbeeld
+      BOUWER_VOORBEELD_REDIS: redis://bouwer-redis:6379
+      BOUWER_VOORBEELD_HOST: ${BOUWER_VOORBEELD_HOST:-voorbeeld.37-97-226-24.sslip.io}
     volumes:
       - ./deploy/bouwer/werker:/opt/bouwer:ro
       - bouwer-werk:/werk
@@ -195,14 +200,43 @@ services:
     # tsc op de hele codebase vraagt ~2 GB; hier begrensd zodat de app nooit krap komt
     mem_limit: 3g
     cpus: 2
-    networks: [internal]
+    depends_on:
+      bouwer-db: { condition: service_started }
+      bouwer-redis: { condition: service_started }
+    networks: [internal, bouwer]
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Wegwerp-database voor het live voorbeeld van de Bouwer: alleen demogegevens,
+  # los van de echte database, op een eigen netwerk zonder internet. Het vaste
+  # wachtwoord is bewust: niets anders dan de Bouwer kan erbij.
+  bouwer-db:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: voorbeeld
+      POSTGRES_PASSWORD: voorbeeld
+      POSTGRES_DB: voorbeeld
+    volumes:
+      - bouwer-db:/var/lib/postgresql
+    mem_limit: 512m
+    networks: [bouwer]
+
+  bouwer-redis:
+    image: redis:7-bookworm
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb"]
+    mem_limit: 128m
+    networks: [bouwer]
+
 networks:
   internal:
     driver: bridge
+  # alleen de Bouwer en zijn voorbeeld-database/-redis; geen internet
+  bouwer:
+    driver: bridge
+    internal: true
 
 volumes:
   app-storage:
@@ -214,3 +248,4 @@ volumes:
   caddy-config:
   ollama-models:
   bouwer-werk:
+  bouwer-db:

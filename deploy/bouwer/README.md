@@ -54,6 +54,21 @@ De werkbank heeft ook een **echte terminal** op deze werkkopie: Terminal →
 (geen database, geen geheimen), elk commando mag maximaal 2 minuten duren, en elk
 commando komt in het auditlog.
 
+**Live voorbeeld** (`werker/voorbeeld.mjs`): bij een open opdracht start je met
+"Start voorbeeld" de gewijzigde site als `next dev` in de container. Daarachter:
+
+- Een eigen database `bouwer-db` met **alleen demogegevens**, gezaaid met
+  `prisma/seed.ts` en `scripts/demo-shifts.mjs`, plus een eigen `bouwer-redis`.
+  Beide staan op een netwerk zonder internet; de echte database komt er niet bij.
+- Caddy maakt het voorbeeld bereikbaar op `BOUWER_VOORBEELD_HOST` (standaard
+  `voorbeeld.37-97-226-24.sslip.io`, dus geen DNS nodig).
+- Toegang alleen met een getekende link uit Admin, 2 uur geldig.
+- Na 30 minuten zonder bezoek stopt het voorbeeld, en altijd zodra de Bouwer
+  weer aan het werk gaat. tsc en `next dev` passen samen niet in de 3 GB van de
+  container.
+- Inloggen in het voorbeeld met de demo-accounts, bijvoorbeeld
+  `admin@zekerflex.nl` / `Zeker!2026`.
+
 Installeren (eenmalig): `sudo bash deploy/bouwer/installeer-bouwer.sh`
 
 Dit script zet `BOUWER_TOKEN` in `.env.production`, zet 4 GB swap aan en start de

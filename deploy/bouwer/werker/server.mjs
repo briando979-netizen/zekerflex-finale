@@ -14,12 +14,14 @@
 //   POST /taken/:id/weggooien
 //   POST /taken/:id/stop
 //   POST /terminal                   → { opdracht } één shell-commando in de werkkopie (max 2 min)
+//   GET  /voorbeeld, POST /voorbeeld/start, POST /voorbeeld/stop → live voorbeeld (voorbeeld.mjs)
 import http from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { GITHUB_REPO, REPO_DIR, WERK, controleer, gewijzigdeBestanden, huidigeDiff, nieuweWerkkopie, sh } from "./werkkopie.mjs";
 import { controleTekst, draai, systeemPrompt } from "./agent.mjs";
+import { startVoorbeeld, startVoorbeeldProxy, stopVoorbeeld, voorbeeldStand } from "./voorbeeld.mjs";
 
 const POORT = Number(process.env.BOUWER_POORT || 4100);
 const TOKEN = process.env.BOUWER_TOKEN || "";
@@ -93,6 +95,11 @@ async function werk(taak, llm, messages) {
   const abort = new AbortController();
   actief = { id: taak.id, abort };
   const log = logger(taak);
+  // tsc en next dev passen samen niet in het geheugen van deze container
+  if (voorbeeldStand().staat !== "uit") {
+    stopVoorbeeld();
+    log("info", "Live voorbeeld gestopt zolang de Bouwer werkt");
+  }
   try {
     if (!messages) {
       taak.basis = await nieuweWerkkopie(taak.id, log);
@@ -134,6 +141,7 @@ async function goedkeuren(taak, { door, githubToken }) {
   const log = logger(taak);
   const git = (args, opts) => sh("git", args, opts);
   actief = { id: taak.id, abort: new AbortController() };
+  if (voorbeeldStand().staat !== "uit") stopVoorbeeld();
   // een herhaalde poging (na een mislukte push) controleert altijd opnieuw
   let moetControleren = taak.staat !== "klaar";
   taak.staat = "goedkeuren";
@@ -248,6 +256,20 @@ const server = http.createServer(async (req, res) => {
       const r = await sh("bash", ["-lc", opdracht], { cwd, timeout: 120_000 });
       const uit = r.uit.length > 100_000 ? `…\n${r.uit.slice(-100_000)}` : r.uit;
       return antwoord(res, 200, { ok: r.code === 0, code: r.code, uitvoer: uit || (r.code === 0 ? "(geen uitvoer)" : `(afgesloten met code ${r.code})`), map: cwd });
+    }
+
+    if (url.pathname === "/voorbeeld" && req.method === "GET") return antwoord(res, 200, voorbeeldStand());
+    if (url.pathname === "/voorbeeld/start" && req.method === "POST") {
+      if (actief) return antwoord(res, 409, { fout: "De Bouwer is aan het werk; start het voorbeeld als hij klaar is" });
+      try {
+        return antwoord(res, 202, startVoorbeeld());
+      } catch (e) {
+        return antwoord(res, 409, { fout: e instanceof Error ? e.message : "Voorbeeld kan niet starten" });
+      }
+    }
+    if (url.pathname === "/voorbeeld/stop" && req.method === "POST") {
+      stopVoorbeeld();
+      return antwoord(res, 200, voorbeeldStand());
     }
 
     if (delen[0] !== "taken") return antwoord(res, 404, { fout: "Onbekend pad" });
@@ -369,3 +391,4 @@ for (const t of await alleTaken()) {
   }
 }
 server.listen(POORT, () => console.log(`[bouwer] luistert op ${POORT}${TOKEN.length >= 24 ? "" : " (ZONDER BOUWER_TOKEN: alles geweigerd)"}`));
+startVoorbeeldProxy();

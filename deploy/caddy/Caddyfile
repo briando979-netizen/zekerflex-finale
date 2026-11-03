@@ -58,6 +58,20 @@ schwarzwald.zekerflex.com {
 	}
 }
 
+# Live voorbeeld van de Bouwer (Admin → ZekerFlex AI → Bouwer): next dev op de
+# werkkopie, met alleen demogegevens. De bouwer-container laat alleen bezoekers
+# met een getekende link uit Admin binnen (deploy/bouwer/werker/voorbeeld.mjs).
+# Standaard een sslip.io-naam (geen DNS nodig); met een eigen A-record kan
+# BOUWER_VOORBEELD_HOST in .env.production bv. voorbeeld.zekerflex.com worden.
+{$BOUWER_VOORBEELD_HOST:voorbeeld.37-97-226-24.sslip.io} {
+	encode zstd gzip
+	# zoals overal: alleen hun eigen blokken zetten de koppen voor voorstel/klantsite
+	reverse_proxy bouwer:4200 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

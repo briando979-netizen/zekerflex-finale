@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Taak, TaakKort, TaakStaat, TaakStap } from "@/lib/bouwer/werker";
+import type { Taak, TaakKort, TaakStaat, TaakStap, VoorbeeldStand } from "@/lib/bouwer/werker";
 
 // ---------------------------------------------------------------------------
 // Bouwer — pane in de ZekerFlex AI-studio. Geef een opdracht in gewone taal; de
@@ -292,6 +292,8 @@ function TaakDetail({
         </div>
       )}
 
+      {open && !werkt && <VoorbeeldPaneel />}
+
       {taak.controle && (
         <div className="flex flex-wrap gap-2 text-[11px]">
           <ControleChip label="TypeScript" ok={taak.controle.tsc.ok} uit={taak.controle.tsc.uit} />
@@ -376,6 +378,82 @@ function TaakDetail({
       )}
 
       <Wijzigingen diff={taak.diff} bestanden={taak.bestanden} />
+    </div>
+  );
+}
+
+/** Live voorbeeld van de werkkopie: de gewijzigde site met demogegevens, vóór je goedkeurt. */
+function VoorbeeldPaneel() {
+  const [stand, setStand] = useState<(VoorbeeldStand & { link: string | null }) | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
+  const [bezig, setBezig] = useState(false);
+
+  const laad = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/bouwer/voorbeeld", { cache: "no-store" });
+      if (res.ok) setStand((await res.json()) as VoorbeeldStand & { link: string | null });
+    } catch {
+      /* volgende peiling */
+    }
+  }, []);
+
+  const start = stand?.staat === "start";
+  useEffect(() => {
+    void laad();
+    const id = setInterval(() => void laad(), start ? 3000 : 15_000);
+    return () => clearInterval(id);
+  }, [laad, start]);
+
+  const actie = async (naam: "start" | "stop") => {
+    setBezig(true);
+    setFout(null);
+    try {
+      setStand(await verstuur<VoorbeeldStand & { link: string | null }>("/api/admin/bouwer/voorbeeld", "POST", { actie: naam }));
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : "Mislukt");
+    } finally {
+      setBezig(false);
+    }
+  };
+
+  if (!stand?.beschikbaar) return null;
+  return (
+    <div className="space-y-2 rounded-xl border border-[#7CC5FF]/20 bg-[rgba(124,197,255,0.05)] p-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] uppercase tracking-[0.16em] text-[#7CC5FF]/80">Live voorbeeld</span>
+        <span className="text-white/50">
+          {stand.staat === "aan" ? "staat aan" : stand.staat === "start" ? "start op… (1 tot 3 minuten)" : stand.staat === "fout" ? "niet gelukt" : "staat uit"}
+        </span>
+        <span className="ml-auto flex gap-2">
+          {stand.staat === "aan" && stand.link && (
+            <a href={stand.link} target="_blank" rel="noreferrer" className="rounded-md bg-[#7CC5FF] px-3 py-1.5 font-semibold text-ink">
+              Open voorbeeld ↗
+            </a>
+          )}
+          {(stand.staat === "uit" || stand.staat === "fout") && (
+            <button type="button" disabled={bezig} onClick={() => void actie("start")} className="rounded-md border border-[#7CC5FF]/40 px-3 py-1.5 text-[#7CC5FF] hover:bg-[rgba(124,197,255,0.1)] disabled:opacity-40">
+              Start voorbeeld
+            </button>
+          )}
+          {(stand.staat === "aan" || stand.staat === "start") && (
+            <button type="button" disabled={bezig} onClick={() => void actie("stop")} className="rounded-md border border-white/15 px-3 py-1.5 text-white/60 hover:bg-white/10 disabled:opacity-40">
+              Stop
+            </button>
+          )}
+        </span>
+      </div>
+      <p className="leading-relaxed text-white/45">
+        De gewijzigde site, met alleen demogegevens (inloggen als admin@zekerflex.nl / Zeker!2026). De link geldt 2 uur; zonder bezoek stopt het voorbeeld na 30 minuten.
+      </p>
+      {stand.fout && <p className="text-[#F07C6B]">{stand.fout}</p>}
+      {fout && (
+        <p role="alert" className="text-[#F07C6B]">
+          {fout}
+        </p>
+      )}
+      {stand.staat === "start" && stand.regels.length > 0 && (
+        <pre className="max-h-32 overflow-auto rounded-md bg-black/40 p-2 font-mono text-[10.5px] text-white/50">{stand.regels.slice(-8).join("\n")}</pre>
+      )}
     </div>
   );
 }

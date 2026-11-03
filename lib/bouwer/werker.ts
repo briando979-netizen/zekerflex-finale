@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { kvGet, kvSet } from "@/lib/storage/kv";
@@ -74,6 +75,27 @@ interface Instellingen {
 
 export function bouwerIngesteld(): boolean {
   return TOKEN.length >= 24;
+}
+
+// ---- live voorbeeld (deploy/bouwer/werker/voorbeeld.mjs) ---------------------------
+
+const VOORBEELD_HOST = process.env.BOUWER_VOORBEELD_HOST || "voorbeeld.37-97-226-24.sslip.io";
+const VOORBEELD_GELDIG_MS = 2 * 60 * 60_000;
+
+export interface VoorbeeldStand {
+  staat: "uit" | "start" | "aan" | "fout";
+  sinds: string | null;
+  fout: string | null;
+  regels: string[];
+  host: string;
+  beschikbaar: boolean;
+}
+
+/** Een link die 2 uur toegang geeft tot het voorbeeld (de bouwer controleert de HMAC met BOUWER_TOKEN). */
+export function voorbeeldLink(now = Date.now()): string {
+  const exp = String(now + VOORBEELD_GELDIG_MS);
+  const sig = createHmac("sha256", TOKEN).update(`voorbeeld:${exp}`).digest("base64url");
+  return `https://${VOORBEELD_HOST}/?zf_vb=${exp}.${sig}`;
 }
 
 /** Een verzoek aan de bouwer-container; fouten worden een nette AppError. */

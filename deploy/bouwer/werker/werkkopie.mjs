@@ -13,11 +13,17 @@ export const GITHUB_REPO = process.env.BOUWER_GITHUB_REPO || "briando979-netizen
 const REPO_URL = `https://github.com/${GITHUB_REPO}.git`;
 const MAX_UIT = 2_000_000;
 
+/** De omgeving zonder BOUWER_TOKEN: voor processen die door de AI gewijzigde code draaien. */
+export function omgevingZonderSleutel() {
+  return Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== "BOUWER_TOKEN"));
+}
+
 /** Draai een commando; geeft code + (afgekapte) uitvoer, gooit nooit. */
-export function sh(cmd, args, { cwd = REPO_DIR, timeout = 600_000, env = {}, signal } = {}) {
+export function sh(cmd, args, { cwd = REPO_DIR, timeout = 600_000, env = {}, signal, zonderSleutel = false } = {}) {
   return new Promise((resolve) => {
     // geen stdin en geen wachtwoordvraag: niets mag ooit op invoer blijven wachten
-    const p = spawn(cmd, args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env }, signal, stdio: ["ignore", "pipe", "pipe"] });
+    const basis = zonderSleutel ? omgevingZonderSleutel() : process.env;
+    const p = spawn(cmd, args, { cwd, env: { ...basis, GIT_TERMINAL_PROMPT: "0", ...env }, signal, stdio: ["ignore", "pipe", "pipe"] });
     let uit = "";
     const neem = (b) => {
       if (uit.length < MAX_UIT) uit += b.toString();
