@@ -47,9 +47,18 @@ export default async function AccountPage() {
           where: { freelancerId: profile.id, acceptedAt: { gte: since } },
         })
       : Promise.resolve(0),
+    // Alleen wat de werker zelf niet afmaakte: zelf afgezegd of niet opgekomen.
+    // Een annulering door de opdrachtgever of een overdracht via "vervanging
+    // regelen" telt niet (zie de cancelReason-teksten in de afzegroute en
+    // lib/claims/no-show-sweep.ts).
     profile
       ? prisma.shiftAssignment.count({
-          where: { freelancerId: profile.id, acceptedAt: { gte: since }, cancelledAt: { not: null } },
+          where: {
+            freelancerId: profile.id,
+            acceptedAt: { gte: since },
+            cancelledAt: { not: null },
+            OR: [{ cancelReason: { startsWith: "Afgezegd door flexwerker" } }, { cancelReason: { startsWith: "Niet opgekomen" } }],
+          },
         })
       : Promise.resolve(0),
     getTheme(),

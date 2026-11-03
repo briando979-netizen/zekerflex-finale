@@ -36,20 +36,34 @@ export function avatarUrlFor(userId: string, hasAvatar: boolean): string | null 
   return hasAvatar ? `/api/profile/${userId}/avatar` : null;
 }
 
+/**
+ * Telt deze annulering tegen de werker? Alleen zelf afzeggen of niet opkomen
+ * (cancelReason van de afzegroute en lib/claims/no-show-sweep.ts). Zonder reden
+ * is de oorzaak onbekend (oude gegevens) en telt hij niet.
+ */
+export function workerMissed(cancelReason: string | null): boolean {
+  if (!cancelReason) return false;
+  return cancelReason.startsWith("Afgezegd door flexwerker") || cancelReason.startsWith("Niet opgekomen");
+}
+
 async function attendancePct(freelancerId: string): Promise<number | null> {
   const now = new Date();
   const past = await prisma.shiftAssignment.findMany({
-    where: { freelancerId, shift: { endsAt: { lt: now } } },
-    select: { cancelledAt: true, timesheet: { select: { status: true, actualStart: true } } },
+    where: { freelancerId, shift: { endsAt: { lt: now }, status: { not: "CANCELLED" } } },
+    select: { cancelledAt: true, cancelReason: true, timesheet: { select: { status: true, actualStart: true } } },
   });
   if (past.length === 0) return null;
   let showed = 0;
   let missed = 0;
   for (const a of past) {
+    if (a.cancelledAt) {
+      // Alleen zelf afzeggen of niet opkomen telt als gemist; een annulering door
+      // de opdrachtgever of een overdracht aan een vervanger is niet de werker.
+      if (workerMissed(a.cancelReason)) missed++;
+      continue;
+    }
     const ts = a.timesheet;
-    const cameIn =
-      !a.cancelledAt &&
-      (ts?.actualStart != null || ["SUBMITTED", "APPROVED", "DISPUTED"].includes(ts?.status ?? ""));
+    const cameIn = ts?.actualStart != null || ["SUBMITTED", "APPROVED", "DISPUTED", "PAID"].includes(ts?.status ?? "");
     if (cameIn) showed++;
     else missed++;
   }
