@@ -7,6 +7,8 @@ import { websiteVan, whatsappNummer } from "@/lib/rijschool/website";
 import { prisma } from "@/lib/prisma";
 import { winkelLink } from "@/lib/play/api";
 import { Stuur } from "@/components/rijschool/site/Stuur";
+import { SiteMenu } from "@/components/rijschool/site/SiteMenu";
+import { adresRegels, telefoonLink, telefoonWeergave } from "@/lib/rijschool/format";
 
 // De publieke website van een rijschool, in de ZekerFlex-huisstijl (zoals
 // schwarzwald.zekerflex.com): crème vlakken, een sticky kop met menu en een
@@ -66,6 +68,7 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
             <Link href={`${basis}/inloggen`} className="rounded-full px-3 py-2 hover:bg-schw-night/5">
               {leerling ? "Mijn lessen" : "Inloggen"}
             </Link>
+            <SiteMenu links={MENU.map((m) => ({ href: `${basis}${m.href}`, label: m.label }))} />
             {r.proeflesOnline && (
               <Link
                 href={`${basis}/proefles`}
@@ -86,8 +89,13 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
               <Stuur className="h-8 w-8" />
               {r.naam}
             </p>
-            {r.adres && <p className="mt-3 text-schw-cream/80">{r.adres}</p>}
-            {r.plaats && <p className="text-schw-cream/80">{r.plaats}</p>}
+            <address className="mt-3 not-italic text-schw-cream/80">
+              {adresRegels(r.adres, r.plaats).map((regel) => (
+                <span key={regel} className="block">
+                  {regel}
+                </span>
+              ))}
+            </address>
             {r.kvk && <p className="mt-2 text-schw-cream/80">KVK {r.kvk}</p>}
           </div>
           <div>
@@ -97,8 +105,8 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
             <ul className="mt-3 space-y-1.5 text-schw-cream/85">
               {tel && (
                 <li>
-                  <a href={`tel:${tel}`} className="hover:underline">
-                    {r.telefoon}
+                  <a href={`tel:${telefoonLink(r.telefoon)}`} className="hover:underline">
+                    {telefoonWeergave(r.telefoon)}
                   </a>
                 </li>
               )}

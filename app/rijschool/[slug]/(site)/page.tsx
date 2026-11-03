@@ -9,6 +9,7 @@ import { euro } from "@/lib/payroll/format";
 import { siteUrl } from "@/lib/rijschool/mail";
 import { winkelLink } from "@/lib/play/api";
 import { Stuur } from "@/components/rijschool/site/Stuur";
+import { telefoonWeergave } from "@/lib/rijschool/format";
 
 export const dynamic = "force-dynamic";
 
@@ -339,12 +340,18 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
 
       {/* Vragen */}
       {w.faq.length > 0 && (
-        <section id="vragen" className="mx-auto max-w-3xl scroll-mt-24 px-4 pt-24 sm:px-8">
-          <p className={label} style={{ color: "var(--rs-kleur-tekst)" }}>
-            Vragen
-          </p>
-          <h2 className="mt-3 font-display text-4xl font-bold tracking-tight">Veelgestelde vragen</h2>
-          <div className="mt-8 divide-y divide-schw-night/10 rounded-xl3 bg-white shadow-[0_20px_50px_-35px_rgba(10,18,14,0.35)]">
+        <section id="vragen" className="mx-auto grid max-w-[1280px] scroll-mt-24 gap-8 px-4 pt-24 sm:px-8 lg:grid-cols-[1fr_1.6fr] lg:gap-12">
+          <div>
+            <p className={label} style={{ color: "var(--rs-kleur-tekst)" }}>
+              Vragen
+            </p>
+            <h2 className="mt-3 font-display text-4xl font-bold tracking-tight">Veelgestelde vragen</h2>
+            <p className="mt-4 leading-relaxed text-schw-mute">
+              Staat je vraag er niet bij? {r.telefoon ? `Bel ons op ${telefoonWeergave(r.telefoon)}` : "Neem contact op"}
+              {r.email ? ` of mail naar ${r.email}` : ""}.
+            </p>
+          </div>
+          <div className="divide-y divide-schw-night/10 rounded-xl3 bg-white shadow-[0_20px_50px_-35px_rgba(10,18,14,0.35)]">
             {w.faq.map((q) => (
               <details key={q.vraag} className="group p-6">
                 <summary className="cursor-pointer list-none font-display text-lg font-bold marker:hidden">

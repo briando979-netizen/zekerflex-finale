@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
+import { adresRegels, telefoonWeergave } from "@/lib/rijschool/format";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function PrivacyPage({ params }: { params: Promise<{ slug: string }> }) {
   const r = await laadRijschool((await params).slug);
   if (!r) notFound();
-  const contact = [r.email, r.telefoon].filter(Boolean).join(" of ");
+  const contact = [r.email, r.telefoon ? telefoonWeergave(r.telefoon) : ""].filter(Boolean).join(" of ");
+  const adres = r.adres ? adresRegels(r.adres, r.plaats).join(", ") : "";
   const kop = "mt-6 font-display text-lg font-bold text-ink";
   const tekst = "mt-2 text-sm leading-relaxed text-neutralx-700";
   return (
@@ -63,7 +65,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
       <h2 className={kop}>Contact</h2>
       <p className={tekst}>
         {r.naam}
-        {r.adres ? `, ${r.adres}` : ""}
+        {adres ? `, ${adres}` : ""}
         {r.kvk ? `, KVK ${r.kvk}` : ""}
         {contact ? `. ${contact}.` : "."}
       </p>
