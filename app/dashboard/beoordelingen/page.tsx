@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { listReviews, reviewSummary } from "@/lib/reviews/store";
-import { PageHeader, EmptyState, dateShort } from "@/components/app/ui";
-import { getDict } from "@/lib/i18n/server";
-import { fmt } from "@/lib/i18n/dictionaries";
+import { PageHeader, EmptyState } from "@/components/app/ui";
+import { getFreelancerDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-function Stars({ n, className = "" }: { n: number; className?: string }) {
+function Stars({ n, label, className = "" }: { n: number; label: string; className?: string }) {
   const full = Math.round(n);
   return (
-    <span className={`inline-flex ${className}`} aria-label={`${n} van 5 sterren`}>
+    <span className={`inline-flex ${className}`} aria-label={label}>
       {[1, 2, 3, 4, 5].map((i) => (
         <svg key={i} width="16" height="16" viewBox="0 0 24 24" className={i <= full ? "text-amber-400" : "text-neutralx-300"}>
           <path fill="currentColor" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" />
@@ -21,7 +20,9 @@ function Stars({ n, className = "" }: { n: number; className?: string }) {
 }
 
 export default async function MyReviewsPage() {
-  const rv = (await getDict()).myReviews;
+  const ft = await getFreelancerDict();
+  const rv = ft.rev;
+  const dateFmt = (d: Date | string) => new Date(d).toLocaleDateString(ft.intl, { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
   const principal = await requirePrincipal();
 
   const [summary, all] = await Promise.all([
@@ -35,7 +36,7 @@ export default async function MyReviewsPage() {
     <>
       <div className="mb-6">
         <Link href="/dashboard/account" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-          ← {rv.backToStart}
+          ← {rv.back}
         </Link>
       </div>
 
@@ -48,9 +49,9 @@ export default async function MyReviewsPage() {
           <div className="mb-8 grid gap-6 rounded-2xl border border-hair bg-white p-6 shadow-card sm:grid-cols-[auto_1fr]">
             <div className="text-center sm:pr-6">
               <p className="num font-display text-4xl font-bold text-ink">{summary.average.toFixed(1)}</p>
-              <Stars n={summary.average} className="mt-1 justify-center" />
+              <Stars n={summary.average} label={rv.stars(summary.average)} className="mt-1 justify-center" />
               <p className="mt-1 text-xs text-neutralx-500">
-                {fmt(summary.count === 1 ? rv.countOne : rv.count, { n: summary.count })}
+                {rv.count(summary.count)}
               </p>
             </div>
             <div className="space-y-1.5 sm:border-l sm:border-hair sm:pl-6">
@@ -82,10 +83,10 @@ export default async function MyReviewsPage() {
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-ink">{r.authorName}</p>
-                      <p className="text-[11px] text-neutralx-400">{fmt(rv.reviewer, { date: dateShort(r.at) })}</p>
+                      <p className="text-[11px] text-neutralx-400">{dateFmt(r.at)}</p>
                     </div>
                   </div>
-                  <Stars n={r.rating} />
+                  <Stars n={r.rating} label={rv.stars(r.rating)} />
                 </div>
                 {r.text && <p className="mt-3 text-sm leading-relaxed text-neutralx-700">{r.text}</p>}
                 {r.shiftTitle && (
