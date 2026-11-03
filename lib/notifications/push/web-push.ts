@@ -39,13 +39,22 @@ export interface WebPushResult {
   gone: boolean;
 }
 
+/** For logs: only the push service's host. The endpoint itself is a per-device capability URL. */
+export function pushServiceOf(endpoint: string): string {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return "onbekend";
+  }
+}
+
 export async function sendWebPush(
   target: WebPushTarget,
   payload: string,
   opts: { ttlSeconds: number },
 ): Promise<WebPushResult> {
   if (!isWebPushEnabled()) {
-    logger.warn("web push not configured; skipping", { endpoint: target.endpoint });
+    logger.warn("web push not configured; skipping", { pushService: pushServiceOf(target.endpoint) });
     return { ok: false, statusCode: 0, gone: false };
   }
 
@@ -82,7 +91,7 @@ export async function sendWebPush(
   const ok = res.status >= 200 && res.status < 300;
   if (!ok && !gone) {
     logger.warn("web push rejected", {
-      endpoint: target.endpoint,
+      pushService: pushServiceOf(target.endpoint),
       status: res.status,
     });
   }

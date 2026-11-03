@@ -51,6 +51,12 @@ describe("niets bewaren wat niet bewaard mag worden", () => {
     expect(j.scrub(text)).toBe(text);
   });
 
+  it("haalt de querystring uit een adres, ook als het token procent-gecodeerd is (push-endpoint van Windows)", () => {
+    const s = j.scrub('{"endpoint":"https://wns2-par02p.notify.windows.com/w/?token=BQYAAAB%2fUPZSfvX%2fDrSH0gHUaERGn6AAID3V8mDqNI7%2bcuyGq4fJXK%3d","status":401}');
+    expect(s).toBe('{"endpoint":"https://wns2-par02p.notify.windows.com/w/?<weg>","status":401}');
+    expect(j.scrub("fetch mislukt voor https://example.com/pagina#stuk")).toBe("fetch mislukt voor https://example.com/pagina?<weg>");
+  });
+
   it("neemt van de context alleen het veilige deel, en houdt de foutcode die de bezoeker zag leesbaar", () => {
     const d = j.detailOf({ route: "GET /x", correlationId: "corr-xyz-123", password: "hunter2", apiKey: "geheim-abc", user: { email: "piet@example.nl", plaats: "Zwolle" }, error: new Error("kapot bij jan@example.nl"), digest: "1234567890" });
     expect(d.startsWith("digest 1234567890 · ")).toBe(true);

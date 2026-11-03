@@ -59,6 +59,8 @@ const SECRET_KEY = /pass(word)?|token|secret|key|authorization|cookie|iban|bsn|e
 /** Haalt e-mailadressen, IBAN's, telefoonnummers, sleutels en lange id's uit een tekst. */
 export function scrub(text: string): string {
   return text
+    // a query or fragment can carry a token (a push endpoint's ?token=…, percent-encoded so the id rules below miss it)
+    .replace(/(https?:\/\/[^\s"'<>?#]+)[?#][^\s"'<>]*/g, "$1?<weg>")
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "<e-mail>")
     .replace(/\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b/g, "<iban>")
     .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 <weg>")

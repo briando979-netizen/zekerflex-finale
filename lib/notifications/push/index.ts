@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { recordShiftOffer } from "@/lib/metrics";
 import {
   isWebPushEnabled,
+  pushServiceOf,
   sendWebPush,
 } from "@/lib/notifications/push/web-push";
 
@@ -60,7 +61,7 @@ async function fanOut(subs: StoredSubscription[], payload: string, ttlSeconds: n
         else if (r.gone) gone.push(s.endpoint);
       } catch (err) {
         logger.warn("web push send failed", {
-          endpoint: s.endpoint,
+          pushService: pushServiceOf(s.endpoint),
           error: (err as Error).message,
         });
       }

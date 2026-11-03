@@ -86,4 +86,24 @@ describe("sendWebPush", () => {
     );
     expect(res).toEqual({ ok: false, statusCode: 410, gone: true });
   });
+
+  it("logs a rejection with the push service's host only, never the device's endpoint", async () => {
+    const { logger } = await import("@/lib/logger");
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = createECDH("prime256v1");
+    client.generateKeys();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 401 })) as never);
+    const res = await sendWebPush(
+      {
+        endpoint: "https://wns2-par02p.notify.windows.com/w/?token=BQYAAAB%2fUPZSfvX%3d",
+        p256dh: client.getPublicKey().toString("base64url"),
+        auth: randomBytes(16).toString("base64url"),
+      },
+      "{}",
+      { ttlSeconds: 60 },
+    );
+    expect(res).toEqual({ ok: false, statusCode: 401, gone: false });
+    expect(warn).toHaveBeenCalledWith("web push rejected", { pushService: "wns2-par02p.notify.windows.com", status: 401 });
+    warn.mockRestore();
+  });
 });
