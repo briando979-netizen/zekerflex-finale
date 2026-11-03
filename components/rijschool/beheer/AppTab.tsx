@@ -160,7 +160,11 @@ export function AppTab({ data }: { data: BeheerWeergave }) {
           <Stap nr={2} titel="App laten bouwen" klaar={!!a?.versie} open={!!a && !a.versie}>
             <p>ZekerFlex maakt je Android-app met je naam, je kleuren en dit icoon. De app opent de leerling- en instructeur-app schermvullend, zonder adresbalk.</p>
             {!w.bouwerIngesteld && <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900">Het bouwen van apps staat nog niet aan op de server. ZekerFlex zet dit aan; probeer het later opnieuw.</p>}
-            {a?.taak.fase === "fout" && a.taak.fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-crit">{a.taak.fout}</p>}
+            {a?.taak.fase === "fout" && a.taak.fout && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-crit">
+                {a.taak.fout}
+              </p>
+            )}
             {loopt && a && (
               <div className="rounded-lg bg-paper-soft p-3">
                 <p className="font-medium text-ink">
@@ -361,8 +365,16 @@ function Schermafbeeldingen({ uit, bezig, onKies }: { uit: boolean; bezig: boole
           onKies(beelden);
         }}
       />
-      {bezig && <p className="mt-1 text-xs text-neutralx-600">Uploaden naar Google Play…</p>}
-      {fout && <p className="mt-1 text-xs text-crit">{fout}</p>}
+      {bezig && (
+        <p role="status" className="mt-1 text-xs text-neutralx-600">
+          Uploaden naar Google Play…
+        </p>
+      )}
+      {fout && (
+        <p role="alert" className="mt-1 text-xs text-crit">
+          {fout}
+        </p>
+      )}
     </div>
   );
 }
