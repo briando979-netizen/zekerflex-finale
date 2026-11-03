@@ -27,6 +27,11 @@ async function getList(key: string): Promise<string[]> {
   return (await kvGet<string[]>(key)) ?? [];
 }
 
+/** De tenantIds die deze werker volgt (voor de marktplaats). */
+export async function followedTenantIds(userId: string): Promise<string[]> {
+  return getList(followsKey(userId));
+}
+
 export async function isFollowing(userId: string, tenantId: string): Promise<boolean> {
   return (await getList(followsKey(userId))).includes(tenantId);
 }

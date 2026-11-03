@@ -10,6 +10,7 @@ import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/s
 import { tenantsBlockingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
+import { followedTenantIds } from "@/lib/worker/follows";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -56,6 +57,8 @@ export interface MarketplaceShift {
   match: MatchInfo | null;
   travel: ShiftTravel | null;
   workedHereBefore: number;
+  /** the freelancer follows this employer (❤️, lib/worker/follows) */
+  followed: boolean;
   /** part of a multi-day run posted by the employer */
   series: Series | null;
   /** this seat opened up because someone needs a replacement */
@@ -221,6 +224,9 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     }
   }
 
+  // Employers this freelancer follows (❤️) — for the card and the favourites filter.
+  const followed = new Set(await followedTenantIds(userId).catch(() => [] as string[]));
+
   const [openReplacements, myOffers] = await Promise.all([
     listReplacementRequests(300),
     offersForUser(userId),
@@ -340,6 +346,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         daypart: daypartOf(s.startsAt),
         weekday: amsterdamParts(s.startsAt).weekday,
         workedHereBefore: priorByBranch.get(s.branchId) ?? 0,
+        followed: followed.has(s.branch.tenantId),
         travel: computeTravel(home, { lat: s.branch.latitude, lng: s.branch.longitude }),
         series: series.get(s.id) ?? null,
         isReplacement: replacementByShift.has(s.id),
@@ -542,6 +549,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       match: null,
       travel: computeTravel(detailHome, { lat: row.branch.latitude, lng: row.branch.longitude }),
       workedHereBefore: 0,
+      followed: false,
       series: null,
       isReplacement: false,
       replacementNote: null,

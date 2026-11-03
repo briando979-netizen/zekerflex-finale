@@ -562,6 +562,7 @@ const nl = {
   follow: {
     follow: "Volg",
     following: "Volgend",
+    youFollow: "Je volgt dit bedrijf",
     followAria: (name: string) => `Volg ${name}: je krijgt een melding bij elke nieuwe dienst`,
     unfollowAria: (name: string) => `Ontvolg ${name}`,
     failed: "Dat lukte niet. Probeer het opnieuw.",
@@ -573,6 +574,12 @@ const nl = {
     seeShifts: "Bekijk diensten",
     unfollow: "Ontvolgen",
     back: "← Terug",
+  },
+  rate: {
+    above: (pct: number, cat: string) => `▲ ${pct}% boven het gemiddelde voor ${cat}`,
+    below: (pct: number, cat: string) => `▼ ${pct}% onder het gemiddelde voor ${cat}`,
+    average: (cat: string) => `Rond het gemiddelde voor ${cat}`,
+    note: "Vergeleken met dit soort diensten op ZekerFlex van het afgelopen half jaar.",
   },
   greet: {
     morning: "Goedemorgen",
@@ -1148,6 +1155,7 @@ const en: FreelancerDict = {
   follow: {
     follow: "Follow",
     following: "Following",
+    youFollow: "You follow this company",
     followAria: (name: string) => `Follow ${name}: get a notification for every new shift`,
     unfollowAria: (name: string) => `Unfollow ${name}`,
     failed: "That didn't work. Please try again.",
@@ -1159,6 +1167,12 @@ const en: FreelancerDict = {
     seeShifts: "View shifts",
     unfollow: "Unfollow",
     back: "← Back",
+  },
+  rate: {
+    above: (pct: number, cat: string) => `▲ ${pct}% above average for ${cat}`,
+    below: (pct: number, cat: string) => `▼ ${pct}% below average for ${cat}`,
+    average: (cat: string) => `Around the average for ${cat}`,
+    note: "Compared with similar shifts on ZekerFlex over the last six months.",
   },
   greet: {
     morning: "Good morning",
@@ -1732,6 +1746,7 @@ const pl: FreelancerDict = {
   follow: {
     follow: "Obserwuj",
     following: "Obserwujesz",
+    youFollow: "Obserwujesz tę firmę",
     followAria: (name: string) => `Obserwuj ${name}: dostaniesz powiadomienie o każdej nowej zmianie`,
     unfollowAria: (name: string) => `Przestań obserwować ${name}`,
     failed: "Nie udało się. Spróbuj ponownie.",
@@ -1743,6 +1758,12 @@ const pl: FreelancerDict = {
     seeShifts: "Zobacz zmiany",
     unfollow: "Przestań obserwować",
     back: "← Wróć",
+  },
+  rate: {
+    above: (pct: number, cat: string) => `▲ ${pct}% powyżej średniej dla: ${cat}`,
+    below: (pct: number, cat: string) => `▼ ${pct}% poniżej średniej dla: ${cat}`,
+    average: (cat: string) => `Około średniej dla: ${cat}`,
+    note: "W porównaniu z podobnymi zmianami na ZekerFlex z ostatniego półrocza.",
   },
   greet: {
     morning: "Dzień dobry",
@@ -2316,6 +2337,7 @@ const ro: FreelancerDict = {
   follow: {
     follow: "Urmărește",
     following: "Urmărești",
+    youFollow: "Urmărești această firmă",
     followAria: (name: string) => `Urmărește ${name}: primești o notificare la fiecare tură nouă`,
     unfollowAria: (name: string) => `Nu mai urmări ${name}`,
     failed: "Nu a reușit. Încearcă din nou.",
@@ -2327,6 +2349,12 @@ const ro: FreelancerDict = {
     seeShifts: "Vezi turele",
     unfollow: "Nu mai urmări",
     back: "← Înapoi",
+  },
+  rate: {
+    above: (pct: number, cat: string) => `▲ ${pct}% peste media pentru ${cat}`,
+    below: (pct: number, cat: string) => `▼ ${pct}% sub media pentru ${cat}`,
+    average: (cat: string) => `În jurul mediei pentru ${cat}`,
+    note: "Comparat cu ture similare pe ZekerFlex din ultima jumătate de an.",
   },
   greet: {
     morning: "Bună dimineața",
@@ -2900,6 +2928,7 @@ const uk: FreelancerDict = {
   follow: {
     follow: "Стежити",
     following: "Ви стежите",
+    youFollow: "Ви стежите за цією компанією",
     followAria: (name: string) => `Стежити за ${name}: сповіщення про кожну нову зміну`,
     unfollowAria: (name: string) => `Не стежити за ${name}`,
     failed: "Не вдалося. Спробуйте ще раз.",
@@ -2911,6 +2940,12 @@ const uk: FreelancerDict = {
     seeShifts: "Переглянути зміни",
     unfollow: "Не стежити",
     back: "← Назад",
+  },
+  rate: {
+    above: (pct: number, cat: string) => `▲ на ${pct}% вище середнього для: ${cat}`,
+    below: (pct: number, cat: string) => `▼ на ${pct}% нижче середнього для: ${cat}`,
+    average: (cat: string) => `Близько до середнього для: ${cat}`,
+    note: "Порівняно з подібними змінами на ZekerFlex за останні пів року.",
   },
   greet: {
     morning: "Доброго ранку",

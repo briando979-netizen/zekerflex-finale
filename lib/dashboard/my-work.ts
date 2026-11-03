@@ -108,6 +108,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     match: null,
     travel: computeTravel(home, { lat: row.branch.latitude, lng: row.branch.longitude }),
     workedHereBefore: 0,
+    followed: false,
     series: null,
     isReplacement: false,
     replacementNote: null,
