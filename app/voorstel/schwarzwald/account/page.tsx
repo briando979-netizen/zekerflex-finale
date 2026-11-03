@@ -7,7 +7,7 @@ import { boekingenVanAccount } from "@/lib/voorstel/schwarzwald-boekingen";
 import { aanvragenVan, klantkaart, tijdlijn } from "@/lib/voorstel/schwarzwald-crm";
 import { googleAan } from "@/lib/voorstel/google";
 import { reviewsVan } from "@/lib/voorstel/schwarzwald-reviews";
-import { icsAdres, icsToken } from "@/lib/voorstel/schwarzwald-ics";
+import { icsAdres, icsToken, uitjePad } from "@/lib/voorstel/schwarzwald-ics";
 import { SchwarzwaldAccount } from "@/components/voorstel/SchwarzwaldAccount";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <section className="mx-auto max-w-[1280px] px-4 py-10 sm:px-8">
         <SchwarzwaldAccount
           account={account ? { email: account.email, naam: account.naam, telefoon: account.telefoon, rol: account.rol, google: !!account.google, heeftWachtwoord: account.heeftWachtwoord } : null}
-          boekingen={boekingen.map(({ id, activiteit, datum, tijd, personen, status }) => ({ id, activiteit, datum, tijd, personen, status, ics: icsAdres(icsToken({ datum, id })) }))}
+          boekingen={boekingen.map(({ id, activiteit, datum, tijd, personen, status }) => ({ id, activiteit, datum, tijd, personen, status, ics: icsAdres(icsToken({ datum, id })), deel: uitjePad(id) }))}
           aanvragen={aanvragen.map(({ id, programma, gelegenheid, datum, personen, status, aangemaakt, bedrag }) => ({ id, programma, gelegenheid, datum, personen, status, aangemaakt, bedrag }))}
           berichten={lijn
             .filter((i) => i.soort === "bericht-klant" || i.soort === "bericht-team")

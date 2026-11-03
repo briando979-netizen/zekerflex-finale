@@ -14,3 +14,15 @@ export function leesIcsToken(token: string | null): { datum: string; id: string 
 }
 
 export const icsAdres = (token: string) => `/api/voorstel/schwarzwald/agenda/ics?t=${encodeURIComponent(token)}`;
+
+// Deel-link voor de groep (/uitje/<token>): alleen het nummer, zodat hij na
+// verzetten blijft werken. Eigen veld "uitje", dus nooit te gebruiken als
+// sessie of als agendalink.
+export const uitjeToken = (id: string) => onderteken({ uitje: id });
+
+export function leesUitjeToken(token: string): string | null {
+  const inhoud = leesOndertekend<{ uitje?: unknown }>(decodeURIComponent(token));
+  return typeof inhoud?.uitje === "string" ? inhoud.uitje : null;
+}
+
+export const uitjePad = (id: string) => `/voorstel/schwarzwald/uitje/${uitjeToken(id)}`;

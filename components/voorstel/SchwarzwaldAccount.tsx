@@ -9,6 +9,8 @@ import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { sterren } from "@/lib/voorstel/review-weergave";
 import { VOORUIT_DAGEN, plusDagen } from "@/lib/voorstel/schwarzwald-agenda";
 import { offerteKlaar } from "@/lib/voorstel/offerte-regels";
+import { deelTekst } from "@/lib/voorstel/uitje-tekst";
+import { DeelUitje } from "@/components/voorstel/DeelUitje";
 
 // Klantaccount: inloggen/registreren (ook met Google), en ingelogd een
 // dashboard met je volgende uitje, reserveringen, aanvragen, berichten met het
@@ -31,6 +33,8 @@ export interface MijnBoeking {
   status: "nieuw" | "bevestigd" | "geannuleerd";
   /** adres van het agendabestand (.ics) */
   ics: string;
+  /** pad van de deel-link voor de groep */
+  deel: string;
 }
 export interface MijnAanvraag {
   id: string;
@@ -604,6 +608,7 @@ export function SchwarzwaldAccount(props: {
               <a href={b.ics} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-schw-night/15">
                 Apple Agenda
               </a>
+              <DeelUitje pad={b.deel} tekst={deelTekst(namen[b.activiteit] ?? b.activiteit, b.datum, b.tijd)} />
             </>
           )}
           {b.status !== "geannuleerd" && b.datum > vandaag && bewerk?.id !== b.id && (

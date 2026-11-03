@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar/links";
 import Link from "next/link";
 import { BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
+import { deelTekst } from "@/lib/voorstel/uitje-tekst";
+import { DeelUitje } from "@/components/voorstel/DeelUitje";
 
 // Eigen reserveringsagenda: activiteit + groep kiezen, dag in de maandkalender,
 // tijdslot, gegevens, bevestigen. Beschikbaarheid en boeken via
@@ -19,7 +21,7 @@ export interface AgendaActiviteit {
 
 type DagStatus = "verleden" | "gesloten" | "vrij" | "vol";
 type SlotStatus = "vrij" | "bijna-vol" | "vol";
-interface Bevestiging { id: string; activiteit: string; datum: string; tijd: string; personen: number; prijs: number | null; ics: string }
+interface Bevestiging { id: string; activiteit: string; datum: string; tijd: string; personen: number; prijs: number | null; ics: string; deel: string }
 
 const API = "/api/voorstel/schwarzwald/agenda";
 const WEEKDAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
@@ -184,6 +186,7 @@ export function SchwarzwaldAgenda({
           <a href={outlookCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-6 py-3 font-semibold">
             Zet in Outlook
           </a>
+          <DeelUitje pad={klaar.deel} tekst={deelTekst(act.naam, klaar.datum, klaar.tijd)} licht />
           <button
             type="button"
             onClick={() => {

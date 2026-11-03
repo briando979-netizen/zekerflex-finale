@@ -9,7 +9,7 @@ import { dagStatus, isDatum, prijsIndicatie, tijdsloten } from "@/lib/voorstel/s
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { alleBoekingen, bezetVan, boekingenOp, maakBoeking } from "@/lib/voorstel/schwarzwald-boekingen";
 import { eisZelfdeHerkomst, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
-import { icsAdres, icsToken } from "@/lib/voorstel/schwarzwald-ics";
+import { icsAdres, icsToken, uitjePad } from "@/lib/voorstel/schwarzwald-ics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,6 +109,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       prijs: prijsIndicatie(boeking.activiteit, boeking.personen, boeking.datum, await agendaConfig()),
       account: !!boeking.account,
       ics: icsAdres(icsToken(boeking)),
+      deel: uitjePad(boeking.id),
     });
   } catch (err) {
     return jsonError(err);

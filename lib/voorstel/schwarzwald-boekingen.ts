@@ -157,6 +157,12 @@ export async function wijzigEigen(
   return { oud: b, nieuw };
 }
 
+/** Eén boeking op alleen het nummer (de datum kan door verzetten veranderd zijn), of null. */
+export async function zoekBoekingOpNummer(id: string): Promise<Boeking | null> {
+  if (!/^[0-9A-F]{8}$/.test(id)) return null;
+  return (await kvFindByField<Boeking>(PREFIX, "id", id, 1))[0] ?? null;
+}
+
 /** Eén boeking op datum en nummer, of null. */
 export async function zoekBoeking(datum: string, id: string): Promise<Boeking | null> {
   if (!geldigId(datum, id)) return null;
