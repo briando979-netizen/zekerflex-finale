@@ -32,7 +32,7 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
-import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
+import { findOverlappingShift, MIN_REST_HOURS, shortestRest } from "@/lib/shifts/worker-overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -137,15 +137,34 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     ? await findOverlappingShift(prisma, myProfile.id, { shiftId: s.id, startsAt: new Date(s.startsAt), endsAt: new Date(s.endsAt) })
     : null;
   const conflict = Boolean(overlap);
-  const overlapWhen = (o: NonNullable<typeof overlap>) => {
+  const whenOf = (o: { startsAt: Date; endsAt: Date }) => {
     const p = amsterdamParts(o.startsAt);
     return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(o.startsAt)}–${hhmm(o.endsAt)}`;
   };
+  // Less than 11 hours between this klus and your own work before/after it (Arbeidstijdenwet): a heads-up, no block.
+  const restWindow = MIN_REST_HOURS * 3_600_000;
+  const nearby =
+    myProfile && !overlap && upcoming
+      ? await prisma.shiftAssignment.findMany({
+          where: {
+            freelancerId: myProfile.id,
+            cancelledAt: null,
+            shiftId: { not: s.id },
+            shift: {
+              startsAt: { lt: new Date(new Date(s.endsAt).getTime() + restWindow) },
+              endsAt: { gt: new Date(start.getTime() - restWindow) },
+            },
+          },
+          select: { shift: { select: { startsAt: true, endsAt: true } } },
+          take: 10,
+        })
+      : [];
+  const rest = shortestRest(nearby.map((n) => n.shift), { startsAt: start, endsAt: new Date(s.endsAt) });
   const applyDisabled = !s.canApply || Boolean(overlap) || Boolean(missingRequiredCert) || uitzendbureauBlocked;
   const applyBlockReason = !s.canApply
     ? s.blockReason && translateBlockReason(s.blockReason, ft)
     : overlap
-      ? D.blockOverlap(overlap.title, overlapWhen(overlap))
+      ? D.blockOverlap(overlap.title, whenOf(overlap))
       : uitzendbureauBlocked
         ? D.blockAgencyOnly
         : missingRequiredCert
@@ -349,6 +368,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <span className="text-hairstrong">|</span>
           <span>{s.city}</span>
         </p>
+        {rest && (
+          <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
+            ⏳ {D.shortRest(Math.floor(rest.restMs / 3_600_000), whenOf(rest.other))}
+          </p>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">

@@ -27,7 +27,15 @@ vi.mock("@/lib/pools/store", () => ({ isInvitedToPoolOnlyShift: async () => fals
 const recordOfferResponse = vi.fn(async () => ({ status: "ACCEPTED", shiftFilled: false }));
 vi.mock("@/lib/notifications/dispatcher", () => ({ recordOfferResponse: () => recordOfferResponse() }));
 
-import { findOverlappingShift, overlapMessageOther, overlapMessageSelf, overlapWhen, overlapsAny } from "@/lib/shifts/worker-overlap";
+import {
+  findOverlappingShift,
+  overlapMessageOther,
+  overlapMessageSelf,
+  overlapWhen,
+  overlapsAny,
+  shortestRest,
+} from "@/lib/shifts/worker-overlap";
+import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { applyToShift } from "@/lib/matching/apply";
 import { AppError } from "@/lib/errors";
 
@@ -91,6 +99,39 @@ describe("overlapsAny (de lijst met klussen)", () => {
     expect(overlapsAny(mine, at("2026-11-04T04:00:00Z", "2026-11-04T08:00:00Z"))).toBe(false);
     expect(overlapsAny(mine, at("2026-11-05T08:00:00Z", "2026-11-05T16:00:00Z"))).toBe(false);
     expect(overlapsAny([], at("2026-11-04T08:00:00Z", "2026-11-04T16:00:00Z"))).toBe(false);
+  });
+});
+
+describe("shortestRest (Arbeidstijdenwet: 11 uur rust)", () => {
+  const at = (from: string, to: string) => ({ startsAt: new Date(from), endsAt: new Date(to) });
+  // avonddienst 16:00–24:00 UTC
+  const klus = at("2026-11-04T16:00:00Z", "2026-11-05T00:00:00Z");
+
+  it("vindt de kortste rust ervoor of erna, onder de 11 uur", () => {
+    const vroeg = at("2026-11-05T06:00:00Z", "2026-11-05T14:00:00Z"); // 6 uur na afloop
+    const ervoor = at("2026-11-04T06:00:00Z", "2026-11-04T08:00:00Z"); // 8 uur ervoor
+    const r = shortestRest([ervoor, vroeg], klus);
+    expect(r?.other).toBe(vroeg);
+    expect(r?.restMs).toBe(6 * 3_600_000);
+  });
+
+  it("zwijgt bij 11 uur of meer, en bij overlap (die wordt al geweigerd)", () => {
+    expect(shortestRest([at("2026-11-05T11:00:00Z", "2026-11-05T15:00:00Z")], klus)).toBeNull();
+    expect(shortestRest([at("2026-11-04T20:00:00Z", "2026-11-04T22:00:00Z")], klus)).toBeNull();
+    expect(shortestRest([], klus)).toBeNull();
+  });
+
+  it("telt een aansluitende dienst als 0 uur rust", () => {
+    expect(shortestRest([at("2026-11-05T00:00:00Z", "2026-11-05T04:00:00Z")], klus)?.restMs).toBe(0);
+  });
+
+  it("heeft in elke taal een zin, ook voor minder dan een uur", () => {
+    expect(FREELANCER_DICTS.nl.detail.shortRest(6, "do 5 nov. 07:00–15:00")).toBe(
+      "Maar 6 uur rust tussen deze klus en je dienst van do 5 nov. 07:00–15:00. De Arbeidstijdenwet vraagt minstens 11 uur tussen twee diensten.",
+    );
+    expect(FREELANCER_DICTS.nl.detail.shortRest(0, "x")).toMatch(/^Minder dan 1 uur rust/);
+    expect(FREELANCER_DICTS.en.detail.shortRest(1, "x")).toMatch(/^Only 1 hour of rest/);
+    for (const d of Object.values(FREELANCER_DICTS)) expect(d.detail.shortRest(6, "W")).toContain("W");
   });
 });
 

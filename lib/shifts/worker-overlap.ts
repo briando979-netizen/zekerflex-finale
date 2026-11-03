@@ -52,6 +52,28 @@ export function overlapsAny(
   return windows.some((o) => o.startsAt.getTime() < b && o.endsAt.getTime() > a);
 }
 
+/** De Arbeidstijdenwet vraagt minstens 11 uur rust tussen twee diensten. */
+export const MIN_REST_HOURS = 11;
+
+/**
+ * De eigen dienst met de kortste rust ervoor of erna, als die rust korter is
+ * dan MIN_REST_HOURS. Overlap telt hier niet mee: die wordt al geweigerd.
+ */
+export function shortestRest<T extends { startsAt: Date; endsAt: Date }>(
+  windows: readonly T[],
+  w: { startsAt: Date; endsAt: Date },
+): { other: T; restMs: number } | null {
+  const a = w.startsAt.getTime();
+  const b = w.endsAt.getTime();
+  let best: { other: T; restMs: number } | null = null;
+  for (const o of windows) {
+    const gap = o.endsAt.getTime() <= a ? a - o.endsAt.getTime() : o.startsAt.getTime() >= b ? o.startsAt.getTime() - b : null;
+    if (gap === null || gap >= MIN_REST_HOURS * 3_600_000) continue;
+    if (!best || gap < best.restMs) best = { other: o, restMs: gap };
+  }
+  return best;
+}
+
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const MON = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
