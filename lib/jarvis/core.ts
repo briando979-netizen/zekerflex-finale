@@ -22,6 +22,7 @@ import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { bouwer, bouwerLlm, type TaakKort } from "@/lib/bouwer/werker";
 import { agentLeeft, isBezig, leesLive, plaatsVerzoek } from "@/lib/bouwer/live";
 import { bouwerStand } from "@/lib/bouwer/stand";
+import { herstartTaak, onderhoudVanuitChat } from "@/lib/bouwer/onderhoud";
 
 // ---------------------------------------------------------------------------
 // Jarvis conversational core.
@@ -40,8 +41,8 @@ const AGENTS = {
 } as const;
 
 const routeSchema = z.object({
-  // "bouwer", "bouwerstatus" en "live" komen alleen uit heuristicRoute, nooit uit de LLM-router
-  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat", "bouwer", "bouwerstatus", "live"]),
+  // "bouwer", "bouwerstatus", "live", "serverstand" en "onderhoud" komen alleen uit heuristicRoute, nooit uit de LLM-router
+  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat", "bouwer", "bouwerstatus", "live", "serverstand", "onderhoud"]),
   agent: z.enum(["jarvis", "analyst", "developer", "sales"]).default("jarvis"),
   rationale: z.string().max(300).default(""),
 });
@@ -104,6 +105,13 @@ export function heuristicRoute(prompt: string): Route | null {
   // alleen lezen: wat doet de Bouwer, wat staat er live
   if (/\b(bouwer|live-?zetter|uitrol)\b/.test(p) && /^(hoe staat|hoe gaat|wat doet|status|stand van|staat er|is de bouwer|wat staat er live)/.test(p)) {
     return { capability: "bouwerstatus", agent: "developer", rationale: "stand van de Bouwer en de uitrol" };
+  }
+  // serveronderhoud (lib/bouwer/onderhoud.ts): de stand lezen, of één onderdeel herstarten
+  if (/^(serverstand|stand van de server|status van de server|hoe staat (het met )?de server|hoe gaat het met de server)\b/.test(p)) {
+    return { capability: "serverstand", agent: "developer", rationale: "stand van de server (alleen lezen)" };
+  }
+  if (herstartTaak(p)) {
+    return { capability: "onderhoud", agent: "developer", rationale: "één onderdeel van de server herstarten" };
   }
 
   // Greetings / smalltalk / very short -> conversation.
@@ -235,7 +243,7 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
       }
       // code wijzigen of uitrollen nooit op gok van het model
-      if (route.capability === "bouwer" || route.capability === "bouwerstatus" || route.capability === "live") {
+      if (["bouwer", "bouwerstatus", "live", "serverstand", "onderhoud"].includes(route.capability)) {
         route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
       }
     }
@@ -339,6 +347,25 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
           "Ik zet de nieuwste versie van GitHub live. Database-wijzigingen krijg je eerst te zien in het tabblad Live zetten, en als de nieuwe versie niet gezond start, zet de server zelf de vorige terug.";
       }
       await emit(turnId, "TOOL_RESULT", agent, "Live zetten", { detail: answer, durationMs: Date.now() - stepStart });
+    } else if (route.capability === "serverstand" || route.capability === "onderhoud") {
+      const taak = route.capability === "serverstand" ? "status" : herstartTaak(input.prompt);
+      await emit(turnId, "TOOL_CALL", agent, taak === "status" ? "Serverstand ophalen" : "Onderdeel van de server herstarten");
+      if (!taak) {
+        answer = "Welk onderdeel? Ik kan de app, de Bouwer, de webserver of de planner herstarten.";
+      } else {
+        answer = await onderhoudVanuitChat(taak, input.principal.email);
+        if (taak !== "status") {
+          await recordAudit({
+            category: "ADMIN",
+            action: "admin.live.onderhoud",
+            severity: "warning",
+            actorUserId: input.principal.userId,
+            actorLabel: "user",
+            summary: `${input.principal.email} liet via ZekerFlex AI ${taak} uitvoeren (serveronderhoud)`,
+          });
+        }
+      }
+      await emit(turnId, "TOOL_RESULT", agent, "Serveronderhoud", { detail: answer, durationMs: Date.now() - stepStart });
     } else if (route.capability === "briefing") {
       await emit(turnId, "TOOL_CALL", agent, "Live briefing samenstellen");
       const res = await speakBriefing({ rephrase: true });
@@ -390,6 +417,8 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
       route.capability === "bouwer" ||
       route.capability === "bouwerstatus" ||
       route.capability === "live" ||
+      route.capability === "serverstand" ||
+      route.capability === "onderhoud" ||
       answer.length < 40 ||
       // quick console questions already have a finished, model-free answer
       (route.capability === "console" && quickIntent(input.prompt) !== null);
