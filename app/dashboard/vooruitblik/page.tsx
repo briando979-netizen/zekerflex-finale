@@ -3,6 +3,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { PageHeader, EmptyState } from "@/components/app/ui";
 import { getEarningsForecast } from "@/lib/dashboard/earnings-forecast";
 import { inAndroidApp } from "@/lib/app-mode-server";
+import { getEarningsGoal } from "@/lib/dashboard/earnings-goal";
+import { EarningsGoalCard } from "@/components/app/EarningsGoalCard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,11 @@ function euro(cents: number): string {
 
 export default async function VooruitblikPage() {
   const principal = await requirePrincipal();
-  const [forecast, inApp] = await Promise.all([getEarningsForecast(principal.userId), inAndroidApp()]);
+  const [forecast, inApp, goalCents] = await Promise.all([
+    getEarningsForecast(principal.userId),
+    inAndroidApp(),
+    getEarningsGoal(principal.userId),
+  ]);
 
   if (!forecast) {
     return (
@@ -56,6 +62,13 @@ export default async function VooruitblikPage() {
             <p className="mt-2 text-sm text-neutralx-500">Nog geen diensten deze maand. Reageer op klussen om je vooruitblik te vullen.</p>
           )}
         </div>
+
+        <EarningsGoalCard
+          initialGoalCents={goalCents}
+          workedCents={forecast.workedCents}
+          expectedCents={forecast.expectedCents}
+          monthLabel={forecast.monthLabel}
+        />
 
         {/* belasting-potje (alleen zzp/flex) */}
         {!forecast.isPayroll ? (
