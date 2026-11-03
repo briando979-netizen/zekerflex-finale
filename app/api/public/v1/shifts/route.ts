@@ -7,6 +7,7 @@ import { rateLimitHeaders } from "@/lib/http/rate-limit-headers";
 import { createShiftSchema } from "@/lib/shifts/create";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,8 +70,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!body.branchId) throw AppError.validation("branchId is verplicht");
     const branch = await prisma.branch.findFirst({ where: { id: body.branchId, tenantId: key.tenantId }, select: { id: true } });
     if (!branch) throw AppError.forbidden("Vestiging hoort niet bij de organisatie van deze sleutel");
-    const startsAt = new Date(body.startsAt);
-    const endsAt = new Date(body.endsAt);
+    // Without a zone ("2026-11-05T09:00") the time is Dutch, as in the dashboard form (the server runs in UTC).
+    const startsAt = parseAmsterdamLocal(body.startsAt);
+    const endsAt = parseAmsterdamLocal(body.endsAt);
     if (endsAt <= startsAt) throw AppError.validation("De eindtijd moet na de starttijd liggen");
     await assertMayPlaceShift(key.tenantId);
     const shift = await prisma.shift.create({ data: { branchId: branch.id, title: body.title, ...(body.description ? { description: body.description } : {}), startsAt, endsAt, breakMinutes: body.breakMinutes, hourlyRateCents: body.hourlyRateCents, positions: body.positions, status: "OPEN" }, select: { id: true, title: true, startsAt: true, endsAt: true, status: true } });

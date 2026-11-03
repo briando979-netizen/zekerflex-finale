@@ -11,6 +11,7 @@ import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
+import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 
 export interface ShiftTemplate {
   key: string;
@@ -128,8 +129,9 @@ export async function createShift(
     pool = { id: found.id, name: found.name };
   }
 
-  const startsAt = new Date(input.startsAt);
-  const endsAt = new Date(input.endsAt);
+  // The form sends datetime-local values ("2026-11-05T09:00"): Dutch time, while the server runs in UTC.
+  const startsAt = parseAmsterdamLocal(input.startsAt);
+  const endsAt = parseAmsterdamLocal(input.endsAt);
   if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
     throw AppError.validation("Ongeldige datum/tijd.");
   }
@@ -137,16 +139,17 @@ export async function createShift(
   if (startsAt.getTime() < Date.now() - 60_000) throw AppError.validation("De starttijd ligt in het verleden.");
 
   // Build the full set of (start, end) windows: the primary one + any extra
-  // dates, each repeating the same time-of-day and duration.
+  // dates, each repeating the same Dutch time-of-day (also across a DST switch)
+  // and duration.
   const windows: { startsAt: Date; endsAt: Date }[] = [{ startsAt, endsAt }];
-  const seenDays = new Set<string>([startsAt.toISOString().slice(0, 10)]);
+  const seenDays = new Set<string>([amsterdamDayKey(startsAt)]);
   const durationMs = endsAt.getTime() - startsAt.getTime();
+  const at = amsterdamParts(startsAt);
   for (const iso of input.extraDates ?? []) {
     if (seenDays.has(iso)) continue;
     seenDays.add(iso);
     const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
-    const ws = new Date(startsAt);
-    ws.setFullYear(y, m - 1, d);
+    const ws = amsterdamToUtc(y, m, d, at.hour, at.minute);
     if (ws.getTime() < Date.now() - 60_000) continue;
     windows.push({ startsAt: ws, endsAt: new Date(ws.getTime() + durationMs) });
   }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { shiftCategory } from "@/lib/shifts/category";
 import { env } from "@/lib/env";
+import { amsterdamParts, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Tarief-advies & vraagvoorspelling.
@@ -122,8 +123,7 @@ export interface Forecast {
 
 /** Difficulty multiplier on fill: evenings/nights/weekends are harder to fill. */
 function difficulty(d: Date): { factor: number; label: string | null } {
-  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Europe/Amsterdam" }).format(d));
-  const wd = d.getUTCDay(); // 0 Sun .. 6 Sat
+  const { hour: h, weekday: wd } = amsterdamParts(d); // Dutch hour; weekday 0 Sun .. 6 Sat
   const weekend = wd === 0 || wd === 6;
   const evening = h >= 18 || h < 6;
   if (weekend && evening) return { factor: -0.22, label: "weekendavond is lastiger te vullen" };
@@ -145,7 +145,8 @@ export async function fillForecast(input: ForecastInput): Promise<Forecast> {
   const cat = shiftCategory(input.title, input.skill ?? null).key;
   const marketRateCents = stats.medianByCategory[cat] || stats.overallMedian || env.MIN_SHIFT_RATE_CENTS;
   const baseFill = stats.fillByCategory[cat] ?? stats.overallFill ?? 0.6;
-  const d = new Date(input.startsAt);
+  // From the form: a datetime-local value, Dutch time (the server runs in UTC).
+  const d = typeof input.startsAt === "string" ? parseAmsterdamLocal(input.startsAt) : input.startsAt;
   const diff = difficulty(d);
 
   const fillChance = chance(input.rateCents, marketRateCents, diff.factor, baseFill);

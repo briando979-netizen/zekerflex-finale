@@ -47,6 +47,18 @@ export function amsterdamToUtc(year: number, month: number, day: number, hour = 
   return zonedToUtc("Europe/Amsterdam", year, month, day, hour, minute, second);
 }
 
+/**
+ * "2026-11-05T09:00" (a datetime-local value, no zone) is a Dutch wall-clock
+ * time; `new Date()` would read it as UTC on the server. Strings that carry a
+ * zone ("…Z", "…+01:00") are read as they are.
+ */
+export function parseAmsterdamLocal(s: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+  return m
+    ? amsterdamToUtc(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] ?? 0))
+    : new Date(s);
+}
+
 /** 00:00 Amsterdam time of the day `d` falls on, shifted by `addDays` (DST-safe: days can be 23 or 25 h). */
 export function amsterdamStartOfDay(d: Date, addDays = 0): Date {
   const p = amsterdamParts(d);
