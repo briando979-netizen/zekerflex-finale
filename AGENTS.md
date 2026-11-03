@@ -71,7 +71,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 
 ### Gedeelde werkmap en uitrollen (sessies op de pc; de Bouwer heeft een eigen kopie)
 
-- Meerdere sessies delen één werkmap en `main`. Push op sha (`git push origin <sha>:main`) en rol een vaste hash uit, nooit HEAD. Faalt tsc door onaf werk van een ander, controleer dan HEAD + je eigen bestanden in een losse `git worktree`.
+- Meerdere sessies delen één werkmap en `main`. Push op sha (`git push origin <sha>:main`) en rol een vaste hash uit, nooit HEAD. Gewoon pushen alleen als `git merge-base --is-ancestor origin/main main` waar is; anders je eigen commits in een losse worktree op `origin/main` cherry-picken. Nooit `pull --rebase`/`--autostash` in de gedeelde map (dat raakt onaf werk van anderen). Faalt tsc door onaf werk van een ander, controleer dan HEAD + je eigen bestanden in een losse `git worktree`.
 - Vóór een uitrol: staat er op `main` een migratie van een ander die nog niet op prod is (`_prisma_migrations`), rol dan niet blind `main` uit. Meld een uitrol vooraf en "klaar" erna; test live nooit tijdens de uitrol van een ander.
 - PowerShell 5: `Out-File -Encoding utf8` zet een BOM; `git archive | ssh` beschadigt binaire data. Gebruik daarvoor Git Bash.
 
