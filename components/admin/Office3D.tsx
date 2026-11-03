@@ -122,6 +122,14 @@ export function Office3D() {
   const [touring, setTouring] = useState(false);
   const [legend, setLegend] = useState(false);
   const [clock, setClock] = useState("");
+  const [latest, setLatest] = useState<CityEvent | null>(null);
+
+  // Een nieuwe gebeurtenis staat even in beeld (klik om het voertuig te volgen).
+  useEffect(() => {
+    if (!latest) return;
+    const t = setTimeout(() => setLatest(null), 9000);
+    return () => clearTimeout(t);
+  }, [latest]);
 
   // Klokje in beeld: de tijd en het dagdeel in Amsterdam, zoals de stad ze toont.
   useEffect(() => {
@@ -147,6 +155,7 @@ export function Office3D() {
       const fresh = d.events.filter((e) => !seen.current.has(e.id));
       fresh.forEach((e) => seen.current.add(e.id));
       const batch = (first ? fresh.slice(0, 6) : fresh).reverse();
+      if (!first && fresh[0]) setLatest(fresh[0]);
       first = false;
       if (city.current) city.current.pushEvents(batch);
       else pending.current.push(...batch);
@@ -482,6 +491,16 @@ export function Office3D() {
               {clock}
             </p>
           )}
+          <div aria-live="polite" className="absolute left-3 top-12 max-w-[calc(100%-1.5rem)] sm:top-3 sm:max-w-[55%]">
+            {latest && (
+              <button type="button" onClick={() => pickEvent(latest.id)} className="block max-w-full truncate rounded-full px-3 py-1 text-left text-[11px] font-medium shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
+                <span aria-hidden style={{ color: latest.severity === "critical" ? "#dc2626" : latest.severity === "warning" ? "#f59e0b" : "#16a34a" }}>
+                  ●
+                </span>{" "}
+                Nieuw · {timeNl(latest.at)} · {latest.summary}
+              </button>
+            )}
+          </div>
         </div>
         <Panel title={title} subtitle={subtitle} {...(selected ? { actions: <button type="button" className="a-button text-xs" onClick={() => choose(null)}>Alles</button> } : {})}>
           {body}

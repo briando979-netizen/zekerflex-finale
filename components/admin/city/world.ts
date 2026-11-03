@@ -721,6 +721,17 @@ export function buildHouses(root: Kit, n: number): { layer: Layer; built: Plot[]
   const bodyMesh = instanced(kit, unit, kit.mat(0xffffff, { roughness: 0.85 }), bodies, true);
   const roofMesh = instanced(kit, kit.geo("gable", gableGeometry), kit.mat(0xffffff, { roughness: 0.75, flatShading: true }), roofs, true);
   L.group.add(pickable(L, bodyMesh, { kind: "woonwijk" }), pickable(L, roofMesh, { kind: "woonwijk" }), instanced(kit, unit, kit.mat(0xffffff, { roughness: 0.6 }), doors), instanced(kit, unit, winMat, wins));
+  // de eerstvolgende kavel: fundering en een bordje, zoals de bouwkraan bij de klanten
+  const next = HOUSE_SLOTS[n];
+  if (next) {
+    const front = next.road.z < next.z ? -1 : 1;
+    const plotGroup = new THREE.Group();
+    const sign = board(kit, "Volgende werker", 2.8, 0.7, { bg: "#f8fafc", fg: "#0f172a" });
+    sign.position.set(next.x, SLAB + 0.75, next.z + front * 2);
+    sign.rotation.y = front < 0 ? Math.PI : 0;
+    plotGroup.add(flat(kit, 3.6, 5, kit.mat(0xcbd5e1, { roughness: 1 }), next.x, PLOT, next.z), sign);
+    L.group.add(pickable(L, plotGroup, { kind: "woonwijk" }));
+  }
   return { layer: L, built };
 }
 

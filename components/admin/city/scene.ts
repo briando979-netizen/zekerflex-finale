@@ -578,13 +578,31 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   const v = new THREE.Vector3();
   let last = performance.now();
   let frame = 0;
+  // Loopt het niet vloeiend (onder ~30 beelden per seconde), dan minder scherp tekenen.
+  let ratio = Math.min(window.devicePixelRatio, 2);
+  let perfSum = 0;
+  let perfN = 0;
 
   const tick = () => {
     frame = requestAnimationFrame(tick);
     const now = performance.now();
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const raw = now - last;
+    const dt = Math.min(0.05, raw / 1000);
     last = now;
     if (!visible || document.hidden) return;
+    if (raw < 250) {
+      perfSum += raw;
+      perfN += 1;
+    }
+    if (perfN >= 120) {
+      if (perfSum / perfN > 33 && ratio > 1) {
+        ratio = Math.max(1, ratio - 0.5);
+        renderer.setPixelRatio(ratio);
+        renderer.setSize(host.clientWidth, host.clientHeight);
+      }
+      perfSum = 0;
+      perfN = 0;
+    }
     const bob = (speed: number, phaseOff: number, moving: boolean) => (reduced ? 0 : Math.abs(Math.sin(now / speed + phaseOff)) * (moving ? 0.08 : 0.015));
 
     // robots in het kantoor lopen rond in hun eigen afdeling
