@@ -98,7 +98,7 @@ export function CandidateCardButton({ userId, shiftId, name }: { userId: string;
                     <p className="flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
                       <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">★ {BADGE_NL[card.badge] ?? card.badge}</span>
                       {card.followsYou && (
-                        <span className="rounded-full bg-crit/10 px-2 py-0.5 text-xs font-semibold text-crit" title="Deze werker volgt jullie en krijgt een melding bij elke nieuwe dienst">
+                        <span className="rounded-full bg-paper-soft px-2 py-0.5 text-xs font-semibold text-ink" title="Deze werker volgt jullie en krijgt een melding bij elke nieuwe dienst">
                           ❤️ volgt jullie
                         </span>
                       )}

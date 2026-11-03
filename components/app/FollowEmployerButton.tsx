@@ -38,7 +38,7 @@ export function FollowEmployerButton({ tenantId, name, initialFollowing }: { ten
       aria-pressed={following}
       aria-label={following ? t.unfollowAria(name) : t.followAria(name)}
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-        following ? "border-crit/30 bg-crit/5 text-crit" : "border-hairstrong text-ink hover:bg-paper-soft"
+        following ? "border-brand-200 bg-brand-50 text-brand-700" : "border-hairstrong text-ink hover:bg-paper-soft"
       }`}
     >
       <span aria-hidden>{following ? "❤️" : "🤍"}</span>

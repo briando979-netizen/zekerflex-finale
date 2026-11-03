@@ -170,7 +170,7 @@ export function ShiftCard({
         {shift.match?.belowDesiredRate && (
           <p className="mt-2 text-[11px] font-medium text-warn">{c.belowRate}</p>
         )}
-        {shift.followed && <p className="mt-1 text-[11px] font-medium text-crit">❤️ {t.follow.youFollow}</p>}
+        {shift.followed && <p className="mt-1 text-[11px] font-medium text-neutralx-600">❤️ {t.follow.youFollow}</p>}
         {shift.workedHereBefore > 0 && (
           <p className="mt-1 text-[11px] text-neutralx-400">{c.workedHere(shift.workedHereBefore)}</p>
         )}
