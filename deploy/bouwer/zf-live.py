@@ -7,7 +7,8 @@ deed, zonder Claude:
 
   1. de nieuwste GitHub-main ophalen (eigen git-kopie, openbare repo)
   2. controleren: staat de live versie op main? zijn er database-wijzigingen?
-     Database-wijzigingen alleen met akkoord op precies die migraties.
+     Database-wijzigingen alleen met akkoord op precies die migraties, en pas
+     na een geslaagde proef op de echte database in BEGIN … ROLLBACK.
   3. code uitpakken over ~/zekerflex en deploy/scripts/vps-update.sh draaien
      (bouwen, eventueel migreren vóór de start, starten, Caddy herladen)
   4. wachten tot de nieuwe app gezond is; zo niet, zelf de vorige terugzetten
@@ -265,6 +266,14 @@ class Uitrol:
                 )
                 return
             self.schrijf(f"akkoord voor {len(migraties)} database-wijziging(en): {', '.join(wachtend)}")
+            self.stap("Database-wijzigingen proefdraaien")
+            fout = self.proefdraai(doel, wachtend)
+            if fout:
+                self.zet(
+                    staat="mislukt",
+                    bericht=f"De database-wijziging zou mislukken, dus er is niets veranderd en de vorige versie draait gewoon door. {fout}",
+                )
+                return
 
         self.stap("Code klaarzetten op de server")
         archief = subprocess.Popen(["git", "-C", SRC, "archive", doel], stdout=subprocess.PIPE)
@@ -319,6 +328,38 @@ class Uitrol:
         )
         for regel in (r.stdout + r.stderr).splitlines():
             self.schrijf(regel)
+
+    def proefdraai(self, doel: str, wachtend: list[str]) -> str | None:
+        """Alle wachtende migraties samen op de echte database in BEGIN … ROLLBACK.
+
+        Mislukt er een, dan zou het echte migreren half blijven steken (Prisma noteert
+        hem als mislukt en dan moet iemand het met de hand oplossen). Zo weten we het
+        vooraf, zonder iets te veranderen. Geeft de fout terug, of None als het lukt.
+        """
+        delen = []
+        for naam in wachtend:
+            code, inhoud = run(["git", "-C", SRC, "show", f"{doel}:prisma/migrations/{naam}/migration.sql"])
+            if code != 0:
+                return f"Migratie {naam} is niet te lezen."
+            # eigen transacties of CONCURRENTLY passen niet in één proef-transactie
+            if re.search(r"\b(BEGIN|COMMIT|ROLLBACK|END)\s*;|\bCONCURRENTLY\b", inhoud, re.IGNORECASE):
+                self.schrijf(f"proefdraaien overgeslagen: {naam} regelt zelf transacties")
+                return None
+            delen.append(f"-- {naam}\n{inhoud}")
+        script = "BEGIN;\nSET LOCAL lock_timeout = '10s';\nSET LOCAL statement_timeout = '120s';\n" + "\n".join(delen) + "\nROLLBACK;\n"
+        r = subprocess.run(
+            ["docker", "exec", "-i", PG, "psql", "-U", "zekerflex", "-d", "zekerflex", "-v", "ON_ERROR_STOP=1", "-qtA"],
+            input=script,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if r.returncode == 0:
+            self.schrijf(f"proefdraaien gelukt ({len(wachtend)} migratie(s), teruggedraaid)")
+            return None
+        melding = " ".join(r.stderr.split())[:400]
+        self.schrijf(f"!! proefdraaien mislukt: {melding}")
+        return f"Foutmelding van de database: {melding}"
 
     def migratie_stand(self, doel: str) -> tuple[list[str], list[str]]:
         mappen = git("ls-tree", "-d", "--name-only", doel, "prisma/migrations/").splitlines()
