@@ -4,6 +4,7 @@ import { listCertificates, CERT_TYPES } from "@/lib/certificates/store";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { amsterdamParts } from "@/lib/time/amsterdam";
+import { workerMissed } from "@/lib/profile/card";
 
 // ---------------------------------------------------------------------------
 // Profielkaart van een freelancer voor de opdrachtgever — te zien zodra de
@@ -37,6 +38,8 @@ export interface CandidateCard {
   skills: { name: string; rating: number; shiftsWorked: number }[];
   certificates: { label: string; expiresOn?: string }[];
   history: CandidateHistoryItem[];
+  /** Volgt deze werker het bedrijf dat de kaart bekijkt? (lib/worker/follows) */
+  followsYou?: boolean;
 }
 
 const MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -66,6 +69,7 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
       where: { freelancerId: fp.id },
       select: {
         cancelledAt: true,
+        cancelReason: true,
         timesheet: { select: { status: true, actualStart: true } },
         shift: {
           select: { title: true, startsAt: true, endsAt: true, hourlyRateCents: true, branch: { select: { name: true, city: true } } },
@@ -80,20 +84,26 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
   ]);
 
   const active = assignments.filter((a) => !a.cancelledAt);
-  const cancellations = assignments.length - active.length;
+  // Alleen wat de werker zelf afzegde of liet schieten telt; een annulering door
+  // een opdrachtgever of een overdracht aan een vervanger niet (workerMissed).
+  const cancellations = assignments.filter((a) => a.cancelledAt && workerMissed(a.cancelReason)).length;
   const avgRateCents = active.length
     ? Math.round(active.reduce((s, a) => s + a.shift.hourlyRateCents, 0) / active.length)
     : null;
 
-  // opkomst: verscheen vs. gemist op afgelopen (niet-geannuleerde) diensten
+  // opkomst: verscheen vs. gemist op afgelopen diensten
   let showed = 0;
   let missed = 0;
   for (const a of assignments) {
     if (a.shift.endsAt >= now) continue;
+    if (a.cancelledAt) {
+      if (workerMissed(a.cancelReason)) missed++;
+      continue;
+    }
     const ts = a.timesheet;
-    const cameIn = !a.cancelledAt && (ts?.actualStart != null || ["SUBMITTED", "APPROVED", "DISPUTED"].includes(ts?.status ?? ""));
-    if (a.cancelledAt || !cameIn) missed++;
-    else showed++;
+    const cameIn = ts?.actualStart != null || ["SUBMITTED", "APPROVED", "DISPUTED", "PAID"].includes(ts?.status ?? "");
+    if (cameIn) showed++;
+    else missed++;
   }
   const attendancePct = showed + missed > 0 ? Math.round((showed / (showed + missed)) * 100) : null;
 

@@ -18,9 +18,11 @@ interface Card {
   skills: { name: string; rating: number; shiftsWorked: number }[];
   certificates: { label: string; expiresOn?: string }[];
   history: { title: string; city: string; company: string; monthLabel: string; rateCents: number }[];
+  followsYou?: boolean;
 }
 
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
+const BADGE_NL: Record<string, string> = { BRONZE: "Brons", SILVER: "Zilver", GOLD: "Goud", PLATINUM: "Platina" };
 
 function Stars({ n }: { n: number }) {
   const full = Math.round(n);
@@ -94,7 +96,12 @@ export function CandidateCardButton({ userId, shiftId, name }: { userId: string;
                   <div className="min-w-0">
                     <p className="font-display text-xl font-bold">{card.name}</p>
                     <p className="flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
-                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">★ {card.badge}</span>
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">★ {BADGE_NL[card.badge] ?? card.badge}</span>
+                      {card.followsYou && (
+                        <span className="rounded-full bg-crit/10 px-2 py-0.5 text-xs font-semibold text-crit" title="Deze werker volgt jullie en krijgt een melding bij elke nieuwe dienst">
+                          ❤️ volgt jullie
+                        </span>
+                      )}
                       {card.area && <span>📍 omgeving {card.area}</span>}
                       {card.rating.count > 0 && (
                         <span className="inline-flex items-center gap-1"><Stars n={card.rating.average} /> {card.rating.average} ({card.rating.count})</span>
@@ -108,7 +115,7 @@ export function CandidateCardButton({ userId, shiftId, name }: { userId: string;
                   <Stat value={`${card.reliabilityPct}%`} label="betrouwbaar" />
                   <Stat value={card.attendancePct !== null ? `${card.attendancePct}%` : "—"} label="opkomst" />
                   <Stat value={String(card.shiftsCompleted)} label="diensten" />
-                  <Stat value={String(card.cancellations)} label="geannuleerd" tone={card.cancellations > 0 ? "warn" : "ok"} />
+                  <Stat value={String(card.cancellations)} label="zelf afgezegd" tone={card.cancellations > 0 ? "warn" : "ok"} />
                 </div>
                 {card.avgRateCents !== null && (
                   <p className="text-center text-sm text-neutralx-600">

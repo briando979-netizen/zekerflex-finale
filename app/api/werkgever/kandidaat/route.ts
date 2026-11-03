@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { myOfferForShift } from "@/lib/offers/store";
 import { buildCandidateCard } from "@/lib/employer/candidate-card";
+import { isFollowing } from "@/lib/worker/follows";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,9 +48,12 @@ export async function GET(request: Request): Promise<Response> {
       return NextResponse.json({ error: { code: "FORBIDDEN", message: "Deze freelancer heeft (nog) niet op deze klus gereageerd" } }, { status: 403 });
     }
 
-    const card = await buildCandidateCard(userId);
+    const [card, followsYou] = await Promise.all([
+      buildCandidateCard(userId),
+      isFollowing(userId, shift.branch.tenantId).catch(() => false),
+    ]);
     if (!card) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Profiel niet gevonden" } }, { status: 404 });
-    return NextResponse.json({ card });
+    return NextResponse.json({ card: { ...card, followsYou } });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
