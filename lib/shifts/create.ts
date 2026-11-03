@@ -9,6 +9,7 @@ import { recordAudit } from "@/lib/audit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyFollowersOfShifts } from "@/lib/worker/follows";
+import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
@@ -232,6 +233,10 @@ export async function createShift(
   if (!pool) {
     await notifyFollowersOfShifts(created.map((c) => c.id)).catch((err) =>
       logger.warn("follower notify after shift create failed (non-fatal)", { shiftId: shift.id, error: (err as Error).message }),
+    );
+    // Werkers met een passende job-alert (lib/matching/job-alerts) ook.
+    await notifyJobAlerts(created.map((c) => c.id)).catch((err) =>
+      logger.warn("job alert notify after shift create failed (non-fatal)", { shiftId: shift.id, error: (err as Error).message }),
     );
   }
 

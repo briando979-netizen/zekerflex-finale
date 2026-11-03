@@ -12,6 +12,7 @@ import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { followedTenantIds } from "@/lib/worker/follows";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
+import { matchingAlert } from "@/lib/matching/job-alerts";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -62,6 +63,8 @@ export interface MarketplaceShift {
   followed: boolean;
   /** overlaps a shift the freelancer already works: taking it is refused (lib/shifts/worker-overlap) */
   busy?: boolean;
+  /** label of the freelancer's own job alert this shift matches (lib/matching/job-alerts) */
+  alert?: string | null;
   /** part of a multi-day run posted by the employer */
   series: Series | null;
   /** this seat opened up because someone needs a replacement */
@@ -353,6 +356,13 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         workedHereBefore: priorByBranch.get(s.branchId) ?? 0,
         followed: followed.has(s.branch.tenantId),
         busy: overlapsAny(busyWindows, s),
+        alert: matchingAlert(prefs.jobAlerts, {
+          title: s.title,
+          skill: s.requiredSkill?.name ?? null,
+          city: s.branch.city,
+          startsAt: s.startsAt,
+          hourlyRateCents: s.hourlyRateCents,
+        }),
         travel: computeTravel(home, { lat: s.branch.latitude, lng: s.branch.longitude }),
         series: series.get(s.id) ?? null,
         isReplacement: replacementByShift.has(s.id),

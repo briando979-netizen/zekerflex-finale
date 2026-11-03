@@ -13,6 +13,7 @@ import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyFollowersOfShifts } from "@/lib/worker/follows";
+import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
@@ -297,6 +298,7 @@ export async function publishShiftAction(shiftId: string): Promise<OfferResponse
     }
     // Now public: workers who follow this employer get a push.
     await notifyFollowersOfShifts([shift.id]).catch(() => undefined);
+    await notifyJobAlerts([shift.id]).catch(() => undefined);
 
     revalidatePath(`/werkgever/diensten/${shift.id}`);
     revalidatePath("/werkgever/diensten");

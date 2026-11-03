@@ -217,6 +217,8 @@ export function MarketplaceView({
       return true;
     });
     out = [...out].sort((a, b) => {
+      // Matches for the worker's own job alerts come first ("verschijnt bovenaan"), then the chosen order.
+      if (Boolean(a.alert) !== Boolean(b.alert)) return a.alert ? -1 : 1;
       if (sort === "match") return (b.match?.score ?? 0) - (a.match?.score ?? 0);
       if (sort === "pay") return b.hourlyRateCents - a.hourlyRateCents;
       if (sort === "near") return (a.match?.distanceKm ?? 999) - (b.match?.distanceKm ?? 999);
