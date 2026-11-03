@@ -22,10 +22,12 @@ function roomFor(category: string, action: string): string {
 // its vehicle out of that customer's building. Unknown targets stay null.
 async function tenantsFor(rows: { targetType: string | null; targetId: string | null }[]): Promise<Map<string, string>> {
   const ids = (type: string) => [...new Set(rows.filter((r) => r.targetType === type && r.targetId).map((r) => r.targetId as string))];
+  // only ask the database when there is something to look up
+  const lookup = <T>(list: string[], run: (inList: string[]) => Promise<T[]>): Promise<T[]> => (list.length ? run(list) : Promise.resolve([]));
   const [shifts, timesheets, invoices] = await Promise.all([
-    prisma.shift.findMany({ where: { id: { in: ids("shift") } }, select: { id: true, branch: { select: { tenantId: true } } } }),
-    prisma.timesheet.findMany({ where: { id: { in: ids("timesheet") } }, select: { id: true, branch: { select: { tenantId: true } } } }),
-    prisma.invoice.findMany({ where: { id: { in: ids("invoice") } }, select: { id: true, recipientTenantId: true } }),
+    lookup(ids("shift"), (inList) => prisma.shift.findMany({ where: { id: { in: inList } }, select: { id: true, branch: { select: { tenantId: true } } } })),
+    lookup(ids("timesheet"), (inList) => prisma.timesheet.findMany({ where: { id: { in: inList } }, select: { id: true, branch: { select: { tenantId: true } } } })),
+    lookup(ids("invoice"), (inList) => prisma.invoice.findMany({ where: { id: { in: inList } }, select: { id: true, recipientTenantId: true } })),
   ]);
   const out = new Map<string, string>();
   for (const s of shifts) out.set(`shift:${s.id}`, s.branch.tenantId);
