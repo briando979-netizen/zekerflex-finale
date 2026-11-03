@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Portal } from "@/components/chat/Portal";
 import { useToast } from "@/components/ui/Toast";
+import { useFT } from "@/components/i18n/useFT";
 
 // ---------------------------------------------------------------------------
 // Full-screen "Vervanging zoeken via ZekerFlex" flow (freelancer). Opened from
@@ -10,7 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 //   1. explainer page + sticky "Zoek een vervanger" / "Annuleren"
 //   2. native-style confirm dialog → POST /api/me/replacement
 // On success the klus is re-listed on the marketplace and the freelancer keeps
-// responsibility until they pick a substitute.
+// responsibility until they pick a substitute. Texts: useFT().repl (5 languages).
 // ---------------------------------------------------------------------------
 
 export function RegelVervangingFlow({
@@ -25,6 +26,7 @@ export function RegelVervangingFlow({
   onRequested: () => void;
 }) {
   const toast = useToast();
+  const t = useFT().repl;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -37,8 +39,8 @@ export function RegelVervangingFlow({
         body: JSON.stringify({ assignmentId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Aanvraag mislukt");
-      toast.success("Vervanger gevraagd", "Andere krachten kunnen zich nu aanbieden.");
+      if (!res.ok) throw new Error(data?.error?.message ?? t.failed);
+      toast.success(t.requested, t.requestedBody);
       onRequested();
     } catch (e) {
       toast.error((e as Error).message);
@@ -62,40 +64,27 @@ export function RegelVervangingFlow({
 
         <div className="mx-auto max-w-2xl px-5 pb-44 pt-6">
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
-            Vervanging zoeken via ZekerFlex
+            {t.title}
           </h1>
           <div className="mt-5 space-y-4 border-t border-hair pt-5 text-sm leading-relaxed text-neutralx-700">
-            <p className="font-semibold text-ink">
-              Zorg dat je vervanging altijd met de opdrachtgever overlegd!
-            </p>
-            <p>
-              De klus wordt opnieuw uitgezet op het platform, maar jij blijft verantwoordelijk voor
-              de vervanger en het selecteren hiervan. Zorg ervoor dat je vervanger bij het selecteren
-              voldoet aan de gestelde eisen van de klusomschrijving en geschikt is om de klus over te
-              nemen.
-            </p>
-            <p>
-              Reageert er niemand op de klus? Dan ben jij nog steeds verplicht om te gaan werken. Kom
-              je niet opdagen? Dit heeft direct gevolgen voor je opkomstpercentage.
-            </p>
-            <p>
-              Kan je écht niet werken? Neem dan zo snel mogelijk contact op met de opdrachtgever
-              zodat ze tijd hebben iemand anders te vinden.
-            </p>
+            <p className="font-semibold text-ink">{t.consult}</p>
+            <p>{t.p1}</p>
+            <p>{t.p2}</p>
+            <p>{t.p3}</p>
           </div>
         </div>
 
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-hair bg-white/95 px-5 py-4 backdrop-blur">
           <div className="mx-auto max-w-2xl">
             <button type="button" onClick={() => setConfirmOpen(true)} className="btn-primary w-full">
-              Zoek een vervanger
+              {t.find}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="mt-3 block w-full text-center text-sm font-semibold text-neutralx-500 underline underline-offset-2"
             >
-              Annuleren
+              {t.cancel}
             </button>
           </div>
         </div>
@@ -103,14 +92,8 @@ export function RegelVervangingFlow({
         {confirmOpen && (
           <div className="fixed inset-0 z-20 flex items-center justify-center bg-ink/45 p-6">
             <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lift">
-              <h2 className="font-display text-lg font-bold text-ink">
-                Klus vervangingsverzoek bevestiging
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">
-                Door de klus voor vervanging aan te bieden, begrijp en aanvaard je dat het jouw
-                verantwoordelijkheid is om een geschikte vervanger te vinden en als je dit niet doet,
-                zal dit jouw aanwezigheidspercentage negatief beïnvloeden.
-              </p>
+              <h2 className="font-display text-lg font-bold text-ink">{t.confirmTitle}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{t.confirmBody}</p>
               <div className="mt-4 flex gap-3">
                 <button
                   type="button"
@@ -118,7 +101,7 @@ export function RegelVervangingFlow({
                   onClick={() => setConfirmOpen(false)}
                   className="btn-ghost flex-1 disabled:opacity-50"
                 >
-                  Annuleren
+                  {t.cancel}
                 </button>
                 <button
                   type="button"
@@ -126,7 +109,7 @@ export function RegelVervangingFlow({
                   onClick={submit}
                   className="btn-primary flex-1 disabled:opacity-50"
                 >
-                  {busy ? "Bezig…" : "Bevestigen"}
+                  {busy ? t.busy : t.confirmBtn}
                 </button>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { RegelVervangingFlow } from "@/components/app/RegelVervangingFlow";
 import { AddToCalendarButton } from "@/components/app/AddToCalendarButton";
 import type { CalendarEvent } from "@/lib/calendar/links";
 import { NOTICE_HOURS } from "@/lib/claims/policy";
+import { useFT } from "@/components/i18n/useFT";
 
 // ---------------------------------------------------------------------------
 // Action set for a shift the freelancer has been assigned to:
@@ -18,7 +19,25 @@ import { NOTICE_HOURS } from "@/lib/claims/policy";
 //   • Zeg deze klus af            (free the seat, back to the marketplace)
 // Once a replacement request is open the block switches to a list:
 //   Je zoekt vervanging voor deze klus → Trek vervanging in / Zeg deze klus af
+// Teksten in vijf talen via useFT().act (lib/i18n/freelancer.ts); **vet** in een
+// zin wordt een nadruk-span, zodat elke taal zijn eigen woordvolgorde houdt.
 // ---------------------------------------------------------------------------
+
+function Rich({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("**").map((part, i) =>
+        i % 2 ? (
+          <span key={i} className="font-semibold text-ink">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
 
 export interface ShiftActionsProps {
   assignmentId: string;
@@ -49,6 +68,8 @@ export function ShiftActions({
 }: ShiftActionsProps) {
   const toast = useToast();
   const router = useRouter();
+  const ft = useFT();
+  const t = ft.act;
   const [pending, start] = useTransition();
   const [confirmed, setConfirmed] = useState(Boolean(confirmedAt));
   const [reqOpen, setReqOpen] = useState(replacementRequested);
@@ -63,7 +84,7 @@ export function ShiftActions({
   // Annuleertermijn: tot NOTICE_HOURS vóór aanvang kun je kosteloos afzeggen.
   const freeUntilMs = new Date(startsAtISO).getTime() - NOTICE_HOURS * 3_600_000;
   const stillFree = Date.now() < freeUntilMs;
-  const deadlineLabel = new Date(freeUntilMs).toLocaleString("nl-NL", {
+  const deadlineLabel = new Date(freeUntilMs).toLocaleString(ft.intl, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -81,9 +102,9 @@ export function ShiftActions({
       });
       if (res.ok) {
         setConfirmed(true);
-        toast.success("Bedankt — je komst is bevestigd");
+        toast.success(t.confirmedToast);
       } else {
-        toast.error("Bevestigen mislukt");
+        toast.error(t.confirmFailed);
       }
     });
   }
@@ -98,10 +119,10 @@ export function ShiftActions({
         body: JSON.stringify({ id: replacementRequestId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Intrekken mislukt");
+      if (!res.ok) throw new Error(data?.error?.message ?? t.withdrawFailed);
       setReqOpen(false);
       setWithdrawOpen(false);
-      toast.success("Vervanging ingetrokken", "De klus blijft van jou.");
+      toast.success(t.withdrawn, t.withdrawnBody);
       router.refresh();
     } catch (e) {
       toast.error((e as Error).message);
@@ -120,7 +141,7 @@ export function ShiftActions({
         <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
         <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
-      Zet in je agenda
+      {t.addToCalendar}
     </a>
   );
 
@@ -132,12 +153,7 @@ export function ShiftActions({
       onClose={() => setCancelOpen(false)}
       onCancelled={(late) => {
         setCancelOpen(false);
-        toast.success(
-          "Klus afgezegd",
-          late
-            ? "Omdat dit buiten de opzegtermijn is, kan de opdrachtgever een vergoeding van 50% claimen."
-            : "De dienst staat weer open op het platform.",
-        );
+        toast.success(t.cancelledToast, late ? t.cancelledLate : t.cancelledFree);
         router.refresh();
       }}
     />
@@ -147,14 +163,14 @@ export function ShiftActions({
     return (
       <>
         <div>
-          <p className="font-display text-base font-bold text-ink">Je zoekt vervanging voor deze klus</p>
+          <p className="font-display text-base font-bold text-ink">{t.seeking}</p>
           <div className="mt-3 divide-y divide-hair border-y border-hair">
             {replacementRequestId && replacementResponseCount > 0 && (
               <Link
                 href={`/dashboard/diensten/vervanging/${replacementRequestId}`}
                 className="flex items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-brand-700"
               >
-                Bekijk reacties ({replacementResponseCount})
+                {t.viewResponses(replacementResponseCount)}
                 <span className="text-neutralx-400">›</span>
               </Link>
             )}
@@ -163,7 +179,7 @@ export function ShiftActions({
               onClick={() => setWithdrawOpen(true)}
               className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-brand-700"
             >
-              Trek vervanging in
+              {t.withdraw}
               <span className="text-neutralx-400">›</span>
             </button>
             <button
@@ -171,7 +187,7 @@ export function ShiftActions({
               onClick={() => setCancelOpen(true)}
               className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-crit"
             >
-              Zeg deze klus af
+              {t.cancelJob}
               <span className="text-neutralx-400">›</span>
             </button>
           </div>
@@ -182,11 +198,8 @@ export function ShiftActions({
           <Portal>
             <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/45 p-6">
               <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lift">
-                <h2 className="font-display text-lg font-bold text-ink">Vervanging intrekken?</h2>
-                <p className="mt-2 text-sm leading-relaxed text-neutralx-600">
-                  De klus blijft van jou en de openstaande oproep voor een vervanger wordt gesloten.
-                  Eventuele reacties vervallen.
-                </p>
+                <h2 className="font-display text-lg font-bold text-ink">{t.withdrawQ}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{t.withdrawBody}</p>
                 <div className="mt-4 flex gap-3">
                   <button
                     type="button"
@@ -194,7 +207,7 @@ export function ShiftActions({
                     onClick={() => setWithdrawOpen(false)}
                     className="btn-ghost flex-1 disabled:opacity-50"
                   >
-                    Annuleren
+                    {t.back}
                   </button>
                   <button
                     type="button"
@@ -202,7 +215,7 @@ export function ShiftActions({
                     onClick={withdrawReplacement}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {withdrawBusy ? "Bezig…" : "Intrekken"}
+                    {withdrawBusy ? t.busy : t.withdrawBtn}
                   </button>
                 </div>
               </div>
@@ -219,7 +232,7 @@ export function ShiftActions({
     <div className={variant === "detail" ? "space-y-3" : "space-y-2"}>
       <div className="flex items-center justify-between gap-2">
         {confirmed ? (
-          <span className="pill-ok">✓ Bevestigd</span>
+          <span className="pill-ok">{t.confirmed}</span>
         ) : (
           <button
             type="button"
@@ -227,7 +240,7 @@ export function ShiftActions({
             onClick={confirmAttendance}
             className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
           >
-            Bevestig dat je komt
+            {t.confirmBtn}
           </button>
         )}
         {AgendaLink}
@@ -242,31 +255,22 @@ export function ShiftActions({
             }`}
           >
             {stillFree ? (
-              <>
-                🕒 Gratis afzeggen kan nog tot <span className="font-semibold text-ink">{deadlineLabel}</span>. Daarna kan de
-                opdrachtgever tot 50% in rekening brengen.
-              </>
+              <Rich text={t.freeUntil(deadlineLabel)} />
             ) : (
               <>
-                <span className="font-semibold text-warn">Binnen de opzegtermijn.</span> Afzeggen kan nog, maar de
-                opdrachtgever kan tot 50% van de dienst in rekening brengen. Kun je niet?{" "}
-                <span className="font-semibold text-ink">Regel kosteloos een vervanger</span> — dan heeft het geen gevolgen
-                voor je betrouwbaarheidsscore.
+                <span className="font-semibold text-warn">{t.lateTitle}</span> <Rich text={t.lateBody} />
               </>
             )}
           </div>
 
           {/* Extra info voor jou */}
           <div className="rounded-lg border border-hairstrong bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-            <p className="mb-1.5 text-sm font-semibold text-ink">Extra info voor jou</p>
+            <p className="mb-1.5 text-sm font-semibold text-ink">{t.extraTitle}</p>
             <p>
-              <span className="font-semibold text-ink">Vergeet je ID-kaart niet</span> — je checkt op locatie in en uit via de
-              app.
+              <Rich text={t.idCard} />
             </p>
             <p className="mt-1.5">
-              De eindtijd is <span className="font-semibold text-ink">indicatief</span>: de klus kan eerder of later eindigen.
-              Alleen je <span className="font-semibold text-ink">daadwerkelijk gewerkte uren</span> worden uitbetaald, dus houd
-              hier rekening mee in je planning.
+              <Rich text={t.endTime} />
             </p>
           </div>
 
@@ -277,7 +281,7 @@ export function ShiftActions({
               onClick={() => setFlowOpen(true)}
               className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-brand-700"
             >
-              Regel vervanging via ZekerFlex
+              {t.replaceVia}
               <span className="text-neutralx-400" aria-hidden>›</span>
             </button>
             <button
@@ -285,7 +289,7 @@ export function ShiftActions({
               onClick={() => setCancelOpen(true)}
               className="flex w-full items-center justify-between py-3.5 text-sm font-semibold text-ink hover:text-crit"
             >
-              Zeg deze klus af
+              {t.cancelJob}
               <span className="text-neutralx-400" aria-hidden>›</span>
             </button>
           </div>
@@ -324,6 +328,7 @@ function CancelShiftModal({
   onCancelled: (late: boolean) => void;
 }) {
   const toast = useToast();
+  const t = useFT().act;
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -332,7 +337,7 @@ function CancelShiftModal({
 
   async function cancelShift() {
     if (reason.trim().length < 3) {
-      toast.error("Geef kort aan waarom je afzegt.");
+      toast.error(t.reasonRequired);
       return;
     }
     setBusy(true);
@@ -343,7 +348,7 @@ function CancelShiftModal({
         body: JSON.stringify({ reason }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Afzeggen mislukt");
+      if (!res.ok) throw new Error(data?.error?.message ?? t.cancelFailed);
       onCancelled(Boolean(data?.late));
     } catch (e) {
       toast.error((e as Error).message);
@@ -355,33 +360,29 @@ function CancelShiftModal({
     <Portal>
       <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
         <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-lift" onClick={(e) => e.stopPropagation()}>
-          <h2 className="font-display text-lg font-bold text-ink">Zeg deze klus af</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t.cancelJob}</h2>
           <p className="mt-1 text-sm text-neutralx-600">&ldquo;{shiftTitle}&rdquo;</p>
 
           {withinNotice ? (
             <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
-              <span className="font-semibold text-warn">Let op:</span> zonder vervanger afzeggen telt mee
-              in je betrouwbaarheidsscore en kan je matching beperken. Je zegt af binnen de opzegtermijn
-              ({NOTICE_HOURS} uur), dus hier zijn geen kosten aan verbonden. Deze actie kun je niet
-              ongedaan maken.
+              <span className="font-semibold text-warn">{t.warn}</span> {t.earlyWarn(NOTICE_HOURS)}
             </div>
           ) : (
             <div className="mt-3 rounded-lg border border-crit/30 bg-crit/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
-              <span className="font-semibold text-crit">Let op:</span> je zegt af binnen {NOTICE_HOURS} uur voor
-              aanvang. De opdrachtgever krijgt hierdoor de optie om 50% van deze dienst bij jou in rekening
-              te brengen. Dit telt ook mee in je betrouwbaarheidsscore. Deze actie kun je niet ongedaan maken.
+              <span className="font-semibold text-crit">{t.warn}</span> {t.lateWarn(NOTICE_HOURS)}
             </div>
           )}
 
-          <label className="mt-3 block text-xs font-medium text-neutralx-500">
-            Waarom wil je deze klus afzeggen?
+          <label htmlFor="cancel-reason" className="mt-3 block text-xs font-medium text-neutralx-500">
+            {t.reasonLabel}
           </label>
           <textarea
+            id="cancel-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             className="field-input mt-1"
-            placeholder="Bijv. ziek, dubbel geboekt, vervoer niet gelukt…"
+            placeholder={t.reasonPlaceholder}
           />
 
           <div className="mt-4 space-y-2">
@@ -391,7 +392,7 @@ function CancelShiftModal({
               disabled={busy}
               className="w-full rounded-xl border border-crit/40 bg-crit/5 px-3 py-2 text-sm font-semibold text-crit hover:bg-crit/10 disabled:opacity-50"
             >
-              {busy ? "Bezig…" : "Zeg deze klus af"}
+              {busy ? t.busy : t.cancelJob}
             </button>
             <button
               type="button"
@@ -399,7 +400,7 @@ function CancelShiftModal({
               disabled={busy}
               className="block w-full py-1.5 text-center text-xs text-neutralx-400 hover:text-ink"
             >
-              Toch niet
+              {t.notNow}
             </button>
           </div>
         </div>

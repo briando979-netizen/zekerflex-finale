@@ -6,6 +6,7 @@ import {
   outlookCalendarUrl,
   type CalendarEvent,
 } from "@/lib/calendar/links";
+import { useFT } from "@/components/i18n/useFT";
 
 // ---------------------------------------------------------------------------
 // "Zet in je agenda" — opens the viewer's actual calendar with the shift
@@ -22,6 +23,8 @@ export interface AddToCalendarProps extends CalendarEvent {
 }
 
 export function AddToCalendarButton({ assignmentId, compact, ...event }: AddToCalendarProps) {
+  const ft = useFT();
+  const t = ft.cal;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,25 +40,25 @@ export function AddToCalendarButton({ assignmentId, compact, ...event }: AddToCa
 
   const items: { label: string; sub: string; onClick: () => void }[] = [
     {
-      label: "Google Agenda",
-      sub: "Opent in je browser",
+      label: t.google,
+      sub: t.opensBrowser,
       onClick: () => window.open(googleCalendarUrl(event), "_blank", "noopener"),
     },
     {
       label: "Outlook",
-      sub: "Opent outlook.com",
+      sub: t.opensOutlook,
       onClick: () => window.open(outlookCalendarUrl(event), "_blank", "noopener"),
     },
     {
-      label: "Apple Agenda / iCal",
-      sub: "Opent je agenda-app",
+      label: t.apple,
+      sub: t.opensApp,
       onClick: () => {
         window.location.href = icsHref;
       },
     },
     {
-      label: "Download .ics-bestand",
-      sub: "Voor elk ander programma",
+      label: t.download,
+      sub: t.other,
       onClick: () => {
         window.location.href = `${icsHref}?dl=1`;
       },
@@ -78,7 +81,7 @@ export function AddToCalendarButton({ assignmentId, compact, ...event }: AddToCa
           <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
           <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        Zet in je agenda
+        {ft.act.addToCalendar}
       </button>
 
       {open && (
