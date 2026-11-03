@@ -9,12 +9,17 @@ export interface TeDoenTellingen {
   sollicitatiesNieuw: number;
   wachtlijstVrij: number;
   openTaken: number;
+  /** groepen van vandaag en morgen zonder begeleider */
+  zonderBegeleider: number;
+  /** komende groepen met een begeleider die tegelijk elders staat */
+  begeleiderDubbel: number;
 }
 
 export interface TeDoenPunt {
   sleutel: keyof TeDoenTellingen;
   aantal: number;
   tekst: string;
+  /** tabblad, eventueel met een filter erachter ("reserveringen=zonder-begeleider") */
   tab: string;
 }
 
@@ -25,6 +30,8 @@ export function teDoen(t: TeDoenTellingen): TeDoenPunt[] {
   const punten: TeDoenPunt[] = [
     { sleutel: "wachtlijstVrij", aantal: t.wachtlijstVrij, tekst: `${meervoud(t.wachtlijstVrij, "wachtende gast kan", "wachtende gasten kunnen")} nu boeken: bel ze`, tab: "wachtlijst" },
     { sleutel: "wachtOpAntwoord", aantal: t.wachtOpAntwoord, tekst: `${meervoud(t.wachtOpAntwoord, "gast wacht", "gasten wachten")} op antwoord op een bericht`, tab: "klanten" },
+    { sleutel: "begeleiderDubbel", aantal: t.begeleiderDubbel, tekst: `${meervoud(t.begeleiderDubbel, "groep heeft", "groepen hebben")} een begeleider die tegelijk elders staat`, tab: "reserveringen=dubbel" },
+    { sleutel: "zonderBegeleider", aantal: t.zonderBegeleider, tekst: `${meervoud(t.zonderBegeleider, "groep", "groepen")} vandaag of morgen nog zonder begeleider`, tab: "reserveringen=zonder-begeleider" },
     { sleutel: "teBevestigen", aantal: t.teBevestigen, tekst: `${meervoud(t.teBevestigen, "reservering", "reserveringen")} nog bevestigen`, tab: "reserveringen" },
     { sleutel: "nieuweAanvragen", aantal: t.nieuweAanvragen, tekst: `${meervoud(t.nieuweAanvragen, "nieuwe aanvraag", "nieuwe aanvragen")} oppakken`, tab: "aanvragen" },
     { sleutel: "sollicitatiesNieuw", aantal: t.sollicitatiesNieuw, tekst: `${meervoud(t.sollicitatiesNieuw, "nieuwe sollicitatie", "nieuwe sollicitaties")} bekijken`, tab: "sollicitaties" },

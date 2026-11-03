@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/http/errors";
+import { begeleiderTellingen } from "@/lib/voorstel/begeleider-regels";
+import { AGENDA } from "@/lib/voorstel/schwarzwald-agenda";
 import { eisBeheerder } from "@/lib/voorstel/schwarzwald-accounts";
+import { alleBoekingen } from "@/lib/voorstel/schwarzwald-boekingen";
 import { dashboardCijfers } from "@/lib/voorstel/schwarzwald-crm";
+import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { alleReviews } from "@/lib/voorstel/schwarzwald-reviews";
 import { alleSollicitaties } from "@/lib/voorstel/schwarzwald-sollicitaties";
 import { alleWachtplekken } from "@/lib/voorstel/schwarzwald-wachtlijst";
@@ -15,8 +19,17 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     await eisBeheerder();
-    const [cijfers, reviews, sollicitaties, wachtlijst] = await Promise.all([dashboardCijfers(), alleReviews(), alleSollicitaties(), alleWachtplekken()]);
+    const [cijfers, reviews, sollicitaties, wachtlijst, boekingen, cfg] = await Promise.all([
+      dashboardCijfers(),
+      alleReviews(),
+      alleSollicitaties(),
+      alleWachtplekken(),
+      alleBoekingen(),
+      agendaConfig(),
+    ]);
+    const duur = Object.fromEntries([...Object.entries(AGENDA), ...Object.entries(cfg.regels)].map(([slug, r]) => [slug, r.duurMin]));
     const lijst = teDoen({
+      ...begeleiderTellingen(boekingen, duur, cijfers.vandaag),
       teBevestigen: cijfers.teBevestigen,
       nieuweAanvragen: cijfers.pijplijn.find((p) => p.status === "nieuw")?.aantal ?? 0,
       wachtOpAntwoord: cijfers.klanten.wachtOpAntwoord.length,

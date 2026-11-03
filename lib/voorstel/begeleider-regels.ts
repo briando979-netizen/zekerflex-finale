@@ -1,4 +1,4 @@
-import { minuten } from "@/lib/voorstel/schwarzwald-planning";
+import { minuten, plusDagen } from "@/lib/voorstel/schwarzwald-planning";
 
 // ---------------------------------------------------------------------------
 // Begeleiders per groep: wie staat dubbel ingepland (twee groepen die
@@ -43,6 +43,22 @@ export function dubbelIngepland<T extends Groep>(boekingen: T[], duur: Record<st
     }
   }
   return uit;
+}
+
+/**
+ * Voor "Te doen": groepen van vandaag en morgen zonder begeleider (alleen als
+ * het team begeleiders gebruikt, anders is het ruis) en komende groepen met
+ * een dubbel ingeplande begeleider.
+ */
+export function begeleiderTellingen<T extends Groep>(boekingen: T[], duur: Record<string, number>, vandaag: string) {
+  const morgen = plusDagen(vandaag, 1);
+  const komend = boekingen.filter((b) => b.status !== "geannuleerd" && b.datum >= vandaag);
+  const inGebruik = boekingen.some((b) => b.begeleider?.trim());
+  const dubbel = dubbelIngepland(komend, duur);
+  return {
+    zonderBegeleider: inGebruik ? komend.filter((b) => b.datum <= morgen && !b.begeleider?.trim()).length : 0,
+    begeleiderDubbel: komend.filter((b) => dubbel.has(`${b.datum}-${b.id}`)).length,
+  };
 }
 
 /** Per begeleider de groepen (op tijd), voor de dagplanning; begeleiders op naam. */

@@ -70,7 +70,13 @@ export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, st
               <li key={p.sleutel}>
                 <button
                   type="button"
-                  onClick={() => (DOELEN.includes(p.tab) ? naar(p.tab as Doel) : document.getElementById("dash-taken")?.scrollIntoView({ behavior: "smooth" }))}
+                  onClick={() => {
+                    const [doel = "", filter] = p.tab.split("=");
+                    if (!DOELEN.includes(doel)) document.getElementById("dash-taken")?.scrollIntoView({ behavior: "smooth" });
+                    // met een filter via de adresbalk: het beheer zet tabblad en filter
+                    else if (filter) window.location.hash = p.tab;
+                    else naar(doel as Doel);
+                  }}
                   className="flex w-full items-center justify-between gap-3 py-2.5 text-left font-semibold hover:text-schw-rust"
                 >
                   <span>{p.tekst}</span>

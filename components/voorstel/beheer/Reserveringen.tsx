@@ -47,6 +47,9 @@ const AANWEZIG_PIL: Record<Aanwezig, string> = {
   nee: "bg-[#FEE2E2] text-[#B91C1C]",
 };
 
+/** Filter op begeleider; ook te openen vanuit "Te doen" (#reserveringen=zonder-begeleider). */
+export type BegeleiderFilter = "" | "zonder-begeleider" | "dubbel";
+
 /** "Let op: Sanne begeleidt tegelijk ook 14:00 Buggy rijden (Gerda Gast)." */
 export const dubbelTekst = (wie: string, tegelijk: BeheerBoeking[], namen: Record<string, string>) =>
   `Let op: ${wie} begeleidt tegelijk ook ${tegelijk.map((x) => `${x.tijd} ${namen[x.activiteit] ?? x.activiteit} (${x.naam})`).join(", ")}.`;
@@ -154,6 +157,7 @@ export function Reserveringen({
   vandaag,
   start = null,
   klaarStart = () => {},
+  begeleiderFilter = "",
 }: {
   namen: Record<string, string>;
   duur: Record<string, number>;
@@ -161,6 +165,7 @@ export function Reserveringen({
   /** een aanvraag die als reservering wordt ingeboekt */
   start?: InboekStart | null;
   klaarStart?: () => void;
+  begeleiderFilter?: BegeleiderFilter;
 }) {
   const { data, setData, fout, setFout, laad } = useBeheerData<{ boekingen: BeheerBoeking[] }>(BEHEER_API);
   const [alles, setAlles] = useState(false);
@@ -170,7 +175,10 @@ export function Reserveringen({
   const [nieuw, setNieuw] = useState(Boolean(start));
   const [bezig, setBezig] = useState("");
   const [ok, setOk] = useState("");
+  const [beg, setBeg] = useState<BegeleiderFilter>(begeleiderFilter);
 
+  // over alle boekingen, niet alleen de gefilterde: een overlap blijft zichtbaar bij zoeken
+  const dubbel = useMemo(() => dubbelIngepland(data?.boekingen ?? [], duur), [data, duur]);
   const lijst = useMemo(() => {
     const q = zoek.trim().toLowerCase();
     return (data?.boekingen ?? []).filter(
@@ -178,12 +186,12 @@ export function Reserveringen({
         (alles || b.datum >= vandaag) &&
         (!status || b.status === status) &&
         (!activiteit || b.activiteit === activiteit) &&
+        (beg !== "zonder-begeleider" || (b.status !== "geannuleerd" && !b.begeleider?.trim())) &&
+        (beg !== "dubbel" || dubbel.has(`${b.datum}-${b.id}`)) &&
         (!q || `${b.naam} ${b.email} ${b.telefoon} ${b.id} ${b.begeleider ?? ""}`.toLowerCase().includes(q)),
     );
-  }, [data, alles, status, activiteit, zoek, vandaag]);
+  }, [data, alles, status, activiteit, beg, dubbel, zoek, vandaag]);
   const begeleiders = useMemo(() => [...new Set((data?.boekingen ?? []).flatMap((b) => (b.begeleider ? [b.begeleider] : [])))].sort((a, b) => a.localeCompare(b, "nl")), [data]);
-  // over alle boekingen, niet alleen de gefilterde: een overlap blijft zichtbaar bij zoeken
-  const dubbel = useMemo(() => dubbelIngepland(data?.boekingen ?? [], duur), [data, duur]);
   const perDag = useMemo(() => {
     const m = new Map<string, BeheerBoeking[]>();
     for (const b of lijst) m.set(b.datum, [...(m.get(b.datum) ?? []), b]);
@@ -233,6 +241,11 @@ export function Reserveringen({
           <option value="nieuw">Nieuw</option>
           <option value="bevestigd">Bevestigd</option>
           <option value="geannuleerd">Geannuleerd</option>
+        </select>
+        <select value={beg} onChange={(e) => setBeg(e.target.value as BegeleiderFilter)} aria-label="Begeleider" className={`${VELD_BASIS} w-auto`}>
+          <option value="">Alle begeleiders</option>
+          <option value="zonder-begeleider">Zonder begeleider</option>
+          <option value="dubbel">Dubbel ingepland</option>
         </select>
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" checked={alles} onChange={(e) => setAlles(e.target.checked)} className="h-4 w-4 accent-[#FF5F1F]" />

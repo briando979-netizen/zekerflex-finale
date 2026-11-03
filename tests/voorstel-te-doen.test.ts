@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { teDoen } from "@/lib/voorstel/te-doen";
 
-const nul = { teBevestigen: 0, nieuweAanvragen: 0, wachtOpAntwoord: 0, reviewsNieuw: 0, sollicitatiesNieuw: 0, wachtlijstVrij: 0, openTaken: 0 };
+const nul = { teBevestigen: 0, nieuweAanvragen: 0, wachtOpAntwoord: 0, reviewsNieuw: 0, sollicitatiesNieuw: 0, wachtlijstVrij: 0, openTaken: 0, zonderBegeleider: 0, begeleiderDubbel: 0 };
 
 describe("te doen op het dashboard", () => {
   it("is leeg als alles bijgewerkt is", () => {
@@ -14,6 +14,13 @@ describe("te doen op het dashboard", () => {
     expect(l[0]?.tekst).toBe("1 wachtende gast kan nu boeken: bel ze");
     expect(l[1]?.tekst).toBe("3 reserveringen nog bevestigen");
     expect(l[2]?.tekst).toBe("2 beoordelingen wachten op goedkeuring");
+  });
+
+  it("begeleiders: dubbel vóór zonder, met een filter achter het tabblad", () => {
+    const l = teDoen({ ...nul, teBevestigen: 1, zonderBegeleider: 2, begeleiderDubbel: 1 });
+    expect(l.map((p) => p.tab)).toEqual(["reserveringen=dubbel", "reserveringen=zonder-begeleider", "reserveringen"]);
+    expect(l[0]?.tekst).toBe("1 groep heeft een begeleider die tegelijk elders staat");
+    expect(l[1]?.tekst).toBe("2 groepen vandaag of morgen nog zonder begeleider");
   });
 
   it("gebruikt enkelvoud bij 1", () => {

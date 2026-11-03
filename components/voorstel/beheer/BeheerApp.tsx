@@ -9,7 +9,7 @@ import { Dashboard } from "@/components/voorstel/beheer/Dashboard";
 import { Planning } from "@/components/voorstel/beheer/Planning";
 import { Klanten } from "@/components/voorstel/beheer/Klanten";
 import { Aanvragen } from "@/components/voorstel/beheer/Aanvragen";
-import { Reserveringen } from "@/components/voorstel/beheer/Reserveringen";
+import { Reserveringen, type BegeleiderFilter } from "@/components/voorstel/beheer/Reserveringen";
 import { Aankondiging, Activiteiten, Openingstijden } from "@/components/voorstel/beheer/Instellingen";
 import { Paginas } from "@/components/voorstel/beheer/Paginas";
 import { Accounts } from "@/components/voorstel/beheer/Accounts";
@@ -92,12 +92,15 @@ export function BeheerApp({
   const [klant, setKlant] = useState("");
   // een aanvraag die als reservering wordt ingeboekt (Aanvragen → Reserveringen)
   const [inboek, setInboek] = useState<InboekStart | null>(null);
+  // filter waarmee Reserveringen opent (#reserveringen=zonder-begeleider, vanuit Te doen)
+  const [resFilter, setResFilter] = useState<BegeleiderFilter>("");
 
   useEffect(() => {
     const lees = () => {
-      const [h, email] = decodeURIComponent(window.location.hash.slice(1)).split("=");
+      const [h, extra] = decodeURIComponent(window.location.hash.slice(1)).split("=");
       if (TABS.some(([k]) => k === h)) setTab(h as Tab);
-      if (h === "klanten" && email) setKlant(email);
+      if (h === "klanten" && extra) setKlant(extra);
+      if (h === "reserveringen") setResFilter(extra === "zonder-begeleider" || extra === "dubbel" ? extra : "");
     };
     lees();
     window.addEventListener("hashchange", lees);
@@ -106,6 +109,7 @@ export function BeheerApp({
 
   const naar = (t: Tab) => {
     setTab(t);
+    setResFilter("");
     window.history.replaceState(window.history.state, "", `#${t}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -189,7 +193,10 @@ export function BeheerApp({
               }}
             />
           )}
-          {tab === "reserveringen" && <Reserveringen namen={namen} duur={duur} vandaag={vandaag} start={inboek} klaarStart={() => setInboek(null)} />}
+          {tab === "reserveringen" && (
+            // key: bij een nieuw filter vanuit Te doen opnieuw beginnen
+            <Reserveringen key={resFilter} namen={namen} duur={duur} vandaag={vandaag} start={inboek} klaarStart={() => setInboek(null)} begeleiderFilter={resFilter} />
+          )}
           {tab === "wachtlijst" && <Wachtlijst namen={namen} openKlant={openKlant} />}
           {tab === "reviews" && <Reviews namen={namen} openKlant={openKlant} />}
           {tab === "sollicitaties" && <Sollicitaties />}
