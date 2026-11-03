@@ -178,7 +178,7 @@ export function Planning({
                     key={sleutel}
                     type="button"
                     onClick={() => setGekozen(gekozen === sleutel ? null : sleutel)}
-                    aria-label={`${b.tijd} ${namen[b.activiteit] ?? b.activiteit}, ${b.personen} personen, ${b.naam}, ${b.status}`}
+                    aria-label={`${b.tijd} ${namen[b.activiteit] ?? b.activiteit}, ${b.personen} personen, ${b.naam}, ${b.status}${b.begeleider ? `, begeleider ${b.begeleider}` : ""}`}
                     className={`absolute z-10 overflow-hidden rounded-lg px-1.5 py-1 text-left text-[11px] leading-tight text-white shadow-sm transition-transform hover:z-30 hover:scale-[1.02] ${
                       b.status === "nieuw" ? "ring-2 ring-schw-sun ring-offset-1" : ""
                     } ${b.status === "geannuleerd" ? "opacity-40 line-through" : ""} ${gekozen === sleutel ? "z-30 outline outline-2 outline-schw-night" : ""}`}
@@ -196,6 +196,7 @@ export function Planning({
                     <span className="block truncate">
                       {b.personen} p · {b.naam}
                     </span>
+                    {b.begeleider && <span className="block truncate font-semibold">↳ {b.begeleider}</span>}
                   </button>
                 );
               })}
@@ -241,6 +242,9 @@ export function Planning({
                 <a href={`mailto:${keuze.email}`} className="underline">{keuze.email}</a>
               </p>
               {keuze.opmerking && <p className="mt-2">&ldquo;{keuze.opmerking}&rdquo;</p>}
+              <p className="mt-2 text-sm">
+                <strong>Begeleider:</strong> {keuze.begeleider ?? "nog niemand (in te vullen onder Reserveringen)"}
+              </p>
               {keuze.verzetVan && <p className="mt-2 font-semibold text-schw-rust">{verzetTekst(keuze.verzetVan)}</p>}
               {keuze.aantalVan !== undefined && <p className="mt-2 font-semibold text-schw-rust">aantal gewijzigd door de gast, was {keuze.aantalVan}</p>}
             </div>

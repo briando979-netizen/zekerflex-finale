@@ -41,6 +41,15 @@ export interface Boeking {
   aantalVan?: number;
   /** aangemeld bij de balie: gekomen of niet (leeg = nog niet aangemeld) */
   aanwezig?: Aanwezig;
+  /** wie van het team de groep begeleidt; intern, de gast ziet dit niet */
+  begeleider?: string;
+}
+
+/** Zoals de gast zijn boeking ziet en exporteert: zonder interne teamgegevens. */
+export function voorGast(b: Boeking): Boeking {
+  const r = { ...b };
+  delete r.begeleider;
+  return r;
 }
 
 const sleutel = (datum: string, id: string) => `${PREFIX}${datum}:${id}`;
@@ -69,6 +78,7 @@ export async function boekingenVanAccount(email: string): Promise<Boeking[]> {
   const nu = Date.now();
   return (await kvFindByField<Boeking>(PREFIX, "account", email.toLowerCase(), 500))
     .filter((b) => !verlopen(b, nu))
+    .map(voorGast)
     .sort((a, b) => `${a.datum} ${a.tijd}`.localeCompare(`${b.datum} ${b.tijd}`));
 }
 
@@ -130,6 +140,19 @@ export async function zetAanwezig(datum: string, id: string, waarde: Aanwezig | 
   const nieuw: Boeking = { ...b };
   if (waarde) nieuw.aanwezig = waarde;
   else delete nieuw.aanwezig;
+  await kvSet(sleutel(datum, id), nieuw);
+  return nieuw;
+}
+
+/** Het personeel zet wie de groep begeleidt ("" = niemand). */
+export async function zetBegeleider(datum: string, id: string, naam: string): Promise<Boeking> {
+  if (!geldigId(datum, id)) throw AppError.validation("Onbekende boeking.");
+  const b = await kvGet<Boeking>(sleutel(datum, id));
+  if (!b) throw AppError.notFound("Boeking niet gevonden.");
+  const nieuw: Boeking = { ...b };
+  const schoon = naam.replace(/\s+/g, " ").trim();
+  if (schoon) nieuw.begeleider = schoon;
+  else delete nieuw.begeleider;
   await kvSet(sleutel(datum, id), nieuw);
   return nieuw;
 }

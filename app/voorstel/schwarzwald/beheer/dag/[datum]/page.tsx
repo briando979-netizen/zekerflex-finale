@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Dagplanning" };
 
 // Dagplanning voor het personeel, om te printen en mee de vloer op te nemen:
-// alle reserveringen van één dag op begintijd, met eindtijd, contact,
-// opmerking en de wensen uit het klantdossier (dieet, allergieën).
+// alle reserveringen van één dag op begintijd, met eindtijd, begeleider,
+// contact, opmerking en de wensen uit het klantdossier (dieet, allergieën).
 
 const dagNaam = (datum: string, opties: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("nl-NL", { ...opties, timeZone: "UTC" }).format(new Date(`${datum}T12:00:00Z`));
 const STATUS: Record<string, string> = { nieuw: "nog bevestigen", bevestigd: "bevestigd" };
@@ -132,7 +132,15 @@ export default async function DagplanningPage({ params }: { params: Promise<{ da
                     <td className="whitespace-nowrap py-2.5 pr-3 font-bold">
                       {b.tijd}–{eind}
                     </td>
-                    <td className="py-2.5 pr-3">{namen[b.activiteit] ?? b.activiteit}</td>
+                    <td className="py-2.5 pr-3">
+                      {namen[b.activiteit] ?? b.activiteit}
+                      {b.begeleider && (
+                        <>
+                          <br />
+                          <span className="font-semibold">Begeleider: {b.begeleider}</span>
+                        </>
+                      )}
+                    </td>
                     <td className="py-2.5 pr-3 text-right font-bold">{b.personen}</td>
                     <td className="py-2.5 pr-3">
                       {b.naam}

@@ -7,7 +7,7 @@ import { AANWEZIG_LABEL, aanmeldFout, balieStand, type Aanwezig } from "@/lib/vo
 
 // Reserveringen: overzicht per dag met zoeken en filters, bevestigen,
 // annuleren, verwijderen, zelf inboeken (telefoon/balie), gasten aanmelden
-// bij de balie (vanaf de dag zelf) en Excel-export.
+// bij de balie (vanaf de dag zelf), een begeleider per groep en Excel-export.
 
 export type Status = "nieuw" | "bevestigd" | "geannuleerd";
 export interface BeheerBoeking {
@@ -27,6 +27,7 @@ export interface BeheerBoeking {
   /** aantal personen voordat de gast het zelf wijzigde */
   aantalVan?: number;
   aanwezig?: Aanwezig;
+  begeleider?: string;
   prijs: number | null;
 }
 
@@ -43,6 +44,28 @@ const AANWEZIG_PIL: Record<Aanwezig, string> = {
   ja: "bg-[#DCFCE7] text-[#15803D]",
   nee: "bg-[#FEE2E2] text-[#B91C1C]",
 };
+
+/** Wie de groep begeleidt; de keuzelijst bevat namen die al eerder gebruikt zijn. */
+function BegeleiderVeld({ b, bezig, opslaan }: { b: BeheerBoeking; bezig: boolean; opslaan: (naam: string) => void }) {
+  const id = `begeleider-${b.datum}-${b.id}`;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        opslaan(String(new FormData(e.currentTarget).get("begeleider") ?? ""));
+      }}
+      className="mt-2 flex flex-wrap items-center gap-2 text-sm"
+    >
+      <label htmlFor={id} className="font-semibold">
+        Begeleider
+      </label>
+      <input key={b.begeleider ?? ""} id={id} name="begeleider" list="schw-begeleiders" defaultValue={b.begeleider ?? ""} maxLength={60} placeholder="Naam" className={`${VELD_BASIS} w-44 py-1.5`} />
+      <button type="submit" disabled={bezig} aria-label={`Begeleider opslaan voor ${b.naam} om ${b.tijd}`} className={KNOP_LICHT}>
+        Opslaan
+      </button>
+    </form>
+  );
+}
 
 function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; klaar: () => void }) {
   const [fout, setFout] = useState("");
@@ -119,6 +142,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
   const [zoek, setZoek] = useState("");
   const [nieuw, setNieuw] = useState(false);
   const [bezig, setBezig] = useState("");
+  const [ok, setOk] = useState("");
 
   const lijst = useMemo(() => {
     const q = zoek.trim().toLowerCase();
@@ -127,9 +151,10 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
         (alles || b.datum >= vandaag) &&
         (!status || b.status === status) &&
         (!activiteit || b.activiteit === activiteit) &&
-        (!q || `${b.naam} ${b.email} ${b.telefoon} ${b.id}`.toLowerCase().includes(q)),
+        (!q || `${b.naam} ${b.email} ${b.telefoon} ${b.id} ${b.begeleider ?? ""}`.toLowerCase().includes(q)),
     );
   }, [data, alles, status, activiteit, zoek, vandaag]);
+  const begeleiders = useMemo(() => [...new Set((data?.boekingen ?? []).flatMap((b) => (b.begeleider ? [b.begeleider] : [])))].sort((a, b) => a.localeCompare(b, "nl")), [data]);
   const perDag = useMemo(() => {
     const m = new Map<string, BeheerBoeking[]>();
     for (const b of lijst) m.set(b.datum, [...(m.get(b.datum) ?? []), b]);
@@ -138,11 +163,13 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
 
   // status of aanmelding wijzigen; de server geeft de boeking terug zoals hij nu is
   // (annuleren wist bv. ook de aanmelding), dus die nemen we over
-  async function wijzig(b: BeheerBoeking, body: { status: Status } | { aanwezig: Aanwezig | null }) {
+  async function wijzig(b: BeheerBoeking, body: { status: Status } | { aanwezig: Aanwezig | null } | { begeleider: string }) {
     setBezig(b.id);
+    setOk("");
     try {
       const { boeking } = await vraag<{ boeking: Omit<BeheerBoeking, "prijs"> }>(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, ...body } });
       setData((d) => (d ? { boekingen: d.boekingen.map((x) => (x.id === b.id && x.datum === b.datum ? { ...boeking, prijs: x.prijs } : x)) } : d));
+      if ("begeleider" in body) setOk(boeking.begeleider ? `${boeking.begeleider} begeleidt ${b.naam} om ${b.tijd}.` : `Begeleider bij ${b.naam} weggehaald.`);
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Opslaan mislukt.");
     } finally {
@@ -165,7 +192,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op naam, e-mail, telefoon of nummer" aria-label="Zoeken" className={`${VELD} max-w-xs`} />
+        <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op naam, e-mail, nummer of begeleider" aria-label="Zoeken" className={`${VELD} max-w-xs`} />
         <select value={activiteit} onChange={(e) => setActiviteit(e.target.value)} aria-label="Activiteit" className={`${VELD_BASIS} w-auto`}>
           <option value="">Alle activiteiten</option>
           {Object.entries(namen).map(([slug, naam]) => (
@@ -200,8 +227,13 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
         />
       )}
       <div className="mt-4">
-        <Melding fout={fout} />
+        <Melding fout={fout} ok={ok} />
       </div>
+      <datalist id="schw-begeleiders">
+        {begeleiders.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
       {data && perDag.length === 0 && <p className="mt-8 text-schw-mute">Geen reserveringen gevonden.</p>}
       <div className="mt-6 space-y-8">
         {perDag.map(({ datum, items, stand }) => (
@@ -239,6 +271,7 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
                     {b.opmerking && <p className="mt-1 text-sm">&ldquo;{b.opmerking}&rdquo;</p>}
                     {b.verzetVan && <p className="mt-1 text-sm font-semibold text-schw-rust">{verzetTekst(b.verzetVan)}</p>}
                     {b.aantalVan !== undefined && <p className="mt-1 text-sm font-semibold text-schw-rust">aantal gewijzigd door de gast, was {b.aantalVan}</p>}
+                    {b.status !== "geannuleerd" && <BegeleiderVeld b={b} bezig={bezig === b.id} opslaan={(naam) => void wijzig(b, { begeleider: naam })} />}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {!aanmeldFout(b, vandaag) &&

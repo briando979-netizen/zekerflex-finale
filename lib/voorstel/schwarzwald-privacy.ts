@@ -3,7 +3,7 @@ import { AppError } from "@/lib/errors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { CONTACT } from "@/lib/voorstel/schwarzwald";
 import { hoortBij, komendeReservering } from "@/lib/voorstel/privacy-regels";
-import type { Boeking } from "@/lib/voorstel/schwarzwald-boekingen";
+import { voorGast, type Boeking } from "@/lib/voorstel/schwarzwald-boekingen";
 import type { Aanvraag, CrmItem, Klantkaart } from "@/lib/voorstel/schwarzwald-crm";
 import type { GastReview } from "@/lib/voorstel/schwarzwald-reviews";
 import type { Sollicitatie } from "@/lib/voorstel/schwarzwald-sollicitaties";
@@ -41,7 +41,7 @@ export async function gegevensVan(email: string) {
     account: account ? accountZonderHash : null,
     wensen: kaart?.wensen ?? "",
     berichten: items.map((r) => r.value).filter((i) => i.soort === "bericht-klant" || i.soort === "bericht-team").map(({ soort, tekst, door, datum }) => ({ soort, tekst, door, datum })),
-    reserveringen: boekingen.map((r) => r.value),
+    reserveringen: boekingen.map((r) => voorGast(r.value)),
     aanvragen: aanvragen.map((r) => r.value),
     beoordelingen: reviews.map((r) => r.value),
     sollicitaties: sollicitaties.map((r) => r.value),
