@@ -791,6 +791,11 @@ body {
 
 .app-scope[data-theme="dark"] .bg-paper-soft,
 .app-scope[data-theme="dark"] .bg-paper { background-color: var(--app-surface) !important; }
+/* Doorzichtig papier werd een licht waas over donker; bg-hair (rasterlijnen van de kalender) fel lichtgrijs. */
+.app-scope[data-theme="dark"] .bg-paper-soft\/50 { background-color: rgba(11, 13, 17, 0.5) !important; }
+.app-scope[data-theme="dark"] .bg-paper-soft\/60 { background-color: rgba(11, 13, 17, 0.6) !important; }
+.app-scope[data-theme="dark"] .bg-hair { background-color: var(--app-edge) !important; }
+.app-scope[data-theme="dark"] .bg-hairstrong { background-color: var(--app-edge-strong) !important; }
 .app-scope[data-theme="dark"] .bg-white { background-color: var(--app-card) !important; }
 /* Translucent header/sheet surfaces (bg-white/NN) — same dark card colour at the same alpha. */
 .app-scope[data-theme="dark"] .bg-white\/15 { background-color: rgba(21,24,30,0.15) !important; }
