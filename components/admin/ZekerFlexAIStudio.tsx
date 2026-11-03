@@ -5,6 +5,7 @@ import { JarvisConsole } from "@/components/jarvis/JarvisConsole";
 import { ConsoleTerminal } from "@/components/admin/ConsoleTerminal";
 import { LiveZetten } from "@/components/admin/bouwer/LiveZetten";
 import { Bouwer } from "@/components/admin/bouwer/Bouwer";
+import { Handleiding } from "@/components/admin/bouwer/Handleiding";
 import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.generated";
 
 // ---------------------------------------------------------------------------
@@ -27,9 +28,16 @@ import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.gen
 // loaded page survives tab switches.
 // ---------------------------------------------------------------------------
 
-type Tab = "ai" | "bouwer" | "browser" | "sandbox" | "live";
+type Tab = "ai" | "bouwer" | "browser" | "sandbox" | "live" | "hulp";
 
-const TAB_LABEL: Record<Tab, string> = { ai: "ZekerFlex AI", bouwer: "Bouwer", browser: "Pagina's", sandbox: "Sandbox", live: "Live zetten" };
+const TAB_LABEL: Record<Tab, string> = {
+  ai: "ZekerFlex AI",
+  bouwer: "Bouwer",
+  browser: "Pagina's",
+  sandbox: "Sandbox",
+  live: "Live zetten",
+  hulp: "Hoe werkt het?",
+};
 type PanelMode = "explorer" | "search";
 
 const AREA_ORDER = ["Admin", "Marketing", "Werkgever", "Freelancer", "Webshop", "Account & overig"];
@@ -304,6 +312,9 @@ export function ZekerFlexAIStudio({
             <IRocketIcon />
           </ActivityButton>
           <div className="mt-auto" />
+          <ActivityButton label="Hoe werkt het?" active={tab === "hulp"} onClick={() => setTab("hulp")}>
+            <IHelpIcon />
+          </ActivityButton>
           <ActivityButton label="Terminal" active={terminalOpen} onClick={() => setTerminalOpen((o) => !o)}>
             <ITerminalIcon />
           </ActivityButton>
@@ -403,6 +414,11 @@ export function ZekerFlexAIStudio({
             {tab === "live" && (
               <div className="flex min-h-0 flex-1">
                 <LiveZetten />
+              </div>
+            )}
+            {tab === "hulp" && (
+              <div className="flex min-h-0 flex-1">
+                <Handleiding naarTab={setTab} />
               </div>
             )}
           </div>
@@ -716,6 +732,15 @@ function IBeakerIcon() {
   return (
     <svg {...IS}>
       <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IHelpIcon() {
+  return (
+    <svg {...IS}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" />
     </svg>
   );
 }
