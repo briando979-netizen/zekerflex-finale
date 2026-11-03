@@ -31,6 +31,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Vaste sleutel voor server-acties (zie Dockerfile): open formulieren overleven een update.
+      args:
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
     image: zekerflex-app:latest
     restart: unless-stopped
     env_file: [.env.production]

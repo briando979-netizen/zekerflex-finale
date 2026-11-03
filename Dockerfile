@@ -22,6 +22,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # is separate and receives the real environment from compose / Kubernetes.
 ENV AUTH_SECRET=build_time_placeholder_value_min_32_chars_000
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
+# Vaste sleutel voor server-acties, uit .env.production via de compose-build-args.
+# Zonder vaste sleutel maakt `next build` in Docker er elke build een nieuwe, en dan
+# krijgt elke server-actie bij elke uitrol een andere naam: wie op dat moment een
+# formulier openheeft (inloggen, dienst plaatsen, uren) loopt vast
+# (lib/ops/stale-deployment.ts). Leeg = een willekeurige sleutel, zoals vroeger.
+# Next schrijft hem toch in het serveractie-manifest; dit ARG geldt alleen in deze bouwfase.
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=""
 # `npm run build` runs `prisma generate && next build`
 RUN npm run build
 

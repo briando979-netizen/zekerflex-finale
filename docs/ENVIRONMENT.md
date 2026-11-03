@@ -19,6 +19,7 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 | `AUTH_TRUST_HOST` | `true` | `true` 🔴 | Vertrouw de `X-Forwarded-*` headers van cloudflared |
 | `AUTH_SECRET` | dev-string | 32+ random (`gen-secrets`) 🔴 | Ondertekent de sessie-JWT's |
 | `INTERNAL_CRON_TOKEN` | dev-string | 16+ random 🟡 | Beschermt de interne worker-endpoints |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | — | `openssl rand -base64 32` 🟡 | Vaste sleutel voor server-acties; compose geeft hem ook aan de build. Zonder vaste sleutel krijgt elke actie bij elke update een nieuwe naam en loopt een formulier vast dat iemand op dat moment openheeft |
 | `GOOGLE_SITE_VERIFICATION` | — | token ⚪ | Google Search Console property-verificatie (`<meta>`-methode). Zie `docs/SEO.md` |
 | `BING_SITE_VERIFICATION` | — | token ⚪ | Bing Webmaster Tools property-verificatie (optioneel) |
 | `DATABASE_URL` | `postgresql://zekerflex:zekerflex@localhost:5432/zekerflex?schema=public` | `…@postgres:5432/…` 🔴 | PostgreSQL-verbinding |
