@@ -53,6 +53,16 @@ export function AppTab({ data }: { data: BeheerWeergave }) {
     return () => clearInterval(t);
   }, [fase, laad]);
 
+  // na afloop van een bouw geen "De bouw is gestart." meer bovenaan
+  const vorigeFase = useRef(fase);
+  useEffect(() => {
+    const was = vorigeFase.current;
+    vorigeFase.current = fase;
+    if (was !== "bouwt" && was !== "verwerkt") return;
+    if (fase === "") setOk(`Klaar: versie ${w?.app?.versie ?? ""} is gebouwd.`);
+    else if (fase === "fout") setOk(null);
+  }, [fase, w?.app?.versie]);
+
   async function actie(naam: string, body: Record<string, unknown>, gelukt: (d: Antwoord) => string | null) {
     setBezig(naam);
     setFout(null);
