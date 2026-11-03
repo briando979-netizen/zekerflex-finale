@@ -34,7 +34,7 @@ export function KantoorView() {
     <div className="space-y-3">
       <div className="inline-flex rounded-lg border p-0.5" style={{ borderColor: "var(--a-border)" }} role="tablist" aria-label="Weergave van het kantoor">
         {([
-          ["3d", "3D"],
+          ["3d", "3D-stad"],
           ["2d", "Plattegrond"],
         ] as const).map(([id, label]) => (
           <button

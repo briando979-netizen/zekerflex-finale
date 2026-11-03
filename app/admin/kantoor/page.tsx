@@ -14,7 +14,7 @@ export default async function KantoorPage() {
     <div className="space-y-4">
       <PageHead
         title="Live kantoor"
-        subtitle="Het ZekerFlex-kantoor waar AI-robotjes werken. Elke robot in de gang brengt een échte gebeurtenis van de laatste 24 uur naar de afdeling die hem afhandelde."
+        subtitle="Het ZekerFlex-kantoor en de stad eromheen, live. Elk voertuig brengt een échte gebeurtenis van de laatste 24 uur naar het hoofdkantoor, waar een robot hem naar de juiste afdeling brengt. Klantpanden, de woonwijk, de bank en het magazijn draaien op echte cijfers."
       />
       <KantoorView />
       <OfficeFloor />
