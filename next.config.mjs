@@ -76,6 +76,12 @@ const nextConfig = {
         source: "/manifest.webmanifest",
         headers: [{ key: "Cache-Control", value: "public, max-age=3600" }],
       },
+      {
+        // Self-hosted fonts (app/fonts.css): the file names carry a content hash,
+        // so they may be cached for good, as next/font's own files were.
+        source: "/fonts/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
     ];
   },
 };

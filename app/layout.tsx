@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { ldJson } from "@/lib/seo/json-ld";
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import "./fonts.css";
 import "./globals.css";
-import { fontVariables } from "@/lib/fonts";
+import { FONT_PRELOADS, fontVariables } from "@/lib/fonts";
+import { FontPreloads } from "@/components/ui/FontPreloads";
 import { getLocale } from "@/lib/i18n/server";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
@@ -103,6 +105,7 @@ export default async function RootLayout({
   return (
     <html lang={await getLocale()} className={fontVariables}>
       <body>
+        <FontPreloads hrefs={FONT_PRELOADS} />
         {brandingCss && (
           // eslint-disable-next-line react/no-danger
           <style nonce={nonce} dangerouslySetInnerHTML={{ __html: brandingCss }} />
