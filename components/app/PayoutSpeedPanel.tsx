@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
+import { useFT } from "@/components/i18n/useFT";
 
 type Speed = "instant" | "threeDay" | "standard";
 
@@ -33,6 +34,8 @@ interface Data {
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
 export function PayoutSpeedPanel() {
+  const ft = useFT();
+  const t = ft.pay;
   const [d, setD] = useState<Data | null>(null);
   const [saving, setSaving] = useState(false);
   const [amount, setAmount] = useState("");
@@ -77,7 +80,7 @@ export function PayoutSpeedPanel() {
       });
       if (!r.ok) {
         const j = await r.json().catch(() => null);
-        throw new Error(j?.error?.message ?? "Aanvraag mislukt");
+        throw new Error(j?.error?.message ?? t.requestFailed);
       }
       setAmount("");
       await load();
@@ -95,10 +98,10 @@ export function PayoutSpeedPanel() {
   return (
     <div className="space-y-6">
       <section className="surface p-6">
-        <p className="eyebrow">Uitbetaling</p>
-        <h2 className="mt-1 font-display text-lg font-bold text-ink">Hoe snel wil je je geld?</h2>
+        <p className="eyebrow">{t.eyebrowPayout}</p>
+        <h2 className="mt-1 font-display text-lg font-bold text-ink">{t.speedTitle}</h2>
         <p className="mt-1 text-sm text-neutralx-500">
-          Je kiest per keer. De kosten worden ingehouden op de betreffende factuur — je nettobedrag is dus lager.
+          {t.speedBody}
         </p>
         <div className="mt-4 grid gap-3">
           {order.map((s) => {
@@ -123,15 +126,15 @@ export function PayoutSpeedPanel() {
                 </span>
                 <span className="flex-1">
                   <span className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-ink">{meta.label}</span>
+                    <span className="text-sm font-semibold text-ink">{ft.ts.speeds[s].title}</span>
                     <span className="text-sm font-semibold text-ink">
-                      {meta.feeRate > 0 ? `${Math.round(meta.feeRate * 100)}%` : "gratis"}
+                      {meta.feeRate > 0 ? `${Math.round(meta.feeRate * 100)}%` : t.free}
                     </span>
                   </span>
-                  <span className="mt-0.5 block text-xs text-neutralx-500">{meta.sub}</span>
+                  <span className="mt-0.5 block text-xs text-neutralx-500">{ft.ts.speeds[s].body}</span>
                   {d.pendingPayoutCents > 0 && meta.feeRate > 0 && (
                     <span className="mt-1 block text-xs text-neutralx-400">
-                      Nu ± {euro(fee)} kosten over {euro(d.pendingPayoutCents)} openstaand
+                      {t.feeNow(euro(fee), euro(d.pendingPayoutCents))}
                     </span>
                   )}
                 </span>
@@ -142,22 +145,21 @@ export function PayoutSpeedPanel() {
       </section>
 
       <section className="surface p-6">
-        <p className="eyebrow">Voorschot</p>
-        <h2 className="mt-1 font-display text-lg font-bold text-ink">Nu al een deel opnemen</h2>
+        <p className="eyebrow">{t.eyebrowAdvance}</p>
+        <h2 className="mt-1 font-display text-lg font-bold text-ink">{t.advTitle}</h2>
         <p className="mt-1 text-sm text-neutralx-500">
-          Krijg een voorschot op je eerstvolgende betaling. Kosten: {d.advanceFeeRatePct}% over het voorschot,
-          automatisch verrekend met je volgende uitbetaling.
+          {t.advBody(d.advanceFeeRatePct)}
         </p>
 
         {d.outstandingAdvanceCents > 0 && (
           <p className="mt-3 rounded-lg bg-warn/10 px-3 py-2 text-xs text-neutralx-700">
-            Lopend voorschot: {euro(d.outstandingAdvanceCents)} — wordt van je volgende betaling afgetrokken.
+            {t.outstanding(euro(d.outstandingAdvanceCents))}
           </p>
         )}
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <label className="block">
-            <span className="field-label">Bedrag (€)</span>
+            <span className="field-label">{t.amount}</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -172,9 +174,9 @@ export function PayoutSpeedPanel() {
             disabled={advBusy || d.maxAdvanceCents <= 0}
             className="btn-primary disabled:opacity-40"
           >
-            {advBusy ? "Aanvragen…" : "Voorschot aanvragen"}
+            {advBusy ? t.requesting : t.request}
           </button>
-          <span className="text-xs text-neutralx-400">max {euro(d.maxAdvanceCents)}</span>
+          <span className="text-xs text-neutralx-400">{t.max(euro(d.maxAdvanceCents))}</span>
         </div>
         {advErr && <p role="alert" className="mt-2 text-xs text-crit">{advErr}</p>}
 
@@ -185,11 +187,11 @@ export function PayoutSpeedPanel() {
                 <span>
                   {euro(a.amountCents)}{" "}
                   <span className="text-xs text-neutralx-400">
-                    − {euro(a.feeCents)} kosten = {euro(a.netCents)} netto
+                    {t.advLine(euro(a.feeCents), euro(a.netCents))}
                   </span>
                 </span>
                 <span className="text-xs text-neutralx-500">
-                  {a.status === "settled" ? "verrekend" : a.status === "rejected" ? "afgewezen" : "in behandeling"}
+                  {a.status === "settled" ? t.advSettled : a.status === "rejected" ? t.advRejected : t.advPending}
                 </span>
               </li>
             ))}
