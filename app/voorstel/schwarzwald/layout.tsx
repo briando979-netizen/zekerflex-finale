@@ -8,6 +8,7 @@ import { beheerder, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { leesInstellingen } from "@/lib/voorstel/schwarzwald-instellingen";
 import { Logo, SchwarzwaldHeader, type KopAccount, type ZoekItem } from "@/components/voorstel/SchwarzwaldHeader";
 import { KortAdres } from "@/components/voorstel/KortAdres";
+import { AlleenOpSite } from "@/components/voorstel/AlleenOpSite";
 import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
 
 // Ontwerpvoorstel: een nieuwe website voor Het Schwarzwald, gebouwd op
@@ -56,20 +57,24 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-schw-sun focus:px-4 focus:py-2 focus:font-bold">
         Naar de inhoud
       </a>
-      <div className="bg-schw-sun px-4 py-2 text-center text-xs font-semibold text-schw-night sm:text-sm">
-        Ontwerpvoorstel van ZekerFlex. Dit is niet de officiële website van Het Schwarzwald.{" "}
-        <a href="https://www.hetschwarzwald.nl/" className="underline underline-offset-2" rel="noopener noreferrer">
-          Naar de huidige site
-        </a>
-      </div>
       {subdomein && <KortAdres />}
-      <SchwarzwaldHeader zoekIndex={zoekIndex()} account={kopAccount} />
-      {instellingen.aankondiging && (
-        <div role="note" className="bg-schw-orange px-4 py-2.5 text-center text-sm font-bold text-schw-night">
-          {instellingen.aankondiging}
+      {/* in het beheer vallen balk, menu en footer weg: dat heeft een eigen dashboard-opmaak */}
+      <AlleenOpSite>
+        <div className="bg-schw-sun px-4 py-2 text-center text-xs font-semibold text-schw-night sm:text-sm">
+          Ontwerpvoorstel van ZekerFlex. Dit is niet de officiële website van Het Schwarzwald.{" "}
+          <a href="https://www.hetschwarzwald.nl/" className="underline underline-offset-2" rel="noopener noreferrer">
+            Naar de huidige site
+          </a>
         </div>
-      )}
+        <SchwarzwaldHeader zoekIndex={zoekIndex()} account={kopAccount} />
+        {instellingen.aankondiging && (
+          <div role="note" className="bg-schw-orange px-4 py-2.5 text-center text-sm font-bold text-schw-night">
+            {instellingen.aankondiging}
+          </div>
+        )}
+      </AlleenOpSite>
       <main id="inhoud">{children}</main>
+      <AlleenOpSite>
       <footer className="bg-schw-night text-schw-cream">
         <div className="mx-auto grid max-w-[1280px] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
           <div>
@@ -137,6 +142,7 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
           </div>
         </div>
       </footer>
+      </AlleenOpSite>
     </div>
   );
 }

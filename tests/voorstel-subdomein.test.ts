@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { kortPad, voorstelPad } from "@/lib/voorstel/subdomein";
+import { isBeheerPad, kortPad, voorstelPad } from "@/lib/voorstel/subdomein";
+
+describe("beheer zonder de omlijsting van de site", () => {
+  it("herkent het beheer op het subdomein en op zekerflex.com", () => {
+    expect(isBeheerPad("/beheer")).toBe(true);
+    expect(isBeheerPad("/beheer/dag/2026-11-04")).toBe(true);
+    expect(isBeheerPad("/voorstel/schwarzwald/beheer")).toBe(true);
+    expect(isBeheerPad("/voorstel/schwarzwald/beheer/dag/2026-11-04")).toBe(true);
+  });
+
+  it("niet de gewone pagina's, ook niet als ze op beheer lijken", () => {
+    expect(isBeheerPad("/")).toBe(false);
+    expect(isBeheerPad("/account")).toBe(false);
+    expect(isBeheerPad("/beheerder")).toBe(false);
+    expect(isBeheerPad("/voorstel/schwarzwald/activiteiten")).toBe(false);
+    expect(isBeheerPad("/voorstel/schwarzwald/beheerx")).toBe(false);
+  });
+});
 
 describe("voorstel op een eigen subdomein", () => {
   it("toont het voorstel op de kale paden", () => {

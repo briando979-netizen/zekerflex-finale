@@ -24,6 +24,16 @@ export function kortPad(pad: string, basis = VOORSTELLEN.schwarzwald ?? ""): str
   return pad.slice(basis.length) || "/";
 }
 
+/**
+ * Valt dit pad onder het beheer (/beheer op het subdomein, of
+ * /voorstel/schwarzwald/beheer op zekerflex.com)? Daar hoort de omlijsting van
+ * de publieke site (balk, menu, footer) niet; het beheer heeft een eigen.
+ */
+export const isBeheerPad = (pad: string, basis = VOORSTELLEN.schwarzwald ?? "") => {
+  const kort = kortPad(pad, basis);
+  return kort === "/beheer" || kort.startsWith("/beheer/");
+};
+
 /** Gedeelde openbare API's die de voorstelpagina's zelf gebruiken. */
 const GEDEELDE_API = ["/api/media/youtube/"];
 
