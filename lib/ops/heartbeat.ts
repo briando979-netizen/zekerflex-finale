@@ -49,6 +49,13 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bouwer-auto", label: "Bouwer: automatische reparaties", maxAgeHours: 2 },
   // elke 2 min: pushmeldingen over de Bouwer en het live zetten
   { job: "bouwer-meldingen", label: "Bouwer: meldingen", maxAgeHours: 2 },
+  // dagelijks 10:00 UTC (/api/internal/worker/milestones): profielcijfers + mijlpalen van werkers
+  { job: "worker-stats", label: "Werkers: profielcijfers", maxAgeHours: 26 },
+  { job: "worker-milestones", label: "Werkers: mijlpalen en seintjes", maxAgeHours: 26 },
+  // dagelijks 11:00 UTC: nieuwe pagina's melden bij Bing/IndexNow
+  { job: "indexnow", label: "IndexNow (zoekmachines)", maxAgeHours: 26 },
+  // 08, 12 en 16 UTC: offerte-aanvragen in sales@/info@ herkennen
+  { job: "sales-offers", label: "Offerte-AI (mailbox)", maxAgeHours: 26 },
 ];
 
 interface Beat {
