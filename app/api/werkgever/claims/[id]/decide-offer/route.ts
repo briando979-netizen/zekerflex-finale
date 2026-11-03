@@ -9,6 +9,8 @@ import { issueClaimInvoice } from "@/lib/claims/billing";
 import { recordAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
+import { sendUserPush } from "@/lib/notifications/push";
+import { runAfter } from "@/lib/run-after";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -90,6 +92,19 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     } catch {
       /* non-fatal */
     }
+    // A system chat message sends no push; money asked from the worker must not go unnoticed.
+    const amount = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(claim.claimedCents / 100);
+    runAfter(() =>
+      sendUserPush([claim.freelancerUserId], {
+        title: decision === "accepted" ? "De opdrachtgever claimt een vergoeding" : "Geen vergoeding geclaimd",
+        body:
+          decision === "accepted"
+            ? `${claim.shiftTitle}: ${amount} wegens te laat afzeggen of niet opdagen. Je krijgt hierover een factuur per mail.`
+            : `De opdrachtgever ziet af van een vergoeding voor ${claim.shiftTitle}.`,
+        data: { type: "SHIFT", url: `/dashboard/klussen/${claim.shiftId}`, tag: `claim-${claim.id}` },
+        ttlSeconds: 3 * 86_400,
+      }),
+    );
 
     return NextResponse.json({ claim: updated });
   } catch (err) {

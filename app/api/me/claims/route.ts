@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { claimsForFreelancer, existingClaimFor, fileClaim } from "@/lib/claims/store";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
+import { sendUserPush } from "@/lib/notifications/push";
+import { runAfter } from "@/lib/run-after";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,6 +112,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       } catch {
         /* non-fatal */
       }
+      // A system chat message sends no push (lib/messaging/notify.ts).
+      const employerUserId = contact.userId;
+      runAfter(() =>
+        sendUserPush([employerUserId], {
+          title: `Annuleringsclaim: ${assignment.shift.title}`,
+          body: `${profile.user.fullName} claimt 50% (${new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(claim.claimedCents / 100)}). Beoordeel de claim in je diensten-overzicht.`,
+          data: { type: "SHIFT", url: `/werkgever/diensten/${shiftId}`, tag: `claim-${claim.id}` },
+          ttlSeconds: 3 * 86_400,
+        }),
+      );
     }
 
     return NextResponse.json({ claim }, { status: 201 });

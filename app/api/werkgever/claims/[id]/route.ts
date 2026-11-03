@@ -8,6 +8,8 @@ import { decideClaim, getClaim } from "@/lib/claims/store";
 import { issueClaimInvoice } from "@/lib/claims/billing";
 import { recordAudit } from "@/lib/audit";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
+import { sendUserPush } from "@/lib/notifications/push";
+import { runAfter } from "@/lib/run-after";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
@@ -88,6 +90,19 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     } catch {
       /* non-fatal */
     }
+    // A system chat message sends no push (lib/messaging/notify.ts); this is about the worker's money.
+    const amount = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(claim.claimedCents / 100);
+    runAfter(() =>
+      sendUserPush([claim.freelancerUserId], {
+        title: decision === "approved" ? "Je annuleringsclaim is goedgekeurd" : "Je annuleringsclaim is afgewezen",
+        body:
+          decision === "approved"
+            ? `${claim.shiftTitle}: je ontvangt ${amount} bij je eerstvolgende uitbetaling.`
+            : `${claim.shiftTitle}${note ? `: ${note}` : ""}`.slice(0, 180),
+        data: { type: "SHIFT", url: `/dashboard/klussen/${claim.shiftId}`, tag: `claim-${claim.id}` },
+        ttlSeconds: 3 * 86_400,
+      }),
+    );
 
     return NextResponse.json({ claim: updated });
   } catch (err) {
