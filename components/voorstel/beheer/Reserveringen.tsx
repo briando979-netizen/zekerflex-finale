@@ -136,41 +136,21 @@ export function Reserveringen({ namen, vandaag }: { namen: Record<string, string
     return [...m.entries()].map(([datum, items]) => ({ datum, items, stand: balieStand(items) }));
   }, [lijst]);
 
-  async function zet(b: BeheerBoeking, s: Status) {
+  // status of aanmelding wijzigen; de server geeft de boeking terug zoals hij nu is
+  // (annuleren wist bv. ook de aanmelding), dus die nemen we over
+  async function wijzig(b: BeheerBoeking, body: { status: Status } | { aanwezig: Aanwezig | null }) {
     setBezig(b.id);
     try {
-      await vraag(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, status: s } });
-      setData((d) => (d ? { boekingen: d.boekingen.map((x) => (x.id === b.id && x.datum === b.datum ? { ...x, status: s } : x)) } : d));
+      const { boeking } = await vraag<{ boeking: Omit<BeheerBoeking, "prijs"> }>(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, ...body } });
+      setData((d) => (d ? { boekingen: d.boekingen.map((x) => (x.id === b.id && x.datum === b.datum ? { ...boeking, prijs: x.prijs } : x)) } : d));
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Opslaan mislukt.");
     } finally {
       setBezig("");
     }
   }
-
-  async function meld(b: BeheerBoeking, w: Aanwezig | null) {
-    setBezig(b.id);
-    try {
-      await vraag(BEHEER_API, { method: "PATCH", body: { datum: b.datum, id: b.id, aanwezig: w } });
-      setData((d) =>
-        d
-          ? {
-              boekingen: d.boekingen.map((x) => {
-                if (x.id !== b.id || x.datum !== b.datum) return x;
-                const nieuw = { ...x };
-                if (w) nieuw.aanwezig = w;
-                else delete nieuw.aanwezig;
-                return nieuw;
-              }),
-            }
-          : d,
-      );
-    } catch (e) {
-      setFout(e instanceof Error ? e.message : "Opslaan mislukt.");
-    } finally {
-      setBezig("");
-    }
-  }
+  const zet = (b: BeheerBoeking, status: Status) => wijzig(b, { status });
+  const meld = (b: BeheerBoeking, aanwezig: Aanwezig | null) => wijzig(b, { aanwezig });
 
   async function verwijder(b: BeheerBoeking) {
     if (!window.confirm(`Reservering ${b.id} van ${b.naam} definitief verwijderen?`)) return;
