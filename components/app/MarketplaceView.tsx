@@ -161,6 +161,7 @@ export function MarketplaceView({
     { k: "replacement", l: mk.qReplacement },
     { k: "tomorrow", l: mk.qTomorrow },
     { k: "weekend", l: mk.qWeekend },
+    { k: "free", l: mk.qFree },
   ] as const;
 
   const SORTS: { k: Sort; l: string }[] = [
@@ -211,6 +212,7 @@ export function MarketplaceView({
       if (quick.has("replacement") && !s.isReplacement) return false;
       if (quick.has("tomorrow") && !isTomorrow(d)) return false;
       if (quick.has("weekend") && !isUpcomingWeekend(d)) return false;
+      if (quick.has("free") && s.busy) return false; // overlaps own work (lib/shifts/worker-overlap)
       if (dates.size && !dates.has(dayKey(d))) return false;
       return true;
     });
