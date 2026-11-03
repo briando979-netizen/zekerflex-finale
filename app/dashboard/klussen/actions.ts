@@ -8,6 +8,8 @@ import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { createCounterOffer } from "@/lib/offers/store";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
+import { pushShiftTaken } from "@/lib/notifications/employer-push";
+import { runAfter } from "@/lib/run-after";
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 
@@ -34,6 +36,7 @@ export async function applyToShiftAction(shiftId: string): Promise<ApplyResult> 
     requireRole(principal, "FREELANCER");
     const res = await applyToShift(principal.userId, shiftId);
     bust();
+    if (!res.pendingCompanyVerification) runAfter(() => pushShiftTaken(shiftId, principal.fullName));
     return {
       ok: true,
       message: res.pendingCompanyVerification
@@ -57,16 +60,23 @@ export async function applyToSeriesAction(shiftIds: string[]): Promise<ApplyResu
     if (ids.length === 0) return { ok: false, message: "Kies minstens één dag." };
 
     let taken = 0;
+    let firstTaken: string | null = null;
     const failed: string[] = [];
     for (const id of ids) {
       try {
-        await applyToShift(principal.userId, id);
+        const res = await applyToShift(principal.userId, id);
         taken += 1;
+        if (!res.pendingCompanyVerification) firstTaken ??= id;
       } catch (e) {
         failed.push(e instanceof AppError ? e.message : "onbekende fout");
       }
     }
     bust();
+    // One message for the whole series, not one per day.
+    if (firstTaken) {
+      const id = firstTaken;
+      runAfter(() => pushShiftTaken(id, principal.fullName, taken));
+    }
     if (taken === 0) return { ok: false, message: failed[0] ?? "Aanmelden mislukt." };
     return {
       ok: true,

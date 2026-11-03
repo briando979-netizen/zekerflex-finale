@@ -5,6 +5,8 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
+import { pushShiftTaken } from "@/lib/notifications/employer-push";
+import { runAfter } from "@/lib/run-after";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +39,7 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
     if (!profile) throw AppError.forbidden("No freelancer profile for this user");
 
     const result = await recordOfferResponse(shiftId, profile.id, decision);
+    if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
