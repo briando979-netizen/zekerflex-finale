@@ -68,6 +68,7 @@ export default async function AccountPage() {
         { label: "Je administratie, zonder gedoe", href: "/dashboard/administratie" },
         { label: "Loon-vooruitblik", href: "/dashboard/vooruitblik" },
         { label: "Kilometer-administratie", href: "/dashboard/ritten" },
+        { label: "Diensten in je eigen agenda", href: "/dashboard/agenda-koppeling" },
         { label: "Je eigen werknummer", href: "/dashboard/telefonie" },
         ...(inApp ? [] : [{ label: "ZekerFlex Bank", href: "/dashboard/bank" }]),
         { label: "Ik heb een vraag", href: "/kennis" },

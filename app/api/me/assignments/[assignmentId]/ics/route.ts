@@ -4,16 +4,12 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-/** Local wall-clock → floating iCalendar datetime (no timezone marker). */
-function floating(d: Date): string {
-  return (
-    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
-    `T${pad(d.getHours())}${pad(d.getMinutes())}00`
-  );
+/**
+ * UTC iCalendar datetime ("20261103T080000Z"). Not a floating local time: the
+ * server runs in UTC, so local getters wrote 08:00 for a 09:00 Dutch shift.
+ */
+function utcStamp(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
 }
 
 function escapeText(s: string): string {
@@ -89,8 +85,8 @@ export async function GET(req: Request, props: { params: Promise<{ assignmentId:
     "BEGIN:VEVENT",
     `UID:shift-${assignment.id}@zekerflex.com`,
     `DTSTAMP:${stamp}`,
-    `DTSTART:${floating(s.startsAt)}`,
-    `DTEND:${floating(s.endsAt)}`,
+    `DTSTART:${utcStamp(s.startsAt)}`,
+    `DTEND:${utcStamp(s.endsAt)}`,
     `SUMMARY:${escapeText(s.title)} — ${escapeText(b.name)}`,
     `DESCRIPTION:${escapeText(description)}`,
     `LOCATION:${escapeText(address)}`,
