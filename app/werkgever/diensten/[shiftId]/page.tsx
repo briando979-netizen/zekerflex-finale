@@ -175,6 +175,11 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                         )}
                       </p>
                       {o.note && <p className="mt-0.5 text-xs text-neutralx-500">{o.note}</p>}
+                      {o.busyElsewhere && (
+                        <p className="mt-1 text-xs text-neutralx-500">
+                          <span className="font-semibold text-warn">⏰ {d.busyElsewhere}.</span> {d.busyElsewhereHint}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

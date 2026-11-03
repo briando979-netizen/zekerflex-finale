@@ -75,6 +75,8 @@ export interface EmployerShiftView {
     badge: string | null;
     reviewAverage: number;
     reviewCount: number;
+    /** booked on another shift at that time: accepting would be refused (lib/shifts/worker-overlap) */
+    busyElsewhere: boolean;
   }[];
 }
 
@@ -161,14 +163,27 @@ export async function getEmployerShift(
       ...shift.matches.map((m) => m.freelancer.userId),
     ]),
   ];
-  const [avatars, offerProfiles, offerReviews] = await Promise.all([
+  const [avatars, offerProfiles, offerReviews, busyRows] = await Promise.all([
     getUserAvatars(allUserIds),
     prisma.freelancerProfile.findMany({
       where: { userId: { in: offerUserIds } },
       select: { userId: true, reliabilityScore: true, badgeLevel: true },
     }),
     Promise.all(offerUserIds.map((id) => reviewSummary("freelancer", id))),
+    // Reacted, but meanwhile booked elsewhere at the same time. Only the fact, never where.
+    offerUserIds.length
+      ? prisma.shiftAssignment.findMany({
+          where: {
+            cancelledAt: null,
+            shiftId: { not: shift.id },
+            freelancer: { userId: { in: offerUserIds } },
+            shift: { startsAt: { lt: shift.endsAt }, endsAt: { gt: shift.startsAt } },
+          },
+          select: { freelancer: { select: { userId: true } } },
+        })
+      : Promise.resolve([]),
   ]);
+  const busyUsers = new Set(busyRows.map((r) => r.freelancer.userId));
   const avatarUrl = (userId: string): string | null => (avatars[userId] ? `/api/profile/${userId}/avatar` : null);
   const offerProfileByUser = new Map(offerProfiles.map((p) => [p.userId, p]));
   const offerReviewByUser = new Map(offerUserIds.map((id, i) => [id, offerReviews[i]!]));
@@ -240,6 +255,7 @@ export async function getEmployerShift(
         badge: profile?.badgeLevel ?? null,
         reviewAverage: reviews?.average ?? 0,
         reviewCount: reviews?.count ?? 0,
+        busyElsewhere: busyUsers.has(o.userId),
       };
     }),
   };

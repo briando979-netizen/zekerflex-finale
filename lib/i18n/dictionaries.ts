@@ -425,6 +425,8 @@ export const nl = {
     kpiMatching: "matchen loopt",
     offersTitle: "Reacties ({n})",
     offersSubtitle: "Een kracht reageert op deze klus, soms met een ander uurtarief.",
+    busyElsewhere: "Werkt op dat moment al elders",
+    busyElsewhereHint: "Accepteren kan pas als die andere dienst vervalt.",
     message: "Bericht",
     assignedTitle: "Aangenomen ({n}/{total})",
     assignedEmptyTitle: "Nog niemand aangenomen",

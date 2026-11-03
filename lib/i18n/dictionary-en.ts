@@ -421,6 +421,8 @@ export const en: Dict = {
     kpiMatching: "matching running",
     offersTitle: "Reactions ({n})",
     offersSubtitle: "A worker reacts to this job, sometimes with a different hourly rate.",
+    busyElsewhere: "Already working elsewhere then",
+    busyElsewhereHint: "You can accept once that other shift drops out.",
     message: "Message",
     assignedTitle: "Assigned ({n}/{total})",
     assignedEmptyTitle: "Nobody assigned yet",
