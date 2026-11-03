@@ -97,11 +97,17 @@ async function zorgVoorPakketten(log) {
 }
 
 export async function gewijzigdeBestanden() {
-  const uit = await git(["status", "--porcelain", "--untracked-files=all"]);
-  return uit
+  // niet trimmen: de eerste kolom van --porcelain is vaak een spatie (" M pad")
+  const r = await sh("git", ["status", "--porcelain", "--untracked-files=all"]);
+  if (r.code !== 0) throw new Error(`git status: ${r.uit.trim().slice(-300)}`);
+  return r.uit
     .split("\n")
-    .filter(Boolean)
-    .map((r) => ({ status: r.slice(0, 2).trim(), pad: r.slice(3).replace(/^"|"$/g, "") }));
+    .filter((regel) => regel.length > 3)
+    .map((regel) => ({
+      status: regel.slice(0, 2).trim(),
+      // hernoemd: "R  oud -> nieuw"
+      pad: regel.slice(3).split(" -> ").pop().replace(/^"|"$/g, ""),
+    }));
 }
 
 export async function huidigeDiff() {
