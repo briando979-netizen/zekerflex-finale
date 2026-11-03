@@ -8,6 +8,7 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
 import { ZiekMelden } from "@/components/app/ZiekMelden";
+import { ReliabilityRing } from "@/components/app/ReliabilityRing";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
@@ -177,6 +178,12 @@ export default async function AccountPage() {
             <Stat value={replacementsArranged} label="Vervanging geregeld" />
           </div>
         </div>
+
+        {profile && (
+          <div className="mt-4 flex justify-center border-t border-hair pt-4 text-left">
+            <ReliabilityRing score={overview.reliabilityScore} shiftsCompleted={overview.shiftsCompleted} size={84} />
+          </div>
+        )}
       </div>
 
       {!overview.profileComplete && (

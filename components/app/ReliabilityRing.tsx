@@ -17,14 +17,16 @@ export function ReliabilityRing({
   const dash = (pct / 100) * circ;
   const tone = pct >= 90 ? "#0E5C4A" : pct >= 70 ? "#B45309" : "#B91C1C";
 
+  // Teksten volgen de berekening in lib/worker/stats-sync.ts (reliabilityFrom):
+  // een misser telt na 3 goed afgeronde diensten nog half, na een half jaar ook.
   const band =
     pct >= 90
       ? { label: "Uitstekend", note: "Je krijgt het meeste en beste aanbod." }
       : pct >= 75
-        ? { label: "Goed", note: "Een paar diensten op tijd houdt je hier of hoger." }
+        ? { label: "Goed", note: "Elke dienst die je goed afmaakt, laat een eerdere misser minder zwaar wegen." }
         : pct >= 60
-          ? { label: "Let op", note: "Onder de 60 daalt je aanbod. 3 diensten zonder incident = herstel." }
-          : { label: "Beperkt", note: "Je aanbod is tijdelijk lager. Elke dienst op tijd telt mee voor herstel." };
+          ? { label: "Let op", note: "Onder de 60 daalt je aanbod. Na 3 goede diensten telt een misser nog maar half." }
+          : { label: "Beperkt", note: "Je aanbod is tijdelijk lager. Elke dienst die je goed afmaakt, helpt je herstellen." };
 
   return (
     <div className="flex items-center gap-4">
