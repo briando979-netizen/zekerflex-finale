@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { zelfdeHerkomst } from "@/lib/voorstel/herkomst";
 
 // ---------------------------------------------------------------------------
 // Accounts van de Schwarzwald-site: klanten (eigen reserveringen) en
@@ -76,8 +77,7 @@ function leesToken(token: string | undefined): string | null {
 /** Wijzigende verzoeken alleen als JSON en vanaf deze site (geen formulier-post van een andere site). */
 export function eisZelfdeHerkomst(request: Request): void {
   if (!(request.headers.get("content-type") ?? "").includes("application/json")) throw AppError.validation("Verwacht JSON.");
-  const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) throw AppError.forbidden("Verzoek van een andere website.");
+  if (!zelfdeHerkomst(request.headers, request.url)) throw AppError.forbidden("Verzoek van een andere website.");
 }
 
 async function zetSessie(email: string): Promise<void> {
