@@ -129,6 +129,11 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
     };
   }, [eigenLagen]);
 
+  // op een smal scherm begint het gereedschap ingeklapt, zodat de kaart te zien is
+  useEffect(() => {
+    if (window.innerWidth < 640) setPaneelOpen(false);
+  }, []);
+
   // een eerder opgenomen rit terug (alleen in deze browser)
   useEffect(() => {
     try {
@@ -174,6 +179,7 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
       if (!plekMarker.current) {
         const el = document.createElement("div");
         el.className = "h-5 w-5 rounded-full bg-sky-600 ring-4 ring-white shadow-lg";
+        el.setAttribute("role", "img");
         el.setAttribute("aria-label", "Jouw plek");
         plekMarker.current = new mod.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(map);
       } else plekMarker.current.setLngLat([p.lon, p.lat]);

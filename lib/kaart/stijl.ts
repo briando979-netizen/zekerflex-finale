@@ -45,7 +45,8 @@ export function kaartStijl(origin: string, stijl: KaartStijl, drie: boolean): St
       // de hoogte uit OpenStreetMap; zonder hoogte een gewoon huis (±8 m)
       "fill-extrusion-height": ["coalesce", ["get", "height"], 8],
       "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
-      "fill-extrusion-opacity": 0.9,
+      // op de luchtfoto doorzichtiger, zodat de foto eronder zichtbaar blijft
+      "fill-extrusion-opacity": stijl === "luchtfoto" ? 0.55 : 0.9,
     },
   };
 
