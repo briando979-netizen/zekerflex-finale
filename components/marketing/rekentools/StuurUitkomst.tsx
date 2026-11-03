@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { registerUrl } from "@/lib/rekentools/links";
 
 type Tool = { tool: "kosten-uitzendkracht"; input: Record<string, number> } | { tool: "wet-dba-check"; answers: Record<string, string> };
 
@@ -41,9 +42,15 @@ export function StuurUitkomst({ payload, label }: { payload: Tool; label: string
 
   if (state === "sent") {
     return (
-      <p role="status" className="mt-6 rounded-2xl bg-mintwash p-4 text-sm text-brand-700">
-        Verstuurd naar <strong>{email}</strong>. Kijk ook even in je spam.
-      </p>
+      <div role="status" className="mt-6 rounded-2xl bg-mintwash p-4 text-sm text-brand-700">
+        <p>
+          Verstuurd naar <strong>{email}</strong>. Kijk ook even in je spam.
+        </p>
+        <Link href={registerUrl(email, company)} className="btn-primary mt-3">
+          Maak meteen je gratis account
+        </Link>
+        <p className="mt-2 text-xs text-neutralx-600">Je e-mailadres staat dan al ingevuld.</p>
+      </div>
     );
   }
 

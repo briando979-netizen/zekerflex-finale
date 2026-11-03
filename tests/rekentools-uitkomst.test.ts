@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DBA_QUESTIONS } from "@/lib/rekentools/dba-check";
 import { buildUitkomst, escapeHtml, isBot, leadCompany, uitkomstSchema } from "@/lib/rekentools/uitkomst";
+import { registerUrl } from "@/lib/rekentools/links";
 
 const contact = { email: "jan@bakkerij.nl", consent: true as const };
 const kostenInput = { workers: 1, hoursPerWeek: 24, weeks: 12, wageCents: 1_600, factor: 1.9, rateCents: 2_500 };
@@ -61,6 +62,14 @@ describe("stuur mij de uitkomst: veiligheid", () => {
     expect(isBot({ website: "" })).toBe(false);
     expect(isBot({})).toBe(false);
     expect(isBot(null)).toBe(false);
+  });
+
+  it("builds a sign-up link with the address and company filled in, safely encoded", () => {
+    expect(registerUrl("jan@bakkerij.nl")).toBe("/register?type=bedrijf&email=jan%40bakkerij.nl");
+    expect(registerUrl(" jan@bakkerij.nl ", "Bakker & Zn", "https://zekerflex.com")).toBe(
+      "https://zekerflex.com/register?type=bedrijf&email=jan%40bakkerij.nl&company=Bakker+%26+Zn",
+    );
+    expect(registerUrl("jan@bakkerij.nl", "   ")).not.toContain("company=");
   });
 
   it("falls back to the mail domain for the lead company", () => {

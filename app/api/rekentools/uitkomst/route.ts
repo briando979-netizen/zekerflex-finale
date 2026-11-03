@@ -11,6 +11,7 @@ import { CONTACTS } from "@/lib/seo";
 import { createLead } from "@/lib/sales/leads";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { buildUitkomst, escapeHtml, isBot, leadCompany, uitkomstSchema } from "@/lib/rekentools/uitkomst";
+import { registerUrl } from "@/lib/rekentools/links";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const base = env.APP_BASE_URL.replace(/\/+$/, "");
     const company = leadCompany(d.email, d.company);
+    const signUp = registerUrl(d.email, d.company, base);
 
     // One lead per address: a second calculation adds nothing for sales.
     try {
@@ -83,11 +85,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       replyTo: CONTACTS.sales,
       kind: "rekentool-uitkomst",
       subject: result.subject,
-      text: `${result.text}\n\nOpnieuw rekenen: ${base}${result.path}\nGratis een klus plaatsen: ${base}/register?type=bedrijf\n\nVragen? Beantwoord deze mail.`,
+      text: `${result.text}\n\nOpnieuw rekenen: ${base}${result.path}\nGratis een klus plaatsen (je e-mailadres staat al ingevuld): ${signUp}\n\nVragen? Beantwoord deze mail.`,
       html: mailShell(
         result.subject,
         `${result.html}
-         <p style="margin:16px 0 8px">${mailButton(`${base}/register?type=bedrijf`, "Gratis een klus plaatsen")}</p>
+         <p style="margin:16px 0 8px">${mailButton(signUp, "Gratis een klus plaatsen")}</p>
          <p style="margin:0;font-size:13px;color:#667469"><a href="${base}${result.path}" style="color:#0E5C4A">Opnieuw rekenen</a> · Vragen? Beantwoord deze mail.</p>`,
       ),
     });
