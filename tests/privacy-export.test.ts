@@ -37,6 +37,15 @@ vi.mock("@/lib/prisma", () => {
     deviceFingerprint: { findMany: many([{ hardwareHash: "abc", platform: "android" }]) },
     dispute: { findMany: many([]) },
     auditLog: { findMany: many([{ action: "auth.login.succeeded", summary: "ok" }]) },
+    keyValueStore: {
+      findMany: many([
+        { key: "ritten:u1", value: { t1: { km: 12 } }, updatedAt: new Date() },
+        { key: "auth-2fa:u1", value: { secret: "JBSWY3DPEHPK3PXP" }, updatedAt: new Date() },
+        { key: "mail-tools:u1", value: { signature: "Groet, Jan", smtpPassword: "geheim" }, updatedAt: new Date() },
+        // "u1" komt ook voor in een ander id — hoort niet bij deze persoon
+        { key: "agenda:u12:x", value: { title: "van iemand anders" }, updatedAt: new Date() },
+      ]),
+    },
   },
   };
 });
@@ -60,6 +69,12 @@ describe("exportUserData", () => {
     expect(s.invoices).toHaveLength(1);
     expect(s.auditTrail).toHaveLength(1);
     expect(s.webPushSubscriptions).toHaveLength(1);
+
+    const stored = s.storedSettings as { key: string; value: unknown }[];
+    expect(stored.map((r) => r.key)).toEqual(["ritten:u1", "auth-2fa:u1", "mail-tools:u1"]);
+    expect(stored[0]!.value).toEqual({ t1: { km: 12 } });
+    expect(stored[1]!.value).toBe("[afgeschermd]");
+    expect(stored[2]!.value).toEqual({ signature: "Groet, Jan", smtpPassword: "[afgeschermd]" });
   });
 
   it("filename is dated and namespaced", () => {

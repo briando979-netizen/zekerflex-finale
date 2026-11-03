@@ -4,6 +4,7 @@ import { recordAudit } from "@/lib/audit";
 import { recordUserErased } from "@/lib/metrics";
 import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
+import { erasableKvWhere } from "@/lib/privacy/user-kv";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -177,6 +178,12 @@ export async function anonymizeUser(
 
     cleared.password_reset_tokens = (
       await tx.passwordResetToken.deleteMany({ where: { userId } })
+    ).count;
+
+    // Personal JSON in the KeyValueStore without a retention duty (agenda,
+    // trips, chat settings, contacts, AI memory, 2FA, mailbox login).
+    cleared.personal_settings = (
+      await tx.keyValueStore.deleteMany({ where: erasableKvWhere(userId) })
     ).count;
 
     cleared.web_push = (

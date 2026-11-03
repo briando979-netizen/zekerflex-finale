@@ -16,6 +16,7 @@ const h = vi.hoisted(() => {
     deleted: [] as string[],
     uploadsDeleted: [] as string[],
     audits: [] as Record<string, unknown>[],
+    kvWhere: null as unknown,
   };
 
   const tx = {
@@ -42,6 +43,12 @@ const h = vi.hoisted(() => {
     identityVerification: { deleteMany: async () => { state.deleted.push("kyc"); return { count: 2 }; } },
     deviceFingerprint: { deleteMany: async () => { state.deleted.push("device"); return { count: 1 }; } },
     passwordResetToken: { deleteMany: async () => ({ count: 0 }) },
+    keyValueStore: {
+      deleteMany: async ({ where }: { where: unknown }) => {
+        state.kvWhere = where;
+        return { count: 4 };
+      },
+    },
     webPushSubscription: { deleteMany: async () => { state.deleted.push("push"); return { count: 3 }; } },
     certificate: { deleteMany: async () => ({ count: 1 }) },
     complianceDocument: { deleteMany: async () => ({ count: 2 }) },
@@ -137,6 +144,15 @@ describe("anonymizeUser", () => {
     expect(h.state.cregUpdates[0]).toMatchObject({ legalName: "[verwijderd]", city: null });
     expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push"]));
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2"]));
+
+    // personal KV (agenda, trips, 2FA, …) wiped by exact key or key + ":"; fiscal/contracts are not on the list
+    expect(report.cleared.personal_settings).toBe(4);
+    const kvKeys = JSON.stringify(h.state.kvWhere);
+    expect(kvKeys).toContain('"equals":"ritten:u1"');
+    expect(kvKeys).toContain('"startsWith":"agenda:u1:"');
+    expect(kvKeys).toContain('"equals":"auth-2fa:u1"');
+    expect(kvKeys).not.toContain("fiscal:");
+    expect(kvKeys).not.toContain("uitzend-contracts:");
 
     // audit rows scrubbed, not deleted
     expect(h.state.auditUpdates[0]).toMatchObject({
