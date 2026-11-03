@@ -1,0 +1,281 @@
+// De werkkopie van de ZekerFlex Bouwer: een eigen git-kopie van GitHub main in
+// /werk/repo, met de gereedschappen die het model mag gebruiken. Lezen mag bijna
+// overal; schrijven niet in de beveiliging, de database, de pakketlijst of de
+// uitrol-scripts. Die blijven mensenwerk.
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
+export const WERK = process.env.BOUWER_WERK || "/werk";
+export const REPO_DIR = path.join(WERK, "repo");
+export const GITHUB_REPO = process.env.BOUWER_GITHUB_REPO || "briando979-netizen/zekerflex-finale";
+const REPO_URL = `https://github.com/${GITHUB_REPO}.git`;
+const MAX_UIT = 2_000_000;
+
+/** Draai een commando; geeft code + (afgekapte) uitvoer, gooit nooit. */
+export function sh(cmd, args, { cwd = REPO_DIR, timeout = 600_000, env = {}, signal } = {}) {
+  return new Promise((resolve) => {
+    // geen stdin en geen wachtwoordvraag: niets mag ooit op invoer blijven wachten
+    const p = spawn(cmd, args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env }, signal, stdio: ["ignore", "pipe", "pipe"] });
+    let uit = "";
+    const neem = (b) => {
+      if (uit.length < MAX_UIT) uit += b.toString();
+    };
+    p.stdout.on("data", neem);
+    p.stderr.on("data", neem);
+    const klok = setTimeout(() => p.kill("SIGKILL"), timeout);
+    p.on("error", (e) => {
+      clearTimeout(klok);
+      resolve({ code: -1, uit: `${uit}\n${e.message}` });
+    });
+    p.on("close", (code) => {
+      clearTimeout(klok);
+      resolve({ code: code ?? -1, uit });
+    });
+  });
+}
+
+async function git(args, opts) {
+  const r = await sh("git", args, opts);
+  if (r.code !== 0) throw new Error(`git ${args.slice(0, 2).join(" ")}: ${r.uit.trim().slice(-400)}`);
+  return r.uit.trim();
+}
+
+const bestaat = (p) => fs.access(p).then(() => true, () => false);
+
+// De uitrol-vergrendeling van de server (alleen-lezen gemount). Een uitrol draait
+// next build (2–3 GB) op dezelfde 8 GB: zware stappen wachten tot die klaar is.
+const SLOT = "/zf-slot/deploy.lock";
+
+export async function wachtOpUitrol(log) {
+  if (!(await bestaat(SLOT))) return;
+  let gemeld = false;
+  const eind = Date.now() + 30 * 60_000;
+  while (Date.now() < eind) {
+    // flock -n: 0 = vrij, 1 = een uitrol houdt hem vast, anders (bv. niet te openen) = niet blokkeren
+    const r = await sh("flock", ["-n", "-s", SLOT, "true"], { cwd: WERK, timeout: 10_000 });
+    if (r.code !== 1) return;
+    if (!gemeld) {
+      log("info", "Er loopt een uitrol op de server; even wachten zodat het geheugen niet krap wordt");
+      gemeld = true;
+    }
+    await new Promise((klaar) => setTimeout(klaar, 15_000));
+  }
+}
+
+/** Verse branch bouwer/<id> op de nieuwste main; eerste keer klonen. */
+export async function nieuweWerkkopie(id, log) {
+  if (!(await bestaat(path.join(REPO_DIR, ".git")))) {
+    log("info", "Eerste keer: de codebase ophalen van GitHub");
+    await fs.mkdir(WERK, { recursive: true });
+    await git(["clone", "--depth", "200", "--branch", "main", REPO_URL, REPO_DIR], { cwd: WERK, timeout: 900_000 });
+  }
+  await git(["fetch", "--depth", "200", "origin", "main"]);
+  await git(["checkout", "-f", "-B", `bouwer/${id}`, "origin/main"]);
+  await git(["clean", "-fd"]);
+  const basis = await git(["rev-parse", "HEAD"]);
+  log("info", `Werkkopie klaar op main ${basis.slice(0, 7)}`);
+  await zorgVoorPakketten(log);
+  return basis;
+}
+
+/** npm ci + prisma generate, alleen als package-lock.json veranderde. */
+async function zorgVoorPakketten(log) {
+  const lock = await fs.readFile(path.join(REPO_DIR, "package-lock.json"));
+  const hash = createHash("sha256").update(lock).digest("hex");
+  const merk = path.join(WERK, "pakketten.hash");
+  const vorige = await fs.readFile(merk, "utf8").catch(() => "");
+  if (vorige === hash && (await bestaat(path.join(REPO_DIR, "node_modules", ".bin", "tsc")))) return;
+  await wachtOpUitrol(log);
+  log("info", "Pakketten installeren (npm ci, eenmalig enkele minuten)");
+  const ci = await sh("npm", ["ci", "--no-audit", "--no-fund", "--loglevel=error"], { timeout: 1_200_000 });
+  if (ci.code !== 0) throw new Error(`npm ci mislukt: ${ci.uit.slice(-600)}`);
+  const gen = await sh("npx", ["prisma", "generate"], { timeout: 300_000 });
+  if (gen.code !== 0) throw new Error(`prisma generate mislukt: ${gen.uit.slice(-600)}`);
+  await fs.writeFile(merk, hash);
+}
+
+export async function gewijzigdeBestanden() {
+  const uit = await git(["status", "--porcelain", "--untracked-files=all"]);
+  return uit
+    .split("\n")
+    .filter(Boolean)
+    .map((r) => ({ status: r.slice(0, 2).trim(), pad: r.slice(3).replace(/^"|"$/g, "") }));
+}
+
+export async function huidigeDiff() {
+  await sh("git", ["add", "-N", "."]);
+  const r = await sh("git", ["diff", "--no-color", "--no-ext-diff"]);
+  return r.uit.length > 400_000 ? `${r.uit.slice(0, 400_000)}\n… (diff ingekort)` : r.uit;
+}
+
+/** De gouden regels uit AGENTS.md: tsc op het hele project + eslint op de gewijzigde bestanden. */
+export async function controleer(log) {
+  const bestanden = (await gewijzigdeBestanden()).filter((b) => b.status !== "D").map((b) => b.pad);
+  await wachtOpUitrol(log);
+  log("info", "Controle: TypeScript (hele project)");
+  const tsc = await sh("npx", ["tsc", "--noEmit", "-p", "."], { timeout: 1_200_000 });
+  const lintbaar = bestanden.filter((p) => /\.(tsx?|mjs|js)$/.test(p));
+  let eslint = { code: 0, uit: "" };
+  if (lintbaar.length) {
+    log("info", `Controle: eslint op ${lintbaar.length} bestand(en)`);
+    eslint = await sh("npx", ["eslint", ...lintbaar], { timeout: 600_000 });
+  }
+  const kort = (t) => t.trim().split("\n").slice(0, 80).join("\n");
+  return {
+    ok: tsc.code === 0 && eslint.code === 0,
+    tsc: { ok: tsc.code === 0, uit: kort(tsc.uit) },
+    eslint: { ok: eslint.code === 0, uit: kort(eslint.uit) },
+    op: new Date().toISOString(),
+  };
+}
+
+// ---- gereedschappen voor het model ------------------------------------------------
+
+const ALLEEN_LEZEN = [
+  /^\.git(\/|$)/,
+  /^node_modules(\/|$)/,
+  /(^|\/)\.env/,
+  /^prisma\//,
+  /^package(-lock)?\.json$/,
+  /^deploy\//,
+  /^\.github\//,
+  /^Dockerfile/,
+  /^docker-compose/,
+  /^middleware\.ts$/,
+  /^next\.config\./,
+  /^lib\/auth\//,
+  /^lib\/security\//,
+  /^lib\/bouwer\//,
+  /^app\/api\/admin\/bouwer\//,
+  /^\.gitattributes$/,
+];
+const GEHEIM = [/(^|\/)\.env/, /^\.git\//];
+
+function veiligPad(rel, schrijven) {
+  const schoon = path.posix.normalize(String(rel || ".").replace(/\\/g, "/")).replace(/^\.\/+/, "");
+  if (schoon.startsWith("..") || path.posix.isAbsolute(schoon)) throw new Error(`Pad buiten de codebase: ${rel}`);
+  if (GEHEIM.some((r) => r.test(schoon))) throw new Error(`Dit bestand is afgeschermd: ${schoon}`);
+  if (schrijven && ALLEEN_LEZEN.some((r) => r.test(schoon)))
+    throw new Error(`${schoon} mag de bouwer niet wijzigen (beveiliging, database, pakketten of uitrol). Beschrijf de nodige wijziging in je samenvatting.`);
+  return { rel: schoon, abs: path.join(REPO_DIR, schoon) };
+}
+
+export const GEREEDSCHAP = [
+  {
+    naam: "zoek",
+    beschrijving: "Zoek met een reguliere expressie in de codebase (ripgrep). Geeft pad:regel:tekst.",
+    params: {
+      patroon: { type: "string", description: "Regex, bv. 'export function kvGet' of 'Live zetten'" },
+      pad: { type: "string", description: "Map of bestand om in te zoeken (standaard de hele codebase)" },
+      glob: { type: "string", description: "Optioneel bestandsfilter, bv. '*.tsx'" },
+    },
+    verplicht: ["patroon"],
+  },
+  {
+    naam: "lijst",
+    beschrijving: "Toon de inhoud van een map (mappen eindigen op /).",
+    params: { pad: { type: "string", description: "Map, bv. 'app/admin' of '.'" } },
+    verplicht: ["pad"],
+  },
+  {
+    naam: "lees",
+    beschrijving: "Lees een bestand met regelnummers (max 400 regels per keer).",
+    params: {
+      pad: { type: "string" },
+      vanaf: { type: "integer", description: "Eerste regel (1 = begin)" },
+      aantal: { type: "integer", description: "Aantal regels (max 400)" },
+    },
+    verplicht: ["pad"],
+  },
+  {
+    naam: "vervang",
+    beschrijving:
+      "Vervang in een bestaand bestand precies één keer de tekst `oud` door `nieuw`. `oud` moet letterlijk en uniek in het bestand staan (neem genoeg context mee, zonder regelnummers).",
+    params: { pad: { type: "string" }, oud: { type: "string" }, nieuw: { type: "string" } },
+    verplicht: ["pad", "oud", "nieuw"],
+  },
+  {
+    naam: "schrijf",
+    beschrijving: "Maak een nieuw bestand (of overschrijf een klein bestand helemaal). Gebruik voor bestaande bestanden liever `vervang`.",
+    params: { pad: { type: "string" }, inhoud: { type: "string" } },
+    verplicht: ["pad", "inhoud"],
+  },
+  {
+    naam: "controleer",
+    beschrijving: "Draai de verplichte controles (TypeScript op het hele project + eslint op je gewijzigde bestanden). Duurt een paar minuten.",
+    params: {},
+    verplicht: [],
+  },
+  {
+    naam: "klaar",
+    beschrijving: "Rond af. Alleen aanroepen als de controle schoon is (of je uitlegt waarom niet).",
+    params: {
+      samenvatting: { type: "string", description: "Voor de eigenaar, in gewone Nederlandse taal: wat is er veranderd en waar zie je het." },
+      commitbericht: { type: "string", description: "Conventionele commit in het Nederlands, bv. 'feat(shop): filter op maat'" },
+    },
+    verplicht: ["samenvatting", "commitbericht"],
+  },
+];
+
+const MAX_SCHRIJF = 200_000;
+
+export async function voerUit(naam, args, { log, signal } = {}) {
+  switch (naam) {
+    case "zoek": {
+      const doel = veiligPad(args.pad || ".", false);
+      const rgArgs = ["-n", "--no-heading", "-S", "--max-count", "8", "--max-columns", "220", "-g", "!node_modules", "-g", "!.env*", "-g", "!*.lock"];
+      if (args.glob) rgArgs.push("-g", String(args.glob));
+      rgArgs.push("-e", String(args.patroon ?? ""), doel.rel || ".");
+      const r = await sh("rg", rgArgs, { timeout: 60_000, signal });
+      const regels = r.uit.trim().split("\n").filter(Boolean);
+      if (!regels.length) return "Niets gevonden.";
+      return regels.slice(0, 120).join("\n") + (regels.length > 120 ? `\n… en nog ${regels.length - 120} treffers` : "");
+    }
+    case "lijst": {
+      const doel = veiligPad(args.pad || ".", false);
+      const items = await fs.readdir(doel.abs, { withFileTypes: true });
+      return items
+        .filter((d) => d.name !== "node_modules" && d.name !== ".git" && !d.name.startsWith(".env"))
+        .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name))
+        .slice(0, 250)
+        .map((d) => (d.isDirectory() ? `${d.name}/` : d.name))
+        .join("\n");
+    }
+    case "lees": {
+      const doel = veiligPad(args.pad, false);
+      const tekst = await fs.readFile(doel.abs, "utf8");
+      const regels = tekst.split("\n");
+      const vanaf = Math.max(1, Number(args.vanaf) || 1);
+      const aantal = Math.min(400, Math.max(1, Number(args.aantal) || 250));
+      const stuk = regels.slice(vanaf - 1, vanaf - 1 + aantal).map((r, i) => `${String(vanaf + i).padStart(5)}  ${r}`);
+      const rest = regels.length - (vanaf - 1 + stuk.length);
+      return `${doel.rel} (${regels.length} regels)\n${stuk.join("\n")}${rest > 0 ? `\n… nog ${rest} regels (lees verder met vanaf=${vanaf + stuk.length})` : ""}`;
+    }
+    case "vervang": {
+      const doel = veiligPad(args.pad, true);
+      const tekst = await fs.readFile(doel.abs, "utf8");
+      const oud = String(args.oud ?? "");
+      if (!oud) throw new Error("`oud` is leeg");
+      const keer = tekst.split(oud).length - 1;
+      if (keer === 0) throw new Error("`oud` staat niet letterlijk in het bestand. Lees het bestand opnieuw en neem de tekst exact over (spaties en inspringing tellen mee).");
+      if (keer > 1) throw new Error(`\`oud\` staat ${keer} keer in het bestand. Neem meer omringende regels mee zodat hij uniek is.`);
+      await fs.writeFile(doel.abs, tekst.replace(oud, () => String(args.nieuw ?? "")));
+      log?.("bestand", `bewerkt ${doel.rel}`);
+      return `Gewijzigd: ${doel.rel}`;
+    }
+    case "schrijf": {
+      const doel = veiligPad(args.pad, true);
+      const inhoud = String(args.inhoud ?? "");
+      if (inhoud.length > MAX_SCHRIJF) throw new Error("Bestand te groot; splits het op.");
+      const nieuw = !(await bestaat(doel.abs));
+      await fs.mkdir(path.dirname(doel.abs), { recursive: true });
+      await fs.writeFile(doel.abs, inhoud);
+      log?.("bestand", `${nieuw ? "nieuw" : "overschreven"} ${doel.rel}`);
+      return `${nieuw ? "Aangemaakt" : "Overschreven"}: ${doel.rel}`;
+    }
+    default:
+      throw new Error(`Onbekend gereedschap: ${naam}`);
+  }
+}

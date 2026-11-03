@@ -182,7 +182,9 @@ class Uitrol:
     def uitvoeren(self) -> None:
         pomp = threading.Thread(target=self._log_pomp, daemon=True)
         pomp.start()
-        slot = open(os.path.join(ZF_DIR, ".zf-deploy.lock"), "w")
+        # zelfde vergrendeling als vps-update.sh; de Bouwer leest hem om te wachten
+        os.makedirs(os.path.join(ZF_DIR, ".zf-slot"), exist_ok=True)
+        slot = open(os.path.join(ZF_DIR, ".zf-slot", "deploy.lock"), "w")
         try:
             try:
                 fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)

@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as RKeyboardEvent } from "react";
 
-// Lichte, dependency-vrije terminal-UI (geen xterm). Praat met /api/admin/console,
-// dat alleen een vaste, veilige set read-only commando's uitvoert (geen shell).
+// Lichte, dependency-vrije terminal-UI (geen xterm). Standaard praat hij met
+// /api/admin/terminal, dat alleen een vaste, veilige set read-only commando's
+// uitvoert (geen shell). Met `endpoint` bedient dezelfde UI de echte shell in de
+// werkkopie van de Bouwer (/api/admin/bouwer/terminal, eigen container).
 
 type LineKind = "in" | "out" | "err";
 interface Line {
@@ -14,10 +16,18 @@ interface Line {
 
 const COLORS: Record<LineKind, string> = { in: "#7dd3fc", out: "#e5e7eb", err: "#f87171" };
 
-export function ConsoleTerminal() {
-  const [lines, setLines] = useState<Line[]>([
-    { kind: "out", text: "ZekerFlex admin-console — typ 'help'. (veilig, geen shell)" },
-  ]);
+export function ConsoleTerminal({
+  endpoint = "/api/admin/terminal",
+  titel = "zekerflex-console",
+  welkom = "ZekerFlex admin-console — typ 'help'. (veilig, geen shell)",
+  placeholder = "typ een commando, bv. help",
+}: {
+  endpoint?: string;
+  titel?: string;
+  welkom?: string;
+  placeholder?: string;
+} = {}) {
+  const [lines, setLines] = useState<Line[]>([{ kind: "out", text: welkom }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
@@ -41,7 +51,7 @@ export function ConsoleTerminal() {
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/terminal", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command: cmd }),
@@ -82,7 +92,7 @@ export function ConsoleTerminal() {
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ef4444" }} />
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#eab308" }} />
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#22c55e" }} />
-        <span className="ml-2">zekerflex-console</span>
+        <span className="ml-2">{titel}</span>
       </div>
       <div className="h-80 space-y-1 overflow-y-auto p-3">
         {lines.map((l, i) => (
@@ -102,7 +112,7 @@ export function ConsoleTerminal() {
           onKeyDown={onKey}
           disabled={busy}
           spellCheck={false}
-          placeholder="typ een commando, bv. help"
+          placeholder={placeholder}
           className="flex-1 bg-transparent outline-none"
           style={{ color: "#e5e7eb" }}
           aria-label="Console-commando"

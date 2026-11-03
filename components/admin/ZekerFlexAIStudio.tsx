@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JarvisConsole } from "@/components/jarvis/JarvisConsole";
 import { ConsoleTerminal } from "@/components/admin/ConsoleTerminal";
 import { LiveZetten } from "@/components/admin/bouwer/LiveZetten";
+import { Bouwer } from "@/components/admin/bouwer/Bouwer";
 import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.generated";
 
 // ---------------------------------------------------------------------------
@@ -18,15 +19,17 @@ import { APP_PAGES, APP_PAGE_COUNT, type AppPage } from "@/lib/dev/app-pages.gen
 //   · Sandbox       : a live HTML/CSS/JS playground rendered in an isolated
 //                     sandbox iframe (/admin/zekerflex-ai/sandbox-frame)
 //   · Terminal      : the safe in-app console (read-only command set)
+//   · Bouwer        : the AI programmer on the server (deploy/bouwer/werker) —
+//                     give a task, watch it work live, review the diff, approve
 //   · Live zetten   : one click puts the newest GitHub main live via the
 //                     server-side live-zetter (components/admin/bouwer/LiveZetten)
 // All panes stay mounted and toggle with `hidden`, so a running chat turn or a
 // loaded page survives tab switches.
 // ---------------------------------------------------------------------------
 
-type Tab = "ai" | "browser" | "sandbox" | "live";
+type Tab = "ai" | "bouwer" | "browser" | "sandbox" | "live";
 
-const TAB_LABEL: Record<Tab, string> = { ai: "ZekerFlex AI", browser: "Pagina's", sandbox: "Sandbox", live: "Live zetten" };
+const TAB_LABEL: Record<Tab, string> = { ai: "ZekerFlex AI", bouwer: "Bouwer", browser: "Pagina's", sandbox: "Sandbox", live: "Live zetten" };
 type PanelMode = "explorer" | "search";
 
 const AREA_ORDER = ["Admin", "Marketing", "Werkgever", "Freelancer", "Webshop", "Account & overig"];
@@ -138,6 +141,7 @@ export function ZekerFlexAIStudio({
   const [panelMode, setPanelMode] = useState<PanelMode>("explorer");
   const [query, setQuery] = useState("");
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalSoort, setTerminalSoort] = useState<"veilig" | "bouwer">("veilig");
   const [brain, setBrain] = useState<Brain | null>(null);
   const [clock, setClock] = useState("");
 
@@ -270,6 +274,9 @@ export function ZekerFlexAIStudio({
           <ActivityButton label="ZekerFlex AI" active={tab === "ai"} onClick={() => setTab("ai")}>
             <IChatIcon />
           </ActivityButton>
+          <ActivityButton label="Bouwer" active={tab === "bouwer"} onClick={() => setTab("bouwer")}>
+            <IHammerIcon />
+          </ActivityButton>
           <ActivityButton
             label="Pagina's"
             active={tab === "browser" && panelMode === "explorer"}
@@ -387,7 +394,12 @@ export function ZekerFlexAIStudio({
             <div className={tab === "sandbox" ? "flex min-h-0 flex-1" : "hidden"}>
               <SandboxPane />
             </div>
-            {/* alleen gemount als hij open is: hij peilt de server elke paar seconden */}
+            {/* alleen gemount als ze open zijn: ze peilen de server elke paar seconden */}
+            {tab === "bouwer" && (
+              <div className="flex min-h-0 flex-1">
+                <Bouwer onLiveZetten={() => setTab("live")} />
+              </div>
+            )}
             {tab === "live" && (
               <div className="flex min-h-0 flex-1">
                 <LiveZetten />
@@ -397,14 +409,40 @@ export function ZekerFlexAIStudio({
 
           {terminalOpen && (
             <div className="flex-shrink-0 border-t border-white/10 bg-[#0b0e13]">
-              <div className="flex items-center justify-between px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-white/35">
-                <span>Terminal · veilig (read-only)</span>
-                <button type="button" onClick={() => setTerminalOpen(false)} className="text-white/40 hover:text-white/70">
+              <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-white/35">
+                <span>Terminal</span>
+                {(
+                  [
+                    ["veilig", "veilig (read-only)"],
+                    ["bouwer", "werkkopie (echte shell)"],
+                  ] as const
+                ).map(([soort, label]) => (
+                  <button
+                    key={soort}
+                    type="button"
+                    onClick={() => setTerminalSoort(soort)}
+                    aria-pressed={terminalSoort === soort}
+                    className={terminalSoort === soort ? "text-brand-mint" : "text-white/40 hover:text-white/70"}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setTerminalOpen(false)} className="ml-auto text-white/40 hover:text-white/70">
                   sluiten ✕
                 </button>
               </div>
               <div className="px-2 pb-2">
-                <ConsoleTerminal />
+                {terminalSoort === "veilig" ? (
+                  <ConsoleTerminal key="veilig" />
+                ) : (
+                  <ConsoleTerminal
+                    key="bouwer"
+                    endpoint="/api/admin/bouwer/terminal"
+                    titel="bouwer · werkkopie"
+                    welkom="Echte shell in de werkkopie van de Bouwer (eigen container: geen database, geen geheimen; max 2 minuten per commando). Bv. git log --oneline -5, ls app/admin, npx tsc --noEmit -p ."
+                    placeholder="shell-commando, bv. git status"
+                  />
+                )}
               </div>
             </div>
           )}
@@ -678,6 +716,14 @@ function IBeakerIcon() {
   return (
     <svg {...IS}>
       <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IHammerIcon() {
+  return (
+    <svg {...IS}>
+      <path d="m15 3 6 6-3 3-6-6 3-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M13.5 7.5 3.5 17.5l3 3 10-10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }

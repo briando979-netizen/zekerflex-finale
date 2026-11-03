@@ -10,9 +10,11 @@
 cd "$(dirname "$0")/../.." || { echo "DEPLOY_EXIT=2"; exit 2; }
 C="docker compose -f docker-compose.vps.yml --env-file .env.production"
 # Eén uitrol tegelijk: sessies en de Admin-knop delen deze vergrendeling, een tweede
-# stopt meteen. zf-live.py houdt hem zelf al vast en zet dan ZF_DEPLOY_LOCKED.
+# stopt meteen. zf-live.py houdt hem zelf al vast en zet dan ZF_DEPLOY_LOCKED. De
+# Bouwer ziet hem (alleen-lezen mount) en wacht met zware stappen tot de uitrol klaar is.
+mkdir -p .zf-slot
 if [ -z "${ZF_DEPLOY_LOCKED:-}" ]; then
-  exec 9>.zf-deploy.lock
+  exec 9>.zf-slot/deploy.lock
   flock -n 9 || { echo "DEPLOY_BEZIG: er loopt al een uitrol, probeer het straks opnieuw"; echo "DEPLOY_EXIT=3"; exit 3; }
 fi
 sudo docker tag zekerflex-app:latest zekerflex-app:rollback
@@ -34,6 +36,15 @@ for i in 1 2 3; do
     # want lopende gesprekken via de relay vallen dan even weg.
     if [ "$(sudo docker exec zekerflex-coturn-1 cat /zf-turn.sh 2>/dev/null | sha256sum)" != "$(sha256sum < deploy/coturn/entrypoint.sh)" ]; then
       sudo $C up -d --force-recreate coturn
+    fi
+    # De Bouwer (AI-programmeur, deploy/bouwer/werker) leest zijn code via een map-mount:
+    # alleen herstarten als die code veranderde, want een herstart breekt lopend werk af.
+    if [ -f deploy/bouwer/werker/server.mjs ]; then
+      sudo $C up -d bouwer
+      BOUWER_HASH="$(cat deploy/bouwer/werker/*.mjs | sha256sum)"
+      if [ "$BOUWER_HASH" != "$(cat .zf-bouwer.hash 2>/dev/null)" ]; then
+        sudo $C restart bouwer && echo "$BOUWER_HASH" > .zf-bouwer.hash
+      fi
     fi
     # de crontab wordt bij het starten gemaakt: herstarten neemt nieuwe taken mee
     sudo $C restart cron

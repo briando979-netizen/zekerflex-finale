@@ -19,6 +19,8 @@ import {
 } from "@/lib/jarvis/persona";
 import { jarvisStateLine } from "@/lib/admin/overview";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
+import { bouwer, bouwerLlm, type TaakKort } from "@/lib/bouwer/werker";
+import { agentLeeft, isBezig, leesLive, plaatsVerzoek } from "@/lib/bouwer/live";
 
 // ---------------------------------------------------------------------------
 // Jarvis conversational core.
@@ -37,7 +39,8 @@ const AGENTS = {
 } as const;
 
 const routeSchema = z.object({
-  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat"]),
+  // "bouwer" en "live" komen alleen uit heuristicRoute (een expliciete opdracht), nooit uit de LLM-router
+  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat", "bouwer", "live"]),
   agent: z.enum(["jarvis", "analyst", "developer", "sales"]).default("jarvis"),
   rationale: z.string().max(300).default(""),
 });
@@ -80,11 +83,23 @@ const ROUTER_SYSTEM = `${JARVIS_ROUTER_PREFIX} Kies EEN capability voor het verz
 Kies ook de sub-agent: "analyst" (data/analyse), "developer" (code/bugs), "sales" (leads/outreach), "jarvis" (overig).
 Antwoord met JSON: {"capability": ..., "agent": ..., "rationale": "<kort, NL>"}.`;
 
+// "bouw: …", "bouwer: …", "bouwer, …" of "laat de bouwer …"
+const BOUWER_OPDRACHT = /^(bouw(er)?\s*:|bouwer,|laat de bouwer\b)/;
+
 // Deterministic routing. The local router model is weak; match obvious intents
 // first and only fall back to the LLM for genuinely ambiguous prompts.
 export function heuristicRoute(prompt: string): Route | null {
   const p = prompt.trim().toLowerCase();
   const words = p.split(/\s+/).filter(Boolean);
+
+  // De Bouwer (AI-programmeur) en de live-zetter: alleen op een expliciete opdracht,
+  // zodat een gewone vraag nooit per ongeluk code wijzigt of uitrolt.
+  if (BOUWER_OPDRACHT.test(p) && words.length >= 3) {
+    return { capability: "bouwer", agent: "developer", rationale: "opdracht voor de Bouwer" };
+  }
+  if (/^(zet (alles |het |de nieuwste versie |nieuwste versie )?live|rol (alles |het |de nieuwste versie )?uit)\b/.test(p)) {
+    return { capability: "live", agent: "developer", rationale: "nieuwste versie live zetten" };
+  }
 
   // Greetings / smalltalk / very short -> conversation.
   if (
@@ -214,6 +229,10 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
       } catch {
         route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
       }
+      // code wijzigen of uitrollen nooit op gok van het model
+      if (route.capability === "bouwer" || route.capability === "live") {
+        route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
+      }
     }
     const agent = AGENTS[route.agent];
     await emit(turnId, "THINKING", AGENTS.jarvis, `Gekozen: ${route.capability}`, {
@@ -271,6 +290,46 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         durationMs: Date.now() - stepStart,
       });
       answer = res.summary || `Cyclus afgerond met ${res.findingsCount} bevindingen.`;
+    } else if (route.capability === "bouwer") {
+      const opdracht = input.prompt.trim().replace(/^(bouw(er)?\s*:|bouwer,|laat de bouwer)\s*/i, "");
+      await emit(turnId, "TOOL_CALL", agent, "Opdracht naar de Bouwer", { payload: { opdracht } });
+      try {
+        const llm = await bouwerLlm();
+        const taak = await bouwer<TaakKort>("/taken", { method: "POST", body: { opdracht, door: input.principal.email, llm } });
+        await recordAudit({
+          category: "ADMIN",
+          action: "admin.bouwer.opdracht",
+          severity: "info",
+          actorUserId: input.principal.userId,
+          actorLabel: "user",
+          summary: `${input.principal.email} gaf de Bouwer via ZekerFlex AI een opdracht (${llm.model}): ${opdracht.slice(0, 200)}`,
+        });
+        answer = `De Bouwer is begonnen (${taak.model}). Volg hem live in het tabblad Bouwer; daar zie je precies wat er verandert en keur je het goed, stuur je bij of gooi je het weg.`;
+      } catch (err) {
+        answer = `De Bouwer kon niet starten: ${(err as Error).message}`;
+      }
+      await emit(turnId, "TOOL_RESULT", agent, "Bouwer", { detail: answer, durationMs: Date.now() - stepStart });
+    } else if (route.capability === "live") {
+      await emit(turnId, "TOOL_CALL", agent, "Live zetten aanvragen");
+      const stand = await leesLive();
+      if (stand.verzoek || isBezig(stand.status)) {
+        answer = "Er loopt al een uitrol. Volg hem in het tabblad Live zetten.";
+      } else if (!agentLeeft(stand.hartslag)) {
+        answer = "De live-zetter op de server reageert niet; ik kan nu niet uitrollen. Kijk in het tabblad Live zetten.";
+      } else {
+        await plaatsVerzoek({ actie: "uitrollen", migraties: [], destructiefAkkoord: false, forceer: false, door: input.principal.email });
+        await recordAudit({
+          category: "ADMIN",
+          action: "admin.live.uitrollen",
+          severity: "info",
+          actorUserId: input.principal.userId,
+          actorLabel: "user",
+          summary: `${input.principal.email} zette via ZekerFlex AI de nieuwste versie live`,
+        });
+        answer =
+          "Ik zet de nieuwste versie van GitHub live. Database-wijzigingen krijg je eerst te zien in het tabblad Live zetten, en als de nieuwe versie niet gezond start, zet de server zelf de vorige terug.";
+      }
+      await emit(turnId, "TOOL_RESULT", agent, "Live zetten", { detail: answer, durationMs: Date.now() - stepStart });
     } else if (route.capability === "briefing") {
       await emit(turnId, "TOOL_CALL", agent, "Live briefing samenstellen");
       const res = await speakBriefing({ rephrase: true });
@@ -319,6 +378,8 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
     const skipStructure =
       route.capability === "briefing" ||
       route.capability === "chat" ||
+      route.capability === "bouwer" ||
+      route.capability === "live" ||
       answer.length < 40 ||
       // quick console questions already have a finished, model-free answer
       (route.capability === "console" && quickIntent(input.prompt) !== null);
