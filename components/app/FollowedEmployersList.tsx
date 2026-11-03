@@ -47,7 +47,10 @@ export function FollowedEmployersList({ initial }: { initial: FollowedEmployer[]
           <span aria-hidden>❤️</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink">{e.name}</p>
-            <p className="text-xs text-neutralx-500">{t.openShifts(e.openShifts)}</p>
+            <p className="text-xs text-neutralx-500">
+              {t.openShifts(e.openShifts)}
+              {e.shiftsWorked > 0 && <> · {t.worked(e.shiftsWorked, `€ ${Math.round(e.earnedCents / 100).toLocaleString("nl-NL")}`)}</>}
+            </p>
           </div>
           {e.openShifts > 0 && (
             <Link href={`/dashboard/klussen?employer=${encodeURIComponent(e.name)}`} className="text-xs font-semibold text-brand-600 hover:underline">

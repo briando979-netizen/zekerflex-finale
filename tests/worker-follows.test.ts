@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const tenantFindUnique = vi.fn();
+const tenantFindMany = vi.fn();
 const shiftFindMany = vi.fn();
+const timesheetFindMany = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    tenant: { findUnique: (...a: unknown[]) => tenantFindUnique(...a), findMany: vi.fn() },
+    tenant: { findUnique: (...a: unknown[]) => tenantFindUnique(...a), findMany: (...a: unknown[]) => tenantFindMany(...a) },
     shift: { findMany: (...a: unknown[]) => shiftFindMany(...a) },
+    timesheet: { findMany: (...a: unknown[]) => timesheetFindMany(...a) },
   },
 }));
 
@@ -27,7 +30,7 @@ vi.mock("@/lib/fiscal/store", () => ({
 const sendUserPush = vi.fn().mockResolvedValue(1);
 vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => sendUserPush(...a) }));
 
-import { followerCount, isFollowing, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
+import { followerCount, isFollowing, listFollows, notifyFollowersOfShifts, setFollow } from "@/lib/worker/follows";
 
 const NOW = new Date("2026-11-03T10:00:00Z");
 
@@ -57,6 +60,23 @@ describe("setFollow", () => {
   it("weigert een onbekend bedrijf", async () => {
     tenantFindUnique.mockResolvedValue(null);
     await expect(setFollow("u1", "nope", true)).rejects.toThrow(/bestaat niet/);
+  });
+});
+
+describe("listFollows", () => {
+  it("toont per bedrijf de open diensten en wat je er al deed, nieuwste volg eerst", async () => {
+    store.set("volgt:u1", ["t1", "t2", "weg"]);
+    tenantFindMany.mockResolvedValue([{ id: "t1", name: "Café A" }, { id: "t2", name: "Hotel B" }]);
+    shiftFindMany.mockResolvedValue([{ branch: { tenantId: "t1" } }, { branch: { tenantId: "t1" } }]);
+    timesheetFindMany.mockResolvedValue([
+      { billableMinutes: 480, hourlyRateCents: 1500, branch: { tenantId: "t2" } },
+      { billableMinutes: 240, hourlyRateCents: 1500, branch: { tenantId: "t2" } },
+    ]);
+    expect(await listFollows("u1", NOW)).toEqual([
+      { tenantId: "t2", name: "Hotel B", openShifts: 0, shiftsWorked: 2, earnedCents: 18_000 },
+      { tenantId: "t1", name: "Café A", openShifts: 2, shiftsWorked: 0, earnedCents: 0 },
+    ]);
+    expect(timesheetFindMany.mock.calls[0]![0].where.freelancer).toEqual({ userId: "u1" });
   });
 });
 

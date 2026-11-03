@@ -59,28 +59,50 @@ export interface FollowedEmployer {
   tenantId: string;
   name: string;
   openShifts: number;
+  /** goedgekeurde diensten die je hier al deed, en wat dat bruto opleverde */
+  shiftsWorked: number;
+  earnedCents: number;
 }
 
 /** De opdrachtgevers die je volgt, met hoeveel open diensten ze nu hebben. */
 export async function listFollows(userId: string, now = new Date()): Promise<FollowedEmployer[]> {
   const ids = await getList(followsKey(userId));
   if (!ids.length) return [];
-  const [tenants, open] = await Promise.all([
+  const [tenants, open, worked] = await Promise.all([
     prisma.tenant.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }),
     prisma.shift.findMany({
       where: { branch: { tenantId: { in: ids } }, visibility: "PUBLIC", status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gte: now } },
       select: { branch: { select: { tenantId: true } } },
       take: 2000,
     }),
+    // Wat je er al deed: goedgekeurde/uitbetaalde uren bij dat bedrijf.
+    prisma.timesheet.findMany({
+      where: { freelancer: { userId }, status: { in: ["APPROVED", "PAID"] }, branch: { tenantId: { in: ids } } },
+      select: { billableMinutes: true, hourlyRateCents: true, branch: { select: { tenantId: true } } },
+      take: 5000,
+    }),
   ]);
   const counts = new Map<string, number>();
   for (const s of open) counts.set(s.branch.tenantId, (counts.get(s.branch.tenantId) ?? 0) + 1);
+  const history = new Map<string, { shifts: number; earnedCents: number }>();
+  for (const t of worked) {
+    const h = history.get(t.branch.tenantId) ?? { shifts: 0, earnedCents: 0 };
+    h.shifts += 1;
+    h.earnedCents += Math.round((t.billableMinutes / 60) * t.hourlyRateCents);
+    history.set(t.branch.tenantId, h);
+  }
   const name = new Map(tenants.map((t) => [t.id, t.name]));
   // In de volgorde waarin je ze volgde, nieuwste eerst; verdwenen bedrijven vallen weg.
   return [...ids]
     .reverse()
     .filter((id) => name.has(id))
-    .map((id) => ({ tenantId: id, name: name.get(id)!, openShifts: counts.get(id) ?? 0 }));
+    .map((id) => ({
+      tenantId: id,
+      name: name.get(id)!,
+      openShifts: counts.get(id) ?? 0,
+      shiftsWorked: history.get(id)?.shifts ?? 0,
+      earnedCents: history.get(id)?.earnedCents ?? 0,
+    }));
 }
 
 /** Hoeveel werkers volgen (een van) deze bedrijven — voor het werkgeversdashboard. Telt alleen echte volgers. */
