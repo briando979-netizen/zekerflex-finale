@@ -8,6 +8,7 @@ import { createShiftSchema } from "@/lib/shifts/create";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
+import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const startsAt = parseAmsterdamLocal(body.startsAt);
     const endsAt = parseAmsterdamLocal(body.endsAt);
     if (endsAt <= startsAt) throw AppError.validation("De eindtijd moet na de starttijd liggen");
+    const lengthProblem = shiftLengthProblem({ startsAt, endsAt, breakMinutes: body.breakMinutes, viaUitzendbureau: body.viaUitzendbureau });
+    if (lengthProblem) throw AppError.validation(lengthProblem);
     await assertMayPlaceShift(key.tenantId);
     const shift = await prisma.shift.create({ data: { branchId: branch.id, title: body.title, ...(body.description ? { description: body.description } : {}), startsAt, endsAt, breakMinutes: body.breakMinutes, hourlyRateCents: body.hourlyRateCents, positions: body.positions, status: "OPEN" }, select: { id: true, title: true, startsAt: true, endsAt: true, status: true } });
     void runMatchingForShift(shift.id).catch(() => undefined);

@@ -17,6 +17,7 @@ import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
 import { findOverlappingShift, overlapMessageOther } from "@/lib/shifts/worker-overlap";
+import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
 export interface OfferResponse {
   ok: boolean;
@@ -41,6 +42,7 @@ async function assertOwnsShift(shiftId: string) {
       breakMinutes: true,
       hourlyRateCents: true,
       positions: true,
+      viaUitzendbureau: true,
       branch: { select: { name: true } },
       assignments: {
         where: { cancelledAt: null },
@@ -85,6 +87,13 @@ export async function updateShiftAction(
     const starts = parsed.startsAt ? new Date(parsed.startsAt) : shift.startsAt;
     const ends = parsed.endsAt ? new Date(parsed.endsAt) : shift.endsAt;
     if (ends <= starts) return { ok: false, message: "Einde moet na de start liggen." };
+    const lengthProblem = shiftLengthProblem({
+      startsAt: starts,
+      endsAt: ends,
+      breakMinutes: parsed.breakMinutes ?? shift.breakMinutes,
+      viaUitzendbureau: shift.viaUitzendbureau,
+    });
+    if (lengthProblem) return { ok: false, message: lengthProblem };
     if (parsed.positions !== undefined && parsed.positions < shift.assignments.length) {
       return { ok: false, message: `Er zijn al ${shift.assignments.length} krachten aangenomen.` };
     }

@@ -12,6 +12,7 @@ import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
+import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
 export interface ShiftTemplate {
   key: string;
@@ -136,6 +137,8 @@ export async function createShift(
     throw AppError.validation("Ongeldige datum/tijd.");
   }
   if (endsAt <= startsAt) throw AppError.validation("De eindtijd moet na de starttijd liggen.");
+  const lengthProblem = shiftLengthProblem({ startsAt, endsAt, breakMinutes: input.breakMinutes, viaUitzendbureau: input.viaUitzendbureau });
+  if (lengthProblem) throw AppError.validation(lengthProblem);
   if (startsAt.getTime() < Date.now() - 60_000) throw AppError.validation("De starttijd ligt in het verleden.");
 
   // Build the full set of (start, end) windows: the primary one + any extra
