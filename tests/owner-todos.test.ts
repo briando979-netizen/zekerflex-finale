@@ -10,7 +10,9 @@ const live = vi.hoisted(() => ({
   testUsers: 0,
   branches: [] as { name: string; tenant: { name: string } }[],
   webhookEvents: [] as string[],
+  proposals: [] as { status: string; createdAt: string; expiresAt: string }[],
 }));
+vi.mock("@/lib/sales/website-proposal", () => ({ listWebsiteProposals: async () => live.proposals }));
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
 vi.mock("@/lib/env", () => ({ env: live.env }));
 vi.mock("@/lib/ai/client", () => ({
@@ -56,6 +58,21 @@ beforeEach(() => {
   live.testUsers = 0;
   live.branches = [];
   live.webhookEvents = [];
+  live.proposals = [];
+});
+
+describe("websitevoorstellen versturen", () => {
+  it("counts proposals left as concept for 2+ days (not fresh, sent or expired ones) and ticks itself off", async () => {
+    const day = 86_400_000;
+    const now = Date.now();
+    const p = (status: string, ageDays: number, expiresInDays = 20) => ({ status, createdAt: new Date(now - ageDays * day).toISOString(), expiresAt: new Date(now + expiresInDays * day).toISOString() });
+    live.proposals = [p("concept", 3), p("concept", 5), p("concept", 1), p("verstuurd", 9), p("concept", 40, -1)];
+    expect((await byId())["websitevoorstellen-versturen"]).toMatchObject({ title: "2 websitevoorstellen staan klaar om te versturen", done: false, auto: true });
+    live.proposals = [p("concept", 3)];
+    expect((await byId())["websitevoorstellen-versturen"]?.title).toBe("1 websitevoorstel staat klaar om te versturen");
+    live.proposals = [];
+    expect((await byId())["websitevoorstellen-versturen"]).toMatchObject({ title: "Websitevoorstellen versturen", done: true });
+  });
 });
 
 describe("owner to-do list", () => {
