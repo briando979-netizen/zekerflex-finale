@@ -279,6 +279,43 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("stripe-btw"),
     },
     {
+      id: "loonweek-grens",
+      group: "Geld & bank",
+      title: "Loonweek: laten beginnen om 00:00 Nederlandse tijd? (keuze nodig)",
+      why: "De loonweek begint nu op maandag 00:00 UTC: dat is 01:00 of 02:00 in Nederland. Een dienst op maandag tussen middernacht en dat uur valt daardoor in de loonrun van de week ervoor. Rechtzetten kan een dienst in de overgangsweek in twee loonruns laten belanden, en dan wordt hij dubbel betaald. Daarom is het niet zomaar aangepast (gevonden op 3 nov).",
+      how: [
+        "Aangeraden: de grens naar 00:00 Nederlandse tijd verleggen, met een vangnet. Urenbriefjes die al in een definitieve loonrun zitten, worden overgeslagen.",
+        "Of zo laten: het gaat alleen om diensten op maandag tussen 00:00 en 01:00/02:00.",
+        "Zeg je keuze tegen Claude; die bouwt het met tests op de overgangsweek.",
+      ],
+      auto: false,
+      ...m("loonweek-grens"),
+    },
+    {
+      id: "no-show-sweep",
+      group: "Geld & bank",
+      title: "Automatisch 'niet opgekomen': aan of uit laten? (staat nu uit)",
+      why: "Er bestaat een automatische controle die iedereen zonder check-in na 60 minuten als 'niet opgekomen' markeert. Die wist het concept-urenbriefje, verlaagt de betrouwbaarheid en biedt de opdrachtgever een claim aan. Hij staat nergens in de planning en draait dus niet. Een werker die wél werkte maar vergat in te checken, zou zo zijn uren kwijtraken.",
+      how: [
+        "Aangeraden: uit laten, of pas aanzetten met een veiligere regel. Dan blijft het urenbriefje bewaard en bevestigt de werker eerst.",
+        "Zeg je keuze tegen Claude; die zet hem dan in de planning met die regel.",
+      ],
+      auto: false,
+      ...m("no-show-sweep"),
+    },
+    {
+      id: "avg-bewaartermijn",
+      group: "Juridisch",
+      title: "AVG: de dagelijkse opschoning van oude gegevens aanzetten? (staat nu uit)",
+      why: "De opschoning die gegevens na hun bewaartermijn weghaalt of inkort, staat nergens in de planning. De bewaarregels uit de privacyverklaring worden dus niet afgedwongen. Een proef op 3 nov telde alleen en veranderde niets. Volgens die proef zou de eerste echte run 2 KYC-dossiers inkorten: de ruwe gegevens en scores gaan weg, de uitslag van de controle blijft. Dat is niet terug te draaien, daarom staat hij niet vanzelf aan.",
+      how: [
+        "Aangeraden: dagelijks laten draaien, zoals de andere geplande taken.",
+        "Zeg het tegen Claude; die zet hem in de planning en controleert de eerste run.",
+      ],
+      auto: false,
+      ...m("avg-bewaartermijn"),
+    },
+    {
       id: "terms-review",
       group: "Juridisch",
       title: "Voorwaarden snelle uitbetaling laten nakijken",
