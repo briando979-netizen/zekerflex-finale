@@ -123,8 +123,10 @@ body {
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
   }
-  .pill-ok { @apply pill text-ok; background: rgba(21, 128, 61, 0.1); }
-  .pill-warn { @apply pill text-warn; background: rgba(180, 83, 9, 0.1); }
+  /* groen en amber haalden op hun zachte vlak 4,38 en 4,41:1 (kleine tekst vraagt 4,5:1, axe);
+     dezelfde kleur een tint donkerder, zoals --a-ok-ink/--a-warn-ink in de beheeromgeving: 6,2 en 6,0:1 */
+  .pill-ok { @apply pill; color: #166534; background: rgba(21, 128, 61, 0.1); }
+  .pill-warn { @apply pill; color: #8a4b05; background: rgba(180, 83, 9, 0.1); }
   .pill-crit { @apply pill text-crit; background: rgba(185, 28, 28, 0.1); }
   .pill-neutral { @apply pill bg-paper-soft text-neutralx-600; }
 
