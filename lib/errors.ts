@@ -105,7 +105,8 @@ function isZodError(err: unknown): err is ZodLikeError {
 }
 
 type UnexpectedErrorReporter = (err: unknown) => void;
-let reportUnexpected: UnexpectedErrorReporter | null = null;
+// On globalThis: the server build holds several copies of this module (see lib/logger.ts).
+const shared = globalThis as typeof globalThis & { __zfUnexpectedErrorReporter?: UnexpectedErrorReporter | null };
 
 /**
  * Node server only (lib/ops/error-journal.ts, started from instrumentation.ts):
@@ -113,7 +114,7 @@ let reportUnexpected: UnexpectedErrorReporter | null = null;
  * left no trace in routes that aren't wrapped by withAuth.
  */
 export function setUnexpectedErrorReporter(fn: UnexpectedErrorReporter | null): void {
-  reportUnexpected = fn;
+  shared.__zfUnexpectedErrorReporter = fn;
 }
 
 /** `logged`: the caller logs the 500 itself (withAuth's boundary), so don't report it twice. */
@@ -144,7 +145,7 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
   }
   if (!opts.logged) {
     try {
-      reportUnexpected?.(err);
+      shared.__zfUnexpectedErrorReporter?.(err);
     } catch {
       // reporting may never change the response
     }

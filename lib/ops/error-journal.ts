@@ -138,11 +138,20 @@ export function groupId(level: JournalLevel, message: string, route: string | nu
 
 // --- verzamelen en wegschrijven -------------------------------------------------
 
-const pending = new Map<string, ErrorGroup>();
-let dropped = 0;
-let flushing: Promise<void> | null = null;
-let lastPrune = 0;
-let createdSincePrune = 0;
+interface JournalState {
+  pending: Map<string, ErrorGroup>;
+  dropped: number;
+  flushing: Promise<void> | null;
+  lastPrune: number;
+  createdSincePrune: number;
+  started: boolean;
+}
+// On globalThis, not in module variables: the Next.js server build holds several
+// copies of this module (instrumentation.ts and each route get their own), and
+// they must all fill and flush the same queue.
+const shared = globalThis as typeof globalThis & { __zfErrorJournal?: JournalState };
+const state: JournalState = (shared.__zfErrorJournal ??= { pending: new Map(), dropped: 0, flushing: null, lastPrune: 0, createdSincePrune: 0, started: false });
+const pending = state.pending;
 
 /** Remember one warning or error; it reaches the database with the next flush. */
 export function journal(level: JournalLevel, message: string, context: Record<string, unknown> = {}, at = new Date()): void {
@@ -159,7 +168,7 @@ export function journal(level: JournalLevel, message: string, context: Record<st
     return;
   }
   if (pending.size >= MAX_PENDING) {
-    dropped += 1;
+    state.dropped += 1;
     return;
   }
   pending.set(id, { id, level, message: scrub(message).slice(0, 300), reason, route, count: 1, firstAt: iso, lastAt: iso, samples: [sample] });
@@ -172,36 +181,36 @@ function merge(old: ErrorGroup | null, add: ErrorGroup): ErrorGroup {
 
 /** Write what was collected. One flush at a time; failures stay quiet (the console still has the line). */
 export async function flushJournal(now = Date.now()): Promise<void> {
-  if (flushing) return flushing;
+  if (state.flushing) return state.flushing;
   const batch = [...pending.values()];
   pending.clear();
-  if (dropped > 0) {
+  if (state.dropped > 0) {
     const iso = new Date(now).toISOString();
-    batch.push({ id: OVERFLOW_ID, level: "warn", message: "Te veel verschillende meldingen tegelijk: deze zijn alleen geteld", reason: null, route: null, count: dropped, firstAt: iso, lastAt: iso, samples: [] });
-    dropped = 0;
+    batch.push({ id: OVERFLOW_ID, level: "warn", message: "Te veel verschillende meldingen tegelijk: deze zijn alleen geteld", reason: null, route: null, count: state.dropped, firstAt: iso, lastAt: iso, samples: [] });
+    state.dropped = 0;
   }
   if (batch.length === 0) return;
-  flushing = (async () => {
+  state.flushing = (async () => {
     for (const add of batch) {
       try {
         const old = await kvGet<ErrorGroup>(KEY(add.id));
-        if (!old) createdSincePrune += 1;
+        if (!old) state.createdSincePrune += 1;
         await kvSet(KEY(add.id), merge(old, add));
       } catch {
         // the database is what's broken; logging that here would only loop
       }
     }
-    if (now - lastPrune >= PRUNE_EVERY_MS || createdSincePrune >= PRUNE_AFTER_NEW) await pruneJournal(now).catch(() => undefined);
+    if (now - state.lastPrune >= PRUNE_EVERY_MS || state.createdSincePrune >= PRUNE_AFTER_NEW) await pruneJournal(now).catch(() => undefined);
   })().finally(() => {
-    flushing = null;
+    state.flushing = null;
   });
-  return flushing;
+  return state.flushing;
 }
 
 /** Drop groups not seen for 30 days, and keep at most the 400 most recent. */
 export async function pruneJournal(now = Date.now()): Promise<number> {
-  lastPrune = now;
-  createdSincePrune = 0;
+  state.lastPrune = now;
+  state.createdSincePrune = 0;
   const groups = await listErrorGroups(5000);
   const cutoff = now - KEEP_DAYS * 86_400_000;
   const fresh = groups.filter((g) => Date.parse(g.lastAt) >= cutoff);
@@ -244,15 +253,14 @@ export function recordRequestError(err: unknown, request: { method: string }, co
   logger.error(`unhandled ${context.routeType} error`, { route: `${request.method} ${context.routePath}`, error: err, ...(digest ? { digest } : {}) });
 }
 
-let started = false;
-
 /** Called once per server start (instrumentation.ts). Keeps messages only in production. */
 export function startErrorJournal(): void {
-  if (started) return;
-  started = true;
+  if (state.started) return;
+  state.started = true;
   // a bare 500 used to leave no trace at all in routes without withAuth
   setUnexpectedErrorReporter((err) => logger.error("unexpected server error", { error: err }));
   if (env.NODE_ENV !== "production") return;
   setLogSink((level, message, context) => journal(level, message, context));
   setInterval(() => void flushJournal(), FLUSH_MS).unref?.();
+  logger.info("error journal started");
 }

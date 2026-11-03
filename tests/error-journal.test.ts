@@ -122,6 +122,32 @@ describe("verzamelen en bewaren", () => {
   });
 });
 
+describe("gedeeld tussen de kopieën die de Next.js-build van een module maakt", () => {
+  // Live 3 nov: instrumentation.ts zette het aansluitpunt in zijn eigen kopie van
+  // lib/logger.ts, de routes gebruikten een andere kopie, en het logboek bleef leeg.
+  it("aansluitpunt, foutmelder en wachtrij uit de ene kopie werken ook in de andere", async () => {
+    const sink = vi.fn();
+    setLogSink(sink);
+    const reporter = vi.fn();
+    setUnexpectedErrorReporter(reporter);
+    vi.resetModules();
+    const otherLogger = await import("@/lib/logger");
+    const otherErrors = await import("@/lib/errors");
+    const otherJournal = await import("@/lib/ops/error-journal");
+    expect(otherLogger.logger).not.toBe(logger);
+    expect(otherJournal.flushJournal).not.toBe(j.flushJournal);
+
+    otherLogger.logger.warn("via de andere kopie");
+    expect(sink).toHaveBeenCalledWith("warn", "via de andere kopie", {});
+    otherErrors.toErrorBody(new Error("kale 500 in een route"));
+    expect(reporter).toHaveBeenCalledTimes(1);
+
+    j.journal("error", "verzameld in de ene kopie");
+    await otherJournal.flushJournal();
+    expect((await j.listErrorGroups()).map((g) => g.message)).toContain("verzameld in de ene kopie");
+  });
+});
+
 describe("waar de meldingen vandaan komen", () => {
   it("de logger geeft waarschuwingen en fouten door, gewone info niet", () => {
     const sink = vi.fn();

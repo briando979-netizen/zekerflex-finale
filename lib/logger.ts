@@ -6,11 +6,13 @@ const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 
 const MIN_LEVEL: Level = env.NODE_ENV === "production" ? "info" : "debug";
 
 type LogSink = (level: "warn" | "error", message: string, context: Record<string, unknown>) => void;
-let sink: LogSink | null = null;
+// On globalThis, not in a module variable: the Next.js server build holds several
+// copies of this module (instrumentation.ts and the routes each get their own).
+const shared = globalThis as typeof globalThis & { __zfLogSink?: LogSink | null };
 
 /** Where warnings and errors also go, so they outlive a container restart (lib/ops/error-journal.ts, Node server only). */
 export function setLogSink(next: LogSink | null): void {
-  sink = next;
+  shared.__zfLogSink = next;
 }
 
 function emit(level: Level, message: string, context?: Record<string, unknown>) {
@@ -31,6 +33,7 @@ function emit(level: Level, message: string, context?: Record<string, unknown>) 
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);
   else console.log(line);
+  const sink = shared.__zfLogSink;
   if (sink && (level === "warn" || level === "error")) {
     try {
       sink(level, message, context ?? {});
