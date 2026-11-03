@@ -42,6 +42,20 @@ function tijd(iso: string | undefined): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
 }
 
+/** Schermafbeelding verkleinen tot hooguit 1600 px breed (JPEG): snel en zuinig voor het model. */
+async function verkleinAfbeelding(bestand: File): Promise<string> {
+  const beeld = await createImageBitmap(bestand);
+  const schaal = Math.min(1, 1600 / beeld.width);
+  const doek = document.createElement("canvas");
+  doek.width = Math.round(beeld.width * schaal);
+  doek.height = Math.round(beeld.height * schaal);
+  const ctx = doek.getContext("2d");
+  if (!ctx) throw new Error("geen canvas");
+  ctx.drawImage(beeld, 0, 0, doek.width, doek.height);
+  beeld.close();
+  return doek.toDataURL("image/jpeg", 0.85);
+}
+
 async function verstuur<T>(url: string, method: "POST" | "PUT", body: unknown): Promise<T> {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const d = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } | string };
@@ -57,6 +71,7 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
   const [gekozen, setGekozen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [opdracht, setOpdracht] = useState("");
+  const [afbeelding, setAfbeelding] = useState<string | null>(null);
   const [bijsturing, setBijsturing] = useState("");
   const [fout, setFout] = useState<string | null>(null);
   const [bezigMet, setBezigMet] = useState<string | null>(null);
@@ -116,10 +131,19 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
 
   const start = () =>
     actie("start", async () => {
-      const t = await verstuur<TaakKort>("/api/admin/bouwer/taken", "POST", { opdracht });
+      const t = await verstuur<TaakKort>("/api/admin/bouwer/taken", "POST", { opdracht, ...(afbeelding ? { afbeelding } : {}) });
       setOpdracht("");
+      setAfbeelding(null);
       setGekozen(t.id);
     });
+
+  const voegAfbeeldingToe = async (bestand: File) => {
+    try {
+      setAfbeelding(await verkleinAfbeelding(bestand));
+    } catch {
+      setFout("Deze afbeelding kon niet worden gelezen");
+    }
+  };
 
   const taakActie = (naam: string, body: Record<string, unknown>) =>
     actie(naam, () => verstuur(`/api/admin/bouwer/taken/${gekozen}`, "POST", body));
@@ -160,10 +184,41 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
             id="bouwer-opdracht"
             value={opdracht}
             onChange={(e) => setOpdracht(e.target.value)}
+            onPaste={(e) => {
+              // een geplakte schermafbeelding (Ctrl+V) gaat als bijlage mee
+              const bestand = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"))?.getAsFile();
+              if (bestand) {
+                e.preventDefault();
+                void voegAfbeeldingToe(bestand);
+              }
+            }}
             rows={4}
-            placeholder="Bv. Zet op de prijzenpagina onder de tabel een veelgestelde vraag over opzegtermijnen."
+            placeholder="Bv. Zet op de prijzenpagina onder de tabel een veelgestelde vraag over opzegtermijnen. Je kunt ook een schermafbeelding plakken."
             className="w-full resize-y rounded-lg border border-white/15 bg-[#0b0e13] p-2.5 text-xs text-white placeholder:text-white/30 focus:border-brand-mint focus:outline-none"
           />
+          {afbeelding ? (
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- lokale data-URL, geen optimalisatie nodig */}
+              <img src={afbeelding} alt="Schermafbeelding bij de opdracht" className="h-14 w-20 rounded-md border border-white/15 object-cover" />
+              <button type="button" onClick={() => setAfbeelding(null)} className="text-[11px] text-white/50 underline hover:text-white/80">
+                afbeelding weghalen
+              </button>
+            </div>
+          ) : (
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-white/45 hover:text-white/75">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={(e) => {
+                  const bestand = e.target.files?.[0];
+                  if (bestand) void voegAfbeeldingToe(bestand);
+                  e.target.value = "";
+                }}
+              />
+              🖼 Schermafbeelding toevoegen (optioneel)
+            </label>
+          )}
           <button
             type="button"
             disabled={!kanStarten}
@@ -188,7 +243,10 @@ export function Bouwer({ onLiveZetten }: { onLiveZetten?: () => void } = {}) {
                 onClick={() => setGekozen(t.id)}
                 className={`w-full border-b border-white/5 px-3 py-2 text-left transition ${gekozen === t.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
               >
-                <span className="line-clamp-2 text-xs text-white/80">{t.opdracht}</span>
+                <span className="line-clamp-2 text-xs text-white/80">
+                  {t.metAfbeelding && <span title="met schermafbeelding">🖼 </span>}
+                  {t.opdracht}
+                </span>
                 <span className="mt-1 flex items-center gap-2 text-[10px] text-white/35">
                   <span className={`rounded-full px-1.5 py-px ${STAAT[t.staat].kleur}`}>{STAAT[t.staat].label}</span>
                   {tijd(t.begon)}

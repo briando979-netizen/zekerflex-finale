@@ -50,6 +50,8 @@ export interface TaakKort {
   bijgewerkt: string;
   sha: string | null;
   bestanden: number;
+  /** de opdracht kwam met een schermafbeelding */
+  metAfbeelding?: boolean;
 }
 
 export interface Taak extends Omit<TaakKort, "bestanden"> {

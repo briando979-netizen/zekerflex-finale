@@ -22,14 +22,25 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   });
 });
 
-const schema = z.object({ opdracht: z.string().trim().min(5).max(6000) });
+const schema = z.object({
+  opdracht: z.string().trim().min(5).max(6000),
+  // optioneel een schermafbeelding ("dit moet anders"); in de browser al verkleind
+  afbeelding: z
+    .string()
+    .max(5_600_000)
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/)
+    .optional(),
+});
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
-  if (!parsed.success) throw AppError.validation("Beschrijf de opdracht in 5 tot 6000 tekens");
+  if (!parsed.success) throw AppError.validation("Beschrijf de opdracht in 5 tot 6000 tekens (een afbeelding mag een PNG, JPEG of WebP van hooguit 4 MB zijn)");
 
   const llm = await bouwerLlm();
-  const taak = await bouwer<TaakKort>("/taken", { method: "POST", body: { opdracht: parsed.data.opdracht, door: principal.email, llm } });
+  const taak = await bouwer<TaakKort>("/taken", {
+    method: "POST",
+    body: { opdracht: parsed.data.opdracht, door: principal.email, llm, ...(parsed.data.afbeelding ? { afbeelding: parsed.data.afbeelding } : {}) },
+  });
 
   await recordAudit({
     category: "ADMIN",

@@ -91,7 +91,7 @@ function geldigLlm(llm) {
   return llm && typeof llm.baseUrl === "string" && /^https?:\/\//.test(llm.baseUrl) && typeof llm.model === "string" && llm.model.length > 0;
 }
 
-async function werk(taak, llm, messages) {
+async function werk(taak, llm, messages, afbeelding = null) {
   const abort = new AbortController();
   actief = { id: taak.id, abort };
   const log = logger(taak);
@@ -103,10 +103,20 @@ async function werk(taak, llm, messages) {
   try {
     if (!messages) {
       taak.basis = await nieuweWerkkopie(taak.id, log);
+      const tekst = `Opdracht van ${taak.door}:\n${taak.opdracht}`;
       messages = [
         { role: "system", content: await systeemPrompt() },
-        { role: "user", content: `Opdracht van ${taak.door}:\n${taak.opdracht}` },
+        afbeelding
+          ? {
+              role: "user",
+              content: [
+                { type: "text", text: `${tekst}\n\n(Bij deze opdracht hoort de schermafbeelding hieronder.)` },
+                { type: "image_url", image_url: { url: afbeelding } },
+              ],
+            }
+          : { role: "user", content: tekst },
       ];
+      if (afbeelding) log("info", "Met schermafbeelding");
     }
     log("info", `Model: ${llm.model}`);
     const r = await draai({
@@ -219,14 +229,18 @@ function magErin(req) {
   return TOKEN.length >= 24 && gegeven.length === verwacht.length && timingSafeEqual(gegeven, verwacht);
 }
 
-async function lichaam(req) {
+async function lichaam(req, max = 1_000_000) {
   let data = "";
   for await (const stuk of req) {
     data += stuk;
-    if (data.length > 1_000_000) throw new Error("Te groot");
+    if (data.length > max) throw new Error("Te groot");
   }
   return data ? JSON.parse(data) : {};
 }
+
+// Een schermafbeelding bij de opdracht ("dit moet anders"): alleen echte afbeeldingen, max ~4 MB.
+const AFBEELDING = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_AFBEELDING = 5_600_000;
 
 const samenvatting = (t) => ({
   id: t.id,
@@ -238,6 +252,7 @@ const samenvatting = (t) => ({
   bijgewerkt: t.bijgewerkt,
   sha: t.sha ?? null,
   bestanden: (t.bestanden ?? []).length,
+  metAfbeelding: Boolean(t.metAfbeelding),
 });
 
 const server = http.createServer(async (req, res) => {
@@ -284,10 +299,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (delen.length === 1 && req.method === "POST") {
-      const b = await lichaam(req);
+      const b = await lichaam(req, 6_000_000);
       const opdracht = String(b.opdracht ?? "").trim();
       if (opdracht.length < 5 || opdracht.length > 6000) return antwoord(res, 400, { fout: "Beschrijf de opdracht in 5 tot 6000 tekens" });
       if (!geldigLlm(b.llm)) return antwoord(res, 400, { fout: "Geen taalmodel ingesteld" });
+      const afbeelding = b.afbeelding == null ? null : String(b.afbeelding);
+      if (afbeelding && (afbeelding.length > MAX_AFBEELDING || !AFBEELDING.test(afbeelding)))
+        return antwoord(res, 400, { fout: "De afbeelding moet een PNG, JPEG of WebP van hooguit 4 MB zijn" });
       if (actief) return antwoord(res, 409, { fout: "De Bouwer is nog bezig met een andere opdracht" });
       const open = await openTaak();
       if (open) return antwoord(res, 409, { fout: "Er staat nog een opdracht open. Zet die live of gooi hem weg.", open: open.id });
@@ -308,9 +326,10 @@ const server = http.createServer(async (req, res) => {
         sha: null,
         fout: null,
         diff: "",
+        metAfbeelding: Boolean(afbeelding),
       };
       await bewaar(taak, true);
-      void werk(taak, b.llm, null);
+      void werk(taak, b.llm, null, afbeelding);
       return antwoord(res, 202, samenvatting(taak));
     }
 
