@@ -15,6 +15,7 @@ import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { inAndroidApp } from "@/lib/app-mode-server";
+import { getFreelancerDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,8 @@ export default async function AccountPage() {
 
   // Android app: no ZekerFlex Bank (lib/app-mode.ts)
   const inApp = await inAndroidApp();
+  const ft = await getFreelancerDict();
+  const t = ft.acct;
   const [card, overview, fiscal, myReplacements, matched, notCompleted, theme] = await Promise.all([
     getUserCard(principal.userId),
     getFreelancerOverview(principal.userId),
@@ -66,67 +69,67 @@ export default async function AccountPage() {
   const GROUPS: { items: Item[] }[] = [
     {
       items: [
-        { label: "Je administratie, zonder gedoe", href: "/dashboard/administratie" },
-        { label: "Loon-vooruitblik", href: "/dashboard/vooruitblik" },
-        { label: "Kilometer-administratie", href: "/dashboard/ritten" },
-        { label: "Diensten in je eigen agenda", href: "/dashboard/agenda-koppeling" },
-        { label: "Je eigen werknummer", href: "/dashboard/telefonie" },
-        ...(inApp ? [] : [{ label: "ZekerFlex Bank", href: "/dashboard/bank" }]),
-        { label: "Ik heb een vraag", href: "/kennis" },
+        { label: t.admin, href: "/dashboard/administratie" },
+        { label: t.forecast, href: "/dashboard/vooruitblik" },
+        { label: t.trips, href: "/dashboard/ritten" },
+        { label: t.calendar, href: "/dashboard/agenda-koppeling" },
+        { label: t.workNumber, href: "/dashboard/telefonie" },
+        ...(inApp ? [] : [{ label: t.bank, href: "/dashboard/bank" }]),
+        { label: t.question, href: "/kennis" },
         {
-          label: "Feedback verzenden",
+          label: t.feedback,
           href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex-app",
           external: true,
         },
-        { label: "Favoriete opdrachtgevers", href: "/dashboard/klussen" },
-        { label: "Verborgen opdrachtgevers", href: "/dashboard/account/verborgen" },
+        { label: t.favorites, href: "/dashboard/klussen" },
+        { label: t.hidden, href: "/dashboard/account/verborgen" },
       ],
     },
     {
       items: isUitzend
         ? [
-            { label: "Persoonlijke gegevens", href: "/dashboard/profiel" },
-            { label: "Adresgegevens", href: "/dashboard/profiel" },
-            { label: "Werkervaring", href: "/dashboard/profiel" },
-            { label: "Certificaten (VCA, BHV, heftruck…)", href: "/dashboard/certificaten" },
-            { label: "Werkpaspoort (deelbaar)", href: "/dashboard/paspoort" },
-            { label: "Uitzendovereenkomst", href: "/dashboard/verificatie" },
-            { label: "Verloning & loonstroken", href: "/dashboard/verloning" },
-            { label: "Werkvorm & BSN", href: "/dashboard/fiscaal" },
+            { label: t.personal, href: "/dashboard/profiel" },
+            { label: t.address, href: "/dashboard/profiel" },
+            { label: t.experience, href: "/dashboard/profiel" },
+            { label: t.certs, href: "/dashboard/certificaten" },
+            { label: t.passport, href: "/dashboard/paspoort" },
+            { label: t.uitzendContract, href: "/dashboard/verificatie" },
+            { label: t.payroll, href: "/dashboard/verloning" },
+            { label: t.kindBsn, href: "/dashboard/fiscaal" },
           ]
         : [
-            { label: "Persoonlijke gegevens", href: "/dashboard/profiel" },
-            { label: "Adresgegevens", href: "/dashboard/profiel" },
-            { label: "Werkervaring", href: "/dashboard/profiel" },
-            { label: "Certificaten (VCA, BHV, heftruck…)", href: "/dashboard/certificaten" },
-            { label: "Werkpaspoort (deelbaar)", href: "/dashboard/paspoort" },
-            { label: "Zakelijke gegevens", href: "/dashboard/fiscaal" },
-            { label: "Verzekering & voordelen", href: "/dashboard/verzekering" },
-            { label: "Facturenoverzicht", href: "/dashboard/uitbetalingen" },
-            { label: "Machtiging", href: "/dashboard/uitbetalingen" },
+            { label: t.personal, href: "/dashboard/profiel" },
+            { label: t.address, href: "/dashboard/profiel" },
+            { label: t.experience, href: "/dashboard/profiel" },
+            { label: t.certs, href: "/dashboard/certificaten" },
+            { label: t.passport, href: "/dashboard/paspoort" },
+            { label: t.business, href: "/dashboard/fiscaal" },
+            { label: t.insurance, href: "/dashboard/verzekering" },
+            { label: t.invoices, href: "/dashboard/uitbetalingen" },
+            { label: t.mandate, href: "/dashboard/uitbetalingen" },
           ],
     },
     {
       items: [
-        { label: "E-mailadres wijzigen", href: "/dashboard/profiel" },
-        { label: "Wachtwoord wijzigen", href: "/wachtwoord-vergeten" },
-        { label: "Tweestapsverificatie", href: "/dashboard/account/beveiliging" },
+        { label: t.email, href: "/dashboard/profiel" },
+        { label: t.password, href: "/wachtwoord-vergeten" },
+        { label: t.twoFactor, href: "/dashboard/account/beveiliging" },
         {
-          label: "Download mijn gegevens",
+          label: t.download,
           href: "/api/me/gegevens/export",
           external: true,
         },
-        { label: "Account verwijderen", href: "/dashboard/account/verwijderen" },
+        { label: t.delete, href: "/dashboard/account/verwijderen" },
       ],
     },
     {
       items: [
-        { label: "Kennisbank", href: "/kennis" },
-        { label: "Join de community", href: "/nieuwsbrief" },
+        { label: t.kb, href: "/kennis" },
+        { label: t.community, href: "/nieuwsbrief" },
       ],
     },
     {
-      items: [{ label: "Privacy instellingen", href: "/privacy" }],
+      items: [{ label: t.privacy, href: "/privacy" }],
     },
   ];
 
@@ -134,7 +137,7 @@ export default async function AccountPage() {
     <>
       <div className="mb-5">
         <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
-          Account
+          {t.title}
         </h1>
         <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
       </div>
@@ -167,21 +170,21 @@ export default async function AccountPage() {
           href="/dashboard/beoordelingen"
           className="mt-1 inline-block text-sm font-semibold text-ink underline underline-offset-2"
         >
-          {reviews.count} {reviews.count === 1 ? "beoordeling" : "beoordelingen"}
+          {t.reviews(reviews.count)}
         </Link>
 
         <div className="mt-5 border-t border-hair pt-4">
-          <p className="text-sm text-neutralx-500">Jouw klussen over de laatste 6 maanden</p>
+          <p className="text-sm text-neutralx-500">{t.statsTitle}</p>
           <div className="mt-3 grid grid-cols-3 divide-x divide-hair">
-            <Stat value={matched} label="Gematchte klussen" />
-            <Stat value={notCompleted} label="Niet voltooide klussen" />
-            <Stat value={replacementsArranged} label="Vervanging geregeld" />
+            <Stat value={matched} label={t.matched} />
+            <Stat value={notCompleted} label={t.notCompleted} />
+            <Stat value={replacementsArranged} label={t.replaced} />
           </div>
         </div>
 
         {profile && (
           <div className="mt-4 flex justify-center border-t border-hair pt-4 text-left">
-            <ReliabilityRing score={overview.reliabilityScore} shiftsCompleted={overview.shiftsCompleted} size={84} />
+            <ReliabilityRing score={overview.reliabilityScore} shiftsCompleted={overview.shiftsCompleted} size={84} t={ft.ring} />
           </div>
         )}
       </div>
@@ -191,7 +194,7 @@ export default async function AccountPage() {
           href="/dashboard/verificatie"
           className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-warn/40 bg-warn/5 px-4 py-3.5 text-sm"
         >
-          <span className="font-semibold text-ink">Rond je profiel af om klussen aan te nemen</span>
+          <span className="font-semibold text-ink">{t.finishProfile}</span>
           <span className="text-neutralx-400">›</span>
         </Link>
       )}
@@ -203,8 +206,8 @@ export default async function AccountPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-trust-ink">Beveilig je account en je uitbetalingen</span>
-              <span className="block text-xs text-neutralx-600">Zet tweestapsverificatie aan — 1 minuut, met een app op je telefoon.</span>
+              <span className="block text-sm font-semibold text-trust-ink">{t.secureTitle}</span>
+              <span className="block text-xs text-neutralx-600">{t.secureBody}</span>
             </span>
             <span className="text-trust" aria-hidden>→</span>
           </Link>
@@ -239,7 +242,7 @@ export default async function AccountPage() {
             type="submit"
             className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-crit hover:bg-crit/5"
           >
-            Uitloggen
+            {t.logout}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
                 d="M16 17l5-5-5-5M21 12H9M12 19H6a2 2 0 01-2-2V7a2 2 0 012-2h6"

@@ -1,15 +1,20 @@
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
+
 /**
  * Betrouwbaarheidsring — the freelancer's own reliability score, visible with
- * a short explanation + recovery path. Presentational (server-safe).
+ * a short explanation + recovery path. Presentational (server-safe); texts come
+ * from the freelancer dictionary (`ring`) so they follow the app language.
  */
 export function ReliabilityRing({
   score,
   shiftsCompleted,
   size = 92,
+  t,
 }: {
   score: number;
   shiftsCompleted: number;
   size?: number;
+  t: FreelancerDict["ring"];
 }) {
   const pct = Math.round(Math.max(0, Math.min(1, score)) * 100);
   const r = (size - 12) / 2;
@@ -21,12 +26,12 @@ export function ReliabilityRing({
   // een misser telt na 3 goed afgeronde diensten nog half, na een half jaar ook.
   const band =
     pct >= 90
-      ? { label: "Uitstekend", note: "Je krijgt het meeste en beste aanbod." }
+      ? { label: t.excellent, note: t.excellentNote }
       : pct >= 75
-        ? { label: "Goed", note: "Elke dienst die je goed afmaakt, laat een eerdere misser minder zwaar wegen." }
+        ? { label: t.good, note: t.goodNote }
         : pct >= 60
-          ? { label: "Let op", note: "Onder de 60 daalt je aanbod. Na 3 goede diensten telt een misser nog maar half." }
-          : { label: "Beperkt", note: "Je aanbod is tijdelijk lager. Elke dienst die je goed afmaakt, helpt je herstellen." };
+          ? { label: t.attention, note: t.attentionNote }
+          : { label: t.limited, note: t.limitedNote };
 
   return (
     <div className="flex items-center gap-4">
@@ -47,13 +52,13 @@ export function ReliabilityRing({
           {pct}
         </text>
         <text x="50%" y="64%" textAnchor="middle" fontSize="8" fill="#8A93A0">
-          betrouwbaar
+          {t.label}
         </text>
       </svg>
       <div>
         <p className="text-sm font-semibold text-ink">{band.label}</p>
         <p className="mt-0.5 max-w-xs text-xs leading-relaxed text-neutralx-600">{band.note}</p>
-        <p className="mt-1 text-xs text-neutralx-400">{shiftsCompleted} diensten voltooid</p>
+        <p className="mt-1 text-xs text-neutralx-400">{t.completed(shiftsCompleted)}</p>
       </div>
     </div>
   );
