@@ -7,6 +7,8 @@ import { websiteBewerkbaar, type RijschoolWebsite } from "@/lib/rijschool/websit
 import { saldiVan, saldoVan } from "@/lib/rijschool/store";
 import { siteUrl } from "@/lib/rijschool/mail";
 import { onlineBetalenAan } from "@/lib/rijschool/betalen";
+import { automailInstellingen } from "@/lib/rijschool/automailer";
+import type { AutomailInstellingen } from "@/lib/rijschool/automail-soorten";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
@@ -226,10 +228,12 @@ export interface BeheerWeergave {
   producten: ProductRij[];
   leerlingen: LeerlingRij[];
   betalingen: BetalingRij[];
+  /** welke mails de automailer vanzelf stuurt (lib/rijschool/automailer.ts) */
+  automails: AutomailInstellingen;
 }
 
 export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
-  const [instructeurs, voertuigen, producten, leerlingen, betalingen] = await Promise.all([
+  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails] = await Promise.all([
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
@@ -240,10 +244,12 @@ export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
+    automailInstellingen(r.id),
   ]);
   const ids = leerlingen.map((l) => l.id);
   const [saldi, voortgangen] = await Promise.all([saldiVan(ids), voortgangVan(ids)]);
   return {
+    automails,
     rijschool: rijschoolInfo(r),
     website: websiteBewerkbaar(r.website),
     instructeurs: instructeurs.map(instructeurRij),

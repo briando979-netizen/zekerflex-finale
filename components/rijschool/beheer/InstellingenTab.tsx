@@ -5,6 +5,7 @@ import type { BeheerWeergave } from "@/lib/rijschool/weergave";
 import type { Doe } from "@/components/rijschool/beheer/RijschoolBeheer";
 import { foutVan } from "@/components/rijschool/api";
 import { Melding, Schakelaar, Veld } from "@/components/rijschool/ui";
+import { AUTOMAILS } from "@/lib/rijschool/automail-soorten";
 
 // Gegevens en spelregels van de rijschool, en de knop om de website online te
 // zetten. Adres en KVK-nummer horen volgens de wet op een zakelijke website.
@@ -108,6 +109,41 @@ export function InstellingenTab({ data, doe }: { data: BeheerWeergave; doe: Doe 
           {bezig ? "Bezig…" : "Opslaan"}
         </button>
       </div>
+      <Automailer data={data} doe={doe} />
     </form>
+  );
+}
+
+// De automailer: elke schakelaar slaat meteen op (los van de knop Opslaan hierboven).
+function Automailer({ data, doe }: { data: BeheerWeergave; doe: Doe }) {
+  const [fout, setFout] = useState<string | null>(null);
+  return (
+    <section className="card space-y-3 p-5 lg:col-span-2">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">Automatische mails</h2>
+        <p className="text-sm text-neutralx-600">
+          ZekerFlex stuurt deze mails vanzelf namens je rijschool, elke middag. Antwoorden komen bij jou binnen. De herinnering de avond voor een les gaat altijd.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {AUTOMAILS.map((m) => (
+          <Schakelaar
+            key={m.id}
+            label={m.titel}
+            uitleg={m.uitleg}
+            aan={data.automails[m.id]}
+            onChange={async (aan) => {
+              setFout(null);
+              try {
+                await doe({ actie: "automail", id: m.id, aan });
+              } catch (err) {
+                setFout(foutVan(err));
+              }
+            }}
+          />
+        ))}
+      </div>
+      <Melding fout={fout} />
+    </section>
   );
 }

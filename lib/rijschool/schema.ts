@@ -168,6 +168,7 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("lesStatus"), id, status: z.enum(["GEPLAND", "VOLTOOID", "GEANNULEERD", "NIET_VERSCHENEN"]), mail: z.boolean() }),
   z.object({ actie: z.literal("betaling"), data: betalingSchema }),
   z.object({ actie: z.literal("correctie"), data: correctieSchema }),
+  z.object({ actie: z.literal("automail"), id: z.enum(["tegoed", "proefles", "stil", "geslaagd"]), aan: z.boolean() }),
 ]);
 
 export type BeheerActie = z.infer<typeof beheerActieSchema>;

@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { sendMail, type MailInput } from "@/lib/mail";
 import { lesMoment, SOORT_LABEL } from "@/lib/rijschool/format";
+import { tegoedTekst } from "@/lib/rijschool/tegoed";
 
 // ---------------------------------------------------------------------------
 // Mails die ZekerFlex namens een rijschool stuurt: uitnodiging om een
@@ -151,6 +152,79 @@ export function herinneringMail(r: School & Pick<Rijschool, "annuleerUren">, lee
        ${les.ophaaladres ? alinea(`Ophaaladres: ${esc(les.ophaaladres)}`) : ""}
        ${knop(r, link, "Huiswerk bekijken")}
        ${alinea(esc(verhinderd))}`,
+    ),
+  );
+}
+
+// --- automailer (lib/rijschool/automailer.ts) -------------------------------------
+
+const afmelden = (r: School) => `<p style="margin:0;font-size:12px;color:#667469">Liever geen herinneringen meer? Laat het ${esc(r.naam)} weten door op deze mail te antwoorden.</p>`;
+const afmeldenTekst = (r: School) => `Liever geen herinneringen meer? Laat het ${r.naam} weten door op deze mail te antwoorden.`;
+
+export function tegoedBijnaOpMail(r: School & Pick<Rijschool, "lesMinuten">, leerling: { naam: string; email: string }, overMin: number): MailInput {
+  const stand = overMin > 0 ? `nog ${tegoedTekst(overMin, r.lesMinuten)} tegoed` : "geen tegoed meer";
+  const link = siteUrl(r, "/leerling");
+  return mail(
+    r,
+    leerling.email,
+    `Je tegoed is bijna op`,
+    `Hoi ${voornaam(leerling.naam)},\n\nNa je laatste les heb je ${stand}. Wil je door zonder pauze? Kies een nieuw pakket in de app of vraag het je instructeur: ${link}\n\n${afmeldenTekst(r)}`,
+    omlijsting(
+      r,
+      "Je tegoed is bijna op",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, na je laatste les heb je <strong>${esc(stand)}</strong>. Wil je door zonder pauze? Kies een nieuw pakket in de app of vraag het je instructeur.`)}
+       ${knop(r, link, "Pakketten bekijken")}
+       ${afmelden(r)}`,
+    ),
+  );
+}
+
+export function naProeflesMail(r: School & Pick<Rijschool, "online">, leerling: { naam: string; email: string }): MailInput {
+  const link = r.online ? siteUrl(r, "#pakketten") : siteUrl(r, "/leerling");
+  return mail(
+    r,
+    leerling.email,
+    `Bedankt voor je proefles bij ${r.naam}`,
+    `Hoi ${voornaam(leerling.naam)},\n\nBedankt voor je proefles! We hopen dat je er zin in hebt gekregen. Wil je verder? Kies een pakket dat bij je past, of antwoord op deze mail met je vragen: ${link}${r.telefoon ? `\n\nBellen kan ook: ${r.telefoon}` : ""}`,
+    omlijsting(
+      r,
+      "Bedankt voor je proefles",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, bedankt voor je proefles! We hopen dat je er zin in hebt gekregen. Wil je verder? Kies een pakket dat bij je past, of antwoord op deze mail met je vragen.`)}
+       ${knop(r, link, "Pakketten bekijken")}
+       ${r.telefoon ? alinea(`Bellen kan ook: ${esc(r.telefoon)}`) : ""}`,
+    ),
+  );
+}
+
+export function langNietGeredenMail(r: School, leerling: { naam: string; email: string }): MailInput {
+  const link = siteUrl(r, "/leerling");
+  return mail(
+    r,
+    leerling.email,
+    `Zullen we je volgende les plannen?`,
+    `Hoi ${voornaam(leerling.naam)},\n\nJe hebt al even niet gereden en er staat nog geen les gepland. Regelmatig rijden houdt het vertrouwd. Plan je volgende les in de app, of antwoord op deze mail en we zoeken samen een moment: ${link}\n\n${afmeldenTekst(r)}`,
+    omlijsting(
+      r,
+      "Zullen we je volgende les plannen?",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, je hebt al even niet gereden en er staat nog geen les gepland. Regelmatig rijden houdt het vertrouwd. Plan je volgende les in de app, of antwoord op deze mail en we zoeken samen een moment.`)}
+       ${knop(r, link, "Naar de app")}
+       ${afmelden(r)}`,
+    ),
+  );
+}
+
+export function geslaagdMail(r: School, leerling: { naam: string; email: string }): MailInput {
+  return mail(
+    r,
+    leerling.email,
+    `Gefeliciteerd met je rijbewijs!`,
+    `Hoi ${voornaam(leerling.naam)},\n\nGefeliciteerd, je bent geslaagd! Heel goed gedaan. Bedankt dat je bij ${r.naam} hebt leren rijden. Kennen je vrienden of familie iemand die ook wil beginnen? We helpen ze graag.\n\nRij voorzichtig!`,
+    omlijsting(
+      r,
+      "Gefeliciteerd, je bent geslaagd!",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, gefeliciteerd met je rijbewijs! Heel goed gedaan. Bedankt dat je bij ${esc(r.naam)} hebt leren rijden.`)}
+       ${alinea("Kennen je vrienden of familie iemand die ook wil beginnen? We helpen ze graag.")}
+       ${alinea("Rij voorzichtig!")}`,
     ),
   );
 }

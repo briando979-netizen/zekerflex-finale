@@ -20,6 +20,7 @@ import {
 import { beheerWeergave, lessenIn } from "@/lib/rijschool/weergave";
 import { isDatum, moment } from "@/lib/rijschool/planning";
 import type { Rijschool } from "@prisma/client";
+import { stuurGeslaagd, zetAutomail } from "@/lib/rijschool/automailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,7 +127,10 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Reco
       if (a.data.instructeurId) await eigenInstructeur(r, a.data.instructeurId);
       const data = { ...a.data, geboortedatum: alleenDatum(a.data.geboortedatum), examenDatum: alleenDatum(a.data.examenDatum) };
       if (a.id) {
-        await prisma.rijschoolLeerling.update({ where: { id: (await eigenLeerling(r, a.id)).id }, data });
+        const voor = await eigenLeerling(r, a.id);
+        const bij = await prisma.rijschoolLeerling.update({ where: { id: voor.id }, data });
+        // net geslaagd: de felicitatie van de automailer (als die aanstaat)
+        if (bij.status === "GESLAAGD" && voor.status !== "GESLAAGD") return { geslaagdGemaild: await stuurGeslaagd(r, bij) };
         return {};
       }
       const nieuw = await prisma.rijschoolLeerling.create({ data: { ...data, rijschoolId: r.id } });
@@ -162,6 +166,9 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Reco
       return {};
     case "correctie":
       await corrigeerTegoed(r, a.data, door);
+      return {};
+    case "automail":
+      await zetAutomail(r.id, a.id, a.aan);
       return {};
   }
 }
