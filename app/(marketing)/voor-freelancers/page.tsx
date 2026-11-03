@@ -133,6 +133,12 @@ export default function VoorFreelancersPage() {
         <div className="mt-10">
           <FaqList items={FAQ} />
         </div>
+        <p className="mt-8 text-[0.975rem] text-neutralx-600">
+          Twijfel je welk uurtarief je moet vragen?{" "}
+          <Link href="/rekentools/zzp-uurtarief-berekenen" className="font-semibold text-brand-600 underline">
+            Bereken je uurtarief
+          </Link>
+        </p>
       </Section>
 
       <CtaBand

@@ -1,38 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
+import { tierFor, tierRateCents, type VolumeTier } from "@/lib/pricing/tiers";
 
 // ---------------------------------------------------------------------------
 // Staffelkorting on the employer platform fee: the more hours a client has
 // worked through ZekerFlex this calendar month, the lower the fee per hour
 // for the next ones. Tiers are by hours already approved this month, so a
 // client always knows its rate up front and it never changes retroactively.
+// The tiers themselves live in lib/pricing/tiers.ts (no db/env, browser-safe).
 // ---------------------------------------------------------------------------
 
-export interface VolumeTier {
-  name: string;
-  fromHours: number;
-  /** fraction of the base fee (1 = full price) */
-  factor: number;
-}
-
-export const VOLUME_TIERS: VolumeTier[] = [
-  { name: "Basis", fromHours: 0, factor: 1 },
-  // Exact fractions of the € 3,50 base so the advertised round prices come out
-  // to the cent (0.93 etc. gave € 3,26 / 3,01 / 2,77 / 2,49).
-  { name: "Groei", fromHours: 500, factor: 325 / 350 }, // € 3,25
-  { name: "Volume", fromHours: 2_000, factor: 300 / 350 }, // € 3,00
-  { name: "Enterprise", fromHours: 10_000, factor: 275 / 350 }, // € 2,75
-  { name: "Mega", fromHours: 50_000, factor: 250 / 350 }, // € 2,50
-];
-
-export function tierFor(monthHours: number): { tier: VolumeTier; next: VolumeTier | null } {
-  let i = 0;
-  while (i + 1 < VOLUME_TIERS.length && monthHours >= VOLUME_TIERS[i + 1]!.fromHours) i++;
-  return { tier: VOLUME_TIERS[i]!, next: VOLUME_TIERS[i + 1] ?? null };
-}
+export { VOLUME_TIERS, tierFor, type VolumeTier } from "@/lib/pricing/tiers";
 
 export function feePerHourFor(monthHours: number, baseCents = env.PLATFORM_FEE_PER_HOUR_CENTS): number {
-  return Math.round(baseCents * tierFor(monthHours).tier.factor);
+  return tierRateCents(tierFor(monthHours).tier, baseCents);
 }
 
 /** Hours approved at this client's locations since the start of the month. */

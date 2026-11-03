@@ -1,14 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-const TIERS = [
-  { fromHours: 0, rateCents: 350 },
-  { fromHours: 500, rateCents: 325 },
-  { fromHours: 2_000, rateCents: 300 },
-  { fromHours: 10_000, rateCents: 275 },
-  { fromHours: 50_000, rateCents: 250 },
-] as const;
+import { monthlyPlatformFeeCents } from "@/lib/pricing/tiers";
 
 const euro = new Intl.NumberFormat("nl-NL", {
   style: "currency",
@@ -18,21 +11,7 @@ const euro = new Intl.NumberFormat("nl-NL", {
 export function PlatformFeeEstimate() {
   const [hours, setHours] = useState(100);
   const estimate = useMemo(() => {
-    let remaining = hours;
-    let previousThreshold = 0;
-    let subtotalCents = 0;
-
-    for (const [index, tier] of TIERS.entries()) {
-      const nextTier = TIERS[index + 1];
-      const tierCapacity = nextTier ? nextTier.fromHours - previousThreshold : remaining;
-      const tierHours = Math.min(remaining, tierCapacity);
-      subtotalCents += tierHours * tier.rateCents;
-      remaining -= tierHours;
-      previousThreshold = tier.fromHours;
-
-      if (remaining <= 0) break;
-    }
-
+    const subtotalCents = monthlyPlatformFeeCents(hours);
     return { subtotalCents, vatCents: Math.round(subtotalCents * 0.21) };
   }, [hours]);
 

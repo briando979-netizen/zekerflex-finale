@@ -114,6 +114,12 @@ export default function PrijzenPage() {
           urengoedkeuring, 2% bij indiening binnen 3 werkdagen, of direct).
         </p>
         <PlatformFeeEstimate />
+        <p className="mt-5 text-center text-sm text-neutralx-600">
+          Benieuwd wat je bespaart ten opzichte van een uitzendbureau?{" "}
+          <Link href="/rekentools/kosten-uitzendkracht-berekenen" className="font-semibold text-brand-600 underline">
+            Vergelijk de kosten per uur
+          </Link>
+        </p>
       </Section>
 
       <Section tone="soft">

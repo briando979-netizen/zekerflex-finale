@@ -35,6 +35,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/kennis/wet-dba", label: "Wet DBA" },
       { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },
       { href: "/kennis/whitepapers", label: "Whitepapers" },
+      { href: "/rekentools", label: "Gratis rekentools" },
       { href: "/kennis/blog", label: "Blog" },
       { href: "/kennis/faq", label: "Veelgestelde vragen" },
     ],
