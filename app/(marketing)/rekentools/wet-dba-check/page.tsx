@@ -63,8 +63,8 @@ export default function WetDbaCheckPage() {
             Wet DBA-check
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            Tien vragen over hoe je met een zzp&apos;er samenwerkt. Je ziet meteen waar het op loondienst lijkt en wat je
-            eraan kunt doen.
+            Tien vragen over hoe een zzp-opdracht in de praktijk loopt, voor opdrachtgevers én zzp&apos;ers. Je ziet meteen
+            waar het op loondienst lijkt en wat je eraan kunt doen.
           </p>
         </div>
       </div>
