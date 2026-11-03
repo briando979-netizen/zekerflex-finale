@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 // Kleine bouwstenen voor het tabblad App: een genummerde stap zoals in Play
 // Console, een kopieerknop en een knop die eerst om bevestiging vraagt.
 
 export function Stap({ nr, titel, klaar, open, children }: { nr: number; titel: string; klaar: boolean; open: boolean; children: ReactNode }) {
   const [uit, setUit] = useState(open);
+  // de stap die aan de beurt komt, gaat vanzelf open (dichtklappen blijft aan de gebruiker)
+  useEffect(() => {
+    if (open) setUit(true);
+  }, [open]);
   return (
     <section className="rounded-xl border border-hair bg-white">
       <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left" aria-expanded={uit} onClick={() => setUit(!uit)}>
