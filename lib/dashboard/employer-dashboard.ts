@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { amsterdamStartOfDay } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Shopify-stijl dashboardcijfers voor de OPDRACHTGEVER, afgeschermd op de eigen
@@ -40,7 +41,8 @@ export async function employerDashboardStats(principal: Principal, now = new Dat
   const weekAgo = new Date(now.getTime() - 7 * DAY);
   const twoWeeksAgo = new Date(now.getTime() - 14 * DAY);
   const monthAgo = new Date(now.getTime() - 30 * DAY);
-  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayStart = amsterdamStartOfDay(now); // vandaag in Nederland, de server draait in UTC
+  const dayEnd = amsterdamStartOfDay(now, 1);
 
   const [spendWeek, spendPrev, invoices, timesheets, shiftsTotal, shiftsFilled, toApprove, activeToday, recentTs, recentAssign] = await Promise.all([
     safe(() => prisma.invoice.aggregate({ where: { recipientTenantId: { in: scope.tenantIds }, status: { in: ["PAID", "ISSUED"] }, createdAt: { gte: weekAgo } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
@@ -50,7 +52,7 @@ export async function employerDashboardStats(principal: Principal, now = new Dat
     safe(() => prisma.shift.count({ where: { branch: branchFilter, startsAt: { gte: monthAgo, lt: now } } }), 0),
     safe(() => prisma.shift.count({ where: { branch: branchFilter, startsAt: { gte: monthAgo, lt: now }, status: "FILLED" } }), 0),
     safe(() => prisma.timesheet.count({ where: { branch: branchFilter, status: "SUBMITTED" } }), 0),
-    safe(() => prisma.shiftAssignment.findMany({ where: { cancelledAt: null, shift: { branch: branchFilter, startsAt: { gte: dayStart, lt: new Date(dayStart.getTime() + DAY) } } }, select: { freelancerId: true }, take: 5000 }), [] as { freelancerId: string }[]),
+    safe(() => prisma.shiftAssignment.findMany({ where: { cancelledAt: null, shift: { branch: branchFilter, startsAt: { gte: dayStart, lt: dayEnd } } }, select: { freelancerId: true }, take: 5000 }), [] as { freelancerId: string }[]),
     safe(
       () => prisma.timesheet.findMany({ where: { branch: branchFilter, status: "APPROVED", approvedAt: { not: null } }, orderBy: { approvedAt: "desc" }, take: 6, select: { approvedAt: true, freelancer: { select: { user: { select: { fullName: true } } } }, branch: { select: { name: true } } } }),
       [] as { approvedAt: Date | null; freelancer: { user: { fullName: string } }; branch: { name: string } }[],

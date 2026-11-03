@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Principal } from "@/lib/auth";
 import { hasRole } from "@/lib/auth";
+import { amsterdamStartOfMonth } from "@/lib/time/amsterdam";
 
 export interface EmployerScope {
   tenantIds: string[];
@@ -81,7 +82,7 @@ export interface EmployerOverview {
 export async function getEmployerOverview(p: Principal): Promise<EmployerOverview> {
   const scope = await resolveEmployerScope(p);
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStart = amsterdamStartOfMonth(now); // de server draait in UTC
 
   const branchFilter = scope.branchIds
     ? { id: { in: scope.branchIds } }

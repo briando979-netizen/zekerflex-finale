@@ -3,6 +3,7 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { listCertificates, CERT_TYPES } from "@/lib/certificates/store";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Profielkaart van een freelancer voor de opdrachtgever — te zien zodra de
@@ -103,7 +104,7 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
       title: a.shift.title,
       city: a.shift.branch.city,
       company: a.shift.branch.name,
-      monthLabel: `${MONTHS_NL[a.shift.startsAt.getMonth()]} ${a.shift.startsAt.getFullYear()}`,
+      monthLabel: (({ month, year }) => `${MONTHS_NL[month - 1]} ${year}`)(amsterdamParts(a.shift.startsAt)),
       rateCents: a.shift.hourlyRateCents,
     }));
 
