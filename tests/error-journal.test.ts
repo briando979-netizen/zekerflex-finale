@@ -12,6 +12,9 @@ vi.mock("@/lib/storage/kv", () => ({
   kvListValues: async (prefix: string) => [...store.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => structuredClone(v)),
 }));
 
+const alertOwnerLater = vi.fn();
+vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (...a: unknown[]) => alertOwnerLater(...a) }));
+
 const j = await import("@/lib/ops/error-journal");
 const { logger, setLogSink } = await import("@/lib/logger");
 const { AppError, setUnexpectedErrorReporter, toErrorBody } = await import("@/lib/errors");
@@ -26,6 +29,7 @@ beforeEach(async () => {
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   await j.flushJournal();
   store.clear();
+  alertOwnerLater.mockClear();
 });
 afterEach(() => {
   setLogSink(null);
@@ -119,6 +123,38 @@ describe("verzamelen en bewaren", () => {
     expect(await j.listErrorGroups()).toHaveLength(1);
     expect(await j.clearErrorGroups("alles")).toBe(1);
     expect(await j.listErrorGroups()).toHaveLength(0);
+  });
+});
+
+describe("de eigenaar hoort het als er iets nieuws misgaat", () => {
+  it("één melding bij een nieuwe soort fout, niet bij herhaling of waarschuwingen", async () => {
+    j.journal("error", "betaling kon niet worden verwerkt", { error: new Error("timeout") });
+    j.journal("warn", "langzaam antwoord van KVK");
+    await j.flushJournal();
+    expect(alertOwnerLater).toHaveBeenCalledTimes(1);
+    expect(alertOwnerLater.mock.calls[0]![0]).toMatchObject({ key: "fouten:nieuw", severity: "warning", title: "Nieuwe soort fout op de site", url: "/admin/systeem#fouten" });
+    expect(alertOwnerLater.mock.calls[0]![0].detail).toContain("betaling kon niet worden verwerkt · timeout");
+
+    j.journal("error", "betaling kon niet worden verwerkt", { error: new Error("timeout") });
+    await j.flushJournal();
+    expect(alertOwnerLater).toHaveBeenCalledTimes(1);
+  });
+
+  it("meerdere nieuwe soorten tegelijk: één bericht met de eerste drie", async () => {
+    for (const w of ["een", "twee", "drie", "vier"]) j.journal("error", `stuk ${w}`);
+    await j.flushJournal();
+    expect(alertOwnerLater).toHaveBeenCalledTimes(1);
+    const a = alertOwnerLater.mock.calls[0]![0];
+    expect(a.title).toBe("4 nieuwe soorten fouten op de site");
+    expect(a.detail).toContain("… en nog 1");
+  });
+
+  it("geen melding voor eigen testmeldingen of een mislukte melding (geen kringloop)", async () => {
+    j.journal("error", "client error boundary", { clientMessage: "ZF-TEST foutenlogboek abc" });
+    j.journal("error", "owner alert failed", { key: "fouten:nieuw" });
+    await j.flushJournal();
+    expect(alertOwnerLater).not.toHaveBeenCalled();
+    expect(j.worthAlerting({ id: "overloop", level: "error", message: "x", reason: null })).toBe(false);
   });
 });
 

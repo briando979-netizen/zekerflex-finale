@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { env } from "@/lib/env";
 import { setUnexpectedErrorReporter } from "@/lib/errors";
 import { logger, setLogSink } from "@/lib/logger";
+import { alertOwnerLater } from "@/lib/ops/alert";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
@@ -179,6 +180,29 @@ function merge(old: ErrorGroup | null, add: ErrorGroup): ErrorGroup {
   return { ...old, count: old.count + add.count, lastAt: add.lastAt > old.lastAt ? add.lastAt : old.lastAt, samples: [...old.samples, ...add.samples].slice(-KEEP_SAMPLES) };
 }
 
+// --- de eigenaar laten weten dat er iets nieuws misgaat --------------------------
+
+const ALERT_KEY = "fouten:nieuw";
+
+/** Only a new kind of real error: never our own ZF-TEST messages, and never a failing alert itself (that would loop). */
+export function worthAlerting(g: Pick<ErrorGroup, "id" | "level" | "message" | "reason">): boolean {
+  if (g.level !== "error" || g.id === OVERFLOW_ID || g.message === "owner alert failed") return false;
+  return !/ZF-TEST/i.test(`${g.message} ${g.reason ?? ""}`);
+}
+
+/** Push + mail to the platform admins (lib/ops/alert.ts), at most once every 6 hours for all of them together. */
+function alertNewErrors(groups: ErrorGroup[]): void {
+  const n = groups.length;
+  const lines = groups.slice(0, 3).map((g) => [g.message, g.reason, g.route].filter(Boolean).join(" · ").slice(0, 140));
+  alertOwnerLater({
+    key: ALERT_KEY,
+    severity: "warning",
+    title: n === 1 ? "Nieuwe soort fout op de site" : `${n} nieuwe soorten fouten op de site`,
+    detail: `Er ging iets mis dat nog niet eerder voorkwam. Bekijk het in Beheer → Systeem → Foutmeldingen; daar kun je het ook door de Bouwer laten oplossen.\n${lines.join("\n")}${n > 3 ? `\n… en nog ${n - 3}` : ""}`,
+    url: "/admin/systeem#fouten",
+  });
+}
+
 /** Write what was collected. One flush at a time; failures stay quiet (the console still has the line). */
 export async function flushJournal(now = Date.now()): Promise<void> {
   if (state.flushing) return state.flushing;
@@ -191,15 +215,20 @@ export async function flushJournal(now = Date.now()): Promise<void> {
   }
   if (batch.length === 0) return;
   state.flushing = (async () => {
+    const fresh: ErrorGroup[] = [];
     for (const add of batch) {
       try {
         const old = await kvGet<ErrorGroup>(KEY(add.id));
-        if (!old) state.createdSincePrune += 1;
+        if (!old) {
+          state.createdSincePrune += 1;
+          if (worthAlerting(add)) fresh.push(add);
+        }
         await kvSet(KEY(add.id), merge(old, add));
       } catch {
         // the database is what's broken; logging that here would only loop
       }
     }
+    if (fresh.length) alertNewErrors(fresh);
     if (now - state.lastPrune >= PRUNE_EVERY_MS || state.createdSincePrune >= PRUNE_AFTER_NEW) await pruneJournal(now).catch(() => undefined);
   })().finally(() => {
     state.flushing = null;
