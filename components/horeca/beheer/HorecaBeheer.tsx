@@ -8,6 +8,8 @@ import { euro } from "@/lib/horeca/weergave";
 import { MenukaartTab } from "@/components/horeca/beheer/MenukaartTab";
 import { ModulesTab } from "@/components/horeca/beheer/ModulesTab";
 import { GegevensTab } from "@/components/horeca/beheer/GegevensTab";
+import { BestellingenTab } from "@/components/horeca/beheer/BestellingenTab";
+import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
 import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types";
 
 // ---------------------------------------------------------------------------
@@ -17,9 +19,16 @@ import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-type Tab = "overzicht" | "menukaart" | "modules" | "gegevens";
-const TABS: { id: Tab; label: string }[] = [
+type Tab = "overzicht" | "bestellingen" | "tafels" | "menukaart" | "modules" | "gegevens";
+/** De tabbladen; die van een module alleen als die module aan staat. */
+const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
   { id: "overzicht", label: "Overzicht" },
+  ...(modules.includes("bestellen")
+    ? [
+        { id: "bestellingen" as const, label: "Bestellingen" },
+        { id: "tafels" as const, label: "Tafels & QR" },
+      ]
+    : []),
   { id: "menukaart", label: "Menukaart" },
   { id: "modules", label: "Modules & abonnement" },
   { id: "gegevens", label: "Gegevens & openingstijden" },
@@ -84,10 +93,12 @@ export function HorecaBeheer() {
         </div>
       </section>
 
-      <Tabs tabs={TABS} actief={tab} onKies={setTab} label="Horeca-beheer" />
+      <Tabs tabs={tabsVoor(z.modules)} actief={tab} onKies={setTab} label="Horeca-beheer" />
       <Melding fout={fout} ok={ok} />
 
       {tab === "overzicht" && <Overzicht data={data} naar={setTab} />}
+      {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
+      {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}
       {tab === "modules" && <ModulesTab data={data} doe={doe} />}
       {tab === "gegevens" && <GegevensTab data={data} doe={doe} />}

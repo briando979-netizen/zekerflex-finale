@@ -17,8 +17,9 @@ import {
   zetOnline,
   zetOpeningstijden,
 } from "@/lib/horeca/store";
-import { maandbedrag } from "@/lib/horeca/modules";
+import { heeftModule, maandbedrag, MODULES, type ModuleSleutel } from "@/lib/horeca/modules";
 import { zaakWeergave } from "@/lib/horeca/weergave";
+import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -34,16 +35,25 @@ const fout = (err: unknown) => {
 };
 
 async function alles(zaak: HorecaZaak) {
-  const kaart = await menukaart(zaak.id);
-  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, maand: maandbedrag(zaak.modules) };
+  const [kaart, tafels] = await Promise.all([menukaart(zaak.id), tafelsVan(zaak.id)]);
+  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules) };
 }
 
-export async function GET(): Promise<NextResponse> {
+const eisModule = (zaak: HorecaZaak, m: ModuleSleutel) => {
+  if (!heeftModule(zaak, m)) throw AppError.precondition(`Zet eerst de module ${MODULES[m].naam} aan.`);
+};
+
+// GET → alles voor het beheer; ?alleen=bestellingen → alleen de bestellingen (keukenscherm ververst vaak)
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { p, tenantId, zaak } = await beheerContext();
     if (!zaak) {
       const d = await companyDefaults(tenantId, p);
       return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
+    }
+    if (new URL(request.url).searchParams.get("alleen") === "bestellingen") {
+      eisModule(zaak, "bestellen");
+      return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
     }
     return NextResponse.json(await alles(zaak));
   } catch (err) {
@@ -95,6 +105,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       case "beschikbaar":
         await zetBeschikbaar(zaak, a.id, a.beschikbaar);
         break;
+      case "tafel": {
+        const { actie: _a, ...t } = a;
+        await bewaarTafel(zaak, t);
+        break;
+      }
+      case "tafel-weg":
+        await verwijderTafel(zaak, a.id);
+        break;
+      case "tafel-code":
+        await vernieuwCode(zaak, a.id);
+        break;
+      case "bestelling": {
+        eisModule(zaak, "bestellen");
+        const b = await plaatsBestelling(zaak, { tafelId: a.tafelId, mand: a.mand, opmerking: a.opmerking, naam: a.naam, bron: "bediening" });
+        return NextResponse.json({ ...(await alles(zaak)), nummer: b.nummer });
+      }
+      case "bestelstatus":
+        eisModule(zaak, "bestellen");
+        await zetBestelStatus(zaak, a.id, a.status);
+        return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
     }
     return NextResponse.json(await alles(nu));
   } catch (err) {

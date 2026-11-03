@@ -48,7 +48,7 @@ export const MODULES: Record<ModuleSleutel, Module> = {
     punten: ["Keuken- en barscherm met status", "Bediening voert zelf bestellingen in", "Volgnummer per bestelling"],
     prijsCentPerMaand: 1900,
     vereist: [],
-    klaar: false,
+    klaar: true,
   },
   qr: {
     sleutel: "qr",
@@ -57,7 +57,7 @@ export const MODULES: Record<ModuleSleutel, Module> = {
     punten: ["QR-code per tafel om te printen", "Gast ziet direct wat er is en wat het kost", "Bestelling gaat meteen naar keuken of bar"],
     prijsCentPerMaand: 1900,
     vereist: ["bestellen"],
-    klaar: false,
+    klaar: true,
   },
   betalen: {
     sleutel: "betalen",

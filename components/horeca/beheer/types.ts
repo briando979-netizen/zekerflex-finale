@@ -22,11 +22,21 @@ export interface Item {
   volgorde: number;
 }
 
+export interface Tafel {
+  id: string;
+  naam: string;
+  plaatsen: number;
+  zone: string;
+  code: string;
+  actief: boolean;
+}
+
 export interface BeheerData {
   aan: true;
   zaak: ZaakWeergave;
   categorieen: Categorie[];
   items: Item[];
+  tafels: Tafel[];
   maand: { totaalCent: number; losCent: number; bundel: boolean };
 }
 

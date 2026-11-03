@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { isTijd } from "@/lib/horeca/tijden";
 import { SOORTEN } from "@/lib/horeca/soorten";
+import { MAX_AANTAL, MAX_REGELS } from "@/lib/horeca/bestellen";
 
 // Invoer van het horecabeheer (/api/horeca/beheer). Eén POST met een "actie";
 // alles wat de zaak wijzigt, gaat langs deze schema's.
@@ -11,6 +12,10 @@ const tekst = (max: number) => z.string().trim().max(max);
 const kleur = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Kies een kleur.");
 const tijd = z.string().refine(isTijd, "Gebruik UU:MM.");
 const id = z.string().min(1).max(40);
+const mandSchema = z
+  .array(z.object({ itemId: id, aantal: z.number().int().min(1).max(MAX_AANTAL), opmerking: tekst(140).optional() }))
+  .min(1, "Je mandje is leeg.")
+  .max(MAX_REGELS);
 
 export const aanzettenSchema = z.object({
   actie: z.literal("aanzetten"),
@@ -59,7 +64,22 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   }),
   z.object({ actie: z.literal("item-weg"), id }),
   z.object({ actie: z.literal("beschikbaar"), id, beschikbaar: z.boolean() }),
+  z.object({
+    actie: z.literal("tafel"),
+    id: id.optional(),
+    naam: tekst(30).pipe(z.string().min(1, "Geef de tafel een naam of nummer.")),
+    plaatsen: z.number().int().min(1).max(40),
+    zone: tekst(30),
+    actief: z.boolean(),
+  }),
+  z.object({ actie: z.literal("tafel-weg"), id }),
+  z.object({ actie: z.literal("tafel-code"), id }),
+  z.object({ actie: z.literal("bestelling"), tafelId: id.nullable(), mand: mandSchema, opmerking: tekst(300), naam: tekst(60) }),
+  z.object({ actie: z.literal("bestelstatus"), id, status: z.enum(["NIEUW", "IN_BEREIDING", "KLAAR", "GESERVEERD", "GEANNULEERD"]) }),
 ]);
+
+/** Een gast bestelt via de QR-code op tafel (/api/horeca/site/<slug>/bestellen). */
+export const gastBestellingSchema = z.object({ code: z.string().min(6).max(40), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") });
 
 export type BeheerActie = z.infer<typeof beheerActieSchema>;
 

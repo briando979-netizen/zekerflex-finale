@@ -42,6 +42,7 @@ const PUBLIC_PREFIXES = [
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
   "/api/kaart", // ZekerFlex Kaart: adres zoeken (PDOK, IP-begrensd) en luchtfoto-tegels (PDOK, alleen NL); alleen lezen, geen gegevens van gebruikers
+  "/api/horeca/site", // horecasite: bestellen via de QR-code op tafel (IP-begrensd, tafelcode verplicht) en de bestelling volgen; elke route controleert zelf (lib/horeca). Het beheer (/api/horeca/beheer) blijft achter de ZekerFlex-login
   "/api/rijschool/site", // rijschoolsite: proefles (IP-begrensd), leerling- en instructeur-app met eigen sessie-cookie; elke route controleert zelf (lib/rijschool/accounts.ts). Het beheer (/api/rijschool/beheer) blijft achter de ZekerFlex-login
   "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)
   "/api/review", // Google-reviews verzamelen: sterren, privébericht en de doorstuurlink naar Google van één verzoek; het niet te raden token is de sleutel, IP-begrensd (lib/review-requests/store.ts). /api/reviews (interne beoordelingen) valt hier niet onder
