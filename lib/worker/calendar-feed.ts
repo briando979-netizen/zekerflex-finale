@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Agenda-abonnement voor werkers: een geheime iCal-link met al je diensten,
@@ -17,6 +18,7 @@ import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const ownKey = (userId: string) => `werker-agenda:${userId}`;
 const lookupKey = (token: string) => `werker-agenda-token:${sha(token)}`;
+const langKey = (userId: string) => `werker-agenda-taal:${userId}`;
 
 export async function workerFeedToken(userId: string, rotate = false): Promise<string> {
   const existing = await kvGet<string>(ownKey(userId));
@@ -57,14 +59,88 @@ export interface FeedAssignment {
   };
 }
 
-export function feedIcs(assignments: FeedAssignment[], siteUrl: string): string {
+/** Teksten in de feed, in de app-taal van de werker (een agenda-app stuurt geen taal mee). */
+const FEED_TEXT: Record<Locale, {
+  calName: string;
+  intro: (company: string) => string;
+  pause: (minutes: number) => string;
+  dress: (text: string) => string;
+  cancelledLine: string;
+  checkIn: string;
+  cancelledPrefix: string;
+  alarm: (company: string) => string;
+}> = {
+  nl: {
+    calName: "ZekerFlex diensten",
+    intro: (c) => `Je dienst via ZekerFlex bij ${c}.`,
+    pause: (n) => `Pauze: ${n} minuten.`,
+    dress: (x) => `Kleding: ${x}`,
+    cancelledLine: "Deze dienst gaat niet door.",
+    checkIn: "Check op tijd in op locatie.",
+    cancelledPrefix: "Gaat niet door: ",
+    alarm: (c) => `Over 2 uur begint je dienst bij ${c}`,
+  },
+  en: {
+    calName: "ZekerFlex shifts",
+    intro: (c) => `Your shift via ZekerFlex at ${c}.`,
+    pause: (n) => `Break: ${n} minutes.`,
+    dress: (x) => `Clothing: ${x}`,
+    cancelledLine: "This shift is cancelled.",
+    checkIn: "Check in on site on time.",
+    cancelledPrefix: "Cancelled: ",
+    alarm: (c) => `Your shift at ${c} starts in 2 hours`,
+  },
+  pl: {
+    calName: "Zmiany ZekerFlex",
+    intro: (c) => `Twoja zmiana przez ZekerFlex u ${c}.`,
+    pause: (n) => `Przerwa: ${n} min.`,
+    dress: (x) => `Strój: ${x}`,
+    cancelledLine: "Ta zmiana jest odwołana.",
+    checkIn: "Zamelduj się na miejscu na czas.",
+    cancelledPrefix: "Odwołana: ",
+    alarm: (c) => `Za 2 godziny zaczyna się Twoja zmiana u ${c}`,
+  },
+  ro: {
+    calName: "Ture ZekerFlex",
+    intro: (c) => `Tura ta prin ZekerFlex la ${c}.`,
+    pause: (n) => `Pauză: ${n} minute.`,
+    dress: (x) => `Îmbrăcăminte: ${x}`,
+    cancelledLine: "Această tură a fost anulată.",
+    checkIn: "Fă check-in la locație la timp.",
+    cancelledPrefix: "Anulată: ",
+    alarm: (c) => `Tura ta la ${c} începe în 2 ore`,
+  },
+  uk: {
+    calName: "Зміни ZekerFlex",
+    intro: (c) => `Ваша зміна через ZekerFlex у ${c}.`,
+    pause: (n) => `Перерва: ${n} хв.`,
+    dress: (x) => `Одяг: ${x}`,
+    cancelledLine: "Цю зміну скасовано.",
+    checkIn: "Вчасно відмітьтеся на місці.",
+    cancelledPrefix: "Скасовано: ",
+    alarm: (c) => `Через 2 години починається ваша зміна у ${c}`,
+  },
+};
+
+/** Onthoud de app-taal (gezet als de werker de koppelpagina opent). */
+export async function setFeedLanguage(userId: string, locale: Locale): Promise<void> {
+  if ((await kvGet<string>(langKey(userId))) !== locale) await kvSet(langKey(userId), locale);
+}
+
+async function feedLanguage(userId: string): Promise<Locale> {
+  const v = await kvGet<string>(langKey(userId));
+  return isLocale(v) ? v : DEFAULT_LOCALE;
+}
+
+export function feedIcs(assignments: FeedAssignment[], siteUrl: string, lang: Locale = DEFAULT_LOCALE): string {
+  const tx = FEED_TEXT[lang];
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//ZekerFlex//Mijn diensten//NL",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:ZekerFlex diensten",
+    `X-WR-CALNAME:${esc(tx.calName)}`,
     "X-PUBLISHED-TTL:PT1H",
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
   ];
@@ -73,10 +149,10 @@ export function feedIcs(assignments: FeedAssignment[], siteUrl: string): string 
     const b = s.branch;
     const cancelled = a.cancelledAt !== null || s.status === "CANCELLED";
     const desc = [
-      `Je dienst via ZekerFlex bij ${b.tenant.name}.`,
-      s.breakMinutes > 0 ? `Pauze: ${s.breakMinutes} minuten.` : null,
-      s.dresscode ? `Kleding: ${s.dresscode}` : null,
-      cancelled ? "Deze dienst gaat niet door." : "Check op tijd in op locatie.",
+      tx.intro(b.tenant.name),
+      s.breakMinutes > 0 ? tx.pause(s.breakMinutes) : null,
+      s.dresscode ? tx.dress(s.dresscode) : null,
+      cancelled ? tx.cancelledLine : tx.checkIn,
       `${siteUrl}/dashboard/klussen/${s.id}`,
     ]
       .filter((l): l is string => l !== null)
@@ -87,14 +163,14 @@ export function feedIcs(assignments: FeedAssignment[], siteUrl: string): string 
       `DTSTAMP:${stamp(a.cancelledAt && a.cancelledAt > s.updatedAt ? a.cancelledAt : s.updatedAt)}`,
       `DTSTART:${stamp(s.startsAt)}`,
       `DTEND:${stamp(s.endsAt)}`,
-      `SUMMARY:${esc(`${cancelled ? "Gaat niet door: " : ""}${s.title} · ${b.tenant.name}`)}`,
+      `SUMMARY:${esc(`${cancelled ? tx.cancelledPrefix : ""}${s.title} · ${b.tenant.name}`)}`,
       `LOCATION:${esc(`${b.name}, ${b.addressLine}, ${b.postalCode} ${b.city}`)}`,
       `DESCRIPTION:${esc(desc)}`,
       `STATUS:${cancelled ? "CANCELLED" : "CONFIRMED"}`,
       `TRANSP:${cancelled ? "TRANSPARENT" : "OPAQUE"}`,
     );
     if (!cancelled) {
-      lines.push("BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Over 2 uur begint je dienst bij ${b.tenant.name}`)}`, "END:VALARM");
+      lines.push("BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${esc(tx.alarm(b.tenant.name))}`, "END:VALARM");
     }
     lines.push("END:VEVENT");
   }
@@ -132,5 +208,5 @@ export async function workerCalendarIcs(userId: string, siteUrl: string, now = n
         take: 1000,
       })
     : [];
-  return feedIcs(assignments, siteUrl);
+  return feedIcs(assignments, siteUrl, await feedLanguage(userId));
 }

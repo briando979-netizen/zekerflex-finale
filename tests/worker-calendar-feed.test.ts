@@ -63,6 +63,16 @@ describe("feedIcs", () => {
     expect(unfold(feedIcs([assignment({}, { status: "CANCELLED" })], "https://x"))).toContain("STATUS:CANCELLED");
   });
 
+  it("schrijft de feed in de taal van de werker", () => {
+    const en = unfold(feedIcs([assignment({ cancelledAt: new Date("2026-11-05T09:30:00Z") })], "https://x", "en"));
+    expect(en).toContain("X-WR-CALNAME:ZekerFlex shifts");
+    expect(en).toContain("SUMMARY:Cancelled: ");
+    expect(en).toContain("This shift is cancelled.");
+    const pl = unfold(feedIcs([assignment()], "https://x", "pl"));
+    expect(pl).toContain("Przerwa: 30 min.");
+    expect(pl).toContain("DESCRIPTION:Za 2 godziny zaczyna się Twoja zmiana u De Brug BV");
+  });
+
   it("vouwt lange regels en eindigt met CRLF", () => {
     const ics = feedIcs([assignment({}, { title: "x".repeat(200) })], "https://x");
     for (const line of ics.split("\r\n")) expect(line.length).toBeLessThanOrEqual(75);

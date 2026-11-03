@@ -41,6 +41,7 @@ export const ERASABLE_KV_PREFIXES = [
   "wa-contacts:",
   "wa-msgs:",
   "werker-agenda:",
+  "werker-agenda-taal:",
 ] as const;
 
 /** Hele waarde afschermen: dit zijn (versleutelde) inloggegevens. */
