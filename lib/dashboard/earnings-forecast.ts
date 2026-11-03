@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { getTaxSettings } from "@/lib/bank/tax";
+import { amsterdamParts, amsterdamStartOfMonth } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Loon-vooruitblik: een eerlijke projectie van de bruto verdiensten uit de
@@ -42,9 +43,15 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
   const profile = await prisma.freelancerProfile.findUnique({ where: { userId }, select: { id: true } });
   if (!profile) return null;
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const windowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1); // 6 maanden incl. deze
+  // Maanden zoals in Nederland: de server draait in UTC.
+  const monthStart = amsterdamStartOfMonth(now);
+  const monthEnd = amsterdamStartOfMonth(now, 1);
+  const windowStart = amsterdamStartOfMonth(now, -5); // 6 maanden incl. deze
+  const ym = (d: Date) => {
+    const p = amsterdamParts(d);
+    return { key: `${p.year}-${p.month - 1}`, year: p.year, month0: p.month - 1 };
+  };
+  const months = Array.from({ length: 6 }, (_, i) => ym(amsterdamStartOfMonth(now, i - 5)));
 
   const [assignments, fiscal, tax] = await Promise.all([
     prisma.shiftAssignment.findMany({
@@ -60,11 +67,7 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
   ]);
 
   // trend-buckets voor 6 maanden
-  const buckets = new Map<string, number>();
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    buckets.set(`${d.getFullYear()}-${d.getMonth()}`, 0);
-  }
+  const buckets = new Map<string, number>(months.map((m) => [m.key, 0]));
 
   let workedCents = 0;
   let plannedCents = 0;
@@ -73,7 +76,7 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
     const s = a.shift;
     const cents = shiftCents(s.startsAt, s.endsAt, s.breakMinutes, s.hourlyRateCents);
     if (cents <= 0) continue;
-    const key = `${s.startsAt.getFullYear()}-${s.startsAt.getMonth()}`;
+    const key = ym(s.startsAt).key;
     if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + cents);
     if (s.startsAt >= monthStart && s.startsAt < monthEnd) {
       if (s.endsAt <= now) workedCents += cents;
@@ -84,18 +87,14 @@ export async function getEarningsForecast(userId: string, now = new Date()): Pro
     }
   }
 
-  const trend: TrendPoint[] = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    trend.push({ ym: `${d.getFullYear()}-${d.getMonth()}`, label: MONTHS_NL[d.getMonth()]!, cents: buckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0 });
-  }
+  const trend: TrendPoint[] = months.map((m) => ({ ym: m.key, label: MONTHS_NL[m.month0]!, cents: buckets.get(m.key) ?? 0 }));
 
   const expectedCents = workedCents + plannedCents;
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
   const taxReserveCents = isPayroll ? 0 : Math.round((expectedCents * tax.pct) / 100);
 
   return {
-    monthLabel: `${MONTHS_NL[now.getMonth()]} ${now.getFullYear()}`,
+    monthLabel: `${MONTHS_NL[ym(now).month0]} ${ym(now).year}`,
     workedCents,
     plannedCents,
     expectedCents,

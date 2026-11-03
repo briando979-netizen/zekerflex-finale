@@ -47,6 +47,20 @@ export function amsterdamToUtc(year: number, month: number, day: number, hour = 
   return zonedToUtc("Europe/Amsterdam", year, month, day, hour, minute, second);
 }
 
+/** 00:00 Amsterdam time of the day `d` falls on, shifted by `addDays` (DST-safe: days can be 23 or 25 h). */
+export function amsterdamStartOfDay(d: Date, addDays = 0): Date {
+  const p = amsterdamParts(d);
+  const n = new Date(Date.UTC(p.year, p.month - 1, p.day + addDays));
+  return amsterdamToUtc(n.getUTCFullYear(), n.getUTCMonth() + 1, n.getUTCDate());
+}
+
+/** 00:00 Amsterdam time on the 1st of the month `d` falls in, shifted by `addMonths`. */
+export function amsterdamStartOfMonth(d: Date, addMonths = 0): Date {
+  const p = amsterdamParts(d);
+  const n = new Date(Date.UTC(p.year, p.month - 1 + addMonths, 1));
+  return amsterdamToUtc(n.getUTCFullYear(), n.getUTCMonth() + 1, 1);
+}
+
 /** Calendar date + time of an instant as seen in Amsterdam. */
 export function amsterdamParts(d: Date): { year: number; month: number; day: number; hour: number; minute: number; weekday: number } {
   const parts = Object.fromEntries(formatterFor("Europe/Amsterdam").formatToParts(d).map((p) => [p.type, p.value]));

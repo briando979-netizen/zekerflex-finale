@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { amsterdamStartOfDay } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Kleine, persoonlijke dashboard-helpers:
@@ -8,8 +9,6 @@ import { prisma } from "@/lib/prisma";
 //     uitbetaalde uren), voor de mijlpaal-felicitatie.
 // Read-only, best-effort.
 // ---------------------------------------------------------------------------
-
-const DAY = 86_400_000;
 
 export interface TodayShift {
   id: string;
@@ -21,8 +20,9 @@ export interface TodayShift {
 export async function todaysShifts(userId: string, now = new Date()): Promise<TodayShift[]> {
   const profile = await prisma.freelancerProfile.findUnique({ where: { userId }, select: { id: true } });
   if (!profile) return [];
-  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayEnd = new Date(dayStart.getTime() + DAY);
+  // Vandaag in Nederland: de server draait in UTC.
+  const dayStart = amsterdamStartOfDay(now);
+  const dayEnd = amsterdamStartOfDay(now, 1);
   const rows = await prisma.shiftAssignment.findMany({
     where: { freelancerId: profile.id, cancelledAt: null, shift: { startsAt: { gte: dayStart, lt: dayEnd } } },
     orderBy: { shift: { startsAt: "asc" } },

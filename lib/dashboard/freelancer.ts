@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
+import { amsterdamStartOfMonth } from "@/lib/time/amsterdam";
 
 export interface FreelancerOverview {
   hasProfile: boolean;
@@ -80,7 +81,7 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
   }
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStart = amsterdamStartOfMonth(now); // de server draait in UTC
 
   const [assignments, actionTimesheets, invoices, agreements] = await Promise.all([
     prisma.shiftAssignment.findMany({
