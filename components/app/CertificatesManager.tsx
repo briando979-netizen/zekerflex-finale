@@ -62,7 +62,7 @@ export function CertificatesManager() {
   const hasValidVca = certs?.some((c) => (c.type === "VCA_BASIS" || c.type === "VCA_VOL") && c.status === "valid");
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div>
         <h2 className="font-display text-lg font-bold text-ink">{t.mine}</h2>
         {certs === null ? (
@@ -172,14 +172,15 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
         {t.certNumber} <span className="font-normal text-neutralx-400">{t.optional}</span>
         <input name="number" className="field-input" />
       </label>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="field-label">
+      {/* Two date fields side by side are wider than a phone (date inputs have an intrinsic width): stack them below 640px. */}
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="field-label min-w-0">
           {t.issuedOn}
-          <input type="date" name="issuedOn" className="field-input" />
+          <input type="date" name="issuedOn" className="field-input min-w-0" />
         </label>
-        <label className="field-label">
+        <label className="field-label min-w-0">
           {t.expiresOn}
-          <input type="date" name="expiresOn" className="field-input" />
+          <input type="date" name="expiresOn" className="field-input min-w-0" />
         </label>
       </div>
       <label className="field-label mt-3 block">

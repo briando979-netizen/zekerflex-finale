@@ -201,7 +201,7 @@ x-api-key: zf_live_...`}</Code>
         <SectionHead eyebrow="Alternative" title="GraphQL" />
         <p className="mt-4 max-w-2xl text-[1.05rem] leading-relaxed text-neutralx-600">
           A read-mostly GraphQL endpoint is available at{" "}
-          <code>{`${SITE.url}/api/graphql`}</code>, authenticated with the same session/role system as the
+          <code className="break-all">{`${SITE.url}/api/graphql`}</code>, authenticated with the same session/role system as the
           dashboard (not API keys) — it&apos;s meant for logged-in users and internal tooling, not third-party
           integrations. Introspect the schema directly against the endpoint to see the full set of queries
           and types.
@@ -212,13 +212,13 @@ x-api-key: zf_live_...`}</Code>
         <SectionHead eyebrow="For agents" title="Machine-readable discovery" />
         <ul className="mt-6 max-w-2xl list-disc space-y-2 pl-5 text-[1.05rem] leading-relaxed text-neutralx-600">
           <li>
-            <code>{`${SITE.url}/llms.txt`}</code> — what {SITE.name} is, when to use it, and links to everything below.
+            <code className="break-all">{`${SITE.url}/llms.txt`}</code> — what {SITE.name} is, when to use it, and links to everything below.
           </li>
           <li>
-            <code>{`${SITE.url}/openapi.json`}</code> — the full REST API spec.
+            <code className="break-all">{`${SITE.url}/openapi.json`}</code> — the full REST API spec.
           </li>
           <li>
-            <code>{`${SITE.url}/sitemap.xml`}</code> — every indexable page.
+            <code className="break-all">{`${SITE.url}/sitemap.xml`}</code> — every indexable page.
           </li>
           <li>
             Homepage and the 404 page both honor <code>Accept: text/markdown</code> with a real Markdown

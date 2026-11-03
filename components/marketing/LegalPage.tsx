@@ -19,7 +19,8 @@ export function LegalPage({
       <div className="hero-ink text-white">
         <div className="shell py-16 md:py-20">
           <p className="eyebrow text-brand-mint">Juridisch</p>
-          <h1 className="mt-3 font-display text-3xl font-bold md:text-4xl">{title}</h1>
+          {/* Long Dutch compounds ("Verwerkersovereenkomst") don't fit a 320–390px phone at 30px: smaller there, and allowed to break. */}
+          <h1 className="mt-3 break-words font-display text-2xl font-bold hyphens-auto min-[400px]:text-3xl md:text-4xl">{title}</h1>
           <p className="mt-3 font-mono text-xs text-white/50">Laatst bijgewerkt: {updated}</p>
           {intro && <p className="mt-5 max-w-2xl text-white/70">{intro}</p>}
         </div>
