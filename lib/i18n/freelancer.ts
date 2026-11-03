@@ -795,6 +795,13 @@ const nl = {
     milestoneN: "klussen voltooid! 🎉",
     profileLabel: "Rond je profiel af",
   },
+  // Klus die je vóór het aanmelden op de website wilde (components/app/WilReagerenNudge.tsx).
+  intent: {
+    title: "Je wilde reageren op een klus",
+    body: (klus: string) => `"${klus}" wacht op je reactie, als er nog plek is.`,
+    open: "Bekijk de klus",
+    dismiss: "Niet meer tonen",
+  },
 };
 
 export type FreelancerDict = typeof nl;
@@ -1586,6 +1593,12 @@ const en: FreelancerDict = {
     milestoneN: "shifts completed! 🎉",
     profileLabel: "Complete your profile",
   },
+  intent: {
+    title: "You wanted to respond to a job",
+    body: (job: string) => `"${job}" is waiting for your response, if there's still room.`,
+    open: "View the job",
+    dismiss: "Don't show again",
+  },
 };
 
 const pl: FreelancerDict = {
@@ -2374,6 +2387,12 @@ const pl: FreelancerDict = {
     milestoneFirst: "Ukończono pierwsze zlecenie! 🎉",
     milestoneN: "ukończonych zleceń! 🎉",
     profileLabel: "Dokończ swój profil",
+  },
+  intent: {
+    title: "Zlecenie, które Cię zainteresowało",
+    body: (zlecenie: string) => `Zlecenie „${zlecenie}" czeka na Twoją odpowiedź, jeśli są jeszcze wolne miejsca.`,
+    open: "Zobacz zlecenie",
+    dismiss: "Nie pokazuj więcej",
   },
 };
 
@@ -3164,6 +3183,12 @@ const ro: FreelancerDict = {
     milestoneN: "joburi finalizate! 🎉",
     profileLabel: "Finalizează-ți profilul",
   },
+  intent: {
+    title: "Ai vrut să răspunzi la un job",
+    body: (job: string) => `Jobul „${job}" te așteaptă, dacă mai sunt locuri libere.`,
+    open: "Vezi jobul",
+    dismiss: "Nu mai afișa",
+  },
 };
 
 const uk: FreelancerDict = {
@@ -3952,6 +3977,12 @@ const uk: FreelancerDict = {
     milestoneFirst: "Ви виконали першу зміну! 🎉",
     milestoneN: "виконаних змін! 🎉",
     profileLabel: "Завершіть свій профіль",
+  },
+  intent: {
+    title: "Ви хотіли відгукнутися на роботу",
+    body: (robota: string) => `Робота «${robota}» чекає на ваш відгук, якщо ще є вільні місця.`,
+    open: "Переглянути роботу",
+    dismiss: "Більше не показувати",
   },
 };
 

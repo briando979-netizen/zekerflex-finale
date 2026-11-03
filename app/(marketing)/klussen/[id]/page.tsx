@@ -3,6 +3,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section } from "@/components/marketing/primitives";
+import { ReageerKnop } from "@/components/marketing/ReageerKnop";
 import { jobPostingJsonLd, publicShift, publicShiftTenant } from "@/lib/public-shifts";
 import { companyRatings } from "@/lib/reviews/ratings";
 import { CITIES } from "@/lib/seo-cities";
@@ -79,9 +80,7 @@ export default async function KlusPublicPage({ params }: { params: Promise<{ id:
           {s.positions > 1 ? ` Er zijn ${s.positions} plekken.` : ""}
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/register?type=freelancer" className="btn-primary">
-            Reageer op deze klus
-          </Link>
+          <ReageerKnop shiftId={s.id} title={s.title} />
           <Link href={`/login?callbackUrl=${next}`} className="btn-ghost">
             Ik heb al een account
           </Link>

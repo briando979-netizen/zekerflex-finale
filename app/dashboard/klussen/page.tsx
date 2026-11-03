@@ -11,6 +11,7 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { isBirthdayToday } from "@/lib/birthday";
 import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
+import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 
@@ -59,6 +60,7 @@ export default async function KlussenPage(
         shifts={today}
         labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
       />
+      <WilReagerenNudge />
       {!overview.profileComplete && (
         <OnboardingProgress
           done={obDone}
