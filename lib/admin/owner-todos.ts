@@ -200,9 +200,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "GitHub-sleutel voor de Bouwer invullen",
       why: "De Bouwer (ZekerFlex AI → Bouwer) maakt wijzigingen en laat ze je eerst zien. Zonder deze sleutel kan hij een goedgekeurde wijziging niet opslaan en dus niet live zetten.",
       how: [
-        "Ga op github.com naar Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.",
-        "Kies bij Repository access alleen zekerflex-finale, en bij Permissions → Contents: Read and write. Kopieer de sleutel (begint met github_pat_).",
-        "Plak hem in Admin → ZekerFlex AI → Bouwer → instellingen → GitHub-sleutel en klik Bewaar. Hij wordt versleuteld bewaard.",
+        "Open Admin → ZekerFlex AI → Bouwer → instellingen en klik Sleutel aanmaken bij GitHub (log in bij GitHub als dat gevraagd wordt). Het formulier staat al ingevuld.",
+        "Kies bij Repository access → Only select repositories → zekerflex-finale, klik Generate token en kopieer de sleutel (begint met github_pat_).",
+        "Plak hem terug in de Bouwer-instellingen bij GitHub-sleutel en klik Bewaar. Hij wordt versleuteld bewaard.",
       ],
       auto: true,
       done: Boolean(bouwer?.githubSleutel),

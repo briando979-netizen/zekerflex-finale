@@ -36,6 +36,9 @@ const STAAT: Record<TaakStaat, { label: string; kleur: string }> = {
 const STAP_TEKEN: Record<TaakStap["soort"], string> = { info: "·", denk: "💭", tool: "⚙", bestand: "✎", fout: "!", klaar: "✓", vraag: "?" };
 
 const GITHUB = "https://github.com/briando979-netizen/zekerflex-finale";
+// GitHub vult het sleutelformulier vooraf in (template-URL voor fine-grained tokens): naam, eigenaar, 1 jaar, Contents schrijven
+const GITHUB_SLEUTEL_MAKEN =
+  "https://github.com/settings/personal-access-tokens/new?name=ZekerFlex%20Bouwer&description=Goedgekeurde%20wijzigingen%20van%20de%20ZekerFlex%20Bouwer%20naar%20main&target_name=briando979-netizen&expires_in=366&contents=write";
 
 function tijd(iso: string | undefined): string {
   if (!iso) return "";
@@ -610,8 +613,18 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
             Bewaar
           </button>
         </div>
+        {!data.githubSleutel && (
+          <a
+            href={GITHUB_SLEUTEL_MAKEN}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block rounded-md bg-brand-mint px-2.5 py-1 font-semibold text-ink hover:opacity-90"
+          >
+            Sleutel aanmaken bij GitHub ↗
+          </a>
+        )}
         <p className="leading-relaxed text-white/35">
-          Maak hem op GitHub: Settings → Developer settings → Fine-grained tokens → alleen de repo zekerflex-finale → Contents: Read and write. Hij wordt versleuteld bewaard.
+          Het formulier op GitHub staat al ingevuld. Kies daar alleen bij Repository access → Only select repositories → zekerflex-finale, klik Generate token en plak de sleutel (begint met github_pat_) hierboven. Hij wordt versleuteld bewaard.
           {data.githubSleutel && (
             <button type="button" onClick={() => void bewaar({ githubToken: null })} className="ml-1 text-[#F07C6B]/80 underline">
               verwijderen
