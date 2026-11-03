@@ -128,6 +128,45 @@ export function precipitationAmount(kind: WeatherKind, mmPerHour = 0): number {
   return 0;
 }
 
+// --- seizoenen en feestdagen ------------------------------------------------
+
+export type YearSeason = "lente" | "zomer" | "herfst" | "winter";
+
+/** Seizoen van een maand (1–12) zoals Nederlanders het beleven: lente maart–mei, enz. */
+export function yearSeason(month: number): YearSeason {
+  if (month >= 3 && month <= 5) return "lente";
+  if (month >= 6 && month <= 8) return "zomer";
+  if (month >= 9 && month <= 11) return "herfst";
+  return "winter";
+}
+
+const LEAVES: Record<YearSeason, number[]> = {
+  lente: [0x7cc35a, 0x8fd16a, 0x6bb84f, 0x86c95d],
+  zomer: [0x3f8f3a, 0x4d9a40, 0x2f7d32, 0x5aa646, 0x6aaa3f],
+  herfst: [0xd97706, 0xea580c, 0xca8a04, 0xb45309, 0x9a3412, 0xc2410c],
+  winter: [0x2f5d3a, 0x355e3b],
+};
+
+/**
+ * Kleur van een boomkruin in dit seizoen; `r` is een toevalsgetal 0..1. In de
+ * lente bloeit een deel roze of wit, in de herfst is nog een deel groen, in de
+ * winter zijn de meeste bomen kaal (alleen naaldbomen houden hun groen).
+ */
+export function treeLook(season: YearSeason, r: number): { color: number; bare: boolean } {
+  const pick = (list: number[], x: number) => list[Math.min(list.length - 1, Math.floor(x * list.length))] ?? 0x3f8f3a;
+  if (season === "winter") return r < 0.65 ? { color: 0x6b5b4b, bare: true } : { color: pick(LEAVES.winter, (r - 0.65) / 0.35), bare: false };
+  if (season === "lente" && r < 0.14) return { color: r < 0.08 ? 0xf9a8d4 : 0xfdf2f8, bare: false };
+  if (season === "herfst" && r < 0.15) return { color: pick(LEAVES.zomer, r / 0.15), bare: false };
+  return { color: pick(LEAVES[season], r), bare: false };
+}
+
+/** Vuurwerk: op oudjaarsavond na het donker, en in de nieuwjaarsnacht tot 03:00. */
+export function fireworksOn(holiday: string | null, hour: number, dark: boolean): boolean {
+  if (holiday === "oudjaar") return dark && hour >= 17;
+  if (holiday === "nieuwjaar") return hour < 3;
+  return false;
+}
+
 // --- plekken voor bankjes en dieren -------------------------------------
 
 export interface Bench {

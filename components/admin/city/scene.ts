@@ -4,6 +4,10 @@ import { COMPANY_SLOTS, companyFloors, dayPhase, EXITS, houseCount, LANDMARKS, L
 import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
 import type { CityData, CityWeather } from "@/lib/admin/city-data";
 import { createLife } from "@/components/admin/city/life";
+import { createFestive } from "@/components/admin/city/feest";
+import { yearSeason, type YearSeason } from "@/lib/admin/city-life";
+import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { count, euro } from "@/lib/admin/format";
 import { blobTexture, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
 import { roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -69,7 +73,19 @@ function tooClose(m: Mover, all: Mover[]): boolean {
 }
 const sevColor = (s: string) => (s === "critical" ? 0xdc2626 : s === "warning" ? 0xf59e0b : 0x334155);
 
-export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts: { reduced: boolean; onPick: (p: Pick | null) => void; onTourEnd: () => void }): CityHandle {
+export function createCity(
+  host: HTMLDivElement,
+  labelHost: HTMLDivElement,
+  opts: {
+    reduced: boolean;
+    onPick: (p: Pick | null) => void;
+    onTourEnd: () => void;
+    /** Voorbeeld van een feestdag (?thema=kerst); anders de echte Nederlandse kalender. */
+    theme?: SeasonId | null;
+    /** Voorbeeld van een seizoen (?seizoen=winter); anders de echte maand. */
+    season?: YearSeason;
+  },
+): CityHandle {
   const { reduced } = opts;
   const rnd = seeded(Date.now() % 100_000);
 
@@ -123,11 +139,18 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   scene.add(stars);
 
   // --- de stad ------------------------------------------------------------
-  const world = buildWorld(kit, win);
+  // het echte seizoen en de feestdag van vandaag in Nederland (of een voorbeeld)
+  const today = new Date();
+  const season = opts.season ?? yearSeason(amsterdamParts(today).month);
+  const holiday = opts.theme !== undefined ? opts.theme : seasonOn(amsterdamDayKey(today));
+  const world = buildWorld(kit, win, season);
   const office = buildOffice(kit, shadow);
   scene.add(world.layer.group, office.layer.group);
-  // voetgangers, dieren, wolken en neerslag
+  // voetgangers, dieren, wolken en neerslag; versiering op feestdagen
   const life = createLife(kit, scene, shadow);
+  life.setHoliday(holiday);
+  const festive = createFestive(kit, scene, holiday);
+  let hourNow = amsterdamParts(today).hour;
   let weather: CityWeather | null = null;
   let weatherKey = "";
   let companies: CompanyLayer = buildCompanies(kit, [], win);
@@ -584,6 +607,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0 });
   const applyDaylight = () => {
     const s = sunAt(new Date());
+    hourNow = amsterdamParts(new Date()).hour;
     phase = dayPhase(s.elevation);
     const w = weather?.kind ?? "helder";
     const el = Math.max(0.14, s.elevation);
@@ -767,6 +791,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       if (b.g.position.x < -160) b.g.position.x = 160;
     }
     life.update(dt, now, controls.target);
+    festive.update(dt, now, hourNow, phase !== "dag");
     // bij onweer flitst af en toe de bliksem
     if (weather?.kind === "onweer" && !reduced) {
       if (now > nextFlash) {
@@ -874,6 +899,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       renderer.domElement.removeEventListener("pointermove", onMove);
       for (const l of layers()) l.dispose();
       life.dispose();
+      festive.dispose();
       kit.dispose();
       renderer.dispose();
       renderer.domElement.remove();

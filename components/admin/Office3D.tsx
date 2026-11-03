@@ -6,6 +6,7 @@ import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
 import { dayPhase, type Origin, sunAt, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
 import { WEATHER_NL } from "@/lib/admin/city-life";
+import { isThemeId } from "@/lib/seasons/calendar";
 import { count, euro } from "@/lib/admin/format";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -205,10 +206,16 @@ export function Office3D() {
     (async () => {
       const { createCity } = await import("@/components/admin/city/scene");
       if (disposed) return;
+      // voorbeeld van een feestdag of seizoen: /admin/kantoor?thema=kerst of ?seizoen=winter
+      const q = new URLSearchParams(window.location.search);
+      const thema = q.get("thema");
+      const seizoen = q.get("seizoen");
       handle = createCity(el, labelHost, {
         reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         onPick: setSelected,
         onTourEnd: () => setTouring(false),
+        ...(thema && isThemeId(thema) && thema !== "verjaardag" ? { theme: thema } : {}),
+        ...(seizoen === "lente" || seizoen === "zomer" || seizoen === "herfst" || seizoen === "winter" ? { season: seizoen } : {}),
       });
       city.current = handle;
       if (lastData.current) handle.setData(lastData.current);

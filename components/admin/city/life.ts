@@ -97,6 +97,8 @@ export interface LifeState {
 
 export interface Life {
   setState: (s: LifeState) => void;
+  /** Feestdag: op Koningsdag lopen de bewoners in het oranje (bezoekers houden hun felblauwe jas). */
+  setHoliday: (h: string | null) => void;
   update: (dt: number, now: number, around: THREE.Vector3) => void;
   dispose: () => void;
 }
@@ -151,11 +153,12 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
   const looks = Array.from({ length: MAX_WALKERS }, () => ({ skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRTS), pants: pick(PANTS) }));
   const dogColors = Array.from({ length: MAX_DOGS }, () => pick(DOGS));
   let raining = false;
+  let orange = false;
 
   const paint = () => {
     walkers.forEach((w, i) => {
       const l = looks[i] ?? looks[0]!;
-      const shirt = w.visitor ? VISITOR_JACKET : l.shirt;
+      const shirt = w.visitor ? VISITOR_JACKET : orange ? 0xf97316 : l.shirt;
       torso.setColorAt(i, _c.setHex(shirt));
       arm.setColorAt(i * 2, _c);
       arm.setColorAt(i * 2 + 1, _c);
@@ -580,6 +583,10 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
   setState({ phase: "dag", visitors: 0, weather: "helder", mmPerHour: 0 });
   return {
     setState,
+    setHoliday(h) {
+      orange = h === "koningsdag";
+      paint();
+    },
     update,
     dispose: () => {
       group.removeFromParent();

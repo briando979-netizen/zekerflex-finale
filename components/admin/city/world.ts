@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { blockRect, CANAL_Z, COMPANY_SLOTS, companyFloors, EXITS, HOUSE_SLOTS, LANDMARKS, type LandmarkId, LINES, type Plot, type Pt, ROAD_W, roadSpan } from "@/lib/admin/city-layout";
 import { FRONT_Z, RD, roomCenter, RW } from "@/lib/admin/office3d-layout";
 import type { CityCompany } from "@/lib/admin/city-data";
-import { DITCHES, FARM, inRect, MEADOW_COWS, MEADOW_SHEEP } from "@/lib/admin/city-life";
+import { DITCHES, FARM, inRect, MEADOW_COWS, MEADOW_SHEEP, treeLook, type YearSeason } from "@/lib/admin/city-life";
 import { bake, gableGeometry, hashOf, type Kit, repeated, seeded, signTexture, type windowTextures } from "@/components/admin/city/parts";
 import { ROOMS, type Room, type RoomId } from "@/components/admin/city/rooms";
 import { robot, vehicle } from "@/components/admin/city/vehicles";
@@ -170,8 +170,8 @@ export interface StaticWorld {
   water: THREE.MeshStandardMaterial;
 }
 
-/** De vaste stad: alles wat niet van de cijfers afhangt. */
-export function buildWorld(kit: Kit, win: Windows): StaticWorld {
+/** De vaste stad: alles wat niet van de cijfers afhangt. De bomen volgen het seizoen. */
+export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer"): StaticWorld {
   const L = makeLayer(kit);
   const G = L.group;
   const rnd = seeded(2026);
@@ -295,13 +295,18 @@ export function buildWorld(kit: Kit, win: Windows): StaticWorld {
   }
   const trunks: Inst[] = [];
   const crowns: Inst[] = [];
-  const greens = [0x3f8f3a, 0x4d9a40, 0x2f7d32, 0x5aa646, 0x6aaa3f];
+  const twigs: Inst[] = [];
   for (const [x, z] of trees) {
     const s = 0.8 + rnd() * 0.6;
     const base = baseAt(x, z);
+    const look = treeLook(season, rnd());
+    const ry = rnd() * 6;
     trunks.push({ x, y: base + 0.6 * s, z, sx: s, sy: s, sz: s });
-    crowns.push({ x, y: base + 1.9 * s, z, sx: s, sy: s * 1.15, sz: s, ry: rnd() * 6, color: greens[Math.floor(rnd() * greens.length)] ?? 0x3f8f3a });
+    // kale boom in de winter: geen kruin, wel een paar takken
+    if (look.bare) twigs.push({ x, y: base + 1.5 * s, z, sx: s, sy: s, sz: s, ry });
+    else crowns.push({ x, y: base + 1.9 * s, z, sx: s, sy: s * 1.15, sz: s, ry, color: look.color });
   }
+  if (twigs.length) G.add(instanced(kit, kit.geo("twigs", () => new THREE.ConeGeometry(0.75, 1.6, 5, 1, true)), kit.mat(0x6b5b4b, { roughness: 1, flatShading: true }), twigs, true));
   G.add(
     instanced(kit, kit.geo("trunk", () => new THREE.CylinderGeometry(0.12, 0.17, 1.2, 6)), kit.mat(0x7c5a3a), trunks, true),
     instanced(kit, kit.geo("crown", () => new THREE.IcosahedronGeometry(0.95, 0)), kit.mat(0xffffff, { roughness: 0.9, flatShading: true }), crowns, true),

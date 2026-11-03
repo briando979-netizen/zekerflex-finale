@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANAL_Z, COMPANY_SLOTS, HOUSE_SLOTS, LANDMARKS, LINES, type Plot, ROAD_W, roadSpan } from "@/lib/admin/city-layout";
-import { alongLoop, BENCHES, blockWeight, crowdSize, pickBlock, DITCHES, FARM, inPond, inRect, loopLength, MEADOW_COWS, MEADOW_SHEEP, POND, precipitationAmount, sidewalkLoop, steerInside, weatherKind } from "@/lib/admin/city-life";
+import { alongLoop, BENCHES, blockWeight, crowdSize, fireworksOn, pickBlock, treeLook, yearSeason, DITCHES, FARM, inPond, inRect, loopLength, MEADOW_COWS, MEADOW_SHEEP, POND, precipitationAmount, sidewalkLoop, steerInside, weatherKind } from "@/lib/admin/city-life";
 
 // Leven in de 3D-stad: voetgangers blijven op de stoep, bankjes staan vrij,
 // dieren blijven in hun wei of op het water, en het weer volgt de echte code.
@@ -99,6 +99,37 @@ describe("dieren", () => {
   it("zwemmen in de vijver", () => {
     expect(inPond(POND.x, POND.z)).toBe(true);
     expect(inPond(POND.x + POND.rx + 1, POND.z)).toBe(false);
+  });
+});
+
+describe("seizoenen en feestdagen", () => {
+  it("volgt de Nederlandse seizoenen", () => {
+    expect(yearSeason(3)).toBe("lente");
+    expect(yearSeason(7)).toBe("zomer");
+    expect(yearSeason(11)).toBe("herfst");
+    expect(yearSeason(12)).toBe("winter");
+    expect(yearSeason(2)).toBe("winter");
+  });
+
+  it("kleurt de bomen naar het seizoen: kaal in de winter, herfstkleuren in november", () => {
+    const sample = (s: Parameters<typeof treeLook>[0]) => Array.from({ length: 200 }, (_, k) => treeLook(s, (k + 0.5) / 200));
+    const winter = sample("winter");
+    expect(winter.filter((t) => t.bare).length).toBeGreaterThan(100);
+    expect(sample("zomer").some((t) => t.bare)).toBe(false);
+    // herfst: het grootste deel oranje/geel/bruin (rood-kanaal sterker dan groen)
+    const warm = sample("herfst").filter((t) => (t.color >> 16) > ((t.color >> 8) & 0xff)).length;
+    expect(warm).toBeGreaterThan(150);
+    // lente: een deel bloeit
+    expect(sample("lente").filter((t) => t.color === 0xf9a8d4 || t.color === 0xfdf2f8).length).toBeGreaterThan(10);
+  });
+
+  it("steekt alleen rond de jaarwisseling vuurwerk af", () => {
+    expect(fireworksOn("oudjaar", 21, true)).toBe(true);
+    expect(fireworksOn("oudjaar", 12, false)).toBe(false);
+    expect(fireworksOn("nieuwjaar", 1, true)).toBe(true);
+    expect(fireworksOn("nieuwjaar", 14, false)).toBe(false);
+    expect(fireworksOn("kerst", 22, true)).toBe(false);
+    expect(fireworksOn(null, 22, true)).toBe(false);
   });
 });
 
