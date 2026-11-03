@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { AANVRAAG_STATUS, BEHEER_API, VELD_BASIS, Melding, dagNaam, euro, useBeheerData, vraag, type AanvraagStatus } from "@/components/voorstel/beheer/api";
 import { BASE } from "@/lib/voorstel/schwarzwald";
+import { inboekVanAanvraag, type InboekStart } from "@/lib/voorstel/inboek-regels";
 
 // Aanvragen (leads) als pijplijn: één kolom per stap. Status en offertebedrag
 // zijn per kaart aan te passen; "Klant" opent het klantdossier in het CRM,
-// "Offerte" de printbare offerte (die de gast ziet zodra de status offerte is).
+// "Offerte" de printbare offerte (die de gast ziet zodra de status offerte is),
+// "Inboeken" opent een ingevulde reservering (daarna staat de aanvraag op geboekt).
 
 interface Aanvraag {
   id: string;
@@ -26,7 +28,15 @@ interface Aanvraag {
 const URL_AV = `${BEHEER_API}/aanvragen`;
 const STAPPEN = Object.keys(AANVRAAG_STATUS) as AanvraagStatus[];
 
-export function Aanvragen({ openKlant }: { openKlant: (email: string) => void }) {
+export function Aanvragen({
+  namen,
+  openKlant,
+  inboeken,
+}: {
+  namen: Record<string, string>;
+  openKlant: (email: string) => void;
+  inboeken: (start: InboekStart) => void;
+}) {
   const { data, setData, fout, setFout } = useBeheerData<{ aanvragen: Aanvraag[] }>(URL_AV);
   const [bedragen, setBedragen] = useState<Record<string, string>>({});
 
@@ -80,6 +90,16 @@ export function Aanvragen({ openKlant }: { openKlant: (email: string) => void })
                       {dagNaam(a.aangemaakt.slice(0, 10), { day: "numeric", month: "short" })}
                     </p>
                     {a.bericht && <p className="mt-1 line-clamp-3 text-xs">&ldquo;{a.bericht}&rdquo;</p>}
+                    {a.status !== "geboekt" && a.status !== "verloren" && (
+                      <button
+                        type="button"
+                        onClick={() => inboeken(inboekVanAanvraag(a, namen))}
+                        aria-label={`Inboeken als reservering: ${a.naam}`}
+                        className="mt-2 w-full rounded-full bg-schw-night px-3 py-1.5 text-xs font-bold text-schw-cream"
+                      >
+                        Inboeken als reservering
+                      </button>
+                    )}
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       <select value={a.status} onChange={(e) => void wijzig(a, { status: e.target.value as AanvraagStatus })} aria-label={`Status van ${a.naam}`} className={`${VELD_BASIS} py-1.5 text-xs`}>
                         {STAPPEN.map((x) => (

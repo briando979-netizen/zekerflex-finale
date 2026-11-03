@@ -17,6 +17,7 @@ import { Reviews } from "@/components/voorstel/beheer/Reviews";
 import { Sollicitaties } from "@/components/voorstel/beheer/Sollicitaties";
 import { Wachtlijst } from "@/components/voorstel/beheer/Wachtlijst";
 import { Nieuws } from "@/components/voorstel/beheer/Nieuws";
+import type { InboekStart } from "@/lib/voorstel/inboek-regels";
 
 // De beheeromgeving van Het Schwarzwald als eigen dashboard: zijbalk met de
 // tabbladen in groepen (op de telefoon een balk bovenaan), een kop per
@@ -89,6 +90,8 @@ export function BeheerApp({
 }) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [klant, setKlant] = useState("");
+  // een aanvraag die als reservering wordt ingeboekt (Aanvragen → Reserveringen)
+  const [inboek, setInboek] = useState<InboekStart | null>(null);
 
   useEffect(() => {
     const lees = () => {
@@ -176,8 +179,17 @@ export function BeheerApp({
           {tab === "dashboard" && <Dashboard namen={namen} naar={naar} openKlant={openKlant} />}
           {tab === "planning" && <Planning namen={namen} duur={duur} vandaag={vandaag} openKlant={openKlant} />}
           {tab === "klanten" && <Klanten namen={namen} vandaag={vandaag} start={klant} />}
-          {tab === "aanvragen" && <Aanvragen openKlant={openKlant} />}
-          {tab === "reserveringen" && <Reserveringen namen={namen} duur={duur} vandaag={vandaag} />}
+          {tab === "aanvragen" && (
+            <Aanvragen
+              namen={namen}
+              openKlant={openKlant}
+              inboeken={(s) => {
+                setInboek(s);
+                naar("reserveringen");
+              }}
+            />
+          )}
+          {tab === "reserveringen" && <Reserveringen namen={namen} duur={duur} vandaag={vandaag} start={inboek} klaarStart={() => setInboek(null)} />}
           {tab === "wachtlijst" && <Wachtlijst namen={namen} openKlant={openKlant} />}
           {tab === "reviews" && <Reviews namen={namen} openKlant={openKlant} />}
           {tab === "sollicitaties" && <Sollicitaties />}

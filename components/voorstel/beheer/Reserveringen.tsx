@@ -5,6 +5,7 @@ import { BEHEER_API, KAART, KNOP, KNOP_LICHT, Melding, VELD, VELD_BASIS, dagNaam
 import { BASE } from "@/lib/voorstel/schwarzwald";
 import { AANWEZIG_LABEL, aanmeldFout, balieStand, type Aanwezig } from "@/lib/voorstel/aanwezig-regels";
 import { dubbelIngepland } from "@/lib/voorstel/begeleider-regels";
+import type { InboekStart } from "@/lib/voorstel/inboek-regels";
 
 // Reserveringen: overzicht per dag met zoeken en filters, bevestigen,
 // annuleren, verwijderen, zelf inboeken (telefoon/balie), gasten aanmelden
@@ -72,7 +73,7 @@ function BegeleiderVeld({ b, bezig, opslaan }: { b: BeheerBoeking; bezig: boolea
   );
 }
 
-function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; klaar: () => void }) {
+function NieuweReservering({ namen, start, klaar }: { namen: Record<string, string>; start: InboekStart | null; klaar: () => void }) {
   const [fout, setFout] = useState("");
   const [bezig, setBezig] = useState(false);
   async function verstuur(e: FormEvent<HTMLFormElement>) {
@@ -91,9 +92,17 @@ function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; kl
   }
   return (
     <form onSubmit={(e) => void verstuur(e)} className={`${KAART} mt-4 grid gap-3 sm:grid-cols-4`}>
+      {start && (
+        <p className="rounded-xl bg-schw-sand px-4 py-3 text-sm sm:col-span-4">
+          <strong>Inboeken uit de aanvraag van {start.naam}.</strong> Controleer de gegevens{start.activiteit ? "" : ", kies de activiteit"} en kies een begintijd. Na het inboeken staat de aanvraag op Geboekt.
+        </p>
+      )}
       <label className="text-sm font-semibold sm:col-span-2">
         Activiteit
-        <select name="activiteit" required className={`${VELD} mt-1`}>
+        <select name="activiteit" required defaultValue={start?.activiteit ?? ""} className={`${VELD} mt-1`}>
+          <option value="" disabled>
+            Kies een activiteit
+          </option>
           {Object.entries(namen).map(([slug, naam]) => (
             <option key={slug} value={slug}>{naam}</option>
           ))}
@@ -101,7 +110,7 @@ function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; kl
       </label>
       <label className="text-sm font-semibold">
         Datum
-        <input name="datum" type="date" required className={`${VELD} mt-1`} />
+        <input name="datum" type="date" required defaultValue={start?.datum ?? ""} className={`${VELD} mt-1`} />
       </label>
       <label className="text-sm font-semibold">
         Begintijd (heel uur)
@@ -109,23 +118,23 @@ function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; kl
       </label>
       <label className="text-sm font-semibold">
         Personen
-        <input name="personen" type="number" min={1} max={500} required className={`${VELD} mt-1`} />
+        <input name="personen" type="number" min={1} max={500} required defaultValue={start?.personen ?? ""} className={`${VELD} mt-1`} />
       </label>
       <label className="text-sm font-semibold">
         Naam
-        <input name="naam" required className={`${VELD} mt-1`} />
+        <input name="naam" required defaultValue={start?.naam ?? ""} className={`${VELD} mt-1`} />
       </label>
       <label className="text-sm font-semibold">
         E-mail
-        <input name="email" type="email" required className={`${VELD} mt-1`} />
+        <input name="email" type="email" required defaultValue={start?.email ?? ""} className={`${VELD} mt-1`} />
       </label>
       <label className="text-sm font-semibold">
         Telefoon
-        <input name="telefoon" type="tel" required className={`${VELD} mt-1`} />
+        <input name="telefoon" type="tel" required defaultValue={start?.telefoon ?? ""} className={`${VELD} mt-1`} />
       </label>
       <label className="text-sm font-semibold sm:col-span-3">
         Opmerking
-        <input name="opmerking" className={`${VELD} mt-1`} />
+        <input name="opmerking" maxLength={1000} defaultValue={start?.opmerking ?? ""} className={`${VELD} mt-1`} />
       </label>
       <div className="flex items-end">
         <button type="submit" disabled={bezig} className={`${KNOP} w-full`}>
@@ -139,13 +148,26 @@ function NieuweReservering({ namen, klaar }: { namen: Record<string, string>; kl
   );
 }
 
-export function Reserveringen({ namen, duur, vandaag }: { namen: Record<string, string>; duur: Record<string, number>; vandaag: string }) {
+export function Reserveringen({
+  namen,
+  duur,
+  vandaag,
+  start = null,
+  klaarStart = () => {},
+}: {
+  namen: Record<string, string>;
+  duur: Record<string, number>;
+  vandaag: string;
+  /** een aanvraag die als reservering wordt ingeboekt */
+  start?: InboekStart | null;
+  klaarStart?: () => void;
+}) {
   const { data, setData, fout, setFout, laad } = useBeheerData<{ boekingen: BeheerBoeking[] }>(BEHEER_API);
   const [alles, setAlles] = useState(false);
   const [status, setStatus] = useState<"" | Status>("");
   const [activiteit, setActiviteit] = useState("");
   const [zoek, setZoek] = useState("");
-  const [nieuw, setNieuw] = useState(false);
+  const [nieuw, setNieuw] = useState(Boolean(start));
   const [bezig, setBezig] = useState("");
   const [ok, setOk] = useState("");
 
@@ -219,7 +241,16 @@ export function Reserveringen({ namen, duur, vandaag }: { namen: Record<string, 
         <div className="ml-auto flex gap-2">
           <a href={`${BEHEER_API}?formaat=csv`} className={KNOP_LICHT}>Export (Excel)</a>
           <button type="button" onClick={() => void laad()} className={KNOP_LICHT}>Vernieuwen</button>
-          <button type="button" onClick={() => setNieuw((v) => !v)} aria-expanded={nieuw} className={KNOP}>
+          <button
+            type="button"
+            onClick={() => {
+              // sluiten = ook het inboeken van een aanvraag afbreken
+              if (nieuw) klaarStart();
+              setNieuw((v) => !v);
+            }}
+            aria-expanded={nieuw}
+            className={KNOP}
+          >
             {nieuw ? "Sluiten" : "+ Reservering"}
           </button>
         </div>
@@ -227,9 +258,16 @@ export function Reserveringen({ namen, duur, vandaag }: { namen: Record<string, 
       {nieuw && (
         <NieuweReservering
           namen={namen}
+          start={start}
           klaar={() => {
             setNieuw(false);
             void laad();
+            if (!start) return;
+            // de aanvraag is nu een reservering
+            void vraag(`${BEHEER_API}/aanvragen`, { method: "PATCH", body: { id: start.aanvraag, status: "geboekt" } })
+              .then(() => setOk(`Ingeboekt. De aanvraag van ${start.naam} staat nu op Geboekt.`))
+              .catch((e: unknown) => setFout(e instanceof Error ? `Ingeboekt, maar de aanvraag bijwerken mislukte: ${e.message}` : "Ingeboekt, maar de aanvraag bijwerken mislukte."))
+              .finally(klaarStart);
           }}
         />
       )}
