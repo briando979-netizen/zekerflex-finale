@@ -70,13 +70,16 @@ export async function wachtOpUitrol(log) {
   }
 }
 
+async function zorgVoorKloon(log) {
+  if (await bestaat(path.join(REPO_DIR, ".git"))) return;
+  log("info", "Eerste keer: de codebase ophalen van GitHub");
+  await fs.mkdir(WERK, { recursive: true });
+  await git(["clone", "--depth", "200", "--branch", "main", REPO_URL, REPO_DIR], { cwd: WERK, timeout: 900_000 });
+}
+
 /** Verse branch bouwer/<id> op de nieuwste main; eerste keer klonen. */
 export async function nieuweWerkkopie(id, log) {
-  if (!(await bestaat(path.join(REPO_DIR, ".git")))) {
-    log("info", "Eerste keer: de codebase ophalen van GitHub");
-    await fs.mkdir(WERK, { recursive: true });
-    await git(["clone", "--depth", "200", "--branch", "main", REPO_URL, REPO_DIR], { cwd: WERK, timeout: 900_000 });
-  }
+  await zorgVoorKloon(log);
   await git(["fetch", "--depth", "200", "origin", "main"]);
   await git(["checkout", "-f", "-B", `bouwer/${id}`, "origin/main"]);
   await git(["clean", "-fd"]);
@@ -86,20 +89,41 @@ export async function nieuweWerkkopie(id, log) {
   return basis;
 }
 
-/** npm ci + prisma generate, alleen als package-lock.json veranderde. */
+/** De werkkopie op de nieuwste main, zonder eigen branch: voor het voorbeeld van wat er live gaat. */
+export async function werkkopieOpMain(log) {
+  await zorgVoorKloon(log);
+  await git(["fetch", "--depth", "200", "origin", "main"]);
+  await git(["checkout", "-q", "-f", "--detach", "origin/main"]);
+  await git(["clean", "-fdq"]);
+  const sha = await git(["rev-parse", "HEAD"]);
+  log("info", `Werkkopie op de nieuwste main ${sha.slice(0, 7)}`);
+  await zorgVoorPakketten(log);
+  return sha;
+}
+
+/** npm ci + prisma generate, alleen als package-lock.json of het databaseschema veranderde. */
 async function zorgVoorPakketten(log) {
-  const lock = await fs.readFile(path.join(REPO_DIR, "package-lock.json"));
-  const hash = createHash("sha256").update(lock).digest("hex");
-  const merk = path.join(WERK, "pakketten.hash");
-  const vorige = await fs.readFile(merk, "utf8").catch(() => "");
-  if (vorige === hash && (await bestaat(path.join(REPO_DIR, "node_modules", ".bin", "tsc")))) return;
+  const hashVan = (buf) => createHash("sha256").update(buf).digest("hex");
+  const lockHash = hashVan(await fs.readFile(path.join(REPO_DIR, "package-lock.json")));
+  // ook het schema: anders blijft de gegenereerde Prisma-client achter bij een nieuwe tabel
+  const schemaHash = hashVan(await fs.readFile(path.join(REPO_DIR, "prisma", "schema.prisma")).catch(() => Buffer.alloc(0)));
+  const merkLock = path.join(WERK, "pakketten.hash");
+  const merkSchema = path.join(WERK, "schema.hash");
+  const lees = (p) => fs.readFile(p, "utf8").catch(() => "");
+  const pakkettenOk = (await lees(merkLock)) === lockHash && (await bestaat(path.join(REPO_DIR, "node_modules", ".bin", "tsc")));
+  if (pakkettenOk && (await lees(merkSchema)) === schemaHash) return;
   await wachtOpUitrol(log);
-  log("info", "Pakketten installeren (npm ci, eenmalig enkele minuten)");
-  const ci = await sh("npm", ["ci", "--no-audit", "--no-fund", "--loglevel=error"], { timeout: 1_200_000 });
-  if (ci.code !== 0) throw new Error(`npm ci mislukt: ${ci.uit.slice(-600)}`);
+  if (!pakkettenOk) {
+    log("info", "Pakketten installeren (npm ci, eenmalig enkele minuten)");
+    const ci = await sh("npm", ["ci", "--no-audit", "--no-fund", "--loglevel=error"], { timeout: 1_200_000 });
+    if (ci.code !== 0) throw new Error(`npm ci mislukt: ${ci.uit.slice(-600)}`);
+  } else {
+    log("info", "Databaseschema veranderd: Prisma-client bijwerken");
+  }
   const gen = await sh("npx", ["prisma", "generate"], { timeout: 300_000 });
   if (gen.code !== 0) throw new Error(`prisma generate mislukt: ${gen.uit.slice(-600)}`);
-  await fs.writeFile(merk, hash);
+  await fs.writeFile(merkLock, lockHash);
+  await fs.writeFile(merkSchema, schemaHash);
 }
 
 export async function gewijzigdeBestanden() {

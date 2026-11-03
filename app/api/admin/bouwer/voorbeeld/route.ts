@@ -16,12 +16,13 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   return NextResponse.json({ ...stand, link: stand.staat === "aan" ? voorbeeldLink() : null });
 });
 
-const schema = z.object({ actie: z.enum(["start", "stop"]) });
+// versie "main": de nieuwste versie op GitHub bekijken vóór je hem live zet (alleen als er geen opdracht open staat)
+const schema = z.object({ actie: z.enum(["start", "stop"]), versie: z.enum(["opdracht", "main"]).default("opdracht") });
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation("Onbekende actie");
-  const stand = await bouwer<VoorbeeldStand>(`/voorbeeld/${parsed.data.actie}`, { method: "POST", body: {} });
+  const stand = await bouwer<VoorbeeldStand>(`/voorbeeld/${parsed.data.actie}`, { method: "POST", body: { versie: parsed.data.versie } });
   if (parsed.data.actie === "start") {
     await recordAudit({
       category: "ADMIN",
@@ -29,7 +30,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
       severity: "info",
       actorUserId: principal.userId,
       actorLabel: "user",
-      summary: `${principal.email} startte het live voorbeeld van de Bouwer`,
+      summary: `${principal.email} startte het live voorbeeld (${parsed.data.versie === "main" ? "nieuwste versie" : "opdracht van de Bouwer"})`,
     });
   }
   return NextResponse.json({ ...stand, link: stand.staat === "aan" ? voorbeeldLink() : null });

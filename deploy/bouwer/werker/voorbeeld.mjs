@@ -10,7 +10,7 @@ import { spawn } from "node:child_process";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { REPO_DIR, WERK, omgevingZonderSleutel, sh, wachtOpUitrol } from "./werkkopie.mjs";
+import { REPO_DIR, WERK, omgevingZonderSleutel, sh, wachtOpUitrol, werkkopieOpMain } from "./werkkopie.mjs";
 
 const DB = process.env.BOUWER_VOORBEELD_DB || "";
 const REDIS = process.env.BOUWER_VOORBEELD_REDIS || "";
@@ -24,7 +24,8 @@ const GEHEIM = randomBytes(32).toString("hex");
 
 /** @type {import("node:child_process").ChildProcess | null} */
 let proces = null;
-let stand = { staat: "uit", sinds: null, fout: null, regels: [] };
+/** versie: "opdracht" = de werkkopie van de open opdracht, "main" = de nieuwste main (wat er live gaat) */
+let stand = { staat: "uit", sinds: null, fout: null, regels: [], versie: "opdracht", sha: null };
 let laatsteBezoek = 0;
 
 function regel(tekst) {
@@ -39,7 +40,16 @@ export function voorbeeldBeschikbaar() {
 }
 
 export function voorbeeldStand() {
-  return { staat: stand.staat, sinds: stand.sinds, fout: stand.fout, regels: stand.regels.slice(-30), host: HOST, beschikbaar: voorbeeldBeschikbaar() };
+  return {
+    staat: stand.staat,
+    sinds: stand.sinds,
+    fout: stand.fout,
+    regels: stand.regels.slice(-30),
+    host: HOST,
+    beschikbaar: voorbeeldBeschikbaar(),
+    versie: stand.versie,
+    sha: stand.sha,
+  };
 }
 
 function voorbeeldEnv() {
@@ -95,16 +105,23 @@ async function wachtTotKlaar(maxMs = 240_000) {
   throw new Error("De ontwikkelserver werd niet op tijd klaar");
 }
 
-/** Start het voorbeeld op de huidige werkkopie (op de achtergrond; volg via voorbeeldStand). */
-export function startVoorbeeld() {
+/**
+ * Start het voorbeeld op de achtergrond (volg via voorbeeldStand): op de werkkopie van de
+ * open opdracht, of met opMain op de nieuwste main (bekijken wat er live gaat).
+ */
+export function startVoorbeeld({ opMain = false } = {}) {
   if (!voorbeeldBeschikbaar()) throw new Error("Het voorbeeld is niet ingesteld op de server");
   if (proces || stand.staat === "start") return voorbeeldStand();
-  stand = { staat: "start", sinds: new Date().toISOString(), fout: null, regels: [] };
+  stand = { staat: "start", sinds: new Date().toISOString(), fout: null, regels: [], versie: opMain ? "main" : "opdracht", sha: null };
   void (async () => {
     try {
-      await fs.access(path.join(REPO_DIR, ".git")).catch(() => {
-        throw new Error("Er is nog geen werkkopie: geef eerst een opdracht");
-      });
+      if (opMain) {
+        stand.sha = await werkkopieOpMain((_soort, tekst) => regel(tekst));
+      } else {
+        await fs.access(path.join(REPO_DIR, ".git")).catch(() => {
+          throw new Error("Er is nog geen werkkopie: geef eerst een opdracht");
+        });
+      }
       await wachtOpUitrol(() => regel("Er loopt een uitrol op de server; even wachten"));
       const env = voorbeeldEnv();
       regel("Database bijwerken");

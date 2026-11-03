@@ -93,6 +93,9 @@ export interface VoorbeeldStand {
   regels: string[];
   host: string;
   beschikbaar: boolean;
+  /** "opdracht" = de open opdracht van de Bouwer, "main" = de nieuwste versie op GitHub */
+  versie?: "opdracht" | "main";
+  sha?: string | null;
 }
 
 /** Een link die 2 uur toegang geeft tot het voorbeeld (de bouwer controleert de HMAC met BOUWER_TOKEN). */
@@ -190,11 +193,20 @@ export async function githubSleutel(): Promise<string | null> {
   }
 }
 
-/** Het taalmodel dat de Bouwer per opdracht meekrijgt (zelfde endpoint/sleutel als de rest van de AI). */
-export async function bouwerLlm(): Promise<{ baseUrl: string; apiKey: string | null; model: string }> {
+/**
+ * Het taalmodel dat de Bouwer per opdracht meekrijgt (zelfde endpoint/sleutel als de rest van de AI),
+ * met het hoofdmodel als reserve voor als het gekozen model overbelast is of aan zijn daglimiet zit.
+ */
+export async function bouwerLlm(): Promise<{ baseUrl: string; apiKey: string | null; model: string; reserveModel?: string }> {
   // zelfde regel als de governor: code gaat alleen naar een extern model als dat mag
   if (!env.AI_ALLOW_REMOTE && !isLocalInference()) {
     throw AppError.precondition("Het taalmodel staat extern en AI_ALLOW_REMOTE staat uit; de Bouwer stuurt geen code naar buiten.");
   }
-  return { baseUrl: env.LLM_BASE_URL, apiKey: await getLlmApiKey(), model: await bouwerModel() };
+  const model = await bouwerModel();
+  return {
+    baseUrl: env.LLM_BASE_URL,
+    apiKey: await getLlmApiKey(),
+    model,
+    ...(env.LLM_MODEL && env.LLM_MODEL !== model ? { reserveModel: env.LLM_MODEL } : {}),
+  };
 }

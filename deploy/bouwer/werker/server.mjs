@@ -261,8 +261,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/voorbeeld" && req.method === "GET") return antwoord(res, 200, voorbeeldStand());
     if (url.pathname === "/voorbeeld/start" && req.method === "POST") {
       if (actief) return antwoord(res, 409, { fout: "De Bouwer is aan het werk; start het voorbeeld als hij klaar is" });
+      const b = await lichaam(req);
+      const opMain = b.versie === "main";
+      // de nieuwste main zetten we in dezelfde werkkopie: alleen als er geen opdracht open staat
+      if (opMain && (await openTaak())) return antwoord(res, 409, { fout: "Er staat een opdracht van de Bouwer open. Rond die eerst af (goedkeuren of weggooien), dan kan het voorbeeld de nieuwste versie tonen." });
       try {
-        return antwoord(res, 202, startVoorbeeld());
+        return antwoord(res, 202, startVoorbeeld({ opMain }));
       } catch (e) {
         return antwoord(res, 409, { fout: e instanceof Error ? e.message : "Voorbeeld kan niet starten" });
       }

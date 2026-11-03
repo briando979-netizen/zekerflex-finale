@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Versie } from "@/lib/bouwer/versie";
 import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek } from "@/lib/bouwer/live";
 import type { LiveMoment } from "@/lib/bouwer/geschiedenis";
+import { VoorbeeldPaneel } from "@/components/admin/bouwer/VoorbeeldPaneel";
 
 // ---------------------------------------------------------------------------
 // Live zetten — pane in de ZekerFlex AI-studio. Laat zien welke versie live
@@ -189,6 +190,9 @@ export function LiveZetten() {
             {fout}
           </p>
         )}
+
+        {/* eerst kijken, dan live zetten: de nieuwste versie op demogegevens */}
+        {!upToDate && <VoorbeeldPaneel versie="main" />}
 
         {stand.verzoek && (
           <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/70">

@@ -69,6 +69,28 @@ async function vraagModel(llm, messages, signal) {
   throw new Error(`Model niet bereikbaar: ${laatste}`);
 }
 
+/**
+ * Zoals vraagModel, maar bij een overbelast model of een bereikte daglimiet (de
+ * gratis laag) één keer verder met het reservemodel in plaats van op te geven.
+ * Denkhandtekeningen (extra_content) horen bij het vorige model en gaan eruit.
+ */
+async function vraagModelMetReserve(llm, messages, signal, log) {
+  try {
+    return await vraagModel(llm, messages, signal);
+  } catch (e) {
+    const fout = e instanceof Error ? e.message : String(e);
+    if (!llm.reserveModel || llm.model === llm.reserveModel || !/Model niet bereikbaar: (429|503)\b/.test(fout)) throw e;
+    log("info", `${llm.model} is overbelast of zit aan zijn daglimiet; verder met ${llm.reserveModel}`);
+    llm.model = llm.reserveModel;
+    for (const m of messages) {
+      if (m.role !== "assistant") continue;
+      delete m.extra_content;
+      for (const c of m.tool_calls ?? []) delete c.extra_content;
+    }
+    return await vraagModel(llm, messages, signal);
+  }
+}
+
 /** Oude gereedschap-uitvoer inkorten als het gesprek te groot wordt (het begin blijft). */
 function kortIn(messages) {
   let totaal = messages.reduce((n, m) => n + (typeof m.content === "string" ? m.content.length : 0), 0);
@@ -97,7 +119,7 @@ export async function draai({ llm, messages, log, signal, zetControle }) {
   for (let stap = 0; stap < MAX_STAPPEN; stap++) {
     if (signal?.aborted) throw new Error("Gestopt");
     kortIn(messages);
-    const { bericht } = await vraagModel(llm, messages, signal);
+    const { bericht } = await vraagModelMetReserve(llm, messages, signal, log);
     messages.push(bericht);
     const tekst = typeof bericht.content === "string" ? bericht.content.trim() : "";
     if (tekst) log("denk", tekst);
