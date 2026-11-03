@@ -30,6 +30,9 @@ describe("public chat assistant without a model", () => {
     expect(topicAnswer("ik heb geen kvk")?.reply).toContain("uitzendkracht");
     expect(topicAnswer("hoe moet ik inchecken")?.reply).toContain("check je in");
     expect(topicAnswer("ik zoek personeel voor mijn restaurant")?.reply).toContain("€ 3,50");
+    expect(topicAnswer("houden jullie mijn kilometers bij?")?.reply).toContain("kilometer-administratie");
+    expect(topicAnswer("mag ik reiskosten aftrekken")?.reply).toContain("€ 0,23");
+    expect(topicAnswer("hoe doe ik mijn aangifte")?.reply).toContain("jaaroverzicht");
   });
 
   it("sends follow-ups in the widget's wire format", () => {

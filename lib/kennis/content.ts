@@ -322,6 +322,7 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
       { q: "Waarom zie ik maar een deel van de diensten?", a: "De matching toont alleen aanbod waar je een sterke match voor bent, gewogen op vak, reistijd, betrouwbaarheid en beschikbaarheid." },
       { q: "Kan ik een tegenbod doen op een klus?", a: "Ja. Bij een dienst kun je vóór het accepteren een ander uurtarief voorstellen. De opdrachtgever keurt dat goed of af." },
       { q: "Wat als ik een aangenomen dienst niet kan doen?", a: "Je bent zelf verantwoordelijk voor een vervanger. Je klus wordt automatisch terug op het platform gezet met een 'Vervanging'-label. Onterecht afzeggen weegt mee in je betrouwbaarheidsscore." },
+      { q: "Kan ik mijn diensten in mijn eigen agenda zien?", a: "Ja. Onder Account → Diensten in je eigen agenda koppel je één keer Google Agenda, Apple Agenda of Outlook. Elke dienst die je aanneemt, verschijnt daarna vanzelf met adres en een herinnering, en een afgezegde dienst verdwijnt weer." },
     ],
   },
   {
@@ -330,6 +331,7 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
       { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformkosten, met de juiste btw-behandeling." },
       { q: "Wanneer krijg ik mijn geld?", a: "Dat kies je zelf per dienst, nadat je uren zijn goedgekeurd: de betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). De bijschrijving bij een externe bank kan daarna langer duren." },
       { q: "Kan ik een voorschot krijgen?", a: "Ja, op je eerstvolgende betaling. Kosten: 3% over het voorschot, automatisch verrekend met je volgende uitbetaling." },
+      { q: "Houdt ZekerFlex mijn kilometers bij?", a: "Ja. Elke dienst waarvoor je uren indient, staat als rit in je kilometer-administratie, met een geschatte afstand die je zelf kunt aanpassen. Ritten buiten ZekerFlex voeg je toe. Je downloadt de lijst voor je boekhouder, en als zzp'er staan je kilometers ook in je jaaroverzicht voor de aangifte (€ 0,23 per zakelijke km met je eigen auto, indicatief)." },
     ],
   },
   {

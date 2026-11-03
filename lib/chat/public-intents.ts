@@ -72,6 +72,11 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
     answer: { reply: "Ja: je kunt een voorschot opnemen op uren die al goedgekeurd of onderweg zijn, tegen een kleine vergoeding. Ontvang je je verdiensten op ZekerFlex Bank, dan staat het voorschot direct op je rekening en wordt het verrekend met je volgende uitbetaling.", suggestions: ["Wat is ZekerFlex Bank?", "Hoe snel word ik uitbetaald?"] },
   },
   {
+    // vóór de prijs-regel: "reiskosten" bevat "kost"
+    re: /kilometer|reiskost|rittenadministratie|ritten ?registratie|km-?vergoeding/i,
+    answer: { reply: "Elke dienst waarvoor je uren indient, zet ZekerFlex als rit in je kilometer-administratie: van huis naar de opdrachtgever en terug, met een afstand die je zelf kunt aanpassen. Ritten buiten ZekerFlex voeg je toe. Als zzp'er mag je met je eigen auto € 0,23 per zakelijke km aftrekken; de lijst download je voor je boekhouder.", suggestions: ["Hoe zit het met btw en belasting?", "Hoe meld ik me aan?"] },
+  },
+  {
     re: /prijs|prijzen|kost|tarief|fee|commissie|abonnement|wat betaal/i,
     answer: { reply: "Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen als er echt iemand werkt — geen abonnement of opstartkosten. Voor werkenden is ZekerFlex gratis; ZekerFlex Bank is de eerste 30 dagen gratis en de virtuele betaalpas altijd.", suggestions: ["Plan een demo", "Wat is ZekerFlex Bank?"] },
   },
@@ -93,7 +98,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /belasting|btw|inkomstenbelasting|aangifte|kvk|kleineondernemers|\bkor\b/i,
-    answer: { reply: "Als zzp'er heb je een KVK-inschrijving nodig. ZekerFlex maakt je facturen automatisch, en in ZekerFlex Bank → Belasting zie je per kwartaal de btw die je moet afdragen en wat je opzij zet voor inkomstenbelasting — in één tik naar je potje Belasting. Jaaroverzicht downloadbaar voor je boekhouder.", suggestions: ["Kan ik als uitzendkracht werken?", "Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Als zzp'er heb je een KVK-inschrijving nodig. ZekerFlex maakt je facturen automatisch, en in ZekerFlex Bank → Belasting zie je per kwartaal de btw die je moet afdragen en wat je opzij zet voor inkomstenbelasting — in één tik naar je potje Belasting. Onder Je administratie download je een jaaroverzicht met omzet, btw, uren en kilometers voor je aangifte.", suggestions: ["Kan ik als uitzendkracht werken?", "Wat is ZekerFlex Bank?"] },
   },
   {
     re: /uren (invullen|indienen|schrijven)|inchecken|uitchecken|urenbrief|timesheet/i,
