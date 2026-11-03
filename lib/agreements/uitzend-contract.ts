@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getFiscal } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { kvAppend, kvGet } from "@/lib/storage/kv";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Uitzendovereenkomst — the temp-work employment contract between ZekerFlex
@@ -66,7 +67,7 @@ export async function signUitzendContract(
 
   const [fiscal, status] = await Promise.all([getFiscal(userId), getUitzendStatus(userId)]);
   const now = new Date();
-  const year = now.getFullYear();
+  const year = amsterdamParts(now).year; // Dutch year: just after midnight on 1 Jan the UTC server is still in the old year
   const all = await listUitzendContracts(userId);
   const reference = `ZF-UZO-${year}-${String(all.length + 1).padStart(3, "0")}-${userId.replace(/[^a-z0-9]/gi, "").slice(0, 6)}`;
 
