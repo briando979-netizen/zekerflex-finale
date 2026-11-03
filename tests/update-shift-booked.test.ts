@@ -4,12 +4,20 @@ import type { Principal } from "@/lib/auth";
 // Een werkgever verzet de tijd van een dienst waar al iemand op staat:
 // - niet als die kracht op het nieuwe tijdstip al elders werkt (zonder te zeggen waar),
 // - de concept-urenbriefjes volgen de nieuwe tijden (anders telden oude uren),
-// - het chatbericht noemt de nieuwe tijd.
+// - het chatbericht noemt de nieuwe tijd, en de kracht krijgt een push (een
+//   systeembericht in de chat stuurt zelf geen push). Ook bij annuleren.
 
 const h = vi.hoisted(() => ({
   overlap: null as unknown,
   tsUpdates: [] as unknown[],
   messages: [] as string[],
+  pushes: [] as { ids: string[]; push: { title: string; body: string } }[],
+  tasks: [] as Promise<unknown>[],
+}));
+
+vi.mock("@/lib/run-after", () => ({ runAfter: (t: () => Promise<unknown>) => void h.tasks.push(t()) }));
+vi.mock("@/lib/notifications/push", () => ({
+  sendUserPush: async (ids: string[], push: { title: string; body: string }) => (h.pushes.push({ ids, push }), 1),
 }));
 
 const requirePrincipal = vi.fn();
@@ -45,12 +53,12 @@ vi.mock("@/lib/prisma", () => ({
       update: (args: unknown) => args,
     },
     timesheet: { updateMany: (args: unknown) => (h.tsUpdates.push(args), args) },
-    shiftAssignment: { findFirst: async () => h.overlap },
+    shiftAssignment: { findFirst: async () => h.overlap, update: (args: unknown) => args },
     $transaction: async (ops: unknown[]) => ops,
   },
 }));
 
-import { updateShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { cancelShiftAction, updateShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 
 const manager = {
   userId: "mgr1",
@@ -67,6 +75,8 @@ beforeEach(() => {
   h.overlap = null;
   h.tsUpdates.length = 0;
   h.messages.length = 0;
+  h.pushes.length = 0;
+  h.tasks.length = 0;
 });
 
 describe("updateShiftAction — tijd verzetten met ingeplande krachten", () => {
@@ -87,6 +97,19 @@ describe("updateShiftAction — tijd verzetten met ingeplande krachten", () => {
       data: { scheduledStart: new Date("2026-11-05T09:00:00.000Z"), scheduledEnd: new Date("2026-11-05T17:00:00.000Z") },
     });
     expect(h.messages[0]).toBe("De opdrachtgever heeft de tijd van deze dienst aangepast: nu do 5 nov 10:00–18:00. Bekijk de klus opnieuw.");
+    await Promise.all(h.tasks);
+    expect(h.pushes).toEqual([
+      { ids: ["w1"], push: expect.objectContaining({ title: "Nieuwe tijd: Magazijn", body: "De opdrachtgever heeft je dienst verzet naar do 5 nov 10:00–18:00." }) },
+    ]);
+  });
+
+  it("stuurt de ingeplande kracht een push als de opdrachtgever de dienst annuleert", async () => {
+    const r = await cancelShiftAction("sh1", "Te weinig werk");
+    expect(r.ok).toBe(true);
+    await Promise.all(h.tasks);
+    expect(h.pushes[0]?.ids).toEqual(["w1"]);
+    expect(h.pushes[0]?.push.title).toBe("Geannuleerd: Magazijn");
+    expect(h.pushes[0]?.push.body).toContain("do 5 nov 09:00–17:00");
   });
 
   it("laat de urenbriefjes met rust als alleen de titel verandert", async () => {
@@ -94,5 +117,7 @@ describe("updateShiftAction — tijd verzetten met ingeplande krachten", () => {
     expect(r.ok).toBe(true);
     expect(h.tsUpdates).toHaveLength(0);
     expect(h.messages[0]).toContain("details van deze dienst aangepast");
+    await Promise.all(h.tasks);
+    expect(h.pushes).toHaveLength(0);
   });
 });

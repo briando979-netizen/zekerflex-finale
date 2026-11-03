@@ -16,6 +16,7 @@ import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
+import { sendUserPush } from "@/lib/notifications/push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
@@ -173,6 +174,18 @@ export async function updateShiftAction(
         /* non-fatal */
       }
     }
+    // System chat messages send no push (lib/messaging/notify.ts), and a new time must not go unnoticed.
+    if (timesChanged && shift.assignments.length) {
+      const booked = shift.assignments.map((a) => a.freelancer.userId);
+      runAfter(() =>
+        sendUserPush(booked, {
+          title: `Nieuwe tijd: ${parsed.title ?? shift.title}`,
+          body: `De opdrachtgever heeft je dienst verzet naar ${overlapWhen({ startsAt: starts, endsAt: ends })}.`,
+          data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `tijd-${shift.id}` },
+          ttlSeconds: 86_400,
+        }),
+      );
+    }
 
     revalidatePath(`/werkgever/diensten/${shift.id}`);
     revalidatePath("/werkgever/diensten");
@@ -237,6 +250,18 @@ export async function cancelShiftAction(shiftId: string, reason: string): Promis
       } catch {
         /* non-fatal */
       }
+    }
+    // System chat messages send no push: tell the booked people now, not on the day itself.
+    if (hadAssignees) {
+      const booked = shift.assignments.map((a) => a.freelancer.userId);
+      runAfter(() =>
+        sendUserPush(booked, {
+          title: `Geannuleerd: ${shift.title}`,
+          body: `De opdrachtgever heeft je dienst van ${overlapWhen(shift)} geannuleerd. Bekijk de klus voor de vergoeding.`,
+          data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `geannuleerd-${shift.id}` },
+          ttlSeconds: 86_400,
+        }),
+      );
     }
 
     revalidatePath(`/werkgever/diensten/${shift.id}`);
