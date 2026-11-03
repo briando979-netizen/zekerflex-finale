@@ -626,7 +626,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "alert-push",
       group: "Beheer & veiligheid",
       title: "Storingsmeldingen op je telefoon aanzetten",
-      why: "Mislukte taken, uitbetalingen, Stripe-fouten en bank-risico's komen als pushmelding binnen — maar alleen als je telefoon meldingen van ZekerFlex toestaat. Anders krijg je ze alleen per mail.",
+      why: "Mislukte taken, uitbetalingen, Stripe-fouten en bank-risico's komen als pushmelding binnen — maar alleen als je telefoon meldingen van ZekerFlex toestaat. Anders krijg je ze alleen per mail. Had je dit al gedaan? Je toestellen van eind oktober waren nog aangemeld met een oude sleutel en kregen niets meer; op 3 november zijn die uitgezet. Open ZekerFlex op elk toestel één keer opnieuw, dan meldt het zich vanzelf aan met de juiste sleutel.",
       how: ["Open zekerflex.com/admin op je telefoon (zet hem eventueel op je beginscherm).", "Tik op het belletje bovenin en sta meldingen toe.", "Ga naar Admin → Systeemstatus en klik 'Testmelding sturen' om te controleren dat hij aankomt."],
       auto: true,
       done: adminPush,
