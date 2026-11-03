@@ -9,7 +9,7 @@ import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { count, euro } from "@/lib/admin/format";
-import { blobTexture, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
+import { blobTexture, liveBoard, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
 import { roomOf, type CityEvent } from "@/components/admin/city/rooms";
 import { bike, boat, Mover, robot, TRAFFIC_COLORS, vehicle } from "@/components/admin/city/vehicles";
 import { type Anchor, buildCompanies, buildDock, buildHouses, buildOffice, buildWorld, type CompanyLayer, type Layer, type Pick, ROAD_TOP, SLAB } from "@/components/admin/city/world";
@@ -153,6 +153,36 @@ export function createCity(
   life.setHoliday(holiday);
   const festive = createFestive(kit, scene, holiday);
   let hourNow = amsterdamParts(today).hour;
+
+  // lichtreclameborden langs de snelweg bij de ingangen van de stad, met live cijfers
+  const board = liveBoard(kit);
+  const boardMat = kit.own({ map: board.texture, emissive: 0xffffff, emissiveMap: board.texture, emissiveIntensity: 0.4, roughness: 0.5 });
+  for (const [x, z] of [
+    [88, 14],
+    [-88, -34],
+  ] as const) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    const face = new THREE.Mesh(kit.geo("billboard", () => new THREE.PlaneGeometry(14, 5.25)), boardMat);
+    face.position.set(0, 8.6, 0.09);
+    g.add(face, kit.box(14.3, 5.55, 0.15, kit.mat(0x1f2937), 0, 8.6, 0));
+    for (const px of [-5, 5]) g.add(kit.box(0.3, 6, 0.3, kit.mat(0x475569, { metalness: 0.4, roughness: 0.5 }), px, 3, 0));
+    scene.add(g);
+  }
+  const plural = (n: number, one: string, many: string) => `${count(n)} ${n === 1 ? one : many}`;
+  const drawBoard = () => {
+    const d = data;
+    if (!d) return board.draw("ZekerFlex · nu live", ["Cijfers laden…"]);
+    const open = d.shifts?.open ?? d.companies.reduce((s, c) => s + c.openShifts, 0);
+    const week = d.shifts?.week ?? d.companies.reduce((s, c) => s + c.shiftsWeek, 0);
+    board.draw("ZekerFlex · nu live", [
+      `${plural(open, "open dienst", "open diensten")} · ${count(week)} deze week`,
+      `${plural(d.workers.total, "werker", "werkers")} · ${plural(d.companiesTotal, "klant", "klanten")}`,
+      `${count(d.visitors?.total ?? 0)} nu op zekerflex.com`,
+    ]);
+  };
+  // de gegevens komen pas later (setData); tot dan staat er "laden"
+  board.draw("ZekerFlex · nu live", ["Cijfers laden…"]);
   let weather: CityWeather | null = null;
   let weatherKey = "";
   let companies: CompanyLayer = buildCompanies(kit, [], win);
@@ -609,6 +639,7 @@ export function createCity(
       applyDaylight();
     } else updateLife();
     refreshLabels();
+    drawBoard();
     syncAmbient();
     syncBikes();
   };
@@ -638,6 +669,7 @@ export function createCity(
     moon.intensity = (phase === "nacht" ? 0.12 + 0.38 * lit : phase === "schemer" ? 0.12 : 0) * (w === "helder" ? 1 : 0.6);
     // koplampen en achterlichten branden feller als het donker is
     headlights.emissiveIntensity = phase === "nacht" ? 2.2 : phase === "schemer" ? 1.4 : 0.6;
+    boardMat.emissiveIntensity = phase === "nacht" ? 1 : phase === "schemer" ? 0.75 : 0.4;
     taillights.emissiveIntensity = phase === "nacht" ? 1.6 : phase === "schemer" ? 1 : 0.5;
     hemiBase = (phase === "dag" ? 1.25 : phase === "schemer" ? 0.75 : 0.32) * (w === "helder" ? 1 : 0.92);
     hemi.intensity = hemiBase;

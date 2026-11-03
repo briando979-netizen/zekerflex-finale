@@ -246,6 +246,30 @@ export function signTexture(kit: Kit, text: string, opts: { bg: string; fg: stri
   return t;
 }
 
+/** Lichtbord met regels tekst dat opnieuw getekend kan worden (bijvoorbeeld met live cijfers). */
+export function liveBoard(kit: Kit, width = 1024, height = 384) {
+  const { c, ctx } = canvas(width, height);
+  const t = kit.texture(new THREE.CanvasTexture(c));
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  const draw = (title: string, lines: string[]) => {
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#4f6bed";
+    ctx.fillRect(0, 0, width, height * 0.26);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `700 ${Math.round(height * 0.15)}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+    ctx.fillText(title, width * 0.05, height * 0.13);
+    ctx.fillStyle = "#fde68a";
+    ctx.font = `600 ${Math.round(height * 0.14)}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+    lines.slice(0, 3).forEach((line, k) => ctx.fillText(line, width * 0.05, height * (0.42 + k * 0.22)));
+    t.needsUpdate = true;
+  };
+  return { texture: t, draw };
+}
+
 /** Zachte ronde schaduw onder alles wat beweegt (goedkoper dan echte schaduwen per beeld). */
 export function blobTexture(kit: Kit) {
   const { c, ctx } = canvas(64, 64);

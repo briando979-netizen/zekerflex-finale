@@ -23,6 +23,8 @@ export interface CityData {
   companies: CityCompany[];
   companiesTotal: number;
   workers: { total: number; workingNow: number };
+  /** Alle open diensten en alle diensten die de komende 7 dagen beginnen (niet alleen van klanten met een pand). */
+  shifts?: { open: number; week: number };
   shop: { ordersToday: number; toShip: number };
   money: { openInvoices: number; openCents: number; paidToday: number; paidTodayCents: number };
   ai: { callsToday: number };
@@ -167,6 +169,7 @@ export async function getCityData(now = new Date()): Promise<CityData> {
     companies: rankCompanies(all),
     companiesTotal: all.length,
     workers: { total: workers, workingNow: working.length },
+    shifts: { open: open.length, week: week.length },
     shop: { ordersToday, toShip },
     money: { openInvoices: openInv._count, openCents: openInv._sum.totalCents ?? 0, paidToday: paidInv._count, paidTodayCents: paidInv._sum.totalCents ?? 0 },
     ai: { callsToday: aiCalls },
