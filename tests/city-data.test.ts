@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
+vi.mock("@/lib/redis", () => ({ redis: {}, cached: async () => null }));
 
 import { type CityCompany, rankCompanies } from "@/lib/admin/city-data";
 import { COMPANY_SLOTS } from "@/lib/admin/city-layout";

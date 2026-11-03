@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { COMPANY_SLOTS, companyFloors, dayPhase, EXITS, houseCount, LANDMARKS, LANE_BIKE, LANE_CAR, laneOffset, millSpeed, type Origin, type Plot, type Pt, type RoadPt, sunAt, trafficFor, tripCenter } from "@/lib/admin/city-layout";
 import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
-import type { CityData } from "@/lib/admin/city-data";
+import type { CityData, CityWeather } from "@/lib/admin/city-data";
+import { createLife } from "@/components/admin/city/life";
 import { count, euro } from "@/lib/admin/format";
 import { blobTexture, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
 import { roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -16,8 +17,8 @@ import { type Anchor, buildCompanies, buildDock, buildHouses, buildOffice, build
 // mensen die nu een dienst hebben; gewoon verkeer wordt drukker als er meer
 // mensen werken. Tekenen pauzeert buiten beeld en in een verborgen tabblad.
 
-export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park";
-export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "magazijn", "opleiding", "woonwijk", "park"];
+export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park" | "polder";
+export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "magazijn", "opleiding", "woonwijk", "park", "polder"];
 
 export interface CityHandle {
   setData: (d: CityData) => void;
@@ -125,6 +126,10 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   const world = buildWorld(kit, win);
   const office = buildOffice(kit, shadow);
   scene.add(world.layer.group, office.layer.group);
+  // voetgangers, dieren, wolken en neerslag
+  const life = createLife(kit, scene, shadow);
+  let weather: CityWeather | null = null;
+  let weatherKey = "";
   let companies: CompanyLayer = buildCompanies(kit, [], win);
   let houses: { layer: Layer; built: Plot[] } = buildHouses(kit, 0);
   let dock: Layer = buildDock(kit, 0, 0, shadow);
@@ -254,6 +259,8 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
         return around(0, 0, 50, 0, 46, 54);
       case "park":
         return around(LANDMARKS.park.x, 3, LANDMARKS.park.z - 4, 16, 20, 30);
+      case "polder":
+        return around(0, 0, -106, 0, 58, 74);
       default: {
         const p = LANDMARKS[to];
         return around(p.x, 2, p.z, 14, 22, 28);
@@ -558,32 +565,61 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       sigDock = dk;
       changed = true;
     }
-    if (changed) {
-      refreshPickables();
+    weather = d.weather;
+    const wk = d.weather ? `${d.weather.kind}|${d.weather.tempC}` : "";
+    if (changed) refreshPickables();
+    if (changed || wk !== weatherKey) {
+      weatherKey = wk;
       applyDaylight();
-    }
+    } else updateLife();
     refreshLabels();
     syncAmbient();
     syncBikes();
   };
 
-  // --- dag en nacht -------------------------------------------------------
+  // --- dag en nacht, en het echte weer -------------------------------------
   let phase: "dag" | "schemer" | "nacht" = "dag";
+  let hemiBase = 1.25;
+  const grassMats = [kit.mat(0x9fcd85, { roughness: 1 }), kit.mat(0x8cc56f, { roughness: 1 })];
+  const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0 });
   const applyDaylight = () => {
     const s = sunAt(new Date());
     phase = dayPhase(s.elevation);
+    const w = weather?.kind ?? "helder";
     const el = Math.max(0.14, s.elevation);
     sun.position.set(s.dir[0] * Math.cos(el) * 150, Math.sin(el) * 150, s.dir[1] * Math.cos(el) * 150);
     const warm = new THREE.Color(0xffc28a).lerp(new THREE.Color(0xffffff), Math.min(1, Math.max(0, s.elevation) / 0.5));
     sun.color.copy(warm);
-    sun.intensity = phase === "dag" ? 0.7 + 0.9 * Math.min(1, s.elevation / 0.8) : phase === "schemer" ? 0.45 : 0;
-    moon.intensity = phase === "nacht" ? 0.35 : phase === "schemer" ? 0.12 : 0;
-    hemi.intensity = phase === "dag" ? 1.25 : phase === "schemer" ? 0.75 : 0.32;
+    // bewolking en neerslag dimmen de zon; bij mist en regen is de lucht grijs
+    const dim = { helder: 1, bewolkt: 0.62, mist: 0.5, motregen: 0.5, regen: 0.4, sneeuw: 0.55, onweer: 0.3 }[w];
+    sun.intensity = (phase === "dag" ? 0.7 + 0.9 * Math.min(1, s.elevation / 0.8) : phase === "schemer" ? 0.45 : 0) * dim;
+    moon.intensity = (phase === "nacht" ? 0.35 : phase === "schemer" ? 0.12 : 0) * (w === "helder" ? 1 : 0.6);
+    hemiBase = (phase === "dag" ? 1.25 : phase === "schemer" ? 0.75 : 0.32) * (w === "helder" ? 1 : 0.92);
+    hemi.intensity = hemiBase;
     hemi.color.setHex(phase === "nacht" ? 0x8ea2d8 : 0xffffff);
-    const [top, bottom] = phase === "dag" ? ["#7fb8e6", "#dcecf7"] : phase === "schemer" ? ["#334a7d", "#f2b48a"] : ["#030712", "#1b2747"];
+    const grey = w !== "helder";
+    const [top, bottom] =
+      phase === "dag"
+        ? grey
+          ? w === "mist" || w === "sneeuw"
+            ? ["#c4ccd6", "#e7ebef"]
+            : w === "bewolkt"
+              ? ["#9fb3c8", "#dfe6ee"]
+              : ["#6f7f90", "#c3ccd5"]
+          : ["#7fb8e6", "#dcecf7"]
+        : phase === "schemer"
+          ? grey
+            ? ["#3b4658", "#a99a92"]
+            : ["#334a7d", "#f2b48a"]
+          : ["#030712", "#1b2747"];
     sky.paint(top, bottom);
-    (scene.fog as THREE.Fog).color.set(bottom);
-    stars.visible = phase === "nacht";
+    const fog = scene.fog as THREE.Fog;
+    fog.color.set(bottom);
+    fog.near = w === "mist" ? 30 : w === "regen" || w === "onweer" || w === "sneeuw" ? 150 : 280;
+    fog.far = w === "mist" ? 180 : w === "regen" || w === "onweer" || w === "sneeuw" ? 440 : 640;
+    grassMats.forEach((m, k) => m.color.setHex(w === "sneeuw" ? 0xe8eef0 : k ? 0x8cc56f : 0x9fcd85));
+    stars.visible = phase === "nacht" && w === "helder";
+    updateLife();
     const key = phase === "dag" ? "day" : phase === "schemer" ? "dusk" : "night";
     for (const l of layers()) for (const g of l.glows) g.m.emissiveIntensity = g[key];
     renderer.shadowMap.needsUpdate = true;
@@ -605,6 +641,8 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
   let ratio = Math.min(window.devicePixelRatio, 2);
   let perfSum = 0;
   let perfN = 0;
+  let nextFlash = 0;
+  let flashUntil = 0;
 
   const tick = () => {
     frame = requestAnimationFrame(tick);
@@ -728,6 +766,15 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       if (b.g.position.x > 160) b.g.position.x = -160;
       if (b.g.position.x < -160) b.g.position.x = 160;
     }
+    life.update(dt, now, controls.target);
+    // bij onweer flitst af en toe de bliksem
+    if (weather?.kind === "onweer" && !reduced) {
+      if (now > nextFlash) {
+        flashUntil = now + 120;
+        nextFlash = now + 7000 + rnd() * 9000;
+      }
+      hemi.intensity = hemiBase + (now < flashUntil ? 2.6 : 0);
+    }
 
     // molen, koelers, munt, knipperlichten, bouwkraan
     if (!reduced) {
@@ -826,6 +873,7 @@ export function createCity(host: HTMLDivElement, labelHost: HTMLDivElement, opts
       renderer.domElement.removeEventListener("pointerup", onUp);
       renderer.domElement.removeEventListener("pointermove", onMove);
       for (const l of layers()) l.dispose();
+      life.dispose();
       kit.dispose();
       renderer.dispose();
       renderer.domElement.remove();

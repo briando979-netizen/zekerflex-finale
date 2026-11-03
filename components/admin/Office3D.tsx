@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
 import { dayPhase, type Origin, sunAt, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
+import { WEATHER_NL } from "@/lib/admin/city-life";
 import { count, euro } from "@/lib/admin/format";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -33,6 +34,7 @@ const VIEWS: [View, string][] = [
   ["opleiding", "Opleiding"],
   ["woonwijk", "Woonwijk"],
   ["park", "Park"],
+  ["polder", "Polder"],
 ];
 
 const LEGEND: [string, string][] = [
@@ -44,10 +46,13 @@ const LEGEND: [string, string][] = [
   ["#4f6bed", "Stroomauto: AI"],
   ["#f97316", "Fietser: iemand op weg naar een dienst"],
   ["#94a3b8", "Grijze auto: gewoon verkeer, drukker als er meer mensen werken"],
+  // dezelfde kleur als VISITOR_JACKET in components/admin/city/life.ts
+  ["#0ea5e9", "Voetganger in felblauwe jas: een echte bezoeker die nu op zekerflex.com is (anoniem)"],
+  ["#a8a29e", "Andere voetgangers, honden, eenden, vogels, koeien en schapen: sfeer, drukker overdag"],
 ];
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
-const pickFor = (v: View): Pick | null => (v === "stad" ? null : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+const pickFor = (v: View): Pick | null => (v === "stad" || v === "polder" ? null : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
 
 const ORIGIN_NL: Record<string, string> = {
@@ -285,6 +290,10 @@ export function Office3D() {
           <InfoList
             rows={[
               { label: "Gebeurtenissen laatste uur", value: data ? count(data.eventsLastHour) : "—" },
+              {
+                label: "Nu op zekerflex.com",
+                value: data?.visitors ? `${count(data.visitors.total)} (${count(data.visitors.anoniem)} bezoekers, ${count(data.visitors.freelancer)} werkers, ${count(data.visitors.bedrijf)} bedrijven)` : "—",
+              },
               { label: "Sales-leads", value: data ? `${count(data.leads.total)} (${count(data.leads.newToday)} nieuw vandaag)` : "—" },
             ]}
           />
@@ -504,10 +513,13 @@ export function Office3D() {
                   <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: "#dc2626" }} aria-hidden />
                   Zwaailicht: rood = kritiek, oranje = waarschuwing
                 </li>
+                <li className="pt-1" style={{ color: "var(--a-dim)" }}>
+                  Zon, wolken, regen en sneeuw zijn echt: het weer in Amsterdam nu (bron: MET Norway, CC BY 4.0).
+                </li>
               </ul>
             )}
             <button type="button" onClick={() => setLegend((v) => !v)} aria-expanded={legend} className="rounded-full px-3 py-1 text-[11px] font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
-              {legend ? "Verberg uitleg" : "Wat rijdt er?"}
+              {legend ? "Verberg uitleg" : "Wat zie je?"}
             </button>
           </div>
           <p className="pointer-events-none absolute bottom-3 right-3 hidden rounded-full px-3 py-1 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
@@ -516,6 +528,7 @@ export function Office3D() {
           {clock && (
             <p className="pointer-events-none absolute right-3 top-3 rounded-full px-3 py-1 text-[11px] font-medium shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
               {clock}
+              {data?.weather ? ` · ${data.weather.tempC} °C, ${WEATHER_NL[data.weather.kind]}` : ""}
             </p>
           )}
           <div aria-live="polite" className="absolute left-3 top-12 max-w-[calc(100%-1.5rem)] sm:top-3 sm:max-w-[55%]">

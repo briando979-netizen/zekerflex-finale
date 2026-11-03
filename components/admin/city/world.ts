@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { blockRect, CANAL_Z, COMPANY_SLOTS, companyFloors, EXITS, HOUSE_SLOTS, LANDMARKS, type LandmarkId, LINES, type Plot, type Pt, ROAD_W, roadSpan } from "@/lib/admin/city-layout";
 import { FRONT_Z, RD, roomCenter, RW } from "@/lib/admin/office3d-layout";
 import type { CityCompany } from "@/lib/admin/city-data";
+import { DITCHES, FARM, inRect, MEADOW_COWS, MEADOW_SHEEP } from "@/lib/admin/city-life";
 import { bake, gableGeometry, hashOf, type Kit, repeated, seeded, signTexture, type windowTextures } from "@/components/admin/city/parts";
 import { ROOMS, type Room, type RoomId } from "@/components/admin/city/rooms";
 import { robot, vehicle } from "@/components/admin/city/vehicles";
@@ -289,7 +290,8 @@ export function buildWorld(kit: Kit, win: Windows): StaticWorld {
     const inCity = Math.abs(x) < 80 && z > -80 && z < cz0 + 2;
     const inCanal = z > cz0 - 2 && z < cz1 + 2;
     const onExit = (x > 72 && Math.abs(z - 24) < 5) || (x < -72 && Math.abs(z + 24) < 5);
-    if (!inCity && !inCanal && !onExit) trees.push([x, z]);
+    const inPolder = inRect(MEADOW_COWS, x, z, -3) || inRect(MEADOW_SHEEP, x, z, -3) || Math.hypot(x - FARM[0], z - FARM[1]) < 15 || (z < -84 && z > -134 && Math.abs(x) < 112);
+    if (!inCity && !inCanal && !onExit && !inPolder) trees.push([x, z]);
   }
   const trunks: Inst[] = [];
   const crowns: Inst[] = [];
@@ -304,6 +306,50 @@ export function buildWorld(kit: Kit, win: Windows): StaticWorld {
     instanced(kit, kit.geo("trunk", () => new THREE.CylinderGeometry(0.12, 0.17, 1.2, 6)), kit.mat(0x7c5a3a), trunks, true),
     instanced(kit, kit.geo("crown", () => new THREE.IcosahedronGeometry(0.95, 0)), kit.mat(0xffffff, { roughness: 0.9, flatShading: true }), crowns, true),
   );
+
+  // --- polder achter het bedrijventerrein: weides, sloten en een boerderij --
+  const meadow = kit.mat(0x8cc56f, { roughness: 1 });
+  for (const m of [MEADOW_COWS, MEADOW_SHEEP]) G.add(flat(kit, m.x1 - m.x0 + 6, m.z1 - m.z0 + 6, meadow, (m.x0 + m.x1) / 2, 0.01, (m.z0 + m.z1) / 2));
+  for (const d of DITCHES) G.add(flat(kit, d.x1 - d.x0, d.z1 - d.z0, water, (d.x0 + d.x1) / 2, 0.03, (d.z0 + d.z1) / 2));
+  {
+    const [fx, fz] = FARM;
+    // stolpboerderij met piramidedak, een rode schuur en een silo
+    const brickFarm = kit.mat(0x9a4a32, { roughness: 0.9 });
+    G.add(kit.box(7, 3.2, 7, brickFarm, fx, 1.6, fz));
+    const stolp = new THREE.Mesh(
+      kit.geo("stolp", () => new THREE.ConeGeometry(5.6, 5, 4).rotateY(Math.PI / 4)),
+      kit.mat(0x3f3a36, { roughness: 0.95, flatShading: true }),
+    );
+    stolp.position.set(fx, 3.2 + 2.5, fz);
+    stolp.castShadow = true;
+    G.add(stolp, kit.box(1.2, 2, 0.08, kit.mat(0x14532d), fx, 1, fz + 3.54, false));
+    G.add(kit.box(10, 4.2, 7, kit.mat(0x991b1b, { roughness: 0.85 }), fx + 12, 2.1, fz - 1));
+    const barnRoof = new THREE.Mesh(
+      kit.geo("gable", gableGeometry),
+      kit.mat(0x52525b, { roughness: 0.8, flatShading: true }),
+    );
+    barnRoof.scale.set(7.6, 2.6, 10.4);
+    barnRoof.rotation.y = Math.PI / 2;
+    barnRoof.position.set(fx + 12, 4.2, fz - 1);
+    barnRoof.castShadow = true;
+    G.add(barnRoof, kit.box(3, 3, 0.1, kit.mat(0xf5f5f4), fx + 12, 1.5, fz + 2.55, false));
+    const silo = new THREE.Mesh(
+      kit.geo("silo", () => new THREE.CylinderGeometry(1.5, 1.5, 8, 16)),
+      kit.mat(0xcbd5e1, { roughness: 0.5, metalness: 0.3 }),
+    );
+    silo.position.set(fx - 7, 4, fz - 3);
+    silo.castShadow = true;
+    const dome = new THREE.Mesh(
+      kit.geo("silo-dome", () => new THREE.SphereGeometry(1.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)),
+      kit.mat(0x94a3b8, { roughness: 0.5, metalness: 0.3 }),
+    );
+    dome.position.set(fx - 7, 8, fz - 3);
+    G.add(silo, dome, flat(kit, 30, 18, kit.mat(0xd6c9ab, { roughness: 1 }), fx + 3, 0.02, fz));
+    // een landweggetje van het erf naar de stad, met een bruggetje over de sloot
+    G.add(flat(kit, 3, 34, kit.mat(0xb8a98a, { roughness: 1 }), fx, 0.025, fz + 26));
+    const ditch = DITCHES[0];
+    if (ditch) G.add(kit.box(3.6, 0.22, 2.4, kit.mat(0x78716c, { roughness: 0.9 }), fx, 0.11, (ditch.z0 + ditch.z1) / 2));
+  }
 
   // --- park met molen, tulpen en een vijver -------------------------------
   const P = LANDMARKS.park;
@@ -571,6 +617,7 @@ export function buildOffice(kit: Kit, shadow: THREE.Texture) {
 }
 
 const PALETTE = [0xe2e8f0, 0xdbeafe, 0xe0e7ff, 0xfef3c7, 0xdcfce7, 0xfce7f3, 0xede9fe, 0xccfbf1, 0xffedd5];
+const PARKED = [0x94a3b8, 0x1f2937, 0xe5e7eb, 0x7f1d1d, 0x1e3a8a, 0x64748b];
 
 export interface CompanyLayer {
   layer: Layer;
@@ -651,6 +698,14 @@ export function buildCompanies(root: Kit, companies: CityCompany[], win: Windows
     );
     G.add(pickable(L, pand, { kind: "company", id: c.id }));
     L.anchors.push({ key: `company:${c.id}`, text: c.name, pos: new THREE.Vector3(slot.x, SLAB + H + 2.9, slot.z), tier: "company" });
+    // geparkeerde auto's op het voorplein (buiten de aanklikbare groep, zodat ze samengevoegd worden)
+    const cars = c.workingNow > 0 ? 2 : 1;
+    for (let n = 0; n < cars; n++) {
+      const color = PARKED[(hashOf(c.id) + n) % PARKED.length] ?? 0x94a3b8;
+      const px = slot.x - bw / 2 + 1.2 + n * 1.45;
+      const pz = slot.z + bd / 2 + 2.6;
+      G.add(kit.box(1.1, 0.55, 2.1, kit.mat(color, { roughness: 0.35, metalness: 0.15 }), px, PLOT + 0.4, pz), kit.box(0.95, 0.42, 1.05, kit.mat(0x1e293b, { roughness: 0.15, metalness: 0.4 }), px, PLOT + 0.88, pz + 0.1, false));
+    }
   }
   bake(kit, G);
   return { layer: L, racks, crane };
