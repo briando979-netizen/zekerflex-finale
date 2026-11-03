@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { reviewSummary } from "@/lib/reviews/store";
+import { workerMissWhere } from "@/lib/profile/card";
 
 // ---------------------------------------------------------------------------
 // Public "card" stats for a freelancer who responded to a replacement request —
@@ -47,7 +48,8 @@ export async function responderCards(
       homeLatitude: true,
       homeLongitude: true,
       user: { select: { fullName: true } },
-      _count: { select: { assignments: { where: { cancelledAt: { not: null } } } } },
+      // Alleen zelf afzeggen / niet opkomen, niet een annulering door een opdrachtgever.
+      _count: { select: { assignments: { where: workerMissWhere } } },
     },
   });
 

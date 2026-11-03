@@ -43,8 +43,16 @@ export function avatarUrlFor(userId: string, hasAvatar: boolean): string | null 
  */
 export function workerMissed(cancelReason: string | null): boolean {
   if (!cancelReason) return false;
-  return cancelReason.startsWith("Afgezegd door flexwerker") || cancelReason.startsWith("Niet opgekomen");
+  return WORKER_MISS_PREFIXES.some((p) => cancelReason.startsWith(p));
 }
+
+const WORKER_MISS_PREFIXES = ["Afgezegd door flexwerker", "Niet opgekomen"] as const;
+
+/** Prisma-filter op ShiftAssignment met dezelfde regel als workerMissed, voor tellingen in de database. */
+export const workerMissWhere = {
+  cancelledAt: { not: null },
+  OR: WORKER_MISS_PREFIXES.map((p) => ({ cancelReason: { startsWith: p } })),
+};
 
 async function attendancePct(freelancerId: string): Promise<number | null> {
   const now = new Date();

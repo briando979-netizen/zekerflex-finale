@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/lib/auth/actions";
-import { getUserCard } from "@/lib/profile/card";
+import { getUserCard, workerMissWhere } from "@/lib/profile/card";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
@@ -53,12 +53,7 @@ export default async function AccountPage() {
     // lib/claims/no-show-sweep.ts).
     profile
       ? prisma.shiftAssignment.count({
-          where: {
-            freelancerId: profile.id,
-            acceptedAt: { gte: since },
-            cancelledAt: { not: null },
-            OR: [{ cancelReason: { startsWith: "Afgezegd door flexwerker" } }, { cancelReason: { startsWith: "Niet opgekomen" } }],
-          },
+          where: { freelancerId: profile.id, acceptedAt: { gte: since }, ...workerMissWhere },
         })
       : Promise.resolve(0),
     getTheme(),
