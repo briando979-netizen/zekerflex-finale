@@ -41,6 +41,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
     "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail
     "/api/indexnow-key", // IndexNow verifies site ownership without a session
+    "/api/rekentools/uitkomst", // "stuur mij de uitkomst" on the public rekentools
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);

@@ -80,6 +80,8 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   test: "essential",
   "demo-aanvraag": "essential",
   "demo-aanvraag-bevestiging": "essential",
+  "rekentool-uitkomst": "essential",
+  "rekentool-lead": "essential",
   "uitzendbureau-aanvraag": "essential",
   "uitzendbureau-aanvraag-bevestiging": "essential",
   "shop-order": "essential",
@@ -109,6 +111,9 @@ const REPLIABLE_KINDS = new Set([
   "replacement",
   "demo-aanvraag",
   "demo-aanvraag-bevestiging",
+  // Rekentool-uitkomst: replyTo is sales@, en de lead-melding aan sales heeft de bezoeker als replyTo.
+  "rekentool-uitkomst",
+  "rekentool-lead",
   "uitzendbureau-aanvraag",
   "uitzendbureau-aanvraag-bevestiging",
   "open-sollicitatie",

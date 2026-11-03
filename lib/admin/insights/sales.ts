@@ -21,6 +21,7 @@ const SOURCE_LABEL: Record<string, string> = {
   offerte: "Offerte-AI",
   "offerte-inbound": "Offerte-AI",
   "website-check": "Website-check",
+  rekentool: "Rekentool",
   "ai-belafspraak": "Afspraak via AI-beller",
   "ai-demo": "Demo via AI-assistent",
   "sales-partner-application": "Aanmelding sales-partner",

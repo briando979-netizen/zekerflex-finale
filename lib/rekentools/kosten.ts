@@ -35,13 +35,20 @@ export interface FlexCostResult {
 
 const clamp = (n: number, min: number, max: number) => (Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min);
 
+/** The input within the ranges the tool (and the "stuur mij de uitkomst" API) accepts. */
+export function normaliseFlexInput(input: FlexCostInput): FlexCostInput {
+  return {
+    workers: Math.round(clamp(input.workers, 0, 500)),
+    hoursPerWeek: clamp(input.hoursPerWeek, 0, 60),
+    weeks: clamp(input.weeks, 0, 104),
+    factor: clamp(input.factor, 1, 4),
+    wageCents: Math.round(clamp(input.wageCents, 0, 50_000)),
+    rateCents: Math.round(clamp(input.rateCents, 0, 50_000)),
+  };
+}
+
 export function compareFlexCost(input: FlexCostInput): FlexCostResult {
-  const workers = Math.round(clamp(input.workers, 0, 500));
-  const hoursPerWeek = clamp(input.hoursPerWeek, 0, 60);
-  const weeks = clamp(input.weeks, 0, 104);
-  const factor = clamp(input.factor, 1, 4);
-  const wageCents = Math.round(clamp(input.wageCents, 0, 50_000));
-  const rateCents = Math.round(clamp(input.rateCents, 0, 50_000));
+  const { workers, hoursPerWeek, weeks, factor, wageCents, rateCents } = normaliseFlexInput(input);
 
   const totalHours = workers * hoursPerWeek * weeks;
   // A job shorter than a month only fills that part of the month's staffel.

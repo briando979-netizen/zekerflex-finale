@@ -39,6 +39,7 @@ const PUBLIC_PREFIXES = [
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
   "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
+  "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
   "/api/rijschool/site", // rijschoolsite: proefles (IP-begrensd), leerling- en instructeur-app met eigen sessie-cookie; elke route controleert zelf (lib/rijschool/accounts.ts). Het beheer (/api/rijschool/beheer) blijft achter de ZekerFlex-login
   "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)

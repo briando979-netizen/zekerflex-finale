@@ -128,6 +128,22 @@ export const DBA_MAX_SCORE = DBA_QUESTIONS.reduce((s, q) => s + q.weight, 0);
 
 export type DbaLevel = "laag" | "letop" | "hoog";
 
+/** Shared by the page and the mail with the result. */
+export const DBA_LEVEL_TEXT: Record<DbaLevel, { title: string; body: string }> = {
+  laag: {
+    title: "Weinig signalen van loondienst",
+    body: "Zoals je het beschrijft, lijkt dit op samenwerken met een zelfstandige. Blijf het zo inrichten en leg de afspraken vast.",
+  },
+  letop: {
+    title: "Let op: een paar signalen van loondienst",
+    body: "Een deel van de samenwerking lijkt op een dienstverband. Pak de punten hieronder aan, dan sta je sterker.",
+  },
+  hoog: {
+    title: "Veel signalen van loondienst",
+    body: "Zoals je het beschrijft, lijkt dit eerder op een dienstverband dan op zelfstandig werk. Overweeg om anders samen te werken, bijvoorbeeld via een uitzendkracht.",
+  },
+};
+
 export interface DbaResult {
   answered: number;
   complete: boolean;

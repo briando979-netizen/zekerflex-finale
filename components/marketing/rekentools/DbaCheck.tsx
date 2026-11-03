@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   DBA_GROUP_LABELS,
+  DBA_LEVEL_TEXT,
   DBA_MAX_SCORE,
   DBA_QUESTIONS,
   scoreDba,
@@ -12,6 +13,7 @@ import {
   type DbaLevel,
 } from "@/lib/rekentools/dba-check";
 import { useEersteGebruik } from "@/components/marketing/rekentools/Veld";
+import { StuurUitkomst } from "@/components/marketing/rekentools/StuurUitkomst";
 
 const OPTIONS: [DbaAnswer, string][] = [
   ["ja", "Ja"],
@@ -21,29 +23,17 @@ const OPTIONS: [DbaAnswer, string][] = [
 
 const GROUPS = Object.keys(DBA_GROUP_LABELS) as DbaGroup[];
 
-const LEVEL: Record<DbaLevel, { title: string; body: string; className: string }> = {
-  laag: {
-    title: "Weinig signalen van loondienst",
-    body: "Zoals je het beschrijft, lijkt dit op samenwerken met een zelfstandige. Blijf het zo inrichten en leg de afspraken vast.",
-    className: "bg-mintwash text-brand-700",
-  },
-  letop: {
-    title: "Let op: een paar signalen van loondienst",
-    body: "Een deel van de samenwerking lijkt op een dienstverband. Pak de punten hieronder aan, dan sta je sterker.",
-    className: "bg-warn/10 text-warn",
-  },
-  hoog: {
-    title: "Veel signalen van loondienst",
-    body: "Zoals je het beschrijft, lijkt dit eerder op een dienstverband dan op zelfstandig werk. Overweeg om anders samen te werken, bijvoorbeeld via een uitzendkracht.",
-    className: "bg-red-50 text-red-800",
-  },
+const LEVEL_CLASS: Record<DbaLevel, string> = {
+  laag: "bg-mintwash text-brand-700",
+  letop: "bg-warn/10 text-warn",
+  hoog: "bg-red-50 text-red-800",
 };
 
 export function DbaCheck() {
   const used = useEersteGebruik("wet-dba-check");
   const [answers, setAnswers] = useState<Partial<Record<string, DbaAnswer>>>({});
   const r = useMemo(() => scoreDba(answers), [answers]);
-  const level = r.level ? LEVEL[r.level] : null;
+  const level = r.level ? { ...DBA_LEVEL_TEXT[r.level], className: LEVEL_CLASS[r.level] } : null;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
@@ -158,6 +148,15 @@ export function DbaCheck() {
           Uiteindelijk telt het totaalbeeld. Via ZekerFlex leg je de afspraken per opdracht vast en krijg je een seintje bij
           signalen zoals veel uren bij één opdrachtgever.
         </p>
+        {r.complete ? (
+          <StuurUitkomst
+            label="Je uitkomst met alle tips in je mail?"
+            payload={{
+              tool: "wet-dba-check",
+              answers: Object.fromEntries(Object.entries(answers).filter((e): e is [string, DbaAnswer] => Boolean(e[1]))),
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

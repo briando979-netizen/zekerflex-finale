@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { compareFlexCost } from "@/lib/rekentools/kosten";
+import { compareFlexCost, normaliseFlexInput } from "@/lib/rekentools/kosten";
 import { centsFrom, euroCents, euroWhole, hoursNl, numberFrom } from "@/lib/rekentools/invoer";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
+import { StuurUitkomst } from "@/components/marketing/rekentools/StuurUitkomst";
 
 export function KostenFlexkracht() {
   const used = useEersteGebruik("kosten-uitzendkracht");
@@ -15,9 +16,9 @@ export function KostenFlexkracht() {
   const [factor, setFactor] = useState("1,9");
   const [rate, setRate] = useState("25,00");
 
-  const r = useMemo(
+  const input = useMemo(
     () =>
-      compareFlexCost({
+      normaliseFlexInput({
         workers: numberFrom(workers),
         hoursPerWeek: numberFrom(hoursPerWeek),
         weeks: numberFrom(weeks),
@@ -27,6 +28,7 @@ export function KostenFlexkracht() {
       }),
     [workers, hoursPerWeek, weeks, wage, factor, rate],
   );
+  const r = useMemo(() => compareFlexCost(input), [input]);
 
   const max = Math.max(r.bureau.perHourCents, r.zekerflex.perHourCents, 1);
   const verdict =
@@ -126,6 +128,9 @@ export function KostenFlexkracht() {
           Indicatie. Toeslagen voor avond, weekend of feestdag en reiskosten zijn aan geen van beide kanten meegerekend.
           Bij ZekerFlex daalt de platformfee vanaf 500 uur per maand, over alle krachten van je organisatie samen.
         </p>
+        {r.totalHours > 0 ? (
+          <StuurUitkomst label="Deze vergelijking in je mail?" payload={{ tool: "kosten-uitzendkracht", input: { ...input } }} />
+        ) : null}
       </div>
     </div>
   );
