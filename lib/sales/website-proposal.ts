@@ -397,6 +397,31 @@ export async function updateWebsiteProposal(id: string, action: ProposalAction, 
   return next;
 }
 
+/** The company accounts this e-mail manages (HQ_ADMIN). A transfer needs exactly one. */
+async function companiesOf(email: string): Promise<{ tenantId: string; tenant: { name: string } }[]> {
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
+    select: { memberships: { where: { role: "HQ_ADMIN" }, select: { tenantId: true, tenant: { select: { name: true } } } } },
+  });
+  return user?.memberships ?? [];
+}
+
+/**
+ * Admin list: for each proposal with a "ja", the companies its e-mail already
+ * manages, so the team sees whether it can transfer now (the company can make
+ * the account itself from the thank-you screen). Proposal id → company names;
+ * a transfer needs exactly one.
+ */
+export async function proposalAccounts(proposals: Pick<WebsiteProposal, "id" | "status" | "akkoord">[]): Promise<Record<string, string[]>> {
+  const found: Record<string, string[]> = {};
+  for (const p of proposals) {
+    if (p.status !== "akkoord" || !p.akkoord?.email) continue;
+    const companies = await companiesOf(p.akkoord.email).catch(() => []);
+    if (companies.length > 0) found[p.id] = companies.map((c) => c.tenant.name);
+  }
+  return found;
+}
+
 /**
  * After a yes: hand the site to the company's own account (the admin of that
  * company, found by e-mail address). In the builder it is then their site,
@@ -406,11 +431,7 @@ export async function transferWebsiteProposal(id: string, email: string, by: { u
   const p = await getWebsiteProposal(id);
   if (!p) throw AppError.notFound("Dit voorstel bestaat niet.");
   if (p.status !== "akkoord") throw AppError.validation("Zet een voorstel pas over als het bedrijf ja heeft gezegd.");
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: email.trim(), mode: "insensitive" } },
-    select: { memberships: { where: { role: "HQ_ADMIN" }, select: { tenantId: true, tenant: { select: { name: true } } } } },
-  });
-  const admin = user?.memberships ?? [];
+  const admin = await companiesOf(email);
   if (admin.length === 0) throw AppError.validation("Geen beheerder van een bedrijf gevonden met dit e-mailadres. Zet eerst een account voor het bedrijf klaar (Buitendienst) en probeer het daarna opnieuw.");
   if (admin.length > 1) throw AppError.validation(`Dit account beheert meer dan één bedrijf (${admin.map((m) => m.tenant.name).join(", ")}). Gebruik het e-mailadres van de beheerder van het juiste bedrijf.`);
   const target = admin[0]!;

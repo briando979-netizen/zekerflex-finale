@@ -19,6 +19,8 @@ interface Data {
   proposals: WebsiteProposal[];
   offer: Offer;
   pricingSet: boolean;
+  /** proposal id → the companies its "ja" e-mail already manages (a transfer needs exactly one) */
+  accounts: Record<string, string[]>;
 }
 
 const TONE: Record<ProposalStatus, Tone> = { concept: "neutral", verstuurd: "plan", bekeken: "trust", akkoord: "ok", afgewezen: "warn", ingetrokken: "neutral", overgezet: "ok" };
@@ -154,6 +156,26 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                   {p.overgezet && (
                     <p className="text-[0.8125rem]" style={{ color: "var(--a-text)" }}>
                       Overgezet op {day(p.overgezet.at)} naar {p.overgezet.bedrijf}: de website staat in hun websitebouwer en gaat online zodra zij Website-beheer nemen.
+                    </p>
+                  )}
+                  {p.status === "akkoord" && p.akkoord && (
+                    <p className="flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--a-mute)" }}>
+                      {(data.accounts[p.id]?.length ?? 0) === 1 ? (
+                        <>
+                          <Pill tone="ok">Account staat klaar</Pill>
+                          {p.akkoord.email} beheert {data.accounts[p.id]?.[0]}: je kunt nu overzetten.
+                        </>
+                      ) : data.accounts[p.id] ? (
+                        <>
+                          <Pill tone="warn">Meerdere bedrijven</Pill>
+                          {p.akkoord.email} beheert {data.accounts[p.id]?.join(", ")}. Vul het e-mailadres van de beheerder van het juiste bedrijf in.
+                        </>
+                      ) : (
+                        <>
+                          <Pill tone="warn">Nog geen account</Pill>
+                          Nog geen bedrijfsaccount met {p.akkoord.email}. Het bedrijf kan er zelf een maken met de knop na hun ja; dan zie je het hier.
+                        </>
+                      )}
                     </p>
                   )}
                   {p.status === "akkoord" && (

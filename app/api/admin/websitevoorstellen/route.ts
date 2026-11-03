@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
-import { createWebsiteProposal, listWebsiteProposals, pricingIsSet, pricingSchema, proposalOffer, saveProposalPricing } from "@/lib/sales/website-proposal";
+import { createWebsiteProposal, listWebsiteProposals, pricingIsSet, pricingSchema, proposalAccounts, proposalOffer, saveProposalPricing } from "@/lib/sales/website-proposal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +12,8 @@ export const maxDuration = 120;
 // ---------------------------------------------------------------------------
 // Admin → Websitevoorstellen (lib/sales/website-proposal.ts), platform admins
 // only like every /api/admin route. Sales people use /api/sales/websitevoorstellen.
-// GET  — the proposals, the prices and how many launch places are left
+// GET  — the proposals, the prices, how many launch places are left, and which
+//        "ja" proposals already have a company account to transfer to
 // POST — make a proposal for a lead or a website address
 // PUT  — set the prices and the launch discount
 // ---------------------------------------------------------------------------
@@ -21,7 +22,7 @@ const createSchema = z.object({ leadId: z.string().min(1).max(128).optional(), u
 
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const [proposals, offer, set] = await Promise.all([listWebsiteProposals(), proposalOffer(), pricingIsSet()]);
-  return NextResponse.json({ proposals, offer, pricingSet: set });
+  return NextResponse.json({ proposals, offer, pricingSet: set, accounts: await proposalAccounts(proposals) });
 });
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {

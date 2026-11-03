@@ -346,6 +346,19 @@ describe("na een ja: overzetten naar het bedrijfsaccount", () => {
     await expect(engine.transferWebsiteProposal(p.id, "beheer@echtbedrijf.nl", BY)).rejects.toThrow(/heeft al een website/);
     expect((await engine.getWebsiteProposal(p.id))!.status).toBe("akkoord");
   });
+
+  it("het beheer ziet of het account van de ja al klaarstaat, alleen bij een ja", async () => {
+    const p = await engine.createWebsiteProposal({ leadId: "lead1" }, BY);
+    expect(await engine.proposalAccounts([p])).toEqual({});
+    const yes = await engine.acceptWebsiteProposal(p.id, { ...ja, email: "jan@devries.test" });
+    expect(await engine.proposalAccounts([yes.proposal])).toEqual({});
+    const at = (email: string) => ({ ...yes.proposal, akkoord: { ...yes.proposal.akkoord!, email } });
+    expect(await engine.proposalAccounts([at("Beheer@EchtBedrijf.nl")])).toEqual({ [p.id]: ["De Vries Schilders"] });
+    expect(await engine.proposalAccounts([at("twee@bedrijven.nl")])).toEqual({ [p.id]: ["A", "B"] });
+    expect(await engine.proposalAccounts([at("werker@example.nl")])).toEqual({});
+    const done = await engine.transferWebsiteProposal(p.id, "beheer@echtbedrijf.nl", BY);
+    expect(await engine.proposalAccounts([{ ...done, akkoord: at("beheer@echtbedrijf.nl").akkoord }])).toEqual({});
+  });
 });
 
 describe("het openbare ja-formulier", () => {
