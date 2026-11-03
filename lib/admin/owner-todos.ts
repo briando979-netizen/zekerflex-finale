@@ -14,6 +14,7 @@ import { getReminderSettings } from "@/lib/billing/reminders";
 import { readBackupReport, type BackupReport } from "@/lib/ops/backup";
 import { listModels3D } from "@/lib/shop/model3d";
 import { playIngesteld } from "@/lib/play/account";
+import { bouwerInstellingen } from "@/lib/bouwer/werker";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -155,7 +156,7 @@ const hasVideos = () => {
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
-  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling] = await Promise.all([
+  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer] = await Promise.all([
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
@@ -169,6 +170,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     testAccountCount(),
     vagueBranchCities(),
     playIngesteld().catch(() => false),
+    bouwerInstellingen().catch(() => null),
   ]);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
@@ -191,6 +193,30 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Draai ComfyUI of AUTOMATIC1111 op dezelfde GPU-server (zie deploy/ai-node/README.md).", "Geef Claude het adres en de sleutel van die beeldserver; die zet IMAGE_ENABLED, IMAGE_BACKEND, IMAGE_BASE_URL en IMAGE_API_KEY op de server."],
       auto: true,
       done: env.IMAGE_ENABLED,
+    },
+    {
+      id: "bouwer-github",
+      group: "AI",
+      title: "GitHub-sleutel voor de Bouwer invullen",
+      why: "De Bouwer (ZekerFlex AI → Bouwer) maakt wijzigingen en laat ze je eerst zien. Zonder deze sleutel kan hij een goedgekeurde wijziging niet opslaan en dus niet live zetten.",
+      how: [
+        "Ga op github.com naar Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.",
+        "Kies bij Repository access alleen zekerflex-finale, en bij Permissions → Contents: Read and write. Kopieer de sleutel (begint met github_pat_).",
+        "Plak hem in Admin → ZekerFlex AI → Bouwer → instellingen → GitHub-sleutel en klik Bewaar. Hij wordt versleuteld bewaard.",
+      ],
+      auto: true,
+      done: Boolean(bouwer?.githubSleutel),
+      ...(bouwer?.githubSleutel ? { doneNote: "sleutel staat erin (versleuteld)" } : {}),
+    },
+    {
+      id: "bouwer-auto",
+      group: "AI",
+      title: "Automatische reparaties van de Bouwer aanzetten (optioneel)",
+      why: "Komt een fout uit het foutenlogboek steeds terug, dan begint de Bouwer er zelf aan en krijg je een melding als er een reparatie klaarstaat. Goedkeuren doe je altijd zelf; hooguit 3 per dag.",
+      how: ["Zet in Admin → ZekerFlex AI → Bouwer → instellingen het vinkje bij \"Automatisch reparaties voorstellen\" aan. Werkt pas echt als de GitHub-sleutel er ook in staat."],
+      auto: true,
+      done: Boolean(bouwer?.autoFouten),
+      ...(bouwer?.autoFouten ? { doneNote: "staat aan" } : {}),
     },
     {
       id: "sepa",

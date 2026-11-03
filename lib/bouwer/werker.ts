@@ -35,6 +35,8 @@ export interface Controle {
   ok: boolean;
   tsc: { ok: boolean; uit: string };
   eslint: { ok: boolean; uit: string };
+  /** de bestaande tests die de wijziging raken (vitest related); ontbreekt bij oudere opdrachten */
+  tests?: { ok: boolean; uit: string };
   op: string;
 }
 

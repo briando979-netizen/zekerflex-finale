@@ -122,7 +122,7 @@ export async function huidigeDiff() {
   return r.uit.length > 400_000 ? `${r.uit.slice(0, 400_000)}\n… (diff ingekort)` : r.uit;
 }
 
-/** De gouden regels uit AGENTS.md: tsc op het hele project + eslint op de gewijzigde bestanden. */
+/** De gouden regels uit AGENTS.md: tsc op het hele project + eslint op de gewijzigde bestanden, plus de tests die erbij horen. */
 export async function controleer(log) {
   const bestanden = (await gewijzigdeBestanden()).filter((b) => b.status !== "D").map((b) => b.pad);
   await wachtOpUitrol(log);
@@ -134,12 +134,40 @@ export async function controleer(log) {
     log("info", `Controle: eslint op ${lintbaar.length} bestand(en)`);
     eslint = await sh("npx", ["eslint", ...lintbaar], { timeout: 600_000 });
   }
+  // De bestaande tests die de gewijzigde bestanden raken (vitest related). Tests met
+  // een database draaien op de wegwerp-database van het voorbeeld (alleen demogegevens).
+  let tests = { code: 0, uit: "" };
+  if (lintbaar.length) {
+    log("info", "Controle: tests die bij de wijziging horen");
+    const env = testOmgeving();
+    if (env.DATABASE_URL) await sh("npx", ["prisma", "migrate", "deploy"], { env, timeout: 300_000, zonderSleutel: true });
+    tests = await sh("npx", ["vitest", "related", "--run", "--passWithNoTests", "--maxWorkers=2", ...lintbaar], {
+      env,
+      timeout: 900_000,
+      zonderSleutel: true,
+    });
+  }
   const kort = (t) => t.trim().split("\n").slice(0, 80).join("\n");
+  // bij tests staat de samenvatting onderaan
+  const staart = (t) => t.trim().split("\n").slice(-80).join("\n");
   return {
-    ok: tsc.code === 0 && eslint.code === 0,
+    ok: tsc.code === 0 && eslint.code === 0 && tests.code === 0,
     tsc: { ok: tsc.code === 0, uit: kort(tsc.uit) },
     eslint: { ok: eslint.code === 0, uit: kort(eslint.uit) },
+    tests: { ok: tests.code === 0, uit: staart(tests.uit) },
     op: new Date().toISOString(),
+  };
+}
+
+function testOmgeving() {
+  const db = process.env.BOUWER_VOORBEELD_DB || "";
+  return {
+    NODE_ENV: "test",
+    // geen kleurcodes: de uitvoer komt als platte tekst in Admin
+    NO_COLOR: "1",
+    FORCE_COLOR: "0",
+    ...(db ? { DATABASE_URL: db, DATABASE_URL_UNPOOLED: db } : {}),
+    ...(process.env.BOUWER_VOORBEELD_REDIS ? { REDIS_URL: process.env.BOUWER_VOORBEELD_REDIS } : {}),
   };
 }
 
@@ -216,7 +244,7 @@ export const GEREEDSCHAP = [
   },
   {
     naam: "controleer",
-    beschrijving: "Draai de verplichte controles (TypeScript op het hele project + eslint op je gewijzigde bestanden). Duurt een paar minuten.",
+    beschrijving: "Draai de verplichte controles: TypeScript op het hele project, eslint op je gewijzigde bestanden en de bestaande tests die je wijziging raken. Duurt een paar minuten.",
     params: {},
     verplicht: [],
   },

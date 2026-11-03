@@ -21,6 +21,7 @@ import { jarvisStateLine } from "@/lib/admin/overview";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { bouwer, bouwerLlm, type TaakKort } from "@/lib/bouwer/werker";
 import { agentLeeft, isBezig, leesLive, plaatsVerzoek } from "@/lib/bouwer/live";
+import { bouwerStand } from "@/lib/bouwer/stand";
 
 // ---------------------------------------------------------------------------
 // Jarvis conversational core.
@@ -39,8 +40,8 @@ const AGENTS = {
 } as const;
 
 const routeSchema = z.object({
-  // "bouwer" en "live" komen alleen uit heuristicRoute (een expliciete opdracht), nooit uit de LLM-router
-  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat", "bouwer", "live"]),
+  // "bouwer", "bouwerstatus" en "live" komen alleen uit heuristicRoute, nooit uit de LLM-router
+  capability: z.enum(["memory", "console", "orchestration", "briefing", "chat", "bouwer", "bouwerstatus", "live"]),
   agent: z.enum(["jarvis", "analyst", "developer", "sales"]).default("jarvis"),
   rationale: z.string().max(300).default(""),
 });
@@ -99,6 +100,10 @@ export function heuristicRoute(prompt: string): Route | null {
   }
   if (/^(zet (alles |het |de nieuwste versie |nieuwste versie )?live|rol (alles |het |de nieuwste versie )?uit)\b/.test(p)) {
     return { capability: "live", agent: "developer", rationale: "nieuwste versie live zetten" };
+  }
+  // alleen lezen: wat doet de Bouwer, wat staat er live
+  if (/\b(bouwer|live-?zetter|uitrol)\b/.test(p) && /^(hoe staat|hoe gaat|wat doet|status|stand van|staat er|is de bouwer|wat staat er live)/.test(p)) {
+    return { capability: "bouwerstatus", agent: "developer", rationale: "stand van de Bouwer en de uitrol" };
   }
 
   // Greetings / smalltalk / very short -> conversation.
@@ -230,7 +235,7 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
       }
       // code wijzigen of uitrollen nooit op gok van het model
-      if (route.capability === "bouwer" || route.capability === "live") {
+      if (route.capability === "bouwer" || route.capability === "bouwerstatus" || route.capability === "live") {
         route = { capability: "chat", agent: "jarvis", rationale: "router-fallback" };
       }
     }
@@ -309,6 +314,10 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         answer = `De Bouwer kon niet starten: ${(err as Error).message}`;
       }
       await emit(turnId, "TOOL_RESULT", agent, "Bouwer", { detail: answer, durationMs: Date.now() - stepStart });
+    } else if (route.capability === "bouwerstatus") {
+      await emit(turnId, "TOOL_CALL", agent, "Stand van de Bouwer en de uitrol");
+      answer = await bouwerStand();
+      await emit(turnId, "TOOL_RESULT", agent, "Stand", { detail: answer, durationMs: Date.now() - stepStart });
     } else if (route.capability === "live") {
       await emit(turnId, "TOOL_CALL", agent, "Live zetten aanvragen");
       const stand = await leesLive();
@@ -379,6 +388,7 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
       route.capability === "briefing" ||
       route.capability === "chat" ||
       route.capability === "bouwer" ||
+      route.capability === "bouwerstatus" ||
       route.capability === "live" ||
       answer.length < 40 ||
       // quick console questions already have a finished, model-free answer

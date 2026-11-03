@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Versie } from "@/lib/bouwer/versie";
 import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek } from "@/lib/bouwer/live";
+import type { LiveMoment } from "@/lib/bouwer/geschiedenis";
 
 // ---------------------------------------------------------------------------
 // Live zetten — pane in de ZekerFlex AI-studio. Laat zien welke versie live
@@ -21,6 +22,7 @@ interface Stand {
   verzoek: LiveVerzoek | null;
   agent: { leeft: boolean; hartslag: LiveHartslag | null };
   bezig: boolean;
+  geschiedenis: LiveMoment[];
 }
 
 const STAAT: Record<LiveStatus["staat"], { label: string; kleur: string }> = {
@@ -293,6 +295,24 @@ export function LiveZetten() {
             {github.aantalNieuw > github.nieuw.length && (
               <p className="px-4 py-2 text-[11px] text-white/35">en nog {github.aantalNieuw - github.nieuw.length} oudere…</p>
             )}
+          </section>
+        )}
+
+        {/* wat er eerder live stond (vastgelegd elke 30 minuten; dagoverzicht per mail na 18:00) */}
+        {stand.geschiedenis.length > 1 && (
+          <section className="rounded-xl border border-white/10 bg-[#0e1116]">
+            <h3 className="border-b border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-white/40">Eerder live</h3>
+            <ul className="divide-y divide-white/5">
+              {stand.geschiedenis.map((m, i) => (
+                <li key={m.sha} className="flex items-baseline gap-3 px-4 py-2">
+                  <span className="font-mono text-[11px] text-white/35">{kort(m.sha)}</span>
+                  <span className={`min-w-0 flex-1 truncate text-xs ${i === 0 ? "text-brand-mint" : "text-white/70"}`} title={m.onderwerp}>
+                    {m.onderwerp}
+                  </span>
+                  <span className="flex-shrink-0 text-[11px] text-white/30">{i === 0 ? "nu live" : `live vanaf ${tijd(m.gezienOp)}`}</span>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
       </div>

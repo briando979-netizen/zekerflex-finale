@@ -16,6 +16,14 @@ describe("heuristicRoute: Bouwer en live zetten", () => {
     }
   });
 
+  it("een vraag naar de stand van de Bouwer of de uitrol leest alleen", () => {
+    for (const p of ["hoe staat de bouwer?", "Wat doet de bouwer nu", "status van de live-zetter", "hoe staat de uitrol", "wat staat er live van de bouwer"]) {
+      expect(heuristicRoute(p)?.capability, p).toBe("bouwerstatus");
+    }
+    // zonder bouwer/uitrol blijft "hoe staat" de gewone briefing
+    expect(heuristicRoute("hoe staat het platform")?.capability).toBe("briefing");
+  });
+
   it("een gewone vraag start nooit de Bouwer of een uitrol", () => {
     for (const p of [
       "hoe bouw ik een team op",

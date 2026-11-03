@@ -151,6 +151,12 @@ export function migratiesUitBestanden(files: { filename: string; status: string 
   return [...namen].sort();
 }
 
+/** De commits tussen twee versies, oudste eerst (voor het dagoverzicht). */
+export async function commitsTussen(van: string, tot: string): Promise<Commit[]> {
+  const c = await gh<GhCompare>(`/compare/${van}...${tot}`);
+  return c.commits.map(toCommit);
+}
+
 let ghCache: { key: string; at: number; data: GithubOverzicht } | null = null;
 const GH_TTL_MS = 60_000;
 

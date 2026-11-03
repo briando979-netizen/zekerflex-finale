@@ -4,6 +4,7 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { liveVersie } from "@/lib/bouwer/versie";
+import { registreerLiveVersie } from "@/lib/bouwer/geschiedenis";
 import { agentLeeft, githubOverzicht, isBezig, leesLive, plaatsVerzoek, trekVerzoekIn } from "@/lib/bouwer/live";
 
 export const runtime = "nodejs";
@@ -16,12 +17,13 @@ export const dynamic = "force-dynamic";
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const vers = new URL(request.url).searchParams.has("vers");
   const live = liveVersie();
-  const [stand, github] = await Promise.all([
+  const [stand, github, geschiedenis] = await Promise.all([
     leesLive(),
     githubOverzicht(live, vers).then(
       (data) => ({ data, fout: null as string | null }),
       (err: unknown) => ({ data: null, fout: err instanceof Error ? err.message : "GitHub onbereikbaar" }),
     ),
+    registreerLiveVersie().catch(() => []),
   ]);
   return NextResponse.json({
     live,
@@ -32,6 +34,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
     verzoek: stand.verzoek,
     agent: { leeft: agentLeeft(stand.hartslag), hartslag: stand.hartslag },
     bezig: isBezig(stand.status),
+    geschiedenis: geschiedenis.slice(0, 15),
   });
 });
 

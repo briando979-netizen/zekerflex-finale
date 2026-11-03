@@ -298,6 +298,7 @@ function TaakDetail({
         <div className="flex flex-wrap gap-2 text-[11px]">
           <ControleChip label="TypeScript" ok={taak.controle.tsc.ok} uit={taak.controle.tsc.uit} />
           <ControleChip label="eslint" ok={taak.controle.eslint.ok} uit={taak.controle.eslint.uit} />
+          {taak.controle.tests && <ControleChip label="tests" ok={taak.controle.tests.ok} uit={taak.controle.tests.uit} />}
         </div>
       )}
 
@@ -323,7 +324,7 @@ function TaakDetail({
               Alleen naar GitHub
             </button>
           </div>
-          {!taak.controle?.ok && <p className="text-[11px] text-white/45">Goedkeuren kan pas als TypeScript en eslint schoon zijn. Stuur bij of gooi weg.</p>}
+          {!taak.controle?.ok && <p className="text-[11px] text-white/45">Goedkeuren kan pas als TypeScript, eslint en de tests schoon zijn. Stuur bij of gooi weg.</p>}
         </div>
       )}
 
