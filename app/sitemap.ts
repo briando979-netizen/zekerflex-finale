@@ -12,6 +12,11 @@ import { paginaLijst } from "@/lib/ontwerp/paginas-store";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
+// Zonder dit maakt Next de sitemap één keer tijdens de build, als er geen database is: dan
+// ontbraken open klussen (Google for Jobs), shopproducten en eigen pagina's (gemeten 4 nov:
+// x-nextjs-cache HIT, lastmod = buildtijd). Nu elke 10 minuten opnieuw, met de echte gegevens.
+export const revalidate = 600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const entry = (
