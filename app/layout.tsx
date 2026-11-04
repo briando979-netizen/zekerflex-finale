@@ -95,7 +95,11 @@ export default async function RootLayout({
   // also opts every route into dynamic rendering — required, because a
   // statically prerendered page can't carry a fresh nonce on its inline
   // bootstrap scripts and the strict CSP would then block them.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const kop = await headers();
+  const nonce = kop.get("x-nonce") ?? undefined;
+  // De bedrijfsgegevens van ZekerFlex (JSON-LD) horen niet op de website van een
+  // rijschool, ook niet op haar eigen domein: die heeft haar eigen DrivingSchool-gegevens.
+  const rijschoolSite = (kop.get("x-pathname") ?? "").startsWith("/rijschool/");
   // Runtime huisstijl: overschrijf de merkkleur-variabelen als de eigenaar ze
   // heeft aangepast (Admin → Huisstijl). Staat alles op standaard → null → geen
   // injectie, dus identieke look.
@@ -111,16 +115,18 @@ export default async function RootLayout({
           // eslint-disable-next-line react/no-danger
           <style nonce={nonce} dangerouslySetInnerHTML={{ __html: brandingCss }} />
         )}
-        <script
-          type="application/ld+json"
-          nonce={nonce}
-          // browsers blank the nonce attribute after load, so the client always sees ""
-          suppressHydrationWarning
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{
-            __html: ldJson([organizationJsonLd(), websiteJsonLd()]),
-          }}
-        />
+        {!rijschoolSite && (
+          <script
+            type="application/ld+json"
+            nonce={nonce}
+            // browsers blank the nonce attribute after load, so the client always sees ""
+            suppressHydrationWarning
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{
+              __html: ldJson([organizationJsonLd(), websiteJsonLd()]),
+            }}
+          />
+        )}
         <Providers>{children}</Providers>
         <CookieConsent />
         <Suspense fallback={null}>
