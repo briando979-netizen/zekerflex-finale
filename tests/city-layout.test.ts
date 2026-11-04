@@ -211,6 +211,8 @@ describe("verkeerslichten en maan", () => {
     const minutes = (d: Date | null) => (d ? d.getUTCHours() * 60 + d.getUTCMinutes() : -1);
     expect(Math.abs(minutes(rise) - (6 * 60 + 39))).toBeLessThan(5);
     expect(Math.abs(minutes(set) - (16 * 60 + 7))).toBeLessThan(5);
+    // dezelfde dag, welk uur ook: de rekensom kijkt naar de UTC-dag van het moment
+    expect(sunTimes(new Date("2026-11-03T00:10:00Z")).rise?.toISOString()).toBe(rise?.toISOString());
     // midzomer: lange dag
     const summer = sunTimes(new Date("2026-06-21T12:00:00Z"));
     expect(minutes(summer.set) - minutes(summer.rise)).toBeGreaterThan(16 * 60);

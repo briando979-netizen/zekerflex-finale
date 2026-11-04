@@ -8,7 +8,7 @@ import { dayPhase, moonName, moonPhase, type Origin, sunAt, sunTimes, trafficFor
 import { WEATHER_NL } from "@/lib/admin/city-life";
 import { isThemeId } from "@/lib/seasons/calendar";
 import { count, euro } from "@/lib/admin/format";
-import { amsterdamClock } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
 import type { CityHandle, View } from "@/components/admin/city/scene";
 import type { Pick } from "@/components/admin/city/world";
@@ -423,7 +423,9 @@ export function Office3D() {
   } else if (selected?.kind === "polder") {
     const w = data?.weather;
     const now = new Date();
-    const sun = sunTimes(now);
+    // de Nederlandse kalenderdag: tussen 00:00 en 01:00 (of 02:00 in de zomer) is het in UTC nog gisteren
+    const nl = amsterdamParts(now);
+    const sun = sunTimes(new Date(Date.UTC(nl.year, nl.month - 1, nl.day, 12)));
     const moon = moonPhase(now);
     title = "Polder, weer en natuur";
     subtitle = "Het weer, de zon en de maan boven Amsterdam, nu";
