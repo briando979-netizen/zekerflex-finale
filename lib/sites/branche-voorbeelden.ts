@@ -1,4 +1,5 @@
 import type { Block, BlockProps, BlockType, Company, Item, Page, Theme } from "@/lib/sites/types";
+import { newBlock } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Voorbeeldwebsites per branche (4 nov 2026, opdracht van de eigenaar): voor elke
@@ -45,6 +46,8 @@ export interface BrancheVoorbeeld {
   contact: { kop: string; tekst: string };
   /** "werken bij": de open diensten van het bedrijf op ZekerFlex */
   werken?: { kop: string; tekst: string } | undefined;
+  /** online een tafel reserveren (lib/sites/reserveren.ts): de knoppen gaan dan naar …/reserveren */
+  reserveren?: Pick<BlockProps["reserveren"], "kop" | "tekst" | "tijden" | "maxGroep" | "maxGasten"> | undefined;
 }
 
 export const pexelsUrl = (id: number) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=2000`;
@@ -110,7 +113,7 @@ export const BRANCHE_VOORBEELDEN: BrancheVoorbeeld[] = [
       kop: "Zo reserveer je",
       items: [
         { titel: "Kies je moment", tekst: "Lunch, diner of borrel: kies een dag en het aantal gasten." },
-        { titel: "Stuur je aanvraag", tekst: "Via het formulier of de chat. We bevestigen dezelfde dag." },
+        { titel: "Kies een vrije tijd", tekst: "Online zie je meteen wat er nog vrij is. Je krijgt direct een bevestiging per mail." },
         { titel: "Schuif aan", tekst: "Je tafel staat klaar. Allergieën? Zeg het, de keuken houdt er rekening mee." },
       ],
     },
@@ -138,6 +141,13 @@ export const BRANCHE_VOORBEELDEN: BrancheVoorbeeld[] = [
     cta: { kop: "Tot snel aan het plein!", tekst: "Reserveer een tafel of vraag een voorstel voor je feest. We reageren dezelfde dag.", knop: "Reserveer een tafel" },
     contact: { kop: "Reserveren of een vraag?", tekst: "Laat weten wanneer je wilt komen en met hoeveel gasten. Voor groepen maken we graag een voorstel op maat." },
     werken: { kop: "Werken bij Het Plein", tekst: "Bediening, keuken of afwas: we zoeken altijd gastvrije mensen. Kijk welke diensten er openstaan en reageer met één klik." },
+    reserveren: {
+      kop: "Reserveer je tafel",
+      tekst: "Kies een dag en met hoeveel je komt: je ziet meteen welke tijden nog vrij zijn, en je krijgt direct een bevestiging. Met meer dan tien gasten? Dan maken we graag een voorstel voor de bovenzaal.",
+      tijden: { "0": { van: "12:00", tot: "21:30" }, "1": null, "2": { van: "12:00", tot: "22:00" }, "3": { van: "12:00", tot: "22:00" }, "4": { van: "12:00", tot: "22:00" }, "5": { van: "12:00", tot: "23:00" }, "6": { van: "12:00", tot: "23:00" } },
+      maxGroep: 10,
+      maxGasten: 60,
+    },
   },
   {
     id: "bouw",
@@ -721,7 +731,10 @@ export function brancheVoorbeeldPaginas(v: BrancheVoorbeeld, foto: (key: string)
   const galerij = v.galerij.fotos.map(foto).filter((f): f is string => Boolean(f));
   const reviews = () => block("reviews", { kop: "Wat klanten zeggen (voorbeeld)", items: v.reviews.map((r) => ({ ...r, sterren: 5 })) });
   const uren = () => block("openingstijden", { kop: v.uren.kop, regels: v.uren.regels });
-  const cta = () => block("cta", { kop: v.cta.kop, tekst: v.cta.tekst, knop: v.cta.knop, knopLink: "contact" });
+  // een restaurant: de knoppen gaan naar de vrije tijden, het blok staat op de home en bij contact
+  const knopLink = v.reserveren ? "reserveren" : "contact";
+  const cta = () => block("cta", { kop: v.cta.kop, tekst: v.cta.tekst, knop: v.cta.knop, knopLink });
+  const reserveren = () => (v.reserveren ? [block("reserveren", { ...(newBlock("reserveren", "x").props as BlockProps["reserveren"]), ...v.reserveren })] : []);
   const naam = v.bedrijf.naam;
   const paginas: Page[] = [
     {
@@ -731,10 +744,11 @@ export function brancheVoorbeeldPaginas(v: BrancheVoorbeeld, foto: (key: string)
       seoTitel: `${naam} | ${v.label} in ${PLAATS}`.slice(0, 70),
       seoOmschrijving: v.hero.tekst.slice(0, 160),
       blocks: [
-        block("hero", { kop: v.hero.kop, tekst: v.hero.tekst, knop: v.hero.knop, knopLink: "contact", foto: foto(v.hero.foto) }),
+        block("hero", { kop: v.hero.kop, tekst: v.hero.tekst, knop: v.hero.knop, knopLink, foto: foto(v.hero.foto) }),
         block("tekstFoto", { kop: v.over.kop, tekst: v.over.tekst, foto: foto(v.over.foto), fotoLinks: false }),
         block("diensten", { kop: v.aanbod.kop, items }),
         block("usps", v.usps),
+        ...reserveren(),
         block("stappen", v.stappen),
         ...(galerij.length >= 2 ? [block("galerij", { kop: v.galerij.kop, fotos: galerij })] : []),
         reviews(),
@@ -780,7 +794,7 @@ export function brancheVoorbeeldPaginas(v: BrancheVoorbeeld, foto: (key: string)
     titel: "Contact",
     seoTitel: `Contact | ${naam}`.slice(0, 70),
     seoOmschrijving: v.contact.tekst.slice(0, 160),
-    blocks: [block("contact", { kop: v.contact.kop, tekst: v.contact.tekst, formulier: true }), uren(), block("faq", { kop: "Veelgestelde vragen", items: v.faq })],
+    blocks: [...reserveren(), block("contact", { kop: v.contact.kop, tekst: v.contact.tekst, formulier: true }), uren(), block("faq", { kop: "Veelgestelde vragen", items: v.faq })],
   });
   return paginas;
 }

@@ -2,6 +2,7 @@ import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { siteForHost, verificationRecord } from "@/lib/sites/domain";
 import { handleSiteContact, serveSitePath, siteText, type ServeOptions } from "@/lib/sites/serve";
 import { handleSiteOrder } from "@/lib/sites/bestellingen";
+import { handleSiteReservering } from "@/lib/sites/reserveringen";
 import { handleSiteChat } from "@/lib/sitechat/site-pagina";
 
 export const runtime = "nodejs";
@@ -48,12 +49,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ hos
   const host = hostOf(request, param);
   if (!host) return new Response("Niet gevonden", { status: 404 });
   const doel = path.join("/");
-  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat") return new Response("Niet toegestaan", { status: 405 });
+  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering") return new Response("Niet toegestaan", { status: 405 });
   const found = await siteForHost(host).catch(() => null);
   if (!found) return notLinked(host);
   // the chat (lib/sitechat/site-pagina.ts)
   if (doel === "_zf/chat") return handleSiteChat(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, address: `https://${found.primary}` });
   // the shop's order form (lib/sites/bestellingen.ts)
   if (doel === "_zf/bestelling") return handleSiteOrder(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, besteld: "/besteld", address: `https://${found.primary}` });
+  // reserving a table (lib/sites/reserveringen.ts)
+  if (doel === "_zf/reservering") return handleSiteReservering(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, gereserveerd: "/gereserveerd", address: `https://${found.primary}` });
   return handleSiteContact(request, found.live, { ...optsFor(found.primary), thanks: "/bedankt", address: `https://${found.primary}` });
 }

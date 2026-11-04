@@ -5,22 +5,25 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { BRANCHE_VOORBEELDEN } from "@/lib/sites/branche-voorbeelden";
 import { DEMO_SLUG } from "@/lib/sites/demo";
+import { BURGER_SLUG } from "@/lib/sites/burger-voorbeeld";
 
 export const metadata: Metadata = {
   title: "Voorbeeldwebsites per branche",
   description:
-    "Bekijk complete voorbeeldwebsites van ZekerFlex voor horeca, bouw, schoonmaak, transport, zorg, kappers, garages, zakelijke dienstverlening en winkels. Met reserveren, afspraken, offertes, chat en meer.",
+    "Bekijk complete voorbeeldwebsites van ZekerFlex voor horeca, bouw, schoonmaak, transport, zorg, kappers, garages, zakelijke dienstverlening en winkels. Met online reserveren, een webshop met winkelmand, een 3D-burger, afspraken, offertes, chat en meer.",
   ...canonical("/voorbeeldsites"),
 };
 
 // De voorbeeldsites per branche (lib/sites/branche-voorbeelden.ts) en Bakkerij Jansen
-// met webshop (lib/sites/demo.ts), allemaal in de stijl van schwarzwald.zekerflex.com.
+// met webshop (lib/sites/demo.ts) en Burgerbar Vuur met 3D-burger, menu als webshop en reserveren
+// (lib/sites/burger-voorbeeld.ts), allemaal in de stijl van schwarzwald.zekerflex.com.
 // De foto's op deze pagina zijn de branchefoto's van de klus-kaarten (public/shifts), of
 // een eigen kaartfoto waar de klus-kaarten geen branche hebben (public/voorbeeldsites).
 
 const KAARTEN = [
   ...BRANCHE_VOORBEELDEN.map((v) => ({ slug: v.slug, label: v.label, naam: v.bedrijf.naam, tekst: v.omschrijving, foto: v.kaart ?? `/shifts/${v.id}.jpg` })),
-  { slug: DEMO_SLUG, label: "Winkel met webshop", naam: "Bakkerij Jansen", tekst: "Bakkerij met een webshop: producten met foto en prijs, maten en smaken, en bestellen om af te halen of te laten bezorgen.", foto: "/shifts/retail.jpg" },
+  { slug: BURGER_SLUG, label: "Hamburgerzaak", naam: "Burgerbar Vuur", tekst: "Een burger in 3D die laag voor laag in elkaar valt terwijl je scrolt, het menu als webshop met winkelmand, en online een tafel reserveren.", foto: "/voorbeeldsites/burger.jpg" },
+  { slug: DEMO_SLUG, label: "Winkel met webshop", naam: "Bakkerij Jansen", tekst: "Bakkerij met een webshop: zoeken en filteren, producten met foto en prijs, maten en smaken, een winkelmand, en bestellen om af te halen of te laten bezorgen.", foto: "/shifts/retail.jpg" },
 ];
 
 export default function VoorbeeldsitesPage() {
@@ -68,7 +71,7 @@ export default function VoorbeeldsitesPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-8 text-sm text-neutralx-500">De bedrijven op deze voorbeeldsites bestaan niet, en hun formulieren versturen niets. De foto&apos;s op de voorbeeldsites komen van Pexels.</p>
+          <p className="mt-8 text-sm text-neutralx-500">De bedrijven op deze voorbeeldsites bestaan niet. Je kunt alles proberen, ook reserveren en bestellen, maar er wordt niets bewaard of verstuurd. De foto&apos;s op de voorbeeldsites komen van Pexels.</p>
         </div>
       </section>
     </>

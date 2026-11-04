@@ -63,6 +63,14 @@ export async function runRetentionSweep(
     : (await prisma.horecaReservering.updateMany({ where: resWhere, data: { naam: "Gast", email: "", telefoon: "", opmerking: "" } })).count +
       (await prisma.horecaBestelling.updateMany({ where: bestelWhere, data: { naam: "", opmerking: "" } })).count;
 
+  // Tafelreserveringen via een klantsite (lib/sites/reserveringen-opslag.ts): na dezelfde 12 maanden helemaal weg.
+  // De dag zit in de sleutel: site-reservering:<siteId>:<datum>:<id>.
+  const siteDag = amsterdamDayKey(horecaCut);
+  const siteOud = (await prisma.keyValueStore.findMany({ where: { key: { startsWith: "site-reservering:" } }, select: { key: true } }))
+    .map((r) => r.key)
+    .filter((k) => (k.split(":")[2] ?? "9999") < siteDag);
+  cleared.site_reserveringen = dryRun || siteOud.length === 0 ? siteOud.length : (await prisma.keyValueStore.deleteMany({ where: { key: { in: siteOud } } })).count;
+
   const deviceCut = retentionCutoff("device_fingerprint", now)!;
   cleared.device_fingerprint = dryRun
     ? await prisma.deviceFingerprint.count({ where: { lastSeenAt: { lt: deviceCut } } })

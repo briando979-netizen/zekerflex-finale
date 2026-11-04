@@ -115,7 +115,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "horeca_gasten",
-    label: "Gastgegevens bij horecareserveringen en -bestellingen (naam, e-mail, telefoon, opmerking)",
+    label: "Gastgegevens bij horecareserveringen en -bestellingen (naam, e-mail, telefoon, opmerking); een tafelreservering via een klantsite gaat dan helemaal weg",
     days: YEAR,
     anchor: "dag van de reservering / bestelling",
     basis: "Alleen nodig voor de reservering en de nazorg; daarna geen grondslag. Datum, tijd, aantal personen en bedragen blijven voor de cijfers van de zaak",

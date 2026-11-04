@@ -10,6 +10,10 @@ const tekst = z.string().trim().max(4000);
 const short = z.string().trim().max(200);
 const link = z.string().trim().max(300);
 const mediaId = z.string().regex(/^m[a-z0-9]{6,20}$/).nullable();
+const klok = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Een tijd schrijf je als 17:30.");
+/** per weekday (0 = Sunday) from-to, or null = no reservations that day */
+const dagTijd = z.object({ van: klok, tot: klok }).nullable();
+const reserveerTijden = z.object({ "0": dagTijd, "1": dagTijd, "2": dagTijd, "3": dagTijd, "4": dagTijd, "5": dagTijd, "6": dagTijd });
 
 const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("hero"), props: z.object({ kop, tekst, knop: short, knopLink: link, foto: mediaId }) }),
@@ -27,6 +31,21 @@ const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("usps"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
   z.object({ id: z.string().max(40), type: z.literal("producten"), props: z.object({ kop, tekst, categorie: z.string().trim().max(60), aantal: z.number().int().min(1).max(48) }) }),
   z.object({ id: z.string().max(40), type: z.literal("uitgelicht"), props: z.object({ productId: z.string().regex(/^$|^p[a-z0-9]{6,20}$/), kop, tekst, fotoLinks: z.boolean() }) }),
+  z.object({ id: z.string().max(40), type: z.literal("burger3d"), props: z.object({ kop, tekst, lagen: z.array(z.object({ titel: short, tekst: z.string().trim().max(300) })).max(7), knop: short, knopLink: link }) }),
+  z.object({
+    id: z.string().max(40),
+    type: z.literal("reserveren"),
+    props: z.object({
+      kop,
+      tekst,
+      tijden: reserveerTijden,
+      slotMinuten: z.union([z.literal(15), z.literal(30), z.literal(60)]),
+      verblijfMinuten: z.number().int().min(30).max(360),
+      maxGroep: z.number().int().min(1).max(100),
+      dagenVooruit: z.number().int().min(1).max(365),
+      maxGasten: z.number().int().min(1).max(2000),
+    }),
+  }),
 ]);
 
 const cents = z.number().int().min(0).max(10_000_000);
@@ -111,7 +130,7 @@ export const siteSaveSchema = z
     const slugs = v.pages.map((p) => p.slug);
     if (!slugs.includes("")) ctx.addIssue({ code: "custom", message: "Er moet een homepagina zijn." });
     if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee pagina's hebben hetzelfde webadres." });
-    if (slugs.some((s) => ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld"].includes(s))) {
+    if (slugs.some((s) => ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld", "mand", "reserveren", "gereserveerd", "wat-kan-deze-site"].includes(s))) {
       ctx.addIssue({ code: "custom", message: "Dit webadres voor een pagina is gereserveerd." });
     }
   });

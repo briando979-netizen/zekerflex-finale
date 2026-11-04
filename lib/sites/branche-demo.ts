@@ -15,8 +15,8 @@ import { brancheVoorbeeldPaginas, pexelsUrl, type BrancheVoorbeeld } from "@/lib
 //   KV "site-voorbeeld-slot:<branche>" — één bouwer tegelijk
 // ---------------------------------------------------------------------------
 
-/** 1: de eerste zes branches (4 nov 2026). */
-const VERSIE = 1;
+/** 1: de eerste zes branches (4 nov 2026); 2: online een tafel reserveren bij de brasserie (4 nov 2026). */
+const VERSIE = 2;
 const BY = { userId: "system", name: "ZekerFlex (voorbeeld)" };
 const tenantVan = (v: BrancheVoorbeeld) => `voorbeeld:${v.id}`;
 const STATE = (v: BrancheVoorbeeld) => `site-voorbeeld:${v.id}`;

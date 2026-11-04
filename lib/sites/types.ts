@@ -6,6 +6,8 @@
 // policy holds and visitors never load anything from a third party.
 // ---------------------------------------------------------------------------
 
+import { STANDAARD_TIJDEN, type Openingstijden } from "@/lib/horeca/tijden";
+
 export type BlockType =
   | "hero"
   | "tekst"
@@ -21,7 +23,9 @@ export type BlockType =
   | "stappen"
   | "usps"
   | "producten"
-  | "uitgelicht";
+  | "uitgelicht"
+  | "reserveren"
+  | "burger3d";
 
 export interface Item {
   titel: string;
@@ -54,6 +58,24 @@ export interface BlockProps {
   producten: { kop: string; tekst: string; categorie: string; aantal: number };
   /** one product of the shop, big, with photo and price */
   uitgelicht: { productId: string; kop: string; tekst: string; fotoLinks: boolean };
+  /**
+   * a table reservation (lib/sites/reserveren.ts): day and party size in the block, the free times
+   * and the guest's details on …/reserveren. `tijden` = when guests can arrive, per weekday
+   * (0 = Sunday); the other settings work as in the horeca package (lib/horeca/reserveren.ts)
+   */
+  reserveren: {
+    kop: string;
+    tekst: string;
+    tijden: Openingstijden;
+    slotMinuten: 15 | 30 | 60;
+    verblijfMinuten: number;
+    maxGroep: number;
+    dagenVooruit: number;
+    /** guests at the same time */
+    maxGasten: number;
+  };
+  /** a burger in 3D whose layers float apart and fall together while scrolling (lib/sites/burger3d.ts); `lagen` names the seven layers, top first */
+  burger3d: { kop: string; tekst: string; lagen: Item[]; knop: string; knopLink: string };
 }
 
 /**
@@ -270,6 +292,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   vacatures: "Vacatures (je open diensten)",
   producten: "Producten uit je winkel",
   uitgelicht: "Uitgelicht product",
+  reserveren: "Tafel reserveren",
+  burger3d: "3D-burger (beweegt bij scrollen)",
 };
 
 /** A fresh block of a type, with sensible example content. */
@@ -314,6 +338,41 @@ export function newBlock(type: BlockType, id: string): Block {
       return { id, type, props: { kop: "Ons assortiment", tekst: "", categorie: "", aantal: 8 } };
     case "uitgelicht":
       return { id, type, props: { productId: "", kop: "Uitgelicht", tekst: "", fotoLinks: false } };
+    case "burger3d":
+      return {
+        id,
+        type,
+        props: {
+          kop: "Laag voor laag de lekkerste burger",
+          tekst: "Alles vers, alles met de hand. Zo bouwen we hem op.",
+          lagen: [
+            { titel: "Brioche met sesam", tekst: "Elke ochtend vers gebakken, licht zoet en luchtig." },
+            { titel: "Knapperige sla", tekst: "Ijsbergsla, koud en fris." },
+            { titel: "Belegen cheddar", tekst: "Gesmolten over het vlees, net van de grill." },
+            { titel: "Rundvlees, 180 gram", tekst: "Vers gedraaid, op houtskool gegrild." },
+            { titel: "Tomaat", tekst: "Rijp en sappig, in dikke plakken." },
+            { titel: "Rode ui", tekst: "Dun gesneden, voor een frisse beet." },
+            { titel: "Geroosterde bodem", tekst: "Van dezelfde brioche, kort op de plaat." },
+          ],
+          knop: "Bekijk het menu",
+          knopLink: "winkel",
+        },
+      };
+    case "reserveren":
+      return {
+        id,
+        type,
+        props: {
+          kop: "Reserveer een tafel",
+          tekst: "Kies een dag en met hoeveel personen je komt. Je ziet meteen welke tijden nog vrij zijn.",
+          tijden: { ...STANDAARD_TIJDEN },
+          slotMinuten: 30,
+          verblijfMinuten: 120,
+          maxGroep: 8,
+          dagenVooruit: 60,
+          maxGasten: 40,
+        },
+      };
     case "usps":
       return {
         id,
@@ -500,6 +559,8 @@ const fillIn = (s: string, c: Pick<Company, "naam" | "plaats">) =>
 /** The pages of a new site, from a sector template and the company details. */
 export function pagesFromTemplate(t: SectorTemplate, c: Company, newId: () => string): Page[] {
   const f = (s: string) => fillIn(s, c);
+  // a restaurant or café takes reservations online (lib/sites/reserveren.ts); a bakery, butcher or catering service does not
+  const tafels = t.id === "horeca" && !/bakker|banket|patisserie|slager|traiteur|ijssalon|snackbar|catering/i.test(c.naam);
   const block = <T extends BlockType>(type: T, props: Partial<BlockProps[T]>) => {
     const b = newBlock(type, newId());
     return { ...b, props: { ...b.props, ...props } } as Block;
@@ -512,12 +573,16 @@ export function pagesFromTemplate(t: SectorTemplate, c: Company, newId: () => st
       seoTitel: f("{bedrijf} in {plaats}"),
       seoOmschrijving: f(t.heroTekst),
       blocks: [
-        block("hero", { kop: f(t.heroKop), tekst: f(t.heroTekst) }),
+        block("hero", { kop: f(t.heroKop), tekst: f(t.heroTekst), ...(tafels ? { knop: "Reserveer een tafel", knopLink: "reserveren" } : {}) }),
         block("diensten", { kop: "Wat we doen", items: t.diensten.map((d) => ({ titel: f(d.titel), tekst: f(d.tekst) })) }),
+        // a burger place: the 3D burger whose layers fall together while scrolling (lib/sites/burger3d.ts)
+        ...(t.id === "horeca" && /burger|smash/i.test(c.naam) ? [block("burger3d", {})] : []),
         block("tekstFoto", { kop: f("Over {bedrijf}"), tekst: f(t.over) }),
         block("stappen", {}),
+        // a restaurant takes reservations online (lib/sites/reserveren.ts); the company sets its own times
+        ...(tafels ? [block("reserveren", {})] : []),
         block("reviews", {}),
-        block("cta", {}),
+        block("cta", tafels ? { kop: "Tot snel!", tekst: "Reserveer online een tafel, of neem contact op voor een groep.", knop: "Reserveer een tafel", knopLink: "reserveren" } : {}),
       ],
     },
     {
@@ -534,7 +599,7 @@ export function pagesFromTemplate(t: SectorTemplate, c: Company, newId: () => st
       titel: "Contact",
       seoTitel: f("Contact | {bedrijf}"),
       seoOmschrijving: f("Neem contact op met {bedrijf} in {plaats}."),
-      blocks: [block("contact", {}), block("openingstijden", {})],
+      blocks: [...(tafels ? [block("reserveren", {})] : []), block("contact", {}), block("openingstijden", {})],
     },
   ];
 }

@@ -129,7 +129,7 @@ describe("winkel: maten, kleuren en voorraad", () => {
 
   it("toont keuzelijsten op de productpagina en 'Nog 3 op voorraad'", () => {
     const html = renderWinkelPagina(site(w), { soort: "product", slug: "hoodie" }, opts) ?? "";
-    expect(html).toContain('<select id="o0" name="o0">');
+    expect(html).toContain('<select id="o0" name="o0" required>');
     expect(html).toContain('<option value="Zwart">Zwart</option>');
     expect(html).toContain("Nog 3 op voorraad");
     expect(html).toContain('max="3"');
@@ -161,16 +161,19 @@ describe("winkel: weergave", () => {
   it("geeft een productpagina met bestelknop en Product-gegevens voor zoekmachines", () => {
     const html = renderWinkelPagina(site(winkel()), { soort: "product", slug: "desembrood" }, opts) ?? "";
     expect(html).toContain("<h1>Desembrood</h1>");
-    expect(html).toContain('action="/site/bakker/bestellen"');
+    expect(html).toContain('action="/site/bakker/mand"');
     expect(html).toContain('"@type":"Product"');
     expect(html).toContain('<link rel="canonical" href="https://zekerflex.com/site/bakker/p/desembrood">');
     expect(renderWinkelPagina(site(winkel()), { soort: "product", slug: "bestaat-niet" }, opts)).toBeNull();
   });
 
-  it("laat in een voorbeeldwinkel niets bestellen", () => {
+  it("laat in een voorbeeldwinkel alles proberen, maar zegt dat er niets besteld wordt", () => {
     const html = renderWinkelPagina({ ...site(winkel()), voorbeeld: true }, { soort: "bestellen" }, opts) ?? "";
-    expect(html).toContain('action="#"');
-    expect(html).toContain("bestellen kan hier niet");
+    expect(html).toContain('action="/site/bakker/_zf/bestelling"');
+    expect(html).toContain("er wordt niets besteld of verstuurd");
+    expect(html).not.toMatch(/<input[^>]*name="naam"[^>]*disabled/);
+    const klaar = renderWinkelPagina({ ...site(winkel()), voorbeeld: true }, { soort: "besteld", nr: "", voorbeeld: true }, opts) ?? "";
+    expect(klaar).toContain("er is niets besteld en niets verstuurd");
   });
 
   it("zet de winkel en de producten in de sitemap", () => {

@@ -3,9 +3,15 @@ import { belevingBlok, belevingCss, metKicker, paginaKop, type BelevingCtx } fro
 import { functiesVoorBezoekers, functiesVoorJou, type Functie } from "@/lib/sites/wat-kan-deze-site";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
+import { nuInNL, reserveerBlokVan } from "@/lib/sites/reserveren";
+import type { MandRegelInfo } from "@/lib/sites/mand";
+import { burgerBlokHtml, burgerCss, heeftBurger } from "@/lib/sites/burger3d";
+import type { WinkelFilter } from "@/lib/sites/winkel-filter";
+import { gereserveerdBody, reserveerBlokHtml, reserveerCss, reserveerPaginaBody, type ReserveerCtx, type ReserveerStaat } from "@/lib/sites/reserveren-render";
 import {
   besteldPaginaBody,
   bestelPaginaBody,
+  mandPaginaBody,
   controlePaginaBody,
   productPaginaBody,
   renderProductenBlok,
@@ -43,6 +49,8 @@ export interface RenderOptions {
   vacatures?: SiteVacancy[] | undefined;
   /** a "Chat met ons" link at the bottom right to the site's chat page …/_zf/chat (lib/sitechat/site-pagina.ts); no script */
   chat?: boolean | undefined;
+  /** hoeveel artikelen in de winkelmand van deze bezoeker (lib/sites/mand.ts); absent = geen mandje in de kop */
+  mandAantal?: number | undefined;
 }
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -58,8 +66,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone). */
-const CSS_REV = 14;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026). */
+const CSS_REV = 17;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
@@ -91,7 +99,7 @@ main.zfc.wrap{max-width:820px;padding-top:28px;padding-bottom:56px}.zfc-uitleg{c
 export const stylesheetHref = (opts: Pick<RenderOptions, "root" | "version">) => `${opts.root}assets/site.css${opts.version ? `?v=${opts.version}.${CSS_REV}` : ""}`;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
-export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen", "wat-kan-deze-site"];
+export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen", "wat-kan-deze-site", "reserveren", "mand"];
 
 /** The site's home address without a trailing slash ("/site/bakker"), or "/" on an own domain. */
 export const homeHref = (root: string) => (root.length > 1 ? root.slice(0, -1) : "/");
@@ -241,7 +249,7 @@ nav a{border-radius:0;padding:10px 14px;font-size:.76rem;letter-spacing:.14em;te
  * stylesheet on a published site (assets/site.css → assets/fonts/), the app's
  * own /fonts/ for the inline CSS of the builder's preview.
  */
-export function siteCss(theme: Theme, fontBase = "fonts/"): string {
+export function siteCss(theme: Theme, fontBase = "fonts/", metBurger = false): string {
   const kleur = isHexColor(theme.kleur) ? theme.kleur : "#0E5C4A";
   const accent = isHexColor(theme.accent) ? theme.accent : "#F2B544";
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
@@ -250,7 +258,7 @@ export function siteCss(theme: Theme, fontBase = "fonts/"): string {
   const premium = theme.stijl === "premium" || theme.stijl === "beleving";
   const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : premium ? `\n${premiumCss(kleur, accent, fontBase)}${theme.stijl === "beleving" ? belevingStijl(kleur, accent) : ""}` : "";
   // de winkel (lib/sites/winkel-render.ts) staat tussen de basis en de stijl, zodat luxe/premium hem kunnen bijstellen
-  const winkel = `\n${winkelCss(premium)}`;
+  const winkel = `\n${winkelCss(premium)}\n${reserveerCss(premium)}`;
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:17px/1.65 ${f.tekst};color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}a{color:var(--k)}h1,h2,h3{font-family:${f.kop};line-height:1.15;margin:0 0 .6em;letter-spacing:-.01em}
@@ -285,7 +293,7 @@ ul.cards{list-style:none;margin:0;padding:0}.probeer{margin:14px 0 0}.probeer a{
 .card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
 .steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
 .steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
-.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${CHAT_CSS}${winkel}${luxe}`;
+.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${CHAT_CSS}${winkel}${luxe}${metBurger ? `\n${burgerCss()}` : ""}`;
 }
 
 /** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
@@ -338,6 +346,8 @@ interface Ctx {
   beleving: boolean;
   /** the site's shop (an empty one when it has none) */
   winkel: Winkel;
+  /** items in this visitor's cart; undefined = no cart link in the header */
+  mandAantal: number | undefined;
 }
 
 /** What the shop's rendering (lib/sites/winkel-render.ts) needs from a page context. */
@@ -353,6 +363,11 @@ function winkelCtx(ctx: Ctx): WinkelCtx {
     img: (id, sizes, eager) => img(ctx, id, sizes, eager),
     href: (raw) => href(ctx, raw),
   };
+}
+
+/** What reserving a table (lib/sites/reserveren-render.ts) needs from a page context. */
+function reserveerCtx(ctx: Ctx): ReserveerCtx {
+  return { root: ctx.root, preview: ctx.preview, inert: ctx.voorbeeld || Boolean(ctx.voorstel), bedrijf: ctx.bedrijf, esc, paras, href: (raw) => href(ctx, raw) };
 }
 
 /** `alt` overrides the photo's own description ("" for a photo that is only decoration). */
@@ -472,6 +487,10 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       return renderProductenBlok(winkelCtx(ctx), ctx.winkel, b.props, alt);
     case "uitgelicht":
       return renderUitgelichtBlok(winkelCtx(ctx), ctx.winkel, b.props, alt);
+    case "reserveren":
+      return reserveerBlokHtml(reserveerCtx(ctx), b.props, alt, nuInNL());
+    case "burger3d":
+      return burgerBlokHtml(b.props, { esc, paras, href: (raw) => href(ctx, raw) }, b.id);
   }
 }
 
@@ -506,11 +525,20 @@ function header(ctx: Ctx, current: Page): string {
     ? `<img src="${esc(ctx.mediaSrc(ctx.logo.file))}" alt="${esc(ctx.bedrijf.naam)}" width="${ctx.logo.width}" height="${ctx.logo.height}" fetchpriority="high" decoding="async">`
     : esc(ctx.bedrijf.naam);
   const menu = `<details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details>`;
+  const mand = mandLink(ctx);
   if (ctx.premium) {
     // beleving: no bar with phone and e-mail above the header, as on schwarzwald.zekerflex.com (the phone is in the opening and the closing band)
-    return `${ctx.beleving ? "" : topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
+    return `${ctx.beleving ? "" : topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${mand}${headerButton(ctx, current)}${menu}</div></div></header>`;
   }
-  return `<header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${menu}</div></header>`;
+  return `<header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${mand ? `<div class="acts">${mand}${menu}</div>` : menu}</div></header>`;
+}
+
+/** The cart in the header of a site with a shop (lib/sites/mand.ts): a plain link with the number of items. */
+function mandLink(ctx: Ctx): string {
+  if (ctx.mandAantal === undefined) return "";
+  const n = ctx.mandAantal;
+  const label = n === 1 ? "1 artikel" : `${n} artikelen`;
+  return `<a class="mandlink" href="${esc(ctx.preview ? "#" : `${ctx.root}mand`)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><span class="mtekst">Winkelmand</span>${n ? `<b>${n}</b>` : ""}<span class="vh">, ${label}</span></a>`;
 }
 
 const telHref = (raw: string) => `tel:${raw.replace(/[^\d+]/g, "")}`;
@@ -527,6 +555,8 @@ function topBar(ctx: Ctx): string {
 
 /** Premium: the round button in the header, to the contact form, or the phone number when there is none. */
 function headerButton(ctx: Ctx, current: Page): string {
+  // a restaurant that takes reservations: the button goes straight to the free times
+  if (reserveerBlokVan(ctx.pages)) return `<a class="btn cta-top" href="${esc(href(ctx, "reserveren"))}">Reserveren</a>`;
   const withForm = ctx.pages.find((p) => p.blocks.some((b) => b.type === "contact"));
   const target = withForm ? (withForm.id === current.id ? "#contact" : withForm.slug || "home") : ctx.bedrijf.telefoon ? telHref(ctx.bedrijf.telefoon) : "";
   if (!target) return "";
@@ -650,6 +680,7 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     premium: site.theme.stijl === "premium" || site.theme.stijl === "beleving",
     beleving: site.theme.stijl === "beleving",
     winkel: winkelVan(site),
+    mandAantal: opts.mandAantal,
   };
 }
 
@@ -691,7 +722,7 @@ export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions
     const html = ctx.beleving ? belevingHtml(b, hero ? i : i - 1, ctx, page) : renderBlock(b, i, ctx);
     return ctx.preview && html ? `<div data-blok="${esc(b.id)}">${html}</div>` : html;
   });
-  return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
+  return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS, heeftBurger(site.pages)));
 }
 
 const fixedPage = (id: string, slug: string, titel: string): Page => ({ id: `__${id}`, slug, titel, seoTitel: titel, seoOmschrijving: titel, blocks: [] });
@@ -703,7 +734,10 @@ export function renderSystemPage(site: RenderableSite, kind: "privacy" | "bedank
   const home = esc(ctx.preview ? "#" : homeHref(opts.root));
   const wrap = (inner: string) => `<section><div class="wrap narrow">${inner}</div></section>`;
   if (kind === "privacy") {
-    const text = `${c.naam}${c.kvk ? ` (KVK ${c.kvk})` : ""} gaat zorgvuldig om met je gegevens.\n\nStuur je ons een bericht via het contactformulier, dan gebruiken we je naam, e-mailadres, telefoonnummer en bericht alleen om je te antwoorden. We bewaren ze niet langer dan nodig en delen ze met niemand, behalve met ZekerFlex, dat deze website voor ons host.\n\nDeze website gebruikt geen cookies en geen bezoekersvolgsystemen van anderen. Foto's en lettertypes komen van deze website zelf.\n\nWil je weten welke gegevens we van je hebben, of wil je ze laten verwijderen? Mail ons${c.email ? ` op ${c.email}` : ""}.`;
+    // reserving or ordering on this site: say so, and what those details are used for
+    const extra = [reserveerBlokVan(site.pages) && "een tafel reserveert", zichtbareProducten(ctx.winkel).length > 0 && "iets bestelt"].filter(Boolean);
+    const ook = extra.length ? ` Hetzelfde geldt als je ${extra.join(" of ")}: dan gebruiken we je gegevens alleen daarvoor.` : "";
+    const text = `${c.naam}${c.kvk ? ` (KVK ${c.kvk})` : ""} gaat zorgvuldig om met je gegevens.\n\nStuur je ons een bericht via het contactformulier, dan gebruiken we je naam, e-mailadres, telefoonnummer en bericht alleen om je te antwoorden.${ook} We bewaren ze niet langer dan nodig en delen ze met niemand, behalve met ZekerFlex, dat deze website voor ons host.\n\nDeze website gebruikt geen cookies en geen bezoekersvolgsystemen van anderen. Foto's en lettertypes komen van deze website zelf.\n\nWil je weten welke gegevens we van je hebben, of wil je ze laten verwijderen? Mail ons${c.email ? ` op ${c.email}` : ""}.`;
     return htmlDoc(ctx, fixedPage("privacy", "privacy", `Privacyverklaring | ${c.naam}`), wrap(`<h1>Privacyverklaring</h1>${paras(text)}`), opts, siteCss(site.theme, PREVIEW_FONTS));
   }
   if (kind === "bedankt") {
@@ -748,10 +782,11 @@ export function renderFunctiesPagina(site: RenderableSite, opts: RenderOptions &
 /** A page of the site's shop: a product, the overview, the order form, the check before ordering, the thank-you page. */
 export type WinkelPagina =
   | { soort: "product"; slug: string }
-  | { soort: "winkel" }
-  | { soort: "bestellen"; invoer?: BestelInvoer | undefined; fouten?: string[] | undefined }
-  | { soort: "controle"; concept: Bestelconcept }
-  | { soort: "besteld"; nr: string };
+  | { soort: "winkel"; filter?: WinkelFilter | undefined }
+  | { soort: "bestellen"; invoer?: BestelInvoer | undefined; fouten?: string[] | undefined; vanMand?: boolean | undefined }
+  | { soort: "controle"; concept: Bestelconcept; vanMand?: boolean | undefined }
+  | { soort: "besteld"; nr: string; voorbeeld?: boolean | undefined }
+  | { soort: "mand"; mand: { regels: MandRegelInfo[]; subtotaalCents: number; aantal: number }; melding: string };
 
 /** A shop page as a full HTML document; null when the product does not exist (or is hidden). */
 export function renderWinkelPagina(site: RenderableSite, w: WinkelPagina, opts: RenderOptions): string | null {
@@ -769,14 +804,46 @@ export function renderWinkelPagina(site: RenderableSite, w: WinkelPagina, opts: 
       return htmlDoc(ctx, page, productPaginaBody(wc, ctx.winkel, p, meta), opts, css, m?.id ?? null);
     }
     case "winkel":
-      return htmlDoc(ctx, { id: "winkel", slug: "winkel", titel: "Winkel", seoTitel: `Winkel | ${naam}`, seoOmschrijving: `Bekijk en bestel het assortiment van ${naam}.`.slice(0, 160), blocks: [] }, winkelPaginaBody(wc, ctx.winkel), opts, css, zichtbareProducten(ctx.winkel)[0]?.fotos[0] ?? null);
+      return htmlDoc(ctx, { id: "winkel", slug: "winkel", titel: "Winkel", seoTitel: `Winkel | ${naam}`, seoOmschrijving: `Bekijk en bestel het assortiment van ${naam}.`.slice(0, 160), blocks: [] }, winkelPaginaBody(wc, ctx.winkel, w.filter), opts, css, zichtbareProducten(ctx.winkel)[0]?.fotos[0] ?? null);
     case "bestellen":
-      return htmlDoc(ctx, fixedPage("bestellen", "bestellen", `Bestellen | ${naam}`), bestelPaginaBody(wc, ctx.winkel, { invoer: w.invoer, fouten: w.fouten }), opts, css);
+      return htmlDoc(ctx, fixedPage("bestellen", "bestellen", `Bestellen | ${naam}`), bestelPaginaBody(wc, ctx.winkel, { invoer: w.invoer, fouten: w.fouten, vanMand: w.vanMand }), opts, css);
     case "controle":
-      return htmlDoc(ctx, fixedPage("controle", "bestellen", `Klopt je bestelling? | ${naam}`), controlePaginaBody(wc, ctx.winkel, w.concept), opts, css);
+      return htmlDoc(ctx, fixedPage("controle", "bestellen", `Klopt je bestelling? | ${naam}`), controlePaginaBody(wc, ctx.winkel, w.concept, w.vanMand), opts, css);
     case "besteld":
-      return htmlDoc(ctx, fixedPage("besteld", "besteld", `Bedankt voor je bestelling | ${naam}`), besteldPaginaBody(wc, ctx.winkel, w.nr), opts, css);
+      return htmlDoc(ctx, fixedPage("besteld", "besteld", `Bedankt voor je bestelling | ${naam}`), besteldPaginaBody(wc, ctx.winkel, w.nr, w.voorbeeld), opts, css);
+    case "mand":
+      return htmlDoc(ctx, fixedPage("mand", "mand", `Winkelmand | ${naam}`), mandPaginaBody(wc, ctx.winkel, w.mand, w.melding), opts, css);
   }
+}
+
+/** A page for reserving a table: the free times and the guest's details, or the confirmation. */
+export type ReserveerPagina =
+  | { soort: "reserveren"; staat: ReserveerStaat }
+  | { soort: "gereserveerd"; reservering: { nr: string; datum: string; tijd: string; personen: number } | null; voorbeeld: boolean };
+
+/** At most `max` characters, ending on a whole sentence when there is one ("…graa" never shows). */
+function totZin(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const stuk = s.slice(0, max);
+  const eind = Math.max(stuk.lastIndexOf(". "), stuk.lastIndexOf("? "), stuk.lastIndexOf("! "));
+  return eind > 40 ? stuk.slice(0, eind + 1) : `${stuk.slice(0, stuk.lastIndexOf(" "))}…`;
+}
+
+/** A reservation page as a full HTML document; null when the site takes no reservations. */
+export function renderReserveerPagina(site: RenderableSite, w: ReserveerPagina, opts: RenderOptions): string | null {
+  const blok = reserveerBlokVan(site.pages);
+  if (!blok) return null;
+  const ctx = context(site, opts);
+  const rc = reserveerCtx(ctx);
+  const css = siteCss(site.theme, PREVIEW_FONTS);
+  const naam = site.bedrijf.naam;
+  if (w.soort === "gereserveerd") {
+    return htmlDoc(ctx, fixedPage("gereserveerd", "gereserveerd", `Gereserveerd | ${naam}`), gereserveerdBody(rc, w.reservering, w.voorbeeld), opts, css);
+  }
+  // beleving: the dark page header with the title, like every page of schwarzwald.zekerflex.com
+  const page: Page = { id: "reserveren-pagina", slug: "reserveren", titel: blok.kop || "Reserveren", seoTitel: `Reserveren | ${naam}`.slice(0, 70), seoOmschrijving: totZin(blok.tekst || `Reserveer online een tafel bij ${naam}.`, 160), blocks: [] };
+  const kop = ctx.beleving ? paginaKop(page, ctx.bedrijf, esc) : "";
+  return htmlDoc(ctx, page, kop + reserveerPaginaBody(rc, blok, w.staat, !ctx.beleving), opts, css);
 }
 
 export function renderSitemap(site: RenderableSite, opts: RenderOptions): string {
@@ -785,6 +852,8 @@ export function renderSitemap(site: RenderableSite, opts: RenderOptions): string
     ...site.pages.map((p) => `${opts.origin}${p.slug ? `${opts.root}${p.slug}` : homeHref(opts.root)}`),
     // the shop: the overview and every visible product page
     ...(winkel.length ? [`${opts.origin}${opts.root}winkel`, ...winkel.map((p) => `${opts.origin}${opts.root}p/${p.slug}`)] : []),
+    // reserving a table
+    ...(reserveerBlokVan(site.pages) ? [`${opts.origin}${opts.root}reserveren`] : []),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${esc(u)}</loc></url>`).join("")}</urlset>`;
 }

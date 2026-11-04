@@ -5,8 +5,13 @@ import { sendMail } from "@/lib/mail";
 import { clientIp } from "@/lib/http/request";
 import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
-import { SITE_FONT_FILES, renderFunctiesPagina, renderPage, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
-import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer } from "@/lib/sites/winkel";
+import { SITE_FONT_FILES, renderFunctiesPagina, renderPage, renderReserveerPagina, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
+import { reserveerBlokVan } from "@/lib/sites/reserveren";
+import { heeftBurger } from "@/lib/sites/burger3d";
+import { gereserveerdPagina, reserveerStaat } from "@/lib/sites/reserveringen-opslag";
+import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer, zichtbareProducten } from "@/lib/sites/winkel";
+import { leesMand, mandCookie, mandMetProducten, mandNaarInvoer, voegToe, zetAantal } from "@/lib/sites/mand";
+import { leesFilter } from "@/lib/sites/winkel-filter";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
 import { recordSiteView } from "@/lib/sites/stats";
 import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
@@ -51,9 +56,13 @@ export const proposalExpired = (snapshot: LiveSite["snapshot"], now = Date.now()
 export async function serveSitePath(live: LiveSite, path: string[], given: ServeOptions, request?: Request): Promise<Response> {
   const { snapshot, siteId } = live;
   // a proposal stays out of search engines wherever it is shown
-  const opts: ServeOptions = snapshot.voorstel ? { ...given, noindex: true } : given;
-  if (proposalExpired(snapshot)) return siteText("Dit ontwerpvoorstel is verlopen. Wil je het opnieuw zien? Neem contact op met ZekerFlex.", 410, opts);
-  const html = (body: string, status = 200) => new Response(body, { status, headers: siteHeaders("text/html; charset=utf-8", "public, max-age=60", opts) });
+  const basis: ServeOptions = snapshot.voorstel ? { ...given, noindex: true } : given;
+  if (proposalExpired(snapshot)) return siteText("Dit ontwerpvoorstel is verlopen. Wil je het opnieuw zien? Neem contact op met ZekerFlex.", 410, basis);
+  // a site with a shop has a cart (lib/sites/mand.ts): the number shows in the header, so its pages are per visitor
+  const winkel = snapshot.winkel && snapshot.winkel.bestellen && zichtbareProducten(snapshot.winkel).length ? snapshot.winkel : null;
+  const mand = winkel ? mandMetProducten(winkel, leesMand(request?.headers.get("cookie"))) : null;
+  const opts: ServeOptions = mand ? { ...basis, mandAantal: mand.aantal } : basis;
+  const html = (body: string, status = 200) => new Response(body, { status, headers: siteHeaders("text/html; charset=utf-8", mand ? "private, no-cache" : "public, max-age=60", opts) });
   // a vacatures block shows the company's open shifts live; an example or a proposal has none and shows an example
   const withVacancies = async (page: Page): Promise<ServeOptions> => {
     const n = vacancyCount(page);
@@ -81,7 +90,8 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     return serveSiteChat(live, { root: opts.root, origin: opts.origin, version: opts.version, noindex: true }, request ?? new Request(`${opts.origin}${opts.root}_zf/chat`));
   }
   if (first === "assets" && second === "site.css" && rest.length === 0) {
-    return new Response(siteCss(snapshot.theme), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
+    // the 3D burger's styles (with movement) only for a site that has one (lib/sites/burger3d.ts)
+    return new Response(siteCss(snapshot.theme, undefined, heeftBurger(snapshot.pages)), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
   }
   // the premium style's fonts, from the site itself (only the known files, from our own public/fonts)
   if (first === "assets" && second === "fonts" && rest.length === 1) {
@@ -127,19 +137,56 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     const q = new URL(request?.url ?? "http://zf/").searchParams;
     if (first === "winkel") {
       count({ slug: "winkel" });
-      return html(renderWinkelPagina(snapshot, { soort: "winkel" }, opts) ?? "");
+      // zoeken, filteren en sorteren (lib/sites/winkel-filter.ts)
+      return html(renderWinkelPagina(snapshot, { soort: "winkel", filter: leesFilter(q) }, opts) ?? "");
+    }
+    // the cart: ?voeg=<id>&aantal=&o0=&o1= adds, ?zet=<regel>&aantal= changes, ?weg=<regel> removes; then back to …/mand
+    if (first === "mand" && winkel && mand) {
+      const regels = leesMand(request?.headers.get("cookie"));
+      const naar = (nieuw: typeof regels, query: string) =>
+        new Response(null, { status: 303, headers: { Location: `${opts.root}mand${query}`, "Set-Cookie": mandCookie(nieuw, opts.root, opts.origin.startsWith("https:")), "Cache-Control": "no-store" } });
+      const voeg = q.get("voeg");
+      if (voeg) {
+        const p = zichtbareProducten(winkel).find((x) => x.id === voeg);
+        if (!p) return naar(regels, "?klaar=weg");
+        const aantal = Math.max(1, Math.min(MAX_PER_PRODUCT, Math.floor(Number(q.get("aantal") ?? 1)) || 1));
+        const keuzes = [q.get("o0") ?? "", q.get("o1") ?? ""].slice(0, (p.opties ?? []).length).map((s) => s.slice(0, 40));
+        return naar(voegToe(regels, { productId: p.id, aantal, keuzes }), `?toegevoegd=${p.id}`);
+      }
+      if (q.has("zet")) return naar(zetAantal(regels, Number(q.get("zet")), Number(q.get("aantal") ?? 1)), "?klaar=bijgewerkt");
+      if (q.has("weg")) return naar(zetAantal(regels, Number(q.get("weg")), 0), "?klaar=verwijderd");
+      const erbij = zichtbareProducten(winkel).find((x) => x.id === q.get("toegevoegd"));
+      const meldingen: Record<string, string> = { bijgewerkt: "Je winkelmand is bijgewerkt.", verwijderd: "Verwijderd uit je winkelmand.", weg: "Dat product is er niet meer." };
+      const melding = erbij ? `${erbij.naam} staat in je winkelmand.` : (meldingen[q.get("klaar") ?? ""] ?? "");
+      return new Response(renderWinkelPagina(snapshot, { soort: "mand", mand, melding }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
     }
     if (first === "bestellen") {
       // from a product page: ?p=<id>&aantal=<n>&o0=<maat>&o1=<kleur> fills in that product
       const p = q.get("p") ?? "";
       const n = Math.max(1, Math.min(MAX_PER_PRODUCT, Math.floor(Number(q.get("aantal") ?? 1)) || 1));
       const keuze = [q.get("o0") ?? "", q.get("o1") ?? ""].map((s) => s.slice(0, 40));
-      const invoer = /^p[a-z0-9]{6,20}$/.test(p) ? { ...LEGE_INVOER, aantallen: { [p]: n }, keuzes: { [p]: keuze } } : undefined;
-      return new Response(renderWinkelPagina(snapshot, { soort: "bestellen", invoer }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+      const los = /^p[a-z0-9]{6,20}$/.test(p) ? { ...LEGE_INVOER, aantallen: { [p]: n }, keuzes: { [p]: keuze } } : undefined;
+      // otherwise from the cart: only what is in it
+      const uitMand = !los && mand ? mandNaarInvoer(mand.regels) : null;
+      const vanMand = Boolean(uitMand && Object.keys(uitMand.aantallen).length);
+      const invoer = los ?? (vanMand && uitMand ? uitMand : undefined);
+      return new Response(renderWinkelPagina(snapshot, { soort: "bestellen", invoer, vanMand }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
     }
     if (first === "besteld") {
       const nr = q.get("nr") ?? "";
-      return new Response(renderWinkelPagina(snapshot, { soort: "besteld", nr: isBestelnummer(nr) ? nr : "" }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+      // an example or proposal stores nothing: it shows what the confirmation looks like
+      const voorbeeld = q.get("voorbeeld") === "1" && Boolean(snapshot.voorbeeld || snapshot.voorstel);
+      return new Response(renderWinkelPagina(snapshot, { soort: "besteld", nr: isBestelnummer(nr) ? nr : "", voorbeeld }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+    }
+    // reserving a table (lib/sites/reserveren.ts): the free times are live, so never cached
+    if (first === "reserveren" || first === "gereserveerd") {
+      const blok = reserveerBlokVan(snapshot.pages);
+      if (blok) {
+        if (first === "reserveren") count({ slug: "reserveren" });
+        const w = first === "reserveren" ? await reserveerStaat(live, blok, q) : await gereserveerdPagina(live, q);
+        const doc = renderReserveerPagina(snapshot, w, opts);
+        if (doc) return new Response(doc, { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+      }
     }
   }
   return html(renderSystemPage(snapshot, "404", opts), 404);

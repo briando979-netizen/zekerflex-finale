@@ -60,9 +60,12 @@ export function productSlug(naam: string, bestaand: string[]): string {
 export type Levering = "afhalen" | "bezorgen";
 
 export interface BestelInvoer {
-  /** product-id → aantal */
+  /**
+   * regel → aantal. Een regel is het product-id, of voor een tweede (derde…) maat of kleur van
+   * hetzelfde product "<id>-1", "<id>-2" (uit de winkelmand, lib/sites/mand.ts)
+   */
   aantallen: Record<string, number>;
-  /** product-id → de gekozen waarde per optie (maat, kleur), in de volgorde van de opties */
+  /** regel → de gekozen waarde per optie (maat, kleur), in de volgorde van de opties */
   keuzes: Record<string, string[]>;
   levering: Levering;
   naam: string;
@@ -99,6 +102,9 @@ export interface Bestelconcept {
   invoer: BestelInvoer;
 }
 
+/** De regels van een product in het bestelformulier: het id zelf, dan "<id>-1" tot "<id>-9" (andere maten of kleuren). */
+export const regelSleutels = (productId: string): string[] => [productId, ...Array.from({ length: 9 }, (_, i) => `${productId}-${i + 1}`)];
+
 const knip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
 /** Het bestelformulier uitlezen: n_<productId> = aantal, k_<productId>_<optie> = keuze, de rest als tekst met een maximum. */
@@ -106,12 +112,12 @@ export function leesBestelForm(form: { get(naam: string): unknown } & Iterable<[
   const aantallen: Record<string, number> = {};
   const keuzes: Record<string, string[]> = {};
   for (const [naam, waarde] of form) {
-    const k = /^k_(p[a-z0-9]{6,20})_([01])$/.exec(naam);
+    const k = /^k_(p[a-z0-9]{6,20}(?:-[1-9])?)_([01])$/.exec(naam);
     if (k?.[1] && k[2]) {
       (keuzes[k[1]] ??= [])[Number(k[2])] = knip(waarde, 40);
       continue;
     }
-    const m = /^n_(p[a-z0-9]{6,20})$/.exec(naam);
+    const m = /^n_(p[a-z0-9]{6,20}(?:-[1-9])?)$/.exec(naam);
     if (!m?.[1]) continue;
     const n = Math.floor(Number(waarde));
     if (Number.isFinite(n) && n > 0) aantallen[m[1]] = Math.min(MAX_PER_PRODUCT, n);
@@ -140,26 +146,31 @@ export function berekenBestelling(w: Winkel, invoer: BestelInvoer): { concept: B
 
   const regels: BestelRegel[] = [];
   for (const p of zichtbareProducten(w)) {
-    const aantal = invoer.aantallen[p.id] ?? 0;
-    if (aantal <= 0) continue;
+    // een product kan meer regels hebben: elke andere maat of kleur uit de winkelmand een eigen regel
+    const sleutels = regelSleutels(p.id).filter((k) => (invoer.aantallen[k] ?? 0) > 0);
+    if (!sleutels.length) continue;
+    const totaal = sleutels.reduce((som, k) => som + (invoer.aantallen[k] ?? 0), 0);
     if (isUitverkocht(p)) {
       fouten.push(`${p.naam} is uitverkocht.`);
       continue;
     }
-    if (p.voorraad != null && aantal > p.voorraad) {
+    if (p.voorraad != null && totaal > p.voorraad) {
       fouten.push(`Van ${p.naam} ${p.voorraad === 1 ? "is er nog 1" : `zijn er nog ${p.voorraad}`}.`);
       continue;
     }
-    // elke optie (maat, kleur) moet een bestaande keuze hebben
-    const gekozen = invoer.keuzes[p.id] ?? [];
-    const opties = p.opties ?? [];
-    const mist = opties.find((o, i) => !o.waarden.includes(gekozen[i] ?? ""));
-    if (mist) {
-      fouten.push(`Kies ${mist.naam.toLowerCase()} bij ${p.naam}.`);
-      continue;
+    for (const k of sleutels) {
+      const aantal = invoer.aantallen[k] ?? 0;
+      // elke optie (maat, kleur) moet een bestaande keuze hebben
+      const gekozen = invoer.keuzes[k] ?? [];
+      const opties = p.opties ?? [];
+      const mist = opties.find((o, i) => !o.waarden.includes(gekozen[i] ?? ""));
+      if (mist) {
+        fouten.push(`Kies ${mist.naam.toLowerCase()} bij ${p.naam}.`);
+        continue;
+      }
+      const variant = opties.length ? opties.map((_, i) => gekozen[i]).join(", ") : undefined;
+      regels.push({ productId: p.id, naam: variant ? `${p.naam} (${variant})` : p.naam, ...(variant ? { variant } : {}), prijsCents: p.prijsCents, aantal, totaalCents: p.prijsCents * aantal });
     }
-    const variant = opties.length ? opties.map((_, i) => gekozen[i]).join(", ") : undefined;
-    regels.push({ productId: p.id, naam: variant ? `${p.naam} (${variant})` : p.naam, ...(variant ? { variant } : {}), prijsCents: p.prijsCents, aantal, totaalCents: p.prijsCents * aantal });
   }
   if (!regels.length && !fouten.length) fouten.push("Kies bij minstens één product hoeveel je wilt bestellen.");
 

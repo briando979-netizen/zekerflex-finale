@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { BRANCHE_VOORBEELDEN } from "@/lib/sites/branche-voorbeelden";
+import { isTafelZaak, tijdenUitUren } from "@/lib/sites/reserveren";
+import { isBurgerZaak } from "@/lib/sites/burger3d";
 import { zonderDubbeleFotos } from "@/lib/sites/foto-afdruk";
 import { textOn } from "@/lib/sites/render";
 import { siteSaveSchema } from "@/lib/sites/schema";
@@ -226,9 +228,27 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
   // "Binnenschilderwerk en buitenschilderwerk in Rijssen en omgeving." — a list with commas only gets the place as its own sentence
   const waar = c.plaats ? (namen.some(hasEn) ? `. In ${c.plaats} en omgeving` : ` in ${c.plaats} en omgeving`) : "";
   const heroTekst = namen.length >= 2 ? `${listOf(namen)}${waar}.` : fill(t.heroTekst, c);
+  // a restaurant with known opening hours gets online table reservations (lib/sites/reserveren.ts): their own hours, never made up
+  const reserveerTijden = horeca && isTafelZaak([c.naam, ...namen, f.intro ?? ""].join(" ")) ? tijdenUitUren(f.uren ?? []) : null;
+  const reserveerProps = reserveerTijden
+    ? { kop: "Reserveer een tafel", tekst: "Kies een dag en met hoeveel je komt, dan zie je meteen welke tijden nog vrij zijn. Je krijgt direct een bevestiging per mail.", tijden: reserveerTijden }
+    : null;
+  const reserveer = reserveerProps ? block("reserveren", reserveerProps) : null;
+  // a burger place gets the 3D burger (lib/sites/burger3d.ts), with plain layer names: nothing about their meat or grill we don't know
+  const burger =
+    horeca && isBurgerZaak([c.naam, ...namen, f.intro ?? ""].join(" "))
+      ? block("burger3d", {
+          kop: "Laag voor laag",
+          tekst: "",
+          lagen: ["Broodje", "Sla", "Kaas", "Burger", "Tomaat", "Ui", "Bodem"].map((titel) => ({ titel, tekst: "" })),
+          knop: reserveer ? "Reserveer een tafel" : "Neem contact op",
+          knopLink: reserveer ? "reserveren" : "contact",
+        })
+      : null;
   // a salon and a garage work by appointment: the button and their opening hours on the home page
   const afspraak = t.id === "kapper" || t.id === "garage";
-  const knop = horeca ? "Reserveer of bestel" : afspraak ? "Maak een afspraak" : t.id === "zorg" ? "Neem contact op" : "Vraag een offerte aan";
+  const knop = reserveer ? "Reserveer een tafel" : horeca ? "Reserveer of bestel" : afspraak ? "Maak een afspraak" : t.id === "zorg" ? "Neem contact op" : "Vraag een offerte aan";
+  const knopLink = reserveer ? "reserveren" : "contact";
   const over = f.intro ?? fill(t.over, c);
   const overLang = f.overTekst ?? over;
 
@@ -251,18 +271,20 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
   const cta = block("cta", {
     kop: kop(horeca ? `Tot snel bij ${c.naam}` : `Benieuwd wat ${c.naam} voor je kan doen?`),
     tekst: (c.telefoon ? `Bel ${c.telefoon} of stuur een bericht, dan nemen we snel contact met je op.` : "Stuur ons een bericht, dan nemen we snel contact met je op.") + googleRegel,
-    knop: "Neem contact op",
-    knopLink: "contact",
+    knop: reserveer ? "Reserveer een tafel" : "Neem contact op",
+    knopLink,
   });
   const aanbodPagina = alleDiensten.length >= 4;
   const fotoPagina = (photos.alle ?? []).length >= 6;
 
   // the order of schwarzwald.zekerflex.com: opening, about, the offer as photo tiles, strengths, steps, photos, reviews, closing
   const home: Block[] = [
-    block("hero", { kop: kop(c.naam), tekst: heroTekst, knop, knopLink: "contact", foto: photos.hero }),
+    block("hero", { kop: kop(c.naam), tekst: heroTekst, knop, knopLink, foto: photos.hero }),
+    ...(burger ? [burger] : []),
     block("tekstFoto", { kop: kop(`Over ${c.naam}`), tekst: clipSentences(over, 420), foto: photos.over, fotoLinks: false }),
     block("diensten", { kop: voorbeeld?.aanbod.kop ?? (horeca ? "Ons aanbod" : "Wat we doen"), items: alleDiensten.slice(0, 6) }),
     ...(usps.length >= 2 ? [block("usps", { kop: `Waarom ${c.naam}`.slice(0, 160), items: usps.slice(0, 4) })] : []),
+    ...(reserveer ? [reserveer] : []),
     block("stappen", { kop: voorbeeld?.stappen.kop ?? "Zo simpel is het", items: stappenVoor(t, c) }),
     ...(photos.galerij.length >= 2 ? [block("galerij", { kop: voorbeeld?.galerij.kop ?? (horeca ? "Sfeer en smaak" : t.id === "bouw" ? "Ons werk" : "Een indruk"), fotos: photos.galerij })] : []),
     ...(reviews ? [reviews] : []),
@@ -329,7 +351,7 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
     titel: "Contact",
     seoTitel: `Contact | ${c.naam}`.slice(0, 70),
     seoOmschrijving: clipSentences(`Neem contact op met ${c.naam}${c.plaats ? ` in ${c.plaats}` : ""}. ${c.telefoon ? `Bel ${c.telefoon} of stuur` : "Stuur"} een bericht via het formulier, dan reageren we snel.`, 160),
-    blocks: [block("contact", { kop: "Neem contact op", tekst: `Heb je een vraag of wil je een afspraak maken? Laat het ${c.naam} weten.`, formulier: true }), ...(uren ? [uren] : [])],
+    blocks: [...(reserveerProps ? [block("reserveren", reserveerProps)] : []), block("contact", { kop: "Neem contact op", tekst: `Heb je een vraag of wil je een afspraak maken? Laat het ${c.naam} weten.`, formulier: true }), ...(uren ? [uren] : [])],
   });
   return pages;
 }

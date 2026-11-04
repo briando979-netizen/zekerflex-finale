@@ -8,6 +8,7 @@ import { renderWinkelPagina } from "@/lib/sites/render";
 import { siteHeaders, siteText, type ServeOptions } from "@/lib/sites/serve";
 import { getSite, saveWinkel, type LiveSite } from "@/lib/sites/store";
 import { berekenBestelling, euro, leesBestelForm, verlaagVoorraad, winkelVan, type Bestelconcept } from "@/lib/sites/winkel";
+import { mandCookie } from "@/lib/sites/mand";
 
 // ---------------------------------------------------------------------------
 // Bestellingen uit de winkel van een klantsite (lib/sites/winkel.ts).
@@ -15,7 +16,9 @@ import { berekenBestelling, euro, leesBestelForm, verlaagVoorraad, winkelVan, ty
 // POST …/_zf/bestelling in drie stappen, zonder scripts: "controle" toont het
 // overzicht met totaal, "wijzig" het formulier terug, "plaats" bewaart, mailt
 // het bedrijf en stuurt de bezoeker naar de bedankpagina. Prijzen komen van de
-// gepubliceerde site; een voorbeeld of voorstel verstuurt nooit iets.
+// gepubliceerde site. Een voorbeeld of voorstel doorloopt dezelfde stappen,
+// maar bewaart en verstuurt nooit iets (4 nov 2026: proberen moet kunnen).
+// Kwam de bestelling uit de winkelmand (bron=mand), dan is die daarna leeg.
 // ---------------------------------------------------------------------------
 
 export type BestelStatus = "nieuw" | "bevestigd" | "klaar" | "afgerond" | "geannuleerd";
@@ -86,9 +89,6 @@ export function bestelMail(c: Bestelconcept, nr: string, adres: string): string 
  * `address` hoe de mail de site noemt.
  */
 export async function handleSiteOrder(request: Request, live: LiveSite, opts: ServeOptions & { besteld: string; address: string }): Promise<Response> {
-  if (live.snapshot.voorbeeld) return siteText("Dit is een voorbeeldwebsite: bestellingen worden niet verstuurd.", 403, opts);
-  // een voorstel draagt het echte e-mailadres van een bedrijf: daar mag nooit iets heen
-  if (live.snapshot.voorstel) return siteText("Dit is een ontwerpvoorstel: bestellingen worden niet verstuurd.", 403, opts);
   const html = (doc: string | null, status = 200) => (doc ? new Response(doc, { status, headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) }) : siteText("Deze pagina bestaat niet.", 404, opts));
 
   const form = await request.formData().catch(() => null);
@@ -98,11 +98,14 @@ export async function handleSiteOrder(request: Request, live: LiveSite, opts: Se
 
   const winkel = winkelVan(live.snapshot);
   const invoer = leesBestelForm(form);
+  const vanMand = form.get("bron") === "mand";
   const stap = String(form.get("stap") ?? "controle");
-  if (stap === "wijzig") return html(renderWinkelPagina(live.snapshot, { soort: "bestellen", invoer }, opts));
+  if (stap === "wijzig") return html(renderWinkelPagina(live.snapshot, { soort: "bestellen", invoer, vanMand }, opts));
   const { concept, fouten } = berekenBestelling(winkel, invoer);
-  if (!concept) return html(renderWinkelPagina(live.snapshot, { soort: "bestellen", invoer, fouten }, opts));
-  if (stap !== "plaats") return html(renderWinkelPagina(live.snapshot, { soort: "controle", concept }, opts));
+  if (!concept) return html(renderWinkelPagina(live.snapshot, { soort: "bestellen", invoer, fouten, vanMand }, opts));
+  if (stap !== "plaats") return html(renderWinkelPagina(live.snapshot, { soort: "controle", concept, vanMand }, opts));
+  // na het plaatsen is de winkelmand leeg (lib/sites/mand.ts)
+  const leeg: Record<string, string> = vanMand ? { "Set-Cookie": mandCookie([], opts.root, opts.origin.startsWith("https:")) } : {};
 
   try {
     await enforceRateLimit({ name: "site-order-ip", identifier: privateRateLimitIdentifier(clientIp(request)), limit: 5, windowSeconds: 600, message: "Te veel bestellingen. Probeer het later opnieuw." });
@@ -110,6 +113,8 @@ export async function handleSiteOrder(request: Request, live: LiveSite, opts: Se
   } catch {
     return siteText("Te veel bestellingen in korte tijd. Probeer het later opnieuw, of neem contact op met de winkel.", 429, opts);
   }
+  // een voorbeeld of voorstel: niets bewaren of versturen (een voorstel draagt het echte e-mailadres van een bedrijf)
+  if (live.snapshot.voorbeeld || live.snapshot.voorstel) return new Response(null, { status: 303, headers: { Location: `${opts.besteld}?voorbeeld=1`, ...leeg } });
 
   const rec = await bewaarBestelling(live.siteId, concept);
   // bijgehouden voorraad omlaag (de winkel staat live, dus de site zoals hij nu is); mislukt dat, dan staat de bestelling er wel
@@ -127,5 +132,5 @@ export async function handleSiteOrder(request: Request, live: LiveSite, opts: Se
       text: bestelMail(concept, rec.nr, opts.address),
     }).catch((err) => logger.warn("site order mail failed", { siteId: live.siteId, err: String(err) }));
   }
-  return new Response(null, { status: 303, headers: { Location: `${opts.besteld}?nr=${rec.nr}` } });
+  return new Response(null, { status: 303, headers: { Location: `${opts.besteld}?nr=${rec.nr}`, ...leeg } });
 }

@@ -1,11 +1,14 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { DEMO_SLUG, ensureDemoSite } from "@/lib/sites/demo";
+import { ensureBurgerDemo } from "@/lib/sites/burger-demo";
+import { BURGER_SLUG } from "@/lib/sites/burger-voorbeeld";
 import { ensureBrancheVoorbeeld } from "@/lib/sites/branche-demo";
 import { brancheVoorbeeldVoorSlug } from "@/lib/sites/branche-voorbeelden";
 import { handleSiteContact, serveSitePath, siteText, type ServeOptions } from "@/lib/sites/serve";
 import { liveSiteBySlug } from "@/lib/sites/store";
 import { handleSiteOrder } from "@/lib/sites/bestellingen";
+import { handleSiteReservering } from "@/lib/sites/reserveringen";
 import { handleSiteChat } from "@/lib/sitechat/site-pagina";
 
 export const runtime = "nodejs";
@@ -16,7 +19,8 @@ export const dynamic = "force-dynamic";
 // (lib/sites/serve.ts). Kept out of search engines on this address; once the
 // company's own domain is active (lib/sites/domain.ts), visitors and search
 // engines are sent there instead.
-// POST /site/<naam>/_zf/contact — the contact form; _zf/bestelling — the shop's order form; _zf/chat — the chat.
+// POST /site/<naam>/_zf/contact — the contact form; _zf/bestelling — the shop's order form; _zf/chat — the chat;
+// _zf/reservering — reserving a table.
 // ---------------------------------------------------------------------------
 
 const ORIGIN = new URL(env.APP_BASE_URL).origin;
@@ -26,6 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const { slug, path = [] } = await params;
   // the example sites make themselves on the first visit (lib/sites/demo.ts, lib/sites/branche-demo.ts)
   if (slug === DEMO_SLUG) await ensureDemoSite().catch((err) => logger.warn("demo site failed", { err: String(err) }));
+  if (slug === BURGER_SLUG) await ensureBurgerDemo().catch((err) => logger.warn("burger example failed", { err: String(err) }));
   const voorbeeld = brancheVoorbeeldVoorSlug(slug);
   if (voorbeeld) await ensureBrancheVoorbeeld(voorbeeld).catch((err) => logger.warn("branch example failed", { branche: voorbeeld.id, err: String(err) }));
   const live = await liveSiteBySlug(slug).catch(() => null);
@@ -40,7 +45,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string; path?: string[] }> }): Promise<Response> {
   const { slug, path = [] } = await params;
   const doel = path.join("/");
-  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat") return new Response("Niet toegestaan", { status: 405 });
+  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering") return new Response("Niet toegestaan", { status: 405 });
   const live = await liveSiteBySlug(slug).catch(() => null);
   if (!live) return siteText("Deze website bestaat niet (meer).", 404, BASE);
   // the chat (lib/sitechat/site-pagina.ts): a question, "speak to someone" or an appointment request

@@ -219,6 +219,8 @@ export function kickerVoor(b: Block, c: Company): string {
     openingstijden: "Kom langs",
     contact: "Contact",
     vacatures: "Werken bij",
+    reserveren: "Reserveren",
+    burger3d: "Laag voor laag",
   };
   const t = label[b.type] ?? "";
   const kop = String((b.props as { kop?: unknown }).kop ?? "").toLowerCase();

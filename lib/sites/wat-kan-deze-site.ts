@@ -1,4 +1,5 @@
 import { zichtbareProducten, winkelVan } from "@/lib/sites/winkel";
+import { reserveerBlokVan } from "@/lib/sites/reserveren";
 import type { Block, Page, SiteDoc } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -42,10 +43,16 @@ export function functiesVoorBezoekers(site: Site, opties: { chat?: boolean | und
   if (opties.chat) {
     uit.push({ titel: "Chatten met een assistent", tekst: "Een assistent beantwoordt vragen met de gegevens van deze site, ook 's avonds. Een medewerker kan het gesprek overnemen, en een bezoeker kan meteen een afspraak aanvragen.", link: "_zf/chat" });
   }
+  const reserveren = reserveerBlokVan(site.pages);
+  if (reserveren) {
+    uit.push({ titel: "Online een tafel reserveren", tekst: `Een gast kiest een dag en met hoeveel hij komt, en ziet meteen welke tijden nog vrij zijn. Is het vol, dan stelt de site de eerstvolgende dagen met plek voor. De gast krijgt direct een bevestiging per mail.`, link: "reserveren" });
+  }
   const winkel = winkelVan(site);
   if (zichtbareProducten(winkel).length) {
-    uit.push({ titel: "Online bestellen", tekst: "Producten met foto en prijs, kiezen uit maten en kleuren, en bestellen om af te halen of te laten bezorgen.", link: "winkel" });
+    uit.push({ titel: "Een echte webshop", tekst: "Zoeken, filteren op categorie, prijs en voorraad, en sorteren. Producten met foto en prijs, maten en kleuren, een winkelmand die blijft staan, en bestellen om af te halen of te laten bezorgen.", link: "winkel" });
   }
+  const burger = paginaMet(site.pages, "burger3d");
+  if (burger) uit.push({ titel: "Een burger in 3D die je ziet ontstaan", tekst: "Terwijl je scrolt, zweven de lagen uit elkaar en vallen ze samen tot één burger, met stoom en vonken van de grill. Gemaakt zonder video of scripts, dus razendsnel, en stil voor wie minder beweging wil.", link: naar(burger.page) });
   const diensten = paginaMet(site.pages, "diensten");
   if (diensten) uit.push({ titel: "Het aanbod in één oogopslag", tekst: "Alles wat je doet, met een foto en een korte uitleg. Eén tik op de pijl en de bezoeker vraagt ernaar.", link: naar(diensten.page) });
   const uren = paginaMet(site.pages, "openingstijden");
@@ -70,13 +77,17 @@ export function functiesVoorBezoekers(site: Site, opties: { chat?: boolean | und
 /** Wat het bedrijf zelf krijgt achter de login (functies van ZekerFlex die er nu zijn). */
 export function functiesVoorJou(site: Site): Functie[] {
   const winkel = zichtbareProducten(winkelVan(site)).length > 0;
+  const reserveren = reserveerBlokVan(site.pages)
+    ? [{ titel: "Je reserveringsboek", tekst: "Alle reserveringen per dag, met aangekomen, niet gekomen of geannuleerd. Belt er iemand, dan voer je het zelf in. Tijden, plaatsen en de grootste groep stel je zelf in; dubbel boeken kan niet." }]
+    : [];
   return [
+    ...reserveren,
     { titel: "Zelf aanpassen", tekst: "Teksten, foto's, kleuren en blokken pas je zelf aan in de Websitestudio. Je ziet het eerst als voorbeeld, en zet het live wanneer jij wilt." },
     { titel: "Geen bericht meer missen", tekst: "Aanvragen via het formulier komen binnen bij Berichten en in je mail. Chatgesprekken volg je live, en een gesprek neem je met één klik over." },
     { titel: "Zien hoeveel bezoekers je hebt", tekst: "Het aantal bezoekers per dag, zonder cookies en zonder iemand te volgen." },
     { titel: "Je eigen domeinnaam", tekst: "Koppel je eigen adres, of vraag een nieuwe domeinnaam aan via ZekerFlex. Het beveiligde slotje regelen wij." },
     winkel
-      ? { titel: "Je webshop beheren", tekst: "Producten, maten en kleuren, voorraad die vanzelf afneemt en een overzicht van de bestellingen." }
+      ? { titel: "Je webshop beheren", tekst: "Producten, maten en kleuren, voorraad die vanzelf afneemt, alle bestellingen met hun status, en een klantenlijst die zich vanzelf vult: wie bestelde, hoe vaak en voor hoeveel." }
       : { titel: "Een webshop, als je wilt", tekst: "Verkoop je producten? Zet er een webshop bij, met maten, kleuren en voorraad. Geen webshop nodig, dan blijft hij gewoon uit." },
     { titel: "Google-reviews verzamelen", tekst: "Vraag klanten na een klus of bezoek met één klik om een review op Google." },
     { titel: "Personeel via ZekerFlex", tekst: "Extra handen nodig? Plaats een dienst op ZekerFlex; hij staat vanzelf als vacature op je site." },

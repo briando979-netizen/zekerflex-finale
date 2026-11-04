@@ -6,6 +6,7 @@ import { blockSummary, renderPage } from "@/lib/sites/render";
 import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
 import SiteStats from "@/components/app/SiteStats";
 import { categorieen } from "@/lib/sites/winkel";
+import { DAGEN } from "@/lib/horeca/tijden";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 
 // ---------------------------------------------------------------------------
@@ -1219,6 +1220,80 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
             Foto links van de tekst
           </label>
           {producten.length === 0 && <p className="text-xs text-neutralx-500">Voeg eerst een product toe in het tabblad Winkel.</p>}
+        </>
+      );
+      break;
+    }
+    case "burger3d": {
+      const p = block.props;
+      const set = (patch: Partial<typeof p>) => onChange({ ...block, props: { ...p, ...patch } });
+      fields = (
+        <>
+          {kop}
+          {tekst(p.tekst, (v) => set({ tekst: v }))}
+          <span className="field-label">De lagen, van boven naar beneden</span>
+          <ItemsEditor items={p.lagen} max={7} blank={{ titel: "Nieuwe laag", tekst: "" }} fields={[{ key: "titel", label: "Naam" }, { key: "tekst", label: "Uitleg (mag leeg)", area: true }]} onChange={(lagen) => set({ lagen })} />
+          <Field label="Tekst op de knop (leeg = geen knop)"><input className="field-input" value={p.knop} maxLength={200} onChange={(e) => set({ knop: e.target.value })} /></Field>
+          <LinkField value={p.knopLink} site={site} onChange={(v) => set({ knopLink: v })} />
+          <p className="text-xs text-neutralx-500">De burger is een tekening in 3D: brioche, sla, cheddar, vlees, tomaat, ui en bodem. Bij het scrollen zweven de lagen uit elkaar en vallen ze samen. De namen hierboven staan ernaast; heb je minder dan zeven lagen, dan houdt de rest de standaardnaam.</p>
+        </>
+      );
+      break;
+    }
+    case "reserveren": {
+      const p = block.props;
+      const set = (patch: Partial<typeof p>) => onChange({ ...block, props: { ...p, ...patch } });
+      const getal = (v: string, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(v)) || min));
+      fields = (
+        <>
+          {kop}
+          {tekst(p.tekst, (v) => set({ tekst: v }))}
+          <div className="space-y-2">
+            <span className="field-label">Wanneer gasten kunnen komen</span>
+            {DAGEN.map(({ dag, naam }) => {
+              const t = p.tijden[dag];
+              return (
+                <div key={dag} className="flex flex-wrap items-center gap-2 text-sm">
+                  <label className="flex w-28 items-center gap-2 font-medium text-neutralx-700">
+                    <input type="checkbox" checked={Boolean(t)} onChange={(e) => set({ tijden: { ...p.tijden, [dag]: e.target.checked ? { van: "17:00", tot: "22:00" } : null } })} className="h-4 w-4 accent-brand-600" />
+                    {naam}
+                  </label>
+                  {t ? (
+                    <>
+                      <input type="time" aria-label={`${naam} vanaf`} className="field-input w-28" value={t.van} onChange={(e) => e.target.value && set({ tijden: { ...p.tijden, [dag]: { ...t, van: e.target.value } } })} />
+                      <span aria-hidden="true">–</span>
+                      <input type="time" aria-label={`${naam} tot`} className="field-input w-28" value={t.tot} onChange={(e) => e.target.value && set({ tijden: { ...p.tijden, [dag]: { ...t, tot: e.target.value } } })} />
+                    </>
+                  ) : (
+                    <span className="text-neutralx-500">Gesloten</span>
+                  )}
+                </div>
+              );
+            })}
+            <p className="text-xs text-neutralx-500">Gebruik de tijden van de keuken. Sluit je na middernacht, zet dan bijvoorbeeld 17:00 – 01:00.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Om de hoeveel minuten">
+              <select className="field-input" value={p.slotMinuten} onChange={(e) => set({ slotMinuten: Number(e.target.value) === 15 ? 15 : Number(e.target.value) === 60 ? 60 : 30 })}>
+                <option value={15}>Elk kwartier</option>
+                <option value={30}>Elk half uur</option>
+                <option value={60}>Elk uur</option>
+              </select>
+            </Field>
+            <Field label="Tafel bezet (minuten)">
+              <input className="field-input" type="number" min={30} max={360} step={15} value={p.verblijfMinuten} onChange={(e) => set({ verblijfMinuten: getal(e.target.value, 30, 360) })} />
+            </Field>
+            <Field label="Gasten tegelijk">
+              <input className="field-input" type="number" min={1} max={2000} value={p.maxGasten} onChange={(e) => set({ maxGasten: getal(e.target.value, 1, 2000) })} />
+            </Field>
+            <Field label="Grootste groep online">
+              <input className="field-input" type="number" min={1} max={100} value={p.maxGroep} onChange={(e) => set({ maxGroep: getal(e.target.value, 1, 100) })} />
+            </Field>
+            <Field label="Dagen vooruit">
+              <input className="field-input" type="number" min={1} max={365} value={p.dagenVooruit} onChange={(e) => set({ dagenVooruit: getal(e.target.value, 1, 365) })} />
+            </Field>
+          </div>
+          <p className="text-xs text-neutralx-500">Gasten kiezen een dag en met hoeveel ze komen, en zien dan welke tijden vrij zijn. Ze krijgen een bevestiging per mail, jij een bericht. Alle reserveringen staan in de Websitestudio onder Reserveringen.</p>
         </>
       );
       break;

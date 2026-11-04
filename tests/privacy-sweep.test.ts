@@ -28,6 +28,13 @@ const h = vi.hoisted(() => {
       rijschoolBericht: mk("rijschoolBericht", 8),
       horecaReservering: mk("horecaReservering", 6),
       horecaBestelling: mk("horecaBestelling", 7),
+      keyValueStore: {
+        findMany: async () => [{ key: "site-reservering:s1:2025-09-08:r1" }, { key: "site-reservering:s1:2025-09-09:r2" }, { key: "site-reservering:s1:2026-12-01:r3" }],
+        deleteMany: async ({ where }: { where: unknown }) => {
+          calls.push({ model: "keyValueStore", op: "deleteMany", where });
+          return { count: (where as { key: { in: string[] } }).key.in.length };
+        },
+      },
     },
     audits: [] as unknown[],
   };
@@ -64,7 +71,10 @@ describe("runRetentionSweep", () => {
       rijschool_lesroutes: 4,
       rijschool_berichten: 8,
       horeca_gasten: 13,
+      site_reserveringen: 1,
     });
+    // klantsites: alleen reserveringen van vóór de grens, op de dag uit de sleutel
+    expect(h.calls.find((c) => c.model === "keyValueStore")?.where).toEqual({ key: { in: ["site-reservering:s1:2025-09-08:r1"] } });
 
     // horeca: gastgegevens geanonimiseerd na 12 maanden (dag in NL-tijd), rijen blijven
     const res6 = h.calls.find((c) => c.model === "horecaReservering");
