@@ -182,7 +182,8 @@ export function ShopStorefront({
               </Heading>
               <p className="mt-0.5 text-[13px] text-neutralx-500">{fmt(t.shop.results, { n: shown.length })}</p>
             </div>
-            <div className="flex items-center gap-2">
+            {/* telefoon: eigen regel over de volle breedte, het sorteermenu vult de rest (anders 2px te breed op 320) */}
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <button
                 type="button"
                 onClick={() => setPanel(true)}
@@ -192,13 +193,13 @@ export function ShopStorefront({
                 {t.shop.filter}
                 {chips.length > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-500 px-1 text-[11px] text-white">{chips.length}</span>}
               </button>
-              <label className="flex items-center gap-2 text-[13px] text-neutralx-600">
+              <label className="flex min-w-0 flex-1 items-center gap-2 text-[13px] text-neutralx-600 sm:flex-none">
                 <span className="hidden sm:inline">{t.shop.sortBy}</span>
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortOrder)}
                   aria-label={t.shop.sortBy}
-                  className="h-10 rounded-lg border border-hairstrong bg-white px-3 text-[13px] font-semibold text-ink"
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-hairstrong bg-white px-3 text-[13px] font-semibold text-ink sm:flex-none"
                 >
                   {(Object.keys(labels.sort) as SortOrder[]).map((s) => (
                     <option key={s} value={s}>
