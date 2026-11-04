@@ -58,6 +58,20 @@ export interface PaginaInhoud {
   blokken: Blok[];
 }
 
+/** Talen voor vertalingen van eigen pagina's; Nederlands is de hoofdtaal (/p/<slug>). */
+export const TALEN = {
+  en: { naam: "Engels", eigen: "English" },
+  de: { naam: "Duits", eigen: "Deutsch" },
+  fr: { naam: "Frans", eigen: "Français" },
+  es: { naam: "Spaans", eigen: "Español" },
+  pl: { naam: "Pools", eigen: "Polski" },
+  ro: { naam: "Roemeens", eigen: "Română" },
+  uk: { naam: "Oekraïens", eigen: "Українська" },
+  tr: { naam: "Turks", eigen: "Türkçe" },
+} as const;
+export type Taal = keyof typeof TALEN;
+export const isTaal = (v: unknown): v is Taal => typeof v === "string" && v in TALEN;
+
 export interface Pagina {
   id: string;
   slug: string;
@@ -65,6 +79,77 @@ export interface Pagina {
   live: PaginaInhoud | null;
   bijgewerkt: string;
   gepubliceerd: string | null;
+  /** vertalingen van het concept; gaan met Publiceren mee naar liveVertalingen */
+  vertalingen?: Partial<Record<Taal, PaginaInhoud>>;
+  liveVertalingen?: Partial<Record<Taal, PaginaInhoud>>;
+}
+
+/** Alleen geldige talen met een geldige inhoud. */
+export function normalizeVertalingen(raw: unknown): Partial<Record<Taal, PaginaInhoud>> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const uit: Partial<Record<Taal, PaginaInhoud>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (isTaal(k) && v && typeof v === "object") uit[k] = normalizeInhoud(v);
+  return uit;
+}
+
+/**
+ * Een vertaling op de vorm van het origineel: alleen tekst komt uit de vertaling,
+ * al het andere (soort, volgorde, achtergrond, foto's, video, links, uitlijning)
+ * uit het origineel. Zo kan een vertaling nooit een link, foto of blok toevoegen
+ * of weghalen. Een blok dat de vertaling mist, blijft in de hoofdtaal staan.
+ */
+export function opVormVanOrigineel(origineel: PaginaInhoud, vertaling: PaginaInhoud): PaginaInhoud {
+  const tekstVan = (o: Blok, v: Blok | undefined): Blok => {
+    if (!v || v.soort !== o.soort) return o;
+    switch (o.soort) {
+      case "hero": {
+        const t = v as typeof o;
+        return { ...o, bovenregel: t.bovenregel, kop: t.kop, tekst: t.tekst, knop: { ...o.knop, tekst: t.knop.tekst }, knop2: { ...o.knop2, tekst: t.knop2.tekst } };
+      }
+      case "tekst": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, tekst: t.tekst };
+      }
+      case "beeldTekst": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, tekst: t.tekst, knop: { ...o.knop, tekst: t.knop.tekst } };
+      }
+      case "kolommen": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, items: o.items.map((it, i) => ({ kop: t.items[i]?.kop ?? it.kop, tekst: t.items[i]?.tekst ?? it.tekst })) };
+      }
+      case "cijfers": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, items: o.items.map((it, i) => ({ getal: it.getal, label: t.items[i]?.label ?? it.label })) };
+      }
+      case "faq": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, items: o.items.map((it, i) => ({ vraag: t.items[i]?.vraag ?? it.vraag, antwoord: t.items[i]?.antwoord ?? it.antwoord })) };
+      }
+      case "citaat": {
+        const t = v as typeof o;
+        return { ...o, tekst: t.tekst, naam: t.naam };
+      }
+      case "video":
+      case "galerij": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop };
+      }
+      case "oproep": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, tekst: t.tekst, knop: { ...o.knop, tekst: t.knop.tekst } };
+      }
+      case "ruimte":
+        return o;
+    }
+  };
+  const perId = new Map(vertaling.blokken.map((b) => [b.id, b]));
+  return {
+    titel: vertaling.titel || origineel.titel,
+    omschrijving: vertaling.omschrijving,
+    noindex: origineel.noindex,
+    blokken: origineel.blokken.map((o, i) => tekstVan(o, perId.get(o.id) ?? vertaling.blokken[i])),
+  };
 }
 
 export const MAX_BLOKKEN = 40;

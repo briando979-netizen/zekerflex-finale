@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/storage/kv", () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => undefined) }));
 
-import { BLOK_SOORTEN, PAGINA_SJABLONEN, leegBlok, maakSlug, normalizeBlok, normalizeInhoud, veiligeLink, videoBron } from "@/lib/ontwerp/paginas";
+import { BLOK_SOORTEN, PAGINA_SJABLONEN, leegBlok, maakSlug, normalizeBlok, normalizeInhoud, normalizeVertalingen, opVormVanOrigineel, veiligeLink, videoBron } from "@/lib/ontwerp/paginas";
 import { videoSoort } from "@/lib/ontwerp/media";
 
 describe("veiligeLink", () => {
@@ -74,6 +74,42 @@ describe("blokken", () => {
       const inhoud = s.inhoud();
       expect(normalizeInhoud(inhoud)).toEqual(inhoud);
     }
+  });
+});
+
+describe("vertalingen", () => {
+  it("een vertaling neemt alleen tekst over; links, foto's, volgorde en blokken blijven van het origineel", () => {
+    const origineel = normalizeInhoud({
+      titel: "Personeel",
+      blokken: [
+        { id: "baaaa1", soort: "hero", kop: "Kop", tekst: "Tekst", knop: { tekst: "Start", link: "/register" }, beeld: "mabc123def456" },
+        { id: "baaaa2", soort: "faq", kop: "Vragen", items: [{ vraag: "V1", antwoord: "A1" }] },
+      ],
+    });
+    const vertaling = normalizeInhoud({
+      titel: "Staff",
+      blokken: [
+        { id: "baaaa1", soort: "hero", kop: "Heading", tekst: "Text", knop: { tekst: "Start now", link: "https://kwaad.example.com" }, beeld: "" },
+        { id: "baaaa2", soort: "faq", kop: "Questions", items: [{ vraag: "Q1", antwoord: "A1en" }, { vraag: "extra", antwoord: "extra" }] },
+        { id: "baaaa3", soort: "oproep", kop: "Extra blok" },
+      ],
+    });
+    const uit = opVormVanOrigineel(origineel, vertaling);
+    expect(uit.titel).toBe("Staff");
+    expect(uit.blokken.length).toBe(2);
+    const hero = uit.blokken[0];
+    if (hero?.soort !== "hero") throw new Error("geen hero");
+    expect(hero.kop).toBe("Heading");
+    expect(hero.knop).toEqual({ tekst: "Start now", link: "/register" });
+    expect(hero.beeld).toBe("mabc123def456");
+    const faq = uit.blokken[1];
+    if (faq?.soort !== "faq") throw new Error("geen faq");
+    expect(faq.items).toEqual([{ vraag: "Q1", antwoord: "A1en" }]);
+  });
+  it("een blok dat de vertaling mist blijft in de hoofdtaal; alleen geldige talen", () => {
+    const origineel = normalizeInhoud({ titel: "X", blokken: [{ id: "bbbbb1", soort: "tekst", kop: "Nederlands", tekst: "Hallo" }] });
+    expect(opVormVanOrigineel(origineel, normalizeInhoud({ titel: "", blokken: [] })).blokken[0]).toEqual(origineel.blokken[0]);
+    expect(Object.keys(normalizeVertalingen({ en: origineel, xx: origineel, "<script>": origineel }))).toEqual(["en"]);
   });
 });
 

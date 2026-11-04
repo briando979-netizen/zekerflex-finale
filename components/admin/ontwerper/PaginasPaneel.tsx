@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ACHTERGRONDEN, BLOK_SOORTEN, PAGINA_SJABLONEN, leegBlok, nieuwId, videoBron, type Achtergrond, type Blok, type BlokSoort, type Knop, type Pagina, type PaginaInhoud } from "@/lib/ontwerp/paginas";
+import { ACHTERGRONDEN, BLOK_SOORTEN, PAGINA_SJABLONEN, TALEN, leegBlok, nieuwId, videoBron, type Taal, type Achtergrond, type Blok, type BlokSoort, type Knop, type Pagina, type PaginaInhoud } from "@/lib/ontwerp/paginas";
 import { MediaKiezer, MediaVoorbeeld } from "@/components/admin/ontwerper/Media";
 
 // ---------------------------------------------------------------------------
@@ -292,7 +292,7 @@ function BlokVelden({ blok, zet }: { blok: Blok; zet: (b: Blok) => void }) {
 
 const samenvatting = (b: Blok) => ("kop" in b && b.kop) || ("tekst" in b && b.tekst.slice(0, 50)) || "";
 
-function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDupliceer, onWeg, eerste, laatste }: { blok: Blok; open: boolean; onOpen: () => void; onZet: (b: Blok) => void; onOmhoog: () => void; onOmlaag: () => void; onDupliceer: () => void; onWeg: () => void; eerste: boolean; laatste: boolean }) {
+function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDupliceer, onWeg, eerste, laatste, vast = false }: { blok: Blok; open: boolean; onOpen: () => void; onZet: (b: Blok) => void; onOmhoog: () => void; onOmlaag: () => void; onDupliceer: () => void; onWeg: () => void; eerste: boolean; laatste: boolean; /** in een vertaling: alleen teksten, geen volgorde of blokken */ vast?: boolean }) {
   const soort = BLOK_SOORTEN.find((s) => s.soort === blok.soort);
   const klein = "grid h-7 w-7 place-items-center rounded-md text-xs disabled:opacity-30";
   return (
@@ -306,30 +306,184 @@ function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDupliceer,
             {samenvatting(blok) || soort?.uitleg}
           </span>
         </button>
-        <button type="button" onClick={onOmhoog} disabled={eerste} aria-label="Omhoog" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
-          ↑
-        </button>
-        <button type="button" onClick={onOmlaag} disabled={laatste} aria-label="Omlaag" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
-          ↓
-        </button>
-        <button type="button" onClick={onDupliceer} aria-label="Dupliceren" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
-          ⧉
-        </button>
-        <button type="button" onClick={onWeg} aria-label="Blok verwijderen" className={klein} style={{ background: "var(--a-crit-soft)", color: "var(--a-crit)" }}>
-          ✕
-        </button>
+        {vast ? null : (
+          <>
+            <button type="button" onClick={onOmhoog} disabled={eerste} aria-label="Omhoog" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
+              ↑
+            </button>
+            <button type="button" onClick={onOmlaag} disabled={laatste} aria-label="Omlaag" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
+              ↓
+            </button>
+            <button type="button" onClick={onDupliceer} aria-label="Dupliceren" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
+              ⧉
+            </button>
+            <button type="button" onClick={onWeg} aria-label="Blok verwijderen" className={klein} style={{ background: "var(--a-crit-soft)", color: "var(--a-crit)" }}>
+              ✕
+            </button>
+          </>
+        )}
       </div>
       {open ? (
         <div className="space-y-3 border-t p-3" style={{ borderColor: "var(--a-border)" }}>
           <BlokVelden blok={blok} zet={onZet} />
-          <Keuzeknoppen<Achtergrond> label="Achtergrond" waarde={blok.achtergrond} opties={ACHTERGRONDEN} onChange={(v) => onZet({ ...blok, achtergrond: v })} />
+          {vast ? null : <Keuzeknoppen<Achtergrond> label="Achtergrond" waarde={blok.achtergrond} opties={ACHTERGRONDEN} onChange={(v) => onZet({ ...blok, achtergrond: v })} />}
         </div>
       ) : null}
     </li>
   );
 }
 
-function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld }: { start: Pagina; onTerug: () => void; onBijgewerkt: (p: Pagina | null) => void; onVoorbeeld: () => void }) {
+/** Een vertaling bijwerken: dezelfde velden, maar volgorde, foto's en links volgen het Nederlands. */
+function VertalingEditor({ pagina, taal, onBijgewerkt, onVoorbeeld }: { pagina: Pagina; taal: Taal; onBijgewerkt: (p: Pagina) => void; onVoorbeeld: () => void }) {
+  const [inhoud, setInhoud] = useState<PaginaInhoud | null>(pagina.vertalingen?.[taal] ?? null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [status, setStatus] = useState("Vertaling bewaard");
+  const eerste = useRef(true);
+
+  useEffect(() => {
+    if (eerste.current) {
+      eerste.current = false;
+      return;
+    }
+    if (!inhoud) return;
+    setStatus("Wijzigingen…");
+    const t = window.setTimeout(async () => {
+      try {
+        const d = await post<{ pagina: Pagina }>({ actie: "vertaling", id: pagina.id, taal, inhoud });
+        onBijgewerkt(d.pagina);
+        setStatus("Vertaling bewaard");
+        onVoorbeeld();
+      } catch {
+        setStatus("Bewaren lukte niet, we proberen het bij de volgende wijziging opnieuw");
+      }
+    }, 900);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inhoud]);
+
+  if (!inhoud) return null;
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px]" style={mute}>
+        {TALEN[taal].naam}: je past hier alleen de teksten aan. Volgorde, foto&apos;s, video&apos;s en links volgen de Nederlandse versie. <span role="status">{status}</span>
+      </p>
+      <Veld label={`Titel (${TALEN[taal].naam})`} waarde={inhoud.titel} onChange={(v) => setInhoud({ ...inhoud, titel: v })} max={120} />
+      <Tekstvak label={`Omschrijving voor Google (${inhoud.omschrijving.length}/155)`} waarde={inhoud.omschrijving} onChange={(v) => setInhoud({ ...inhoud, omschrijving: v })} max={300} rijen={2} />
+      <ol className="space-y-2">
+        {inhoud.blokken.map((b, i) => (
+          <BlokKaart
+            key={b.id}
+            blok={b}
+            open={open === b.id}
+            onOpen={() => setOpen((o) => (o === b.id ? null : b.id))}
+            onZet={(nb) => setInhoud({ ...inhoud, blokken: inhoud.blokken.map((x) => (x.id === b.id ? nb : x)) })}
+            onOmhoog={() => undefined}
+            onOmlaag={() => undefined}
+            onDupliceer={() => undefined}
+            onWeg={() => undefined}
+            eerste={i === 0}
+            laatste={i === inhoud.blokken.length - 1}
+            vast
+          />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function Talenbalk({ pagina, taal, onKies, onBijgewerkt, bewaarEerst }: { pagina: Pagina; taal: Taal | null; onKies: (t: Taal | null) => void; onBijgewerkt: (p: Pagina) => void; bewaarEerst: () => Promise<void> }) {
+  const bestaand = (Object.keys(pagina.vertalingen ?? {}) as Taal[]).filter((t) => t in TALEN);
+  const vrij = (Object.keys(TALEN) as Taal[]).filter((t) => !bestaand.includes(t));
+  const [nieuw, setNieuw] = useState<Taal | "">("");
+  const [bezig, setBezig] = useState<Taal | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
+
+  async function vertaal(t: Taal) {
+    setBezig(t);
+    setFout(null);
+    try {
+      await bewaarEerst();
+      const d = await post<{ pagina: Pagina }>({ actie: "vertaal", id: pagina.id, taal: t });
+      onBijgewerkt(d.pagina);
+      onKies(t);
+      setNieuw("");
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : "Vertalen lukte niet.");
+    } finally {
+      setBezig(null);
+    }
+  }
+
+  async function weg(t: Taal) {
+    if (!window.confirm(`De ${TALEN[t].naam.toLowerCase()}e vertaling weghalen? Na Publiceren is hij ook live weg.`)) return;
+    try {
+      const d = await post<{ pagina: Pagina }>({ actie: "vertaling-weg", id: pagina.id, taal: t });
+      onBijgewerkt(d.pagina);
+      onKies(null);
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : "Weghalen lukte niet.");
+    }
+  }
+
+  const chip = (aan: boolean) => ({ background: aan ? "var(--a-accent)" : "var(--a-elev)", color: aan ? "var(--a-on-accent)" : "var(--a-text)" });
+  return (
+    <section className="space-y-2 rounded-xl p-3" style={paneel}>
+      <p className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>
+        Talen
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Bewerk in taal">
+        <button type="button" onClick={() => onKies(null)} aria-pressed={taal === null} className="rounded-lg px-2.5 py-1 text-xs font-semibold" style={chip(taal === null)}>
+          Nederlands
+        </button>
+        {bestaand.map((t) => (
+          <button key={t} type="button" onClick={() => onKies(t)} aria-pressed={taal === t} className="rounded-lg px-2.5 py-1 text-xs font-semibold" style={chip(taal === t)}>
+            {TALEN[t].naam}
+          </button>
+        ))}
+      </div>
+      {taal ? (
+        <div className="flex flex-wrap gap-3 text-[11px] font-semibold">
+          <button type="button" disabled={bezig !== null} onClick={() => window.confirm("Opnieuw vertalen vanuit de Nederlandse versie? Je eigen aanpassingen in deze taal gaan dan verloren.") && vertaal(taal)} className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>
+            {bezig === taal ? "Bezig met vertalen…" : "Opnieuw vertalen met AI"}
+          </button>
+          <button type="button" onClick={() => weg(taal)} className="hover:underline" style={{ color: "var(--a-crit)" }}>
+            Deze vertaling weghalen
+          </button>
+        </div>
+      ) : null}
+      {vrij.length ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <label className="text-[11px]" style={mute} htmlFor={`nieuwe-taal-${pagina.id}`}>
+            Vertaal naar
+          </label>
+          <select id={`nieuwe-taal-${pagina.id}`} value={nieuw} onChange={(e) => setNieuw(e.target.value as Taal | "")} className="rounded-md px-1.5 py-1 text-xs" style={veldStijl}>
+            <option value="">kies een taal…</option>
+            {vrij.map((t) => (
+              <option key={t} value={t}>
+                {TALEN[t].naam} ({TALEN[t].eigen})
+              </option>
+            ))}
+          </select>
+          <button type="button" disabled={!nieuw || bezig !== null} onClick={() => nieuw && vertaal(nieuw)} className="a-button text-xs disabled:opacity-50">
+            {bezig && bezig === nieuw ? "Bezig met vertalen…" : "Vertaal met AI"}
+          </button>
+        </div>
+      ) : null}
+      {fout ? (
+        <p role="alert" className="text-xs font-semibold" style={{ color: "var(--a-crit)" }}>
+          {fout}
+        </p>
+      ) : null}
+      <p className="text-[11px]" style={mute}>
+        Vertalingen gaan live samen met de pagina (Publiceren), op /p/{pagina.slug}/en enzovoort, met een taalkeuze bovenaan.
+      </p>
+    </section>
+  );
+}
+
+function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld, onPad }: { start: Pagina; onTerug: () => void; onBijgewerkt: (p: Pagina | null) => void; onVoorbeeld: () => void; onPad: (pad: string) => void }) {
+  const [taal, setTaal] = useState<Taal | null>(null);
+  const [versie, setVersie] = useState(0);
   const [pagina, setPagina] = useState(start);
   const [inhoud, setInhoud] = useState<PaginaInhoud>(start.concept);
   const [open, setOpen] = useState<string | null>(start.concept.blokken[0]?.id ?? null);
@@ -404,7 +558,7 @@ function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld }: { start: Pa
       setPagina(d.pagina);
       setSlug(d.pagina.slug);
       onBijgewerkt(d.pagina);
-      onVoorbeeld();
+      onPad(`/p/${d.pagina.slug}${taal ? `/${taal}` : ""}?concept=1`);
     } catch (e) {
       setMelding({ tekst: e instanceof Error ? e.message : "Het adres wijzigen lukte niet.", fout: true });
     }
@@ -465,6 +619,37 @@ function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld }: { start: Pa
         ) : null}
       </section>
 
+      <Talenbalk
+        pagina={pagina}
+        taal={taal}
+        onKies={(t) => {
+          setTaal(t);
+          onPad(`/p/${pagina.slug}${t ? `/${t}` : ""}?concept=1`);
+        }}
+        onBijgewerkt={(p) => {
+          setPagina(p);
+          onBijgewerkt(p);
+          // nieuwe of weggehaalde vertaling: de vertaal-editor begint opnieuw met wat de server heeft
+          setVersie((v) => v + 1);
+        }}
+        bewaarEerst={async () => {
+          await post({ actie: "concept", id: pagina.id, inhoud });
+        }}
+      />
+
+      {taal ? (
+        <VertalingEditor
+          key={`${taal}-${versie}`}
+          pagina={pagina}
+          taal={taal}
+          onBijgewerkt={(p) => {
+            setPagina(p);
+            onBijgewerkt(p);
+          }}
+          onVoorbeeld={onVoorbeeld}
+        />
+      ) : (
+      <>
       <ol className="space-y-2">
         {blokken.map((b, i) => (
           <BlokKaart
@@ -501,6 +686,8 @@ function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld }: { start: Pa
           ))}
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }
@@ -556,9 +743,9 @@ export function PaginasPaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: 
         }}
         onBijgewerkt={(p) => {
           setPaginas((c) => (p ? (c ?? []).map((x) => (x.id === p.id ? p : x)) : (c ?? []).filter((x) => x.id !== bewerk.id)));
-          if (p) onVoorbeeldPad(`/p/${p.slug}?concept=1`);
         }}
         onVoorbeeld={onVernieuw}
+        onPad={onVoorbeeldPad}
       />
     );
   }

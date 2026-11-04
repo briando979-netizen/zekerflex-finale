@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { AppError } from "@/lib/errors";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { PAGINA_SJABLONEN, maakSlug, normalizeInhoud, type Pagina, type PaginaInhoud } from "@/lib/ontwerp/paginas";
+import { PAGINA_SJABLONEN, maakSlug, normalizeInhoud, normalizeVertalingen, type Pagina, type PaginaInhoud, type Taal } from "@/lib/ontwerp/paginas";
 
 // ---------------------------------------------------------------------------
 // Opslag van de eigen pagina's (lib/ontwerp/paginas.ts) in de KeyValueStore.
@@ -12,7 +12,13 @@ import { PAGINA_SJABLONEN, maakSlug, normalizeInhoud, type Pagina, type PaginaIn
 const KEY = "ontwerp:paginas";
 const MAX_PAGINAS = 200;
 
-const normalizePagina = (p: Pagina): Pagina => ({ ...p, concept: normalizeInhoud(p.concept), live: p.live ? normalizeInhoud(p.live) : null });
+const normalizePagina = (p: Pagina): Pagina => ({
+  ...p,
+  concept: normalizeInhoud(p.concept),
+  live: p.live ? normalizeInhoud(p.live) : null,
+  vertalingen: normalizeVertalingen(p.vertalingen),
+  liveVertalingen: normalizeVertalingen(p.liveVertalingen),
+});
 
 export async function paginaLijst(): Promise<Pagina[]> {
   const lijst = (await kvGet<Pagina[]>(KEY).catch(() => null)) ?? [];
@@ -70,12 +76,25 @@ export function zetSlug(id: string, slug: string): Promise<Pagina> {
   return wijzig(id, (p, lijst) => ({ ...p, slug: vrijeSlug(slug, lijst, id), bijgewerkt: new Date().toISOString() }));
 }
 
+/** Het concept en al zijn vertalingen gaan samen live. */
 export function publiceerPagina(id: string): Promise<Pagina> {
-  return wijzig(id, (p) => ({ ...p, live: p.concept, gepubliceerd: new Date().toISOString() }));
+  return wijzig(id, (p) => ({ ...p, live: p.concept, liveVertalingen: { ...(p.vertalingen ?? {}) }, gepubliceerd: new Date().toISOString() }));
 }
 
 export function haalOffline(id: string): Promise<Pagina> {
-  return wijzig(id, (p) => ({ ...p, live: null, gepubliceerd: null }));
+  return wijzig(id, (p) => ({ ...p, live: null, liveVertalingen: {}, gepubliceerd: null }));
+}
+
+export function bewaarVertaling(id: string, taal: Taal, inhoud: unknown): Promise<Pagina> {
+  return wijzig(id, (p) => ({ ...p, vertalingen: { ...(p.vertalingen ?? {}), [taal]: normalizeInhoud(inhoud) }, bijgewerkt: new Date().toISOString() }));
+}
+
+export function verwijderVertaling(id: string, taal: Taal): Promise<Pagina> {
+  return wijzig(id, (p) => {
+    const rest = { ...(p.vertalingen ?? {}) };
+    delete rest[taal];
+    return { ...p, vertalingen: rest, bijgewerkt: new Date().toISOString() };
+  });
 }
 
 export async function verwijderPagina(id: string): Promise<void> {

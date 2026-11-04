@@ -56,7 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Eigen pagina's uit de Site-ontwerper (/p/<slug>): alleen live en niet op "niet in Google"
     ...(await paginaLijst().catch(() => []))
       .filter((p) => p.live && !p.live.noindex)
-      .map((p) => entry(`/p/${p.slug}`, 0.6, "weekly", p.gepubliceerd ?? now)),
+      .flatMap((p) => [
+        entry(`/p/${p.slug}`, 0.6, "weekly", p.gepubliceerd ?? now),
+        // en de vertalingen (/p/<slug>/<taal>)
+        ...Object.keys(p.liveVertalingen ?? {}).map((t) => entry(`/p/${p.slug}/${t}`, 0.5, "weekly", p.gepubliceerd ?? now)),
+      ]),
 
     // Producten (ontbundeld) + los aanbod voor bureaus
     entry("/producten", 0.8, "weekly"),

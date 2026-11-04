@@ -1,7 +1,7 @@
 import { chat, chatJson, llmConfigProblem } from "@/lib/ai/client";
 import { AppError } from "@/lib/errors";
 import { HOEKEN, KNOPPEN, LETTERTYPES, SCHADUWEN, STANDAARD_THEMA, normalizeThema, zelfdeThema, type Thema } from "@/lib/ontwerp/thema";
-import { normalizeInhoud, type PaginaInhoud } from "@/lib/ontwerp/paginas";
+import { TALEN, normalizeInhoud, opVormVanOrigineel, type PaginaInhoud, type Taal } from "@/lib/ontwerp/paginas";
 
 // ---------------------------------------------------------------------------
 // AI-hulp in de Site-ontwerper. Alleen voorstellen: de uitkomst gaat door
@@ -76,6 +76,38 @@ export async function maakPaginaMetAi(onderwerp: string): Promise<PaginaInhoud> 
   const inhoud = normalizeInhoud(res);
   if (!inhoud.blokken.length) throw AppError.validation("De AI-hulp maakte geen bruikbare pagina. Probeer een andere omschrijving of begin met een sjabloon.");
   return { ...inhoud, blokken: inhoud.blokken.slice(0, 10) };
+}
+
+/**
+ * Een eigen pagina vertalen. Het model krijgt de hele pagina als JSON en geeft
+ * dezelfde vorm terug; daarna nemen we alleen de teksten over
+ * (opVormVanOrigineel): links, foto's, volgorde en blokken blijven van het
+ * origineel. Merknaam ZekerFlex en bedragen blijven staan.
+ */
+export async function vertaalPagina(inhoud: PaginaInhoud, taal: Taal): Promise<PaginaInhoud> {
+  aiBeschikbaar();
+  const res = await chatJson<unknown>({
+    purpose: "ontwerper",
+    retry: false,
+    timeoutMs: 60_000,
+    temperature: 0.2,
+    maxTokens: 6000,
+    messages: [
+      {
+        role: "system",
+        content:
+          `Je vertaalt een webpagina van het Nederlands naar het ${TALEN[taal].naam} (${TALEN[taal].eigen}). Antwoord alleen met JSON in precies dezelfde vorm als de invoer: dezelfde velden, dezelfde blokken in dezelfde volgorde, dezelfde id's. ` +
+          "Vertaal alleen de tekst die een bezoeker leest (titel, omschrijving, kop, tekst, bovenregel, knopteksten, vragen, antwoorden, labels, naam bij een citaat). Laat links, id's, soort, achtergrond, beeld, bron en getallen ongewijzigd. " +
+          "De naam ZekerFlex en bedragen in euro blijven zoals ze zijn. Schrijf natuurlijk en helder, niet letterlijk.",
+      },
+      { role: "user", content: JSON.stringify(inhoud) },
+    ],
+  });
+  const vertaald = opVormVanOrigineel(inhoud, normalizeInhoud(res));
+  if (vertaald.titel === inhoud.titel && JSON.stringify(vertaald.blokken) === JSON.stringify(inhoud.blokken)) {
+    throw AppError.validation("De vertaling kwam niet goed terug. Probeer het nog eens.");
+  }
+  return vertaald;
 }
 
 export interface AssistentAntwoord {
