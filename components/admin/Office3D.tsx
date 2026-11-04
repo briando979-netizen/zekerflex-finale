@@ -55,6 +55,8 @@ const LEGEND: [string, string][] = [
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
 const pickFor = (v: View): Pick | null => (v === "stad" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+/** 21,25 → "21:15" */
+const hourText = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
 
 const ORIGIN_NL: Record<string, string> = {
@@ -129,6 +131,8 @@ export function Office3D() {
   const [touring, setTouring] = useState(false);
   const [legend, setLegend] = useState(false);
   const [clock, setClock] = useState("");
+  const [nowHour, setNowHour] = useState(12);
+  const [timeOverride, setTimeOverride] = useState<number | null>(null);
   const [latest, setLatest] = useState<CityEvent | null>(null);
   const [replay, setReplay] = useState<{ at: string; left: number; total: number } | null>(null);
   const [hourly, setHourly] = useState<{ labels: string[]; values: number[] } | null>(null);
@@ -159,6 +163,8 @@ export function Office3D() {
       const now = new Date();
       const phase = dayPhase(sunAt(now).elevation);
       setClock(`${amsterdamClock(now)} · ${phase === "dag" ? "dag" : phase === "schemer" ? "schemering" : "nacht"} in Amsterdam`);
+      const p = amsterdamParts(now);
+      setNowHour(p.hour + p.minute / 60);
     };
     tick();
     const t = setInterval(tick, 30_000);
@@ -543,6 +549,37 @@ export function Office3D() {
         >
           {replay ? "Stop afspelen" : "⏪ Laatste 24 uur afspelen"}
         </button>
+        <label className="flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs" style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}>
+          <span className="font-medium">Tijd</span>
+          <input
+            type="range"
+            min={0}
+            max={23.75}
+            step={0.25}
+            value={timeOverride ?? nowHour}
+            onChange={(e) => {
+              const h = Number(e.target.value);
+              setTimeOverride(h);
+              city.current?.setTime(h);
+            }}
+            aria-label="Bekijk de stad op een ander uur van vandaag"
+            className="w-24 sm:w-32"
+          />
+          <span className="w-10 tabular-nums">{hourText(timeOverride ?? nowHour)}</span>
+          {timeOverride !== null && (
+            <button
+              type="button"
+              className="font-semibold underline-offset-2 hover:underline"
+              style={{ color: "#4f6bed" }}
+              onClick={() => {
+                setTimeOverride(null);
+                city.current?.setTime(null);
+              }}
+            >
+              Nu
+            </button>
+          )}
+        </label>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div
@@ -586,8 +623,8 @@ export function Office3D() {
             Sleep om te draaien · scroll om te zoomen · klik een gebouw of voertuig
           </p>
           {clock && (
-            <p className="pointer-events-none absolute right-3 top-3 rounded-full px-3 py-1 text-[11px] font-medium shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
-              {clock}
+            <p className="pointer-events-none absolute right-3 top-3 rounded-full px-3 py-1 text-[11px] font-medium shadow" style={{ background: timeOverride !== null ? "#4f6bed" : "var(--a-panel)", color: timeOverride !== null ? "#fff" : "var(--a-text)" }}>
+              {timeOverride !== null ? `Voorbeeld: ${hourText(timeOverride)} vandaag in Amsterdam` : clock}
               {data?.weather ? ` · ${data.weather.tempC} °C, ${WEATHER_NL[data.weather.kind]}` : ""}
             </p>
           )}

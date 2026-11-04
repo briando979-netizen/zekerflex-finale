@@ -7,7 +7,7 @@ import { createLife } from "@/components/admin/city/life";
 import { createFestive } from "@/components/admin/city/feest";
 import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-life";
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
-import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
+import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { count, euro } from "@/lib/admin/format";
 import { blobTexture, liveBoard, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
 import { roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -33,6 +33,8 @@ export interface CityHandle {
   fly: (to: View | { company: string }) => void;
   tour: (on: boolean) => void;
   select: (p: Pick | null) => void;
+  /** Bekijk de stad op een ander uur van vandaag (0–24, Nederlandse tijd); null = nu. */
+  setTime: (hour: number | null) => void;
   dispose: () => void;
 }
 
@@ -654,9 +656,18 @@ export function createCity(
   const taillights = kit.mat(0x7f1d1d, { emissive: 0xef4444, emissiveIntensity: 0.6 });
   const grassMats = [kit.mat(0x9fcd85, { roughness: 1 }), kit.mat(0x8cc56f, { roughness: 1 })];
   const updateLife = () => life.setState({ phase, visitors: data?.visitors?.total ?? 0, weather: weather?.kind ?? "helder", mmPerHour: weather?.mmPerHour ?? 0, windKmh: weather?.windKmh ?? 12 });
+  // tijdschuif: een ander uur van vandaag (Nederlandse tijd), of null voor nu
+  let timeOverride: number | null = null;
+  const clockNow = () => {
+    if (timeOverride === null) return new Date();
+    const p = amsterdamParts(new Date());
+    const h = Math.floor(timeOverride);
+    return amsterdamToUtc(p.year, p.month, p.day, h, Math.round((timeOverride - h) * 60));
+  };
   const applyDaylight = () => {
-    const s = sunAt(new Date());
-    hourNow = amsterdamParts(new Date()).hour;
+    const when = clockNow();
+    const s = sunAt(when);
+    hourNow = amsterdamParts(when).hour;
     phase = dayPhase(s.elevation);
     const w = weather?.kind ?? "helder";
     const el = Math.max(0.14, s.elevation);
@@ -667,7 +678,7 @@ export function createCity(
     const dim = { helder: 1, bewolkt: 0.62, mist: 0.5, motregen: 0.5, regen: 0.4, sneeuw: 0.55, onweer: 0.3 }[w];
     sun.intensity = (phase === "dag" ? 0.7 + 0.9 * Math.min(1, s.elevation / 0.8) : phase === "schemer" ? 0.45 : 0) * dim;
     // het maanlicht volgt de echte maanfase: bij volle maan is de nacht lichter
-    const lit = moonPhase(new Date()).lit;
+    const lit = moonPhase(when).lit;
     moon.intensity = (phase === "nacht" ? 0.12 + 0.38 * lit : phase === "schemer" ? 0.12 : 0) * (w === "helder" ? 1 : 0.6);
     // koplampen en achterlichten branden feller als het donker is
     headlights.emissiveIntensity = phase === "nacht" ? 2.2 : phase === "schemer" ? 1.4 : 0.6;
@@ -955,6 +966,10 @@ export function createCity(
       } else fly = null;
     },
     select,
+    setTime(hour) {
+      timeOverride = hour === null ? null : Math.max(0, Math.min(23.99, hour));
+      applyDaylight();
+    },
     dispose() {
       cancelAnimationFrame(frame);
       clearInterval(dayTimer);
