@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { sendMail } from "@/lib/mail";
+import { isReservedTestAddress, sendMail } from "@/lib/mail";
 import { CONTACTS } from "@/lib/seo";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { BUNDEL_TLDS, euroPrijs, extensie, metBtw } from "@/lib/domeinen/extensies";
@@ -121,14 +121,18 @@ async function naBetaling(b: DomeinBestelling): Promise<void> {
     targetId: b.id,
     metadata: { tenantId: b.tenantId, bundel: b.bundel },
   }).catch(() => undefined);
+  // een bestelling van een testadres (example.com, .test) mag sales nooit vragen een echt domein te kopen
+  const test = isReservedTestAddress(b.email);
   await Promise.all([
-    sendMail({
-      to: CONTACTS.sales,
-      kind: "domein-bestelling",
-      replyTo: b.email,
-      subject: `Domein betaald: ${b.domein} — registreren`,
-      text: `${b.domein} is besteld (${bedrag}).\nBesteld door: ${b.email}\n\nRegistreer hem in TransIP en vink hem daarna af in Admin → Domeinen.`,
-    }).catch((e) => logger.warn("domein: mail aan sales mislukt", { error: (e as Error).message })),
+    test
+      ? Promise.resolve()
+      : sendMail({
+          to: CONTACTS.sales,
+          kind: "domein-bestelling",
+          replyTo: b.email,
+          subject: `Domein betaald: ${b.domein} — registreren`,
+          text: `${b.domein} is besteld (${bedrag}).\nBesteld door: ${b.email}\n\nRegistreer hem in TransIP en vink hem daarna af in Admin → Domeinen.`,
+        }).catch((e) => logger.warn("domein: mail aan sales mislukt", { error: (e as Error).message })),
     sendMail({
       to: b.email,
       kind: "domein-bestelling",

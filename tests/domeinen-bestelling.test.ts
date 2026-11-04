@@ -26,7 +26,13 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/prisma", () => ({ prisma: h.prisma }));
-vi.mock("@/lib/mail", () => ({ sendMail: async (m: { to: string; subject: string }) => { h.state.mails.push(m); return { delivered: true }; } }));
+vi.mock("@/lib/mail", () => ({
+  isReservedTestAddress: (a: string) => /@example\.com$|\.test$/i.test(a),
+  sendMail: async (m: { to: string; subject: string }) => {
+    h.state.mails.push(m);
+    return { delivered: true };
+  },
+}));
 vi.mock("@/lib/audit", () => ({ recordAudit: async () => undefined }));
 vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: () => ({}) }));
 vi.mock("@/lib/mail/hosting/transip", () => ({ transipConfigured: () => false, domainAvailability: async () => null }));
@@ -89,11 +95,16 @@ describe("bundel", () => {
 
 describe("webhook", () => {
   it("betaald → BETAALD en mails aan sales en klant", async () => {
+    h.state.rij = best({ email: "eigenaar@bakkerij-jansen.nl" });
     expect(await verwerkDomeinSessie(sessie())).toEqual({ verwerkt: true });
     const u = h.state.updates[0] as { where: { id: string; status: string }; data: { status: string } };
     expect(u.where).toEqual({ id: "b1", status: "OPEN" });
     expect(u.data.status).toBe("BETAALD");
-    expect(h.state.mails.map((m) => m.to)).toEqual(["sales@zekerflex.com", "k.test@example.com"]);
+    expect(h.state.mails.map((m) => m.to)).toEqual(["sales@zekerflex.com", "eigenaar@bakkerij-jansen.nl"]);
+  });
+  it("een testadres (example.com) vraagt sales nooit een echt domein te kopen", async () => {
+    await verwerkDomeinSessie(sessie());
+    expect(h.state.mails.map((m) => m.to)).toEqual(["k.test@example.com"]);
   });
   it("dubbel gestuurd: geen tweede mail", async () => {
     h.state.updateCount = 0;
