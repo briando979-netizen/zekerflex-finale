@@ -3,7 +3,7 @@ import { bevestigingGast, verstuur } from "@/lib/horeca/mail";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
-import { aanzettenSchema, beheerActieSchema, lees, takenActieSchema, TAKEN_ACTIES } from "@/lib/horeca/schema";
+import { aanzettenSchema, beheerActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES } from "@/lib/horeca/schema";
 import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
 import { beheerContext, eisBeheer } from "@/lib/horeca/toegang";
 import {
@@ -21,10 +21,14 @@ import {
 } from "@/lib/horeca/store";
 import { heeftModule, maandbedrag, MODULES, type ModuleSleutel } from "@/lib/horeca/modules";
 import { zaakWeergave } from "@/lib/horeca/weergave";
-import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
+import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, tafelVrij, verplaatsFase, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
 import { bewaarReserveerInstellingen, maakReservering, reserveringenOp, zetReserveringStatus, zetReserveringTafel } from "@/lib/horeca/reserveringen";
 import { isDatum, leesInstellingen } from "@/lib/horeca/reserveren";
 import { cijfersVan } from "@/lib/horeca/cijfers-server";
+import { dashboardVan } from "@/lib/horeca/live";
+import { apparatenVan, bewaarApparaat, koppelcodeVoor, ontkoppel } from "@/lib/horeca/apparaten";
+import { handelAf } from "@/lib/horeca/oproepen";
+import { STAPPEN } from "@/lib/horeca/fasen";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -57,6 +61,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
     }
     const q = new URL(request.url).searchParams;
+    // ?alleen=live → het live-dashboard (zaal, cijfers van vandaag, oproepen, takenlijsten, schermen)
+    if (q.get("alleen") === "live") return NextResponse.json(await dashboardVan(zaak));
+    // ?alleen=apparaten → de gekoppelde schermen
+    if (q.get("alleen") === "apparaten") return NextResponse.json({ apparaten: await apparatenVan(zaak.id) });
     if (q.get("alleen") === "bestellingen") {
       eisModule(zaak, "bestellen");
       return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
@@ -124,6 +132,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       else if (t.actie === "takenlijst-weg") await verwijderLijst(zaak, t.id);
       else await maakVoorbeeldlijsten(zaak);
       return NextResponse.json({ ok: true });
+    }
+    // live-dashboard en schermen: eigen schema
+    if (LIVE_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {
+      const l = lees(liveActieSchema, body);
+      if (l.actie === "apparaat") {
+        const koppel = await bewaarApparaat(zaak.id, { id: l.id, naam: l.naam, rol: l.rol });
+        return NextResponse.json({ apparaten: await apparatenVan(zaak.id), koppel });
+      }
+      if (l.actie === "apparaat-code") return NextResponse.json({ apparaten: await apparatenVan(zaak.id), koppel: await koppelcodeVoor(zaak.id, l.id) });
+      if (l.actie === "apparaat-weg") {
+        await ontkoppel(zaak.id, l.id);
+        return NextResponse.json({ apparaten: await apparatenVan(zaak.id) });
+      }
+      if (l.actie === "oproep-af") await handelAf(zaak.id, l.tafelId, l.soort);
+      else if (l.actie === "serveer") await verplaatsFase(zaak, { tafelId: l.tafelId }, "alles", STAPPEN.serveer);
+      else {
+        await tafelVrij(zaak, l.tafelId);
+        await handelAf(zaak.id, l.tafelId);
+      }
+      return NextResponse.json(await dashboardVan(zaak));
     }
     const a = lees(beheerActieSchema, body);
     let nu = zaak;

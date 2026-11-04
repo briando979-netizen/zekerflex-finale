@@ -51,6 +51,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/domeinen/aanvraag", // request a domain / transfer
     "/api/rijschool/domein", // middleware lookup: which driving school owns this own domain
     "/api/rijschool/domein/bewijs", // https proof on the own domain of a driving school
+    "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
+    "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -77,6 +79,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/sites/domain",
     "/api/indexnow-key/extra", // exact match only
     "/api/rijschool/beheer", // the driving-school admin stays behind the ZekerFlex login
+    "/api/horeca/beheer", // the horeca admin stays behind the ZekerFlex login
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

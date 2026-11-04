@@ -101,12 +101,22 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                         </span>
                       </p>
                       <ul className="mt-2 space-y-1 text-sm text-ink">
-                        {regelsVoor(b.regels, station).map((r, i) => (
-                          <li key={i}>
-                            <strong>{r.aantal}×</strong> {r.naam}
-                            {r.opmerking && <span className="text-neutralx-600"> ({r.opmerking})</span>}
-                          </li>
-                        ))}
+                        {regelsVoor(b.regels, station).map((r, i) => {
+                          // keuken en bar melden elk hun eigen regels klaar (lib/horeca/fasen.ts)
+                          const af = r.fase === "klaar" || r.fase === "geserveerd";
+                          return (
+                            <li key={i} className={af ? "text-neutralx-500" : undefined}>
+                              {af && (
+                                <span className="mr-1 font-bold text-ok" aria-hidden>
+                                  ✓
+                                </span>
+                              )}
+                              <strong>{r.aantal}×</strong> {r.naam}
+                              {r.opmerking && <span className="text-neutralx-600"> ({r.opmerking})</span>}
+                              {af && <span className="sr-only"> ({r.fase === "klaar" ? "klaar" : "geserveerd"})</span>}
+                            </li>
+                          );
+                        })}
                       </ul>
                       {b.opmerking && <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-sm text-ink">{b.opmerking}</p>}
                       <div className="mt-3 flex flex-wrap gap-2">

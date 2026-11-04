@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Tabs, Veld } from "@/components/rijschool/ui";
 import { SOORTEN, SOORT_LABEL, soortLabel } from "@/lib/horeca/soorten";
-import { euro } from "@/lib/horeca/weergave";
 import { MenukaartTab } from "@/components/horeca/beheer/MenukaartTab";
 import { ModulesTab } from "@/components/horeca/beheer/ModulesTab";
 import { GegevensTab } from "@/components/horeca/beheer/GegevensTab";
@@ -13,19 +12,22 @@ import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
 import { ReserveringenTab } from "@/components/horeca/beheer/ReserveringenTab";
 import { TakenTab } from "@/components/horeca/beheer/TakenTab";
 import { CijfersTab } from "@/components/horeca/beheer/CijfersTab";
-import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types";
+import { LiveTab, type BeheerTab } from "@/components/horeca/beheer/LiveTab";
+import { SchermenTab } from "@/components/horeca/beheer/SchermenTab";
+import type { Antwoord, Doe } from "@/components/horeca/beheer/types";
 
 // ---------------------------------------------------------------------------
-// Het beheer van het horeca-pakket (/werkgever/horeca): aanzetten, overzicht,
-// menukaart, modules & abonnement, gegevens & openingstijden. Elke wijziging is
-// één POST naar /api/horeca/beheer, die alles ververst teruggeeft.
+// Het beheer van het horeca-pakket (/werkgever/horeca): aanzetten, het
+// live-dashboard, de modules (reserveren, bestellen, takenlijsten, cijfers),
+// menukaart, schermen, modules & abonnement, gegevens & openingstijden. Elke
+// wijziging is één POST naar /api/horeca/beheer, die alles ververst teruggeeft.
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-type Tab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "taken" | "cijfers" | "menukaart" | "modules" | "gegevens";
+type Tab = BeheerTab;
 /** De tabbladen; die van een module alleen als die module aan staat. */
 const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
-  { id: "overzicht", label: "Overzicht" },
+  { id: "overzicht", label: "Live" },
   ...(modules.includes("reserveren") ? [{ id: "reserveringen" as const, label: "Reserveringen" }] : []),
   ...(modules.includes("bestellen")
     ? [
@@ -36,6 +38,7 @@ const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
   ...(modules.includes("taken") ? [{ id: "taken" as const, label: "Takenlijsten" }] : []),
   ...(modules.includes("bestellen") || modules.includes("reserveren") ? [{ id: "cijfers" as const, label: "Cijfers" }] : []),
   { id: "menukaart", label: "Menukaart" },
+  { id: "schermen", label: "Schermen" },
   { id: "modules", label: "Modules & abonnement" },
   { id: "gegevens", label: "Gegevens & openingstijden" },
 ];
@@ -111,63 +114,16 @@ export function HorecaBeheer() {
       <Tabs tabs={tabsVoor(z.modules)} actief={tab} onKies={setTab} label="Horeca-beheer" />
       <Melding fout={fout} ok={ok} />
 
-      {tab === "overzicht" && <Overzicht data={data} naar={setTab} />}
+      {tab === "overzicht" && <LiveTab data={data} doe={doe} naar={setTab} />}
       {tab === "reserveringen" && z.modules.includes("reserveren") && <ReserveringenTab data={data} doe={doe} />}
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
       {tab === "taken" && z.modules.includes("taken") && <TakenTab />}
       {tab === "cijfers" && (z.modules.includes("bestellen") || z.modules.includes("reserveren")) && <CijfersTab />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}
+      {tab === "schermen" && <SchermenTab data={data} />}
       {tab === "modules" && <ModulesTab data={data} doe={doe} />}
       {tab === "gegevens" && <GegevensTab data={data} doe={doe} />}
-    </div>
-  );
-}
-
-function Overzicht({ data, naar }: { data: BeheerData; naar: (t: Tab) => void }) {
-  const z = data.zaak;
-  const stappen: { klaar: boolean; tekst: string; tab: Tab }[] = [
-    { klaar: data.items.length > 0, tekst: `Menukaart: ${data.items.length} ${data.items.length === 1 ? "gerecht" : "gerechten"} (de voorbeelden mag je aanpassen of weghalen)`, tab: "menukaart" },
-    { klaar: Boolean(z.adres && z.telefoon), tekst: "Adres, telefoon en openingstijden invullen", tab: "gegevens" },
-    { klaar: z.modules.length > 0, tekst: "Modules kiezen die jullie willen gebruiken", tab: "modules" },
-    { klaar: z.online, tekst: "De site online zetten (bovenaan)", tab: "overzicht" },
-  ];
-  return (
-    <div className="grid gap-5 lg:grid-cols-3">
-      <section className="card p-5 lg:col-span-2" aria-labelledby="horeca-stappen">
-        <h2 id="horeca-stappen" className="font-display text-lg font-bold text-ink">
-          Aan de slag
-        </h2>
-        <ol className="mt-3 space-y-2">
-          {stappen.map((s) => (
-            <li key={s.tekst}>
-              <button type="button" onClick={() => naar(s.tab)} className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left hover:bg-neutralx-50">
-                <span className={`mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full text-xs font-bold ${s.klaar ? "bg-emerald-100 text-ok" : "bg-neutralx-100 text-neutralx-500"}`} aria-hidden>
-                  {s.klaar ? "✓" : "•"}
-                </span>
-                <span className="text-sm text-ink">
-                  {s.tekst}
-                  <span className="sr-only">{s.klaar ? " (gedaan)" : " (nog te doen)"}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </section>
-      <section className="card p-5" aria-labelledby="horeca-abonnement">
-        <h2 id="horeca-abonnement" className="font-display text-lg font-bold text-ink">
-          Abonnement
-        </h2>
-        <p className="mt-2 font-display text-3xl font-bold text-ink">
-          {euro(data.maand.totaalCent)}
-          <span className="text-base font-semibold text-neutralx-500"> per maand</span>
-        </p>
-        <p className="mt-1 text-sm text-neutralx-600">{data.maand.bundel ? "Alles-in-één: goedkoper dan de modules los." : "Basis plus de modules die aan staan."}</p>
-        <p className="mt-3 text-xs text-neutralx-500">Voorbeeldprijzen; je betaalt nog niets zolang het abonnement niet is gestart.</p>
-        <button type="button" className="btn-ghost mt-4" onClick={() => naar("modules")}>
-          Modules bekijken
-        </button>
-      </section>
     </div>
   );
 }

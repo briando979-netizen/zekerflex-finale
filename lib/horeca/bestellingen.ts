@@ -3,6 +3,7 @@ import type { HorecaBestelling, HorecaBestellingStatus, HorecaZaak } from "@pris
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { bouwRegels, leesRegels, type BestelRegel, type MandRegel } from "@/lib/horeca/bestellen";
+import { stapVoorStatus, statusUit, verplaats, type Fase, type Filter } from "@/lib/horeca/fasen";
 
 // ---------------------------------------------------------------------------
 // Tafels en bestellingen van een zaak. Elke tafel heeft een willekeurige code
@@ -83,9 +84,49 @@ export async function bestellingenVan(zaakId: string) {
   return lijst.map((b) => ({ ...b, regels: leesRegels(b.regels), tafelNaam: b.tafel?.naam ?? null }));
 }
 
+/**
+ * Een stap zetten (lib/horeca/fasen.ts) voor één bestelling of voor alle
+ * onbetaalde bestellingen van een tafel, voor één station of alles. Regels en
+ * status gaan samen, onder een rijslot: keuken en bar tikken tegelijk zonder
+ * elkaars werk te overschrijven. Geeft terug hoeveel bestellingen veranderden.
+ */
+export async function verplaatsFase(zaak: HorecaZaak, wie: { id: string } | { tafelId: string }, filter: Filter, stap: { van: readonly Fase[]; naar: Fase; laatste?: boolean }): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const rijen =
+      "id" in wie
+        ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE id = ${wie.id} AND "zaakId" = ${zaak.id} AND status <> 'GEANNULEERD' FOR UPDATE`
+        : await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE "tafelId" = ${wie.tafelId} AND "zaakId" = ${zaak.id} AND betaald = false AND status <> 'GEANNULEERD' FOR UPDATE`;
+    if (!rijen.length && "id" in wie) throw AppError.notFound("Deze bestelling bestaat niet (meer) of is geannuleerd.");
+    const lijst = await tx.horecaBestelling.findMany({ where: { id: { in: rijen.map((r) => r.id) } }, select: { id: true, regels: true } });
+    const nu = new Date().toISOString();
+    // "Ongedaan maken" voor een hele tafel: alleen de bestellingen van die ene serveerronde
+    const ronde = stap.laatste ? lijst.flatMap((b) => leesRegels(b.regels).map((r) => r.geserveerdOp ?? "")).sort().pop() ?? "" : "";
+    let gewijzigd = 0;
+    for (const b of lijst) {
+      const oud = leesRegels(b.regels);
+      if (stap.laatste && !oud.some((r) => r.geserveerdOp === ronde)) continue;
+      const regels = verplaats(oud, filter, stap.van, stap.naar, nu, stap.laatste === true);
+      if (JSON.stringify(regels) === JSON.stringify(oud)) continue;
+      gewijzigd++;
+      await tx.horecaBestelling.update({ where: { id: b.id }, data: { regels: regels as unknown as object[], status: statusUit(regels) } });
+    }
+    return gewijzigd;
+  });
+}
+
 export async function zetBestelStatus(zaak: HorecaZaak, id: string, status: HorecaBestellingStatus) {
+  if (status !== "GEANNULEERD") {
+    await verplaatsFase(zaak, { id }, "alles", stapVoorStatus(status));
+    return;
+  }
   const r = await prisma.horecaBestelling.updateMany({ where: { id, zaakId: zaak.id }, data: { status } });
   if (!r.count) throw AppError.notFound("Bestelling niet gevonden.");
+}
+
+/** Na het afrekenen (pin, contant): de onbetaalde bestellingen van de tafel als betaald, de tafel is weer vrij. */
+export async function tafelVrij(zaak: HorecaZaak, tafelId: string): Promise<number> {
+  const r = await prisma.horecaBestelling.updateMany({ where: { zaakId: zaak.id, tafelId, betaald: false, status: { not: "GEANNULEERD" } }, data: { betaald: true } });
+  return r.count;
 }
 
 /** Wat de gast na het bestellen ziet: alleen met de tafelcode erbij (geen raden van id's). */

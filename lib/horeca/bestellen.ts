@@ -50,6 +50,9 @@ export interface KaartItem {
   station: string;
 }
 
+/** Waar een regel staat: keuken en bar melden elk hun eigen regels klaar (lib/horeca/fasen.ts). */
+export type Fase = "nieuw" | "gestart" | "klaar" | "geserveerd";
+
 export interface BestelRegel {
   itemId: string;
   naam: string;
@@ -57,6 +60,12 @@ export interface BestelRegel {
   aantal: number;
   opmerking: string;
   station: "keuken" | "bar";
+  /** ontbreekt = nieuw */
+  fase?: Fase;
+  /** wanneer de regel klaar werd (ISO), voor de bereidingstijd */
+  klaarOp?: string;
+  /** wanneer de regel geserveerd werd (ISO); regels die samen gingen, hebben dezelfde tijd */
+  geserveerdOp?: string;
 }
 
 /**
@@ -95,15 +104,17 @@ export function leesRegels(json: unknown): BestelRegel[] {
     if (!r || typeof r !== "object") return [];
     const x = r as Record<string, unknown>;
     if (typeof x.naam !== "string" || typeof x.prijsCent !== "number" || typeof x.aantal !== "number") return [];
-    return [
-      {
-        itemId: typeof x.itemId === "string" ? x.itemId : "",
-        naam: x.naam,
-        prijsCent: x.prijsCent,
-        aantal: x.aantal,
-        opmerking: typeof x.opmerking === "string" ? x.opmerking : "",
-        station: x.station === "bar" ? "bar" : "keuken",
-      } satisfies BestelRegel,
-    ];
+    const regel: BestelRegel = {
+      itemId: typeof x.itemId === "string" ? x.itemId : "",
+      naam: x.naam,
+      prijsCent: x.prijsCent,
+      aantal: x.aantal,
+      opmerking: typeof x.opmerking === "string" ? x.opmerking : "",
+      station: x.station === "bar" ? "bar" : "keuken",
+    };
+    if (x.fase === "gestart" || x.fase === "klaar" || x.fase === "geserveerd") regel.fase = x.fase;
+    if (typeof x.klaarOp === "string") regel.klaarOp = x.klaarOp;
+    if (typeof x.geserveerdOp === "string") regel.geserveerdOp = x.geserveerdOp;
+    return [regel];
   });
 }

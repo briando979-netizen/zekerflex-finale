@@ -16,6 +16,43 @@ export interface MenuGroep {
 
 const euro = (cent: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(cent / 100);
 
+// De ober roepen of de rekening vragen: de bediening ziet het meteen op de handheld.
+function RoepKnoppen({ slug, code }: { slug: string; code: string }) {
+  const [melding, setMelding] = useState<{ tekst: string; fout: boolean } | null>(null);
+  const [bezig, setBezig] = useState(false);
+  async function roep(soort: "ober" | "rekening") {
+    setBezig(true);
+    setMelding(null);
+    try {
+      const r = await fetch(`/api/horeca/site/${slug}/oproep`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code, soort }) });
+      const d = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
+      if (!r.ok) throw new Error(d.error?.message ?? "Dat lukte niet. Steek gerust je hand op.");
+      setMelding({ tekst: soort === "ober" ? "De bediening weet het en komt naar je toe." : "De bediening komt met de rekening.", fout: false });
+    } catch (e) {
+      setMelding({ tekst: e instanceof Error ? e.message : "Dat lukte niet.", fout: true });
+    } finally {
+      setBezig(false);
+    }
+  }
+  return (
+    <div className="rounded-[1.75rem] bg-white p-4 shadow-[0_1px_2px_rgba(10,18,14,0.06)]">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={bezig} onClick={() => void roep("ober")} className="flex-1 rounded-full px-4 py-3 text-sm font-bold ring-1 ring-[#0A120E]/20 disabled:opacity-60">
+          Ober roepen
+        </button>
+        <button type="button" disabled={bezig} onClick={() => void roep("rekening")} className="flex-1 rounded-full px-4 py-3 text-sm font-bold ring-1 ring-[#0A120E]/20 disabled:opacity-60">
+          Rekening vragen
+        </button>
+      </div>
+      {melding && (
+        <p role={melding.fout ? "alert" : "status"} className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${melding.fout ? "bg-[#FDE2E2] text-[#B91C1C]" : "bg-[#E7F5EC] text-[#14532D]"}`}>
+          {melding.tekst}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code: string; tafel: string; groepen: MenuGroep[] }) {
   const [mand, setMand] = useState<Record<string, number>>({});
   const [opmerking, setOpmerking] = useState("");
@@ -81,6 +118,7 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
         <p className="text-sm text-[#4B5563]">
           Je bestelt voor <strong className="text-[#0A120E]">{tafel}</strong>. Je rekent af zoals je gewend bent.
         </p>
+        <RoepKnoppen slug={slug} code={code} />
         {groepen.map((g) => (
           <section key={g.id} aria-labelledby={`g-${g.id}`} className="rounded-[1.75rem] bg-white p-5 shadow-[0_1px_2px_rgba(10,18,14,0.06)]">
             <h2 id={`g-${g.id}`} className="font-display text-2xl font-bold">

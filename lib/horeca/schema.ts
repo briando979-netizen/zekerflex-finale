@@ -5,6 +5,7 @@ import { isTijd } from "@/lib/horeca/tijden";
 import { SOORTEN } from "@/lib/horeca/soorten";
 import { MAX_AANTAL, MAX_REGELS } from "@/lib/horeca/bestellen";
 import { MOMENTEN } from "@/lib/horeca/taken";
+import { SCHERM_ROLLEN } from "@/lib/horeca/schermen";
 
 // Invoer van het horecabeheer (/api/horeca/beheer). Eén POST met een "actie";
 // alles wat de zaak wijzigt, gaat langs deze schema's.
@@ -116,6 +117,41 @@ export const takenActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("afvinken-weg"), lijstId: id, datum: datumSchema, taak: z.number().int().min(0).max(39) }),
 ]);
 export const TAKEN_ACTIES: readonly string[] = ["takenlijst", "takenlijst-weg", "takenlijst-voorbeeld", "afvinken", "afvinken-weg"];
+
+const oproepSoort = z.enum(["ober", "rekening"]);
+const reserveringStatus = z.enum(["BEVESTIGD", "AANGEKOMEN", "NIET_GEKOMEN", "GEANNULEERD"]);
+
+/** Het live-dashboard en de schermen-tab in het beheer: apparaten koppelen, oproepen afhandelen, tafels. */
+export const liveActieSchema = z.discriminatedUnion("actie", [
+  z.object({ actie: z.literal("apparaat"), id: id.optional(), naam: tekst(40).pipe(z.string().min(1, "Geef het apparaat een naam, bijvoorbeeld Tablet keuken.")), rol: z.enum(SCHERM_ROLLEN) }),
+  z.object({ actie: z.literal("apparaat-code"), id }),
+  z.object({ actie: z.literal("apparaat-weg"), id }),
+  z.object({ actie: z.literal("oproep-af"), tafelId: id, soort: oproepSoort.optional() }),
+  z.object({ actie: z.literal("tafel-vrij"), tafelId: id }),
+  z.object({ actie: z.literal("serveer"), tafelId: id }),
+]);
+export const LIVE_ACTIES: readonly string[] = ["apparaat", "apparaat-code", "apparaat-weg", "oproep-af", "tafel-vrij", "serveer"];
+
+/** Wat een gekoppeld scherm kan doen (/api/horeca/scherm); welk scherm wat mag staat in lib/horeca/schermen.ts. */
+export const schermActieSchema = z.discriminatedUnion("actie", [
+  z.object({ actie: z.literal("fase"), id, stap: z.enum(["start", "klaar", "terugNaarBezig", "terugNaarNieuw"]) }),
+  // één bestelling (id) of alles wat klaarstaat aan een tafel (tafelId); terug = per ongeluk afgevinkt
+  z.object({ actie: z.literal("serveer"), id: id.nullable().default(null), tafelId: id.nullable().default(null), terug: z.boolean().default(false) }),
+  z.object({ actie: z.literal("bestelling"), tafelId: id.nullable(), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") }),
+  z.object({ actie: z.literal("uitverkocht"), id, beschikbaar: z.boolean() }),
+  z.object({ actie: z.literal("reservering-status"), id, status: reserveringStatus }),
+  z.object({ actie: z.literal("reservering-tafel"), id, tafelId: id.nullable() }),
+  z.object({ actie: z.literal("inloop"), personen: z.number().int().min(1).max(100), naam: tekst(80).default(""), tafelId: id.nullable().default(null) }),
+  z.object({ actie: z.literal("oproep-af"), tafelId: id, soort: oproepSoort.optional() }),
+  z.object({ actie: z.literal("tafel-vrij"), tafelId: id }),
+]);
+export type SchermActieInvoer = z.output<typeof schermActieSchema>;
+
+/** Een gast aan tafel roept de ober of vraagt de rekening (/api/horeca/site/<slug>/oproep). */
+export const gastOproepSchema = z.object({ code: z.string().min(6).max(40), soort: oproepSoort });
+
+/** Een apparaat koppelen met de code uit het beheer (/api/horeca/scherm/koppel). */
+export const koppelSchema = z.object({ code: z.string().trim().min(6).max(20) });
 
 /** Een gast reserveert online (/api/horeca/site/<slug>/reserveren). */
 export const gastReserveringSchema = z.object({
