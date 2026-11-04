@@ -89,7 +89,7 @@ export function isTestHost(host: string | null): boolean {
  * Een testadres voor mail: de RFC 2606-domeinen (example.com/.net/.org) en .test/.example/.invalid/localhost.
  * lib/mail verstuurt example.com wél (live tests gebruiken het); meldingen aan sales slaan we bij een test dus zelf over.
  */
-export const isTestEmail = (email: string) => /@([^@]+\.)?example\.(com|net|org)$/i.test(email.trim()) || /\.(test|example|invalid|localhost)$/i.test(email.trim());
+export const isTestEmail = (email: string) => /@([^@]+\.)?example\.(com|net|org)$/i.test(email.trim()) || /[@.](test|example|invalid|localhost)$/i.test(email.trim());
 
 // --- deal op maat ------------------------------------------------------------------
 
