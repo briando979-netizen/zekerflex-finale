@@ -40,6 +40,12 @@ export function MenukaartTab({ data, doe }: { data: BeheerData; doe: Doe }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-neutralx-600">Per gerecht de allergenen; de wet vraagt dat je ze aan gasten kunt laten zien.</p>
+        <a href="/werkgever/horeca/allergenen" target="_blank" rel="noopener" className="btn-ghost">
+          Allergenenkaart printen
+        </a>
+      </div>
       {concept && <ItemFormulier concept={concept} data={data} doe={doe} sluit={() => setConcept(null)} />}
       {groepen.map(({ c, items }) => (
         <section key={c?.id ?? "zonder"} className="card p-5" aria-labelledby={`cat-${c?.id ?? "zonder"}`}>
