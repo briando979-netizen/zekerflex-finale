@@ -98,3 +98,9 @@ export function amsterdamDayKey(d: Date | string | number): string {
   const p = amsterdamParts(new Date(d));
   return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
 }
+
+/** "2026-11-05T09:00" — a datetime-local field value in Dutch time; parseAmsterdamLocal reads it back. */
+export function amsterdamLocalInput(d: Date | string | number): string {
+  const p = amsterdamParts(new Date(d));
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}T${pad2(p.hour)}:${pad2(p.minute)}`;
+}

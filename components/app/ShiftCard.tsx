@@ -138,6 +138,13 @@ export function ShiftCard({
           {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
         </p>
 
+        {shift.extraInfo && (
+          <p className="mt-2 line-clamp-2 rounded-lg bg-paper-soft px-2.5 py-1.5 text-xs leading-snug text-neutralx-700">
+            <span aria-hidden>ℹ️ </span>
+            <span className="font-semibold">{c.extraInfo}:</span> {shift.extraInfo}
+          </p>
+        )}
+
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {special && (
             <span className="rounded border border-crit/30 px-1.5 py-0.5 text-[11px] font-semibold text-crit">

@@ -80,6 +80,8 @@ export interface MarketplaceShift {
   viaUitzendbureau: boolean;
   /** what other freelancers rated this company (null = no reviews yet) */
   companyRating?: { average: number; count: number } | null;
+  /** "Extra informatie" from the employer (where to report, parking, what to bring) */
+  extraInfo?: string | null;
   /** the company's own logo/photo (null = none uploaded) */
   companyLogoUrl?: string | null;
   /** the company chose its logo instead of the branch photo at the top of the card */
@@ -264,6 +266,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     id: true,
     title: true,
     description: true,
+    extraInfo: true,
     startsAt: true,
     endsAt: true,
     breakMinutes: true,
@@ -346,6 +349,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         id: s.id,
         title: s.title,
         description: s.description,
+        extraInfo: s.extraInfo,
         branch: s.branch.name,
         city: s.branch.city,
         branchLat: s.branch.latitude,
@@ -434,6 +438,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       title: true,
       description: true,
       dresscode: true,
+      extraInfo: true,
       viaUitzendbureau: true,
       startsAt: true,
       endsAt: true,
@@ -557,6 +562,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       id: row.id,
       title: row.title,
       description: row.description,
+      extraInfo: row.extraInfo,
       branch: row.branch.name,
       city: row.branch.city,
       branchLat: row.branch.latitude,
@@ -596,6 +602,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
 
   return {
     ...base,
+    extraInfo: row.extraInfo,
     dresscode: row.dresscode,
     address: row.branch.addressLine,
     postalCode: row.branch.postalCode,

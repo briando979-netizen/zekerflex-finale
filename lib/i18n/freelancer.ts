@@ -23,6 +23,7 @@ const nl = {
   card: {
     offer: { pending: "in afwachting", accepted: "geaccepteerd", declined: "afgewezen", withdrawn: "ingetrokken", expired: "niet uitgekozen" } as Record<string, string>,
     specialForYou: "Speciaal voor jou",
+    extraInfo: "Extra informatie",
     viaAgency: "Via uitzendbureau",
     freelance: "Freelance",
     invalklus: "Invalklus",
@@ -830,6 +831,7 @@ const en: FreelancerDict = {
   card: {
     offer: { pending: "pending", accepted: "accepted", declined: "declined", withdrawn: "withdrawn", expired: "not selected" },
     specialForYou: "Picked for you",
+    extraInfo: "Extra information",
     viaAgency: "Via staffing agency",
     freelance: "Freelance",
     invalklus: "Fill-in shift",
@@ -1634,6 +1636,7 @@ const pl: FreelancerDict = {
   card: {
     offer: { pending: "oczekuje", accepted: "zaakceptowano", declined: "odrzucono", withdrawn: "wycofano", expired: "nie wybrano" },
     specialForYou: "Specjalnie dla ciebie",
+    extraInfo: "Dodatkowe informacje",
     viaAgency: "Przez agencję pracy",
     freelance: "Freelance",
     invalklus: "Zastępstwo",
@@ -2438,6 +2441,7 @@ const ro: FreelancerDict = {
   card: {
     offer: { pending: "în așteptare", accepted: "acceptat", declined: "respins", withdrawn: "retras", expired: "nu ai fost ales(ă)" },
     specialForYou: "Special pentru tine",
+    extraInfo: "Informații suplimentare",
     viaAgency: "Prin agenție de muncă",
     freelance: "Freelance",
     invalklus: "Înlocuire",
@@ -3242,6 +3246,7 @@ const uk: FreelancerDict = {
   card: {
     offer: { pending: "очікує", accepted: "прийнято", declined: "відхилено", withdrawn: "відкликано", expired: "не обрано" },
     specialForYou: "Спеціально для вас",
+    extraInfo: "Додаткова інформація",
     viaAgency: "Через кадрове агентство",
     freelance: "Фриланс",
     invalklus: "Підміна",

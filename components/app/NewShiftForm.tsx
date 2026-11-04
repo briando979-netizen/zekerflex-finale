@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
+import { updateShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import type { ShiftTemplate } from "@/lib/shifts/create";
 import { shiftCategory } from "@/lib/shifts/category";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -39,12 +41,33 @@ function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
 
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 
+/** An existing klus opened for editing: same form, saved with updateShiftAction. */
+export interface ShiftEdit {
+  shiftId: string;
+  /** "Vestiging — Plaats": the location stays as it was placed */
+  locatie: string;
+  assignedCount: number;
+  initial: {
+    title: string;
+    description: string;
+    dresscode: string;
+    extraInfo: string;
+    /** datetime-local values in Dutch time ("2026-11-05T09:00") */
+    startsAt: string;
+    endsAt: string;
+    breakMinutes: number;
+    hourlyRateCents: number;
+    positions: number;
+  };
+}
+
 export function NewShiftForm({
   branches,
   templates,
   minRateCents = 1620,
   pools = [],
   beeld = { logoUrl: null, useLogo: false, canChange: false },
+  edit,
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
@@ -52,7 +75,13 @@ export function NewShiftForm({
   pools?: { id: string; name: string; memberCount: number }[];
   /** the organisation's logo and whether its klussen show it instead of the branch photo */
   beeld?: { logoUrl: string | null; useLogo: boolean; canChange: boolean };
+  /** set: edit this klus instead of placing a new one */
+  edit?: ShiftEdit;
 }) {
+  const router = useRouter();
+  const init = edit?.initial;
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const minRateEuro = minRateCents / 100;
   const [state, formAction] = useFormState(createShiftAction, initial);
   const [useLogo, setUseLogo] = useState(beeld.useLogo && Boolean(beeld.logoUrl));
@@ -63,9 +92,10 @@ export function NewShiftForm({
     [templates, minRateCents],
   );
   const [tpl, setTpl] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dresscode, setDresscode] = useState("");
+  const [title, setTitle] = useState(init?.title ?? "");
+  const [description, setDescription] = useState(init?.description ?? "");
+  const [dresscode, setDresscode] = useState(init?.dresscode ?? "");
+  const [extraInfo, setExtraInfo] = useState(init?.extraInfo ?? "");
   const [writing, setWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<string | null>(null);
   const [forecast, setForecast] = useState<{
@@ -76,11 +106,11 @@ export function NewShiftForm({
     reasons: string[];
     sample: number;
   } | null>(null);
-  const [rateEuro, setRateEuro] = useState(minRateEuro.toFixed(2));
-  const [breakMin, setBreakMin] = useState("30");
-  const [positions, setPositions] = useState("1");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
+  const [rateEuro, setRateEuro] = useState(((init?.hourlyRateCents ?? minRateCents) / 100).toFixed(2));
+  const [breakMin, setBreakMin] = useState(String(init?.breakMinutes ?? 30));
+  const [positions, setPositions] = useState(String(init?.positions ?? 1));
+  const [startsAt, setStartsAt] = useState(init?.startsAt ?? "");
+  const [endsAt, setEndsAt] = useState(init?.endsAt ?? "");
   const [extraDates, setExtraDates] = useState<string[]>([]);
   const [multi, setMulti] = useState(false);
   const [poolId, setPoolId] = useState("");
@@ -92,7 +122,10 @@ export function NewShiftForm({
   const [fromWebsite, setFromWebsite] = useState(false);
 
   // A klus drafted on /klus-plaatsen before sign-up: fill it in once, then forget it.
+  // Never over an existing klus that is being edited.
+  const editing = Boolean(edit);
   useEffect(() => {
+    if (editing) return;
     let raw: string | null = null;
     try {
       raw = localStorage.getItem(CONCEPT_KEY);
@@ -111,7 +144,7 @@ export function NewShiftForm({
     setStartsAt(v.startsAt);
     setEndsAt(v.endsAt);
     setFromWebsite(true);
-  }, []);
+  }, [editing]);
 
   useEffect(() => {
     fetch("/api/werkgever/templates", { cache: "no-store" })
@@ -163,6 +196,33 @@ export function NewShiftForm({
     setUseLogo(((await res.json()) as { useLogo: boolean }).useLogo);
   }
 
+  // edit mode: the same checks as the old edit window (updateShiftAction: overlap with booked people,
+  // chat message + push to them); afterwards back to the klus with the server's version
+  async function saveEdit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!edit) return;
+    setEditBusy(true);
+    setEditError(null);
+    const res = await updateShiftAction(edit.shiftId, {
+      title,
+      description,
+      dresscode,
+      extraInfo,
+      startsAt,
+      endsAt,
+      breakMinutes: Number(breakMin) || 0,
+      hourlyRateCents,
+      positions: Number(positions) || 1,
+    }).catch(() => ({ ok: false, message: "Opslaan lukte niet. Probeer het opnieuw." }));
+    setEditBusy(false);
+    if (!res.ok) {
+      setEditError(res.message);
+      return;
+    }
+    router.push(`/werkgever/diensten/${edit.shiftId}`);
+    router.refresh();
+  }
+
   function applyOwnTemplate(t: OwnTemplate) {
     setTpl("");
     setTitle(t.label);
@@ -191,11 +251,19 @@ export function NewShiftForm({
   const primaryDay = startsAt ? startsAt.slice(0, 10) : "";
   const dayOptions = useMemo(() => extraDayOptions(startsAt ? startsAt.slice(0, 10) : amsterdamDayKey(new Date())), [startsAt]);
 
+  const plek = edit ? edit.locatie : oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging";
+
   return (
     // grid-cols-1 + minmax(0,…): anders wordt de kolom zo breed als de rij branche-knoppen van de galerij (4 nov: pagina 2552px breed)
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <form action={formAction} className="min-w-0 space-y-7">
-        {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+      <form {...(edit ? { onSubmit: saveEdit } : { action: formAction })} className="min-w-0 space-y-7">
+        {(editError ?? state.error) && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{editError ?? state.error}</p>}
+        {edit && edit.assignedCount > 0 && (
+          <p role="status" className="rounded-lg bg-warn/10 px-3 py-2.5 text-sm text-neutralx-700">
+            {edit.assignedCount === 1 ? "Er is al 1 kracht ingepland." : `Er zijn al ${edit.assignedCount} krachten ingepland.`} Zij krijgen een
+            bericht over je wijziging, en een nieuwe tijd mag niet botsen met hun andere klussen.
+          </p>
+        )}
         {fromWebsite && (
           <p role="status" className="rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
             We hebben de klus die je op de website samenstelde al ingevuld. Kies je vestiging en controleer de gegevens voordat je hem uitzet.
@@ -235,6 +303,13 @@ export function NewShiftForm({
         <input type="hidden" name="hourlyRateCents" value={Number.isFinite(hourlyRateCents) ? hourlyRateCents : 0} />
         <input type="hidden" name="extraDates" value={extraDates.join(",")} />
 
+        {edit ? (
+          <div>
+            <p className="field-label">Locatie</p>
+            <p className="rounded-xl border border-hair bg-paper-soft px-3 py-2.5 text-sm text-ink">{edit.locatie}</p>
+            <p className="mt-1 text-xs text-neutralx-500">De locatie verandert niet meer na het plaatsen. Andere locatie nodig? Zet een nieuwe klus uit.</p>
+          </div>
+        ) : (
         <div>
           <label className="flex items-center gap-2 text-xs font-medium text-neutralx-500">
             <input
@@ -293,6 +368,7 @@ export function NewShiftForm({
             </div>
           )}
         </div>
+        )}
 
         <label className="block">
           <span className="field-label">Titel van de dienst</span>
@@ -362,6 +438,23 @@ export function NewShiftForm({
           />
         </label>
 
+        <label className="block">
+          <span className="field-label">
+            Extra informatie <span className="text-neutralx-400">(optioneel)</span>
+          </span>
+          <textarea
+            name="extraInfo"
+            rows={3}
+            maxLength={1000}
+            value={extraInfo}
+            onChange={(e) => setExtraInfo(e.target.value)}
+            placeholder="Bijv. meld je bij de receptie, parkeren achter het gebouw, vraag naar Sanne, neem je ID mee…"
+            className="field-input"
+          />
+          <span className="mt-1 block text-xs text-neutralx-500">Staat op de klus-kaart en bij de klus, zodat de kracht precies weet wat er verwacht wordt.</span>
+        </label>
+
+        {!edit && (
         <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
           <input type="checkbox" name="viaUitzendbureau" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
           <span>
@@ -372,6 +465,7 @@ export function NewShiftForm({
             </span>
           </span>
         </label>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
@@ -427,7 +521,8 @@ export function NewShiftForm({
           )}
         </div>
 
-        {/* multi-day */}
+        {/* multi-day (only when placing) */}
+        {!edit && (
         <div className="rounded-xl border border-hair bg-paper-soft/50 p-4">
           <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
             <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} className="accent-brand-500" />
@@ -462,8 +557,9 @@ export function NewShiftForm({
             </>
           )}
         </div>
+        )}
 
-        {pools.length > 0 && (
+        {!edit && pools.length > 0 && (
           <label className="block">
             <span className="field-label">
               Eerst privé uitnodigen <span className="text-neutralx-400">(optioneel)</span>
@@ -483,7 +579,18 @@ export function NewShiftForm({
           </label>
         )}
 
-        <Submit days={totalDays} blocked={hourlyRateCents < minRateCents} />
+        {edit ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="submit" disabled={editBusy || hourlyRateCents < minRateCents} className="btn-primary flex-1 disabled:opacity-50">
+              {editBusy ? "Bezig met opslaan…" : "Wijzigingen opslaan"}
+            </button>
+            <Link href={`/werkgever/diensten/${edit.shiftId}`} className="btn-ghost text-center">
+              Annuleren
+            </Link>
+          </div>
+        ) : (
+          <Submit days={totalDays} blocked={hourlyRateCents < minRateCents} />
+        )}
       </form>
 
       {/* live preview */}
@@ -516,7 +623,7 @@ export function NewShiftForm({
               <div className="absolute inset-x-3 bottom-3 text-white">
                 <p className="truncate font-display text-lg font-bold drop-shadow">{title || "Titel van de dienst"}</p>
                 <p className="truncate text-xs text-white/80">
-                  {oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging"}
+                  {plek}
                   {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
                 </p>
               </div>
@@ -526,7 +633,7 @@ export function NewShiftForm({
             <div className="border-b border-hair px-4 pb-3 pt-3">
               <p className="truncate font-display text-lg font-bold text-ink">{title || "Titel van de dienst"}</p>
               <p className="truncate text-xs text-neutralx-500">
-                {oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging"}
+                {plek}
                 {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
               </p>
             </div>
@@ -541,8 +648,14 @@ export function NewShiftForm({
               <Row k={`Totaal (${totalDays} dagen)`} v={`€ ${((grossPerSeat * totalDays) / 100).toFixed(0)}`} highlight />
             )}
           </div>
+          {extraInfo.trim() && (
+            <p className="mx-4 mb-4 line-clamp-3 rounded-lg bg-paper-soft px-2.5 py-1.5 text-xs leading-snug text-neutralx-700">
+              <span aria-hidden>ℹ️ </span>
+              <span className="font-semibold">Extra informatie:</span> {extraInfo.trim()}
+            </p>
+          )}
         </article>
-        {primaryDay && <p className="mt-2 text-[11px] text-neutralx-500">Wordt automatisch gematcht zodra je uitzet.</p>}
+        {primaryDay && !edit && <p className="mt-2 text-[11px] text-neutralx-500">Wordt automatisch gematcht zodra je uitzet.</p>}
 
         <fieldset className="mt-4 min-w-0 rounded-xl border border-hair bg-white p-3">
           <legend className="px-1 text-xs font-semibold text-ink">Beeld op je klussen</legend>

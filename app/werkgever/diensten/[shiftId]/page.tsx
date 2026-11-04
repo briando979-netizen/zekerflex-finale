@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
 import { getEmployerShift } from "@/lib/dashboard/employer-shift";
@@ -152,41 +153,38 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
           <Panel title={fmt(d.offersTitle, { n: pendingOffers.length })} subtitle={d.offersSubtitle}>
             <ul className="divide-y divide-hair">
               {pendingOffers.map((o) => (
-                <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar url={o.avatarUrl} name={o.freelancerName} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">
-                        {o.freelancerName} · <span className="num text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
+                <li key={o.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName}>
+                      <Persoon url={o.avatarUrl} name={o.freelancerName}>
+                        <span className="num font-semibold text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
                         {o.proposedRateCents !== o.listedRateCents && (
-                          <span className="ml-2 text-xs font-normal text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
+                          <span className="ml-1.5 text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
                         )}
-                      </p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-neutralx-500">
-                        {o.reliability !== null && (
-                          <span title="Opkomstpercentage / betrouwbaarheid">
-                            ✓ {Math.round(o.reliability * 100)}% opkomst
-                          </span>
-                        )}
+                        {o.reliability !== null && <span> · ✓ {Math.round(o.reliability * 100)}% opkomst</span>}
                         {o.reviewCount > 0 ? (
-                          <span>★ {o.reviewAverage.toFixed(1)} ({o.reviewCount})</span>
+                          <span> · ★ {o.reviewAverage.toFixed(1).replace(".", ",")} ({o.reviewCount})</span>
                         ) : (
-                          <span className="text-neutralx-400">nog geen beoordelingen</span>
+                          <span> · nog geen beoordelingen</span>
                         )}
-                      </p>
-                      {o.note && <p className="mt-0.5 text-xs text-neutralx-500">{o.note}</p>}
-                      {o.busyElsewhere && (
-                        <p className="mt-1 text-xs text-neutralx-500">
-                          <span className="font-semibold text-warn">⏰ {d.busyElsewhere}.</span> {d.busyElsewhereHint}
-                        </p>
-                      )}
-                    </div>
+                      </Persoon>
+                    </CandidateCardButton>
+                    {(o.note || o.busyElsewhere) && (
+                      <div className="mt-1.5 space-y-1 pl-[3.25rem] text-xs text-neutralx-500">
+                        {o.note && <p className="break-words">&ldquo;{o.note}&rdquo;</p>}
+                        {o.busyElsewhere && (
+                          <p>
+                            <span className="font-semibold text-warn">⏰ {d.busyElsewhere}.</span> {d.busyElsewhereHint}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <Acties>
                     <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} />
                     <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
                     <OfferResponseButtons offerId={o.id} />
-                  </div>
+                  </Acties>
                 </li>
               ))}
             </ul>
@@ -194,38 +192,31 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 space-y-6">
         <Panel title={fmt(d.assignedTitle, { n: s.assigned.length, total: s.positions })}>
           {s.assigned.length === 0 ? (
             <EmptyState title={d.assignedEmptyTitle} body={d.assignedEmptyBody} />
           ) : (
             <ul className="divide-y divide-hair">
               {s.assigned.map((a) => (
-                <li key={a.assignmentId} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar url={a.avatarUrl} name={a.name} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">
-                        {a.name}
-                        {stars(a.userId)}
-                      </p>
-                      <p className="text-xs text-neutralx-500">
+                <li key={a.assignmentId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <CandidateCardButton userId={a.userId} shiftId={s.id} name={a.name}>
+                      <Persoon url={a.avatarUrl} name={a.name} extra={stars(a.userId)}>
                         {fmt(d.reliability, { n: Math.round(a.reliability * 100) })} · {a.badge} · {fmt(d.acceptedOn, { date: dateTime(a.acceptedAt) })}
-                      </p>
-                    </div>
+                      </Persoon>
+                    </CandidateCardButton>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <Acties>
                     {a.replacementRequested && <StatusPill tone="crit">{d.replacementPill}</StatusPill>}
-                    {a.timesheetStatus && (
-                      <StatusPill tone={a.timesheetStatus === "PAID" ? "ok" : "neutral"}>{a.timesheetStatus}</StatusPill>
-                    )}
+                    {a.timesheetStatus && <StatusPill tone={a.timesheetStatus === "PAID" ? "ok" : "neutral"}>{a.timesheetStatus}</StatusPill>}
                     <CandidateCardButton userId={a.userId} shiftId={s.id} name={a.name} />
                     <ChatUserButton toUserId={a.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
                     <FreelancerRelationButton userId={a.userId} name={a.name} kind="favorite" active={favSet.has(a.userId)} />
                     {shiftEnded && (
                       <ReviewButton subjectType="freelancer" subjectId={a.userId} subjectName={a.name} shiftId={s.id} label={d.reviewWorker} />
                     )}
-                  </div>
+                  </Acties>
                 </li>
               ))}
             </ul>
@@ -239,19 +230,28 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <ul className="divide-y divide-hair">
               {s.queue.slice(0, 10).map((q) => {
                 const ex = explainMatch(q);
+                const matchLine = fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes });
+                const rating = ratings.get(q.userId);
+                // not reacted (yet): no full card (api/werkgever/kandidaat), but the photo and what this page already shows
+                const preview = q.reacted
+                  ? undefined
+                  : {
+                      avatarUrl: q.avatarUrl,
+                      lines: [
+                        matchLine,
+                        ...(rating ? [`★ ${rating.average.toFixed(1).replace(".", ",")} uit ${rating.count} beoordelingen`] : []),
+                        `Status: ${QUEUE_LABEL[q.status] ?? q.status}`,
+                      ],
+                    };
                 return (
-                <li key={q.freelancerId} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar url={q.avatarUrl} name={q.name} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">
-                        {q.name}
-                        {stars(q.userId)}
-                      </p>
-                      <p className="text-xs text-neutralx-500">
-                        {fmt(d.matchLine, { pct: Math.round(q.score * 100), min: q.travelMinutes })}
-                      </p>
-                      <details className="mt-1 text-xs">
+                  <li key={q.freelancerId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <CandidateCardButton userId={q.userId} shiftId={s.id} name={q.name} {...(preview ? { preview } : {})}>
+                        <Persoon url={q.avatarUrl} name={q.name} extra={stars(q.userId)}>
+                          {matchLine}
+                        </Persoon>
+                      </CandidateCardButton>
+                      <details className="mt-1 pl-[3.25rem] text-xs">
                         <summary className="cursor-pointer text-brand-600 hover:underline">Waarom deze match? ({ex.verdict})</summary>
                         <ul className="mt-1 space-y-0.5">
                           {ex.reasons.map((r, i) => (
@@ -265,16 +265,14 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                         </ul>
                       </details>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusPill tone={q.status === "DECLINED" ? "crit" : q.status === "NOTIFIED" ? "warn" : "neutral"}>
-                      {QUEUE_LABEL[q.status] ?? q.status}
-                    </StatusPill>
-                    <ChatUserButton toUserId={q.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
-                    <FreelancerRelationButton userId={q.userId} name={q.name} kind="favorite" active={favSet.has(q.userId)} />
-                    <FreelancerRelationButton userId={q.userId} name={q.name} kind="block" active={blockSet.has(q.userId)} />
-                  </div>
-                </li>
+                    <Acties>
+                      <StatusPill tone={q.status === "DECLINED" ? "crit" : q.status === "NOTIFIED" ? "warn" : "neutral"}>{QUEUE_LABEL[q.status] ?? q.status}</StatusPill>
+                      <CandidateCardButton userId={q.userId} shiftId={s.id} name={q.name} {...(preview ? { preview } : {})} />
+                      <ChatUserButton toUserId={q.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
+                      <FreelancerRelationButton userId={q.userId} name={q.name} kind="favorite" active={favSet.has(q.userId)} />
+                      <FreelancerRelationButton userId={q.userId} name={q.name} kind="block" active={blockSet.has(q.userId)} />
+                    </Acties>
+                  </li>
                 );
               })}
             </ul>
@@ -282,10 +280,29 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </Panel>
       </div>
 
-      {s.description && (
+      {(s.description || s.dresscode || s.extraInfo) && (
         <div className="mt-6">
-          <Panel title={d.descriptionPanel}>
-            <p className="px-5 py-4 text-sm leading-relaxed text-ink-soft">{s.description}</p>
+          <Panel title="Over de klus">
+            <div className="space-y-4 px-5 py-4 text-sm">
+              {s.description && <p className="whitespace-pre-line leading-relaxed text-ink-soft">{s.description}</p>}
+              {s.dresscode && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">👕 Kledingvoorschriften</h3>
+                  <p className="mt-1 whitespace-pre-line text-ink-soft">{s.dresscode}</p>
+                </div>
+              )}
+              {s.extraInfo && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">ℹ️ Extra informatie</h3>
+                  <p className="mt-1 whitespace-pre-line break-words text-ink-soft">{s.extraInfo}</p>
+                </div>
+              )}
+              {["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(s.status) && (
+                <Link href={`/werkgever/diensten/${s.id}/bewerken`} className="inline-block text-sm font-semibold text-brand-600 hover:underline">
+                  Klus bewerken →
+                </Link>
+              )}
+            </div>
           </Panel>
         </div>
       )}
@@ -310,6 +327,27 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
       {initials(name)}
     </span>
   );
+}
+
+/** Photo + name + one line: the clickable part of a row (opens the profile card). */
+function Persoon({ url, name, extra, children }: { url: string | null; name: string; extra?: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      <Avatar url={url} name={name} />
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center text-sm font-semibold text-ink group-hover:underline">
+          {name}
+          {extra}
+        </span>
+        <span className="block text-xs text-neutralx-500">{children}</span>
+      </span>
+    </>
+  );
+}
+
+/** The buttons of a row: under the person on a phone, on the right from sm. */
+function Acties({ children }: { children: ReactNode }) {
+  return <div className="flex flex-shrink-0 flex-wrap items-center gap-2 pl-[3.25rem] sm:justify-end sm:pl-0">{children}</div>;
 }
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {

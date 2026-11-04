@@ -19,6 +19,9 @@ export interface EmployerShiftView {
   id: string;
   title: string;
   description: string | null;
+  dresscode: string | null;
+  /** "Extra informatie" for the worker (where to report, parking, what to bring) */
+  extraInfo: string | null;
   branch: string;
   branchId: string;
   city: string;
@@ -60,6 +63,8 @@ export interface EmployerShiftView {
     scoreBreakdown: unknown;
     status: string;
     avatarUrl: string | null;
+    /** reacted on this shift: only then may the employer open the full profile card (api/werkgever/kandidaat) */
+    reacted: boolean;
   }[];
   offers: {
     id: string;
@@ -95,6 +100,8 @@ export async function getEmployerShift(
       id: true,
       title: true,
       description: true,
+      dresscode: true,
+      extraInfo: true,
       startsAt: true,
       endsAt: true,
       breakMinutes: true,
@@ -195,6 +202,8 @@ export async function getEmployerShift(
     id: shift.id,
     title: shift.title,
     description: shift.description,
+    dresscode: shift.dresscode,
+    extraInfo: shift.extraInfo,
     branch: shift.branch.name,
     branchId: shift.branch.id,
     city: shift.branch.city,
@@ -237,6 +246,7 @@ export async function getEmployerShift(
         scoreBreakdown: m.scoreBreakdown,
         status: m.status,
         avatarUrl: avatarUrl(m.freelancer.userId),
+        reacted: offerUserIds.includes(m.freelancer.userId),
       })),
     offers: pendingOfferRows.map((o) => {
       const profile = offerProfileByUser.get(o.userId);

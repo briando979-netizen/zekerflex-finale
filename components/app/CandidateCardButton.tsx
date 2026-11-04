@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 interface Card {
   userId: string;
@@ -37,14 +37,35 @@ function Stars({ n }: { n: number }) {
   );
 }
 
-export function CandidateCardButton({ userId, shiftId, name }: { userId: string; shiftId: string; name: string }) {
+/** What the page already shows of someone who has not reacted (yet): photo, name and the match lines. */
+export interface CandidatePreview {
+  avatarUrl: string | null;
+  lines: string[];
+}
+
+export function CandidateCardButton({
+  userId,
+  shiftId,
+  name,
+  children,
+  preview,
+}: {
+  userId: string;
+  shiftId: string;
+  name: string;
+  /** custom trigger (e.g. the photo + name of a row); default the "Bekijk profiel" button */
+  children?: ReactNode;
+  /** set when the full card may not be shown yet (no reaction on this klus: api/werkgever/kandidaat refuses) */
+  preview?: CandidatePreview;
+}) {
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const titleId = useId();
 
   const load = async () => {
     setOpen(true);
-    if (card || state === "loading") return;
+    if (preview || card || state === "loading") return;
     setState("loading");
     try {
       const r = await fetch(`/api/werkgever/kandidaat?userId=${encodeURIComponent(userId)}&shiftId=${encodeURIComponent(shiftId)}`, { cache: "no-store" });
@@ -59,24 +80,59 @@ export function CandidateCardButton({ userId, shiftId, name }: { userId: string;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={load}
-        className="rounded-lg border border-hairstrong px-2.5 py-1 text-xs font-medium text-neutralx-700 hover:border-brand-400"
-      >
-        Bekijk profiel
-      </button>
+      {children ? (
+        <button type="button" onClick={load} aria-label={`Profiel van ${name} bekijken`} className="group flex min-w-0 items-center gap-3 rounded-xl text-left">
+          {children}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={load}
+          className="rounded-lg border border-hairstrong px-2.5 py-1 text-xs font-medium text-neutralx-700 hover:border-brand-400"
+        >
+          Bekijk profiel
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
             className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-lift sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold">Profiel</h2>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Sluiten" className="grid h-8 w-8 place-items-center rounded-full bg-neutralx-100 text-neutralx-600">✕</button>
+              <h2 id={titleId} className="font-display text-lg font-bold text-ink">
+                {preview ? name : "Profiel"}
+              </h2>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Sluiten" className="grid h-8 w-8 place-items-center rounded-full bg-paper-soft text-neutralx-600">✕</button>
             </div>
+
+            {preview && (
+              <div className="space-y-4">
+                {preview.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview.avatarUrl} alt={`Foto van ${name}`} className="mx-auto aspect-square w-full max-w-[16rem] rounded-2xl object-cover" />
+                ) : (
+                  <span className="mx-auto grid aspect-square w-40 place-items-center rounded-2xl bg-brand-100 text-5xl font-bold text-brand-700">
+                    {name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                {preview.lines.length > 0 && (
+                  <ul className="space-y-1 text-sm text-neutralx-700">
+                    {preview.lines.map((l, i) => (
+                      <li key={i}>{l}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="rounded-xl bg-paper-soft px-3 py-2.5 text-xs text-neutralx-600">
+                  Het volledige profiel (betrouwbaarheid, werkverleden en beoordelingen) zie je zodra deze kracht op je klus reageert. Zo
+                  bepaalt de kracht zelf wie dat te zien krijgt.
+                </p>
+              </div>
+            )}
 
             {state === "loading" && <p className="py-8 text-center text-sm text-neutralx-500">Laden…</p>}
             {state === "error" && <p className="py-8 text-center text-sm text-crit">Kon dit profiel niet laden.</p>}
@@ -181,7 +237,7 @@ export function CandidateCardButton({ userId, shiftId, name }: { userId: string;
 
 function Stat({ value, label, tone }: { value: string; label: string; tone?: "ok" | "warn" }) {
   return (
-    <div className="rounded-xl bg-neutralx-50 py-2">
+    <div className="rounded-xl bg-paper-soft py-2">
       <div className={`font-display text-base font-bold ${tone === "warn" ? "text-warn" : "text-brand-600"}`}>{value}</div>
       <div className="text-[10px] text-neutralx-500">{label}</div>
     </div>

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Portal } from "@/components/chat/Portal";
-import { updateShiftAction, cancelShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import Link from "next/link";
+import { cancelShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -19,18 +20,9 @@ interface ShiftInit {
   assignedCount: number;
 }
 
-// Spiegelt env.MIN_SHIFT_RATE_CENTS (server valideert het echt).
-const MIN_RATE_EURO = 16.2;
-
-const toLocal = (iso: string) => {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-};
-
 export function EmployerShiftControls({ shift }: { shift: ShiftInit }) {
   const c = useT().controls;
-  const [mode, setMode] = useState<null | "edit" | "cancel">(null);
+  const [mode, setMode] = useState<null | "cancel">(null);
   const [msg, setMsg] = useState<string | null>(null);
   const editable = ["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status);
   const cancellable = !["COMPLETED", "CANCELLED"].includes(shift.status);
@@ -40,9 +32,10 @@ export function EmployerShiftControls({ shift }: { shift: ShiftInit }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {editable && (
-        <button type="button" onClick={() => setMode("edit")} className="btn-ghost text-sm">
+        // same form and preview as placing a klus (/werkgever/diensten/[id]/bewerken)
+        <Link href={`/werkgever/diensten/${shift.id}/bewerken`} className="btn-ghost text-sm">
           {c.editShift}
-        </button>
+        </Link>
       )}
       {cancellable && (
         <button type="button" onClick={() => setMode("cancel")} className="text-sm font-medium text-crit hover:underline">
@@ -51,16 +44,6 @@ export function EmployerShiftControls({ shift }: { shift: ShiftInit }) {
       )}
       {msg && <span className="text-xs text-neutralx-500">{msg}</span>}
 
-      {mode === "edit" && (
-        <EditModal
-          shift={shift}
-          onClose={() => setMode(null)}
-          onDone={(m) => {
-            setMsg(m);
-            setMode(null);
-          }}
-        />
-      )}
       {mode === "cancel" && (
         <CancelModal
           shift={shift}
@@ -88,96 +71,6 @@ function Shell({ title, onClose, children }: { title: string; onClose: () => voi
         </div>
       </div>
     </Portal>
-  );
-}
-
-function EditModal({ shift, onClose, onDone }: { shift: ShiftInit; onClose: () => void; onDone: (m: string) => void }) {
-  const c = useT().controls;
-  const [title, setTitle] = useState(shift.title);
-  const [description, setDescription] = useState(shift.description ?? "");
-  const [startsAt, setStartsAt] = useState(toLocal(shift.startsAt));
-  const [endsAt, setEndsAt] = useState(toLocal(shift.endsAt));
-  const [breakMin, setBreakMin] = useState(String(shift.breakMinutes));
-  const [rate, setRate] = useState((shift.hourlyRateCents / 100).toFixed(2));
-  const [positions, setPositions] = useState(String(shift.positions));
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const save = async () => {
-    setBusy(true);
-    setErr(null);
-    const res = await updateShiftAction(shift.id, {
-      title,
-      description,
-      startsAt: new Date(startsAt).toISOString(),
-      endsAt: new Date(endsAt).toISOString(),
-      breakMinutes: Number(breakMin) || 0,
-      hourlyRateCents: Math.round(parseFloat(rate.replace(",", ".")) * 100),
-      positions: Number(positions) || 1,
-    });
-    setBusy(false);
-    if (res.ok) onDone(res.message);
-    else setErr(res.message);
-  };
-
-  return (
-    <Shell title={c.editTitle} onClose={onClose}>
-      <div className="space-y-3">
-        <label className="block">
-          <span className="field-label">{c.fTitle}</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="field-input" />
-        </label>
-        <label className="block">
-          <span className="field-label">{c.fDescription}</span>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="field-input" />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="field-label">{c.fStart}</span>
-            <input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className="field-input" />
-          </label>
-          <label className="block">
-            <span className="field-label">{c.fEnd}</span>
-            <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className="field-input" />
-          </label>
-          <label className="block">
-            <span className="field-label">{c.fBreak}</span>
-            <input type="number" value={breakMin} onChange={(e) => setBreakMin(e.target.value)} className="field-input" />
-          </label>
-          <label className="block">
-            <span className="field-label">{c.fRate}</span>
-            <input
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              onBlur={(e) => {
-                const v = parseFloat(e.target.value.replace(",", "."));
-                if (Number.isFinite(v) && v < MIN_RATE_EURO) setRate(MIN_RATE_EURO.toFixed(2));
-              }}
-              className="field-input"
-            />
-            <span className="mt-1 block text-xs text-neutralx-400">
-              Minimum € {MIN_RATE_EURO.toFixed(2).replace(".", ",")} per uur.
-            </span>
-          </label>
-          <label className="block">
-            <span className="field-label">{fmt(c.fSeats, { n: shift.assignedCount })}</span>
-            <input type="number" value={positions} onChange={(e) => setPositions(e.target.value)} className="field-input" />
-          </label>
-        </div>
-        {err && <p role="alert" className="text-xs text-crit">{err}</p>}
-        <button type="button" onClick={save} disabled={busy} className="btn-primary w-full">
-          {busy ? c.savingShort : c.saveChanges}
-        </button>
-        {shift.assignedCount > 0 && (
-          <p className="text-xs text-neutralx-400">
-            {fmt(c.assignedNotice, {
-              n: shift.assignedCount,
-              verb: shift.assignedCount === 1 ? c.verbIs : c.verbAre,
-            })}
-          </p>
-        )}
-      </div>
-    </Shell>
   );
 }
 

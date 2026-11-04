@@ -21,6 +21,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushWhen } from "@/lib/i18n/worker-push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
+import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
 
 export interface OfferResponse {
   ok: boolean;
@@ -57,11 +58,16 @@ async function assertOwnsShift(shiftId: string) {
   return { principal, shift };
 }
 
+// a datetime-local value from the edit form ("2026-11-05T09:00", Dutch wall-clock) or a full ISO string
+const whenSchema = z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/));
+
 const updateSchema = z.object({
   title: z.string().trim().min(2).max(120).optional(),
   description: z.string().trim().max(2000).optional(),
-  startsAt: z.string().datetime().optional(),
-  endsAt: z.string().datetime().optional(),
+  dresscode: z.string().trim().max(500).optional(),
+  extraInfo: z.string().trim().max(1000).optional(),
+  startsAt: whenSchema.optional(),
+  endsAt: whenSchema.optional(),
   breakMinutes: z.number().int().min(0).max(240).optional(),
   hourlyRateCents: z
     .number()
@@ -87,8 +93,8 @@ export async function updateShiftAction(
     if (!["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
       return { ok: false, message: "Deze dienst kan niet meer worden aangepast (al bezet of gestart)." };
     }
-    const starts = parsed.startsAt ? new Date(parsed.startsAt) : shift.startsAt;
-    const ends = parsed.endsAt ? new Date(parsed.endsAt) : shift.endsAt;
+    const starts = parsed.startsAt ? parseAmsterdamLocal(parsed.startsAt) : shift.startsAt;
+    const ends = parsed.endsAt ? parseAmsterdamLocal(parsed.endsAt) : shift.endsAt;
     if (ends <= starts) return { ok: false, message: "Einde moet na de start liggen." };
     const lengthProblem = shiftLengthProblem({
       startsAt: starts,
@@ -123,6 +129,8 @@ export async function updateShiftAction(
         data: {
           ...(parsed.title ? { title: parsed.title } : {}),
           ...(parsed.description !== undefined ? { description: parsed.description || null } : {}),
+          ...(parsed.dresscode !== undefined ? { dresscode: parsed.dresscode || null } : {}),
+          ...(parsed.extraInfo !== undefined ? { extraInfo: parsed.extraInfo || null } : {}),
           ...(parsed.startsAt ? { startsAt: starts } : {}),
           ...(parsed.endsAt ? { endsAt: ends } : {}),
           ...(parsed.breakMinutes !== undefined ? { breakMinutes: parsed.breakMinutes } : {}),

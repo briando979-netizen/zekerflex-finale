@@ -35,6 +35,7 @@ export async function createShiftAction(
     title: formData.get("title"),
     description: formData.get("description") || undefined,
     dresscode: formData.get("dresscode") || undefined,
+    extraInfo: formData.get("extraInfo") || undefined,
     viaUitzendbureau: formData.get("viaUitzendbureau") === "on",
     startsAt: formData.get("startsAt"),
     endsAt: formData.get("endsAt"),
