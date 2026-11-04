@@ -25,7 +25,7 @@ const WORD = (words: string) => new RegExp(`(?<![\\p{L}\\d])(?:${words})(?![\\p{
 
 /** Words on a company's front page that point to one of the shift templates. Order breaks a tie. */
 const SIGNALS: [string, RegExp][] = [
-  ["horeca", WORD("restaurant|caf[eé]|eetcaf[eé]|grand caf[eé]|bistro|brasserie|lunchroom|bar|hotel|catering|pizzeria|grillroom|snackbar|strandpaviljoen|terras|menukaart|diner|lunch|ontbijt|high tea|horeca|bediening|koffiebar")],
+  ["horeca", WORD("restaurant|caf[eé]|eetcaf[eé]|grand caf[eé]|bistro|brasserie|lunchroom|bar|hotel|catering|pizzeria|grillroom|snackbar|strandpaviljoen|terras|menukaart|diner|lunch|ontbijt|high tea|horeca|bediening|koffiebar|eten en drinken|feesten|partycentrum|feestzaal|escaperooms?")],
   ["magazijn", WORD("magazijn|logistiek|logistics|transport|distributie|distributiecentrum|warehouse|fulfil?ment|orderpick\\p{L}*|expeditie|opslag|koeriers?|groothandel|productie|verzending")],
   ["schoonmaak", WORD("schoonmaak\\p{L}*|glazenwass\\p{L}*|reiniging|facilitair\\p{L}*|cleaning|housekeeping|hygi[eë]ne")],
   ["vakkenvuller", WORD("supermarkt|bouwmarkt|drogist\\p{L}*|tuincentrum|retail|filialen|assortiment|levensmiddelen|boodschappen")],

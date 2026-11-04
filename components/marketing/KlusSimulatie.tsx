@@ -60,7 +60,7 @@ function Scherm({ stap, k, logo, kleur, kosten }: { stap: number; k: SimulatieKl
   if (stap === 0) {
     return (
       <div className="flex h-full flex-col bg-paper-soft">
-        <p className="px-4 pt-4 font-display text-lg font-bold text-ink">Ontdekken</p>
+        <p className="px-4 pt-9 font-display text-lg font-bold text-ink">Ontdekken</p>
         <div className="flex gap-1.5 px-4 pt-2 text-[11px] font-semibold">
           <span className="rounded-full bg-ink px-2.5 py-1 text-white">Alles</span>
           <span className="rounded-full bg-white px-2.5 py-1 text-neutralx-600">{cat.label}</span>
@@ -101,7 +101,7 @@ function Scherm({ stap, k, logo, kleur, kosten }: { stap: number; k: SimulatieKl
   }
   if (stap === 2) {
     return (
-      <div className="flex h-full flex-col bg-paper-soft p-4 text-left">
+      <div className="flex h-full flex-col bg-paper-soft p-4 pt-9 text-left">
         <div className="flex items-center gap-2">
           <Werkgever bedrijf={k.bedrijf} logo={logo} kleur={kleur} />
           <div className="min-w-0">
@@ -159,12 +159,12 @@ function Scherm({ stap, k, logo, kleur, kosten }: { stap: number; k: SimulatieKl
     );
   }
   return (
-    <div className="flex h-full flex-col bg-paper-soft p-4 text-left">
+    <div className="flex h-full flex-col bg-paper-soft p-4 pt-9 text-left">
       <p className="font-display text-base font-bold text-ink">Uren van Sanne</p>
       <div className="mt-3 rounded-2xl border border-hair bg-white p-3 shadow-sm">
         <p className="text-xs text-neutralx-600">{k.when}</p>
         <p className="num mt-1 font-semibold text-ink">{uurNl(k.hours)} uur gewerkt</p>
-        <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-ok/10 px-2 py-0.5 text-[11px] font-bold text-ok motion-safe:animate-scale-in">✓ Goedgekeurd door jou</p>
+        <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-ok/10 px-2 py-0.5 text-[11px] font-bold text-green-800 motion-safe:animate-scale-in">✓ Goedgekeurd door jou</p>
       </div>
       <div className="mt-3 rounded-2xl border border-hair bg-white p-3 text-xs shadow-sm">
         <p className="font-semibold text-ink">Factuur</p>
@@ -296,7 +296,7 @@ export function KlusSimulatie({
           </p>
         </div>
 
-        <div className="mx-auto w-[290px]" role="group" aria-label={`Voorbeeldscherm: ${huidig.kop}`}>
+        <div className="mx-auto w-full max-w-[290px]" role="group" aria-label={`Voorbeeldscherm: ${huidig.kop}`}>
           <div className="relative h-[560px] overflow-hidden rounded-[2.6rem] border-[10px] border-ink bg-ink shadow-lift">
             <span className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" aria-hidden="true" />
             <div key={stap} className="h-full overflow-hidden rounded-[2rem] motion-safe:animate-fade-up">

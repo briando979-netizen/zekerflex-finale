@@ -17,6 +17,9 @@ describe("guessTemplate", () => {
     expect(guessTemplate({ title: "Bakkerij Bol", koppen: [], tekst: "" })).toBe("kassa");
     expect(guessTemplate({ title: "Tandartspraktijk Zuid", koppen: [], tekst: "" })).toBe("receptie");
   });
+  it("een activiteitencentrum met eten en drinken is horeca", () => {
+    expect(guessTemplate({ title: "Het Schwarzwald", koppen: [], tekst: "Buggy's, quads, zes escaperooms en feesten. Activiteit, eten en drinken op één plek." })).toBe("horeca");
+  });
   it("geen woord dat ergens op wijst: null", () => {
     expect(guessTemplate({ title: "Rijschool Snel", koppen: ["Lespakketten"], tekst: "Haal je rijbewijs." })).toBeNull();
   });
