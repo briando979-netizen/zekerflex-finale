@@ -58,8 +58,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page). */
-const CSS_REV = 13;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone). */
+const CSS_REV = 14;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page

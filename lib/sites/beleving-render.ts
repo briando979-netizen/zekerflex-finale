@@ -57,7 +57,7 @@ section{padding:80px 0}.wrap.narrow p,.split p{font-size:1.125rem;line-height:1.
 .kicker{margin:0 0 12px;font:700 .75rem/1.4 ${text};letter-spacing:.18em;text-transform:uppercase;color:var(--a-d)}
 .demo-bar{background:var(--sun);color:var(--night);font-size:.875rem;font-weight:600;padding:8px 16px}.demo-bar a{color:var(--night);text-decoration:underline;text-underline-offset:2px}
 .bar{min-height:72px}nav a{font-size:.875rem;font-weight:600;padding:8px 14px}.btn{color:${ink}}
-.cta-top{padding:10px 20px;font-size:.875rem;box-shadow:0 8px 24px -8px rgba(${a},.7)}@media (max-width:480px){.cta-top{display:inline-block;padding:9px 16px}.bar.prem .logo img{max-height:44px}}
+.cta-top{padding:10px 20px;font-size:.875rem;box-shadow:0 8px 24px -8px rgba(${a},.7)}@media (max-width:480px){.cta-top{display:inline-block;padding:9px 16px}.bar.prem .logo img{max-height:44px}.bar.prem{gap:10px}.bar.prem .logo{min-width:0;font-size:1.05rem;line-height:1.15;hyphens:auto;overflow-wrap:break-word}}
 .hero.bel{min-height:0;display:block;padding:48px 0 96px}@media (min-width:1024px){.hero.bel{padding:80px 0 128px}}
 .hero.bel::before,.hero.bel::after{content:"";position:absolute;border-radius:50%;pointer-events:none}.hero.bel::before{left:-128px;top:40px;width:420px;height:420px;background:radial-gradient(closest-side,rgba(${a},.34),rgba(${a},0))}.hero.bel::after{right:-80px;bottom:0;width:380px;height:380px;background:radial-gradient(closest-side,rgba(${moss},.95),rgba(${moss},0))}
 .hero-grid{display:grid;gap:48px;align-items:center}@media (min-width:1024px){.hero-grid.met-foto{grid-template-columns:1.05fr 1fr}}
