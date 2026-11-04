@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { BASE, CONTACT, DOELGROEPEN, MENU, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
+import { ACTIVITEITEN, BASE, CONTACT, DOELGROEPEN, MENU, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
+import { boekbaar, plusDagen } from "@/lib/voorstel/schwarzwald-agenda";
+import { SchwarzwaldChat, type ChatActiviteit } from "@/components/voorstel/SchwarzwaldChat";
 import { pagina, paginaPaden } from "@/lib/voorstel/schwarzwald-paginas";
 import { beheerder, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { leesInstellingen, maakConfig } from "@/lib/voorstel/schwarzwald-instellingen";
@@ -59,6 +61,11 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
   const nu = new Date();
   const klok = amsterdamParts(nu);
   const status = openStatus(amsterdamDayKey(nu), klok.hour * 60 + klok.minute, tijden);
+  // chat rechtsonder: reserveren kan voor alles wat online te boeken is
+  const chatActiviteiten: ChatActiviteit[] = ACTIVITEITEN.filter((a) => boekbaar(a, tijden)).flatMap((a) => {
+    const r = tijden.regels[a.slug];
+    return r ? [{ slug: a.slug, naam: a.naam, min: r.min, max: r.max }] : [];
+  });
   return (
     <div className="min-h-screen bg-schw-cream font-sans text-schw-night">
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-schw-sun focus:px-4 focus:py-2 focus:font-bold">
@@ -157,6 +164,13 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
           </div>
         </div>
       </footer>
+      <SchwarzwaldChat
+        activiteiten={chatActiviteiten}
+        morgen={plusDagen(amsterdamDayKey(nu), 1)}
+        bekend={account ? { naam: account.naam, email: account.email, telefoon: account.telefoon } : null}
+        telefoon={CONTACT.telefoon}
+        accountPad={`${BASE}/account`}
+      />
       </AlleenOpSite>
     </div>
   );

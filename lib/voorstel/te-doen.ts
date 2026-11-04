@@ -13,6 +13,8 @@ export interface TeDoenTellingen {
   zonderBegeleider: number;
   /** komende groepen met een begeleider die tegelijk elders staat */
   begeleiderDubbel: number;
+  /** gasten in de websitechat die op een medewerker wachten (of op antwoord van de medewerker) */
+  chatWacht?: number;
 }
 
 export interface TeDoenPunt {
@@ -28,6 +30,7 @@ const meervoud = (n: number, een: string, meer: string) => `${n} ${n === 1 ? een
 /** Alleen de punten waar iets ligt, de dringendste (gasten die wachten) eerst. */
 export function teDoen(t: TeDoenTellingen): TeDoenPunt[] {
   const punten: TeDoenPunt[] = [
+    { sleutel: "chatWacht", aantal: t.chatWacht ?? 0, tekst: `${meervoud(t.chatWacht ?? 0, "gast wacht", "gasten wachten")} in de websitechat op een medewerker`, tab: "chat" },
     { sleutel: "wachtlijstVrij", aantal: t.wachtlijstVrij, tekst: `${meervoud(t.wachtlijstVrij, "wachtende gast kan", "wachtende gasten kunnen")} nu boeken: bel ze`, tab: "wachtlijst" },
     { sleutel: "wachtOpAntwoord", aantal: t.wachtOpAntwoord, tekst: `${meervoud(t.wachtOpAntwoord, "gast wacht", "gasten wachten")} op antwoord op een bericht`, tab: "klanten" },
     { sleutel: "begeleiderDubbel", aantal: t.begeleiderDubbel, tekst: `${meervoud(t.begeleiderDubbel, "groep heeft", "groepen hebben")} een begeleider die tegelijk elders staat`, tab: "reserveringen=dubbel" },

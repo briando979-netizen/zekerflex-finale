@@ -10,6 +10,8 @@ import { alleReviews } from "@/lib/voorstel/schwarzwald-reviews";
 import { alleSollicitaties } from "@/lib/voorstel/schwarzwald-sollicitaties";
 import { alleWachtplekken } from "@/lib/voorstel/schwarzwald-wachtlijst";
 import { teDoen } from "@/lib/voorstel/te-doen";
+import { gesprekken } from "@/lib/sitechat/gesprek";
+import { SCHWARZWALD_KANAAL } from "@/lib/voorstel/schwarzwald-chat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,13 +21,14 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     await eisBeheerder();
-    const [cijfers, reviews, sollicitaties, wachtlijst, boekingen, cfg] = await Promise.all([
+    const [cijfers, reviews, sollicitaties, wachtlijst, boekingen, cfg, chats] = await Promise.all([
       dashboardCijfers(),
       alleReviews(),
       alleSollicitaties(),
       alleWachtplekken(),
       alleBoekingen(),
       agendaConfig(),
+      gesprekken(SCHWARZWALD_KANAAL).catch(() => []),
     ]);
     const duur = Object.fromEntries([...Object.entries(AGENDA), ...Object.entries(cfg.regels)].map(([slug, r]) => [slug, r.duurMin]));
     const lijst = teDoen({
@@ -37,6 +40,7 @@ export async function GET(): Promise<NextResponse> {
       sollicitatiesNieuw: sollicitaties.filter((s) => s.status === "nieuw").length,
       wachtlijstVrij: wachtlijst.filter((w) => w.plekVrij).length,
       openTaken: cijfers.taken.length,
+      chatWacht: chats.filter((g) => g.status === "wacht" || (g.status === "mens" && g.ongelezen > 0)).length,
     });
     return NextResponse.json({ ...cijfers, teDoen: lijst });
   } catch (err) {

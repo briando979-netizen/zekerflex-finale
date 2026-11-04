@@ -31,7 +31,7 @@ interface Cijfers {
   teDoen: { sleutel: string; aantal: number; tekst: string; tab: string }[];
 }
 
-type Doel = "reserveringen" | "aanvragen" | "klanten" | "activiteiten" | "wachtlijst" | "sollicitaties" | "reviews";
+type Doel = "reserveringen" | "aanvragen" | "klanten" | "activiteiten" | "wachtlijst" | "sollicitaties" | "reviews" | "chat";
 const DOELEN: readonly string[] = ["reserveringen", "aanvragen", "klanten", "activiteiten", "wachtlijst", "sollicitaties", "reviews"];
 
 export function Dashboard({ namen, naar, openKlant }: { namen: Record<string, string>; naar: (t: Doel) => void; openKlant: (email: string) => void }) {
