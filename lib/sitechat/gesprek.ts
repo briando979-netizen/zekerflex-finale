@@ -1,6 +1,6 @@
-import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvDeleteStale, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
-import { isGesprekId, isKanaal, metBericht, nieuwGesprek, verlopen, type ChatRol, type ChatStatus, type SiteGesprek } from "@/lib/sitechat/regels";
+import { BEWAAR_DAGEN, isGesprekId, isKanaal, metBericht, nieuwGesprek, verlopen, type ChatRol, type ChatStatus, type SiteGesprek } from "@/lib/sitechat/regels";
 
 // ---------------------------------------------------------------------------
 // Opslag van websitechats per kanaal (één site). KV: sitechat:<kanaal>:<id>.
@@ -69,6 +69,16 @@ export async function gesprekken(kanaal: string): Promise<SiteGesprek[]> {
     .map((r) => r.value)
     .filter((g) => !verlopen(g.laatst, nu))
     .sort((a, b) => (a.laatst < b.laatst ? 1 : -1));
+}
+
+/**
+ * Elke nacht (deploy/cron/entrypoint.sh): gesprekken waar BEWAAR_DAGEN dagen
+ * niets in gebeurde wissen, van alle sites, ook als niemand de inbox opent.
+ * Elk bericht schrijft de rij opnieuw, dus de wijzigdatum is het laatste bericht.
+ */
+export async function ruimVerlopenGesprekkenOp(nu = Date.now()): Promise<{ gewist: number }> {
+  const gewist = await kvDeleteStale("sitechat:", new Date(nu - BEWAAR_DAGEN * 86_400_000));
+  return { gewist };
 }
 
 /** Gesprekken van een ingelogde gast (inzage), met hun KV-sleutels (wissen). */

@@ -34,6 +34,17 @@ export async function kvDelete(key: string): Promise<void> {
   await prisma.keyValueStore.deleteMany({ where: { key } });
 }
 
+/**
+ * Delete every key under `prefix` that was last written before `before` — one
+ * query for a retention sweep, without loading the values. The prefix must be
+ * a real namespace ("name:"), so a slip can never empty the whole store.
+ */
+export async function kvDeleteStale(prefix: string, before: Date): Promise<number> {
+  if (!/^[a-z0-9][a-z0-9-]*:/.test(prefix)) throw new Error(`kvDeleteStale: ongeldig voorvoegsel "${prefix}"`);
+  const { count } = await prisma.keyValueStore.deleteMany({ where: { key: { startsWith: prefix }, updatedAt: { lt: before } } });
+  return count;
+}
+
 /** Keys that share the given prefix, most-recently-updated first — the KV equivalent of readdir(). */
 export async function kvListKeys(prefix: string, limit = 1000): Promise<string[]> {
   const rows = await prisma.keyValueStore.findMany({
