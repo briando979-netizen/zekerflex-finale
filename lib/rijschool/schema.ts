@@ -179,6 +179,10 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("berichtGelezen"), leerlingId: id }),
   // de AI-assistent op de website aan of uit (lib/rijschool/assistent-server.ts)
   z.object({ actie: z.literal("assistent"), aan: z.boolean() }),
+  // een eigen domein voor website en app (lib/rijschool/domein.ts)
+  z.object({ actie: z.literal("domein"), domein: z.string().trim().min(3, "Vul je domeinnaam in, bijvoorbeeld rijschooljansen.nl.").max(253) }),
+  z.object({ actie: z.literal("domeinControleer") }),
+  z.object({ actie: z.literal("domeinWeg") }),
 ]);
 
 export type BeheerActie = z.infer<typeof beheerActieSchema>;

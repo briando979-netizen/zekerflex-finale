@@ -49,6 +49,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer
+    "/api/rijschool/domein", // middleware lookup: which driving school owns this own domain
+    "/api/rijschool/domein/bewijs", // https proof on the own domain of a driving school
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -74,6 +76,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/sites/domein-check/extra", // exact match only
     "/api/werkgever/sites/domain",
     "/api/indexnow-key/extra", // exact match only
+    "/api/rijschool/beheer", // the driving-school admin stays behind the ZekerFlex login
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

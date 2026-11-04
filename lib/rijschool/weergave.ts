@@ -14,6 +14,8 @@ import { routeWeergave, type RouteWeergave } from "@/lib/rijschool/lesroute";
 import { gesprekMet, gesprekkenVan } from "@/lib/rijschool/berichten";
 import type { BerichtRij, Gesprek } from "@/lib/rijschool/berichten-lijst";
 import { assistentAan } from "@/lib/rijschool/assistent-server";
+import { dnsRegels, domeinVan, type RijschoolDomein } from "@/lib/rijschool/domein";
+import type { DnsRecord } from "@/lib/sites/domain";
 
 // ---------------------------------------------------------------------------
 // Wat elk scherm van het rijschool-pakket te zien krijgt, als platte JSON
@@ -238,10 +240,19 @@ export interface BeheerWeergave {
   gesprekken: Gesprek[];
   /** de AI-assistent op de website staat aan (lib/rijschool/assistent-server.ts) */
   assistent: boolean;
+  /** het eigen domein met de DNS-regels die erbij horen (lib/rijschool/domein.ts) */
+  domein: DomeinWeergave | null;
+}
+
+export type DomeinWeergave = RijschoolDomein & { regels: DnsRecord[] };
+
+async function domeinWeergave(r: Pick<Rijschool, "id">): Promise<DomeinWeergave | null> {
+  const d = await domeinVan(r.id);
+  return d ? { ...d, regels: dnsRegels(r.id, d) } : null;
 }
 
 export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
-  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails, gesprekken, assistent] = await Promise.all([
+  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails, gesprekken, assistent, domein] = await Promise.all([
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
@@ -255,6 +266,7 @@ export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
     automailInstellingen(r.id),
     gesprekkenVan(r.id),
     assistentAan(r.id),
+    domeinWeergave(r),
   ]);
   const ids = leerlingen.map((l) => l.id);
   const [saldi, voortgangen] = await Promise.all([saldiVan(ids), voortgangVan(ids)]);
@@ -262,6 +274,7 @@ export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
     automails,
     gesprekken,
     assistent,
+    domein,
     rijschool: rijschoolInfo(r),
     website: websiteBewerkbaar(r.website),
     instructeurs: instructeurs.map(instructeurRij),

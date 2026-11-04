@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
 import { websiteVan } from "@/lib/rijschool/website";
 import { siteKleuren } from "@/lib/rijschool/kleuren";
+import { eigenAdres } from "@/lib/rijschool/domein";
 
 // De omlijsting van alles onder /rijschool/<slug>: de kleuren van de rijschool
 // als CSS-variabelen, en de naam van de rijschool in de titel. Niet in Google
@@ -14,13 +15,15 @@ type Props = { children: ReactNode; params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const r = await laadRijschool((await params).slug);
   if (!r) return {};
+  // met een actief eigen domein is dat het hoofdadres (lib/rijschool/domein.ts)
+  const eigen = await eigenAdres(r.id);
   return {
     title: { default: r.naam, template: `%s · ${r.naam}` },
     description: websiteVan(r.website, r).intro,
     applicationName: r.naam,
     appleWebApp: { capable: true, title: r.naam, statusBarStyle: "default" },
     robots: r.online ? { index: true, follow: true } : { index: false, follow: false },
-    alternates: { canonical: `/rijschool/${r.slug}` },
+    alternates: { canonical: eigen ? `${eigen}/` : `/rijschool/${r.slug}` },
     // eigen app op het beginscherm: naam, icoon en kleur van de rijschool
     manifest: `/rijschool/${r.slug}/manifest.webmanifest`,
     icons: { apple: `/rijschool/${r.slug}/app-icoon.png?maat=192` },

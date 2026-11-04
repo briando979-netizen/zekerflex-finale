@@ -11,6 +11,7 @@ import { winkelLink } from "@/lib/play/api";
 import { Stuur } from "@/components/rijschool/site/Stuur";
 import { telefoonWeergave } from "@/lib/rijschool/format";
 import { heldfotoUrl } from "@/lib/rijschool/heldfoto";
+import { eigenAdres } from "@/lib/rijschool/domein";
 
 export const dynamic = "force-dynamic";
 
@@ -38,18 +39,19 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
   const basis = `/rijschool/${r.slug}`;
-  const [producten, instructeurs, playApp, foto] = await Promise.all([
+  const [producten, instructeurs, playApp, foto, eigen] = await Promise.all([
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id, zichtbaar: true }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id, actief: true }, select: { id: true, naam: true, bio: true, categorieen: true }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolApp.findUnique({ where: { rijschoolId: r.id }, select: { pakketnaam: true, liveSinds: true } }).catch(() => null),
     heldfotoUrl(r),
+    eigenAdres(r.id),
   ]);
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const ld = {
     "@context": "https://schema.org",
     "@type": "DrivingSchool",
     name: r.naam,
-    url: siteUrl(r),
+    url: eigen ? `${eigen}/` : siteUrl(r),
     ...(r.telefoon ? { telephone: r.telefoon } : {}),
     ...(r.email ? { email: r.email } : {}),
     ...(r.adres || r.plaats ? { address: { "@type": "PostalAddress", streetAddress: r.adres, addressLocality: r.plaats, addressCountry: "NL" } } : {}),

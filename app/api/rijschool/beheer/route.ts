@@ -24,6 +24,7 @@ import { stuurGeslaagd, zetAutomail } from "@/lib/rijschool/automailer";
 import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { zetAssistent } from "@/lib/rijschool/assistent-server";
+import { controleerDomein, koppelDomein, ontkoppelDomein } from "@/lib/rijschool/domein";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,7 +83,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   try {
     const { p, rijschool } = await eisBeheer();
     const actie = lees(beheerActieSchema, await request.json().catch(() => ({})));
-    const extra = await voerUit(rijschool, actie, p.fullName);
+    const extra = await voerUit(rijschool, actie, p.fullName, p.userId);
     const bij = await prisma.rijschool.findUniqueOrThrow({ where: { id: rijschool.id } });
     return NextResponse.json({ aan: true, ...extra, ...(await beheerWeergave(bij)) });
   } catch (err) {
@@ -93,7 +94,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   }
 }
 
-async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Record<string, unknown>> {
+async function voerUit(r: Rijschool, a: BeheerActie, door: string, userId: string): Promise<Record<string, unknown>> {
   switch (a.actie) {
     case "instellingen":
       await prisma.rijschool.update({ where: { id: r.id }, data: a.data });
@@ -192,6 +193,17 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Reco
       return {};
     case "assistent":
       await zetAssistent(r.id, a.aan);
+      return {};
+    case "domein":
+      await koppelDomein(r, a.domein, { userId });
+      return {};
+    case "domeinControleer":
+      // DNS-vragen en een https-proef per keer: niet onbeperkt achter elkaar
+      await enforceRateLimit({ name: "rijschool-domein-controle", identifier: r.id, limit: 20, windowSeconds: 600 });
+      await controleerDomein(r, { userId });
+      return {};
+    case "domeinWeg":
+      await ontkoppelDomein(r, { userId });
       return {};
   }
 }

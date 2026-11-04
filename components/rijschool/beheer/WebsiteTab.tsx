@@ -6,6 +6,7 @@ import type { Doe } from "@/components/rijschool/beheer/RijschoolBeheer";
 import type { RijschoolWebsite } from "@/lib/rijschool/website";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
+import { EigenDomein } from "@/components/rijschool/beheer/EigenDomein";
 
 // De teksten van de rijschoolwebsite. {naam} en {plaats} worden op de site
 // vanzelf ingevuld; leeg laten kan niet, dan gebruikt de site de standaard.
@@ -49,108 +50,111 @@ export function WebsiteTab({ data, doe }: { data: BeheerWeergave; doe: Doe }) {
   }
 
   return (
-    <form onSubmit={bewaar} className="space-y-4">
-      <Heldfoto />
-      <section className="card grid gap-4 p-5">
-        <h2 className="font-display text-lg font-bold text-ink">Bovenaan de website</h2>
-        <Veld label="Kop" uitleg="{naam} en {plaats} worden automatisch ingevuld.">
-          <input className="field-input" value={w.kop} onChange={(e) => setW({ ...w, kop: e.target.value })} maxLength={120} required />
-        </Veld>
-        <Veld label="Korte introductie">
-          <textarea className="field-input min-h-[4rem]" value={w.intro} onChange={(e) => setW({ ...w, intro: e.target.value })} maxLength={400} />
-        </Veld>
-        <Veld label="Over ons">
-          <textarea className="field-input min-h-[7rem]" value={w.overOns} onChange={(e) => setW({ ...w, overOns: e.target.value })} maxLength={2000} />
-        </Veld>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Veld label="Werkgebied" uitleg="Plaatsen gescheiden door komma's.">
-            <input className="field-input" value={werkgebied} onChange={(e) => setWerkgebied(e.target.value)} placeholder="Zwolle, Kampen, Hattem" />
+    <div className="space-y-4">
+      <form onSubmit={bewaar} className="space-y-4">
+        <Heldfoto />
+        <section className="card grid gap-4 p-5">
+          <h2 className="font-display text-lg font-bold text-ink">Bovenaan de website</h2>
+          <Veld label="Kop" uitleg="{naam} en {plaats} worden automatisch ingevuld.">
+            <input className="field-input" value={w.kop} onChange={(e) => setW({ ...w, kop: e.target.value })} maxLength={120} required />
           </Veld>
-          <Veld label="Slagingspercentage" uitleg="Alleen invullen als je het kunt onderbouwen.">
-            <input className="field-input" inputMode="numeric" value={slaging} onChange={(e) => setSlaging(e.target.value)} placeholder="bijvoorbeeld 78" />
+          <Veld label="Korte introductie">
+            <textarea className="field-input min-h-[4rem]" value={w.intro} onChange={(e) => setW({ ...w, intro: e.target.value })} maxLength={400} />
           </Veld>
-          <Veld label="WhatsApp-nummer" uitleg="Leeg laten voor geen WhatsApp-knop.">
-            <input className="field-input" type="tel" value={w.whatsapp} onChange={(e) => setW({ ...w, whatsapp: e.target.value })} maxLength={20} />
+          <Veld label="Over ons">
+            <textarea className="field-input min-h-[7rem]" value={w.overOns} onChange={(e) => setW({ ...w, overOns: e.target.value })} maxLength={2000} />
           </Veld>
-        </div>
-      </section>
-
-      <section className="card space-y-3 p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-ink">Waarom kiezen voor jullie</h2>
-          {w.sterkePunten.length < 8 && (
-            <button type="button" className="btn-ghost !py-1.5 text-xs" onClick={() => setW({ ...w, sterkePunten: [...w.sterkePunten, { titel: "", tekst: "" }] })}>
-              Punt toevoegen
-            </button>
-          )}
-        </div>
-        {w.sterkePunten.map((p, i) => (
-          <div key={i} className="grid gap-2 sm:grid-cols-[14rem_1fr_auto]">
-            <input
-              className="field-input !mt-0"
-              value={p.titel}
-              onChange={(e) => setW({ ...w, sterkePunten: w.sterkePunten.map((x, j) => (j === i ? { ...x, titel: e.target.value } : x)) })}
-              maxLength={80}
-              aria-label={`Titel punt ${i + 1}`}
-            />
-            <input
-              className="field-input !mt-0"
-              value={p.tekst}
-              onChange={(e) => setW({ ...w, sterkePunten: w.sterkePunten.map((x, j) => (j === i ? { ...x, tekst: e.target.value } : x)) })}
-              maxLength={300}
-              aria-label={`Tekst punt ${i + 1}`}
-            />
-            <button type="button" className="btn-ghost !px-3 text-crit" onClick={() => setW({ ...w, sterkePunten: w.sterkePunten.filter((_, j) => j !== i) })} aria-label={`Punt ${i + 1} weghalen`}>
-              ✕
-            </button>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Veld label="Werkgebied" uitleg="Plaatsen gescheiden door komma's.">
+              <input className="field-input" value={werkgebied} onChange={(e) => setWerkgebied(e.target.value)} placeholder="Zwolle, Kampen, Hattem" />
+            </Veld>
+            <Veld label="Slagingspercentage" uitleg="Alleen invullen als je het kunt onderbouwen.">
+              <input className="field-input" inputMode="numeric" value={slaging} onChange={(e) => setSlaging(e.target.value)} placeholder="bijvoorbeeld 78" />
+            </Veld>
+            <Veld label="WhatsApp-nummer" uitleg="Leeg laten voor geen WhatsApp-knop.">
+              <input className="field-input" type="tel" value={w.whatsapp} onChange={(e) => setW({ ...w, whatsapp: e.target.value })} maxLength={20} />
+            </Veld>
           </div>
-        ))}
-      </section>
+        </section>
 
-      <section className="card space-y-3 p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-ink">Veelgestelde vragen</h2>
-          {w.faq.length < 20 && (
-            <button type="button" className="btn-ghost !py-1.5 text-xs" onClick={() => setW({ ...w, faq: [...w.faq, { vraag: "", antwoord: "" }] })}>
-              Vraag toevoegen
-            </button>
-          )}
-        </div>
-        {w.faq.map((q, i) => (
-          <div key={i} className="grid gap-2 rounded-lg border border-hair p-3">
-            <div className="flex gap-2">
+        <section className="card space-y-3 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-ink">Waarom kiezen voor jullie</h2>
+            {w.sterkePunten.length < 8 && (
+              <button type="button" className="btn-ghost !py-1.5 text-xs" onClick={() => setW({ ...w, sterkePunten: [...w.sterkePunten, { titel: "", tekst: "" }] })}>
+                Punt toevoegen
+              </button>
+            )}
+          </div>
+          {w.sterkePunten.map((p, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[14rem_1fr_auto]">
               <input
                 className="field-input !mt-0"
-                value={q.vraag}
-                onChange={(e) => setW({ ...w, faq: w.faq.map((x, j) => (j === i ? { ...x, vraag: e.target.value } : x)) })}
-                maxLength={200}
-                aria-label={`Vraag ${i + 1}`}
+                value={p.titel}
+                onChange={(e) => setW({ ...w, sterkePunten: w.sterkePunten.map((x, j) => (j === i ? { ...x, titel: e.target.value } : x)) })}
+                maxLength={80}
+                aria-label={`Titel punt ${i + 1}`}
               />
-              <button type="button" className="btn-ghost !px-3 text-crit" onClick={() => setW({ ...w, faq: w.faq.filter((_, j) => j !== i) })} aria-label={`Vraag ${i + 1} weghalen`}>
+              <input
+                className="field-input !mt-0"
+                value={p.tekst}
+                onChange={(e) => setW({ ...w, sterkePunten: w.sterkePunten.map((x, j) => (j === i ? { ...x, tekst: e.target.value } : x)) })}
+                maxLength={300}
+                aria-label={`Tekst punt ${i + 1}`}
+              />
+              <button type="button" className="btn-ghost !px-3 text-crit" onClick={() => setW({ ...w, sterkePunten: w.sterkePunten.filter((_, j) => j !== i) })} aria-label={`Punt ${i + 1} weghalen`}>
                 ✕
               </button>
             </div>
-            <textarea
-              className="field-input !mt-0 min-h-[3.5rem]"
-              value={q.antwoord}
-              onChange={(e) => setW({ ...w, faq: w.faq.map((x, j) => (j === i ? { ...x, antwoord: e.target.value } : x)) })}
-              maxLength={1000}
-              aria-label={`Antwoord ${i + 1}`}
-            />
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
 
-      <Melding fout={fout} ok={ok} />
-      <div className="flex flex-wrap gap-2">
-        <button type="submit" className="btn-primary" disabled={bezig}>
-          {bezig ? "Bezig…" : "Website opslaan"}
-        </button>
-        <a href={data.rijschool.url} target="_blank" rel="noopener" className="btn-ghost">
-          Bekijk website
-        </a>
-      </div>
-    </form>
+        <section className="card space-y-3 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-ink">Veelgestelde vragen</h2>
+            {w.faq.length < 20 && (
+              <button type="button" className="btn-ghost !py-1.5 text-xs" onClick={() => setW({ ...w, faq: [...w.faq, { vraag: "", antwoord: "" }] })}>
+                Vraag toevoegen
+              </button>
+            )}
+          </div>
+          {w.faq.map((q, i) => (
+            <div key={i} className="grid gap-2 rounded-lg border border-hair p-3">
+              <div className="flex gap-2">
+                <input
+                  className="field-input !mt-0"
+                  value={q.vraag}
+                  onChange={(e) => setW({ ...w, faq: w.faq.map((x, j) => (j === i ? { ...x, vraag: e.target.value } : x)) })}
+                  maxLength={200}
+                  aria-label={`Vraag ${i + 1}`}
+                />
+                <button type="button" className="btn-ghost !px-3 text-crit" onClick={() => setW({ ...w, faq: w.faq.filter((_, j) => j !== i) })} aria-label={`Vraag ${i + 1} weghalen`}>
+                  ✕
+                </button>
+              </div>
+              <textarea
+                className="field-input !mt-0 min-h-[3.5rem]"
+                value={q.antwoord}
+                onChange={(e) => setW({ ...w, faq: w.faq.map((x, j) => (j === i ? { ...x, antwoord: e.target.value } : x)) })}
+                maxLength={1000}
+                aria-label={`Antwoord ${i + 1}`}
+              />
+            </div>
+          ))}
+        </section>
+
+        <Melding fout={fout} ok={ok} />
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" className="btn-primary" disabled={bezig}>
+            {bezig ? "Bezig…" : "Website opslaan"}
+          </button>
+          <a href={data.rijschool.url} target="_blank" rel="noopener" className="btn-ghost">
+            Bekijk website
+          </a>
+        </div>
+      </form>
+      <EigenDomein data={data} doe={doe} />
+    </div>
   );
 }
 

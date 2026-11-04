@@ -5,6 +5,7 @@ import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
+import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
@@ -167,14 +168,81 @@ const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 // /login and /api included — goes to that website and never to the app:
 // bakkerjansen.nl/contact is served by /site-domein/bakkerjansen.nl/contact.
 // ---------------------------------------------------------------------------
-function customerSite(req: NextRequest, raw: string): NextResponse {
+async function customerSite(req: NextRequest, raw: string): Promise<NextResponse> {
   const host = siteHostFrom(raw);
   if (!host) return new NextResponse("Onbekend domein", { status: 400 });
+  const rijschool = await rijschoolOpHost(host);
+  if (rijschool) return rijschoolSite(req, host, rijschool);
   const url = req.nextUrl.clone();
   url.pathname = `/site-domein/${host}${req.nextUrl.pathname === "/" ? "" : req.nextUrl.pathname}`;
   const res = NextResponse.rewrite(url);
   res.headers.set(CSP_HEADER, siteHostCsp(`https://${host}`));
   return res;
+}
+
+// ---------------------------------------------------------------------------
+// Een rijschool op haar eigen domein (lib/rijschool/domein.ts). Het domein komt
+// binnen als klantdomein; de middleware kan niet bij de database en vraagt de
+// app zelf welke rijschool erbij hoort (kort onthouden, gedeeld via globalThis).
+// Lukt dat niet, dan gaat alles zoals voorheen naar de klantwebsite.
+// ---------------------------------------------------------------------------
+type RijschoolHost = { slug: string; online: boolean; hoofd: string };
+type RijschoolHostCache = Map<string, { r: RijschoolHost | null; tot: number }>;
+const RIJSCHOOL_HOSTS: RijschoolHostCache = ((globalThis as { __zfRijschoolHosts?: RijschoolHostCache }).__zfRijschoolHosts ??= new Map());
+const INTERNE_APP = process.env.INTERNAL_APP_URL ?? `http://127.0.0.1:${process.env.PORT ?? "3000"}`;
+
+async function rijschoolOpHost(host: string): Promise<RijschoolHost | null> {
+  const nu = Date.now();
+  const bekend = RIJSCHOOL_HOSTS.get(host);
+  if (bekend && bekend.tot > nu) return bekend.r;
+  const stop = new AbortController();
+  const klok = setTimeout(() => stop.abort(), 2000);
+  try {
+    const res = await fetch(`${INTERNE_APP}/api/rijschool/domein?host=${encodeURIComponent(host)}`, { signal: stop.signal, cache: "no-store" });
+    if (res.status !== 200 && res.status !== 404) return null;
+    const body = (await res.json()) as { rijschool?: RijschoolHost | null };
+    const r = res.status === 200 && body.rijschool?.slug ? body.rijschool : null;
+    if (RIJSCHOOL_HOSTS.size > 500) RIJSCHOOL_HOSTS.clear();
+    RIJSCHOOL_HOSTS.set(host, { r, tot: nu + (r ? 60_000 : 20_000) });
+    return r;
+  } catch {
+    return null; // niet onthouden: de volgende vraag probeert het opnieuw
+  } finally {
+    clearTimeout(klok);
+  }
+}
+
+function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextResponse {
+  const pad = req.nextUrl.pathname;
+  // www en zonder www: één hoofdadres, de andere vorm stuurt door
+  if (host !== r.hoofd && pad !== BEWIJS_PAD) {
+    return NextResponse.redirect(`https://${r.hoofd}${pad}${req.nextUrl.search}`, 308);
+  }
+  if (pad === "/robots.txt") {
+    return new NextResponse(robotsVoor(r.online), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  // zelfde als bij het voorstel: geen ZekerFlex-statistiek en geen ZekerFlex-service-worker
+  if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
+  if (pad === "/sw.js") {
+    return new NextResponse(
+      "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>self.registration.unregister());",
+      { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" } },
+    );
+  }
+  const doel = rijschoolPad(r.slug, pad);
+  if (doel === null) return new NextResponse("Niet gevonden", { status: 404 });
+  if (doel.startsWith("/_next/")) return NextResponse.next();
+  const nonce = generateNonce();
+  const ctx: RequestContext = { cid: correlationId(req), nonce, csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname: doel }) };
+  const headers = new Headers(req.headers);
+  headers.set(CORRELATION_HEADER, ctx.cid);
+  headers.set("x-pathname", doel);
+  headers.set(NONCE_HEADER, ctx.nonce);
+  headers.set(CSP_HEADER, ctx.csp);
+  if (doel === pad) return decorate(NextResponse.next({ request: { headers } }), ctx);
+  const url = req.nextUrl.clone();
+  url.pathname = doel;
+  return decorate(NextResponse.rewrite(url, { request: { headers } }), ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +286,7 @@ function voorstelSite(req: NextRequest, naam: string): NextResponse {
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const siteHost = req.headers.get(SITE_HOST_HEADER);
-  if (siteHost !== null) return customerSite(req, siteHost);
+  if (siteHost !== null) return await customerSite(req, siteHost);
   const voorstel = req.headers.get(VOORSTEL_HEADER);
   if (voorstel !== null) return voorstelSite(req, voorstel);
 
