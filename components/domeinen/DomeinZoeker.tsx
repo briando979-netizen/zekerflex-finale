@@ -14,6 +14,8 @@ interface Resultaat {
 type Soort = "registreren" | "verhuizen";
 
 const VELD = "w-full rounded-lg border border-hairstrong bg-white px-3 py-2.5 text-base text-ink";
+/** in een smal paneel eerst alleen de getypte en de populaire extensies */
+const SMAL_AANTAL = 5;
 const fout = async (r: Response | null, standaard: string) => {
   const d = r ? ((await r.json().catch(() => ({}))) as { error?: { message?: string } }) : {};
   return d.error?.message ?? standaard;
@@ -68,6 +70,7 @@ export function DomeinZoeker({
   const [werkgever, setWerkgever] = useState(false);
   const [mijn, setMijn] = useState<MijnDomein[] | null>(null);
   const [terug, setTerug] = useState<{ gelukt: boolean; domein: string } | null>(null);
+  const [alles, setAlles] = useState(false);
 
   const laadMijn = useCallback(async () => {
     const r = await fetch("/api/werkgever/domeinen", { cache: "no-store" }).catch(() => null);
@@ -95,6 +98,7 @@ export function DomeinZoeker({
     setBezig(true);
     setMelding(null);
     setKeuze(null);
+    setAlles(false);
     const r = await fetch(`/api/domeinen/zoek?naam=${encodeURIComponent(zoek)}`, { cache: "no-store" }).catch(() => null);
     setBezig(false);
     if (!r?.ok) {
@@ -134,26 +138,48 @@ export function DomeinZoeker({
 
       {res && (
         <ul className="divide-y divide-hair overflow-hidden rounded-2xl border border-hair bg-white" aria-label="Zoekresultaten">
-          {res.map((r) => {
+          {(smal && !alles ? res.slice(0, SMAL_AANTAL) : res).map((r) => {
             const kan = r.status === "vrij" || r.status === "waarschijnlijk-vrij" || r.status === "onbekend";
-            return (
-              <li key={r.domein} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-                <span className="min-w-0 flex-1 break-all font-display text-lg font-bold text-ink">{r.domein}</span>
+            const naam = <span className={`${smal ? "block" : "min-w-0 flex-1"} break-all font-display text-lg font-bold text-ink`}>{r.domein}</span>;
+            const rest = (
+              <>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${LABEL[r.status].klasse}`}>{LABEL[r.status].tekst}</span>
                 {r.prijsCent !== null && <span className="text-sm text-neutralx-700">{euroPrijs(r.prijsCent)} per jaar</span>}
                 {kan ? (
-                  <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "registreren", prijsCent: r.prijsCent })}>
-                    Kies {r.domein}
+                  <button
+                    type="button"
+                    aria-label={`Kies ${r.domein}`}
+                    className={`btn-primary px-4 py-1.5 text-sm ${smal ? "ml-auto" : ""}`}
+                    onClick={() => setKeuze({ domein: r.domein, soort: "registreren", prijsCent: r.prijsCent })}
+                  >
+                    {smal ? "Kies" : `Kies ${r.domein}`}
                   </button>
                 ) : (
                   <button type="button" className="btn-ghost px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "verhuizen", prijsCent: r.prijsCent })}>
-                    Is hij van jou? Verhuizen
+                    {smal ? "Verhuizen" : "Is hij van jou? Verhuizen"}
                   </button>
                 )}
+              </>
+            );
+            return smal ? (
+              // smal paneel: de naam op een eigen regel, daaronder stand, prijs en knop
+              <li key={r.domein} className="space-y-2 px-3 py-3">
+                {naam}
+                <div className="flex flex-wrap items-center gap-2">{rest}</div>
+              </li>
+            ) : (
+              <li key={r.domein} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                {naam}
+                {rest}
               </li>
             );
           })}
         </ul>
+      )}
+      {res && smal && !alles && res.length > SMAL_AANTAL && (
+        <button type="button" onClick={() => setAlles(true)} className="text-sm font-semibold text-brand-600 underline">
+          Toon alle extensies ({res.length})
+        </button>
       )}
       {res && <p className="text-xs text-neutralx-500">Prijzen per jaar, excl. btw. Bij het aanvragen controleren we de beschikbaarheid nog een keer.</p>}
 
