@@ -299,7 +299,7 @@ export function EmployerOnboardingWizard({
                       <span className={`block text-sm ${isActive ? "font-semibold text-ink" : "text-ink"}`}>
                         {it.label}
                       </span>
-                      {it.hint && <span className="block text-[11px] text-neutralx-400">{it.hint}</span>}
+                      {it.hint && <span className="block text-[11px] text-neutralx-500">{it.hint}</span>}
                     </span>
                   </button>
                 </li>
@@ -309,12 +309,13 @@ export function EmployerOnboardingWizard({
         </div>
 
         <div>
-          <h3 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
+          {/* h2: het eerste kopje onder de h1 van de startpagina (axe heading-order); uiterlijk gelijk */}
+          <h2 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
             <span className="grid h-5 w-5 place-items-center rounded-full border border-hairstrong text-[10px] text-neutralx-400">
               ●
             </span>
             {o.firstJobTitle}
-          </h3>
+          </h2>
           <p className="mt-2 text-xs text-neutralx-500">{o.firstJobBody}</p>
           <ol className="mt-3 space-y-1">
             {FIRST_JOB.map((label) => (
