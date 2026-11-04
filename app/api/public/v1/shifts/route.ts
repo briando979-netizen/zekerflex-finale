@@ -24,6 +24,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     const shifts = await prisma.shift.findMany({
       where: {
         status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
+        // een voorbije klus is niet meer open (de status gaat na afloop niet vanzelf om)
+        endsAt: { gte: new Date() },
         ...(key.tenantId ? { branch: { tenantId: key.tenantId } } : {}),
       },
       select: {

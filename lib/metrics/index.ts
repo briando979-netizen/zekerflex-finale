@@ -117,8 +117,9 @@ export async function refreshBusinessGauges(): Promise<void> {
     const { prisma } = await import("@/lib/prisma");
     const [pending, open, disabled] = await Promise.all([
       prisma.timesheet.count({ where: { status: { in: ["SUBMITTED", "DISPUTED"] } } }),
+      // alleen klussen die nog niet voorbij zijn (de status gaat na afloop niet vanzelf om)
       prisma.shift.count({
-        where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } },
+        where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, endsAt: { gte: new Date() } },
       }),
       prisma.user.count({ where: { disabledAt: { not: null } } }),
     ]);

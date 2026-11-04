@@ -9,6 +9,7 @@ import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { recentNotes } from "@/lib/bank/notify";
 import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
+import { REACTIE_MARGE_MS } from "@/lib/offers/verval";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -135,13 +136,26 @@ export async function getNotifications(principal: Principal): Promise<Notificati
             urgent: true,
           });
         } else if (o.status === "declined") {
+          // een gewone reactie (tegen het aangeboden tarief) is geen tegenbod
+          const tegenbod = o.proposedRateCents !== o.listedRateCents;
           out.push({
             id: `offer:${o.id}`,
             kind: "offer",
-            title: "Tegenbod afgewezen",
-            body: `${o.shiftTitle}: het oorspronkelijke tarief blijft gelden.`,
-            href: `/dashboard/klussen/${o.shiftId}`,
+            title: tegenbod ? "Tegenbod afgewezen" : "Niet uitgekozen",
+            body: tegenbod ? `${o.shiftTitle}: het oorspronkelijke tarief blijft gelden.` : `${o.shiftTitle}: er is iemand anders gekozen. Zoek een andere klus.`,
+            href: tegenbod ? `/dashboard/klussen/${o.shiftId}` : "/dashboard/klussen",
             at: o.respondedAt ?? o.at,
+            urgent: false,
+          });
+        } else if (o.status === "expired" && o.respondedAt && now - new Date(o.respondedAt).getTime() < 7 * 24 * 3600_000) {
+          // de klus begon zonder keuze (lib/offers/expire.ts); een week zichtbaar
+          out.push({
+            id: `offer:${o.id}`,
+            kind: "offer",
+            title: "Helaas niet uitgekozen",
+            body: `${o.shiftTitle}: de klus is begonnen zonder dat je gekozen bent. Zoek een andere klus.`,
+            href: "/dashboard/klussen",
+            at: o.respondedAt,
             urgent: false,
           });
         }
@@ -188,8 +202,9 @@ export async function getNotifications(principal: Principal): Promise<Notificati
       // Pending counter-offers on THIS employer's shifts — getNotifications()
       // used to call offersForUser("__none__"), a literal placeholder id that
       // matches nothing, so a freelancer's "reactie" never reached the bell.
+      // alleen klussen waarop je nog kunt kiezen: na de start + marge vervalt een reactie (lib/offers/verval.ts)
       prisma.shift.findMany({
-        where: { branch: bf, startsAt: { gte: new Date(now - 24 * 3600_000) } },
+        where: { branch: bf, startsAt: { gte: new Date(now - REACTIE_MARGE_MS) } },
         select: { id: true },
         take: 500,
       }),
@@ -203,8 +218,11 @@ export async function getNotifications(principal: Principal): Promise<Notificati
       out.push({
         id: `emp:offer:${o.id}`,
         kind: "offer",
-        title: "Nieuw tegenbod",
-        body: `${o.freelancerName} biedt € ${(o.proposedRateCents / 100).toFixed(2)}/u voor ${o.shiftTitle}.`,
+        title: o.proposedRateCents !== o.listedRateCents ? "Nieuw tegenbod" : "Nieuwe reactie",
+        body:
+          o.proposedRateCents !== o.listedRateCents
+            ? `${o.freelancerName} biedt € ${(o.proposedRateCents / 100).toFixed(2)}/u voor ${o.shiftTitle}.`
+            : `${o.freelancerName} wil ${o.shiftTitle} doen. Kies voor de klus begint.`,
         href: `/werkgever/diensten/${o.shiftId}`,
         at: o.at,
         urgent: true,

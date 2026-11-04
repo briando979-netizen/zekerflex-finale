@@ -181,3 +181,60 @@ describe("getMyWork — matched but not chosen", () => {
     expect(work.history).toHaveLength(0);
   });
 });
+
+describe("getMyWork — verlopen reacties en vervangingen", () => {
+  const H = 3_600_000;
+  const verleden = (id: string, title: string, uurGeleden: number) => ({
+    ...shiftRow(id, title),
+    startsAt: new Date(Date.now() - uurGeleden * H),
+    endsAt: new Date(Date.now() - (uurGeleden - 4) * H),
+  });
+  const reactie = (shiftId: string, status: string, proposedRateCents = 1500) => ({ ...acceptedOffer(shiftId), proposedRateCents, listedRateCents: 1500, status, respondedAt: null });
+  const leeg = () => {
+    freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
+    shiftAssignmentFindMany.mockResolvedValue([]);
+    modelAgreementFindMany.mockResolvedValue([]);
+    shiftMatchFindMany.mockResolvedValue([]);
+  };
+
+  it("een reactie zonder keuze op een klus die al begon staat in het archief als niet uitgekozen", async () => {
+    leeg();
+    offersForUser.mockResolvedValue([reactie("oud", "pending"), reactie("straks", "pending")]);
+    shiftFindMany.mockResolvedValue([verleden("oud", "Oude klus", 6), shiftRow("straks", "Klus morgen")]);
+
+    const work = await getMyWork("u1");
+
+    expect(work.pending.map((i) => i.shift.id)).toEqual(["straks"]);
+    expect(work.history).toHaveLength(1);
+    expect(work.history[0]).toMatchObject({ status: "rejected", rejectedKind: "expired", offerStatusLabel: "Niet uitgekozen" });
+    expect(work.history[0]?.shift.myOffer?.status).toBe("expired");
+  });
+
+  it("onderscheidt een afgewezen tegenbod van een gewone reactie die niet gekozen is", async () => {
+    leeg();
+    offersForUser.mockResolvedValue([reactie("a", "declined"), reactie("b", "declined", 1900), reactie("c", "expired")]);
+    shiftFindMany.mockResolvedValue([shiftRow("a", "A"), shiftRow("b", "B"), verleden("c", "C", 30)]);
+
+    const work = await getMyWork("u1");
+    const soort = Object.fromEntries(work.history.map((i) => [i.shift.id, i.rejectedKind]));
+    expect(soort).toEqual({ a: "notChosen", b: "counter", c: "expired" });
+  });
+
+  it("een voorbije klus met een open vervangingsverzoek gaat naar de uren, niet blijvend onder Uitgekozen", async () => {
+    leeg();
+    offersForUser.mockResolvedValue([]);
+    shiftFindMany.mockResolvedValue([]);
+    shiftAssignmentFindMany.mockResolvedValue([
+      { id: "asg9", acceptedAt: new Date(), cancelledAt: null, cancelReason: null, shift: verleden("shiftR", "Klus R", 8), timesheet: { id: "ts9", status: "DRAFT" } },
+    ]);
+    const { listReplacementRequests } = await import("@/lib/replacements/store");
+    vi.mocked(listReplacementRequests).mockResolvedValueOnce([
+      { id: "r1", at: new Date().toISOString(), userId: "u1", freelancerName: "Jan", assignmentId: "asg9", shiftId: "shiftR", shiftTitle: "Klus R", branch: "B", startsAt: new Date().toISOString(), note: "", status: "open", responses: [] },
+    ]);
+
+    const work = await getMyWork("u1");
+
+    expect(work.active).toHaveLength(0);
+    expect(work.hours.map((i) => [i.shift.id, i.status, i.replacementRequested])).toEqual([["shiftR", "hours", false]]);
+  });
+});

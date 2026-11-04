@@ -7,6 +7,7 @@ import { travelByMode, fastestMode, type ModeEstimate, type TravelModeKey } from
 import { detectSeries, type Series } from "@/lib/shifts/series";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/store";
+import { reactieVervalt } from "@/lib/offers/verval";
 import { tenantsBlockingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
@@ -574,7 +575,9 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       viaUitzendbureau: row.viaUitzendbureau,
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {
-    base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: ownOffer.status };
+    // begonnen zonder keuze: niet uitgekozen, niet meer "in afwachting" (lib/offers/verval.ts)
+    const verlopen = ownOffer.status === "pending" && reactieVervalt({ startsAt: new Date(base.startsAt), status: "" }, Date.now());
+    base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: verlopen ? "expired" : ownOffer.status };
   }
 
   const agreementType =

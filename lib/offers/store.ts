@@ -7,7 +7,11 @@ import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 // shift. Was local disk, unreliable on Vercel's serverless functions.
 // ---------------------------------------------------------------------------
 
-export type OfferStatus = "pending" | "accepted" | "declined" | "withdrawn";
+/**
+ * expired = niet uitgekozen omdat de klus begon (of verviel) zonder dat de
+ * opdrachtgever een keuze maakte; gezet door lib/offers/expire.ts.
+ */
+export type OfferStatus = "pending" | "accepted" | "declined" | "withdrawn" | "expired";
 
 export interface CounterOffer {
   id: string;

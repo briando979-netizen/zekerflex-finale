@@ -93,15 +93,19 @@ export async function getEmployerOverview(p: Principal): Promise<EmployerOvervie
     select: { name: true },
   });
 
+  // Een klus waarvan de eindtijd voorbij is, telt niet meer als open of komend: de
+  // status gaat na afloop niet vanzelf om, dus zonder datumgrens bleven oude, nooit
+  // ingevulde klussen hier voor altijd "wachten op invulling".
+  const nogNiet = { endsAt: { gte: new Date() } };
   const [openShifts, toApprove, upcoming, approvals, invoices, activeAssignments] = await Promise.all([
     prisma.shift.count({
-      where: { branch: branchFilter, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } },
+      where: { branch: branchFilter, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, ...nogNiet },
     }),
     prisma.timesheet.count({
       where: { branch: branchFilter, status: "SUBMITTED" },
     }),
     prisma.shift.findMany({
-      where: { branch: branchFilter, status: { notIn: ["CANCELLED", "COMPLETED"] } },
+      where: { branch: branchFilter, status: { notIn: ["CANCELLED", "COMPLETED"] }, ...nogNiet },
       select: {
         id: true,
         title: true,

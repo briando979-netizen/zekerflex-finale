@@ -740,9 +740,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 <p className="num font-display text-lg font-bold text-ink">{moneyExact(s.hourlyRateCents)}</p>
                 <p className="text-[11px] text-neutralx-400">{ft.card.earn(money(s.grossCents))}</p>
               </div>
-              <span className="pill-warn">
+              <span className={s.myOffer.status === "expired" || s.myOffer.status === "declined" ? "pill-neutral" : "pill-warn"}>
                 {D.responseSent} ·{" "}
-                {ft.card.offer[s.myOffer.status === "accepted" || s.myOffer.status === "declined" ? s.myOffer.status : "pending"]}
+                {ft.card.offer[s.myOffer.status === "accepted" || s.myOffer.status === "declined" || s.myOffer.status === "expired" ? s.myOffer.status : "pending"]}
               </span>
             </div>
           ) : s.isReplacement && upcoming ? (

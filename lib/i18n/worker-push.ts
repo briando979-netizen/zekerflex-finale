@@ -48,6 +48,9 @@ export interface WorkerPushTexts {
   profileBody: string;
   declinedTitle: string;
   declinedBody: (title: string) => string;
+  /** reactie vervallen: de klus begon zonder dat de opdrachtgever koos (lib/offers/expire.ts) */
+  notChosenTitle: string;
+  notChosenBody: (title: string) => string;
   followTitle: (company: string) => string;
   followMore: (extraDays: number) => string;
   geoTitle: (hours: number) => string;
@@ -94,6 +97,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Vul je gegevens in om te beginnen — daarna kun je direct op klussen reageren.",
     declinedTitle: "Reactie niet gekozen",
     declinedBody: (t) => `Voor "${t}" is iemand anders gekozen. Er staan nog genoeg andere klussen voor je klaar.`,
+    notChosenTitle: "Helaas niet uitgekozen",
+    notChosenBody: (t) => `Voor "${t}" ben je deze keer niet gekozen. Zoek een andere klus: er staan er genoeg voor je klaar.`,
     followTitle: (c) => `❤️ Nieuwe dienst bij ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dag" : "dagen"})`,
     geoTitle: (h) => `📍 Klus dichtbij — begint over ${h} uur`,
@@ -138,6 +143,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Fill in your details to get started — then you can respond to jobs right away.",
     declinedTitle: "Response not chosen",
     declinedBody: (t) => `Someone else was chosen for "${t}". There are plenty of other jobs waiting for you.`,
+    notChosenTitle: "Not selected this time",
+    notChosenBody: (t) => `You were not chosen for "${t}" this time. Find another job: there are plenty waiting for you.`,
     followTitle: (c) => `❤️ New shift at ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "day" : "days"})`,
     geoTitle: (h) => `📍 Job nearby — starts in ${h} ${h === 1 ? "hour" : "hours"}`,
@@ -182,6 +189,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Uzupełnij swoje dane, aby zacząć — potem od razu możesz reagować na zlecenia.",
     declinedTitle: "Twoja odpowiedź nie została wybrana",
     declinedBody: (t) => `Do „${t}” wybrano kogoś innego. Czeka na Ciebie wiele innych zleceń.`,
+    notChosenTitle: "Tym razem nie wybrano",
+    notChosenBody: (t) => `Tym razem nie wybrano Cię do „${t}”. Znajdź inne zlecenie: czeka na Ciebie wiele innych.`,
     followTitle: (c) => `❤️ Nowa zmiana w ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dzień" : "dni"})`,
     geoTitle: (h) => `📍 Zlecenie w pobliżu — zaczyna się za ${h} godz.`,
@@ -226,6 +235,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Completează-ți datele ca să începi — apoi poți răspunde imediat la joburi.",
     declinedTitle: "Răspunsul tău nu a fost ales",
     declinedBody: (t) => `Pentru „${t}” a fost ales altcineva. Te așteaptă multe alte joburi.`,
+    notChosenTitle: "Nu ai fost ales(ă) de data aceasta",
+    notChosenBody: (t) => `De data aceasta nu ai fost ales(ă) pentru „${t}”. Caută alt job: te așteaptă multe altele.`,
     followTitle: (c) => `❤️ Tură nouă la ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "zi" : "zile"})`,
     geoTitle: (h) => `📍 Job în apropiere — începe în ${h} ${h === 1 ? "oră" : "ore"}`,
@@ -270,6 +281,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     profileBody: "Заповніть свої дані, щоб почати — потім одразу зможете відгукуватися на роботи.",
     declinedTitle: "Вашу відповідь не обрано",
     declinedBody: (t) => `На «${t}» обрали іншу людину. На вас чекає багато інших робіт.`,
+    notChosenTitle: "Цього разу вас не обрано",
+    notChosenBody: (t) => `Цього разу вас не обрали на «${t}». Знайдіть іншу роботу: на вас чекає багато інших.`,
     followTitle: (c) => `❤️ Нова зміна в ${c}`,
     followMore: (n) => ` (+${n} дн.)`,
     geoTitle: (h) => `📍 Робота поруч — починається через ${h} год`,

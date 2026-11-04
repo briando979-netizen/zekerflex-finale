@@ -6,6 +6,7 @@ import { healAcceptedOffer } from "@/lib/matching/heal";
 import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
+import { REACTIE_MARGE_MS, reactieVervalt } from "@/lib/offers/verval";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -50,6 +51,11 @@ export interface MyWorkItem {
   clientName: string | null;
   offerRateCents: number | null;
   offerStatusLabel: string | null;
+  /**
+   * Waarom een item in het archief "rejected" is: tegenbod afgewezen, niet gekozen,
+   * of verlopen (de klus begon zonder keuze, lib/offers/verval.ts). Null bij andere statussen.
+   */
+  rejectedKind: "counter" | "notChosen" | "expired" | null;
   /** employer cancelled this after you were assigned → you may file a 50% claim */
   cancelledByEmployer: boolean;
 }
@@ -122,6 +128,7 @@ const OFFER_LABEL: Record<string, string> = {
   pending: "In afwachting",
   accepted: "Geaccepteerd",
   declined: "Afgewezen",
+  expired: "Niet uitgekozen",
 };
 
 export const SHIFT_SELECT = {
@@ -135,6 +142,7 @@ export const SHIFT_SELECT = {
   positions: true,
   branchId: true,
   viaUitzendbureau: true,
+  status: true,
   requiredSkill: { select: { name: true } },
   branch: { select: { name: true, city: true, latitude: true, longitude: true, tenant: { select: { id: true, name: true } } } },
   _count: { select: { assignments: { where: { cancelledAt: null } } } },
@@ -246,13 +254,18 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     if (!row) continue;
     const over = row.endsAt.getTime() < now;
     const shift = toShift(row, home);
-    shift.myOffer = { proposedRateCents: o.proposedRateCents, status: o.status };
+    // Een reactie waar niet op gekozen werd terwijl de klus al begon (of geannuleerd is)
+    // telt als niet uitgekozen, ook vóór de opruimronde (lib/offers/expire.ts) hem omzet.
+    const status = o.status === "pending" && reactieVervalt(row, now) ? "expired" : o.status;
+    shift.myOffer = { proposedRateCents: o.proposedRateCents, status };
+    const rejectedKind: MyWorkItem["rejectedKind"] =
+      status === "expired" ? "expired" : status === "declined" ? (o.proposedRateCents !== o.listedRateCents ? "counter" : "notChosen") : null;
     const item: MyWorkItem = {
       workKey: `o:${o.id}`,
       shift,
       assignmentId: null,
       // Voorbije geaccepteerde reactie → archief, niet meer onder "Uitgekozen".
-      status: o.status === "pending" ? "pending" : o.status === "accepted" ? (over ? "done" : "active") : "rejected",
+      status: status === "pending" ? "pending" : status === "accepted" ? (over ? "done" : "active") : "rejected",
       confirmedAt: null,
       replacementRequested: false,
       replacementRequestId: null,
@@ -263,7 +276,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientTenantId: null,
       clientName: null,
       offerRateCents: o.proposedRateCents,
-      offerStatusLabel: OFFER_LABEL[o.status] ?? o.status,
+      offerStatusLabel: OFFER_LABEL[status] ?? status,
+      rejectedKind,
       cancelledByEmployer: false,
     };
     // Each item lands in exactly the one bucket that matches its own status —
@@ -279,9 +293,11 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   // after the hours are handed in it moves to "Gearchiveerd".
   for (const a of assignments) {
     const shift = toShift(a.shift as ShiftRow, home);
-    const repl = replacementByAssignment.get(a.id);
-    const isReplacement = Boolean(repl);
     const over = a.shift.endsAt.getTime() < now;
+    // Een vervangingsverzoek telt alleen tot de klus begint; daarna gewoon uren of archief
+    // (anders bleef de klus voor altijd onder "Uitgekozen" hangen zonder uren in te vullen).
+    const repl = a.shift.startsAt.getTime() > now ? replacementByAssignment.get(a.id) : undefined;
+    const isReplacement = Boolean(repl);
     const ts = a.timesheet?.status ?? null;
     // Afgelopen klus met nog in te vullen of ingediende (nog niet goedgekeurde)
     // uren → "Uren"-bucket. Die blijft daar (ook met status "ingediend") tot de
@@ -303,6 +319,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientName: a.shift.branch.tenant.name,
       offerRateCents: null,
       offerStatusLabel: null,
+      rejectedKind: null,
       cancelledByEmployer: Boolean(
         a.cancelledAt && (a.cancelReason ?? "").toLowerCase().includes("opdrachtgever"),
       ),
@@ -342,6 +359,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientName: null,
       offerRateCents: null,
       offerStatusLabel: "Aanbod ontvangen",
+      rejectedKind: null,
       cancelledByEmployer: false,
     });
   }
@@ -356,11 +374,16 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   // item was ever built with offerRateCents: null + status "rejected" from
   // this source.
   const coveredShiftIds = new Set([...assignedShiftIds, ...offerShiftIds, ...pendingShiftIds]);
+  // Ook een aanbod waar je nooit op reageerde en waarvan de klus al begon: anders
+  // verdween het spoorloos uit "In afwachting" (alleen weergave; de match zelf blijft).
   const notChosen = await prisma.shiftMatch.findMany({
     where: {
       freelancerId: profile.id,
-      status: { in: ["DECLINED", "EXPIRED"] },
       shiftId: { notIn: [...coveredShiftIds] },
+      OR: [
+        { status: { in: ["DECLINED", "EXPIRED"] } },
+        { status: { in: ["NOTIFIED", "VIEWED"] }, respondedAt: null, shift: { startsAt: { lt: new Date(now - REACTIE_MARGE_MS) } } },
+      ],
     },
     select: { id: true, shift: { select: SHIFT_SELECT }, respondedAt: true, expiresAt: true, createdAt: true },
     orderBy: { createdAt: "desc" },
@@ -383,6 +406,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientName: null,
       offerRateCents: null,
       offerStatusLabel: null,
+      rejectedKind: "notChosen",
       cancelledByEmployer: false,
     });
   }

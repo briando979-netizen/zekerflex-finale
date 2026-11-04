@@ -5,6 +5,7 @@ import { notifyNearbyOpenShifts } from "@/lib/notifications/geo-push";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushDay, type WorkerPushTexts } from "@/lib/i18n/worker-push";
 import type { Locale } from "@/lib/i18n/config";
+import { ruimVerlopenReactiesOp } from "@/lib/offers/expire";
 
 // ---------------------------------------------------------------------------
 // Push notifications for werknemers (app + web). Each one is sent at most
@@ -15,6 +16,8 @@ import type { Locale } from "@/lib/i18n/config";
 //   soon      — ≈2 hours before
 //   start     — at the start "check in"
 //   profile   — "vul je gegevens in om te beginnen" (max 3×, ≥3 days apart)
+//   notchosen — "helaas niet uitgekozen": een reactie waar niet op gekozen werd
+//               terwijl de klus al begon (lib/offers/expire.ts ruimt die op)
 // sweepWorkerPushes() runs from the frequent notifications poll (throttled to
 // once per 4 minutes through KV) and from the daily cron, so it works without
 // a high-frequency scheduler.
@@ -140,14 +143,19 @@ async function profilePushes(now: Date): Promise<number> {
   return n;
 }
 
-export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number; geo: number }> {
+export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number; geo: number; verlopen: number }> {
   const [selected, reminders] = [await selectedPushes(now), await reminderPushes(now)];
+  // reacties en vervangingsverzoeken die bleven openstaan terwijl de klus al begon
+  const opruim = await ruimVerlopenReactiesOp(now).catch((err: unknown) => {
+    logger.warn("opruimen verlopen reacties mislukt", { error: err instanceof Error ? err.message : String(err) });
+    return { reacties: 0, seintjes: 0, vervangingen: 0 };
+  });
   // the profile nudge only in daytime (09–20h Amsterdam)
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: TZ }).format(now));
   const profile = hour >= 9 && hour < 20 ? await profilePushes(now) : 0;
   // geo-targeted push for soon-starting, still-open shifts (daytime only)
   const geo = hour >= 8 && hour < 21 ? await notifyNearbyOpenShifts(now).catch(() => 0) : 0;
-  return { selected, reminders, profile, geo };
+  return { selected, reminders, profile, geo, verlopen: opruim.reacties + opruim.vervangingen };
 }
 
 /** Called from frequently-hit endpoints: runs the sweep at most once per 4 minutes. */
@@ -158,7 +166,7 @@ export async function maybeSweepWorkerPushes(): Promise<void> {
   await kvSet(key, new Date().toISOString());
   try {
     const r = await sweepWorkerPushes();
-    if (r.selected + r.reminders + r.profile + r.geo > 0) logger.info("worker pushes sent", r);
+    if (r.selected + r.reminders + r.profile + r.geo + r.verlopen > 0) logger.info("worker pushes sent", r);
   } catch (err) {
     logger.warn("worker push sweep failed", { error: (err as Error).message });
   }

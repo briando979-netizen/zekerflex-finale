@@ -306,18 +306,25 @@ function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey
     return <p className="text-sm font-semibold text-crit">{w.cancelled}</p>;
   }
   if (item.status === "rejected") {
+    // niet uitgekozen of verlopen: meteen een alternatief aanbieden, en de kaart kunnen wegklikken
     return (
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-neutralx-500">
-          {item.offerRateCents ? w.counterDeclined : w.notChosen}
-        </p>
-        <button
-          type="button"
-          onClick={() => onHide(item.workKey)}
-          className="flex-shrink-0 text-xs font-medium text-neutralx-400 underline-offset-2 hover:text-neutralx-600 hover:underline"
-        >
-          {w.hide}
-        </button>
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-semibold text-neutralx-500">{item.rejectedKind === "counter" ? w.counterDeclined : w.notChosen}</p>
+          {item.rejectedKind === "expired" && <p className="mt-0.5 text-xs text-neutralx-500">{w.notChosenExpired}</p>}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link href="/dashboard/klussen" className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100">
+            {w.findOther} <span aria-hidden>→</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => onHide(item.workKey)}
+            className="flex-shrink-0 text-xs font-medium text-neutralx-500 underline-offset-2 hover:text-neutralx-700 hover:underline"
+          >
+            {w.hide}
+          </button>
+        </div>
       </div>
     );
   }

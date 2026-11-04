@@ -53,7 +53,7 @@ export async function gatherBriefingData(): Promise<BriefingData> {
   ] = await Promise.all([
     prisma.user.count({ where: { disabledAt: null } }),
     prisma.freelancerProfile.count(),
-    prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } } }),
+    prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, endsAt: { gte: new Date() } } }),
     prisma.timesheet.count({ where: { status: { in: ["SUBMITTED", "DISPUTED"] } } }),
     prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
     prisma.invoice.aggregate({

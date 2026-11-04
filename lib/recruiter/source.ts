@@ -37,7 +37,8 @@ const ACTIVE_MATCH = ["SCORED", "NOTIFIED", "VIEWED"] as const;
 /** Openstaande uitzend-vacatures met het aantal gescoorde kandidaten erbij. */
 export async function openUitzendVacancies(limit = 50): Promise<VacancySummary[]> {
   const shifts = await prisma.shift.findMany({
-    where: { viaUitzendbureau: true, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } },
+    // een vacature die al begon is niet meer te vullen: daar zoeken we geen kandidaten meer voor
+    where: { viaUitzendbureau: true, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gt: new Date() } },
     orderBy: { startsAt: "asc" },
     take: limit,
     select: {
