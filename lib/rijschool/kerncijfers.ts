@@ -29,6 +29,8 @@ export interface RijschoolKerncijfers {
   /** openstaande betalingen: aantal en bedrag */
   openBetalingen: number;
   openBetalingenCent: number;
+  /** berichten van leerlingen die de rijschool nog niet las (lib/rijschool/berichten.ts) */
+  ongelezenBerichten: number;
 }
 
 /** De kerncijfers van de rijschool van dit bedrijf, of null als het rijschool-pakket niet aanstaat. */
@@ -39,12 +41,13 @@ export async function rijschoolKerncijfers(tenantId: string, nu = new Date()): P
   const morgen = amsterdamStartOfDay(nu, 1);
   const overWeek = amsterdamStartOfDay(nu, 7);
   const gepland = { rijschoolId: r.id, status: "GEPLAND" as const };
-  const [statussen, lessenVandaag, lessenKomendeWeek, lopend, open] = await Promise.all([
+  const [statussen, lessenVandaag, lessenKomendeWeek, lopend, open, ongelezenBerichten] = await Promise.all([
     prisma.rijschoolLeerling.groupBy({ by: ["status"], where: { rijschoolId: r.id }, _count: { _all: true } }),
     prisma.rijschoolLes.count({ where: { ...gepland, start: { gte: vandaag, lt: morgen } } }),
     prisma.rijschoolLes.count({ where: { ...gepland, start: { gte: vandaag, lt: overWeek } } }),
     prisma.rijschoolLeerling.findMany({ where: { rijschoolId: r.id, status: { in: ["ACTIEF", "AANMELDING"] } }, select: { id: true }, take: 5000 }),
     prisma.rijschoolBetaling.aggregate({ where: { rijschoolId: r.id, status: "OPEN" }, _count: { _all: true }, _sum: { bedragCent: true } }),
+    prisma.rijschoolBericht.count({ where: { rijschoolId: r.id, vanLeerling: true, gelezenOm: null } }),
   ]);
   const saldi = await saldiVan(lopend.map((l) => l.id));
   const aantal = (s: string) => statussen.find((x) => x.status === s)?._count._all ?? 0;
@@ -61,5 +64,6 @@ export async function rijschoolKerncijfers(tenantId: string, nu = new Date()): P
     tegoedTekort: lopend.filter((l) => (saldi.get(l.id) ?? 0) < 0).length,
     openBetalingen: open._count._all,
     openBetalingenCent: open._sum.bedragCent ?? 0,
+    ongelezenBerichten,
   };
 }

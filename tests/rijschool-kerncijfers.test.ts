@@ -21,6 +21,7 @@ vi.mock("@/lib/prisma", () => ({
       }),
     },
     rijschoolBetaling: { aggregate: vi.fn(async () => ({ _count: { _all: 2 }, _sum: { bedragCent: 9500 } })) },
+    rijschoolBericht: { count: vi.fn(async () => 4) },
   },
 }));
 vi.mock("@/lib/rijschool/store", () => ({
@@ -45,6 +46,7 @@ describe("rijschoolKerncijfers", () => {
       tegoedTekort: 1,
       openBetalingen: 2,
       openBetalingenCent: 9500,
+      ongelezenBerichten: 4,
       beheerUrl: "/werkgever/rijschool",
     });
     expect(k?.siteUrl).toMatch(/\/rijschool\/rijschool-test$/);

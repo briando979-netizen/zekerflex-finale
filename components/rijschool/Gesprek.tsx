@@ -30,7 +30,7 @@ export function Gesprek({
   const [tekst, setTekst] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
-  const lijst = useRef<HTMLOListElement>(null);
+  const lijst = useRef<HTMLDivElement>(null);
   const eigenKleur = knop(/^#[0-9a-fA-F]{6}$/.test(kleur) ? kleur : "#1D4E89");
   const isEigen = (b: BerichtRij) => b.vanLeerling === (eigen === "leerling");
   const laatsteEigen = [...berichten].reverse().find(isEigen);
@@ -61,32 +61,35 @@ export function Gesprek({
       {berichten.length === 0 ? (
         <p className="rounded-xl bg-paper-soft p-4 text-sm text-neutralx-600">{leeg}</p>
       ) : (
-        <ol ref={lijst} role="log" aria-live="polite" aria-label={`Berichten met ${naamAnder}`} className="max-h-[60vh] space-y-2 overflow-y-auto rounded-xl bg-paper-soft p-3">
-          {berichten.map((b, i) => {
-            const dag = datumKort(b.at);
-            const nieuweDag = i === 0 || datumKort(berichten[i - 1]?.at ?? b.at) !== dag;
-            const mijn = isEigen(b);
-            return (
-              <li key={b.id}>
-                {nieuweDag && <p className="my-2 text-center text-xs font-medium text-neutralx-500">{metHoofdletter(dag)}</p>}
-                <div className={`flex ${mijn ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${mijn ? "rounded-br-md" : "rounded-bl-md bg-white ring-1 ring-hair"}`}
-                    style={mijn ? { background: eigenKleur.achtergrond, color: eigenKleur.tekst } : undefined}
-                  >
-                    {!mijn && !b.vanLeerling && b.afzender && <p className="mb-0.5 text-xs font-semibold text-neutralx-600">{b.afzender}</p>}
-                    <p className="whitespace-pre-line break-words">{b.tekst}</p>
-                    <p className={`mt-1 text-right text-[0.7rem] ${mijn ? "opacity-80" : "text-neutralx-500"}`}>
-                      <span className="sr-only">{mijn ? "Jij, " : `${b.afzender || naamAnder}, `}</span>
-                      {tijd(b.at)}
-                      {mijn && b.id === laatsteEigen?.id && b.gelezen ? " · gelezen" : ""}
-                    </p>
+        // role="log" op een omhullende div: op de <ol> zelf verliezen de <li>'s hun lijst (axe listitem)
+        <div ref={lijst} role="log" aria-live="polite" aria-label={`Berichten met ${naamAnder}`} className="max-h-[60vh] overflow-y-auto rounded-xl bg-paper-soft p-3">
+          <ol className="space-y-2">
+            {berichten.map((b, i) => {
+              const dag = datumKort(b.at);
+              const nieuweDag = i === 0 || datumKort(berichten[i - 1]?.at ?? b.at) !== dag;
+              const mijn = isEigen(b);
+              return (
+                <li key={b.id}>
+                  {nieuweDag && <p className="my-2 text-center text-xs font-medium text-neutralx-500">{metHoofdletter(dag)}</p>}
+                  <div className={`flex ${mijn ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${mijn ? "rounded-br-md" : "rounded-bl-md bg-white ring-1 ring-hair"}`}
+                      style={mijn ? { background: eigenKleur.achtergrond, color: eigenKleur.tekst } : undefined}
+                    >
+                      {!mijn && !b.vanLeerling && b.afzender && <p className="mb-0.5 text-xs font-semibold text-neutralx-600">{b.afzender}</p>}
+                      <p className="whitespace-pre-line break-words">{b.tekst}</p>
+                      <p className={`mt-1 text-right text-[0.7rem] ${mijn ? "opacity-80" : "text-neutralx-500"}`}>
+                        <span className="sr-only">{mijn ? "Jij, " : `${b.afzender || naamAnder}, `}</span>
+                        {tijd(b.at)}
+                        {mijn && b.id === laatsteEigen?.id && b.gelezen ? " · gelezen" : ""}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
 
       <form onSubmit={verstuur} className="space-y-2">
