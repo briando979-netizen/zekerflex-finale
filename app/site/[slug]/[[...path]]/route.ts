@@ -52,5 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   if (doel === "_zf/chat") return handleSiteChat(request, live, { ...BASE, root: `/site/${slug}/`, version: live.buildId, address: `${ORIGIN}/site/${slug}` });
   // the shop's order form (lib/sites/bestellingen.ts)
   if (doel === "_zf/bestelling") return handleSiteOrder(request, live, { ...BASE, root: `/site/${slug}/`, version: live.buildId, besteld: `/site/${slug}/besteld`, address: `${ORIGIN}/site/${slug}` });
+  // reserving a table (lib/sites/reserveringen.ts)
+  if (doel === "_zf/reservering") return handleSiteReservering(request, live, { ...BASE, root: `/site/${slug}/`, version: live.buildId, gereserveerd: `/site/${slug}/gereserveerd`, address: `${ORIGIN}/site/${slug}` });
   return handleSiteContact(request, live, { ...BASE, thanks: `/site/${slug}/bedankt`, address: `${ORIGIN}/site/${slug}` });
 }
