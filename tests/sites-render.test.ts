@@ -312,7 +312,9 @@ describe("ontwerpvoorstel voor een bedrijf", () => {
     const s = site({ voorstel });
     const html = renderPage(s, s.pages[0]!, { ...opts, noindex: false });
     expect(html).toContain("Ontwerpvoorstel van ZekerFlex voor Bakkerij &lt;script&gt;");
-    expect(html).toContain('die staat op <a href="https://bakkerij.nl" rel="noopener">bakkerij.nl</a>');
+    // zoals schwarzwald.zekerflex.com: wat de site kan, en de weg naar de echte site
+    expect(html).toContain("Dit is niet de officiële website van Bakkerij &lt;script&gt;");
+    expect(html).toContain('. <a href="/site/bakkerij/wat-kan-deze-site">Bekijk wat deze site kan</a> · <a href="https://bakkerij.nl" rel="noopener">Naar de huidige site</a></aside>');
     expect(html).toContain('<meta name="robots" content="noindex">'); // ook als de plek zelf wel geïndexeerd mag worden
     expect(html).not.toContain("application/ld+json");
     expect(renderSystemPage(s, "privacy", opts)).toContain("Ontwerpvoorstel van ZekerFlex");

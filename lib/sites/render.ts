@@ -1,5 +1,6 @@
 import { ldJson } from "@/lib/seo/json-ld";
 import { belevingBlok, belevingCss, metKicker, paginaKop, type BelevingCtx } from "@/lib/sites/beleving-render";
+import { functiesVoorBezoekers, functiesVoorJou, type Functie } from "@/lib/sites/wat-kan-deze-site";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
 import {
@@ -57,8 +58,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones). */
-const CSS_REV = 12;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page). */
+const CSS_REV = 13;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
@@ -90,7 +91,7 @@ main.zfc.wrap{max-width:820px;padding-top:28px;padding-bottom:56px}.zfc-uitleg{c
 export const stylesheetHref = (opts: Pick<RenderOptions, "root" | "version">) => `${opts.root}assets/site.css${opts.version ? `?v=${opts.version}.${CSS_REV}` : ""}`;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
-export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
+export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen", "wat-kan-deze-site"];
 
 /** The site's home address without a trailing slash ("/site/bakker"), or "/" on an own domain. */
 export const homeHref = (root: string) => (root.length > 1 ? root.slice(0, -1) : "/");
@@ -278,6 +279,7 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 .vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .demo-bar{display:block;background:#16191d;color:#fff;text-align:center;font-size:.9rem;line-height:1.5;padding:10px 20px}.demo-bar a{color:#fff;font-weight:700}form.contact :disabled{opacity:.6;cursor:not-allowed}
 .logo img{display:block;max-height:48px;width:auto}.socials{display:flex;flex-wrap:wrap;gap:6px 16px}
+ul.cards{list-style:none;margin:0;padding:0}.probeer{margin:14px 0 0}.probeer a{font-weight:700}
 .vac{display:flex;flex-direction:column;gap:6px}.vac .meta{color:var(--mute);font-size:.95rem}.vac .btn{padding:10px 18px;font-size:.9rem}
 .wa{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1c7c4b;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.wa svg{width:20px;height:20px;fill:currentColor}
 .card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
@@ -621,10 +623,12 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const naam = esc(ctx.bedrijf.naam);
   const officieel = ctx.voorstel?.officieel;
   // een aside met een naam: alle inhoud hoort in een landmark (toegankelijkheid)
+  // like schwarzwald.zekerflex.com: what it is, then "what this site can do" (…/wat-kan-deze-site) and the way out
+  const tour = `<a href="${esc(href(ctx, "wat-kan-deze-site"))}">Bekijk wat deze site kan</a>`;
   const bar = ctx.voorstel
-    ? `<aside class="demo-bar" aria-label="Over deze website">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}${officieel ? `; die staat op <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">${esc(officieel)}</a>` : ""}.</aside>`
+    ? `<aside class="demo-bar" aria-label="Over deze website">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}. ${tour}${officieel ? ` · <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">Naar de huidige site</a>` : ""}</aside>`
     : ctx.voorbeeld
-      ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
+      ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. ${tour} · <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
       : "";
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}${opts.chat ? chatLink(ctx) : ""}</body></html>`;
 }
@@ -706,6 +710,39 @@ export function renderSystemPage(site: RenderableSite, kind: "privacy" | "bedank
     return htmlDoc(ctx, fixedPage("bedankt", "bedankt", `Bedankt | ${c.naam}`), wrap(`<h1>Bedankt voor je bericht</h1>${paras("We hebben je bericht ontvangen en nemen zo snel mogelijk contact met je op.")}<p><a class="btn" href="${home}">Terug naar de website</a></p>`), opts, siteCss(site.theme, PREVIEW_FONTS));
   }
   return htmlDoc(ctx, fixedPage("404", "niet-gevonden", `Pagina niet gevonden | ${c.naam}`), wrap(`<h1>Deze pagina bestaat niet</h1>${paras("Misschien is hij verhuisd. Ga terug naar de homepagina.")}<p><a class="btn" href="${home}">Naar de homepagina</a></p>`), opts, siteCss(site.theme, PREVIEW_FONTS));
+}
+
+/**
+ * "Wat kan deze site" (…/wat-kan-deze-site), like the tour on schwarzwald.zekerflex.com: what visitors can
+ * do on this very site, each with a link to try it, and what the company gets behind the login
+ * (lib/sites/wat-kan-deze-site.ts). Only on a proposal or an example; null on a company's own site.
+ */
+export function renderFunctiesPagina(site: RenderableSite, opts: RenderOptions & { chat?: boolean | undefined }): string | null {
+  if (!site.voorstel && !site.voorbeeld) return null;
+  const ctx = context(site, opts);
+  const naam = esc(site.bedrijf.naam);
+  const bel = ctx.beleving;
+  const link = (raw: string) => {
+    if (ctx.preview) return "#";
+    if (raw.startsWith("_zf/")) return `${opts.root}${raw}`;
+    const [slug = "", anker] = raw.split("#");
+    const h = safeHref(slug, opts.root, ctx.pages);
+    return anker ? `${h}#${anker}` : h;
+  };
+  const kaarten = (lijst: Functie[]) =>
+    `<ul class="cards fn" role="list">${lijst
+      .map((f) => `<li class="card"><h3>${esc(f.titel)}</h3>${paras(f.tekst)}${f.link ? `<p class="probeer"><a href="${esc(link(f.link))}">Probeer het<span class="vh">: ${esc(f.titel.toLowerCase())}</span></a></p>` : ""}</li>`)
+      .join("")}</ul>`;
+  const kop = `${bel ? `<section class="pagekop"><div class="wrap"><p class="kicker">Rondleiding</p>` : `<section class="hero"><div class="wrap">`}<h1>Wat deze site voor ${naam} doet</h1><p>${ctx.voorstel ? `Een nieuwe website voor ${naam}, gemaakt door ZekerFlex van jullie eigen teksten en foto's.` : `Een voorbeeld van wat de websites van ZekerFlex kunnen. ${naam} bestaat niet.`} Hieronder wat bezoekers ermee kunnen, en wat je zelf krijgt achter de login.</p></div></section>`;
+  const bezoekers = `<section><div class="wrap"><p class="kicker">Voor je bezoekers</p><h2>Zelf regelen, wanneer het hen uitkomt</h2>${kaarten(functiesVoorBezoekers(site, { chat: opts.chat }))}</div></section>`;
+  const jij = `<section class="alt"><div class="wrap"><p class="kicker">Voor jou</p><h2>Het beheer achter de login</h2>${kaarten(functiesVoorJou(site))}</div></section>`;
+  const terug = esc(ctx.preview ? "#" : homeHref(opts.root));
+  const acties = ctx.voorstel
+    ? `<a class="btn${bel ? " dark" : ""}" href="mailto:info@zekerflex.com">Mail ZekerFlex</a><a class="btn line" href="${terug}">Terug naar de site</a>`
+    : `<a class="btn${bel ? " dark" : ""}" href="${esc(ctx.preview ? "#" : `${ctx.origin}/website-check`)}">Laat er gratis een maken</a><a class="btn line" href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak hem zelf</a>`;
+  const slot = `<section class="band${bel ? " bel" : ""}"><div class="wrap"><h2>${ctx.voorstel ? "Wil je deze website?" : "Zo'n website voor jouw bedrijf?"}</h2>${paras(ctx.voorstel ? "ZekerFlex zet hem op je eigen adres, met je eigen teksten en foto's, en houdt hem daarna bij." : "Vul het adres van je huidige website in, dan maken we er gratis een nieuwe van. Of bouw hem zelf.")}<p class="band-acts">${acties}</p></div></section>`;
+  const page = fixedPage("functies", "wat-kan-deze-site", `Wat kan deze site | ${site.bedrijf.naam}`);
+  return htmlDoc(ctx, page, kop + bezoekers + jij + slot, opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
 /** A page of the site's shop: a product, the overview, the order form, the check before ordering, the thank-you page. */

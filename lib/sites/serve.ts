@@ -5,7 +5,7 @@ import { sendMail } from "@/lib/mail";
 import { clientIp } from "@/lib/http/request";
 import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
-import { SITE_FONT_FILES, renderPage, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
+import { SITE_FONT_FILES, renderFunctiesPagina, renderPage, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
 import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer } from "@/lib/sites/winkel";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
 import { recordSiteView } from "@/lib/sites/stats";
@@ -119,6 +119,11 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
       return html(renderPage(snapshot, page, await pageOpts(page)));
     }
     if (first === "privacy" || first === "bedankt") return html(renderSystemPage(snapshot, first, opts));
+    // "Bekijk wat deze site kan": only on a proposal or an example (lib/sites/wat-kan-deze-site.ts)
+    if (first === "wat-kan-deze-site") {
+      const doc = renderFunctiesPagina(snapshot, { ...opts, chat: await chatAan({ id: siteId, createdAt: snapshot.createdAt }) });
+      if (doc) return html(doc);
+    }
     const q = new URL(request?.url ?? "http://zf/").searchParams;
     if (first === "winkel") {
       count({ slug: "winkel" });
