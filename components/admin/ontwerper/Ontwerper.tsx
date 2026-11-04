@@ -13,6 +13,7 @@ import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
 import { SiteFotos } from "@/components/admin/ontwerper/SiteFotos";
 import { TekstWijzigingen } from "@/components/admin/ontwerper/TekstWijzigingen";
+import { SeoPaneel } from "@/components/admin/ontwerper/SeoPaneel";
 import { Assistent } from "@/components/admin/ontwerper/Assistent";
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,7 @@ const TABS = [
   { id: "home", label: "Homepage" },
   { id: "paginas", label: "Pagina's" },
   { id: "menu", label: "Menu" },
+  { id: "seo", label: "SEO" },
   { id: "media", label: "Media" },
   { id: "ai", label: "AI-hulp" },
   { id: "geschiedenis", label: "Geschiedenis" },
@@ -289,7 +291,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
 
       <div className="grid gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
         <div className="space-y-3">
-          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="grid grid-cols-4 gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
+          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="grid grid-cols-3 gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -326,6 +328,11 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           {tab === "menu" ? (
             <div id="ontwerper-paneel-menu" role="tabpanel" aria-labelledby="ontwerper-tab-menu">
               <MenuPaneel onVernieuw={verversVoorbeeld} />
+            </div>
+          ) : null}
+          {tab === "seo" ? (
+            <div id="ontwerper-paneel-seo" role="tabpanel" aria-labelledby="ontwerper-tab-seo">
+              <SeoPaneel />
             </div>
           ) : null}
           {tab === "media" ? (

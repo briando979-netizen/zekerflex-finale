@@ -18,19 +18,14 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
-import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
+import { faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { getContentValues, lijstRegels } from "@/lib/content/store";
 
-const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
-const DESCRIPTION =
-  "Het Nederlandse platform voor freelance werk, flexwerk en uitzendwerk. Vind klussen op basis van vak en reistijd, kies je uitbetaalsnelheid en werk met afspraken en Wet DBA-risicosignalering. Bedrijven betalen € 3,50 per gewerkt uur, zonder abonnement.";
-
-export const metadata: Metadata = {
-  title: { absolute: TITLE },
-  description: DESCRIPTION,
-  keywords: [...SITE.keywords],
-  ...canonical("/", { title: TITLE, description: DESCRIPTION }),
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/", { keywords: [...SITE.keywords] });
+}
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [v, { indeling, isConcept }] = await Promise.all([getContentValues(), homeIndeling(searchParams)]);

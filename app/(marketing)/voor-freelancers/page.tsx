@@ -4,24 +4,23 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneWork } from "@/components/marketing/Scene";
-import { canonical } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 
-export const metadata: Metadata = {
-  title: "Flexwerk & zzp-opdrachten vinden",
-  description:
-    "Vind flexwerk en zzp-opdrachten die passen bij je vak en reistijd. Kies je uitbetaalsnelheid, verstuur geen facturen en bekijk Wet DBA-risicosignalen. Meedoen is gratis.",
-  keywords: [
-    "zzp klus vinden",
-    "flexwerk vinden",
-    "freelance opdrachten",
-    "bijbaan direct uitbetaald",
-    "zelfde dag uitbetaald",
-    "werk in de buurt",
-    "freelance werk zonder tussenpersoon",
-  ],
-  ...canonical("/voor-freelancers"),
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/voor-freelancers", {
+    keywords: [
+      "zzp klus vinden",
+      "flexwerk vinden",
+      "freelance opdrachten",
+      "bijbaan direct uitbetaald",
+      "zelfde dag uitbetaald",
+      "werk in de buurt",
+      "freelance werk zonder tussenpersoon",
+    ],
+  });
+}
 
 const BENEFITS = [
   {

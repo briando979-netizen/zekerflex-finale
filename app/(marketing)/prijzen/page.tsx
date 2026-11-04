@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
-import { canonical } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 
-export const metadata: Metadata = {
-  title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
-  description:
-    "Wat kost ZekerFlex? Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten, geen verrassingen.",
-  keywords: ["zekerflex kosten", "zzp platform kosten", "uitzendbureau tarief", "flexpool prijs"],
-  ...canonical("/prijzen"),
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/prijzen", { keywords: ["zekerflex kosten", "zzp platform kosten", "uitzendbureau tarief", "flexpool prijs"] });
+}
 
 const FAQ = [
   { q: "Zijn er verborgen kosten?", a: "Nee. Voor freelancers is meedoen gratis. Voor bedrijven zijn er alleen de platformkosten van € 3,50 per gewerkt uur. Btw wordt regulier toegepast." },

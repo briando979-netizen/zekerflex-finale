@@ -4,24 +4,23 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneApprove } from "@/components/marketing/Scene";
-import { canonical } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 
-export const metadata: Metadata = {
-  title: "Flexkrachten & zzp'ers inhuren",
-  description:
-    "Huur betrouwbare zzp'ers en flexkrachten in, precies wanneer je ze nodig hebt — horeca, retail, logistiek en meer. Automatische matching per vestiging, GPS check-in en Wet DBA-bewaking ingebouwd. € 3,50 per gewerkt uur, geen abonnement.",
-  keywords: [
-    "zzp'er inhuren",
-    "flexkrachten inhuren",
-    "personeel inhuren horeca",
-    "personeel inhuren retail",
-    "tijdelijk personeel vinden",
-    "uitzendkrachten inhuren",
-    "flexpool opzetten",
-  ],
-  ...canonical("/voor-bedrijven"),
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/voor-bedrijven", {
+    keywords: [
+      "zzp'er inhuren",
+      "flexkrachten inhuren",
+      "personeel inhuren horeca",
+      "personeel inhuren retail",
+      "tijdelijk personeel vinden",
+      "uitzendkrachten inhuren",
+      "flexpool opzetten",
+    ],
+  });
+}
 
 const BLOCKS = [
   {

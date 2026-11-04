@@ -3,17 +3,13 @@ import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives
 import { Photo } from "@/components/marketing/Photo";
 import { SceneTeam } from "@/components/marketing/Scene";
 import { OpenApplicationForm } from "@/components/marketing/OpenApplicationForm";
-import { canonical } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 
-export const metadata: Metadata = {
-  title: "Over ZekerFlex",
-  description:
-    "ZekerFlex is opgebouwd, bedacht en zelf geschreven door oprichter Briando van Essen — een Nederlands platform voor flexibel werk dat eerlijk, snel en zeker hoort te zijn.",
-  authors: [{ name: "Briando van Essen" }],
-  creator: "Briando van Essen",
-  ...canonical("/over-ons"),
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/over-ons", { authors: [{ name: "Briando van Essen" }], creator: "Briando van Essen" });
+}
 
 export default async function OverOnsPage() {
   // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
