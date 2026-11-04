@@ -67,7 +67,8 @@ export function SjabloonGalerij({
   const kaarten = gekozenSjabloon && ingeklapt && !zichtbaar.includes(gekozenSjabloon) ? [gekozenSjabloon, ...zichtbaar.slice(0, EERST - 1)] : zichtbaar;
 
   return (
-    <div>
+    // min-w-0: nooit zo breed als de rij branche-knoppen (die scrollt zelf)
+    <div className="min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="field-label">{kop} <span className="font-normal text-neutralx-500">(optioneel)</span></p>
         <label className="w-full sm:w-56">
@@ -121,7 +122,7 @@ export function SjabloonGalerij({
                     )}
                   </span>
                   <span className="flex flex-1 flex-col px-2.5 py-2">
-                    <span className="text-sm font-semibold leading-snug text-ink">{t.label}</span>
+                    <span className="text-sm font-semibold leading-snug text-ink [overflow-wrap:anywhere] hyphens-auto">{t.label}</span>
                     <span className="mt-0.5 text-xs text-neutralx-500">vanaf {euro(t.rateCents)}/u</span>
                   </span>
                 </button>

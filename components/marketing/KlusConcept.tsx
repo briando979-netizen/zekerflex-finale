@@ -260,8 +260,8 @@ export function KlusConcept({
         )}
       </form>
 
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-        <div className="space-y-5" onChange={used}>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
+        <div className="min-w-0 space-y-5" onChange={used}>
           <Groep title="Wat moet er gebeuren?">
             <div className="min-w-0 sm:col-span-2">
               <SjabloonGalerij

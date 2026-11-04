@@ -192,8 +192,9 @@ export function NewShiftForm({
   const dayOptions = useMemo(() => extraDayOptions(startsAt ? startsAt.slice(0, 10) : amsterdamDayKey(new Date())), [startsAt]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-      <form action={formAction} className="space-y-7">
+    // grid-cols-1 + minmax(0,…): anders wordt de kolom zo breed als de rij branche-knoppen van de galerij (4 nov: pagina 2552px breed)
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <form action={formAction} className="min-w-0 space-y-7">
         {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
         {fromWebsite && (
           <p role="status" className="rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
