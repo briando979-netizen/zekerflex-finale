@@ -43,6 +43,12 @@ const TOOLS = [
     title: "Gratis website-check",
     body: "Hoe snel, vindbaar en veilig is je website? Binnen een halve minuut een rapport in gewone taal.",
   },
+  {
+    href: "/review-check",
+    who: "Voor ondernemers",
+    title: "Gratis review-check",
+    body: "Hoe scoort je bedrijf op Google, naast de zaken bij jou in de buurt? Met verbeterpunten en voorbeeldantwoorden.",
+  },
 ];
 
 export default function RekentoolsPage() {

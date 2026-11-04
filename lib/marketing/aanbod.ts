@@ -190,6 +190,20 @@ export const AANBOD: AanbodItem[] = [
     start: { label: "Check mijn website", href: "/website-check" },
   },
   {
+    slug: "review-check",
+    pijler: "online",
+    naam: "Gratis review-check",
+    kort: "Zie hoe je bedrijf op Google scoort, naast de zaken bij jou in de buurt.",
+    tekst:
+      "Zoek je bedrijf op of plak je Google-link. Je ziet je score, hoe je het doet ten opzichte van de buurt en wat je kunt doen om meer en betere reviews te krijgen, met voorbeeldantwoorden op je reviews.",
+    punten: ["Score en positie in de buurt", "Wat klanten vaak noemen", "Concrete verbeterpunten", "Voorbeeldantwoorden op je reviews"],
+    voorWie: "Zaken die in de buurt gevonden willen worden",
+    prijs: "Gratis",
+    status: "beschikbaar",
+    pagina: "/review-check",
+    start: { label: "Check mijn reviews", href: "/review-check" },
+  },
+  {
     slug: "google-reviews",
     pijler: "online",
     naam: "Meer Google-reviews",
