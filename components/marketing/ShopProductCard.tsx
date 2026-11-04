@@ -64,6 +64,15 @@ export function ShopProductCard({
         )}
         {p.altImageUrl && hovered && <Image src={p.altImageUrl} alt="" fill sizes={sizes} className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100" />}
         {p.label && <span className="absolute left-2 top-2 rounded-md bg-money-soft px-2 py-1 text-[11px] font-bold text-money-ink">{p.label}</span>}
+        <button
+          type="button"
+          aria-label={`${fav ? t.shop.removeFromFavorites : t.shop.addToFavorites}: ${p.name}`}
+          aria-pressed={fav}
+          onClick={() => wishlist.toggle(p.id)}
+          className={`absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/95 shadow-e1 transition hover:bg-white ${fav ? "text-crit" : "text-neutralx-600 hover:text-ink"}`}
+        >
+          <IconHeart filled={fav} />
+        </button>
       </div>
 
       <p className="mt-3 text-[12px] text-neutralx-500">{p.category === "Cadeaus" ? t.shop.navTeams : p.category}</p>
@@ -91,31 +100,25 @@ export function ShopProductCard({
       </p>
       <p className="mt-0.5 text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: SELLER })}</p>
 
-      <div className="relative z-10 mt-auto flex items-center gap-2 pt-3">
+      <div className="relative z-10 mt-auto pt-3">
         {single ? (
           <button
             type="button"
             onClick={quickAdd}
             disabled={single.stock <= 0}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-[13px] font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-neutralx-300"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-500 px-2 text-[12px] font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-neutralx-300 min-[400px]:text-[13px] sm:gap-2 sm:px-3"
           >
-            <IconCart />
+            {/* op een smalle telefoon past alleen de tekst */}
+            <span className="hidden min-[400px]:inline-flex">
+              <IconCart />
+            </span>
             <span>{added ? "✓" : t.shop.addToCart}</span>
           </button>
         ) : href ? (
-          <Link href={href} className="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-brand-500 px-3 text-[13px] font-bold text-brand-600 transition hover:bg-brand-50">
+          <Link href={href} className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-lg border border-brand-500 px-2 text-[12px] font-bold text-brand-600 transition hover:bg-brand-50 min-[400px]:text-[13px] sm:px-3">
             {t.shop.chooseOptionShort}
           </Link>
         ) : null}
-        <button
-          type="button"
-          aria-label={`${fav ? t.shop.removeFromFavorites : t.shop.addToFavorites}: ${p.name}`}
-          aria-pressed={fav}
-          onClick={() => wishlist.toggle(p.id)}
-          className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border transition ${fav ? "border-crit/30 bg-crit/5 text-crit" : "border-hair text-neutralx-600 hover:border-hairstrong hover:text-ink"}`}
-        >
-          <IconHeart filled={fav} />
-        </button>
       </div>
       <span role="status" className="sr-only">
         {added ? fmt(t.shop.addedToCart, { n: count }) : ""}
