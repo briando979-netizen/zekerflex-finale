@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { ldJson } from "@/lib/seo/json-ld";
+import { getPrincipal, hasRole } from "@/lib/auth";
+import { zichtbareSecties, type HomeIndeling, type HomeSectie } from "@/lib/ontwerp/home";
+import { getConceptHomeIndeling, getLiveHomeIndeling } from "@/lib/ontwerp/home-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
@@ -26,11 +29,18 @@ export const metadata: Metadata = {
   ...canonical("/", { title: TITLE, description: DESCRIPTION }),
 };
 
-export default async function HomePage() {
-  const v = await getContentValues();
+export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [v, { indeling, isConcept }] = await Promise.all([getContentValues(), homeIndeling(searchParams)]);
   const t = (k: string) => v[k] ?? "";
+  // de blokken onder de kop, in de volgorde uit de Site-ontwerper (tabblad Homepage); zonder eigen indeling de standaard
+  const zichtbaar = zichtbareSecties(indeling);
   return (
     <>
+      {isConcept ? (
+        <div className="bg-amber-100 px-4 py-2 text-center text-sm font-semibold text-amber-900" role="status">
+          Concept-voorbeeld van de homepage-indeling: alleen jij ziet dit.
+        </div>
+      ) : null}
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
@@ -60,7 +70,9 @@ export default async function HomePage() {
         }
       />
 
-      {/* ──────────────────────────────────────────────────────── TRUST BAND */}
+      {toonSecties(zichtbaar, {
+      // vertrouwensbalk
+      vertrouwen: (
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
         <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60" data-cms-key="trust.label">{t("trust.label")}</span>
@@ -91,13 +103,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─────────────────────────────────────── AANBOD: WAAR BEN JE NAAR OP ZOEK? */}
+      ),
+      // aanbod: waar ben je naar op zoek?
+      aanbod: (
       <AanbodKiezer />
 
-      {/* ──────────────────────────────────────────────────── BRANCHES */}
+      ),
+      branches: (
       <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
 
-      {/* ─────────────────────────────────────────────────── HOE HET WERKT */}
+      ),
+      hoe: (
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
@@ -131,9 +147,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ────────────────────────────────────────────── SHIFT SHOWCASE */}
-
-      {/* ───────────────────────────────────────────── SPLIT · FREELANCERS */}
+      ),
+      freelancers: (
       <ShowcaseSplit
         keys={{ eyebrow: "fl.eyebrow", title: "fl.title", body: "fl.body" }}
         eyebrow={t("fl.eyebrow")}
@@ -150,7 +165,8 @@ export default async function HomePage() {
         photo={<Photo name="freelancer" fallback={<SceneWork />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
       />
 
-      {/* ───────────────────────────────────────────────── SPLIT · BEDRIJVEN */}
+      ),
+      bedrijven: (
       <ShowcaseSplit
         reverse
         tone="ink"
@@ -169,7 +185,8 @@ export default async function HomePage() {
         photo={<Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
       />
 
-      {/* ──────────────────────────────────────────── DRIE WERKVORMEN */}
+      ),
+      werkvormen: (
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
@@ -232,7 +249,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ────────────────────────────────────────────────────── STATS BAND */}
+      ),
+      cijfers: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-70" aria-hidden />
         <div className="shell-4k relative py-24 lg:py-32">
@@ -252,7 +270,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─────────────────────────────────────────────────────── FEATURES */}
+      ),
+      functies: (
       <section className="relative bg-paper-soft">
         <div className="shell-4k py-28 lg:py-36">
           <Reveal>
@@ -275,7 +294,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─────────────────────────────────────────────────── COMPLIANCE */}
+      ),
+      zekerheid: (
       <section className="relative bg-paper">
         <div className="shell-4k grid gap-16 py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
           <Reveal>
@@ -300,7 +320,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ──────────────────────────────────────────────────── TESTIMONIAL */}
+      ),
+      citaat: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-60" aria-hidden />
         <div className="shell-4k relative py-28 lg:py-36">
@@ -317,7 +338,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ────────────────────────────────────────────────────────── FAQ */}
+      ),
+      vragen: (
       <section className="relative bg-paper-soft">
         <div className="shell-4k grid gap-14 py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
           <Reveal>
@@ -330,10 +352,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ────────────────────────────────────────────────────────── APP */}
+      ),
+      app: (
       <AppDownload />
 
-      {/* ────────────────────────────────────────────────────────── CTA */}
+      ),
+      oproep: (
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
         <div className="shell-4k relative py-28 lg:py-36">
@@ -355,8 +379,28 @@ export default async function HomePage() {
           </Reveal>
         </div>
       </section>
+      ),
+      })}
     </>
   );
+}
+
+/* ─────────────────────────────────────────────────── indeling (ontwerper) */
+
+/** Live indeling; een platformbeheerder ziet met ?concept=1 het concept (het voorbeeld in de Site-ontwerper). */
+async function homeIndeling(searchParams: Promise<Record<string, string | string[] | undefined>>): Promise<{ indeling: HomeIndeling | null; isConcept: boolean }> {
+  const sp = await searchParams.catch(() => ({}) as Record<string, string | string[] | undefined>);
+  if (sp.concept === "1") {
+    const principal = await getPrincipal().catch(() => null);
+    if (principal && hasRole(principal, "PLATFORM_ADMIN")) {
+      return { indeling: await getConceptHomeIndeling().catch(() => null), isConcept: true };
+    }
+  }
+  return { indeling: await getLiveHomeIndeling().catch(() => null), isConcept: false };
+}
+
+function toonSecties(volgorde: HomeSectie[], blokken: Record<HomeSectie, ReactNode>) {
+  return volgorde.map((id) => <Fragment key={id}>{blokken[id]}</Fragment>);
 }
 
 /* ─────────────────────────────────────────────────────── showcase split */

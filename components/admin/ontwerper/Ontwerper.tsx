@@ -10,6 +10,7 @@ import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
 import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
+import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
 import { Assistent } from "@/components/admin/ontwerper/Assistent";
 
 // ---------------------------------------------------------------------------
@@ -22,6 +23,7 @@ import { Assistent } from "@/components/admin/ontwerper/Assistent";
 const TABS = [
   { id: "stijl", label: "Stijl" },
   { id: "teksten", label: "Teksten" },
+  { id: "home", label: "Homepage" },
   { id: "paginas", label: "Pagina's" },
   { id: "menu", label: "Menu" },
   { id: "media", label: "Media" },
@@ -306,6 +308,12 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           <div id="ontwerper-paneel-teksten" role="tabpanel" aria-labelledby="ontwerper-tab-teksten" hidden={tab !== "teksten"}>
             <TekstenPaneel gekozen={gekozenTekst} onKies={tekstKeuze} onTeksten={setTeksten} injectie={injectie} />
           </div>
+          {/* het concept staat op de server, dus dit paneel mag verdwijnen als je wisselt */}
+          {tab === "home" ? (
+            <div id="ontwerper-paneel-home" role="tabpanel" aria-labelledby="ontwerper-tab-home">
+              <HomePaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
+            </div>
+          ) : null}
           {/* blijft ook bestaan: een half bewerkte pagina gaat niet verloren als je even naar Stijl gaat */}
           <div id="ontwerper-paneel-paginas" role="tabpanel" aria-labelledby="ontwerper-tab-paginas" hidden={tab !== "paginas"}>
             <PaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
