@@ -339,6 +339,9 @@ export interface RijkeFeiten extends BusinessFacts {
 
 const eerste = <T>(...xs: (T | null | undefined)[]): T | null => xs.find((x) => x !== null && x !== undefined) ?? null;
 
+/** Kopjes uit een voettekst of menu die geen dienst zijn ("Handige links" stond live als dienst). */
+const GEEN_DIENST = /^(handige links|nuttige links|quick ?links|links|direct naar|snel naar|informatie|meer informatie|meer weten|volg ons|social media|sociale media|downloads?|klantenservice|algemeen|contactgegevens|bereikbaarheid|sitemap|zoeken)[.:!]?$/i;
+
 /** Alle gelezen pagina's tot één set feiten: algemene gegevens van de homepage, de rest van de pagina die erover gaat. */
 export function voegSamen(paginas: GelezenPagina[], nu = new Date()): RijkeFeiten {
   const home = paginas.find((p) => p.soort === "home") ?? paginas[0];
@@ -349,11 +352,11 @@ export function voegSamen(paginas: GelezenPagina[], nu = new Date()): RijkeFeite
   const contact = van("contact")[0];
   const volgorde = (...soorten: PaginaSoort[]) => [...soorten.flatMap(van), ...per.filter((p) => !soorten.includes(p.soort))];
 
-  // diensten: eerst van de aanbodpagina's, dan de homepage; geen vragen als dienst
+  // diensten: eerst van de aanbodpagina's, dan de homepage; geen vragen en geen kopjes uit een voettekst of menu
   const secties: BusinessFacts["secties"] = [];
   for (const p of volgorde("aanbod", "home")) {
     for (const s of p.f.secties) {
-      if (s.kop.endsWith("?")) continue;
+      if (s.kop.endsWith("?") || GEEN_DIENST.test(s.kop.trim())) continue;
       const al = secties.findIndex((x) => x.kop.toLowerCase() === s.kop.toLowerCase());
       // dezelfde dienst op twee pagina's: de versie mét uitleg wint
       if (al >= 0) {

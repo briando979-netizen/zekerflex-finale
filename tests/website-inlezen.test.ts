@@ -110,7 +110,8 @@ describe("voegSamen", () => {
     const home = `<html><head><title>Bakkerij Jansen | Utrecht</title><meta property="og:site_name" content="Bakkerij Jansen"></head><body>
       <img src="/logo.png" alt="logo"><img src="/home.jpg" width="1600" height="900">
       <p>Bakkerij Jansen bakt elke ochtend vers brood, banket en taarten op bestelling voor heel Utrecht en omgeving.</p>
-      <h2>Brood</h2><p>Desem, volkoren en meergranen, elke ochtend vers uit de oven.</p><a href="tel:0612345678">bel</a></body></html>`;
+      <h2>Brood</h2><p>Desem, volkoren en meergranen, elke ochtend vers uit de oven.</p><a href="tel:0612345678">bel</a>
+      <footer><h3>Handige links</h3><p>Algemene voorwaarden, privacy en vacatures bij ons bedrijf.</p></footer></body></html>`;
     const aanbod = `<html><body><h2>Taarten op bestelling</h2><p>Voor verjaardagen, bruiloften en zomaar, met jouw eigen tekst erop.</p><h2>Brood</h2><p>dubbel</p><img src="/taart.jpg"></body></html>`;
     const contact = `<html><body><p>Dorpsstraat 1, 3511 AB Utrecht</p><p>Maandag Gesloten</p><p>Di t/m za 8:00 - 17:00</p><p>Sinds 1987 aan de Dorpsstraat.</p></body></html>`;
     const f = voegSamen(
