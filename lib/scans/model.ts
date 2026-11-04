@@ -101,7 +101,7 @@ export const isTestEmail = (email: string) => /@([^@]+\.)?example\.(com|net|org)
 
 // --- deal op maat ------------------------------------------------------------------
 
-export type Branche = "horeca" | "rijschool" | "bouw" | "zorg" | "schoonmaak" | "logistiek" | "algemeen";
+export type Branche = "horeca" | "rijschool" | "bouw" | "zorg" | "schoonmaak" | "logistiek" | "kapper" | "garage" | "algemeen";
 
 export interface DealPrijzen {
   /** nieuwe website, eenmalig, en de prijs met introductiekorting als er nog plekken zijn */
@@ -250,7 +250,8 @@ export function dealOpties(d: DealInput, p: DealPrijzen): DealOptie[] {
       aanbevolen: true,
     });
   }
-  if (d.branche === "horeca" || d.branche === "bouw" || d.branche === "schoonmaak" || d.branche === "logistiek" || d.branche === "zorg") {
+  // a salon (stylists for the holidays) and a garage (the tyre weeks) hire extra hands too
+  if (d.branche === "horeca" || d.branche === "bouw" || d.branche === "schoonmaak" || d.branche === "logistiek" || d.branche === "zorg" || d.branche === "kapper" || d.branche === "garage") {
     opties.push({
       id: "personeel",
       naam: "Personeel inhuren",

@@ -112,6 +112,11 @@ describe("voorstel op maat", () => {
     expect(o.find((x) => x.id === "nieuwe-website")).toMatchObject({ eenmaligCent: 49500, prijsTekst: null });
   });
 
+  it("een kapper en een garage huren ook extra handen in; een adviesbureau krijgt geen personeel aangeraden", () => {
+    for (const branche of ["kapper", "garage"] as const) expect(dealOpties({ ...INPUT, branche }, PRIJZEN).some((x) => x.id === "personeel"), branche).toBe(true);
+    expect(dealOpties({ ...INPUT, branche: "algemeen" }, PRIJZEN).some((x) => x.id === "personeel")).toBe(false);
+  });
+
   it("een review-scan raadt Google-reviews aan, geen nieuwe website", () => {
     const o = dealOpties({ ...INPUT, soort: "reviews", branche: "algemeen", googleRating: 4.1, googleAantal: 23, nieuweSite: false }, PRIJZEN);
     expect(o.filter((x) => x.aanbevolen).map((x) => x.id)).toEqual(["google-reviews"]);

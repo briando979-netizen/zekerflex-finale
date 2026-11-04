@@ -14,7 +14,7 @@ import { scanSleutel, type Branche, type ScanLog } from "@/lib/scans/model";
 // mag nooit mislukken door het logboek.
 // ---------------------------------------------------------------------------
 
-const TEMPLATE_BRANCHES = new Set<Branche>(["horeca", "bouw", "schoonmaak", "logistiek", "zorg", "algemeen"]);
+const TEMPLATE_BRANCHES = new Set<Branche>(["horeca", "bouw", "schoonmaak", "logistiek", "zorg", "kapper", "garage", "algemeen"]);
 export function brancheVan(tekst: string): Branche {
   if (/rijschool|autorijschool|rijles|driving school/i.test(tekst)) return "rijschool";
   const id = templateFor(tekst).id as Branche;
