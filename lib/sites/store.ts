@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvListKeys, kvListValues, kvSet } from "@/lib/storage/kv";
 import type { CleanImage } from "@/lib/media/clean-image";
 import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain, type SiteProposalMark } from "@/lib/sites/types";
 import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
@@ -220,6 +220,29 @@ export async function transferSite(siteId: string, toTenantId: string, by: { use
   for (const b of builds) await kvDelete(buildKey(siteId, b.id));
   await recordAudit({ category: "SALES", action: "site.transferred", actorUserId: by.userId, summary: `Website ${site.slug} overgezet naar een bedrijf`, targetType: "site", targetId: siteId, metadata: { from: site.tenantId, to: toTenantId } });
   return next;
+}
+
+/** The tenant of a site the free website check made (lib/website-check/nieuwe-site.ts): a proposal nobody owns. */
+export const isCheckProposalTenant = (tenantId: string) => tenantId.startsWith("voorstel:wc-");
+
+/**
+ * Remove a site the free website check made, once it has expired: its address,
+ * snapshots, messages and photos on disk. Only such a site (its own tenant and
+ * still a proposal): a company's site or a proposal from sales is never touched.
+ */
+export async function deleteCheckProposalSite(id: string): Promise<boolean> {
+  const site = await getSite(id);
+  if (!site || !site.voorstel || !isCheckProposalTenant(site.tenantId)) return false;
+  for (const b of site.builds) await kvDelete(buildKey(id, b.id));
+  for (const k of await kvListKeys(contactPrefix(id), 1000)) await kvDelete(k);
+  if ((await kvGet<string>(slugKey(site.slug))) === id) await kvDelete(slugKey(site.slug));
+  if ((await kvGet<string>(tenantKey(site.tenantId))) === id) await kvDelete(tenantKey(site.tenantId));
+  await kvDelete(domainKey(id));
+  await kvDelete(siteKey(id));
+  // isSiteId guards the path: never anything outside storage/sitebuilder/<id>
+  if (isSiteId(id)) await rm(path.join(SITE_BUILDER_DIR, id), { recursive: true, force: true });
+  await recordAudit({ category: "SALES", action: "site.check-proposal-removed", actorUserId: null, summary: `Verlopen voorbeeldsite ${site.slug} van de gratis website-check opgeruimd`, targetType: "site", targetId: id });
+  return true;
 }
 
 /** Give a site's address back (a withdrawn proposal), so a real company or a new proposal can have it. The site keeps its data. */

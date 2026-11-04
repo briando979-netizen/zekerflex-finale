@@ -2,9 +2,11 @@ import { randomBytes } from "node:crypto";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { kvGet, kvSet } from "@/lib/storage/kv";
+import { recordCronRun } from "@/lib/metrics";
+import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 import { buildProposalSite } from "@/lib/sites/proposal-site";
-import { getSite } from "@/lib/sites/store";
+import { deleteCheckProposalSite, getSite, isCheckProposalTenant } from "@/lib/sites/store";
+import type { SiteDoc } from "@/lib/sites/types";
 import { scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { extractBusiness } from "@/lib/website-check/proposal";
@@ -21,9 +23,13 @@ import { getWebsiteCheck, markCheckSite, runWebsiteCheck, type NieuweSite, type 
 // het scherm. Eén site per website tegelijk; wie dezelfde site opnieuw checkt,
 // krijgt die terug.
 //   KV "website-check-site:<host>" — de nieuwe site van een website (zolang hij geldig is)
+// Elke nacht ruimt ruimVerlopenSitesOp ze een week na het verlopen op, met de
+// foto's op schijf (cron "website-check-opruimen").
 // ---------------------------------------------------------------------------
 
 export const NIEUWE_SITE_DAGEN = 30;
+/** Zo lang na het verlopen toont de link nog "verlopen" (in een lead of een gedeeld rapport), daarna gaat hij weg. */
+export const OPRUIM_NA_DAGEN = 7;
 
 /** Wat een voorstel bewust anders doet (noindex, geen robots.txt-regels en geen LocalBusiness), telt niet mee in "na". */
 const ALLEEN_VOORSTEL = new Set(["noindex", "robots", "jsonld"]);
@@ -52,6 +58,29 @@ async function meet(slug: string): Promise<number | null> {
     logger.info("website check new site not measured", { slug, reason: String(err) });
     return null;
   }
+}
+
+/**
+ * Ruimt de voorbeeldsites van de gratis check op die langer dan OPRUIM_NA_DAGEN verlopen zijn:
+ * adres, versies, berichten en foto's (lib/sites/store.ts deleteCheckProposalSite raakt
+ * alleen zulke sites, nooit die van een bedrijf of een voorstel van sales).
+ */
+export async function ruimVerlopenSitesOp(now = Date.now()): Promise<{ opgeruimd: number }> {
+  const grens = now - OPRUIM_NA_DAGEN * 86_400_000;
+  const sites = await kvListValues<SiteDoc>("site:", 5000);
+  let opgeruimd = 0;
+  for (const s of sites) {
+    if (!s || typeof s.id !== "string" || typeof s.tenantId !== "string" || !isCheckProposalTenant(s.tenantId) || !s.voorstel) continue;
+    if (!(Date.parse(s.voorstel.verloopt) < grens)) continue;
+    if (await deleteCheckProposalSite(s.id)) opgeruimd++;
+  }
+  // de verwijzing per website gaat mee (een nieuwe check bouwt dan gewoon een nieuwe site)
+  for (const { key, value } of await kvListEntries<NieuweSite>("website-check-site:", 5000)) {
+    if (!value || !(Date.parse(value.verloopt) >= grens)) await kvDelete(key);
+  }
+  recordCronRun("website-check-opruimen", true);
+  if (opgeruimd) logger.info("website check sites removed", { opgeruimd });
+  return { opgeruimd };
 }
 
 /** Maak (of geef terug) de nieuwe website bij een check. */

@@ -34,6 +34,7 @@ cat > /etc/crontabs/root <<EOF
 */5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/website/uptime"
 0 6 * * 1 wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website/weekly-check"
 30 1 * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/website/site-backups"
+45 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website-check/opruimen"
 0 17 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rijschool/herinneringen"
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/bouwer/auto"
 */2 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/bouwer/meldingen"
