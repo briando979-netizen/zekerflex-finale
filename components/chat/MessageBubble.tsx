@@ -346,7 +346,7 @@ export function MessageBubble({
   const meta = (
     <span className="flex items-center justify-end gap-1 whitespace-nowrap text-[10px] leading-none text-neutralx-500">
       {starred && (
-        <span aria-label="bewaard" className="text-amber-500">
+        <span role="img" aria-label="bewaard" className="text-amber-500">
           ★
         </span>
       )}
@@ -409,7 +409,7 @@ export function MessageBubble({
   return (
     <div
       ref={rowRef}
-      className={`group relative flex items-end gap-1.5 [touch-action:pan-y] ${mine ? "justify-end" : "justify-start"}`}
+      className={`group relative flex items-end gap-1.5 [touch-action:pan-y_pinch-zoom] ${mine ? "justify-end" : "justify-start"}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
