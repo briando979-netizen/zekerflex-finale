@@ -559,8 +559,17 @@ export function InboxPage({
     }
   };
 
-  const startThreadWith = async (userId: string) => {
+  const startThreadWith = async (userId: string): Promise<string | null> => {
     setPicker(null);
+    // already talking: open that chat (this used to post another 👋 every time)
+    const existing = threads.find((t) => t.kind === "direct" && t.participants.includes(userId));
+    if (existing) {
+      if (existing.archived) void doAction(existing.id, { action: "unarchive" });
+      setTab("chats");
+      setView("main");
+      openThread(existing.id);
+      return existing.id;
+    }
     const r = await fetch("/api/inbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -571,10 +580,21 @@ export function InboxPage({
       await loadThreads();
       setTab("chats");
       openThread(d.threadId);
-    } else {
-      const d = await r.json().catch(() => ({}));
-      say(d?.error?.message ?? "Dit gesprek kon niet starten.", true);
+      return (d.threadId as string) ?? null;
     }
+    const d = await r.json().catch(() => ({}));
+    say(d?.error?.message ?? "Dit gesprek kon niet starten.", true);
+    return null;
+  };
+
+  // calling from someone's profile card: dial THAT person (startCall reads the chat that was open)
+  const callUser = async (userId: string, mode: "audio" | "video") => {
+    const threadId = await startThreadWith(userId);
+    if (!threadId) return;
+    const u = dir[userId];
+    window.dispatchEvent(
+      new CustomEvent("zf:call", { detail: { threadId, mode, peerName: u?.name ?? "", peerUserId: userId, peerRole: u?.role ?? "employer" } }),
+    );
   };
 
   const startSupport = async () => {
@@ -1350,7 +1370,7 @@ export function InboxPage({
           onMessage={(uid) => { setCardUser(null); void startThreadWith(uid); }}
           onCall={(uid, mode) => {
             setCardUser(null);
-            void startThreadWith(uid).then(() => setTimeout(() => startCall(mode), 400));
+            void callUser(uid, mode);
           }}
         />
       )}

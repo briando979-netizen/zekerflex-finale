@@ -16,7 +16,10 @@ function Shell({ title, onClose, children }: { title: string; onClose: () => voi
     <Portal>
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
       <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-lift"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="chat-surface max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-lift"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -72,6 +75,7 @@ export function PeoplePicker({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Zoek op naam…"
+        aria-label="Zoek op naam"
         className="field-input mb-3"
       />
       {loading && <p className="text-sm text-neutralx-400">Zoeken…</p>}
