@@ -26,6 +26,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Na een PATCH** de teruggegeven serverversie overnemen in de lijst, niet lokaal één veld bijwerken (de server kan bijeffecten hebben).
 - **Gedeelde staat in het geheugen** (wachtrijen, caches) via `globalThis`: Next bundelt routes apart, dus een gewone module-variabele bestaat per bundel.
 - **Bestanden die de app zelf schrijft** (uploads, Studio-foto's) horen op het opslagvolume (`storage/`, volume app-storage), nooit in `public/`: de container wordt bij elke uitrol vervangen en alles daarin is dan weg (`lib/ontwerp/fotos-store.ts`, `lib/ontwerp/media.ts`).
+- **Grote uploads:** met middleware kapt Next elke request-body stil af op `middlewareClientMaxBodySize` (in `next.config.mjs`, nu 210mb; standaard 10 MB, alleen een waarschuwing in het log). Staat een route grotere bestanden toe, verhoog dan die grens mee.
 - **AuditLog** heeft bewust geen relatie met User (de hashketen); voeg die niet toe.
 
 ### Veiligheid en privacy
