@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { importRemoteImage } from "@/lib/media/clean-image";
+import { BRANCHE_VOORBEELDEN } from "@/lib/sites/branche-voorbeelden";
 import { zonderDubbeleFotos } from "@/lib/sites/foto-afdruk";
 import { textOn } from "@/lib/sites/render";
 import { siteSaveSchema } from "@/lib/sites/schema";
@@ -196,6 +197,9 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
   };
   const kop = (s: string) => s.slice(0, 160);
   const horeca = t.id === "horeca";
+  // the example site of this branch (lib/sites/branche-voorbeelden.ts) gives the headings and a "werken bij"
+  // page where it has one; the content stays theirs
+  const voorbeeld = BRANCHE_VOORBEELDEN.find((v) => v.id === t.id);
   const kaartFoto = (i: number) => photos.diensten?.[i] ?? null;
   const alleDiensten = f.secties.length
     ? f.secties.slice(0, 12).map((s, i) => ({ titel: s.kop.slice(0, 200), tekst: s.tekst, ...(kaartFoto(i) ? { foto: kaartFoto(i) } : {}) }))
@@ -237,10 +241,10 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
   const home: Block[] = [
     block("hero", { kop: kop(c.naam), tekst: heroTekst, knop, knopLink: "contact", foto: photos.hero }),
     block("tekstFoto", { kop: kop(`Over ${c.naam}`), tekst: clipSentences(over, 420), foto: photos.over, fotoLinks: false }),
-    block("diensten", { kop: horeca ? "Ons aanbod" : "Wat we doen", items: alleDiensten.slice(0, 6) }),
+    block("diensten", { kop: voorbeeld?.aanbod.kop ?? (horeca ? "Ons aanbod" : "Wat we doen"), items: alleDiensten.slice(0, 6) }),
     ...(usps.length >= 2 ? [block("usps", { kop: `Waarom ${c.naam}`.slice(0, 160), items: usps.slice(0, 4) })] : []),
-    block("stappen", { kop: "Zo simpel is het", items: stappenVoor(t, c) }),
-    ...(photos.galerij.length >= 2 ? [block("galerij", { kop: horeca ? "Sfeer en smaak" : t.id === "bouw" ? "Ons werk" : "Een indruk", fotos: photos.galerij })] : []),
+    block("stappen", { kop: voorbeeld?.stappen.kop ?? "Zo simpel is het", items: stappenVoor(t, c) }),
+    ...(photos.galerij.length >= 2 ? [block("galerij", { kop: voorbeeld?.galerij.kop ?? (horeca ? "Sfeer en smaak" : t.id === "bouw" ? "Ons werk" : "Een indruk"), fotos: photos.galerij })] : []),
     ...(reviews ? [reviews] : []),
     ...(uren && horeca ? [uren] : []),
     cta,
@@ -286,6 +290,17 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
       seoTitel: `Foto's | ${c.naam}`.slice(0, 70),
       seoOmschrijving: clipSentences(`Foto's van ${c.naam}${c.plaats ? ` in ${c.plaats}` : ""}: een indruk van ons werk, onze zaak en onze mensen.`, 160),
       blocks: [block("galerij", { kop: horeca ? "Sfeer en smaak" : t.id === "bouw" ? "Ons werk" : "Een indruk", fotos: photos.alle ?? [] }), cta],
+    });
+  }
+  // "werken bij": their open shifts on ZekerFlex, shown as a marked example on the proposal until they are a customer
+  if (voorbeeld?.werken) {
+    pages.push({
+      id: newId(),
+      slug: "werken-bij",
+      titel: "Werken bij",
+      seoTitel: `Werken bij ${c.naam}`.slice(0, 70),
+      seoOmschrijving: clipSentences(`Werken bij ${c.naam}${c.plaats ? ` in ${c.plaats}` : ""}? Bekijk welke diensten er openstaan en reageer met één klik.`, 160),
+      blocks: [block("vacatures", { kop: kop(`Werken bij ${c.naam}`), tekst: "Bekijk welke diensten er openstaan en reageer met één klik.", aantal: 6 }), cta],
     });
   }
   pages.push({

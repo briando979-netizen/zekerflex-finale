@@ -170,6 +170,23 @@ describe("de nieuwe website: puur", () => {
     expect(site.pickPhotos([{ id: "a", width: 800, height: 800 }, { id: "b", width: 1600, height: 900 }, { id: "c", width: 900, height: 900 }, { id: "d", width: 900, height: 900 }])).toEqual({ hero: "b", over: "a", galerij: ["c", "d"] });
   });
 
+  it("volgt de opbouw van de voorbeeldsite van de branche: haar koppen, en bij horeca een werken-bij-pagina", () => {
+    const facts = extractBusiness(OUDE_SITE, "https://devries-schilders.nl/");
+    const company = site.proposalCompany(facts, { naam: "Brasserie De Hoek", plaats: "Rijssen", kvk: "", sector: "Horeca" });
+    let n = 0;
+    const horeca = site.proposalPages(company, site.templateFor("restaurant"), facts, { hero: null, over: null, galerij: [] }, () => `b${n++}`);
+    const home = horeca[0]!.blocks;
+    expect(home.find((b) => b.type === "diensten")?.props).toMatchObject({ kop: "Wat mag het zijn?" });
+    expect(home.find((b) => b.type === "stappen")?.props).toMatchObject({ kop: "Zo reserveer je" });
+    const werken = horeca.find((p) => p.slug === "werken-bij");
+    expect(werken?.blocks[0]).toMatchObject({ type: "vacatures", props: { kop: `Werken bij ${company.naam}`, aantal: 6 } });
+    expect(siteSaveSchema.safeParse({ theme: site.proposalTheme(null, site.templateFor("restaurant"), null), bedrijf: company, pages: horeca }).success).toBe(true);
+    // een schilder heeft geen werken-bij-pagina in zijn voorbeeld, dus ook niet in het voorstel
+    const bouw = site.proposalPages(company, site.templateFor("schilder"), facts, { hero: null, over: null, galerij: [] }, () => `b${n++}`);
+    expect(bouw.some((p) => p.slug === "werken-bij")).toBe(false);
+    expect(bouw[0]!.blocks.find((b) => b.type === "diensten")?.props).toMatchObject({ kop: "Wat we voor je bouwen" });
+  });
+
   it("vult de site met hun echte gegevens: foto per dienst, sterke punten, uren, vragen, klantverhalen, aanbod- en fotopagina", () => {
     const facts = {
       ...extractBusiness(OUDE_SITE, "https://devries-schilders.nl/"),
