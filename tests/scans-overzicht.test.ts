@@ -53,6 +53,20 @@ describe("dagoverzicht van de scans", () => {
     expect(o.ietsNieuws).toBe(true);
   });
 
+  it("noemt een bedrijf dat vaker scande één keer, en laat een al gemaild bedrijf niet opnieuw wachten", () => {
+    const o = scanOverzicht(
+      [
+        log("a1", "2026-11-04T20:00:00Z", [["nieuwe-site", "2026-11-04T20:05:00Z"]], "www.marktzicht.nl"),
+        log("a2", "2026-11-04T10:00:00Z", [["deal-bekeken", "2026-11-04T10:05:00Z"]], "marktzicht.nl"),
+        log("b1", "2026-11-04T09:00:00Z", [["deal-bekeken", "2026-11-04T09:05:00Z"]], "bakker.nl"),
+        log("b0", "2026-11-01T09:00:00Z", [["opgevolgd", "2026-11-02T09:00:00Z"]], "bakker.nl"),
+      ],
+      NU,
+    );
+    expect(o.nieuw.map((l) => l.naam)).toEqual(["a1", "b1"]);
+    expect(o.wachten.map((l) => l.naam)).toEqual(["a1"]);
+  });
+
   it("onze eigen opvolging telt niet als activiteit van de bezoeker", () => {
     const l = log("x", "2026-11-01T10:00:00Z", [["stijl", "2026-11-02T10:00:00Z"], ["opgevolgd", "2026-11-04T10:00:00Z"]]);
     expect(laatsteActiviteit(l)).toBe("2026-11-02T10:00:00Z");
