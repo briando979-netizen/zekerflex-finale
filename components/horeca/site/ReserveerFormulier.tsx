@@ -129,7 +129,9 @@ export function ReserveerFormulier({ slug, vandaag, maxGroep, dagenVooruit, tele
       <button type="submit" disabled={bezig} className="w-full rounded-full bg-[var(--rs-accent-knop)] py-4 font-bold text-[var(--rs-op-accent)] disabled:opacity-60">
         {bezig ? "Bezig…" : tijd ? `Reserveer om ${tijd}` : "Reserveer"}
       </button>
-      <p className="text-xs text-[#4B5563]">We gebruiken je gegevens alleen voor deze reservering.</p>
+      <p className="text-xs text-[#4B5563]">
+        We gebruiken je gegevens alleen voor deze reservering. Na 12 maanden wissen we je naam, e-mailadres, telefoonnummer en opmerking.
+      </p>
     </form>
   );
 }

@@ -25,6 +25,8 @@ const h = vi.hoisted(() => {
       passwordResetToken: mk("passwordResetToken", 1),
       identityVerification: mk("identityVerification", 3),
       rijschoolLes: mk("rijschoolLes", 4),
+      horecaReservering: mk("horecaReservering", 6),
+      horecaBestelling: mk("horecaBestelling", 7),
     },
     audits: [] as unknown[],
   };
@@ -59,7 +61,18 @@ describe("runRetentionSweep", () => {
       password_reset_tokens: 1,
       kyc: 3,
       rijschool_lesroutes: 4,
+      horeca_gasten: 13,
     });
+
+    // horeca: gastgegevens geanonimiseerd na 12 maanden (dag in NL-tijd), rijen blijven
+    const res6 = h.calls.find((c) => c.model === "horecaReservering");
+    expect(res6?.op).toBe("updateMany");
+    expect(res6?.data).toEqual({ naam: "Gast", email: "", telefoon: "", opmerking: "" });
+    expect((res6?.where as { datum: { lt: string } }).datum.lt).toBe("2025-09-09");
+    const best = h.calls.find((c) => c.model === "horecaBestelling");
+    expect(best?.op).toBe("updateMany");
+    expect(best?.data).toEqual({ naam: "", opmerking: "" });
+    expect((best?.where as { createdAt: { lt: Date } }).createdAt.lt.toISOString()).toBe("2025-09-09T00:00:00.000Z");
 
     // lesroutes: alleen de route weg (updateMany), de les zelf blijft
     const route = h.calls.find((c) => c.model === "rijschoolLes");

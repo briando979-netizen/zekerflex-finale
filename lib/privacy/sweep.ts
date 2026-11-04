@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { retentionCutoff } from "@/lib/privacy/retention";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -42,6 +43,19 @@ export async function runRetentionSweep(
   cleared.rijschool_lesroutes = dryRun
     ? await prisma.rijschoolLes.count({ where: routeWhere })
     : (await prisma.rijschoolLes.updateMany({ where: routeWhere, data: { route: Prisma.DbNull } })).count;
+
+  // Horeca: na 12 maanden naam, e-mail, telefoon en opmerking van gasten weg;
+  // datum, tijd, aantal personen en bedragen blijven voor de cijfers van de zaak.
+  const horecaCut = retentionCutoff("horeca_gasten", now)!;
+  const resWhere = {
+    datum: { lt: amsterdamDayKey(horecaCut) },
+    OR: [{ naam: { not: "Gast" } }, { email: { not: "" } }, { telefoon: { not: "" } }, { opmerking: { not: "" } }],
+  };
+  const bestelWhere = { createdAt: { lt: horecaCut }, OR: [{ naam: { not: "" } }, { opmerking: { not: "" } }] };
+  cleared.horeca_gasten = dryRun
+    ? (await prisma.horecaReservering.count({ where: resWhere })) + (await prisma.horecaBestelling.count({ where: bestelWhere }))
+    : (await prisma.horecaReservering.updateMany({ where: resWhere, data: { naam: "Gast", email: "", telefoon: "", opmerking: "" } })).count +
+      (await prisma.horecaBestelling.updateMany({ where: bestelWhere, data: { naam: "", opmerking: "" } })).count;
 
   const deviceCut = retentionCutoff("device_fingerprint", now)!;
   cleared.device_fingerprint = dryRun

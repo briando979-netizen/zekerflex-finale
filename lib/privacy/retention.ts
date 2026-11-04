@@ -105,6 +105,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: false,
   },
   {
+    key: "horeca_gasten",
+    label: "Gastgegevens bij horecareserveringen en -bestellingen (naam, e-mail, telefoon, opmerking)",
+    days: YEAR,
+    anchor: "dag van de reservering / bestelling",
+    basis: "Alleen nodig voor de reservering en de nazorg; daarna geen grondslag. Datum, tijd, aantal personen en bedragen blijven voor de cijfers van de zaak",
+    onExpiry: "anonymise",
+    blocksErasure: false,
+  },
+  {
     key: "timesheets",
     label: "Urenstaten",
     days: 7 * YEAR,
