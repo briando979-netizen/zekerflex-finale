@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InstructeurWeergave } from "@/lib/rijschool/weergave";
 import { foutVan, stuur } from "@/components/rijschool/api";
@@ -10,16 +10,20 @@ import { datumKort, datumLang, metHoofdletter, SOORT_LABEL, tijd } from "@/lib/r
 import { plusDagen } from "@/lib/rijschool/planning";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import type { BerichtRij } from "@/lib/rijschool/berichten-lijst";
+import { bezorgUitleg, GesprekkenLijst, GesprekPaneel } from "@/components/rijschool/Gesprekken";
 
 // De app van een instructeur: de lesdag (vorige/volgende dag), per les het
-// lesscherm, en een lijst van je leerlingen met tegoed en volgende les.
+// lesscherm, een lijst van je leerlingen met tegoed en volgende les, en de
+// berichten met je eigen leerlingen (lib/rijschool/berichten.ts).
 
 export function InstructeurApp({ slug, begin }: { slug: string; begin: InstructeurWeergave }) {
   const router = useRouter();
   const api = `/api/rijschool/site/${slug}/instructeur`;
   const [d, setD] = useState(begin);
   const [lesId, setLesId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"dag" | "leerlingen">("dag");
+  const [tab, setTab] = useState<"dag" | "leerlingen" | "berichten">("dag");
+  const [gesprek, setGesprek] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const vandaag = amsterdamDayKey(new Date());
@@ -56,6 +60,26 @@ export function InstructeurApp({ slug, begin }: { slug: string; begin: Instructe
   }
 
   const les = lesId ? d.lessen.find((l) => l.id === lesId) : undefined;
+  const ongelezen = d.gesprekken.reduce((s, g) => s + g.ongelezen, 0);
+  const gesprekLeerling = gesprek ? d.leerlingen.find((l) => l.id === gesprek) : undefined;
+  const datum = d.datum;
+
+  // berichten met een eigen leerling; elke POST geeft de nieuwe stand (met de gesprekken) terug
+  const laadGesprek = useCallback(async () => (await stuur<{ berichten: BerichtRij[] }>(`${api}?berichten=${encodeURIComponent(gesprek ?? "")}`)).berichten, [api, gesprek]);
+  const stuurBericht = useCallback(
+    async (tekst: string) => {
+      if (gesprek) setD(await stuur<InstructeurWeergave>(`${api}?datum=${datum}`, "POST", { actie: "bericht", leerlingId: gesprek, tekst }));
+    },
+    [api, gesprek, datum],
+  );
+  const gesprekGelezen = useCallback(async () => {
+    if (gesprek) setD(await stuur<InstructeurWeergave>(`${api}?datum=${datum}`, "POST", { actie: "berichtGelezen", leerlingId: gesprek }));
+  }, [api, gesprek, datum]);
+
+  function openGesprek(leerlingId: string) {
+    setGesprek(leerlingId);
+    setTab("berichten");
+  }
 
   return (
     <div className="space-y-4">
@@ -70,20 +94,56 @@ export function InstructeurApp({ slug, begin }: { slug: string; begin: Instructe
               Uitloggen
             </button>
           </div>
-          <div role="tablist" aria-label="Instructeur-app" className="grid grid-cols-2 gap-1 rounded-full bg-paper-soft p-1">
+          <div role="tablist" aria-label="Instructeur-app" className="grid grid-cols-3 gap-1 rounded-full bg-paper-soft p-1">
             {(
               [
                 ["dag", "Lesdag"],
-                ["leerlingen", "Mijn leerlingen"],
+                ["leerlingen", "Leerlingen"],
+                ["berichten", "Berichten"],
               ] as const
             ).map(([id, label]) => (
-              <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === id ? "bg-white shadow-sm" : "text-neutralx-600"}`}>
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`whitespace-nowrap rounded-full px-2 py-2 text-sm font-semibold ${tab === id ? "bg-white shadow-sm" : "text-neutralx-600"}`}
+              >
                 {label}
+                {id === "berichten" && ongelezen > 0 && (
+                  <span className="num ml-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-900">
+                    {ongelezen}
+                    <span className="sr-only"> nieuw</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-          {tab === "dag" ? (
+          {tab === "berichten" ? (
+            gesprekLeerling ? (
+              <GesprekPaneel
+                key={gesprekLeerling.id}
+                leerlingNaam={gesprekLeerling.naam}
+                uitleg={bezorgUitleg(gesprekLeerling)}
+                kleur={d.rijschool.kleur}
+                laad={laadGesprek}
+                verstuur={stuurBericht}
+                gelezen={gesprekGelezen}
+                onTerug={() => setGesprek(null)}
+                terugAltijd
+              />
+            ) : (
+              <GesprekkenLijst
+                gesprekken={d.gesprekken}
+                kandidaten={d.leerlingen}
+                focus={gesprek}
+                onFocus={setGesprek}
+                leeg="Nog geen berichten met je leerlingen. Ze kunnen je schrijven vanuit hun app; jij kunt hieronder een gesprek beginnen."
+              />
+            )
+          ) : tab === "dag" ? (
             <>
               <div className="flex items-center gap-2">
                 <button type="button" className="btn-ghost !px-3" onClick={() => laadDag(plusDagen(d.datum, -1))} aria-label="Vorige dag">
@@ -135,7 +195,12 @@ export function InstructeurApp({ slug, begin }: { slug: string; begin: Instructe
                       {l.procent}% · {tegoedTekst(l.saldoMin, d.rijschool.lesMinuten)}
                     </span>
                   </span>
-                  <span className="text-right text-xs text-neutralx-600">{l.volgende ? `Volgende: ${datumKort(l.volgende)} ${tijd(l.volgende)}` : "Geen les gepland"}</span>
+                  <span className="flex flex-col items-end gap-1">
+                    <span className="text-right text-xs text-neutralx-600">{l.volgende ? `Volgende: ${datumKort(l.volgende)} ${tijd(l.volgende)}` : "Geen les gepland"}</span>
+                    <button type="button" className="text-xs font-semibold underline underline-offset-2" onClick={() => openGesprek(l.id)} aria-label={`Bericht aan ${l.naam}`}>
+                      Bericht
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>

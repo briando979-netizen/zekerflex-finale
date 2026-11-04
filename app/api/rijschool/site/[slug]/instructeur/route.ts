@@ -12,6 +12,8 @@ import { isDatum, moment } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { onlineBetalenAan, startIdeal } from "@/lib/rijschool/betalen";
 import { leesRoute, routeWeergave, voegRouteToe } from "@/lib/rijschool/lesroute";
+import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
+import type { Rijschool, RijschoolInstructeur } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,13 @@ const fout = (err: unknown) => {
   return NextResponse.json(body, { status, headers });
 };
 
+/** Een leerling van deze instructeur: aan hem gekoppeld, of hij gaf haar les. Alleen met die leerlingen voert hij gesprekken. */
+async function mijnLeerling(r: Pick<Rijschool, "id">, i: Pick<RijschoolInstructeur, "id">, leerlingId: string) {
+  const l = await prisma.rijschoolLeerling.findFirst({ where: { id: leerlingId, rijschoolId: r.id, OR: [{ instructeurId: i.id }, { lessen: { some: { instructeurId: i.id } } }] } });
+  if (!l) throw AppError.forbidden("Dit is niet jouw leerling.");
+  return l;
+}
+
 const datumUit = (s: string | null) => {
   if (s === null) return amsterdamDayKey(new Date());
   if (!isDatum(s)) throw AppError.validation("Kies een datum.");
@@ -29,11 +38,14 @@ const datumUit = (s: string | null) => {
 
 // GET /api/rijschool/site/<slug>/instructeur?datum=2026-11-04 — de lesdag van de ingelogde instructeur.
 // ?vrij=2026-11-05&duur=60 — eigen vrije tijden, om de volgende les te plannen.
+// ?berichten=<leerlingId> — het gesprek met een eigen leerling.
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }): Promise<NextResponse> {
   try {
     const r = await siteRijschool((await params).slug);
     const i = await eisInstructeur(r);
     const url = new URL(request.url);
+    const metLeerling = url.searchParams.get("berichten");
+    if (metLeerling) return NextResponse.json({ berichten: await gesprekMet((await mijnLeerling(r, i, metLeerling)).id) });
     const vrij = url.searchParams.get("vrij");
     if (vrij !== null) {
       const duur = Math.min(Math.max(Number(url.searchParams.get("duur") ?? r.lesMinuten) || r.lesMinuten, 15), 300);
@@ -46,7 +58,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   }
 }
 
-// POST — tijdens en na de les: starten, leskaart invullen, afronden, volgende les plannen, betaling in de auto.
+// POST — tijdens en na de les: starten, leskaart invullen, afronden, volgende les plannen, betaling in de auto;
+// en berichten met je eigen leerlingen.
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }): Promise<NextResponse> {
   try {
     eisZelfdeHerkomst(request);
@@ -108,6 +121,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       }
       case "betaling":
         await registreerBetaling(r, a, i.naam);
+        break;
+      case "bericht": {
+        const l = await mijnLeerling(r, i, a.leerlingId);
+        await enforceRateLimit({ name: "rijschool-bericht-instructeur", identifier: i.id, limit: 60, windowSeconds: 600 });
+        await stuurBericht(r, l, { leerling: false, afzender: i.naam }, a.tekst);
+        // wie antwoordt, heeft het gesprek gelezen
+        await markeerGelezen(l.id, false);
+        break;
+      }
+      case "berichtGelezen":
+        await markeerGelezen((await mijnLeerling(r, i, a.leerlingId)).id, false);
         break;
       case "ideal": {
         const l = await eigenLeerling(r, a.leerlingId);

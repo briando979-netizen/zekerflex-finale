@@ -246,4 +246,7 @@ export const instructeurActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("route"), lesId: id, punten: z.array(z.tuple([z.number(), z.number(), z.number()])).max(600) }),
   // iDEAL in de auto: geeft de betaalpagina terug, de instructeur toont die als QR-code
   z.object({ actie: z.literal("ideal"), leerlingId: id, productId: id.nullable(), bedragCent: z.number().int().min(100).max(1_000_000), omschrijving: tekst(160).min(2) }),
+  // berichten met een eigen leerling (lib/rijschool/berichten.ts)
+  z.object({ actie: z.literal("bericht"), leerlingId: id, tekst: berichtTekst }),
+  z.object({ actie: z.literal("berichtGelezen"), leerlingId: id }),
 ]);

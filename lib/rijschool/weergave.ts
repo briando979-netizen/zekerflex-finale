@@ -394,7 +394,9 @@ export interface InstructeurWeergave {
   instructeur: { id: string; naam: string };
   datum: string;
   lessen: DagLes[];
-  leerlingen: { id: string; naam: string; saldoMin: number; procent: number; volgende: string | null }[];
+  leerlingen: { id: string; naam: string; email: string; heeftWachtwoord: boolean; saldoMin: number; procent: number; volgende: string | null }[];
+  /** gesprekken met je eigen leerlingen (lib/rijschool/berichten.ts) */
+  gesprekken: Gesprek[];
   voertuigen: VoertuigRij[];
   producten: ProductRij[];
   /** iDEAL in de auto (QR-code) kan als de rijschool online betalen heeft aangezet */
@@ -411,13 +413,13 @@ export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur,
   const lessen = lessenRuim.filter((l) => amsterdamDayKey(l.start) === datum);
   const eigen = await prisma.rijschoolLeerling.findMany({
     where: { rijschoolId: r.id, status: { in: ["AANMELDING", "ACTIEF"] }, OR: [{ instructeurId: i.id }, { lessen: { some: { instructeurId: i.id } } }] },
-    select: { id: true, naam: true, telefoon: true, adres: true, automaat: true },
+    select: { id: true, naam: true, email: true, wachtwoordHash: true, telefoon: true, adres: true, automaat: true },
     orderBy: { naam: "asc" },
     take: 500,
   });
   const dagLeerlingIds = lessen.flatMap((l) => (l.leerlingId ? [l.leerlingId] : []));
   const ids = [...new Set([...eigen.map((l) => l.id), ...dagLeerlingIds])];
-  const [saldi, voortgangen, dagLeerlingen, volgende, vorige, voertuigen, producten] = await Promise.all([
+  const [saldi, voortgangen, dagLeerlingen, volgende, vorige, voertuigen, producten, alleGesprekken] = await Promise.all([
     saldiVan(ids),
     voortgangVan(ids),
     prisma.rijschoolLeerling.findMany({ where: { id: { in: dagLeerlingIds } }, select: { id: true, naam: true, telefoon: true, adres: true, automaat: true } }),
@@ -433,7 +435,9 @@ export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur,
     }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id, actief: true }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
+    gesprekkenVan(r.id),
   ]);
+  const eigenIds = new Set(eigen.map((l) => l.id));
   const eerstVolgende = new Map<string, string>();
   for (const v of volgende) if (v.leerlingId && !eerstVolgende.has(v.leerlingId)) eerstVolgende.set(v.leerlingId, v.start.toISOString());
   const leerlingInfo = new Map(dagLeerlingen.map((l) => [l.id, l]));
@@ -463,9 +467,12 @@ export async function instructeurWeergave(r: Rijschool, i: RijschoolInstructeur,
           : null,
       };
     }),
+    gesprekken: alleGesprekken.filter((g) => eigenIds.has(g.leerlingId)),
     leerlingen: eigen.map((l) => ({
       id: l.id,
       naam: l.naam,
+      email: l.email,
+      heeftWachtwoord: Boolean(l.wachtwoordHash),
       saldoMin: saldi.get(l.id) ?? 0,
       procent: voortgangen.get(l.id)?.procent ?? 0,
       volgende: eerstVolgende.get(l.id) ?? null,
