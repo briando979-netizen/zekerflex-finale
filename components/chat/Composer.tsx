@@ -10,6 +10,8 @@ export interface OutgoingMessage {
   attachment?: { mediaId: string; filename: string; mimeType: string; sizeBytes: number; durationSec?: number };
   location?: { lat: number; lng: number; label?: string };
   replyToId?: string;
+  /** set: this rewrites your own message instead of sending a new one */
+  editId?: string;
 }
 
 export function Composer({
@@ -20,6 +22,8 @@ export function Composer({
   onSend,
   onTyping,
   lastIncoming = "",
+  editing = null,
+  onCancelEdit,
 }: {
   /** text of the last message from the other side — for ✨ reply suggestions */
   lastIncoming?: string;
@@ -29,8 +33,15 @@ export function Composer({
   onClearReply: () => void;
   onSend: (msg: OutgoingMessage) => Promise<void>;
   onTyping: () => void;
+  /** your own message being edited (its text fills the field) */
+  editing?: Msg | null;
+  onCancelEdit?: () => void;
 }) {
   const [text, setText] = useState("");
+  // editing starts: the field gets the message's text; editing stops: empty again
+  useEffect(() => {
+    setText(editing ? editing.text : "");
+  }, [editing]);
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showQuick, setShowQuick] = useState(false);
@@ -93,6 +104,11 @@ export function Composer({
     setBusy(true);
     setText("");
     try {
+      if (editing) {
+        await onSend({ text: t, kind: "text", editId: editing.id });
+        onCancelEdit?.();
+        return;
+      }
       await onSend({ text: t, kind: "text", ...(replyTo ? { replyToId: replyTo.id } : {}) });
       onClearReply();
     } finally {
@@ -199,7 +215,17 @@ export function Composer({
 
   return (
     <div className="border-t border-hair bg-white">
-      {replyTo && (
+      {editing && (
+        <div className="flex items-center gap-2 border-b border-hair px-3 py-1.5 text-xs">
+          <span className="min-w-0 truncate border-l-2 border-brand-400 pl-2 text-neutralx-600">
+            <span className="font-semibold text-ink">✏️ Bericht bewerken:</span> {editing.text}
+          </span>
+          <button type="button" onClick={onCancelEdit} aria-label="Bewerken stoppen" className="ml-auto flex-shrink-0 text-neutralx-500">
+            ✕
+          </button>
+        </div>
+      )}
+      {!editing && replyTo && (
         <div className="flex items-center gap-2 border-b border-hair px-3 py-1.5 text-xs">
           <span className="border-l-2 border-brand-400 pl-2 text-neutralx-500">
             Antwoord op: {replyTo.text || replyTo.kind}

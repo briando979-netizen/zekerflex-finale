@@ -42,7 +42,14 @@ export interface Msg {
   reactions?: Record<string, string[]>;
   deleted?: boolean;
   forwarded?: boolean;
+  /** bewerkt door de afzender: wanneer */
+  editedAt?: string;
 }
+
+/** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */
+export const EDIT_WINDOW_MS = 24 * 3_600_000;
+export const canEdit = (m: Msg, myUserId: string | null | undefined, now = Date.now()): boolean =>
+  Boolean(myUserId) && m.from === myUserId && m.kind === "text" && !m.deleted && !m.pending && now - new Date(m.at).getTime() < EDIT_WINDOW_MS;
 
 /** Zet reacties op een bericht (of haalt het veld weg als er geen zijn). */
 export function withReactions(m: Msg, reactions: Record<string, string[]>): Msg {
@@ -93,8 +100,9 @@ export const ROLE_COLOR: Record<string, string> = {
 export const initials = (n: string) =>
   n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 
+// Dutch time, like every time on the platform (the server runs in UTC; lib/time/amsterdam)
 export const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
 export function dayLabel(iso: string): string {
   const d = new Date(iso);

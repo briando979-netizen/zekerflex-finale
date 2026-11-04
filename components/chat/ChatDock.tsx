@@ -40,6 +40,7 @@ export function ChatDock() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [theirTyping, setTheirTyping] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [editing, setEditing] = useState<Msg | null>(null);
   const [available, setAvailable] = useState(true);
   const [cardUser, setCardUser] = useState<string | null>(null);
 
@@ -290,8 +291,35 @@ export function ChatDock() {
     fetch(`/api/inbox/${active}/typing`, { method: "POST" }).catch(() => undefined);
   };
 
+
+  // another conversation opened: stop editing (the message belongs to the old one)
+  useEffect(() => {
+    setEditing(null);
+  }, [active]);
+
+  // your own message rewritten: shown at once, then the server's version (with its editedAt)
+  const saveEdit = async (messageId: string, text: string) => {
+    if (!active) return;
+    const threadId = active;
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, text, editedAt: new Date().toISOString() } : m)));
+    const r = await fetch(`/api/inbox/${threadId}/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, text }),
+    }).catch(() => null);
+    if (r?.ok) {
+      const server = ((await r.json()) as { message: Msg }).message;
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, ...server } : m)));
+    } else {
+      const d = r ? await r.json().catch(() => ({})) : {};
+      window.alert(d?.error?.message ?? "Bewerken lukte niet. Probeer het opnieuw.");
+      await loadThread(threadId);
+    }
+  };
+
   const send = async (msg: OutgoingMessage) => {
     if (!active) return;
+    if (msg.editId) return saveEdit(msg.editId, msg.text);
     setMessages((m) => [
       ...m,
       {
@@ -490,6 +518,10 @@ export function ChatDock() {
                         onAvatarClick={setCardUser}
                         onReact={react}
                         onDelete={del}
+                        onEdit={(m) => {
+                          setReplyTo(null);
+                          setEditing(m);
+                        }}
                         onForward={setForwarding}
                         onPin={togglePin}
                         {...(me ? { myUserId: me.userId } : {})}
@@ -513,6 +545,8 @@ export function ChatDock() {
                 quickReplies={quickReplies}
                 replyTo={replyTo}
                 onClearReply={() => setReplyTo(null)}
+                editing={editing}
+                onCancelEdit={() => setEditing(null)}
                 onSend={send}
                 onTyping={pingTyping}
               />

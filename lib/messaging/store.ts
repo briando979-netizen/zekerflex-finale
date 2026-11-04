@@ -69,7 +69,12 @@ export interface ChatMessage {
   deleted?: boolean;
   /** doorgestuurd vanuit een ander gesprek */
   forwarded?: boolean;
+  /** door de afzender bewerkt: wanneer (de bubbel toont "bewerkt" met deze tijd) */
+  editedAt?: string;
 }
+
+/** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
+export const EDIT_WINDOW_MS = 24 * 3_600_000;
 
 export type MessageExtra = Partial<
   Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded">
@@ -345,6 +350,32 @@ export async function deleteMessage(threadId: string, messageId: string): Promis
   const updated: ChatMessage = { id: m.id, threadId: m.threadId, from: m.from, at: m.at, text: "", kind: m.kind, deleted: true };
   list[idx] = updated;
   await kvSet(key, list.slice(-5000));
+  return updated;
+}
+
+/**
+ * The sender rewrites their own text message: new text + editedAt. Only text
+ * messages that are not withdrawn; the route checks sender and EDIT_WINDOW_MS.
+ * Keeps the thread preview in step when it was the last message.
+ */
+export async function editMessage(threadId: string, messageId: string, text: string, now = new Date()): Promise<ChatMessage | null> {
+  const id = await resolveThreadId(threadId);
+  const key = messagesKey(id);
+  const clean = text.trim().slice(0, 4000);
+  if (!clean) throw new Error("empty message");
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  if (idx === -1) return null;
+  const m = list[idx]!;
+  if (m.kind !== "text" || m.deleted) return null;
+  const updated: ChatMessage = { ...m, text: clean, editedAt: now.toISOString() };
+  list[idx] = updated;
+  await kvSet(key, list.slice(-5000));
+  const t = await getThread(id);
+  if (t?.lastMessage && t.lastMessage.at === m.at && t.lastMessage.from === m.from) {
+    t.lastMessage = { ...t.lastMessage, text: previewText(updated) };
+    await writeThread(t);
+  }
   return updated;
 }
 

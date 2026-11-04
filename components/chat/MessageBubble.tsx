@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { fmtBytes, fmtDuration, fmtTime, type Msg } from "./shared";
+import { canEdit, fmtBytes, fmtDuration, fmtTime, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots } from "./icons";
 
@@ -59,6 +59,7 @@ export function MessageBubble({
   onAvatarClick,
   onReact,
   onDelete,
+  onEdit,
   onForward,
   onPin,
   myUserId,
@@ -77,6 +78,8 @@ export function MessageBubble({
   onAvatarClick?: (userId: string) => void;
   onReact?: (m: Msg, emoji: string) => void;
   onDelete?: (m: Msg) => void;
+  /** your own text message, within 24 hours: back into the composer to rewrite */
+  onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
   onPin?: (m: Msg) => void;
   myUserId?: string;
@@ -149,6 +152,11 @@ export function MessageBubble({
           {onPin && (
             <button type="button" onClick={() => { onPin(m); setMenuOpen(false); }} className="whitespace-nowrap px-4 py-1.5 text-left text-ink hover:bg-paper-soft">
               {pinnedId === m.id ? "📌 Losmaken" : "📌 Vastzetten"}
+            </button>
+          )}
+          {mine && onEdit && canEdit(m, myUserId) && (
+            <button type="button" onClick={() => { onEdit(m); setMenuOpen(false); }} className="whitespace-nowrap px-4 py-1.5 text-left text-ink hover:bg-paper-soft">
+              ✏️ Bewerken
             </button>
           )}
           {mine && onDelete && (
@@ -284,7 +292,14 @@ export function MessageBubble({
 
         <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-neutralx-500">
           {m.auto && <span className="italic">automatisch</span>}
-          {fmtTime(m.at)}
+          {m.editedAt ? (
+            // edited: the time of the edit, the original send time on hover
+            <span title={`Verstuurd om ${fmtTime(m.at)}`}>
+              <span className="italic">bewerkt</span> {fmtTime(m.editedAt)}
+            </span>
+          ) : (
+            fmtTime(m.at)
+          )}
           {mine && <Ticks m={m} />}
         </span>
 
