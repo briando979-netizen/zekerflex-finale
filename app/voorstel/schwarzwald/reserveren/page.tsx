@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ACTIVITEITEN, BASE, CONTACT, OPENINGSTIJDEN } from "@/lib/voorstel/schwarzwald";
+import { ACTIVITEITEN, BASE, CONTACT } from "@/lib/voorstel/schwarzwald";
 import { boekbaar, isDatum } from "@/lib/voorstel/schwarzwald-agenda";
+import { openingsRegels } from "@/lib/voorstel/open-status";
 import { agendaConfig } from "@/lib/voorstel/schwarzwald-instellingen";
 import { huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
 import { leesEtenInvulling } from "@/lib/voorstel/eten-regels";
@@ -70,7 +71,7 @@ export default async function ReserverenPage({ searchParams }: { searchParams: P
           <div className="rounded-xl3 bg-schw-night p-7 text-schw-cream sm:p-8">
             <h2 className="font-display text-xl font-bold">Openingstijden</h2>
             <dl className="mt-4 space-y-2">
-              {OPENINGSTIJDEN.map((o) => (
+              {openingsRegels(cfg.open).map((o) => (
                 <div key={o.dagen} className="flex justify-between gap-4">
                   <dt className="text-schw-cream/70">{o.dagen}</dt>
                   <dd className="font-semibold">{o.tijd}</dd>

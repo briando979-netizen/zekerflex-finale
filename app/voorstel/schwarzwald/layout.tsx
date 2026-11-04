@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { BASE, CONTACT, DOELGROEPEN, MENU, OPENINGSTIJDEN, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
+import { BASE, CONTACT, DOELGROEPEN, MENU, SOCIAAL, TOPLINKS, doelgroepHref } from "@/lib/voorstel/schwarzwald";
 import { pagina, paginaPaden } from "@/lib/voorstel/schwarzwald-paginas";
 import { beheerder, huidigAccount } from "@/lib/voorstel/schwarzwald-accounts";
-import { leesInstellingen } from "@/lib/voorstel/schwarzwald-instellingen";
+import { leesInstellingen, maakConfig } from "@/lib/voorstel/schwarzwald-instellingen";
+import { openStatus, openingsRegels } from "@/lib/voorstel/open-status";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { Logo, SchwarzwaldHeader, type KopAccount, type ZoekItem } from "@/components/voorstel/SchwarzwaldHeader";
 import { KortAdres } from "@/components/voorstel/KortAdres";
 import { AlleenOpSite } from "@/components/voorstel/AlleenOpSite";
@@ -52,6 +54,11 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
     : beheer
       ? { voornaam: beheer.naam, beheerder: true }
       : null;
+  // openingstijden zoals het team ze in het beheer instelt, niet een vaste lijst
+  const tijden = maakConfig(instellingen);
+  const nu = new Date();
+  const klok = amsterdamParts(nu);
+  const status = openStatus(amsterdamDayKey(nu), klok.hour * 60 + klok.minute, tijden);
   return (
     <div className="min-h-screen bg-schw-cream font-sans text-schw-night">
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-schw-sun focus:px-4 focus:py-2 focus:font-bold">
@@ -105,8 +112,12 @@ export default async function SchwarzwaldLayout({ children }: { children: ReactN
           </div>
           <div>
             <p className={KOP}>Openingstijden</p>
+            <p className="mt-4 flex items-center gap-2 text-sm font-semibold">
+              <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-full ${status.open ? "bg-[#4ADE80]" : "bg-schw-cream/40"}`} />
+              {status.tekst}
+            </p>
             <dl className="mt-4 space-y-3 text-sm">
-              {OPENINGSTIJDEN.map((o) => (
+              {openingsRegels(tijden.open).map((o) => (
                 <div key={o.dagen}>
                   <dt className="text-schw-cream/60">{o.dagen}</dt>
                   <dd className="font-semibold">{o.tijd}</dd>

@@ -9,6 +9,10 @@ import { RunsWeergave } from "@/components/voorstel/SchwarzwaldBlokken";
 import { HeroVideo } from "@/components/voorstel/HeroVideo";
 import { goedgekeurdeReviews } from "@/lib/voorstel/schwarzwald-reviews";
 import { sterren } from "@/lib/voorstel/review-weergave";
+import { IndoorAanmelding } from "@/components/voorstel/IndoorAanmelding";
+import { leesInstellingen, maakConfig } from "@/lib/voorstel/schwarzwald-instellingen";
+import { openStatus } from "@/lib/voorstel/open-status";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 type Alinea = Extract<Blok, { type: "alinea" }>;
 const alineaDieBegintMet = (blokken: Blok[], begin: string) =>
@@ -32,6 +36,10 @@ export default async function SchwarzwaldHome() {
   ].slice(0, 3);
   const trending = home && alineaDieBegintMet(home.blokken, "Trending");
   const intro = home && alineaDieBegintMet(home.blokken, "Het Schwarzwald in Rijssen");
+  // "Nu open tot 22:30", uit de openingstijden die het team in het beheer instelt
+  const nu = new Date();
+  const klok = amsterdamParts(nu);
+  const status = openStatus(amsterdamDayKey(nu), klok.hour * 60 + klok.minute, maakConfig(await leesInstellingen()));
 
   return (
     <>
@@ -67,6 +75,10 @@ export default async function SchwarzwaldHome() {
               <span>
                 <strong className="text-schw-cream">{CONTACT.score}</strong> uit {CONTACT.aantalReviews} beoordelingen
               </span>
+            </p>
+            <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-schw-cream/90">
+              <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-full ${status.open ? "bg-[#4ADE80]" : "bg-schw-cream/40"}`} />
+              {status.tekst}
             </p>
           </div>
 
@@ -235,12 +247,7 @@ export default async function SchwarzwaldHome() {
               Ons nieuwe indoor entertainment <span className="text-schw-orange">megacenter</span> in Rijssen.
             </h2>
             <p className="mt-6 max-w-xl text-lg text-schw-cream/80">FUN bij elk weer. Wil je als eerste weten wanneer de deuren opengaan?</p>
-            <a
-              href={`mailto:${CONTACT.email}?subject=${encodeURIComponent("Houd me op de hoogte van het indoor centrum")}`}
-              className="mt-8 inline-block rounded-full bg-schw-cream px-7 py-4 font-bold text-schw-night transition-transform hover:-translate-y-0.5"
-            >
-              Houd me op de hoogte
-            </a>
+            <IndoorAanmelding contactEmail={CONTACT.email} />
           </div>
         </div>
       </section>

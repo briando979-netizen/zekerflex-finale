@@ -17,6 +17,7 @@ import { Reviews } from "@/components/voorstel/beheer/Reviews";
 import { Sollicitaties } from "@/components/voorstel/beheer/Sollicitaties";
 import { Wachtlijst } from "@/components/voorstel/beheer/Wachtlijst";
 import { Nieuws } from "@/components/voorstel/beheer/Nieuws";
+import { Indoor } from "@/components/voorstel/beheer/Indoor";
 import type { InboekStart } from "@/lib/voorstel/inboek-regels";
 
 // De beheeromgeving van Het Schwarzwald als eigen dashboard: zijbalk met de
@@ -29,6 +30,7 @@ const TABS = [
   ["planning", "Planning"],
   ["reserveringen", "Reserveringen"],
   ["wachtlijst", "Wachtlijst"],
+  ["indoor", "Indoor-interesse"],
   ["klanten", "Klanten (CRM)"],
   ["aanvragen", "Aanvragen"],
   ["reviews", "Reviews"],
@@ -44,7 +46,7 @@ type Tab = (typeof TABS)[number][0];
 const LABEL = Object.fromEntries(TABS) as Record<Tab, string>;
 const GROEPEN: readonly (readonly [string, readonly Tab[]])[] = [
   ["Overzicht", ["dashboard", "planning"]],
-  ["Gasten", ["reserveringen", "wachtlijst", "klanten", "aanvragen", "reviews"]],
+  ["Gasten", ["reserveringen", "wachtlijst", "indoor", "klanten", "aanvragen", "reviews"]],
   ["Website", ["paginas", "nieuws", "activiteiten", "openingstijden"]],
   ["Organisatie", ["sollicitaties", "accounts", "instellingen"]],
 ];
@@ -198,6 +200,7 @@ export function BeheerApp({
             <Reserveringen key={resFilter} namen={namen} duur={duur} vandaag={vandaag} start={inboek} klaarStart={() => setInboek(null)} begeleiderFilter={resFilter} />
           )}
           {tab === "wachtlijst" && <Wachtlijst namen={namen} openKlant={openKlant} />}
+          {tab === "indoor" && <Indoor openKlant={openKlant} />}
           {tab === "reviews" && <Reviews namen={namen} openKlant={openKlant} />}
           {tab === "sollicitaties" && <Sollicitaties />}
           {tab === "activiteiten" && <Activiteiten namen={namen} />}
