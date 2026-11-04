@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState, type FormEvent, type InputHTMLAttributes } from "react";
-import { euroPrijs, metBtw } from "@/lib/domeinen/extensies";
+import { BUNDEL_TLDS, euroPrijs, metBtw } from "@/lib/domeinen/extensies";
 
 type Status = "vrij" | "bezet" | "waarschijnlijk-vrij" | "onbekend";
 interface Resultaat {
@@ -71,12 +71,17 @@ export function DomeinZoeker({
   const [verhuis, setVerhuis] = useState("");
   const [werkgever, setWerkgever] = useState(false);
   const [mijn, setMijn] = useState<MijnDomein[] | null>(null);
+  // eerste jaar nog inbegrepen (betaald websiteabonnement, bundel nog niet gebruikt)
+  const [bundelOver, setBundelOver] = useState(false);
   const [terug, setTerug] = useState<{ gelukt: boolean; domein: string } | null>(null);
   const [alles, setAlles] = useState(false);
 
   const laadMijn = useCallback(async () => {
     const r = await fetch("/api/werkgever/domeinen", { cache: "no-store" }).catch(() => null);
-    if (r?.ok) setMijn(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    if (!r?.ok) return;
+    const d = (await r.json()) as { bestellingen: MijnDomein[]; bundel?: boolean };
+    setMijn(d.bestellingen);
+    setBundelOver(Boolean(d.bundel));
   }, []);
   useEffect(() => {
     // terug van de betaalpagina van Stripe
@@ -208,7 +213,15 @@ export function DomeinZoeker({
 
       {keuze &&
         (werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null ? (
-          <Bestellen key={keuze.domein} domein={keuze.domein} prijsCent={keuze.prijsCent} terugNaar={terugNaar} onAnnuleer={() => setKeuze(null)} onKlaar={() => void laadMijn()} />
+          <Bestellen
+            key={keuze.domein}
+            domein={keuze.domein}
+            prijsCent={keuze.prijsCent}
+            inbegrepen={bundelOver && (BUNDEL_TLDS as readonly string[]).includes(keuze.domein.slice(keuze.domein.indexOf(".") + 1))}
+            terugNaar={terugNaar}
+            onAnnuleer={() => setKeuze(null)}
+            onKlaar={() => void laadMijn()}
+          />
         ) : (
           <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} smal={smal} onAnnuleer={() => setKeuze(null)} />
         ))}
@@ -289,7 +302,22 @@ function MijnDomeinen({ lijst, onLijst }: { lijst: MijnDomein[]; onLijst: (l: Mi
   );
 }
 
-function Bestellen({ domein, prijsCent, terugNaar, onAnnuleer, onKlaar }: { domein: string; prijsCent: number; terugNaar: string; onAnnuleer: () => void; onKlaar: () => void }) {
+function Bestellen({
+  domein,
+  prijsCent,
+  inbegrepen,
+  terugNaar,
+  onAnnuleer,
+  onKlaar,
+}: {
+  domein: string;
+  prijsCent: number;
+  /** het eerste jaar is inbegrepen bij het (betaalde) websiteabonnement: vooraf laten zien, niet pas na de klik */
+  inbegrepen: boolean;
+  terugNaar: string;
+  onAnnuleer: () => void;
+  onKlaar: () => void;
+}) {
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [bundel, setBundel] = useState(false);
@@ -324,24 +352,44 @@ function Bestellen({ domein, prijsCent, terugNaar, onAnnuleer, onKlaar }: { dome
   return (
     <section aria-label={`${domein} bestellen`} className="rounded-2xl border border-hair bg-white p-5">
       <h3 className="font-display text-xl font-bold text-ink">{domein} bestellen</h3>
-      <dl className="mt-3 max-w-sm space-y-1 text-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="text-neutralx-600">Domeinnaam, 1 jaar</dt>
-          <dd className="text-ink">{euroPrijs(p.exclCent)}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-neutralx-600">Btw 21%</dt>
-          <dd className="text-ink">{euroPrijs(p.btwCent)}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-t border-hair pt-1 font-semibold">
-          <dt className="text-ink">Totaal</dt>
-          <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
-        </div>
-      </dl>
-      <p className="mt-3 text-sm text-neutralx-600">
-        Je betaalt met iDEAL of je kaart. Heb je een websiteabonnement van ZekerFlex, dan is je eerste .nl, .com, .eu of .be het eerste jaar inbegrepen; dat zie je
-        meteen. Daarna verlengt hij per jaar, opzeggen kan altijd voor de verlengdatum.
-      </p>
+      {inbegrepen ? (
+        <>
+          <dl className="mt-3 max-w-sm space-y-1 text-sm">
+            <div className="flex justify-between gap-4 font-semibold">
+              <dt className="text-ink">Eerste jaar</dt>
+              <dd className="text-ink">{euroPrijs(0)} (inbegrepen)</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-neutralx-600">Daarna per jaar, incl. btw</dt>
+              <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-sm text-neutralx-600">
+            Het eerste jaar is inbegrepen bij je websiteabonnement; je betaalt nu niets. Daarna verlengt hij per jaar, opzeggen kan altijd voor de verlengdatum.
+          </p>
+        </>
+      ) : (
+        <>
+          <dl className="mt-3 max-w-sm space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-neutralx-600">Domeinnaam, 1 jaar</dt>
+              <dd className="text-ink">{euroPrijs(p.exclCent)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-neutralx-600">Btw 21%</dt>
+              <dd className="text-ink">{euroPrijs(p.btwCent)}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-hair pt-1 font-semibold">
+              <dt className="text-ink">Totaal</dt>
+              <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-sm text-neutralx-600">
+            Je betaalt met iDEAL of je kaart. Met een betaald websiteabonnement van ZekerFlex is je eerste .nl, .com, .eu of .be het eerste jaar inbegrepen. Daarna
+            verlengt hij per jaar, opzeggen kan altijd voor de verlengdatum.
+          </p>
+        </>
+      )}
       {melding && (
         <p role="alert" className="mt-3 rounded-xl bg-[#FDE2E2] p-3 text-sm font-semibold text-[#B91C1C]">
           {melding}
@@ -349,7 +397,7 @@ function Bestellen({ domein, prijsCent, terugNaar, onAnnuleer, onKlaar }: { dome
       )}
       <div className="mt-4 flex flex-wrap gap-3">
         <button type="button" disabled={bezig} onClick={() => void bestel()} className="btn-primary px-5 py-2.5 disabled:opacity-60">
-          {bezig ? "Even geduld…" : "Bestel en betaal"}
+          {bezig ? "Even geduld…" : inbegrepen ? "Bestel (inbegrepen)" : "Bestel en betaal"}
         </button>
         <button type="button" onClick={onAnnuleer} className="btn-ghost px-5 py-2.5">
           Andere naam

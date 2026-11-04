@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
   const state = {
-    site: null as null | { status: string },
+    site: null as null | { status: string; stripeSubId?: string | null },
     eerderBundel: 0,
     rij: null as null | Record<string, unknown>,
     updateCount: 1,
@@ -64,7 +64,7 @@ vi.mock("@/lib/domeinen/koppelen", async (orig) => {
 });
 
 import { metBtw } from "@/lib/domeinen/extensies";
-import { bundelVoor, koppelBestelling, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
+import { bundelOver, bundelVoor, koppelBestelling, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
 
 const best = (extra: Record<string, unknown> = {}) => ({
   id: "b1",
@@ -126,16 +126,23 @@ describe("terug na de betaalpagina", () => {
 });
 
 describe("bundel", () => {
-  it("alleen met een websiteabonnement, alleen nl/com/eu/be, één keer", async () => {
+  it("alleen met een betaald websiteabonnement, alleen nl/com/eu/be, één keer", async () => {
     expect(await bundelVoor("t1", "nl")).toBe(false);
-    h.state.site = { status: "ACTIVE" };
+    h.state.site = { status: "ACTIVE", stripeSubId: "sub_1" };
     expect(await bundelVoor("t1", "nl")).toBe(true);
+    expect(await bundelOver("t1")).toBe(true);
     expect(await bundelVoor("t1", "shop")).toBe(false);
-    h.state.site = { status: "PENDING_PAYMENT" };
+    h.state.site = { status: "PENDING_PAYMENT", stripeSubId: null };
     expect(await bundelVoor("t1", "com")).toBe(false);
-    h.state.site = { status: "SUBMITTED" };
+    h.state.site = { status: "SUBMITTED", stripeSubId: "sub_1" };
     h.state.eerderBundel = 1;
     expect(await bundelVoor("t1", "com")).toBe(false);
+    expect(await bundelOver("t1")).toBe(false);
+  });
+  it("een kosteloos account of beheerdersrecord (actief zonder Stripe-abonnement) betaalt gewoon", async () => {
+    h.state.site = { status: "ACTIVE", stripeSubId: null };
+    expect(await bundelVoor("t1", "nl")).toBe(false);
+    expect(await bundelOver("t1")).toBe(false);
   });
 });
 

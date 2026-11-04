@@ -17,21 +17,30 @@ import { registerDomain, transipConfigured } from "@/lib/mail/hosting/transip";
 // kaart). De webhook (app/api/webhooks/stripe, metadata.domeinBestellingId)
 // zet hem op BETAALD; ZekerFlex registreert hem in Admin → Domeinen (met de
 // knop via TransIP, of met de hand en dan afvinken). Geregistreerd = meteen op
-// de website van het bedrijf (lib/domeinen/koppelen.ts). Met een
+// de website van het bedrijf (lib/domeinen/koppelen.ts). Met een betaald
 // websiteabonnement is één .nl/.com/.eu/.be het eerste jaar inbegrepen (de bundel).
 
 const BUNDEL_STATUSSEN = ["ONBOARDING", "SUBMITTED", "ACTIVE"] as const;
 /** Bestellingen die een domein "bezet houden" (een tweede bestelling is dan niet nodig). */
 const LOPEND: DomeinBestelStatus[] = ["OPEN", "BETAALD", "GEREGISTREERD"];
 
-/** Heeft dit bedrijf recht op de bundel voor deze extensie? (websiteabonnement, nog niet eerder gebruikt) */
+/** Heeft dit bedrijf recht op de bundel voor deze extensie? */
 export async function bundelVoor(tenantId: string, tld: string): Promise<boolean> {
-  if (!(BUNDEL_TLDS as readonly string[]).includes(tld)) return false;
+  return (BUNDEL_TLDS as readonly string[]).includes(tld) && bundelOver(tenantId);
+}
+
+/**
+ * Is de bundel (eerste jaar inbegrepen) voor dit bedrijf nog te gebruiken? Alleen met
+ * een echt betaald websiteabonnement (een Stripe-abonnement) en nog niet eerder gebruikt.
+ * Een kosteloos account of een beheerdersrecord (geen stripeSubId) betaalt de naam
+ * gewoon: een domeinnaam kost ZekerFlex bij TransIP echt geld.
+ */
+export async function bundelOver(tenantId: string): Promise<boolean> {
   const [site, eerder] = await Promise.all([
-    prisma.managedWebsite.findUnique({ where: { tenantId }, select: { status: true } }),
+    prisma.managedWebsite.findUnique({ where: { tenantId }, select: { status: true, stripeSubId: true } }),
     prisma.domeinBestelling.count({ where: { tenantId, bundel: true, status: { not: "GEANNULEERD" } } }),
   ]);
-  return Boolean(site && (BUNDEL_STATUSSEN as readonly string[]).includes(site.status)) && eerder === 0;
+  return Boolean(site?.stripeSubId && (BUNDEL_STATUSSEN as readonly string[]).includes(site.status)) && eerder === 0;
 }
 
 export interface Besteller {

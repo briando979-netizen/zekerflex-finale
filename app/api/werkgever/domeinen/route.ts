@@ -6,14 +6,14 @@ import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { bestellingenVan, koppelBestelling, startBestelling, terugPad } from "@/lib/domeinen/bestelling";
+import { bestellingenVan, bundelOver, koppelBestelling, startBestelling, terugPad } from "@/lib/domeinen/bestelling";
 import { domeinenOpWebsite } from "@/lib/domeinen/koppelen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Domeinnamen van het eigen bedrijf: GET de bestellingen (en of ze op de website
-// staan), POST een nieuwe (Stripe Checkout, of meteen klaar in de bundel) of
+// staan, en of het eerste jaar nog inbegrepen is: bundel), POST een nieuwe (Stripe Checkout, of meteen klaar in de bundel) of
 // { koppel: id } om een vastgelegde naam op de eigen website te zetten.
 // lib/domeinen/bestelling.ts.
 
@@ -39,7 +39,8 @@ const fout = (err: unknown) => {
 export async function GET(): Promise<NextResponse> {
   try {
     const b = await bedrijf();
-    return NextResponse.json({ bestellingen: await lijst(b.tenantId) }, { headers: { "cache-control": "no-store" } });
+    const [bestellingen, bundel] = await Promise.all([lijst(b.tenantId), bundelOver(b.tenantId)]);
+    return NextResponse.json({ bestellingen, bundel }, { headers: { "cache-control": "no-store" } });
   } catch (err) {
     return fout(err);
   }
