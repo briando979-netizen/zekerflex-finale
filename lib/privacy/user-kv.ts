@@ -22,6 +22,7 @@ export const ERASABLE_KV_PREFIXES = [
   "auth-2fa:",
   "badge-push:",
   "brain-mem:",
+  "chat-bewaard:",
   "chat-prefs:",
   "chat-settings:",
   "companion:ctx:",
