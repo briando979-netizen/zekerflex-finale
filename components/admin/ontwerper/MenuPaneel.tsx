@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { MAX_KOLOMMEN, MAX_LINKS, normalizeVoettekst, type MenuLink, type Voettekst, type VoettekstKolom } from "@/lib/ontwerp/menu";
+import type { Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
+import { HoofdmenuPaneel } from "@/components/admin/ontwerper/HoofdmenuPaneel";
 
 // ---------------------------------------------------------------------------
-// Tabblad Menu: de voettekst van de site. Kolommen met een kop en links,
+// Tabblad Menu: het hoofdmenu bovenaan (HoofdmenuPaneel) en de voettekst
+// van de site. Voettekst: kolommen met een kop en links,
 // verplaatsen, toevoegen en weghalen; eigen pagina's (Pagina's) met één klik
 // erbij. Opslaan zet hem meteen live; "Standaard" zet de oorspronkelijke terug.
 // ---------------------------------------------------------------------------
@@ -112,6 +115,7 @@ export function MenuPaneel({ onVernieuw }: { onVernieuw: () => void }) {
   const [standaard, setStandaard] = useState<Voettekst | null>(null);
   const [eigen, setEigen] = useState(false);
   const [eigenPaginas, setEigenPaginas] = useState<MenuLink[]>([]);
+  const [hoofdmenu, setHoofdmenu] = useState<{ begin: Hoofdmenu; eigen: boolean } | null>(null);
   const [gewijzigd, setGewijzigd] = useState(false);
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<{ tekst: string; fout?: boolean } | null>(null);
@@ -119,11 +123,12 @@ export function MenuPaneel({ onVernieuw }: { onVernieuw: () => void }) {
   useEffect(() => {
     fetch("/api/admin/ontwerp/menu", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { voettekst: Voettekst; eigen: boolean; standaard: Voettekst } | null) => {
+      .then((d: { voettekst: Voettekst; eigen: boolean; standaard: Voettekst; hoofdmenu: Hoofdmenu; hoofdmenuEigen: boolean } | null) => {
         if (!d) return;
         setVoettekst(d.voettekst);
         setStandaard(d.standaard);
         setEigen(d.eigen);
+        setHoofdmenu({ begin: d.hoofdmenu, eigen: d.hoofdmenuEigen });
       })
       .catch(() => undefined);
     fetch("/api/admin/ontwerp/paginas", { cache: "no-store" })
@@ -173,6 +178,7 @@ export function MenuPaneel({ onVernieuw }: { onVernieuw: () => void }) {
 
   return (
     <div className="space-y-3">
+      {hoofdmenu ? <HoofdmenuPaneel begin={hoofdmenu.begin} beginEigen={hoofdmenu.eigen} eigenPaginas={eigenPaginas} onVernieuw={onVernieuw} /> : null}
       <section className="space-y-3 rounded-xl p-4" style={paneel}>
         <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
           Voettekst

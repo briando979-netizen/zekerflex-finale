@@ -1,8 +1,9 @@
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { STANDAARD_VOETTEKST, normalizeVoettekst, type Voettekst } from "@/lib/ontwerp/menu";
+import { isStandaardHoofdmenu, normalizeHoofdmenu, type Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
 
 // ---------------------------------------------------------------------------
-// Opslag van de voettekst uit de Site-ontwerper. Geen eigen versie (of de
+// Opslag van de voettekst en het hoofdmenu uit de Site-ontwerper. Geen eigen versie (of de
 // opslag is even weg) = de standaard, dus de site toont altijd een voettekst.
 // ---------------------------------------------------------------------------
 
@@ -23,4 +24,27 @@ export async function setVoettekst(raw: unknown): Promise<Voettekst> {
 /** Terug naar de standaard: de eigen versie weg. */
 export async function resetVoettekst(): Promise<void> {
   await kvDelete(KEY);
+}
+
+// Het hoofdmenu (bovenbalk). null = het standaardmenu, ook bij een storing.
+const HOOFDMENU_KEY = "ontwerp:hoofdmenu";
+
+export async function getHoofdmenu(): Promise<Hoofdmenu | null> {
+  const raw = await kvGet<unknown>(HOOFDMENU_KEY).catch(() => null);
+  return raw ? normalizeHoofdmenu(raw) : null;
+}
+
+/** Gelijk aan de standaard = de eigen versie weg (dan blijft de site exact zoals hij was). */
+export async function setHoofdmenu(raw: unknown): Promise<Hoofdmenu | null> {
+  const m = normalizeHoofdmenu(raw);
+  if (isStandaardHoofdmenu(m)) {
+    await kvDelete(HOOFDMENU_KEY);
+    return null;
+  }
+  await kvSet(HOOFDMENU_KEY, m);
+  return m;
+}
+
+export async function resetHoofdmenu(): Promise<void> {
+  await kvDelete(HOOFDMENU_KEY);
 }

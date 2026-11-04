@@ -4,12 +4,15 @@ import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { ChatWidgetLazy } from "@/components/marketing/ChatWidgetLazy";
 import { ScrollProgress } from "@/components/marketing/ScrollProgress";
 import { VisitorNudge } from "@/components/marketing/VisitorNudge";
-import { getVoettekst } from "@/lib/ontwerp/menu-store";
+import { getHoofdmenu, getVoettekst } from "@/lib/ontwerp/menu-store";
 import { STANDAARD_VOETTEKST } from "@/lib/ontwerp/menu";
 
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
-  // de voettekst uit de Site-ontwerper; bij een storing gewoon de standaard
-  const { voettekst } = await getVoettekst().catch(() => ({ voettekst: STANDAARD_VOETTEKST }));
+  // voettekst en hoofdmenu uit de Site-ontwerper; bij een storing gewoon de standaard
+  const [{ voettekst }, hoofdmenu] = await Promise.all([
+    getVoettekst().catch(() => ({ voettekst: STANDAARD_VOETTEKST })),
+    getHoofdmenu().catch(() => null),
+  ]);
   return (
     // zf-site: hier gelden de vormen, lettertypes en maten uit de Site-ontwerper (lib/ontwerp/thema.ts)
     <div className="zf-site flex min-h-screen flex-col bg-paper">
@@ -20,7 +23,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
         Naar hoofdinhoud
       </a>
       <ScrollProgress />
-      <SiteHeader />
+      <SiteHeader hoofdmenu={hoofdmenu} />
       <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>
       <SiteFooter voettekst={voettekst} />
       <ChatWidgetLazy />
