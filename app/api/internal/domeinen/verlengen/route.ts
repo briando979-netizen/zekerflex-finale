@@ -11,11 +11,16 @@ export const dynamic = "force-dynamic";
 // herinneringen, opzeggen; lib/domeinen/verlengen.ts). Dagelijks draait hij al
 // mee in /api/internal/claims/collections-sweep; deze route is voor een
 // losse run (na een storing, of een livetest) zonder de andere taken.
+// ?proef=<ISO-datum>: doen alsof het die dag is, ALLEEN voor testbestellingen
+// (testadressen), zodat een livetest herinneringen en opzeggen kan doorlopen.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   try {
-    const ronde = await runDomeinVerlengingen();
+    const proef = new URL(request.url).searchParams.get("proef");
+    const nu = proef ? new Date(proef) : null;
+    if (nu && Number.isNaN(nu.getTime())) return NextResponse.json({ error: { code: "VALIDATION", message: "proef is geen datum" } }, { status: 422 });
+    const ronde = nu ? await runDomeinVerlengingen(nu, { alleenTest: true }) : await runDomeinVerlengingen();
     recordCronRun("domein-verlengen", true);
     return NextResponse.json({ ok: true, ...ronde });
   } catch (err) {

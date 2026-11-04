@@ -272,28 +272,36 @@ export interface VerlengRonde {
   fouten: number;
 }
 
-export async function runDomeinVerlengingen(nu = new Date()): Promise<VerlengRonde> {
+/**
+ * De dagelijkse ronde. `alleenTest`: alleen testbestellingen (testadressen); zo kan
+ * een livetest met een andere datum (`nu`) nooit een echte klant een factuur,
+ * afschrijving of opzegging bezorgen.
+ */
+export async function runDomeinVerlengingen(nu = new Date(), opties: { alleenTest?: boolean } = {}): Promise<VerlengRonde> {
   const r: VerlengRonde = { vastgelegd: 0, facturen: 0, afgeschreven: 0, herinneringen: 0, opgezegd: 0, incassoBetaald: 0, incassoMislukt: 0, fouten: 0 };
+  const mag = (b: { email: string }) => !opties.alleenTest || isTestAdres(b.email);
 
   // 1. betaald maar nog niet vastgelegd (register even niet bereikbaar, of de dagelijkse grens)
   const { legVast } = await import("@/lib/domeinen/bestelling");
   const blijven = await prisma.domeinBestelling.findMany({ where: { status: "BETAALD", betaaldOp: { lt: new Date(nu.getTime() - 15 * 60_000) } }, take: 50 });
-  for (const b of blijven) {
+  for (const b of blijven.filter(mag)) {
     if ((await legVast(b, "systeem:domein-verlengen", false).catch(() => "mislukt")) === "vastgelegd") r.vastgelegd += 1;
   }
 
   // 2. vastgelegde namen zonder verlooptdatum: bij het register opvragen
   const zonder = await prisma.domeinBestelling.findMany({ where: { status: "GEREGISTREERD", verlooptOp: null }, take: 100 });
-  for (const b of zonder) {
+  for (const b of zonder.filter(mag)) {
     let datum: Date | null = null;
     if (!isTestAdres(b.email) && transipConfigured()) datum = leesDatum((await domainInfo(b.domein).catch(() => null))?.renewalDate);
     await prisma.domeinBestelling.update({ where: { id: b.id }, data: { verlooptOp: datum ?? jaarLater(b.afgerondOp ?? b.betaaldOp ?? b.createdAt) } });
   }
 
-  // 3. lopende incasso's
-  const inc = await incassosNakijken();
-  r.incassoBetaald = inc.betaald;
-  r.incassoMislukt = inc.mislukt;
+  // 3. lopende incasso's (een proefronde raakt geen echte betalingen)
+  if (!opties.alleenTest) {
+    const inc = await incassosNakijken();
+    r.incassoBetaald = inc.betaald;
+    r.incassoMislukt = inc.mislukt;
+  }
 
   // 4. verlengen, herinneren, opzeggen
   const binnenkort = await prisma.domeinBestelling.findMany({
@@ -301,7 +309,7 @@ export async function runDomeinVerlengingen(nu = new Date()): Promise<VerlengRon
     orderBy: { verlooptOp: "asc" },
     take: 500,
   });
-  for (const b0 of binnenkort) {
+  for (const b0 of binnenkort.filter(mag)) {
     const b = b0 as DomeinBestelling & { verlooptOp: Date };
     try {
       const factuur = await verlengFactuur(b);
