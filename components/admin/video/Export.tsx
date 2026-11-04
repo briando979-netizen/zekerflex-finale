@@ -58,7 +58,7 @@ export function Export({ project, speler, duur, onSluit, onMelding, onBewaard }:
     try {
       await uploadBestand(resultaat.blob, project.naam, "export", duur);
       await onBewaard();
-      onMelding("De video staat bij Mijn media.");
+      onMelding("De video staat bij Media (links in de editor).");
     } catch (err) {
       onMelding((err as Error).message, "fout");
     } finally {
@@ -129,7 +129,7 @@ export function Export({ project, speler, duur, onSluit, onMelding, onBewaard }:
             <div className="grid gap-2 sm:grid-cols-3">
               <a href={resultaat.url} download={bestandsnaam} className="a-button a-button-primary justify-center text-xs">Downloaden</a>
               <button type="button" className="a-button text-xs" disabled={bewaar !== null} onClick={() => void naarBestanden()}>
-                {bewaar === "bestanden" ? "Bewaren…" : "Bewaar bij Mijn media"}
+                {bewaar === "bestanden" ? "Bewaren…" : "Bewaar bij Media"}
               </button>
               <button type="button" className="a-button text-xs" disabled={bewaar !== null || resultaat.blob.size > 80_000_000} onClick={() => void naarSite()} title={resultaat.blob.size > 80_000_000 ? "Groter dan 80 MB: te groot voor de site" : undefined}>
                 {bewaar === "site" ? "Plaatsen…" : "Zet op de website"}

@@ -78,7 +78,6 @@ export function bouwAutoProject(s: Scenario, o: BouwOpties): Project {
         beweging: BEWEGINGEN[i % BEWEGINGEN.length] ?? "inzoomen",
         overgang: i === 0 ? "geen" : (OVERGANGEN[i % OVERGANGEN.length] ?? "vervagen"),
         overgangDuur: 0.5,
-        vervagenIn: i === 0 ? 0.4 : 0,
         filters: { helderheid: 96, contrast: 106, verzadiging: 108, vervaging: 0, zwartwit: 0, sepia: 0, tint: 0 },
       }),
     );

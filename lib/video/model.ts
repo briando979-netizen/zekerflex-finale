@@ -7,11 +7,11 @@
 
 export type Formaat = "9:16" | "16:9" | "1:1" | "4:5";
 
-export const FORMATEN: Record<Formaat, { w: number; h: number; label: string }> = {
-  "9:16": { w: 1080, h: 1920, label: "Staand (Reels, TikTok, Shorts)" },
-  "16:9": { w: 1920, h: 1080, label: "Liggend (YouTube, website)" },
-  "1:1": { w: 1080, h: 1080, label: "Vierkant" },
-  "4:5": { w: 1080, h: 1350, label: "Instagram-bericht" },
+export const FORMATEN: Record<Formaat, { w: number; h: number; label: string; kort: string }> = {
+  "9:16": { w: 1080, h: 1920, label: "Staand (Reels, TikTok, Shorts)", kort: "Staand, Reels" },
+  "16:9": { w: 1920, h: 1080, label: "Liggend (YouTube, website)", kort: "Liggend, YouTube" },
+  "1:1": { w: 1080, h: 1080, label: "Vierkant", kort: "Vierkant" },
+  "4:5": { w: 1080, h: 1350, label: "Instagram-bericht", kort: "Instagram" },
 };
 
 export type SpoorSoort = "beeld" | "tekst" | "audio";

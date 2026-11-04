@@ -44,7 +44,7 @@ function bestandData(b: VideoBestand): SleepData {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "media", label: "Mijn media" },
+  { id: "media", label: "Media" },
   { id: "fotos", label: "Foto's" },
   { id: "tekst", label: "Tekst" },
   { id: "muziek", label: "Muziek" },
@@ -390,7 +390,7 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
             <button type="button" className="a-button a-button-primary w-full text-xs" onClick={() => void componeer()} disabled={Boolean(bezig)}>
               Maak muziek ({tijdTekst(Math.ceil(projectDuur + 1))})
             </button>
-            <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>Eigen muziek? Upload een MP3 bij Mijn media en sleep hem naar het muziekspoor.</p>
+            <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>Eigen muziek? Upload een MP3 bij Media en sleep hem naar het muziekspoor.</p>
           </div>
         )}
 

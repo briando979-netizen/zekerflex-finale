@@ -333,7 +333,7 @@ export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, ai
             {(Object.keys(FORMATEN) as Formaat[]).map((f) => (
               <button key={f} type="button" onClick={() => onProject({ formaat: f })} aria-pressed={project.formaat === f} className={`a-button flex-col items-start text-left text-[0.6875rem] ${project.formaat === f ? "a-button-primary" : ""}`}>
                 <span className="font-semibold">{f}</span>
-                <span className="opacity-80">{FORMATEN[f].label}</span>
+                <span className="opacity-80" title={FORMATEN[f].label}>{FORMATEN[f].kort}</span>
               </button>
             ))}
           </div>
