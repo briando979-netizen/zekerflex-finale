@@ -25,6 +25,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Promise.all uitbreiden:** controleer de volgorde van de destructuring.
 - **Na een PATCH** de teruggegeven serverversie overnemen in de lijst, niet lokaal één veld bijwerken (de server kan bijeffecten hebben).
 - **Gedeelde staat in het geheugen** (wachtrijen, caches) via `globalThis`: Next bundelt routes apart, dus een gewone module-variabele bestaat per bundel.
+- **Bestanden die de app zelf schrijft** (uploads, Studio-foto's) horen op het opslagvolume (`storage/`, volume app-storage), nooit in `public/`: de container wordt bij elke uitrol vervangen en alles daarin is dan weg (`lib/ontwerp/fotos-store.ts`, `lib/ontwerp/media.ts`).
 - **AuditLog** heeft bewust geen relatie met User (de hashketen); voeg die niet toe.
 
 ### Veiligheid en privacy

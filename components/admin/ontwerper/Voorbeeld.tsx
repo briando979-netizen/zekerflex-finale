@@ -118,7 +118,13 @@ export function Voorbeeld({
     doc.body.appendChild(stijl);
     stijl.textContent = `${themaCss(thema, { alles: true }) ?? ""}\n${tekstModus ? MARKEER_CSS : ""}`;
     for (const [key, waarde] of Object.entries(teksten)) {
-      doc.querySelectorAll(`[data-cms-key="${key.replace(/"/g, "")}"]`).forEach((el) => zetTekst(el, waarde));
+      doc.querySelectorAll(`[data-cms-key="${key.replace(/"/g, "")}"]`).forEach((el) => {
+        // een punt van een lijsttekst (één per regel, lege regels tellen niet; zoals lijstRegels in lib/content/store.ts)
+        const regel = el.getAttribute("data-cms-regel");
+        if (regel === null) return zetTekst(el, waarde);
+        const regels = waarde.split("\n").map((r) => r.trim()).filter(Boolean);
+        zetTekst(el, regels[Number(regel)] ?? "");
+      });
     }
   }, [thema, teksten, tekstModus]);
 

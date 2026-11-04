@@ -19,7 +19,7 @@ import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { canonical, faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
-import { getContentValues } from "@/lib/content/store";
+import { getContentValues, lijstRegels } from "@/lib/content/store";
 
 const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
 const DESCRIPTION =
@@ -38,6 +38,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // de blokken onder de kop, in de volgorde uit de Site-ontwerper (tabblad Homepage); zonder eigen indeling de standaard
   const zichtbaar = zichtbareSecties(indeling);
   const eigen = await eigenBlokken(indeling, zichtbaar);
+  const STEPS = [1, 2, 3].map((n) => ({ n, title: t(`how.s${n}.title`), body: t(`how.s${n}.body`) }));
   return (
     <>
       {isConcept ? (
@@ -80,30 +81,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
         <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60" data-cms-key="trust.label">{t("trust.label")}</span>
-          {["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"].map(
-            (t, i) => (
-              <Reveal key={t} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75">
+          {lijstRegels(t("trust.items")).map(
+            (punt, i) => (
+              <Reveal key={`${i}-${punt}`} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75" cms={{ key: "trust.items", regel: i }}>
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-mint" />
-                {t}
+                {punt}
               </Reveal>
             ),
           )}
         </div>
         <div className="border-t border-white/5 bg-[#0A0C10]">
-          <Marquee
-            items={[
-              "Sneller uitbetalen als optie",
-              "Software voor horeca en rijscholen",
-              "Een eigen website op je domein",
-              "Meer Google-reviews",
-              "Gebouwd voor flexibel werk in Nederland",
-              "Modelovereenkomst inbegrepen",
-              "Wet DBA-risicosignalering",
-              "Reverse billing",
-              "Geen tussenpartijen",
-              "Wekelijkse verloning",
-            ]}
-          />
+          <Marquee items={lijstRegels(t("marquee.items"))} />
         </div>
       </section>
 
@@ -132,7 +120,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
           <ol className="mt-16 grid gap-6 md:grid-cols-3 lg:gap-8">
             {STEPS.map((s, i) => (
-              <Reveal key={s.title} as="li" delay={i * 120} className="relative">
+              <Reveal key={s.n} as="li" delay={i * 120} className="relative">
                 <div className="glass-light group h-full rounded-3xl p-8 transition-transform duration-500 hover:-translate-y-1.5">
                   <div className="flex items-center gap-4">
                     <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-display text-lg font-bold text-white shadow-glow">
@@ -142,8 +130,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                       <span className="hidden h-px flex-1 bg-gradient-to-r from-brand-300/70 to-transparent md:block" />
                     )}
                   </div>
-                  <h3 className="mt-6 font-display text-2xl font-semibold">{s.title}</h3>
-                  <p className="mt-3 text-[1.02rem] leading-relaxed text-neutralx-600">{s.body}</p>
+                  <h3 className="mt-6 font-display text-2xl font-semibold" data-cms-key={`how.s${s.n}.title`}>{s.title}</h3>
+                  <p className="mt-3 text-[1.02rem] leading-relaxed text-neutralx-600" data-cms-key={`how.s${s.n}.body`} data-cms-ml="1">{s.body}</p>
                 </div>
               </Reveal>
             ))}
@@ -158,14 +146,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         eyebrow={t("fl.eyebrow")}
         title={t("fl.title")}
         body={t("fl.body")}
-        points={[
-          "Aanbod afgestemd op je reistijd, skills en beschikbaarheid",
-          "Zelf kiezen hoe snel je uitbetaald wordt — geen facturen sturen",
-          "Afspraken vastgelegd, risico's gesignaleerd",
-          "Bouw badges op van Brons tot Platina",
-        ]}
+        points={lijstRegels(t("fl.points"))}
+        pointsKey="fl.points"
         href="/voor-freelancers"
-        cta="Voor freelancers"
+        cta={t("fl.cta")}
+        ctaKey="fl.cta"
         photo={<Photo name="freelancer" fallback={<SceneWork />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
       />
 
@@ -178,14 +163,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         eyebrow={t("emp.eyebrow")}
         title={t("emp.title")}
         body={t("emp.body")}
-        points={[
-          "Automatische matching en toewijzing per vestiging",
-          "Uren goedkeuren met GPS check-in — facturen volgen vanzelf",
-          "Wet DBA-risico's zichtbaar vóór ze een probleem worden",
-          "Alleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur",
-        ]}
+        points={lijstRegels(t("emp.points"))}
+        pointsKey="emp.points"
         href="/voor-bedrijven"
-        cta="Voor bedrijven"
+        cta={t("emp.cta")}
+        ctaKey="emp.cta"
         photo={<Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
       />
 
@@ -206,22 +188,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Reveal>
 
           <div className="mt-14 grid gap-5 lg:grid-cols-3">
-            {WORKFORMS.map((w, i) => (
-              <Reveal key={w.kind} delay={i * 110}>
+            {WORKFORMS.map((vorm, i) => {
+              // teksten uit het register (work.f1 …); kleur en link blijven vast
+              const w = { ...vorm, kind: t(`${vorm.k}.kind`), who: t(`${vorm.k}.who`), points: lijstRegels(t(`${vorm.k}.points`)), cta: t(`${vorm.k}.cta`) };
+              return (
+              <Reveal key={vorm.k} delay={i * 110}>
                 <div
                   className={`flex h-full flex-col rounded-2xl p-7 ${
                     w.highlight ? "bg-brand-500 text-white shadow-lift" : "glass-light"
                   }`}
                 >
-                  <h3 className="font-display text-xl font-bold">{w.kind}</h3>
-                  <p className={`mt-2 text-sm ${w.highlight ? "text-white/75" : "text-neutralx-500"}`}>
+                  <h3 className="font-display text-xl font-bold" data-cms-key={`${vorm.k}.kind`}>{w.kind}</h3>
+                  <p className={`mt-2 text-sm ${w.highlight ? "text-white/75" : "text-neutralx-500"}`} data-cms-key={`${vorm.k}.who`}>
                     {w.who}
                   </p>
                   <ul className="mt-5 space-y-2.5">
-                    {w.points.map((p) => (
+                    {w.points.map((p, pi) => (
                       <li
-                        key={p}
+                        key={`${pi}-${p}`}
                         className={`flex gap-2.5 text-sm ${w.highlight ? "text-white/90" : "text-neutralx-600"}`}
+                        data-cms-key={`${vorm.k}.points`}
+                        data-cms-regel={pi}
                       >
                         <span className="mt-1 flex-shrink-0">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -243,12 +230,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     className={`mt-7 self-start text-sm font-semibold ${
                       w.highlight ? "text-white underline" : "text-brand-600 hover:underline"
                     }`}
+                    data-cms-key={`${vorm.k}.cta`}
                   >
                     {w.cta} →
                   </Link>
                 </div>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -259,15 +248,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <div className="aurora opacity-70" aria-hidden />
         <div className="shell-4k relative py-24 lg:py-32">
           <div className="grid gap-14 sm:grid-cols-2 lg:grid-cols-4">
+            {/* de grote cijfers staan vast (bedragen: lib/pricing/tiers.ts); de regel eronder is een tekst */}
             {[
-              { v: "€ 3,50", l: "standaard platformkosten per gewerkt uur, lager bij volume" },
-              { v: "€ 0", l: "abonnement en opstartkosten" },
-              { v: "GPS", l: "check-in en urengoedkeuring op locatie" },
-              { v: "Na uren", l: "automatische factuur na goedkeuring" },
+              { v: "€ 3,50", k: "cijfers.1" },
+              { v: "€ 0", k: "cijfers.2" },
+              { v: "GPS", k: "cijfers.3" },
+              { v: "Na uren", k: "cijfers.4" },
             ].map((s, i) => (
               <Reveal key={i} delay={i * 100}>
                 <div className="fluid-stat font-display font-bold text-brand-mint">{s.v}</div>
-                <div className="mt-3 text-sm text-white/55">{s.l}</div>
+                <div className="mt-3 text-sm text-white/55" data-cms-key={s.k}>{t(s.k)}</div>
               </Reveal>
             ))}
           </div>
@@ -286,11 +276,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Reveal>
           <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.title} delay={(i % 3) * 90}>
+              <Reveal key={f.k} delay={(i % 3) * 90}>
                 <div className="glass-light h-full rounded-2xl p-7">
                   <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-500">{f.icon}</div>
-                  <h3 className="mt-5 font-display text-lg font-semibold">{f.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{f.body}</p>
+                  <h3 className="mt-5 font-display text-lg font-semibold" data-cms-key={`${f.k}.title`}>{t(`${f.k}.title`)}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600" data-cms-key={`${f.k}.body`} data-cms-ml="1">{t(`${f.k}.body`)}</p>
                 </div>
               </Reveal>
             ))}
@@ -312,11 +302,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </p>
           </Reveal>
           <div className="grid gap-4 sm:grid-cols-2">
-            {COMPLIANCE.map((c, i) => (
-              <Reveal key={c.title} delay={i * 90}>
+            {["comp.c1", "comp.c2", "comp.c3", "comp.c4"].map((k, i) => (
+              <Reveal key={k} delay={i * 90}>
                 <div className="card h-full p-6">
-                  <h3 className="font-display text-base font-semibold">{c.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{c.body}</p>
+                  <h3 className="font-display text-base font-semibold" data-cms-key={`${k}.title`}>{t(`${k}.title`)}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600" data-cms-key={`${k}.body`} data-cms-ml="1">{t(`${k}.body`)}</p>
                 </div>
               </Reveal>
             ))}
@@ -438,6 +428,8 @@ function ShowcaseSplit({
   reverse = false,
   tone = "paper",
   keys,
+  pointsKey,
+  ctaKey,
 }: {
   eyebrow: string;
   title: string;
@@ -449,6 +441,9 @@ function ShowcaseSplit({
   reverse?: boolean;
   tone?: "paper" | "ink";
   keys?: { eyebrow: string; title: string; body: string };
+  /** tekst-sleutels voor het voorbeeld van de Site-ontwerper: de lijst (één punt per regel) en de knop */
+  pointsKey?: string;
+  ctaKey?: string;
 }) {
   const dark = tone === "ink";
   return (
@@ -464,8 +459,8 @@ function ShowcaseSplit({
           <h2 className="fluid-h2 mt-4 text-balance font-display font-bold" data-cms-key={keys?.title}>{title}</h2>
           <p className={`fluid-lead mt-5 max-w-xl ${dark ? "text-white/65" : "text-neutralx-600"}`} data-cms-key={keys?.body} data-cms-ml="1">{body}</p>
           <ul className="mt-8 space-y-3.5">
-            {points.map((p) => (
-              <li key={p} className={`flex gap-3 text-[1.02rem] ${dark ? "text-white/75" : "text-neutralx-600"}`}>
+            {points.map((p, i) => (
+              <li key={`${i}-${p}`} className={`flex gap-3 text-[1.02rem] ${dark ? "text-white/75" : "text-neutralx-600"}`} data-cms-key={pointsKey} data-cms-regel={pointsKey ? i : undefined}>
                 <span className="mt-1 flex-shrink-0">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path d="M5 13l4 4L19 7" stroke={dark ? "#4FE0A0" : "#0E5C4A"} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -475,7 +470,7 @@ function ShowcaseSplit({
               </li>
             ))}
           </ul>
-          <Link href={href} className={`${dark ? "btn-ghost-invert" : "btn-ghost"} mt-9 self-start text-base`}>
+          <Link href={href} className={`${dark ? "btn-ghost-invert" : "btn-ghost"} mt-9 self-start text-base`} data-cms-key={ctaKey}>
             {cta} →
           </Link>
         </Reveal>
@@ -490,77 +485,22 @@ function ShowcaseSplit({
 
 /* ───────────────────────────────────────────────────────────── content */
 
-const STEPS = [
-  {
-    title: "Meld je aan en verifieer",
-    body: "Werknemers koppelen hun KVK en doorlopen een korte identiteitscheck. Bedrijven registreren hun organisatie en vestigingen.",
-  },
-  {
-    title: "Word slim gematcht",
-    body: "Bij een nieuwe dienst rangschikt ZekerFlex kandidaten op reistijd, betrouwbaarheid en vakmatch. De beste match wordt direct toegewezen.",
-  },
-  {
-    title: "Werk en word betaald",
-    body: "Check in op locatie en werk je dienst. Zodra de uren zijn goedgekeurd kies je zelf hoe snel je uitbetaald wilt worden — gratis wachten of sneller tegen een fee.",
-  },
-];
+// De teksten van de stappen, werkvormen, functies en zekerheden staan in het tekstregister
+// (lib/content/store.ts: how.s1 …, work.f1 …, feat.f1 …, comp.c1 …); hier alleen wat vast blijft.
 
 const WORKFORMS = [
-  {
-    kind: "Via ons uitzendbureau",
-    who: "Geen KVK nodig. ZekerFlex is je werkgever.",
-    points: [
-      "Wekelijkse verloning met loonstrook",
-      "Vakantiegeld (8,33%) en vakantie-uren",
-      "Pensioen via StiPP vanaf week 9",
-      "ABU-fasensysteem: zekerheid die meegroeit",
-    ],
-    href: "/uitzendbureau",
-    cta: "Werken via het uitzendbureau",
-    highlight: true,
-  },
-  {
-    kind: "Als flexwerker",
-    who: "Af en toe zelfstandig, soms met de KOR.",
-    points: [
-      "Btw optioneel of kleineondernemersregeling",
-      "Self-invoice of reverse billing",
-      "Je eigen tarief en ritme",
-      "Lichte fiscale administratie",
-    ],
-    href: "/voor-freelancers",
-    cta: "Meer over flexwerk",
-    highlight: false,
-  },
-  {
-    kind: "Als zzp'er",
-    who: "Eigen bedrijf met KVK en btw-nummer.",
-    points: [
-      "Reverse billing — geen facturen sturen",
-      "Zelf je uitbetaalsnelheid kiezen",
-      "Modelovereenkomst per opdrachtgever",
-      "Wet DBA-monitor bewaakt je risico",
-    ],
-    href: "/voor-freelancers",
-    cta: "Meer voor zzp'ers",
-    highlight: false,
-  },
+  { k: "work.f1", href: "/uitzendbureau", highlight: true },
+  { k: "work.f2", href: "/voor-freelancers", highlight: false },
+  { k: "work.f3", href: "/voor-freelancers", highlight: false },
 ];
 
 const FEATURES = [
-  { title: "Slimme matching", body: "Gewogen score op reistijd, reviews, vakmatch en badge-niveau — niet wie het eerst klikt.", icon: <IconTarget /> },
-  { title: "Uitbetaling naar keuze", body: "Gratis wachten op de reguliere termijn, of sneller uitbetaald worden tegen een fee — jij kiest per dienst.", icon: <IconBolt /> },
-  { title: "Wet DBA-monitor", body: "Urenconcentratie, opeenvolgende weken en omzetafhankelijkheid worden live bewaakt.", icon: <IconShield /> },
-  { title: "Automatische facturatie", body: "Reverse billing: de dienst- en platformfactuur worden voor je aangemaakt, btw-correct.", icon: <IconDoc /> },
-  { title: "GPS check-in", body: "Check-ins worden gegeofenced tegen de vestiging. Afwijkingen openen automatisch een dispuut.", icon: <IconPin /> },
-  { title: "Meldingen die kloppen", body: "Je krijgt alleen een push als het relevant is — en nooit tijdens je rust-uren.", icon: <IconBell /> },
-];
-
-const COMPLIANCE = [
-  { title: "Opdrachtsovereenkomst", body: "ZekerFlex zet afspraken per relatie klaar. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie." },
-  { title: "KVK-validatie", body: "Inschrijving en btw-nummer worden bij aanmelding gecontroleerd tegen het Handelsregister." },
-  { title: "Identiteitsverificatie", body: "Een geverifieerde identiteit (KYC) is verplicht voordat je een dienst kunt aannemen." },
-  { title: "Auditspoor", body: "Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders." },
+  { k: "feat.f1", icon: <IconTarget /> },
+  { k: "feat.f2", icon: <IconBolt /> },
+  { k: "feat.f3", icon: <IconShield /> },
+  { k: "feat.f4", icon: <IconDoc /> },
+  { k: "feat.f5", icon: <IconPin /> },
+  { k: "feat.f6", icon: <IconBell /> },
 ];
 
 const FAQ = [

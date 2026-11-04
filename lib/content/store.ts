@@ -193,7 +193,73 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "oo.cta.body", group: "Over ons — slot-oproep", label: "Tekst", default: "Als freelancer of als werkgever — aanmelden is gratis.", multiline: true },
   { key: "oo.cta.primary", group: "Over ons — slot-oproep", label: "Knop 1", default: "Account aanmaken" },
   { key: "oo.cta.secondary", group: "Over ons — slot-oproep", label: "Knop 2", default: "Voor bedrijven" },
+
+  // ─────────────────────────────────────────────────────────── Homepage: de lijsten en kaarten
+  // Een lijst is één veld met één punt per regel (lijstRegels). De grote cijfers in de cijferbalk
+  // (€ 3,50, € 0 …) staan niet in het register: bedragen komen uit lib/pricing/tiers.ts.
+  { key: "trust.items", group: "Homepage — vertrouwensbalk", label: "Punten (één per regel)", default: "KVK Handelsregister\nGeverifieerde identiteit (KYC)\nSEPA-uitbetaling\nWet DBA-monitor", multiline: true },
+  {
+    key: "marquee.items",
+    group: "Homepage — vertrouwensbalk",
+    label: "Lopende band (één per regel)",
+    default:
+      "Sneller uitbetalen als optie\nSoftware voor horeca en rijscholen\nEen eigen website op je domein\nMeer Google-reviews\nGebouwd voor flexibel werk in Nederland\nModelovereenkomst inbegrepen\nWet DBA-risicosignalering\nReverse billing\nGeen tussenpartijen\nWekelijkse verloning",
+    multiline: true,
+  },
+  { key: "how.s1.title", group: "Homepage — hoe het werkt", label: "Stap 1: titel", default: "Meld je aan en verifieer" },
+  { key: "how.s1.body", group: "Homepage — hoe het werkt", label: "Stap 1: tekst", default: "Werknemers koppelen hun KVK en doorlopen een korte identiteitscheck. Bedrijven registreren hun organisatie en vestigingen.", multiline: true },
+  { key: "how.s2.title", group: "Homepage — hoe het werkt", label: "Stap 2: titel", default: "Word slim gematcht" },
+  { key: "how.s2.body", group: "Homepage — hoe het werkt", label: "Stap 2: tekst", default: "Bij een nieuwe dienst rangschikt ZekerFlex kandidaten op reistijd, betrouwbaarheid en vakmatch. De beste match wordt direct toegewezen.", multiline: true },
+  { key: "how.s3.title", group: "Homepage — hoe het werkt", label: "Stap 3: titel", default: "Werk en word betaald" },
+  { key: "how.s3.body", group: "Homepage — hoe het werkt", label: "Stap 3: tekst", default: "Check in op locatie en werk je dienst. Zodra de uren zijn goedgekeurd kies je zelf hoe snel je uitbetaald wilt worden — gratis wachten of sneller tegen een fee.", multiline: true },
+  { key: "fl.points", group: "Homepage — blok freelancers", label: "Voordelen (één per regel)", default: "Aanbod afgestemd op je reistijd, skills en beschikbaarheid\nZelf kiezen hoe snel je uitbetaald wordt — geen facturen sturen\nAfspraken vastgelegd, risico's gesignaleerd\nBouw badges op van Brons tot Platina", multiline: true },
+  { key: "fl.cta", group: "Homepage — blok freelancers", label: "Knop", default: "Voor freelancers" },
+  { key: "emp.points", group: "Homepage — blok bedrijven", label: "Voordelen (één per regel)", default: "Automatische matching en toewijzing per vestiging\nUren goedkeuren met GPS check-in — facturen volgen vanzelf\nWet DBA-risico's zichtbaar vóór ze een probleem worden\nAlleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur", multiline: true },
+  { key: "emp.cta", group: "Homepage — blok bedrijven", label: "Knop", default: "Voor bedrijven" },
+  { key: "work.f1.kind", group: "Homepage — drie werkvormen", label: "Kaart 1: titel", default: "Via ons uitzendbureau" },
+  { key: "work.f1.who", group: "Homepage — drie werkvormen", label: "Kaart 1: voor wie", default: "Geen KVK nodig. ZekerFlex is je werkgever." },
+  { key: "work.f1.points", group: "Homepage — drie werkvormen", label: "Kaart 1: punten (één per regel)", default: "Wekelijkse verloning met loonstrook\nVakantiegeld (8,33%) en vakantie-uren\nPensioen via StiPP vanaf week 9\nABU-fasensysteem: zekerheid die meegroeit", multiline: true },
+  { key: "work.f1.cta", group: "Homepage — drie werkvormen", label: "Kaart 1: link", default: "Werken via het uitzendbureau" },
+  { key: "work.f2.kind", group: "Homepage — drie werkvormen", label: "Kaart 2: titel", default: "Als flexwerker" },
+  { key: "work.f2.who", group: "Homepage — drie werkvormen", label: "Kaart 2: voor wie", default: "Af en toe zelfstandig, soms met de KOR." },
+  { key: "work.f2.points", group: "Homepage — drie werkvormen", label: "Kaart 2: punten (één per regel)", default: "Btw optioneel of kleineondernemersregeling\nSelf-invoice of reverse billing\nJe eigen tarief en ritme\nLichte fiscale administratie", multiline: true },
+  { key: "work.f2.cta", group: "Homepage — drie werkvormen", label: "Kaart 2: link", default: "Meer over flexwerk" },
+  { key: "work.f3.kind", group: "Homepage — drie werkvormen", label: "Kaart 3: titel", default: "Als zzp'er" },
+  { key: "work.f3.who", group: "Homepage — drie werkvormen", label: "Kaart 3: voor wie", default: "Eigen bedrijf met KVK en btw-nummer." },
+  { key: "work.f3.points", group: "Homepage — drie werkvormen", label: "Kaart 3: punten (één per regel)", default: "Reverse billing — geen facturen sturen\nZelf je uitbetaalsnelheid kiezen\nModelovereenkomst per opdrachtgever\nWet DBA-monitor bewaakt je risico", multiline: true },
+  { key: "work.f3.cta", group: "Homepage — drie werkvormen", label: "Kaart 3: link", default: "Meer voor zzp'ers" },
+  { key: "cijfers.1", group: "Homepage — cijfers", label: "Onder cijfer 1 (€ 3,50)", default: "standaard platformkosten per gewerkt uur, lager bij volume" },
+  { key: "cijfers.2", group: "Homepage — cijfers", label: "Onder cijfer 2 (€ 0)", default: "abonnement en opstartkosten" },
+  { key: "cijfers.3", group: "Homepage — cijfers", label: "Onder cijfer 3 (GPS)", default: "check-in en urengoedkeuring op locatie" },
+  { key: "cijfers.4", group: "Homepage — cijfers", label: "Onder cijfer 4 (Na uren)", default: "automatische factuur na goedkeuring" },
+  { key: "feat.f1.title", group: "Homepage — het platform", label: "Kaart 1: titel", default: "Slimme matching" },
+  { key: "feat.f1.body", group: "Homepage — het platform", label: "Kaart 1: tekst", default: "Gewogen score op reistijd, reviews, vakmatch en badge-niveau — niet wie het eerst klikt.", multiline: true },
+  { key: "feat.f2.title", group: "Homepage — het platform", label: "Kaart 2: titel", default: "Uitbetaling naar keuze" },
+  { key: "feat.f2.body", group: "Homepage — het platform", label: "Kaart 2: tekst", default: "Gratis wachten op de reguliere termijn, of sneller uitbetaald worden tegen een fee — jij kiest per dienst.", multiline: true },
+  { key: "feat.f3.title", group: "Homepage — het platform", label: "Kaart 3: titel", default: "Wet DBA-monitor" },
+  { key: "feat.f3.body", group: "Homepage — het platform", label: "Kaart 3: tekst", default: "Urenconcentratie, opeenvolgende weken en omzetafhankelijkheid worden live bewaakt.", multiline: true },
+  { key: "feat.f4.title", group: "Homepage — het platform", label: "Kaart 4: titel", default: "Automatische facturatie" },
+  { key: "feat.f4.body", group: "Homepage — het platform", label: "Kaart 4: tekst", default: "Reverse billing: de dienst- en platformfactuur worden voor je aangemaakt, btw-correct.", multiline: true },
+  { key: "feat.f5.title", group: "Homepage — het platform", label: "Kaart 5: titel", default: "GPS check-in" },
+  { key: "feat.f5.body", group: "Homepage — het platform", label: "Kaart 5: tekst", default: "Check-ins worden gegeofenced tegen de vestiging. Afwijkingen openen automatisch een dispuut.", multiline: true },
+  { key: "feat.f6.title", group: "Homepage — het platform", label: "Kaart 6: titel", default: "Meldingen die kloppen" },
+  { key: "feat.f6.body", group: "Homepage — het platform", label: "Kaart 6: tekst", default: "Je krijgt alleen een push als het relevant is — en nooit tijdens je rust-uren.", multiline: true },
+  { key: "comp.c1.title", group: "Homepage — compliance", label: "Kaart 1: titel", default: "Opdrachtsovereenkomst" },
+  { key: "comp.c1.body", group: "Homepage — compliance", label: "Kaart 1: tekst", default: "ZekerFlex zet afspraken per relatie klaar. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie.", multiline: true },
+  { key: "comp.c2.title", group: "Homepage — compliance", label: "Kaart 2: titel", default: "KVK-validatie" },
+  { key: "comp.c2.body", group: "Homepage — compliance", label: "Kaart 2: tekst", default: "Inschrijving en btw-nummer worden bij aanmelding gecontroleerd tegen het Handelsregister.", multiline: true },
+  { key: "comp.c3.title", group: "Homepage — compliance", label: "Kaart 3: titel", default: "Identiteitsverificatie" },
+  { key: "comp.c3.body", group: "Homepage — compliance", label: "Kaart 3: tekst", default: "Een geverifieerde identiteit (KYC) is verplicht voordat je een dienst kunt aannemen.", multiline: true },
+  { key: "comp.c4.title", group: "Homepage — compliance", label: "Kaart 4: titel", default: "Auditspoor" },
+  { key: "comp.c4.body", group: "Homepage — compliance", label: "Kaart 4: tekst", default: "Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders.", multiline: true },
 ];
+
+/** De punten van een lijsttekst (één per regel; lege regels tellen niet). */
+export const lijstRegels = (waarde: string) =>
+  waarde
+    .split("\n")
+    .map((r) => r.trim())
+    .filter(Boolean);
 
 /** Alle sleutels van één groep-voorvoegsel (bv. "vb." voor /voor-bedrijven), voor getContentMap op die pagina. */
 export const contentKeys = (prefix: string) => CONTENT_REGISTRY.filter((c) => c.key.startsWith(prefix)).map((c) => c.key);

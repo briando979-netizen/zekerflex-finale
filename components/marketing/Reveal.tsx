@@ -13,12 +13,15 @@ export function Reveal({
   delay = 0,
   className = "",
   once = true,
+  cms,
 }: {
   children: ReactNode;
   as?: ElementType;
   delay?: number;
   className?: string;
   once?: boolean;
+  /** tekst-sleutel (lib/content/store.ts), in het voorbeeld van de Site-ontwerper aanklikbaar; regel = welk punt van een lijsttekst */
+  cms?: { key: string; regel?: number };
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
@@ -50,6 +53,8 @@ export function Reveal({
     <Tag
       ref={ref}
       data-shown={shown}
+      data-cms-key={cms?.key}
+      data-cms-regel={cms?.regel}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
       className={`reveal ${className}`}
     >

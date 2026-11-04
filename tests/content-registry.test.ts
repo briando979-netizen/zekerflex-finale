@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/storage/kv", () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => undefined) }));
 
-import { CONTENT_REGISTRY, contentKeys, getContentMap } from "@/lib/content/store";
+import { CONTENT_REGISTRY, contentKeys, getContentMap, getContentValues, lijstRegels } from "@/lib/content/store";
 
 describe("tekstregister van de Site-ontwerper", () => {
   it("elke sleutel komt één keer voor en heeft een groep en een standaardtekst", () => {
@@ -38,5 +38,18 @@ describe("tekstregister van de Site-ontwerper", () => {
     expect(oo["oo.opr.tekst"]).toContain("jóuw agenda");
     expect(contentKeys("pr.").length).toBe(20);
     expect(contentKeys("oo.").length).toBe(17);
+  });
+
+  it("homepage-lijsten: één punt per regel, standaard exact de oude lijsten", async () => {
+    const v = await getContentValues();
+    expect(lijstRegels(v["trust.items"] ?? "")).toEqual(["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"]);
+    expect(lijstRegels(v["marquee.items"] ?? "").length).toBe(10);
+    expect(lijstRegels(v["emp.points"] ?? "").at(-1)).toBe("Alleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur");
+    expect(lijstRegels(v["work.f1.points"] ?? "")).toContain("Vakantiegeld (8,33%) en vakantie-uren");
+    expect(v["how.s2.title"]).toBe("Word slim gematcht");
+    expect(v["feat.f6.title"]).toBe("Meldingen die kloppen");
+    expect(v["comp.c4.body"]).toBe("Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders.");
+    // lege regels en spaties tellen niet
+    expect(lijstRegels("  een \n\n twee\n ")).toEqual(["een", "twee"]);
   });
 });
