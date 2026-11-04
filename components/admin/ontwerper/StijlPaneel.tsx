@@ -28,9 +28,9 @@ function Blok({ titel, uitleg, children }: { titel: string; uitleg?: string; chi
   return (
     <section className="space-y-3 rounded-xl p-4" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)" }}>
       <div>
-        <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
           {titel}
-        </h3>
+        </h2>
         {uitleg ? (
           <p className="mt-0.5 text-xs" style={mute}>
             {uitleg}

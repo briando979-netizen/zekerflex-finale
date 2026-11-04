@@ -137,9 +137,9 @@ export function TekstenPaneel({
       <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek een tekst…" aria-label="Zoek een tekst" className="w-full rounded-lg px-3 py-2 text-sm" style={veld} />
       {groepen.map(([groep, lijst]) => (
         <section key={groep} className="space-y-3 rounded-xl p-4" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)" }}>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
             {groep}
-          </h3>
+          </h2>
           {lijst.map((item) => {
             const waarde = invoer[item.key] ?? "";
             const gewijzigd = waarde !== (bewaard[item.key] ?? "");

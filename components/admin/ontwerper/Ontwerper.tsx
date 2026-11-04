@@ -9,6 +9,7 @@ import { GeschiedenisPaneel } from "@/components/admin/ontwerper/GeschiedenisPan
 import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
 import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
+import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 
 // ---------------------------------------------------------------------------
 // De Site-ontwerper: links de keuzes, rechts de echte site als voorbeeld.
@@ -21,6 +22,7 @@ const TABS = [
   { id: "stijl", label: "Stijl" },
   { id: "teksten", label: "Teksten" },
   { id: "paginas", label: "Pagina's" },
+  { id: "menu", label: "Menu" },
   { id: "media", label: "Media" },
   { id: "ai", label: "AI-hulp" },
   { id: "geschiedenis", label: "Geschiedenis" },
@@ -278,7 +280,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
 
       <div className="grid gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
         <div className="space-y-3">
-          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="grid grid-cols-3 gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
+          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="grid grid-cols-4 gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -306,6 +308,11 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           <div id="ontwerper-paneel-paginas" role="tabpanel" aria-labelledby="ontwerper-tab-paginas" hidden={tab !== "paginas"}>
             <PaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
           </div>
+          {tab === "menu" ? (
+            <div id="ontwerper-paneel-menu" role="tabpanel" aria-labelledby="ontwerper-tab-menu">
+              <MenuPaneel onVernieuw={verversVoorbeeld} />
+            </div>
+          ) : null}
           {tab === "media" ? (
             <div id="ontwerper-paneel-media" role="tabpanel" aria-labelledby="ontwerper-tab-media">
               <MediaPaneel />

@@ -44,9 +44,9 @@ export function AiPaneel({ thema, onProbeer }: { thema: Thema; onProbeer: (t: Th
     <div className="space-y-3">
       <section className="space-y-3 rounded-xl p-4" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)" }}>
         <div>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
             Stijl met AI
-          </h3>
+          </h2>
           <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>
             Beschrijf hoe de site moet voelen. De AI kiest kleuren, lettertypes en vormen en controleert de leesbaarheid. Alles kan ook zonder AI, bij Stijl.
           </p>
@@ -93,9 +93,9 @@ export function AiPaneel({ thema, onProbeer }: { thema: Thema; onProbeer: (t: Th
 
       {voorstel ? (
         <section className="space-y-3 rounded-xl p-4" style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)" }}>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
             Voorstel
-          </h3>
+          </h2>
           <span className="flex h-12 overflow-hidden rounded-lg" aria-hidden="true">
             <span className="flex-1" style={{ background: voorstel.thema.inkt }} />
             <span className="flex-1" style={{ background: voorstel.thema.primair }} />

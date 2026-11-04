@@ -194,7 +194,8 @@ export function themaCss(input: Thema, opts: { alles?: boolean } = {}): string |
       `.hero-ink{background:radial-gradient(1100px 500px at 12% -10%,${rgba(rgb(t.accent), 0.16)},transparent 60%),radial-gradient(900px 600px at 100% 0%,${rgba(rgb(t.primair), 0.28)},transparent 55%),${t.inkt}}`,
     );
   }
-  if (anders("inkt")) regels.push(`.zf-site .bg-ink{background-color:${t.inkt}}`);
+  // de bovenbalk (SiteHeader) leest --zf-inkt-rgb; de rest van de donkere vlakken via .bg-ink en .hero-ink
+  if (anders("inkt")) regels.push(`:root{--zf-inkt-rgb:${kanalen(rgb(t.inkt))}}`, `.zf-site .bg-ink{background-color:${t.inkt}}`);
   if (anders("papier")) {
     regels.push(`.zf-site.bg-paper,.zf-site .bg-paper{background-color:${t.papier}}`, `.zf-site .bg-paper-soft{background-color:${`rgb(${mix(rgb(t.papier), ZWART, 0.035).join(",")})`}}`);
   }

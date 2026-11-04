@@ -3,70 +3,18 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { SocialLinks } from "@/components/marketing/SocialLinks";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
+import { STANDAARD_VOETTEKST, type Voettekst } from "@/lib/ontwerp/menu";
 
-const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
-  {
-    title: "Platform",
-    links: [
-      { href: "/aanbod", label: "Het hele aanbod" },
-      { href: "/aanbod/horeca", label: "Horecasoftware" },
-      { href: "/aanbod/rijschool", label: "Rijschoolsoftware" },
-      { href: "/aanbod/website", label: "Website laten maken" },
-      { href: "/klussen", label: "Open klussen" },
-      { href: "/open-diensten", label: "Open diensten op de kaart" },
-      { href: "/freelance-werk", label: "Freelance werk per stad" },
-      { href: "/personeel-inhuren", label: "Personeel inhuren" },
-      { href: "/voor-freelancers", label: "Voor freelancers" },
-      { href: "/uitzendbureau", label: "Werken via uitzendbureau" },
-      { href: "/voor-bedrijven", label: "Voor bedrijven" },
-      { href: "/producten", label: "Producten & losse modules" },
-      { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
-      { href: "/sales-partner", label: "Word sales-partner (commissie)" },
-      { href: "/prijzen", label: "Prijzen" },
-      { href: "/shop", label: "ZekerFlex shop" },
-      { href: "/website-check", label: "Gratis website-check" },
-      { href: "/app", label: "Download de app" },
-      { href: "/status", label: "Systeemstatus" },
-      { href: "/developers", label: "API voor ontwikkelaars" },
-    ],
-  },
-  {
-    title: "Kennis",
-    links: [
-      { href: "/kennis", label: "Informatie" },
-      { href: "/uitleg", label: "Uitleg in het kort" },
-      { href: "/kennis#kennisbank", label: "Kennisbank" },
-      { href: "/kennis/wet-dba", label: "Wet DBA" },
-      { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },
-      { href: "/kennis/whitepapers", label: "Whitepapers" },
-      { href: "/rekentools", label: "Gratis rekentools" },
-      { href: "/kennis/blog", label: "Blog" },
-      { href: "/kennis/faq", label: "Veelgestelde vragen" },
-    ],
-  },
-  {
-    title: "Bedrijf",
-    links: [
-      { href: "/over-ons", label: "Over ZekerFlex" },
-      { href: "/contact", label: "Contact" },
-      { href: "tel:+3197010251797", label: "📞 +31 970 102 51797" },
-      { href: "/demo", label: "Vraag een demo aan" },
-      { href: "/over-ons#werken-bij", label: "Werken bij ons" },
-      { href: "/status", label: "Uptime & incidenten" },
-      { href: "mailto:info@zekerflex.com", label: "info@zekerflex.com" },
-      { href: "/login", label: "Inloggen" },
-    ],
-  },
-];
-
-export function SiteFooter() {
+// De kolommen en de zin onder het logo zijn te bewerken in Admin → Site-ontwerper → Menu
+// (lib/ontwerp/menu.ts); zonder eigen versie is het de standaard daar.
+export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Voettekst }) {
   const year = new Date().getFullYear();
   return (
     <footer className="hero-ink text-white">
       <div className="border-b border-white/10">
         <div className="shell flex flex-col gap-6 py-12 md:flex-row md:items-center md:justify-between">
           <div className="max-w-sm">
-            <h3 className="font-display text-lg font-bold">Blijf op de hoogte</h3>
+            <h2 className="font-display text-lg font-bold">Blijf op de hoogte</h2>
             <p className="mt-1.5 text-sm text-white/60">
               Af en toe een update over flexibel werk, de Wet DBA en het platform. Geen spam.
             </p>
@@ -77,17 +25,13 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <div className="shell grid gap-12 py-16 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div className={`shell grid gap-12 py-16 ${voettekst.kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : voettekst.kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : voettekst.kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
         <div>
           <div className="flex items-center gap-2.5">
             <LogoGlyph size={30} tone="light" />
             <span className="font-display text-lg font-bold">ZekerFlex</span>
           </div>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
-            Zeker van je werk, zeker van je mensen. Het onafhankelijke
-            Nederlandse platform voor flexibel werk en voor je hele bedrijf. Bekijk ons privacybeleid
-            voor informatie over gegevensverwerking en betrokken dienstverleners.
-          </p>
+          {voettekst.slogan ? <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">{voettekst.slogan}</p> : null}
           <div className="mt-5 flex items-center gap-2 text-xs text-white/50">
             <Link href="/status" className="underline hover:text-white">
               Bekijk de systeemstatus
@@ -96,11 +40,13 @@ export function SiteFooter() {
           <SocialLinks className="mt-6" />
         </div>
 
-        {COLUMNS.map((col) => (
-          <div key={col.title}>
-            <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">
-              {col.title}
-            </h3>
+        {voettekst.kolommen.map((col, i) => (
+          <div key={`${col.titel}-${i}`}>
+            {col.titel ? (
+              <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">
+                {col.titel}
+              </h3>
+            ) : null}
             <ul className="mt-4 space-y-2.5">
               {col.links.map((l) => (
                 <li key={l.href + l.label}>

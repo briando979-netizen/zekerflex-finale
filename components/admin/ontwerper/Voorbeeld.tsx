@@ -126,12 +126,15 @@ export function Voorbeeld({
     pasToe();
   }, [pasToe]);
 
-  const geladen = () => {
+  const geladen = useCallback(() => {
     setLaden(false);
     pasToe();
     try {
       const doc = frame.current?.contentDocument;
-      doc?.addEventListener(
+      // één klik-luisteraar per document, ook als load en de controle hieronder allebei afgaan
+      if (!doc || doc.documentElement.dataset.zfOntwerper === "1") return;
+      doc.documentElement.dataset.zfOntwerper = "1";
+      doc.addEventListener(
         "click",
         (e) => {
           if (!modus.current) return;
@@ -147,7 +150,23 @@ export function Voorbeeld({
     } catch {
       /* andere herkomst */
     }
-  };
+  }, [pasToe]);
+
+  // Laadt het venster sneller dan React zijn onLoad koppelt (vaak bij de eerste pagina), dan
+  // komt er geen load-melding meer: kijk dan zelf of het document al klaar is.
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      try {
+        if (frame.current?.contentDocument?.readyState === "complete") {
+          geladen();
+          window.clearInterval(t);
+        }
+      } catch {
+        window.clearInterval(t);
+      }
+    }, 400);
+    return () => window.clearInterval(t);
+  }, [pad, geladen]);
 
   const breedte = APPARATEN[apparaat].breedte;
   const schaal = Math.min(1, maat.w / breedte);

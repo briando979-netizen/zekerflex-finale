@@ -8,6 +8,7 @@ import { SECTORS } from "@/lib/seo-sectors";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { SPINOFF_PRODUCTS } from "@/lib/products";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
+import { paginaLijst } from "@/lib/ontwerp/paginas-store";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -52,6 +53,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders
     entry("/aanbod", 0.9, "weekly"),
     ...eigenPaginas().map((a) => entry(`/aanbod/${a.slug}`, 0.7, "monthly")),
+    // Eigen pagina's uit de Site-ontwerper (/p/<slug>): alleen live en niet op "niet in Google"
+    ...(await paginaLijst().catch(() => []))
+      .filter((p) => p.live && !p.live.noindex)
+      .map((p) => entry(`/p/${p.slug}`, 0.6, "weekly", p.gepubliceerd ?? now)),
 
     // Producten (ontbundeld) + los aanbod voor bureaus
     entry("/producten", 0.8, "weekly"),

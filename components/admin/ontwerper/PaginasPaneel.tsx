@@ -566,9 +566,9 @@ export function PaginasPaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: 
   return (
     <div className="space-y-3">
       <section className="space-y-3 rounded-xl p-4" style={paneel}>
-        <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
           Nieuwe pagina
-        </h3>
+        </h2>
         <Veld label="Titel" waarde={titel} onChange={setTitel} max={120} placeholder="Bijvoorbeeld: Personeel voor festivals" />
         <label className="block">
           <span className="mb-1 block text-xs" style={mute}>

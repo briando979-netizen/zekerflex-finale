@@ -166,9 +166,9 @@ export function MediaPaneel() {
   return (
     <div className="space-y-3">
       <section className="space-y-3 rounded-xl p-4" style={paneel}>
-        <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
           Media-bibliotheek
-        </h3>
+        </h2>
         <p className="text-xs" style={{ color: "var(--a-mute)" }}>
           Foto&apos;s en video&apos;s voor je eigen pagina&apos;s. Ze staan op onze eigen server; bezoekers laden niets van anderen.
         </p>

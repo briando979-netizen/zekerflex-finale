@@ -252,7 +252,8 @@ export function SiteHeader() {
         scrolled ? "shadow-[0_10px_30px_-18px_rgba(0,0,0,0.7)]" : ""
       }`}
       style={{
-        background: scrolled || menu ? "rgba(12,14,18,0.94)" : "#0C0E12",
+        // --zf-inkt-rgb: de kleur "Donkere vlakken" uit de Site-ontwerper (lib/ontwerp/thema.ts); standaard 12 14 18 = #0C0E12
+        background: scrolled || menu ? "rgb(var(--zf-inkt-rgb, 12 14 18) / 0.94)" : "rgb(var(--zf-inkt-rgb, 12 14 18))",
         backdropFilter: scrolled || menu ? "blur(10px)" : undefined,
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
