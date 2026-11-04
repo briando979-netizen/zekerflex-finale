@@ -59,6 +59,12 @@ export function EmployerOnboardingWizard({
     emailVerified: boolean;
     answers: Record<string, string>;
     coverStepDone?: boolean;
+    /** het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen */
+    kvkPrefill?: string | undefined;
+    /** na opnieuw laden: is het bedrijf goedgekeurd, of nog in controle bij ZekerFlex? */
+    verified?: boolean | undefined;
+    inControle?: boolean | undefined;
+    companyName?: string | undefined;
   };
 }) {
   const o = useT().onboarding;
@@ -67,6 +73,7 @@ export function EmployerOnboardingWizard({
   const [kvkState, kvkFormAction] = useFormState<EmployerOnboardingState, FormData>(employerOnboardingAction, {
     error: null,
     done: initial.kvkDone,
+    ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), companyName: initial.companyName ?? null } : {}),
   });
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
@@ -80,7 +87,8 @@ export function EmployerOnboardingWizard({
     email: initial.emailVerified,
     klaar: false,
   };
-  const ORDER: StepKey[] = ["org", "adres", "profiel", "foto", "email"];
+  // de KVK-stap eerst: zonder geverifieerd bedrijf kun je niemand inplannen (4 nov 2026)
+  const ORDER: StepKey[] = ["adres", "org", "profiel", "foto", "email"];
   const firstOpen = ORDER.find((k) => !done[k]) ?? "klaar";
   const [open, setOpen] = useState<StepKey>(firstOpen);
 
@@ -90,8 +98,8 @@ export function EmployerOnboardingWizard({
   const minutesLeft = Math.max(1, ORDER.length - completed);
 
   const STEP_META: { key: StepKey; label: string; hint?: string }[] = [
-    { key: "org", label: o.stepOrg },
     { key: "adres", label: o.stepAdres, hint: o.stepAdresHint },
+    { key: "org", label: o.stepOrg },
     { key: "profiel", label: o.stepProfiel, hint: o.stepProfielHint },
     { key: "foto", label: o.stepFoto, hint: o.stepFotoHint },
     { key: "email", label: o.stepEmail, hint: o.stepEmailHint },
@@ -104,7 +112,7 @@ export function EmployerOnboardingWizard({
     startTransition(async () => {
       await saveOnboardingProfileAction(form);
       setOrgSaved(true);
-      setOpen("adres");
+      setOpen(done.adres ? "profiel" : "adres");
     });
   }
   function markStep(field: "profileStepDone" | "coverStepDone", nextStep: StepKey) {
@@ -158,12 +166,20 @@ export function EmployerOnboardingWizard({
         title: o.stepAdres,
         body: kvkState.done ? (
           <div className="space-y-3">
-            <p className={`rounded-lg px-3 py-2.5 text-sm ${kvkState.kvkValid ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
-              {fmt(kvkState.kvkValid ? o.kvkVerified : o.kvkSaved, {
+            {/* groen = goedgekeurd, amber = wacht op ZekerFlex of op een geldig KVK-nummer (één kleur = één betekenis) */}
+            <p role="status" className={`rounded-lg px-3 py-2.5 text-sm ${kvkState.kvkValid && !kvkState.inControle ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
+              {fmt(kvkState.kvkValid ? (kvkState.inControle ? o.kvkInControle : o.kvkVerified) : o.kvkSaved, {
                 name: kvkState.companyName ?? nl.shell.orgFallback,
               })}
             </p>
-            <button type="button" onClick={() => setOpen("profiel")} className="btn-primary text-sm">
+            {kvkState.reasons && kvkState.reasons.length > 0 && !kvkState.kvkValid && (
+              <ul className="list-disc pl-5 text-xs text-neutralx-600">
+                {kvkState.reasons.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            )}
+            <button type="button" onClick={() => setOpen(done.org ? "profiel" : "org")} className="btn-primary text-sm">
               {o.nextStep}
             </button>
           </div>
@@ -172,7 +188,7 @@ export function EmployerOnboardingWizard({
             {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
             <label className="block">
               <span className="field-label">{o.kvkNumber}</span>
-              <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
+              <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={initial.kvkPrefill ?? ""} className="field-input" />
               <span className="mt-1 block text-xs text-neutralx-400">{o.kvkHint}</span>
             </label>
             <label className="block">
@@ -359,6 +375,7 @@ export function EmployerOnboardingWizard({
         <div className="mt-3 space-y-2">
           {panels
             .filter((p) => p.key !== "klaar" || completed === ORDER.length)
+            .sort((a, b) => (a.key === "klaar" ? 99 : ORDER.indexOf(a.key)) - (b.key === "klaar" ? 99 : ORDER.indexOf(b.key)))
             .map((p) => {
               const isOpen = open === p.key;
               return (

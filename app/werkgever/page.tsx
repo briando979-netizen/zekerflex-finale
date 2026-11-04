@@ -5,7 +5,8 @@ import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
 import { pendingEmployerReviews } from "@/lib/reviews/pending";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
-import { isTenantVerified } from "@/lib/company/verified";
+import { tenantVerification } from "@/lib/company/verified";
+import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { recentThreads } from "@/lib/messaging/recent";
 import {
@@ -57,15 +58,19 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
   const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite;
 
-  const [kvkDone, extra, o, threads, companyVerified, pendingReviews, followers] = await Promise.all([
+  const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
-    tenantId ? isTenantVerified(tenantId) : Promise.resolve(true),
+    tenantId ? tenantVerification(tenantId) : Promise.resolve({ verified: true, via: null, inControle: false }),
     pendingEmployerReviews(principal).catch(() => []),
     followerCount(scope.tenantIds).catch(() => 0),
+    // het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen: vult de KVK-stap vooraf in
+    tenantId ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { kvkNumber: true } }).catch(() => null) : Promise.resolve(null),
   ]);
+  const companyVerified = verificatie.verified;
+  const inControle = Boolean(verificatie.inControle);
 
   const ob = extra.onboarding ?? {};
   const answers: Record<string, string> = {};
@@ -77,6 +82,13 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   const wizardComplete = kvkDone && Boolean(ob.profileStepDone) && emailVerified && orgAnswered;
   const canOnboard = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   const showWizard = canOnboard && !wizardComplete;
+  // Startmodus: nog bezig met de stappen en nog niets te laten zien (geen klussen, uren of facturen).
+  // Dan staan de stappen bovenaan en vallen de lege cijfers, grafiek en panelen weg (4 nov 2026:
+  // een nieuw bedrijf zag eerst een scherm vol nullen en vond de KVK-stap pas ver naar beneden).
+  const nogLeeg =
+    o.kpis.openShifts === 0 && o.kpis.toApprove === 0 && o.kpis.activeFreelancers === 0 && o.kpis.spentThisMonthCents === 0 &&
+    o.shifts.length === 0 && o.approvals.length === 0 && o.invoices.length === 0;
+  const startModus = showWizard && nogLeeg;
 
   // Warme, contextuele subregel bij de groet — wat vraagt nu om aandacht?
   const greetSub =
@@ -94,16 +106,25 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
     <>
       {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
-      <EmployerDashboardHero />
+      {!startModus && <EmployerDashboardHero />}
       {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag />}
-      <KlusConceptNudge />
-      {!companyVerified && (
+      {!startModus && <KlusConceptNudge />}
+      {!companyVerified && !startModus && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-          <p className="font-semibold text-ink">Je bedrijf is nog niet geverifieerd</p>
+          <p className="font-semibold text-ink">{inControle ? "We controleren je bedrijf" : "Je bedrijf is nog niet geverifieerd"}</p>
           <p className="mt-1">
-            Je kunt alvast één <strong>testklus</strong> plaatsen: die is zichtbaar en freelancers kunnen erop reageren. Iemand
-            inplannen kan pas zodra je KVK is goedgekeurd — vul daarvoor je KVK-nummer in bij &ldquo;Jouw organisatie&rdquo;. Lukt
-            het niet automatisch? Dan keurt ZekerFlex je bedrijf handmatig goed, meestal binnen een werkdag.
+            Je kunt alvast één <strong>testklus</strong> plaatsen: die is zichtbaar en freelancers kunnen erop reageren.{" "}
+            {inControle ? (
+              <>
+                Je KVK-nummer klopt. We controleren nog of je bij dit bedrijf hoort, meestal binnen een werkdag, en je krijgt bericht
+                zodra je mensen kunt inplannen.
+              </>
+            ) : (
+              <>
+                Iemand inplannen kan pas zodra je bedrijf is geverifieerd: vul je KVK-nummer in bij de stap &ldquo;Bedrijf verifiëren&rdquo;
+                op deze pagina. Lukt het niet automatisch? Dan controleert ZekerFlex je bedrijf met de hand, meestal binnen een werkdag.
+              </>
+            )}
           </p>
         </div>
       )}
@@ -124,6 +145,10 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
                 emailVerified,
                 answers,
                 coverStepDone: Boolean(ob.coverStepDone),
+                kvkPrefill: tenantKvk?.kvkNumber ?? undefined,
+                verified: companyVerified,
+                inControle,
+                companyName: o.orgName,
               }}
             />
           </div>
@@ -141,6 +166,9 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
         />
       )}
 
+      {/* in de startmodus is alles hieronder nog leeg (zie startModus) */}
+      {!startModus && (
+      <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label={t.start.kpiOpen} value={String(o.kpis.openShifts)} tone={o.kpis.openShifts > 0 ? "warn" : "default"} />
         <KpiCard
@@ -306,6 +334,8 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
           )}
         </Panel>
       </div>
+      </>
+      )}
 
       {!nieuwBedrijf && !voorbeeldSoort && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
     </>

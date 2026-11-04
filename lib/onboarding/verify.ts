@@ -12,6 +12,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
+import { alertOwnerLater } from "@/lib/ops/alert";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -504,9 +505,17 @@ export async function submitFreelancerOnboarding(
     ai.verdict === "rejected" ||
     companyStatus === "DISSOLVED" ||
     visionFaceMismatch;
+  // Automatisch goedkeuren alleen als iets echt naar de foto's heeft gekeken.
+  // Zonder beeldcontrole (LLM_VISION_MODEL niet gezet, of het model reageert niet)
+  // ziet de tekst-AI alleen ingetypte velden: dan beoordeelt een mens de foto's
+  // (in_review), nooit automatisch "geverifieerd" (4 nov 2026).
   const visionOk =
-    !vision.available ||
-    ((vision.document?.plausible ?? true) && (vision.face?.samePerson ?? true) && (vision.face?.looksLive ?? true));
+    vision.available &&
+    vision.document !== null &&
+    vision.face !== null &&
+    vision.document.plausible &&
+    vision.face.samePerson &&
+    vision.face.looksLive;
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
@@ -596,8 +605,19 @@ export async function submitFreelancerOnboarding(
     summary: `Zelf-verificatie ${user.fullName}: ${outcome} (KVK ${kvkValid ? "geldig" : "niet geldig"})`,
     targetType: "user",
     targetId: user.id,
-    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence },
+    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available },
   });
+
+  // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).
+  if (outcome === "in_review") {
+    alertOwnerLater({
+      key: `kyc-beoordeling:${user.id}`,
+      title: `ID-controle wacht op je: ${user.fullName}`,
+      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${vision.available ? "De beeldcontrole was niet overtuigend." : "Er is geen automatische beeldcontrole, dus bekijk de foto's zelf."} Keur goed of af bij de gebruiker.`,
+      severity: "warning",
+      url: `/admin/gebruikers/${user.id}`,
+    });
+  }
 
   const reasons = [
     ...checks.filter((c) => !c.ok).map((c) => c.detail),
@@ -611,13 +631,12 @@ export async function submitFreelancerOnboarding(
     companyName,
     checks,
     reasons: [...new Set(reasons)],
+    // bij "in behandeling" een vaste, eerlijke tekst: de AI-samenvatting kan "alles klopt" zeggen terwijl een mens nog kijkt
     summary:
-      ai.summary ||
-      (outcome === "verified"
-        ? "Je bent geverifieerd en kunt diensten aannemen."
-        : outcome === "rejected"
-          ? "De verificatie is afgewezen. Controleer je gegevens en probeer opnieuw."
-          : "Je aanvraag staat in behandeling."),
+      outcome === "in_review"
+        ? "Je aanvraag staat in behandeling. Een medewerker van ZekerFlex bekijkt je foto's, meestal binnen een werkdag. Je krijgt bericht zodra je diensten kunt aannemen."
+        : ai.summary ||
+          (outcome === "verified" ? "Je bent geverifieerd en kunt diensten aannemen." : "De verificatie is afgewezen. Controleer je gegevens en probeer opnieuw."),
   };
 }
 

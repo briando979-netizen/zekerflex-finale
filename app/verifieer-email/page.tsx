@@ -7,6 +7,7 @@ import { confirmVerificationToken, currentVerification } from "@/lib/auth/email-
 import { smtpConfigured } from "@/lib/mail";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { ResendVerification } from "@/components/auth/ResendVerification";
+import { WijzigEmail } from "@/components/auth/WijzigEmail";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
 
@@ -66,6 +67,7 @@ export default async function VerifieerEmailPage(
       }
     >
       <ResendVerification locale={locale} devLink={local?.link ?? null} devCode={local?.code ?? null} />
+      <WijzigEmail locale={locale} />
     </AuthShell>
   );
 }

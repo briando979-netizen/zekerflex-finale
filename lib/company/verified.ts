@@ -9,7 +9,10 @@ import { logger } from "@/lib/logger";
 // Until it is, a company may place ONE test klus: it is visible and freelancers
 // can respond, but nobody gets scheduled on it (no assignment, no timesheet,
 // no invoice). Verified means any of:
-//   - the KVK registration checks out as active in the Handelsregister,
+//   - the KVK registration checks out as active in the Handelsregister AND the
+//     person who registered belongs to it: an own e-mail domain that fits the
+//     registered name (lib/company/eigendom.ts). An active KVK number alone only
+//     proves the company exists; anyone can type it (4 Nov 2026),
 //   - a platform admin approved the company by hand (Admin → Bedrijven),
 //   - the company already had people scheduled before this rule existed, so
 //     existing customers are never suddenly blocked.
@@ -18,19 +21,33 @@ import { logger } from "@/lib/logger";
 export type TenantVerifiedVia = "platform" | "kvk" | "admin" | "history";
 
 const approvalKey = (tenantId: string) => `tenant-approved:${tenantId}`;
+const bewijsKey = (tenantId: string) => `tenant-kvk-bewijs:${tenantId}`;
 
-export async function tenantVerification(tenantId: string): Promise<{ verified: boolean; via: TenantVerifiedVia | null }> {
+/** Proof that the registrant belongs to the KVK company (set at onboarding, lib/onboarding/employer.ts). */
+export interface KvkBewijs {
+  via: "domein";
+  domein: string;
+  at: string;
+}
+
+export async function setKvkBewijs(tenantId: string, bewijs: KvkBewijs): Promise<void> {
+  await kvSet(bewijsKey(tenantId), bewijs);
+}
+
+/** inControle: the KVK is valid and active but nobody proved they belong to it, so ZekerFlex checks by hand. */
+export async function tenantVerification(tenantId: string): Promise<{ verified: boolean; via: TenantVerifiedVia | null; inControle?: boolean }> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: { type: true, companyRegistration: { select: { isActive: true, insolvent: true } } },
   });
   if (!tenant) return { verified: false, via: null };
   if (tenant.type === "PLATFORM") return { verified: true, via: "platform" };
-  if (tenant.companyRegistration?.isActive && !tenant.companyRegistration.insolvent) return { verified: true, via: "kvk" };
+  const kvkActief = Boolean(tenant.companyRegistration?.isActive && !tenant.companyRegistration.insolvent);
+  if (kvkActief && (await kvGet<KvkBewijs>(bewijsKey(tenantId)))) return { verified: true, via: "kvk" };
   if ((await kvGet<{ approved: boolean }>(approvalKey(tenantId)))?.approved) return { verified: true, via: "admin" };
   const staffed = await prisma.shiftAssignment.count({ where: { shift: { branch: { tenantId } } }, take: 1 });
   if (staffed > 0) return { verified: true, via: "history" };
-  return { verified: false, via: null };
+  return { verified: false, via: null, inControle: kvkActief };
 }
 
 export async function isTenantVerified(tenantId: string): Promise<boolean> {
@@ -47,7 +64,7 @@ export async function assertMayPlaceShift(tenantId: string): Promise<{ test: boo
   const existing = await prisma.shift.count({ where: { branch: { tenantId }, status: { not: "CANCELLED" } } });
   if (existing >= 1) {
     throw AppError.precondition(
-      "Je kunt één testklus plaatsen zolang je KVK nog niet is geverifieerd. Rond je bedrijfsgegevens af (Jouw start → Jouw organisatie); zodra je KVK is goedgekeurd kun je onbeperkt klussen plaatsen en mensen inplannen.",
+      "Je kunt één testklus plaatsen zolang je bedrijf nog niet is geverifieerd. Vul je KVK-nummer in bij Jouw start → Bedrijf verifiëren; zodra je bedrijf is goedgekeurd kun je onbeperkt klussen plaatsen en mensen inplannen.",
     );
   }
   return { test: true };

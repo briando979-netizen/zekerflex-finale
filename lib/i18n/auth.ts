@@ -87,6 +87,12 @@ export interface AuthDict {
     resend: string;
     busy: string;
     local: string;
+    spamHint: string;
+    wrongEmail: string;
+    newEmail: string;
+    saveEmail: string;
+    emailChanged: string;
+    emailChangedWait: string;
   };
   page: {
     back: string;
@@ -267,6 +273,12 @@ const nl: AuthDict = {
     resend: "Stuur de code opnieuw",
     busy: "Bezig…",
     local: "Lokale omgeving: er is nog geen externe e-mailserver ingesteld, dus hier is je verificatie direct.",
+    spamHint: "Geen mail gezien? Kijk ook in je map Ongewenst of Spam. Het kan een paar minuten duren.",
+    wrongEmail: "Verkeerd e-mailadres ingevuld?",
+    newEmail: "Juiste e-mailadres",
+    saveEmail: "Pas aan en stuur de code",
+    emailChanged: "Aangepast. We hebben een nieuwe code gestuurd naar {email}.",
+    emailChangedWait: "Aangepast naar {email}. Vraag over een minuut de code opnieuw aan.",
   },
   page: {
     back: "Instellingen",
@@ -447,6 +459,12 @@ const en: AuthDict = {
     resend: "Send the code again",
     busy: "Working…",
     local: "Local environment: no external mail server is set up yet, so here is your verification directly.",
+    spamHint: "No email? Also check your Junk or Spam folder. It can take a few minutes.",
+    wrongEmail: "Entered the wrong email address?",
+    newEmail: "Correct email address",
+    saveEmail: "Change and send the code",
+    emailChanged: "Changed. We sent a new code to {email}.",
+    emailChangedWait: "Changed to {email}. Request the code again in a minute.",
   },
   page: {
     back: "Settings",
@@ -627,6 +645,12 @@ const pl: AuthDict = {
     resend: "Wyślij kod ponownie",
     busy: "Chwileczkę…",
     local: "Środowisko lokalne: serwer poczty nie jest jeszcze skonfigurowany, więc weryfikacja jest tutaj.",
+    spamHint: "Nie widzisz wiadomości? Sprawdź też folder Spam lub Wiadomości-śmieci. Może to potrwać kilka minut.",
+    wrongEmail: "Podano zły adres e-mail?",
+    newEmail: "Prawidłowy adres e-mail",
+    saveEmail: "Zmień i wyślij kod",
+    emailChanged: "Zmieniono. Wysłaliśmy nowy kod na {email}.",
+    emailChangedWait: "Zmieniono na {email}. Poproś o kod ponownie za minutę.",
   },
   page: {
     back: "Ustawienia",
@@ -807,6 +831,12 @@ const ro: AuthDict = {
     resend: "Trimite din nou codul",
     busy: "Se procesează…",
     local: "Mediu local: încă nu este configurat un server de e-mail, așa că verificarea este aici.",
+    spamHint: "Nu ai primit e-mailul? Verifică și dosarul Spam sau Nesolicitate. Poate dura câteva minute.",
+    wrongEmail: "Ai introdus o adresă de e-mail greșită?",
+    newEmail: "Adresa de e-mail corectă",
+    saveEmail: "Modifică și trimite codul",
+    emailChanged: "Modificat. Am trimis un cod nou la {email}.",
+    emailChangedWait: "Modificat la {email}. Cere din nou codul peste un minut.",
   },
   page: {
     back: "Setări",
@@ -987,6 +1017,12 @@ const uk: AuthDict = {
     resend: "Надіслати код ще раз",
     busy: "Зачекай…",
     local: "Локальне середовище: поштовий сервер ще не налаштовано, тому підтвердження тут.",
+    spamHint: "Не бачите листа? Перевірте також папку «Спам». Це може тривати кілька хвилин.",
+    wrongEmail: "Вказали неправильну адресу e-mail?",
+    newEmail: "Правильна адреса e-mail",
+    saveEmail: "Змінити й надіслати код",
+    emailChanged: "Змінено. Ми надіслали новий код на {email}.",
+    emailChangedWait: "Змінено на {email}. Запросіть код ще раз за хвилину.",
   },
   page: {
     back: "Налаштування",

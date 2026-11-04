@@ -68,6 +68,17 @@ vi.mock("@/lib/storage/local", () => ({
 const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: null, face: null, model: null });
 vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
 
+const alertOwnerLater = vi.fn();
+vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (...a: unknown[]) => alertOwnerLater(...a) }));
+
+/** a vision review that looked at the photos and found nothing wrong */
+const VISION_OK = {
+  available: true,
+  model: "moondream",
+  document: { plausible: true, confidence: 0.9, documentNumber: null, expiryDate: null, concerns: [] },
+  face: { samePerson: true, faceMatchConfidence: 0.9, looksLive: true, livenessConfidence: 0.8, concerns: [] },
+};
+
 vi.mock("@/lib/ai/client", () => ({
   ensureAiNode: async () => undefined,
   chatJson: vi.fn().mockResolvedValue({
@@ -134,12 +145,14 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       freelancerProfile: { id: "fp_1" },
     });
 
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
     const result = await submitFreelancerOnboarding({
       ...BASE_INPUT,
       files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
     });
 
     expect(result.outcome).toBe("verified");
+    expect(alertOwnerLater).not.toHaveBeenCalled();
 
     // One compliance "id" doc, superseding any previous one, pointing at the
     // FRONT upload specifically — not the back or the selfie.
@@ -239,7 +252,30 @@ describe("submitFreelancerOnboarding — vision review (photo content)", () => {
     expect(result.outcome).toBe("in_review");
   });
 
-  it("a vision model failure (unavailable) never blocks — same outcome as without vision", async () => {
+  it("without any photo check (no vision model) nobody is auto-approved on typed fields alone: a person reviews", async () => {
+    userFindUnique.mockResolvedValue({
+      id: "usr_1",
+      fullName: "Jan Jansen",
+      kycStatus: "PENDING",
+      freelancerProfile: { id: "fp_1" },
+    });
+
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+    });
+
+    // the text AI said "approved", but it never saw the photos
+    expect(result.outcome).toBe("in_review");
+    expect(result.kycStatus).toBe("PENDING");
+    expect(result.summary).toMatch(/medewerker/);
+    // the owner is told, otherwise the worker waits unseen
+    expect(alertOwnerLater).toHaveBeenCalledWith(expect.objectContaining({ key: "kyc-beoordeling:usr_1", url: "/admin/gebruikers/usr_1" }));
+    // the front photo still fills the compliance ID slot (not rejected)
+    expect(complianceCreate).toHaveBeenCalled();
+  });
+
+  it("a vision model failure (unavailable) never blocks — it lands with a person (in_review), never rejected", async () => {
     userFindUnique.mockResolvedValue({
       id: "usr_1",
       fullName: "Jan Jansen",
@@ -259,7 +295,7 @@ describe("submitFreelancerOnboarding — vision review (photo content)", () => {
       files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
     });
 
-    expect(result.outcome).toBe("verified");
+    expect(result.outcome).toBe("in_review");
     expect(result.checks.some((c) => c.label.includes("beeldcontrole"))).toBe(false);
   });
 });

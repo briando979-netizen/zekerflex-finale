@@ -97,8 +97,8 @@ export const nl = {
     nextStep: "Volgende stap",
     busy: "Bezig…",
     stepOrg: "Jouw organisatie",
-    stepAdres: "Bevestig je adres",
-    stepAdresHint: "Locatiegegevens controleren",
+    stepAdres: "Bedrijf verifiëren: KVK en vestiging",
+    stepAdresHint: "Nodig om mensen in te plannen",
     stepProfiel: "Je profiel instellen",
     stepProfielHint: "Bedrijfsnaam, contactgegevens en logo",
     stepFoto: "Upload een omslagfoto",
@@ -141,6 +141,7 @@ export const nl = {
     verifyNext: "Verifiëren & verder",
     kvkVerified: "{name} — geverifieerd in het Handelsregister",
     kvkSaved: "{name} — opgeslagen, KVK nog te bevestigen",
+    kvkInControle: "{name} staat in het Handelsregister. We controleren nog of je bij dit bedrijf hoort: meestal binnen een werkdag, je krijgt bericht. Je kunt alvast één testklus plaatsen.",
     profielBody:
       "Vul je bedrijfsnaam, contactgegevens en logo aan. Zo zien krachten meteen wie je bent — dat levert meer en betere reacties op.",
     editProfile: "Profiel bewerken",

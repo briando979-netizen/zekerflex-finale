@@ -8,6 +8,7 @@ import { AppError } from "@/lib/errors";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { nameSimilarity } from "@/lib/onboarding/verify";
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { alertOwnerLater } from "@/lib/ops/alert";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -146,6 +147,16 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
       targetType: "user",
       targetId: user.id,
     });
+    // handmatige controle nodig: zonder melding blijft de werknemer onzichtbaar wachten (4 nov 2026)
+    if (!nameOk) {
+      alertOwnerLater({
+        key: `kyc-beoordeling:${user.id}`,
+        title: `ID-controle wacht op je: ${user.fullName}`,
+        detail: `Stripe keurde het document goed, maar de naam erop (${docName ?? "onbekend"}) lijkt niet op de accountnaam. Bekijk het en keur goed of af bij de gebruiker.`,
+        severity: "warning",
+        url: `/admin/gebruikers/${user.id}`,
+      });
+    }
     return;
   }
 

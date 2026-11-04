@@ -99,6 +99,22 @@ export async function consumeCode(userId: string, code: string): Promise<string 
   return null;
 }
 
+/**
+ * Make every open verification link/code of a user worthless — when they
+ * correct a mistyped address, whoever got the mail at the WRONG address must
+ * not be able to confirm the account. Returns how many were removed.
+ */
+export async function revokeTokensFor(userId: string): Promise<number> {
+  const entries = await kvListEntries<TokenRecord>("mail-token:", 5000);
+  let n = 0;
+  for (const { key, value: rec } of entries) {
+    if (rec.userId !== userId) continue;
+    await kvDelete(key);
+    n += 1;
+  }
+  return n;
+}
+
 /** Returns the userId and deletes the token, or null when invalid/expired. */
 export async function consumeToken(token: string): Promise<string | null> {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return null;

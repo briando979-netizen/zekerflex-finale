@@ -94,8 +94,8 @@ export const en: Dict = {
     nextStep: "Next step",
     busy: "Working…",
     stepOrg: "Your organisation",
-    stepAdres: "Confirm your address",
-    stepAdresHint: "Check location details",
+    stepAdres: "Verify your company: Chamber of Commerce and branch",
+    stepAdresHint: "Needed to schedule people",
     stepProfiel: "Set up your profile",
     stepProfielHint: "Company name, contact details and logo",
     stepFoto: "Upload a cover photo",
@@ -138,6 +138,7 @@ export const en: Dict = {
     verifyNext: "Verify & continue",
     kvkVerified: "{name} — verified in the trade register",
     kvkSaved: "{name} — saved, Chamber of Commerce still to confirm",
+    kvkInControle: "{name} is in the trade register. We are still checking that you belong to this company: usually within one working day, we will let you know. You can already post one test job.",
     profielBody:
       "Add your company name, contact details and logo. Workers see straight away who you are — that gets you more and better responses.",
     editProfile: "Edit profile",

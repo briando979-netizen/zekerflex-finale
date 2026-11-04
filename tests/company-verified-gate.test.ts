@@ -21,7 +21,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { assertMayPlaceShift, setTenantApproval, tenantVerification } from "@/lib/company/verified";
+import { assertMayPlaceShift, setKvkBewijs, setTenantApproval, tenantVerification } from "@/lib/company/verified";
 
 describe("company verification gate", () => {
   beforeEach(() => {
@@ -38,11 +38,25 @@ describe("company verification gate", () => {
     await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één testklus/);
   });
 
-  it("active KVK registration → verified, unlimited klussen", async () => {
+  it("active KVK alone is not enough: anyone can type a number, so ZekerFlex checks by hand (inControle)", async () => {
     m.tenant.companyRegistration = { isActive: true, insolvent: false };
+    expect(await tenantVerification("t1")).toEqual({ verified: false, via: null, inControle: true });
+    m.shifts = 1;
+    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één testklus/);
+  });
+
+  it("active KVK + proof the registrant belongs to it (own domain) → verified, unlimited klussen", async () => {
+    m.tenant.companyRegistration = { isActive: true, insolvent: false };
+    await setKvkBewijs("t1", { via: "domein", domein: "bakkerijjansen.nl", at: "2026-11-04T07:00:00.000Z" });
     m.shifts = 5;
     expect(await tenantVerification("t1")).toEqual({ verified: true, via: "kvk" });
     expect(await assertMayPlaceShift("t1")).toEqual({ test: false });
+  });
+
+  it("active KVK in control + admin approval → verified via admin", async () => {
+    m.tenant.companyRegistration = { isActive: true, insolvent: false };
+    await setTenantApproval("t1", true, "admin@zekerflex.nl");
+    expect(await tenantVerification("t1")).toEqual({ verified: true, via: "admin" });
   });
 
   it("insolvent company does not count as verified", async () => {

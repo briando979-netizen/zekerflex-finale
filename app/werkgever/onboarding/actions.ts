@@ -51,6 +51,8 @@ export interface EmployerOnboardingState {
   done: boolean;
   companyName?: string | null;
   kvkValid?: boolean;
+  /** KVK klopt, maar ZekerFlex controleert met de hand of de aanmelder bij het bedrijf hoort */
+  inControle?: boolean;
   reasons?: string[];
 }
 
@@ -79,11 +81,22 @@ export async function employerOnboardingAction(
   try {
     const res = await submitEmployerOnboarding(principal.userId, tenantId, parsed.data);
     revalidatePath("/werkgever");
+    // Een KVK-nummer dat niet klopt is geen afgeronde stap: het formulier blijft open
+    // met de reden (4 nov 2026: de stap kreeg een groen vinkje bij een verzonnen nummer).
+    if (!res.kvkValid) {
+      const reden = res.reasons[0] ?? "We konden dit KVK-nummer niet bevestigen in het Handelsregister.";
+      return {
+        error: `${reden} Controleer het nummer (8 cijfers, bijvoorbeeld op je KVK-uittreksel) en probeer het opnieuw; je vestiging is al opgeslagen.`,
+        done: false,
+        reasons: res.reasons,
+      };
+    }
     return {
       error: null,
       done: true,
       companyName: res.companyName,
       kvkValid: res.kvkValid,
+      inControle: res.inControle,
       reasons: res.reasons,
     };
   } catch (err) {
