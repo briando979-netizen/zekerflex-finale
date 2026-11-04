@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MAX_KOLOMMEN, MAX_LINKS, normalizeVoettekst, type MenuLink, type Voettekst, type VoettekstKolom } from "@/lib/ontwerp/menu";
 import type { Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
 import { HoofdmenuPaneel } from "@/components/admin/ontwerper/HoofdmenuPaneel";
+import { BalkPaneel } from "@/components/admin/ontwerper/BalkPaneel";
 
 // ---------------------------------------------------------------------------
 // Tabblad Menu: het hoofdmenu bovenaan (HoofdmenuPaneel) en de voettekst
@@ -178,6 +179,7 @@ export function MenuPaneel({ onVernieuw }: { onVernieuw: () => void }) {
 
   return (
     <div className="space-y-3">
+      <BalkPaneel onVernieuw={onVernieuw} />
       {hoofdmenu ? <HoofdmenuPaneel begin={hoofdmenu.begin} beginEigen={hoofdmenu.eigen} eigenPaginas={eigenPaginas} onVernieuw={onVernieuw} /> : null}
       <section className="space-y-3 rounded-xl p-4" style={paneel}>
         <h2 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
