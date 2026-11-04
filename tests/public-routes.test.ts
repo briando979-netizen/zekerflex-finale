@@ -45,6 +45,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/auth/werkgever", // /klus-plaatsen: is the caller's own session a werkgever? (yes/no only)
     "/api/review-scan", // free public review-scan
     "/api/review-scan/lead", // its contact form
+    "/api/klus-plaatsen/website", // /klus-plaatsen reads a company's public front page
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
