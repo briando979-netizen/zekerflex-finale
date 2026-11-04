@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
 import { BTW_PROCENT, metBtw } from "@/lib/domeinen/extensies";
-import { periodeTekst } from "@/lib/domeinen/verlengen-core";
+import { isTestAdres, periodeTekst } from "@/lib/domeinen/verlengen-core";
 
 // ---------------------------------------------------------------------------
 // Facturen voor domeinnamen: gewone ZekerFlex-facturen (type DOMEIN, nummer
@@ -13,7 +13,7 @@ import { periodeTekst } from "@/lib/domeinen/verlengen-core";
 // ---------------------------------------------------------------------------
 
 export interface DomeinFactuurInvoer {
-  bestelling: Pick<DomeinBestelling, "id" | "tenantId" | "domein">;
+  bestelling: Pick<DomeinBestelling, "id" | "tenantId" | "domein" | "email">;
   soort: "eerste-jaar" | "verlenging";
   /** prijs per jaar excl. btw */
   exclCent: number;
@@ -35,13 +35,17 @@ export function factuurRegel(domein: string, soort: DomeinFactuurInvoer["soort"]
   return `Domeinnaam ${domein} — ${soort === "verlenging" ? "verlenging" : "registratie"}, 1 jaar (${periodeTekst(van, tot)})`;
 }
 
-/** Maakt de factuur (met een gatloos nummer in dezelfde transactie). */
+/**
+ * Maakt de factuur (met een gatloos nummer in dezelfde transactie). Een
+ * testbestelling (testadres) krijgt een los ZF-TEST-nummer, zodat opruimen na
+ * een livetest geen gat in de echte nummering slaat.
+ */
 export async function maakDomeinFactuur(input: DomeinFactuurInvoer): Promise<Invoice> {
   const p = metBtw(input.exclCent);
   const issuer = await platformTenantId();
   const nu = new Date();
   return prisma.$transaction(async (tx) => {
-    const number = await nextInvoiceNumber(tx, "DOMEIN", nu);
+    const number = isTestAdres(input.bestelling.email) ? `ZF-TEST-${nu.getTime().toString(36).toUpperCase()}` : await nextInvoiceNumber(tx, "DOMEIN", nu);
     return tx.invoice.create({
       data: {
         number,
