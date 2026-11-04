@@ -45,6 +45,8 @@ export function rijschoolPad(slug: string, pad: string): string | null {
   if (GEDEELDE_PADEN.some((p) => pad.startsWith(p))) return pad;
   // een ander /rijschool/<naam>: niet op dit domein
   if (pad.startsWith("/rijschool/")) return null;
+  // de sitemap van de rijschool zelf, niet die van ZekerFlex (lib/rijschool/vindbaar.ts)
+  if (pad === "/sitemap.xml") return `${basis}/sitemap.xml`;
   if (/\.[a-z0-9]{2,5}$/i.test(pad) && pad !== "/robots.txt") return pad;
   return pad === "/" ? basis : `${basis}${pad}`;
 }
@@ -68,7 +70,8 @@ export function naarEigenDomein(tekst: string, basis: string, adressen: Readonly
   });
 }
 
-/** robots.txt voor het domein: vindbaar als de website online staat, anders niet. */
-export function robotsVoor(online: boolean): string {
-  return online ? "User-agent: *\nAllow: /\n" : "User-agent: *\nDisallow: /\n";
+/** robots.txt voor het domein: vindbaar als de website online staat (met de sitemap erbij), anders niet. */
+export function robotsVoor(online: boolean, host?: string): string {
+  if (!online) return "User-agent: *\nDisallow: /\n";
+  return `User-agent: *\nAllow: /\n${host ? `\nSitemap: https://${host}/sitemap.xml\n` : ""}`;
 }

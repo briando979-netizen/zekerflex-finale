@@ -26,7 +26,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: eigen ? `${eigen}/` : `/rijschool/${r.slug}` },
     // eigen app op het beginscherm: naam, icoon en kleur van de rijschool
     manifest: `/rijschool/${r.slug}/manifest.webmanifest`,
-    icons: { apple: `/rijschool/${r.slug}/app-icoon.png?maat=192` },
+    // het icoon van de rijschool in het tabblad en bij Google (anders geen enkel icoon)
+    icons: {
+      icon: [{ url: `/rijschool/${r.slug}/app-icoon.png?maat=192`, type: "image/png", sizes: "192x192" }],
+      apple: `/rijschool/${r.slug}/app-icoon.png?maat=192`,
+    },
     openGraph: { title: r.naam, siteName: r.naam, type: "website", locale: "nl_NL" },
   };
 }

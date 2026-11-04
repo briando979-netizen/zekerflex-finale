@@ -9,6 +9,7 @@ import { publicOpenShifts } from "@/lib/public-shifts";
 import { SPINOFF_PRODUCTS } from "@/lib/products";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
+import { rijschoolPadenVoorSitemap } from "@/lib/rijschool/vindbaar";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -115,5 +116,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: { active: true },
       select: { slug: true, updatedAt: true },
     }).catch(() => [] as { slug: string; updatedAt: Date }[])).map((p) => entry(`/shop/${p.slug}`, 0.6, "weekly", p.updatedAt)),
+
+    // Websites van rijscholen op zekerflex.com (met een actief eigen domein: daar een eigen sitemap)
+    ...(await rijschoolPadenVoorSitemap().catch(() => [])).map((p) => entry(p.pad, 0.5, "weekly", p.bijgewerkt)),
   ];
 }

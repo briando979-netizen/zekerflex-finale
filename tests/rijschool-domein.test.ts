@@ -35,10 +35,17 @@ describe("rijschoolPad (eigen domein)", () => {
     expect(p(BEWIJS_PAD)).toBe("/api/rijschool/domein/bewijs");
   });
 
-  it("robots.txt volgt of de site online staat", () => {
+  it("robots.txt volgt of de site online staat, met de eigen sitemap erbij", () => {
     expect(p("/robots.txt")).toBe("/rijschool/jansen/robots.txt");
     expect(robotsVoor(true)).toContain("Allow: /");
     expect(robotsVoor(false)).toContain("Disallow: /");
+    expect(robotsVoor(true, "rijschooljansen.nl")).toContain("Sitemap: https://rijschooljansen.nl/sitemap.xml");
+    expect(robotsVoor(false, "rijschooljansen.nl")).not.toContain("Sitemap");
+  });
+
+  it("/sitemap.xml is die van de rijschool, niet die van ZekerFlex", () => {
+    expect(p("/sitemap.xml")).toBe("/rijschool/jansen/sitemap.xml");
+    expect(p("/rijschool/jansen/sitemap.xml")).toBe("/rijschool/jansen/sitemap.xml");
   });
 });
 

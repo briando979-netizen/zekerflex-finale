@@ -219,7 +219,7 @@ function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextRe
     return NextResponse.redirect(`https://${r.hoofd}${pad}${req.nextUrl.search}`, 308);
   }
   if (pad === "/robots.txt") {
-    return new NextResponse(robotsVoor(r.online), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    return new NextResponse(robotsVoor(r.online, r.hoofd), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
   // zelfde als bij het voorstel: geen ZekerFlex-statistiek en geen ZekerFlex-service-worker
   if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
