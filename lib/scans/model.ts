@@ -11,7 +11,8 @@
 export type ScanSoort = "website" | "reviews";
 export const SOORT_LABEL: Record<ScanSoort, string> = { website: "Website-check", reviews: "Review-scan" };
 
-export type ScanStap = "gescand" | "nieuwe-site" | "stijl" | "deal-bekeken" | "aanvraag" | "deal-akkoord";
+/** "opgevolgd" is een stap van ons (sales mailde het voorstel), de rest doet de bezoeker. */
+export type ScanStap = "gescand" | "nieuwe-site" | "stijl" | "deal-bekeken" | "aanvraag" | "deal-akkoord" | "opgevolgd";
 export const STAP_LABEL: Record<ScanStap, string> = {
   gescand: "Gescand",
   "nieuwe-site": "Nieuwe website gemaakt",
@@ -19,7 +20,14 @@ export const STAP_LABEL: Record<ScanStap, string> = {
   "deal-bekeken": "Voorstel bekeken",
   aanvraag: "Contact aangevraagd",
   "deal-akkoord": "Voorstel geaccepteerd",
+  opgevolgd: "Voorstel gemaild door sales",
 };
+
+/** Wanneer sales het voorstel het laatst mailde, of null. */
+export function laatstOpgevolgd(log: Pick<ScanLog, "stappen">): string | null {
+  const s = log.stappen.filter((x) => x.stap === "opgevolgd").map((x) => x.at).sort();
+  return s[s.length - 1] ?? null;
+}
 
 export interface ScanLog {
   /** `${soort}:${scanId}` */
@@ -43,9 +51,9 @@ export interface ScanLog {
 
 export const scanSleutel = (soort: ScanSoort, scanId: string) => `${soort}:${scanId}`;
 
-/** Een stap erbij; elke stap telt één keer, behalve een stijlkeuze (die mag vaker). */
+/** Een stap erbij; elke stap telt één keer, behalve een stijlkeuze en het mailen door sales (die mogen vaker). */
 export function metStap(log: ScanLog, stap: ScanStap, at: string, info?: string): ScanLog {
-  if (stap !== "stijl" && log.stappen.some((s) => s.stap === stap)) return log;
+  if (stap !== "stijl" && stap !== "opgevolgd" && log.stappen.some((s) => s.stap === stap)) return log;
   return { ...log, stappen: [...log.stappen, { stap, at, ...(info ? { info: info.slice(0, 120) } : {}) }] };
 }
 

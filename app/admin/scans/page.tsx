@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Funnel, KpiStrip, PageHead, Panel } from "@/components/admin/kit";
 import { ScansTabel, type ScanRij } from "@/components/admin/ScansTabel";
 import { lijstScans } from "@/lib/scans/store";
-import { getDeals } from "@/lib/scans/deal";
-import { dealEuro, dealTotaal, statusVan, trechter } from "@/lib/scans/model";
+import { dealVerlopen, getDeals } from "@/lib/scans/deal";
+import { dealEuro, dealTotaal, laatstOpgevolgd, statusVan, trechter } from "@/lib/scans/model";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +20,8 @@ export default async function ScansPage() {
   const leadIds = [...new Set(scans.map((s) => s.leadId).filter((l): l is string => Boolean(l)))];
   const leads = leadIds.length
     ? await prisma.salesLead
-        .findMany({ where: { id: { in: leadIds } }, select: { id: true, status: true, contactName: true, source: true } })
-        .catch(() => [] as { id: string; status: string; contactName: string | null; source: string }[])
+        .findMany({ where: { id: { in: leadIds } }, select: { id: true, status: true, contactName: true, source: true, contactEmail: true, discoveredEmail: true } })
+        .catch(() => [] as { id: string; status: string; contactName: string | null; source: string; contactEmail: string | null; discoveredEmail: string | null }[])
     : [];
   const leadVan = new Map(leads.map((l) => [l.id, l]));
 
@@ -59,8 +59,11 @@ export default async function ScansPage() {
             gekozen: d.opties.filter((o) => d.keuze.includes(o.id)).map((o) => o.naam),
             eenmalig: totaal?.eenmaligCent ?? 0,
             maand: totaal?.maandCent ?? 0,
+            verlopen: dealVerlopen(d, nu),
           }
         : null,
+      email: lead?.contactEmail ?? lead?.discoveredEmail ?? null,
+      opgevolgd: laatstOpgevolgd(s),
     };
   });
 
@@ -90,7 +93,11 @@ export default async function ScansPage() {
           ]}
         />
       </Panel>
-      <Panel title="Alle scans" subtitle="Nieuwste eerst. Een lead zonder contactpersoon is automatisch gemaakt: de bezoeker vroeg (nog) niets aan." flush>
+      <Panel
+        title="Alle scans"
+        subtitle="Nieuwste eerst. Een lead zonder contactpersoon is automatisch gemaakt: de bezoeker vroeg (nog) niets aan. Met Stuur voorstel mail je het voorstel op maat zelf naar het bedrijf (zakelijke introductie met afmeldlink, hooguit eens per week)."
+        flush
+      >
         <ScansTabel rijen={rijen} />
       </Panel>
     </div>

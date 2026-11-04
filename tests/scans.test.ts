@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dealOpties, dealTotaal, isTestEmail, isTestHost, metStap, schoneKeuze, statusVan, trechter, type DealInput, type DealPrijzen, type ScanLog } from "@/lib/scans/model";
+import { dealOpties, dealTotaal, isTestEmail, isTestHost, laatstOpgevolgd, metStap, schoneKeuze, statusVan, trechter, type DealInput, type DealPrijzen, type ScanLog } from "@/lib/scans/model";
 
 // Scans & deals: het logboek van de gratis scans, wat de bezoeker daarna deed,
 // en het voorstel op maat met echte prijzen.
@@ -61,6 +61,14 @@ describe("logboek en status", () => {
     expect(statusVan(metStap(LOG, "deal-bekeken", "t"))).toBe("verder-gekeken");
     expect(statusVan(metStap(metStap(LOG, "nieuwe-site", "t"), "aanvraag", "t"))).toBe("aanvraag");
     expect(statusVan(metStap(LOG, "deal-akkoord", "t"))).toBe("akkoord");
+  });
+
+  it("mailen door sales mag vaker, telt niet als stap van de bezoeker, en de laatste datum is bekend", () => {
+    const l = metStap(metStap(LOG, "opgevolgd", "2026-11-04T11:00:00Z", "a"), "opgevolgd", "2026-11-11T11:00:00Z", "b");
+    expect(l.stappen.filter((s) => s.stap === "opgevolgd")).toHaveLength(2);
+    expect(statusVan(l)).toBe("alleen-gescand");
+    expect(laatstOpgevolgd(l)).toBe("2026-11-11T11:00:00Z");
+    expect(laatstOpgevolgd(LOG)).toBeNull();
   });
 
   it("de trechter telt een latere stap ook voor de eerdere", () => {
