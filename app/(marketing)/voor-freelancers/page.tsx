@@ -5,6 +5,7 @@ import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneWork } from "@/components/marketing/Scene";
 import { canonical } from "@/lib/seo";
+import { contentKeys, getContentMap } from "@/lib/content/store";
 
 export const metadata: Metadata = {
   title: "Flexwerk & zzp-opdrachten vinden",
@@ -67,26 +68,28 @@ const FAQ = [
   { q: "Wat als er een geschil is over mijn uren?", a: "Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je GPS check-in en de goedgekeurde planning wegen daarin mee." },
 ];
 
-export default function VoorFreelancersPage() {
+export default async function VoorFreelancersPage() {
+  // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
+  const tekst = await getContentMap(contentKeys("vf."));
+  const v = (k: string) => tekst[k] ?? "";
   return (
     <>
       <div className="hero-ink text-white">
         <div className="shell grid gap-12 py-20 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-28">
           <div>
-            <p className="eyebrow text-brand-mint">Voor freelancers</p>
-            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">
-              Werk dat bij je past. Geld dat op tijd komt.
+            <p className="eyebrow text-brand-mint" data-cms-key="vf.eyebrow">{v("vf.eyebrow")}</p>
+            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl" data-cms-key="vf.title">
+              {v("vf.title")}
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/70">
-              Jij levert vakmanschap. Wij regelen de match, de overeenkomst, de
-              factuur en de uitbetaling — zodat jij je op je werk kunt richten.
+            <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="vf.lead" data-cms-ml="1">
+              {v("vf.lead")}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register" className="btn-mint">
-                Maak je profiel aan
+              <Link href="/register" className="btn-mint" data-cms-key="vf.cta1">
+                {v("vf.cta1")}
               </Link>
-              <Link href="/prijzen" className="btn-ghost-invert">
-                Bekijk de voorwaarden
+              <Link href="/prijzen" className="btn-ghost-invert" data-cms-key="vf.cta2">
+                {v("vf.cta2")}
               </Link>
             </div>
             <HeroChecks items={["Bepaal je eigen uurtarief", "Kies je eigen klussen", "Bouw aan jouw toekomst"]} />
@@ -96,7 +99,7 @@ export default function VoorFreelancersPage() {
       </div>
 
       <Section tone="paper">
-        <SectionHead eyebrow="Wat je krijgt" title="Alles geregeld, behalve het werk zelf" />
+        <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: "vf.got.eyebrow", title: "vf.got.title" }} />
         <div className="mt-14 grid gap-x-10 gap-y-12 md:grid-cols-2">
           {BENEFITS.map((b) => (
             <div key={b.id} id={b.id} className="scroll-mt-24">
@@ -108,7 +111,7 @@ export default function VoorFreelancersPage() {
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Zo werkt het" title="Van aanmelding tot eerste uitbetaling" />
+        <SectionHead eyebrow={v("vf.how.eyebrow")} title={v("vf.how.title")} cms={{ eyebrow: "vf.how.eyebrow", title: "vf.how.title" }} />
         <ol className="mt-12 space-y-6">
           {[
             "Maak je account aan en koppel je KVK.",
@@ -129,7 +132,7 @@ export default function VoorFreelancersPage() {
       </Section>
 
       <Section tone="paper">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <SectionHead eyebrow={v("vf.faq.eyebrow")} title={v("vf.faq.title")} cms={{ eyebrow: "vf.faq.eyebrow", title: "vf.faq.title" }} />
         <div className="mt-10">
           <FaqList items={FAQ} />
         </div>
@@ -142,11 +145,12 @@ export default function VoorFreelancersPage() {
       </Section>
 
       <CtaBand
-        title="Klaar om aan de slag te gaan?"
-        body="Je profiel staat in een paar minuten. Gratis, geen verplichtingen."
-        primaryLabel="Profiel aanmaken"
-        secondaryLabel="Voor bedrijven"
+        title={v("vf.cta.title")}
+        body={v("vf.cta.body")}
+        primaryLabel={v("vf.cta.primary")}
+        secondaryLabel={v("vf.cta.secondary")}
         secondaryHref="/voor-bedrijven"
+        cms={{ title: "vf.cta.title", body: "vf.cta.body", primary: "vf.cta.primary", secondary: "vf.cta.secondary" }}
       />
     </>
   );

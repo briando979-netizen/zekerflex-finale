@@ -5,6 +5,7 @@ import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneApprove } from "@/components/marketing/Scene";
 import { canonical } from "@/lib/seo";
+import { contentKeys, getContentMap } from "@/lib/content/store";
 
 export const metadata: Metadata = {
   title: "Flexkrachten & zzp'ers inhuren",
@@ -65,26 +66,28 @@ const FAQ = [
   { q: "Kan ik meerdere vestigingen beheren?", a: "Ja. Je richt een organisatie in met vestigingen, wijst lokale managers toe met of zonder locatiebeperking, en houdt op hoofdkantoorniveau overzicht over alles." },
 ];
 
-export default function VoorBedrijvenPage() {
+export default async function VoorBedrijvenPage() {
+  // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
+  const tekst = await getContentMap(contentKeys("vb."));
+  const v = (k: string) => tekst[k] ?? "";
   return (
     <>
       <div className="hero-ink text-white">
         <div className="shell grid gap-12 py-20 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-28">
           <div>
-            <p className="eyebrow text-brand-mint">Voor bedrijven</p>
-            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">
-              Betrouwbare mensen, precies wanneer je ze nodig hebt.
+            <p className="eyebrow text-brand-mint" data-cms-key="vb.eyebrow">{v("vb.eyebrow")}</p>
+            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl" data-cms-key="vb.title">
+              {v("vb.title")}
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/70">
-              Zet een dienst uit en ZekerFlex regelt de rest: de match, de
-              overeenkomst, de check-in, de facturatie en de compliance.
+            <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="vb.lead" data-cms-ml="1">
+              {v("vb.lead")}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register?type=bedrijf" className="btn-mint">
-                Organisatie aanmelden
+              <Link href="/register?type=bedrijf" className="btn-mint" data-cms-key="vb.cta1">
+                {v("vb.cta1")}
               </Link>
-              <Link href="/prijzen" className="btn-ghost-invert">
-                Bekijk de prijzen
+              <Link href="/prijzen" className="btn-ghost-invert" data-cms-key="vb.cta2">
+                {v("vb.cta2")}
               </Link>
             </div>
             <p className="mt-4 text-sm text-white/70">
@@ -100,10 +103,7 @@ export default function VoorBedrijvenPage() {
       </div>
 
       <Section tone="paper">
-        <SectionHead
-          eyebrow="Het systeem"
-          title="Van dienst uitzetten tot factuur — één doorlopend proces"
-        />
+        <SectionHead eyebrow={v("vb.sys.eyebrow")} title={v("vb.sys.title")} cms={{ eyebrow: "vb.sys.eyebrow", title: "vb.sys.title" }} />
         <div className="mt-14 grid gap-6 md:grid-cols-2">
           {BLOCKS.map((b) => (
             <div key={b.id} id={b.id} className="card scroll-mt-24 p-7">
@@ -133,9 +133,10 @@ export default function VoorBedrijvenPage() {
 
       <Section tone="paper">
         <SectionHead
-          eyebrow="Reken het zelf uit"
-          title="Twee gratis rekentools voor werkgevers"
-          intro="Zonder account, en alles wordt in je eigen browser berekend."
+          eyebrow={v("vb.tools.eyebrow")}
+          title={v("vb.tools.title")}
+          intro={v("vb.tools.intro")}
+          cms={{ eyebrow: "vb.tools.eyebrow", title: "vb.tools.title", intro: "vb.tools.intro" }}
         />
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {TOOLS.map((t) => (
@@ -153,19 +154,20 @@ export default function VoorBedrijvenPage() {
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <SectionHead eyebrow={v("vb.faq.eyebrow")} title={v("vb.faq.title")} cms={{ eyebrow: "vb.faq.eyebrow", title: "vb.faq.title" }} />
         <div className="mt-10">
           <FaqList items={FAQ} />
         </div>
       </Section>
 
       <CtaBand
-        title="Zet vandaag je eerste dienst uit"
-        body="Meld je organisatie aan, richt je vestigingen in en nodig je managers uit. Binnen een uur operationeel."
+        title={v("vb.cta.title")}
+        body={v("vb.cta.body")}
         primaryHref="/register?type=bedrijf"
-        primaryLabel="Organisatie aanmelden"
-        secondaryLabel="Voor freelancers"
+        primaryLabel={v("vb.cta.primary")}
+        secondaryLabel={v("vb.cta.secondary")}
         secondaryHref="/voor-freelancers"
+        cms={{ title: "vb.cta.title", body: "vb.cta.body", primary: "vb.cta.primary", secondary: "vb.cta.secondary" }}
       />
     </>
   );

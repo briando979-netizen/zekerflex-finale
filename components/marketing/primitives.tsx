@@ -26,21 +26,25 @@ export function SectionHead({
   title,
   intro,
   invert = false,
+  cms,
 }: {
   eyebrow?: string;
   title: string;
   intro?: string;
   invert?: boolean;
+  /** tekst-sleutels (lib/content/store.ts): in het voorbeeld van de Site-ontwerper aanklikbaar */
+  cms?: { eyebrow?: string; title?: string; intro?: string };
 }) {
   return (
     <div className="max-w-2xl">
       {eyebrow ? (
-        <p className={`eyebrow ${invert ? "text-brand-mint" : ""}`}>{eyebrow}</p>
+        <p className={`eyebrow ${invert ? "text-brand-mint" : ""}`} data-cms-key={cms?.eyebrow}>{eyebrow}</p>
       ) : null}
       <h2
         className={`mt-3 text-balance font-display text-3xl font-bold leading-tight tracking-tight md:text-[2.6rem] ${
           invert ? "text-white" : "text-ink"
         }`}
+        data-cms-key={cms?.title}
       >
         {title}
       </h2>
@@ -49,6 +53,7 @@ export function SectionHead({
           className={`mt-4 text-lg leading-relaxed ${
             invert ? "text-white/65" : "text-neutralx-600"
           }`}
+          data-cms-key={cms?.intro}
         >
           {intro}
         </p>
@@ -89,6 +94,7 @@ export function CtaBand({
   primaryLabel = "Account aanmaken",
   secondaryHref = "/voor-bedrijven",
   secondaryLabel = "Voor bedrijven",
+  cms,
 }: {
   title: string;
   body: string;
@@ -96,22 +102,24 @@ export function CtaBand({
   primaryLabel?: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  /** tekst-sleutels (lib/content/store.ts): in het voorbeeld van de Site-ontwerper aanklikbaar */
+  cms?: { title?: string; body?: string; primary?: string; secondary?: string };
 }) {
   return (
     <section className="hero-ink text-white">
       <div className="shell py-20 md:py-24">
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div className="max-w-xl">
-            <h2 className="text-balance font-display text-3xl font-bold leading-tight md:text-4xl">
+            <h2 className="text-balance font-display text-3xl font-bold leading-tight md:text-4xl" data-cms-key={cms?.title}>
               {title}
             </h2>
-            <p className="mt-3 text-lg text-white/65">{body}</p>
+            <p className="mt-3 text-lg text-white/65" data-cms-key={cms?.body}>{body}</p>
           </div>
           <div className="flex flex-shrink-0 flex-wrap gap-3">
-            <Link href={primaryHref} className="btn-mint">
+            <Link href={primaryHref} className="btn-mint" data-cms-key={cms?.primary}>
               {primaryLabel}
             </Link>
-            <Link href={secondaryHref} className="btn-ghost-invert">
+            <Link href={secondaryHref} className="btn-ghost-invert" data-cms-key={cms?.secondary}>
               {secondaryLabel}
             </Link>
           </div>
