@@ -16,8 +16,8 @@ import { slugify, type Block, type BlockProps, type BlockType, type Company, typ
 // ---------------------------------------------------------------------------
 
 export const DEMO_SLUG = "bakkerij-jansen";
-// 2: the premium house style (3 Nov 2026); 3: a webshop with products (4 Nov 2026)
-const DEMO_VERSION = 3;
+// 2: the premium house style (3 Nov 2026); 3: a webshop with products; 4: choices (taart) and stock (4 Nov 2026)
+const DEMO_VERSION = 4;
 const DEMO_TENANT = "voorbeeld:bakkerij-jansen";
 const STATE_KEY = "site-demo:bakkerij-jansen";
 const LOCK_KEY = "site-demo-lock:bakkerij-jansen";
@@ -140,10 +140,15 @@ export function demoWinkel(foto: (key: PhotoKey) => string | null): Winkel {
       p("pdemo00volkoren", "Volkoren met zaden", "Brood", 395, "Met zonnebloempitten, lijnzaad en sesam", "Een stevig volkorenbrood vol zaden en pitten. Lekker bij de lunch en lang vers.\n\nOngeveer 800 gram.", "hero"),
       p("pdemo0000mand", "Broodmand voor de zondag", "Brood", 1495, "Vier broden en zes broodjes, voor het hele gezin", "Voor een ontbijt of brunch met het hele gezin: desem, volkoren, spelt en een stokbrood, met zes zachte broodjes.\n\nBestel uiterlijk vrijdag, dan staat hij zondagochtend klaar.", "mand", { oudePrijsCents: 1695 }),
       p("pdemo00stokbrood", "Stokbrood", "Brood", 225, "Elke ochtend en middag vers", "Een knapperig stokbrood, twee keer per dag vers uit de oven.", null, { uitverkocht: true }),
-      p(DEMO_UITGELICHT, "Roomboter croissant", "Banket en zoet", 185, "Met echte roomboter, met de hand gevouwen", "Vroeg in de ochtend gevouwen met echte Franse roomboter, voor een krokante buitenkant en een luchtig, zacht binnenste.\n\nNaturel, of vraag naar de amandelcroissant.", "croissant"),
+      p(DEMO_UITGELICHT, "Roomboter croissant", "Banket en zoet", 185, "Met echte roomboter, met de hand gevouwen", "Vroeg in de ochtend gevouwen met echte Franse roomboter, voor een krokante buitenkant en een luchtig, zacht binnenste.\n\nNaturel, of vraag naar de amandelcroissant.", "croissant", { voorraad: 4 }),
       p("pdemo0chocolade", "Chocoladebroodje", "Banket en zoet", 210, "Bladerdeeg met twee staafjes pure chocolade", "Luchtig bladerdeeg met twee staafjes pure chocolade. Het lekkerst nog even warm.", "chocolade"),
-      p("pdemo00cupcakes", "Cupcakes, doosje van 6", "Banket en zoet", 1250, "Vrolijk versierd, voor elk feestje", "Zes cupcakes met vanille, chocolade en aardbei, versierd met botercrème en spikkels.\n\nTip: bestel ze twee dagen van tevoren met jouw kleuren.", "cupcakes"),
-      p("pdemo000taart", "Taart op maat", "Banket en zoet", 3450, "Kies smaak, formaat en tekst", "Voor verjaardagen, bruiloften en het werk. Kies smaak en formaat, en zet er je eigen tekst op. Prijs voor een taart van 10 tot 12 personen.\n\nBestel minstens twee dagen van tevoren.", "schaal"),
+      p("pdemo00cupcakes", "Cupcakes, doosje van 6", "Banket en zoet", 1250, "Vrolijk versierd, voor elk feestje", "Zes cupcakes met vanille, chocolade en aardbei, versierd met botercrème en spikkels.\n\nTip: bestel ze twee dagen van tevoren met jouw kleuren.", "cupcakes", { voorraad: 12 }),
+      p("pdemo000taart", "Taart op maat", "Banket en zoet", 3450, "Kies smaak, formaat en tekst", "Voor verjaardagen, bruiloften en het werk. Kies smaak en formaat, en zet er je eigen tekst op (bij de opmerking). Prijs voor een taart van 10 tot 12 personen.\n\nBestel minstens twee dagen van tevoren.", "schaal", {
+        opties: [
+          { naam: "Formaat", waarden: ["6 tot 8 personen", "10 tot 12 personen", "16 tot 20 personen"] },
+          { naam: "Smaak", waarden: ["Aardbei", "Chocolade", "Vanille", "Citroen"] },
+        ],
+      }),
     ],
     bestellen: true,
     levering: { afhalen: true, bezorgen: true, bezorgkostenCents: 395, gratisVanafCents: 2500 },
