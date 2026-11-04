@@ -77,7 +77,9 @@ const abs = (src: string, base: URL) => {
 
 const GENERIC = /^(home|homepage|welkom|start|index|hoofdpagina)$/i;
 const SKIP_HEADING =
-  /^(contact|menu|navigatie|zoeken|volg ons|nieuwsbrief|social|delen|cookies?|privacy|footer|meer|lees meer|copyright|openingstijden|openingsuren|adres|route|over ons|wie zijn wij|nieuws|blog|vacatures|werken bij|reviews|beoordelingen|klantervaringen|disclaimer|algemene voorwaarden|snel naar)\b/i;
+  /^(contact|menu|navigatie|zoeken|volg ons|nieuwsbrief|social|delen|cookies?|privacy|footer|meer|lees meer|copyright|openingstijden|openingsuren|adres|route|over ons|wie zijn wij|nieuws|blog|vacatures|werken bij|reviews|beoordelingen|klantervaringen|disclaimer|algemene voorwaarden|snel naar|handige links|snelle links|quick links|links|sitemap|ons adres|contactgegevens|bereikbaarheid|meer informatie|klantenservice)\b/i;
+/** A teaser that was cut off on their site ("Bij MarktZicht zit je ..."): not a service. */
+const CUT_OFF = /(\.\.\.|…)\s*$/;
 
 /** A line from the footer (copyright, registration numbers, an address), not about a service. */
 const footerLine = (t: string) => /©|copyright|alle rechten|kvk|btw-?(nummer|nr|id)|privacyverklaring|cookies?\b/i.test(t) || /\b[1-9]\d{3} ?[A-Z]{2}\b/.test(t);
@@ -133,7 +135,8 @@ export function extractBusiness(html: string, finalUrl: string): BusinessFacts {
       .map((i) => abs(attr(i, "src") ?? "", base)),
   ].filter((u, idx, all): u is string => Boolean(u) && all.indexOf(u) === idx).slice(0, 8);
 
-  const usable = (h: string) => h.length >= 3 && h.length <= 60 && !SKIP_HEADING.test(h);
+  // no link lists, no cut-off teasers and not their own name as a "service"
+  const usable = (h: string) => h.length >= 3 && h.length <= 60 && !SKIP_HEADING.test(h) && !CUT_OFF.test(h) && h.toLowerCase() !== (naam ?? "").trim().toLowerCase();
   const koppen = [...new Set((visible.match(/<h[23]\b[^>]*>[\s\S]*?<\/h[23]>/gi) ?? []).map((h) => decode(h.replace(/<[^>]+>/g, " "))).filter(usable))].slice(0, 12);
   const paragraphs = (html: string) => (html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) ?? []).map((p) => decode(p.replace(/<[^>]+>/g, " ")));
   // a heading and the paragraphs under it, up to the next heading

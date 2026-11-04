@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { importRemoteImage } from "@/lib/media/clean-image";
+import { zonderDubbeleFotos } from "@/lib/sites/foto-afdruk";
 import { textOn } from "@/lib/sites/render";
 import { siteSaveSchema } from "@/lib/sites/schema";
 import { addMedia, createSite, markProposal, publishSite, saveSite } from "@/lib/sites/store";
@@ -342,10 +343,12 @@ export async function buildProposalSite(input: ProposalSiteInput): Promise<SiteD
       }
     }),
   );
+  // the same photo under two addresses (another size, another name) counts once: the largest stays
+  const uniek = await zonderDubbeleFotos(opgehaald, facts.fotos.slice(0, 16));
   const fotos: Media[] = [];
-  for (const [i, image] of opgehaald.entries()) {
+  for (const [i, image] of uniek.fotos.entries()) {
     if (!image) continue;
-    fotos.push(await addMedia(site.id, image, { alt: `Foto van ${bedrijf.naam}`, bron: "internet", sourceUrl: facts.fotos[i] ?? image.sourceUrl }));
+    fotos.push(await addMedia(site.id, image, { alt: `Foto van ${bedrijf.naam}`, bron: "internet", sourceUrl: uniek.bron[i] ?? image.sourceUrl }));
   }
 
   const theme = proposalTheme(facts.kleur, template, logo);
