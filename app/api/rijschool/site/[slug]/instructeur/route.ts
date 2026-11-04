@@ -11,6 +11,7 @@ import { instructeurWeergave } from "@/lib/rijschool/weergave";
 import { isDatum, moment } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { onlineBetalenAan, startIdeal } from "@/lib/rijschool/betalen";
+import { eigenAdres } from "@/lib/rijschool/domein";
 import { leesRoute, routeWeergave, voegRouteToe } from "@/lib/rijschool/lesroute";
 import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
 import type { Rijschool, RijschoolInstructeur } from "@prisma/client";
@@ -141,7 +142,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         const wat = a.productId
           ? { productId: a.productId, ookVerborgen: true }
           : { betalingId: (await prisma.rijschoolBetaling.create({ data: { rijschoolId: r.id, leerlingId: l.id, omschrijving: a.omschrijving, bedragCent: a.bedragCent, status: "OPEN" } })).id };
-        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling") });
+        // de leerling betaalt op zijn eigen telefoon: terug naar het hoofdadres van de rijschool
+        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling", await eigenAdres(r.id)) });
       }
     }
     return NextResponse.json(await instructeurWeergave(r, i, datum));

@@ -4,6 +4,8 @@ import { logger } from "@/lib/logger";
 import { sendMail, type MailInput } from "@/lib/mail";
 import { lesMoment, SOORT_LABEL } from "@/lib/rijschool/format";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
+import { naarEigenDomein, rijschoolLinksIn } from "@/lib/rijschool/domein-pad";
+import { eigenAdresVoorSlug } from "@/lib/rijschool/domein";
 
 // ---------------------------------------------------------------------------
 // Mails die ZekerFlex namens een rijschool stuurt: uitnodiging om een
@@ -315,10 +317,32 @@ export function testAppMail(r: School, ontvanger: { naam: string; email: string 
   );
 }
 
+/**
+ * Heeft de rijschool een actief eigen domein (lib/rijschool/domein.ts), dan wijzen
+ * de links in de mail daarheen in plaats van naar zekerflex.com/rijschool/<naam>.
+ * Lukt het opzoeken niet, dan gaat de mail gewoon met de zekerflex.com-links.
+ */
+async function metEigenDomein(m: MailInput): Promise<MailInput> {
+  try {
+    const slugs = rijschoolLinksIn(`${m.text}\n${m.html ?? ""}`, basis());
+    if (slugs.length === 0) return m;
+    const adressen = new Map<string, string>();
+    for (const slug of slugs) {
+      const adres = await eigenAdresVoorSlug(slug);
+      if (adres) adressen.set(slug, adres);
+    }
+    if (adressen.size === 0) return m;
+    const om = (s: string) => naarEigenDomein(s, basis(), adressen);
+    return { ...m, text: om(m.text), ...(m.html !== undefined ? { html: om(m.html) } : {}) };
+  } catch {
+    return m;
+  }
+}
+
 export async function verstuur(m: MailInput | null): Promise<boolean> {
   if (!m || !m.to) return false;
   try {
-    return (await sendMail(m)).delivered;
+    return (await sendMail(await metEigenDomein(m))).delivered;
   } catch (err) {
     logger.warn("rijschool: mail niet verstuurd", { subject: m.subject, error: err instanceof Error ? err.message : String(err) });
     return false;

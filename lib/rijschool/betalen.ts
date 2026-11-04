@@ -118,6 +118,8 @@ export async function startIdeal(
   l: Pick<RijschoolLeerling, "id" | "email" | "naam">,
   wat: { productId: string; ookVerborgen?: boolean } | { betalingId: string },
   terugPad: string,
+  /** https://<eigen domein> als de leerling daar zit (lib/rijschool/domein.ts); anders zekerflex.com/rijschool/<naam> */
+  adres: string | null = null,
 ): Promise<string> {
   if (!r.stripeAccountId || !(await onlineBetalenAan(r))) throw AppError.precondition("Online betalen staat nog niet aan bij deze rijschool.");
   let omschrijving: string;
@@ -153,8 +155,8 @@ export async function startIdeal(
       application_fee_amount: IDEAL_KOSTEN_CENT,
       metadata,
     },
-    success_url: siteUrl(r, `${terugPad}?betaling=gelukt`),
-    cancel_url: siteUrl(r, `${terugPad}?betaling=geannuleerd`),
+    success_url: `${adres ?? siteUrl(r)}${terugPad}?betaling=gelukt`,
+    cancel_url: `${adres ?? siteUrl(r)}${terugPad}?betaling=geannuleerd`,
   });
   if (!sessie.url) throw AppError.upstream("Stripe gaf geen betaalpagina terug.");
   if ("betalingId" in wat) await prisma.rijschoolBetaling.update({ where: { id: wat.betalingId }, data: { stripeSessionId: sessie.id } }).catch(() => undefined);

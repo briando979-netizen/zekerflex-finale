@@ -39,6 +39,25 @@ export function rijschoolPad(slug: string, pad: string): string | null {
   return pad === "/" ? basis : `${basis}${pad}`;
 }
 
+const linkPatroon = (basis: string) => new RegExp(`${basis.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}/rijschool/([a-z0-9-]+)(?![a-z0-9-])/?`, "g");
+
+/** De rijscholen (slugs) waarnaar een tekst linkt via `${basis}/rijschool/<slug>`. */
+export function rijschoolLinksIn(tekst: string, basis: string): string[] {
+  return [...new Set([...tekst.matchAll(linkPatroon(basis))].map((m) => m[1] ?? "").filter(Boolean))];
+}
+
+/**
+ * Zet links naar zekerflex.com/rijschool/<slug>/… om naar https://<eigen domein>/…
+ * voor de rijscholen in `adressen` (slug → https://domein). De rest blijft staan.
+ */
+export function naarEigenDomein(tekst: string, basis: string, adressen: ReadonlyMap<string, string>): string {
+  if (adressen.size === 0) return tekst;
+  return tekst.replace(linkPatroon(basis), (heel, slug: string) => {
+    const adres = adressen.get(slug);
+    return adres ? `${adres}/` : heel;
+  });
+}
+
 /** robots.txt voor het domein: vindbaar als de website online staat, anders niet. */
 export function robotsVoor(online: boolean): string {
   return online ? "User-agent: *\nAllow: /\n" : "User-agent: *\nDisallow: /\n";

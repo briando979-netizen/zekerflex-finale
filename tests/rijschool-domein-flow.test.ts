@@ -21,17 +21,22 @@ vi.mock("@/lib/prisma", () => ({
         return data;
       },
     },
-    rijschool: { findUnique: async ({ where }: { where: { id: string } }) => scholen.get(where.id) ?? null },
+    rijschool: {
+      findUnique: async ({ where }: { where: { id?: string; slug?: string } }) =>
+        where.id ? (scholen.get(where.id) ?? null) : ([...scholen].map(([id, s]) => ({ id, ...s })).find((s) => s.slug === where.slug) ?? null),
+    },
   },
 }));
 const audit = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => audit(...a) }));
 
 import {
+  adresVanVerzoek,
   controleerDomein,
   dnsRegels,
   domeinVan,
   eigenAdres,
+  eigenAdresVoorSlug,
   koppelDomein,
   ontkoppelDomein,
   rijschoolMagCertificaat,
@@ -147,5 +152,27 @@ describe("eigen domein van een rijschool", () => {
     expect(store.has("site-host:www.rijschooljansen.nl")).toBe(false);
     expect(await rijschoolVoorHost("rijschooljansen.nl")).toBeNull();
     expect(await eigenAdres("r1")).toBeNull();
+  });
+});
+
+describe("adres van de bezoeker (terug na iDEAL) en links in mails", () => {
+  const verzoek = (host?: string) => new Request("http://app:3000/api/rijschool/site/jansen/leerling", { headers: host ? { "x-zf-site-host": host } : {} });
+
+  it("via het eigen domein: terug naar het hoofdadres; via zekerflex.com of een ander domein: null", async () => {
+    await koppelDomein(r1, "rijschooljansen.nl", door);
+    await controleerDomein(r1, door, goedeDns("r1", verificatieRegel("r1")));
+    expect(await adresVanVerzoek(verzoek("www.rijschooljansen.nl"), r1)).toBe("https://rijschooljansen.nl");
+    expect(await adresVanVerzoek(verzoek(), r1)).toBeNull();
+    // het domein van r1 hoort niet bij r2
+    expect(await adresVanVerzoek(verzoek("rijschooljansen.nl"), r2)).toBeNull();
+  });
+
+  it("mails linken pas naar het eigen domein als het actief is", async () => {
+    await koppelDomein(r1, "rijschooljansen.nl", door);
+    await controleerDomein(r1, door, goedeDns("r1"));
+    expect(await eigenAdresVoorSlug("jansen")).toBeNull();
+    await controleerDomein(r1, door, goedeDns("r1", verificatieRegel("r1")));
+    expect(await eigenAdresVoorSlug("jansen")).toBe("https://rijschooljansen.nl");
+    expect(await eigenAdresVoorSlug("bestaat-niet")).toBeNull();
   });
 });

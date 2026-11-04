@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
+import { BEWIJS_PAD, naarEigenDomein, rijschoolLinksIn, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 
 describe("rijschoolPad (eigen domein)", () => {
   const p = (pad: string) => rijschoolPad("jansen", pad);
@@ -39,5 +39,37 @@ describe("rijschoolPad (eigen domein)", () => {
     expect(p("/robots.txt")).toBe("/rijschool/jansen/robots.txt");
     expect(robotsVoor(true)).toContain("Allow: /");
     expect(robotsVoor(false)).toContain("Disallow: /");
+  });
+});
+
+describe("links in mails naar het eigen domein", () => {
+  const basis = "https://zekerflex.com";
+  const tekst = [
+    "Kies je wachtwoord: https://zekerflex.com/rijschool/jansen/inloggen?uitnodiging=abc",
+    "Pakketten: https://zekerflex.com/rijschool/jansen#pakketten",
+    "Home: https://zekerflex.com/rijschool/jansen",
+    "Andere school: https://zekerflex.com/rijschool/jansen-zwolle/leerling",
+    "ZekerFlex zelf: https://zekerflex.com/werkgever",
+  ].join("\n");
+
+  it("vindt de rijscholen waarnaar gelinkt wordt, elk één keer", () => {
+    expect(rijschoolLinksIn(tekst, basis).sort()).toEqual(["jansen", "jansen-zwolle"]);
+    expect(rijschoolLinksIn("geen links", basis)).toEqual([]);
+  });
+
+  it("zet alleen de links van rijscholen met een actief domein om", () => {
+    const uit = naarEigenDomein(tekst, basis, new Map([["jansen", "https://rijschooljansen.nl"]]));
+    expect(uit).toContain("https://rijschooljansen.nl/inloggen?uitnodiging=abc");
+    expect(uit).toContain("https://rijschooljansen.nl/#pakketten");
+    expect(uit).toContain("Home: https://rijschooljansen.nl/");
+    // jansen-zwolle is een andere rijschool zonder eigen domein
+    expect(uit).toContain("https://zekerflex.com/rijschool/jansen-zwolle/leerling");
+    expect(uit).toContain("https://zekerflex.com/werkgever");
+  });
+
+  it("zonder actieve domeinen blijft de tekst gelijk; ook in HTML (href) werkt het", () => {
+    expect(naarEigenDomein(tekst, basis, new Map())).toBe(tekst);
+    const html = '<a href="https://zekerflex.com/rijschool/jansen/leerling">Open</a>';
+    expect(naarEigenDomein(html, basis, new Map([["jansen", "https://rijschooljansen.nl"]]))).toBe('<a href="https://rijschooljansen.nl/leerling">Open</a>');
   });
 });

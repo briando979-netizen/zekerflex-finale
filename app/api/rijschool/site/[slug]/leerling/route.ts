@@ -13,6 +13,7 @@ import { bewaarBeste, leesTheorie } from "@/lib/rijschool/theorie";
 import { lesduur } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { startIdeal } from "@/lib/rijschool/betalen";
+import { adresVanVerzoek } from "@/lib/rijschool/domein";
 import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
 
 export const runtime = "nodejs";
@@ -106,7 +107,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         if (!a.productId === !a.betalingId) throw AppError.validation("Kies een pakket of een betaling.");
         await enforceRateLimit({ name: "rijschool-ideal", identifier: l.id, limit: 10, windowSeconds: 600 });
         const wat = a.productId ? { productId: a.productId } : { betalingId: a.betalingId ?? "" };
-        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling") });
+        // terug naar het adres waarop de leerling ingelogd is (eigen domein of zekerflex.com)
+        return NextResponse.json({ url: await startIdeal(r, l, wat, "/leerling", await adresVanVerzoek(request, r)) });
       }
     }
     const bij = await prisma.rijschoolLeerling.findUniqueOrThrow({ where: { id: l.id } });

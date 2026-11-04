@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
-import { siteHostFrom } from "@/lib/sites/host-header";
+import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { dnsLookups, normalizeDomain, type DnsRecord, type DomainLookups } from "@/lib/sites/domain";
 
 // ---------------------------------------------------------------------------
@@ -196,4 +196,23 @@ export async function actiefDomein(rijschoolId: string): Promise<string | null> 
 export async function eigenAdres(rijschoolId: string): Promise<string | null> {
   const host = await actiefDomein(rijschoolId).catch(() => null);
   return host ? `https://${host}` : null;
+}
+
+/**
+ * Het adres waarop deze bezoeker de rijschool gebruikt: https://<eigen domein>
+ * als het verzoek via dat domein binnenkwam (Caddy zet de kop), anders null
+ * (dan zekerflex.com/rijschool/<naam>). De inlog-cookie hoort bij dat adres,
+ * dus terug na iDEAL moet ook daarheen.
+ */
+export async function adresVanVerzoek(request: Request, r: Pick<Rijschool, "id">): Promise<string | null> {
+  const host = siteHostFrom(request.headers.get(SITE_HOST_HEADER));
+  if (!host) return null;
+  const op = await rijschoolVoorHost(host).catch(() => null);
+  return op?.id === r.id ? `https://${op.hoofd}` : null;
+}
+
+/** Het actieve eigen domein van de rijschool met deze naam (slug), voor links in mails. */
+export async function eigenAdresVoorSlug(slug: string): Promise<string | null> {
+  const r = await prisma.rijschool.findUnique({ where: { slug }, select: { id: true } });
+  return r ? eigenAdres(r.id) : null;
 }

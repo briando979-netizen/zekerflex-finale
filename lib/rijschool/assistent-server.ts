@@ -6,6 +6,7 @@ import { isLocalInference, llmHost } from "@/lib/ai/governor";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { websiteVan } from "@/lib/rijschool/website";
 import { siteUrl } from "@/lib/rijschool/mail";
+import { eigenAdres } from "@/lib/rijschool/domein";
 import { GESCHIEDENIS_MAX, kennisVan, regelAntwoord, schoonAntwoord, systeemPrompt, type Beurt, type SchoolKennis } from "@/lib/rijschool/assistent";
 
 // ---------------------------------------------------------------------------
@@ -35,12 +36,14 @@ export function aiVerwerker(): string {
 }
 
 export async function schoolKennis(r: Rijschool): Promise<SchoolKennis> {
-  const [producten, instructeurs, voertuigen] = await Promise.all([
+  const [producten, instructeurs, voertuigen, eigen] = await Promise.all([
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id, zichtbaar: true }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }], take: 30 }),
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id, actief: true }, select: { naam: true, categorieen: true, actief: true }, take: 30 }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id, actief: true }, select: { automaat: true, actief: true }, take: 30 }),
+    // met een actief eigen domein linkt de assistent daarheen (lib/rijschool/domein.ts)
+    eigenAdres(r.id),
   ]);
-  return kennisVan({ rijschool: r, website: websiteVan(r.website, r), producten, instructeurs, voertuigen, proeflesUrl: siteUrl(r, "/proefles") });
+  return kennisVan({ rijschool: r, website: websiteVan(r.website, r), producten, instructeurs, voertuigen, proeflesUrl: eigen ? `${eigen}/proefles` : siteUrl(r, "/proefles") });
 }
 
 /** Beantwoord een vraag van een bezoeker. Valt altijd terug op een vast antwoord; gooit nooit door het model. */
