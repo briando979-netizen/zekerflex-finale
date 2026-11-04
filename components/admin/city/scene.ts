@@ -7,7 +7,7 @@ import { createLife } from "@/components/admin/city/life";
 import { createFestive } from "@/components/admin/city/feest";
 import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-life";
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
-import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { count, euro } from "@/lib/admin/format";
 import { blobTexture, liveBoard, makeKit, seeded, skyTexture, windowTextures } from "@/components/admin/city/parts";
 import { roomOf, type CityEvent } from "@/components/admin/city/rooms";
@@ -35,6 +35,8 @@ export interface CityHandle {
   select: (p: Pick | null) => void;
   /** Bekijk de stad op een ander uur van vandaag (0–24, Nederlandse tijd); null = nu. */
   setTime: (hour: number | null) => void;
+  /** Foto van de stad zoals hij nu in beeld is (PNG), om te delen. */
+  snapshot: () => string;
   dispose: () => void;
 }
 
@@ -996,6 +998,27 @@ export function createCity(
     setTime(hour) {
       timeOverride = hour === null ? null : Math.max(0, Math.min(23.99, hour));
       applyDaylight();
+    },
+    snapshot() {
+      // direct na het tekenen uitlezen: zonder preserveDrawingBuffer is het beeld anders al leeg
+      renderer.render(scene, camera);
+      const src = renderer.domElement;
+      const out = document.createElement("canvas");
+      out.width = src.width;
+      out.height = src.height;
+      const ctx = out.getContext("2d");
+      if (!ctx) return src.toDataURL("image/png");
+      ctx.drawImage(src, 0, 0);
+      // band onderaan met naam, datum en tijd, zodat een gedeelde foto meteen zegt wat het is
+      const band = Math.round(out.height * 0.06);
+      ctx.fillStyle = "rgba(15,23,42,.72)";
+      ctx.fillRect(0, out.height - band, out.width, band);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `600 ${Math.round(band * 0.45)}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+      ctx.textBaseline = "middle";
+      const when = clockNow();
+      ctx.fillText(`ZekerFlex · live kantoor · ${amsterdamDayKey(when)} ${amsterdamClock(when)}`, band * 0.4, out.height - band / 2);
+      return out.toDataURL("image/png");
     },
     dispose() {
       cancelAnimationFrame(frame);

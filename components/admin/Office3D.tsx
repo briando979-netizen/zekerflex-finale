@@ -9,7 +9,7 @@ import { hourlyCounts, WEATHER_NL } from "@/lib/admin/city-life";
 import { Chart } from "@/components/admin/kit-client";
 import { isThemeId } from "@/lib/seasons/calendar";
 import { count, euro } from "@/lib/admin/format";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
 import type { CityHandle, View } from "@/components/admin/city/scene";
 import type { Pick } from "@/components/admin/city/world";
@@ -584,6 +584,22 @@ export function Office3D() {
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            const url = city.current?.snapshot();
+            if (!url) return;
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `zekerflex-stad-${amsterdamDayKey(new Date())}.png`;
+            a.click();
+          }}
+          className="rounded-full border px-2.5 py-1 text-xs font-medium transition hover:bg-[var(--a-elev)]"
+          style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}
+          title="Sla een foto van de stad op, om te delen"
+        >
+          📷 Foto maken
+        </button>
         {canFull && (
           <button
             type="button"
