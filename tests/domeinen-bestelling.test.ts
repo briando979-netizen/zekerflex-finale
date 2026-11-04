@@ -27,7 +27,8 @@ const h = vi.hoisted(() => {
 
 vi.mock("@/lib/prisma", () => ({ prisma: h.prisma }));
 vi.mock("@/lib/mail", () => ({
-  isReservedTestAddress: (a: string) => /@example\.com$|\.test$/i.test(a),
+  // zoals lib/mail: alleen .test/.example/.invalid/localhost, NIET example.com
+  isReservedTestAddress: (a: string) => /\.(test|example|invalid|localhost)$/i.test(a),
   sendMail: async (m: { to: string; subject: string }) => {
     h.state.mails.push(m);
     return { delivered: true };

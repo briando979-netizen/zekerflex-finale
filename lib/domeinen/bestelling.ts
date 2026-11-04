@@ -121,8 +121,10 @@ async function naBetaling(b: DomeinBestelling): Promise<void> {
     targetId: b.id,
     metadata: { tenantId: b.tenantId, bundel: b.bundel },
   }).catch(() => undefined);
-  // een bestelling van een testadres (example.com, .test) mag sales nooit vragen een echt domein te kopen
-  const test = isReservedTestAddress(b.email);
+  // een bestelling van een testadres mag sales nooit vragen een echt domein te kopen. Let op:
+  // isReservedTestAddress telt @example.com bewust NIET mee (tests/mail-reserved-address.test.ts),
+  // terwijl live tests juist example.com gebruiken; hier tellen de RFC 2606-domeinen dus wel.
+  const test = isReservedTestAddress(b.email) || /@example\.(com|net|org)$/i.test(b.email.trim());
   await Promise.all([
     test
       ? Promise.resolve()
