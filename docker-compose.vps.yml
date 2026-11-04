@@ -62,7 +62,13 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    env_file: [.env.production]
+    # Alleen wat de Caddyfile leest, niet heel .env.production: anders maakt elke
+    # nieuwe sleutel daarin (van welke functie ook) Caddy bij de volgende uitrol
+    # opnieuw aan, en is de hele site even weg (4 nov: inloggen gaf de foutpagina).
+    # Caddy hoeft ook geen geheimen van de app te kennen. Standaard = die in de Caddyfile.
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      BOUWER_VOORBEELD_HOST: ${BOUWER_VOORBEELD_HOST:-voorbeeld.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"
