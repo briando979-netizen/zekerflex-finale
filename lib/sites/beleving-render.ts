@@ -127,12 +127,13 @@ export function splitKop(kop: string): { rest: string; hl: string } {
 }
 
 /**
- * Hoeveel "breedtes" het langste woord van de kop heeft (Bricolage Grotesque vet ±0,56 em per letter):
- * de kop wordt nooit breder dan zijn kolom, ook niet met "Schildersbedrijf" op een telefoon.
+ * Hoeveel "breedtes" het langste woord van de kop heeft (Bricolage Grotesque vet ±0,56 em per letter, met
+ * wat marge: 0,6): de kop wordt nooit breder dan zijn kolom, ook niet met "Schildersbedrijf" op een telefoon,
+ * en een punt achter een lang woord ("vakmanschap.") valt niet los op de volgende regel.
  */
 export function kopMaat(kop: string): number {
   const longest = Math.max(4, ...kop.split(/\s+/).map((w) => [...w].length));
-  return Math.round(longest * 0.56 * 100) / 100;
+  return Math.round(longest * 0.6 * 100) / 100;
 }
 
 /** De foto's van de opening: die van het blok zelf, dan nog twee andere van deze pagina. */

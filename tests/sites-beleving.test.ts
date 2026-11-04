@@ -163,8 +163,10 @@ describe("stijl beleving", () => {
     expect(bel.splitKop("Ambachtelijk brood, elke ochtend vers")).toEqual({ rest: "Ambachtelijk brood, elke ochtend", hl: "vers" });
     expect(bel.splitKop("Kompas")).toEqual({ rest: "Kompas", hl: "" });
     // een lang woord maakt de kop kleiner, zodat hij op een telefoon niet uit beeld loopt
-    expect(bel.kopMaat("Schildersbedrijf De Vries")).toBeCloseTo(16 * 0.56, 2);
-    expect(bel.kopMaat("Je beleeft")).toBeCloseTo(7 * 0.56, 2);
+    expect(bel.kopMaat("Schildersbedrijf De Vries")).toBeCloseTo(16 * 0.6, 2);
+    expect(bel.kopMaat("Je beleeft")).toBeCloseTo(7 * 0.6, 2);
+    // een punt achter een lang woord telt mee, zodat hij niet los op de volgende regel valt
+    expect(bel.kopMaat("Bouwen met vakmanschap.")).toBeCloseTo(12 * 0.6, 2);
     expect(bel.badgeTekst({ ...company, naam: "Installatiebedrijf Van den Berg en Zonen", plaats: "Hengelo" })).toBe("Installatiebedrijf Van den… · ");
     expect(bel.kickerVoor({ ...newBlock("contact", "x"), props: { kop: "Neem contact op", tekst: "", formulier: true } } as Block, company)).toBe("");
   });

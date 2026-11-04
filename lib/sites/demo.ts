@@ -16,15 +16,16 @@ import { slugify, type Block, type BlockProps, type BlockType, type Company, typ
 // ---------------------------------------------------------------------------
 
 export const DEMO_SLUG = "bakkerij-jansen";
-// 2: the premium house style (3 Nov 2026); 3: a webshop with products; 4: choices (taart) and stock (4 Nov 2026)
-const DEMO_VERSION = 4;
+// 2: the premium house style (3 Nov 2026); 3: a webshop with products; 4: choices (taart) and stock;
+// 5: the beleving style, like schwarzwald.zekerflex.com and the branch examples (4 Nov 2026)
+const DEMO_VERSION = 5;
 const DEMO_TENANT = "voorbeeld:bakkerij-jansen";
 const STATE_KEY = "site-demo:bakkerij-jansen";
 const LOCK_KEY = "site-demo-lock:bakkerij-jansen";
 const BY = { userId: "system", name: "ZekerFlex (voorbeeld)" };
 
 const BEDRIJF: Company = { naam: "Bakkerij Jansen", kvk: "", straat: "", postcode: "", plaats: "Zonnedorp", telefoon: "", email: "" };
-const THEME: Theme = { kleur: "#3B2A1E", accent: "#D4A24C", lettertype: "klassiek", hoeken: "rond", stijl: "premium" };
+const THEME: Theme = { kleur: "#3B2A1E", accent: "#D4A24C", lettertype: "klassiek", hoeken: "rond", stijl: "beleving" };
 
 const PHOTOS = {
   hero: { id: "1509440159596-0249088772ff", alt: "Ambachtelijk brood met zaden en een bos tarwe" },
