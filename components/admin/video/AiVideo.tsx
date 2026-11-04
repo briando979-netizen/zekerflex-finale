@@ -83,7 +83,7 @@ export function AiVideo({ ai, onSluit, onKlaar }: Props) {
             Formaat
             <select className="a-input" value={formaat} onChange={(e) => setFormaat(e.target.value as Formaat)} disabled={bezig}>
               {(Object.keys(FORMATEN) as Formaat[]).map((f) => (
-                <option key={f} value={f}>{f}: {FORMATEN[f].label}</option>
+                <option key={f} value={f}>{f}: {FORMATEN[f].kort}</option>
               ))}
             </select>
           </label>
