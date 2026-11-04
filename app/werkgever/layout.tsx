@@ -16,6 +16,9 @@ import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
 import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList } from "@/components/app/icons";
+import type { NavItem } from "@/components/app/AppShell";
+import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
+import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 
 export const dynamic = "force-dynamic";
 
@@ -35,45 +38,55 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const t = await getDict();
   // Android app: no ZekerFlex Bank (lib/app-mode.ts)
   const inApp = await inAndroidApp();
-  const nav = [
-    { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
-    { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
-    { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
-    { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
-    ...(inApp ? [] : [{ href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> }]),
-    { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
-    { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
-    { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
-    { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
-    { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
-    { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock />, section: t.nav.beheer },
-    { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc />, section: t.nav.beheer },
-    { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield />, section: t.nav.beheer },
-    { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc />, section: t.nav.beheer },
-    { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid />, section: t.nav.beheer },
-    { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe />, section: t.nav.beheer },
-    { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone />, section: t.nav.beheer },
-    { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar />, section: t.nav.beheer },
-  ];
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, rijschool, horecaZaak] = await Promise.all([
+  const [tenant, rating, avatars, birthday, werkruimte] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
     getUserAvatars([principal.userId]),
     birthdayToday(principal.userId).catch(() => false),
-    // los en foutbestendig: een ontbrekende tabel (migratie nog niet gedraaid) mag het menu niet breken
-    tenantId ? prisma.rijschool.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null) : Promise.resolve(null),
-    tenantId ? prisma.horecaZaak.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null) : Promise.resolve(null),
+    // rijschool, horeca, website of personeel: bepaalt de volgorde en indeling van het menu (lib/werkgever/werkruimte.ts)
+    werkruimteVan(tenantId),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
-  // het rijschool-pakket staat alleen in het menu als het aan staat (aanzetten via Website-beheer)
-  if (rijschool) nav.splice(1, 0, { href: "/werkgever/rijschool", label: "Rijschool", icon: <ICar /> });
-  // net zo het horeca-pakket (aanzetten via Website-beheer of /werkgever/horeca)
-  if (horecaZaak) nav.splice(1, 0, { href: "/werkgever/horeca", label: "Horeca", icon: <IList /> });
+
+  // elk onderdeel één keer; de werkruimte kiest welke en in welke volgorde
+  const onderdelen: Record<MenuSleutel, Omit<NavItem, "section">> = {
+    start: { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
+    rijschool: { href: "/werkgever/rijschool", label: "Rijschool", icon: <ICar /> },
+    horeca: { href: "/werkgever/horeca", label: "Horeca", icon: <IList /> },
+    studio: { href: "/studio", label: "Website en webshop", icon: <IGlobe /> },
+    inhuren: { href: "/werkgever/diensten/nieuw", label: "Klus plaatsen", icon: <IBriefcase /> },
+    klussen: { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
+    kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
+    agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
+    bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
+    favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
+    berichten: { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
+    mail: { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
+    whatsapp: { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
+    geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
+    uren: { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock /> },
+    facturen: { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc /> },
+    compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
+    overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },
+    bedrijf: { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid /> },
+    website: { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe /> },
+    telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
+    reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
+  };
+  const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
+  const nav: NavItem[] = menuVoor(werkruimte.soort, {
+    ookPersoneel: werkruimte.ookPersoneel,
+    heeftRijschool: werkruimte.heeftRijschool,
+    heeftHoreca: werkruimte.heeftHoreca,
+    inApp,
+    // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
+    studio: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN"),
+  }).map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
 
   return (
     <I18nProvider locale={locale} t={clientDict(locale)}>

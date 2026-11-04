@@ -25,6 +25,10 @@ import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
+import { inAndroidApp } from "@/lib/app-mode-server";
+import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
+import { WerkruimteStart } from "@/components/app/werkruimte/WerkruimteStart";
+import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +37,15 @@ export default async function WerkgeverStartPage() {
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
+
+  // rijschool, horeca of alleen website: een eigen startscherm (components/app/werkruimte)
+  const [w, inApp] = await Promise.all([werkruimteVan(tenantId), inAndroidApp()]);
+  const kanKiezen = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
+  if (w.soort !== "personeel") {
+    return <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} kanKiezen={kanKiezen} studio={kanKiezen} />;
+  }
+  // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
+  const nieuwBedrijf = kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite;
 
   const [kvkDone, extra, o, threads, companyVerified, pendingReviews, followers] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
@@ -71,6 +84,7 @@ export default async function WerkgeverStartPage() {
     <>
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       <EmployerDashboardHero />
+      {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag />}
       <KlusConceptNudge />
       {!companyVerified && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
@@ -281,6 +295,8 @@ export default async function WerkgeverStartPage() {
           )}
         </Panel>
       </div>
+
+      {!nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
     </>
   );
 }
