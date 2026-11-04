@@ -5,11 +5,13 @@ import { logger } from "@/lib/logger";
 import { recordCronRun } from "@/lib/metrics";
 import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
 import { buildProposalSite } from "@/lib/sites/proposal-site";
-import { deleteCheckProposalSite, getSite, isCheckProposalTenant } from "@/lib/sites/store";
+import { deleteCheckProposalSite, getSite, isCheckProposalTenant, publishSite, saveSite } from "@/lib/sites/store";
+import { siteSaveSchema } from "@/lib/sites/schema";
+import { isStijlKeuze, paletVan, type Overgenomen } from "@/lib/website-check/stijl-keuze";
 import type { SiteDoc } from "@/lib/sites/types";
 import { scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
-import { extractBusiness } from "@/lib/website-check/proposal";
+import { leesHeleSite } from "@/lib/website-check/inlezen-site";
 import { getWebsiteCheck, markCheckSite, runWebsiteCheck, type NieuweSite, type WebsiteCheckResult } from "@/lib/website-check/run";
 
 // ---------------------------------------------------------------------------
@@ -40,10 +42,13 @@ const geldig = (s: NieuweSite | null | undefined, now = Date.now()): s is Nieuwe
 /** Een site van ZekerFlex zelf krijgt geen nieuwe site. */
 export const isEigenSite = (host: string) => /(^|\.)zekerflex\.(com|nl)$/i.test(host);
 
-/** De nieuwe site die al voor deze website klaarstaat, als hij nog geldig is en nog een voorstel is. */
+/** Gemaakt met de motor van vóór 4 nov 2026 (alleen de homepage, voorbeeldtijden): die mag opnieuw. */
+export const oudeMotor = (s: NieuweSite) => !s.overgenomen;
+
+/** De nieuwe site die al voor deze website klaarstaat, als hij nog geldig is, nog een voorstel is en met de huidige motor gemaakt. */
 async function bestaande(host: string): Promise<NieuweSite | null> {
   const s = await kvGet<NieuweSite>(KEY(host)).catch(() => null);
-  if (!geldig(s)) return null;
+  if (!geldig(s) || oudeMotor(s)) return null;
   const site = await getSite(s.siteId).catch(() => null);
   return site?.voorstel ? s : null;
 }
@@ -88,7 +93,7 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
   const check = await getWebsiteCheck(checkId);
   if (!check) throw AppError.validation("Dit rapport bestaat niet meer. Doe de check opnieuw.");
   if (isEigenSite(check.host)) throw AppError.validation("Dit is een website van ZekerFlex zelf.");
-  if (geldig(check.nieuweSite)) return { check, site: check.nieuweSite };
+  if (geldig(check.nieuweSite) && !oudeMotor(check.nieuweSite)) return { check, site: check.nieuweSite };
 
   const klaar = await bestaande(check.host);
   if (klaar) {
@@ -106,7 +111,8 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
     if (err instanceof FetchError) throw AppError.validation(`We konden je website nu niet openen: ${err.message}`);
     throw err;
   }
-  const facts = extractBusiness(html, finalUrl);
+  // de hele site (homepage + over ons, aanbod, werk, contact …) en Google, niet alleen de homepage
+  const facts = await leesHeleSite({ body: html, finalUrl });
   const now = new Date();
   const verloopt = new Date(now.getTime() + NIEUWE_SITE_DAGEN * 86_400_000).toISOString();
   const doc = await buildProposalSite({
@@ -116,9 +122,53 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
     mark: { officieel: check.host, verloopt },
     by: { userId: "systeem", name: "Gratis website-check" },
   });
-  const site: NieuweSite = { siteId: doc.id, slug: doc.slug, at: now.toISOString(), verloopt, score: await meet(doc.slug) };
+  const overgenomen: Overgenomen = {
+    paginas: facts.paginas.length,
+    fotos: doc.media.filter((m) => m.id !== doc.theme.logo).length,
+    diensten: facts.secties.length,
+    uren: facts.uren.length > 0,
+    vragen: facts.faq.length,
+    klantverhalen: facts.getuigenissen.length,
+    google: facts.google?.rating ?? null,
+  };
+  const site: NieuweSite = {
+    siteId: doc.id,
+    slug: doc.slug,
+    at: now.toISOString(),
+    verloopt,
+    score: await meet(doc.slug),
+    overgenomen,
+    stijl: doc.theme.stijl ?? "beleving",
+    palet: "eigen",
+    eigen: { kleur: doc.theme.kleur, accent: doc.theme.accent },
+  };
   await kvSet(KEY(check.host), site);
   await markCheckSite(check.id, site);
-  logger.info("website check new site", { host: check.host, slug: site.slug, score: site.score });
+  logger.info("website check new site", { host: check.host, slug: site.slug, score: site.score, ...overgenomen });
   return { check: { ...check, nieuweSite: site }, site };
+}
+
+/**
+ * Meer opties: een andere stijl of andere kleuren voor de nieuwe website van een check. Raakt alleen een
+ * voorbeeldsite van de gratis check die nog geldig is (tenant "voorstel:wc-…"), nooit de site van een
+ * bedrijf of een voorstel van sales: de check-id in de link is de sleutel.
+ */
+export async function kiesStijl(checkId: string, stijl: unknown, paletId: unknown): Promise<NieuweSite> {
+  if (!isStijlKeuze(stijl)) throw AppError.validation("Kies een van de stijlen.");
+  const palet = paletVan(paletId);
+  if (!palet) throw AppError.validation("Kies een van de kleuren.");
+  const check = await getWebsiteCheck(checkId);
+  if (!check) throw AppError.validation("Dit rapport bestaat niet meer. Doe de check opnieuw.");
+  const ns = check.nieuweSite;
+  if (!geldig(ns)) throw AppError.validation("Deze nieuwe website is verlopen. Maak hem opnieuw.");
+  const doc = await getSite(ns.siteId);
+  if (!doc || !isCheckProposalTenant(doc.tenantId) || !doc.voorstel) throw AppError.notFound("Deze website bestaat niet (meer).");
+  const eigen = ns.eigen ?? { kleur: doc.theme.kleur, accent: doc.theme.accent };
+  const theme = { ...doc.theme, stijl, kleur: palet.kleur ?? eigen.kleur, accent: palet.accent ?? eigen.accent };
+  await saveSite(doc.id, siteSaveSchema.parse({ theme, bedrijf: doc.bedrijf, pages: doc.pages }));
+  await publishSite(doc.id, { userId: "systeem", name: "Gratis website-check" });
+  const next: NieuweSite = { ...ns, stijl, palet: palet.id, eigen };
+  await kvSet(KEY(check.host), next);
+  await markCheckSite(check.id, next);
+  return next;
 }

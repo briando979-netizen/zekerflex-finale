@@ -148,6 +148,47 @@ export async function bedrijfDetails(placeId: string): Promise<PlaatsDetails> {
   };
 }
 
+export interface GoogleVoorSite {
+  rating: number | null;
+  aantal: number;
+  mapsUrl: string | null;
+  /** "maandag: 09:00–17:00", zoals Google ze geeft */
+  uren: string[];
+  telefoon: string | null;
+}
+
+const kaal = (host: string) => host.toLowerCase().replace(/^www\./, "");
+
+/**
+ * Het Google-profiel van het bedrijf achter een website, voor de nieuwe site (lib/website-check/inlezen-site.ts):
+ * score, aantal reviews, openingstijden en telefoon. Alleen als het profiel naar díe website wijst, zodat we
+ * nooit de gegevens van een ander bedrijf met dezelfde naam overnemen. Zonder sleutel: null. Lichte velden, geen reviews.
+ */
+export async function googleVoorWebsite(naam: string | null, plaats: string | null, host: string): Promise<GoogleVoorSite | null> {
+  if (!placesAan() || !naam) return null;
+  const k = await zoekBedrijven([naam, plaats].filter(Boolean).join(" "));
+  const match = k.find((c) => {
+    try {
+      return c.website !== null && kaal(new URL(c.website).hostname) === kaal(host);
+    } catch {
+      return false;
+    }
+  });
+  if (!match) return null;
+  const p = await google(`/places/${encodeURIComponent(match.placeId)}?languageCode=nl&regionCode=NL`, {
+    method: "GET",
+    velden: "rating,userRatingCount,googleMapsUri,regularOpeningHours,nationalPhoneNumber",
+  });
+  const uren = obj(p.regularOpeningHours).weekdayDescriptions;
+  return {
+    rating: num(p.rating),
+    aantal: num(p.userRatingCount) ?? 0,
+    mapsUrl: str(p.googleMapsUri),
+    uren: Array.isArray(uren) ? uren.filter((u): u is string => typeof u === "string").slice(0, 7) : [],
+    telefoon: str(p.nationalPhoneNumber),
+  };
+}
+
 /** Vergelijkbare bedrijven binnen 3 km (zelfde soort), zonder het bedrijf zelf. Faalt stil: dan zonder vergelijking. */
 export async function concurrentenVan(d: PlaatsDetails): Promise<Concurrent[]> {
   if (!d.locatie) return [];

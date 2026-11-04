@@ -3,6 +3,7 @@ import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { FetchError, fetchPage, type FetchedPage } from "@/lib/website-check/fetch";
 import { buildFindings, extractFacts, scoreFindings, type CheckCategory, type Finding } from "@/lib/website-check/analyze";
+import type { Overgenomen } from "@/lib/website-check/stijl-keuze";
 
 // ---------------------------------------------------------------------------
 // Gratis website-check (zekerflex.com/website-check): haalt de pagina op, meet
@@ -47,6 +48,13 @@ export interface NieuweSite {
   verloopt: string;
   /** de nieuwe site gemeten met dezelfde check; null als meten even niet lukte */
   score: number | null;
+  /** wat de nieuwe site van hun website overnam (sinds 4 nov 2026; lib/website-check/stijl-keuze.ts) */
+  overgenomen?: Overgenomen | undefined;
+  /** de gekozen stijl en kleuren; zonder: beleving met hun eigen kleuren */
+  stijl?: string | undefined;
+  palet?: string | undefined;
+  /** hun eigen kleuren, om naar terug te gaan */
+  eigen?: { kleur: string; accent: string } | undefined;
 }
 
 const KEY = (id: string) => `website-check:${id}`;

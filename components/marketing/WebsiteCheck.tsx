@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NieuweSite, WebsiteCheckResult } from "@/lib/website-check/run";
 import type { Finding, FindingStatus } from "@/lib/website-check/analyze";
+import { PALETTEN, STIJL_KEUZES, overgenomenRegels } from "@/lib/website-check/stijl-keuze";
 
 export interface PlanCard {
   key: "basis" | "pro";
@@ -70,9 +71,93 @@ function FindingRow({ f }: { f: Finding }) {
   );
 }
 
-const BOUW_STAPPEN = ["Je website lezen", "Teksten en foto's ophalen", "Logo en kleuren overnemen", "Pagina's opbouwen", "Je nieuwe website meten"];
+const BOUW_STAPPEN = ["Je website lezen", "Je andere pagina's lezen", "Teksten, foto's en openingstijden ophalen", "Logo en kleuren overnemen", "Pagina's opbouwen", "Je nieuwe website meten"];
 
 const dag = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long" });
+
+/** Meer opties: een andere stijl of kleuren, meteen toegepast op de voorbeeldsite (POST /api/website-check/website/stijl). */
+function StijlKiezer({ checkId, site, onSite }: { checkId: string; site: NieuweSite; onSite: (s: NieuweSite) => void }) {
+  const [bezig, setBezig] = useState<string | null>(null);
+  const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
+  const stijl = site.stijl ?? "beleving";
+  const palet = site.palet ?? "eigen";
+
+  async function kies(nieuweStijl: string, nieuwPalet: string) {
+    if (nieuweStijl === stijl && nieuwPalet === palet) return;
+    setBezig(`${nieuweStijl}:${nieuwPalet}`);
+    setMelding(null);
+    try {
+      const res = await fetch("/api/website-check/website/stijl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkId, stijl: nieuweStijl, palet: nieuwPalet }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.site) {
+        setMelding({ ok: false, tekst: data?.error?.message ?? "Dat lukte niet. Probeer het opnieuw." });
+        return;
+      }
+      onSite(data.site as NieuweSite);
+      setMelding({ ok: true, tekst: "Aangepast. Open je nieuwe website (of ververs hem) om het te zien." });
+    } catch {
+      setMelding({ ok: false, tekst: "Geen verbinding. Probeer het opnieuw." });
+    } finally {
+      setBezig(null);
+    }
+  }
+
+  return (
+    <div className="mt-6 border-t border-hair pt-5">
+      <p className="text-sm font-semibold text-ink">Probeer een andere stijl</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Stijl van je nieuwe website">
+        {STIJL_KEUZES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="radio"
+            aria-checked={stijl === s.id}
+            disabled={bezig !== null}
+            onClick={() => void kies(s.id, palet)}
+            className={`rounded-xl border-2 p-3 text-left text-sm transition ${stijl === s.id ? "border-brand-600 bg-brand-50" : "border-hair hover:border-brand-500"}`}
+          >
+            <span className="block font-semibold text-ink">{s.naam}</span>
+            <span className="mt-0.5 block text-xs text-neutralx-600">{s.uitleg}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-4 text-sm font-semibold text-ink">Kleuren</p>
+      <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Kleuren van je nieuwe website">
+        {PALETTEN.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={palet === p.id}
+            disabled={bezig !== null}
+            onClick={() => void kies(stijl, p.id)}
+            className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-medium text-ink transition ${palet === p.id ? "border-brand-600 bg-brand-50" : "border-hair hover:border-brand-500"}`}
+          >
+            <span className="flex" aria-hidden>
+              <span className="h-4 w-4 rounded-full border border-white" style={{ background: p.kleur ?? site.eigen?.kleur ?? "#325A46" }} />
+              <span className="-ml-1.5 h-4 w-4 rounded-full border border-white" style={{ background: p.accent ?? site.eigen?.accent ?? "#FF5F1F" }} />
+            </span>
+            {p.naam}
+          </button>
+        ))}
+      </div>
+      {bezig && (
+        <p role="status" className="mt-3 text-xs text-neutralx-600">
+          Je website wordt aangepast…
+        </p>
+      )}
+      {melding && (
+        <p role={melding.ok ? "status" : "alert"} className={`mt-3 text-xs ${melding.ok ? "text-ok" : "text-crit"}`}>
+          {melding.tekst}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** "Maak mijn nieuwe website": van de gecheckte site een nieuwe in de stijl van schwarzwald.zekerflex.com. */
 function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; site: NieuweSite | null; onSite: (s: NieuweSite) => void }) {
@@ -126,7 +211,7 @@ function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; 
             .
           </p>
           <ul className="mt-5 space-y-1.5 text-sm text-neutralx-600">
-            {["Je eigen naam, teksten, foto's en logo", "Werkt op elke telefoon, zonder trage scripts", "Contactformulier, WhatsApp en privacyverklaring erbij"].map((x) => (
+            {["Je eigen teksten, foto's, logo, diensten en openingstijden, van al je pagina's", "Kies zelf de stijl en kleuren", "Werkt op elke telefoon, zonder trage scripts", "Contactformulier, WhatsApp en privacyverklaring erbij"].map((x) => (
               <li key={x} className="flex gap-2">
                 <span className="text-brand-700" aria-hidden>✓</span>
                 {x}
@@ -157,6 +242,18 @@ function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; 
                   </div>
                 </div>
               )}
+              {site.overgenomen && overgenomenRegels(site.overgenomen).length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">Dit namen we over van je website</p>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {overgenomenRegels(site.overgenomen).map((r) => (
+                      <li key={r} className="pill-ok">
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="mt-5 flex flex-wrap gap-2">
                 <a href={`/site/${site.slug}`} target="_blank" rel="noopener" className="btn-primary">
                   Bekijk je nieuwe website
@@ -165,6 +262,22 @@ function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; 
                   Ik wil deze website
                 </a>
               </div>
+              {site.overgenomen ? (
+                <StijlKiezer checkId={result.id} site={site} onSite={onSite} />
+              ) : (
+                <div className="mt-5 rounded-xl border border-hair p-4">
+                  <p className="text-sm font-semibold text-ink">Er is een betere versie</p>
+                  <p className="mt-1 text-sm text-neutralx-600">We lezen nu al je pagina&apos;s, met je echte openingstijden en meer foto&apos;s, en je kiest zelf de stijl.</p>
+                  <button type="button" onClick={maak} disabled={busy} className="btn-primary mt-3">
+                    {busy ? `${BOUW_STAPPEN[step]}…` : "Maak hem opnieuw"}
+                  </button>
+                  {err && (
+                    <p role="alert" className="mt-3 text-sm text-crit">
+                      {err}
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="mt-4 text-xs leading-relaxed text-neutralx-500">
                 Dit is een ontwerpvoorstel: niet vindbaar in Google, het formulier verstuurt nog niets en hij blijft staan tot {dag(site.verloopt)}. Zeg je ja, dan zetten we hem op je eigen adres.
               </p>

@@ -12,13 +12,21 @@ vi.mock("@/lib/storage/kv", () => ({
 const build = vi.fn();
 vi.mock("@/lib/sites/proposal-site", () => ({ buildProposalSite: (...a: unknown[]) => build(...a) }));
 const getSite = vi.fn();
-vi.mock("@/lib/sites/store", () => ({ getSite: (...a: unknown[]) => getSite(...a) }));
+const saveSite = vi.fn();
+const publishSite = vi.fn();
+vi.mock("@/lib/sites/store", () => ({
+  getSite: (...a: unknown[]) => getSite(...a),
+  saveSite: (...a: unknown[]) => saveSite(...a),
+  publishSite: (...a: unknown[]) => publishSite(...a),
+  isCheckProposalTenant: (t: string) => t.startsWith("voorstel:wc-"),
+}));
 const fetchPage = vi.fn();
 vi.mock("@/lib/website-check/fetch", async (orig) => ({ ...(await orig<typeof import("@/lib/website-check/fetch")>()), fetchPage: (...a: unknown[]) => fetchPage(...a) }));
 const sendMail = vi.fn();
 vi.mock("@/lib/mail", () => ({ sendMail }));
 
-const { maakNieuweSite, NIEUWE_SITE_DAGEN } = await import("@/lib/website-check/nieuwe-site");
+const { maakNieuweSite, kiesStijl, NIEUWE_SITE_DAGEN } = await import("@/lib/website-check/nieuwe-site");
+const THEMA = { kleur: "#325A46", accent: "#FF5F1F", lettertype: "modern", hoeken: "rond", stijl: "beleving", logo: null };
 type Check = import("@/lib/website-check/run").WebsiteCheckResult;
 
 const CHECK: Check = {
@@ -47,7 +55,9 @@ beforeEach(() => {
     if (url.includes("/site/")) throw new Error("niet bereikbaar in de test");
     return { status: 200, finalUrl: url, body: HTML, headers: {}, bytes: HTML.length, transferBytes: HTML.length, ttfbMs: 10, totalMs: 20 };
   });
-  build.mockResolvedValue({ id: "snieuw00001", slug: "bakkerij-jansen", voorstel: { officieel: CHECK.host, verloopt: "x" } });
+  build.mockResolvedValue({ id: "snieuw00001", slug: "bakkerij-jansen", voorstel: { officieel: CHECK.host, verloopt: "x" }, media: [], theme: THEMA });
+  saveSite.mockReset();
+  publishSite.mockReset();
 });
 
 describe("maak mijn nieuwe website", () => {
@@ -97,5 +107,51 @@ describe("maak mijn nieuwe website", () => {
     kv.set(`website-check:${CHECK.id}`, { ...CHECK, host: "www.zekerflex.com" });
     await expect(maakNieuweSite(CHECK.id)).rejects.toThrow("ZekerFlex zelf");
     expect(build).not.toHaveBeenCalled();
+  });
+
+  it("maakt een site van de oude motor (alleen de homepage) opnieuw als erom gevraagd wordt", async () => {
+    const oud = { siteId: "soud0000001", slug: "oud", at: "", verloopt: "2099-01-01T00:00:00Z", score: 70 };
+    kv.set(`website-check:${CHECK.id}`, { ...CHECK, nieuweSite: oud });
+    kv.set("website-check-site:bakkerij.example.com", oud);
+    getSite.mockResolvedValue({ id: "soud0000001", voorstel: { officieel: CHECK.host, verloopt: "2099-01-01T00:00:00Z" } });
+    const { site } = await maakNieuweSite(CHECK.id);
+    expect(build).toHaveBeenCalledTimes(1);
+    expect(site.slug).toBe("bakkerij-jansen");
+    expect(site.overgenomen).toBeDefined();
+  });
+
+  it("onthoudt wat hij van hun website overnam en hun eigen kleuren", async () => {
+    const { site } = await maakNieuweSite(CHECK.id);
+    expect(site).toMatchObject({ stijl: "beleving", palet: "eigen", eigen: { kleur: "#325A46", accent: "#FF5F1F" } });
+    expect(site.overgenomen).toMatchObject({ paginas: 1, fotos: 0, uren: false, google: null });
+  });
+});
+
+describe("meer opties: stijl en kleuren kiezen", () => {
+  const pagina = { id: "p1", slug: "", titel: "Home", seoTitel: "", seoOmschrijving: "", blocks: [] };
+  const bedrijf = { naam: "Bakkerij Jansen", kvk: "", straat: "", postcode: "", plaats: "", telefoon: "", email: "" };
+  const voorbeeld = (tenantId = "voorstel:wc-abc") => ({ id: "snieuw00001", tenantId, voorstel: { officieel: CHECK.host, verloopt: "2099-01-01T00:00:00Z" }, theme: THEMA, bedrijf, pages: [pagina] });
+
+  it("zet een andere stijl en kleuren en publiceert opnieuw; 'eigen' brengt hun kleuren terug", async () => {
+    await maakNieuweSite(CHECK.id);
+    getSite.mockResolvedValue(voorbeeld());
+    const na = await kiesStijl(CHECK.id, "premium", "oceaan");
+    expect(saveSite.mock.calls[0]![1]).toMatchObject({ theme: { stijl: "premium", kleur: "#1D4E89", accent: "#F28C38" } });
+    expect(publishSite).toHaveBeenCalledTimes(1);
+    expect(na).toMatchObject({ stijl: "premium", palet: "oceaan" });
+    expect((kv.get(`website-check:${CHECK.id}`) as Check).nieuweSite).toMatchObject({ stijl: "premium", palet: "oceaan" });
+    await kiesStijl(CHECK.id, "luxe", "eigen");
+    expect(saveSite.mock.calls[1]![1]).toMatchObject({ theme: { stijl: "luxe", kleur: "#325A46", accent: "#FF5F1F" } });
+  });
+
+  it("raakt alleen de voorbeeldsite van de check, en alleen bekende keuzes", async () => {
+    await maakNieuweSite(CHECK.id);
+    getSite.mockResolvedValue(voorbeeld("t-echt-bedrijf"));
+    await expect(kiesStijl(CHECK.id, "premium", "oceaan")).rejects.toThrow("bestaat niet");
+    getSite.mockResolvedValue(voorbeeld());
+    await expect(kiesStijl(CHECK.id, "neon", "oceaan")).rejects.toThrow("stijlen");
+    await expect(kiesStijl(CHECK.id, "premium", "regenboog")).rejects.toThrow("kleuren");
+    await expect(kiesStijl("aaaaaaaaaaaaaaaa", "premium", "oceaan")).rejects.toThrow("bestaat niet meer");
+    expect(saveSite).not.toHaveBeenCalled();
   });
 });

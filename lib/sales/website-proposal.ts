@@ -15,6 +15,7 @@ import { CATEGORY_LABEL, scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { extractBusiness, extraScores, improvementPlan, proposalFindings } from "@/lib/website-check/proposal";
 import { normalizeInput, runWebsiteCheck } from "@/lib/website-check/run";
+import { leesHeleSite } from "@/lib/website-check/inlezen-site";
 import { leadWebsiteUrl } from "@/lib/sales/website-score-shared";
 import { markLeadReplied } from "@/lib/sales/reply";
 import { buildProposalSite } from "@/lib/sites/proposal-site";
@@ -264,7 +265,8 @@ export async function createWebsiteProposal(input: { leadId?: string | undefined
   } catch (err) {
     throw asValidation(err);
   }
-  const facts = extractBusiness(html, finalUrl);
+  // de hele site en Google (lib/website-check/inlezen-site.ts), zodat de nieuwe site hun echte gegevens toont
+  const facts = await leesHeleSite({ body: html, finalUrl });
   const extra = proposalFindings(facts, check.metrics.images);
   const all = [...check.findings, ...extra];
 

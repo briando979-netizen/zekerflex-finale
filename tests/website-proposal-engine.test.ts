@@ -144,7 +144,7 @@ describe("de nieuwe website: puur", () => {
     expect(site.listOf(["Desembrood", "Banket en croissants", "Taarten op bestelling"])).toBe("Desembrood, banket en croissants, taarten op bestelling");
   });
 
-  it("maakt pagina's die door de controle van de bouwer komen, met voorbeelden duidelijk gemarkeerd", () => {
+  it("maakt pagina's die door de controle van de bouwer komen, zonder verzonnen voorbeelden", () => {
     const facts = extractBusiness(OUDE_SITE, "https://devries-schilders.nl/");
     const company = site.proposalCompany(facts, { naam: lead.companyName, plaats: "Rijssen", kvk: "12345678", sector: "Bouw" });
     expect(company).toMatchObject({ naam: "Schildersbedrijf De Vries", kvk: "12345678", telefoon: "06 1234 5678", whatsapp: "06 1234 5678", plaats: "Rijssen" });
@@ -155,8 +155,9 @@ describe("de nieuwe website: puur", () => {
     const text = JSON.stringify(pages);
     expect(text).toContain("Binnenschilderwerk en buitenschilderwerk in Rijssen en omgeving.");
     expect(text).toContain("Muren, plafonds en kozijnen"); // hun eigen woorden
-    expect(text).toContain("Wat klanten zeggen (voorbeeld)");
-    expect(text).toContain("Openingstijden (voorbeeld)");
+    // sinds 4 nov 2026: geen voorbeeldreviews of voorbeeldtijden meer; wat we niet weten, staat er niet
+    expect(text).not.toContain("voorbeeld");
+    expect(pages[0]!.blocks.map((b) => b.type)).toEqual(["hero", "tekstFoto", "diensten", "stappen", "cta"]);
     expect(text).toContain("Vraag een offerte aan");
     // Google toont 50 tot 160 tekens onder de titel; ook een korte openingszin wordt aangevuld
     for (const page of pages) expect(page.seoOmschrijving.length, page.titel).toBeGreaterThanOrEqual(50);
@@ -166,6 +167,43 @@ describe("de nieuwe website: puur", () => {
     const lang = "Binnenschilderwerk, buitenschilderwerk, behangen en glaszetten voor particulieren en bedrijven.";
     expect(site.homeDescription(lang, "Iets anders.")).toBe(lang);
     expect(site.pickPhotos([{ id: "a", width: 800, height: 800 }, { id: "b", width: 1600, height: 900 }, { id: "c", width: 900, height: 900 }, { id: "d", width: 900, height: 900 }])).toEqual({ hero: "b", over: "a", galerij: ["c", "d"] });
+  });
+
+  it("vult de site met hun echte gegevens: foto per dienst, sterke punten, uren, vragen, klantverhalen, aanbod- en fotopagina", () => {
+    const facts = {
+      ...extractBusiness(OUDE_SITE, "https://devries-schilders.nl/"),
+      secties: ["Binnenschilderwerk", "Buitenschilderwerk", "Behangen", "Glaszetten", "Houtrot herstel"].map((kop) => ({ kop, tekst: `${kop} door vakmensen, netjes en op tijd opgeleverd.` })),
+      uren: [{ dag: "Maandag t/m vrijdag", tijd: "07:30 – 16:30" }],
+      google: { rating: 4.7, aantal: 86, mapsUrl: null },
+      sinds: 1994,
+      usps: ["Eigen vakmensen, geen inhuur"],
+      faq: [{ vraag: "Werken jullie ook in de winter?", antwoord: "Ja, binnen werken we het hele jaar door." }],
+      getuigenissen: [{ naam: "Familie Jansen", tekst: "Ons huis is weer als nieuw, en alles netjes opgeruimd.", sterren: null }],
+    };
+    const company = site.proposalCompany(facts, { naam: null, plaats: "Rijssen", kvk: null, sector: null });
+    const media = ["h", "a", "b", "c", "d", "e", "f", "g"].map((x, i) => ({ id: `m${x}000000${i}`, width: i === 0 ? 1600 : 1000, height: 900 }));
+    const photos = site.pickPhotos(media, facts.secties.length);
+    expect(photos.diensten).toHaveLength(5);
+    expect(photos.alle).toHaveLength(8);
+    let n = 0;
+    const pages = site.proposalPages(company, site.templateFor("schilder"), facts, photos, () => `b${n++}`, new Date("2026-11-04T12:00:00Z"));
+    expect(siteSaveSchema.safeParse({ theme: site.proposalTheme(null, site.templateFor("schilder"), null), bedrijf: company, pages }).success).toBe(true);
+    expect(pages.map((p) => p.slug)).toEqual(["", "aanbod", "over-ons", "fotos", "contact"]);
+    const home = pages[0]!;
+    // 8 foto's: opening, over ons en vijf dienstkaarten; de fotopagina toont ze allemaal
+    expect(home.blocks.map((b) => b.type)).toEqual(["hero", "tekstFoto", "diensten", "usps", "stappen", "reviews", "cta"]);
+    const diensten = home.blocks.find((b) => b.type === "diensten") as Extract<(typeof home.blocks)[number], { type: "diensten" }>;
+    expect(diensten.props.items.every((it) => Boolean(it.foto))).toBe(true);
+    const text = JSON.stringify(pages);
+    expect(text).toContain("4,7 op Google");
+    expect(text).toContain("Sinds 1994");
+    expect(text).toContain("Al 32 jaar in Rijssen.");
+    expect(text).toContain("Eigen vakmensen, geen inhuur");
+    expect(text).toContain("07:30 – 16:30");
+    expect(text).toContain("Werken jullie ook in de winter?");
+    expect(text).toContain('"naam":"Familie Jansen","tekst":"Ons huis is weer als nieuw, en alles netjes opgeruimd.","sterren":0');
+    expect(text).not.toContain("voorbeeld");
+    for (const page of pages) expect(page.seoOmschrijving.length, page.titel).toBeGreaterThanOrEqual(50);
   });
 });
 
