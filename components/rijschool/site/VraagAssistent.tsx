@@ -6,18 +6,19 @@ import { SNELLE_VRAGEN, VRAAG_MAX, type Beurt } from "@/lib/rijschool/assistent"
 // De knop "Stel een vraag" op de website van een rijschool, met een klein
 // gesprek met de AI-assistent (lib/rijschool/assistent.ts). Alleen zichtbaar als
 // de rijschool hem aanzette. Niets wordt bewaard: sluit je de pagina, dan is het
-// gesprek weg. Links in een antwoord zijn alleen klikbaar als ze naar deze site gaan.
+// gesprek weg. Links in een antwoord zijn alleen klikbaar als ze naar deze site gaan
+// (een volledig adres op dit domein, of een pad als /rijschool/<naam>/proefles).
 
 function MetLinks({ tekst }: { tekst: string }) {
-  const delen = tekst.split(/(https?:\/\/[^\s]+)/g);
+  const delen = tekst.split(/(https?:\/\/[^\s]+|\/rijschool\/[a-z0-9-]+[^\s]*)/g);
   return (
     <>
       {delen.map((d, i) => {
-        if (!/^https?:\/\//.test(d)) return <span key={i}>{d}</span>;
+        if (!/^(https?:\/\/|\/rijschool\/)/.test(d)) return <span key={i}>{d}</span>;
         const schoon = d.replace(/[.,!?)]+$/, "");
         let eigen = false;
         try {
-          eigen = new URL(schoon).host === window.location.host;
+          eigen = new URL(schoon, window.location.origin).host === window.location.host;
         } catch {
           eigen = false;
         }
@@ -45,9 +46,22 @@ export function VraagAssistent({ slug, naam }: { slug: string; naam: string }) {
   const knop = useRef<HTMLButtonElement>(null);
   const invoer = useRef<HTMLInputElement>(null);
   const lijst = useRef<HTMLDivElement>(null);
+  const paneel = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (open) invoer.current?.focus();
+  }, [open]);
+  // Esc sluit, waar de focus ook staat (een knop die tijdens het wachten uitgaat, verliest zijn focus)
+  useEffect(() => {
+    if (!open) return;
+    const toets = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        knop.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", toets);
+    return () => window.removeEventListener("keydown", toets);
   }, [open]);
   useEffect(() => {
     const el = lijst.current;
@@ -82,6 +96,9 @@ export function VraagAssistent({ slug, naam }: { slug: string; naam: string }) {
       setVraag(v);
     } finally {
       setBezig(false);
+      // focus kwijt (de knop was even uit, of een snelle vraag verdween): naar het paneel,
+      // niet naar de invoer, zodat op de telefoon het toetsenbord het antwoord niet bedekt
+      if (!document.activeElement || document.activeElement === document.body) paneel.current?.focus();
     }
   }
 
@@ -89,10 +106,11 @@ export function VraagAssistent({ slug, naam }: { slug: string; naam: string }) {
     <>
       {open && (
         <section
+          ref={paneel}
+          tabIndex={-1}
           id="vraag-assistent"
           aria-label={`Vraag het ${naam}`}
-          onKeyDown={(e) => e.key === "Escape" && sluit()}
-          className="fixed inset-x-3 bottom-20 z-40 flex max-h-[75vh] flex-col overflow-hidden rounded-3xl bg-white text-schw-night shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] ring-1 ring-schw-night/10 sm:inset-x-auto sm:right-6 sm:w-[24rem]"
+          className="outline-none fixed inset-x-3 bottom-20 z-40 flex max-h-[75vh] flex-col overflow-hidden rounded-3xl bg-white text-schw-night shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] ring-1 ring-schw-night/10 sm:inset-x-auto sm:right-6 sm:w-[24rem]"
         >
           <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4" style={{ background: "var(--rs-nacht)", color: "#FFF6EA" }}>
             <div>
