@@ -54,8 +54,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock, 4 Nov 2026). */
-const CSS_REV = 5;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px, 4 Nov 2026). */
+const CSS_REV = 6;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
