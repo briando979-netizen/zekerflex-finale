@@ -203,7 +203,7 @@ export function winkelCss(premium: boolean): string {
 .pcatgroup{margin:0 0 56px;scroll-margin-top:96px}.pcatgroup h2{margin-bottom:20px}
 .crumbs{margin:0 0 24px;font-size:.92rem;color:var(--mute)}.crumbs a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 @media (max-width:640px){.pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pbody{padding:12px 12px 16px}.pkort{display:none}.pcard h3{font-size:.98rem}.pprice{font-size:1rem}.pcat{font-size:.68rem;letter-spacing:.1em}}
-form.order{max-width:none}.ocols{display:grid;gap:20px}.oside{display:grid;gap:14px}@media (min-width:900px){.ocols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}.oside{position:sticky;top:100px}}
+form.order{max-width:none}.ocols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}.ocols>*,.oside{min-width:0}.oside{display:grid;gap:14px}form.order fieldset{min-width:0}.keuze select{max-width:100%;min-width:0}.orow input{flex-shrink:0}@media (min-width:900px){.ocols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}.oside{position:sticky;top:100px}}
 .product{display:grid;gap:40px;align-items:start}@media (min-width:900px){.product{grid-template-columns:1.1fr 1fr;gap:64px}.pinfo{position:sticky;top:100px}}
 .pgal{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}.pgal img,.pgal .pimg{border-radius:var(--r);width:100%;aspect-ratio:1;object-fit:cover}.pgal>:first-child{grid-column:1/-1}
 .pinfo h1{font-size:clamp(2rem,4vw,3.2rem);margin-bottom:12px}.lead{font-size:1.15rem;color:var(--mute)}.pdesc{margin-top:28px;border-top:1px solid var(--line);padding-top:24px}
