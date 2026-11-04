@@ -133,6 +133,8 @@ export function Office3D() {
   const [clock, setClock] = useState("");
   const [nowHour, setNowHour] = useState(12);
   const [timeOverride, setTimeOverride] = useState<number | null>(null);
+  const [canFull, setCanFull] = useState(false);
+  useEffect(() => setCanFull(Boolean(document.fullscreenEnabled)), []);
   const [latest, setLatest] = useState<CityEvent | null>(null);
   const [replay, setReplay] = useState<{ at: string; left: number; total: number } | null>(null);
   const [hourly, setHourly] = useState<{ labels: string[]; values: number[] } | null>(null);
@@ -549,8 +551,10 @@ export function Office3D() {
         >
           {replay ? "Stop afspelen" : "⏪ Laatste 24 uur afspelen"}
         </button>
-        <label className="flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs" style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}>
-          <span className="font-medium">Tijd</span>
+        <div role="group" aria-label="Tijd van de dag" className="flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs" style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}>
+          <span className="font-medium" aria-hidden>
+            Tijd
+          </span>
           <input
             type="range"
             min={0}
@@ -579,7 +583,18 @@ export function Office3D() {
               Nu
             </button>
           )}
-        </label>
+        </div>
+        {canFull && (
+          <button
+            type="button"
+            onClick={() => void host.current?.requestFullscreen().catch(() => {})}
+            className="rounded-full border px-2.5 py-1 text-xs font-medium transition hover:bg-[var(--a-elev)]"
+            style={{ borderColor: "var(--a-border)", color: "var(--a-text)" }}
+            title="Toon de stad schermvullend, bijvoorbeeld op een tv op kantoor (terug met Esc)"
+          >
+            ⛶ Volledig scherm
+          </button>
+        )}
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div

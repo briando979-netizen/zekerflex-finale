@@ -467,6 +467,24 @@ export function createCity(
     return LANDMARKS[from as "bank" | "datacenter" | "magazijn" | "opleiding"];
   };
 
+  // --- alarmlicht op het hoofdkantoor bij een kritieke gebeurtenis (laatste 15 minuten)
+  const alarmMat = kit.own({ color: 0x7f1d1d, emissive: 0xef4444, emissiveIntensity: 0 });
+  const alarm = new THREE.Group();
+  alarm.position.set(0, SLAB + 4.2, 0);
+  const alarmLamp = new THREE.Mesh(kit.geo("alarm-lamp", () => new THREE.SphereGeometry(0.9, 16, 12)), alarmMat);
+  const alarmBeam = new THREE.Mesh(
+    kit.geo("alarm-beam", () => new THREE.ConeGeometry(1.6, 9, 16, 1, true).translate(0, -4.5, 0).rotateZ(Math.PI / 2)),
+    kit.track(new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide })),
+  );
+  alarm.add(alarmLamp, alarmBeam, kit.box(0.5, 4, 0.5, kit.mat(0x334155), 0, -2.1, 0, false));
+  alarm.visible = false;
+  scene.add(alarm);
+  let alarmUntil = 0;
+  const noteAlarm = (evs: CityEvent[]) => {
+    const recent = evs.some((e) => e.severity === "critical" && Date.now() - Date.parse(e.at) < 15 * 60_000);
+    if (recent) alarmUntil = performance.now() + 90_000;
+  };
+
   // --- echte gebeurtenissen: voertuig → hoofdkantoor → robot naar de afdeling
   const queue: CityEvent[] = [];
   const couriers: { mover: Mover; g: THREE.Object3D }[] = [];
@@ -891,6 +909,12 @@ export function createCity(
     }
     world.antenna.emissiveIntensity = now % 1400 < 180 ? 2.2 : 0.15;
     beaconRed.emissiveIntensity = now % 640 < 320 ? 1.8 : 0.2;
+    // alarmlicht: zwaait rond zolang er net iets kritieks gebeurde
+    alarm.visible = now < alarmUntil;
+    if (alarm.visible) {
+      alarmBeam.rotation.y = reduced ? 0 : now / 300;
+      alarmMat.emissiveIntensity = 1.4 + Math.sin(now / 120) * 0.8;
+    }
     beaconAmber.emissiveIntensity = now % 900 < 450 ? 1.5 : 0.25;
     beaconGreen.emissiveIntensity = 0.6 + 0.6 * Math.abs(Math.sin(now / 700));
     world.coinMat.emissiveIntensity = 0.2 + Math.min(0.8, (data?.money.paidToday ?? 0) * 0.12) + (phase === "nacht" ? 0.3 : 0);
@@ -948,7 +972,10 @@ export function createCity(
 
   return {
     setData,
-    pushEvents: (evs) => queue.push(...evs),
+    pushEvents: (evs) => {
+      queue.push(...evs);
+      noteAlarm(evs);
+    },
     replay(evs, onStep) {
       if (onReplay) endReplay();
       if (evs.length === 0) return onStep(null, 0);
