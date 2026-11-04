@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
+import { GEMINI_BEELDMODELLEN, geminiBeeld, geminiBeschikbaar, geminiSlot, VERHOUDINGEN, type BeeldGrootte, type GeminiBeeldModel, type Verhouding } from "@/lib/ai/gemini-media";
 
 // ---------------------------------------------------------------------------
 // Self-hosted image generation adapter — the same "point at a model in the box"
@@ -34,9 +35,53 @@ export interface ImageBackendHealth {
   remoteAllowed: boolean;
   detail?: string;
   models?: string[];
+  /** Bekende blokkade die het maken (nog) tegenhoudt, bv. geen beeldtegoed bij Google. */
+  warning?: string;
+}
+
+export type BeeldBackend = "a1111" | "openai" | "comfyui" | "gemini";
+
+/**
+ * Welke beeldgenerator er echt draait. Een eigen Stable Diffusion-server gaat
+ * voor (IMAGE_ENABLED); staat die uit en draait de live AI op Gemini, dan maakt
+ * Gemini (Nano Banana) de foto's. null = er is niets om foto's mee te maken.
+ */
+export async function beeldBackend(): Promise<BeeldBackend | null> {
+  if (env.IMAGE_BACKEND === "gemini") return (await geminiBeschikbaar()) ? "gemini" : null;
+  if (env.IMAGE_ENABLED) return env.IMAGE_BACKEND;
+  return (await geminiBeschikbaar()) ? "gemini" : null;
+}
+
+/** Dichtstbijzijnde verhouding die Gemini kent, bij een breedte en hoogte. */
+export function verhoudingVoor(width: number, height: number): Verhouding {
+  const doel = width / Math.max(1, height);
+  let beste: Verhouding = "1:1";
+  let afstand = Infinity;
+  for (const v of VERHOUDINGEN) {
+    const [a, b] = v.split(":").map(Number);
+    const d = Math.abs(Math.log((a ?? 1) / (b ?? 1)) - Math.log(doel));
+    if (d < afstand) {
+      afstand = d;
+      beste = v;
+    }
+  }
+  return beste;
 }
 
 export async function imageHealth(): Promise<ImageBackendHealth> {
+  if ((await beeldBackend()) === "gemini") {
+    const slot = await geminiSlot("beeld");
+    return {
+      configured: true,
+      backend: "gemini",
+      baseUrl: "Google Gemini",
+      reachable: true,
+      local: false,
+      remoteAllowed: true,
+      models: GEMINI_BEELDMODELLEN.map((m) => `${m.label} (${m.id})`),
+      ...(slot ? { warning: slot.melding } : {}),
+    };
+  }
   const base = env.IMAGE_BASE_URL.replace(/\/+$/, "");
   const common = {
     configured: env.IMAGE_ENABLED,
@@ -89,6 +134,9 @@ export interface GenerateImageInput {
   steps?: number;
   seed?: number;
   purpose?: string;
+  /** Alleen bij Gemini: welk Nano Banana-model en hoe groot. */
+  geminiModel?: GeminiBeeldModel;
+  geminiGrootte?: BeeldGrootte;
 }
 
 export interface GeneratedImage {
@@ -145,7 +193,36 @@ async function runRender<T>(purpose: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
+// Gemini geeft meestal PNG; is het iets anders, dan maken we er PNG van zodat
+// iedereen die GeneratedImage gebruikt hetzelfde krijgt.
+async function viaGemini(input: { prompt: string; width: number; height: number; bron?: string; model?: GeminiBeeldModel; grootte?: BeeldGrootte; purpose: string }): Promise<GeneratedImage> {
+  const started = Date.now();
+  const bronMime = /^data:(image\/[a-z+]+);base64,/.exec(input.bron ?? "")?.[1] ?? "image/png";
+  const beeld = await geminiBeeld({
+    prompt: input.prompt,
+    verhouding: verhoudingVoor(input.width, input.height),
+    grootte: input.grootte ?? "2K",
+    ...(input.model ? { model: input.model } : {}),
+    ...(input.bron ? { bronnen: [{ b64: input.bron, mime: bronMime }] } : {}),
+  });
+  let bytes: Buffer = Buffer.from(beeld.b64, "base64");
+  if (beeld.mime !== "image/png") bytes = await (await import("sharp")).default(bytes).png().toBuffer();
+  const meta = await (await import("sharp")).default(bytes).metadata();
+  logger.info("image render", { backend: "gemini", model: beeld.model, ms: Date.now() - started, purpose: input.purpose });
+  return { b64: bytes.toString("base64"), mimeType: "image/png", width: meta.width ?? input.width, height: meta.height ?? input.height, backend: "gemini" };
+}
+
 export async function generateImage(input: GenerateImageInput): Promise<GeneratedImage> {
+  if ((await beeldBackend()) === "gemini") {
+    return viaGemini({
+      prompt: input.negativePrompt ? `${input.prompt}\n\nVermijd: ${input.negativePrompt}` : input.prompt,
+      width: input.width,
+      height: input.height,
+      purpose: input.purpose ?? "studio",
+      ...(input.geminiModel ? { model: input.geminiModel } : {}),
+      ...(input.geminiGrootte ? { grootte: input.geminiGrootte } : {}),
+    });
+  }
   return runRender(input.purpose ?? "studio", () =>
     env.IMAGE_BACKEND === "a1111"
       ? genA1111(input)
@@ -173,7 +250,19 @@ export interface EditImageInput {
 // Beeld-bewerking (img2img): bestaande foto + instructie → bewerkte foto. De
 // self-hosted tegenhanger van "Nano Banana", zonder credits. A1111 ondersteunt
 // dit via /sdapi/v1/img2img; voor andere backends volgt een duidelijke melding.
-export async function editImage(input: EditImageInput): Promise<GeneratedImage> {
+export async function editImage(input: EditImageInput & { geminiModel?: GeminiBeeldModel }): Promise<GeneratedImage> {
+  // Gemini bewerkt een foto op instructie (de echte "Nano Banana"): het houdt
+  // de foto en verandert alleen wat je vraagt, dus geen denoise nodig.
+  if ((await beeldBackend()) === "gemini") {
+    return viaGemini({
+      prompt: `Bewerk deze foto: ${input.prompt}. Houd al het andere precies zoals het is.`,
+      width: input.width,
+      height: input.height,
+      bron: input.imageB64.startsWith("data:") ? input.imageB64 : `data:image/png;base64,${input.imageB64}`,
+      purpose: input.purpose ?? "studio:edit",
+      ...(input.geminiModel ? { model: input.geminiModel } : {}),
+    });
+  }
   if (env.IMAGE_BACKEND !== "a1111") {
     throw AppError.precondition(
       `Beeld-bewerken wordt nu alleen ondersteund op de a1111-backend (IMAGE_BACKEND=a1111). Huidige backend: ${env.IMAGE_BACKEND}.`,

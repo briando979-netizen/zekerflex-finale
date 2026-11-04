@@ -15,6 +15,7 @@ import { readBackupReport, type BackupReport } from "@/lib/ops/backup";
 import { listModels3D } from "@/lib/shop/model3d";
 import { playIngesteld } from "@/lib/play/account";
 import { bouwerInstellingen } from "@/lib/bouwer/werker";
+import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -186,6 +187,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     bouwerInstellingen().catch(() => null),
     unsentProposals(),
   ]);
+  const [beeldGelukt, beeldSlot] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld")]);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -202,11 +204,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "image",
       group: "AI",
-      title: "Beeldserver voor de Studio koppelen (optioneel)",
-      why: "Nodig om in admin → Studio beelden te laten maken.",
-      how: ["Draai ComfyUI of AUTOMATIC1111 op dezelfde GPU-server (zie deploy/ai-node/README.md).", "Geef Claude het adres en de sleutel van die beeldserver; die zet IMAGE_ENABLED, IMAGE_BACKEND, IMAGE_BASE_URL en IMAGE_API_KEY op de server."],
+      title: "Betalen aanzetten bij Google voor AI-foto's en AI-video (Nano Banana, Veo)",
+      why: "De Studio en de video-editor maken foto's met Google Nano Banana 2 en Nano Banana Pro, en videoclips met Veo. Op de gratis laag geeft Google daarvoor geen tegoed: elke foto geeft nu 'quota 0'. De gratis laag mag in de EER ook niet zakelijk gebruikt worden. Met betalen aan kost een foto ongeveer 4 tot 25 cent en een Veo-clip van 8 seconden een paar euro. De video-editor zelf, de AI-scenario's, de eigen muziek en de eigen foto's werken ook zonder.",
+      how: [
+        "Ga naar aistudio.google.com en log in met het Google-account van de Gemini-sleutel.",
+        "Klik op Get API key en kies bij het project van de sleutel Set up billing. Koppel een betaalkaart.",
+        "Zet in Google Cloud bij Billing een budgetwaarschuwing, bijvoorbeeld € 25 per maand.",
+        "Test in Admin → Video-editor → AI met één foto. Uitrollen is niet nodig; dit punt vinkt zichzelf af zodra er een foto gelukt is.",
+      ],
       auto: true,
-      done: env.IMAGE_ENABLED,
+      done: env.IMAGE_ENABLED || Boolean(beeldGelukt && !beeldSlot),
+      doneNote: env.IMAGE_ENABLED
+        ? "eigen beeldserver gekoppeld"
+        : beeldGelukt && !beeldSlot
+          ? `laatste AI-foto gelukt op ${new Date(beeldGelukt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}`
+          : "nog niet: Google geeft deze sleutel geen beeldtegoed (gratis laag)",
     },
     {
       id: "bouwer-github",

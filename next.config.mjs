@@ -27,6 +27,11 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "2mb",
     },
+    // Met middleware kapt Next elke request-body standaard af op 10 MB (stil,
+    // alleen een waarschuwing in het log). Video's voor de video-editor (tot
+    // 200 MB) en de Site-ontwerper (tot 80 MB) kwamen daardoor kapot binnen.
+    // De routes zelf begrenzen de grootte per soort bestand.
+    middlewareClientMaxBodySize: "210mb",
   },
   logging: {
     fetches: { fullUrl: false },

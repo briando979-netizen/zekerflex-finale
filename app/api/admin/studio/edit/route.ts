@@ -21,6 +21,7 @@ const bodySchema = z.object({
   denoise: z.coerce.number().min(0.05).max(1).optional(),
   steps: z.coerce.number().int().min(8).max(50).optional(),
   seed: z.coerce.number().int().optional(),
+  geminiModel: z.enum(["gemini-3.1-flash-image", "gemini-3-pro-image"]).optional(),
 });
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
@@ -43,6 +44,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     ...(input.steps ? { steps: input.steps } : {}),
     ...(input.seed !== undefined ? { seed: input.seed } : {}),
     purpose: "studio:edit",
+    ...(input.geminiModel ? { geminiModel: input.geminiModel } : {}),
   });
 
   await recordAudit({

@@ -11,6 +11,7 @@ interface Health {
   local: boolean;
   detail?: string;
   models?: string[];
+  warning?: string;
 }
 interface SlotInfo {
   key: string;
@@ -55,6 +56,9 @@ export function Studio() {
   const [editSrc, setEditSrc] = useState<string | null>(null); // base64 bron-foto om te bewerken
   const [instruction, setInstruction] = useState("");
   const [denoise, setDenoise] = useState(0.6);
+  // Alleen bij Gemini: Nano Banana 2 (snel) of Pro (hoogste kwaliteit), en hoe groot.
+  const [geminiModel, setGeminiModel] = useState<"gemini-3.1-flash-image" | "gemini-3-pro-image">("gemini-3.1-flash-image");
+  const [grootte, setGrootte] = useState<"1K" | "2K" | "4K">("2K");
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,8 +100,8 @@ export function Studio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           mode === "preset"
-            ? { presetKey, extra: extra || undefined, aspect, steps }
-            : { idea, enhance, extra: extra || undefined, aspect, steps },
+            ? { presetKey, extra: extra || undefined, aspect, steps, geminiModel, grootte }
+            : { idea, enhance, extra: extra || undefined, aspect, steps, geminiModel, grootte },
         ),
       });
       const data = await res.json();
@@ -119,7 +123,7 @@ export function Studio() {
       const res = await fetch("/api/admin/studio/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageB64: editSrc, instruction, aspect, steps, denoise }),
+        body: JSON.stringify({ imageB64: editSrc, instruction, aspect, steps, denoise, geminiModel }),
       });
       const data = await res.json();
       if (!res.ok) setError(data?.error?.message ?? "Bewerken mislukt.");
@@ -179,13 +183,14 @@ export function Studio() {
   }
 
   const ok = health?.configured && health?.reachable;
+  const gemini = health?.backend === "gemini";
   const live = slots.filter((s) => s.ready).length;
 
   return (
     <div className="space-y-4">
       <PageHead
         title="Studio"
-        subtitle="Maak, bewerk en publiceer beelden voor de site vanuit één werkplek op je eigen server. Er gaat niets naar buiten."
+        subtitle={gemini ? "Maak, bewerk en publiceer beelden voor de site met Google Nano Banana, hetzelfde soort AI waarmee Claude en Gemini foto's maken." : "Maak, bewerk en publiceer beelden voor de site vanuit één werkplek op je eigen server. Er gaat niets naar buiten."}
         meta={health ? <Pill tone={ok ? "ok" : "warn"}>{ok ? "Beeldmodel online" : "Beeldmodel offline"}</Pill> : undefined}
       />
 
@@ -193,7 +198,7 @@ export function Studio() {
         items={[
           { label: "Beeldplekken live", value: `${live} van ${slots.length}`, hint: live < slots.length ? "de rest toont een illustratie" : "overal een echte foto" },
           { label: "Beeldmodel", value: health === null ? "—" : ok ? "Bereikbaar" : health.configured ? "Niet bereikbaar" : "Niet ingesteld", hint: health ? health.backend : "status laden", ...(health && !ok ? { tone: "warn" as const } : {}) },
-          { label: "Draait op", value: health === null ? "—" : health.local ? "Eigen server" : "Op afstand", hint: health?.models?.[0] ?? "geen model gemeld" },
+          { label: "Draait op", value: health === null ? "—" : gemini ? "Google Gemini" : health.local ? "Eigen server" : "Op afstand", hint: health?.models?.[0] ?? "geen model gemeld" },
           { label: "Sjablonen", value: presets.length, hint: "klaar voor gebruik" },
         ]}
       />
@@ -212,7 +217,8 @@ export function Studio() {
           </p>
         </Panel>
       )}
-      {ok && health && (
+      {ok && health?.warning && <Notice tone="warn">{health.warning}</Notice>}
+      {ok && health && !health.warning && (
         <Notice tone="ok">
           Beeldmodel bereikbaar: <span className="font-mono text-xs">{health.backend}, {health.baseUrl}{health.models?.[0] ? `, ${health.models[0]}` : ""}</span>
         </Notice>
@@ -279,11 +285,13 @@ export function Studio() {
                   Wat moet er veranderen?
                   <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={2} placeholder="Bijvoorbeeld: maak de achtergrond wit, voeg een bouwhelm toe, verwijder het logo" className="a-input" />
                 </label>
+                {!gemini && <>
                 <label className="a-label">
                   Hoeveel mag veranderen: {Math.round(denoise * 100)}%
                   <input type="range" min={10} max={90} value={Math.round(denoise * 100)} onChange={(e) => setDenoise(Number(e.target.value) / 100)} className="mt-3 w-full" style={{ accentColor: "var(--a-accent)" }} />
                 </label>
                 <p className="text-xs" style={{ color: "var(--a-mute)" }}>Laag percentage blijft dicht bij het origineel, hoog geeft meer vrijheid.</p>
+                </>}
               </div>
             )}
 
@@ -294,7 +302,29 @@ export function Studio() {
               </label>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            {gemini && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="a-label">
+                  Model
+                  <select value={geminiModel} onChange={(e) => setGeminiModel(e.target.value as typeof geminiModel)} className="a-input">
+                    <option value="gemini-3.1-flash-image">Nano Banana 2 (snel)</option>
+                    <option value="gemini-3-pro-image">Nano Banana Pro (hoogste kwaliteit)</option>
+                  </select>
+                </label>
+                {mode !== "edit" && (
+                  <label className="a-label">
+                    Grootte
+                    <select value={grootte} onChange={(e) => setGrootte(e.target.value as typeof grootte)} className="a-input">
+                      <option value="1K">1K (snel)</option>
+                      <option value="2K">2K (scherp)</option>
+                      <option value="4K">4K (hoogste)</option>
+                    </select>
+                  </label>
+                )}
+              </div>
+            )}
+
+            <div className={`grid gap-3 ${gemini ? "grid-cols-1" : "grid-cols-2"}`}>
               <label className="a-label">
                 Verhouding
                 <select value={aspect} onChange={(e) => setAspect(e.target.value as typeof aspect)} className="a-input">
@@ -303,10 +333,12 @@ export function Studio() {
                   <option value="wide">Breed (16:9)</option>
                 </select>
               </label>
-              <label className="a-label">
-                Stappen: {steps}
-                <input type="range" min={12} max={40} value={steps} onChange={(e) => setSteps(Number(e.target.value))} className="mt-3 w-full" style={{ accentColor: "var(--a-accent)" }} />
-              </label>
+              {!gemini && (
+                <label className="a-label">
+                  Stappen: {steps}
+                  <input type="range" min={12} max={40} value={steps} onChange={(e) => setSteps(Number(e.target.value))} className="mt-3 w-full" style={{ accentColor: "var(--a-accent)" }} />
+                </label>
+              )}
             </div>
 
             <button
@@ -317,7 +349,7 @@ export function Studio() {
             >
               {busy ? "Bezig met maken…" : mode === "edit" ? "Foto bewerken" : "Beeld maken"}
             </button>
-            {busy && <p className="text-xs" style={{ color: "var(--a-mute)" }}>Op een CPU kan dit een paar minuten duren. Laat het tabblad open.</p>}
+            {busy && <p className="text-xs" style={{ color: "var(--a-mute)" }}>{gemini ? "Dit duurt meestal 10 tot 40 seconden." : "Op een CPU kan dit een paar minuten duren. Laat het tabblad open."}</p>}
             {error && <Notice tone="crit" role="alert">{error}</Notice>}
           </div>
         </Panel>

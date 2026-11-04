@@ -94,11 +94,15 @@ const schema = z.object({
   //   "a1111"  -> AUTOMATIC1111 / Forge  (POST {base}/sdapi/v1/txt2img)
   //   "openai" -> OpenAI-compatible      (POST {base}/images/generations)
   //   "comfyui" -> ComfyUI prompt API    (POST {base}/prompt, needs IMAGE_COMFY_WORKFLOW)
+  //   "gemini" -> Google Nano Banana     (lib/ai/gemini-media.ts, IMAGE_API_KEY)
+  // Staat IMAGE_ENABLED uit en draait de live AI op Gemini, dan maakt de Studio
+  // zijn foto's vanzelf met Gemini (zie lib/ai/images.ts → beeldBackend()).
   IMAGE_ENABLED: z
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
-  IMAGE_BACKEND: z.enum(["a1111", "openai", "comfyui"]).default("a1111"),
+  IMAGE_BACKEND: z.enum(["a1111", "openai", "comfyui", "gemini"]).default("a1111"),
+  IMAGE_GEMINI_MODEL: z.string().optional(),
   IMAGE_BASE_URL: z.string().url().default("http://localhost:7860"),
   // Standaard mag de beeldserver alleen lokaal/privé zijn (data blijft binnen).
   // Zet dit op "true" ALLEEN om je EIGEN self-hoste server op afstand te

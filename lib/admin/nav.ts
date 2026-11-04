@@ -109,6 +109,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/partners", label: "Partnerprogramma" },
       { href: "/admin/verkopers", label: "Verkopers" },
       { href: "/admin/studio", label: "Studio" },
+      { href: "/admin/video", label: "Video-editor" },
       { href: "/admin/huisstijl", label: "Huisstijl" },
       { href: "/admin/website-beheer", label: "Website-beheer" },
       { href: "/admin/domeinen", label: "Domeinen" },
