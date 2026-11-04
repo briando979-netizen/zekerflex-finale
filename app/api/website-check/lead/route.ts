@@ -53,7 +53,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const attention = check.findings.filter((f) => f.status === "let-op");
     const base = env.APP_BASE_URL.replace(/\/+$/, "");
     const reportUrl = `${base}/website-check?r=${check.id}`;
-    const summary = `Website-check ${check.host}: score ${check.score}/100, ${problems.length} problemen, ${attention.length} aandachtspunten${check.platform ? `, gemaakt met ${check.platform}` : ""}. Interesse: ${PLAN_LABEL[d.plan]}.`;
+    // de nieuwe website die ze zelf lieten maken (lib/website-check/nieuwe-site.ts), zodat sales hem meteen ziet
+    const nieuw = check.nieuweSite ? ` Liet een nieuwe website maken: ${base}/site/${check.nieuweSite.slug}${check.nieuweSite.score !== null ? ` (${check.nieuweSite.score}/100)` : ""}.` : "";
+    const summary = `Website-check ${check.host}: score ${check.score}/100, ${problems.length} problemen, ${attention.length} aandachtspunten${check.platform ? `, gemaakt met ${check.platform}` : ""}. Interesse: ${PLAN_LABEL[d.plan]}.${nieuw}`;
 
     const lead = await createLead({
       companyName: d.company || check.host,

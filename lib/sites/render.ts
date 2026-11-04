@@ -1,4 +1,5 @@
 import { ldJson } from "@/lib/seo/json-ld";
+import { belevingBlok, belevingCss, metKicker, type BelevingCtx } from "@/lib/sites/beleving-render";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
 import {
@@ -54,8 +55,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px, 4 Nov 2026). */
-const CSS_REV = 6;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026). */
+const CSS_REV = 7;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
@@ -177,6 +178,12 @@ footer .cols{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:40px}f
 :focus-visible{outline-color:var(--a-d)}header :focus-visible,.hero :focus-visible,.band :focus-visible,footer :focus-visible{outline-color:var(--sun)}.topbar :focus-visible{outline-color:var(--night)}`;
 }
 
+/** Beleving on top of premium: text on the accent is night (on a light accent, like their orange) or cream. */
+function belevingStijl(kleur: string, accent: string): string {
+  const t = premiumTokens(kleur, accent);
+  return belevingCss(t, accent, textOn(accent) === "#ffffff" ? CREAM : t.night, DISPLAY, TEXT);
+}
+
 /** The "luxe" style on top of the base: room, thin gold lines, uppercase small navigation, a tall opening photo. */
 function luxeCss(serif: boolean): string {
   const kop = serif ? `h1,h2,h3,.logo{font-family:${LUXE_SERIF};font-weight:500}blockquote p{font-family:${LUXE_SERIF};font-size:1.2rem;line-height:1.6}` : "h1,h2,h3{font-weight:600}";
@@ -204,9 +211,11 @@ export function siteCss(theme: Theme, fontBase = "fonts/"): string {
   const accent = isHexColor(theme.accent) ? theme.accent : "#F2B544";
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
   const r = theme.hoeken === "strak" ? "4px" : "16px";
-  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : theme.stijl === "premium" ? `\n${premiumCss(kleur, accent, fontBase)}` : "";
+  // beleving (lib/sites/beleving-render.ts) is premium met de opbouw van schwarzwald.zekerflex.com erbovenop
+  const premium = theme.stijl === "premium" || theme.stijl === "beleving";
+  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : premium ? `\n${premiumCss(kleur, accent, fontBase)}${theme.stijl === "beleving" ? belevingStijl(kleur, accent) : ""}` : "";
   // de winkel (lib/sites/winkel-render.ts) staat tussen de basis en de stijl, zodat luxe/premium hem kunnen bijstellen
-  const winkel = `\n${winkelCss(theme.stijl === "premium")}`;
+  const winkel = `\n${winkelCss(premium)}`;
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:17px/1.65 ${f.tekst};color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}a{color:var(--k)}h1,h2,h3{font-family:${f.kop};line-height:1.15;margin:0 0 .6em;letter-spacing:-.01em}
@@ -289,6 +298,8 @@ interface Ctx {
   origin: string;
   /** the premium house style: a label above the opening heading, a bar with phone/e-mail, a button in the header, a full footer */
   premium: boolean;
+  /** the "beleving" style: premium laid out like schwarzwald.zekerflex.com (lib/sites/beleving-render.ts) */
+  beleving: boolean;
   /** the site's shop (an empty one when it has none) */
   winkel: Winkel;
 }
@@ -308,12 +319,13 @@ function winkelCtx(ctx: Ctx): WinkelCtx {
   };
 }
 
-function img(ctx: Ctx, id: string | null, sizes: string, eager = false): string {
+/** `alt` overrides the photo's own description ("" for a photo that is only decoration). */
+function img(ctx: Ctx, id: string | null, sizes: string, eager = false, alt?: string): string {
   const m = id ? ctx.media.get(id) : undefined;
   if (!m) return "";
   // a photo of up to 4K with a 1600 px copy: the browser picks by screen size and sharpness (Media.klein)
   const srcset = m.klein ? ` srcset="${esc(`${ctx.mediaSrc(m.file.replace(/\.webp$/, "-k.webp"))} ${m.klein.width}w, ${ctx.mediaSrc(m.file)} ${m.width}w`)}"` : "";
-  return `<img src="${esc(ctx.mediaSrc(m.file))}"${srcset} alt="${esc(m.alt)}" width="${m.width}" height="${m.height}" sizes="${esc(sizes)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
+  return `<img src="${esc(ctx.mediaSrc(m.file))}"${srcset} alt="${esc(alt ?? m.alt)}" width="${m.width}" height="${m.height}" sizes="${esc(sizes)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
 }
 
 const href = (ctx: Ctx, raw: string) => (ctx.preview ? "#" : safeHref(raw, ctx.root, ctx.pages));
@@ -453,7 +465,8 @@ function header(ctx: Ctx, current: Page): string {
     : esc(ctx.bedrijf.naam);
   const menu = `<details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details>`;
   if (ctx.premium) {
-    return `${topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
+    // beleving: no bar with phone and e-mail above the header, as on schwarzwald.zekerflex.com (the phone is in the opening and the closing band)
+    return `${ctx.beleving ? "" : topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
   }
   return `<header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${menu}</div></header>`;
 }
@@ -497,8 +510,10 @@ function premiumFooter(ctx: Ctx): string {
     c.email && `<p><a href="${esc(href(ctx, `mailto:${c.email}`))}">${esc(c.email)}</a></p>`,
     socials.length && `<p class="socials">${socials.join("")}</p>`,
   ].filter(Boolean);
+  // beleving: the logo on top of the first column, as on schwarzwald.zekerflex.com
+  const flogo = ctx.beleving && ctx.logo ? `<img class="flogo" src="${esc(ctx.mediaSrc(ctx.logo.file))}" alt="" width="${ctx.logo.width}" height="${ctx.logo.height}" loading="lazy" decoding="async">` : "";
   const cols = [
-    `<div><h3>${esc(c.naam)}</h3>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}</div>`,
+    `<div>${flogo}<h3>${esc(c.naam)}</h3>${address.length ? `<p>${address.map(esc).join("<br>")}</p>` : ""}${c.kvk ? `<p>KVK ${esc(c.kvk)}</p>` : ""}</div>`,
     hours?.props.regels.length ? `<div><h3>${esc(hours.props.kop || "Openingstijden")}</h3><dl class="foot-hours">${hours.props.regels.map((r) => `<dt>${esc(r.dag)}</dt><dd>${esc(r.tijd)}</dd>`).join("")}</dl></div>` : "",
     `<div><h3>Menu</h3><ul>${menu}</ul></div>`,
     contact.length ? `<div><h3>Contact</h3>${contact.join("")}</div>` : "",
@@ -583,9 +598,31 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
     vacatures: opts.vacatures,
     origin: opts.origin,
-    premium: site.theme.stijl === "premium",
+    premium: site.theme.stijl === "premium" || site.theme.stijl === "beleving",
+    beleving: site.theme.stijl === "beleving",
     winkel: winkelVan(site),
   };
+}
+
+/**
+ * A block in the beleving style: its own layout for the opening, offer cards, steps,
+ * reviews and the closing band, the premium one with a small label above it for the rest.
+ * The opening is block 0, so the first block after it is on cream, as on the Schwarzwald site.
+ */
+function belevingHtml(b: Block, i: number, ctx: Ctx, page: Page): string {
+  const withForm = ctx.pages.find((p) => p.blocks.some((x) => x.type === "contact"));
+  const bc: BelevingCtx = {
+    esc,
+    paras,
+    img: (id, sizes, eager, alt) => img(ctx, id, sizes, eager, alt),
+    href: (raw) => href(ctx, raw),
+    bedrijf: ctx.bedrijf,
+    page,
+    pages: ctx.pages,
+    contact: withForm ? (withForm.id === page.id ? "#contact" : withForm.slug || "home") : null,
+  };
+  const alt = (i + 1) % 2 === 1 ? ' class="alt"' : "";
+  return belevingBlok(b, alt, bc) ?? metKicker(renderBlock(b, i + 1, ctx), b, bc);
 }
 
 /** The inline CSS (only used in the builder's preview, on zekerflex.com) takes the fonts from the app's own /fonts/. */
@@ -598,7 +635,7 @@ export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions
   const h1 = page.blocks.some((b) => b.type === "hero") ? "" : `<h1 class="vh">${esc(page.titel)}</h1>`;
   // in the builder's preview each block is clickable (data-blok → the editor selects it); visitors never get this
   const blokken = page.blocks.map((b, i) => {
-    const html = renderBlock(b, i, ctx);
+    const html = ctx.beleving ? belevingHtml(b, i, ctx, page) : renderBlock(b, i, ctx);
     return ctx.preview && html ? `<div data-blok="${esc(b.id)}">${html}</div>` : html;
   });
   return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS));

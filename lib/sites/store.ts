@@ -89,8 +89,8 @@ export async function createSite(tenantId: string, by: { userId: string; name: s
     id,
     tenantId,
     slug,
-    // the house style for every new site since 3 Nov 2026; existing sites keep theirs
-    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: "premium" },
+    // the house style for every new site: premium since 3 Nov 2026, beleving (exactly like schwarzwald.zekerflex.com) since 4 Nov; existing sites keep theirs
+    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: "beleving" },
     bedrijf: input.bedrijf,
     pages: pagesFromTemplate(template, input.bedrijf, () => rid("b", 8)),
     media: [],

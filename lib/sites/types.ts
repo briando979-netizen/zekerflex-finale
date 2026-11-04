@@ -142,8 +142,12 @@ export interface Theme {
    * "premium": the ZekerFlex house style since 3 Nov 2026 (like schwarzwald.zekerflex.com): a dark
    * header and opening photo with a gradient, big display headings, round buttons, white cards on
    * cream and sand, a full footer. The default for new sites; existing sites keep theirs.
+   * "beleving": premium laid out exactly like schwarzwald.zekerflex.com (lib/sites/beleving-render.ts):
+   * an opening in two columns with tilted photos, a band with the offer, labels above headings,
+   * big numbered steps, reviews on a dark band, a closing band in the accent. The default for new
+   * sites and proposals since 4 Nov 2026; sites in premium keep premium.
    */
-  stijl?: "standaard" | "luxe" | "premium" | undefined;
+  stijl?: "standaard" | "luxe" | "premium" | "beleving" | undefined;
   /** media id of a photo of this site shown as the logo in the header; the name as text when absent */
   logo?: string | null | undefined;
 }

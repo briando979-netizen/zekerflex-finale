@@ -40,16 +40,21 @@ export function templateFor(text: string): SectorTemplate {
   return SECTOR_TEMPLATES.find((t) => t.id === id) ?? SECTOR_TEMPLATES[0]!;
 }
 
-const GOLD = "#B8925A";
+/** The forest green whose dark tones are exactly those of schwarzwald.zekerflex.com (night #0A120E, forest, moss). */
+export const SCHWARZWALD_GROEN = "#325A46";
+/** Their orange: the accent when a company has no light colour of its own. */
+export const SCHWARZWALD_ORANJE = "#FF5F1F";
 
 /**
- * Their own colour where it carries white text, otherwise as the accent; gold and the sector colour
- * when they have none. In the premium house style (since 3 Nov 2026; earlier proposals keep "luxe").
+ * Their own colour where it carries white text, otherwise as the accent; the Schwarzwald green and
+ * orange when they have none. In the beleving style, exactly like schwarzwald.zekerflex.com (since
+ * 4 Nov 2026; earlier proposals keep "premium" or "luxe").
  */
 export function proposalTheme(brand: string | null, template: SectorTemplate, logo: string | null): Theme {
+  void template;
   const own = brand && isHexColor(brand) ? brand : null;
   const dark = own !== null && textOn(own) === "#ffffff";
-  return { kleur: dark ? own : template.theme.kleur, accent: own && !dark ? own : GOLD, lettertype: "klassiek", hoeken: "strak", stijl: "premium", logo };
+  return { kleur: dark ? own : SCHWARZWALD_GROEN, accent: own && !dark ? own : SCHWARZWALD_ORANJE, lettertype: "modern", hoeken: "rond", stijl: "beleving", logo };
 }
 
 const THREE_DIGIT_AREAS = new Set(["010", "013", "015", "020", "023", "024", "026", "030", "033", "035", "036", "038", "040", "043", "045", "046", "050", "053", "055", "058", "070", "071", "072", "073", "074", "075", "076", "077", "078", "079", "085", "088", "097"]);

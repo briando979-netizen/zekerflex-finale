@@ -13,7 +13,8 @@ import { isHexColor, type Theme } from "@/lib/sites/types";
 // ---------------------------------------------------------------------------
 
 const STIJLEN: { id: NonNullable<Theme["stijl"]>; naam: string; uitleg: string }[] = [
-  { id: "premium", naam: "Premium", uitleg: "Donker en groot, met ronde knoppen en een volle voettekst. Zoals schwarzwald.zekerflex.com." },
+  { id: "beleving", naam: "Beleving", uitleg: "Precies zoals schwarzwald.zekerflex.com: schuine foto's, een band met je aanbod, grote koppen en een afsluiter in je eigen kleur." },
+  { id: "premium", naam: "Premium", uitleg: "Donker en groot, met één grote foto, ronde knoppen en een volle voettekst." },
   { id: "luxe", naam: "Luxe", uitleg: "Veel ruimte, fijne lijnen en verfijnde koppen. Rustig en chic." },
   { id: "standaard", naam: "Eenvoudig", uitleg: "Licht en overzichtelijk. Snel en duidelijk." },
 ];

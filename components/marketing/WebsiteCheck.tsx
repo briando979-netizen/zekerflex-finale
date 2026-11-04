@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { WebsiteCheckResult } from "@/lib/website-check/run";
+import type { NieuweSite, WebsiteCheckResult } from "@/lib/website-check/run";
 import type { Finding, FindingStatus } from "@/lib/website-check/analyze";
 
 export interface PlanCard {
@@ -67,6 +67,133 @@ function FindingRow({ f }: { f: Finding }) {
         <p className="mt-0.5 break-words text-sm leading-relaxed text-neutralx-600">{f.detail}</p>
       </div>
     </li>
+  );
+}
+
+const BOUW_STAPPEN = ["Je website lezen", "Teksten en foto's ophalen", "Logo en kleuren overnemen", "Pagina's opbouwen", "Je nieuwe website meten"];
+
+const dag = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long" });
+
+/** "Maak mijn nieuwe website": van de gecheckte site een nieuwe in de stijl van schwarzwald.zekerflex.com. */
+function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; site: NieuweSite | null; onSite: (s: NieuweSite) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState(0);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!busy) return;
+    setStep(0);
+    const t = setInterval(() => setStep((s) => Math.min(s + 1, BOUW_STAPPEN.length - 1)), 5000);
+    return () => clearInterval(t);
+  }, [busy]);
+
+  async function maak() {
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch("/api/website-check/website", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkId: result.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.site) {
+        setErr(data?.error?.message ?? "Het maken is niet gelukt. Probeer het opnieuw.");
+        return;
+      }
+      onSite(data.site as NieuweSite);
+    } catch {
+      setErr("Geen verbinding. Probeer het opnieuw.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const t = tone(result.score);
+  return (
+    <section className="border-t border-hair bg-white" id="nieuwe-website" aria-labelledby="nieuwe-website-kop">
+      <div className="shell grid gap-10 py-14 md:py-20 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+        <div>
+          <p className="eyebrow text-brand-700">Gratis: je nieuwe website</p>
+          <h2 id="nieuwe-website-kop" className="mt-3 text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
+            Zo kan {result.host} eruitzien
+          </h2>
+          <p className="mt-4 max-w-xl text-lg leading-relaxed text-neutralx-600">
+            We maken in een halve minuut een nieuwe website van je eigen teksten, foto&apos;s en logo. Snel, goed vindbaar en veilig, met een opening vol foto&apos;s en grote koppen, net als{" "}
+            <a href="https://schwarzwald.zekerflex.com/" target="_blank" rel="noopener" className="font-semibold text-brand-700 underline underline-offset-2">
+              schwarzwald.zekerflex.com
+            </a>
+            .
+          </p>
+          <ul className="mt-5 space-y-1.5 text-sm text-neutralx-600">
+            {["Je eigen naam, teksten, foto's en logo", "Werkt op elke telefoon, zonder trage scripts", "Contactformulier, WhatsApp en privacyverklaring erbij"].map((x) => (
+              <li key={x} className="flex gap-2">
+                <span className="text-brand-700" aria-hidden>✓</span>
+                {x}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="surface p-6">
+          {site ? (
+            <div>
+              <p className="text-sm font-semibold text-ink">Je nieuwe website staat klaar</p>
+              {site.score !== null && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-hair p-4">
+                    <p className="text-xs text-neutralx-500">Nu</p>
+                    <p className="num font-display text-3xl font-bold" style={{ color: t.color }}>
+                      {result.score}
+                      <span className="text-sm font-medium text-neutralx-500"> van 100</span>
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-hair p-4">
+                    <p className="text-xs text-neutralx-500">Nieuwe website</p>
+                    <p className="num font-display text-3xl font-bold" style={{ color: tone(site.score).color }}>
+                      {site.score}
+                      <span className="text-sm font-medium text-neutralx-500"> van 100</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <a href={`/site/${site.slug}`} target="_blank" rel="noopener" className="btn-primary">
+                  Bekijk je nieuwe website
+                </a>
+                <a href="#oplossen" className="btn-ghost">
+                  Ik wil deze website
+                </a>
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-neutralx-500">
+                Dit is een ontwerpvoorstel: niet vindbaar in Google, het formulier verstuurt nog niets en hij blijft staan tot {dag(site.verloopt)}. Zeg je ja, dan zetten we hem op je eigen adres.
+              </p>
+            </div>
+          ) : busy ? (
+            <div role="status" aria-live="polite">
+              <p className="text-sm font-medium text-ink">{BOUW_STAPPEN[step]}…</p>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-paper-soft">
+                <div className="h-full rounded-full bg-brand-500 transition-[width] duration-700" style={{ width: `${Math.round(((step + 1) / BOUW_STAPPEN.length) * 100)}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-neutralx-500">Dit duurt meestal 20 tot 40 seconden.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-semibold text-ink">Gratis en zonder account</p>
+              <p className="mt-1 text-sm text-neutralx-600">Je ziet hem meteen. Pas als je ja zegt, nemen we contact op.</p>
+              <button type="button" onClick={maak} className="btn-primary mt-5 w-full">
+                Maak mijn nieuwe website
+              </button>
+              {err && (
+                <p role="alert" className="mt-3 text-sm text-crit">
+                  {err}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -216,9 +343,13 @@ function LeadForm({ result, plans }: { result: WebsiteCheckResult; plans: PlanCa
   );
 }
 
+/** De nieuwe website bij een rapport, zolang hij nog staat. */
+const geldigeSite = (r: WebsiteCheckResult | null) => (r?.nieuweSite && Date.parse(r.nieuweSite.verloopt) > Date.now() ? r.nieuweSite : null);
+
 export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult | null; plans: PlanCard[] }) {
   const [url, setUrl] = useState(initial?.host ?? "");
   const [result, setResult] = useState<WebsiteCheckResult | null>(initial);
+  const [site, setSite] = useState<NieuweSite | null>(() => geldigeSite(initial));
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");
@@ -250,6 +381,7 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
       }
       const r = data.result as WebsiteCheckResult;
       setResult(r);
+      setSite(geldigeSite(r));
       window.history.replaceState(null, "", `/website-check?r=${r.id}`);
       requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch {
@@ -353,7 +485,8 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
                       {result.platform ? ` Gemaakt met ${result.platform}.` : ""}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <a href="#oplossen" className="btn-primary">Laat het oplossen</a>
+                      <a href="#nieuwe-website" className="btn-primary">{site ? "Bekijk je nieuwe website" : "Maak je nieuwe website"}</a>
+                      <a href="#oplossen" className="btn-ghost">Laat het oplossen</a>
                       <button type="button" onClick={share} className="btn-ghost">
                         {copied ? "Link gekopieerd" : "Deel dit rapport"}
                       </button>
@@ -421,6 +554,7 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
               </p>
             </div>
           </div>
+          <NieuweSiteBlok result={result} site={site} onSite={setSite} />
           <LeadForm result={result} plans={plans} />
         </>
       )}

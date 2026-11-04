@@ -93,7 +93,7 @@ export const themeSchema = z.object({
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   lettertype: z.enum(["modern", "klassiek", "vriendelijk"]),
   hoeken: z.enum(["rond", "strak"]),
-  stijl: z.enum(["standaard", "luxe", "premium"]).optional(),
+  stijl: z.enum(["standaard", "luxe", "premium", "beleving"]).optional(),
   logo: mediaId.optional(),
 });
 

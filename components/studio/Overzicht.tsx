@@ -55,7 +55,7 @@ export default function Overzicht() {
   const actief = zichtbareProducten(winkel).length;
   const heeftProductBlok = site.pages.some((p) => p.blocks.some((b) => b.type === "producten" || b.type === "uitgelicht"));
   const taken = [
-    { klaar: site.theme.stijl === "premium" || site.theme.stijl === "luxe", tekst: "Kies een ontwerp dat bij je merk past", href: "/studio/ontwerp" },
+    { klaar: site.theme.stijl === "beleving" || site.theme.stijl === "premium" || site.theme.stijl === "luxe", tekst: "Kies een ontwerp dat bij je merk past", href: "/studio/ontwerp" },
     { klaar: Boolean(site.theme.logo), tekst: "Voeg je logo toe", href: "/studio/ontwerp" },
     { klaar: actief > 0, tekst: "Zet je eerste product in de winkel", href: "/studio/producten" },
     { klaar: heeftProductBlok, tekst: "Laat je producten zien op je website (blok Producten)", href: "/studio/website" },

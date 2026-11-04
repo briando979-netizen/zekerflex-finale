@@ -34,6 +34,19 @@ export interface WebsiteCheckResult {
   };
   platform: string | null;
   leadId: string | null;
+  /** de nieuwe website die de bezoeker liet maken (lib/website-check/nieuwe-site.ts) */
+  nieuweSite?: NieuweSite | undefined;
+}
+
+/** Een nieuwe website in de stijl beleving, gemaakt van de gecheckte site; een ontwerpvoorstel dat na `verloopt` weg is. */
+export interface NieuweSite {
+  siteId: string;
+  /** te zien op zekerflex.com/site/<slug> */
+  slug: string;
+  at: string;
+  verloopt: string;
+  /** de nieuwe site gemeten met dezelfde check; null als meten even niet lukte */
+  score: number | null;
 }
 
 const KEY = (id: string) => `website-check:${id}`;
@@ -180,6 +193,12 @@ export async function markCheckLead(id: string, leadId: string): Promise<void> {
   const rec = await getWebsiteCheck(id);
   if (!rec) return;
   await kvSet(KEY(id), { ...rec, leadId });
+}
+
+export async function markCheckSite(id: string, site: NieuweSite): Promise<void> {
+  const rec = await getWebsiteCheck(id);
+  if (!rec) return;
+  await kvSet(KEY(id), { ...rec, nieuweSite: site });
 }
 
 /** Voor beheer: de laatste checks, nieuwste eerst. */
