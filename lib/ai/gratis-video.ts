@@ -19,11 +19,15 @@ export const LTX_STANDAARD_URL = "https://lightricks-ltx-2-3.hf.space";
 export type ClipFormaat = "9:16" | "16:9" | "1:1" | "4:5";
 export type ClipKwaliteit = "snel" | "scherp";
 
-/** Breedte en hoogte (veelvouden van 32, wat LTX wil) per formaat. */
+/**
+ * Breedte en hoogte per formaat, altijd veelvouden van 64. Gemeten 4 nov: met
+ * een foto en 864 × 1536 brak de Space af binnen 5 s (geen video); 896 × 1536
+ * werkte. Ook de presets van Lightricks zijn allemaal veelvouden van 64.
+ */
 export function ltxMaat(formaat: ClipFormaat, kwaliteit: ClipKwaliteit): { breedte: number; hoogte: number } {
   const tabel: Record<ClipFormaat, Record<ClipKwaliteit, [number, number]>> = {
-    "9:16": { scherp: [864, 1536], snel: [576, 1024] },
-    "16:9": { scherp: [1536, 864], snel: [1024, 576] },
+    "9:16": { scherp: [896, 1536], snel: [576, 1024] },
+    "16:9": { scherp: [1536, 896], snel: [1024, 576] },
     "1:1": { scherp: [1024, 1024], snel: [768, 768] },
     "4:5": { scherp: [1024, 1280], snel: [768, 960] },
   };

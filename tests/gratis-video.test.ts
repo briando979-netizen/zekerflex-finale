@@ -23,12 +23,12 @@ describe("gratis AI-video (LTX-2.3)", () => {
     expect(JSON.parse(ev[1]!.data)[1]).toBe(5);
   });
 
-  it("maten zijn veelvouden van 32 en volgen het formaat", () => {
+  it("maten zijn veelvouden van 64 en volgen het formaat", () => {
     for (const f of ["9:16", "16:9", "1:1", "4:5"] as const) {
       for (const k of ["snel", "scherp"] as const) {
         const { breedte, hoogte } = ltxMaat(f, k);
-        expect(breedte % 32).toBe(0);
-        expect(hoogte % 32).toBe(0);
+        expect(breedte % 64).toBe(0);
+        expect(hoogte % 64).toBe(0);
       }
     }
     expect(ltxMaat("9:16", "scherp").hoogte).toBeGreaterThan(ltxMaat("9:16", "scherp").breedte);
@@ -52,7 +52,7 @@ describe("gratis AI-video (LTX-2.3)", () => {
     expect(uit.mp4.subarray(4, 8).toString()).toBe("ftyp");
     const body = JSON.parse(String(fetchMock.mock.calls[0]![1].body));
     // foto, prompt, duur, verbeteren, seed, willekeurig, hoogte, breedte
-    expect(body.data).toEqual([null, "a waiter", 4, false, 10, true, 1536, 864]);
+    expect(body.data).toEqual([null, "a waiter", 4, false, 10, true, 1536, 896]);
     expect(String(fetchMock.mock.calls[1]![0])).toContain("/gradio_api/call/generate_video/abc12345def");
   });
 
