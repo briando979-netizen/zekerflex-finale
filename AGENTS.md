@@ -33,6 +33,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **AVG:** een nieuwe KV-sleutel per gebruiker → het voorvoegsel in `ERASABLE_KV_PREFIXES` (`lib/privacy/user-kv.ts`), anders ontbreekt hij bij export/wissen. Uitvoer naar gasten/klanten (account-API, export) bevat geen interne teamvelden: filter op één plek.
 - **Nooit capability-URL's in een log** (push-endpoints, getekende links, tokens in een querystring); log alleen de host.
 - **Herkomstcontrole achter Caddy:** `request.url` is `app:3000`; vergelijk `Origin` met `Host`/`X-Forwarded-Host` (`lib/rijschool/herkomst.ts`), anders krijgt elke echte POST een 403.
+- **Een CSP hoort bij het document:** wie via een `<Link>` navigeert, houdt de CSP van de eerste pagina. Een versoepeling (bijv. `frame-src 'self'`) dus per hele omgeving zetten (alle `/admin`), niet per losse route (`lib/security/csp.ts`).
 - **Nieuwe openbare API-route** → `lib/auth/public-routes.ts` + `tests/public-routes.test.ts`.
 - **Storingen in Redis/KV mogen inloggen niet blokkeren** (fail-open voor slot/limiet).
 - **Testen met mail of bedrijven:** alleen `example.com`/`.test`-adressen (sendMail stuurt die nooit echt); nooit een echte lead.
