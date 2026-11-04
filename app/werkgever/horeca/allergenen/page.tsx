@@ -66,7 +66,7 @@ export default async function AllergenenPagina() {
             {groepen.map((g) => (
               <tbody key={g.naam}>
                 <tr>
-                  <th scope="colgroup" colSpan={ALLERGEEN_VOLGORDE.length + 1} className="bg-paper-soft px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wide text-neutralx-700">
+                  <th scope="rowgroup" colSpan={ALLERGEEN_VOLGORDE.length + 1} className="bg-paper-soft px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wide text-neutralx-700">
                     {g.naam}
                   </th>
                 </tr>
