@@ -306,6 +306,7 @@ export const en: Dict = {
     typeShift: "Job (freelance)",
     typePenalty: "Cancellation fee",
     typeUitzend: "Temp staff (wage + markup)",
+    typeDomein: "Domain name",
     reverseCharge: "· reverse charge",
     statusPaid: "Paid",
     statusOpen: "Open",

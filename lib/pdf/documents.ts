@@ -22,6 +22,7 @@ const TYPE_LABEL: Record<string, string> = {
   REVERSE_BILL_CLIENT: "Factuur opdrachtgever",
   CANCELLATION_PENALTY: "Annuleringsvergoeding",
   UITZEND_FEE: "Uitzendkracht — loon en opslag",
+  DOMEIN: "Domeinnaam",
 };
 
 /** Build an A4 PDF for a single invoice. Returns null if not found. */

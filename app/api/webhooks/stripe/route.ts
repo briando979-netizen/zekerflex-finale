@@ -21,6 +21,7 @@ import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
+import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 
 export const runtime = "nodejs";
@@ -87,6 +88,10 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
 
     if (invoice.type === InvoiceType.CANCELLATION_PENALTY && invoice.claimId) {
       await fulfillPaidClaim(invoice);
+    }
+    // verlenging van een domeinnaam betaald: de verlooptdatum schuift een jaar op (lib/domeinen/verlengen.ts)
+    if (invoice.type === InvoiceType.DOMEIN) {
+      await domeinFactuurBetaald(invoice.id).catch((err) => logger.error("domain renewal after payment failed", { invoiceId: invoice.id, error: (err as Error).message }));
     }
   }
   return true;

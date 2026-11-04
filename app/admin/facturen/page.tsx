@@ -15,6 +15,7 @@ const TYPE_LABEL: Record<string, string> = {
   SELF_BILL_FREELANCER: "Dienst (zzp)",
   CANCELLATION_PENALTY: "Annuleringsvergoeding",
   UITZEND_FEE: "Uitzendkracht",
+  DOMEIN: "Domeinnaam",
 };
 
 const STATUS: Record<string, { label: string; tone: Tone }> = {

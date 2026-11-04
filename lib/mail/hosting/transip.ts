@@ -148,3 +148,29 @@ export interface TransipDnsEntry {
 export async function registerDomain(domainName: string, dnsEntries: TransipDnsEntry[]): Promise<void> {
   await call("POST", "/domains", { domainName, dnsEntries });
 }
+
+export interface TransipDomain {
+  name: string;
+  /** "2026-11-05" */
+  registrationDate?: string;
+  /** de datum waarop TransIP de naam verlengt (en ZekerFlex factureert) */
+  renewalDate?: string;
+  /** "" | "signed" | "cancelled" */
+  cancellationStatus?: string;
+  cancellationDate?: string;
+}
+
+/** Een domein in het ZekerFlex-account, met zijn verlengdatum. */
+export async function domainInfo(domainName: string): Promise<TransipDomain | null> {
+  const d = await call<{ domain?: TransipDomain }>("GET", `/domains/${encodeURIComponent(domainName)}`);
+  return d?.domain ?? null;
+}
+
+/**
+ * Zeg een domein op aan het eind van de lopende periode (endTime "end"): de
+ * naam blijft werken tot de verlengdatum en wordt dan niet verlengd. Alleen
+ * vanuit lib/domeinen/verlengen.ts (klant betaalde niet, of wil niet verlengen).
+ */
+export async function cancelDomain(domainName: string): Promise<void> {
+  await call("DELETE", `/domains/${encodeURIComponent(domainName)}`, { endTime: "end" });
+}

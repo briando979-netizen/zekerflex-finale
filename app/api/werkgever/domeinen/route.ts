@@ -8,14 +8,17 @@ import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { bestellingenVan, bundelOver, koppelBestelling, startBestelling, terugPad } from "@/lib/domeinen/bestelling";
 import { domeinenOpWebsite } from "@/lib/domeinen/koppelen";
+import { verlengStanden, zetAutoVerlengen } from "@/lib/domeinen/verlengen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Domeinnamen van het eigen bedrijf: GET de bestellingen (en of ze op de website
-// staan, en of het eerste jaar nog inbegrepen is: bundel), POST een nieuwe (Stripe Checkout, of meteen klaar in de bundel) of
-// { koppel: id } om een vastgelegde naam op de eigen website te zetten.
-// lib/domeinen/bestelling.ts.
+// staan, tot wanneer ze lopen, of ze automatisch verlengen, een open
+// verlengfactuur, en of het eerste jaar nog inbegrepen is: bundel), POST een
+// nieuwe (Stripe Checkout, of meteen klaar in de bundel), { koppel: id } om een
+// vastgelegde naam op de eigen website te zetten, of { verlengen: id, aan }.
+// lib/domeinen/bestelling.ts en verlengen.ts.
 
 async function bedrijf() {
   const p = await getPrincipal();
@@ -27,8 +30,8 @@ async function bedrijf() {
 }
 
 async function lijst(tenantId: string) {
-  const [bestellingen, op] = await Promise.all([bestellingenVan(tenantId), domeinenOpWebsite(tenantId)]);
-  return bestellingen.map((b) => ({ ...b, opWebsite: op.includes(b.domein) }));
+  const [bestellingen, op, standen] = await Promise.all([bestellingenVan(tenantId), domeinenOpWebsite(tenantId), verlengStanden(tenantId)]);
+  return bestellingen.map((b) => ({ ...b, opWebsite: op.includes(b.domein), ...(standen.get(b.id) ?? {}) }));
 }
 
 const fout = (err: unknown) => {
@@ -48,12 +51,18 @@ export async function GET(): Promise<NextResponse> {
 
 const schema = z.object({ domein: z.string().trim().min(3).max(260), terug: z.string().max(80).optional() });
 const koppelSchema = z.object({ koppel: z.string().min(1).max(60) });
+const verlengSchema = z.object({ verlengen: z.string().min(1).max(60), aan: z.boolean() });
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     if (!zelfdeHerkomst(request.headers, request.url)) throw AppError.forbidden("Verzoek van een andere website geweigerd.");
     const b = await bedrijf();
     const body: unknown = await request.json().catch(() => null);
+    const verlengen = verlengSchema.safeParse(body);
+    if (verlengen.success) {
+      await zetAutoVerlengen(b.tenantId, verlengen.data.verlengen, verlengen.data.aan);
+      return NextResponse.json({ bestellingen: await lijst(b.tenantId) });
+    }
     const koppel = koppelSchema.safeParse(body);
     if (koppel.success) {
       await koppelBestelling(b.tenantId, koppel.data.koppel, { userId: b.userId, name: b.naam });

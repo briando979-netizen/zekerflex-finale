@@ -5,6 +5,7 @@ import { recordCronRun } from "@/lib/metrics";
 import { sweepClaimCollections } from "@/lib/claims/collections-sweep";
 import { runInvoiceReminders } from "@/lib/billing/reminders";
 import { runOnboardingReminders } from "@/lib/onboarding/reminders";
+import { runDomeinVerlengingen } from "@/lib/domeinen/verlengen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,16 @@ async function handle(request: Request): Promise<NextResponse> {
     logger.error("invoice reminders failed", { error: (err as Error).message });
     reminders = { error: "failed" };
   }
+  // Domeinnamen: vastleggen wat bleef hangen, verlengfacturen, incasso, herinneringen, opzeggen.
+  let domeinen: Awaited<ReturnType<typeof runDomeinVerlengingen>> | { error: string };
+  try {
+    domeinen = await runDomeinVerlengingen();
+    recordCronRun("domein-verlengen", true);
+  } catch (err) {
+    recordCronRun("domein-verlengen", false);
+    logger.error("domain renewals failed", { error: (err as Error).message });
+    domeinen = { error: "failed" };
+  }
   // "Maak je account af"-mails for sign-ups that never finished; same 09:00 run.
   let onboarding: Awaited<ReturnType<typeof runOnboardingReminders>> | { error: string };
   try {
@@ -44,7 +55,7 @@ async function handle(request: Request): Promise<NextResponse> {
   try {
     const result = await sweepClaimCollections();
     recordCronRun("claim-collections-sweep", true);
-    return NextResponse.json({ ok: true, ...result, reminders, onboarding });
+    return NextResponse.json({ ok: true, ...result, reminders, onboarding, domeinen });
   } catch (err) {
     recordCronRun("claim-collections-sweep", false);
     logger.error("claim collections sweep failed", { error: (err as Error).message });

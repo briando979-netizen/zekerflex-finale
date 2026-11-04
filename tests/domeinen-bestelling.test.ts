@@ -13,6 +13,10 @@ const h = vi.hoisted(() => {
     transipFout: null as null | Error,
     koppeling: { soort: "gekoppeld" } as { soort: string; host?: string } | Error,
     koppelingen: [] as { tenantId: string; domein: string; door: { userId: string } }[],
+    kv: new Map<string, unknown>(),
+    alerts: [] as { key: string }[],
+    facturen: [] as Record<string, unknown>[],
+    beschikbaar: null as null | { status: string },
   };
   return {
     state,
@@ -42,13 +46,25 @@ vi.mock("@/lib/mail", () => ({
   },
 }));
 vi.mock("@/lib/audit", () => ({ recordAudit: async () => undefined }));
-vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: () => ({}) }));
+vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: () => ({}), ensureStripeCustomer: async () => "cus_1" }));
 vi.mock("@/lib/mail/hosting/transip", () => ({
   transipConfigured: () => h.state.transip,
-  domainAvailability: async () => null,
+  domainAvailability: async () => h.state.beschikbaar,
+  domainInfo: async () => ({ name: "jansen.nl", renewalDate: "2027-11-05" }),
   registerDomain: async (domein: string, dns: unknown[]) => {
     if (h.state.transipFout) throw h.state.transipFout;
     h.state.registraties.push({ domein, dns });
+  },
+}));
+vi.mock("@/lib/storage/kv", () => ({
+  kvGet: async (k: string) => h.state.kv.get(k) ?? null,
+  kvSet: async (k: string, v: unknown) => void h.state.kv.set(k, v),
+}));
+vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (a: { key: string }) => void h.state.alerts.push(a) }));
+vi.mock("@/lib/domeinen/factuur", () => ({
+  maakDomeinFactuur: async (f: Record<string, unknown>) => {
+    h.state.facturen.push(f);
+    return { id: "inv1" };
   },
 }));
 vi.mock("@/lib/domeinen/koppelen", async (orig) => {
@@ -64,7 +80,8 @@ vi.mock("@/lib/domeinen/koppelen", async (orig) => {
 });
 
 import { metBtw } from "@/lib/domeinen/extensies";
-import { bundelOver, bundelVoor, koppelBestelling, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
+import { bundelOver, bundelVoor, koppelBestelling, legVast, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
+import { AUTO_REGISTREREN_PER_DAG } from "@/lib/domeinen/verlengen-core";
 
 const best = (extra: Record<string, unknown> = {}) => ({
   id: "b1",
@@ -100,6 +117,10 @@ beforeEach(() => {
   h.state.transipFout = null;
   h.state.koppeling = { soort: "gekoppeld" };
   h.state.koppelingen.length = 0;
+  h.state.kv.clear();
+  h.state.alerts.length = 0;
+  h.state.facturen.length = 0;
+  h.state.beschikbaar = null;
 });
 
 describe("btw", () => {
@@ -155,6 +176,24 @@ describe("webhook", () => {
     expect(u.data.status).toBe("BETAALD");
     expect(h.state.mails.map((m) => m.to)).toEqual(["sales@zekerflex.com", "eigenaar@bakkerij-jansen.nl"]);
   });
+  it("betaald → meteen een betaalde ZekerFlex-factuur voor het eerste jaar", async () => {
+    h.state.rij = best({ email: "eigenaar@bakkerij-jansen.nl" });
+    await verwerkDomeinSessie(sessie({ payment_intent: "pi_1" }));
+    expect(h.state.facturen).toHaveLength(1);
+    const f = h.state.facturen[0] as { soort: string; exclCent: number; betaald: { stripePaymentIntentId: string; stripeCheckoutSessionId: string } };
+    expect(f.soort).toBe("eerste-jaar");
+    expect(f.exclCent).toBe(995);
+    expect(f.betaald.stripePaymentIntentId).toBe("pi_1");
+    expect(f.betaald.stripeCheckoutSessionId).toBe("cs_1");
+  });
+  it("met de TransIP-koppeling: geen mail aan sales, de klant hoort dat het nu gebeurt", async () => {
+    h.state.transip = true;
+    h.state.rij = best({ email: "eigenaar@bakkerij-jansen.nl" });
+    await verwerkDomeinSessie(sessie());
+    expect(h.state.mails.map((m) => m.to)).toEqual(["eigenaar@bakkerij-jansen.nl"]);
+    expect(h.state.mails[0]?.text).toMatch(/nu voor je vast/);
+    expect(h.state.mails[0]?.text).not.toMatch(/TransIP/);
+  });
   it("een testadres (example.com) vraagt sales nooit een echt domein te kopen", async () => {
     await verwerkDomeinSessie(sessie());
     expect(h.state.mails.map((m) => m.to)).toEqual(["k.test@example.com"]);
@@ -187,7 +226,8 @@ describe("admin zet de status", () => {
   it("een afgeronde bestelling verandert niet meer", async () => {
     h.state.rij = best({ status: "GEREGISTREERD" });
     await expect(zetStatus("b1", "GEANNULEERD", "", "user:admin")).rejects.toThrow();
-    expect(MAG_NAAR.GEREGISTREERD).toEqual([]);
+    expect(MAG_NAAR.GEREGISTREERD).toEqual(["OPGEZEGD"]);
+    expect(MAG_NAAR.OPGEZEGD).toEqual(["GEREGISTREERD"]);
     expect(MAG_NAAR.OPEN).toEqual(["GEANNULEERD"]);
   });
   it("tegelijk aangepast: foutmelding", async () => {
@@ -238,32 +278,51 @@ describe("geregistreerd = meteen op de website", () => {
   });
 });
 
-describe("registreren via TransIP (alleen op een klik)", () => {
+describe("registreren via TransIP (knop in Admin)", () => {
   it("zonder sleutel: een duidelijke melding, niets geregistreerd", async () => {
-    h.state.rij = best({ status: "BETAALD" });
+    h.state.rij = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
     await expect(registreerBijTransip("b1", "user:admin1")).rejects.toThrow(/TransIP staat nog niet aan/);
     expect(h.state.registraties).toHaveLength(0);
     expect(h.state.updates).toHaveLength(0);
   });
   it("met sleutel: registreert met DNS naar onze server, daarna geregistreerd en op de website", async () => {
     h.state.transip = true;
-    h.state.rij = best({ status: "BETAALD" });
+    h.state.rij = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
     await registreerBijTransip("b1", "user:admin1");
     expect(h.state.registraties).toHaveLength(1);
     const dns = h.state.registraties[0]?.dns as { name: string; type: string; content: string }[];
     expect(dns.map((r) => `${r.type} ${r.name}`)).toEqual(["A @", "AAAA @", "CNAME www"]);
     expect(dns[2]?.content).toBe("jansen.nl.");
-    expect((h.state.updates[0] as { data: { status: string } }).data.status).toBe("GEREGISTREERD");
-    expect(notitieVan(0)).toMatch(/Geregistreerd via TransIP\. Op de website/);
+    const u = h.state.updates[0] as { data: { status: string; verlooptOp: Date } };
+    expect(u.data.status).toBe("GEREGISTREERD");
+    // de verlengdatum komt van het register
+    expect(u.data.verlooptOp.toISOString()).toBe("2027-11-05T12:00:00.000Z");
+    expect(notitieVan(0)).toMatch(/Vastgelegd via TransIP \(knop\)\. Op de website/);
     expect(h.state.koppelingen).toHaveLength(1);
   });
-  it("TransIP weigert: status blijft staan", async () => {
+  it("TransIP weigert: op mislukt, melding aan de beheerder, geen mail aan de klant", async () => {
     h.state.transip = true;
     h.state.transipFout = new Error("TransIP: domein niet beschikbaar");
-    h.state.rij = best({ status: "BETAALD" });
+    h.state.rij = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
     await expect(registreerBijTransip("b1", "user:admin1")).rejects.toThrow(/niet beschikbaar/);
-    expect(h.state.updates).toHaveLength(0);
+    expect((h.state.updates[0] as { data: { status: string } }).data.status).toBe("MISLUKT");
+    expect(h.state.alerts.map((a) => a.key)).toEqual(["domein-mislukt:b1"]);
     expect(h.state.mails).toHaveLength(0);
+  });
+  it("staat de naam al in ons account (half gelukte poging): niet nog eens registreren", async () => {
+    h.state.transip = true;
+    h.state.beschikbaar = { status: "inyouraccount" };
+    h.state.rij = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    await registreerBijTransip("b1", "user:admin1");
+    expect(h.state.registraties).toHaveLength(0);
+    expect((h.state.updates[0] as { data: { status: string } }).data.status).toBe("GEREGISTREERD");
+  });
+  it("net door een ander vastgelegd: niet registreren, op mislukt", async () => {
+    h.state.transip = true;
+    h.state.beschikbaar = { status: "notfree" };
+    h.state.rij = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    await expect(registreerBijTransip("b1", "user:admin1")).rejects.toThrow(/niet meer vrij/);
+    expect(h.state.registraties).toHaveLength(0);
   });
   it("niet betaald of al klaar: weigeren", async () => {
     h.state.transip = true;
@@ -272,6 +331,52 @@ describe("registreren via TransIP (alleen op een klik)", () => {
       await expect(registreerBijTransip("b1", "user:admin1")).rejects.toThrow(/betaalde bestelling/);
     }
     expect(h.state.registraties).toHaveLength(0);
+  });
+});
+
+describe("vanzelf vastleggen na betaling", () => {
+  it("betaald + koppeling: vastgelegd zonder klik, de teller loopt op", async () => {
+    h.state.transip = true;
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("vastgelegd");
+    expect(h.state.registraties).toHaveLength(1);
+    expect([...h.state.kv.values()]).toEqual([{ n: 1 }]);
+  });
+  it("de dagelijkse grens: daarna wacht hij op de beheerder", async () => {
+    h.state.transip = true;
+    for (const k of ["x"]) h.state.kv.set(k, null);
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    // de teller van vandaag staat al op de grens
+    const { amsterdamDayKey } = await import("@/lib/time/amsterdam");
+    h.state.kv.set(`domein-auto-vastgelegd:${amsterdamDayKey(new Date())}`, { n: AUTO_REGISTREREN_PER_DAG });
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("wacht");
+    expect(h.state.registraties).toHaveLength(0);
+    expect(h.state.alerts.map((a) => a.key)[0]).toMatch(/^domein-grens:/);
+  });
+  it("lukt het vanzelf niet: mislukt, de beheerder een melding, de klant een geruststellende mail zonder TransIP", async () => {
+    h.state.transip = true;
+    h.state.transipFout = new Error("TransIP: tijdelijk niet bereikbaar");
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("mislukt");
+    expect(h.state.alerts.map((a) => a.key)).toEqual(["domein-mislukt:b1"]);
+    expect(h.state.mails.map((m) => m.subject)).toEqual(["jansen.nl: we regelen het voor je"]);
+    expect(h.state.mails[0]?.text).not.toMatch(/TransIP/);
+  });
+  it("een testbestelling komt nooit bij het register, maar loopt verder net als echt", async () => {
+    h.state.transip = true;
+    const b = best({ status: "BETAALD", email: "proef@zekerflex.test" });
+    h.state.rij = b;
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("vastgelegd");
+    expect(h.state.registraties).toHaveLength(0);
+    expect(notitieVan(0)).toMatch(/Testbestelling/);
+  });
+  it("zonder koppeling: wacht (sales legt hem met de hand vast)", async () => {
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("wacht");
+    expect(h.state.updates).toHaveLength(0);
   });
 });
 

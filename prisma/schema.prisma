@@ -959,6 +959,7 @@ enum InvoiceType {
   PLATFORM_FEE // company <- ZekerFlex platform fee
   CANCELLATION_PENALTY // late-cancel / no-show 50% claim, either direction — see lib/claims
   UITZEND_FEE // company <- ZekerFlex (uitzendbureau): gross wage + markup, payroll track only
+  DOMEIN // company <- ZekerFlex: domeinnaam, eerste jaar of verlenging (lib/domeinen/factuur.ts)
 }
 
 enum InvoiceStatus {
@@ -994,6 +995,8 @@ model Invoice {
 
   // Back-reference to the KV CancellationClaim that generated this invoice (lib/claims/store.ts).
   claimId String?
+  // DOMEIN: de domeinnaam waar deze factuur bij hoort (eerste jaar of een verlenging).
+  domeinBestellingId String?
 
   currency      String       @default("EUR")
   vatTreatment  VatTreatment
@@ -1033,6 +1036,7 @@ model Invoice {
   @@index([type, status])
   @@index([claimId])
   @@index([stripePaymentIntentId])
+  @@index([domeinBestellingId])
 }
 
 // Monotonic per-(type, year) invoice counter. Incremented inside the approval
@@ -2733,6 +2737,7 @@ enum DomeinBestelStatus {
   GEREGISTREERD // vastgelegd bij het register
   MISLUKT // registreren lukte niet (terugbetalen via Stripe)
   GEANNULEERD
+  OPGEZEGD // niet verlengd: opgezegd bij het register, loopt af op verlooptOp (lib/domeinen/verlengen.ts)
 }
 
 model DomeinBestelling {
@@ -2750,10 +2755,16 @@ model DomeinBestelling {
   betaaldOp       DateTime?
   afgerondOp      DateTime?
   notitie         String             @default("")
+  // Verlengen (lib/domeinen/verlengen.ts): tot wanneer de naam loopt, of de klant hem elk jaar
+  // wil verlengen, en wanneer hij (bij niet betalen of op verzoek) is opgezegd.
+  verlooptOp      DateTime?
+  autoVerlengen   Boolean            @default(true)
+  opgezegdOp      DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
   @@index([tenantId, createdAt])
   @@index([status])
   @@index([domein])
+  @@index([status, verlooptOp])
 }

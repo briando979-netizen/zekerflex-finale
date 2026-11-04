@@ -28,7 +28,7 @@ const LABEL: Record<Status, { tekst: string; klasse: string }> = {
   onbekend: { tekst: "Even niet te controleren", klasse: "bg-neutralx-100 text-neutralx-700" },
 };
 
-type BestelStatus = "OPEN" | "BETAALD" | "GEREGISTREERD" | "MISLUKT" | "GEANNULEERD";
+type BestelStatus = "OPEN" | "BETAALD" | "GEREGISTREERD" | "MISLUKT" | "GEANNULEERD" | "OPGEZEGD";
 interface MijnDomein {
   id: string;
   domein: string;
@@ -37,14 +37,22 @@ interface MijnDomein {
   bundel: boolean;
   /** staat op de website van dit bedrijf */
   opWebsite?: boolean;
+  /** tot wanneer de naam loopt (lib/domeinen/verlengen.ts) */
+  verlooptOp?: string | null;
+  autoVerlengen?: boolean;
+  /** een verlengfactuur die nog betaald moet worden */
+  open?: { nummer: string; bedragCent: number; betaalUrl: string; uiterlijk: string | null; incassoLoopt: boolean } | null;
 }
 const BESTEL_LABEL: Record<BestelStatus, string> = {
   OPEN: "Wacht op betaling",
-  BETAALD: "Betaald, we leggen hem vast",
+  BETAALD: "Betaald, we leggen hem nu vast",
   GEREGISTREERD: "Vastgelegd",
   MISLUKT: "Lukte niet, we nemen contact op",
   GEANNULEERD: "Geannuleerd",
+  OPGEZEGD: "Opgezegd",
 };
+// datums pas na het laden in de browser (de lijst komt via fetch), altijd in Nederlandse tijd
+const datum = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", year: "numeric" });
 
 // Zoek een domeinnaam, zie per extensie of hij vrij is en wat hij kost, en
 // vraag hem aan (of verhuis je eigen domein). Een ingelogd bedrijf bestelt en
@@ -241,7 +249,7 @@ export function DomeinZoeker({
       {terug && (
         <p role="status" className={`rounded-2xl p-4 ${terug.gelukt ? "border border-brand-500/30 bg-mintwash text-ink" : "bg-neutralx-100 text-neutralx-700"}`}>
           {terug.gelukt
-            ? `Betaling gelukt! We leggen ${terug.domein || "je domeinnaam"} binnen één werkdag voor je vast en mailen je zodra hij klaar is.`
+            ? `Betaling gelukt! We leggen ${terug.domein || "je domeinnaam"} nu voor je vast en mailen je zodra hij klaar is, meestal binnen een paar minuten. De factuur staat bij Facturen.`
             : `Je hebt het betalen afgebroken. ${terug.domein || "De domeinnaam"} is nog niet besteld; je kunt het gewoon opnieuw proberen.`}
         </p>
       )}
@@ -254,6 +262,22 @@ export function DomeinZoeker({
 function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; onLijst: (l: MijnDomein[]) => void; onGekoppeld?: (() => void) | undefined }) {
   const [bezig, setBezig] = useState<string | null>(null);
   const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
+
+  // automatisch verlengen aan of uit; daarna de serverversie van de lijst (een open factuur kan vervallen)
+  async function verlengen(d: MijnDomein, aan: boolean) {
+    setBezig(d.id);
+    setMelding(null);
+    const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ verlengen: d.id, aan }) }).catch(() => null);
+    setBezig(null);
+    if (!r?.ok) return setMelding({ ok: false, tekst: await fout(r, "Opslaan lukte niet. Probeer het opnieuw.") });
+    onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    setMelding({
+      ok: true,
+      tekst: aan
+        ? `${d.domein} wordt elk jaar verlengd. Je krijgt de factuur ruim vooraf.`
+        : `${d.domein} wordt niet verlengd. Hij werkt tot ${d.verlooptOp ? datum(d.verlooptOp) : "de verlengdatum"} en wordt een week daarvoor opgezegd. Je kunt dit tot die tijd terugdraaien.`,
+    });
+  }
 
   // een vastgelegde naam op de eigen website zetten; daarna de serverversie van de lijst
   async function koppel(d: MijnDomein) {
@@ -281,7 +305,28 @@ function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; on
                 {BESTEL_LABEL[d.status]}
                 {d.status === "GEREGISTREERD" && d.opWebsite ? " · op je website" : ""}
                 {d.bundel ? " · in de bundel" : ""}
+                {d.verlooptOp ? ` · ${d.status === "OPGEZEGD" ? "werkt tot" : "loopt tot"} ${datum(d.verlooptOp)}` : ""}
               </span>
+              {d.open &&
+                (d.open.incassoLoopt ? (
+                  <span className="text-xs">Verlenging ({euroPrijs(d.open.bedragCent)}) wordt afgeschreven</span>
+                ) : (
+                  <a href={d.open.betaalUrl} className="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-700">
+                    Betaal verlenging ({euroPrijs(d.open.bedragCent)})
+                  </a>
+                ))}
+              {d.status === "GEREGISTREERD" && typeof d.autoVerlengen === "boolean" && (
+                <button
+                  type="button"
+                  disabled={bezig !== null}
+                  aria-pressed={d.autoVerlengen}
+                  onClick={() => void verlengen(d, !d.autoVerlengen)}
+                  aria-label={`Automatisch verlengen van ${d.domein}`}
+                  className="rounded-full border border-hair px-3 py-1 text-xs font-semibold text-ink hover:bg-neutralx-100 disabled:opacity-50"
+                >
+                  {bezig === d.id ? "Bezig…" : d.autoVerlengen ? "Automatisch verlengen: aan" : "Automatisch verlengen: uit"}
+                </button>
+              )}
               {d.status === "GEREGISTREERD" && !d.opWebsite && (
                 <button
                   type="button"
@@ -348,8 +393,8 @@ function Bestellen({
   if (bundel) {
     return (
       <p role="status" className="rounded-2xl border border-brand-500/30 bg-mintwash p-5 text-ink">
-        <strong>{domein} is besteld!</strong> Het eerste jaar is inbegrepen bij je websiteabonnement. We leggen hem binnen één werkdag voor je vast en mailen je
-        zodra hij klaar is.
+        <strong>{domein} is besteld!</strong> Het eerste jaar is inbegrepen bij je websiteabonnement. We leggen hem nu voor je vast en mailen je zodra hij
+        klaar is, meestal binnen een paar minuten.
       </p>
     );
   }

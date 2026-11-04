@@ -5,6 +5,7 @@ const PREFIX: Record<InvoiceType, string> = {
   PLATFORM_FEE: "ZF-PF",
   CANCELLATION_PENALTY: "ZF-CP",
   UITZEND_FEE: "ZF-UZ",
+  DOMEIN: "ZF-DN",
 };
 
 /**

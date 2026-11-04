@@ -47,7 +47,9 @@ export default async function WerkgeverFacturenPage() {
           ? iv.typePenalty
           : i.type === "UITZEND_FEE"
             ? iv.typeUitzend
-            : iv.typeShift,
+            : i.type === "DOMEIN"
+              ? iv.typeDomein
+              : iv.typeShift,
     reverseCharge: i.vatTreatment === "REVERSE_CHARGE",
     branch: i.timesheet?.branch.name ?? "—",
     subtotalCents: i.subtotalCents,

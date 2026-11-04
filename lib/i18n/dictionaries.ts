@@ -310,6 +310,7 @@ export const nl = {
     typeShift: "Dienst (zzp)",
     typePenalty: "Annuleringsvergoeding",
     typeUitzend: "Uitzendkracht (loon + opslag)",
+    typeDomein: "Domeinnaam",
     reverseCharge: "· verlegd",
     statusPaid: "Betaald",
     statusOpen: "Open",

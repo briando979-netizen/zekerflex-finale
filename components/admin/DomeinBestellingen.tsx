@@ -5,7 +5,7 @@ import { KpiStrip, Notice, PageHead, Panel, Pill, type Tone } from "@/components
 import { DataTable } from "@/components/admin/kit-client";
 import { euroPrijs } from "@/lib/domeinen/extensies";
 
-type Status = "OPEN" | "BETAALD" | "GEREGISTREERD" | "MISLUKT" | "GEANNULEERD";
+type Status = "OPEN" | "BETAALD" | "GEREGISTREERD" | "MISLUKT" | "GEANNULEERD" | "OPGEZEGD";
 interface Rij {
   id: string;
   domein: string;
@@ -16,14 +16,17 @@ interface Rij {
   email: string;
   notitie: string;
   betaaldOp: string | null;
+  verlooptOp: string | null;
+  autoVerlengen: boolean;
 }
 
 const STATUS: Record<Status, { label: string; tone: Tone }> = {
   OPEN: { label: "Wacht op betaling", tone: "neutral" },
-  BETAALD: { label: "Registreren", tone: "warn" },
+  BETAALD: { label: "Wordt vastgelegd", tone: "warn" },
   GEREGISTREERD: { label: "Geregistreerd", tone: "ok" },
   MISLUKT: { label: "Mislukt", tone: "crit" },
   GEANNULEERD: { label: "Geannuleerd", tone: "neutral" },
+  OPGEZEGD: { label: "Opgezegd", tone: "neutral" },
 };
 // welke knoppen bij welke status (zelfde regels als lib/domeinen/bestelling.ts)
 const KNOPPEN: Record<Status, { naar: Status; label: string }[]> = {
@@ -39,11 +42,17 @@ const KNOPPEN: Record<Status, { naar: Status; label: string }[]> = {
   ],
   GEREGISTREERD: [],
   GEANNULEERD: [],
+  // de klant betaalde toch en de opzegging is bij TransIP ingetrokken
+  OPGEZEGD: [{ naar: "GEREGISTREERD", label: "Opzegging ingetrokken" }],
 };
+const dag = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Amsterdam" }).format(new Date(iso));
 const datum = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" }).format(new Date(iso));
 
-// Admin → Domeinen: wat er besteld is, registreren via TransIP (met de sleutel)
-// of met de hand en dan afvinken. Geregistreerd = meteen op de website van de klant.
+// Admin → Domeinen: wat er besteld is. Met de TransIP-koppeling legt ZekerFlex
+// een betaalde naam vanzelf vast; de knop "Registreer bij TransIP" is voor een
+// naam die bleef hangen. Zonder koppeling: met de hand en dan afvinken.
+// Geregistreerd = meteen op de website van de klant. Verlengen gaat vanzelf
+// (lib/domeinen/verlengen.ts): factuur, incasso, herinneringen, opzeggen.
 export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; ipv4: string; ipv6: string }) {
   const [rijen, setRijen] = useState<Rij[] | null>(null);
   const [fout, setFout] = useState<string | null>(null);
@@ -96,7 +105,7 @@ export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; 
   const omzet = lijst.filter((r) => r.status === "BETAALD" || r.status === "GEREGISTREERD").reduce((s, r) => s + r.bedragCent, 0);
   return (
     <div className="space-y-4">
-      <PageHead title="Domeinen" subtitle="Bestelde domeinnamen. Registreer ze en vink ze af: de klant krijgt een mail en de naam komt meteen op zijn website." />
+      <PageHead title="Domeinen" subtitle="Bestelde domeinnamen. Betaald = vanzelf vastgelegd en op de website van de klant; elk jaar een verlengfactuur, met incasso of betaallink." />
       {fout && (
         <Notice tone="crit" role="alert">
           {fout}
@@ -113,7 +122,11 @@ export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; 
       />
       <Notice tone={transip ? "ok" : "warn"}>
         {transip ? (
-          <>Registreren gaat met de knop &quot;Registreer bij TransIP&quot;: de naam komt in het TransIP-account van ZekerFlex en wijst meteen naar onze server.</>
+          <>
+            Een betaalde naam wordt vanzelf vastgelegd in het TransIP-account van ZekerFlex en wijst meteen naar onze server. Bleef er een hangen (&quot;Mislukt&quot; of &quot;Wordt
+            vastgelegd&quot;), gebruik dan &quot;Registreer bij TransIP&quot;. Verlengen: 35 dagen vooraf een factuur, met incasso of betaallink; onbetaald wordt hij 7 dagen voor
+            de verlengdatum opgezegd.
+          </>
         ) : (
           <>
             De TransIP-sleutel staat nog niet op de server (Admin → Te doen), dus registreer met de hand in TransIP. Zet daar deze DNS-regels: A @ → {ipv4}, AAAA @ → {ipv6}, CNAME www → de
@@ -134,6 +147,7 @@ export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; 
               { key: "bedrag", label: "Bedrag", align: "right" },
               { key: "klant", label: "Besteld door", hideOnMobile: true },
               { key: "op", label: "Besteld op", hideOnMobile: true },
+              { key: "loopt", label: "Loopt tot", hideOnMobile: true },
               { key: "notitie", label: "Notitie", hideOnMobile: true },
               { key: "acties", label: "Actie" },
             ]}
@@ -145,6 +159,7 @@ export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; 
                 bedrag: r.bundel ? "Bundel" : euroPrijs(r.bedragCent),
                 klant: r.email,
                 op: datum(r.aangemaakt),
+                loopt: r.verlooptOp ? `${dag(r.verlooptOp)}${r.status === "GEREGISTREERD" && !r.autoVerlengen ? " (niet verlengen)" : ""}` : "—",
                 notitie: <span className="text-xs">{r.notitie}</span>,
                 acties: (
                   <span className="flex flex-wrap gap-1.5">
