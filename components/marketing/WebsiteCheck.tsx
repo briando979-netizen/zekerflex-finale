@@ -576,6 +576,31 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
         </div>
       </section>
 
+      {/* zolang er geen rapport is: wat de check oplevert (en een h2 vóór de koppen van de footer, voor de kopvolgorde) */}
+      {!result && !busy && (
+        <section className="bg-paper" aria-labelledby="wc-wat-kop">
+          <div className="shell py-14 md:py-20">
+            <h2 id="wc-wat-kop" className="text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
+              Wat je krijgt
+            </h2>
+            <ul className="mt-8 grid gap-4 md:grid-cols-3">
+              {(
+                [
+                  ["Een rapport in gewone taal", "Hoe snel, vindbaar en veilig je website is, met per punt wat je eraan kunt doen."],
+                  ["Je nieuwe website, meteen te zien", "Met één klik maken we van je eigen teksten, foto's en logo een nieuwe website, zoals schwarzwald.zekerflex.com."],
+                  ["Hulp als je dat wilt", "Wil je de nieuwe website echt? Laat je gegevens achter, dan nemen we binnen één werkdag contact op."],
+                ] as const
+              ).map(([kop, tekst]) => (
+                <li key={kop} className="surface p-6">
+                  <h3 className="font-display text-lg font-bold text-ink">{kop}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{tekst}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
       {result && t && (
         <>
           <div ref={resultsRef} className="scroll-mt-20 bg-paper">
