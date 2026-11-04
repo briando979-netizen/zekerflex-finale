@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Meer geheugen voor de bouw alleen (de runtime hieronder is een eigen fase): op
+# 4 nov liep de typecontrole van `next build` drie keer vol op de standaard ~2 GB
+# ("JavaScript heap out of memory"). De VPS heeft 8 GB; de app zelf gebruikt ~300 MB.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 # Placeholder values so any eager env access during `next build` (static page
 # data collection) doesn't fail. NOT used at runtime — the runtime stage below
 # is separate and receives the real environment from compose / Kubernetes.
