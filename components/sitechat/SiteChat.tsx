@@ -263,7 +263,8 @@ export function SiteChat({
             </button>
           </div>
 
-          <div ref={logRef} role="log" aria-live="polite" aria-label="Chatberichten" className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {/* tabIndex: het berichtenvak scrollt, dus ook met het toetsenbord (pijltjes) te bedienen */}
+          <div ref={logRef} role="log" aria-live="polite" aria-label="Chatberichten" tabIndex={0} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0A120E]">
             <p className="max-w-[85%] rounded-2xl rounded-tl-md bg-[#F3EEE6] px-4 py-2.5 text-sm leading-relaxed">{begroeting}</p>
             {regels.map((r, i) =>
               r.rol === "systeem" ? (
