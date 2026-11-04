@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { laadRijschool } from "@/lib/rijschool/pagina";
+import { laadRijschool, linkBasis } from "@/lib/rijschool/pagina";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 
 // De app-schermen van een rijschool (inloggen, leerling, instructeur): een
 // smalle kop met de naam van de rijschool. Werkt ook als de website zelf nog
@@ -10,6 +11,7 @@ import { laadRijschool } from "@/lib/rijschool/pagina";
 export default async function RijschoolAppLayout({ children, params }: { children: ReactNode; params: Promise<{ slug: string }> }) {
   const r = await laadRijschool((await params).slug);
   if (!r) notFound();
+  const basis = await linkBasis(r.id, r.slug);
   const kop = (
     <>
       <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg text-sm font-bold text-white" style={{ background: "var(--rs-kleur)" }} aria-hidden>
@@ -23,7 +25,7 @@ export default async function RijschoolAppLayout({ children, params }: { childre
       <header className="border-b border-hair bg-white">
         <div className="mx-auto flex max-w-3xl items-center gap-2.5 px-4 py-3">
           {r.online ? (
-            <Link href={`/rijschool/${r.slug}`} className="flex min-w-0 items-center gap-2.5">
+            <Link href={sitePad(basis)} className="flex min-w-0 items-center gap-2.5">
               {kop}
             </Link>
           ) : (

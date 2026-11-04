@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 
 // Inloggen in de app van de rijschool, als leerling of instructeur. Met een
 // uitnodigingslink (?uitnodiging=…) kies je eerst je wachtwoord.
 
 type Soort = "leerling" | "instructeur";
 
-export function InlogFormulier({ slug, uitnodiging, beginSoort }: { slug: string; uitnodiging: string | null; beginSoort: Soort }) {
+export function InlogFormulier({ slug, basis, uitnodiging, beginSoort }: { slug: string; basis: string; uitnodiging: string | null; beginSoort: Soort }) {
   const router = useRouter();
   const api = `/api/rijschool/site/${slug}/account`;
   const [soort, setSoort] = useState<Soort>(beginSoort);
@@ -37,7 +38,7 @@ export function InlogFormulier({ slug, uitnodiging, beginSoort }: { slug: string
       const r = uitnodiging
         ? await stuur<{ soort: Soort }>(api, "POST", { actie: "wachtwoord", token: uitnodiging, wachtwoord })
         : await stuur<{ soort: Soort }>(api, "POST", { actie: "inloggen", soort, email, wachtwoord });
-      router.replace(`/rijschool/${slug}/${r.soort}`);
+      router.replace(sitePad(basis, `/${r.soort}`));
       router.refresh();
     } catch (err) {
       setFout(foutVan(err));

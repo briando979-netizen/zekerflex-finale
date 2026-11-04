@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
+import { eigenAdres } from "@/lib/rijschool/domein";
 import { ProeflesPlanner } from "@/components/rijschool/site/ProeflesPlanner";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Proefles plannen" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const r = await laadRijschool((await params).slug);
+  if (!r) return { title: "Proefles plannen" };
+  // een eigen canonical, niet die van de voorpagina (anders slaat Google deze pagina over)
+  const eigen = await eigenAdres(r.id);
+  return { title: "Proefles plannen", alternates: { canonical: eigen ? `${eigen}/proefles` : `/rijschool/${r.slug}/proefles` } };
+}
 
 export default async function ProeflesPage({ params }: { params: Promise<{ slug: string }> }) {
   const r = await laadRijschool((await params).slug);

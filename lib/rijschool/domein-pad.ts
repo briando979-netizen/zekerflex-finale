@@ -16,6 +16,16 @@ const GEDEELDE_PADEN = ["/fonts/", "/kaart-data/"];
 export const BEWIJS_PAD = "/.well-known/zekerflex-site";
 
 /**
+ * Een link binnen de site of app van de rijschool. `basis` is "" op haar eigen
+ * domein (rijschooljansen.nl/proefles) en "/rijschool/<slug>" op zekerflex.com
+ * (linkBasis in lib/rijschool/pagina.ts). Zonder deel is het de voorpagina.
+ */
+export function sitePad(basis: string, deel = ""): string {
+  if (basis) return `${basis}${deel}`;
+  return deel.startsWith("/") ? deel : `/${deel}`;
+}
+
+/**
  * Welk pad de app moet tonen voor een verzoek op het domein van rijschool `slug`,
  * of null als het daar niet bestaat. "/" wordt de website, "/leerling" de
  * leerling-app; paden die al onder /rijschool/<slug> vallen (links in de app),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
+import { eigenAdres } from "@/lib/rijschool/domein";
 import { adresRegels, telefoonWeergave } from "@/lib/rijschool/format";
 import { aiVerwerker, assistentAan } from "@/lib/rijschool/assistent-server";
 
@@ -8,7 +9,13 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const r = await laadRijschool((await params).slug);
-  return { title: "Privacy", description: r ? `Hoe ${r.naam} omgaat met je gegevens in de app en op de website.` : "" };
+  if (!r) return { title: "Privacy" };
+  const eigen = await eigenAdres(r.id);
+  return {
+    title: "Privacy",
+    description: `Hoe ${r.naam} omgaat met je gegevens in de app en op de website.`,
+    alternates: { canonical: eigen ? `${eigen}/privacy` : `/rijschool/${r.slug}/privacy` },
+  };
 }
 
 // De privacyverklaring van de app en website van een rijschool. Google Play

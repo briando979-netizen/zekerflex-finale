@@ -17,6 +17,7 @@ import { afstandTekst, duurTekst } from "@/lib/kaart/geo";
 import type { RouteWeergave } from "@/lib/rijschool/lesroute";
 import { voorvertoning, type BerichtRij } from "@/lib/rijschool/berichten-lijst";
 import { Gesprek } from "@/components/rijschool/Gesprek";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 
 // De app van een leerling: volgende les, lessen (annuleren en zelf plannen),
 // voortgang per onderdeel, oefenen (lesvoorbereiding en theorie), tegoed en
@@ -32,7 +33,7 @@ const TABS: { id: Tab; label: string; icoon: string }[] = [
   { id: "tegoed", label: "Tegoed", icoon: "M3 7h18v12H3zM3 11h18M7 15h3" },
 ];
 
-export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeergave }) {
+export function LeerlingApp({ slug, basis, begin }: { slug: string; basis: string; begin: LeerlingWeergave }) {
   const router = useRouter();
   const api = `/api/rijschool/site/${slug}/leerling`;
   const [d, setD] = useState(begin);
@@ -59,7 +60,7 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
       setOk(melding);
     } catch (e) {
       setFout(foutVan(e));
-      if (/log opnieuw in/i.test(foutVan(e))) router.replace(`/rijschool/${slug}/inloggen`);
+      if (/log opnieuw in/i.test(foutVan(e))) router.replace(sitePad(basis, "/inloggen"));
     }
   }
 
@@ -90,7 +91,7 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
     try {
       setD(await stuur<LeerlingWeergave>(api, "POST", { actie: "bericht", tekst }));
     } catch (e) {
-      if (/log opnieuw in/i.test(foutVan(e))) router.replace(`/rijschool/${slug}/inloggen`);
+      if (/log opnieuw in/i.test(foutVan(e))) router.replace(sitePad(basis, "/inloggen"));
       throw new Error(foutVan(e));
     }
   }
@@ -130,7 +131,7 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
 
   async function uitloggen() {
     await stuur(`/api/rijschool/site/${slug}/account`, "POST", { actie: "uitloggen" }).catch(() => undefined);
-    router.replace(`/rijschool/${slug}/inloggen`);
+    router.replace(sitePad(basis, "/inloggen"));
     router.refresh();
   }
 

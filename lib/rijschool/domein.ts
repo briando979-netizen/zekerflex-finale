@@ -205,7 +205,12 @@ export async function eigenAdres(rijschoolId: string): Promise<string | null> {
  * dus terug na iDEAL moet ook daarheen.
  */
 export async function adresVanVerzoek(request: Request, r: Pick<Rijschool, "id">): Promise<string | null> {
-  const host = siteHostFrom(request.headers.get(SITE_HOST_HEADER));
+  return adresVanHost(request.headers.get(SITE_HOST_HEADER), r);
+}
+
+/** Zelfde, voor de klantdomein-kop (x-zf-site-host) zoals een pagina hem leest. */
+export async function adresVanHost(raw: string | null, r: Pick<Rijschool, "id">): Promise<string | null> {
+  const host = siteHostFrom(raw);
   if (!host) return null;
   const op = await rijschoolVoorHost(host).catch(() => null);
   return op?.id === r.id ? `https://${op.hoofd}` : null;

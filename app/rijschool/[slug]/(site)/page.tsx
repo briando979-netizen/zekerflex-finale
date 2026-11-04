@@ -2,7 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { laadRijschool } from "@/lib/rijschool/pagina";
+import { laadRijschool, linkBasis } from "@/lib/rijschool/pagina";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 import { websiteVan, whatsappNummer } from "@/lib/rijschool/website";
 import { ldJson } from "@/lib/seo/json-ld";
 import { euro } from "@/lib/payroll/format";
@@ -38,7 +39,7 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
   if (!r) notFound();
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
-  const basis = `/rijschool/${r.slug}`;
+  const basis = await linkBasis(r.id, r.slug);
   const [producten, instructeurs, playApp, foto, eigen] = await Promise.all([
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id, zichtbaar: true }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id, actief: true }, select: { id: true, naam: true, bio: true, categorieen: true }, orderBy: { createdAt: "asc" } }),
@@ -89,7 +90,7 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-schw-cream/80">{w.intro}</p>
             <div className="mt-9 flex flex-wrap gap-3">
               {r.proeflesOnline && (
-                <Link href={`${basis}/proefles`} className="rounded-full px-7 py-4 font-bold shadow-[0_14px_40px_-12px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-0.5" style={knopAccent}>
+                <Link href={sitePad(basis, "/proefles")} className="rounded-full px-7 py-4 font-bold shadow-[0_14px_40px_-12px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-0.5" style={knopAccent}>
                   Plan je proefles
                 </Link>
               )}
@@ -236,7 +237,7 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
                 </ul>
                 {r.proeflesOnline && (
                   <Link
-                    href={`${basis}/proefles`}
+                    href={sitePad(basis, "/proefles")}
                     className="mt-6 rounded-full px-5 py-3 text-center text-sm font-bold"
                     style={p.populair ? knopAccent : { background: "var(--rs-kleur-knop)", color: "var(--rs-op-kleur)" }}
                   >
@@ -281,7 +282,7 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
             Na elke les zet je instructeur je voortgang in de app. Zo weet je precies waar je staat, wat je huiswerk is en hoeveel lessen je nog hebt.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={`${basis}/inloggen`} className="rounded-full px-6 py-3.5 font-bold" style={{ background: "var(--rs-kleur-knop)", color: "var(--rs-op-kleur)" }}>
+            <Link href={sitePad(basis, "/inloggen")} className="rounded-full px-6 py-3.5 font-bold" style={{ background: "var(--rs-kleur-knop)", color: "var(--rs-op-kleur)" }}>
               Inloggen in de app
             </Link>
             {playApp?.liveSinds && (
@@ -392,7 +393,7 @@ export default async function RijschoolHome({ params }: { params: Promise<{ slug
                 <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Klaar om te beginnen?</h2>
                 <p className="mt-2 text-lg">Kies zelf een moment voor je proefles. Binnen een minuut geregeld.</p>
               </div>
-              <Link href={`${basis}/proefles`} className="rounded-full bg-schw-night px-7 py-4 font-bold text-schw-cream transition-transform hover:-translate-y-0.5">
+              <Link href={sitePad(basis, "/proefles")} className="rounded-full bg-schw-night px-7 py-4 font-bold text-schw-cream transition-transform hover:-translate-y-0.5">
                 Plan je proefles
               </Link>
             </div>

@@ -31,6 +31,7 @@ const audit = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => audit(...a) }));
 
 import {
+  adresVanHost,
   adresVanVerzoek,
   controleerDomein,
   dnsRegels,
@@ -165,6 +166,10 @@ describe("adres van de bezoeker (terug na iDEAL) en links in mails", () => {
     expect(await adresVanVerzoek(verzoek(), r1)).toBeNull();
     // het domein van r1 hoort niet bij r2
     expect(await adresVanVerzoek(verzoek("rijschooljansen.nl"), r2)).toBeNull();
+    // pagina's lezen dezelfde kop (korte links via linkBasis)
+    expect(await adresVanHost("rijschooljansen.nl", r1)).toBe("https://rijschooljansen.nl");
+    expect(await adresVanHost(null, r1)).toBeNull();
+    expect(await adresVanHost("ander-domein.nl", r1)).toBeNull();
   });
 
   it("mails linken pas naar het eigen domein als het actief is", async () => {

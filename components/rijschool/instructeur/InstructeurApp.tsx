@@ -12,12 +12,13 @@ import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import type { BerichtRij } from "@/lib/rijschool/berichten-lijst";
 import { bezorgUitleg, GesprekkenLijst, GesprekPaneel } from "@/components/rijschool/Gesprekken";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 
 // De app van een instructeur: de lesdag (vorige/volgende dag), per les het
 // lesscherm, een lijst van je leerlingen met tegoed en volgende les, en de
 // berichten met je eigen leerlingen (lib/rijschool/berichten.ts).
 
-export function InstructeurApp({ slug, begin }: { slug: string; begin: InstructeurWeergave }) {
+export function InstructeurApp({ slug, basis, begin }: { slug: string; basis: string; begin: InstructeurWeergave }) {
   const router = useRouter();
   const api = `/api/rijschool/site/${slug}/instructeur`;
   const [d, setD] = useState(begin);
@@ -48,14 +49,14 @@ export function InstructeurApp({ slug, begin }: { slug: string; begin: Instructe
     } catch (e) {
       const m = foutVan(e);
       setFout(m);
-      if (/log in als instructeur|log opnieuw in/i.test(m)) router.replace(`/rijschool/${slug}/inloggen?soort=instructeur`);
+      if (/log in als instructeur|log opnieuw in/i.test(m)) router.replace(sitePad(basis, "/inloggen?soort=instructeur"));
       return false;
     }
   }
 
   async function uitloggen() {
     await stuur(`/api/rijschool/site/${slug}/account`, "POST", { actie: "uitloggen" }).catch(() => undefined);
-    router.replace(`/rijschool/${slug}/inloggen?soort=instructeur`);
+    router.replace(sitePad(basis, "/inloggen?soort=instructeur"));
     router.refresh();
   }
 

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { laadRijschool } from "@/lib/rijschool/pagina";
+import { laadRijschool, linkBasis } from "@/lib/rijschool/pagina";
+import { sitePad } from "@/lib/rijschool/domein-pad";
 import { huidigeLeerling, isEigenaar } from "@/lib/rijschool/accounts";
 import { websiteVan, whatsappNummer } from "@/lib/rijschool/website";
 import { prisma } from "@/lib/prisma";
@@ -38,7 +39,8 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
   const assistent = await assistentAan(r.id).catch(() => false);
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
-  const basis = `/rijschool/${r.slug}`;
+  // korte links op het eigen domein van de rijschool (rijschooljansen.nl/proefles)
+  const basis = await linkBasis(r.id, r.slug);
   const tel = r.telefoon.replace(/[^0-9+]/g, "");
 
   return (
@@ -57,7 +59,7 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
       )}
       <header className="sticky top-0 z-30 border-b border-schw-night/10 bg-schw-cream/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-4 py-3 sm:px-8">
-          <Link href={basis} className="flex min-w-0 items-center gap-2.5">
+          <Link href={sitePad(basis)} className="flex min-w-0 items-center gap-2.5">
             <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl" style={{ background: "var(--rs-kleur-knop)", color: "var(--rs-op-kleur)" }}>
               <Stuur className="h-7 w-7" />
             </span>
@@ -65,17 +67,17 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
           </Link>
           <nav aria-label="Hoofdmenu" className="ml-auto flex items-center gap-1 text-sm font-semibold">
             {MENU.map((m, i) => (
-              <Link key={m.href} href={`${basis}${m.href}`} className={`${i < 2 ? "hidden md:block" : "hidden lg:block"} rounded-full px-3 py-2 hover:bg-schw-night/5`}>
+              <Link key={m.href} href={sitePad(basis, m.href)} className={`${i < 2 ? "hidden md:block" : "hidden lg:block"} rounded-full px-3 py-2 hover:bg-schw-night/5`}>
                 {m.label}
               </Link>
             ))}
-            <Link href={`${basis}/inloggen`} className="rounded-full px-3 py-2 hover:bg-schw-night/5">
+            <Link href={sitePad(basis, "/inloggen")} className="rounded-full px-3 py-2 hover:bg-schw-night/5">
               {leerling ? "Mijn lessen" : "Inloggen"}
             </Link>
-            <SiteMenu links={MENU.map((m) => ({ href: `${basis}${m.href}`, label: m.label }))} />
+            <SiteMenu links={MENU.map((m) => ({ href: sitePad(basis, m.href), label: m.label }))} />
             {r.proeflesOnline && (
               <Link
-                href={`${basis}/proefles`}
+                href={sitePad(basis, "/proefles")}
                 className="whitespace-nowrap rounded-full px-4 py-2.5 font-bold shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-0.5"
                 style={{ background: "var(--rs-accent-knop)", color: "var(--rs-op-accent)" }}
               >
@@ -137,14 +139,14 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
             <ul className="mt-3 space-y-1.5 text-schw-cream/85">
               {MENU.map((m) => (
                 <li key={m.href}>
-                  <Link href={`${basis}${m.href}`} className="hover:underline">
+                  <Link href={sitePad(basis, m.href)} className="hover:underline">
                     {m.label}
                   </Link>
                 </li>
               ))}
               {r.proeflesOnline && (
                 <li>
-                  <Link href={`${basis}/proefles`} className="hover:underline">
+                  <Link href={sitePad(basis, "/proefles")} className="hover:underline">
                     Proefles plannen
                   </Link>
                 </li>
@@ -157,12 +159,12 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
             </p>
             <ul className="mt-3 space-y-1.5 text-schw-cream/85">
               <li>
-                <Link href={`${basis}/inloggen`} className="hover:underline">
+                <Link href={sitePad(basis, "/inloggen")} className="hover:underline">
                   Inloggen in de app
                 </Link>
               </li>
               <li>
-                <Link href={`${basis}/privacy`} className="hover:underline">
+                <Link href={sitePad(basis, "/privacy")} className="hover:underline">
                   Privacy
                 </Link>
               </li>

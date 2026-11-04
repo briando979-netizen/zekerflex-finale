@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEWIJS_PAD, naarEigenDomein, rijschoolLinksIn, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
+import { BEWIJS_PAD, naarEigenDomein, rijschoolLinksIn, rijschoolPad, robotsVoor, sitePad } from "@/lib/rijschool/domein-pad";
 
 describe("rijschoolPad (eigen domein)", () => {
   const p = (pad: string) => rijschoolPad("jansen", pad);
@@ -39,6 +39,25 @@ describe("rijschoolPad (eigen domein)", () => {
     expect(p("/robots.txt")).toBe("/rijschool/jansen/robots.txt");
     expect(robotsVoor(true)).toContain("Allow: /");
     expect(robotsVoor(false)).toContain("Disallow: /");
+  });
+});
+
+describe("links binnen de site (sitePad)", () => {
+  it("op het eigen domein kort, op zekerflex.com onder /rijschool/<slug>", () => {
+    expect(sitePad("")).toBe("/");
+    expect(sitePad("", "/proefles")).toBe("/proefles");
+    expect(sitePad("", "#pakketten")).toBe("/#pakketten");
+    expect(sitePad("", "/inloggen?soort=instructeur")).toBe("/inloggen?soort=instructeur");
+    expect(sitePad("/rijschool/jansen")).toBe("/rijschool/jansen");
+    expect(sitePad("/rijschool/jansen", "/proefles")).toBe("/rijschool/jansen/proefles");
+    expect(sitePad("/rijschool/jansen", "#pakketten")).toBe("/rijschool/jansen#pakketten");
+  });
+
+  it("elke korte link komt via de middleware weer bij dezelfde pagina uit", () => {
+    for (const deel of ["", "/proefles", "/inloggen", "/leerling", "/instructeur", "/privacy", "/app"]) {
+      const kort = sitePad("", deel).split("?")[0] ?? "";
+      expect(rijschoolPad("jansen", kort)).toBe(sitePad("/rijschool/jansen", deel));
+    }
   });
 });
 
