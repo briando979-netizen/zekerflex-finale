@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { StudioProvider, useStudio } from "@/components/studio/context";
-import { IExternal, IHome, ILayout, IMenu, IPalette, IReceipt, ISettings, ITag, IX, Pill, btn } from "@/components/studio/ui";
+import { ICoins, IExternal, IHome, ILayout, IMenu, IPalette, IReceipt, ISettings, ITag, IX, Pill, btn } from "@/components/studio/ui";
 
 // ---------------------------------------------------------------------------
 // De Websitestudio (/studio): een eigen, volledig scherm om de website en de
@@ -19,6 +19,7 @@ const NAV = [
   { href: "/studio/bestellingen", label: "Bestellingen", icon: <IReceipt /> },
   { href: "/studio/website", label: "Website", icon: <ILayout /> },
   { href: "/studio/ontwerp", label: "Ontwerp", icon: <IPalette /> },
+  { href: "/studio/verdienen", label: "Verdienen", icon: <ICoins /> },
   { href: "/studio/instellingen", label: "Instellingen", icon: <ISettings /> },
 ];
 

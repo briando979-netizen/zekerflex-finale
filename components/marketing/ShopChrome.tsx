@@ -22,6 +22,16 @@ type ApiProduct = { id: string; slug?: string | null; name: string; priceCents: 
 type CartLine = { variantId: string; name: string; priceCents: number; imageUrl: string | null; qty: number };
 
 export const CART_OPEN_EVENT = "zf:shop-cart-open";
+// Partnerlink (/shop/p/<code> → ?partner=<code>): alleen in het open tabblad
+// onthouden (sessionStorage, geen cookie) en meegestuurd met de bestelling.
+const PARTNER_KEY = "zf_shop_partner";
+const readPartner = (): string | undefined => {
+  try {
+    return window.sessionStorage.getItem(PARTNER_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
@@ -54,6 +64,20 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       .then((d) => setCatalog(d.products ?? []))
       .catch(() => undefined);
   }, [needCatalog, catalog.length]);
+
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("partner");
+      if (!code) return;
+      if (/^[a-z0-9-]{6,30}$/.test(code)) window.sessionStorage.setItem(PARTNER_KEY, code);
+      // het adres weer schoon, zodat iemand die het deelt de code niet meestuurt
+      url.searchParams.delete("partner");
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      /* zonder sessionStorage werkt de shop gewoon, alleen zonder partner */
+    }
+  }, []);
 
   useEffect(() => {
     const open = () => setDrawer(true);
@@ -99,7 +123,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       const response = await fetch("/api/shop/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, items: items.map((l) => ({ variantId: l.variantId, qty: l.qty })) }),
+        body: JSON.stringify({ ...form, items: items.map((l) => ({ variantId: l.variantId, qty: l.qty })), partner: readPartner() }),
       });
       const data = await response.json();
       if (!response.ok) {

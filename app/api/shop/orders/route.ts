@@ -10,6 +10,7 @@ import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
 import { recordAudit } from "@/lib/audit";
 import { createShopOrderCheckoutSession } from "@/lib/billing/stripe";
+import { legPartnerBestellingVast } from "@/lib/shop/partner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,8 @@ const schema = z.object({
     .array(z.object({ variantId: z.string().min(1), qty: z.number().int().positive().max(99) }))
     .min(1)
     .max(40),
+  /** partnercode uit een partnerlink (/shop/p/<code>), alleen bewaard in het tabblad */
+  partner: z.string().trim().max(40).optional(),
 });
 
 const variantLabel = (size: string | null, color: string | null): string =>
@@ -128,6 +131,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       targetId: order.id,
       metadata: { email: d.email, totalCents, lines: lines.length },
     });
+
+    // Via een partnerlink: de vergoeding vastleggen (lib/shop/partner.ts). Mag de
+    // bestelling nooit tegenhouden.
+    if (d.partner) {
+      try {
+        await legPartnerBestellingVast({ code: d.partner, orderId: order.id, email: d.email, productenCents: subtotalCents, regels: lines.length });
+      } catch (err) {
+        logger.warn("shop partner attribution failed", { orderId: order.id, error: (err as Error).message });
+      }
+    }
 
     // Confirmation mails go out from the Stripe webhook once payment is
     // actually confirmed (app/api/webhooks/stripe/route.ts) — never here,

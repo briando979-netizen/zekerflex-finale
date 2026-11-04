@@ -293,6 +293,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("stripe-btw"),
     },
     {
+      id: "partnerprogramma-voorwaarden",
+      group: "Geld & bank",
+      title: "Partnerprogramma webshop: vergoeding en voorwaarden bevestigen",
+      why: "Sinds 4 november kan elk bedrijf in de Websitestudio (Verdienen) links naar de ZekerFlex-webshop delen. Bestelt iemand via zo'n link, dan krijgt dat bedrijf 10% van het productbedrag zonder btw, vast na 35 dagen, uitbetaald vanaf € 25. Dat zijn keuzes van Claude: kijk of ze bij je marges passen. Uitbetalen gaat met de hand via Beheer → Webshop & merk → Partnerprogramma.",
+      how: [
+        "Controleer in Beheer → Webshop de inkoopprijzen: 10% zonder btw moet bij elk product binnen de marge vallen. Een ander percentage? Zeg het tegen Claude; het staat op één plek (lib/shop/partner-core.ts).",
+        "Laat de partnervoorwaarden opnemen in de algemene voorwaarden: wie mag meedoen, geen vergoeding op eigen aankopen, uitbetaling maandelijks, vervalt bij retour. Vraag Claude om een tekst voor te stellen.",
+        "Het cookiebeleid noemt de partnerlink nog niet. De shop onthoudt de partner alleen in het open tabblad (geen cookie). Zeg tegen Claude dat dit in het cookiebeleid moet.",
+        "Vink deze taak af als je akkoord bent.",
+      ],
+      auto: false,
+      ...m("partnerprogramma-voorwaarden"),
+    },
+    {
       id: "loonweek-grens",
       group: "Geld & bank",
       title: "Loonweek: laten beginnen om 00:00 Nederlandse tijd? (keuze nodig)",
