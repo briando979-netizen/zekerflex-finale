@@ -9,6 +9,8 @@ import { tekstOp } from "@/lib/rijschool/kleuren";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 import { KlusKaart } from "@/components/marketing/KlusKaart";
 import { KlusSimulatie } from "@/components/marketing/KlusSimulatie";
+import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
+import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
 
 export interface ConceptTemplate {
   key: string;
@@ -16,6 +18,7 @@ export interface ConceptTemplate {
   rateCents: number;
   breakMinutes: number;
   description: string;
+  branche?: ShiftCategoryKey | undefined;
 }
 
 const ANDERS = "anders";
@@ -102,6 +105,14 @@ export function KlusConcept({
   const [reading, setReading] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
   const [found, setFound] = useState<WebsiteKlus | null>(null);
+  // the function list grouped per branch, in the order of the branch filter
+  const groepen = useMemo(
+    () =>
+      SHIFT_CATEGORIES.map((c) => ({ key: c.key, label: c.label, items: templates.filter((t) => (t.branche ?? shiftCategory(t.label, null).key) === c.key) })).filter(
+        (g) => g.items.length > 0,
+      ),
+    [templates],
+  );
 
   // Dates in the browser's own (Dutch) time: the server runs in UTC.
   useEffect(() => {
@@ -252,13 +263,25 @@ export function KlusConcept({
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div className="space-y-5" onChange={used}>
           <Groep title="Wat moet er gebeuren?">
+            <div className="min-w-0 sm:col-span-2">
+              <SjabloonGalerij
+                sjablonen={templates.map((t) => ({ key: t.key, label: t.label, rateCents: t.rateCents, branche: t.branche }))}
+                gekozen={tpl === ANDERS ? "" : tpl}
+                onKies={(key) => pickTemplate(key)}
+                kop="Kies een functie"
+              />
+            </div>
             <label className="block sm:col-span-2">
               <span className="block text-sm font-medium text-ink">Functie</span>
               <select value={tpl} onChange={(e) => pickTemplate(e.target.value)} className={`mt-1.5 ${field}`}>
-                {templates.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
-                  </option>
+                {groepen.map((g) => (
+                  <optgroup key={g.key} label={g.label}>
+                    {g.items.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
                 <option value={ANDERS}>Iets anders…</option>
               </select>

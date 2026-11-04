@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
@@ -11,6 +11,7 @@ import { extraDayOptions } from "@/lib/shifts/extra-days";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/concept";
+import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 
 const initial: NewShiftState = { error: null };
 
@@ -43,14 +44,24 @@ export function NewShiftForm({
   templates,
   minRateCents = 1620,
   pools = [],
+  beeld = { logoUrl: null, useLogo: false, canChange: false },
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
   minRateCents?: number;
   pools?: { id: string; name: string; memberCount: number }[];
+  /** the organisation's logo and whether its klussen show it instead of the branch photo */
+  beeld?: { logoUrl: string | null; useLogo: boolean; canChange: boolean };
 }) {
   const minRateEuro = minRateCents / 100;
   const [state, formAction] = useFormState(createShiftAction, initial);
+  const [useLogo, setUseLogo] = useState(beeld.useLogo && Boolean(beeld.logoUrl));
+  const [beeldBezig, setBeeldBezig] = useState(false);
+  const [beeldFout, setBeeldFout] = useState<string | null>(null);
+  const galerij = useMemo(
+    () => templates.map((t) => ({ key: t.key, label: t.label, rateCents: Math.max(t.hourlyRateCents, minRateCents), branche: t.branche })),
+    [templates, minRateCents],
+  );
   const [tpl, setTpl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -129,8 +140,27 @@ export function NewShiftForm({
     setTpl(t.key);
     setTitle(t.label);
     setDescription(t.description);
-    setRateEuro((t.hourlyRateCents / 100).toFixed(2));
+    setDresscode(t.dresscode ?? "");
+    setRateEuro((Math.max(t.hourlyRateCents, minRateCents) / 100).toFixed(2));
     setBreakMin(String(t.breakMinutes));
+  }
+
+  // company-wide choice (all its klussen), saved at once; the server's answer is what we show
+  async function kiesBeeld(logo: boolean) {
+    setBeeldBezig(true);
+    setBeeldFout(null);
+    const res = await fetch("/api/werkgever/klus-beeld", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ beeld: logo ? "logo" : "foto" }),
+    }).catch(() => null);
+    setBeeldBezig(false);
+    if (!res?.ok) {
+      const d = res ? await res.json().catch(() => ({})) : {};
+      setBeeldFout(d?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+      return;
+    }
+    setUseLogo(((await res.json()) as { useLogo: boolean }).useLogo);
   }
 
   function applyOwnTemplate(t: OwnTemplate) {
@@ -171,23 +201,14 @@ export function NewShiftForm({
           </p>
         )}
 
-        <div>
-          <p className="field-label mb-2">Kies een sjabloon (optioneel)</p>
-          <div className="flex flex-wrap gap-2">
-            {templates.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => applyTemplate(t)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                  tpl === t.key ? "border-brand-500 bg-brand-50 text-brand-600" : "border-hairstrong text-neutralx-600 hover:border-brand-500"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SjabloonGalerij
+          sjablonen={galerij}
+          gekozen={tpl}
+          onKies={(key) => {
+            const t = templates.find((x) => x.key === key);
+            if (t) applyTemplate(t);
+          }}
+        />
 
         {ownTemplates.length > 0 && (
           <div>
@@ -469,9 +490,19 @@ export function NewShiftForm({
         <p className="field-label mb-2">Voorbeeld</p>
         <article className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
           <div className="relative aspect-[16/9]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cat.photo} alt="" className="h-full w-full object-cover" />
-            <span className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent" />
+            {useLogo && beeld.logoUrl ? (
+              // fixed white: logos are made for a light background, also in dark mode
+              <span className="flex h-full w-full items-center justify-center bg-[#ffffff] px-10 py-8">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={beeld.logoUrl} alt="" className="max-h-full max-w-full object-contain" />
+              </span>
+            ) : (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cat.photo} alt="" className="h-full w-full object-cover" />
+                <span className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent" />
+              </>
+            )}
             <span className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white" style={{ background: `${cat.accent}cc` }}>
               {cat.label}
             </span>
@@ -480,14 +511,25 @@ export function NewShiftForm({
                 {totalDays} dagen
               </span>
             )}
-            <div className="absolute inset-x-3 bottom-3 text-white">
-              <p className="truncate font-display text-lg font-bold drop-shadow">{title || "Titel van de dienst"}</p>
-              <p className="truncate text-xs text-white/80">
+            {!(useLogo && beeld.logoUrl) && (
+              <div className="absolute inset-x-3 bottom-3 text-white">
+                <p className="truncate font-display text-lg font-bold drop-shadow">{title || "Titel van de dienst"}</p>
+                <p className="truncate text-xs text-white/80">
+                  {oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging"}
+                  {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                </p>
+              </div>
+            )}
+          </div>
+          {useLogo && beeld.logoUrl && (
+            <div className="border-b border-hair px-4 pb-3 pt-3">
+              <p className="truncate font-display text-lg font-bold text-ink">{title || "Titel van de dienst"}</p>
+              <p className="truncate text-xs text-neutralx-500">
                 {oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging"}
                 {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
               </p>
             </div>
-          </div>
+          )}
           <div className="space-y-2 p-4 text-sm">
             <Row k="Uurtarief" v={`€ ${(hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`} />
             <Row k="Duur" v={hours ? `${hours} u${Number(breakMin) ? ` · ${breakMin}m pauze` : ""}` : "—"} />
@@ -499,9 +541,60 @@ export function NewShiftForm({
             )}
           </div>
         </article>
-        {primaryDay && <p className="mt-2 text-[11px] text-neutralx-400">Wordt automatisch gematcht zodra je uitzet.</p>}
+        {primaryDay && <p className="mt-2 text-[11px] text-neutralx-500">Wordt automatisch gematcht zodra je uitzet.</p>}
+
+        <fieldset className="mt-4 min-w-0 rounded-xl border border-hair bg-white p-3">
+          <legend className="px-1 text-xs font-semibold text-ink">Beeld op je klussen</legend>
+          {beeld.logoUrl ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <BeeldKeuze actief={!useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(false)} label="Foto van de branche">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cat.photo} alt="" className="h-full w-full object-cover" />
+                </BeeldKeuze>
+                <BeeldKeuze actief={useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(true)} label="Ons logo">
+                  <span className="flex h-full w-full items-center justify-center bg-[#ffffff] p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={beeld.logoUrl} alt="" className="max-h-full max-w-full object-contain" />
+                  </span>
+                </BeeldKeuze>
+              </div>
+              <p className="mt-2 text-[11px] text-neutralx-500">
+                {beeld.canChange ? "Geldt voor al je klussen. Je logo staat ook klein naast je bedrijfsnaam." : "Alleen een beheerder van je organisatie kan dit wijzigen."}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-neutralx-600">
+              Je klussen tonen een foto van de branche. Wil je je eigen logo erop?{" "}
+              <Link href="/werkgever/bedrijf" className="font-semibold text-brand-600 underline underline-offset-2">
+                Upload je logo bij Bedrijf
+              </Link>
+              .
+            </p>
+          )}
+          {beeldFout && (
+            <p role="alert" className="mt-2 text-xs text-crit">
+              {beeldFout}
+            </p>
+          )}
+        </fieldset>
       </div>
     </div>
+  );
+}
+
+function BeeldKeuze({ actief, disabled, onClick, label, children }: { actief: boolean; disabled: boolean; onClick: () => void; label: string; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={actief}
+      disabled={disabled}
+      onClick={onClick}
+      className={`overflow-hidden rounded-lg border text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${actief ? "border-brand-500 ring-2 ring-brand-500" : "border-hair hover:border-hairstrong"}`}
+    >
+      <span className="block aspect-[16/9] overflow-hidden">{children}</span>
+      <span className="block px-2 py-1.5 text-xs font-semibold text-ink">{label}</span>
+    </button>
   );
 }
 

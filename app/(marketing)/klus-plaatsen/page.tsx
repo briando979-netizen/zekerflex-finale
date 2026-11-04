@@ -48,6 +48,7 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
     rateCents: Math.max(t.hourlyRateCents, MIN_SHIFT_RATE_CENTS),
     breakMinutes: t.breakMinutes,
     description: t.description,
+    branche: t.branche,
   }));
 
   return (

@@ -53,6 +53,28 @@ const GEAR: Record<ShiftCategoryKey, GearHint[]> = {
     { slug: "antislip-werkschoenen-ob", reason: "Gladde vloeren op de afdeling." },
   ],
   kantoor: [],
+  productie: [
+    { slug: "veiligheidsschoenen-s3", reason: "In de meeste fabrieken verplicht: pallets, karren en zware onderdelen.", required: true },
+    { slug: "gehoorbescherming-oordoppen", reason: "Machines en lopende banden boven 80 dB." },
+    { slug: "werkhandschoenen-grip", reason: "Grip bij inpakken en onderdelen aanpakken." },
+  ],
+  promotie: [
+    { slug: "veiligheidssneakers-s1p", reason: "Een hele dag staan en lopen bij je stand of op straat." },
+  ],
+  beveiliging: [
+    { slug: "veiligheidshesje", reason: "Herkenbaar en zichtbaar bij toegangscontrole en verkeer." },
+    { slug: "veiligheidssneakers-s1p", reason: "Lange rondes, lichte bescherming." },
+  ],
+  kinderopvang: [],
+  auto: [
+    { slug: "antislip-werkschoenen-ob", reason: "Natte, zeepachtige vloeren in de wasstraat." },
+    { slug: "werkhandschoenen-grip", reason: "Banden en velgen tillen." },
+  ],
+  agrarisch: [
+    { slug: "werkhandschoenen-grip", reason: "Oogsten, sorteren en kratten tillen." },
+    { slug: "kniebeschermers", reason: "Veel werk op je knieën tussen de rijen." },
+    { slug: "softshell-werkjas", reason: "Koude ochtenden op het land of in de kas." },
+  ],
   algemeen: [
     { slug: "veiligheidssneakers-s1p", reason: "Prettig bij een dienst waar je veel op de been bent." },
   ],

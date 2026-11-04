@@ -31,6 +31,25 @@ const SIGNALS: [string, RegExp][] = [
   ["vakkenvuller", WORD("supermarkt|bouwmarkt|drogist\\p{L}*|tuincentrum|retail|filialen|assortiment|levensmiddelen|boodschappen")],
   ["kassa", WORD("winkel|boetiek|boutique|mode|kleding|schoenen|fashion|bakkerij|slagerij|kaasspeciaalzaak|cadeauwinkel|juwelier|bloemist\\p{L}*|kapsalon")],
   ["receptie", WORD("kantoor|receptie|praktijk|kliniek|tandarts\\p{L}*|fysiotherap\\p{L}*|huisarts\\p{L}*|advocaten?|accountants?|notaris|makelaar\\p{L}*|sportschool|fitness")],
+  // the other branches of lib/shifts/catalogus.ts; after the first six, which win a tie
+  ["productie", WORD("fabriek|productiebedrijf|productielocatie|machinefabriek|metaalbewerking|voedingsmiddelenindustrie|vleesverwerk\\p{L}*|verpakkingsindustrie")],
+  ["beveiliger", WORD("beveiligingsbedrijf|beveiligingsdienst|bewakingsdienst|security|alarmcentrale|objectbeveiliging")],
+  ["promotie", WORD("promotiebureau|promotieteam|sampling|eventmarketing|merkactivatie|promotieacties?")],
+  ["eventcrew", WORD("evenementenbureau|eventbureau|festivals?|tentenverhuur|podiumbouw|evenementenverhuur")],
+  ["pedagogisch", WORD("kinderopvang|kinderdagverblijf|kdv|bso|buitenschoolse opvang|peuteropvang|peuterspeelzaal")],
+  ["onderwijsassistent", WORD("basisschool|basisonderwijs|middelbare school|scholengemeenschap")],
+  ["zorghulp", WORD("thuiszorg|zorginstelling|verpleeghuis|woonzorg\\p{L}*|zorgcentrum|verzorgingshuis")],
+  ["bouwplaats", WORD("bouwbedrijf|aannemer\\p{L}*|bouwonderneming|renovatiebedrijf")],
+  ["schilder", WORD("schildersbedrijf|schilderwerk(en)?|schildersbedrijven")],
+  ["installatiemonteur", WORD("installatiebedrijf|installateur|loodgieter\\p{L}*|cv-ketels?|warmtepompen")],
+  ["wasstraat", WORD("wasstraat|carwash|autowas\\p{L}*|autopoets\\p{L}*")],
+  ["automonteur", WORD("autobedrijf|autogarage|apk|autoservice|occasions|autodealer")],
+  ["bandenwissel", WORD("bandenservice|bandencentrale|bandenspecialist|winterbanden")],
+  ["fietsenmaker", WORD("fietsenwinkel|fietsenmaker|fietsspeciaalzaak|fietsenzaak|e-bikes?|fietsreparatie")],
+  ["kaswerk", WORD("kwekerij|glastuinbouw|tuinbouwbedrijf|tomatenkwekerij|paprikateelt|kassen")],
+  ["oogst", WORD("fruitteler\\p{L}*|fruitteelt|aardbeienkwekerij|akkerbouw\\p{L}*|boerderij")],
+  ["hovenier", WORD("hovenier\\p{L}*|tuinaanleg|tuinonderhoud|groenvoorziening")],
+  ["verhuizer", WORD("verhuisbedrijf|verhuizingen|verhuisservice")],
 ];
 
 const count = (re: RegExp, s: string) => (s.match(re) ?? []).length;

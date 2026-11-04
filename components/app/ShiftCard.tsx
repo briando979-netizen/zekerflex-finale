@@ -70,15 +70,25 @@ export function ShiftCard({
         {/* Decorative duplicate of the title link below — hidden from AT so the
             card exposes exactly one meaningful link. */}
         <Link href={href} className="block h-full w-full" aria-hidden="true" tabIndex={-1}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={cat.photo}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <span className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
+          {shift.useLogo && shift.companyLogoUrl ? (
+            // the company chose its own logo: on fixed white (logos are made for a light background, also in dark mode)
+            <span className="flex h-full w-full items-center justify-center bg-[#ffffff] px-10 py-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={shift.companyLogoUrl} alt="" loading="lazy" decoding="async" className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105" />
+            </span>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cat.photo}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
+            </>
+          )}
         </Link>
         <span
           className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white backdrop-blur"
@@ -106,6 +116,10 @@ export function ShiftCard({
       <div className="flex flex-1 flex-col p-4">
         <Link href={href} className="block">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-600">
+            {shift.companyLogoUrl && !shift.useLogo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shift.companyLogoUrl} alt="" loading="lazy" decoding="async" className="h-5 w-5 flex-shrink-0 rounded-full bg-[#ffffff] object-contain ring-1 ring-hair" />
+            )}
             <span className="truncate">{cleanBranchLabel(shift.branch)}</span>
             {shift.companyRating && (
               <span className="flex flex-shrink-0 items-center gap-0.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink" title={`${shift.companyRating.count}`}>

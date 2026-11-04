@@ -19,7 +19,7 @@ const nl = {
     sluit: "Melding sluiten",
   },
   date: { wd: ["zo", "ma", "di", "wo", "do", "vr", "za"], mon: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"] },
-  cat: { retail: "Retail", horeca: "Horeca", logistiek: "Logistiek", schoonmaak: "Schoonmaak", evenement: "Evenement", zorg: "Zorg", kantoor: "Kantoor", bouw: "Bouw & techniek", algemeen: "Algemeen", overig: "Overig" },
+  cat: { retail: "Retail", horeca: "Horeca", logistiek: "Logistiek", schoonmaak: "Schoonmaak", evenement: "Evenement", zorg: "Zorg", kantoor: "Kantoor", bouw: "Bouw & techniek", productie: "Productie & industrie", promotie: "Promotie & sales", beveiliging: "Beveiliging", kinderopvang: "Kinderopvang & onderwijs", auto: "Auto & fiets", agrarisch: "Land- & tuinbouw", algemeen: "Algemeen", overig: "Overig" },
   card: {
     offer: { pending: "in afwachting", accepted: "geaccepteerd", declined: "afgewezen", withdrawn: "ingetrokken", expired: "niet uitgekozen" } as Record<string, string>,
     specialForYou: "Speciaal voor jou",
@@ -826,7 +826,7 @@ const en: FreelancerDict = {
     sluit: "Close message",
   },
   date: { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], mon: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] },
-  cat: { retail: "Retail", horeca: "Hospitality", logistiek: "Logistics", schoonmaak: "Cleaning", evenement: "Events", zorg: "Care", kantoor: "Office", bouw: "Construction & technical", algemeen: "General", overig: "Other" },
+  cat: { retail: "Retail", horeca: "Hospitality", logistiek: "Logistics", schoonmaak: "Cleaning", evenement: "Events", zorg: "Care", kantoor: "Office", bouw: "Construction & technical", productie: "Production & industry", promotie: "Promotion & sales", beveiliging: "Security", kinderopvang: "Childcare & education", auto: "Cars & bikes", agrarisch: "Agriculture & horticulture", algemeen: "General", overig: "Other" },
   card: {
     offer: { pending: "pending", accepted: "accepted", declined: "declined", withdrawn: "withdrawn", expired: "not selected" },
     specialForYou: "Picked for you",
@@ -1630,7 +1630,7 @@ const pl: FreelancerDict = {
     sluit: "Zamknij komunikat",
   },
   date: { wd: ["nd", "pn", "wt", "śr", "cz", "pt", "sb"], mon: ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"] },
-  cat: { retail: "Handel", horeca: "Gastronomia", logistiek: "Logistyka", schoonmaak: "Sprzątanie", evenement: "Wydarzenia", zorg: "Opieka", kantoor: "Biuro", bouw: "Budowa i technika", algemeen: "Ogólne", overig: "Inne" },
+  cat: { retail: "Handel", horeca: "Gastronomia", logistiek: "Logistyka", schoonmaak: "Sprzątanie", evenement: "Wydarzenia", zorg: "Opieka", kantoor: "Biuro", bouw: "Budowa i technika", productie: "Produkcja i przemysł", promotie: "Promocja i sprzedaż", beveiliging: "Ochrona", kinderopvang: "Opieka nad dziećmi i edukacja", auto: "Samochody i rowery", agrarisch: "Rolnictwo i ogrodnictwo", algemeen: "Ogólne", overig: "Inne" },
   card: {
     offer: { pending: "oczekuje", accepted: "zaakceptowano", declined: "odrzucono", withdrawn: "wycofano", expired: "nie wybrano" },
     specialForYou: "Specjalnie dla ciebie",
@@ -2434,7 +2434,7 @@ const ro: FreelancerDict = {
     sluit: "Închide mesajul",
   },
   date: { wd: ["dum", "lun", "mar", "mie", "joi", "vin", "sâm"], mon: ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"] },
-  cat: { retail: "Comerț", horeca: "Horeca", logistiek: "Logistică", schoonmaak: "Curățenie", evenement: "Evenimente", zorg: "Îngrijire", kantoor: "Birou", bouw: "Construcții și tehnică", algemeen: "General", overig: "Altele" },
+  cat: { retail: "Comerț", horeca: "Horeca", logistiek: "Logistică", schoonmaak: "Curățenie", evenement: "Evenimente", zorg: "Îngrijire", kantoor: "Birou", bouw: "Construcții și tehnică", productie: "Producție și industrie", promotie: "Promovare și vânzări", beveiliging: "Pază", kinderopvang: "Îngrijirea copiilor și educație", auto: "Auto și biciclete", agrarisch: "Agricultură și horticultură", algemeen: "General", overig: "Altele" },
   card: {
     offer: { pending: "în așteptare", accepted: "acceptat", declined: "respins", withdrawn: "retras", expired: "nu ai fost ales(ă)" },
     specialForYou: "Special pentru tine",
@@ -3238,7 +3238,7 @@ const uk: FreelancerDict = {
     sluit: "Закрити повідомлення",
   },
   date: { wd: ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], mon: ["січ", "лют", "бер", "квіт", "трав", "черв", "лип", "серп", "вер", "жовт", "лист", "груд"] },
-  cat: { retail: "Торгівля", horeca: "Ресторани й готелі", logistiek: "Логістика", schoonmaak: "Прибирання", evenement: "Події", zorg: "Догляд", kantoor: "Офіс", bouw: "Будівництво й техніка", algemeen: "Загальне", overig: "Інше" },
+  cat: { retail: "Торгівля", horeca: "Ресторани й готелі", logistiek: "Логістика", schoonmaak: "Прибирання", evenement: "Події", zorg: "Догляд", kantoor: "Офіс", bouw: "Будівництво й техніка", productie: "Виробництво й промисловість", promotie: "Промоція та продажі", beveiliging: "Охорона", kinderopvang: "Догляд за дітьми й освіта", auto: "Авто й велосипеди", agrarisch: "Сільське господарство й садівництво", algemeen: "Загальне", overig: "Інше" },
   card: {
     offer: { pending: "очікує", accepted: "прийнято", declined: "відхилено", withdrawn: "відкликано", expired: "не обрано" },
     specialForYou: "Спеціально для вас",

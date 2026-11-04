@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requirePrincipal } from "@/lib/auth";
+import { requirePrincipal, hasRole } from "@/lib/auth";
+import { getOrgProfileExtra, klusBeeldVan } from "@/lib/profile/store";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
@@ -24,7 +25,11 @@ export default async function NieuweDienstPage() {
   });
 
   const tenantId = scope.tenantIds[0];
-  const pools = tenantId ? await listPools(tenantId) : [];
+  const [pools, extra] = await Promise.all([
+    tenantId ? listPools(tenantId) : Promise.resolve([]),
+    tenantId ? getOrgProfileExtra(tenantId).catch(() => ({})) : Promise.resolve({}),
+  ]);
+  const beeld = tenantId ? klusBeeldVan(tenantId, extra) : { logoUrl: null, useLogo: false };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -48,6 +53,7 @@ export default async function NieuweDienstPage() {
             templates={SHIFT_TEMPLATES}
             minRateCents={MIN_SHIFT_RATE_CENTS}
             pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
+            beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
           />
         </div>
       )}

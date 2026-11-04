@@ -14,6 +14,7 @@ import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { followedTenantIds } from "@/lib/worker/follows";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { matchingAlert } from "@/lib/matching/job-alerts";
+import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -79,6 +80,10 @@ export interface MarketplaceShift {
   viaUitzendbureau: boolean;
   /** what other freelancers rated this company (null = no reviews yet) */
   companyRating?: { average: number; count: number } | null;
+  /** the company's own logo/photo (null = none uploaded) */
+  companyLogoUrl?: string | null;
+  /** the company chose its logo instead of the branch photo at the top of the card */
+  useLogo?: boolean;
 }
 
 export interface MarketplaceData {
@@ -332,6 +337,8 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
 
   const fastPayByTenant = await fastPayAvailableFor(visible.map((s) => s.branch.tenantId));
   const ratingByTenant = await companyRatings(visible.map((s) => s.branch.tenantId));
+  // a missing logo never costs the list: the card falls back to the branch photo
+  const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
       if (s.createdAt.getTime() > lastSeen) newSinceLastVisit += 1;
@@ -372,6 +379,8 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
         companyRating: ratingByTenant.get(s.branch.tenantId) ?? null,
+        companyLogoUrl: beeldByTenant.get(s.branch.tenantId)?.logoUrl ?? null,
+        useLogo: beeldByTenant.get(s.branch.tenantId)?.useLogo ?? false,
         match: computeMatch(
           home,
           profile?.reliabilityScore ?? 0.7,

@@ -1,4 +1,4 @@
-import { kvGet, kvSet } from "@/lib/storage/kv";
+import { kvGet, kvGetMany, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
 // Presentational profile extras that don't belong in the core schema:
@@ -36,7 +36,20 @@ export interface OrgProfileExtra {
     coverStepDone?: boolean;
     completedAt?: string;
   };
+  /** what the klus-kaarten show at the top: the branch photo (default) or the organisation's own logo/photo */
+  klusBeeld?: "foto" | "logo";
   updatedAt?: string;
+}
+
+/** The logo/photo URL to show on a klus of this organisation, and whether it replaces the branch photo. */
+export interface KlusBeeld {
+  logoUrl: string | null;
+  useLogo: boolean;
+}
+
+export function klusBeeldVan(tenantId: string, extra: OrgProfileExtra): KlusBeeld {
+  const logoUrl = extra.photoUploadId ? `/api/orgs/${tenantId}/photo` : null;
+  return { logoUrl, useLogo: Boolean(logoUrl) && extra.klusBeeld === "logo" };
 }
 
 const userKey = (userId: string) => `profile-user:${userId}`;
@@ -76,6 +89,13 @@ export async function getUserAvatars(userIds: string[]): Promise<Record<string, 
 
 export async function getOrgProfileExtra(tenantId: string): Promise<OrgProfileExtra> {
   return (await kvGet<OrgProfileExtra>(orgKey(tenantId))) ?? {};
+}
+
+/** Klus-beeld for many organisations in one query (the marketplace lists shifts of several). */
+export async function getKlusBeelden(tenantIds: string[]): Promise<Map<string, KlusBeeld>> {
+  const ids = [...new Set(tenantIds.filter(Boolean))];
+  const rows = await kvGetMany<OrgProfileExtra>(ids.map(orgKey));
+  return new Map(ids.map((id) => [id, klusBeeldVan(id, rows.get(orgKey(id)) ?? {})]));
 }
 
 export async function saveOrgProfileExtra(

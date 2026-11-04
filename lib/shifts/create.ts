@@ -16,26 +16,12 @@ import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 
-export interface ShiftTemplate {
-  key: string;
-  label: string;
-  hourlyRateCents: number;
-  breakMinutes: number;
-  description: string;
-  skillName: string | null;
-}
+// The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
+// browser forms can read them too; re-exported here for the existing imports.
+export { SHIFT_TEMPLATES, type ShiftTemplate } from "@/lib/shifts/catalogus";
 
 /** Minimum uurtarief (bruto) dat een opdrachtgever mag instellen. */
 export const MIN_SHIFT_RATE_CENTS = env.MIN_SHIFT_RATE_CENTS;
-
-export const SHIFT_TEMPLATES: ShiftTemplate[] = [
-  { key: "vakkenvuller", label: "Vakkenvuller", hourlyRateCents: 1620, breakMinutes: 30, description: "Vakken vullen, schappen aanvullen en netjes houden tijdens de dienst.", skillName: null },
-  { key: "kassa", label: "Kassamedewerker", hourlyRateCents: 1650, breakMinutes: 30, description: "Klanten gastvrij afrekenen en de kassa bemannen.", skillName: null },
-  { key: "magazijn", label: "Magazijnmedewerker", hourlyRateCents: 1700, breakMinutes: 30, description: "Goederen ontvangen, orderpicken en het magazijn op orde houden.", skillName: null },
-  { key: "schoonmaak", label: "Schoonmaakmedewerker", hourlyRateCents: 1650, breakMinutes: 15, description: "Schoonmaakronde volgens checklist: sanitair, kantines en algemene ruimtes.", skillName: null },
-  { key: "horeca", label: "Bediening / horeca", hourlyRateCents: 1700, breakMinutes: 30, description: "Gasten bedienen, bestellingen opnemen en uitserveren.", skillName: null },
-  { key: "receptie", label: "Receptiemedewerker", hourlyRateCents: 1800, breakMinutes: 30, description: "Bezoekers ontvangen, telefoon en post afhandelen.", skillName: null },
-];
 
 /** A one-off klus-locatie (e.g. an offsite demo) instead of a saved vestiging. */
 export const adHocAddressSchema = z.object({
