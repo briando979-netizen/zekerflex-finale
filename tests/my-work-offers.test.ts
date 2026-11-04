@@ -145,7 +145,7 @@ describe("getMyWork — accepted offers", () => {
 });
 
 describe("getMyWork — matched but not chosen", () => {
-  it("surfaces a DECLINED/EXPIRED match as a 'Niet uitgekozen' history card (previously silently vanished)", async () => {
+  it("surfaces a DECLINED/EXPIRED match as a 'Niet uitgekozen' card under In afwachting, not in the archive", async () => {
     freelancerProfileFindUnique.mockResolvedValue({ id: "fp1", homeLatitude: NaN, homeLongitude: NaN });
     shiftAssignmentFindMany.mockResolvedValue([]);
     modelAgreementFindMany.mockResolvedValue([]);
@@ -159,8 +159,9 @@ describe("getMyWork — matched but not chosen", () => {
 
     const work = await getMyWork("u1");
 
-    expect(work.history).toHaveLength(1);
-    expect(work.history[0]).toMatchObject({ status: "rejected", offerRateCents: null, workKey: "nm:match1" });
+    expect(work.history).toHaveLength(0);
+    expect(work.notChosen).toHaveLength(1);
+    expect(work.notChosen[0]).toMatchObject({ status: "rejected", offerRateCents: null, workKey: "nm:match1" });
   });
 
   it("a dismissed workKey never resurfaces", async () => {
@@ -179,6 +180,7 @@ describe("getMyWork — matched but not chosen", () => {
     const work = await getMyWork("u1");
 
     expect(work.history).toHaveLength(0);
+    expect(work.notChosen).toHaveLength(0);
   });
 });
 
@@ -197,7 +199,7 @@ describe("getMyWork — verlopen reacties en vervangingen", () => {
     shiftMatchFindMany.mockResolvedValue([]);
   };
 
-  it("een reactie zonder keuze op een klus die al begon staat in het archief als niet uitgekozen", async () => {
+  it("een reactie zonder keuze op een klus die al begon staat als niet uitgekozen onder In afwachting, niet in het archief", async () => {
     leeg();
     offersForUser.mockResolvedValue([reactie("oud", "pending"), reactie("straks", "pending")]);
     shiftFindMany.mockResolvedValue([verleden("oud", "Oude klus", 6), shiftRow("straks", "Klus morgen")]);
@@ -205,9 +207,10 @@ describe("getMyWork — verlopen reacties en vervangingen", () => {
     const work = await getMyWork("u1");
 
     expect(work.pending.map((i) => i.shift.id)).toEqual(["straks"]);
-    expect(work.history).toHaveLength(1);
-    expect(work.history[0]).toMatchObject({ status: "rejected", rejectedKind: "expired", offerStatusLabel: "Niet uitgekozen" });
-    expect(work.history[0]?.shift.myOffer?.status).toBe("expired");
+    expect(work.history).toHaveLength(0);
+    expect(work.notChosen).toHaveLength(1);
+    expect(work.notChosen[0]).toMatchObject({ status: "rejected", rejectedKind: "expired", offerStatusLabel: "Niet uitgekozen" });
+    expect(work.notChosen[0]?.shift.myOffer?.status).toBe("expired");
   });
 
   it("onderscheidt een afgewezen tegenbod van een gewone reactie die niet gekozen is", async () => {
@@ -216,7 +219,7 @@ describe("getMyWork — verlopen reacties en vervangingen", () => {
     shiftFindMany.mockResolvedValue([shiftRow("a", "A"), shiftRow("b", "B"), verleden("c", "C", 30)]);
 
     const work = await getMyWork("u1");
-    const soort = Object.fromEntries(work.history.map((i) => [i.shift.id, i.rejectedKind]));
+    const soort = Object.fromEntries(work.notChosen.map((i) => [i.shift.id, i.rejectedKind]));
     expect(soort).toEqual({ a: "notChosen", b: "counter", c: "expired" });
   });
 

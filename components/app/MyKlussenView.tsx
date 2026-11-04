@@ -7,7 +7,7 @@ import type { MyWorkItem } from "@/lib/dashboard/my-work";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { CompanyReviewInline } from "@/components/app/CompanyReviewInline";
 import { CancellationClaimButton } from "@/components/app/CancellationClaimButton";
-import { dismissWorkItemAction } from "@/app/dashboard/diensten/actions";
+import { dismissWorkItemAction, dismissWorkItemsAction } from "@/app/dashboard/diensten/actions";
 import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
@@ -26,12 +26,13 @@ const dayKey = (d: Date) => amsterdamDayKey(d);
 export function MyKlussenView({
   work,
 }: {
-  work: { pending: MyWorkItem[]; active: MyWorkItem[]; history: MyWorkItem[] };
+  /** notChosen: klussen you were not chosen for — shown under "In afwachting", not in the archive */
+  work: { pending: MyWorkItem[]; active: MyWorkItem[]; history: MyWorkItem[]; notChosen?: MyWorkItem[] };
 }) {
   const ft = useFT();
   const w = ft.work;
   const [tab, setTab] = useState<TabId>(
-    work.pending.length > 0
+    work.pending.length > 0 || (work.notChosen?.length ?? 0) > 0
       ? "pending"
       : work.active.length > 0
         ? "active"
@@ -50,6 +51,16 @@ export function MyKlussenView({
   }
 
   const items = work[tab].filter((it) => !hidden.has(it.workKey));
+  const notChosen = (work.notChosen ?? [])
+    .filter((it) => !hidden.has(it.workKey))
+    .sort((a, b) => new Date(b.shift.startsAt).getTime() - new Date(a.shift.startsAt).getTime());
+
+  // "Alles verbergen": every klus you were not chosen for at once, instead of one by one
+  function hideAll() {
+    const keys = notChosen.map((it) => it.workKey);
+    setHidden((prev) => new Set([...prev, ...keys]));
+    void dismissWorkItemsAction(keys);
+  }
 
   const dayOptions = useMemo(() => {
     const seen = new Map<string, Date>();
@@ -223,6 +234,34 @@ export function MyKlussenView({
             />
           ))}
         </div>
+      )}
+
+      {tab === "pending" && notChosen.length > 0 && (
+        <section className="mt-8" aria-labelledby="niet-gekozen-kop">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="niet-gekozen-kop" className="font-display text-base font-bold text-ink">
+                {w.notChosenTitle(notChosen.length)}
+              </h2>
+              <p className="mt-0.5 text-xs text-neutralx-500">{w.notChosenBody}</p>
+            </div>
+            <button type="button" onClick={hideAll} className="btn-ghost flex-shrink-0 text-sm">
+              {w.hideAll}
+            </button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {notChosen.map((item) => (
+              <ShiftCard
+                key={item.workKey}
+                shift={item.shift}
+                t={ft}
+                href={`/dashboard/klussen/${item.shift.id}`}
+                dim
+                footerOverride={<HistoryFooter item={item} onHide={hideItem} w={w} />}
+              />
+            ))}
+          </div>
+        </section>
       )}
       <ColorLegend className="mt-6" />
     </div>

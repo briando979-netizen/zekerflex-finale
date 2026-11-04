@@ -83,9 +83,15 @@ export async function confirmAssignment(userId: string, assignmentId: string): P
 
 /** Permanently hides a "Mijn klussen" history card — it never resurfaces in any tab. */
 export async function dismissWorkItem(userId: string, workKey: string): Promise<UserPrefs> {
+  return dismissWorkItems(userId, [workKey]);
+}
+
+/** Several cards at once ("Alles verbergen" for every klus you were not chosen for): one read, one write. */
+export async function dismissWorkItems(userId: string, workKeys: string[]): Promise<UserPrefs> {
   const current = await getPrefs(userId);
-  if (current.dismissedWorkItemIds.includes(workKey)) return current;
+  const nieuw = [...new Set(workKeys)].filter((k) => k && !current.dismissedWorkItemIds.includes(k));
+  if (!nieuw.length) return current;
   return setPrefs(userId, {
-    dismissedWorkItemIds: [...current.dismissedWorkItemIds, workKey].slice(-500),
+    dismissedWorkItemIds: [...current.dismissedWorkItemIds, ...nieuw].slice(-500),
   });
 }

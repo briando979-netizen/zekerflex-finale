@@ -66,6 +66,8 @@ export interface MyWork {
   /** afgelopen klussen waarvan de uren nog ingevuld/goedgekeurd moeten worden */
   hours: MyWorkItem[];
   history: MyWorkItem[];
+  /** niet uitgekozen (afgewezen, verlopen of nooit gekozen): onder "In afwachting", niet in het archief */
+  notChosen: MyWorkItem[];
 }
 
 const WD_DAYPART = (d: Date): MarketplaceShift["daypart"] => {
@@ -153,7 +155,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     where: { userId },
     select: { id: true, homeLatitude: true, homeLongitude: true },
   });
-  if (!profile) return { pending: [], active: [], hours: [], history: [] };
+  if (!profile) return { pending: [], active: [], hours: [], history: [], notChosen: [] };
 
   const home = Number.isFinite(profile.homeLatitude)
     ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
@@ -227,6 +229,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   const active: MyWorkItem[] = [];
   const hours: MyWorkItem[] = [];
   const history: MyWorkItem[] = [];
+  const nietGekozen: MyWorkItem[] = [];
 
   // ── counter-offers ──────────────────────────────────────────────────
   // A live assignment is always the authoritative, current state of a klus
@@ -284,7 +287,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     // an "active" (accepted) item belongs under Uitgekozen, never Pending.
     if (item.status === "pending") pending.push(item);
     else if (item.status === "active") active.push(item);
-    else history.push(item); // "rejected" of voorbij ("done")
+    else if (item.status === "rejected") nietGekozen.push(item); // onder "In afwachting", te verbergen
+    else history.push(item); // voorbij ("done")
   }
 
   // ── accepted assignments ────────────────────────────────────────────
@@ -390,7 +394,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     take: 30,
   });
   for (const m of notChosen) {
-    history.push({
+    nietGekozen.push({
       workKey: `nm:${m.id}`,
       shift: toShift(m.shift as ShiftRow, home),
       assignmentId: null,
@@ -432,5 +436,6 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     active,
     hours,
     history: history.filter((item) => !prefsDismissed.has(item.workKey)),
+    notChosen: nietGekozen.filter((item) => !prefsDismissed.has(item.workKey)),
   };
 }
