@@ -189,8 +189,16 @@ const DEVICES = [
   { id: "telefoon", label: "Telefoon", width: 390, height: 844 },
 ] as const;
 
-function ScaledPreview({ html, title, device }: { html: string; title: string; device: (typeof DEVICES)[number] }) {
+/** Hover and selection in the preview: blue like the editors people know; only in the builder's copy of the page. */
+const KIES_CSS = "[data-blok]{cursor:pointer}[data-blok]:hover{outline:2px dashed #2563eb;outline-offset:-2px}[data-blok].zf-gekozen{outline:3px solid #2563eb;outline-offset:-3px}";
+
+function ScaledPreview({ html, title, device, gekozen, onKies }: { html: string; title: string; device: (typeof DEVICES)[number]; gekozen?: string | null; onKies?: (blockId: string) => void }) {
   const box = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const kies = useRef(onKies);
+  useEffect(() => {
+    kies.current = onKies;
+  });
   const [boxWidth, setBoxWidth] = useState(0);
   useEffect(() => {
     const el = box.current;
@@ -199,11 +207,40 @@ function ScaledPreview({ html, title, device }: { html: string; title: string; d
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // the chosen block gets the blue line and comes into view (only scrolls when it is out of sight)
+  const markeer = useCallback(() => {
+    const doc = frame.current?.contentDocument;
+    if (!doc) return;
+    for (const el of doc.querySelectorAll(".zf-gekozen")) el.classList.remove("zf-gekozen");
+    if (!gekozen) return;
+    const el = doc.querySelector(`[data-blok="${CSS.escape(gekozen)}"]`);
+    el?.classList.add("zf-gekozen");
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [gekozen]);
+  useEffect(() => markeer(), [markeer]);
+
+  // the page has no scripts of its own (sandbox); the builder listens from outside: click a block = edit it
+  const geladen = () => {
+    const doc = frame.current?.contentDocument;
+    if (!doc || !kies.current) return;
+    const style = doc.createElement("style");
+    style.textContent = KIES_CSS;
+    doc.head.appendChild(style);
+    doc.addEventListener("click", (e) => {
+      const el = e.target instanceof Element ? e.target.closest("[data-blok]") : null;
+      e.preventDefault();
+      const id = el?.getAttribute("data-blok");
+      if (id) kies.current?.(id);
+    });
+    markeer();
+  };
+
   const scale = boxWidth ? Math.min(1, boxWidth / device.width) : 1;
   return (
     <div ref={box} className="w-full">
       <div className="mx-auto overflow-hidden rounded-lg border border-hair bg-white shadow-card" style={{ width: device.width * scale, height: device.height * scale }}>
-        <iframe title={title} srcDoc={html} sandbox="allow-same-origin" style={{ width: device.width, height: device.height, transform: `scale(${scale})`, transformOrigin: "top left", border: 0 }} />
+        <iframe ref={frame} title={title} srcDoc={html} sandbox="allow-same-origin" onLoad={geladen} style={{ width: device.width, height: device.height, transform: `scale(${scale})`, transformOrigin: "top left", border: 0 }} />
       </div>
     </div>
   );
@@ -353,7 +390,16 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
             </div>
           </div>
           <div className="bg-paper-soft p-3">
-            <ScaledPreview html={html} title={`Voorbeeld van ${page.titel}`} device={DEVICES.find((d) => d.id === device) ?? DEVICES[0]} />
+            <ScaledPreview
+              html={html}
+              title={`Voorbeeld van ${page.titel}`}
+              device={DEVICES.find((d) => d.id === device) ?? DEVICES[0]}
+              gekozen={blockId}
+              onKies={(id) => {
+                setBlockId(id);
+                setTab("blokken");
+              }}
+            />
           </div>
         </section>
 
@@ -363,7 +409,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
           ) : (
             <div className="space-y-2 text-sm text-neutralx-600">
               <p className="font-semibold text-ink">Kies een blok om te bewerken</p>
-              <p>Klik links op een blok. Je ziet je wijziging meteen in het voorbeeld; bezoekers zien hem na Publiceren.</p>
+              <p>Klik op een blok in het voorbeeld, of links in de lijst. Je ziet je wijziging meteen; bezoekers zien hem na Publiceren. De volgorde verander je door blokken in de lijst te slepen.</p>
               <p>Foto&apos;s van een andere website? Plak het adres van de foto bij Foto&apos;s. We halen hem één keer op en bewaren hem hier, zodat je bezoekers niets van een ander laden.</p>
             </div>
           )}
@@ -377,20 +423,42 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
 
 function BlocksTab({ page, selected, onSelect, updatePage }: { page: Page; selected: string | null; onSelect: (id: string) => void; updatePage: (fn: (p: Page) => Page) => void }) {
   const [adding, setAdding] = useState(false);
-  const move = (i: number, d: -1 | 1) =>
+  // slepen: welk blok je oppakt en waar het neer zou komen
+  const [sleep, setSleep] = useState<{ van: number; naar: number } | null>(null);
+  const verplaats = (van: number, naar: number) =>
     updatePage((p) => {
+      if (van === naar || naar < 0 || naar >= p.blocks.length) return p;
       const blocks = [...p.blocks];
-      const j = i + d;
-      if (j < 0 || j >= blocks.length) return p;
-      [blocks[i], blocks[j]] = [blocks[j]!, blocks[i]!];
+      const [b] = blocks.splice(van, 1);
+      if (b) blocks.splice(naar, 0, b);
       return { ...p, blocks };
     });
+  const move = (i: number, d: -1 | 1) => verplaats(i, i + d);
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">Pagina: {page.titel}</p>
       <ol className="space-y-1.5">
         {page.blocks.map((b, i) => (
-          <li key={b.id} className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 ${selected === b.id ? "border-brand-600 bg-brand-50" : "border-hair"}`}>
+          <li
+            key={b.id}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              setSleep({ van: i, naar: i });
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (sleep && sleep.naar !== i) setSleep({ ...sleep, naar: i });
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (sleep) verplaats(sleep.van, i);
+              setSleep(null);
+            }}
+            onDragEnd={() => setSleep(null)}
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 ${selected === b.id ? "border-brand-600 bg-brand-50" : "border-hair"} ${sleep?.van === i ? "opacity-40" : ""} ${sleep && sleep.naar === i && sleep.van !== i ? "ring-2 ring-brand-300" : ""}`}
+          >
+            <span aria-hidden="true" title="Sleep om te verplaatsen" className="cursor-grab select-none px-0.5 text-neutralx-400">⋮⋮</span>
             <button type="button" onClick={() => onSelect(b.id)} className="min-w-0 flex-1 truncate text-left text-sm text-ink">{blockSummary(b)}</button>
             <button type="button" aria-label="Omhoog" disabled={i === 0} onClick={() => move(i, -1)} className="rounded px-1.5 text-neutralx-500 hover:bg-paper-soft disabled:opacity-30">↑</button>
             <button type="button" aria-label="Omlaag" disabled={i === page.blocks.length - 1} onClick={() => move(i, 1)} className="rounded px-1.5 text-neutralx-500 hover:bg-paper-soft disabled:opacity-30">↓</button>

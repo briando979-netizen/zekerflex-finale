@@ -179,6 +179,12 @@ describe("winkel: weergave", () => {
     expect(xml).toContain("https://zekerflex.com/site/bakker/p/croissant");
   });
 
+  it("maakt blokken alleen in het voorbeeld van de bouwer klikbaar (data-blok)", () => {
+    const s = site(winkel());
+    expect(renderPage(s, s.pages[0]!, { ...opts, preview: { mediaUrl: (f) => f } })).toContain('<div data-blok="b1">');
+    expect(renderPage(s, s.pages[0]!, opts)).not.toContain("data-blok");
+  });
+
   it("geeft een 4K-foto ook een kleine kopie voor telefoons (srcset)", () => {
     const s = { ...site(winkel({ producten: [product({ fotos: ["mfoto000001"] })] })), media: [{ id: "mfoto000001", file: "mfoto000001.webp", width: 3840, height: 2560, alt: "Brood", bron: "upload" as const, klein: { width: 1600, height: 1067 } }] };
     const html = renderPage(s, s.pages[0]!, opts);

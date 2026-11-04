@@ -596,7 +596,12 @@ export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions
   const ctx = context(site, opts);
   // only the opening block has a visible h1; without one, an invisible h1 with the page title (screen readers, search engines)
   const h1 = page.blocks.some((b) => b.type === "hero") ? "" : `<h1 class="vh">${esc(page.titel)}</h1>`;
-  return htmlDoc(ctx, page, h1 + page.blocks.map((b, i) => renderBlock(b, i, ctx)).join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
+  // in the builder's preview each block is clickable (data-blok → the editor selects it); visitors never get this
+  const blokken = page.blocks.map((b, i) => {
+    const html = renderBlock(b, i, ctx);
+    return ctx.preview && html ? `<div data-blok="${esc(b.id)}">${html}</div>` : html;
+  });
+  return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS));
 }
 
 const fixedPage = (id: string, slug: string, titel: string): Page => ({ id: `__${id}`, slug, titel, seoTitel: titel, seoOmschrijving: titel, blocks: [] });
