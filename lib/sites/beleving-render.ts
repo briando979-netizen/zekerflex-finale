@@ -29,6 +29,10 @@ export interface BelevingCtx {
   pages: Page[];
   /** waar het contactformulier staat ("#contact" of de slug), null als er geen is */
   contact: string | null;
+  /** de sterrenregel van een review ("" bij 0: een klantverhaal zonder score) */
+  stars: (sterren: number) => string;
+  /** de galerijklasse voor een aantal foto's (volle rijen) */
+  galleryClass: (n: number) => string;
 }
 
 /** De twee tinten waar de opmaak mee rekent, uit premiumTokens. */
@@ -43,9 +47,10 @@ const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 
  * Kleuren als op schwarzwald.zekerflex.com. `ink` is de tekst op de accentkleur:
  * night op een lichte accent (hun oranje), crème op een donkere.
  */
-export function belevingCss(t: BelevingTokens, accent: string, ink: string, display: string, text: string): string {
+export function belevingCss(t: BelevingTokens, accent: string, ink: string, display: string, text: string, hl = accent): string {
   const a = rgb(accent);
   const moss = rgb(t.moss);
+  const n = rgb(t.night);
   return `
 body{font-size:16px;line-height:1.6;color:var(--night)}h2{font-size:2.25rem;line-height:1.1;letter-spacing:-.025em}@media (min-width:640px){h2{font-size:3rem;line-height:1.02}}h3{font-size:1.25rem}
 section{padding:80px 0}.wrap.narrow p,.split p{font-size:1.125rem;line-height:1.65}
@@ -81,7 +86,26 @@ section.rev{background:var(--forest);color:var(--cream)}.rev h2{color:#fff}.rev 
 .band-acts{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:32px 0 0}.btn.dark{background:var(--night);color:var(--cream)}.btn.line{background:transparent;color:inherit;border:2px solid currentColor;padding:13px 26px}.band.bel :focus-visible{outline-color:var(--night)}
 footer .cols{grid-template-columns:1fr}@media (min-width:640px){footer .cols{grid-template-columns:repeat(2,1fr)}}@media (min-width:1024px){footer .cols{grid-template-columns:1.3fr 1fr 1fr 1fr}}
 footer .flogo{display:block;max-height:80px;width:auto;margin:0 0 20px}footer .socials{gap:8px}footer .socials a{display:inline-block;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.1);font-size:.75rem;font-weight:600;text-decoration:none}footer .socials a:hover{background:rgba(255,255,255,.2)}
-footer small{margin-top:48px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-size:.75rem;color:rgba(255,246,234,.55)}`;
+footer small{margin-top:48px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-size:.75rem;color:rgba(255,246,234,.55)}
+.tegels{display:grid;gap:16px;grid-template-columns:1fr}@media (min-width:640px){.tegels{grid-template-columns:repeat(2,1fr)}}@media (min-width:1024px){.tegels{grid-template-columns:repeat(3,1fr)}}
+.tegel{position:relative;overflow:hidden;margin:0;aspect-ratio:4/5;border-radius:1.75rem;background:var(--forest);color:var(--cream)}@media (min-width:640px){.tegel{aspect-ratio:4/3}}
+.tegel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.92;transition:transform .7s cubic-bezier(.2,.7,.2,1)}.tegel:hover img{transform:scale(1.05)}
+.tegel::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(${n},.94) 0%,rgba(${n},.35) 50%,rgba(${n},0) 80%)}
+.tegel .tg{position:absolute;left:0;right:0;bottom:0;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:20px 22px}.tegel h3{margin:0;color:var(--cream);font-size:clamp(1.3rem,2.2vw,1.875rem);line-height:1.08}
+.tegel .tg p{margin:6px 0 0;color:rgba(255,246,234,.85);font-size:.92rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.tegel .pijl{flex-shrink:0;margin:0}.tegel :focus-visible{outline-color:var(--sun)}
+.split.bel{gap:56px}.lijst{position:relative;padding:14px 10px}.lijst-f{overflow:hidden;transform:rotate(2deg);border-radius:2rem;box-shadow:0 0 0 4px #fff,0 30px 60px -22px rgba(10,18,14,.45)}.split.bel.flip .lijst-f{transform:rotate(-2deg)}.split.bel .lijst-f img{border-radius:0;aspect-ratio:4/3}
+.lijst-tag{position:absolute;left:-6px;bottom:30px;transform:rotate(-5deg);padding:10px 18px;border-radius:999px;background:var(--sun);color:var(--night);font:700 .8rem/1 ${text};letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 24px -10px rgba(0,0,0,.35)}
+.paneel{position:relative;overflow:hidden;padding:64px 24px;border-radius:2.5rem;background:var(--night);color:var(--cream)}@media (min-width:640px){.paneel{padding:80px 56px}}
+.paneel::before,.paneel::after{content:"";position:absolute;border-radius:50%;pointer-events:none}.paneel::before{right:-96px;top:-96px;width:400px;height:400px;background:radial-gradient(closest-side,rgba(${a},.45),rgba(${a},0))}.paneel::after{left:33%;bottom:-140px;width:340px;height:340px;background:radial-gradient(closest-side,rgba(255,210,63,.2),rgba(255,210,63,0))}
+.paneel-in{position:relative;z-index:1}.paneel .kicker{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--sun);color:var(--night);letter-spacing:.16em}.paneel h2{max-width:20ch;color:#fff;font-size:clamp(2.4rem,6vw,4.5rem);line-height:.96;letter-spacing:-.025em}.paneel h2 .hl{color:${hl}}
+.usps.bel{margin-top:40px;gap:28px 40px}.usps.bel h3{color:var(--cream)}.usps.bel p{color:rgba(255,246,234,.78)}.usps.bel li::before{background:var(--a);color:${ink}}.paneel :focus-visible{outline-color:var(--sun)}
+.uren-grid{display:grid;gap:32px;align-items:start}@media (min-width:860px){.uren-grid{grid-template-columns:1fr 1fr;align-items:center}}
+.uren-kaart{margin:0;padding:28px 32px;border-radius:1.75rem;background:var(--night);color:var(--cream);box-shadow:0 30px 60px -30px rgba(10,18,14,.6)}.uren-kaart div{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.1)}.uren-kaart div:first-child{padding-top:0}.uren-kaart div:last-child{border:0;padding-bottom:0}.uren-kaart dt{color:rgba(255,246,234,.72)}.uren-kaart dd{margin:0;font-weight:700;text-align:right}
+.gallery.bel{gap:12px}.gallery.bel img{border-radius:1.5rem;transition:transform .7s cubic-bezier(.2,.7,.2,1)}.gallery.bel img:hover{transform:scale(1.02)}
+details.q{margin:0 0 12px;padding:18px 22px;border:0;border-radius:1.25rem;background:#fff;box-shadow:0 1px 2px rgba(10,18,14,.04),0 12px 28px -20px rgba(10,18,14,.35)}details.q summary{font-family:${display};font-size:1.08rem}
+form.contact{padding:24px;border-radius:1.75rem;background:#fff;box-shadow:0 1px 2px rgba(10,18,14,.04),0 18px 40px -24px rgba(10,18,14,.35)}
+.contact-grid>div:last-child{align-self:start;padding:28px;border-radius:1.75rem;background:var(--night);color:var(--cream)}.contact-grid>div:last-child h3{color:#fff}.contact-grid>div:last-child a{color:var(--sun)}.contact-grid>div:last-child :focus-visible{outline-color:var(--sun)}
+@media (prefers-reduced-motion:reduce){.tegel img,.gallery.bel img{transition:none}.tegel:hover img,.gallery.bel img:hover{transform:none}}`;
 }
 
 // ---- de opening ------------------------------------------------------------
@@ -207,15 +231,54 @@ export function belevingBlok(b: Block, alt: string, bc: BelevingCtx): string | n
       return hero(b, bc);
     case "diensten": {
       const pics = b.props.items.map((it) => bc.img(it.foto ?? null, "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"));
+      const pijlNaar = (titel: string) => (bc.contact ? `<a class="pijl" href="${esc(bc.href(bc.contact))}" aria-label="${esc(`Vraag naar ${titel}`)}">→</a>` : "");
+      // allemaal een foto: fototegels met de naam erin, zoals "Wat vieren jullie?" bij hen
+      if (pics.length && pics.length <= 9 && pics.every(Boolean)) {
+        return `<section${alt}><div class="wrap"><div class="sec-head"><div>${head(b, b.props.kop, bc)}</div></div><div class="tegels">${b.props.items
+          .map((it, i) => {
+            const eerste = it.tekst.split(/\n\s*\n/)[0]?.trim() ?? "";
+            return `<div class="tegel">${pics[i]}<div class="tg"><div><h3>${esc(it.titel)}</h3>${eerste ? `<p>${esc(eerste)}</p>` : ""}</div>${pijlNaar(it.titel)}</div></div>`;
+          })
+          .join("")}</div></div></section>`;
+      }
       // tussen kaarten met een foto krijgt een kaart zonder een vlak in de accentkleur met de naam, zoals "F1 SIM RACE" bij hen
       const metFoto = pics.some(Boolean);
       return `<section${alt}><div class="wrap"><div class="sec-head"><div>${head(b, b.props.kop, bc)}</div></div><div class="cards bel">${b.props.items
         .map((it, i) => {
           const pic = pics[i] ? `<div class="pic">${pics[i]}</div>` : metFoto ? `<div class="pic leeg" aria-hidden="true"><span>${esc(it.titel)}</span></div>` : "";
-          const pijl = bc.contact ? `<a class="pijl" href="${esc(bc.href(bc.contact))}" aria-label="${esc(`Vraag naar ${it.titel}`)}">→</a>` : "";
-          return `<div class="card bel">${pic}<div class="body"><h3>${esc(it.titel)}</h3>${bc.paras(it.tekst)}${pijl}</div></div>`;
+          return `<div class="card bel">${pic}<div class="body"><h3>${esc(it.titel)}</h3>${bc.paras(it.tekst)}${pijlNaar(it.titel)}</div></div>`;
         })
         .join("")}</div></div></section>`;
+    }
+    case "tekstFoto": {
+      const p = b.props;
+      const pic = bc.img(p.foto, "(min-width: 860px) 50vw, 100vw");
+      // zonder foto de gewone leesbreedte (met een label erboven)
+      if (!pic) return null;
+      const tag = bc.bedrijf.plaats || "";
+      return `<section${alt}><div class="wrap split bel${p.fotoLinks ? " flip" : ""}"><div>${head(b, p.kop, bc)}${bc.paras(p.tekst)}</div><div class="lijst"><div class="lijst-f">${pic}</div>${tag ? `<span class="lijst-tag" aria-hidden="true">${esc(tag)}</span>` : ""}</div></div></section>`;
+    }
+    case "usps": {
+      // een donker paneel met gloed, zoals het blok over hun nieuwe megacenter; het laatste woord van de kop in de accentkleur
+      const t = kickerVoor(b, bc.bedrijf);
+      const { rest, hl } = splitKop(b.props.kop);
+      const kop = `${esc(rest)}${hl ? `${rest ? " " : ""}<span class="hl">${esc(hl)}</span>` : ""}`;
+      return `<section${alt}><div class="wrap"><div class="paneel"><div class="paneel-in">${t ? `<p class="kicker">${esc(t)}</p>` : ""}<h2>${kop}</h2><ul class="usps bel" role="list">${b.props.items
+        .map((it) => `<li><h3>${esc(it.titel)}</h3>${bc.paras(it.tekst)}</li>`)
+        .join("")}</ul></div></div></div></section>`;
+    }
+    case "openingstijden": {
+      if (!b.props.regels.length) return null;
+      return `<section${alt}><div class="wrap uren-grid"><div>${head(b, b.props.kop, bc)}${bc.bedrijf.telefoon ? `<p class="small">Liever even bellen? <a href="${esc(bc.href(`tel:${bc.bedrijf.telefoon.replace(/[^\d+]/g, "")}`))}">${esc(bc.bedrijf.telefoon)}</a></p>` : ""}</div><dl class="uren-kaart">${b.props.regels
+        .map((r) => `<div><dt>${esc(r.dag)}</dt><dd>${esc(r.tijd)}</dd></div>`)
+        .join("")}</dl></div></section>`;
+    }
+    case "galerij": {
+      const pics = b.props.fotos.map((f) => bc.img(f, "(min-width: 760px) 33vw, 50vw")).filter(Boolean);
+      if (pics.length === 0) return "";
+      // twaalf foto's: drie volle rijen van vier
+      const cls = pics.length === 12 ? "gallery g4" : bc.galleryClass(pics.length);
+      return `<section${alt}><div class="wrap">${head(b, b.props.kop, bc)}<div class="${cls} bel">${pics.join("")}</div></div></section>`;
     }
     case "stappen":
       return `<section${alt}><div class="wrap">${head(b, b.props.kop, bc)}<ol class="steps bel" role="list">${b.props.items
@@ -223,10 +286,7 @@ export function belevingBlok(b: Block, alt: string, bc: BelevingCtx): string | n
         .join("")}</ol></div></section>`;
     case "reviews":
       return `<section class="rev"><div class="wrap rev-grid"><div>${head(b, b.props.kop, bc)}</div><div class="rev-list">${b.props.items
-        .map((r) => {
-          const n = Math.max(1, Math.min(5, Math.round(r.sterren)));
-          return `<figure class="rv"><div class="stars" role="img" aria-label="${n} van de 5 sterren">${"★".repeat(n)}${"☆".repeat(5 - n)}</div><blockquote>${bc.paras(r.tekst)}</blockquote><figcaption class="who">${esc(r.naam)}</figcaption></figure>`;
-        })
+        .map((r) => `<figure class="rv">${bc.stars(r.sterren)}<blockquote>${bc.paras(r.tekst)}</blockquote><figcaption class="who">${esc(r.naam)}</figcaption></figure>`)
         .join("")}</div></div></section>`;
     case "cta": {
       const p = b.props;

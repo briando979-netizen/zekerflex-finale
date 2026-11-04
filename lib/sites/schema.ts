@@ -17,7 +17,7 @@ const block = z.discriminatedUnion("type", [
   z.object({ id: z.string().max(40), type: z.literal("tekstFoto"), props: z.object({ kop, tekst, foto: mediaId, fotoLinks: z.boolean() }) }),
   z.object({ id: z.string().max(40), type: z.literal("diensten"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst, foto: mediaId.optional() })).max(12) }) }),
   z.object({ id: z.string().max(40), type: z.literal("galerij"), props: z.object({ kop, fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(24) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("reviews"), props: z.object({ kop, items: z.array(z.object({ naam: short, tekst, sterren: z.number().int().min(1).max(5) })).max(12) }) }),
+  z.object({ id: z.string().max(40), type: z.literal("reviews"), props: z.object({ kop, items: z.array(z.object({ naam: short, tekst, sterren: z.number().int().min(0).max(5) })).max(12) }) }), // 0: een klantverhaal zonder sterren (geen verzonnen score)
   z.object({ id: z.string().max(40), type: z.literal("faq"), props: z.object({ kop, items: z.array(z.object({ vraag: short, antwoord: tekst })).max(20) }) }),
   z.object({ id: z.string().max(40), type: z.literal("openingstijden"), props: z.object({ kop, regels: z.array(z.object({ dag: short, tijd: short })).max(10) }) }),
   z.object({ id: z.string().max(40), type: z.literal("cta"), props: z.object({ kop, tekst, knop: short, knopLink: link }) }),

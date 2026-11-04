@@ -55,8 +55,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card). */
-const CSS_REV = 8;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card). */
+const CSS_REV = 9;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
@@ -178,10 +178,13 @@ footer .cols{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:40px}f
 :focus-visible{outline-color:var(--a-d)}header :focus-visible,.hero :focus-visible,.band :focus-visible,footer :focus-visible{outline-color:var(--sun)}.topbar :focus-visible{outline-color:var(--night)}`;
 }
 
-/** Beleving on top of premium: text on the accent is night (on a light accent, like their orange) or cream. */
+/**
+ * Beleving on top of premium: text on the accent is night (on a light accent, like their orange) or cream;
+ * a highlighted word on night is the accent when it reads well there (their orange does), else sun.
+ */
 function belevingStijl(kleur: string, accent: string): string {
   const t = premiumTokens(kleur, accent);
-  return belevingCss(t, accent, textOn(accent) === "#ffffff" ? CREAM : t.night, DISPLAY, TEXT);
+  return belevingCss(t, accent, textOn(accent) === "#ffffff" ? CREAM : t.night, DISPLAY, TEXT, contrast(accent, t.night) >= 4.5 ? accent : SUN);
 }
 
 /** The "luxe" style on top of the base: room, thin gold lines, uppercase small navigation, a tall opening photo. */
@@ -330,6 +333,13 @@ function img(ctx: Ctx, id: string | null, sizes: string, eager = false, alt?: st
 
 const href = (ctx: Ctx, raw: string) => (ctx.preview ? "#" : safeHref(raw, ctx.root, ctx.pages));
 
+/** The stars of a review; none for 0 (a customer's story from their own site, without a made-up score). */
+export function starsRow(sterren: number): string {
+  if (!(sterren >= 1)) return "";
+  const n = Math.min(5, Math.round(sterren));
+  return `<div class="stars" role="img" aria-label="${n} van de 5 sterren">${"★".repeat(n)}${"☆".repeat(5 - n)}</div>`;
+}
+
 /** Full rows for 2, 3, 4, 6, 8 or 9 photos; five get a large first photo with four small ones (a closed 4×2 block). */
 export function galleryClass(n: number): string {
   if (n === 2) return "gallery g2";
@@ -378,8 +388,7 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
     case "reviews":
       return `<section${alt}><div class="wrap"><h2>${esc(b.props.kop)}</h2><div class="cards">${b.props.items
         .map((r) => {
-          const n = Math.max(1, Math.min(5, Math.round(r.sterren)));
-          return `<figure class="card"><div class="stars" role="img" aria-label="${n} van de 5 sterren">${"★".repeat(n)}${"☆".repeat(5 - n)}</div><blockquote>${paras(r.tekst)}</blockquote><figcaption class="who">${esc(r.naam)}</figcaption></figure>`;
+          return `<figure class="card">${starsRow(r.sterren)}<blockquote>${paras(r.tekst)}</blockquote><figcaption class="who">${esc(r.naam)}</figcaption></figure>`;
         })
         .join("")}</div></div></section>`;
     case "faq":
@@ -620,6 +629,8 @@ function belevingHtml(b: Block, i: number, ctx: Ctx, page: Page): string {
     page,
     pages: ctx.pages,
     contact: withForm ? (withForm.id === page.id ? "#contact" : withForm.slug || "home") : null,
+    stars: starsRow,
+    galleryClass,
   };
   const alt = (i + 1) % 2 === 1 ? ' class="alt"' : "";
   return belevingBlok(b, alt, bc) ?? metKicker(renderBlock(b, i + 1, ctx), b, bc);

@@ -10,7 +10,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 const { renderPage, siteCss, premiumTokens, contrast, CREAM } = await import("@/lib/sites/render");
 const bel = await import("@/lib/sites/beleving-render");
 const { SCHWARZWALD_GROEN, SCHWARZWALD_ORANJE } = await import("@/lib/sites/proposal-site");
-const { themeSchema } = await import("@/lib/sites/schema");
+const { themeSchema, siteSaveSchema } = await import("@/lib/sites/schema");
 const { SECTOR_TEMPLATES, pagesFromTemplate, newBlock } = await import("@/lib/sites/types");
 type SiteDoc = import("@/lib/sites/types").SiteDoc;
 type Block = import("@/lib/sites/types").Block;
@@ -97,6 +97,48 @@ describe("stijl beleving", () => {
     for (const bit of ["hero bel", "kicker", "ticker", "card bel", "band bel", 'class="rev"']) expect(html).not.toContain(bit);
     expect(html).toContain('<p class="eyebrow">Het Schwarzwald · Rijssen</p>');
     expect(siteCss(s.theme)).not.toContain(".hero.bel");
+  });
+
+  it("geeft fototegels, een donker paneel, een urenkaart, een schuine foto en een volle galerij van 12", () => {
+    const s = site("beleving");
+    const home = s.pages[0]!;
+    const blok = <T extends Block["type"]>(type: T, props: object) => ({ ...newBlock(type, id()), props: { ...newBlock(type, "x").props, ...props } }) as Block;
+    home.blocks = [
+      home.blocks[0]!,
+      blok("diensten", { kop: "Wat vieren jullie?", items: [{ titel: "Bedrijfsuitje", tekst: "Teambuilding.\n\nEn meer.", foto: "mfoto00001" }, { titel: "Trouwen", tekst: "Jullie dag.", foto: "mover00001" }] }),
+      blok("usps", { kop: "Alles op één plek in Rijssen.", items: [{ titel: "Dertien activiteiten", tekst: "Binnen en buiten." }] }),
+      blok("tekstFoto", { kop: "Over ons", tekst: "Al dertig jaar.", foto: "mfoto00002", fotoLinks: false }),
+      blok("openingstijden", { kop: "Openingstijden", regels: [{ dag: "Woensdag t/m vrijdag", tijd: "13:00 – 22:30" }] }),
+      blok("galerij", { kop: "Sfeer", fotos: Array.from({ length: 12 }, (_, i) => media[i % media.length]!.id) }),
+      blok("contact", { kop: "Neem contact op", tekst: "Bel of mail.", formulier: true }),
+    ];
+    const html = renderPage(s, home, opts);
+    expect(html).toContain('<div class="tegels"><div class="tegel"><img');
+    // alleen de eerste alinea op de tegel, met een pijl naar het formulier
+    expect(html).toContain('<h3>Bedrijfsuitje</h3><p>Teambuilding.</p></div><a class="pijl" href="#contact" aria-label="Vraag naar Bedrijfsuitje">→</a>');
+    expect(html).toContain('<div class="paneel"><div class="paneel-in"><p class="kicker">Waarom wij</p><h2>Alles op één plek in <span class="hl">Rijssen.</span></h2><ul class="usps bel" role="list">');
+    expect(html).toContain('<div class="lijst"><div class="lijst-f"><img');
+    expect(html).toContain('<span class="lijst-tag" aria-hidden="true">Rijssen</span>');
+    expect(html).toContain('<dl class="uren-kaart"><div><dt>Woensdag t/m vrijdag</dt><dd>13:00 – 22:30</dd></div></dl>');
+    expect(html).toContain('<div class="gallery g4 bel">');
+    // de accentkleur leest goed op night (hun oranje), dus het woord in het paneel wordt oranje
+    expect(siteCss(s.theme)).toContain(".paneel h2 .hl{color:#FF5F1F}");
+    // een donkere accentkleur leest niet op night: dan zon-geel
+    expect(siteCss({ ...s.theme, accent: "#1D2B4F" })).toContain(".paneel h2 .hl{color:#FFD23F}");
+  });
+
+  it("toont een klantverhaal zonder sterren als sterren 0 is, in elke stijl", () => {
+    for (const stijl of ["beleving", "premium"] as const) {
+      const s = site(stijl);
+      const reviews = { ...newBlock("reviews", id()), props: { kop: "Klantverhalen", items: [{ naam: "Anita", tekst: "Top dag.", sterren: 0 }, { naam: "Kees", tekst: "Super.", sterren: 4 }] } } as Block;
+      s.pages[0]!.blocks.push(reviews);
+      const html = renderPage(s, s.pages[0]!, opts);
+      expect(html).toMatch(/<figure class="(rv|card)"><blockquote><p>Top dag\.<\/p><\/blockquote>/);
+      expect(html).toContain('aria-label="4 van de 5 sterren">★★★★☆</div>');
+    }
+    const s = site("beleving");
+    s.pages[0]!.blocks.push({ ...newBlock("reviews", id()), props: { kop: "K", items: [{ naam: "A", tekst: "B", sterren: 0 }] } } as Block);
+    expect(siteSaveSchema.safeParse({ theme: s.theme, bedrijf: s.bedrijf, pages: s.pages }).success).toBe(true);
   });
 
   it("knipt de kop en de badge netjes", () => {
