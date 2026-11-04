@@ -188,25 +188,25 @@ export function EmployerOnboardingWizard({
             {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
             <label className="block">
               <span className="field-label">{o.kvkNumber}</span>
-              <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={initial.kvkPrefill ?? ""} className="field-input" />
+              <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={kvkState.values?.kvkNumber ?? initial.kvkPrefill ?? ""} className="field-input" />
               <span className="mt-1 block text-xs text-neutralx-400">{o.kvkHint}</span>
             </label>
             <label className="block">
               <span className="field-label">{o.branchName}</span>
-              <input name="branchName" required placeholder={o.branchNamePh} className="field-input" />
+              <input name="branchName" required placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} className="field-input" />
             </label>
             <label className="block">
               <span className="field-label">{o.address}</span>
-              <input name="addressLine" required placeholder={o.addressPh} className="field-input" />
+              <input name="addressLine" required placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} className="field-input" />
             </label>
             <div className="grid grid-cols-[1fr_110px] gap-3">
               <label className="block">
                 <span className="field-label">{o.postal}</span>
-                <input name="postalCode" required placeholder="1012 AB" className="field-input" />
+                <input name="postalCode" required placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} className="field-input" />
               </label>
               <label className="block">
                 <span className="field-label">{o.houseNr}</span>
-                <input name="houseNumber" required placeholder="10" className="field-input" />
+                <input name="houseNumber" required placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} className="field-input" />
               </label>
             </div>
             <div className="flex justify-end pt-1">

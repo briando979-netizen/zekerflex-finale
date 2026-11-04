@@ -117,7 +117,11 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Pill tone={blocked ? "crit" : "ok"}>{blocked ? "Geblokkeerd" : "Actief"}</Pill>
               <Pill tone={verification.verified ? "trust" : "warn"}>
-                {verification.verified ? `Geverifieerd: ${VERIFIED_VIA[verification.via!] ?? verification.via}` : "Niet geverifieerd, alleen testklus"}
+                {verification.verified
+                  ? `Geverifieerd: ${VERIFIED_VIA[verification.via!] ?? verification.via}`
+                  : verification.inControle
+                    ? "KVK klopt: controleer of de aanmelder erbij hoort"
+                    : "Niet geverifieerd, alleen testklus"}
               </Pill>
             </div>
           </div>

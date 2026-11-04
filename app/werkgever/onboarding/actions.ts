@@ -54,6 +54,8 @@ export interface EmployerOnboardingState {
   /** KVK klopt, maar ZekerFlex controleert met de hand of de aanmelder bij het bedrijf hoort */
   inControle?: boolean;
   reasons?: string[];
+  /** wat er ingevuld was: na een fout blijft het staan (het formulier wordt na een server-actie teruggezet) */
+  values?: { kvkNumber: string; branchName: string; addressLine: string; postalCode: string; houseNumber: string };
 }
 
 export async function employerOnboardingAction(
@@ -67,6 +69,13 @@ export async function employerOnboardingAction(
   const tenantId = scope.tenantIds[0];
   if (!tenantId) return { error: "Geen organisatie gevonden voor je account.", done: false };
 
+  const values = {
+    kvkNumber: String(formData.get("kvkNumber") ?? "").slice(0, 20),
+    branchName: String(formData.get("branchName") ?? "").slice(0, 120),
+    addressLine: String(formData.get("addressLine") ?? "").slice(0, 160),
+    postalCode: String(formData.get("postalCode") ?? "").slice(0, 12),
+    houseNumber: String(formData.get("houseNumber") ?? "").slice(0, 12),
+  };
   const parsed = employerOnboardingSchema.safeParse({
     kvkNumber: formData.get("kvkNumber"),
     branchName: formData.get("branchName"),
@@ -75,7 +84,7 @@ export async function employerOnboardingAction(
     houseNumber: formData.get("houseNumber"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Controleer de gegevens.", done: false };
+    return { error: parsed.error.issues[0]?.message ?? "Controleer de gegevens.", done: false, values };
   }
 
   try {
@@ -89,6 +98,7 @@ export async function employerOnboardingAction(
         error: `${reden} Controleer het nummer (8 cijfers, bijvoorbeeld op je KVK-uittreksel) en probeer het opnieuw; je vestiging is al opgeslagen.`,
         done: false,
         reasons: res.reasons,
+        values,
       };
     }
     return {
@@ -100,7 +110,7 @@ export async function employerOnboardingAction(
       reasons: res.reasons,
     };
   } catch (err) {
-    if (err instanceof AppError) return { error: err.message, done: false };
-    return { error: "De onboarding kon niet worden afgerond. Probeer het opnieuw.", done: false };
+    if (err instanceof AppError) return { error: err.message, done: false, values };
+    return { error: "De onboarding kon niet worden afgerond. Probeer het opnieuw.", done: false, values };
   }
 }
