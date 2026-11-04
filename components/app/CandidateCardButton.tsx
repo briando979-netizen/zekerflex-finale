@@ -1,6 +1,9 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { useToast } from "@/components/ui/Toast";
 
 interface Card {
   userId: string;
@@ -49,6 +52,8 @@ export function CandidateCardButton({
   name,
   children,
   preview,
+  beslissing,
+  knoppen,
 }: {
   userId: string;
   shiftId: string;
@@ -57,7 +62,17 @@ export function CandidateCardButton({
   children?: ReactNode;
   /** set when the full card may not be shown yet (no reaction on this klus: api/werkgever/kandidaat refuses) */
   preview?: CandidatePreview;
+  /** a pending reaction: the card ends in a bar to accept or decline it (same view as viewing the profile) */
+  beslissing?: { offerId: string; regel: string };
+  /** "beslissen": the trigger is the pair Afwijzen / Accepteren, which opens this card first */
+  knoppen?: "beslissen";
 }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [gekozen, setGekozen] = useState<"accepted" | "declined" | null>(null);
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [besluit, setBesluit] = useState<{ decision: "accepted" | "declined"; message: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
@@ -78,9 +93,45 @@ export function CandidateCardButton({
     }
   };
 
+  // decide in the card itself; afterwards the page takes the server's version (assigned list, offers)
+  const beslis = async (decision: "accepted" | "declined") => {
+    if (!beslissing || bezig) return;
+    setBezig(true);
+    setFout(null);
+    const r = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: "Dat lukte niet. Probeer het opnieuw." }));
+    setBezig(false);
+    if (!r.ok) {
+      setFout(r.message);
+      return;
+    }
+    setBesluit({ decision, message: r.message });
+    if (decision === "accepted") toast.success(r.message);
+    else toast.info(r.message);
+    router.refresh();
+  };
+
+  const openMet = (keuze: "accepted" | "declined") => {
+    setGekozen(keuze);
+    setFout(null);
+    void load();
+  };
+
   return (
     <>
-      {children ? (
+      {knoppen === "beslissen" ? (
+        besluit ? (
+          <span className={besluit.decision === "accepted" ? "pill-ok" : "pill-crit"}>{besluit.decision === "accepted" ? "Geaccepteerd" : "Afgewezen"}</span>
+        ) : (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => openMet("declined")} className="btn-ghost px-3 py-1.5 text-xs">
+              Afwijzen
+            </button>
+            <button type="button" onClick={() => openMet("accepted")} className="btn-primary px-3 py-1.5 text-xs">
+              Accepteren
+            </button>
+          </div>
+        )
+      ) : children ? (
         <button type="button" onClick={load} aria-label={`Profiel van ${name} bekijken`} className="group flex min-w-0 items-center gap-3 rounded-xl text-left">
           {children}
         </button>
@@ -105,7 +156,7 @@ export function CandidateCardButton({
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 id={titleId} className="font-display text-lg font-bold text-ink">
-                {preview ? name : "Profiel"}
+                {beslissing ? `Reactie van ${name}` : preview ? name : "Profiel"}
               </h2>
               <button type="button" onClick={() => setOpen(false)} aria-label="Sluiten" className="grid h-8 w-8 place-items-center rounded-full bg-paper-soft text-neutralx-600">✕</button>
             </div>
@@ -225,6 +276,59 @@ export function CandidateCardButton({
                       ))}
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {beslissing && (
+              <div className="sticky bottom-0 -mx-5 -mb-5 mt-5 border-t border-hair bg-white px-5 pb-5 pt-4">
+                <p className="text-sm text-ink">{beslissing.regel}</p>
+                {fout && (
+                  <p role="alert" className="mt-2 rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">
+                    {fout}
+                  </p>
+                )}
+                {besluit ? (
+                  <div role="status" className="mt-3 space-y-3">
+                    <p className={`rounded-lg px-3 py-2 text-sm font-medium ${besluit.decision === "accepted" ? "bg-ok/10 text-ok" : "bg-paper-soft text-neutralx-700"}`}>
+                      {besluit.message}
+                    </p>
+                    <button type="button" onClick={() => setOpen(false)} className="btn-ghost w-full">
+                      Sluiten
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {gekozen && (
+                      <p className="mt-1 text-xs text-neutralx-500">
+                        {gekozen === "accepted" ? `Bekijk het profiel en bevestig dat je ${name} aanneemt.` : `Bekijk het profiel en bevestig dat je deze reactie afwijst.`}
+                      </p>
+                    )}
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGekozen("declined");
+                          void beslis("declined");
+                        }}
+                        disabled={bezig}
+                        className={`btn-ghost disabled:opacity-50 ${gekozen === "declined" ? "ring-2 ring-crit/40" : ""}`}
+                      >
+                        {bezig && gekozen === "declined" ? "Bezig…" : "Afwijzen"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGekozen("accepted");
+                          void beslis("accepted");
+                        }}
+                        disabled={bezig}
+                        className={`btn-primary disabled:opacity-50 ${gekozen === "accepted" ? "ring-2 ring-brand-300" : ""}`}
+                      >
+                        {bezig && gekozen === "accepted" ? "Bezig…" : "Accepteren"}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}

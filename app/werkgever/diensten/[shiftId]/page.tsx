@@ -7,7 +7,6 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
 import { PageHeader, Panel, EmptyState, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
 import { shiftCategory } from "@/lib/shifts/category";
-import { OfferResponseButtons } from "@/components/app/OfferResponseButtons";
 import { ChatUserButton } from "@/components/app/ChatUserButton";
 import { ReviewButton } from "@/components/app/ReviewButton";
 import { EmployerShiftControls } from "@/components/app/EmployerShiftControls";
@@ -155,7 +154,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
               {pendingOffers.map((o) => (
                 <li key={o.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
-                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName}>
+                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(o) }}>
                       <Persoon url={o.avatarUrl} name={o.freelancerName}>
                         <span className="num font-semibold text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
                         {o.proposedRateCents !== o.listedRateCents && (
@@ -181,9 +180,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                     )}
                   </div>
                   <Acties>
-                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} />
+                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(o) }} />
                     <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
-                    <OfferResponseButtons offerId={o.id} />
+                    {/* Afwijzen / Accepteren open the same card: you always decide while seeing who it is */}
+                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(o) }} knoppen="beslissen" />
                   </Acties>
                 </li>
               ))}
@@ -327,6 +327,15 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
       {initials(name)}
     </span>
   );
+}
+
+/** The line above Afwijzen / Accepteren in the profile card of a reaction. */
+function reactieRegel(o: { proposedRateCents: number; listedRateCents: number; busyElsewhere: boolean }): string {
+  const bod =
+    o.proposedRateCents === o.listedRateCents
+      ? `Reageert op je klus voor ${moneyExact(o.listedRateCents)}/u.`
+      : `Tegenbod: ${moneyExact(o.proposedRateCents)}/u (jij bood ${moneyExact(o.listedRateCents)}/u).`;
+  return o.busyElsewhere ? `${bod} Let op: op dat moment al elders ingepland, accepteren lukt dan niet.` : bod;
 }
 
 /** Photo + name + one line: the clickable part of a row (opens the profile card). */
