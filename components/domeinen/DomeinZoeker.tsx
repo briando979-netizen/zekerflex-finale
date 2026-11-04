@@ -54,12 +54,15 @@ export function DomeinZoeker({
   startNaam = "",
   terugNaar = "/domeinnaam",
   smal = false,
+  onGekoppeld,
 }: {
   startNaam?: string;
   /** waar je na de betaalpagina terugkomt (lib/domeinen/bestelling.ts TERUG_PADEN) */
   terugNaar?: string;
   /** in een smal paneel (zoals de websitebouwer): velden onder elkaar */
   smal?: boolean;
+  /** na "Koppel aan mijn website" (de bouwer ververst dan zijn tab Domein) */
+  onGekoppeld?: (() => void) | undefined;
 }) {
   const rij = smal ? "" : "sm:flex-row";
   const id = useId();
@@ -243,12 +246,12 @@ export function DomeinZoeker({
         </p>
       )}
 
-      {werkgever && mijn && mijn.length > 0 && <MijnDomeinen lijst={mijn} onLijst={setMijn} />}
+      {werkgever && mijn && mijn.length > 0 && <MijnDomeinen lijst={mijn} onLijst={setMijn} onGekoppeld={onGekoppeld} />}
     </div>
   );
 }
 
-function MijnDomeinen({ lijst, onLijst }: { lijst: MijnDomein[]; onLijst: (l: MijnDomein[]) => void }) {
+function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; onLijst: (l: MijnDomein[]) => void; onGekoppeld?: (() => void) | undefined }) {
   const [bezig, setBezig] = useState<string | null>(null);
   const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
 
@@ -261,6 +264,7 @@ function MijnDomeinen({ lijst, onLijst }: { lijst: MijnDomein[]; onLijst: (l: Mi
     if (!r?.ok) return setMelding({ ok: false, tekst: await fout(r, "Koppelen lukte niet. Probeer het opnieuw.") });
     onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
     setMelding({ ok: true, tekst: `${d.domein} staat nu op je website. Zodra de DNS overal is bijgewerkt (meestal binnen een paar uur), werkt het adres.` });
+    onGekoppeld?.();
   }
 
   return (

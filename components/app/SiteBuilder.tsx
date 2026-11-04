@@ -803,6 +803,12 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
     })();
   }, []);
 
+  // na "Koppel aan mijn website" in de domeinzoeker: meteen het gekoppelde domein tonen
+  const herlaad = async () => {
+    const res = await fetch("/api/werkgever/sites/domain", { cache: "no-store" }).catch(() => null);
+    if (res?.ok) setState(await res.json());
+  };
+
   const act = async (action: "koppel" | "controleer" | "ontkoppel") => {
     if (action === "ontkoppel" && !window.confirm("Het domein loskoppelen? Je website blijft online op het adres van ZekerFlex.")) return;
     setBusy(action);
@@ -859,7 +865,7 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
         <details className="rounded-lg border border-hair p-3">
           <summary className="cursor-pointer font-semibold text-ink">Nog geen domeinnaam? Zoek en bestel er één</summary>
           <div className="mt-3">
-            <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal />
+            <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal onGekoppeld={() => void herlaad()} />
           </div>
         </details>
       </div>
