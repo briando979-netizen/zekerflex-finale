@@ -294,7 +294,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // account (read-only). /admin and /api/admin keep the admin's own session.
   const viewAs = req.cookies.get(VIEW_AS_COOKIE)?.value;
   const p = req.nextUrl.pathname;
-  if (viewAs && !p.startsWith("/admin") && !p.startsWith("/api/admin")) {
+  // De websitechat en andere openbare formulieren (een schrijfactie naar een
+  // openbare API-route) horen bij de bezoeker, niet bij het voorbeeldaccount:
+  // die gaan gewoon met de eigen sessie van de beheerder. Anders gaf de chatknop
+  // op de homepage "Inspectiemodus is alleen-lezen" (5 nov).
+  const openbaarSchrijven = !READ_METHODS.has(req.method) && p.startsWith("/api/") && isPublicApiRoute(p);
+  if (viewAs && !p.startsWith("/admin") && !p.startsWith("/api/admin") && !openbaarSchrijven) {
     const claims = await decodeSession(viewAs);
     if (claims?.inspect) {
       req.cookies.set(SESSION_COOKIE, viewAs);

@@ -150,6 +150,19 @@ export function ChatWidget() {
         setHuman(true);
         return;
       }
+      // An error response (rate limit, read-only view, server error) is JSON, not an
+      // answer: show a plain sentence instead of streaming the raw body into a bubble.
+      if (!res.ok) {
+        const fout = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+        const tekst =
+          fout?.error?.code === "READ_ONLY"
+            ? "Je bekijkt de site nu als voorbeeldaccount (Bekijk als). Daarin kun je niet chatten. Stop Bekijk als in het beheer, of open de site in een privévenster."
+            : res.status === 429
+              ? "Je stuurt veel berichten achter elkaar. Wacht even en probeer het dan opnieuw."
+              : "De assistent is even niet bereikbaar. Probeer het zo opnieuw.";
+        setMessages((m) => [...m, { role: "assistant", content: tekst }]);
+        return;
+      }
       if (!res.body) throw new Error("no stream");
       setMessages((m) => [...m, { role: "assistant", content: "", q: clean }]);
       const reader = res.body.getReader();

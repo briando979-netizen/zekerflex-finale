@@ -49,6 +49,11 @@ describe("read-only inspection links", () => {
     a.cookies.set(SESSION_COOKIE, admin);
     a.cookies.set(VIEW_AS_COOKIE, viewAs);
     expect((await middleware(a)).status).not.toBe(403);
+    // the public website chat is a visitor action: it works (as the admin), not read-only
+    const chat = new NextRequest(new URL("https://www.zekerflex.com/api/chat"), { method: "POST" });
+    chat.cookies.set(SESSION_COOKIE, admin);
+    chat.cookies.set(VIEW_AS_COOKIE, viewAs);
+    expect((await middleware(chat)).status).not.toBe(403);
   });
 
   it("refuses every write from an inspection session", async () => {
