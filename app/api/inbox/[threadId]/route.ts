@@ -49,7 +49,8 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const own = visibleFrom(prefs, thread.id);
     const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
     const messages = (await getMessages(thread.id, 400)).filter((m) => !from || m.at > from);
-    await markThreadRead(thread.id, p.userId);
+    // ?seen=0: the tab is in the background, so nobody reads it yet (no read receipt, unread stays)
+    if (new URL(req.url).searchParams.get("seen") !== "0") await markThreadRead(thread.id, p.userId);
     const other = thread.kind === "direct" ? thread.participants.find((u) => u !== p.userId) ?? null : null;
     const blocked = other ? await blockedBetween(p.userId, other) : null;
 

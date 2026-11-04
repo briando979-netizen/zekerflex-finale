@@ -58,6 +58,10 @@ interface CommunityRow { id: string; name: string; threadId: string | null; memb
 
 /** Tells the server this tab is in view, so it doesn't also push the messages it shows. */
 const visibleQuery = () => (document.visibilityState === "visible" ? "?visible=1" : "");
+/** Opening a conversation: only "read" while the tab is in view (otherwise no read receipt, unread stays). */
+const threadQuery = () => (document.visibilityState === "visible" ? "?visible=1" : "?seen=0");
+/** Both panes side by side (md+): then the newest chat may open by itself. */
+const twoPanes = () => window.matchMedia("(min-width: 768px)").matches;
 
 const TAB_TITLE: Record<Tab, string> = { chats: "Chats", updates: "Updates", calls: "Oproepen", tools: "Tools", settings: "Instellingen" };
 
@@ -261,7 +265,10 @@ export function InboxPage({
       // ?thread= comes from a call/message notification
       const wanted = new URLSearchParams(window.location.search).get("thread");
       const rows: ThreadRow[] = d.threads;
-      return (wanted && rows.some((t) => t.id === wanted) ? wanted : null) ?? rows[0]?.id ?? null;
+      if (wanted && rows.some((t) => t.id === wanted)) return wanted;
+      // on a phone you only see the list: opening (and so reading) the top chat by itself
+      // gave the sender blue ticks for a message nobody saw
+      return twoPanes() ? (rows[0]?.id ?? null) : null;
     });
   }, []);
 
@@ -274,7 +281,7 @@ export function InboxPage({
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
-    const r = await fetch(`/api/inbox/${id}${visibleQuery()}`, { cache: "no-store", headers: pinHeaders() });
+    const r = await fetch(`/api/inbox/${id}${threadQuery()}`, { cache: "no-store", headers: pinHeaders() });
     if (!r.ok) return;
     const d = await r.json();
     // a late answer for a conversation you already left must not fill the open one
@@ -340,7 +347,15 @@ export function InboxPage({
       if (t && t === activeRef.current) void loadThread(t);
     };
     window.addEventListener("zf:call-ended", onEnded);
-    return () => window.removeEventListener("zf:call-ended", onEnded);
+    // back to this tab: read what came in meanwhile right away (instead of on the next poll)
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && activeRef.current) void loadThread(activeRef.current);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("zf:call-ended", onEnded);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [loadThread]);
 
   const otherOf = (t: ThreadRow): { userId: string; name: string; role: string; support: boolean } => {
@@ -1102,7 +1117,16 @@ export function InboxPage({
             </div>
           )}
           <div className="flex items-center gap-1 border-b border-hair px-2 py-2 sm:gap-2 sm:px-3">
-            <button type="button" onClick={() => setPane("list")} className={`${iconBtn} md:hidden`} aria-label="Terug naar gesprekken">
+            <button
+              type="button"
+              onClick={() => {
+                // phone: the conversation closes, so it stops reading new messages while you're in the list
+                setPane("list");
+                setActive(null);
+              }}
+              className={`${iconBtn} md:hidden`}
+              aria-label="Terug naar gesprekken"
+            >
               <IconBack className="h-6 w-6" />
             </button>
             <button
