@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { zaakVanSlug, menukaart } from "@/lib/horeca/store";
 import { tafelVanCode } from "@/lib/horeca/bestellingen";
 import { heeftModule } from "@/lib/horeca/modules";
+import { leesOpties } from "@/lib/horeca/opties";
 import { BestelMenu, type MenuGroep } from "@/components/horeca/site/BestelMenu";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export default async function TafelPagina({ params }: { params: Promise<{ slug: 
     .filter((g) => g.items.length)
     .map((g) => ({
       ...g,
-      items: g.items.map((i) => ({ id: i.id, naam: i.naam, omschrijving: i.omschrijving, prijsCent: i.prijsCent, allergenen: i.allergenen, vegetarisch: i.vegetarisch, veganistisch: i.veganistisch, beschikbaar: i.beschikbaar })),
+      items: g.items.map((i) => ({ id: i.id, naam: i.naam, omschrijving: i.omschrijving, prijsCent: i.prijsCent, allergenen: i.allergenen, vegetarisch: i.vegetarisch, veganistisch: i.veganistisch, beschikbaar: i.beschikbaar, opties: leesOpties(i.opties), voorraad: i.voorraad })),
     }));
 
   return (

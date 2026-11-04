@@ -6,6 +6,8 @@ import { centVan } from "@/components/rijschool/api";
 import { fooiOpties, rekeningVan, totaalVan, verdeelGelijk, wisselgeld, type Methode, type RekeningRegel } from "@/lib/horeca/kassa";
 import type { BonData, SchermBestelling, SchermData } from "@/components/horeca/live/types";
 import { BonVenster } from "@/components/horeca/live/Bon";
+import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
+import { leesOpties, type Gekozen } from "@/lib/horeca/opties";
 import { Knop, Leeg, type SchermDoe, type SchermProps } from "@/components/horeca/scherm/ui";
 
 // ---------------------------------------------------------------------------
@@ -260,18 +262,22 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
   const cats = data.categorieen ?? [];
   const [cat, setCat] = useState("alles");
   const [mand, setMand] = useState<Record<string, number>>({});
+  const [extra, setExtra] = useState<{ sleutel: string; itemId: string; aantal: number; opties: Gekozen[]; tekst: string; prijsCent: number }[]>([]);
+  const [kiezen, setKiezen] = useState<(typeof items)[number] | null>(null);
   const [meegegeven, setMeegegeven] = useState(false);
   const [bezig, setBezig] = useState(false);
   const regels = Object.entries(mand).filter(([, n]) => n > 0);
-  const te = regels.reduce((s, [id, n]) => s + (items.find((i) => i.id === id)?.prijsCent ?? 0) * n, 0);
+  const te = regels.reduce((s, [id, n]) => s + (items.find((i) => i.id === id)?.prijsCent ?? 0) * n, 0) + extra.reduce((s, x) => s + x.prijsCent * x.aantal, 0);
+  const aantalVan = (id: string) => (mand[id] ?? 0) + extra.filter((x) => x.itemId === id).reduce((s, x) => s + x.aantal, 0);
   const zichtbaar = items.filter((i) => cat === "alles" || i.categorieId === cat);
 
   async function betaal(methode: Methode, fooiCent: number) {
     setBezig(true);
-    const uit = await doe({ actie: "verkoop", mand: regels.map(([itemId, aantal]) => ({ itemId, aantal })), methode, fooiCent, meegegeven });
+    const uit = await doe({ actie: "verkoop", mand: [...regels.map(([itemId, aantal]) => ({ itemId, aantal })), ...extra.map((x) => ({ itemId: x.itemId, aantal: x.aantal, opties: x.opties }))], methode, fooiCent, meegegeven });
     setBezig(false);
     if (uit?.bonnen?.length) {
       setMand({});
+      setExtra([]);
       klaar(uit.bonnen);
     }
   }
@@ -294,10 +300,10 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
         <ul className="mt-3 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
           {zichtbaar.map((i) => (
             <li key={i.id}>
-              <button type="button" onClick={() => setMand((m) => ({ ...m, [i.id]: Math.min(50, (m[i.id] ?? 0) + 1) }))} className="relative flex h-24 w-full flex-col justify-between rounded-xl bg-white/[0.06] p-3 text-left ring-1 ring-white/10 hover:bg-white/10 active:scale-[0.98]" aria-label={`${i.naam} erbij`}>
+              <button type="button" onClick={() => (leesOpties(i.opties).length ? setKiezen(i) : setMand((m) => ({ ...m, [i.id]: Math.min(50, (m[i.id] ?? 0) + 1) })))} className="relative flex h-24 w-full flex-col justify-between rounded-xl bg-white/[0.06] p-3 text-left ring-1 ring-white/10 hover:bg-white/10 active:scale-[0.98]" aria-label={`${i.naam} erbij`}>
                 <span className="line-clamp-2 text-base font-bold text-white">{i.naam}</span>
                 <span className="text-sm text-[#B8C4BD]">{euro(i.prijsCent)}</span>
-                {(mand[i.id] ?? 0) > 0 && <span className="absolute right-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-[#22C55E] px-1.5 text-sm font-bold text-[#04130A]">{mand[i.id]}</span>}
+                {aantalVan(i.id) > 0 && <span className="absolute right-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-[#22C55E] px-1.5 text-sm font-bold text-[#04130A]">{aantalVan(i.id)}</span>}
               </button>
             </li>
           ))}
@@ -305,7 +311,7 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
       </section>
       <div className="space-y-3">
         <section aria-label="Mandje" className="rounded-2xl bg-[#141A17] p-4 ring-1 ring-white/10">
-          {regels.length === 0 ? (
+          {regels.length === 0 && extra.length === 0 ? (
             <p className="text-[#9BA8A1]">Tik op wat er verkocht wordt.</p>
           ) : (
             <ul className="space-y-1">
@@ -325,6 +331,20 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
                   </li>
                 );
               })}
+              {extra.map((x) => (
+                <li key={x.sleutel} className="flex items-center justify-between gap-2 text-white">
+                  <span className="min-w-0 truncate">
+                    {x.aantal}× {items.find((i) => i.id === x.itemId)?.naam}
+                    <span className="block truncate text-xs text-[#B8C4BD]">{x.tekst}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="tabular-nums">{euro(x.prijsCent * x.aantal)}</span>
+                    <button type="button" onClick={() => setExtra((e) => (x.aantal > 1 ? e.map((y) => (y === x ? { ...y, aantal: y.aantal - 1 } : y)) : e.filter((y) => y !== x)))} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 font-bold" aria-label={`Eén ${items.find((i) => i.id === x.itemId)?.naam ?? ""} minder`}>
+                      −
+                    </button>
+                  </span>
+                </li>
+              ))}
             </ul>
           )}
           <label className="mt-3 flex items-center gap-2 text-sm text-[#B8C4BD]">
@@ -334,6 +354,24 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
         </section>
         <Betalen te={te} fooiAan doeBetaal={(m, f) => void betaal(m, f)} bezig={bezig} />
       </div>
+      {kiezen && (
+        <KeuzeVenster
+          naam={kiezen.naam}
+          prijsCent={kiezen.prijsCent}
+          groepen={leesOpties(kiezen.opties)}
+          donker
+          sluit={() => setKiezen(null)}
+          kies={(g) => {
+            const item = kiezen;
+            setKiezen(null);
+            setExtra((e) => {
+              const zelfde = e.find((x) => x.itemId === item.id && x.tekst === g.tekst);
+              if (zelfde) return e.map((x) => (x === zelfde ? { ...x, aantal: Math.min(50, x.aantal + 1) } : x));
+              return [...e, { sleutel: `${item.id}-${e.length}-${g.tekst}`, itemId: item.id, aantal: 1, opties: g.opties, tekst: g.tekst, prijsCent: g.prijsCent }];
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

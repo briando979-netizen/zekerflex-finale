@@ -16,7 +16,7 @@ export type ApparaatSoort = "handheld" | "tablet" | "monitor" | "tv";
 export const APPARAAT_LABEL: Record<ApparaatSoort, string> = { handheld: "Telefoon of handheld", tablet: "Tablet", monitor: "Monitor of pc", tv: "Tv-scherm" };
 
 /** Wat een scherm mag wijzigen (de API controleert dit, lib/horeca/scherm-server.ts). */
-export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop"] as const;
+export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop", "voorraad"] as const;
 export type SchermActie = (typeof SCHERM_ACTIES)[number];
 
 export interface SchermSoort {
@@ -65,7 +65,7 @@ export const SCHERMEN: Record<SchermRol, SchermSoort> = {
     stand: "liggend",
     modules: ["bestellen"],
     punten: ["Bonnen op volgorde, kleur bij lang wachten", "Tik Start en Klaar; per ongeluk afgemeld haal je terug", "Alles-tegelijk: hoeveel van elk gerecht er nog moet", "Geluid bij een nieuwe bon; gerecht met één tik uitverkocht"],
-    acties: ["fase", "uitverkocht"],
+    acties: ["fase", "uitverkocht", "voorraad"],
     verversSec: 4,
   },
   bar: {
@@ -76,7 +76,7 @@ export const SCHERMEN: Record<SchermRol, SchermSoort> = {
     stand: "liggend",
     modules: ["bestellen"],
     punten: ["Alleen de bar-regels van elke bestelling", "Drankjes klaar terwijl de keuken nog bezig is", "Geluid bij een nieuwe bon"],
-    acties: ["fase", "uitverkocht"],
+    acties: ["fase", "uitverkocht", "voorraad"],
     verversSec: 4,
   },
   uitgifte: {

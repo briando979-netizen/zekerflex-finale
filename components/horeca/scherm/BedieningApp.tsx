@@ -10,6 +10,8 @@ import { OPROEP_LANG, RES_STATUS, tijdTot } from "@/components/horeca/live/tekst
 import { minTekst } from "@/components/horeca/live/stijl";
 import type { BonData, SchermBestelling, SchermItem } from "@/components/horeca/live/types";
 import { BonVenster } from "@/components/horeca/live/Bon";
+import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
+import { leesOpties, type Gekozen } from "@/lib/horeca/opties";
 import { ding, tril } from "@/components/horeca/scherm/apparaat";
 import { Knop, Leeg, minSinds, useNieuw, type SchermDoe, type SchermProps } from "@/components/horeca/scherm/ui";
 
@@ -28,6 +30,10 @@ interface MandRegel {
   itemId: string;
   aantal: number;
   opmerking: string;
+  /** gekozen opties met hun tekst en de prijs inclusief meerprijs */
+  opties?: Gekozen[];
+  tekst?: string;
+  prijsCent?: number;
 }
 
 const FASE_TEKEN: Record<Fase, { teken: string; kleur: string; label: string }> = {
@@ -50,6 +56,7 @@ function Regels({ b }: { b: SchermBestelling }) {
             <span className="min-w-0">
               {r.aantal}× {r.naam}
               <span className="sr-only"> ({f.label})</span>
+              {r.keuze && <span className="block text-sm font-semibold">↳ {r.keuze}</span>}
               {r.opmerking && <span className="block text-sm text-[#FDE68A]">{r.opmerking}</span>}
             </span>
           </li>
@@ -189,15 +196,19 @@ function Bestellen({ data, doe, tafelId, kiesTafel, klaar }: { data: SchermProps
   const [bekijk, setBekijk] = useState(false);
   const [opmerking, setOpmerking] = useState("");
   const [bezig, setBezig] = useState(false);
+  const [kiezen, setKiezen] = useState<SchermItem | null>(null);
   const perId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const aantalVan = (id: string) => mand.filter((m) => m.itemId === id).reduce((s, m) => s + m.aantal, 0);
-  const totaal = mand.reduce((s, m) => s + (perId.get(m.itemId)?.prijsCent ?? 0) * m.aantal, 0);
+  const prijsVan = (m: MandRegel) => m.prijsCent ?? perId.get(m.itemId)?.prijsCent ?? 0;
+  const totaal = mand.reduce((s, m) => s + prijsVan(m) * m.aantal, 0);
   const stuks = mand.reduce((s, m) => s + m.aantal, 0);
 
   const zichtbaar = items.filter((i) => (cat === "alles" || i.categorieId === cat) && (!zoek.trim() || i.naam.toLowerCase().includes(zoek.trim().toLowerCase())));
 
   function erbij(i: SchermItem, n: 1 | -1) {
     tril(10);
+    // een gerecht met keuzes (bakwijze, saus) opent eerst het keuzevenster
+    if (n === 1 && leesOpties(i.opties).length) return setKiezen(i);
     setMand((m) => {
       const kaal = m.find((x) => x.itemId === i.id && !x.opmerking);
       if (n === 1) return kaal ? m.map((x) => (x === kaal ? { ...x, aantal: Math.min(50, x.aantal + 1) } : x)) : [...m, { sleutel: `${i.id}-${Date.now()}`, itemId: i.id, aantal: 1, opmerking: "" }];
@@ -211,7 +222,7 @@ function Bestellen({ data, doe, tafelId, kiesTafel, klaar }: { data: SchermProps
     if (!mand.length) return;
     setBezig(true);
     const ok = await doe(
-      { actie: "bestelling", tafelId, mand: mand.map((m) => ({ itemId: m.itemId, aantal: m.aantal, ...(m.opmerking.trim() ? { opmerking: m.opmerking.trim() } : {}) })), opmerking, naam: "" },
+      { actie: "bestelling", tafelId, mand: mand.map((m) => ({ itemId: m.itemId, aantal: m.aantal, ...(m.opmerking.trim() ? { opmerking: m.opmerking.trim() } : {}), ...(m.opties?.length ? { opties: m.opties } : {}) })), opmerking, naam: "" },
       "Verstuurd naar keuken en bar.",
     );
     setBezig(false);
@@ -268,8 +279,9 @@ function Bestellen({ data, doe, tafelId, kiesTafel, klaar }: { data: SchermProps
                   <div className="flex items-center justify-between gap-2">
                     <span className="min-w-0 truncate text-base font-semibold text-white">
                       {m.aantal}× {i?.naam ?? "Gerecht"}
+                      {m.tekst && <span className="block truncate text-sm font-normal text-[#B8C4BD]">{m.tekst}</span>}
                     </span>
-                    <span className="text-[#B8C4BD]">{euro((i?.prijsCent ?? 0) * m.aantal)}</span>
+                    <span className="text-[#B8C4BD]">{euro(prijsVan(m) * m.aantal)}</span>
                   </div>
                   <div className="mt-2 flex gap-2">
                     <label htmlFor={`notitie-${m.sleutel}`} className="sr-only">
@@ -309,7 +321,8 @@ function Bestellen({ data, doe, tafelId, kiesTafel, klaar }: { data: SchermProps
                   <span className={`block truncate text-base font-semibold ${i.beschikbaar ? "text-white" : "text-[#6B7A72] line-through"}`}>{i.naam}</span>
                   <span className="text-sm text-[#9BA8A1]">
                     {euro(i.prijsCent)} · {i.station === "bar" ? "bar" : "keuken"}
-                    {!i.beschikbaar && " · uitverkocht"}
+                    {leesOpties(i.opties).length > 0 && " · met keuzes"}
+                    {!i.beschikbaar ? " · uitverkocht" : typeof i.voorraad === "number" && i.voorraad <= 10 ? ` · nog ${i.voorraad}` : ""}
                   </span>
                 </span>
                 {n > 0 && (
@@ -329,6 +342,24 @@ function Bestellen({ data, doe, tafelId, kiesTafel, klaar }: { data: SchermProps
             );
           })}
         </ul>
+      )}
+
+      {kiezen && (
+        <KeuzeVenster
+          naam={kiezen.naam}
+          prijsCent={kiezen.prijsCent}
+          groepen={leesOpties(kiezen.opties)}
+          donker
+          sluit={() => setKiezen(null)}
+          kies={(g) => {
+            const item = kiezen;
+            setKiezen(null);
+            setMand((m) => {
+              const zelfde = m.find((x) => x.itemId === item.id && x.tekst === g.tekst && !x.opmerking);
+              return zelfde ? m.map((x) => (x === zelfde ? { ...x, aantal: Math.min(50, x.aantal + 1) } : x)) : [...m, { sleutel: `${item.id}-${Date.now()}`, itemId: item.id, aantal: 1, opmerking: "", opties: g.opties, tekst: g.tekst, prijsCent: g.prijsCent }];
+            });
+          }}
+        />
       )}
 
       {stuks > 0 && (
@@ -416,6 +447,7 @@ export function BedieningApp({ data, doe, nu, geluid }: SchermProps) {
                     .map((r, i) => (
                       <li key={i} className="text-lg text-white">
                         {r.aantal}× {r.naam}
+                        {r.keuze && <span className="block text-base font-semibold">↳ {r.keuze}</span>}
                         {r.opmerking && <span className="block text-sm text-[#FDE68A]">{r.opmerking}</span>}
                       </li>
                     ))}

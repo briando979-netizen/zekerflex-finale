@@ -6,6 +6,8 @@
 // Puur, dus ook in de browser bruikbaar en los te testen.
 // ---------------------------------------------------------------------------
 
+import { kies, leesOpties, type Gekozen } from "@/lib/horeca/opties";
+
 export const MAX_AANTAL = 50;
 export const MAX_REGELS = 40;
 
@@ -40,6 +42,8 @@ export interface MandRegel {
   itemId: string;
   aantal: number;
   opmerking?: string | undefined;
+  /** gekozen opties (bakwijze, saus, extra's) — lib/horeca/opties.ts */
+  opties?: Gekozen[] | undefined;
 }
 
 export interface KaartItem {
@@ -49,6 +53,10 @@ export interface KaartItem {
   beschikbaar: boolean;
   station: string;
   btw?: number;
+  /** de keuzegroepen van het gerecht (Json uit de database) */
+  opties?: unknown;
+  /** nog te verkopen stuks; null of weg = onbeperkt */
+  voorraad?: number | null;
 }
 
 /** Waar een regel staat: keuken en bar melden elk hun eigen regels klaar (lib/horeca/fasen.ts). */
@@ -71,11 +79,15 @@ export interface BestelRegel {
   btw?: number;
   /** zoveel stuks zijn al afgerekend aan de kassa (splitsen per gerecht) */
   betaaldAantal?: number;
+  /** de gekozen opties als tekst ("Medium · Bacon"); de meerprijs zit al in prijsCent */
+  keuze?: string;
 }
 
 /**
  * Maakt van de mand vastgelegde regels: onbekende of uitverkochte gerechten
- * geven een nette fout, gelijke gerechten met gelijke opmerking worden samengevoegd.
+ * geven een nette fout, gelijke gerechten met gelijke keuze en opmerking worden
+ * samengevoegd. Keuzes worden tegen de kaart gecontroleerd (meerprijs telt mee)
+ * en er wordt nooit meer besteld dan de voorraad.
  */
 export function bouwRegels(mand: readonly MandRegel[], kaart: readonly KaartItem[]): { regels: BestelRegel[]; totaalCent: number } | { fout: string } {
   if (!mand.length) return { fout: "Je mandje is leeg." };
@@ -88,15 +100,24 @@ export function bouwRegels(mand: readonly MandRegel[], kaart: readonly KaartItem
     if (!k.beschikbaar) return { fout: `${k.naam} is helaas uitverkocht.` };
     if (!Number.isInteger(m.aantal) || m.aantal < 1 || m.aantal > MAX_AANTAL) return { fout: `Kies een aantal van 1 tot ${MAX_AANTAL}.` };
     const opmerking = (m.opmerking ?? "").trim().slice(0, 140);
-    const sleutel = `${k.id}|${opmerking}`;
+    const keuze = kies(leesOpties(k.opties), m.opties ?? [], k.naam);
+    if ("fout" in keuze) return { fout: keuze.fout };
+    const sleutel = `${k.id}|${keuze.tekst}|${opmerking}`;
     const al = samen.get(sleutel);
     const aantal = (al?.aantal ?? 0) + m.aantal;
     if (aantal > MAX_AANTAL) return { fout: `Kies een aantal van 1 tot ${MAX_AANTAL}.` };
-    const regel: BestelRegel = { itemId: k.id, naam: k.naam, prijsCent: k.prijsCent, aantal, opmerking, station: k.station === "bar" ? "bar" : "keuken" };
+    const regel: BestelRegel = { itemId: k.id, naam: k.naam, prijsCent: k.prijsCent + keuze.meerprijsCent, aantal, opmerking, station: k.station === "bar" ? "bar" : "keuken" };
     if (typeof k.btw === "number") regel.btw = k.btw;
+    if (keuze.tekst) regel.keuze = keuze.tekst;
     samen.set(sleutel, regel);
   }
   const regels = [...samen.values()];
+  // voorraad: alle regels van hetzelfde gerecht samen
+  for (const k of kaart) {
+    if (typeof k.voorraad !== "number") continue;
+    const n = regels.filter((r) => r.itemId === k.id).reduce((s, r) => s + r.aantal, 0);
+    if (n > k.voorraad) return { fout: k.voorraad > 0 ? `Van ${k.naam} zijn er nog maar ${k.voorraad}.` : `${k.naam} is helaas uitverkocht.` };
+  }
   return { regels, totaalCent: regels.reduce((s, r) => s + r.prijsCent * r.aantal, 0) };
 }
 
@@ -124,6 +145,7 @@ export function leesRegels(json: unknown): BestelRegel[] {
     if (typeof x.geserveerdOp === "string") regel.geserveerdOp = x.geserveerdOp;
     if (typeof x.btw === "number") regel.btw = x.btw;
     if (typeof x.betaaldAantal === "number" && x.betaaldAantal > 0) regel.betaaldAantal = x.betaaldAantal;
+    if (typeof x.keuze === "string" && x.keuze) regel.keuze = x.keuze;
     return [regel];
   });
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ALLERGENEN, type Allergeen } from "@/lib/horeca/allergenen";
 import { MAX_AANTAL, STATUS_LABEL, type BestelStatus } from "@/lib/horeca/bestellen";
+import type { Gekozen, OptieGroep } from "@/lib/horeca/opties";
+import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
 
 // Bestellen aan tafel via de QR-code: de menukaart met "+"-knoppen, een vast
 // mandje onderin, en na het bestellen het volgnummer met de status die vanzelf
@@ -11,7 +13,17 @@ import { MAX_AANTAL, STATUS_LABEL, type BestelStatus } from "@/lib/horeca/bestel
 export interface MenuGroep {
   id: string;
   naam: string;
-  items: { id: string; naam: string; omschrijving: string; prijsCent: number; allergenen: string[]; vegetarisch: boolean; veganistisch: boolean; beschikbaar: boolean }[];
+  items: { id: string; naam: string; omschrijving: string; prijsCent: number; allergenen: string[]; vegetarisch: boolean; veganistisch: boolean; beschikbaar: boolean; opties: OptieGroep[]; voorraad: number | null }[];
+}
+
+/** Een gerecht met gekozen opties (bakwijze, saus): eigen regel met eigen prijs. */
+interface OptieRegel {
+  sleutel: string;
+  itemId: string;
+  aantal: number;
+  opties: Gekozen[];
+  tekst: string;
+  prijsCent: number;
 }
 
 const euro = (cent: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(cent / 100);
@@ -55,6 +67,8 @@ function RoepKnoppen({ slug, code }: { slug: string; code: string }) {
 
 export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code: string; tafel: string; groepen: MenuGroep[] }) {
   const [mand, setMand] = useState<Record<string, number>>({});
+  const [extra, setExtra] = useState<OptieRegel[]>([]);
+  const [kiezen, setKiezen] = useState<MenuGroep["items"][number] | null>(null);
   const [opmerking, setOpmerking] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState("");
@@ -63,9 +77,19 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
 
   const items = useMemo(() => new Map(groepen.flatMap((g) => g.items.map((i) => [i.id, i] as const))), [groepen]);
   const regels = Object.entries(mand).filter(([, n]) => n > 0);
-  const aantal = regels.reduce((s, [, n]) => s + n, 0);
-  const totaal = regels.reduce((s, [id, n]) => s + (items.get(id)?.prijsCent ?? 0) * n, 0);
+  const aantal = regels.reduce((s, [, n]) => s + n, 0) + extra.reduce((s, x) => s + x.aantal, 0);
+  const totaal = regels.reduce((s, [id, n]) => s + (items.get(id)?.prijsCent ?? 0) * n, 0) + extra.reduce((s, x) => s + x.prijsCent * x.aantal, 0);
   const zet = (id: string, n: number) => setMand((m) => ({ ...m, [id]: Math.max(0, Math.min(MAX_AANTAL, n)) }));
+  const aantalVan = (id: string) => (mand[id] ?? 0) + extra.filter((x) => x.itemId === id).reduce((s, x) => s + x.aantal, 0);
+  const minder = (id: string) => {
+    const laatste = [...extra].reverse().find((x) => x.itemId === id);
+    if (!laatste) return zet(id, (mand[id] ?? 0) - 1);
+    setExtra((e) => (laatste.aantal > 1 ? e.map((x) => (x === laatste ? { ...x, aantal: x.aantal - 1 } : x)) : e.filter((x) => x !== laatste)));
+  };
+  const plus = (i: MenuGroep["items"][number]) => {
+    if (i.opties.length) setKiezen(i);
+    else zet(i.id, (mand[i.id] ?? 0) + 1);
+  };
 
   // status volgen na het bestellen
   useEffect(() => {
@@ -85,12 +109,13 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
       const r = await fetch(`/api/horeca/site/${slug}/bestellen`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, mand: regels.map(([itemId, n]) => ({ itemId, aantal: n })), opmerking }),
+        body: JSON.stringify({ code, mand: [...regels.map(([itemId, n]) => ({ itemId, aantal: n })), ...extra.map((x) => ({ itemId: x.itemId, aantal: x.aantal, opties: x.opties }))], opmerking }),
       });
       const d = (await r.json().catch(() => ({}))) as { id?: string; nummer?: number; error?: { message?: string } };
       if (!r.ok || !d.id || !d.nummer) throw new Error(d.error?.message ?? "Bestellen lukte niet. Probeer het opnieuw of vraag de bediening.");
       setGeplaatst({ id: d.id, nummer: d.nummer, status: "NIEUW" });
       setMand({});
+      setExtra([]);
       setOpmerking("");
       setOpen(false);
     } catch (e) {
@@ -126,7 +151,7 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
             </h2>
             <ul className="mt-2 divide-y divide-[#0A120E]/10">
               {g.items.map((i) => {
-                const n = mand[i.id] ?? 0;
+                const n = aantalVan(i.id);
                 return (
                   <li key={i.id} className="flex items-start justify-between gap-3 py-3">
                     <div className="min-w-0">
@@ -134,6 +159,8 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
                         {i.naam} <span className="font-normal text-[#4B5563]">· {euro(i.prijsCent)}</span>
                       </p>
                       {i.omschrijving && <p className="text-sm text-[#4B5563]">{i.omschrijving}</p>}
+                      {i.opties.length > 0 && <p className="text-xs font-semibold text-[#4B5563]">Met keuze: {i.opties.map((g) => g.naam.toLowerCase()).join(", ")}</p>}
+                      {i.beschikbaar && typeof i.voorraad === "number" && i.voorraad <= 5 && <p className="text-xs font-bold text-[#B45309]">Nog {i.voorraad}</p>}
                       <p className="text-xs text-[#4B5563]">
                         {i.veganistisch ? "Veganistisch" : i.vegetarisch ? "Vegetarisch" : ""}
                         {(i.veganistisch || i.vegetarisch) && i.allergenen.length > 0 && " · "}
@@ -144,7 +171,7 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
                       <div className="flex flex-shrink-0 items-center gap-2">
                         {n > 0 && (
                           <>
-                            <button type="button" onClick={() => zet(i.id, n - 1)} aria-label={`Eén ${i.naam} minder`} className="grid h-10 w-10 place-items-center rounded-full text-xl font-bold ring-1 ring-[#0A120E]/20">
+                            <button type="button" onClick={() => minder(i.id)} aria-label={`Eén ${i.naam} minder`} className="grid h-10 w-10 place-items-center rounded-full text-xl font-bold ring-1 ring-[#0A120E]/20">
                               −
                             </button>
                             <span className="w-6 text-center font-bold" aria-live="polite">
@@ -152,7 +179,7 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
                             </span>
                           </>
                         )}
-                        <button type="button" onClick={() => zet(i.id, n + 1)} aria-label={`${i.naam} toevoegen`} className="grid h-10 w-10 place-items-center rounded-full bg-[var(--rs-kleur-knop)] text-xl font-bold text-[var(--rs-op-kleur)]">
+                        <button type="button" onClick={() => plus(i)} aria-label={`${i.naam} toevoegen`} className="grid h-10 w-10 place-items-center rounded-full bg-[var(--rs-kleur-knop)] text-xl font-bold text-[var(--rs-op-kleur)]">
                           +
                         </button>
                       </div>
@@ -167,6 +194,24 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
         ))}
       </div>
 
+      {kiezen && (
+        <KeuzeVenster
+          naam={kiezen.naam}
+          prijsCent={kiezen.prijsCent}
+          groepen={kiezen.opties}
+          sluit={() => setKiezen(null)}
+          kies={(g) => {
+            const item = kiezen;
+            setKiezen(null);
+            setExtra((e) => {
+              const zelfde = e.find((x) => x.itemId === item.id && x.tekst === g.tekst);
+              if (zelfde) return e.map((x) => (x === zelfde ? { ...x, aantal: Math.min(MAX_AANTAL, x.aantal + 1) } : x));
+              return [...e, { sleutel: `${item.id}-${e.length}-${g.tekst}`, itemId: item.id, aantal: 1, opties: g.opties, tekst: g.tekst, prijsCent: g.prijsCent }];
+            });
+          }}
+        />
+      )}
+
       {aantal > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#0A120E]/10 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(10,18,14,0.08)] backdrop-blur">
           <div className="mx-auto max-w-3xl">
@@ -179,6 +224,15 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
                         {n}× {items.get(id)?.naam}
                       </span>
                       <span>{euro((items.get(id)?.prijsCent ?? 0) * n)}</span>
+                    </li>
+                  ))}
+                  {extra.map((x) => (
+                    <li key={x.sleutel} className="flex justify-between gap-3 py-1">
+                      <span>
+                        {x.aantal}× {items.get(x.itemId)?.naam}
+                        <span className="block text-xs text-[#4B5563]">{x.tekst}</span>
+                      </span>
+                      <span>{euro(x.prijsCent * x.aantal)}</span>
                     </li>
                   ))}
                 </ul>

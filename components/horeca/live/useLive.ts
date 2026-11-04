@@ -39,9 +39,12 @@ export function useLive<T>(url: string, elkeSec: number) {
   }, [url]);
 
   useEffect(() => {
+    // na het sluiten van het scherm geen nieuwe ronde meer plannen (ook niet als er nog een verzoek liep)
+    let actief = true;
     void haal();
     let t: number | undefined;
     const plan = () => {
+      if (!actief) return;
       window.clearTimeout(t);
       t = window.setTimeout(
         () => {
@@ -57,6 +60,7 @@ export function useLive<T>(url: string, elkeSec: number) {
     document.addEventListener("visibilitychange", zichtbaar);
     window.addEventListener("online", zichtbaar);
     return () => {
+      actief = false;
       window.clearTimeout(t);
       document.removeEventListener("visibilitychange", zichtbaar);
       window.removeEventListener("online", zichtbaar);

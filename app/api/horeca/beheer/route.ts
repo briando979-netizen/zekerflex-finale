@@ -16,6 +16,7 @@ import {
   werkGegevensBij,
   zetBeschikbaar,
   zetModuleAan,
+  zetVoorraad,
   zetOnline,
   zetOpeningstijden,
 } from "@/lib/horeca/store";
@@ -206,6 +207,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         break;
       case "beschikbaar":
         await zetBeschikbaar(zaak, a.id, a.beschikbaar);
+        break;
+      case "voorraad":
+        await zetVoorraad(zaak, a.id, a.voorraad);
         break;
       case "tafel": {
         const { actie: _a, ...t } = a;

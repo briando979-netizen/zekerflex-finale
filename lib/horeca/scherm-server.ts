@@ -10,7 +10,7 @@ import type { SchermActieInvoer } from "@/lib/horeca/schema";
 import { plaatsBestelling, tafelVrij, verplaatsFase } from "@/lib/horeca/bestellingen";
 import { maakReservering, nuNL, zetReserveringStatus, zetReserveringTafel } from "@/lib/horeca/reserveringen";
 import { klok } from "@/lib/horeca/reserveren";
-import { zetBeschikbaar } from "@/lib/horeca/store";
+import { zetBeschikbaar, zetVoorraad } from "@/lib/horeca/store";
 import { handelAf } from "@/lib/horeca/oproepen";
 import { afrekenen, bonVan, type Bon } from "@/lib/horeca/kassa-server";
 import { heeftModule } from "@/lib/horeca/modules";
@@ -83,12 +83,14 @@ export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActie
     case "bestelling":
       await plaatsBestelling(zaak, { tafelId: a.tafelId, mand: a.mand, opmerking: a.opmerking, naam: a.naam, bron: "bediening" });
       return {};
-    case "uitverkocht": {
-      // keuken en bar zetten alleen hun eigen gerechten uitverkocht
+    case "uitverkocht":
+    case "voorraad": {
+      // keuken en bar beheren alleen hun eigen gerechten
       const station = stationVan(rol);
       const item = await prisma.horecaItem.findFirst({ where: { id: a.id, zaakId: zaak.id }, select: { station: true } });
       if (!item || (station !== "alles" && item.station !== station)) throw AppError.notFound("Gerecht niet gevonden.");
-      await zetBeschikbaar(zaak, a.id, a.beschikbaar);
+      if (a.actie === "voorraad") await zetVoorraad(zaak, a.id, a.voorraad);
+      else await zetBeschikbaar(zaak, a.id, a.beschikbaar);
       return {};
     }
     case "reservering-status":

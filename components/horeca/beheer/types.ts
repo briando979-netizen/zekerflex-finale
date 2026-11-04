@@ -21,6 +21,10 @@ export interface Item {
   beschikbaar: boolean;
   station: string;
   btw: number;
+  /** null = onbeperkt */
+  voorraad: number | null;
+  /** keuzegroepen (Json; met leesOpties gelezen) */
+  opties: unknown;
   volgorde: number;
 }
 

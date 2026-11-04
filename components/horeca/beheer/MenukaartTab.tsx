@@ -6,12 +6,13 @@ import { Veld } from "@/components/rijschool/ui";
 import { ALLERGENEN, type Allergeen } from "@/lib/horeca/allergenen";
 import { euro } from "@/lib/horeca/weergave";
 import type { BeheerData, Doe, Item } from "@/components/horeca/beheer/types";
+import { leesOptieTekst, leesOpties, optieTekst } from "@/lib/horeca/opties";
 
 // De menukaart: categorieën met gerechten en dranken. Per gerecht prijs,
 // allergenen, vegetarisch/veganistisch, keuken of bar (waar een bestelling
 // heen gaat) en snel "uitverkocht".
 
-type Concept = Omit<Item, "id" | "volgorde" | "prijsCent"> & { id?: string; prijs: string };
+type Concept = Omit<Item, "id" | "volgorde" | "prijsCent" | "opties" | "voorraad"> & { id?: string; prijs: string; optiesTekst: string; voorraadTekst: string };
 
 const leeg = (categorieId: string | null): Concept => ({
   categorieId,
@@ -24,6 +25,8 @@ const leeg = (categorieId: string | null): Concept => ({
   beschikbaar: true,
   station: "keuken",
   btw: 9,
+  optiesTekst: "",
+  voorraadTekst: "",
 });
 
 export function MenukaartTab({ data, doe }: { data: BeheerData; doe: Doe }) {
@@ -88,13 +91,16 @@ export function MenukaartTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                       {i.station === "bar" ? "Naar de bar" : "Naar de keuken"}
                       {i.veganistisch ? " · veganistisch" : i.vegetarisch ? " · vegetarisch" : ""}
                       {i.allergenen.length > 0 && ` · bevat ${i.allergenen.map((a) => ALLERGENEN[a as Allergeen]?.toLowerCase() ?? a).join(", ")}`}
+                      {` · btw ${i.btw} %`}
+                      {i.voorraad !== null && ` · nog ${i.voorraad}`}
+                      {leesOpties(i.opties).length > 0 && ` · keuzes: ${leesOpties(i.opties).map((g) => g.naam.toLowerCase()).join(", ")}`}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" className="btn-ghost" onClick={() => void doe({ actie: "beschikbaar", id: i.id, beschikbaar: !i.beschikbaar }, i.beschikbaar ? `${i.naam} staat op uitverkocht.` : `${i.naam} is weer te bestellen.`)}>
                       {i.beschikbaar ? "Uitverkocht" : "Weer leverbaar"}
                     </button>
-                    <button type="button" className="btn-ghost" aria-label={`${i.naam} bewerken`} onClick={() => setConcept({ ...i, prijs: bedragVeld(i.prijsCent) })}>
+                    <button type="button" className="btn-ghost" aria-label={`${i.naam} bewerken`} onClick={() => setConcept({ ...i, prijs: bedragVeld(i.prijsCent), optiesTekst: optieTekst(leesOpties(i.opties)), voorraadTekst: i.voorraad === null ? "" : String(i.voorraad) })}>
                       Bewerken
                     </button>
                   </div>
@@ -127,9 +133,13 @@ function ItemFormulier({ concept, data, doe, sluit }: { concept: Concept; data: 
     e.preventDefault();
     const prijsCent = centVan(v.prijs);
     if (prijsCent === null) return setFout("Vul een prijs in, bijvoorbeeld 12,50.");
+    const voorraad = v.voorraadTekst.trim() === "" ? null : Number(v.voorraadTekst);
+    if (voorraad !== null && (!Number.isInteger(voorraad) || voorraad < 0)) return setFout("Vul bij voorraad een heel getal in, of laat het leeg voor onbeperkt.");
+    const opties = leesOptieTekst(v.optiesTekst);
+    if (v.optiesTekst.trim() && !opties.length) return setFout("De keuzes zijn niet te lezen. Schrijf per regel bijvoorbeeld: Bakwijze*: Rare, Medium, Well done");
     setFout("");
-    const { prijs: _p, ...rest } = v;
-    if (await doe({ actie: "item", ...rest, prijsCent }, `${v.naam} is bewaard.`)) sluit();
+    const { prijs: _p, optiesTekst: _o, voorraadTekst: _v, ...rest } = v;
+    if (await doe({ actie: "item", ...rest, prijsCent, opties, voorraad }, `${v.naam} is bewaard.`)) sluit();
   }
 
   return (
@@ -163,6 +173,9 @@ function ItemFormulier({ concept, data, doe, sluit }: { concept: Concept; data: 
             <option value="bar">Bar</option>
           </select>
         </Veld>
+        <Veld label="Voorraad (mag leeg)" uitleg="Leeg = onbeperkt. Bij 0 is het gerecht vanzelf uitverkocht; elke bestelling telt af.">
+          <input className="field-input" inputMode="numeric" value={v.voorraadTekst} onChange={(e) => zet("voorraadTekst", e.target.value.replace(/[^0-9]/g, ""))} placeholder="onbeperkt" />
+        </Veld>
         <Veld label="Btw (voor de kassabon)" uitleg="9 % voor eten en alcoholvrije dranken, 21 % voor alcohol">
           <select className="field-input" value={String(v.btw ?? 9)} onChange={(e) => zet("btw", Number(e.target.value))}>
             <option value="9">9 % (laag tarief)</option>
@@ -182,6 +195,9 @@ function ItemFormulier({ concept, data, doe, sluit }: { concept: Concept; data: 
           </label>
         </fieldset>
       </div>
+      <Veld label="Keuzes bij bestellen (mag leeg)" uitleg="Eén groep per regel. * = verplicht, + = meer keuzes tegelijk, meerprijs tussen haakjes. Voorbeeld: Bakwijze*: Rare, Medium, Well done — Extra's+: Bacon (+1,50), Kaas (+1,00)">
+        <textarea className="field-input min-h-24 font-mono text-sm" value={v.optiesTekst} onChange={(e) => zet("optiesTekst", e.target.value)} maxLength={2000} placeholder={"Bakwijze*: Rare, Medium, Well done\nSaus: Pepersaus, Champignonsaus (+1,00)"} />
+      </Veld>
       <fieldset>
         <legend className="field-label">Allergenen</legend>
         <div className="mt-1 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">

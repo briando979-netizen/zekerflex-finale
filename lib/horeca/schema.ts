@@ -6,6 +6,7 @@ import { SOORTEN } from "@/lib/horeca/soorten";
 import { MAX_AANTAL, MAX_REGELS } from "@/lib/horeca/bestellen";
 import { MOMENTEN } from "@/lib/horeca/taken";
 import { SCHERM_ROLLEN } from "@/lib/horeca/schermen";
+import { MAX_GROEPEN, MAX_KEUZES } from "@/lib/horeca/opties";
 
 // Invoer van het horecabeheer (/api/horeca/beheer). Eén POST met een "actie";
 // alles wat de zaak wijzigt, gaat langs deze schema's.
@@ -17,8 +18,15 @@ const centen = (max: number) => z.number().int().min(0).max(max);
 const kleur = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Kies een kleur.");
 const tijd = z.string().refine(isTijd, "Gebruik UU:MM.");
 const id = z.string().min(1).max(40);
+const gekozenSchema = z.array(z.object({ groep: tekst(40), keuzes: z.array(tekst(40)).max(MAX_KEUZES) })).max(MAX_GROEPEN);
+const optieGroepSchema = z.object({
+  naam: tekst(40).pipe(z.string().min(1)),
+  keuzes: z.array(z.object({ naam: tekst(40).pipe(z.string().min(1)), prijsCent: z.number().int().min(0).max(100_000) })).min(1).max(MAX_KEUZES),
+  verplicht: z.boolean(),
+  meer: z.boolean(),
+});
 const mandSchema = z
-  .array(z.object({ itemId: id, aantal: z.number().int().min(1).max(MAX_AANTAL), opmerking: tekst(140).optional() }))
+  .array(z.object({ itemId: id, aantal: z.number().int().min(1).max(MAX_AANTAL), opmerking: tekst(140).optional(), opties: gekozenSchema.optional() }))
   .min(1, "Je mandje is leeg.")
   .max(MAX_REGELS);
 
@@ -67,7 +75,10 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
     beschikbaar: z.boolean(),
     station: z.enum(["keuken", "bar"]),
     btw: btwTarief.default(9),
+    opties: z.array(optieGroepSchema).max(MAX_GROEPEN).default([]),
+    voorraad: z.number().int().min(0).max(100_000).nullable().default(null),
   }),
+  z.object({ actie: z.literal("voorraad"), id, voorraad: z.number().int().min(0).max(100_000).nullable() }),
   z.object({ actie: z.literal("item-weg"), id }),
   z.object({ actie: z.literal("beschikbaar"), id, beschikbaar: z.boolean() }),
   z.object({
@@ -146,6 +157,7 @@ export const schermActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("serveer"), id: id.nullable().default(null), tafelId: id.nullable().default(null), terug: z.boolean().default(false) }),
   z.object({ actie: z.literal("bestelling"), tafelId: id.nullable(), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") }),
   z.object({ actie: z.literal("uitverkocht"), id, beschikbaar: z.boolean() }),
+  z.object({ actie: z.literal("voorraad"), id, voorraad: z.number().int().min(0).max(100_000).nullable() }),
   z.object({ actie: z.literal("reservering-status"), id, status: reserveringStatus }),
   z.object({ actie: z.literal("reservering-tafel"), id, tafelId: id.nullable() }),
   z.object({ actie: z.literal("inloop"), personen: z.number().int().min(1).max(100), naam: tekst(80).default(""), tafelId: id.nullable().default(null) }),

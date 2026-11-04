@@ -51,11 +51,20 @@ export async function plaatsBestelling(
   if (b.tafelId && !(await prisma.horecaTafel.findFirst({ where: { id: b.tafelId, zaakId: zaak.id }, select: { id: true } }))) {
     throw AppError.validation("Kies een bestaande tafel.");
   }
-  const kaart = await prisma.horecaItem.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, btw: true } });
+  const kaart = await prisma.horecaItem.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, btw: true, opties: true, voorraad: true } });
   const r = bouwRegels(b.mand, kaart);
   if ("fout" in r) throw AppError.validation(r.fout);
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`horeca-bestelling:${zaak.id}`}))`;
+    // voorraad afboeken onder hetzelfde slot; op nul is het gerecht vanzelf uitverkocht
+    for (const k of kaart) {
+      if (typeof k.voorraad !== "number") continue;
+      const n = r.regels.filter((x) => x.itemId === k.id).reduce((s, x) => s + x.aantal, 0);
+      if (!n) continue;
+      const af = await tx.horecaItem.updateMany({ where: { id: k.id, zaakId: zaak.id, voorraad: { gte: n } }, data: { voorraad: { decrement: n } } });
+      if (!af.count) throw AppError.conflict(`Van ${k.naam} is net de laatste besteld. Ververs de kaart.`);
+      await tx.horecaItem.updateMany({ where: { id: k.id, voorraad: 0 }, data: { beschikbaar: false } });
+    }
     const laatste = await tx.horecaBestelling.findFirst({ where: { zaakId: zaak.id }, orderBy: { nummer: "desc" }, select: { nummer: true } });
     return tx.horecaBestelling.create({
       data: {
@@ -119,8 +128,19 @@ export async function zetBestelStatus(zaak: HorecaZaak, id: string, status: Hore
     await verplaatsFase(zaak, { id }, "alles", stapVoorStatus(status));
     return;
   }
-  const r = await prisma.horecaBestelling.updateMany({ where: { id, zaakId: zaak.id }, data: { status } });
-  if (!r.count) throw AppError.notFound("Bestelling niet gevonden.");
+  // annuleren: wat van de voorraad afging, komt terug (één keer, onder een rijslot)
+  await prisma.$transaction(async (tx) => {
+    const rij = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE id = ${id} AND "zaakId" = ${zaak.id} FOR UPDATE`;
+    if (!rij.length) throw AppError.notFound("Bestelling niet gevonden.");
+    const b = await tx.horecaBestelling.findUniqueOrThrow({ where: { id }, select: { status: true, regels: true } });
+    if (b.status === "GEANNULEERD") return;
+    const per = new Map<string, number>();
+    for (const r of leesRegels(b.regels)) if (r.itemId) per.set(r.itemId, (per.get(r.itemId) ?? 0) + r.aantal);
+    for (const [itemId, n] of per) {
+      await tx.horecaItem.updateMany({ where: { id: itemId, zaakId: zaak.id, voorraad: { not: null } }, data: { voorraad: { increment: n }, beschikbaar: true } });
+    }
+    await tx.horecaBestelling.update({ where: { id }, data: { status } });
+  });
 }
 
 /** Na het afrekenen (pin, contant): de onbetaalde bestellingen van de tafel als betaald, de tafel is weer vrij. */

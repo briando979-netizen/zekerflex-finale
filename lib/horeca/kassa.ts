@@ -45,7 +45,9 @@ export function rekeningVan(bestellingen: readonly RekeningBestelling[]): Rekeni
   return bestellingen
     .filter((b) => !b.betaald && b.status !== "GEANNULEERD")
     .flatMap((b) =>
-      b.regels.flatMap((r, index) => (open(r) > 0 ? [{ bestellingId: b.id, index, nummer: b.nummer, naam: r.naam, prijsCent: r.prijsCent, aantal: open(r), btw: isBtw(r.btw) ? r.btw : STANDAARD_BTW }] : [])),
+      b.regels.flatMap((r, index) =>
+        open(r) > 0 ? [{ bestellingId: b.id, index, nummer: b.nummer, naam: r.keuze ? `${r.naam} (${r.keuze})` : r.naam, prijsCent: r.prijsCent, aantal: open(r), btw: isBtw(r.btw) ? r.btw : STANDAARD_BTW }] : [],
+      ),
     );
 }
 

@@ -45,6 +45,10 @@ export interface SchermItem {
   categorieId: string | null;
   allergenen: string[];
   vegetarisch: boolean;
+  /** null = onbeperkt */
+  voorraad: number | null;
+  /** keuzegroepen (Json; in de browser met leesOpties gelezen) */
+  opties: unknown;
 }
 
 export interface Oproep {

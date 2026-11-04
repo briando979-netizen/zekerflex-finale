@@ -112,6 +112,7 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                                 </span>
                               )}
                               <strong>{r.aantal}×</strong> {r.naam}
+                              {r.keuze && <span className="font-semibold"> · {r.keuze}</span>}
                               {r.opmerking && <span className="text-neutralx-600"> ({r.opmerking})</span>}
                               {af && <span className="sr-only"> ({r.fase === "klaar" ? "klaar" : "geserveerd"})</span>}
                             </li>

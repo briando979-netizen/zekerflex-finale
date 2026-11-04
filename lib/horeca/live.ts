@@ -112,7 +112,7 @@ export async function schermDataVan(zaak: HorecaZaak, rol: SchermRol) {
     metKaart || rol === "keuken" || rol === "bar"
       ? await prisma.horecaItem.findMany({
           where: { zaakId: zaak.id, ...(station === "alles" ? {} : { station }) },
-          select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, categorieId: true, allergenen: true, vegetarisch: true },
+          select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, categorieId: true, allergenen: true, vegetarisch: true, voorraad: true, opties: true },
           orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }],
         })
       : [];

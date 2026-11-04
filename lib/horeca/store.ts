@@ -5,6 +5,7 @@ import { slugify } from "@/lib/sites/types";
 import { MODULES, zetModule, type ModuleSleutel } from "@/lib/horeca/modules";
 import { schoneAllergenen } from "@/lib/horeca/allergenen";
 import { STANDAARD_TIJDEN, type Openingstijden } from "@/lib/horeca/tijden";
+import type { OptieGroep } from "@/lib/horeca/opties";
 
 // ---------------------------------------------------------------------------
 // Opslag van het horeca-pakket. Elke functie krijgt de zaak mee en controleert
@@ -114,14 +115,22 @@ export async function bewaarItem(
     beschikbaar: boolean;
     station: "keuken" | "bar";
     btw: number;
+    opties: OptieGroep[];
+    voorraad: number | null;
   },
 ) {
   if (it.categorieId && !(await prisma.horecaCategorie.findFirst({ where: { id: it.categorieId, zaakId: zaak.id }, select: { id: true } }))) {
     throw AppError.validation("Kies een bestaande categorie.");
   }
-  const { id, ...rest } = it;
-  // veganistisch is altijd ook vegetarisch
-  const data = { ...rest, allergenen: schoneAllergenen(it.allergenen), vegetarisch: it.vegetarisch || it.veganistisch };
+  const { id, opties, ...rest } = it;
+  // veganistisch is altijd ook vegetarisch; met voorraad 0 is het gerecht uitverkocht
+  const data = {
+    ...rest,
+    opties: opties as unknown as Prisma.InputJsonValue,
+    allergenen: schoneAllergenen(it.allergenen),
+    vegetarisch: it.vegetarisch || it.veganistisch,
+    ...(it.voorraad === 0 ? { beschikbaar: false } : {}),
+  };
   if (!id) {
     const volgorde = await prisma.horecaItem.count({ where: { zaakId: zaak.id, categorieId: it.categorieId } });
     return prisma.horecaItem.create({ data: { ...data, zaakId: zaak.id, volgorde } });
@@ -131,9 +140,17 @@ export async function bewaarItem(
   return prisma.horecaItem.findUniqueOrThrow({ where: { id } });
 }
 
+/** Voorraad zetten (null = onbeperkt); boven nul is het gerecht weer te bestellen, op nul uitverkocht. */
+export async function zetVoorraad(zaak: HorecaZaak, id: string, voorraad: number | null) {
+  const r = await prisma.horecaItem.updateMany({ where: { id, zaakId: zaak.id }, data: { voorraad, ...(voorraad === null || voorraad > 0 ? { beschikbaar: true } : { beschikbaar: false }) } });
+  if (!r.count) throw AppError.notFound("Gerecht niet gevonden.");
+}
+
 export async function zetBeschikbaar(zaak: HorecaZaak, id: string, beschikbaar: boolean) {
   const r = await prisma.horecaItem.updateMany({ where: { id, zaakId: zaak.id }, data: { beschikbaar } });
   if (!r.count) throw AppError.notFound("Gerecht niet gevonden.");
+  // weer leverbaar na een lege voorraad: dan zonder telling verder (onbeperkt)
+  if (beschikbaar) await prisma.horecaItem.updateMany({ where: { id, zaakId: zaak.id, voorraad: 0 }, data: { voorraad: null } });
 }
 
 export async function verwijderItem(zaak: HorecaZaak, id: string) {

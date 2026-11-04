@@ -42,6 +42,7 @@ function Bon({ b, station, nu, doe }: { b: SchermBestelling; station: Station; n
           <li key={i} className={`text-lg leading-snug ${faseVan(r) === "klaar" || faseVan(r) === "geserveerd" ? "text-[#6B7A72] line-through" : "text-white"}`}>
             <strong className="mr-1 tabular-nums">{r.aantal}×</strong>
             {r.naam}
+            {r.keuze && <span className="block pl-7 text-base font-bold text-white">↳ {r.keuze}</span>}
             {r.opmerking && <span className="mt-0.5 block rounded-md bg-[#3A2203] px-2 py-0.5 text-base font-semibold text-[#FDE68A]">{r.opmerking}</span>}
           </li>
         ))}
@@ -142,18 +143,31 @@ export function KeukenScherm({ data, doe, nu, geluid, station }: SchermProps & {
           </section>
         ) : (
           <section aria-label="Uitverkocht zetten" className="rounded-2xl bg-[#141A17] p-4">
-            <p className="text-sm text-[#9BA8A1]">Tik om een gerecht uitverkocht te zetten; gasten zien het meteen op de menukaart.</p>
+            <p className="text-sm text-[#9BA8A1]">Tik om een gerecht uitverkocht te zetten; gasten zien het meteen op de menukaart. Met Aantal tel je af (bijv. nog 12 porties).</p>
             <ul className="mt-3 space-y-1.5">
               {items.map((i) => (
-                <li key={i.id}>
+                <li key={i.id} className="flex gap-1.5">
                   <button
                     type="button"
                     aria-pressed={!i.beschikbaar}
                     onClick={() => void doe({ actie: "uitverkocht", id: i.id, beschikbaar: !i.beschikbaar }, i.beschikbaar ? `${i.naam} is uitverkocht.` : `${i.naam} is weer te bestellen.`)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-base ${i.beschikbaar ? "bg-white/5 text-white" : "bg-[#450A0A] text-[#FECACA]"}`}
+                    className={`flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-base ${i.beschikbaar ? "bg-white/5 text-white" : "bg-[#450A0A] text-[#FECACA]"}`}
                   >
                     <span className="min-w-0 truncate">{i.naam}</span>
-                    <span className="flex-shrink-0 text-xs font-bold uppercase">{i.beschikbaar ? "Op voorraad" : "Uitverkocht"}</span>
+                    <span className="flex-shrink-0 text-xs font-bold uppercase">{!i.beschikbaar ? "Uitverkocht" : i.voorraad !== null ? `Nog ${i.voorraad}` : "Op voorraad"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-shrink-0 rounded-lg px-2 text-xs font-bold text-[#B8C4BD] ring-1 ring-white/15"
+                    onClick={() => {
+                      const invoer = window.prompt(`Hoeveel ${i.naam} zijn er nog? Leeg = onbeperkt.`, i.voorraad === null ? "" : String(i.voorraad));
+                      if (invoer === null) return;
+                      const n = invoer.trim() === "" ? null : Number(invoer);
+                      if (n !== null && (!Number.isInteger(n) || n < 0)) return;
+                      void doe({ actie: "voorraad", id: i.id, voorraad: n }, n === null ? `${i.naam}: onbeperkt.` : `${i.naam}: nog ${n}.`);
+                    }}
+                  >
+                    Aantal<span className="sr-only"> {i.naam}</span>
                   </button>
                 </li>
               ))}

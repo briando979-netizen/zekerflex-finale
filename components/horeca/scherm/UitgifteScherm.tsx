@@ -52,6 +52,7 @@ export function UitgifteScherm({ data, doe, nu, geluid }: SchermProps) {
                         <strong className="mr-1 tabular-nums">{r.aantal}×</strong>
                         {r.naam}
                         <span className="ml-2 text-xs font-semibold uppercase text-[#9BA8A1]">{r.station}</span>
+                        {r.keuze && <span className="block text-base font-bold text-white">↳ {r.keuze}</span>}
                         {r.opmerking && <span className="block text-base text-[#FDE68A]">{r.opmerking}</span>}
                       </li>
                     ))}
