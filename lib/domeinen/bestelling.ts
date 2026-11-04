@@ -39,7 +39,15 @@ export interface Besteller {
 
 export type StartUitkomst = { soort: "betalen"; url: string } | { soort: "bundel"; id: string };
 
-export async function startBestelling(b: Besteller, invoer: string, terugUrl: (pad: string) => string): Promise<StartUitkomst> {
+/** Waar je na de betaalpagina terugkomt: alleen deze eigen pagina's (geen open doorverwijzing). */
+export const TERUG_PADEN = ["/domeinnaam", "/werkgever/website/bouwer", "/studio"] as const;
+export const terugPad = (pad: unknown): string => (typeof pad === "string" && (TERUG_PADEN as readonly string[]).includes(pad) ? pad : "/domeinnaam");
+
+/** Stelt de terugkeer-URL samen: pad + ?bestelling=…&domein=… */
+export const terugMet = (pad: string, uitkomst: "gelukt" | "geannuleerd", domein: string): string =>
+  `${terugPad(pad)}?${new URLSearchParams({ bestelling: uitkomst, domein }).toString()}`;
+
+export async function startBestelling(b: Besteller, invoer: string, terugUrl: (pad: string) => string, terug = "/domeinnaam"): Promise<StartUitkomst> {
   const d = leesDomein(invoer);
   const ext = d ? extensie(d.tld) : undefined;
   if (!d || !ext) throw AppError.validation("Deze domeinnaam of extensie kunnen we (nog) niet aanbieden.");
@@ -76,8 +84,8 @@ export async function startBestelling(b: Besteller, invoer: string, terugUrl: (p
     ],
     metadata: { domeinBestellingId: best.id },
     payment_intent_data: { description: `Domeinnaam ${domein} (1 jaar)`, metadata: { domeinBestellingId: best.id } },
-    success_url: terugUrl(`/domeinnaam?bestelling=gelukt&domein=${encodeURIComponent(domein)}`),
-    cancel_url: terugUrl(`/domeinnaam?bestelling=geannuleerd&domein=${encodeURIComponent(domein)}`),
+    success_url: terugUrl(terugMet(terug, "gelukt", domein)),
+    cancel_url: terugUrl(terugMet(terug, "geannuleerd", domein)),
   });
   if (!sessie.url) throw AppError.upstream("Stripe gaf geen betaalpagina terug.");
   await prisma.domeinBestelling.update({ where: { id: best.id }, data: { stripeSessionId: sessie.id } });

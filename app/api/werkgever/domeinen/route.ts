@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { bestellingenVan, startBestelling } from "@/lib/domeinen/bestelling";
+import { bestellingenVan, startBestelling, terugPad } from "@/lib/domeinen/bestelling";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-const schema = z.object({ domein: z.string().trim().min(3).max(260) });
+const schema = z.object({ domein: z.string().trim().min(3).max(260), terug: z.string().max(80).optional() });
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -47,7 +47,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw AppError.validation("Kies een domeinnaam.");
     const basis = env.APP_BASE_URL.replace(/\/+$/, "");
-    return NextResponse.json(await startBestelling(b, parsed.data.domein, (pad) => `${basis}${pad}`));
+    // terug: alleen een vaste eigen pagina (terugPad in lib/domeinen/bestelling.ts)
+    return NextResponse.json(await startBestelling(b, parsed.data.domein, (pad) => `${basis}${pad}`, terugPad(parsed.data.terug)));
   } catch (err) {
     return fout(err);
   }

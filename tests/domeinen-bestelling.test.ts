@@ -39,7 +39,7 @@ vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: () => ({}) }));
 vi.mock("@/lib/mail/hosting/transip", () => ({ transipConfigured: () => false, domainAvailability: async () => null }));
 
 import { metBtw } from "@/lib/domeinen/extensies";
-import { bundelVoor, MAG_NAAR, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
+import { bundelVoor, MAG_NAAR, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
 
 const best = (extra: Record<string, unknown> = {}) => ({
   id: "b1",
@@ -77,6 +77,20 @@ describe("btw", () => {
     expect(metBtw(995)).toEqual({ exclCent: 995, btwCent: 209, inclCent: 1204 });
     expect(metBtw(1495)).toEqual({ exclCent: 1495, btwCent: 314, inclCent: 1809 });
     expect(metBtw(0)).toEqual({ exclCent: 0, btwCent: 0, inclCent: 0 });
+  });
+});
+
+describe("terug na de betaalpagina", () => {
+  it("alleen vaste eigen pagina's, anders /domeinnaam", () => {
+    expect(terugPad("/werkgever/website/bouwer")).toBe("/werkgever/website/bouwer");
+    expect(terugPad("/studio")).toBe("/studio");
+    for (const slecht of ["https://evil.example", "//evil.example", "/werkgever/website/bouwer?x=1", "/admin", undefined, 42]) {
+      expect(terugPad(slecht)).toBe("/domeinnaam");
+    }
+  });
+  it("zet uitkomst en domein netjes in de querystring", () => {
+    expect(terugMet("/werkgever/website/bouwer", "gelukt", "café.nl")).toBe("/werkgever/website/bouwer?bestelling=gelukt&domein=caf%C3%A9.nl");
+    expect(terugMet("//evil.example", "geannuleerd", "a.nl")).toBe("/domeinnaam?bestelling=geannuleerd&domein=a.nl");
   });
 });
 

@@ -46,7 +46,18 @@ const BESTEL_LABEL: Record<BestelStatus, string> = {
 // vraag hem aan (of verhuis je eigen domein). Een ingelogd bedrijf bestelt en
 // betaalt meteen (/api/werkgever/domeinen) en ziet zijn domeinen. Losse
 // formulieren, nooit genest. Leest /api/domeinen/zoek, post naar /api/domeinen/aanvraag.
-export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
+export function DomeinZoeker({
+  startNaam = "",
+  terugNaar = "/domeinnaam",
+  smal = false,
+}: {
+  startNaam?: string;
+  /** waar je na de betaalpagina terugkomt (lib/domeinen/bestelling.ts TERUG_PADEN) */
+  terugNaar?: string;
+  /** in een smal paneel (zoals de websitebouwer): velden onder elkaar */
+  smal?: boolean;
+}) {
+  const rij = smal ? "" : "sm:flex-row";
   const id = useId();
   const [zoek, setZoek] = useState(startNaam);
   const [bezig, setBezig] = useState(false);
@@ -96,7 +107,7 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={(e) => void zoeken(e)} role="search" aria-label="Domeinnaam zoeken" className="flex flex-col gap-3 sm:flex-row">
+      <form onSubmit={(e) => void zoeken(e)} role="search" aria-label="Domeinnaam zoeken" className={`flex flex-col gap-3 ${rij}`}>
         <label htmlFor={`${id}-zoek`} className="sr-only">
           Welke domeinnaam wil je?
         </label>
@@ -158,7 +169,7 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
           <label htmlFor={`${id}-verhuis`} className="block text-sm font-semibold text-ink">
             Heb je al een domeinnaam? Verhuis hem naar ZekerFlex
           </label>
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+          <div className={`mt-2 flex flex-col gap-3 ${rij}`}>
             <input id={`${id}-verhuis`} className={`${VELD} sm:flex-1`} value={verhuis} onChange={(e) => setVerhuis(e.target.value)} placeholder="jouwbedrijf.nl" spellCheck={false} maxLength={120} />
             <button type="submit" className="btn-ghost justify-center px-5 py-2.5">
               Verhuizen
@@ -169,9 +180,9 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
 
       {keuze &&
         (werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null ? (
-          <Bestellen key={keuze.domein} domein={keuze.domein} prijsCent={keuze.prijsCent} onAnnuleer={() => setKeuze(null)} onKlaar={() => void laadMijn()} />
+          <Bestellen key={keuze.domein} domein={keuze.domein} prijsCent={keuze.prijsCent} terugNaar={terugNaar} onAnnuleer={() => setKeuze(null)} onKlaar={() => void laadMijn()} />
         ) : (
-          <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} onAnnuleer={() => setKeuze(null)} />
+          <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} smal={smal} onAnnuleer={() => setKeuze(null)} />
         ))}
       {keuze && !werkgever && keuze.soort === "registreren" && (
         <p className="text-sm text-neutralx-600">
@@ -217,7 +228,7 @@ function MijnDomeinen({ lijst }: { lijst: MijnDomein[] }) {
   );
 }
 
-function Bestellen({ domein, prijsCent, onAnnuleer, onKlaar }: { domein: string; prijsCent: number; onAnnuleer: () => void; onKlaar: () => void }) {
+function Bestellen({ domein, prijsCent, terugNaar, onAnnuleer, onKlaar }: { domein: string; prijsCent: number; terugNaar: string; onAnnuleer: () => void; onKlaar: () => void }) {
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [bundel, setBundel] = useState(false);
@@ -226,7 +237,7 @@ function Bestellen({ domein, prijsCent, onAnnuleer, onKlaar }: { domein: string;
   async function bestel() {
     setBezig(true);
     setMelding(null);
-    const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ domein }) }).catch(() => null);
+    const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ domein, terug: terugNaar }) }).catch(() => null);
     if (!r?.ok) {
       setBezig(false);
       return setMelding(await fout(r, "Bestellen lukte niet. Probeer het opnieuw of mail sales@zekerflex.com."));
@@ -287,7 +298,7 @@ function Bestellen({ domein, prijsCent, onAnnuleer, onKlaar }: { domein: string;
   );
 }
 
-function Aanvraag({ domein, soort, onAnnuleer }: { domein: string; soort: Soort; onAnnuleer: () => void }) {
+function Aanvraag({ domein, soort, smal, onAnnuleer }: { domein: string; soort: Soort; smal: boolean; onAnnuleer: () => void }) {
   const id = useId();
   const [v, setV] = useState({ naam: "", bedrijf: "", email: "", telefoon: "", bericht: "", consent: false });
   const [bezig, setBezig] = useState(false);
@@ -342,12 +353,12 @@ function Aanvraag({ domein, soort, onAnnuleer }: { domein: string; soort: Soort;
           ? "We leggen de naam voor je vast en koppelen hem aan je website, webshop of e-mail. Je krijgt eerst een bevestiging met de prijs."
           : "Je houdt je domeinnaam; alleen de beheerder wordt ZekerFlex. Je website en mail blijven gewoon werken. Je hebt de verhuiscode van je huidige provider nodig."}
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className={`mt-4 grid gap-4 ${smal ? "" : "sm:grid-cols-2"}`}>
         {veld("naam", "Je naam", { required: true, minLength: 2, maxLength: 120, autoComplete: "name" })}
         {veld("bedrijf", "Bedrijf (mag leeg)", { maxLength: 160, autoComplete: "organization" })}
         {veld("email", "E-mailadres", { required: true, type: "email", maxLength: 200, autoComplete: "email" })}
         {veld("telefoon", "Telefoon (mag leeg)", { type: "tel", maxLength: 40, autoComplete: "tel" })}
-        <div className="sm:col-span-2">
+        <div className={smal ? "" : "sm:col-span-2"}>
           <label htmlFor={`${id}-bericht`} className="block text-sm font-semibold text-ink">
             Bericht (mag leeg)
           </label>

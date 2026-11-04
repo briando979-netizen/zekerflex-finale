@@ -6,6 +6,7 @@ import { blockSummary, renderPage } from "@/lib/sites/render";
 import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
 import SiteStats from "@/components/app/SiteStats";
 import { categorieen } from "@/lib/sites/winkel";
+import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -852,7 +853,12 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
           </p>
         )}
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
-        <p className="text-xs text-neutralx-500">Nog geen domein? Koop er een bij een domeinprovider, bijvoorbeeld TransIP, Hostnet of Strato.</p>
+        <details className="rounded-lg border border-hair p-3">
+          <summary className="cursor-pointer font-semibold text-ink">Nog geen domeinnaam? Zoek en bestel er één</summary>
+          <div className="mt-3">
+            <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal />
+          </div>
+        </details>
       </div>
     );
   }
