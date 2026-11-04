@@ -10,7 +10,7 @@ import { proposalOffer } from "@/lib/sales/website-proposal";
 import { createLead } from "@/lib/sales/leads";
 import { maakLeadWarm } from "@/lib/scans/lead";
 import { getScanLog, koppel, logStap } from "@/lib/scans/store";
-import { dealEuro, dealOpties, dealTotaal, schoneKeuze, SOORT_LABEL, type DealInput, type DealOptie, type DealPrijzen, type ScanLog, type ScanSoort } from "@/lib/scans/model";
+import { dealEuro, dealOpties, dealTotaal, isTestEmail, isTestHost, schoneKeuze, SOORT_LABEL, type DealInput, type DealOptie, type DealPrijzen, type ScanLog, type ScanSoort } from "@/lib/scans/model";
 
 // ---------------------------------------------------------------------------
 // Het voorstel op maat bij een gratis scan (/deal/<id>): met de bedrijfsgegevens
@@ -111,6 +111,11 @@ export async function dealAkkoord(id: string, persoon: { naam: string; email: st
   const next: Deal = { ...d, status: "akkoord", keuze, akkoord: { at: now, naam: persoon.naam, email: persoon.email, telefoon: persoon.telefoon ?? null } };
   await kvSet(KEY(id), next);
 
+  // een test (testbedrijf of testadres): wel vastleggen, maar geen lead en geen mail naar sales of de klant
+  if (isTestHost(d.bedrijf.host) || isTestEmail(persoon.email)) {
+    await logStap(d.scan.soort, d.scan.scanId, "deal-akkoord", `${keuze.join(",")} (test)`);
+    return next;
+  }
   const base = env.APP_BASE_URL.replace(/\/+$/, "");
   const gekozen = d.opties.filter((o) => keuze.includes(o.id));
   const regels = gekozen.map((o) => `${o.naam}${o.eenmaligCent ? ` (${dealEuro(o.eenmaligCent)} eenmalig)` : ""}${o.maandCent ? ` (${dealEuro(o.maandCent)} per maand)` : ""}${!o.eenmaligCent && !o.maandCent && o.prijsTekst ? ` (${o.prijsTekst})` : ""}`);

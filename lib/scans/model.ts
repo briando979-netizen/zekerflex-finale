@@ -85,6 +85,12 @@ export function isTestHost(host: string | null): boolean {
   return /(^|\.)(example\.(com|org|net)|zekerflex\.(com|nl))$/.test(h) || /\.(test|example|invalid|localhost|local)$/.test(h) || h === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(h);
 }
 
+/**
+ * Een testadres voor mail: de RFC 2606-domeinen (example.com/.net/.org) en .test/.example/.invalid/localhost.
+ * lib/mail verstuurt example.com wél (live tests gebruiken het); meldingen aan sales slaan we bij een test dus zelf over.
+ */
+export const isTestEmail = (email: string) => /@([^@]+\.)?example\.(com|net|org)$/i.test(email.trim()) || /\.(test|example|invalid|localhost)$/i.test(email.trim());
+
 // --- deal op maat ------------------------------------------------------------------
 
 export type Branche = "horeca" | "rijschool" | "bouw" | "zorg" | "schoonmaak" | "logistiek" | "algemeen";

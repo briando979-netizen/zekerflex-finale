@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dealOpties, dealTotaal, isTestHost, metStap, schoneKeuze, statusVan, trechter, type DealInput, type DealPrijzen, type ScanLog } from "@/lib/scans/model";
+import { dealOpties, dealTotaal, isTestEmail, isTestHost, metStap, schoneKeuze, statusVan, trechter, type DealInput, type DealPrijzen, type ScanLog } from "@/lib/scans/model";
 
 // Scans & deals: het logboek van de gratis scans, wat de bezoeker daarna deed,
 // en het voorstel op maat met echte prijzen.
@@ -72,6 +72,11 @@ describe("logboek en status", () => {
     for (const h of ["example.com", "www.example.com", "shop.zekerflex.com", "bakkerij.test", "localhost", "10.0.0.1"]) expect(isTestHost(h), h).toBe(true);
     for (const h of ["bakkerij.nl", "examplebakkerij.nl", "marktzichtetenendrinken.nl"]) expect(isTestHost(h), h).toBe(false);
     expect(isTestHost(null)).toBe(false);
+  });
+
+  it("herkent testadressen voor mail, ook example.com (dat lib/mail wel verstuurt)", () => {
+    for (const e of ["test@example.com", "a@sub.example.org", "x@bedrijf.test", "y@localhost"]) expect(isTestEmail(e), e).toBe(true);
+    for (const e of ["info@bakkerij.nl", "piet@examplebakkerij.nl"]) expect(isTestEmail(e), e).toBe(false);
   });
 });
 
