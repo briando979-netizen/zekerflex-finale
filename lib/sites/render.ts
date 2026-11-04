@@ -453,9 +453,9 @@ function header(ctx: Ctx, current: Page): string {
     : esc(ctx.bedrijf.naam);
   const menu = `<details class="menu"><summary>Menu</summary><nav aria-label="Menu"><ul>${links}</ul></nav></details>`;
   if (ctx.premium) {
-    return `<a class="skip" href="#inhoud">Naar de inhoud</a>${topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
+    return `${topBar(ctx)}<header><div class="wrap bar prem"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav><div class="acts">${headerButton(ctx, current)}${menu}</div></div></header>`;
   }
-  return `<a class="skip" href="#inhoud">Naar de inhoud</a><header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${menu}</div></header>`;
+  return `<header><div class="wrap bar"><a class="logo" href="${esc(ctx.preview ? "#" : homeHref(ctx.root))}">${logo}</a><nav class="desk" aria-label="Hoofdmenu"><ul>${links}</ul></nav>${menu}</div></header>`;
 }
 
 const telHref = (raw: string) => `tel:${raw.replace(/[^\d+]/g, "")}`;
@@ -566,7 +566,7 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
     : ctx.voorbeeld
       ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
       : "";
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}</body></html>`;
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}</body></html>`;
 }
 
 function context(site: RenderableSite, opts: RenderOptions): Ctx {
