@@ -117,10 +117,11 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
       return html(renderWinkelPagina(snapshot, { soort: "winkel" }, opts) ?? "");
     }
     if (first === "bestellen") {
-      // from a product page: ?p=<id>&aantal=<n> fills in that product
+      // from a product page: ?p=<id>&aantal=<n>&o0=<maat>&o1=<kleur> fills in that product
       const p = q.get("p") ?? "";
       const n = Math.max(1, Math.min(MAX_PER_PRODUCT, Math.floor(Number(q.get("aantal") ?? 1)) || 1));
-      const invoer = /^p[a-z0-9]{6,20}$/.test(p) ? { ...LEGE_INVOER, aantallen: { [p]: n } } : undefined;
+      const keuze = [q.get("o0") ?? "", q.get("o1") ?? ""].map((s) => s.slice(0, 40));
+      const invoer = /^p[a-z0-9]{6,20}$/.test(p) ? { ...LEGE_INVOER, aantallen: { [p]: n }, keuzes: { [p]: keuze } } : undefined;
       return new Response(renderWinkelPagina(snapshot, { soort: "bestellen", invoer }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
     }
     if (first === "besteld") {

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { foutVan, useStudio } from "@/components/studio/context";
 import { Card, Empty, IExternal, IImage, ITag, IX, PageHead, Pill, btn, input } from "@/components/studio/ui";
 import { slugify, type Media, type SiteProduct } from "@/lib/sites/types";
-import { categorieen, euro, leesBedrag, productSlug } from "@/lib/sites/winkel";
+import { MAX_OPTIES, categorieen, euro, leesBedrag, productSlug } from "@/lib/sites/winkel";
 
 // ---------------------------------------------------------------------------
 // Websitestudio → één product: titel en omschrijving, foto's (slepen, kiezen,
@@ -70,8 +70,11 @@ export default function ProductEditor({ id }: { id: string }) {
     if (!p.naam.trim()) return setFout("Geef het product een naam.");
     if (prijsCents == null) return setFout("Vul een geldige prijs in, bijvoorbeeld 12,50.");
     if (was.trim() && wasCents == null) return setFout("Vul bij 'was' een geldig bedrag in, of laat het leeg.");
+    const halveKeuze = (p.opties ?? []).find((o) => !o.naam.trim() || o.waarden.length === 0);
+    if (halveKeuze) return setFout(`Geef de keuze "${halveKeuze.naam || "zonder naam"}" een naam en minstens één mogelijkheid, of haal hem weg.`);
     const slug = productSlug(p.slug || p.naam, anderen.map((x) => x.slug));
-    const klaar: SiteProduct = { ...p, naam: p.naam.trim(), slug, prijsCents, oudePrijsCents: wasCents && wasCents > prijsCents ? wasCents : null };
+    const opties = (p.opties ?? []).map((o) => ({ naam: o.naam.trim(), waarden: o.waarden }));
+    const klaar: SiteProduct = { ...p, naam: p.naam.trim(), slug, prijsCents, oudePrijsCents: wasCents && wasCents > prijsCents ? wasCents : null, opties };
     setBezig(true);
     const err = await saveWinkel({ ...winkel, producten: nieuw ? [...winkel.producten, klaar] : winkel.producten.map((x) => (x.id === klaar.id ? klaar : x)) });
     setBezig(false);
@@ -147,6 +150,34 @@ export default function ProductEditor({ id }: { id: string }) {
             <FotoBeheer naam={p.naam} fotos={p.fotos} onFotos={(fotos) => zet({ fotos })} />
           </Card>
 
+          <Card
+            title="Varianten"
+            actions={
+              (p.opties?.length ?? 0) < MAX_OPTIES && (
+                <button type="button" onClick={() => zet({ opties: [...(p.opties ?? []), { naam: (p.opties?.length ?? 0) === 0 ? "Maat" : "Kleur", waarden: [] }] })} className={btn.quiet}>
+                  + Keuze toevoegen
+                </button>
+              )
+            }
+          >
+            {!p.opties?.length ? (
+              <p className="text-sm text-[#616161]">Heeft dit product maten of kleuren? Voeg een keuze toe, bijvoorbeeld Maat met S, M, L. De klant kiest die op de productpagina en ziet zijn keuze in de bestelling.</p>
+            ) : (
+              <div className="space-y-3">
+                {p.opties.map((o, i) => (
+                  <OptieRij
+                    key={i}
+                    naam={o.naam}
+                    waarden={o.waarden}
+                    onNaam={(naam) => zet({ opties: (p.opties ?? []).map((x, j) => (j === i ? { ...x, naam } : x)) })}
+                    onWaarden={(waarden) => zet({ opties: (p.opties ?? []).map((x, j) => (j === i ? { ...x, waarden } : x)) })}
+                    onWeg={() => zet({ opties: (p.opties ?? []).filter((_, j) => j !== i) })}
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
+
           <Card title="Prijs">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
@@ -189,6 +220,20 @@ export default function ProductEditor({ id }: { id: string }) {
               <option value="online">Online: zichtbaar op je website</option>
               <option value="verborgen">Verborgen</option>
             </select>
+          </Card>
+
+          <Card title="Voorraad">
+            <label className="flex items-center gap-2 text-sm text-[#303030]">
+              <input type="checkbox" checked={p.voorraad != null} onChange={(e) => zet({ voorraad: e.target.checked ? (basis.voorraad ?? 10) : null })} className="h-4 w-4 accent-[#1a1a1a]" />
+              Voorraad bijhouden
+            </label>
+            {p.voorraad != null && (
+              <label className="mt-3 block">
+                <span className="mb-1 block text-sm font-medium text-[#303030]">Aantal op voorraad</span>
+                <input className={input} type="number" inputMode="numeric" min={0} max={1_000_000} value={p.voorraad} onChange={(e) => zet({ voorraad: Math.max(0, Math.min(1_000_000, Math.floor(Number(e.target.value)) || 0)) })} />
+                <span className="mt-1 block text-xs text-[#707070]">Elke bestelling haalt het aantal eraf. Bij 0 staat het product vanzelf op uitverkocht; bij 5 of minder ziet de klant &quot;Nog 3 op voorraad&quot;.</span>
+              </label>
+            )}
             <label className="mt-3 flex items-center gap-2 text-sm text-[#303030]">
               <input type="checkbox" checked={p.uitverkocht} onChange={(e) => zet({ uitverkocht: e.target.checked })} className="h-4 w-4 accent-[#1a1a1a]" />
               Uitverkocht (wel zichtbaar, niet te bestellen)
@@ -217,6 +262,43 @@ export default function ProductEditor({ id }: { id: string }) {
         </div>
       </div>
     </>
+  );
+}
+
+/** Eén keuze (Maat, Kleur): de naam en de waarden, met komma's gescheiden; eronder de knoppen zoals de klant ze ziet. */
+function OptieRij({ naam, waarden, onNaam, onWaarden, onWeg }: { naam: string; waarden: string[]; onNaam: (n: string) => void; onWaarden: (w: string[]) => void; onWeg: () => void }) {
+  const [tekst, setTekst] = useState(waarden.join(", "));
+  return (
+    <div className="rounded-xl border border-[#ebebeb] p-3">
+      <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:items-end">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-[#616161]">Keuze</span>
+          <input className={input} value={naam} maxLength={30} placeholder="Maat" onChange={(e) => onNaam(e.target.value)} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-[#616161]">Mogelijkheden, met komma&apos;s</span>
+          <input
+            className={input}
+            value={tekst}
+            placeholder="S, M, L, XL"
+            onChange={(e) => {
+              setTekst(e.target.value);
+              onWaarden([...new Set(e.target.value.split(",").map((s) => s.trim().slice(0, 40)).filter(Boolean))].slice(0, 20));
+            }}
+          />
+        </label>
+        <button type="button" onClick={onWeg} aria-label={`Keuze ${naam || ""} weghalen`} className="grid h-9 w-9 place-items-center rounded-lg text-[#b42318] hover:bg-[#fff5f5]">
+          <IX width={16} height={16} />
+        </button>
+      </div>
+      {waarden.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={`${naam || "Keuze"}: zo ziet de klant het`}>
+          {waarden.map((w) => (
+            <li key={w} className="rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-1 text-xs font-medium text-[#303030]">{w}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

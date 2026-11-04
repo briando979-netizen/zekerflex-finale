@@ -6,8 +6,8 @@ import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { renderWinkelPagina } from "@/lib/sites/render";
 import { siteHeaders, siteText, type ServeOptions } from "@/lib/sites/serve";
-import type { LiveSite } from "@/lib/sites/store";
-import { berekenBestelling, euro, leesBestelForm, winkelVan, type Bestelconcept } from "@/lib/sites/winkel";
+import { getSite, saveWinkel, type LiveSite } from "@/lib/sites/store";
+import { berekenBestelling, euro, leesBestelForm, verlaagVoorraad, winkelVan, type Bestelconcept } from "@/lib/sites/winkel";
 
 // ---------------------------------------------------------------------------
 // Bestellingen uit de winkel van een klantsite (lib/sites/winkel.ts).
@@ -112,6 +112,11 @@ export async function handleSiteOrder(request: Request, live: LiveSite, opts: Se
   }
 
   const rec = await bewaarBestelling(live.siteId, concept);
+  // bijgehouden voorraad omlaag (de winkel staat live, dus de site zoals hij nu is); mislukt dat, dan staat de bestelling er wel
+  if (concept.regels.some((r) => winkel.producten.find((p) => p.id === r.productId)?.voorraad != null)) {
+    const site = await getSite(live.siteId).catch(() => null);
+    if (site?.winkel) await saveWinkel(site.id, verlaagVoorraad(site.winkel, concept.regels)).catch((err) => logger.warn("site stock not lowered", { siteId: live.siteId, err: String(err) }));
+  }
   const to = live.snapshot.bedrijf.email;
   if (to) {
     await sendMail({

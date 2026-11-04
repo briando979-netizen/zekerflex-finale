@@ -44,6 +44,11 @@ export const productSchema = z.object({
   categorie: z.string().trim().max(60),
   zichtbaar: z.boolean(),
   uitverkocht: z.boolean(),
+  voorraad: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  opties: z
+    .array(z.object({ naam: z.string().trim().min(1).max(30), waarden: z.array(z.string().trim().min(1).max(40)).min(1).max(20) }))
+    .max(2)
+    .optional(),
   bron: z.object({ zekerflex: z.string().max(60) }).optional(),
 });
 

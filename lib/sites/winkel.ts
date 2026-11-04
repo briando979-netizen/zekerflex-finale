@@ -24,7 +24,22 @@ export function leesBedrag(tekst: string): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 100_000 ? Math.round(n * 100) : null;
 }
 
-export const winkelVan =(site: { winkel?: Winkel | undefined }): Winkel => site.winkel ?? LEGE_WINKEL;
+export const winkelVan = (site: { winkel?: Winkel | undefined }): Winkel => site.winkel ?? LEGE_WINKEL;
+
+/** Uitverkocht: met de hand aangezet, of de bijgehouden voorraad is op. */
+export const isUitverkocht = (p: Pick<SiteProduct, "uitverkocht" | "voorraad">): boolean => p.uitverkocht || (p.voorraad != null && p.voorraad <= 0);
+
+/** Hoeveel er in één keer te bestellen is: 99, of minder als de voorraad lager is. */
+export const maxBestelbaar = (p: Pick<SiteProduct, "voorraad">): number => Math.max(0, Math.min(MAX_PER_PRODUCT, p.voorraad ?? MAX_PER_PRODUCT));
+
+/** Na een bestelling: de bijgehouden voorraad omlaag (nooit onder 0); producten zonder bijgehouden voorraad blijven zoals ze zijn. */
+export function verlaagVoorraad(w: Winkel, regels: Pick<BestelRegel, "productId" | "aantal">[]): Winkel {
+  const besteld = new Map<string, number>();
+  for (const r of regels) besteld.set(r.productId, (besteld.get(r.productId) ?? 0) + r.aantal);
+  return { ...w, producten: w.producten.map((p) => (p.voorraad != null && besteld.has(p.id) ? { ...p, voorraad: Math.max(0, p.voorraad - (besteld.get(p.id) ?? 0)) } : p)) };
+}
+
+export const MAX_OPTIES = 2;
 
 /** Wat bezoekers zien: zichtbare producten, in de volgorde van de bouwer. */
 export const zichtbareProducten = (w: Winkel): SiteProduct[] => w.producten.filter((p) => p.zichtbaar);
@@ -47,6 +62,8 @@ export type Levering = "afhalen" | "bezorgen";
 export interface BestelInvoer {
   /** product-id → aantal */
   aantallen: Record<string, number>;
+  /** product-id → de gekozen waarde per optie (maat, kleur), in de volgorde van de opties */
+  keuzes: Record<string, string[]>;
   levering: Levering;
   naam: string;
   email: string;
@@ -58,14 +75,17 @@ export interface BestelInvoer {
 }
 
 /** Een leeg formulier (de bestelpagina vult er één product in vanaf een productpagina). */
-export const LEGE_INVOER: BestelInvoer = { aantallen: {}, levering: "afhalen", naam: "", email: "", telefoon: "", straat: "", postcode: "", plaats: "", opmerking: "" };
+export const LEGE_INVOER: BestelInvoer = { aantallen: {}, keuzes: {}, levering: "afhalen", naam: "", email: "", telefoon: "", straat: "", postcode: "", plaats: "", opmerking: "" };
 
 /** Een bestelnummer zoals lib/sites/bestellingen.ts ze maakt: zes tekens zonder 0/O, 1/I/L. */
 export const isBestelnummer = (s: string) => /^[A-HJ-NP-Z2-9]{6}$/.test(s);
 
 export interface BestelRegel {
   productId: string;
+  /** met de gekozen variant erachter: "Hoodie (M, Zwart)" */
   naam: string;
+  /** de gekozen variant: "M, Zwart" */
+  variant?: string | undefined;
   prijsCents: number;
   aantal: number;
   totaalCents: number;
@@ -81,10 +101,16 @@ export interface Bestelconcept {
 
 const knip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
-/** Het bestelformulier uitlezen: n_<productId> = aantal, de rest als tekst met een maximum. */
+/** Het bestelformulier uitlezen: n_<productId> = aantal, k_<productId>_<optie> = keuze, de rest als tekst met een maximum. */
 export function leesBestelForm(form: { get(naam: string): unknown } & Iterable<[string, unknown]>): BestelInvoer {
   const aantallen: Record<string, number> = {};
+  const keuzes: Record<string, string[]> = {};
   for (const [naam, waarde] of form) {
+    const k = /^k_(p[a-z0-9]{6,20})_([01])$/.exec(naam);
+    if (k?.[1] && k[2]) {
+      (keuzes[k[1]] ??= [])[Number(k[2])] = knip(waarde, 40);
+      continue;
+    }
     const m = /^n_(p[a-z0-9]{6,20})$/.exec(naam);
     if (!m?.[1]) continue;
     const n = Math.floor(Number(waarde));
@@ -92,6 +118,7 @@ export function leesBestelForm(form: { get(naam: string): unknown } & Iterable<[
   }
   return {
     aantallen,
+    keuzes,
     levering: form.get("levering") === "bezorgen" ? "bezorgen" : "afhalen",
     naam: knip(form.get("naam"), 100),
     email: knip(form.get("email"), 200),
@@ -115,11 +142,24 @@ export function berekenBestelling(w: Winkel, invoer: BestelInvoer): { concept: B
   for (const p of zichtbareProducten(w)) {
     const aantal = invoer.aantallen[p.id] ?? 0;
     if (aantal <= 0) continue;
-    if (p.uitverkocht) {
+    if (isUitverkocht(p)) {
       fouten.push(`${p.naam} is uitverkocht.`);
       continue;
     }
-    regels.push({ productId: p.id, naam: p.naam, prijsCents: p.prijsCents, aantal, totaalCents: p.prijsCents * aantal });
+    if (p.voorraad != null && aantal > p.voorraad) {
+      fouten.push(`Van ${p.naam} ${p.voorraad === 1 ? "is er nog 1" : `zijn er nog ${p.voorraad}`}.`);
+      continue;
+    }
+    // elke optie (maat, kleur) moet een bestaande keuze hebben
+    const gekozen = invoer.keuzes[p.id] ?? [];
+    const opties = p.opties ?? [];
+    const mist = opties.find((o, i) => !o.waarden.includes(gekozen[i] ?? ""));
+    if (mist) {
+      fouten.push(`Kies ${mist.naam.toLowerCase()} bij ${p.naam}.`);
+      continue;
+    }
+    const variant = opties.length ? opties.map((_, i) => gekozen[i]).join(", ") : undefined;
+    regels.push({ productId: p.id, naam: variant ? `${p.naam} (${variant})` : p.naam, ...(variant ? { variant } : {}), prijsCents: p.prijsCents, aantal, totaalCents: p.prijsCents * aantal });
   }
   if (!regels.length && !fouten.length) fouten.push("Kies bij minstens één product hoeveel je wilt bestellen.");
 

@@ -77,8 +77,17 @@ export interface SiteProduct {
   categorie: string;
   zichtbaar: boolean;
   uitverkocht: boolean;
+  /** how many are left; null/absent = not tracked. At 0 the product counts as sold out; every order lowers it */
+  voorraad?: number | null | undefined;
+  /** choices a customer makes, e.g. Maat (S, M, L) and Kleur (Zwart, Wit); at most two */
+  opties?: ProductOptie[] | undefined;
   /** copied from the ZekerFlex webshop (ShopProduct id), so the builder can show where it came from */
   bron?: { zekerflex: string } | undefined;
+}
+
+export interface ProductOptie {
+  naam: string;
+  waarden: string[];
 }
 
 /** A site's shop: products and how ordering works (no online payment yet: the company settles it). */

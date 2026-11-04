@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { foutVan, useStudio } from "@/components/studio/context";
 import { Card, Empty, IImage, IPlus, ISearch, IStore, ITag, IX, PageHead, Pill, btn, input } from "@/components/studio/ui";
-import { categorieen, euro, productSlug } from "@/lib/sites/winkel";
+import { categorieen, euro, isUitverkocht, productSlug } from "@/lib/sites/winkel";
 import type { Media, SiteProduct } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ export default function Producten() {
   const lijst = winkel.producten.filter((p) => {
     if (filter === "actief" && !p.zichtbaar) return false;
     if (filter === "verborgen" && p.zichtbaar) return false;
-    if (filter === "uitverkocht" && !p.uitverkocht) return false;
+    if (filter === "uitverkocht" && !isUitverkocht(p)) return false;
     if (cat && p.categorie !== cat) return false;
     const q = zoek.trim().toLowerCase();
     return !q || p.naam.toLowerCase().includes(q) || p.categorie.toLowerCase().includes(q);
@@ -134,7 +134,16 @@ export default function Producten() {
                         </div>
                       </td>
                       <td className="px-3 py-2.5">{p.zichtbaar ? <Pill tone="ok">Online</Pill> : <Pill>Verborgen</Pill>}</td>
-                      <td className="px-3 py-2.5">{p.uitverkocht ? <span className="font-medium text-[#b42318]">Uitverkocht</span> : <span className="text-[#616161]">Op voorraad</span>}</td>
+                      <td className="px-3 py-2.5">
+                        {isUitverkocht(p) ? (
+                          <span className="font-medium text-[#b42318]">Uitverkocht</span>
+                        ) : p.voorraad != null ? (
+                          <span className={p.voorraad <= 5 ? "font-medium text-[#8a4b00]" : "text-[#616161]"}>{p.voorraad} op voorraad</span>
+                        ) : (
+                          <span className="text-[#616161]">Op voorraad</span>
+                        )}
+                        {p.opties?.length ? <span className="block text-xs text-[#707070]">{p.opties.map((o) => `${o.waarden.length} ${o.naam.toLowerCase()}`).join(" · ")}</span> : null}
+                      </td>
                       <td className="px-3 py-2.5 text-[#616161]">{p.categorie || "—"}</td>
                       <td className="px-3 py-2.5 text-right font-medium text-[#1a1a1a]">
                         {p.oudePrijsCents && p.oudePrijsCents > p.prijsCents && <s className="mr-1.5 font-normal text-[#707070]">{euro(p.oudePrijsCents)}</s>}

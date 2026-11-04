@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { berekenBestelling, categorieen, euro, leesBestelForm, productSlug, type BestelInvoer } from "@/lib/sites/winkel";
+import { LEGE_INVOER, berekenBestelling, categorieen, euro, isUitverkocht, leesBestelForm, productSlug, verlaagVoorraad, type BestelInvoer } from "@/lib/sites/winkel";
 import { renderPage, renderSitemap, renderWinkelPagina, siteCss } from "@/lib/sites/render";
 import { siteSaveSchema, winkelSchema } from "@/lib/sites/schema";
 import { demoWinkel } from "@/lib/sites/demo";
@@ -31,6 +31,7 @@ const winkel = (over: Partial<Winkel> = {}): Winkel => ({
 
 const invoer = (over: Partial<BestelInvoer> = {}): BestelInvoer => ({
   aantallen: { paaaaaaa1: 2 },
+  keuzes: {},
   levering: "afhalen",
   naam: "Sanne de Vries",
   email: "sanne@example.com",
@@ -84,6 +85,57 @@ describe("winkel: rekenen en controleren", () => {
     form.set("levering", "iets");
     expect(leesBestelForm(form).aantallen).toEqual({ paaaaaaa1: 99 });
     expect(leesBestelForm(form).levering).toBe("afhalen");
+  });
+});
+
+describe("winkel: maten, kleuren en voorraad", () => {
+  const hoodie = product({ id: "phoodie001", naam: "Hoodie", slug: "hoodie", prijsCents: 4995, opties: [{ naam: "Maat", waarden: ["S", "M", "L"] }, { naam: "Kleur", waarden: ["Zwart", "Wit"] }], voorraad: 3 });
+  const w = winkel({ producten: [hoodie, product()] });
+
+  it("vraagt om elke keuze en zet de variant in de bestelregel", () => {
+    expect(berekenBestelling(w, invoer({ aantallen: { phoodie001: 1 } })).fouten).toEqual(["Kies maat bij Hoodie."]);
+    expect(berekenBestelling(w, invoer({ aantallen: { phoodie001: 1 }, keuzes: { phoodie001: ["M", "Paars"] } })).fouten).toEqual(["Kies kleur bij Hoodie."]);
+    const r = berekenBestelling(w, invoer({ aantallen: { phoodie001: 2 }, keuzes: { phoodie001: ["M", "Zwart"] } }));
+    expect(r.concept?.regels[0]).toMatchObject({ naam: "Hoodie (M, Zwart)", variant: "M, Zwart", totaalCents: 9990 });
+  });
+
+  it("bestelt nooit meer dan er op voorraad is, en lege voorraad is uitverkocht", () => {
+    expect(berekenBestelling(w, invoer({ aantallen: { phoodie001: 4 }, keuzes: { phoodie001: ["S", "Wit"] } })).fouten).toEqual(["Van Hoodie zijn er nog 3."]);
+    const op = winkel({ producten: [{ ...hoodie, voorraad: 0 }] });
+    expect(berekenBestelling(op, invoer({ aantallen: { phoodie001: 1 }, keuzes: { phoodie001: ["S", "Wit"] } })).fouten).toEqual(["Hoodie is uitverkocht."]);
+    expect(isUitverkocht({ uitverkocht: false, voorraad: 0 })).toBe(true);
+    expect(isUitverkocht({ uitverkocht: false, voorraad: null })).toBe(false);
+  });
+
+  it("haalt na een bestelling alleen bijgehouden voorraad omlaag, nooit onder nul", () => {
+    const na = verlaagVoorraad(w, [{ productId: "phoodie001", aantal: 2 }, { productId: "paaaaaaa1", aantal: 5 }, { productId: "phoodie001", aantal: 5 }]);
+    expect(na.producten.find((p) => p.id === "phoodie001")?.voorraad).toBe(0);
+    expect(na.producten.find((p) => p.id === "paaaaaaa1")?.voorraad).toBeUndefined();
+  });
+
+  it("leest de keuzes uit het formulier en zet ze terug op de controlepagina", () => {
+    const form = new FormData();
+    form.set("n_phoodie001", "1");
+    form.set("k_phoodie001_0", "L");
+    form.set("k_phoodie001_1", "Wit");
+    form.set("k_phoodie001_7", "fout");
+    const i = { ...invoer(), ...leesBestelForm(form), naam: "Sanne", email: "sanne@example.com", telefoon: "0612345678" };
+    expect(i.keuzes).toEqual({ phoodie001: ["L", "Wit"] });
+    const c = berekenBestelling(w, i).concept!;
+    const html = renderWinkelPagina(site(w), { soort: "controle", concept: c }, opts) ?? "";
+    expect(html).toContain('name="k_phoodie001_0" value="L"');
+    expect(html).toContain("1 × Hoodie (L, Wit)");
+  });
+
+  it("toont keuzelijsten op de productpagina en 'Nog 3 op voorraad'", () => {
+    const html = renderWinkelPagina(site(w), { soort: "product", slug: "hoodie" }, opts) ?? "";
+    expect(html).toContain('<select id="o0" name="o0">');
+    expect(html).toContain('<option value="Zwart">Zwart</option>');
+    expect(html).toContain("Nog 3 op voorraad");
+    expect(html).toContain('max="3"');
+    const bestel = renderWinkelPagina(site(w), { soort: "bestellen", invoer: { ...LEGE_INVOER, aantallen: { phoodie001: 1 }, keuzes: { phoodie001: ["M", ""] } } }, opts) ?? "";
+    expect(bestel).toContain('name="k_phoodie001_0"');
+    expect(bestel).toContain('<option value="M" selected>M</option>');
   });
 });
 
