@@ -78,6 +78,57 @@ export async function maakPaginaMetAi(onderwerp: string): Promise<PaginaInhoud> 
   return { ...inhoud, blokken: inhoud.blokken.slice(0, 10) };
 }
 
+export interface AssistentAntwoord {
+  uitleg: string;
+  /** het hele thema na de wijziging, of null als de stijl gelijk blijft */
+  thema: Thema | null;
+  /** tekstvoorstellen per sleutel uit CONTENT_REGISTRY */
+  teksten: Record<string, string>;
+}
+
+/**
+ * De assistent van de ontwerper: een wens in gewone taal ("warmer, rondere
+ * knoppen", "de homepagekop moet over horeca gaan") wordt een voorstel voor de
+ * stijl en de teksten. Alleen bekende tekst-sleutels, alleen geldige
+ * themawaarden; de eigenaar kiest zelf wat hij overneemt.
+ */
+export async function ontwerpAssistent(vraag: string, huidig: Thema, teksten: { key: string; label: string; waarde: string }[]): Promise<AssistentAntwoord> {
+  aiBeschikbaar();
+  const res = await chatJson<{ uitleg?: unknown; thema?: unknown; teksten?: unknown }>({
+    purpose: "ontwerper",
+    retry: false,
+    timeoutMs: 40_000,
+    temperature: 0.5,
+    maxTokens: 1800,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Je bent de ontwerpassistent van de ZekerFlex-website (Nederlands platform voor personeel, websites en bedrijfssoftware). " +
+          "Je antwoordt alleen met JSON: {\"uitleg\": string (kort, gewoon Nederlands, wat je voorstelt en waarom), \"thema\": object met alleen de velden die veranderen of null, \"teksten\": object sleutel → nieuwe tekst (alleen sleutels uit de lijst, alleen als de wens over tekst gaat)}. " +
+          `Themavelden: primair, accent, inkt, papier (#RRGGBB; witte tekst moet leesbaar blijven op primair), koppen en tekst (${Object.keys(LETTERTYPES).join(", ")}), hoeken (${Object.keys(HOEKEN).join(", ")}), knoppen (${Object.keys(KNOPPEN).join(", ")}), schaduw (${Object.keys(SCHADUWEN).join(", ")}), tekstgrootte (90-115), breedte (1040-1440). ` +
+          "Verzin geen feiten, cijfers, prijzen of beloftes in teksten. Kun je iets niet (bijvoorbeeld een nieuwe functie bouwen), zeg dat dan eerlijk in de uitleg.",
+      },
+      {
+        role: "user",
+        content: `Huidige stijl: ${JSON.stringify(huidig)}\nTeksten (sleutel | veld | huidige tekst):\n${teksten.map((t) => `${t.key} | ${t.label} | ${t.waarde.slice(0, 200)}`).join("\n")}\n\nWens: ${vraag.slice(0, 800)}`,
+      },
+    ],
+  });
+  const bekend = new Set(teksten.map((t) => t.key));
+  const voorstel = res.teksten && typeof res.teksten === "object" && !Array.isArray(res.teksten) ? (res.teksten as Record<string, unknown>) : {};
+  const nieuweTeksten = Object.fromEntries(
+    Object.entries(voorstel)
+      .filter(([k, v]) => bekend.has(k) && typeof v === "string" && v.trim())
+      .map(([k, v]) => [k, String(v).trim().slice(0, 2000)]),
+  );
+  const patch = res.thema && typeof res.thema === "object" && !Array.isArray(res.thema) ? (res.thema as Record<string, unknown>) : null;
+  const thema = patch ? normalizeThema({ ...huidig, ...patch }) : null;
+  const uitleg = typeof res.uitleg === "string" ? res.uitleg.slice(0, 600) : "";
+  if (!thema && !Object.keys(nieuweTeksten).length && !uitleg) throw AppError.validation("De assistent gaf geen bruikbaar antwoord. Probeer het anders te zeggen.");
+  return { uitleg, thema, teksten: nieuweTeksten };
+}
+
 const OPDRACHTEN = {
   verbeter: "Maak deze websitetekst duidelijker en aantrekkelijker, in dezelfde lengte.",
   korter: "Maak deze websitetekst korter en krachtiger; houd de betekenis.",

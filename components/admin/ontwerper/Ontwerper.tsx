@@ -10,6 +10,7 @@ import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
 import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
+import { Assistent } from "@/components/admin/ontwerper/Assistent";
 
 // ---------------------------------------------------------------------------
 // De Site-ontwerper: links de keuzes, rechts de echte site als voorbeeld.
@@ -52,6 +53,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
   const [gekozenTekst, setGekozenTekst] = useState<string | null>(null);
   const [voorbeeldPad, setVoorbeeldPad] = useState<string | null>(null);
   const [vernieuw, setVernieuw] = useState(0);
+  const [injectie, setInjectie] = useState<{ key: string; waarde: string; n: number } | null>(null);
   const verversVoorbeeld = useCallback(() => setVernieuw((n) => n + 1), []);
   const [publiceerOpen, setPubliceerOpen] = useState(false);
   const [notitie, setNotitie] = useState("");
@@ -302,7 +304,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           </div>
           {/* blijft bestaan als je wisselt: ingetypte teksten gaan niet verloren */}
           <div id="ontwerper-paneel-teksten" role="tabpanel" aria-labelledby="ontwerper-tab-teksten" hidden={tab !== "teksten"}>
-            <TekstenPaneel gekozen={gekozenTekst} onKies={tekstKeuze} onTeksten={setTeksten} />
+            <TekstenPaneel gekozen={gekozenTekst} onKies={tekstKeuze} onTeksten={setTeksten} injectie={injectie} />
           </div>
           {/* blijft ook bestaan: een half bewerkte pagina gaat niet verloren als je even naar Stijl gaat */}
           <div id="ontwerper-paneel-paginas" role="tabpanel" aria-labelledby="ontwerper-tab-paginas" hidden={tab !== "paginas"}>
@@ -318,11 +320,11 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
               <MediaPaneel />
             </div>
           ) : null}
-          {tab === "ai" ? (
-            <div id="ontwerper-paneel-ai" role="tabpanel" aria-labelledby="ontwerper-tab-ai">
-              <AiPaneel thema={thema} onProbeer={(t) => wijzig(t)} />
-            </div>
-          ) : null}
+          {/* blijft bestaan: het gesprek met de assistent gaat niet verloren als je even wisselt */}
+          <div id="ontwerper-paneel-ai" role="tabpanel" aria-labelledby="ontwerper-tab-ai" hidden={tab !== "ai"} className="space-y-3">
+            <Assistent thema={thema} teksten={teksten} onStijl={(t) => wijzig(t)} onTekst={(key, waarde) => setInjectie({ key, waarde, n: Date.now() })} />
+            <AiPaneel thema={thema} onProbeer={(t) => wijzig(t)} />
+          </div>
           {tab === "geschiedenis" ? (
             <div id="ontwerper-paneel-geschiedenis" role="tabpanel" aria-labelledby="ontwerper-tab-geschiedenis">
               <GeschiedenisPaneel versies={geschiedenis} onTerug={zetTerug} bezig={bezig} />

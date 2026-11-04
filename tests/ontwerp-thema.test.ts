@@ -48,7 +48,21 @@ describe("themaCss", () => {
   });
   it("vormen en lettertypes gelden alleen op de openbare site", () => {
     const css = themaCss({ ...STANDAARD_THEMA, hoeken: "recht", koppen: "georgia", breedte: 1300, tekstgrootte: 105 })!;
-    for (const regel of css.split("\n").filter((r) => !r.startsWith(":root"))) expect(regel).toMatch(/\.zf-site|\.hero-ink/);
+    for (const regel of css.split("\n").filter((r) => !r.startsWith(":root") && !r.startsWith("@font-face"))) expect(regel).toMatch(/\.zf-site|\.hero-ink/);
+  });
+  it("een eigen lettertype laadt alleen als het gekozen is", () => {
+    const css = themaCss({ ...STANDAARD_THEMA, koppen: "playfair-display", tekst: "inter" })!;
+    expect(css).toContain('@font-face{font-family:"Playfair Display"');
+    expect(css).toContain("/fonts/inter-latin.");
+    expect(css).not.toContain("montserrat");
+    expect(themaCss({ ...STANDAARD_THEMA, koppen: "georgia" })).not.toContain("@font-face");
+  });
+  it("elk eigen lettertypebestand bestaat in public/fonts", async () => {
+    const { existsSync } = await import("node:fs");
+    const { LETTERTYPES } = await import("@/lib/ontwerp/thema");
+    for (const lt of Object.values(LETTERTYPES) as { bestand?: string }[]) {
+      if (lt.bestand) expect(existsSync(`public/fonts/${lt.bestand}`)).toBe(true);
+    }
   });
 });
 

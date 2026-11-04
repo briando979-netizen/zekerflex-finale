@@ -21,8 +21,29 @@ export const LETTERTYPES = {
   palatino: { label: "Palatino", soort: "Boekletter, warm", stack: '"Palatino Linotype",Palatino,"Book Antiqua",serif' },
   verdana: { label: "Verdana", soort: "Breed en goed leesbaar", stack: "Verdana,Geneva,sans-serif" },
   trebuchet: { label: "Trebuchet", soort: "Vriendelijk", stack: '"Trebuchet MS",Helvetica,sans-serif' },
+  // Eigen kopieën in public/fonts (latin, variabel 400–700, OFL); de @font-face komt pas mee als je hem kiest.
+  inter: { label: "Inter", soort: "Neutraal en modern", stack: '"Inter",ui-sans-serif,system-ui,sans-serif', bestand: "inter-latin.3100e775.woff2" },
+  "dm-sans": { label: "DM Sans", soort: "Zacht en open", stack: '"DM Sans",ui-sans-serif,system-ui,sans-serif', bestand: "dm-sans-latin.9fea608a.woff2" },
+  manrope: { label: "Manrope", soort: "Strak en technisch", stack: '"Manrope",ui-sans-serif,system-ui,sans-serif', bestand: "manrope-latin.8c2def02.woff2" },
+  outfit: { label: "Outfit", soort: "Rond en vriendelijk", stack: '"Outfit",ui-sans-serif,system-ui,sans-serif', bestand: "outfit-latin.6c18d579.woff2" },
+  montserrat: { label: "Montserrat", soort: "Krachtig en breed", stack: '"Montserrat",ui-sans-serif,system-ui,sans-serif', bestand: "montserrat-latin.06b16db7.woff2" },
+  nunito: { label: "Nunito", soort: "Speels en rond", stack: '"Nunito",ui-sans-serif,system-ui,sans-serif', bestand: "nunito-latin.ba344451.woff2" },
+  "space-grotesk": { label: "Space Grotesk", soort: "Eigenwijs en technisch", stack: '"Space Grotesk",ui-sans-serif,system-ui,sans-serif', bestand: "space-grotesk-latin.06408904.woff2" },
+  "playfair-display": { label: "Playfair Display", soort: "Chic, met schreef", stack: '"Playfair Display",Georgia,serif', bestand: "playfair-display-latin.e0c764a8.woff2" },
+  lora: { label: "Lora", soort: "Warm, met schreef", stack: '"Lora",Georgia,serif', bestand: "lora-latin.ddb8c660.woff2" },
+  fraunces: { label: "Fraunces", soort: "Karaktervol, met schreef", stack: '"Fraunces",Georgia,serif', bestand: "fraunces-latin.7f9d191d.woff2" },
 } as const;
 export type LettertypeKey = keyof typeof LETTERTYPES;
+
+/** De @font-face van een eigen lettertype; leeg voor de vaste en de systeemletters. */
+export function lettertypeFace(key: LettertypeKey): string {
+  const lt: { label: string; bestand?: string } = LETTERTYPES[key];
+  if (!lt.bestand) return "";
+  return `@font-face{font-family:"${lt.label}";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/${lt.bestand}) format("woff2")}`;
+}
+
+/** Alle eigen lettertypes, voor de voorbeelden in de keuzelijst van de ontwerper. */
+export const alleLettertypeFaces = () => (Object.keys(LETTERTYPES) as LettertypeKey[]).map(lettertypeFace).filter(Boolean).join("");
 
 export const HOEKEN = { recht: "Recht", zacht: "Licht afgerond", standaard: "Afgerond", rond: "Extra rond" } as const;
 export type Hoeken = keyof typeof HOEKEN;
@@ -201,6 +222,8 @@ export function themaCss(input: Thema, opts: { alles?: boolean } = {}): string |
   }
   if (anders("koppen") || anders("tekst")) {
     const tekst = LETTERTYPES[t.tekst].stack;
+    const faces = [...new Set([lettertypeFace(t.koppen), lettertypeFace(t.tekst)])].filter(Boolean).join("");
+    if (faces) regels.push(faces);
     regels.push(`.zf-site{--font-display:${LETTERTYPES[t.koppen].stack};--font-sans:${tekst};font-family:${tekst}}`);
   }
   if (anders("hoeken")) {

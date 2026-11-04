@@ -10,6 +10,7 @@ import {
   STANDAARD_THEMA,
   STIJLEN,
   TEKSTGROOTTE,
+  alleLettertypeFaces,
   contrastChecks,
   zelfdeThema,
   type LettertypeKey,
@@ -118,6 +119,8 @@ export function StijlPaneel({ thema, onChange }: { thema: Thema; onChange: (next
 
   return (
     <div className="space-y-3">
+      {/* de eigen lettertypes, zodat de voorbeeldregels in de keuzelijst ze echt tonen (alleen in het beheer) */}
+      <style>{alleLettertypeFaces()}</style>
       <Blok titel="Kant-en-klare stijlen" uitleg="Begin met een stijl en pas daarna alles aan wat je wilt.">
         <div className="grid grid-cols-2 gap-2">
           {STIJLEN.map((s) => {

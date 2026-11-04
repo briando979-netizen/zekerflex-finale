@@ -31,12 +31,15 @@ export function TekstenPaneel({
   gekozen,
   onKies,
   onTeksten,
+  injectie = null,
 }: {
   /** het veld dat in het voorbeeld is aangeklikt */
   gekozen: string | null;
   onKies: (key: string | null) => void;
   /** de teksten zoals ze nu in de velden staan, voor het voorbeeld */
   onTeksten: (t: Record<string, string>) => void;
+  /** een tekst van de assistent: komt in het veld, nog niet opgeslagen */
+  injectie?: { key: string; waarde: string; n: number } | null;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [bewaard, setBewaard] = useState<Record<string, string>>({});
@@ -61,6 +64,10 @@ export function TekstenPaneel({
   useEffect(() => {
     onTeksten(invoer);
   }, [invoer, onTeksten]);
+
+  useEffect(() => {
+    if (injectie) setInvoer((c) => ({ ...c, [injectie.key]: injectie.waarde }));
+  }, [injectie]);
 
   // aangeklikt in het voorbeeld: zoekfilter weg, veld in beeld en focus
   useEffect(() => {
