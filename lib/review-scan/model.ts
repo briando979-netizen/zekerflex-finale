@@ -143,6 +143,9 @@ export interface Onderdeel {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
 export const cijfer = (n: number) => n.toLocaleString("nl-NL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/** 117044 → "117.044" */
+export const getal = (n: number) => n.toLocaleString("nl-NL");
+const reviewsWoord = (n: number) => `${getal(n)} ${n === 1 ? "review" : "reviews"}`;
 
 /** Gewogen score: weinig reviews tellen minder zwaar (zoals klanten het ook lezen). */
 const PRIOR = 4.2;
@@ -182,7 +185,7 @@ export function scoreScan(f: ScanFeiten, nu: Date): { score: number; oordeel: st
     label: "Aantal reviews",
     max: 20,
     punten: Math.round(clamp(Math.log10(f.aantal + 1) / Math.log10(251)) * 20),
-    uitleg: `${f.aantal} ${f.aantal === 1 ? "review" : "reviews"}. Meer reviews maken je score betrouwbaarder voor klanten.`,
+    uitleg: `${reviewsWoord(f.aantal)}. Meer reviews maken je score betrouwbaarder voor klanten.`,
   });
   const dagen = dagenSindsLaatste(f.reviews, nu);
   onderdelen.push({
@@ -236,11 +239,25 @@ export function volgendDoel(rating: number | null): number | null {
   return Math.min(4.8, r1(rating + (rating < 4.5 ? 0.3 : 0.1)));
 }
 
+/** Meer reviews dan dit noemen we niet als doel: bij een heel groot bedrijf beweegt de score nauwelijks. */
+export const MAX_DOEL_REVIEWS = 200;
+/** Meer per maand dan dit is geen realistisch inhaaltempo. */
+export const MAX_PER_MAAND = 100;
+
+/** Het volgende doel met het aantal vijfsterrenreviews dat ervoor nodig is, alleen als dat haalbaar is. */
+export function haalbaarDoel(rating: number | null, aantal: number): { van: number; naar: number; nodig: number } | null {
+  const naar = volgendDoel(rating);
+  if (rating === null || naar === null) return null;
+  const nodig = reviewsNodig(rating, aantal, naar);
+  return nodig > 0 && nodig <= MAX_DOEL_REVIEWS ? { van: rating, naar, nodig } : null;
+}
+
 /** De concurrent met de meeste reviews en een minstens zo goede score: hoeveel per maand om hem in een half jaar in te halen. */
 export function inhaalTempo(eigen: { rating: number | null; aantal: number }, concurrenten: readonly Concurrent[]): { naam: string; aantal: number; perMaand: number } | null {
   const sterk = concurrenten.filter((c) => c.aantal > eigen.aantal && (c.rating ?? 0) >= (eigen.rating ?? 0) - 0.3).sort((a, b) => b.aantal - a.aantal)[0];
   if (!sterk) return null;
-  return { naam: sterk.naam, aantal: sterk.aantal, perMaand: Math.ceil((sterk.aantal - eigen.aantal) / 6) };
+  const perMaand = Math.ceil((sterk.aantal - eigen.aantal) / 6);
+  return perMaand <= MAX_PER_MAAND ? { naam: sterk.naam, aantal: sterk.aantal, perMaand } : null;
 }
 
 // --- wat klanten zeggen (regels; de AI-analyse doet dit beter als hij er is) ---------
@@ -322,7 +339,7 @@ export function maakVoorstellen(f: ScanFeiten, nu: Date, themas: readonly Thema[
     v.push({
       id: "meer-reviews",
       titel: "Vraag elke klant om een review",
-      uitleg: `Je hebt ${f.aantal} ${f.aantal === 1 ? "review" : "reviews"}${mediaan > f.aantal ? `, bedrijven in de buurt gemiddeld ${mediaan}` : ""}. De meeste tevreden klanten schrijven pas iets als je het vraagt. Vraag het iedereen, kort na hun bezoek of opdracht. Alleen tevreden klanten vragen mag volgens Google niet.`,
+      uitleg: `Je hebt ${reviewsWoord(f.aantal)}${mediaan > f.aantal ? `, bedrijven in de buurt gemiddeld ${getal(mediaan)}` : ""}. De meeste tevreden klanten schrijven pas iets als je het vraagt. Vraag het iedereen, kort na hun bezoek of opdracht. Alleen tevreden klanten vragen mag volgens Google niet.`,
       impact: "hoog",
       actie: "verzoeken",
     });
@@ -373,7 +390,7 @@ export function maakVoorstellen(f: ScanFeiten, nu: Date, themas: readonly Thema[
       v.push({ id: "site-knop", titel: "Zet een knop \"Schrijf een review\" op je website", uitleg: "Tevreden klanten die je website bezoeken, kunnen dan met één klik een review achterlaten.", impact: "laag", actie: "website" });
     }
     if (!f.website.reviewsOpSite && f.rating !== null && f.rating >= 4) {
-      v.push({ id: "site-score", titel: "Laat je Google-score zien op je website", uitleg: `Een ${cijfer(f.rating)} van ${f.aantal} klanten is een sterk verkoopargument. Toon die op je homepage.`, impact: "laag", actie: "website" });
+      v.push({ id: "site-score", titel: "Laat je Google-score zien op je website", uitleg: `Een ${cijfer(f.rating)} van ${getal(f.aantal)} klanten is een sterk verkoopargument. Toon die op je homepage.`, impact: "laag", actie: "website" });
     }
   }
   return v.sort((a, b) => IMPACT_VOLGORDE[a.impact] - IMPACT_VOLGORDE[b.impact]);

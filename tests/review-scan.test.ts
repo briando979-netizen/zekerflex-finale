@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   antwoordSjabloon,
+  getal,
+  haalbaarDoel,
   inhaalTempo,
   leesInvoer,
   maakVoorstellen,
@@ -55,6 +57,15 @@ describe("doelen", () => {
     expect(volgendDoel(4.75)).toBe(4.8);
     expect(volgendDoel(4.8)).toBeNull();
     expect(volgendDoel(null)).toBeNull();
+  });
+
+  it("noemt alleen een haalbaar doel (een groot bedrijf krijgt geen doel van duizenden reviews)", () => {
+    expect(haalbaarDoel(4.3, 100)).toEqual({ van: 4.3, naar: 4.6, nodig: 75 });
+    expect(haalbaarDoel(4.7, 117044)).toBeNull();
+    expect(haalbaarDoel(4.9, 20)).toBeNull();
+    expect(haalbaarDoel(null, 0)).toBeNull();
+    expect(getal(117044)).toBe("117.044");
+    expect(inhaalTempo({ rating: 4.5, aantal: 10 }, [{ naam: "Groot", rating: 4.6, aantal: 5000, mapsUrl: null }])).toBeNull();
   });
 
   it("noemt de sterkste concurrent om in te halen", () => {

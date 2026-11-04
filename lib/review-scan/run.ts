@@ -7,14 +7,13 @@ import { sameSite } from "@/lib/website-check/run";
 import { analyseerReviews, type Analyse } from "@/lib/review-scan/analyse";
 import { bedrijfDetails, concurrentenVan, ScanFout, zoekBedrijven, type Kandidaat } from "@/lib/review-scan/places";
 import {
+  haalbaarDoel,
   inhaalTempo,
   isPlaceId,
   leesInvoer,
   maakVoorstellen,
   positie,
-  reviewsNodig,
   scoreScan,
-  volgendDoel,
   websiteSignalen,
   type Concurrent,
   type Onderdeel,
@@ -153,7 +152,6 @@ export async function runReviewScan(invoer: { tekst?: string | undefined; placeI
   const feiten: ScanFeiten = { rating: d.rating, aantal: d.aantal, reviews: d.reviews, profiel: d.profiel, concurrenten, website: signalen };
   const analyse = await analyseerReviews({ bedrijf: d.naam, categorie: d.categorie, rating: d.rating, aantal: d.aantal, reviews: d.reviews });
   const { score, oordeel, onderdelen } = scoreScan(feiten, nu);
-  const naar = volgendDoel(d.rating);
   const { antwoorden, ...rest } = analyse;
 
   const rapport: ReviewScanRapport = {
@@ -168,7 +166,7 @@ export async function runReviewScan(invoer: { tekst?: string | undefined; placeI
     onderdelen,
     positie: positie({ rating: d.rating, aantal: d.aantal }, concurrenten),
     concurrenten: [...concurrenten].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.aantal - a.aantal).slice(0, 6),
-    doel: d.rating !== null && naar !== null ? { van: d.rating, naar, nodig: reviewsNodig(d.rating, d.aantal, naar) } : null,
+    doel: haalbaarDoel(d.rating, d.aantal),
     inhalen: inhaalTempo({ rating: d.rating, aantal: d.aantal }, concurrenten),
     analyse: rest,
     reviews: d.reviews.map((r, i) => ({ ...r, antwoord: antwoorden[i] ?? "" })),

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
-import { cijfer, type Voorstel, type VoorstelActie } from "@/lib/review-scan/model";
+import { MAX_DOEL_REVIEWS, MAX_PER_MAAND, cijfer, getal, type Voorstel, type VoorstelActie } from "@/lib/review-scan/model";
 import type { ReviewScanRapport } from "@/lib/review-scan/run";
 import type { Kandidaat } from "@/lib/review-scan/places";
 
@@ -147,7 +147,7 @@ function Kiezen({ kandidaten, onKies, bezig }: { kandidaten: Kandidaat[]; onKies
                 <span className="block font-semibold text-ink">{k.naam}</span>
                 <span className="block break-words text-sm text-neutralx-600">{k.adres}</span>
               </span>
-              <span className="flex-shrink-0 text-sm text-neutralx-600">{k.rating !== null ? `${cijfer(k.rating)} ★ · ${k.aantal} reviews` : "nog geen reviews"}</span>
+              <span className="flex-shrink-0 text-sm text-neutralx-600">{k.rating !== null ? `${cijfer(k.rating)} ★ · ${getal(k.aantal)} reviews` : "nog geen reviews"}</span>
             </button>
           </li>
         ))}
@@ -302,6 +302,9 @@ function Aanvraag({ scanId }: { scanId: string }) {
 
 function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant: Variant }) {
   const gescand = new Date(r.at).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+  // ook voor rapporten van vóór de grens: geen onhaalbare doelen tonen
+  const doel = r.doel && r.doel.nodig > 0 && r.doel.nodig <= MAX_DOEL_REVIEWS ? r.doel : null;
+  const inhalen = r.inhalen && r.inhalen.perMaand <= MAX_PER_MAAND ? r.inhalen : null;
   return (
     <div className="space-y-6">
       <section className="card p-5 sm:p-6" aria-labelledby="rs-kop">
@@ -315,7 +318,7 @@ function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant:
             <p className="mt-2 text-sm text-ink">
               {r.rating !== null ? (
                 <>
-                  <strong>{cijfer(r.rating)}</strong> <Sterren n={Math.round(r.rating)} /> · {r.aantal} {r.aantal === 1 ? "review" : "reviews"} op Google
+                  <strong>{cijfer(r.rating)}</strong> <Sterren n={Math.round(r.rating)} /> · {getal(r.aantal)} {r.aantal === 1 ? "review" : "reviews"} op Google
                 </>
               ) : (
                 "Nog geen reviews op Google"
@@ -348,20 +351,20 @@ function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant:
         <p className="mt-4 text-xs text-neutralx-500">Gescand op {gescand}. Google laat via zijn koppeling hooguit 5 reviews zien, en niet of je al gereageerd hebt.</p>
       </section>
 
-      {(r.doel || r.inhalen) && (
+      {(doel || inhalen) && (
         <section className="card p-5 sm:p-6" aria-labelledby="rs-doel">
           <h2 id="rs-doel" className="font-display text-lg font-bold text-ink">
             Je volgende doel
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-ink">
-            {r.doel && r.doel.nodig > 0 && (
+            {doel && (
               <li>
-                Met ongeveer <strong>{r.doel.nodig}</strong> nieuwe vijfsterrenreviews ga je van {cijfer(r.doel.van)} naar <strong>{cijfer(r.doel.naar)}</strong>.
+                Met ongeveer <strong>{doel.nodig}</strong> nieuwe vijfsterrenreviews ga je van {cijfer(doel.van)} naar <strong>{cijfer(doel.naar)}</strong>.
               </li>
             )}
-            {r.inhalen && (
+            {inhalen && (
               <li>
-                {r.inhalen.naam} heeft {r.inhalen.aantal} reviews. Met zo&apos;n <strong>{r.inhalen.perMaand}</strong> nieuwe reviews per maand haal je dat in een half jaar in.
+                {inhalen.naam} heeft {getal(inhalen.aantal)} reviews. Met zo&apos;n <strong>{inhalen.perMaand}</strong> nieuwe reviews per maand haal je dat in een half jaar in.
               </li>
             )}
           </ul>
@@ -391,13 +394,13 @@ function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant:
                 <tr className="font-semibold text-ink">
                   <td className="py-2 pr-3">{r.bedrijf.naam} (jij)</td>
                   <td className="num py-2 pr-3 text-right">{r.rating !== null ? cijfer(r.rating) : "–"}</td>
-                  <td className="num py-2 text-right">{r.aantal}</td>
+                  <td className="num py-2 text-right">{getal(r.aantal)}</td>
                 </tr>
                 {r.concurrenten.map((c) => (
                   <tr key={`${c.naam}-${c.aantal}`} className="text-neutralx-700">
                     <td className="py-2 pr-3">{c.naam}</td>
                     <td className="num py-2 pr-3 text-right">{c.rating !== null ? cijfer(c.rating) : "–"}</td>
-                    <td className="num py-2 text-right">{c.aantal}</td>
+                    <td className="num py-2 text-right">{getal(c.aantal)}</td>
                   </tr>
                 ))}
               </tbody>
