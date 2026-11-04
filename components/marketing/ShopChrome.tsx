@@ -159,7 +159,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       </a>
 
       {/* servicebalk */}
-      <div className="bg-ink text-white">
+      <aside aria-label={t.shop.serviceTitle} className="bg-ink text-white">
         <div className={`${WRAP} flex h-9 items-center justify-between gap-4 text-[12px]`}>
           <ul className="flex min-w-0 items-center gap-5 overflow-hidden">
             <ServicePoint>{t.shop.uspNextDay}</ServicePoint>
@@ -177,7 +177,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             {languageSelect("rounded border border-white/25 bg-transparent px-1.5 py-0.5 text-[12px] text-white [&>option]:text-ink")}
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* merkbalk met zoeken: blijft staan tijdens scrollen */}
       <header className="sticky top-0 z-40 bg-brand-700 text-white shadow-e1">
@@ -187,8 +187,8 @@ export function ShopChrome({ children }: { children: ReactNode }) {
           </button>
           <Link href="/shop" className="flex shrink-0 items-center gap-2" aria-label="ZekerFlex Shop">
             <LogoGlyph size={30} tone="light" />
-            <span className="font-display text-[20px] font-extrabold leading-none tracking-tight lg:text-[22px]">
-              ZekerFlex<span className="ml-1 text-brand-mint">shop</span>
+            <span className="font-display text-[18px] font-extrabold leading-none tracking-tight sm:text-[20px] lg:text-[22px]">
+              ZekerFlex<span className="ml-1 hidden text-brand-mint min-[380px]:inline">shop</span>
             </span>
           </Link>
           <div className="hidden min-w-0 flex-1 md:block">
@@ -198,14 +198,15 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             <HeaderLink href="/shop/account" label={t.shop.account}>
               <IconUser />
             </HeaderLink>
-            <HeaderLink href="/shop/account" label={t.shop.favorites} badge={wishlist.count}>
+            {/* op de telefoon via Mijn account: anders past de kop niet op 320px */}
+            <HeaderLink href="/shop/account" label={t.shop.favorites} badge={wishlist.count} className="hidden sm:flex">
               <IconHeartLine />
             </HeaderLink>
             <button
               type="button"
               onClick={() => setDrawer(true)}
               aria-label={`${t.shop.cart} (${count})`}
-              className="relative flex h-11 items-center gap-2 rounded-lg px-2.5 transition hover:bg-white/10"
+              className="relative flex h-11 items-center gap-2 rounded-lg px-2 transition hover:bg-white/10 sm:px-2.5"
             >
               <IconCart />
               <span className="hidden text-[13px] font-semibold xl:inline">{t.shop.cart}</span>
@@ -243,15 +244,15 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      <div id="shop-inhoud" tabIndex={-1} className="outline-none">
+      <main id="shop-inhoud" tabIndex={-1} className="outline-none">
         {children}
-      </div>
+      </main>
 
       <footer className="bg-ink text-white">
         <div className="border-b border-white/10">
-          <ul className={`${WRAP} grid grid-cols-2 gap-x-6 gap-y-4 py-7 text-[13px] lg:grid-cols-4`}>
+          <ul className={`${WRAP} grid gap-x-6 gap-y-3 py-7 text-[13px] sm:grid-cols-2 lg:grid-cols-4`}>
             {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice].map((u) => (
-              <ServicePoint key={u} className="text-white/90">
+              <ServicePoint key={u} className="text-white/90" wrap>
                 {u}
               </ServicePoint>
             ))}
@@ -537,9 +538,9 @@ function SearchForm({ t, id }: { t: Dict; id: string }) {
   );
 }
 
-function HeaderLink({ href, label, badge = 0, children }: { href: string; label: string; badge?: number; children: ReactNode }) {
+function HeaderLink({ href, label, badge = 0, className = "flex", children }: { href: string; label: string; badge?: number; className?: string; children: ReactNode }) {
   return (
-    <Link href={href} aria-label={badge > 0 ? `${label} (${badge})` : label} className="relative flex h-11 items-center gap-2 rounded-lg px-2.5 transition hover:bg-white/10">
+    <Link href={href} aria-label={badge > 0 ? `${label} (${badge})` : label} className={`relative ${className} h-11 items-center gap-2 rounded-lg px-2 transition hover:bg-white/10 sm:px-2.5`}>
       {children}
       <span className="hidden text-[13px] font-semibold xl:inline">{label}</span>
       {badge > 0 && <span className="absolute left-6 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand-mint px-1 text-[11px] font-bold text-ink">{badge}</span>}
@@ -547,9 +548,9 @@ function HeaderLink({ href, label, badge = 0, children }: { href: string; label:
   );
 }
 
-function ServicePoint({ children, className = "" }: { children: ReactNode; className?: string }) {
+function ServicePoint({ children, className = "", wrap = false }: { children: ReactNode; className?: string; wrap?: boolean }) {
   return (
-    <li className={`flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+    <li className={`flex items-center gap-1.5 ${wrap ? "" : "whitespace-nowrap"} ${className}`}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand-mint" aria-hidden>
         <path d="m5 12.5 4.5 4.5L19 7.5" />
       </svg>

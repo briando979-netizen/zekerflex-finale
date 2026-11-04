@@ -211,7 +211,10 @@ export function ShopNewsletter({ t }: { t: T }) {
             {after}
           </p>
         </div>
-        <NewsletterSignup source="shop" />
+        {/* de toestemmingsregel (text-white/50) haalt op dit groen geen 4,5:1: hier lichter */}
+        <div className="[&_label]:text-white/80">
+          <NewsletterSignup source="shop" />
+        </div>
       </div>
     </section>
   );
