@@ -221,6 +221,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
           : "nog niet: Google geeft deze sleutel geen beeldtegoed (gratis laag)",
     },
     {
+      id: "hf-token",
+      group: "AI",
+      title: "Gratis Hugging Face-sleutel voor meer gratis AI-video (optioneel)",
+      why: "De video-editor maakt gratis echte AI-clips met LTX-2.3 op de videokaarten van Lightricks (Hugging Face). Zonder account is het tegoed klein: op 4 november waren 2 clips per dag mogelijk vanaf de server. Met een gratis Hugging Face-account krijg je elke dag meer, met een PRO-account (ongeveer $ 9 per maand) veel meer.",
+      how: [
+        "Maak een gratis account op huggingface.co.",
+        "Ga naar Settings → Access Tokens → Create new token, kies Read en kopieer de sleutel (begint met hf_).",
+        "Geef de sleutel aan Claude; die zet HF_TOKEN op de server.",
+      ],
+      auto: true,
+      done: Boolean(env.HF_TOKEN),
+      ...(env.HF_TOKEN ? { doneNote: "sleutel staat op de server" } : {}),
+    },
+    {
       id: "bouwer-github",
       group: "AI",
       title: "GitHub-sleutel voor de Bouwer invullen",

@@ -7,7 +7,7 @@ import { meetMedia } from "@/lib/video/speler";
 import type { Formaat } from "@/lib/video/model";
 import { SLEEP_TYPE, type SleepData } from "@/components/admin/video/Tijdlijn";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
-import { bestandAdres, getJson, postJson, tijdTekst, uploadBestand, verwijderBestand, zetBestandInfo, type AiStatus, type VideoBestand } from "@/components/admin/video/api";
+import { bestandAdres, getJson, maakGratisClip, postJson, tijdTekst, uploadBestand, verwijderBestand, zetBestandInfo, type AiStatus, type VideoBestand } from "@/components/admin/video/api";
 
 type Tab = "media" | "fotos" | "tekst" | "muziek" | "ai";
 
@@ -62,6 +62,9 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
   const [stemTekst, setStemTekst] = useState("");
   const [stemNaam, setStemNaam] = useState("Kore");
   const [clipPrompt, setClipPrompt] = useState("");
+  const [gratisPrompt, setGratisPrompt] = useState("");
+  const [gratisDuur, setGratisDuur] = useState(5);
+  const [gratisKwaliteit, setGratisKwaliteit] = useState<"snel" | "scherp">("scherp");
   const [opname, setOpname] = useState<MediaRecorder | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -188,6 +191,24 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
       onToevoegen(bestandData(metD));
       onMelding("De stem staat op het stemspoor.");
       setStemTekst("");
+    } catch (err) {
+      onMelding((err as Error).message, "fout");
+    } finally {
+      setBezig(null);
+    }
+  }
+
+  async function gratisClip() {
+    setBezig("Gratis AI-clip wordt gemaakt op de videokaarten van Lightricks… (meestal 1 tot 3 minuten)");
+    try {
+      const item = await maakGratisClip({ omschrijving: gratisPrompt, duur: gratisDuur, formaat, kwaliteit: gratisKwaliteit }, (s) =>
+        setBezig(`Gratis AI-clip wordt gemaakt… ${tijdTekst(s)} (meestal 1 tot 3 minuten). Je kunt intussen verder werken.`),
+      );
+      const metD = await metDuur(item);
+      await onVernieuw();
+      onToevoegen(bestandData(metD));
+      onMelding("Je gratis AI-clip staat op de tijdlijn.");
+      setGratisPrompt("");
     } catch (err) {
       onMelding((err as Error).message, "fout");
     } finally {
@@ -400,6 +421,27 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
               ✨ Maak een hele video met AI
             </button>
 
+            <section className="space-y-1.5 rounded-lg p-2.5" style={{ background: "var(--a-ok-soft)" }}>
+              <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>Gratis AI-videoclip (LTX-2.3)</p>
+              <p className="text-[0.6875rem]" style={{ color: "var(--a-dim)" }}>Echte bewegende beelden met geluid, gemaakt op de videokaarten van Lightricks. Gratis, met een dagtegoed. Schrijf gewoon in het Nederlands.</p>
+              <textarea className="a-input text-[0.8125rem]" rows={2} value={gratisPrompt} onChange={(e) => setGratisPrompt(e.target.value)} placeholder="Bijvoorbeeld: een serveerster loopt lachend met twee cappuccino's door een druk café" />
+              <div className="grid grid-cols-2 gap-1.5">
+                <select className="a-input text-xs" value={gratisDuur} onChange={(e) => setGratisDuur(Number(e.target.value))} aria-label="Lengte van de clip">
+                  {[3, 5, 8, 10].map((d) => (
+                    <option key={d} value={d}>{d} seconden</option>
+                  ))}
+                </select>
+                <select className="a-input text-xs" value={gratisKwaliteit} onChange={(e) => setGratisKwaliteit(e.target.value as "snel" | "scherp")} aria-label="Kwaliteit">
+                  <option value="scherp">Scherp (HD)</option>
+                  <option value="snel">Snel (lager)</option>
+                </select>
+              </div>
+              <button type="button" className="a-button a-button-primary w-full text-xs" disabled={gratisPrompt.trim().length < 3 || Boolean(bezig)} onClick={() => void gratisClip()}>
+                Maak gratis clip in {formaat}
+              </button>
+              <p className="text-[0.625rem]" style={{ color: "var(--a-mute)" }}>Tip: kies een foto op de tijdlijn en klik rechts op &quot;Laat bewegen&quot; om die foto tot leven te brengen.</p>
+            </section>
+
             <section className="space-y-1.5">
               <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>AI-foto (Nano Banana)</p>
               {!beeldAi && <p className="text-[0.6875rem]" style={{ color: "var(--a-warn-ink)" }}>Er is geen beeld-AI gekoppeld.</p>}
@@ -438,7 +480,7 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
             </section>
 
             <section className="space-y-1.5">
-              <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>AI-videoclip (Veo)</p>
+              <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>AI-videoclip (Google Veo, betaald)</p>
               {ai?.videoMelding && <p className="text-[0.6875rem]" style={{ color: "var(--a-warn-ink)" }}>{ai.videoMelding}</p>}
               <textarea className="a-input text-[0.8125rem]" rows={2} value={clipPrompt} onChange={(e) => setClipPrompt(e.target.value)} placeholder="Bijvoorbeeld: drone-shot over een distributiecentrum bij zonsopkomst" />
               <button type="button" className="a-button w-full text-xs" disabled={clipPrompt.trim().length < 3 || Boolean(bezig) || !ai?.gemini} onClick={() => void aiClip()}>

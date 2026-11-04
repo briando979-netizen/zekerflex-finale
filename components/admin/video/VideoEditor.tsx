@@ -39,6 +39,8 @@ import {
   haalBestanden,
   haalProject,
   haalProjecten,
+  bestandAdres,
+  maakGratisClip,
   postJson,
   tijdTekst,
   uploadBestand,
@@ -367,6 +369,29 @@ export function VideoEditor() {
     meld("De foto is bewerkt. Ongedaan maken kan met Ctrl+Z.");
   }
 
+  /** Een foto-clip vervangen door de bewegende versie (zelfde plek en lengte). */
+  const zetOmNaarVideo = useCallback(
+    (id: string, item: VideoBestand, bronDuur: number) => {
+      wijzig((p) => {
+        const c = p.clips.find((x) => x.id === id);
+        if (!c || c.soort === "tekst" || c.soort === "audio") return p;
+        // LTX maakt er eigen omgevingsgeluid bij; naast een stem of muziek staat dat standaard uit.
+        const heeftGeluid = p.clips.some((x) => x.soort === "audio");
+        return vervangClip(p, { ...c, soort: "video", bron: bestandAdres(item.id), naam: `${c.naam} (bewegend)`.slice(0, 80), inpunt: 0, bronDuur, duur: Math.min(c.duur, bronDuur), beweging: "geen", volume: heeftGeluid ? 0 : 1 });
+      });
+    },
+    [wijzig],
+  );
+
+  async function aiBeweeg(clip: BeeldClip, omschrijving: string) {
+    if (!project) return;
+    const duur = Math.min(10, Math.max(2, Math.ceil(clip.duur)));
+    const item = await maakGratisClip({ omschrijving, duur, formaat: project.formaat, kwaliteit: "scherp", fotoBron: clip.bron });
+    zetOmNaarVideo(clip.id, item, item.duur ?? duur);
+    await vernieuwBestanden();
+    meld("De foto beweegt nu. Ongedaan maken kan met Ctrl+Z.");
+  }
+
   async function aiKlaar(p: Project, keuze: AiVideoKeuze, meldingen: string[]) {
     openProject(p);
     setVenster(null);
@@ -385,7 +410,20 @@ export function VideoEditor() {
         meld("De muziek kon niet gemaakt worden; voeg hem toe via het tabblad Muziek.", "fout");
       }
     }
-    meld("Je AI-video staat klaar. Druk op afspelen, pas aan wat je wilt en exporteer.");
+    meld(keuze.bewegend ? "Je AI-video staat klaar. Het openingsshot wordt nu een echte bewegende video (1 tot 3 minuten); je kunt intussen verder." : "Je AI-video staat klaar. Druk op afspelen, pas aan wat je wilt en exporteer.");
+    if (keuze.bewegend) {
+      const eerste = p.clips.filter((c): c is BeeldClip => c.soort === "foto" && c.spoor === "s-beeld").sort((a, b) => a.start - b.start)[0];
+      if (eerste) {
+        const duur = Math.min(10, Math.max(2, Math.ceil(eerste.duur)));
+        void maakGratisClip({ omschrijving: `${eerste.naam}. ${keuze.onderwerp}`, duur, formaat: p.formaat, kwaliteit: "scherp", fotoBron: eerste.bron })
+          .then(async (item) => {
+            zetOmNaarVideo(eerste.id, item, item.duur ?? duur);
+            await vernieuwBestanden();
+            meld("Het openingsshot beweegt nu echt. Druk op afspelen.");
+          })
+          .catch((err: Error) => meld(`Het bewegende openingsshot lukte niet: ${err.message}`, "fout"));
+      }
+    }
   }
 
   async function nieuwProject(formaat: Project["formaat"]) {
@@ -494,6 +532,7 @@ export function VideoEditor() {
               onClip={(c, sleutel) => wijzig((p) => vervangClip(p, c), sleutel ? `${c.id}:${sleutel}` : undefined)}
               onProject={(deel, sleutel) => wijzig((p) => ({ ...p, ...deel }), sleutel ? `project:${sleutel}` : undefined)}
               onAiBewerk={aiBewerk}
+              onAiBeweeg={aiBeweeg}
               aiBeeld={Boolean(ai?.beeld)}
             />
           )}

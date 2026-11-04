@@ -8,6 +8,9 @@ import { postJson, type AiStatus } from "@/components/admin/video/api";
 
 export interface AiVideoKeuze {
   muziek: Stemming | null;
+  /** Openingsshot laten bewegen met de gratis video-AI (LTX-2.3). */
+  bewegend: boolean;
+  onderwerp: string;
 }
 
 interface Props {
@@ -37,6 +40,7 @@ export function AiVideo({ ai, onSluit, onKlaar }: Props) {
   const [beeldModel, setBeeldModel] = useState<"gemini-3.1-flash-image" | "gemini-3-pro-image">("gemini-3.1-flash-image");
   const [ondertiteling, setOndertiteling] = useState(true);
   const [muziek, setMuziek] = useState<Stemming | "geen">("vrolijk");
+  const [bewegend, setBewegend] = useState(true);
   const [bezig, setBezig] = useState(false);
   const [stap, setStap] = useState(0);
   const [fout, setFout] = useState<string | null>(null);
@@ -54,7 +58,7 @@ export function AiVideo({ ai, onSluit, onKlaar }: Props) {
         "De AI-video kon niet gemaakt worden.",
       );
       setStap(STAPPEN.length - 1);
-      await onKlaar(project, { muziek: muziek === "geen" ? null : muziek }, meldingen);
+      await onKlaar(project, { muziek: muziek === "geen" ? null : muziek, bewegend, onderwerp }, meldingen);
     } catch (err) {
       setFout((err as Error).message);
     } finally {
@@ -147,6 +151,14 @@ export function AiVideo({ ai, onSluit, onKlaar }: Props) {
             </select>
           </div>
         </div>
+
+        <label className="flex items-start gap-2 rounded-md px-3 py-2 text-[0.8125rem]" style={{ background: "var(--a-ok-soft)", color: "var(--a-text)" }}>
+          <input type="checkbox" className="mt-1" checked={bewegend} onChange={(e) => setBewegend(e.target.checked)} disabled={bezig} />
+          <span>
+            Openingsshot als echte bewegende AI-video (gratis, LTX-2.3)
+            <span className="block text-[0.6875rem]" style={{ color: "var(--a-dim)" }}>De eerste foto komt tot leven. Dat duurt 1 tot 3 minuten extra en gebeurt terwijl je al verder werkt.</span>
+          </span>
+        </label>
 
         {ai?.beeldMelding && aiFotos && <p className="rounded-md px-3 py-2 text-[0.75rem]" style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }}>{ai.beeldMelding} Tot die tijd neemt de AI passende eigen foto&apos;s.</p>}
 

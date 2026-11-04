@@ -22,6 +22,8 @@ interface Props {
   onClip: (clip: Clip, sleutel?: string) => void;
   onProject: (p: Partial<Pick<Project, "naam" | "formaat" | "achtergrond">>, sleutel?: string) => void;
   onAiBewerk: (clip: BeeldClip, instructie: string) => Promise<void>;
+  /** Foto laten bewegen met de gratis video-AI (LTX-2.3). */
+  onAiBeweeg: (clip: BeeldClip, omschrijving: string) => Promise<void>;
   aiBeeld: boolean;
 }
 
@@ -82,10 +84,13 @@ function TijdVelden({ clip, onClip }: { clip: Clip; onClip: Props["onClip"] }) {
   );
 }
 
-function BeeldPaneel({ clip, onClip, onAiBewerk, aiBeeld }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; aiBeeld: boolean }) {
+function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, aiBeeld }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; onAiBeweeg: Props["onAiBeweeg"]; aiBeeld: boolean }) {
   const [instructie, setInstructie] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
+  const [beweging, setBeweging] = useState("");
+  const [beweegt, setBeweegt] = useState(false);
+  const [beweegFout, setBeweegFout] = useState<string | null>(null);
   const zet = (deel: Partial<BeeldClip>, sleutel?: string) => onClip({ ...clip, ...deel }, sleutel);
   return (
     <div className="space-y-3">
@@ -185,6 +190,33 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, aiBeeld }: { clip: BeeldClip; o
             onChange={(v) => onClip(zetSnelheid(clip, Number(v)) as BeeldClip)}
           />
           <Schuif label="Volume" waarde={Math.round(clip.volume * 100)} min={0} max={200} eenheid="%" onChange={(v) => zet({ volume: v / 100 }, "volume")} />
+        </>
+      )}
+
+      {clip.soort === "foto" && (
+        <>
+          <Kop>Laat bewegen (gratis AI-video)</Kop>
+          <textarea className="a-input text-[0.8125rem]" rows={2} value={beweging} onChange={(e) => setBeweging(e.target.value)} placeholder="Wat moet er bewegen? Bijvoorbeeld: de kok draait zich om en lacht, stoom uit de pan, camera schuift langzaam naar voren" />
+          <button
+            type="button"
+            className="a-button a-button-primary w-full text-xs"
+            disabled={beweegt}
+            onClick={async () => {
+              setBeweegt(true);
+              setBeweegFout(null);
+              try {
+                await onAiBeweeg(clip, beweging.trim() || "natuurlijke beweging van de mensen, rustige camerabeweging naar voren");
+                setBeweging("");
+              } catch (err) {
+                setBeweegFout((err as Error).message);
+              } finally {
+                setBeweegt(false);
+              }
+            }}
+          >
+            {beweegt ? "De foto komt tot leven… (1 tot 3 minuten)" : "Laat deze foto bewegen"}
+          </button>
+          {beweegFout && <p role="alert" className="text-xs" style={{ color: "var(--a-crit)" }}>{beweegFout}</p>}
         </>
       )}
 
@@ -320,7 +352,7 @@ function AudioPaneel({ clip, onClip }: { clip: AudioClip; onClip: Props["onClip"
   );
 }
 
-export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, aiBeeld }: Props) {
+export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, aiBeeld }: Props) {
   if (!clip) {
     return (
       <div className="space-y-3">
@@ -355,5 +387,5 @@ export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, ai
   }
   if (clip.soort === "tekst") return <TekstPaneel clip={clip} onClip={onClip} />;
   if (clip.soort === "audio") return <AudioPaneel clip={clip} onClip={onClip} />;
-  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} aiBeeld={aiBeeld} />;
+  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} aiBeeld={aiBeeld} />;
 }

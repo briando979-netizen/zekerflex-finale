@@ -105,3 +105,34 @@ export function tijdTekst(s: number, frames = false): string {
   if (!frames) return basis;
   return `${basis}.${String(Math.floor((s % 1) * 10))}`;
 }
+
+export interface GratisTaak {
+  id: string;
+  status: "bezig" | "klaar" | "fout";
+  omschrijving: string;
+  op: string;
+  item?: VideoBestand;
+  fout?: string;
+}
+
+export interface GratisClipVraag {
+  omschrijving: string;
+  duur: number;
+  formaat: Project["formaat"];
+  kwaliteit: "snel" | "scherp";
+  fotoBron?: string;
+}
+
+/** Start een gratis AI-clip (LTX-2.3) en wacht tot hij klaar is (1 tot 3 minuten). */
+export async function maakGratisClip(vraag: GratisClipVraag, onStand?: (seconden: number) => void): Promise<VideoBestand> {
+  const { taak } = await postJson<{ taak: GratisTaak }>("/api/admin/video/gratis", vraag, "De gratis clip kon niet gestart worden.");
+  const begin = Date.now();
+  while (Date.now() - begin < 9 * 60_000) {
+    await new Promise((r) => setTimeout(r, 5000));
+    onStand?.(Math.round((Date.now() - begin) / 1000));
+    const { taak: nu } = await getJson<{ taak: GratisTaak }>(`/api/admin/video/gratis?taak=${encodeURIComponent(taak.id)}`, "De stand van de clip kon niet opgehaald worden.");
+    if (nu.status === "klaar" && nu.item) return nu.item;
+    if (nu.status === "fout") throw new Error(nu.fout ?? "De gratis clip lukte niet.");
+  }
+  throw new Error("De clip duurt erg lang. Kijk zo bij Media; hij komt er vaak alsnog bij.");
+}
