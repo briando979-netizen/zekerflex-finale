@@ -16,6 +16,8 @@ export default async function BerichtenPage() {
           subtitle="Praat direct met opdrachtgevers en met ZekerFlex Support. Elk gesprek is privé voor jou."
         />
       </div>
+      {/* de kop is op de telefoon verborgen; de pagina houdt een h1 voor schermlezers */}
+      <h1 className="sr-only md:hidden">Berichten</h1>
       <InboxPage />
     </>
   );

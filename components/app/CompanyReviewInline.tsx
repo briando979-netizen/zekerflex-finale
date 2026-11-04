@@ -48,7 +48,7 @@ export function CompanyReviewInline({
       <div className="flex items-center gap-2">
         <span className="text-amber-500" aria-label={`${mine.rating} van 5 sterren`}>
           {"★★★★★".slice(0, mine.rating)}
-          <span className="text-neutralx-300">{"★★★★★".slice(mine.rating)}</span>
+          <span className="text-neutralx-400">{"★★★★★".slice(mine.rating)}</span>
         </span>
         <span className="text-[11px] font-medium text-neutralx-400">Jouw review</span>
       </div>

@@ -136,6 +136,8 @@ export function FreelancerShell({
             </Link>
             <NotificationsBell />
           </div>
+          {/* in de kopbalk (een landmark), niet los onderaan de pagina */}
+          <span className="sr-only">Ingelogd als {userName}</span>
         </header>
       )}
 
@@ -194,8 +196,6 @@ export function FreelancerShell({
         </ul>
       </nav>
       )}
-
-      <span className="sr-only">Ingelogd als {userName}</span>
     </div>
   );
 }

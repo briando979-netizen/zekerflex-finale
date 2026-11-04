@@ -166,9 +166,10 @@ export default async function AccountPage() {
         </div>
         <p className="mt-3 font-display text-xl font-bold text-ink">{card?.name ?? principal.email}</p>
 
+        {/* lege sterren: neutralx-400 haalt de 3:1 voor beeldelementen (neutralx-300 was 1,6:1) */}
         <div className="mt-1.5 flex items-center justify-center gap-1 text-lg text-amber-500">
           {"★★★★★".slice(0, stars)}
-          <span className="text-neutralx-300">{"★★★★★".slice(stars)}</span>
+          <span className="text-neutralx-400">{"★★★★★".slice(stars)}</span>
         </div>
         <Link
           href="/dashboard/beoordelingen"
