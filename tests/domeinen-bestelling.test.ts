@@ -84,6 +84,7 @@ describe("terug na de betaalpagina", () => {
   it("alleen vaste eigen pagina's, anders /domeinnaam", () => {
     expect(terugPad("/werkgever/website/bouwer")).toBe("/werkgever/website/bouwer");
     expect(terugPad("/studio")).toBe("/studio");
+    expect(terugPad("/studio/instellingen")).toBe("/studio/instellingen");
     for (const slecht of ["https://evil.example", "//evil.example", "/werkgever/website/bouwer?x=1", "/admin", undefined, 42]) {
       expect(terugPad(slecht)).toBe("/domeinnaam");
     }

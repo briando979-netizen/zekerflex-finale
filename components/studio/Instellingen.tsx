@@ -6,6 +6,7 @@ import { useStudio } from "@/components/studio/context";
 import { Card, IExternal, PageHead, btn, input } from "@/components/studio/ui";
 import type { Company, Winkel } from "@/lib/sites/types";
 import { leesBedrag } from "@/lib/sites/winkel";
+import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 
 // ---------------------------------------------------------------------------
 // Websitestudio → Instellingen: hoe bestellen en bezorgen werkt (meteen live),
@@ -37,6 +38,12 @@ export default function Instellingen() {
           </p>
           <p className="mt-2 text-sm text-[#616161]">Een eigen domeinnaam (zoals jouwwinkel.nl) koppel je in de paginabouwer onder Domein. Wij regelen het beveiligde slotje.</p>
           <Link href="/studio/website" className={`${btn.secondary} mt-3`}>Naar de paginabouwer</Link>
+          <details className="mt-4 rounded-xl border border-[#ebebeb] p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-[#1a1a1a]">Nog geen domeinnaam? Zoek en bestel er één</summary>
+            <div className="mt-3">
+              <DomeinZoeker terugNaar="/studio/instellingen" smal />
+            </div>
+          </details>
         </Card>
       </div>
     </>

@@ -40,7 +40,7 @@ export interface Besteller {
 export type StartUitkomst = { soort: "betalen"; url: string } | { soort: "bundel"; id: string };
 
 /** Waar je na de betaalpagina terugkomt: alleen deze eigen pagina's (geen open doorverwijzing). */
-export const TERUG_PADEN = ["/domeinnaam", "/werkgever/website/bouwer", "/studio"] as const;
+export const TERUG_PADEN = ["/domeinnaam", "/werkgever/website/bouwer", "/studio", "/studio/instellingen"] as const;
 export const terugPad = (pad: unknown): string => (typeof pad === "string" && (TERUG_PADEN as readonly string[]).includes(pad) ? pad : "/domeinnaam");
 
 /** Stelt de terugkeer-URL samen: pad + ?bestelling=…&domein=… */
