@@ -86,6 +86,11 @@ export function Assistent({ thema, teksten, onStijl, onTekst }: { thema: Thema; 
                 ) : (
                   <div className="space-y-2 rounded-2xl rounded-bl-sm p-3 text-sm" style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
                     {a.uitleg ? <p>{a.uitleg}</p> : null}
+                    {!a.thema && !Object.keys(a.teksten).length ? (
+                      <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+                        Hier zat geen wijziging in om over te nemen. Vraag het iets concreter, bijvoorbeeld: &ldquo;maak de hoofdkleur warmer bruin&rdquo; of &ldquo;zet de hoeken op extra rond&rdquo;.
+                      </p>
+                    ) : null}
                     {a.thema && stijlAnders ? (
                       <div className="flex items-center gap-2">
                         <span className="flex h-6 w-16 overflow-hidden rounded" aria-hidden="true">

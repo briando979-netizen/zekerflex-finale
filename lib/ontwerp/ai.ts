@@ -1,6 +1,6 @@
 import { chat, chatJson, llmConfigProblem } from "@/lib/ai/client";
 import { AppError } from "@/lib/errors";
-import { HOEKEN, KNOPPEN, LETTERTYPES, SCHADUWEN, STANDAARD_THEMA, normalizeThema, type Thema } from "@/lib/ontwerp/thema";
+import { HOEKEN, KNOPPEN, LETTERTYPES, SCHADUWEN, STANDAARD_THEMA, normalizeThema, zelfdeThema, type Thema } from "@/lib/ontwerp/thema";
 import { normalizeInhoud, type PaginaInhoud } from "@/lib/ontwerp/paginas";
 
 // ---------------------------------------------------------------------------
@@ -94,11 +94,19 @@ export interface AssistentAntwoord {
  */
 export async function ontwerpAssistent(vraag: string, huidig: Thema, teksten: { key: string; label: string; waarde: string }[]): Promise<AssistentAntwoord> {
   aiBeschikbaar();
+  // Een taalmodel beschrijft soms een wijziging zonder de waarden mee te geven: dan één keer opnieuw, strenger.
+  let antwoord = await vraagAssistent(vraag, huidig, teksten, false);
+  if (!antwoord.thema && !Object.keys(antwoord.teksten).length) antwoord = await vraagAssistent(vraag, huidig, teksten, true);
+  if (!antwoord.thema && !Object.keys(antwoord.teksten).length && !antwoord.uitleg) throw AppError.validation("De assistent gaf geen bruikbaar antwoord. Probeer het anders te zeggen.");
+  return antwoord;
+}
+
+async function vraagAssistent(vraag: string, huidig: Thema, teksten: { key: string; label: string; waarde: string }[], streng: boolean): Promise<AssistentAntwoord> {
   const res = await chatJson<{ uitleg?: unknown; thema?: unknown; teksten?: unknown }>({
     purpose: "ontwerper",
     retry: false,
     timeoutMs: 40_000,
-    temperature: 0.5,
+    temperature: streng ? 0.3 : 0.5,
     maxTokens: 1800,
     messages: [
       {
@@ -111,7 +119,11 @@ export async function ontwerpAssistent(vraag: string, huidig: Thema, teksten: { 
       },
       {
         role: "user",
-        content: `Huidige stijl: ${JSON.stringify(huidig)}\nTeksten (sleutel | veld | huidige tekst):\n${teksten.map((t) => `${t.key} | ${t.label} | ${t.waarde.slice(0, 200)}`).join("\n")}\n\nWens: ${vraag.slice(0, 800)}`,
+        content: `Huidige stijl: ${JSON.stringify(huidig)}\nTeksten (sleutel | veld | huidige tekst):\n${teksten.map((t) => `${t.key} | ${t.label} | ${t.waarde.slice(0, 200)}`).join("\n")}\n\nWens: ${vraag.slice(0, 800)}${
+          streng
+            ? "\n\nLet op: je vorige antwoord bevatte geen nieuwe waarden. Zet elke stijlwijziging die je noemt als veld in \"thema\" (met een andere waarde dan nu) en elke nieuwe tekst in \"teksten\"."
+            : ""
+        }`,
       },
     ],
   });
@@ -123,9 +135,10 @@ export async function ontwerpAssistent(vraag: string, huidig: Thema, teksten: { 
       .map(([k, v]) => [k, String(v).trim().slice(0, 2000)]),
   );
   const patch = res.thema && typeof res.thema === "object" && !Array.isArray(res.thema) ? (res.thema as Record<string, unknown>) : null;
-  const thema = patch ? normalizeThema({ ...huidig, ...patch }) : null;
+  const voorgesteld = patch ? normalizeThema({ ...huidig, ...patch }) : null;
+  // een "voorstel" dat gelijk is aan wat er staat, is geen voorstel
+  const thema = voorgesteld && !zelfdeThema(voorgesteld, huidig) ? voorgesteld : null;
   const uitleg = typeof res.uitleg === "string" ? res.uitleg.slice(0, 600) : "";
-  if (!thema && !Object.keys(nieuweTeksten).length && !uitleg) throw AppError.validation("De assistent gaf geen bruikbaar antwoord. Probeer het anders te zeggen.");
   return { uitleg, thema, teksten: nieuweTeksten };
 }
 

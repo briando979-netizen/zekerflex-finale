@@ -10,7 +10,8 @@ import { normalizeThema } from "@/lib/ontwerp/thema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 45;
+// de assistent vraagt het model soms twee keer (lib/ontwerp/ai.ts), elk tot 40 s
+export const maxDuration = 90;
 
 // GET: concept, live en geschiedenis van de Site-ontwerper.
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
