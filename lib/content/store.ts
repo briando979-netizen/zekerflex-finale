@@ -17,7 +17,7 @@ export interface ContentItem {
 
 export const CONTENT_REGISTRY: ContentItem[] = [
   // ─────────────────────────────────────────────────────────── Hero
-  { key: "hero.eyebrow", group: "Homepage — hero", label: "Bovenregel", default: "Flexwerk in Nederland · helder geregeld" },
+  { key: "hero.eyebrow", group: "Homepage — hero", label: "Bovenregel", default: "Personeel · website · branchesoftware · administratie" },
   { key: "hero.titleLine1", group: "Homepage — hero", label: "Titel regel 1", default: "Zeker van je werk." },
   { key: "hero.titleLine2", group: "Homepage — hero", label: "Titel regel 2 (accent)", default: "Zeker van je mensen." },
   {
@@ -25,7 +25,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
     group: "Homepage — hero",
     label: "Introtekst",
     default:
-      "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met flexibele uitbetaling en Wet DBA-risicosignalering.",
+      "Eén plek voor je hele bedrijf: personeel, een eigen website, software voor jouw branche en je administratie. Zoek je werk? Hier vind je diensten bij jou in de buurt.",
     multiline: true,
   },
   { key: "hero.ctaPrimary", group: "Homepage — hero", label: "Knop 1 (werk zoeken)", default: "Ik zoek werk" },

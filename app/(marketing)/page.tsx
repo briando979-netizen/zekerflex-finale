@@ -77,7 +77,9 @@ export default async function HomePage() {
           <Marquee
             items={[
               "Sneller uitbetalen als optie",
-              "Geen abonnement",
+              "Software voor horeca en rijscholen",
+              "Een eigen website op je domein",
+              "Meer Google-reviews",
               "Gebouwd voor flexibel werk in Nederland",
               "Modelovereenkomst inbegrepen",
               "Wet DBA-risicosignalering",

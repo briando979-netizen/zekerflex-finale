@@ -54,7 +54,7 @@ export const PIJLERS: Pijler[] = [
     naam: "Online & klanten",
     kort: "Een eigen website, meer reviews en goed bereikbaar voor klanten.",
     intro:
-      "Een snelle website op je eigen domein, meer Google-reviews en een nette eerste indruk. Alles zelf gehost in Nederland, zonder trackers.",
+      "Een snelle website op je eigen domein, meer Google-reviews en een nette eerste indruk. Je website zonder cookies of trackers van anderen.",
   },
   {
     sleutel: "branche",
@@ -149,13 +149,12 @@ export const AANBOD: AanbodItem[] = [
     naam: "Website laten maken",
     kort: "Een snelle, moderne website op je eigen domein, zelf aan te passen.",
     tekst:
-      "ZekerFlex bouwt een moderne website voor je zaak, op je eigen domeinnaam. Teksten en foto's pas je daarna zelf aan. De site draait op onze eigen servers in Nederland, zonder cookies of trackers van anderen.",
+      "ZekerFlex bouwt een moderne website voor je zaak, op je eigen domeinnaam. Teksten en foto's pas je daarna zelf aan. De site gebruikt geen cookies en geen trackers van anderen.",
     punten: [
       "Modern ontwerp dat op elke telefoon goed werkt",
       "Je eigen domeinnaam met een beveiligde verbinding",
       "Teksten en foto's zelf aanpassen",
       "Bezoekerscijfers zonder cookies",
-      "Gehost in Nederland",
     ],
     voorWie: "Ondernemers die een betere website willen zonder gedoe",
     status: "beschikbaar",
@@ -212,7 +211,7 @@ export const AANBOD: AanbodItem[] = [
     naam: "Zakelijke e-mail",
     kort: "E-mail op je eigen domeinnaam, geregeld samen met je website.",
     tekst: "E-mailadressen op je eigen domeinnaam, zoals info@jouwzaak.nl, geregeld op dezelfde plek als je website.",
-    punten: ["Adressen op je eigen domein", "Samen met je website geregeld", "Opgeslagen in Nederland"],
+    punten: ["Adressen op je eigen domein", "Samen met je website geregeld", "Adressen beheren vanuit je ZekerFlex-account"],
     voorWie: "Ondernemers met een eigen domeinnaam",
     status: "binnenkort",
     start: DEMO,

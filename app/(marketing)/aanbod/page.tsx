@@ -7,7 +7,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 
 const TITLE = "Het aanbod van ZekerFlex: personeel, website, branchesoftware en administratie";
 const DESCRIPTION =
-  "Alles voor je bedrijf onder één dak: flexwerkers en uitzendkrachten, een eigen website en meer Google-reviews, software voor horeca en rijscholen, en facturen en rekentools. Eén account, gehost in Nederland.";
+  "Alles voor je bedrijf onder één dak: flexwerkers en uitzendkrachten, een eigen website en meer Google-reviews, software voor horeca en rijscholen, en facturen en rekentools. Met één account voor alles.";
 
 export const metadata: Metadata = {
   title: { absolute: `${TITLE} | ZekerFlex` },
@@ -34,7 +34,7 @@ export default function AanbodPagina() {
           <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold md:text-6xl">Alles voor je bedrijf onder één dak</h1>
           <p className="mt-6 max-w-2xl text-lg text-white/70">
             Personeel, je website en klanten, software voor jouw branche en je administratie. Je zet aan wat je nodig hebt, met één
-            account en één factuur. Alles draait op onze eigen servers in Nederland.
+            account voor alles.
           </p>
           <nav aria-label="Pijlers" className="mt-8 flex flex-wrap gap-2">
             {PIJLERS.map((p) => (

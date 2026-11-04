@@ -17,10 +17,10 @@ export interface HeroContent {
   ctaSecondary: string;
 }
 const HERO_DEFAULTS: HeroContent = {
-  eyebrow: "Flexwerk in Nederland · helder geregeld",
+  eyebrow: "Personeel · website · branchesoftware · administratie",
   titleLine1: "Zeker van je werk.",
   titleLine2: "Zeker van je mensen.",
-  lead: "Het platform waar werknemers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmanschap, met flexibele uitbetaling en Wet DBA-risicosignalering.",
+  lead: "Eén plek voor je hele bedrijf: personeel, een eigen website, software voor jouw branche en je administratie. Zoek je werk? Hier vind je diensten bij jou in de buurt.",
   ctaPrimary: "Ik zoek werk",
   ctaSecondary: "Ik zoek mensen",
 };
@@ -91,7 +91,7 @@ export function HeroStage({
             </Link>
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65">
-            {["Bepaal je eigen uurtarief", "Kies je eigen klussen", "Bouw aan jouw toekomst"].map((t) => (
+            {["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
               </span>

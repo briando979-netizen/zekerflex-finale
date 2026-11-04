@@ -15,7 +15,7 @@ export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-neutralx-600">
             ZekerFlex begon met flexwerk en is uitgegroeid tot één plek voor je hele bedrijf: personeel, je website en klanten,
-            software voor jouw branche en je geldzaken. Eén account, één factuur.
+            software voor jouw branche en je geldzaken. Met één account voor alles.
           </p>
         </div>
 

@@ -107,7 +107,7 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
                 </div>
                 <div>
                   <dt className="text-neutralx-500">Werkt samen met</dt>
-                  <dd className="font-medium text-ink">Je ZekerFlex-account: één login, één factuur</dd>
+                  <dd className="font-medium text-ink">Je ZekerFlex-account: één login voor alles</dd>
                 </div>
               </dl>
               <Link href={a.start.href} className="btn-primary mt-6 block w-full text-center text-sm">
