@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { kvDelete, kvGet, kvGetMany, kvListValues, kvSet } from "@/lib/storage/kv";
 import { alertOwnerLater } from "@/lib/ops/alert";
+import { isReservedTestAddress } from "@/lib/mail";
 import { tenantVerification } from "@/lib/company/verified";
 import { deleteUpload, storeUpload } from "@/lib/storage/local";
 import { partnerRekening, type PartnerRekening } from "@/lib/shop/partner";
@@ -157,7 +158,17 @@ export async function verkoperProducten(tenantId: string): Promise<VerkoperProdu
   return prisma.shopProduct.findMany({ where: { sellerTenantId: tenantId }, orderBy: { createdAt: "desc" }, select: productSelect, take: MAX_PRODUCTEN });
 }
 
-function meldNieuwProduct(tenantId: string, bedrijf: string, naam: string): void {
+/** Testadressen (RFC 2606, ook example.com zoals live tests gebruiken): daarvoor nooit een melding aan het eigen team. */
+const isTestAdres = (email: string) => isReservedTestAddress(email) || /@example\.(com|net|org)$/i.test(email.trim());
+
+/** Een testbedrijf: alle beheerders hebben een testadres. */
+async function isTestBedrijf(tenantId: string): Promise<boolean> {
+  const mails = await beheerdersVan(tenantId);
+  return mails.length > 0 && mails.every(isTestAdres);
+}
+
+async function meldNieuwProduct(tenantId: string, bedrijf: string, naam: string): Promise<void> {
+  if (await isTestBedrijf(tenantId).catch(() => false)) return;
   alertOwnerLater({
     key: `verkoper-product:${tenantId}`,
     title: `Product van ${bedrijf} wacht op goedkeuring`,
@@ -196,7 +207,7 @@ export async function maakVerkoperProduct(tenantId: string, input: NieuwProduct)
     },
     select: productSelect,
   });
-  meldNieuwProduct(tenantId, tenant?.name ?? "Een verkoper", input.naam);
+  await meldNieuwProduct(tenantId, tenant?.name ?? "Een verkoper", input.naam);
   return product;
 }
 
@@ -254,7 +265,7 @@ export async function wijzigVerkoperProduct(tenantId: string, productId: string,
   }
   if (nieuw === "in_beoordeling" && status !== "in_beoordeling") {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-    meldNieuwProduct(tenantId, tenant?.name ?? "Een verkoper", w.naam ?? p.name);
+    await meldNieuwProduct(tenantId, tenant?.name ?? "Een verkoper", w.naam ?? p.name);
   }
   // een vervangen foto is niet meer in gebruik
   if (w.fotoUploadId && p.imageUploadId && p.imageUploadId !== w.fotoUploadId) await ruimFotoOp(p.imageUploadId);
