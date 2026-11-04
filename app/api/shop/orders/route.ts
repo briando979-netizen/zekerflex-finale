@@ -11,6 +11,7 @@ import { jsonError } from "@/lib/http/errors";
 import { recordAudit } from "@/lib/audit";
 import { createShopOrderCheckoutSession } from "@/lib/billing/stripe";
 import { legPartnerBestellingVast } from "@/lib/shop/partner";
+import { legVerkopersVast } from "@/lib/shop/verkoper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const variants = await prisma.shopProductVariant.findMany({
       where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
-      include: { product: { select: { id: true, name: true, priceCents: true, imageUrl: true } } },
+      include: { product: { select: { id: true, name: true, priceCents: true, imageUrl: true, sellerTenantId: true } } },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
@@ -72,6 +73,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       imageUrl: string | null;
       size: string | null;
       color: string | null;
+      /** verkoper op de marktplaats; ontbreekt bij ZekerFlex-eigen producten (lib/shop/verkoper.ts) */
+      sellerTenantId?: string;
     };
     const lines: Line[] = [];
     const outOfStock: string[] = [];
@@ -92,6 +95,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         imageUrl: v.product.imageUrl,
         size: v.size,
         color: v.color,
+        ...(v.product.sellerTenantId ? { sellerTenantId: v.product.sellerTenantId } : {}),
       });
     }
 
@@ -134,11 +138,23 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // Via een partnerlink: de vergoeding vastleggen (lib/shop/partner.ts). Mag de
     // bestelling nooit tegenhouden.
-    if (d.partner) {
+    // De vergoeding geldt voor ZekerFlex-eigen producten, niet voor die van verkopers.
+    const eigen = lines.filter((l) => !l.sellerTenantId);
+    if (d.partner && eigen.length > 0) {
       try {
-        await legPartnerBestellingVast({ code: d.partner, orderId: order.id, email: d.email, productenCents: subtotalCents, regels: lines.length });
+        const eigenCents = eigen.reduce((s, l) => s + l.priceCents * l.qty, 0);
+        await legPartnerBestellingVast({ code: d.partner, orderId: order.id, email: d.email, productenCents: eigenCents, regels: eigen.length });
       } catch (err) {
         logger.warn("shop partner attribution failed", { orderId: order.id, error: (err as Error).message });
+      }
+    }
+
+    // Producten van verkopers: per verkoper zijn deel vastleggen (commissie, uitbetaling).
+    if (lines.some((l) => l.sellerTenantId)) {
+      try {
+        await legVerkopersVast(order.id, lines, shippingCents);
+      } catch (err) {
+        logger.error("shop seller split failed", { orderId: order.id, error: (err as Error).message });
       }
     }
 

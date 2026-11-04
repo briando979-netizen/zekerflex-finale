@@ -17,9 +17,18 @@ export type ShopCardProduct = {
   /** tweede foto (iemand die het draagt), getoond als je over de kaart beweegt */
   altImageUrl?: string | null;
   variants: ShopVariant[];
+  /** verkoper op de marktplaats; null = ZekerFlex zelf */
+  seller?: string | null;
 };
 
 const oneSize = (id: string, stock = 10): ShopVariant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
+
+/** De naam van de verkoper uit een databaserij met seller: { name } (null bij ZekerFlex-eigen producten). */
+export function sellerName(seller: unknown): string | null {
+  if (!seller || typeof seller !== "object") return null;
+  const name = (seller as { name?: unknown }).name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+}
 
 /** Databaserij (of API-item) → etalageproduct. */
 export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
@@ -46,6 +55,7 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
             stock: Number(v.stock ?? 0),
           }))
         : oneSize(String(it.id), Number(it.stock ?? 0)),
+    seller: sellerName(it.seller),
   };
 }
 

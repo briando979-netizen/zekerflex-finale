@@ -21,6 +21,7 @@ import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
+import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -384,6 +385,8 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         });
         await decrementVariantStock(updated.id, (updated.itemsJson as ShopOrderLine[] | null) ?? []);
         await notifyShopOrderPaid(updated);
+        // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
+        await meldVerkopersBetaald(updated);
       }
       return NextResponse.json({ ok: true });
     }

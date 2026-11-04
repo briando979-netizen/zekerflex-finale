@@ -36,6 +36,8 @@ export type PdpProduct = {
   bundleItems?: PdpBundleItem[];
   /** 3D-model (glb) als de beheerder er een koppelde */
   model3dUrl?: string | null;
+  /** verkoper op de marktplaats; null = ZekerFlex zelf */
+  seller?: string | null;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -55,6 +57,7 @@ const asCard = (p: PdpProduct): ShopCardProduct => ({
   imageUrl: p.imageUrl,
   altImageUrl: p.modelPhotoUrl && p.modelPhotoUrl !== p.imageUrl ? p.modelPhotoUrl : null,
   variants: p.variants,
+  seller: p.seller ?? null,
 });
 
 export function ProductDetail({ product, related, boughtTogether = false }: { product: PdpProduct; related: PdpProduct[]; boughtTogether?: boolean }) {
@@ -123,7 +126,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           {product.badge && <span className="mb-2 inline-block rounded-md bg-money-soft px-2 py-1 text-[12px] font-bold text-money-ink">{product.badge}</span>}
           <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">{product.name}</h1>
           <p className="mt-2 text-[14px] text-neutralx-500">
-            {fmt(t.shop.soldBy, { seller: SELLER })}
+            {fmt(t.shop.soldBy, { seller: product.seller ?? SELLER })}
             {spec.fit && (
               <>
                 {" · "}
@@ -295,9 +298,9 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           </button>
 
           <div className="mt-5 border-t border-hair pt-4">
-            <p className="text-[14px] font-bold text-ink">{fmt(t.shop.buyBoxSeller, { seller: SELLER })}</p>
+            <p className="text-[14px] font-bold text-ink">{fmt(t.shop.buyBoxSeller, { seller: product.seller ?? SELLER })}</p>
             <ul className="mt-2.5 space-y-2 text-[13px] text-neutralx-600">
-              {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice].map((line) => (
+              {(product.seller ? [t.shop.uspSellerShips, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspPaySafe] : [t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice]).map((line) => (
                 <li key={line} className="flex gap-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0 text-ok" aria-hidden>
                     <path d="m5 12.5 4.5 4.5L19 7.5" />
@@ -384,7 +387,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               {t.shop.shippingReturns}
             </h2>
             <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
-              {[t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, t.shop.securePaymentNote].map((line) => (
+              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, t.shop.securePaymentNote] : [t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, t.shop.securePaymentNote]).map((line) => (
                 <li key={line} className="flex gap-3">
                   <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                   <span>{line}</span>

@@ -307,6 +307,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("partnerprogramma-voorwaarden"),
     },
     {
+      id: "marktplaats-verkopers",
+      group: "Geld & bank",
+      title: "Verkopers op de webshop: Stripe Connect, voorwaarden en DAC7 regelen",
+      why: "Sinds 4 november kunnen geverifieerde bedrijven in de Websitestudio (Verkopen op ZekerFlex) eigen producten aanbieden. Niets komt in de shop zonder jouw goedkeuring in Beheer → Verkopers. Kopers betalen nu aan ZekerFlex en jij maakt het geld van verkopers zelf over, min 12% commissie. Geld innen voor andere bedrijven mag maar beperkt zonder vergunning; met Stripe Connect gaat het geld via Stripe rechtstreeks naar de verkoper. De commissie (12%), uitbetaling na 30 dagen en verzenden binnen 2 werkdagen zijn keuzes van Claude.",
+      how: [
+        "Zet Stripe Connect aan (zie de taak 'Stripe Connect aanzetten'). Zeg het daarna tegen Claude; die laat verkopers hun Stripe-account koppelen en betaalt dan automatisch uit.",
+        "Laat de verkoopvoorwaarden nakijken door een jurist en zet ze in de algemene voorwaarden. De korte versie staat in de Websitestudio onder Verkopen op ZekerFlex. Vraag Claude om de volledige tekst voor te stellen.",
+        "DAC7: een platform met verkopers moet elk jaar vóór 31 januari de verkopen per verkoper melden bij de Belastingdienst (vanaf 30 verkopen of € 2.000 per jaar). Meld ZekerFlex aan als platformexploitant via de Belastingdienst; Claude maakt het jaaroverzicht.",
+        "Klopt 12% commissie voor jou? Een ander percentage zeg je tegen Claude; het staat op één plek (lib/shop/verkoper-core.ts).",
+        "Keur pas daarna de eerste producten goed. Vink deze taak dan af.",
+      ],
+      auto: false,
+      ...m("marktplaats-verkopers"),
+    },
+    {
       id: "loonweek-grens",
       group: "Geld & bank",
       title: "Loonweek: laten beginnen om 00:00 Nederlandse tijd? (keuze nodig)",

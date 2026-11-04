@@ -89,6 +89,7 @@ model Tenant {
   managedWebsite       ManagedWebsite?
   rijschool            Rijschool?
   horecaZaak           HorecaZaak?
+  shopProducts         ShopProduct[]         @relation("ShopSeller")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1875,9 +1876,17 @@ model ShopProduct {
   bundleOf   ShopBundleItem[]     @relation("BundleProduct")
   includedIn ShopBundleItem[]     @relation("ItemProduct")
 
+  // Verkoper op de marktplaats (null = ZekerFlex zelf, lib/shop/verkoper.ts). Een
+  // verkopersproduct is pas zichtbaar (active) na goedkeuring door de beheerder.
+  sellerTenantId String?
+  seller         Tenant? @relation("ShopSeller", fields: [sellerTenantId], references: [id], onDelete: Cascade)
+  sellerStatus   String? // "in_beoordeling" | "goedgekeurd" | "afgewezen" | "gepauzeerd"
+  sellerNote     String? // reden bij afwijzen, voor de verkoper
+
   @@index([active, sortOrder])
   @@index([category, active])
   @@index([gender, collection])
+  @@index([sellerTenantId, sellerStatus])
 }
 
 // One stock-tracked purchasable unit of a product (a specific size/color

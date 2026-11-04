@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 function toDto(p: {
   id: string; slug: string; name: string; description: string; category: string;
   priceCents: number; stock: number; imageUrl: string | null; modelPhotoUrl: string | null; badge: string | null;
+  seller?: { name: string } | null;
   variants?: { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
   bundleOf?: { itemProduct: { id: string; name: string; imageUrl: string | null; priceCents: number } }[];
 }): PdpProduct {
@@ -20,6 +21,7 @@ function toDto(p: {
     priceCents: p.priceCents, stock: p.stock, imageUrl: p.imageUrl, modelPhotoUrl: p.modelPhotoUrl, badge: p.badge,
     variants: p.variants ?? [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
     ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
+    seller: p.seller?.name ?? null,
   };
 }
 
@@ -43,6 +45,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     include: {
       variants: { orderBy: { createdAt: "asc" } },
       bundleOf: { include: { itemProduct: { select: { id: true, name: true, imageUrl: true, priceCents: true } } } },
+      seller: { select: { name: true } },
     },
   });
   if (!product || !product.active) notFound();
@@ -50,12 +53,13 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   // "Vaak samen gekocht" from real orders first, topped up from the same category.
   const togetherIds = await boughtTogether(product.id, 4).catch(() => [] as string[]);
   const together = togetherIds.length
-    ? (await prisma.shopProduct.findMany({ where: { id: { in: togetherIds }, active: true } })).sort((a, b) => togetherIds.indexOf(a.id) - togetherIds.indexOf(b.id))
+    ? (await prisma.shopProduct.findMany({ where: { id: { in: togetherIds }, active: true }, include: { seller: { select: { name: true } } } })).sort((a, b) => togetherIds.indexOf(a.id) - togetherIds.indexOf(b.id))
     : [];
   const fill = await prisma.shopProduct.findMany({
     where: { active: true, category: product.category, id: { notIn: [product.id, ...together.map((p) => p.id)] } },
     orderBy: { sortOrder: "asc" },
     take: Math.max(0, 4 - together.length),
+    include: { seller: { select: { name: true } } },
   });
   const related = [...together, ...fill];
   const model3d = await getModel3D(product.id);
@@ -75,6 +79,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
               inStock: product.stock > 0,
               imageUrl: product.imageUrl,
               variants: product.variants.map((v) => ({ priceCents: v.priceCents, stock: v.stock })),
+              sellerName: product.seller?.name ?? null,
             }),
           ),
         }}

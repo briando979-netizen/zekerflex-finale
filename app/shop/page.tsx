@@ -29,7 +29,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
   // Op de server opgehaald en omgezet: de eerste HTML (en Google) toont de echte,
   // koopbare catalogus, en de browser krijgt alleen wat de kaarten nodig hebben.
   const rows = await prisma.shopProduct
-    .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } } } })
+    .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } }, seller: { select: { name: true } } } })
     .catch(() => []);
   const products = rows.map((r) => toShopProduct(r as unknown as Record<string, unknown>));
   const t = (await getDict()).shop;

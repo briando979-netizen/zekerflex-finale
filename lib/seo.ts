@@ -291,7 +291,10 @@ export function productJsonLd(p: {
   inStock: boolean;
   imageUrl?: string | null;
   variants?: { priceCents: number | null; stock: number }[];
+  /** verkoper op de marktplaats; zonder = ZekerFlex verkoopt zelf */
+  sellerName?: string | null;
 }): Record<string, unknown> {
+  const seller = p.sellerName ? { "@type": "Organization", name: p.sellerName } : { "@id": ORG_ID };
   const hasVariants = Boolean(p.variants && p.variants.length > 0);
   const prices = hasVariants ? p.variants!.map((v) => v.priceCents ?? p.priceCents) : [p.priceCents];
   const low = Math.min(...prices);
@@ -307,7 +310,7 @@ export function productJsonLd(p: {
           priceCurrency: "EUR",
           price: (low / 100).toFixed(2),
           availability,
-          seller: { "@id": ORG_ID },
+          seller,
         }
       : {
           "@type": "AggregateOffer",
@@ -317,7 +320,7 @@ export function productJsonLd(p: {
           highPrice: (high / 100).toFixed(2),
           offerCount: prices.length,
           availability,
-          seller: { "@id": ORG_ID },
+          seller,
         };
 
   return {
@@ -326,7 +329,7 @@ export function productJsonLd(p: {
     name: p.name,
     description: p.description,
     image: p.imageUrl ? (p.imageUrl.startsWith("http") ? p.imageUrl : `${SITE.url}${p.imageUrl}`) : `${SITE.url}/opengraph-image`,
-    brand: { "@type": "Brand", name: SITE.name },
+    ...(p.sellerName ? {} : { brand: { "@type": "Brand", name: SITE.name } }),
     offers,
   };
 }
