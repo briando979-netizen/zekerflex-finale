@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { CITIES, cityBySlug } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { klusUrl } from "@/lib/klusconcept/concept";
 
 export const dynamicParams = false;
 
@@ -83,7 +84,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
           intro={`${c.local} Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare flexkrachten voor ${c.sectors.join(", ")} — voor € 3,50 per gewerkt uur, zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/register?type=bedrijf" className="btn-primary">
+          <Link href={klusUrl({ city: c.name })} className="btn-primary">
             Gratis klus plaatsen
           </Link>
           <Link href="/demo" className="btn-ghost">
@@ -122,7 +123,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
       <CtaBand
         title={`Vandaag nog iemand nodig in ${c.name}?`}
         body="Plaats je klus in een paar minuten. Je betaalt alleen voor gewerkte uren."
-        primaryHref="/register?type=bedrijf"
+        primaryHref={klusUrl({ city: c.name })}
         primaryLabel="Klus plaatsen"
         secondaryHref={`/freelance-werk/${c.slug}`}
         secondaryLabel={`Werk zoeken in ${c.name}`}

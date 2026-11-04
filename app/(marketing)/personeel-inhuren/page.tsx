@@ -5,6 +5,7 @@ import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { klusUrl } from "@/lib/klusconcept/concept";
 
 const TITLE = "Personeel inhuren in heel Nederland — klus plaatsen voor flex- en uitzendkrachten";
 const DESCRIPTION =
@@ -32,7 +33,7 @@ export default function PersoneelInhurenPage() {
           intro="Plaats een klus en ZekerFlex vindt geverifieerde flexkrachten in de buurt van je locatie — zzp'ers, flexwerkers of uitzendkrachten via het ZekerFlex-uitzendbureau. Je betaalt € 3,50 per gewerkt uur, zonder abonnement."
         />
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/register?type=bedrijf" className="btn-primary">
+          <Link href={klusUrl()} className="btn-primary">
             Gratis klus plaatsen
           </Link>
           <Link href="/voor-bedrijven" className="btn-ghost">
@@ -65,7 +66,7 @@ export default function PersoneelInhurenPage() {
       <CtaBand
         title="Vandaag nog iemand nodig?"
         body="Plaats je klus in een paar minuten — je betaalt alleen voor gewerkte uren."
-        primaryHref="/register?type=bedrijf"
+        primaryHref={klusUrl()}
         primaryLabel="Klus plaatsen"
         secondaryHref="/prijzen"
         secondaryLabel="Prijzen"
