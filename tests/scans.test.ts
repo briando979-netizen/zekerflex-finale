@@ -118,6 +118,18 @@ describe("voorstel op maat", () => {
     expect(o.find((x) => x.id === "google-reviews")?.waarom).toContain("4,1 uit 23 reviews");
   });
 
+  it("een bedrijf zonder website krijgt een website en een domeinnaam aangeraden (echte .nl-prijs)", () => {
+    const zonder = { ...INPUT, soort: "reviews" as const, branche: "algemeen" as const, googleRating: 4.6, googleAantal: 40, nieuweSite: false, heeftWebsite: false };
+    const o = dealOpties(zonder, { ...PRIJZEN, domeinNlCent: 995 });
+    expect(o.find((x) => x.id === "nieuwe-website")).toMatchObject({ naam: "Je eigen website", aanbevolen: true });
+    const domein = o.find((x) => x.id === "domein")!;
+    expect(domein).toMatchObject({ eenmaligCent: null, maandCent: null, aanbevolen: true });
+    expect(domein.prijsTekst?.replace(/\s/g, " ")).toBe("Eerste jaar inbegrepen bij je website, daarna € 9,95 per jaar (.nl)");
+    // zonder bekende prijs geen domeinoptie; mét website ook niet
+    expect(dealOpties(zonder, PRIJZEN).some((x) => x.id === "domein")).toBe(false);
+    expect(dealOpties({ ...zonder, heeftWebsite: true }, { ...PRIJZEN, domeinNlCent: 995 }).some((x) => x.id === "domein")).toBe(false);
+  });
+
   it("telt het totaal, en Basis en Pro nooit samen", () => {
     const o = dealOpties(INPUT, PRIJZEN);
     expect(dealTotaal(o, ["nieuwe-website", "beheer-pro", "horeca", "google-reviews"])).toEqual({ eenmaligCent: 24750, maandCent: 9900 + 1900 });

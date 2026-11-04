@@ -6,6 +6,7 @@ import { sendMail, mailShell, mailButton } from "@/lib/mail";
 import { CONTACTS } from "@/lib/seo";
 import { kvGet, kvGetMany, kvSet } from "@/lib/storage/kv";
 import { BASIS, BUNDEL } from "@/lib/horeca/modules";
+import { extensie } from "@/lib/domeinen/extensies";
 import { proposalOffer } from "@/lib/sales/website-proposal";
 import { createLead } from "@/lib/sales/leads";
 import { maakLeadWarm } from "@/lib/scans/lead";
@@ -52,6 +53,7 @@ export async function dealPrijzen(): Promise<DealPrijzen> {
     horecaBundelCent: BUNDEL.prijsCentPerMaand,
     telefoonCent: o.telefonieVanafCents,
     uurfeeCent: o.feePerUurCents,
+    domeinNlCent: extensie("nl")?.prijsCent,
   };
 }
 

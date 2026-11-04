@@ -112,6 +112,8 @@ export interface DealPrijzen {
   horecaBundelCent: number;
   telefoonCent: number | null;
   uurfeeCent: number;
+  /** .nl per jaar (lib/domeinen/extensies.ts); het eerste jaar zit bij een nieuwe website */
+  domeinNlCent?: number | undefined;
 }
 
 export interface DealOptie {
@@ -140,6 +142,8 @@ export interface DealInput {
   googleRating: number | null;
   googleAantal: number;
   nieuweSite: boolean;
+  /** het bedrijf heeft een eigen website (bij een review-scan niet altijd) */
+  heeftWebsite?: boolean | undefined;
 }
 
 const euro = (cent: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: cent % 100 ? 2 : 0 }).format(cent / 100);
@@ -150,21 +154,36 @@ export function dealOpties(d: DealInput, p: DealPrijzen): DealOptie[] {
   const opties: DealOptie[] = [];
   const zwak = d.score < 85;
   const website = d.soort === "website";
+  const zonderSite = d.heeftWebsite === false;
   const korting = p.websiteKortingCent !== null && p.websiteKortingCent < p.websiteCent;
   opties.push({
     id: "nieuwe-website",
-    naam: "Je nieuwe website",
+    naam: zonderSite ? "Je eigen website" : "Je nieuwe website",
     uitleg: "Snel, goed vindbaar en veilig, met je eigen teksten en foto's, contactformulier, WhatsApp en privacyverklaring. Wij zetten hem op je eigen adres.",
     waarom: website
       ? d.nieuweSite
         ? `Je hebt hem al gezien: je huidige site scoort ${d.score} van 100, de nieuwe haalt veel meer.`
         : `Je huidige site scoort ${d.score} van 100.${d.problemen.length ? ` Onder meer: ${d.problemen.slice(0, 2).join("; ").toLowerCase()}.` : ""}`
-      : "Een site met je Google-score en een knop om een review te schrijven, zodat bezoekers je meteen vertrouwen.",
+      : zonderSite
+        ? "Je hebt nog geen website: klanten die je op Google vinden, kunnen nergens verder lezen, reserveren of je aanbod bekijken."
+        : "Een site met je Google-score en een knop om een review te schrijven, zodat bezoekers je meteen vertrouwen.",
     eenmaligCent: korting ? p.websiteKortingCent : p.websiteCent,
     maandCent: null,
     prijsTekst: korting ? `Introductieprijs, normaal ${euro(p.websiteCent)}` : null,
-    aanbevolen: website && (zwak || d.nieuweSite),
+    aanbevolen: (website && (zwak || d.nieuweSite)) || zonderSite,
   });
+  if (zonderSite && p.domeinNlCent) {
+    opties.push({
+      id: "domein",
+      naam: "Je eigen domeinnaam",
+      uitleg: "Een eigen adres zoals jouwbedrijf.nl, met e-mail op je eigen naam mogelijk. Wij regelen de aanvraag.",
+      waarom: "Zonder eigen adres vinden klanten je moeilijker en oogt je mail minder zakelijk.",
+      eenmaligCent: null,
+      maandCent: null,
+      prijsTekst: `Eerste jaar inbegrepen bij je website, daarna ${euro(p.domeinNlCent)} per jaar (.nl)`,
+      aanbevolen: true,
+    });
+  }
   const basis = p.beheer.find((b) => b.key === "basis");
   const pro = p.beheer.find((b) => b.key === "pro");
   const zwaar = d.score < 60 || d.probleemCategorieen.some((c) => c === "veiligheid" || c === "snelheid");

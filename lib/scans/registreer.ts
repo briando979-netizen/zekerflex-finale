@@ -107,6 +107,7 @@ export async function registreerReviewScan(r: ReviewScanRapport): Promise<{ deal
       googleRating: r.rating,
       googleAantal: r.aantal,
       nieuweSite: false,
+      heeftWebsite: Boolean(r.bedrijf.website),
     });
     log = { ...log, dealId: deal.id };
     await bewaarScanLog(log);
