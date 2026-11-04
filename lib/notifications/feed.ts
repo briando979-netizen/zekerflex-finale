@@ -124,18 +124,24 @@ export async function getNotifications(principal: Principal): Promise<Notificati
           urgent: t.status === "DISPUTED",
         });
       }
+      // Een antwoord op je reactie is een week nieuws; daarna staat het alleen nog in Mijn klussen
+      // (zonder grens bleef "Tegenbod geaccepteerd" voor altijd in de bel staan).
+      const recent = (at: string | null) => Boolean(at) && now - new Date(at ?? 0).getTime() < 7 * 24 * 3600_000;
       for (const o of offers) {
-        if (o.status === "accepted") {
+        if (o.status === "accepted" && recent(o.respondedAt)) {
+          const tegenbod = o.proposedRateCents !== o.listedRateCents;
           out.push({
             id: `offer:${o.id}`,
             kind: "offer",
-            title: "Tegenbod geaccepteerd",
-            body: `${o.shiftTitle}: je tarief van € ${(o.proposedRateCents / 100).toFixed(2)}/u is akkoord. Neem de klus aan.`,
+            title: tegenbod ? "Tegenbod geaccepteerd" : "Je bent uitgekozen",
+            body: tegenbod
+              ? `${o.shiftTitle}: je tarief van € ${(o.proposedRateCents / 100).toFixed(2)}/u is akkoord. Je staat ingepland.`
+              : `${o.shiftTitle}: je reactie is geaccepteerd. Je staat ingepland.`,
             href: `/dashboard/klussen/${o.shiftId}`,
             at: o.respondedAt ?? o.at,
             urgent: true,
           });
-        } else if (o.status === "declined") {
+        } else if (o.status === "declined" && recent(o.respondedAt)) {
           // een gewone reactie (tegen het aangeboden tarief) is geen tegenbod
           const tegenbod = o.proposedRateCents !== o.listedRateCents;
           out.push({
@@ -147,7 +153,7 @@ export async function getNotifications(principal: Principal): Promise<Notificati
             at: o.respondedAt ?? o.at,
             urgent: false,
           });
-        } else if (o.status === "expired" && o.respondedAt && now - new Date(o.respondedAt).getTime() < 7 * 24 * 3600_000) {
+        } else if (o.status === "expired" && recent(o.respondedAt)) {
           // de klus begon zonder keuze (lib/offers/expire.ts); een week zichtbaar
           out.push({
             id: `offer:${o.id}`,
@@ -155,12 +161,13 @@ export async function getNotifications(principal: Principal): Promise<Notificati
             title: "Helaas niet uitgekozen",
             body: `${o.shiftTitle}: de klus is begonnen zonder dat je gekozen bent. Zoek een andere klus.`,
             href: "/dashboard/klussen",
-            at: o.respondedAt,
+            at: o.respondedAt ?? o.at,
             urgent: false,
           });
         }
       }
       for (const m of notChosen) {
+        if (!recent((m.respondedAt ?? m.expiresAt ?? m.createdAt).toISOString())) continue;
         out.push({
           id: `match:${m.id}`,
           kind: "shift",

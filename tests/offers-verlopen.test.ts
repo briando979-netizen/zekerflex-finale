@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
   offers: [] as { id: string; userId: string; shiftId: string; status: string; proposedRateCents: number; listedRateCents: number }[],
   shifts: [] as { id: string; title: string; startsAt: Date; status: string }[],
   vervangingen: [] as { id: string; status: string; startsAt: string }[],
+  toegewezen: [] as { shiftId: string; userId: string }[],
   kv: new Map<string, unknown>(),
   pushes: [] as { userIds: string[]; title: string; body: string }[],
   gezet: [] as [string, string][],
@@ -14,7 +15,12 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { shift: { findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) => h.shifts.filter((s) => where.id.in.includes(s.id))) } },
+  prisma: {
+    shift: { findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) => h.shifts.filter((s) => where.id.in.includes(s.id))) },
+    shiftAssignment: {
+      findMany: vi.fn(async ({ where }: { where: { shiftId: { in: string[] } } }) => h.toegewezen.filter((a) => where.shiftId.in.includes(a.shiftId)).map((a) => ({ shiftId: a.shiftId, freelancer: { userId: a.userId } }))),
+    },
+  },
 }));
 vi.mock("@/lib/storage/kv", () => ({
   kvGet: vi.fn(async (k: string) => h.kv.get(k) ?? null),
@@ -22,8 +28,8 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 vi.mock("@/lib/offers/store", () => ({
   listCounterOffers: vi.fn(async () => h.offers),
-  setOfferStatus: vi.fn(async (id: string, status: string) => {
-    h.gezet.push([id, status]);
+  setOfferStatus: vi.fn(async (id: string, status: string, opts?: { stil?: boolean }) => {
+    h.gezet.push([id, opts?.stil ? `${status} (stil)` : status]);
     const o = h.offers.find((x) => x.id === id);
     if (o) o.status = status;
     return o ?? null;
@@ -57,6 +63,7 @@ beforeEach(() => {
   h.offers = [];
   h.shifts = [];
   h.vervangingen = [];
+  h.toegewezen = [];
   h.kv.clear();
   h.pushes = [];
   h.gezet = [];
@@ -92,6 +99,16 @@ describe("ruimVerlopenReactiesOp", () => {
     expect(h.offers.find((o) => o.id === "c")?.status).toBe("pending");
     expect(h.pushes).toHaveLength(1);
     expect(h.pushes[0]).toMatchObject({ userIds: ["u-a"], title: "Helaas niet uitgekozen", body: expect.stringContaining('Voor "Afwassen Zwolle" ben je deze keer niet gekozen'), data: { url: "/dashboard/klussen" } });
+  });
+
+  it("kreeg de werker de klus toch, dan wordt de reactie stil geaccepteerd en volgt er geen seintje", async () => {
+    h.shifts = [{ id: "s1", title: "Bediening", startsAt: new Date(NU.getTime() - 3 * H), status: "FILLED" }];
+    h.offers = [reactie("a", "s1"), { ...reactie("b", "s1"), userId: "u-a", status: "expired" }, reactie("c", "s1")];
+    h.toegewezen = [{ shiftId: "s1", userId: "u-a" }];
+    const uit = await ruimVerlopenReactiesOp(NU);
+    expect(h.gezet).toEqual([["a", "accepted (stil)"], ["b", "accepted (stil)"], ["c", "expired"]]);
+    expect(uit.reacties).toBe(1);
+    expect(h.pushes.map((p) => p.userIds)).toEqual([["u-c"]]);
   });
 
   it("stuurt nooit twee keer hetzelfde seintje", async () => {

@@ -75,11 +75,15 @@ export async function myOfferForShift(userId: string, shiftId: string): Promise<
   );
 }
 
-export async function setOfferStatus(id: string, status: OfferStatus): Promise<CounterOffer | null> {
+/**
+ * stil = alleen de status rechtzetten (opruimronde), zonder antwoordmoment: de bel toont
+ * antwoorden van de laatste week (lib/notifications/feed.ts), dus hier volgt geen melding uit.
+ */
+export async function setOfferStatus(id: string, status: OfferStatus, opts: { stil?: boolean } = {}): Promise<CounterOffer | null> {
   const rec = await kvGet<CounterOffer>(key(id.replace(/[^a-z0-9-]/gi, "")));
   if (!isCounterOffer(rec)) return null;
   rec.status = status;
-  rec.respondedAt = status === "pending" ? null : new Date().toISOString();
+  rec.respondedAt = status === "pending" || opts.stil ? null : new Date().toISOString();
   await kvSet(key(rec.id), rec);
   return rec;
 }

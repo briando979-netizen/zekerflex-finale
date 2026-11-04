@@ -36,14 +36,24 @@ export async function ruimVerlopenReactiesOp(now = new Date()): Promise<OpruimUi
   const uit: OpruimUitslag = { reacties: 0, seintjes: 0, vervangingen: 0 };
 
   // ── reacties zonder keuze ───────────────────────────────────────────
-  const open = (await listCounterOffers(5000)).filter((o) => o.status === "pending");
+  // Ook "expired" doet mee: kreeg de werker de klus toch (via een andere weg, bv.
+  // direct ingepland), dan is de reactie gewoon geaccepteerd en geen "niet uitgekozen".
+  const open = (await listCounterOffers(5000)).filter((o) => o.status === "pending" || o.status === "expired");
   if (open.length) {
-    const shifts = await prisma.shift.findMany({
-      where: { id: { in: [...new Set(open.map((o) => o.shiftId))] } },
-      select: { id: true, title: true, startsAt: true, status: true },
-    });
+    const shiftIds = [...new Set(open.map((o) => o.shiftId))];
+    const [shifts, toegewezen] = await Promise.all([
+      prisma.shift.findMany({ where: { id: { in: shiftIds } }, select: { id: true, title: true, startsAt: true, status: true } }),
+      prisma.shiftAssignment.findMany({ where: { shiftId: { in: shiftIds }, cancelledAt: null }, select: { shiftId: true, freelancer: { select: { userId: true } } } }),
+    ]);
     const perId = new Map(shifts.map((s) => [s.id, s]));
+    const kreegHem = new Set(toegewezen.map((a) => `${a.freelancer.userId}:${a.shiftId}`));
     for (const o of open) {
+      if (kreegHem.has(`${o.userId}:${o.shiftId}`)) {
+        // stil: geen nieuw antwoordmoment, dus ook geen melding achteraf
+        await setOfferStatus(o.id, "accepted", { stil: true });
+        continue;
+      }
+      if (o.status !== "pending") continue;
       const shift = perId.get(o.shiftId);
       const reden = reactieVervalt(shift, now);
       if (!reden) continue;
