@@ -35,8 +35,9 @@ export function WerkruimteStart({
   inApp,
   kanKiezen,
   studio,
+  voorbeeld = false,
   ...basis
-}: Basis & { w: WerkruimteContext; inApp: boolean; kanKiezen: boolean; studio: boolean }) {
+}: Basis & { w: WerkruimteContext; inApp: boolean; kanKiezen: boolean; studio: boolean; /** ?voorbeeld=: alleen bekijken, geen keuze tonen */ voorbeeld?: boolean }) {
   return (
     <>
       {w.soort === "rijschool" ? <RijschoolVak {...basis} /> : w.soort === "horeca" ? <HorecaVak {...basis} /> : <WebsiteVak {...basis} studio={studio} />}
@@ -47,7 +48,7 @@ export function WerkruimteStart({
         </Panel>
       </div>
       <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} />
-      <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />
+      {!voorbeeld && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
     </>
   );
 }
@@ -88,9 +89,11 @@ async function RijschoolVak(b: Basis) {
   const sub =
     k.aanmeldingen > 0
       ? `${meervoud(k.aanmeldingen, "nieuwe aanmelding wacht", "nieuwe aanmeldingen wachten")} op je.`
-      : k.lessenVandaag > 0
-        ? `Vandaag ${meervoud(k.lessenVandaag, "les", "lessen")} gepland.`
-        : undefined;
+      : k.ongelezenBerichten > 0
+        ? `${meervoud(k.ongelezenBerichten, "nieuw bericht", "nieuwe berichten")} van leerlingen.`
+        : k.lessenVandaag > 0
+          ? `Vandaag ${meervoud(k.lessenVandaag, "les", "lessen")} gepland.`
+          : undefined;
   const t = (tab: string) => `/werkgever/rijschool?tab=${tab}`;
   const tegels: Tegel[] = [
     { href: t("agenda"), titel: "Agenda", uitleg: "Lessen plannen en verzetten, per instructeur.", teller: k.lessenVandaag > 0 ? `${k.lessenVandaag} vandaag` : undefined, toon: "ok" },
@@ -99,6 +102,12 @@ async function RijschoolVak(b: Basis) {
       titel: "Leerlingen",
       uitleg: "Aanmeldingen, voortgang, leskaart en tegoed.",
       teller: k.aanmeldingen > 0 ? `${k.aanmeldingen} nieuw` : undefined,
+    },
+    {
+      href: t("berichten"),
+      titel: "Berichten",
+      uitleg: "Vragen en berichten van je leerlingen.",
+      teller: k.ongelezenBerichten > 0 ? `${k.ongelezenBerichten} nieuw` : undefined,
     },
     {
       href: t("betalingen"),

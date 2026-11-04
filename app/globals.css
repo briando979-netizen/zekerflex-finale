@@ -793,6 +793,15 @@ body {
 
 .app-scope[data-theme="dark"] .bg-paper-soft,
 .app-scope[data-theme="dark"] .bg-paper { background-color: var(--app-surface) !important; }
+/* EmployerShell zet .app-bg op een kind van .app-scope (FreelancerShell op hetzelfde element):
+   zonder deze regel bleef de werkgeversomgeving in donker licht met stippen, en vielen lichte koppen weg. */
+.app-scope[data-theme="dark"] .app-bg {
+  background:
+    radial-gradient(60rem 40rem at 100% -10%, rgba(79, 224, 160, 0.06), transparent 60%),
+    radial-gradient(50rem 40rem at -10% 20%, rgba(14, 92, 74, 0.08), transparent 55%),
+    var(--app-surface);
+}
+.app-scope[data-theme="dark"] .app-bg::before { background-image: radial-gradient(rgba(242, 243, 240, 0.05) 1px, transparent 1px); }
 /* Doorzichtig papier werd een licht waas over donker; bg-hair (rasterlijnen van de kalender) fel lichtgrijs. */
 .app-scope[data-theme="dark"] .bg-paper-soft\/50 { background-color: rgba(11, 13, 17, 0.5) !important; }
 .app-scope[data-theme="dark"] .bg-paper-soft\/60 { background-color: rgba(11, 13, 17, 0.6) !important; }

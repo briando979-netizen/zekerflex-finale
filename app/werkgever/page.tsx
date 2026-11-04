@@ -29,23 +29,33 @@ import { inAndroidApp } from "@/lib/app-mode-server";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { WerkruimteStart } from "@/components/app/werkruimte/WerkruimteStart";
 import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
+import { VoorbeeldBalk } from "@/components/app/werkruimte/VoorbeeldBalk";
+import { isWerkruimte } from "@/lib/werkgever/werkruimte";
 
 export const dynamic = "force-dynamic";
 
-export default async function WerkgeverStartPage() {
+export default async function WerkgeverStartPage({ searchParams }: { searchParams: Promise<{ voorbeeld?: string | string[] }> }) {
   const t = await getDict();
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
   // rijschool, horeca of alleen website: een eigen startscherm (components/app/werkruimte)
-  const [w, inApp] = await Promise.all([werkruimteVan(tenantId), inAndroidApp()]);
+  const [echt, inApp, { voorbeeld }] = await Promise.all([werkruimteVan(tenantId), inAndroidApp(), searchParams]);
+  // ?voorbeeld=<soort>: alleen bekijken, niets opslaan
+  const voorbeeldSoort = isWerkruimte(voorbeeld) ? voorbeeld : null;
+  const w = voorbeeldSoort ? { ...echt, soort: voorbeeldSoort } : echt;
   const kanKiezen = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   if (w.soort !== "personeel") {
-    return <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} kanKiezen={kanKiezen} studio={kanKiezen} />;
+    return (
+      <>
+        {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
+        <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} kanKiezen={kanKiezen} studio={kanKiezen} voorbeeld={Boolean(voorbeeldSoort)} />
+      </>
+    );
   }
   // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
-  const nieuwBedrijf = kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite;
+  const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite;
 
   const [kvkDone, extra, o, threads, companyVerified, pendingReviews, followers] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
@@ -82,6 +92,7 @@ export default async function WerkgeverStartPage() {
 
   return (
     <>
+      {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       <EmployerDashboardHero />
       {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag />}
@@ -296,7 +307,7 @@ export default async function WerkgeverStartPage() {
         </Panel>
       </div>
 
-      {!nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
+      {!nieuwBedrijf && !voorbeeldSoort && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
     </>
   );
 }
