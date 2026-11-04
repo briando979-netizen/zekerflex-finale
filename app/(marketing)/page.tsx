@@ -499,7 +499,7 @@ const COMPLIANCE = [
 
 const FAQ = [
   { q: "Kan ik werken zonder KVK?", a: "Ja. Via ons uitzendbureau werk je als uitzendkracht: ZekerFlex is dan je werkgever en verloont je elke week met een echte loonstrook, inclusief vakantiegeld, pensioen (StiPP) en het ABU-fasensysteem. Alles is terug te lezen in je dashboard onder ‘Verloning’." },
-  { q: "Wat kost ZekerFlex?", a: "Meedoen als freelancer is gratis. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, en alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten." },
+  { q: "Wat kost ZekerFlex?", a: "Meedoen als freelancer is gratis. Bedrijven betalen voor personeel € 3,50 platformkosten per gewerkt uur, en alleen wanneer er daadwerkelijk iemand werkt. Daarvoor is geen abonnement nodig en zijn er geen opstartkosten. Software zoals de horeca- of rijschoolpakketten werkt met een abonnement." },
   { q: "Hoe snel word ik als zzp'er betaald?", a: "Dat kies je zelf. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%). Een voorschot van maximaal 80% op openstaande diensten kost 3%." },
   { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformfee, met de juiste btw-behandeling." },
   { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },

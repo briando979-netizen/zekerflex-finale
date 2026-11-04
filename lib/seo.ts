@@ -214,7 +214,7 @@ export function serviceJsonLd(): Record<string, unknown> {
         priceCurrency: "EUR",
         price: "3.50",
         unitText: "gewerkt uur",
-        description: "€ 3,50 platformkosten per gewerkt uur, alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.",
+        description: "€ 3,50 platformkosten per gewerkt uur, alleen als er daadwerkelijk iemand werkt. Voor personeel geen abonnement en geen opstartkosten.",
       },
     ],
   };
@@ -340,7 +340,7 @@ export function faqJsonLd(): Record<string, unknown> {
     ],
     [
       "Wat kost ZekerFlex voor bedrijven?",
-      "Bedrijven betalen € 3,50 platformkosten per gewerkt uur en alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten. Voor freelancers is meedoen gratis.",
+      "Voor personeel betalen bedrijven € 3,50 platformkosten per gewerkt uur en alleen als er daadwerkelijk iemand werkt, zonder abonnement of opstartkosten. Software zoals de horeca- of rijschoolpakketten werkt met een abonnement. Voor freelancers is meedoen gratis.",
     ],
     [
       "Hoe zit het met de Wet DBA?",

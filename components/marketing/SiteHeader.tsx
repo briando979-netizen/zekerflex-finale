@@ -114,7 +114,7 @@ const NAV: NavEntry[] = [
         cta: CTA_BV,
         items: [
           { title: "€ 3,50 per gewerkt uur", desc: "Vaste platformkosten — alleen wanneer er iemand werkt.", href: "/prijzen#bedrijven" },
-          { title: "Geen abonnement, geen opstart", desc: "Geen plaatsingskosten, geen staffels om te doorgronden.", href: "/prijzen#bedrijven" },
+          { title: "Personeel zonder abonnement", desc: "Geen opstart- of plaatsingskosten, geen staffels om te doorgronden.", href: "/prijzen#bedrijven" },
           { title: "Veelgestelde vragen", desc: "Wanneer de fee telt, offerte op maat, btw.", href: "/prijzen#faq" },
         ],
       },
