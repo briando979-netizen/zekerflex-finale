@@ -26,6 +26,9 @@ const NAV = [
   { href: "/studio/instellingen", label: "Instellingen", icon: <ISettings /> },
 ];
 
+// Verkopen op ZekerFlex en Verdienen horen bij de ZekerFlex-shop, niet bij een eigen website.
+const ZONDER_SITE = ["/studio/website", "/studio/verkopen", "/studio/verdienen"];
+
 const isActive = (path: string, href: string) => (href === "/studio" ? path === "/studio" : path === href || path.startsWith(`${href}/`));
 
 export function StudioShell({ children }: { children: ReactNode }) {
@@ -151,7 +154,7 @@ function Body({ path, children }: { path: string; children: ReactNode }) {
   const { data, error } = useStudio();
   if (error) return <p role="alert" className="rounded-2xl bg-[#fed1d7] p-5 text-sm text-[#8e0b21]">{error}</p>;
   if (!data) return <div className="h-48 animate-pulse rounded-2xl bg-white/70" />;
-  if (!data.site && !path.startsWith("/studio/website")) {
+  if (!data.site && !ZONDER_SITE.some((p) => path.startsWith(p))) {
     return (
       <section className="overflow-hidden rounded-3xl bg-[#1a1a1a] px-6 py-14 text-center text-white sm:px-12">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">Websitestudio</p>
