@@ -27,6 +27,13 @@ export const PALETTEN: Palet[] = [
 ];
 export const paletVan = (id: unknown): Palet | null => PALETTEN.find((p) => p.id === id) ?? null;
 
+/**
+ * De versie van de motor die nieuwe sites maakt: 1 = hele site lezen (4 nov 2026), 2 = ook foto's achter een
+ * beeldoptimalisatie en lazy geladen foto's. Een site van een oudere motor mag op verzoek opnieuw.
+ */
+export const MOTOR = 2;
+export const motorVan = (s: { motor?: number | undefined; overgenomen?: unknown }) => s.motor ?? (s.overgenomen ? 1 : 0);
+
 /** Wat de nieuwe site van hun eigen website (en Google) overnam: dat laat het scherm zien. */
 export interface Overgenomen {
   /** gelezen pagina's van hun site */

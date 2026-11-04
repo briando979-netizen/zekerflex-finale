@@ -28,7 +28,7 @@ export interface ProposalLead {
 }
 
 const SECTOR_WORDS: [string, RegExp][] = [
-  ["horeca", /restaurant|caf[eé]|bistro|brasserie|eetcaf|lunchroom|catering|bakker|banket|patisserie|hotel|pizzeria|snackbar|grill|\bbar\b|koffie|ijssalon|slager|traiteur|horeca/i],
+  ["horeca", /restaurant|caf[eé]|bistro|brasserie|eetcaf|lunchroom|catering|bakker|banket|patisserie|hotel|pizzeria|snackbar|grill|\bbar\b|koffie|ijssalon|slager|traiteur|horeca|\beten\b|drinken|borrel|\bdiner\b|\blunch\b|ontbijt|terras|tapas|wijnbar|brouwerij|\bfood/i],
   ["bouw", /bouw|aannem|schilder|stukad|timmer|loodgiet|installat|elektr|dakdek|\bdak|tegel|klus|renovat|metsel|vloer|badkamer|glaszet|hovenier|tuin|stratenma|sloop|isolat|kozijn/i],
   ["schoonmaak", /schoonma|glazenwas|reinig|facilit|hygi[eë]n/i],
   ["logistiek", /transport|logistiek|koerier|verhuis|opslag|vracht|expeditie|distributie|bezorg/i],

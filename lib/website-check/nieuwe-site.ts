@@ -7,7 +7,7 @@ import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/stora
 import { buildProposalSite } from "@/lib/sites/proposal-site";
 import { deleteCheckProposalSite, getSite, isCheckProposalTenant, publishSite, saveSite } from "@/lib/sites/store";
 import { siteSaveSchema } from "@/lib/sites/schema";
-import { isStijlKeuze, paletVan, type Overgenomen } from "@/lib/website-check/stijl-keuze";
+import { MOTOR, isStijlKeuze, motorVan, paletVan, type Overgenomen } from "@/lib/website-check/stijl-keuze";
 import type { SiteDoc } from "@/lib/sites/types";
 import { scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
@@ -42,8 +42,8 @@ const geldig = (s: NieuweSite | null | undefined, now = Date.now()): s is Nieuwe
 /** Een site van ZekerFlex zelf krijgt geen nieuwe site. */
 export const isEigenSite = (host: string) => /(^|\.)zekerflex\.(com|nl)$/i.test(host);
 
-/** Gemaakt met de motor van vóór 4 nov 2026 (alleen de homepage, voorbeeldtijden): die mag opnieuw. */
-export const oudeMotor = (s: NieuweSite) => !s.overgenomen;
+/** Gemaakt met een oudere motor (lib/website-check/stijl-keuze.ts MOTOR): die mag op verzoek opnieuw. */
+export const oudeMotor = (s: NieuweSite) => motorVan(s) < MOTOR;
 
 /** De nieuwe site die al voor deze website klaarstaat, als hij nog geldig is, nog een voorstel is en met de huidige motor gemaakt. */
 async function bestaande(host: string): Promise<NieuweSite | null> {
@@ -137,6 +137,7 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
     at: now.toISOString(),
     verloopt,
     score: await meet(doc.slug),
+    motor: MOTOR,
     overgenomen,
     stijl: doc.theme.stijl ?? "beleving",
     palet: "eigen",

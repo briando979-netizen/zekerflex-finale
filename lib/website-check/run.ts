@@ -50,6 +50,8 @@ export interface NieuweSite {
   score: number | null;
   /** wat de nieuwe site van hun website overnam (sinds 4 nov 2026; lib/website-check/stijl-keuze.ts) */
   overgenomen?: Overgenomen | undefined;
+  /** de versie van de motor die hem maakte (lib/website-check/nieuwe-site.ts MOTOR) */
+  motor?: number | undefined;
   /** de gekozen stijl en kleuren; zonder: beleving met hun eigen kleuren */
   stijl?: string | undefined;
   palet?: string | undefined;

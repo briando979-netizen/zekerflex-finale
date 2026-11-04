@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NieuweSite, WebsiteCheckResult } from "@/lib/website-check/run";
 import type { Finding, FindingStatus } from "@/lib/website-check/analyze";
-import { PALETTEN, STIJL_KEUZES, overgenomenRegels } from "@/lib/website-check/stijl-keuze";
+import { MOTOR, PALETTEN, STIJL_KEUZES, motorVan, overgenomenRegels } from "@/lib/website-check/stijl-keuze";
 
 export interface PlanCard {
   key: "basis" | "pro";
@@ -262,7 +262,7 @@ function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; 
                   Ik wil deze website
                 </a>
               </div>
-              {site.overgenomen ? (
+              {motorVan(site) >= MOTOR ? (
                 <StijlKiezer checkId={result.id} site={site} onSite={onSite} />
               ) : (
                 <div className="mt-5 rounded-xl border border-hair p-4">

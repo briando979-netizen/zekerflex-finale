@@ -95,6 +95,82 @@ function decodeURIComponentVeilig(s: string): string {
   }
 }
 
+// --- foto's ----------------------------------------------------------------------
+
+const BEELD = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
+const GEEN_FOTO = /logo|icon|sprite|pixel|spacer|avatar|flag|favicon|placeholder|loader|\.svg|\.gif/i;
+
+/** Het echte beeldadres achter een beeldoptimalisatie (Next.js /_next/image?url=…, Nuxt /_ipx/…, Vercel), anders het adres zelf. */
+export function origineelBeeld(src: string, basis: URL): string | null {
+  let u: URL;
+  try {
+    u = new URL(src.trim(), basis);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+  const binnen = u.searchParams.get("url");
+  if (binnen && /\/(_next|_vercel)\/image\b/.test(u.pathname)) return origineelBeeld(binnen, basis);
+  const ipx = /^\/_ipx\/[^/]+\/(.+)$/.exec(u.pathname);
+  if (ipx?.[1]) return origineelBeeld(`/${ipx[1]}`, basis);
+  return u.toString();
+}
+
+/** Het grootste adres uit een srcset ("a.jpg 640w, b.jpg 1920w" → b.jpg). */
+export function grootsteUitSrcset(srcset: string): string | null {
+  const kandidaten = srcset
+    .split(/,\s+(?=\S)/)
+    .map((deel) => {
+      const [url, maat] = deel.trim().split(/\s+/);
+      return { url: url ?? "", w: maat ? parseFloat(maat) * (maat.endsWith("x") ? 1000 : 1) : 0 };
+    })
+    .filter((k) => k.url);
+  return kandidaten.sort((a, b) => b.w - a.w)[0]?.url ?? null;
+}
+
+/**
+ * Alle foto's van een pagina, ook als de site ze lazy laadt of via een beeldoptimalisatie toont:
+ * og:image, <img> (src, srcset, data-src), <source srcset> en achtergrondfoto's in een style-attribuut.
+ * Geen logo's, iconen of svg's.
+ */
+export function leesFotos(html: string, finalUrl: string): string[] {
+  const basis = new URL(finalUrl);
+  const schoon = zonderCode(html);
+  const attr = (tag: string, naam: string) => {
+    const m = new RegExp(`\\s${naam}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i").exec(tag);
+    return m ? ontsnap(m[1] ?? m[2] ?? "") : null;
+  };
+  const uit: string[] = [];
+  const voeg = (ruw: string | null | undefined, context = "") => {
+    if (!ruw) return;
+    const url = origineelBeeld(ruw, basis);
+    if (!url || GEEN_FOTO.test(`${url} ${context}`) || !BEELD.test(new URL(url).pathname + new URL(url).search)) return;
+    if (!uit.includes(url)) uit.push(url);
+  };
+  const og = /<meta\b[^>]*property\s*=\s*["']og:image["'][^>]*>/i.exec(html)?.[0];
+  if (og) voeg(attr(og, "content"));
+  for (const tag of schoon.match(/<(img|source)\b[^>]*>/gi) ?? []) {
+    const context = `${attr(tag, "alt") ?? ""} ${attr(tag, "class") ?? ""} ${attr(tag, "id") ?? ""}`;
+    if (/logo|icon/i.test(context)) continue;
+    // kleine plaatjes (iconen) overslaan als de maat erbij staat
+    const maat = Math.max(Number(attr(tag, "width")) || 0, Number(attr(tag, "height")) || 0);
+    if (maat > 0 && maat < 300) continue;
+    const set = attr(tag, "srcset") ?? attr(tag, "data-srcset");
+    voeg(set ? grootsteUitSrcset(set) : null, context);
+    voeg(attr(tag, "data-src") ?? attr(tag, "data-lazy-src") ?? attr(tag, "data-original"), context);
+    voeg(attr(tag, "src"), context);
+  }
+  for (const m of schoon.matchAll(/background(?:-image)?\s*:\s*url\(\s*['"]?([^'")]+)['"]?\s*\)/gi)) voeg(m[1]);
+  // dezelfde foto in meerdere maten telt één keer
+  const gezien = new Set<string>();
+  return uit.filter((u) => {
+    const sleutel = new URL(u).pathname.replace(/[-_](\d{2,4}x\d{2,4}|scaled|\d{2,4}w)(?=\.\w+$)/i, "");
+    if (gezien.has(sleutel)) return false;
+    gezien.add(sleutel);
+    return true;
+  });
+}
+
 // --- openingstijden ------------------------------------------------------------
 
 export interface UrenRegel {
@@ -287,7 +363,8 @@ export function voegSamen(paginas: GelezenPagina[], nu = new Date()): RijkeFeite
       if (secties.length < 12) secties.push(s);
     }
   }
-  const fotos = [...new Set(volgorde("home", "werk", "aanbod", "over").flatMap((p) => p.f.fotos))].slice(0, 24);
+  // ook lazy geladen foto's en die achter een beeldoptimalisatie (leesFotos), dan die extractBusiness vond
+  const fotos = [...new Set(volgorde("home", "werk", "aanbod", "over").flatMap((p) => [...leesFotos(p.html, p.url), ...p.f.fotos]))].slice(0, 24);
   const over = van("over")[0];
   const uren = eerste(...[contact, ...volgorde("contact", "home")].map((p) => (p ? leesOpeningstijden(p.tekst) : null)).filter((u) => u && u.length)) ?? [];
   const faq = volgorde("faq", "home", "contact").flatMap((p) => leesFaq(p.html)).filter((q, i, all) => all.findIndex((x) => x.vraag === q.vraag) === i).slice(0, 8);

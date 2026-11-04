@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kiesSubpaginas, leesFaq, leesGetuigenissen, leesOpeningstijden, leesOverTekst, leesSinds, leesUsps, tekstVan, voegSamen } from "@/lib/website-check/inlezen";
+import { kiesSubpaginas, leesFaq, leesFotos, leesGetuigenissen, leesOpeningstijden, leesOverTekst, leesSinds, leesUsps, tekstVan, voegSamen } from "@/lib/website-check/inlezen";
 
 // De hele website inlezen voor een nieuwe site: subpagina's kiezen, en hun eigen
 // openingstijden, vragen, klantverhalen, sterke punten en "sinds" eruit halen.
@@ -20,6 +20,25 @@ describe("kiesSubpaginas", () => {
       { url: "https://www.bakkerij.nl/veelgestelde-vragen", soort: "faq" },
     ]);
     expect(kiesSubpaginas(NAV, "https://www.bakkerij.nl/", 2)).toHaveLength(2);
+  });
+});
+
+describe("leesFotos", () => {
+  it("vindt foto's achter Next.js-optimalisatie, in srcset, lazy en als achtergrond, zonder logo's en dubbele maten", () => {
+    const html = `<head><meta property="og:image" content="https://marktzicht.nl/og.jpg"></head><body>
+      <img alt="Proost!" srcSet="/_next/image?url=%2Fimages%2Fproost.jpg&amp;w=640&amp;q=75 640w, /_next/image?url=%2Fimages%2Fproost.jpg&amp;w=3840&amp;q=75 3840w" src="/_next/image?url=%2Fimages%2Fproost.jpg&amp;w=3840&amp;q=75">
+      <img src="/img/logo.png" alt="Logo Marktzicht"><img src="/icon.svg"><img src="/klein.jpg" width="48" height="48">
+      <img data-src="/wp-content/uploads/terras-1024x683.jpg" src="data:image/gif;base64,R0lG"><img src="/wp-content/uploads/terras.jpg">
+      <picture><source srcset="/foto/zaal.webp 1x, /foto/zaal@2x.webp 2x"><img src="/foto/zaal.jpg"></picture>
+      <div style="background-image: url('/foto/gevel.jpg')"></div></body>`;
+    expect(leesFotos(html, "https://marktzicht.nl/")).toEqual([
+      "https://marktzicht.nl/og.jpg",
+      "https://marktzicht.nl/images/proost.jpg",
+      "https://marktzicht.nl/wp-content/uploads/terras-1024x683.jpg",
+      "https://marktzicht.nl/foto/zaal@2x.webp",
+      "https://marktzicht.nl/foto/zaal.jpg",
+      "https://marktzicht.nl/foto/gevel.jpg",
+    ]);
   });
 });
 

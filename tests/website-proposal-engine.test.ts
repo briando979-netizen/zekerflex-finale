@@ -127,6 +127,7 @@ describe("de nieuwe website: puur", () => {
     expect(site.templateFor("Schildersbedrijf De Vries Binnenschilderwerk").id).toBe("bouw");
     expect(site.templateFor("Bakkerij Modern Desembrood").id).toBe("horeca");
     expect(site.templateFor("Adviesbureau Kompas").id).toBe("algemeen");
+    expect(site.templateFor("Marktzicht Eten & Drinken").id).toBe("horeca");
     const bouw = site.templateFor("schilder");
     // sinds 4 nov in de stijl beleving, precies zoals schwarzwald.zekerflex.com: zonder eigen kleur hun bosgroen en oranje
     expect(site.proposalTheme("#14213D", bouw, null)).toMatchObject({ kleur: "#14213D", accent: "#FF5F1F", stijl: "beleving" });
