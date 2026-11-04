@@ -34,7 +34,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
     const m = await seoMetadata("/over-ons");
     expect(m.title).toBe("Wie wij zijn");
     expect(m.description).toMatch(/^ZekerFlex is opgebouwd/);
-    expect((m.openGraph as Record<string, unknown>).title).toBe("Wie wij zijn");
+    expect((m.openGraph as Record<string, unknown>).title).toBe("Wie wij zijn · ZekerFlex");
     expect(volledigeTitel("/over-ons", "Wie wij zijn")).toBe("Wie wij zijn · ZekerFlex");
     expect(volledigeTitel("/", "Home")).toBe("Home");
     await zetSeoEigen("/over-ons", null);

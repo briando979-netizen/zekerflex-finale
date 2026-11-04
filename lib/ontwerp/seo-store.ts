@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { canonical } from "@/lib/seo";
-import { SEO_PADEN, SEO_STANDAARD, normalizeSeoEigen, type SeoEigen, type SeoPad } from "@/lib/ontwerp/seo";
+import { SEO_PADEN, SEO_STANDAARD, normalizeSeoEigen, volledigeTitel, type SeoEigen, type SeoPad } from "@/lib/ontwerp/seo";
 
 // ---------------------------------------------------------------------------
 // Opslag van de eigen titels en omschrijvingen (KV ontwerp:seo) en de
@@ -37,8 +37,9 @@ export async function seoMetadata(pad: SeoPad, extra: Metadata = {}): Promise<Me
   const eigen = (await getSeoEigen().catch(() => ({}) as Partial<Record<SeoPad, SeoEigen>>))[pad];
   const titel = eigen?.titel || s.titel;
   const omschrijving = eigen?.omschrijving || s.omschrijving;
-  // de homepage gaf zijn titel en omschrijving altijd aan OpenGraph; de andere pagina's alleen met een eigen versie
-  const og = s.absoluut || eigen ? { title: titel, description: omschrijving } : undefined;
+  // de homepage gaf zijn titel en omschrijving altijd aan OpenGraph; de andere pagina's alleen met een eigen versie,
+  // en dan met " · ZekerFlex" erachter, net als de standaard-og:title die Next uit het titelsjabloon haalt
+  const og = s.absoluut ? { title: titel, description: omschrijving } : eigen ? { title: volledigeTitel(pad, titel), description: omschrijving } : undefined;
   return {
     ...extra,
     title: s.absoluut ? { absolute: titel } : titel,
