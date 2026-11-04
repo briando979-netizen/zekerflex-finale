@@ -20,6 +20,7 @@ import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
+import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -347,6 +348,11 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
     if (session.metadata?.rijschoolId) {
       await verwerkRijschoolSessie(session);
       return NextResponse.json({ ok: true });
+    }
+
+    // Een domeinnaam die een bedrijf bestelde: lib/domeinen/bestelling.ts (alleen OPEN → BETAALD, dus dubbel is veilig)
+    if (session.metadata?.domeinBestellingId) {
+      return NextResponse.json({ ok: true, ...(await verwerkDomeinSessie(session)) });
     }
 
     const shopOrderId = session.metadata?.shopOrderId;

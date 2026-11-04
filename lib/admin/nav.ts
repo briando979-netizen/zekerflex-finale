@@ -109,6 +109,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/huisstijl", label: "Huisstijl" },
       { href: "/admin/website-beheer", label: "Website-beheer" },
+      { href: "/admin/domeinen", label: "Domeinen" },
     ],
   },
   {

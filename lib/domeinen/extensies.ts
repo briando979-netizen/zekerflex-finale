@@ -48,5 +48,13 @@ export const BUNDEL_TLDS = ["nl", "com", "eu", "be"] as const;
 
 export const extensie = (tld: string): Extensie | undefined => EXTENSIES.find((e) => e.tld === tld);
 
+export const BTW_PROCENT = 21;
+
+/** Prijs excl. btw → btw (afgerond op hele centen) en het totaal. */
+export function metBtw(exclCent: number): { exclCent: number; btwCent: number; inclCent: number } {
+  const btwCent = Math.round((exclCent * BTW_PROCENT) / 100);
+  return { exclCent, btwCent, inclCent: exclCent + btwCent };
+}
+
 /** "€ 9,95" */
 export const euroPrijs = (cent: number): string => `€ ${(cent / 100).toFixed(2).replace(".", ",")}`;

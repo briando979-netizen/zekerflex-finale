@@ -34,7 +34,7 @@ const FAQ = [
   },
   {
     q: "Wat kost een domeinnaam?",
-    a: `De prijzen staan hierboven, per jaar en excl. btw. Een .nl kost ${euroPrijs(EXTENSIES[0]?.prijsCent ?? 995)} per jaar. Heb je een website of webshop van ZekerFlex, dan is je ${bundel} het eerste jaar inbegrepen.`,
+    a: `De prijzen staan hierboven, per jaar en excl. btw. Een .nl kost ${euroPrijs(EXTENSIES[0]?.prijsCent ?? 995)} per jaar. Heb je een websiteabonnement van ZekerFlex (Basis of Pro), dan is je eerste ${bundel} het eerste jaar inbegrepen. Betalen kan met iDEAL of je kaart.`,
   },
   {
     q: "Kan ik mijn domein later opzeggen of meenemen?",
@@ -154,7 +154,7 @@ export default function DomeinnaamPagina() {
             <aside className="h-fit rounded-2xl border border-hair bg-white p-6">
               <h2 className="font-display text-xl font-bold text-ink">Samen voordeliger</h2>
               <p className="mt-2 text-neutralx-600">
-                Heb je een website of webshop van ZekerFlex? Dan is je {bundel}-domein het eerste jaar inbegrepen. We koppelen hem meteen aan
+                Heb je een websiteabonnement van ZekerFlex (Basis of Pro)? Dan is je eerste {bundel}-domein het eerste jaar inbegrepen. We koppelen hem meteen aan
                 je site, met een beveiligde verbinding.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-neutralx-700">

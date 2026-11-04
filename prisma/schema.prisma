@@ -2694,3 +2694,38 @@ model HorecaAfvinking {
 
   @@unique([lijstId, datum, taak])
 }
+
+// ─────────────────────────────────────────────────────────── Domeinnamen
+// Een domeinnaam die een bedrijf via ZekerFlex bestelt (lib/domeinen/bestelling.ts).
+// Bewust zonder relatie met Tenant: een betaalde bestelling is een financieel
+// gegeven en blijft bestaan als het bedrijf weg is (bewaarplicht).
+enum DomeinBestelStatus {
+  OPEN // wacht op betaling (Stripe Checkout)
+  BETAALD // betaald of in de bundel; ZekerFlex registreert hem
+  GEREGISTREERD // vastgelegd bij het register
+  MISLUKT // registreren lukte niet (terugbetalen via Stripe)
+  GEANNULEERD
+}
+
+model DomeinBestelling {
+  id              String             @id @default(cuid())
+  tenantId        String
+  userId          String
+  email           String // wie bestelde (bevestiging)
+  domein          String
+  jaren           Int                @default(1)
+  prijsCent       Int // excl. btw; 0 in de bundel
+  btwCent         Int
+  bundel          Boolean            @default(false) // eerste jaar inbegrepen bij een websiteabonnement
+  status          DomeinBestelStatus @default(OPEN)
+  stripeSessionId String?            @unique
+  betaaldOp       DateTime?
+  afgerondOp      DateTime?
+  notitie         String             @default("")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([status])
+  @@index([domein])
+}

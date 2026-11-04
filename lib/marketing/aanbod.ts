@@ -168,7 +168,7 @@ export const AANBOD: AanbodItem[] = [
     kort: "Zoek of je naam vrij is: .nl, .com, .eu, .be en meer. Registreren of verhuizen.",
     tekst:
       "Zoek direct of je domeinnaam nog vrij is en vraag hem aan voor een eerlijke prijs per jaar. Heb je al een domein? Verhuis het naar ZekerFlex of koppel het aan je website.",
-    punten: ["Direct zien of je naam vrij is", ".nl, .com, .eu, .be en meer", "Verhuizen met je verhuiscode", "Bij een website of webshop het eerste jaar inbegrepen"],
+    punten: ["Direct zien of je naam vrij is", ".nl, .com, .eu, .be en meer", "Verhuizen met je verhuiscode", "Met een websiteabonnement het eerste jaar inbegrepen"],
     voorWie: "Iedereen die een eigen naam online wil",
     prijs: "Vanaf € 9,95 per jaar",
     status: "beschikbaar",

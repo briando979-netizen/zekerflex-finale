@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState, type FormEvent, type InputHTMLAttributes } from "react";
-import { euroPrijs } from "@/lib/domeinen/extensies";
+import Link from "next/link";
+import { useCallback, useEffect, useId, useState, type FormEvent, type InputHTMLAttributes } from "react";
+import { euroPrijs, metBtw } from "@/lib/domeinen/extensies";
 
 type Status = "vrij" | "bezet" | "waarschijnlijk-vrij" | "onbekend";
 interface Resultaat {
@@ -25,17 +26,58 @@ const LABEL: Record<Status, { tekst: string; klasse: string }> = {
   onbekend: { tekst: "Even niet te controleren", klasse: "bg-neutralx-100 text-neutralx-700" },
 };
 
+type BestelStatus = "OPEN" | "BETAALD" | "GEREGISTREERD" | "MISLUKT" | "GEANNULEERD";
+interface MijnDomein {
+  id: string;
+  domein: string;
+  status: BestelStatus;
+  bedragCent: number;
+  bundel: boolean;
+}
+const BESTEL_LABEL: Record<BestelStatus, string> = {
+  OPEN: "Wacht op betaling",
+  BETAALD: "Betaald, we leggen hem vast",
+  GEREGISTREERD: "Vastgelegd",
+  MISLUKT: "Lukte niet, we nemen contact op",
+  GEANNULEERD: "Geannuleerd",
+};
+
 // Zoek een domeinnaam, zie per extensie of hij vrij is en wat hij kost, en
-// vraag hem aan (of verhuis je eigen domein). Twee losse formulieren, nooit
-// genest. Leest /api/domeinen/zoek en post naar /api/domeinen/aanvraag.
+// vraag hem aan (of verhuis je eigen domein). Een ingelogd bedrijf bestelt en
+// betaalt meteen (/api/werkgever/domeinen) en ziet zijn domeinen. Losse
+// formulieren, nooit genest. Leest /api/domeinen/zoek, post naar /api/domeinen/aanvraag.
 export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
   const id = useId();
   const [zoek, setZoek] = useState(startNaam);
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [res, setRes] = useState<Resultaat[] | null>(null);
-  const [keuze, setKeuze] = useState<{ domein: string; soort: Soort } | null>(null);
+  const [keuze, setKeuze] = useState<{ domein: string; soort: Soort; prijsCent: number | null } | null>(null);
   const [verhuis, setVerhuis] = useState("");
+  const [werkgever, setWerkgever] = useState(false);
+  const [mijn, setMijn] = useState<MijnDomein[] | null>(null);
+  const [terug, setTerug] = useState<{ gelukt: boolean; domein: string } | null>(null);
+
+  const laadMijn = useCallback(async () => {
+    const r = await fetch("/api/werkgever/domeinen", { cache: "no-store" }).catch(() => null);
+    if (r?.ok) setMijn(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+  }, []);
+  useEffect(() => {
+    // terug van de betaalpagina van Stripe
+    const q = new URLSearchParams(window.location.search);
+    const b = q.get("bestelling");
+    if (b === "gelukt" || b === "geannuleerd") setTerug({ gelukt: b === "gelukt", domein: q.get("domein") ?? "" });
+    // mag deze bezoeker als bedrijf meteen bestellen? (altijd 200, alleen ja/nee)
+    void fetch("/api/auth/werkgever", { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ werkgever?: boolean }>) : null))
+      .then((d) => {
+        if (d?.werkgever) {
+          setWerkgever(true);
+          void laadMijn();
+        }
+      })
+      .catch(() => undefined);
+  }, [laadMijn]);
 
   async function zoeken(e: FormEvent) {
     e.preventDefault();
@@ -89,11 +131,11 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${LABEL[r.status].klasse}`}>{LABEL[r.status].tekst}</span>
                 {r.prijsCent !== null && <span className="text-sm text-neutralx-700">{euroPrijs(r.prijsCent)} per jaar</span>}
                 {kan ? (
-                  <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "registreren" })}>
+                  <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "registreren", prijsCent: r.prijsCent })}>
                     Kies {r.domein}
                   </button>
                 ) : (
-                  <button type="button" className="btn-ghost px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "verhuizen" })}>
+                  <button type="button" className="btn-ghost px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "verhuizen", prijsCent: r.prijsCent })}>
                     Is hij van jou? Verhuizen
                   </button>
                 )}
@@ -108,7 +150,7 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (verhuis.trim()) setKeuze({ domein: verhuis.trim(), soort: "verhuizen" });
+            if (verhuis.trim()) setKeuze({ domein: verhuis.trim(), soort: "verhuizen", prijsCent: null });
           }}
           aria-label="Domein verhuizen"
           className="rounded-2xl border border-hair bg-paper-soft p-4"
@@ -125,8 +167,123 @@ export function DomeinZoeker({ startNaam = "" }: { startNaam?: string }) {
         </form>
       )}
 
-      {keuze && <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} onAnnuleer={() => setKeuze(null)} />}
+      {keuze &&
+        (werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null ? (
+          <Bestellen key={keuze.domein} domein={keuze.domein} prijsCent={keuze.prijsCent} onAnnuleer={() => setKeuze(null)} onKlaar={() => void laadMijn()} />
+        ) : (
+          <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} onAnnuleer={() => setKeuze(null)} />
+        ))}
+      {keuze && !werkgever && keuze.soort === "registreren" && (
+        <p className="text-sm text-neutralx-600">
+          Heb je een bedrijfsaccount bij ZekerFlex?{" "}
+          <Link href="/login?callbackUrl=%2Fdomeinnaam" className="font-semibold text-brand-600 underline">
+            Log in
+          </Link>{" "}
+          om direct te bestellen en te betalen.
+        </p>
+      )}
+
+      {terug && (
+        <p role="status" className={`rounded-2xl p-4 ${terug.gelukt ? "border border-brand-500/30 bg-mintwash text-ink" : "bg-neutralx-100 text-neutralx-700"}`}>
+          {terug.gelukt
+            ? `Betaling gelukt! We leggen ${terug.domein || "je domeinnaam"} binnen één werkdag voor je vast en mailen je zodra hij klaar is.`
+            : `Je hebt het betalen afgebroken. ${terug.domein || "De domeinnaam"} is nog niet besteld; je kunt het gewoon opnieuw proberen.`}
+        </p>
+      )}
+
+      {werkgever && mijn && mijn.length > 0 && <MijnDomeinen lijst={mijn} />}
     </div>
+  );
+}
+
+function MijnDomeinen({ lijst }: { lijst: MijnDomein[] }) {
+  return (
+    <section aria-labelledby="mijn-domeinen" className="rounded-2xl border border-hair bg-white p-5">
+      <h3 id="mijn-domeinen" className="font-display text-lg font-bold text-ink">
+        Jouw domeinnamen
+      </h3>
+      <ul className="mt-3 divide-y divide-hair text-sm">
+        {lijst.map((d) => (
+          <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span className="break-all font-semibold text-ink">{d.domein}</span>
+            <span className="text-neutralx-600">
+              {BESTEL_LABEL[d.status]}
+              {d.bundel ? " · in de bundel" : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Bestellen({ domein, prijsCent, onAnnuleer, onKlaar }: { domein: string; prijsCent: number; onAnnuleer: () => void; onKlaar: () => void }) {
+  const [bezig, setBezig] = useState(false);
+  const [melding, setMelding] = useState<string | null>(null);
+  const [bundel, setBundel] = useState(false);
+  const p = metBtw(prijsCent);
+
+  async function bestel() {
+    setBezig(true);
+    setMelding(null);
+    const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ domein }) }).catch(() => null);
+    if (!r?.ok) {
+      setBezig(false);
+      return setMelding(await fout(r, "Bestellen lukte niet. Probeer het opnieuw of mail sales@zekerflex.com."));
+    }
+    const d = (await r.json()) as { soort: "betalen"; url: string } | { soort: "bundel"; id: string };
+    if (d.soort === "betalen") {
+      window.location.href = d.url;
+      return;
+    }
+    setBezig(false);
+    setBundel(true);
+    onKlaar();
+  }
+
+  if (bundel) {
+    return (
+      <p role="status" className="rounded-2xl border border-brand-500/30 bg-mintwash p-5 text-ink">
+        <strong>{domein} is besteld!</strong> Het eerste jaar is inbegrepen bij je websiteabonnement. We leggen hem binnen één werkdag voor je vast en mailen je
+        zodra hij klaar is.
+      </p>
+    );
+  }
+  return (
+    <section aria-label={`${domein} bestellen`} className="rounded-2xl border border-hair bg-white p-5">
+      <h3 className="font-display text-xl font-bold text-ink">{domein} bestellen</h3>
+      <dl className="mt-3 max-w-sm space-y-1 text-sm">
+        <div className="flex justify-between gap-4">
+          <dt className="text-neutralx-600">Domeinnaam, 1 jaar</dt>
+          <dd className="text-ink">{euroPrijs(p.exclCent)}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-neutralx-600">Btw 21%</dt>
+          <dd className="text-ink">{euroPrijs(p.btwCent)}</dd>
+        </div>
+        <div className="flex justify-between gap-4 border-t border-hair pt-1 font-semibold">
+          <dt className="text-ink">Totaal</dt>
+          <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-sm text-neutralx-600">
+        Je betaalt met iDEAL of je kaart. Heb je een websiteabonnement van ZekerFlex, dan is je eerste .nl, .com, .eu of .be het eerste jaar inbegrepen; dat zie je
+        meteen. Daarna verlengt hij per jaar, opzeggen kan altijd voor de verlengdatum.
+      </p>
+      {melding && (
+        <p role="alert" className="mt-3 rounded-xl bg-[#FDE2E2] p-3 text-sm font-semibold text-[#B91C1C]">
+          {melding}
+        </p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button type="button" disabled={bezig} onClick={() => void bestel()} className="btn-primary px-5 py-2.5 disabled:opacity-60">
+          {bezig ? "Even geduld…" : "Bestel en betaal"}
+        </button>
+        <button type="button" onClick={onAnnuleer} className="btn-ghost px-5 py-2.5">
+          Andere naam
+        </button>
+      </div>
+    </section>
   );
 }
 
