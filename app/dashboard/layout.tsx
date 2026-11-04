@@ -10,6 +10,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
+import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -41,6 +42,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
       >
         <IbanHoldBanner userId={principal.userId} />
+        <OpbouwfaseBalk soort="werker" />
         {children}
         <ChatDock />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}

@@ -8,6 +8,7 @@ import { clientDict, getDict, getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
+import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -105,6 +106,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         avatarUrl={avatarUrl}
         canSwitchToFreelancer={hasRole(principal, "FREELANCER")}
       >
+        <OpbouwfaseBalk soort="werkgever" />
         {children}
         <ChatDock />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}

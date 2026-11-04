@@ -29,6 +29,7 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "qr-betalen", label: "QR-betalen", description: "QR-betaallink op facturen.", default: true },
   { key: "shop", label: "Webshop", description: "De klus-gear webshop.", default: true },
   { key: "ai-vertalen", label: "AI-vertalen in chat", description: "Herschrijven/vertalen-knop in de chat.", default: true },
+  { key: "opbouwfase-melding", label: "Melding 'nog in de opbouwfase'", description: "Balk bovenaan /dashboard en /werkgever: nog niet officieel live, testklussen, gegevens veilig, ideeën welkom. Zet uit bij de officiële start.", default: true },
 ];
 
 export interface FlagOverride {
