@@ -8,6 +8,7 @@
 // de dieren zijn sfeer en worden zo ook in de uitleg genoemd. Het weer is echt.
 
 import { blockRect, CANAL_Z, LANDMARKS, type Pt, type Rect } from "@/lib/admin/city-layout";
+import { amsterdamClock } from "@/lib/time/amsterdam";
 
 /** Hoe ver van de wegmidden voetgangers lopen: aan de binnenkant van de stoep (stoep = 2 tot 3). */
 export const WALK_OFF = 2.9;
@@ -126,6 +127,25 @@ export function precipitationAmount(kind: WeatherKind, mmPerHour = 0): number {
   if (kind === "motregen") return 420;
   if (kind === "sneeuw") return 1100;
   return 0;
+}
+
+// --- drukte per uur ---------------------------------------------------------
+
+/**
+ * Gebeurtenissen per klokuur over de laatste 24 uur, oudste uur eerst, met
+ * Nederlandse uurlabels ("13:00"). Het laatste vak is het lopende uur.
+ */
+export function hourlyCounts(times: number[], now: number): { labels: string[]; values: number[] } {
+  const HOUR = 3_600_000;
+  const values = Array.from({ length: 24 }, () => 0);
+  // begin van het lopende uur (uren lopen in NL gelijk met UTC, op de halve-uur-zones na)
+  const currentStart = Math.floor(now / HOUR) * HOUR;
+  for (const t of times) {
+    const k = 23 - Math.floor((currentStart - Math.floor(t / HOUR) * HOUR) / HOUR);
+    if (k >= 0 && k < 24) values[k] = (values[k] ?? 0) + 1;
+  }
+  const labels = values.map((_, k) => `${amsterdamClock(currentStart - (23 - k) * HOUR).slice(0, 2)}:00`);
+  return { labels, values };
 }
 
 // --- seizoenen en feestdagen ------------------------------------------------

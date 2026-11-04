@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANAL_Z, COMPANY_SLOTS, HOUSE_SLOTS, LANDMARKS, LINES, type Plot, ROAD_W, roadSpan } from "@/lib/admin/city-layout";
-import { alongLoop, BENCHES, blockWeight, crowdSize, fireworksOn, pickBlock, treeLook, yearSeason, DITCHES, FARM, inPond, inRect, loopLength, MEADOW_COWS, MEADOW_SHEEP, POND, precipitationAmount, sidewalkLoop, steerInside, weatherKind } from "@/lib/admin/city-life";
+import { alongLoop, BENCHES, blockWeight, crowdSize, fireworksOn, hourlyCounts, pickBlock, treeLook, yearSeason, DITCHES, FARM, inPond, inRect, loopLength, MEADOW_COWS, MEADOW_SHEEP, POND, precipitationAmount, sidewalkLoop, steerInside, weatherKind } from "@/lib/admin/city-life";
 
 // Leven in de 3D-stad: voetgangers blijven op de stoep, bankjes staan vrij,
 // dieren blijven in hun wei of op het water, en het weer volgt de echte code.
@@ -99,6 +99,21 @@ describe("dieren", () => {
   it("zwemmen in de vijver", () => {
     expect(inPond(POND.x, POND.z)).toBe(true);
     expect(inPond(POND.x + POND.rx + 1, POND.z)).toBe(false);
+  });
+});
+
+describe("drukte per uur", () => {
+  it("telt de gebeurtenissen per Nederlands klokuur, het lopende uur achteraan", () => {
+    const now = Date.parse("2026-11-04T09:25:00Z"); // 10:25 in Amsterdam
+    const times = [Date.parse("2026-11-04T09:05:00Z"), Date.parse("2026-11-04T09:24:00Z"), Date.parse("2026-11-04T08:59:00Z"), Date.parse("2026-11-03T10:30:00Z"), Date.parse("2026-11-02T09:00:00Z")];
+    const { labels, values } = hourlyCounts(times, now);
+    expect(labels).toHaveLength(24);
+    expect(labels[23]).toBe("10:00");
+    expect(labels[22]).toBe("09:00");
+    expect(values[23]).toBe(2);
+    expect(values[22]).toBe(1);
+    expect(values[0]).toBe(1); // 11:00 gisteren (10:30 UTC)
+    expect(values.reduce((s, v) => s + v, 0)).toBe(4); // eergisteren valt erbuiten
   });
 });
 

@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
 import { dayPhase, moonName, moonPhase, type Origin, sunAt, sunTimes, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
-import { WEATHER_NL } from "@/lib/admin/city-life";
+import { hourlyCounts, WEATHER_NL } from "@/lib/admin/city-life";
+import { Chart } from "@/components/admin/kit-client";
 import { isThemeId } from "@/lib/seasons/calendar";
 import { count, euro } from "@/lib/admin/format";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
@@ -130,6 +131,20 @@ export function Office3D() {
   const [clock, setClock] = useState("");
   const [latest, setLatest] = useState<CityEvent | null>(null);
   const [replay, setReplay] = useState<{ at: string; left: number; total: number } | null>(null);
+  const [hourly, setHourly] = useState<{ labels: string[]; values: number[] } | null>(null);
+
+  // Drukte per uur over de laatste 24 uur: eens per minuut (tot 200 gebeurtenissen).
+  useEffect(() => {
+    const load = async () => {
+      const r = await fetch("/api/admin/office?limit=200", { cache: "no-store" }).catch(() => null);
+      if (!r?.ok) return;
+      const d: { events: CityEvent[] } = await r.json();
+      setHourly(hourlyCounts(d.events.map((e) => Date.parse(e.at)), Date.now()));
+    };
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Een nieuwe gebeurtenis staat even in beeld (klik om het voertuig te volgen).
   useEffect(() => {
@@ -282,7 +297,19 @@ export function Office3D() {
   const byRooms = (...rooms: string[]) => events.filter((e) => rooms.includes(e.room));
   let title = "Laatste gebeurtenissen";
   let subtitle = "Echte gebeurtenissen; elk voertuig brengt er één naar het hoofdkantoor";
-  let body: ReactNode = <EventList list={events} showRoom onPick={pickEvent} />;
+  let body: ReactNode = (
+    <>
+      {hourly && (
+        <div className="mb-3">
+          <p className="mb-1 text-xs font-medium" style={{ color: "var(--a-dim)" }}>
+            Gebeurtenissen per uur, laatste 24 uur
+          </p>
+          <Chart title="Gebeurtenissen per uur over de laatste 24 uur" labels={hourly.labels} series={[{ label: "Gebeurtenissen", values: hourly.values, slot: 1 }]} kind="bars" height={110} />
+        </div>
+      )}
+      <EventList list={events} showRoom onPick={pickEvent} />
+    </>
+  );
 
   if (selected?.kind === "room") {
     const room = roomOf(selected.id);
