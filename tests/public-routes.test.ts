@@ -43,6 +43,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/indexnow-key", // IndexNow verifies site ownership without a session
     "/api/rekentools/uitkomst", // "stuur mij de uitkomst" on the public rekentools
     "/api/auth/werkgever", // /klus-plaatsen: is the caller's own session a werkgever? (yes/no only)
+    "/api/review-scan", // free public review-scan
+    "/api/review-scan/lead", // its contact form
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);

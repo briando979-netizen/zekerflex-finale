@@ -314,7 +314,7 @@ function extraTegels(inApp: boolean): Tegel[] {
     { href: "/werkgever/berichten", titel: "Chat", uitleg: "Gesprekken, bellen en videobellen." },
     { href: "/werkgever/mail", titel: "Mail", uitleg: "Je zakelijke mail op één plek." },
     { href: "/werkgever/whatsapp", titel: "WhatsApp", uitleg: "Klantgesprekken via WhatsApp." },
-    { href: "/werkgever/google-reviews", titel: "Google-reviews", uitleg: "Vraag klanten om een review op Google." },
+    { href: "/werkgever/google-reviews", titel: "Google-reviews", uitleg: "Vraag klanten om een review en scan hoe je ervoor staat." },
     { href: "/werkgever/telefonie", titel: "Telefonie", uitleg: "Een zakelijk nummer en bellen vanuit ZekerFlex." },
     { href: "/werkgever/agenda", titel: "Agenda", uitleg: "Afspraken uit je mail, chat en WhatsApp, vanzelf bij elkaar." },
     { href: "/werkgever/facturen", titel: "Facturen", uitleg: "Facturen van ZekerFlex." },
