@@ -29,6 +29,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     status: d.status,
     keuze: d.keuze,
     akkoordAt: d.akkoord?.at ?? null,
+    terugbellenAt: d.terugbellen?.at ?? null,
     verlopen: dealVerlopen(d),
   };
   return (

@@ -73,7 +73,7 @@ export async function autoLeadVoorScan(log: ScanLog, c: ScanContact): Promise<st
 }
 
 /** De bezoeker vraagt zelf contact aan: de lead van de scan wordt warm met zijn gegevens. Geeft false als er geen lead was. */
-export async function maakLeadWarm(leadId: string | null, persoon: { naam: string; email: string; telefoon?: string | null | undefined }, bron: string, notitie: string): Promise<boolean> {
+export async function maakLeadWarm(leadId: string | null, persoon: { naam: string; email?: string | null | undefined; telefoon?: string | null | undefined }, bron: string, notitie: string): Promise<boolean> {
   if (!leadId) return false;
   try {
     const lead = await prisma.salesLead.findUnique({ where: { id: leadId }, select: { notes: true } });
@@ -82,7 +82,7 @@ export async function maakLeadWarm(leadId: string | null, persoon: { naam: strin
       where: { id: leadId },
       data: {
         contactName: persoon.naam.slice(0, 120),
-        contactEmail: persoon.email.slice(0, 200),
+        ...(persoon.email ? { contactEmail: persoon.email.slice(0, 200) } : {}),
         ...(persoon.telefoon ? { contactPhone: persoon.telefoon.slice(0, 40) } : {}),
         source: bron,
         notes: `${notitie}\n${lead.notes ?? ""}`.slice(0, 2000),

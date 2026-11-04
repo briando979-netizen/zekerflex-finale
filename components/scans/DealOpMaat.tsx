@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
-import { SOORT_LABEL, dealEuro, dealTotaal, type DealOptie, type DealWeergave } from "@/lib/scans/model";
+import { BEL_MOMENTEN, SOORT_LABEL, dealEuro, dealTotaal, type BelMoment, type DealOptie, type DealWeergave } from "@/lib/scans/model";
 
 // ---------------------------------------------------------------------------
 // Het voorstel op maat na een gratis scan: de opties die bij het bedrijf passen,
@@ -41,6 +41,93 @@ function OptieKaart({ o, aan, onWissel, uit }: { o: DealOptie; aan: boolean; onW
         </span>
       </label>
     </li>
+  );
+}
+
+/** "Bel me eerst terug": voor wie nog geen ja wil zeggen maar wel wil overleggen. Een eigen formulier, los van het akkoord. */
+function Terugbellen({ dealId, al }: { dealId: string; al: boolean }) {
+  const id = useId();
+  const [f, setF] = useState<{ naam: string; telefoon: string; moment: BelMoment; vraag: string; consent: boolean }>({ naam: "", telefoon: "", moment: "maakt_niet_uit", vraag: "", consent: false });
+  const [stand, setStand] = useState<"open" | "bezig" | "klaar">(al ? "klaar" : "open");
+  const [fout, setFout] = useState<string | null>(null);
+
+  const stuur = async (e: FormEvent) => {
+    e.preventDefault();
+    setStand("bezig");
+    setFout(null);
+    const res = await fetch(`/api/deal/${dealId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actie: "terugbellen", naam: f.naam, telefoon: f.telefoon, moment: f.moment, ...(f.vraag.trim() ? { vraag: f.vraag } : {}), consent: f.consent }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const body = (await res?.json().catch(() => null)) as { error?: { message?: string } } | null;
+      setFout(body?.error?.message ?? "Versturen lukte niet. Probeer het opnieuw.");
+      setStand("open");
+      return;
+    }
+    setStand("klaar");
+  };
+
+  if (stand === "klaar") {
+    return (
+      <p role="status" className="mt-6 rounded-2xl border border-hair bg-white p-5 text-sm text-ink">
+        <strong className="block font-display text-lg">We bellen je terug</strong>
+        <span className="mt-1 block text-neutralx-600">Je verzoek is binnen. We bellen je op een werkdag op het moment dat je koos, en nemen het voorstel samen door.</span>
+      </p>
+    );
+  }
+  return (
+    <details className="group mt-6 rounded-2xl border border-hair bg-white p-5">
+      <summary className="cursor-pointer list-none font-display text-lg font-bold text-ink">
+        Eerst even overleggen? <span className="font-sans text-sm font-semibold text-brand-700 group-open:hidden">Laat je bellen</span>
+      </summary>
+      <form onSubmit={stuur} className="mt-4">
+        <p className="text-sm text-neutralx-600">Laat je nummer achter, dan bellen we je terug om je vragen te beantwoorden. Je zit nergens aan vast.</p>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="text-sm text-neutralx-700" htmlFor={`${id}-naam`}>
+            Naam
+            <input id={`${id}-naam`} className="field-input mt-1" required maxLength={120} value={f.naam} onChange={(e) => setF({ ...f, naam: e.target.value })} autoComplete="name" />
+          </label>
+          <label className="text-sm text-neutralx-700" htmlFor={`${id}-tel`}>
+            Telefoonnummer
+            <input id={`${id}-tel`} className="field-input mt-1" type="tel" required minLength={8} maxLength={40} value={f.telefoon} onChange={(e) => setF({ ...f, telefoon: e.target.value })} autoComplete="tel" />
+          </label>
+          <label className="text-sm text-neutralx-700" htmlFor={`${id}-moment`}>
+            Beste moment
+            <select id={`${id}-moment`} className="field-input mt-1" value={f.moment} onChange={(e) => setF({ ...f, moment: e.target.value as BelMoment })}>
+              {(Object.keys(BEL_MOMENTEN) as BelMoment[]).map((m) => (
+                <option key={m} value={m}>
+                  {BEL_MOMENTEN[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-neutralx-700" htmlFor={`${id}-vraag`}>
+            Je vraag (mag leeg)
+            <input id={`${id}-vraag`} className="field-input mt-1" maxLength={500} value={f.vraag} onChange={(e) => setF({ ...f, vraag: e.target.value })} />
+          </label>
+        </div>
+        <label className="mt-3 flex items-start gap-2 text-sm text-neutralx-700">
+          <input type="checkbox" required checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} className="mt-0.5" />
+          <span>
+            ZekerFlex mag me bellen over dit voorstel (zie de{" "}
+            <Link href="/privacy" className="font-semibold text-brand-700 hover:underline">
+              privacyverklaring
+            </Link>
+            ).
+          </span>
+        </label>
+        {fout && (
+          <p role="alert" className="mt-3 text-sm text-crit">
+            {fout}
+          </p>
+        )}
+        <button type="submit" className="btn-ghost mt-4" disabled={stand === "bezig"}>
+          {stand === "bezig" ? "Versturen…" : "Bel me terug"}
+        </button>
+      </form>
+    </details>
   );
 }
 
@@ -183,6 +270,7 @@ export function DealOpMaat({ deal }: { deal: DealWeergave }) {
           )
         )}
       </div>
+      {!dicht && <Terugbellen dealId={deal.id} al={deal.terugbellenAt !== null} />}
     </div>
   );
 }

@@ -291,8 +291,14 @@ export interface DealWeergave {
   status: "open" | "bekeken" | "akkoord";
   keuze: string[];
   akkoordAt: string | null;
+  /** wanneer de bezoeker vroeg om eerst teruggebeld te worden, of null */
+  terugbellenAt: string | null;
   verlopen: boolean;
 }
+
+/** Wanneer we het best kunnen terugbellen (keuze op /deal/<id>). */
+export const BEL_MOMENTEN = { ochtend: "In de ochtend", middag: "In de middag", laat: "Aan het einde van de middag", maakt_niet_uit: "Maakt niet uit" } as const;
+export type BelMoment = keyof typeof BEL_MOMENTEN;
 
 /** Wat de gekozen opties samen kosten: eenmalig en per maand. */
 export function dealTotaal(opties: readonly DealOptie[], keuze: readonly string[]): { eenmaligCent: number; maandCent: number } {

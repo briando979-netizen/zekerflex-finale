@@ -11,7 +11,7 @@ import { proposalOffer } from "@/lib/sales/website-proposal";
 import { createLead } from "@/lib/sales/leads";
 import { maakLeadWarm } from "@/lib/scans/lead";
 import { getScanLog, koppel, logStap } from "@/lib/scans/store";
-import { dealEuro, dealOpties, dealTotaal, isTestEmail, isTestHost, schoneKeuze, SOORT_LABEL, type DealInput, type DealOptie, type DealPrijzen, type ScanLog, type ScanSoort } from "@/lib/scans/model";
+import { BEL_MOMENTEN, dealEuro, dealOpties, dealTotaal, isTestEmail, isTestHost, schoneKeuze, SOORT_LABEL, type BelMoment, type DealInput, type DealOptie, type DealPrijzen, type ScanLog, type ScanSoort } from "@/lib/scans/model";
 
 // ---------------------------------------------------------------------------
 // Het voorstel op maat bij een gratis scan (/deal/<id>): met de bedrijfsgegevens
@@ -40,6 +40,8 @@ export interface Deal {
   status: "open" | "bekeken" | "akkoord";
   keuze: string[];
   akkoord?: { at: string; naam: string; email: string; telefoon: string | null } | undefined;
+  /** "Bel me eerst terug": nog geen ja, wel een gesprek */
+  terugbellen?: { at: string; naam: string; telefoon: string; moment: BelMoment; vraag: string | null } | undefined;
 }
 
 /** De echte prijzen van vandaag (die de eigenaar in beheer instelt). */
@@ -100,6 +102,63 @@ export async function dealBekeken(id: string): Promise<void> {
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * "Bel me eerst terug": de bezoeker zegt nog geen ja, maar wil overleggen. Lead warm (of nieuw) met het
+ * telefoonnummer, stap "aanvraag" in het logboek, sales een melding met het voorstel. Eén keer per voorstel.
+ * Bij een testbedrijf: alleen vastleggen, geen lead en geen mail.
+ */
+export async function dealTerugbellen(id: string, persoon: { naam: string; telefoon: string; moment: BelMoment; vraag?: string | undefined }): Promise<Deal> {
+  const d = await getDeal(id);
+  if (!d) throw AppError.notFound("Dit voorstel bestaat niet (meer).");
+  if (dealVerlopen(d)) throw AppError.validation("Dit voorstel is verlopen. Doe de scan opnieuw voor een nieuw voorstel.");
+  if (d.status === "akkoord") throw AppError.validation("Je hebt al ja gezegd; we nemen sowieso contact met je op.");
+  if (d.terugbellen) return d;
+  const vraag = persoon.vraag?.trim().slice(0, 500) || null;
+  const next: Deal = { ...d, terugbellen: { at: new Date().toISOString(), naam: persoon.naam, telefoon: persoon.telefoon, moment: persoon.moment, vraag } };
+  await kvSet(KEY(id), next);
+
+  if (isTestHost(d.bedrijf.host)) {
+    await logStap(d.scan.soort, d.scan.scanId, "aanvraag", "terugbellen (test)");
+    return next;
+  }
+  const base = env.APP_BASE_URL.replace(/\/+$/, "");
+  const moment = BEL_MOMENTEN[persoon.moment];
+  const aanbevolen = d.opties.filter((o) => o.aanbevolen).map((o) => o.naam);
+  const notitie = `[voorstel op maat] Wil eerst teruggebeld worden (${moment.toLowerCase()}): ${persoon.telefoon}.${vraag ? ` Vraag: ${vraag}` : ""} ${base}/deal/${id}`;
+  const log = await getScanLog(d.scan.soort, d.scan.scanId);
+  const warm = await maakLeadWarm(log?.leadId ?? null, { naam: persoon.naam, telefoon: persoon.telefoon }, "voorstel-op-maat", notitie);
+  if (!warm) {
+    const lead = await createLead({
+      companyName: d.bedrijf.naam,
+      contactName: persoon.naam,
+      contactPhone: persoon.telefoon,
+      city: d.bedrijf.plaats ?? undefined,
+      source: "voorstel-op-maat",
+      sourceUrl: d.bedrijf.host ? `https://${d.bedrijf.host}/` : undefined,
+      notes: notitie.slice(0, 900),
+      createdById: null,
+    }).catch(() => null);
+    if (lead) await koppel(d.scan.soort, d.scan.scanId, { leadId: lead.id });
+  }
+  await logStap(d.scan.soort, d.scan.scanId, "aanvraag", `terugbellen ${persoon.moment}`);
+
+  await sendMail({
+    to: CONTACTS.sales,
+    kind: "voorstel-op-maat-terugbellen",
+    subject: `Terugbellen: ${d.bedrijf.naam} (${moment.toLowerCase()})`,
+    text: `${d.bedrijf.naam} (${d.bedrijf.host ?? "geen website"}) wil eerst even overleggen over het voorstel op maat na een ${SOORT_LABEL[d.scan.soort].toLowerCase()}.\n\nBel ${persoon.naam}: ${persoon.telefoon}\nBeste moment: ${moment}${vraag ? `\nVraag: ${vraag}` : ""}\n\nAanbevolen in het voorstel: ${aanbevolen.join(", ") || "-"}\n\nVoorstel: ${base}/deal/${id}\nRapport: ${base}${d.rapport}`,
+    html: mailShell(
+      "Terugbelverzoek bij een voorstel op maat",
+      `<p style="margin:0 0 6px"><strong>${esc(d.bedrijf.naam)}</strong>${d.bedrijf.host ? ` · ${esc(d.bedrijf.host)}` : ""}</p>
+       <p style="margin:0 0 12px;font-size:15px;color:#17211C">Bel <strong>${esc(persoon.naam)}</strong>: <a href="tel:${esc(persoon.telefoon.replace(/[^\d+]/g, ""))}" style="color:#0E5C4A">${esc(persoon.telefoon)}</a><br><span style="font-size:14px;color:#3C4A42">Beste moment: ${esc(moment)}</span></p>
+       ${vraag ? `<p style="margin:0 0 12px;font-size:14px;color:#3C4A42"><strong>Vraag:</strong> ${esc(vraag)}</p>` : ""}
+       <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">Aanbevolen in het voorstel: ${esc(aanbevolen.join(", ") || "-")}</p>
+       <p style="margin:0">${mailButton(`${base}/deal/${id}`, "Bekijk het voorstel")}</p>`,
+    ),
+  }).catch((e) => logger.warn("voorstel op maat: terugbelmelding mislukt", { error: (e as Error).message }));
+  return next;
+}
 
 /** "Ja, dit wil ik": keuze vastleggen, lead warm (of nieuw), sales een melding, het bedrijf een bevestiging. */
 export async function dealAkkoord(id: string, persoon: { naam: string; email: string; telefoon?: string | undefined }, keuzeRuw: readonly unknown[]): Promise<Deal> {
