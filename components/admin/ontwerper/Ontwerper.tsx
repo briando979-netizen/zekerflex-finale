@@ -194,9 +194,12 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
     }
   }
 
+  // de teller laat het veld ook opnieuw in beeld komen als dezelfde tekst nog eens gekozen wordt
+  const [kiesN, setKiesN] = useState(0);
   const kiesTekst = useCallback((key: string) => {
     setTab("teksten");
     setGekozenTekst(key);
+    setKiesN((n) => n + 1);
   }, []);
   const tekstKeuze = useCallback((key: string | null) => setGekozenTekst(key), []);
   const conceptAnders = !zelfdeThema(thema, live);
@@ -308,7 +311,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           </div>
           {/* blijft bestaan als je wisselt: ingetypte teksten gaan niet verloren */}
           <div id="ontwerper-paneel-teksten" role="tabpanel" aria-labelledby="ontwerper-tab-teksten" hidden={tab !== "teksten"}>
-            <TekstenPaneel gekozen={gekozenTekst} onKies={tekstKeuze} onTeksten={setTeksten} injectie={injectie} />
+            <TekstenPaneel gekozen={gekozenTekst} kiesN={kiesN} onKies={tekstKeuze} onTeksten={setTeksten} injectie={injectie} />
           </div>
           {/* het concept staat op de server, dus dit paneel mag verdwijnen als je wisselt */}
           {tab === "home" ? (

@@ -72,12 +72,15 @@ function EerdereVersies({ wijzigingen, huidig, onGebruik }: { wijzigingen: Tekst
 
 export function TekstenPaneel({
   gekozen,
+  kiesN = 0,
   onKies,
   onTeksten,
   injectie = null,
 }: {
   /** het veld dat in het voorbeeld is aangeklikt */
   gekozen: string | null;
+  /** telt elke keuze (ook dezelfde tekst nog eens), zodat het veld weer in beeld komt */
+  kiesN?: number;
   onKies: (key: string | null) => void;
   /** de teksten zoals ze nu in de velden staan, voor het voorbeeld */
   onTeksten: (t: Record<string, string>) => void;
@@ -124,7 +127,7 @@ export function TekstenPaneel({
       el?.focus({ preventScroll: true });
     }, 60);
     return () => window.clearTimeout(t);
-  }, [gekozen]);
+  }, [gekozen, kiesN]);
 
   const groepen = useMemo(() => {
     const q = zoek.trim().toLowerCase();
