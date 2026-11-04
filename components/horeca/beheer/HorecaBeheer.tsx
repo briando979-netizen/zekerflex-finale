@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Tabs, Veld } from "@/components/rijschool/ui";
 import { SOORTEN, SOORT_LABEL, soortLabel } from "@/lib/horeca/soorten";
@@ -54,6 +54,15 @@ export function HorecaBeheer() {
   useEffect(() => {
     void laad();
   }, [laad]);
+  // ?tab=reserveringen (bijv. vanaf een tegel op /werkgever): na het laden één keer
+  // dat tabblad openen, als het er is (een module-tabblad alleen als de module aan staat)
+  const tabUitLink = useRef(false);
+  useEffect(() => {
+    if (tabUitLink.current || !data?.aan) return;
+    tabUitLink.current = true;
+    const gevraagd = new URLSearchParams(window.location.search).get("tab");
+    if (gevraagd && tabsVoor(data.zaak.modules).some((t) => t.id === gevraagd)) setTab(gevraagd as Tab);
+  }, [data]);
 
   const doe: Doe = async (actie, okTekst) => {
     setFout(null);
