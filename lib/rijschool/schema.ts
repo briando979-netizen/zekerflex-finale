@@ -4,6 +4,7 @@ import { isDatum, isTijd } from "@/lib/rijschool/planning";
 import { isOnderdeel } from "@/lib/rijschool/leskaart";
 import { isTheorieOnderdeel } from "@/lib/rijschool/theorie";
 import { websiteSchema } from "@/lib/rijschool/website";
+import { BERICHT_MAX } from "@/lib/rijschool/berichten-lijst";
 
 // ---------------------------------------------------------------------------
 // Invoer van het rijschool-pakket: beheer, publieke site, leerling- en
@@ -152,6 +153,9 @@ export const correctieSchema = z.object({
   omschrijving: tekst(160).min(2, "Waarom deze correctie?"),
 });
 
+/** Een bericht tussen leerling en rijschool; het opschonen gebeurt in lib/rijschool/berichten.ts. */
+const berichtTekst = z.string().max(BERICHT_MAX + 200, `Een bericht mag hoogstens ${BERICHT_MAX} tekens lang zijn.`);
+
 // --- beheer: één eindpunt, een actie per soort wijziging ----------------------
 
 export const beheerActieSchema = z.discriminatedUnion("actie", [
@@ -169,6 +173,9 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("betaling"), data: betalingSchema }),
   z.object({ actie: z.literal("correctie"), data: correctieSchema }),
   z.object({ actie: z.literal("automail"), id: z.enum(["tegoed", "proefles", "stil", "geslaagd"]), aan: z.boolean() }),
+  // berichten met een leerling (lib/rijschool/berichten.ts)
+  z.object({ actie: z.literal("bericht"), leerlingId: id, tekst: berichtTekst }),
+  z.object({ actie: z.literal("berichtGelezen"), leerlingId: id }),
 ]);
 
 export type BeheerActie = z.infer<typeof beheerActieSchema>;
@@ -210,6 +217,9 @@ export const leerlingActieSchema = z.discriminatedUnion("actie", [
   // online betalen (iDEAL): een pakket kopen of een openstaande betaling voldoen
   // precies één van beide; dat controleert de route (een refine kan niet in een discriminatedUnion)
   z.object({ actie: z.literal("betaal"), productId: id.optional(), betalingId: id.optional() }),
+  // berichten met de rijschool: een nieuw bericht, of wat de school stuurde als gelezen markeren
+  z.object({ actie: z.literal("bericht"), tekst: berichtTekst }),
+  z.object({ actie: z.literal("gelezen") }),
 ]);
 
 // --- instructeur-app ----------------------------------------------------------

@@ -44,6 +44,12 @@ export async function runRetentionSweep(
     ? await prisma.rijschoolLes.count({ where: routeWhere })
     : (await prisma.rijschoolLes.updateMany({ where: routeWhere, data: { route: Prisma.DbNull } })).count;
 
+  // Berichten tussen leerling en rijschool: na 2 jaar weg.
+  const berichtCut = retentionCutoff("rijschool_berichten", now)!;
+  cleared.rijschool_berichten = dryRun
+    ? await prisma.rijschoolBericht.count({ where: { createdAt: { lt: berichtCut } } })
+    : (await prisma.rijschoolBericht.deleteMany({ where: { createdAt: { lt: berichtCut } } })).count;
+
   // Horeca: na 12 maanden naam, e-mail, telefoon en opmerking van gasten weg;
   // datum, tijd, aantal personen en bedragen blijven voor de cijfers van de zaak.
   const horecaCut = retentionCutoff("horeca_gasten", now)!;

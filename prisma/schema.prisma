@@ -2259,6 +2259,7 @@ model Rijschool {
   leerlingen   RijschoolLeerling[]
   lessen       RijschoolLes[]
   betalingen   RijschoolBetaling[]
+  berichten    RijschoolBericht[]
   app          RijschoolApp?
 }
 
@@ -2354,9 +2355,28 @@ model RijschoolLeerling {
   lessen     RijschoolLes[]
   tegoed     RijschoolTegoed[]
   betalingen RijschoolBetaling[]
+  berichten  RijschoolBericht[]
 
   @@unique([rijschoolId, email])
   @@index([rijschoolId, status])
+}
+
+// Berichten tussen een leerling en de rijschool (lib/rijschool/berichten.ts): één
+// gesprek per leerling. Namens de school schrijft het beheer of een instructeur.
+model RijschoolBericht {
+  id          String            @id @default(cuid())
+  rijschoolId String
+  rijschool   Rijschool         @relation(fields: [rijschoolId], references: [id], onDelete: Cascade)
+  leerlingId  String
+  leerling    RijschoolLeerling @relation(fields: [leerlingId], references: [id], onDelete: Cascade)
+  vanLeerling Boolean
+  afzender    String            @default("") // naam van wie namens de school schreef
+  tekst       String
+  gelezenOm   DateTime? // gelezen door de ontvanger
+  createdAt   DateTime          @default(now())
+
+  @@index([leerlingId, createdAt])
+  @@index([rijschoolId, createdAt])
 }
 
 model RijschoolLes {

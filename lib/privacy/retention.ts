@@ -105,6 +105,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: false,
   },
   {
+    key: "rijschool_berichten",
+    label: "Berichten tussen leerling en rijschool in de app",
+    days: 2 * YEAR,
+    anchor: "bericht verstuurd",
+    basis: "Contact over de rijopleiding; daarna niet meer nodig",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "horeca_gasten",
     label: "Gastgegevens bij horecareserveringen en -bestellingen (naam, e-mail, telefoon, opmerking)",
     days: YEAR,

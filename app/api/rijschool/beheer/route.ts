@@ -21,6 +21,8 @@ import { beheerWeergave, lessenIn } from "@/lib/rijschool/weergave";
 import { isDatum, moment } from "@/lib/rijschool/planning";
 import type { Rijschool } from "@prisma/client";
 import { stuurGeslaagd, zetAutomail } from "@/lib/rijschool/automailer";
+import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +37,7 @@ const alleenDatum = (d: string) => (d ? new Date(`${d}T12:00:00Z`) : null);
 
 // GET /api/rijschool/beheer — alles voor het beheer, of (nog niet aan) wat we al weten.
 // ?van=2026-11-03&dagen=7 — de lessen in die periode, voor de agenda.
+// ?berichten=<leerlingId> — het gesprek met die leerling.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { p, tenantId, rijschool } = await beheerContext();
@@ -43,6 +46,11 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
     }
     const url = new URL(request.url);
+    const metLeerling = url.searchParams.get("berichten");
+    if (metLeerling) {
+      const l = await eigenLeerling(rijschool, metLeerling);
+      return NextResponse.json({ berichten: await gesprekMet(l.id) });
+    }
     const van = url.searchParams.get("van");
     if (van) {
       if (!isDatum(van)) throw AppError.validation("Kies een datum.");
@@ -169,6 +177,17 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Reco
       return {};
     case "automail":
       await zetAutomail(r.id, a.id, a.aan);
+      return {};
+    case "bericht": {
+      const l = await eigenLeerling(r, a.leerlingId);
+      await enforceRateLimit({ name: "rijschool-bericht-school", identifier: r.id, limit: 120, windowSeconds: 600 });
+      const bericht = await stuurBericht(r, l, { leerling: false, afzender: door }, a.tekst);
+      // wie antwoordt, heeft het gesprek gelezen
+      await markeerGelezen(l.id, false);
+      return { bericht };
+    }
+    case "berichtGelezen":
+      await markeerGelezen((await eigenLeerling(r, a.leerlingId)).id, false);
       return {};
   }
 }

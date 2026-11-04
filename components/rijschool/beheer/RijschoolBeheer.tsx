@@ -14,22 +14,25 @@ import { WebsiteTab } from "@/components/rijschool/beheer/WebsiteTab";
 import { InstellingenTab } from "@/components/rijschool/beheer/InstellingenTab";
 import { BetalingenTab } from "@/components/rijschool/beheer/BetalingenTab";
 import { AppTab } from "@/components/rijschool/beheer/AppTab";
+import { BerichtenTab } from "@/components/rijschool/beheer/BerichtenTab";
+import { voorvertoning } from "@/lib/rijschool/berichten-lijst";
 import { euro } from "@/lib/payroll/format";
 import { LEERLING_STATUS_LABEL } from "@/lib/rijschool/format";
 
 // ---------------------------------------------------------------------------
 // Het beheer van het rijschool-pakket (/werkgever/rijschool): aanzetten,
-// overzicht, agenda, leerlingen, betalingen, team en auto's, pakketten,
-// website, instellingen en de app. Alle wijzigingen gaan via één eindpunt
+// overzicht, agenda, leerlingen, berichten, betalingen, team en auto's,
+// pakketten, website, instellingen en de app. Alle wijzigingen gaan via één eindpunt
 // (PATCH /api/rijschool/beheer) dat de nieuwe stand terugstuurt.
 // ---------------------------------------------------------------------------
 
-type TabId = "overzicht" | "agenda" | "leerlingen" | "betalingen" | "team" | "pakketten" | "website" | "instellingen" | "app";
+type TabId = "overzicht" | "agenda" | "leerlingen" | "berichten" | "betalingen" | "team" | "pakketten" | "website" | "instellingen" | "app";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overzicht", label: "Overzicht" },
   { id: "agenda", label: "Agenda" },
   { id: "leerlingen", label: "Leerlingen" },
+  { id: "berichten", label: "Berichten" },
   { id: "betalingen", label: "Betalingen" },
   { id: "team", label: "Instructeurs en auto's" },
   { id: "pakketten", label: "Pakketten en prijzen" },
@@ -54,6 +57,7 @@ export function RijschoolBeheer() {
   const [fout, setFout] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("overzicht");
   const [leerlingFocus, setLeerlingFocus] = useState<string | null>(null);
+  const [gesprekFocus, setGesprekFocus] = useState<string | null>(null);
 
   useEffect(() => {
     stuur<({ aan: true } & BeheerWeergave) | { aan: false; voorstel: Voorstel }>("/api/rijschool/beheer")
@@ -62,6 +66,9 @@ export function RijschoolBeheer() {
     // ?tab=betalingen (bijv. terug van Stripe): meteen dat tabblad
     const gevraagd = new URLSearchParams(window.location.search).get("tab");
     if (gevraagd && TABS.some((t) => t.id === gevraagd)) setTab(gevraagd as TabId);
+    // ?tab=berichten&leerling=<id> (link in de mail bij een nieuw bericht): meteen dat gesprek
+    const leerling = new URLSearchParams(window.location.search).get("leerling");
+    if (gevraagd === "berichten" && leerling) setGesprekFocus(leerling);
   }, []);
 
   const doe: Doe = useCallback(async (actie) => {
@@ -91,6 +98,12 @@ export function RijschoolBeheer() {
     setLeerlingFocus(id);
     setTab("leerlingen");
   };
+  const openGesprek = (id: string) => {
+    setGesprekFocus(id);
+    setTab("berichten");
+  };
+  const ongelezen = data.gesprekken.reduce((s, g) => s + g.ongelezen, 0);
+  const tabs = TABS.map((t) => (t.id === "berichten" && ongelezen > 0 ? { ...t, label: `Berichten (${ongelezen})` } : t));
 
   return (
     <div className="space-y-5">
@@ -117,11 +130,12 @@ export function RijschoolBeheer() {
         </div>
       </section>
 
-      <Tabs tabs={TABS} actief={tab} onKies={setTab} label="Onderdelen van het rijschool-pakket" />
+      <Tabs tabs={tabs} actief={tab} onKies={setTab} label="Onderdelen van het rijschool-pakket" />
 
-      {tab === "overzicht" && <Overzicht data={data} naarTab={setTab} openLeerling={openLeerling} />}
+      {tab === "overzicht" && <Overzicht data={data} naarTab={setTab} openLeerling={openLeerling} openGesprek={openGesprek} />}
       {tab === "agenda" && <AgendaTab data={data} doe={doe} />}
-      {tab === "leerlingen" && <LeerlingenTab data={data} doe={doe} focus={leerlingFocus} onFocus={setLeerlingFocus} />}
+      {tab === "leerlingen" && <LeerlingenTab data={data} doe={doe} focus={leerlingFocus} onFocus={setLeerlingFocus} openGesprek={openGesprek} />}
+      {tab === "berichten" && <BerichtenTab data={data} doe={doe} focus={gesprekFocus} onFocus={setGesprekFocus} />}
       {tab === "betalingen" && <BetalingenTab data={data} openLeerling={openLeerling} />}
       {tab === "team" && <TeamTab data={data} doe={doe} />}
       {tab === "pakketten" && <PakkettenTab data={data} doe={doe} />}
@@ -196,7 +210,18 @@ function Aanzetten({ voorstel, onAan }: { voorstel: Voorstel; onAan: (d: BeheerW
   );
 }
 
-function Overzicht({ data, naarTab, openLeerling }: { data: BeheerWeergave; naarTab: (t: TabId) => void; openLeerling: (id: string) => void }) {
+function Overzicht({
+  data,
+  naarTab,
+  openLeerling,
+  openGesprek,
+}: {
+  data: BeheerWeergave;
+  naarTab: (t: TabId) => void;
+  openLeerling: (id: string) => void;
+  openGesprek: (id: string) => void;
+}) {
+  const nieuweBerichten = data.gesprekken.filter((g) => g.ongelezen > 0);
   const actief = data.leerlingen.filter((l) => l.status === "ACTIEF").length;
   const aanmeldingen = data.leerlingen.filter((l) => l.status === "AANMELDING");
   const tekort = data.leerlingen.filter((l) => (l.status === "ACTIEF" || l.status === "AANMELDING") && l.saldoMin < 0).length;
@@ -228,6 +253,29 @@ function Overzicht({ data, naarTab, openLeerling }: { data: BeheerWeergave; naar
           </div>
         ))}
       </div>
+
+      {nieuweBerichten.length > 0 && (
+        <section className="card p-5 lg:col-span-3" aria-labelledby="nieuwe-berichten-kop">
+          <h2 id="nieuwe-berichten-kop" className="font-display text-lg font-bold text-ink">
+            Nieuwe berichten
+          </h2>
+          <ul className="mt-3 divide-y divide-hair">
+            {nieuweBerichten.slice(0, 5).map((g) => (
+              <li key={g.leerlingId} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-ink">
+                    {g.leerlingNaam} <span className="pill-warn ml-1 !py-0 text-[0.7rem]">{g.ongelezen} nieuw</span>
+                  </span>
+                  <span className="block truncate text-xs text-neutralx-500">{voorvertoning(g.laatste.tekst, 90)}</span>
+                </span>
+                <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => openGesprek(g.leerlingId)}>
+                  Antwoorden
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card p-5 lg:col-span-2">
         <h2 className="font-display text-lg font-bold text-ink">Nieuwe aanmeldingen</h2>

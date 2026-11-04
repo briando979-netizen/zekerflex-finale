@@ -11,6 +11,8 @@ import { automailInstellingen } from "@/lib/rijschool/automailer";
 import type { AutomailInstellingen } from "@/lib/rijschool/automail-soorten";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { routeWeergave, type RouteWeergave } from "@/lib/rijschool/lesroute";
+import { gesprekMet, gesprekkenVan } from "@/lib/rijschool/berichten";
+import type { BerichtRij, Gesprek } from "@/lib/rijschool/berichten-lijst";
 
 // ---------------------------------------------------------------------------
 // Wat elk scherm van het rijschool-pakket te zien krijgt, als platte JSON
@@ -231,10 +233,12 @@ export interface BeheerWeergave {
   betalingen: BetalingRij[];
   /** welke mails de automailer vanzelf stuurt (lib/rijschool/automailer.ts) */
   automails: AutomailInstellingen;
+  /** gesprekken met leerlingen (lib/rijschool/berichten.ts), het meest recente bovenaan */
+  gesprekken: Gesprek[];
 }
 
 export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
-  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails] = await Promise.all([
+  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails, gesprekken] = await Promise.all([
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
@@ -246,11 +250,13 @@ export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
       take: 200,
     }),
     automailInstellingen(r.id),
+    gesprekkenVan(r.id),
   ]);
   const ids = leerlingen.map((l) => l.id);
   const [saldi, voortgangen] = await Promise.all([saldiVan(ids), voortgangVan(ids)]);
   return {
     automails,
+    gesprekken,
     rijschool: rijschoolInfo(r),
     website: websiteBewerkbaar(r.website),
     instructeurs: instructeurs.map(instructeurRij),
@@ -314,18 +320,22 @@ export interface LeerlingWeergave {
   theorie: Record<string, TheorieScore>;
   /** de rijschool ontvangt iDEAL via haar eigen Stripe-account (lib/rijschool/betalen.ts) */
   onlineBetalen: boolean;
+  /** het gesprek met de rijschool (lib/rijschool/berichten.ts), oudste eerst */
+  berichten: BerichtRij[];
 }
 
 export async function leerlingWeergave(r: Rijschool, l: RijschoolLeerling): Promise<LeerlingWeergave> {
-  const [lessen, saldoMin, betalingen, producten, instructeur] = await Promise.all([
+  const [lessen, saldoMin, betalingen, producten, instructeur, berichten] = await Promise.all([
     prisma.rijschoolLes.findMany({ where: { leerlingId: l.id }, include: lesInclude, orderBy: { start: "desc" }, take: 300 }),
     saldoVan(l.id),
     prisma.rijschoolBetaling.findMany({ where: { leerlingId: l.id }, orderBy: { createdAt: "desc" }, take: 100 }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id, zichtbaar: true }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
     l.instructeurId ? prisma.rijschoolInstructeur.findUnique({ where: { id: l.instructeurId }, select: { id: true, naam: true, telefoon: true } }) : null,
+    gesprekMet(l.id, 100),
   ]);
   return {
     rijschool: rijschoolInfo(r),
+    berichten,
     leerling: {
       id: l.id,
       naam: l.naam,

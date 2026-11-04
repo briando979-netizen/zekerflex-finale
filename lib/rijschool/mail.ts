@@ -247,6 +247,52 @@ export function betalingOntvangenMail(r: School, leerling: { naam: string; email
   );
 }
 
+// --- berichten (lib/rijschool/berichten.ts) ------------------------------------------
+
+const citaat = (tekst: string) =>
+  `<div style="margin:0 0 20px;padding:14px 16px;border-left:3px solid #E6E7E1;background:#F4F5F1;border-radius:8px;font-size:15px;line-height:1.6;color:#17211C;white-space:pre-line">${esc(tekst)}</div>`;
+
+/** Nieuw bericht van de rijschool aan de leerling, met een knop naar het gesprek in de app. */
+export function berichtAanLeerlingMail(r: School, leerling: { naam: string; email: string }, afzender: string, tekst: string): MailInput {
+  const link = siteUrl(r, "/leerling?tab=berichten");
+  const van = afzender ? `${afzender} van ${r.naam}` : r.naam;
+  return mail(
+    r,
+    leerling.email,
+    `Nieuw bericht van ${r.naam}`,
+    `Hoi ${voornaam(leerling.naam)},\n\n${van} stuurde je een bericht:\n\n${tekst}\n\nAntwoorden kan in de app: ${link}`,
+    omlijsting(
+      r,
+      "Nieuw bericht",
+      `${alinea(`Hoi ${esc(voornaam(leerling.naam))}, ${esc(van)} stuurde je een bericht:`)}
+       ${citaat(tekst)}
+       ${knop(r, link, "Antwoorden in de app")}`,
+    ),
+  );
+}
+
+/** Nieuw bericht van een leerling aan de rijschool; antwoorden op de mail gaan naar de leerling. */
+export function berichtAanSchoolMail(r: School, leerling: { id: string; naam: string; email: string }, tekst: string): MailInput | null {
+  if (!r.email) return null;
+  const link = `${basis()}/werkgever/rijschool?tab=berichten&leerling=${encodeURIComponent(leerling.id)}`;
+  return {
+    ...mail(
+      r,
+      r.email,
+      `Bericht van ${leerling.naam}`,
+      `${leerling.naam} stuurde een bericht via de app:\n\n${tekst}\n\nAntwoorden kan in je beheer: ${link}`,
+      omlijsting(
+        r,
+        `Bericht van ${leerling.naam}`,
+        `${alinea(`<strong>${esc(leerling.naam)}</strong> stuurde een bericht via de app:`)}
+         ${citaat(tekst)}
+         ${knop(r, link, "Antwoorden in het beheer")}`,
+      ),
+    ),
+    replyTo: leerling.email,
+  };
+}
+
 /** Uitnodiging om de Android-app te testen (gesloten test in Google Play). */
 export function testAppMail(r: School, ontvanger: { naam: string; email: string }, links: { groep: string | null; aanmelden: string; winkel: string }): MailInput {
   const stappen = [

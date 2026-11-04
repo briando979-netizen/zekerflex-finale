@@ -38,6 +38,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
           instructeur en {r.naam} zien hem. Na 2 jaar wordt de route gewist.
         </li>
         <li>Je voortgang: de beoordeling per onderdeel en de opmerkingen van je instructeur.</li>
+        <li>De berichten die je in de app met {r.naam} uitwisselt. Na 2 jaar worden ze gewist.</li>
         <li>Je tegoed en betalingen voor lessen en pakketten.</li>
         <li>Je oefenresultaten bij theorie oefenen.</li>
         <li>Een versleuteld wachtwoord en een cookie die je ingelogd houdt.</li>

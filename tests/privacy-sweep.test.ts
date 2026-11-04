@@ -25,6 +25,7 @@ const h = vi.hoisted(() => {
       passwordResetToken: mk("passwordResetToken", 1),
       identityVerification: mk("identityVerification", 3),
       rijschoolLes: mk("rijschoolLes", 4),
+      rijschoolBericht: mk("rijschoolBericht", 8),
       horecaReservering: mk("horecaReservering", 6),
       horecaBestelling: mk("horecaBestelling", 7),
     },
@@ -61,6 +62,7 @@ describe("runRetentionSweep", () => {
       password_reset_tokens: 1,
       kyc: 3,
       rijschool_lesroutes: 4,
+      rijschool_berichten: 8,
       horeca_gasten: 13,
     });
 
@@ -77,6 +79,11 @@ describe("runRetentionSweep", () => {
     // lesroutes: alleen de route weg (updateMany), de les zelf blijft
     const route = h.calls.find((c) => c.model === "rijschoolLes");
     expect(route?.op).toBe("updateMany");
+
+    // berichten tussen leerling en rijschool: na 2 jaar helemaal weg
+    const bericht = h.calls.find((c) => c.model === "rijschoolBericht");
+    expect(bericht?.op).toBe("deleteMany");
+    expect((bericht?.where as { createdAt: { lt: Date } }).createdAt.lt.toISOString()).toBe("2024-09-09T00:00:00.000Z");
 
     const kyc = h.calls.find((c) => c.model === "identityVerification");
     expect(kyc?.op).toBe("updateMany");

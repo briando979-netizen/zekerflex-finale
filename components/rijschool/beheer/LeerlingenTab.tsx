@@ -31,7 +31,20 @@ const LEEG: Omit<LeerlingRij, "id" | "saldoMin" | "procent" | "heeftWachtwoord" 
   notitie: "",
 };
 
-export function LeerlingenTab({ data, doe, focus, onFocus }: { data: BeheerWeergave; doe: Doe; focus: string | null; onFocus: (id: string | null) => void }) {
+export function LeerlingenTab({
+  data,
+  doe,
+  focus,
+  onFocus,
+  openGesprek,
+}: {
+  data: BeheerWeergave;
+  doe: Doe;
+  focus: string | null;
+  onFocus: (id: string | null) => void;
+  /** naar het gesprek met deze leerling (tabblad Berichten) */
+  openGesprek: (id: string) => void;
+}) {
   const [zoek, setZoek] = useState("");
   const [filter, setFilter] = useState<Status | "ALLE">("ALLE");
   const [nieuw, setNieuw] = useState(false);
@@ -51,6 +64,7 @@ export function LeerlingenTab({ data, doe, focus, onFocus }: { data: BeheerWeerg
         data={data}
         doe={doe}
         leerling={gekozen ?? null}
+        openGesprek={openGesprek}
         onTerug={() => {
           setNieuw(false);
           onFocus(null);
@@ -115,12 +129,14 @@ function LeerlingDetail({
   data,
   doe,
   leerling,
+  openGesprek,
   onTerug,
   onAangemaakt,
 }: {
   data: BeheerWeergave;
   doe: Doe;
   leerling: LeerlingRij | null;
+  openGesprek: (id: string) => void;
   onTerug: () => void;
   onAangemaakt: (id: string) => void;
 }) {
@@ -185,7 +201,7 @@ function LeerlingDetail({
         <form onSubmit={bewaar} className="card grid gap-4 p-5 sm:grid-cols-2 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
             <h2 className="font-display text-lg font-bold text-ink">{leerling ? leerling.naam : "Nieuwe leerling"}</h2>
-            {leerling && <Contact telefoon={leerling.telefoon} email={leerling.email} />}
+            {leerling && <Contact telefoon={leerling.telefoon} email={leerling.email} onBericht={() => openGesprek(leerling.id)} />}
           </div>
           <Veld label="Naam">
             <input className="field-input" value={v.naam} onChange={(e) => zet("naam", e.target.value)} required minLength={2} maxLength={100} />
@@ -397,13 +413,16 @@ function CorrectieFormulier({ doe, leerlingId }: { doe: Doe; leerlingId: string 
   );
 }
 
-/** Contact met de leerling vanaf je eigen telefoon of mail: bellen, WhatsApp, mailen. */
-function Contact({ telefoon, email }: { telefoon: string; email: string }) {
+/** Contact met de leerling: een bericht in de app, of vanaf je eigen telefoon of mail bellen, WhatsApp, mailen. */
+function Contact({ telefoon, email, onBericht }: { telefoon: string; email: string; onBericht: () => void }) {
   const tel = telefoon.replace(/[^0-9+]/g, "");
   const wa = whatsappNummer(telefoon);
   const stijl = "btn-ghost !px-3 !py-1.5 text-xs";
   return (
     <div className="flex flex-wrap gap-2">
+      <button type="button" className={stijl} onClick={onBericht}>
+        Bericht
+      </button>
       {tel && (
         <a href={`tel:${tel}`} className={stijl}>
           Bellen

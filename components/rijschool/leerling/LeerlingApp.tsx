@@ -15,11 +15,14 @@ import { komendeDagen } from "@/lib/rijschool/planning";
 import { euro } from "@/lib/payroll/format";
 import { afstandTekst, duurTekst } from "@/lib/kaart/geo";
 import type { RouteWeergave } from "@/lib/rijschool/lesroute";
+import { voorvertoning, type BerichtRij } from "@/lib/rijschool/berichten-lijst";
+import { Gesprek } from "@/components/rijschool/Gesprek";
 
 // De app van een leerling: volgende les, lessen (annuleren en zelf plannen),
-// voortgang per onderdeel, oefenen (lesvoorbereiding en theorie) en tegoed.
+// voortgang per onderdeel, oefenen (lesvoorbereiding en theorie), tegoed en
+// berichten met de rijschool (via het overzicht, niet in het menu onderin).
 
-type Tab = "overzicht" | "lessen" | "voortgang" | "oefenen" | "tegoed";
+type Tab = "overzicht" | "lessen" | "voortgang" | "oefenen" | "tegoed" | "berichten";
 
 const TABS: { id: Tab; label: string; icoon: string }[] = [
   { id: "overzicht", label: "Overzicht", icoon: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
@@ -45,6 +48,8 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
   const volgende = komend[0];
   const laatsteGereden = d.lessen.find((l) => l.status === "VOLTOOID");
   const huiswerk = laatsteGereden?.huiswerk ?? [];
+  const ongelezen = d.berichten.filter((b) => !b.vanLeerling && !b.gelezen).length;
+  const laatsteBericht = d.berichten[d.berichten.length - 1];
 
   async function actie(body: Record<string, unknown>, melding: string) {
     setFout(null);
@@ -55,6 +60,38 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
     } catch (e) {
       setFout(foutVan(e));
       if (/log opnieuw in/i.test(foutVan(e))) router.replace(`/rijschool/${slug}/inloggen`);
+    }
+  }
+
+  // ?tab=berichten (link in de mail bij een nieuw bericht): meteen het gesprek
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "berichten") setTab("berichten");
+  }, []);
+
+  // het gesprek staat open: wat de school stuurde is gelezen, en elke 20 seconden verversen
+  useEffect(() => {
+    if (tab !== "berichten" || ongelezen === 0) return;
+    stuur<LeerlingWeergave>(api, "POST", { actie: "gelezen" })
+      .then(setD)
+      .catch(() => undefined);
+  }, [tab, ongelezen, api]);
+  useEffect(() => {
+    if (tab !== "berichten") return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      stuur<{ berichten: BerichtRij[] }>(`${api}?berichten=1`)
+        .then((r) => setD((oud) => ({ ...oud, berichten: r.berichten })))
+        .catch(() => undefined);
+    }, 20_000);
+    return () => clearInterval(t);
+  }, [tab, api]);
+
+  async function stuurBericht(tekst: string) {
+    try {
+      setD(await stuur<LeerlingWeergave>(api, "POST", { actie: "bericht", tekst }));
+    } catch (e) {
+      if (/log opnieuw in/i.test(foutVan(e))) router.replace(`/rijschool/${slug}/inloggen`);
+      throw new Error(foutVan(e));
     }
   }
 
@@ -128,6 +165,22 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
               <p className="mt-1 text-lg font-semibold">Er staat nog geen les gepland.</p>
             )}
           </section>
+          <button type="button" onClick={() => setTab("berichten")} className="flex w-full items-center gap-3 rounded-2xl border border-hair bg-white p-4 text-left">
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs text-neutralx-500">Berichten met {d.rijschool.naam}</span>
+              <span className="block truncate text-sm font-semibold">
+                {laatsteBericht ? `${laatsteBericht.vanLeerling ? "Jij: " : ""}${voorvertoning(laatsteBericht.tekst, 60)}` : "Stel een vraag of geef iets door"}
+              </span>
+            </span>
+            {ongelezen > 0 ? (
+              <span className="num grid h-6 min-w-[1.5rem] place-items-center rounded-full px-1.5 text-xs font-bold text-white" style={{ background: kleur }}>
+                {ongelezen}
+                <span className="sr-only"> nieuw</span>
+              </span>
+            ) : (
+              <span aria-hidden className="text-neutralx-400">›</span>
+            )}
+          </button>
           <div className="grid grid-cols-2 gap-3">
             <button type="button" onClick={() => setTab("voortgang")} className="rounded-2xl border border-hair bg-white p-4 text-left">
               <p className="text-xs text-neutralx-500">Voortgang</p>
@@ -211,6 +264,28 @@ export function LeerlingApp({ slug, begin }: { slug: string; begin: LeerlingWeer
               </ul>
             )}
           </section>
+        </div>
+      )}
+
+      {tab === "berichten" && (
+        <div className="space-y-4">
+          <button type="button" className="text-sm font-semibold underline underline-offset-2" onClick={() => setTab("overzicht")}>
+            ← Overzicht
+          </button>
+          <div>
+            <h1 className="font-display text-2xl font-bold">Berichten</h1>
+            <p className="text-sm text-neutralx-600">
+              Met {d.rijschool.naam}. Je krijgt een mail als er een antwoord is.
+            </p>
+          </div>
+          <Gesprek
+            berichten={d.berichten}
+            eigen="leerling"
+            kleur={kleur}
+            naamAnder={d.rijschool.naam}
+            leeg="Nog geen berichten. Heb je een vraag over je lessen, je tegoed of je examen? Stel hem hier."
+            onStuur={stuurBericht}
+          />
         </div>
       )}
 

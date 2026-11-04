@@ -13,6 +13,7 @@ import { bewaarBeste, leesTheorie } from "@/lib/rijschool/theorie";
 import { lesduur } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { startIdeal } from "@/lib/rijschool/betalen";
+import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,11 +28,14 @@ const fout = (err: unknown) => {
 
 // GET /api/rijschool/site/<slug>/leerling — alles voor de leerling-app.
 // ?vrij=2026-11-04 — vrije tijden bij je eigen instructeur (als de rijschool zelf plannen toestaat).
+// ?berichten=1 — alleen het gesprek met de rijschool (om het open gesprek te verversen).
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }): Promise<NextResponse> {
   try {
     const r = await siteRijschool((await params).slug);
     const l = await eisLeerling(r);
-    const vrij = new URL(request.url).searchParams.get("vrij");
+    const zoek = new URL(request.url).searchParams;
+    if (zoek.get("berichten") === "1") return NextResponse.json({ berichten: await gesprekMet(l.id, 100) });
+    const vrij = zoek.get("vrij");
     if (vrij !== null) {
       if (!r.zelfPlannen || !l.instructeurId) throw AppError.precondition("Zelf plannen staat bij je rijschool niet aan.");
       const nu = new Date();
@@ -45,8 +49,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   }
 }
 
-// POST — annuleren, zelf een les plannen, een theorieronde bewaren, je gegevens bijwerken
-// of online betalen (geeft dan { url } van de betaalpagina terug).
+// POST — annuleren, zelf een les plannen, een theorieronde bewaren, je gegevens bijwerken,
+// een bericht aan de rijschool, berichten gelezen, of online betalen (geeft dan { url }
+// van de betaalpagina terug).
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }): Promise<NextResponse> {
   try {
     eisZelfdeHerkomst(request);
@@ -89,6 +94,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       }
       case "profiel":
         await prisma.rijschoolLeerling.update({ where: { id: l.id }, data: { telefoon: a.telefoon, adres: a.adres } });
+        break;
+      case "bericht":
+        await enforceRateLimit({ name: "rijschool-bericht", identifier: l.id, limit: 20, windowSeconds: 600 });
+        await stuurBericht(r, l, { leerling: true }, a.tekst);
+        break;
+      case "gelezen":
+        await markeerGelezen(l.id, true);
         break;
       case "betaal": {
         if (!a.productId === !a.betalingId) throw AppError.validation("Kies een pakket of een betaling.");
