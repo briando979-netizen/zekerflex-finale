@@ -46,6 +46,10 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/review-scan", // free public review-scan
     "/api/review-scan/lead", // its contact form
     "/api/klus-plaatsen/website", // /klus-plaatsen reads a company's public front page
+    "/api/review-scan", // free public review-scan
+    "/api/review-scan/lead", // its contact form
+    "/api/domeinen/zoek", // is a domain name still free (public RDAP)
+    "/api/domeinen/aanvraag", // request a domain / transfer
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);

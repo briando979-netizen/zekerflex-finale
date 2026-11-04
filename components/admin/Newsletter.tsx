@@ -66,6 +66,30 @@ Bedankt dat je ons helpt!
 
 Team ZekerFlex`,
   },
+  {
+    // 4 nov, op verzoek van de eigenaar: iedereen die zich al aanmeldde weet dat we nog niet officieel live zijn
+    label: "Opbouwfase: bedankt voor je aanmelding",
+    subject: "Bedankt dat je er al bij bent: ZekerFlex is nog in de opbouwfase",
+    body: `Hoi,
+
+Wat leuk dat je al een account hebt bij ZekerFlex! Er melden zich steeds meer mensen aan, en dat waarderen we enorm.
+
+We willen je eerlijk laten weten waar we staan: ZekerFlex is nog niet officieel gestart. De functies die je ziet werken echt, maar we zitten midden in de opbouw en bouwen elke dag verder.
+
+Testklussen: sommige klussen zijn testklussen die we zelf hebben gemaakt, om te zien of alles goed werkt. Daar zit geen echt bedrijf achter. Je hoeft er niet heen en er hoort geen betaling bij. Reageren mag gewoon, zo zie je hoe het werkt.
+
+Je gegevens zijn veilig: je hoeft je account niet te verwijderen. We gebruiken je gegevens alleen om ZekerFlex te laten werken. We verkopen geen gegevens, tonen geen advertenties en delen niets met advertentienetwerken.
+
+Probeer alles uit: vul je profiel aan met je vak, je beschikbaarheid en hoe ver je wilt reizen. Dan ben je er klaar voor als we officieel starten.
+
+Deel je ideeën: mis je iets of heb je een goed idee? Antwoord gewoon op deze mail of stuur een bericht in de chat in de app. Elk idee lezen we.
+
+Zodra we officieel starten, laten we het je weten. Meer uitleg: https://zekerflex.com/opbouwfase
+
+Bedankt dat je met ons meebouwt!
+
+Het ZekerFlex-team`,
+  },
 ];
 
 const STATUS: Record<Sub["status"], { label: string; tone: Tone }> = {

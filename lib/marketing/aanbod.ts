@@ -162,6 +162,20 @@ export const AANBOD: AanbodItem[] = [
     zoekwoorden: ["website laten maken", "website voor mijn bedrijf", "websitebouwer", "website zonder cookies"],
   },
   {
+    slug: "domeinnaam",
+    pijler: "online",
+    naam: "Domeinnaam",
+    kort: "Zoek of je naam vrij is: .nl, .com, .eu, .be en meer. Registreren of verhuizen.",
+    tekst:
+      "Zoek direct of je domeinnaam nog vrij is en vraag hem aan voor een eerlijke prijs per jaar. Heb je al een domein? Verhuis het naar ZekerFlex of koppel het aan je website.",
+    punten: ["Direct zien of je naam vrij is", ".nl, .com, .eu, .be en meer", "Verhuizen met je verhuiscode", "Bij een website of webshop het eerste jaar inbegrepen"],
+    voorWie: "Iedereen die een eigen naam online wil",
+    prijs: "Vanaf € 9,95 per jaar",
+    status: "beschikbaar",
+    pagina: "/domeinnaam",
+    start: { label: "Zoek je domeinnaam", href: "/domeinnaam" },
+  },
+  {
     slug: "website-check",
     pijler: "online",
     naam: "Gratis website-check",

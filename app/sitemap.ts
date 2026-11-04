@@ -62,6 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
     entry("/website-check", 0.7, "monthly"),
+    entry("/domeinnaam", 0.8, "monthly"),
     entry("/review-check", 0.7, "monthly"),
     entry("/rekentools", 0.7, "monthly"),
     entry("/rekentools/zzp-uurtarief-berekenen", 0.8, "monthly"),
