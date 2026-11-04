@@ -121,12 +121,16 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // Default: Stripe's card iframe and the YouTube player in privacy mode, which
   // only loads after a click (components/ui/YouTubeEmbed.tsx). The studio also
   // frames 'self' (live preview), blob: (sandbox) and best-effort external https: pages.
-  // The Site-ontwerper (/admin/ontwerper) shows the own site in a same-origin preview frame.
-  const ontwerper = pathname === "/admin/ontwerper" || (pathname?.startsWith("/admin/ontwerper/") ?? false);
+  // The Site-ontwerper (/admin/ontwerper) shows the own site in a same-origin
+  // preview frame. A CSP belongs to the document, and admin pages are reached
+  // by client-side navigation (the admin menu), so EVERY admin page needs
+  // 'self' — scoping it to /admin/ontwerper alone blocked the preview whenever
+  // you came from another admin page. Public pages keep no 'self' framing.
+  const admin = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
   const frameSrc = studio
     ? "frame-src 'self' blob: https:"
-    : ontwerper
-      ? "frame-src 'self' https://www.youtube-nocookie.com"
+    : admin
+      ? "frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com"
       : "frame-src https://js.stripe.com https://www.youtube-nocookie.com";
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.

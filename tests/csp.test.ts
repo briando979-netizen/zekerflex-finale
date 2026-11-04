@@ -76,7 +76,17 @@ describe("buildContentSecurityPolicy — ZekerFlex AI studio (scoped relaxations
   it("does not loosen scripts for any other admin route", () => {
     const csp = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/admin/cockpit" });
     expect(csp).toContain("script-src 'self' 'nonce-N' 'strict-dynamic'");
-    expect(csp).toContain("frame-src https://js.stripe.com");
+    expect(csp).toContain("https://js.stripe.com");
+  });
+
+  it("every admin page may frame same-origin pages: the Site-ontwerper preview is reached by client-side navigation, and the CSP stays the one of the first admin page", () => {
+    for (const pathname of ["/admin", "/admin/cockpit", "/admin/huisstijl", "/admin/ontwerper"]) {
+      const frameSrc = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname }).split("; ").find((d) => d.startsWith("frame-src"))!;
+      expect(frameSrc, pathname).toBe("frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com");
+    }
+    // a public page that merely starts with "/admin" is not an admin page
+    const pub = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/administratie" }).split("; ").find((d) => d.startsWith("frame-src"))!;
+    expect(pub).not.toContain("'self'");
   });
 });
 

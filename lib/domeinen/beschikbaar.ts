@@ -62,17 +62,15 @@ export async function beschikbaarheid(domein: string): Promise<Beschikbaarheid> 
   const naam = `${d.label}.${d.tld}`;
   const oud = cache.get(naam);
   if (oud && oud.tot > Date.now()) return oud.s;
-  let s: Beschikbaarheid = "onbekend";
-  try {
-    if (transipConfigured()) s = await viaTransip(naam);
-    if (s === "onbekend") {
-      const rdap = extensie(d.tld)?.rdap;
-      s = rdap ? await viaRdap(rdap, naam) : await viaDns(naam);
-    }
-  } catch (e) {
-    logger.warn("domein: beschikbaarheid niet te bepalen", { tld: d.tld, error: e instanceof Error ? e.message : String(e) });
-    s = "onbekend";
-  }
+  const stil = (bron: string) => (e: unknown): Beschikbaarheid => {
+    logger.warn("domein: beschikbaarheid niet te bepalen", { bron, tld: d.tld, error: e instanceof Error ? e.message : String(e) });
+    return "onbekend";
+  };
+  let s: Beschikbaarheid = transipConfigured() ? await viaTransip(naam).catch(stil("transip")) : "onbekend";
+  const rdap = extensie(d.tld)?.rdap;
+  if (s === "onbekend" && rdap) s = await viaRdap(rdap, naam).catch(stil("rdap"));
+  // geen RDAP, of het register zegt niets (SIDN geeft na een paar vragen 429): DNS als vangnet
+  if (s === "onbekend") s = await viaDns(naam).catch(stil("dns"));
   if (s !== "onbekend") cache.set(naam, { s, tot: Date.now() + TTL });
   if (cache.size > 2000) cache.clear();
   return s;

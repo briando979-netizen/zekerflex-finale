@@ -82,8 +82,12 @@ describe("beschikbaarheid", () => {
     expect(await beschikbaarheid("vrijenaam-test2.eu")).toBe("waarschijnlijk-vrij");
     expect(f).not.toHaveBeenCalled();
   });
-  it("een storing bij het register geeft onbekend, niet vrij", async () => {
+  it("een storing of 429 bij het register: DNS als vangnet, nooit zomaar 'vrij'", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("timeout"); }));
-    expect(await beschikbaarheid("storing-test3.com")).toBe("onbekend");
+    expect(await beschikbaarheid("storing-test3.com")).toBe("waarschijnlijk-vrij");
+    expect(await beschikbaarheid("bezet.com")).toBe("bezet");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 429 })));
+    expect(await beschikbaarheid("druk-test4.nl")).toBe("waarschijnlijk-vrij");
+    expect(await beschikbaarheid("bezet.nl")).toBe("bezet");
   });
 });
