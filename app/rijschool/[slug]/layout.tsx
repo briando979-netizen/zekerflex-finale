@@ -5,6 +5,7 @@ import { laadRijschool } from "@/lib/rijschool/pagina";
 import { websiteVan } from "@/lib/rijschool/website";
 import { siteKleuren } from "@/lib/rijschool/kleuren";
 import { eigenAdres } from "@/lib/rijschool/domein";
+import { deelbeeldUrl, DEELBEELD } from "@/lib/rijschool/deelbeeld";
 
 // De omlijsting van alles onder /rijschool/<slug>: de kleuren van de rijschool
 // als CSS-variabelen, en de naam van de rijschool in de titel. Niet in Google
@@ -16,10 +17,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const r = await laadRijschool((await params).slug);
   if (!r) return {};
   // met een actief eigen domein is dat het hoofdadres (lib/rijschool/domein.ts)
-  const eigen = await eigenAdres(r.id);
+  const [eigen, beeld] = await Promise.all([eigenAdres(r.id), deelbeeldUrl(r)]);
+  const intro = websiteVan(r.website, r).intro;
+  // het deelbeeld op het hoofdadres (zonder eigen domein vult metadataBase zekerflex.com aan)
+  const deelbeeld = { url: `${eigen ?? ""}${beeld}`, width: DEELBEELD.breed, height: DEELBEELD.hoog, alt: r.naam };
   return {
     title: { default: r.naam, template: `%s · ${r.naam}` },
-    description: websiteVan(r.website, r).intro,
+    description: intro,
     applicationName: r.naam,
     appleWebApp: { capable: true, title: r.naam, statusBarStyle: "default" },
     robots: r.online ? { index: true, follow: true } : { index: false, follow: false },
@@ -31,7 +35,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       icon: [{ url: `/rijschool/${r.slug}/app-icoon.png?maat=192`, type: "image/png", sizes: "192x192" }],
       apple: `/rijschool/${r.slug}/app-icoon.png?maat=192`,
     },
-    openGraph: { title: r.naam, siteName: r.naam, type: "website", locale: "nl_NL" },
+    // delen via WhatsApp, Facebook, LinkedIn en X: naam, tekst en beeld van de rijschool, niet van ZekerFlex
+    openGraph: { title: r.naam, description: intro, siteName: r.naam, type: "website", locale: "nl_NL", images: [deelbeeld] },
+    twitter: { card: "summary_large_image", title: r.naam, description: intro, images: [deelbeeld] },
   };
 }
 
