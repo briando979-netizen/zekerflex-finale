@@ -292,7 +292,8 @@ function BlokVelden({ blok, zet }: { blok: Blok; zet: (b: Blok) => void }) {
 
 const samenvatting = (b: Blok) => ("kop" in b && b.kop) || ("tekst" in b && b.tekst.slice(0, 50)) || "";
 
-function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDupliceer, onWeg, eerste, laatste, vast = false }: { blok: Blok; open: boolean; onOpen: () => void; onZet: (b: Blok) => void; onOmhoog: () => void; onOmlaag: () => void; onDupliceer: () => void; onWeg: () => void; eerste: boolean; laatste: boolean; /** in een vertaling: alleen teksten, geen volgorde of blokken */ vast?: boolean }) {
+/** Eén blok in de editor (ook gebruikt in het tabblad Homepage voor eigen blokken). */
+export function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDupliceer, onWeg, eerste, laatste, vast = false }: { blok: Blok; open: boolean; onOpen: () => void; onZet: (b: Blok) => void; onOmhoog: () => void; onOmlaag: () => void; onDupliceer: () => void; onWeg: () => void; eerste: boolean; laatste: boolean; /** in een vertaling: alleen teksten, geen volgorde of blokken */ vast?: boolean }) {
   const soort = BLOK_SOORTEN.find((s) => s.soort === blok.soort);
   const klein = "grid h-7 w-7 place-items-center rounded-md text-xs disabled:opacity-30";
   return (

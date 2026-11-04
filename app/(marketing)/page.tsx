@@ -1,8 +1,11 @@
 import { Fragment, type ReactNode } from "react";
 import { ldJson } from "@/lib/seo/json-ld";
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { zichtbareSecties, type HomeIndeling, type HomeSectie } from "@/lib/ontwerp/home";
+import { eigenSleutel, isSectie, zichtbareSecties, type HomeIndeling, type HomeItem, type HomeSectie } from "@/lib/ontwerp/home";
 import { getConceptHomeIndeling, getLiveHomeIndeling } from "@/lib/ontwerp/home-store";
+import type { Blok } from "@/lib/ontwerp/paginas";
+import { mediaLijst } from "@/lib/ontwerp/media";
+import { BlokWeergave, type MediaInfo } from "@/components/marketing/ontwerp/Blokken";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
@@ -34,6 +37,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const t = (k: string) => v[k] ?? "";
   // de blokken onder de kop, in de volgorde uit de Site-ontwerper (tabblad Homepage); zonder eigen indeling de standaard
   const zichtbaar = zichtbareSecties(indeling);
+  const eigen = await eigenBlokken(indeling, zichtbaar);
   return (
     <>
       {isConcept ? (
@@ -380,7 +384,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </section>
       ),
-      })}
+      }, eigen)}
     </>
   );
 }
@@ -399,8 +403,26 @@ async function homeIndeling(searchParams: Promise<Record<string, string | string
   return { indeling: await getLiveHomeIndeling().catch(() => null), isConcept: false };
 }
 
-function toonSecties(volgorde: HomeSectie[], blokken: Record<HomeSectie, ReactNode>) {
-  return volgorde.map((id) => <Fragment key={id}>{blokken[id]}</Fragment>);
+interface EigenBlokken {
+  blokken: Map<string, Blok>;
+  media: Record<string, MediaInfo>;
+}
+
+/** De vaste blokken en de eigen blokken (zoals op eigen pagina's) in de gekozen volgorde. */
+function toonSecties(volgorde: HomeItem[], blokken: Record<HomeSectie, ReactNode>, eigen: EigenBlokken) {
+  return volgorde.map((id) => {
+    if (isSectie(id)) return <Fragment key={id}>{blokken[id]}</Fragment>;
+    const blok = eigen.blokken.get(id);
+    return blok ? <BlokWeergave key={id} blok={blok} media={eigen.media} eerste={false} /> : null;
+  });
+}
+
+async function eigenBlokken(indeling: HomeIndeling | null, zichtbaar: HomeItem[]): Promise<EigenBlokken> {
+  const blokken = new Map((indeling?.eigen ?? []).map((b) => [eigenSleutel(b), b] as const));
+  // de mediabibliotheek alleen ophalen als er een eigen blok op de pagina staat
+  if (!zichtbaar.some((id) => blokken.has(id))) return { blokken, media: {} };
+  const media: Record<string, MediaInfo> = Object.fromEntries((await mediaLijst().catch(() => [])).map((m) => [m.id, { alt: m.alt, soort: m.soort }]));
+  return { blokken, media };
 }
 
 /* ─────────────────────────────────────────────────────── showcase split */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HOME_SECTIES, isStandaardHomeIndeling, normalizeHomeIndeling, standaardHomeIndeling, zichtbareSecties } from "@/lib/ontwerp/home";
+import { HOME_SECTIES, MAX_EIGEN_BLOKKEN, eigenSleutel, isSectie, isStandaardHomeIndeling, normalizeHomeIndeling, standaardHomeIndeling, zichtbareSecties } from "@/lib/ontwerp/home";
+import { leegBlok } from "@/lib/ontwerp/paginas";
 
 const ALLE = HOME_SECTIES.map((s) => s.id);
 
@@ -31,5 +32,32 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(n.verborgen).toEqual(["vragen"]);
     expect(normalizeHomeIndeling(null)).toEqual(standaardHomeIndeling());
     expect(normalizeHomeIndeling("onzin")).toEqual(standaardHomeIndeling());
+  });
+
+  it("eigen blokken: op hun plek, gecontroleerd zoals op eigen pagina's, zonder plek achteraan", () => {
+    const tekst = { ...leegBlok("tekst"), kop: "Nieuw: horecasoftware", tekst: "Alles in één." };
+    const oproep = { ...leegBlok("oproep"), kop: "Bel ons", knop: { tekst: "Kwaad", link: "javascript:alert(1)" } };
+    const n = normalizeHomeIndeling({
+      volgorde: ["vertrouwen", `blok:${tekst.id}`, "blok:bestaatniet", ...ALLE.filter((x) => x !== "vertrouwen")],
+      verborgen: [],
+      eigen: [tekst, oproep, { soort: "onbekend" }],
+    });
+    expect(n.eigen.map((b) => b.id)).toEqual([tekst.id, oproep.id]);
+    expect(n.volgorde.slice(0, 2)).toEqual(["vertrouwen", eigenSleutel(tekst)]);
+    expect(n.volgorde.at(-1)).toBe(eigenSleutel(oproep));
+    expect(n.volgorde).not.toContain("blok:bestaatniet");
+    const o = n.eigen.find((b) => b.id === oproep.id);
+    expect(o && "knop" in o ? o.knop.link : "?").toBe("");
+    const z = zichtbareSecties(n);
+    expect(z[1]).toBe(eigenSleutel(tekst));
+    expect(z.filter((id) => !isSectie(id)).length).toBe(2);
+    expect(isStandaardHomeIndeling(n)).toBe(false);
+    // dubbel normaliseren verandert niets (de id's blijven gelijk)
+    expect(normalizeHomeIndeling(JSON.parse(JSON.stringify(n)))).toEqual(n);
+  });
+
+  it("hooguit 12 eigen blokken", () => {
+    const veel = Array.from({ length: 20 }, () => leegBlok("ruimte"));
+    expect(normalizeHomeIndeling({ eigen: veel }).eigen.length).toBe(MAX_EIGEN_BLOKKEN);
   });
 });

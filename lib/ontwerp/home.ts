@@ -1,6 +1,9 @@
+import { normalizeBlok, type Blok } from "@/lib/ontwerp/paginas";
+
 // ---------------------------------------------------------------------------
 // De indeling van de homepage, bewerkbaar in de Site-ontwerper (tabblad
-// Homepage): blokken verbergen en in een andere volgorde zetten. De bovenste
+// Homepage): blokken verbergen, in een andere volgorde zetten en eigen blokken
+// (tekst, foto, video, vragen …) ertussen zetten. De bovenste
 // kop (hero) staat altijd bovenaan. Zonder eigen indeling (null) toont de
 // homepage exact de standaardvolgorde hieronder. Puur en browser-veilig.
 // ---------------------------------------------------------------------------
@@ -23,28 +26,45 @@ export const HOME_SECTIES = [
 ] as const;
 
 export type HomeSectie = (typeof HOME_SECTIES)[number]["id"];
+/** een vast blok of een eigen blok ("blok:<id>", dezelfde soorten als op eigen pagina's) */
+export type HomeItem = HomeSectie | `blok:${string}`;
 
 export interface HomeIndeling {
-  /** alle blokken in de gewenste volgorde */
-  volgorde: HomeSectie[];
-  verborgen: HomeSectie[];
+  /** alle blokken (vast en eigen) in de gewenste volgorde */
+  volgorde: HomeItem[];
+  verborgen: HomeItem[];
+  /** eigen blokken tussen de vaste (tekst, foto, video, vragen, …) */
+  eigen: Blok[];
 }
 
+export const MAX_EIGEN_BLOKKEN = 12;
 const IDS = HOME_SECTIES.map((s) => s.id) as HomeSectie[];
-const isSectie = (v: unknown): v is HomeSectie => typeof v === "string" && (IDS as string[]).includes(v);
+export const isSectie = (v: unknown): v is HomeSectie => typeof v === "string" && (IDS as string[]).includes(v);
+export const eigenSleutel = (b: Blok): HomeItem => `blok:${b.id}`;
 
 export function standaardHomeIndeling(): HomeIndeling {
-  return { volgorde: [...IDS], verborgen: [] };
+  return { volgorde: [...IDS], verborgen: [], eigen: [] };
 }
 
-/** Onbekende en dubbele blokken vallen weg; ontbrekende (bv. later toegevoegd) komen achteraan. */
+/**
+ * Onbekende en dubbele blokken vallen weg; ontbrekende vaste blokken (bv. later
+ * toegevoegd) en eigen blokken zonder plek komen achteraan. Eigen blokken gaan
+ * door dezelfde controle als op eigen pagina's (veilige links, media-id's).
+ */
 export function normalizeHomeIndeling(raw: unknown): HomeIndeling {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
-  const volgorde: HomeSectie[] = [];
-  for (const v of Array.isArray(r.volgorde) ? r.volgorde : []) if (isSectie(v) && !volgorde.includes(v)) volgorde.push(v);
-  for (const id of IDS) if (!volgorde.includes(id)) volgorde.push(id);
-  const verborgen = IDS.filter((id) => (Array.isArray(r.verborgen) ? r.verborgen : []).includes(id));
-  return { volgorde, verborgen };
+  const eigen: Blok[] = [];
+  for (const b of (Array.isArray(r.eigen) ? r.eigen : []).slice(0, MAX_EIGEN_BLOKKEN)) {
+    const n = normalizeBlok(b);
+    if (n && !eigen.some((x) => x.id === n.id)) eigen.push(n);
+  }
+  const bekend = new Set<string>([...IDS, ...eigen.map(eigenSleutel)]);
+  const volgorde: HomeItem[] = [];
+  for (const v of Array.isArray(r.volgorde) ? r.volgorde : []) if (typeof v === "string" && bekend.has(v) && !volgorde.includes(v as HomeItem)) volgorde.push(v as HomeItem);
+  for (const id of [...IDS, ...eigen.map(eigenSleutel)]) if (!volgorde.includes(id)) volgorde.push(id);
+  const ruwVerborgen = Array.isArray(r.verborgen) ? r.verborgen : [];
+  const verborgen = volgorde.filter((id) => ruwVerborgen.includes(id));
+  return { volgorde, verborgen, eigen };
 }
 
 export function isStandaardHomeIndeling(i: HomeIndeling): boolean {
@@ -52,7 +72,7 @@ export function isStandaardHomeIndeling(i: HomeIndeling): boolean {
 }
 
 /** De blokken die de homepage toont, in volgorde. Zonder eigen indeling precies de standaard. */
-export function zichtbareSecties(indeling: HomeIndeling | null | undefined): HomeSectie[] {
+export function zichtbareSecties(indeling: HomeIndeling | null | undefined): HomeItem[] {
   if (!indeling) return [...IDS];
   const n = normalizeHomeIndeling(indeling);
   return n.volgorde.filter((id) => !n.verborgen.includes(id));

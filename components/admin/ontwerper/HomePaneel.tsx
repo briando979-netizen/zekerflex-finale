@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HOME_SECTIES, isStandaardHomeIndeling, normalizeHomeIndeling, type HomeIndeling, type HomeSectie } from "@/lib/ontwerp/home";
+import { HOME_SECTIES, MAX_EIGEN_BLOKKEN, eigenSleutel, isStandaardHomeIndeling, normalizeHomeIndeling, type HomeIndeling, type HomeItem } from "@/lib/ontwerp/home";
+import { BLOK_SOORTEN, leegBlok, nieuwId, type Blok, type BlokSoort } from "@/lib/ontwerp/paginas";
+import { BlokKaart } from "@/components/admin/ontwerper/PaginasPaneel";
 
 // ---------------------------------------------------------------------------
 // Tabblad Homepage: de blokken onder de kop verbergen en verplaatsen. Elke
@@ -33,6 +35,8 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
   const [status, setStatus] = useState<"bewaard" | "gewijzigd" | "bezig" | "fout">("bewaard");
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<{ tekst: string; fout?: boolean } | null>(null);
+  // welk eigen blok open staat om te bewerken
+  const [open, setOpen] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // het voorbeeld toont de homepage met het concept zolang dit tabblad open is
@@ -89,8 +93,33 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
     if (x) v.splice(j, 0, x);
     zet({ ...indeling, volgorde: v });
   };
-  const toon = (id: HomeSectie, aan: boolean) => zet({ ...indeling, verborgen: aan ? indeling.verborgen.filter((x) => x !== id) : [...indeling.verborgen, id] });
+  const toon = (id: HomeItem, aan: boolean) => zet({ ...indeling, verborgen: aan ? indeling.verborgen.filter((x) => x !== id) : [...indeling.verborgen, id] });
   const afwijkend = !gelijk(indeling, live);
+  const blokOp = new Map(indeling.eigen.map((b) => [eigenSleutel(b), b] as const));
+
+  // eigen blokken: erbij (onderaan, vóór de slotoproep), wijzigen, dupliceren, weg
+  function blokErbij(soort: BlokSoort) {
+    if (!indeling || indeling.eigen.length >= MAX_EIGEN_BLOKKEN) return;
+    const b = leegBlok(soort);
+    const v = [...indeling.volgorde];
+    const slot = v.indexOf("oproep");
+    v.splice(slot < 0 ? v.length : slot, 0, eigenSleutel(b));
+    zet({ ...indeling, eigen: [...indeling.eigen, b], volgorde: v });
+    setOpen(eigenSleutel(b));
+  }
+  const zetBlok = (b: Blok) => zet({ ...indeling, eigen: indeling.eigen.map((x) => (x.id === b.id ? b : x)) });
+  function dupliceer(b: Blok) {
+    if (!indeling || indeling.eigen.length >= MAX_EIGEN_BLOKKEN) return;
+    const kopie = { ...b, id: nieuwId() };
+    const v = [...indeling.volgorde];
+    v.splice(v.indexOf(eigenSleutel(b)) + 1, 0, eigenSleutel(kopie));
+    zet({ ...indeling, eigen: [...indeling.eigen, kopie], volgorde: v });
+  }
+  function weg(b: Blok) {
+    if (!indeling || !window.confirm("Dit eigen blok weghalen?")) return;
+    const k = eigenSleutel(b);
+    zet({ ...indeling, eigen: indeling.eigen.filter((x) => x.id !== b.id), volgorde: indeling.volgorde.filter((x) => x !== k), verborgen: indeling.verborgen.filter((x) => x !== k) });
+  }
 
   async function liveZetten() {
     if (timer.current) clearTimeout(timer.current);
@@ -182,6 +211,24 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
           <span style={mute}>staat altijd bovenaan</span>
         </li>
         {indeling.volgorde.map((id, i) => {
+          const blok = blokOp.get(id);
+          if (blok) {
+            return (
+              <BlokKaart
+                key={id}
+                blok={blok}
+                open={open === id}
+                onOpen={() => setOpen((o) => (o === id ? null : id))}
+                onZet={zetBlok}
+                onOmhoog={() => verplaats(i, -1)}
+                onOmlaag={() => verplaats(i, 1)}
+                onDupliceer={() => dupliceer(blok)}
+                onWeg={() => weg(blok)}
+                eerste={i === 0}
+                laatste={i === indeling.volgorde.length - 1}
+              />
+            );
+          }
           const info = NAAM.get(id);
           const aan = !verborgen.has(id);
           return (
@@ -208,6 +255,28 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
           );
         })}
       </ol>
+
+      {indeling.eigen.length < MAX_EIGEN_BLOKKEN ? (
+        <section className="space-y-2 rounded-xl p-3" style={paneel}>
+          <h3 className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>
+            Eigen blok toevoegen
+          </h3>
+          <p className="text-[11px]" style={mute}>
+            Dezelfde blokken als op eigen pagina&apos;s. Het nieuwe blok komt boven de slotoproep; verplaats het met de pijltjes.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {BLOK_SOORTEN.map((s) => (
+              <button key={s.soort} type="button" onClick={() => blokErbij(s.soort)} title={s.uitleg} className="a-button text-xs">
+                + {s.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <p className="text-[11px]" style={mute}>
+          Je hebt het maximum van {MAX_EIGEN_BLOKKEN} eigen blokken bereikt.
+        </p>
+      )}
     </div>
   );
 }
