@@ -32,7 +32,8 @@ export function RepeatTeamButton({ shiftId, teamSize }: { shiftId: string; teamS
           <path d="M18 3v4h-4M6 21v-4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
-      <div className="min-w-0 flex-1">
+      {/* min-w: on a phone the text keeps its own line and the controls wrap below it */}
+      <div className="min-w-[12rem] flex-1">
         <p className="text-sm font-semibold text-plan-ink">Zelfde klus, zelfde team</p>
         <p className="text-xs text-neutralx-600">
           {teamSize > 0
