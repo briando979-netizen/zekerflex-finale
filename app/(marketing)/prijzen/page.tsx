@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
 import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate";
+import { contentKeys, getContentMap } from "@/lib/content/store";
 
 export const metadata: Metadata = {
   title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
@@ -22,18 +23,20 @@ const FAQ = [
   { q: "Wat kost de API?", a: "Los van de klusprijs: de publieke API heeft een gratis tier en betaalde abonnementen voor hogere limieten. Zie /developers voor de prijzen." },
 ];
 
-export default function PrijzenPage() {
+export default async function PrijzenPage() {
+  // teksten uit de Site-ontwerper (Teksten); bedragen en staffel blijven uit lib/pricing/tiers.ts
+  const tekst = await getContentMap(contentKeys("pr."));
+  const v = (k: string) => tekst[k] ?? "";
   return (
     <>
       <div className="hero-ink text-white">
         <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint">Prijzen</p>
-          <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">
-            Eerlijk en voorspelbaar
+          <p className="eyebrow text-brand-mint" data-cms-key="pr.eyebrow">{v("pr.eyebrow")}</p>
+          <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl" data-cms-key="pr.title">
+            {v("pr.title")}
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-white/70">
-            Geen abonnement. Je betaalt alleen voor daadwerkelijk gewerkte uren;
-            bij meer uren daalt je platformfee volgens een vaste, vooraf zichtbare staffel.
+          <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="pr.lead" data-cms-ml="1">
+            {v("pr.lead")}
           </p>
         </div>
       </div>
@@ -41,9 +44,9 @@ export default function PrijzenPage() {
       <Section tone="paper">
         <div className="grid gap-6 lg:grid-cols-2">
           <div id="freelancers" className="card flex scroll-mt-24 flex-col p-8">
-            <p className="eyebrow">Freelancers</p>
+            <p className="eyebrow" data-cms-key="pr.fl.label">{v("pr.fl.label")}</p>
             <div className="mt-4 font-display text-5xl font-bold">Gratis</div>
-            <p className="mt-2 text-sm text-neutralx-600">Voor altijd. Meedoen kost je niets.</p>
+            <p className="mt-2 text-sm text-neutralx-600" data-cms-key="pr.fl.sub">{v("pr.fl.sub")}</p>
             <ul className="mt-6 flex-1 space-y-3 text-[0.95rem] text-neutralx-600">
               {[
                 "Onbeperkt diensten aannemen",
@@ -57,22 +60,22 @@ export default function PrijzenPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register" className="btn-primary mt-7 self-start">
-              Profiel aanmaken
+            <Link href="/register" className="btn-primary mt-7 self-start" data-cms-key="pr.fl.knop">
+              {v("pr.fl.knop")}
             </Link>
           </div>
 
           <div id="bedrijven" className="card relative flex scroll-mt-24 flex-col overflow-hidden p-8">
-            <span className="absolute right-5 top-5 pill bg-mintwash text-brand-600">
-              Populair
+            <span className="absolute right-5 top-5 pill bg-mintwash text-brand-600" data-cms-key="pr.bv.badge">
+              {v("pr.bv.badge")}
             </span>
-            <p className="eyebrow">Bedrijven</p>
+            <p className="eyebrow" data-cms-key="pr.bv.label">{v("pr.bv.label")}</p>
             <div className="mt-4 flex items-baseline gap-2">
               <span className="num font-display text-5xl font-bold">€ 3,50</span>
               <span className="text-sm text-neutralx-500">per gewerkt uur</span>
             </div>
-            <p className="mt-2 text-sm text-neutralx-600">
-              Platformkosten per gewerkt uur. Alleen wanneer er iemand werkt — met staffelkorting bij veel uren.
+            <p className="mt-2 text-sm text-neutralx-600" data-cms-key="pr.bv.sub" data-cms-ml="1">
+              {v("pr.bv.sub")}
             </p>
             <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[11px]">
               {[
@@ -102,8 +105,8 @@ export default function PrijzenPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register?type=bedrijf" className="btn-primary mt-7 self-start">
-              Organisatie aanmelden
+            <Link href="/register?type=bedrijf" className="btn-primary mt-7 self-start" data-cms-key="pr.bv.knop">
+              {v("pr.bv.knop")}
             </Link>
           </div>
         </div>
@@ -125,28 +128,32 @@ export default function PrijzenPage() {
       <Section tone="soft">
         <div id="api" className="scroll-mt-24" />
         <SectionHead
-          eyebrow="Los van de klusprijs"
-          title="API-toegang voor ontwikkelaars"
-          intro="Een eigen systeem koppelen aan ZekerFlex (diensten lezen/aanmaken, uren ophalen, webhooks) is een los product met eigen abonnementen — de klusprijs hierboven blijft ongewijzigd."
+          eyebrow={v("pr.api.eyebrow")}
+          title={v("pr.api.title")}
+          intro={v("pr.api.intro")}
+          cms={{ eyebrow: "pr.api.eyebrow", title: "pr.api.title", intro: "pr.api.intro" }}
         />
         <div className="mt-8">
-          <Link href="/developers#pricing" className="btn-primary">
-            Bekijk API-abonnementen
+          <Link href="/developers#pricing" className="btn-primary" data-cms-key="pr.api.knop">
+            {v("pr.api.knop")}
           </Link>
         </div>
       </Section>
 
       <Section tone="paper">
         <div id="faq" className="scroll-mt-24" />
-        <SectionHead eyebrow="Veelgestelde vragen" title="Over de kosten" />
+        <SectionHead eyebrow={v("pr.faq.eyebrow")} title={v("pr.faq.title")} cms={{ eyebrow: "pr.faq.eyebrow", title: "pr.faq.title" }} />
         <div className="mt-10">
           <FaqList items={FAQ} />
         </div>
       </Section>
 
       <CtaBand
-        title="Begin vandaag"
-        body="Aanmelden is gratis en kost een paar minuten. Je zit nergens aan vast."
+        title={v("pr.cta.title")}
+        body={v("pr.cta.body")}
+        primaryLabel={v("pr.cta.primary")}
+        secondaryLabel={v("pr.cta.secondary")}
+        cms={{ title: "pr.cta.title", body: "pr.cta.body", primary: "pr.cta.primary", secondary: "pr.cta.secondary" }}
       />
     </>
   );

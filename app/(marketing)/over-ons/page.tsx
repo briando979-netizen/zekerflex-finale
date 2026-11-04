@@ -4,6 +4,7 @@ import { Photo } from "@/components/marketing/Photo";
 import { SceneTeam } from "@/components/marketing/Scene";
 import { OpenApplicationForm } from "@/components/marketing/OpenApplicationForm";
 import { canonical } from "@/lib/seo";
+import { contentKeys, getContentMap } from "@/lib/content/store";
 
 export const metadata: Metadata = {
   title: "Over ZekerFlex",
@@ -14,14 +15,17 @@ export const metadata: Metadata = {
   ...canonical("/over-ons"),
 };
 
-export default function OverOnsPage() {
+export default async function OverOnsPage() {
+  // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
+  const tekst = await getContentMap(contentKeys("oo."));
+  const v = (k: string) => tekst[k] ?? "";
   return (
     <>
       <div className="hero-ink text-white">
         <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint">Over ons</p>
-          <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
-            Flexibel werk hoort eerlijk, snel en zeker te zijn.
+          <p className="eyebrow text-brand-mint" data-cms-key="oo.eyebrow">{v("oo.eyebrow")}</p>
+          <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl" data-cms-key="oo.title">
+            {v("oo.title")}
           </h1>
           <div className="mt-10">
             <Photo name="team" fallback={<SceneTeam />} className="shadow-lift" />
@@ -32,30 +36,15 @@ export default function OverOnsPage() {
       <Section tone="paper">
         <div id="verhaal" className="scroll-mt-24" />
         <div className="max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
-          <p>
-            ZekerFlex is ontstaan uit een simpele frustratie: flexibel werken in
-            Nederland is omslachtig geworden. Zzp&apos;ers wachten weken op hun
-            geld en verdrinken in facturen. Werkgevers puzzelen met bezetting en
-            lopen risico op de Wet DBA. En tussen beide partijen staat een
-            groeiend aantal bemiddelaars die vooral zichzelf bedienen.
-          </p>
-          <p>
-            Wij bouwen het alternatief: één systeem dat de match maakt, de
-            overeenkomst regelt, de uren verwerkt, de facturen opstelt en de
-            uitbetaling laat kiezen — met compliance ingebouwd in plaats van erbij bedacht.
-          </p>
-          <p>
-            We bouwen ZekerFlex voor de Nederlandse arbeidsmarkt. Voor hosting,
-            betalingen, e-mail en identiteitscontroles werken we met gespecialiseerde
-            dienstverleners. Onze AI-assistent kan draaien op een eigen modelserver.
-            We leggen in ons privacybeleid uit welke gegevens we gebruiken en met wie we die delen.
-          </p>
+          <p data-cms-key="oo.verhaal1" data-cms-ml="1">{v("oo.verhaal1")}</p>
+          <p data-cms-key="oo.verhaal2" data-cms-ml="1">{v("oo.verhaal2")}</p>
+          <p data-cms-key="oo.verhaal3" data-cms-ml="1">{v("oo.verhaal3")}</p>
         </div>
       </Section>
 
       <Section tone="paper">
         <div id="oprichter" className="scroll-mt-24" />
-        <SectionHead eyebrow="De oprichter" title="Gebouwd door één persoon" />
+        <SectionHead eyebrow={v("oo.opr.eyebrow")} title={v("oo.opr.title")} cms={{ eyebrow: "oo.opr.eyebrow", title: "oo.opr.title" }} />
         <div className="mt-8 max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
           <p>
             ZekerFlex is opgebouwd, bedacht en zelf geschreven door{" "}
@@ -63,27 +52,22 @@ export default function OverOnsPage() {
             gebruikt. Geen team van investeerders, geen overgenomen platform: één persoon die het hele systeem van de
             grond af heeft neergezet, omdat het eerlijker en simpeler kon.
           </p>
-          <p>
-            De overtuiging erachter is nuchter: flexibel werk hoort voor iedereen bereikbaar te zijn. Of je nu studeert,
-            er een baan naast hebt, of je leven even anders loopt — je moet er werk bij kunnen pakken dat zich voegt naar
-            jóuw agenda, snel uitbetaalt en je niet opzadelt met rompslomp. Dat is waar ZekerFlex voor is gebouwd: werk
-            dat meebeweegt met je leven, niet andersom.
-          </p>
+          <p data-cms-key="oo.opr.tekst" data-cms-ml="1">{v("oo.opr.tekst")}</p>
         </div>
       </Section>
 
       <Section tone="soft">
         <div id="uitgangspunten" className="scroll-mt-24" />
-        <SectionHead eyebrow="Waar we voor staan" title="Drie uitgangspunten" />
+        <SectionHead eyebrow={v("oo.punten.eyebrow")} title={v("oo.punten.title")} cms={{ eyebrow: "oo.punten.eyebrow", title: "oo.punten.title" }} />
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {[
             { t: "Onafhankelijk", b: "Geen tussenpartijen die aan beide kanten verdienen. Eén transparante fee, verder niets." },
             { t: "Zeker", b: "Compliance, verificatie en een auditspoor zijn geen extra's — ze zitten in de kern van het product." },
             { t: "Transparant", b: "We leggen uit welke gegevens we verwerken en welke dienstverleners daarbij betrokken zijn." },
-          ].map((v) => (
-            <div key={v.t} className="card p-6">
-              <h3 className="font-display text-lg font-semibold">{v.t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{v.b}</p>
+          ].map((p) => (
+            <div key={p.t} className="card p-6">
+              <h3 className="font-display text-lg font-semibold">{p.t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{p.b}</p>
             </div>
           ))}
         </div>
@@ -92,16 +76,23 @@ export default function OverOnsPage() {
       <Section tone="paper">
         <div id="werken-bij" className="scroll-mt-24" />
         <SectionHead
-          eyebrow="Werken bij ons"
-          title="Bouw mee aan ZekerFlex"
-          intro="We hebben niet altijd een vacature openstaan, maar goede mensen zijn altijd welkom. Stuur een open sollicitatie — vertel wat je meebrengt en waar je energie van krijgt."
+          eyebrow={v("oo.werk.eyebrow")}
+          title={v("oo.werk.title")}
+          intro={v("oo.werk.intro")}
+          cms={{ eyebrow: "oo.werk.eyebrow", title: "oo.werk.title", intro: "oo.werk.intro" }}
         />
         <div className="mt-10 max-w-2xl">
           <OpenApplicationForm />
         </div>
       </Section>
 
-      <CtaBand title="Doe mee" body="Als freelancer of als werkgever — aanmelden is gratis." />
+      <CtaBand
+        title={v("oo.cta.title")}
+        body={v("oo.cta.body")}
+        primaryLabel={v("oo.cta.primary")}
+        secondaryLabel={v("oo.cta.secondary")}
+        cms={{ title: "oo.cta.title", body: "oo.cta.body", primary: "oo.cta.primary", secondary: "oo.cta.secondary" }}
+      />
     </>
   );
 }

@@ -25,4 +25,18 @@ describe("tekstregister van de Site-ontwerper", () => {
     expect(contentKeys("vb.").length).toBe(16);
     expect(contentKeys("vf.").length).toBe(15);
   });
+
+  it("zonder eigen versie geven /prijzen en /over-ons exact de oude teksten (bedragen staan niet in het register)", async () => {
+    const pr = await getContentMap(contentKeys("pr."));
+    expect(pr["pr.title"]).toBe("Eerlijk en voorspelbaar");
+    expect(pr["pr.lead"]).toBe("Geen abonnement. Je betaalt alleen voor daadwerkelijk gewerkte uren; bij meer uren daalt je platformfee volgens een vaste, vooraf zichtbare staffel.");
+    expect(pr["pr.cta.primary"]).toBe("Account aanmaken");
+    expect(Object.values(pr).some((t) => /€\s?\d/.test(t))).toBe(false);
+    const oo = await getContentMap(contentKeys("oo."));
+    expect(oo["oo.title"]).toBe("Flexibel werk hoort eerlijk, snel en zeker te zijn.");
+    expect(oo["oo.verhaal1"]).toMatch(/^ZekerFlex is ontstaan uit een simpele frustratie: flexibel werken in Nederland is omslachtig geworden\. Zzp'ers wachten/);
+    expect(oo["oo.opr.tekst"]).toContain("jóuw agenda");
+    expect(contentKeys("pr.").length).toBe(20);
+    expect(contentKeys("oo.").length).toBe(17);
+  });
 });

@@ -117,6 +117,82 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "vf.cta.body", group: "Voor freelancers — slot-oproep", label: "Tekst", default: "Je profiel staat in een paar minuten. Gratis, geen verplichtingen.", multiline: true },
   { key: "vf.cta.primary", group: "Voor freelancers — slot-oproep", label: "Knop 1", default: "Profiel aanmaken" },
   { key: "vf.cta.secondary", group: "Voor freelancers — slot-oproep", label: "Knop 2", default: "Voor bedrijven" },
+
+  // ─────────────────────────────────────────────────────────── Prijzen (/prijzen)
+  // Alleen tekst: de bedragen en de staffel komen uit lib/pricing/tiers.ts en zijn hier niet te wijzigen.
+  { key: "pr.eyebrow", group: "Prijzen — hero", label: "Bovenregel", default: "Prijzen" },
+  { key: "pr.title", group: "Prijzen — hero", label: "Titel", default: "Eerlijk en voorspelbaar" },
+  { key: "pr.lead", group: "Prijzen — hero", label: "Introtekst", default: "Geen abonnement. Je betaalt alleen voor daadwerkelijk gewerkte uren; bij meer uren daalt je platformfee volgens een vaste, vooraf zichtbare staffel.", multiline: true },
+  { key: "pr.fl.label", group: "Prijzen — kaarten", label: "Kaart freelancers: bovenregel", default: "Freelancers" },
+  { key: "pr.fl.sub", group: "Prijzen — kaarten", label: "Kaart freelancers: onder de prijs", default: "Voor altijd. Meedoen kost je niets." },
+  { key: "pr.fl.knop", group: "Prijzen — kaarten", label: "Kaart freelancers: knop", default: "Profiel aanmaken" },
+  { key: "pr.bv.label", group: "Prijzen — kaarten", label: "Kaart bedrijven: bovenregel", default: "Bedrijven" },
+  { key: "pr.bv.badge", group: "Prijzen — kaarten", label: "Kaart bedrijven: label rechtsboven", default: "Populair" },
+  { key: "pr.bv.sub", group: "Prijzen — kaarten", label: "Kaart bedrijven: onder de prijs", default: "Platformkosten per gewerkt uur. Alleen wanneer er iemand werkt — met staffelkorting bij veel uren.", multiline: true },
+  { key: "pr.bv.knop", group: "Prijzen — kaarten", label: "Kaart bedrijven: knop", default: "Organisatie aanmelden" },
+  { key: "pr.api.eyebrow", group: "Prijzen — secties", label: "API: bovenregel", default: "Los van de klusprijs" },
+  { key: "pr.api.title", group: "Prijzen — secties", label: "API: titel", default: "API-toegang voor ontwikkelaars" },
+  { key: "pr.api.intro", group: "Prijzen — secties", label: "API: introtekst", default: "Een eigen systeem koppelen aan ZekerFlex (diensten lezen/aanmaken, uren ophalen, webhooks) is een los product met eigen abonnementen — de klusprijs hierboven blijft ongewijzigd.", multiline: true },
+  { key: "pr.api.knop", group: "Prijzen — secties", label: "API: knop", default: "Bekijk API-abonnementen" },
+  { key: "pr.faq.eyebrow", group: "Prijzen — secties", label: "Vragen: bovenregel", default: "Veelgestelde vragen" },
+  { key: "pr.faq.title", group: "Prijzen — secties", label: "Vragen: titel", default: "Over de kosten" },
+  { key: "pr.cta.title", group: "Prijzen — slot-oproep", label: "Titel", default: "Begin vandaag" },
+  { key: "pr.cta.body", group: "Prijzen — slot-oproep", label: "Tekst", default: "Aanmelden is gratis en kost een paar minuten. Je zit nergens aan vast.", multiline: true },
+  { key: "pr.cta.primary", group: "Prijzen — slot-oproep", label: "Knop 1", default: "Account aanmaken" },
+  { key: "pr.cta.secondary", group: "Prijzen — slot-oproep", label: "Knop 2", default: "Voor bedrijven" },
+
+  // ─────────────────────────────────────────────────────────── Over ons (/over-ons)
+  { key: "oo.eyebrow", group: "Over ons — hero", label: "Bovenregel", default: "Over ons" },
+  { key: "oo.title", group: "Over ons — hero", label: "Titel", default: "Flexibel werk hoort eerlijk, snel en zeker te zijn." },
+  {
+    key: "oo.verhaal1",
+    group: "Over ons — ons verhaal",
+    label: "Alinea 1",
+    default:
+      "ZekerFlex is ontstaan uit een simpele frustratie: flexibel werken in Nederland is omslachtig geworden. Zzp'ers wachten weken op hun geld en verdrinken in facturen. Werkgevers puzzelen met bezetting en lopen risico op de Wet DBA. En tussen beide partijen staat een groeiend aantal bemiddelaars die vooral zichzelf bedienen.",
+    multiline: true,
+  },
+  {
+    key: "oo.verhaal2",
+    group: "Over ons — ons verhaal",
+    label: "Alinea 2",
+    default:
+      "Wij bouwen het alternatief: één systeem dat de match maakt, de overeenkomst regelt, de uren verwerkt, de facturen opstelt en de uitbetaling laat kiezen — met compliance ingebouwd in plaats van erbij bedacht.",
+    multiline: true,
+  },
+  {
+    key: "oo.verhaal3",
+    group: "Over ons — ons verhaal",
+    label: "Alinea 3",
+    default:
+      "We bouwen ZekerFlex voor de Nederlandse arbeidsmarkt. Voor hosting, betalingen, e-mail en identiteitscontroles werken we met gespecialiseerde dienstverleners. Onze AI-assistent kan draaien op een eigen modelserver. We leggen in ons privacybeleid uit welke gegevens we gebruiken en met wie we die delen.",
+    multiline: true,
+  },
+  { key: "oo.opr.eyebrow", group: "Over ons — de oprichter", label: "Bovenregel", default: "De oprichter" },
+  { key: "oo.opr.title", group: "Over ons — de oprichter", label: "Titel", default: "Gebouwd door één persoon" },
+  {
+    key: "oo.opr.tekst",
+    group: "Over ons — de oprichter",
+    label: "Tweede alinea (de eerste, met de naam, staat vast)",
+    default:
+      "De overtuiging erachter is nuchter: flexibel werk hoort voor iedereen bereikbaar te zijn. Of je nu studeert, er een baan naast hebt, of je leven even anders loopt — je moet er werk bij kunnen pakken dat zich voegt naar jóuw agenda, snel uitbetaalt en je niet opzadelt met rompslomp. Dat is waar ZekerFlex voor is gebouwd: werk dat meebeweegt met je leven, niet andersom.",
+    multiline: true,
+  },
+  { key: "oo.punten.eyebrow", group: "Over ons — secties", label: "Uitgangspunten: bovenregel", default: "Waar we voor staan" },
+  { key: "oo.punten.title", group: "Over ons — secties", label: "Uitgangspunten: titel", default: "Drie uitgangspunten" },
+  { key: "oo.werk.eyebrow", group: "Over ons — secties", label: "Werken bij ons: bovenregel", default: "Werken bij ons" },
+  { key: "oo.werk.title", group: "Over ons — secties", label: "Werken bij ons: titel", default: "Bouw mee aan ZekerFlex" },
+  {
+    key: "oo.werk.intro",
+    group: "Over ons — secties",
+    label: "Werken bij ons: introtekst",
+    default: "We hebben niet altijd een vacature openstaan, maar goede mensen zijn altijd welkom. Stuur een open sollicitatie — vertel wat je meebrengt en waar je energie van krijgt.",
+    multiline: true,
+  },
+  { key: "oo.cta.title", group: "Over ons — slot-oproep", label: "Titel", default: "Doe mee" },
+  { key: "oo.cta.body", group: "Over ons — slot-oproep", label: "Tekst", default: "Als freelancer of als werkgever — aanmelden is gratis.", multiline: true },
+  { key: "oo.cta.primary", group: "Over ons — slot-oproep", label: "Knop 1", default: "Account aanmaken" },
+  { key: "oo.cta.secondary", group: "Over ons — slot-oproep", label: "Knop 2", default: "Voor bedrijven" },
 ];
 
 /** Alle sleutels van één groep-voorvoegsel (bv. "vb." voor /voor-bedrijven), voor getContentMap op die pagina. */
