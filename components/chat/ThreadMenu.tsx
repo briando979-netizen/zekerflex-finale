@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Portal } from "./Portal";
 
 export interface ThreadFlags {
@@ -84,6 +84,17 @@ export function SwipeRow({
 
 /* ───────────────────────────── "Meer" menu ───────────────────────────── */
 
+// buiten ThreadMenuSheet: een component binnen een component wordt bij elke render opnieuw gemaakt
+// (het invoerveld "Nieuwe lijst" verloor daardoor zijn focus)
+function Item({ icon, label, danger, onClick }: { icon: string; label: string; danger?: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 px-5 py-3 text-left text-sm hover:bg-paper-soft ${danger ? "text-crit" : "text-ink"}`}>
+      <span className="w-5 text-center" aria-hidden>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 export type MenuAction =
   | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" }
   | { action: "mute"; hours: number | null }
@@ -109,21 +120,20 @@ export function ThreadMenuSheet({
 }) {
   const [sub, setSub] = useState<null | "mute" | "list" | "disappear">(null);
   const [newList, setNewList] = useState("");
-  const Item = ({ icon, label, danger, onClick }: { icon: string; label: string; danger?: boolean; onClick: () => void }) => (
-    <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 px-5 py-3 text-left text-sm hover:bg-paper-soft ${danger ? "text-crit" : "text-ink"}`}>
-      <span className="w-5 text-center">{icon}</span>
-      {label}
-    </button>
-  );
   const done = (a: MenuAction) => {
     onAction(a);
     onClose();
   };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <Portal>
       <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
-        <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white pb-3 shadow-lift sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" aria-label={`Opties voor ${name}`} className="chat-surface max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lift sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
           <p className="truncate border-b border-hair px-5 py-3 font-display text-sm font-bold text-ink">{name}</p>
 
           {sub === "mute" ? (

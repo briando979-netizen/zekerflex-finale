@@ -24,6 +24,11 @@ export function ChatSearchBar({
         autoFocus
         value={query}
         onChange={(e) => onQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+          // Enter = volgende treffer (ouder), Shift+Enter = terug
+          if (e.key === "Enter") (e.shiftKey ? onNext : onPrev)();
+        }}
         placeholder="Zoek in dit gesprek…"
         aria-label="Zoek in dit gesprek"
         className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-neutralx-400"

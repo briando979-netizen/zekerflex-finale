@@ -1,5 +1,7 @@
 // Shared types + helpers for the chat UI (dock + full page).
 
+import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
+
 export interface ChatUser {
   userId: string;
   name: string;
@@ -39,6 +41,8 @@ export interface Msg {
   auto?: boolean;
   readByOthers?: boolean;
   pending?: boolean;
+  /** alleen in de browser: versturen mislukte, met de reden */
+  failed?: string;
   reactions?: Record<string, string[]>;
   deleted?: boolean;
   forwarded?: boolean;
@@ -68,6 +72,17 @@ export function toggleReaction(m: Msg, userId: string, emoji: string): Msg {
   const had = (m.reactions?.[emoji] ?? []).includes(userId);
   if (!had) reactions[emoji] = [...(reactions[emoji] ?? []), userId];
   return withReactions(m, reactions);
+}
+
+/** Een bericht dat je met een ster bewaarde (GET /api/inbox/bewaard, lib/messaging/bewaard.ts). */
+export interface SavedMsg {
+  threadId: string;
+  messageId: string;
+  excerpt: string;
+  kind: Msg["kind"];
+  from: string;
+  at: string;
+  savedAt: string;
 }
 
 export interface ThreadRow {
@@ -104,14 +119,27 @@ export const initials = (n: string) =>
 export const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
-export function dayLabel(iso: string): string {
+const TZ = "Europe/Amsterdam";
+
+/** Dagkop in een gesprek: Vandaag, Gisteren, maandag (deze week), 4 november, 4 november 2025. Nederlandse tijd. */
+export function dayLabel(iso: string, now: Date = new Date()): string {
+  const key = amsterdamDayKey(iso);
+  if (key === amsterdamDayKey(now)) return "Vandaag";
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return "Gisteren";
   const d = new Date(iso);
-  const t = new Date();
-  const y = new Date();
-  y.setDate(t.getDate() - 1);
-  if (d.toDateString() === t.toDateString()) return "Vandaag";
-  if (d.toDateString() === y.toDateString()) return "Gisteren";
-  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString("nl-NL", { weekday: "long", timeZone: TZ });
+  const sameYear = amsterdamParts(d).year === amsterdamParts(now).year;
+  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }), timeZone: TZ });
+}
+
+/** Tijd in de gesprekkenlijst, zoals WhatsApp: 14:05, Gisteren, dinsdag, 28-10-26. */
+export function listTime(iso: string, now: Date = new Date()): string {
+  const key = amsterdamDayKey(iso);
+  if (key === amsterdamDayKey(now)) return amsterdamClock(iso);
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return "Gisteren";
+  const d = new Date(iso);
+  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString("nl-NL", { weekday: "long", timeZone: TZ });
+  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: TZ });
 }
 
 export function fmtDuration(sec: number): string {
@@ -131,18 +159,79 @@ export function fmtBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function lastSeenLabel(p: Presence | undefined): string {
+export function lastSeenLabel(p: Presence | undefined, now: Date = new Date()): string {
   if (!p) return "";
   if (p.online) return "online";
   if (!p.lastSeen) return "";
-  const d = new Date(p.lastSeen);
-  const now = new Date();
-  const time = d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
-  if (d.toDateString() === now.toDateString()) return `laatst gezien om ${time}`;
-  const y = new Date(now);
-  y.setDate(now.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return `laatst gezien gisteren`;
-  return `laatst gezien ${d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}`;
+  const key = amsterdamDayKey(p.lastSeen);
+  if (key === amsterdamDayKey(now)) return `laatst gezien om ${amsterdamClock(p.lastSeen)}`;
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return `laatst gezien gisteren om ${amsterdamClock(p.lastSeen)}`;
+  return `laatst gezien ${new Date(p.lastSeen).toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: TZ })}`;
+}
+
+/* ───────────── tekst in een bericht ───────────── */
+
+export type TextPart = { link: false; text: string } | { link: true; text: string; href: string };
+
+const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+
+/** Knipt een bericht in tekst en links (alleen http(s) en www.), zodat links aanklikbaar worden. */
+export function linkParts(text: string): TextPart[] {
+  const out: TextPart[] = [];
+  let last = 0;
+  for (const m of text.matchAll(URL_RE)) {
+    let url = m[0];
+    // leestekens achter een link horen bij de zin, niet bij de link
+    const trail = /[.,!?;:)\]}'"]+$/.exec(url)?.[0] ?? "";
+    if (trail) url = url.slice(0, -trail.length);
+    if (!url) continue;
+    const at = m.index ?? 0;
+    if (at > last) out.push({ link: false, text: text.slice(last, at) });
+    out.push({ link: true, text: url, href: /^https?:\/\//i.test(url) ? url : `https://${url}` });
+    last = at + url.length;
+  }
+  if (last < text.length) out.push({ link: false, text: text.slice(last) });
+  return out;
+}
+
+/** 1 tot 3 emoji zonder andere tekst → aantal (dan tonen we ze groot), anders 0. */
+export function emojiOnlyCount(text: string): number {
+  const t = text.trim();
+  if (!t || t.length > 32 || /[0-9#*]/.test(t)) return 0;
+  if (!/^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Emoji_Component}|\u200d|\ufe0f|\s)+$/u.test(t)) return 0;
+  if (!/\p{Extended_Pictographic}/u.test(t)) return 0;
+  const n =
+    typeof Intl !== "undefined" && "Segmenter" in Intl
+      ? [...new Intl.Segmenter("nl", { granularity: "grapheme" }).segment(t.replace(/\s+/g, ""))].length
+      : (t.match(/\p{Extended_Pictographic}/gu) ?? []).length;
+  return n <= 3 ? n : 0;
+}
+
+/* ───────────── lijst en gesprek ───────────── */
+
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Zoeken in de gesprekkenlijst: op naam, laatste bericht of klus, zonder hoofdletters/accenten. */
+export function threadMatches(query: string, ...fields: (string | null | undefined)[]): boolean {
+  const q = fold(query.trim());
+  if (!q) return true;
+  return fields.some((f) => (f ? fold(f).includes(q) : false));
+}
+
+/**
+ * Het eerste ongelezen bericht bij het openen van een gesprek (voor de streep "3 ongelezen berichten"):
+ * het n-de bericht van de ander, van achteren geteld. Systeemregels tellen niet mee.
+ */
+export function firstUnreadId(messages: Msg[], unread: number, myUserId: string | null | undefined): string | null {
+  if (unread <= 0) return null;
+  let seen = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.from === myUserId || m.kind === "system") continue;
+    seen++;
+    if (seen === unread) return m.id;
+  }
+  return null;
 }
 
 export function avatarSrc(userId: string, avatars: Record<string, string>): string | null {

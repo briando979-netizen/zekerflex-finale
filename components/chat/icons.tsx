@@ -143,3 +143,59 @@ export const IconSparkle = (p: P) => (
     <path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9L12 3z" />
   </svg>
 );
+
+export const IconChevronDown = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+export const IconCopy = (p: P) => (
+  <svg {...stroke(p)}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+  </svg>
+);
+
+export const IconForward = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M15 5l6 6-6 6" />
+    <path d="M21 11H10a6 6 0 0 0-6 6v2" />
+  </svg>
+);
+
+export const IconPin = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M9 4h6l-1 6 3 3H7l3-3-1-6z" />
+    <path d="M12 16v5" />
+  </svg>
+);
+
+export const IconStar = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3z" />
+  </svg>
+);
+
+export const IconTrash = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M4 7h16" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M6 7l1 13h10l1-13" />
+    <path d="M9 7V4h6v3" />
+  </svg>
+);
+
+export const IconClose = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
+export const IconDownload = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M12 4v11" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M5 20h14" />
+  </svg>
+);
