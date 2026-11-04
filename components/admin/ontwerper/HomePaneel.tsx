@@ -13,6 +13,7 @@ import { BlokKaart } from "@/components/admin/ontwerper/PaginasPaneel";
 // ---------------------------------------------------------------------------
 
 const paneel = { background: "var(--a-panel)", border: "1px solid var(--a-border)" };
+const verborgenStijl = { background: "var(--a-elev)", border: "1px dashed var(--a-border)" };
 const mute = { color: "var(--a-mute)" };
 const klein = "grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-xs disabled:opacity-30";
 const knopStijl = { background: "var(--a-elev)", color: "var(--a-text)" };
@@ -204,7 +205,7 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
       </section>
 
       <ol className="space-y-1.5" aria-label="Blokken van de homepage, van boven naar beneden">
-        <li className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs" style={{ ...paneel, opacity: 0.75 }}>
+        <li className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
           <span className="font-semibold" style={{ color: "var(--a-text)" }}>
             Kop met foto
           </span>
@@ -232,7 +233,8 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
           const info = NAAM.get(id);
           const aan = !verborgen.has(id);
           return (
-            <li key={id} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ ...paneel, opacity: aan ? 1 : 0.55 }}>
+            // verborgen: gestippelde rand en een andere achtergrond (geen doorzichtigheid: de tekst moet leesbaar blijven)
+            <li key={id} className="flex items-center gap-2 rounded-xl px-3 py-2" style={aan ? paneel : verborgenStijl}>
               <label className="flex min-w-0 flex-1 items-start gap-2">
                 <input type="checkbox" checked={aan} onChange={(e) => toon(id, e.target.checked)} className="mt-0.5" />
                 <span className="min-w-0">

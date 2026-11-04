@@ -69,7 +69,8 @@ function KnopRij({
   const vast = standaard?.menu?.werknemers.items.length ?? 0;
   const zetExtra = (extra: MenuItem[]) => onZet({ ...knop, extra });
   return (
-    <li className="space-y-2 rounded-xl p-3" style={{ ...paneel, opacity: knop.verborgen ? 0.6 : 1 }}>
+    // verborgen: gestippelde rand en een andere achtergrond (geen doorzichtigheid: de tekst moet leesbaar blijven)
+    <li className="space-y-2 rounded-xl p-3" style={knop.verborgen ? { background: "var(--a-elev)", border: "1px dashed var(--a-border)" } : paneel}>
       <div className="flex items-center gap-1.5">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Naam van knop {index + 1}</span>
