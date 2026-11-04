@@ -68,7 +68,8 @@ export function voorGast(g: SiteGesprek, sinds: number) {
     berichten: g.berichten
       .map((b, i) => ({ b, i }))
       .filter(({ b, i }) => i >= sinds && (b.rol === "medewerker" || b.rol === "systeem"))
-      .map(({ b }) => ({ rol: b.rol, tekst: b.tekst, door: b.door ?? "", op: b.op })),
+      // met de positie i, zodat de widget nooit iets dubbel toont
+      .map(({ b, i }) => ({ i, rol: b.rol, tekst: b.tekst, door: b.door ?? "", op: b.op })),
   };
 }
 

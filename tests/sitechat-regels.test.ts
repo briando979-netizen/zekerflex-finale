@@ -58,6 +58,8 @@ describe("gesprek", () => {
     g = metBericht(g, { rol: "medewerker", tekst: "Ik help je", door: "Rita" }, NU);
     expect(voorGast(g, 0).berichten.map((b) => b.tekst)).toEqual(["Rita leest mee", "Ik help je"]);
     expect(voorGast(g, 3).berichten.map((b) => b.tekst)).toEqual(["Ik help je"]);
+    // elke regel draagt zijn positie, zodat de widget nooit iets dubbel toont
+    expect(voorGast(g, 0).berichten.map((b) => b.i)).toEqual([2, 3]);
     expect(voorGast(g, 4)).toEqual({ status: "ai", totaal: 4, berichten: [] });
   });
 

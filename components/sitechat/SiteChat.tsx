@@ -95,6 +95,7 @@ export function SiteChat({
   const logRef = useRef<HTMLDivElement>(null);
   const invoerRef = useRef<HTMLInputElement>(null);
   const gezienRef = useRef(0);
+  const bezigMetVerversen = useRef(false);
 
   // gesprek uit deze browser terughalen
   useEffect(() => {
@@ -133,20 +134,27 @@ export function SiteChat({
   }, [open]);
 
   const ververs = useCallback(async () => {
-    if (!id) return;
-    const r = await fetch(`${api}/${id}?sinds=${gezienRef.current}`, { cache: "no-store" }).catch(() => null);
-    if (!r?.ok) return;
-    const d = (await r.json().catch(() => null)) as { status?: Status; totaal?: number; berichten?: { rol: Rol; tekst: string; door: string }[] } | null;
-    if (!d) return;
-    if (d.status) setStatus(d.status);
-    const extra = d.berichten ?? [];
-    if (extra.length) {
-      setRegels((oud) => [...oud, ...extra.map((b) => ({ rol: b.rol, tekst: b.tekst, ...(b.door ? { door: b.door } : {}) }))]);
-      setNieuw((n) => n + extra.filter((b) => b.rol === "medewerker").length);
-    }
-    if (typeof d.totaal === "number") {
-      gezienRef.current = d.totaal;
-      setGezien(d.totaal);
+    // nooit twee keer tegelijk (anders komen dezelfde berichten twee keer binnen)
+    if (!id || bezigMetVerversen.current) return;
+    bezigMetVerversen.current = true;
+    try {
+      const r = await fetch(`${api}/${id}?sinds=${gezienRef.current}`, { cache: "no-store" }).catch(() => null);
+      if (!r?.ok) return;
+      const d = (await r.json().catch(() => null)) as { status?: Status; totaal?: number; berichten?: { i: number; rol: Rol; tekst: string; door: string }[] } | null;
+      if (!d) return;
+      if (d.status) setStatus(d.status);
+      // alleen wat na de laatst geziene positie komt
+      const extra = (d.berichten ?? []).filter((b) => typeof b.i !== "number" || b.i >= gezienRef.current);
+      if (typeof d.totaal === "number") {
+        gezienRef.current = Math.max(gezienRef.current, d.totaal);
+        setGezien(gezienRef.current);
+      }
+      if (extra.length) {
+        setRegels((oud) => [...oud, ...extra.map((b) => ({ rol: b.rol, tekst: b.tekst, ...(b.door ? { door: b.door } : {}) }))]);
+        setNieuw((n) => n + extra.filter((b) => b.rol === "medewerker").length);
+      }
+    } finally {
+      bezigMetVerversen.current = false;
     }
   }, [api, id]);
 
