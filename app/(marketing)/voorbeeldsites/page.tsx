@@ -9,16 +9,17 @@ import { DEMO_SLUG } from "@/lib/sites/demo";
 export const metadata: Metadata = {
   title: "Voorbeeldwebsites per branche",
   description:
-    "Bekijk complete voorbeeldwebsites van ZekerFlex voor horeca, bouw, schoonmaak, transport, zorg, zakelijke dienstverlening en winkels. Met reserveren, offertes, chat en meer.",
+    "Bekijk complete voorbeeldwebsites van ZekerFlex voor horeca, bouw, schoonmaak, transport, zorg, kappers, garages, zakelijke dienstverlening en winkels. Met reserveren, afspraken, offertes, chat en meer.",
   ...canonical("/voorbeeldsites"),
 };
 
 // De voorbeeldsites per branche (lib/sites/branche-voorbeelden.ts) en Bakkerij Jansen
 // met webshop (lib/sites/demo.ts), allemaal in de stijl van schwarzwald.zekerflex.com.
-// De foto's op deze pagina zijn de branchefoto's van de klus-kaarten (public/shifts).
+// De foto's op deze pagina zijn de branchefoto's van de klus-kaarten (public/shifts), of
+// een eigen kaartfoto waar de klus-kaarten geen branche hebben (public/voorbeeldsites).
 
 const KAARTEN = [
-  ...BRANCHE_VOORBEELDEN.map((v) => ({ slug: v.slug, label: v.label, naam: v.bedrijf.naam, tekst: v.omschrijving, foto: `/shifts/${v.id}.jpg` })),
+  ...BRANCHE_VOORBEELDEN.map((v) => ({ slug: v.slug, label: v.label, naam: v.bedrijf.naam, tekst: v.omschrijving, foto: v.kaart ?? `/shifts/${v.id}.jpg` })),
   { slug: DEMO_SLUG, label: "Winkel met webshop", naam: "Bakkerij Jansen", tekst: "Bakkerij met een webshop: producten met foto en prijs, maten en smaken, en bestellen om af te halen of te laten bezorgen.", foto: "/shifts/retail.jpg" },
 ];
 

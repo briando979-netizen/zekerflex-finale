@@ -31,6 +31,10 @@ export interface ProposalLead {
 
 const SECTOR_WORDS: [string, RegExp][] = [
   ["horeca", /restaurant|caf[eé]|bistro|brasserie|eetcaf|lunchroom|catering|bakker|banket|patisserie|hotel|pizzeria|snackbar|grill|\bbar\b|koffie|ijssalon|slager|traiteur|horeca|\beten\b|drinken|borrel|\bdiner\b|\blunch\b|ontbijt|terras|tapas|wijnbar|brouwerij|\bfood/i],
+  // after horeca (a snack bar sells a "kapsalon"), not "knippen" (hedges) or "haar" (her)
+  ["kapper", /kapper|kapsalon|haarsalon|haarstudio|haarmode|haarverzorging|barber|schoonheidssalon|beautysalon|schoonheidsspecialist|nagelstudio|nagelsalon|wimper|visagi|manicure|\bbeauty\b/i],
+  // before bouw ("elektrisch rijden" is not an electrician); not a bare "garage" (a builder converts one)
+  ["garage", /autobedrijf|autogarage|garagebedrijf|autoservice|auto-?reparatie|auto-?onderhoud|autotechniek|autoschade|schadeherstelbedrijf|carrosserie|autospuiterij|bandenservice|bandencentrale|autobanden|automonteur|personenauto|\bapk\b|\boccasions?\b|car ?wash/i],
   ["bouw", /bouw|aannem|schilder|stukad|timmer|loodgiet|installat|elektr|dakdek|\bdak|tegel|klus|renovat|metsel|vloer|badkamer|glaszet|hovenier|tuin|stratenma|sloop|isolat|kozijn/i],
   ["schoonmaak", /schoonma|glazenwas|reinig|facilit|hygi[eë]n/i],
   ["logistiek", /transport|logistiek|koerier|verhuis|opslag|vracht|expeditie|distributie|bezorg/i],
@@ -178,6 +182,20 @@ function stappenVoor(t: SectorTemplate, c: Company): { titel: string; tekst: str
       { titel: "Samen verder", tekst: `${c.naam} staat voor je klaar.` },
     ];
   }
+  if (t.id === "kapper") {
+    return [
+      { titel: "Kies je behandeling", tekst: "Knippen, kleuren of iets anders: laat weten wat je wilt." },
+      { titel: "Maak een afspraak", tekst: bel },
+      { titel: "Even tijd voor jezelf", tekst: `${c.naam} staat voor je klaar.` },
+    ];
+  }
+  if (t.id === "garage") {
+    return [
+      { titel: "Plan je afspraak", tekst: `Vertel om welke auto het gaat en wat er moet gebeuren. ${bel}` },
+      { titel: "Breng je auto", tekst: "We vertellen vooraf wat het kost en doen niets zonder jouw akkoord." },
+      { titel: "Weer veilig op weg", tekst: `${c.naam} laat je weten wanneer je auto klaar is.` },
+    ];
+  }
   return [
     { titel: "Neem contact op", tekst: `Vertel wat je nodig hebt. ${bel}` },
     { titel: "Advies op maat", tekst: "We bespreken de mogelijkheden en wat het kost." },
@@ -208,7 +226,9 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
   // "Binnenschilderwerk en buitenschilderwerk in Rijssen en omgeving." — a list with commas only gets the place as its own sentence
   const waar = c.plaats ? (namen.some(hasEn) ? `. In ${c.plaats} en omgeving` : ` in ${c.plaats} en omgeving`) : "";
   const heroTekst = namen.length >= 2 ? `${listOf(namen)}${waar}.` : fill(t.heroTekst, c);
-  const knop = horeca ? "Reserveer of bestel" : t.id === "zorg" ? "Neem contact op" : "Vraag een offerte aan";
+  // a salon and a garage work by appointment: the button and their opening hours on the home page
+  const afspraak = t.id === "kapper" || t.id === "garage";
+  const knop = horeca ? "Reserveer of bestel" : afspraak ? "Maak een afspraak" : t.id === "zorg" ? "Neem contact op" : "Vraag een offerte aan";
   const over = f.intro ?? fill(t.over, c);
   const overLang = f.overTekst ?? over;
 
@@ -246,7 +266,7 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
     block("stappen", { kop: voorbeeld?.stappen.kop ?? "Zo simpel is het", items: stappenVoor(t, c) }),
     ...(photos.galerij.length >= 2 ? [block("galerij", { kop: voorbeeld?.galerij.kop ?? (horeca ? "Sfeer en smaak" : t.id === "bouw" ? "Ons werk" : "Een indruk"), fotos: photos.galerij })] : []),
     ...(reviews ? [reviews] : []),
-    ...(uren && horeca ? [uren] : []),
+    ...(uren && (horeca || afspraak) ? [uren] : []),
     cta,
   ];
   const eerste = namen[0] ?? t.naam;

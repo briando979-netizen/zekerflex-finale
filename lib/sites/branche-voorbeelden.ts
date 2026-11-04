@@ -21,10 +21,12 @@ export interface BrancheFoto {
 
 export interface BrancheVoorbeeld {
   /** de branche (= een sjabloon van de websitebouwer, SECTOR_TEMPLATES) */
-  id: "horeca" | "bouw" | "schoonmaak" | "logistiek" | "zorg" | "algemeen";
+  id: "horeca" | "bouw" | "schoonmaak" | "logistiek" | "zorg" | "algemeen" | "kapper" | "garage";
   /** wat de bezoeker van /voorbeeldsites ziet */
   label: string;
   omschrijving: string;
+  /** de foto op de kaart van /voorbeeldsites, als er geen klus-kaartfoto van de branche is (public/shifts/<id>.jpg) */
+  kaart?: string | undefined;
   /** het adres: slugify(bedrijf.naam) */
   slug: string;
   bedrijf: Company;
@@ -534,6 +536,178 @@ export const BRANCHE_VOORBEELDEN: BrancheVoorbeeld[] = [
     ],
     cta: { kop: "Benieuwd wat we voor je kunnen doen?", tekst: "Plan een gratis kennismaking, op kantoor of online.", knop: "Plan een kennismaking" },
     contact: { kop: "Plan een kennismaking", tekst: "Vertel kort iets over je bedrijf en wanneer het je uitkomt. We plannen een gesprek op kantoor of online." },
+  },
+  {
+    id: "kapper",
+    label: "Kapper en beauty",
+    omschrijving: "Kapsalon met knippen, kleuren, baard en nagels, met openingstijden en een afspraakformulier.",
+    kaart: "/voorbeeldsites/kapper.jpg",
+    slug: "kapsalon-de-spiegel",
+    bedrijf: bedrijf("Kapsalon De Spiegel"),
+    theme: stijl("#4A2C40", "#E8A598"),
+    fotos: {
+      salon: { pexels: 7755222, alt: "Een kapster knipt lang haar met kam en schaar" },
+      barbier: { pexels: 3998421, alt: "Een barbier werkt een baard bij met kam en schaar" },
+      dames: { pexels: 3356170, alt: "Een kapster knipt nat haar op lengte" },
+      heren: { pexels: 15659486, alt: "Een kapper knipt kort haar bij in de nek" },
+      kleur: { pexels: 2799605, alt: "Een kapper brengt kleur aan in lang haar" },
+      baard: { pexels: 3998417, alt: "Een barbier knipt een volle baard bij met een schaar" },
+      fohn: { pexels: 696285, alt: "Een kapper föhnt het haar van een vrouw in de salon" },
+      nagels: { pexels: 29877720, alt: "Een nagelstyliste verzorgt de nagels van een klant" },
+      knippen: { pexels: 4969866, alt: "Een kapper knipt krullend haar bij met schaar en kam" },
+      spiegels: { pexels: 3993133, alt: "Een salon met verlichte spiegels en kappersstoelen" },
+      folie: { pexels: 8468036, alt: "Een vrouw krijgt highlights met folie" },
+      scheren: { pexels: 6007395, alt: "Een barbier scheert een klant met een mes" },
+      verf: { pexels: 3993292, alt: "Haarverf wordt in een kom gemengd" },
+      lok: { pexels: 7755251, alt: "Handen met kam en schaar bij een lok haar" },
+    },
+    hero: { kop: "Tijd voor jezelf.", tekst: "Knippen, kleuren en verzorgen in het hart van Zonnedorp. Voor dames, heren en kinderen, met eerlijk advies en een kop koffie erbij.", knop: "Maak een afspraak", foto: "salon" },
+    over: {
+      kop: "Een salon waar je even tot rust komt",
+      tekst: "Kapsalon De Spiegel is een salon met vijf stoelen en een vast team. We nemen de tijd, luisteren naar wat je wilt en zeggen eerlijk wat bij je haar past.",
+      foto: "barbier",
+      lang: "Kapsalon De Spiegel begon met één stoel en een grote spiegel, vandaar de naam. Nu werken we met vijf stylisten, een barbier en een nagelstyliste, maar je wordt nog altijd begroet met je voornaam.\n\nWe werken met verzorgende producten en vertellen je graag hoe je je haar thuis mooi houdt.",
+      lang2Kop: "Altijd iemand voor je klaar",
+      lang2: "Op drukke dagen, zoals voor de feestdagen, staan er extra stylisten via ZekerFlex. Zo hoef je nooit lang te wachten op een afspraak.",
+    },
+    aanbod: {
+      kop: "Onze behandelingen",
+      intro: "Van een snelle knipbeurt tot een hele middag in de salon: kies wat bij je past.",
+      items: [
+        { titel: "Knippen dames", tekst: "Wassen, knippen en föhnen, met advies over een model dat bij je past.", foto: "dames" },
+        { titel: "Knippen heren", tekst: "Kort, lang of een fade: strak geknipt en netjes afgewerkt.", foto: "heren" },
+        { titel: "Kleuren en highlights", tekst: "Een nieuwe kleur, grijs wegwerken of highlights en balayage.", foto: "kleur" },
+        { titel: "Baard en scheren", tekst: "Baard bijwerken of een klassieke scheerbeurt met een warme doek.", foto: "baard" },
+        { titel: "Föhnen en opsteken", tekst: "Voor een feest, bruiloft of gewoon omdat het kan.", foto: "fohn" },
+        { titel: "Nagels", tekst: "Manicure, gellak en verzorging van je handen.", foto: "nagels" },
+      ],
+    },
+    usps: {
+      kop: "Waarom klanten blijven komen.",
+      items: [
+        { titel: "Eerlijk advies", tekst: "We zeggen wat bij je past, ook als dat minder is." },
+        { titel: "Op tijd", tekst: "We plannen ruim, dus je afspraak begint op tijd." },
+        { titel: "Thuis ook mooi", tekst: "Tips en producten om je haar thuis goed te verzorgen." },
+      ],
+    },
+    stappen: {
+      kop: "Zo maak je een afspraak",
+      items: [
+        { titel: "Kies je behandeling", tekst: "Knippen, kleuren, baard of nagels: kies wat je wilt." },
+        { titel: "Kies een moment", tekst: "Stuur je aanvraag via het formulier of de chat. We bevestigen dezelfde dag." },
+        { titel: "Even tijd voor jezelf", tekst: "Koffie of thee staat klaar. Leun achterover, wij doen de rest." },
+      ],
+    },
+    galerij: { kop: "In de salon", fotos: ["knippen", "spiegels", "folie", "scheren", "verf", "lok"] },
+    reviews: [
+      { naam: "Voorbeeldklant", tekst: "Eindelijk een kapper die luistert. Mijn haar zit al weken precies zoals ik wilde." },
+      { naam: "Voorbeeldklant", tekst: "De scheerbeurt met de warme doek is een aanrader. Ik ga nergens anders meer heen." },
+      { naam: "Voorbeeldklant", tekst: "Voor mijn bruiloft opgestoken, en het bleef de hele avond zitten. Dank jullie wel!" },
+    ],
+    uren: {
+      kop: "Openingstijden",
+      regels: [
+        { dag: "Maandag", tijd: "Gesloten" },
+        { dag: "Dinsdag en woensdag", tijd: "09:00 – 18:00" },
+        { dag: "Donderdag", tijd: "09:00 – 21:00" },
+        { dag: "Vrijdag", tijd: "09:00 – 18:00" },
+        { dag: "Zaterdag", tijd: "08:30 – 16:00" },
+        { dag: "Zondag", tijd: "Gesloten" },
+      ],
+    },
+    faq: [
+      { vraag: "Moet ik een afspraak maken?", antwoord: "Dat is het fijnst, dan staat er iemand voor je klaar. Op zaterdagochtend kun je ook zonder afspraak binnenlopen." },
+      { vraag: "Knippen jullie ook kinderen?", antwoord: "Ja, kinderen tot twaalf jaar zijn van harte welkom. Ze krijgen er iets lekkers bij." },
+      { vraag: "Kan ik mijn afspraak verzetten?", antwoord: "Ja, laat het uiterlijk een dag van tevoren weten via het formulier of de chat." },
+      { vraag: "Welke producten gebruiken jullie?", antwoord: "Verzorgende producten zonder onnodige toevoegingen. We vertellen je graag welke bij jouw haar passen." },
+    ],
+    cta: { kop: "Tijd voor een nieuwe look?", tekst: "Maak een afspraak, dan staat je stoel klaar. We bevestigen dezelfde dag.", knop: "Maak een afspraak" },
+    contact: { kop: "Maak een afspraak", tekst: "Laat weten welke behandeling je wilt en wanneer het je uitkomt. We stellen een moment voor en bevestigen het dezelfde dag." },
+  },
+  {
+    id: "garage",
+    label: "Garage en autobedrijf",
+    omschrijving: "Garage met APK, onderhoud, banden en occasions, met een afspraakformulier en een werken-bij-pagina.",
+    kaart: "/voorbeeldsites/garage.jpg",
+    slug: "garage-de-rotonde",
+    bedrijf: bedrijf("Garage De Rotonde"),
+    theme: stijl("#1F2A37", "#F5B700"),
+    fotos: {
+      werkplaats: { pexels: 4489702, alt: "Een monteur aan het werk bij een auto, in een werkplaats vol vonken" },
+      advies: { pexels: 6870324, alt: "Een monteur met een klembord naast een oranje auto" },
+      apk: { pexels: 3807120, alt: "Een monteur controleert de onderkant van een auto op de brug" },
+      onderhoud: { pexels: 4315570, alt: "Een monteur werkt aan de motor van een auto" },
+      banden: { pexels: 3806249, alt: "Een monteur wisselt een band in de werkplaats" },
+      remmen: { pexels: 6870299, alt: "Een monteur controleert een remklauw en remschijf" },
+      diagnose: { pexels: 4116193, alt: "Een monteur leest een auto uit met een diagnosecomputer" },
+      occasions: { pexels: 7144176, alt: "Een verkoper laat twee klanten een auto zien in de showroom" },
+      schaar: { pexels: 3807799, alt: "Een monteur bij een auto op een schaarbrug" },
+      onder: { pexels: 4489749, alt: "Een monteur werkt met een lamp onder een auto" },
+      motorkap: { pexels: 8478228, alt: "Een monteur controleert de motorruimte van een auto" },
+      pompen: { pexels: 3807386, alt: "Een monteur pompt een band op" },
+      olie: { pexels: 4895412, alt: "Een monteur controleert het oliepeil" },
+      wassen: { pexels: 6872601, alt: "Een auto wordt gewassen met een hogedrukspuit" },
+    },
+    hero: { kop: "Je auto in goede handen.", tekst: "Onderhoud, APK en reparatie voor elk merk, aan de rand van Zonnedorp. Je weet vooraf wat het kost, en we doen niets zonder jouw akkoord.", knop: "Plan een afspraak", foto: "werkplaats" },
+    over: {
+      kop: "Een garage die eerlijk zegt wat er moet",
+      tekst: "Garage De Rotonde is een zelfstandige garage voor alle merken. We leggen uit wat er aan je auto moet gebeuren, wat kan wachten, en wat het kost.",
+      foto: "advies",
+      lang: "Garage De Rotonde begon dertig jaar geleden als een werkplaats met één brug. Nu werken we met zes monteurs aan auto's van elk merk, van een kleine stadsauto tot een bestelbus.\n\nOnze monteurs zijn opgeleid voor benzine, diesel, hybride en elektrisch. En we werken volgens de voorschriften van de fabrikant, zodat je garantie blijft gelden.",
+      lang2Kop: "Ook in de bandenweken snel geholpen",
+      lang2: "In het voor- en najaar wisselen we honderden banden. Dan zetten we extra handen in via ZekerFlex, zodat je niet weken hoeft te wachten.",
+    },
+    aanbod: {
+      kop: "Wat we voor je auto doen",
+      intro: "Van de APK tot een nieuwe set banden: alles onder één dak, voor elk merk.",
+      items: [
+        { titel: "APK-keuring", tekst: "Je weet vooraf wat het kost. Reparaties doen we alleen na jouw akkoord.", foto: "apk" },
+        { titel: "Onderhoud", tekst: "Kleine en grote beurten volgens het boekje, met behoud van garantie.", foto: "onderhoud" },
+        { titel: "Banden", tekst: "Zomer-, winter- en vierseizoenenbanden, wisselen en opslaan in ons bandenhotel.", foto: "banden" },
+        { titel: "Remmen en uitlaat", tekst: "Remblokken, remschijven en uitlaat, gecontroleerd en zo nodig vervangen.", foto: "remmen" },
+        { titel: "Storingen", tekst: "Een lampje op het dashboard? We lezen je auto uit en zeggen wat er aan de hand is.", foto: "diagnose" },
+        { titel: "Occasions", tekst: "Gecontroleerde auto's met een nieuwe APK en garantie.", foto: "occasions" },
+      ],
+    },
+    usps: {
+      kop: "Waarom rijders voor De Rotonde kiezen.",
+      items: [
+        { titel: "Vooraf een prijs", tekst: "Geen verrassingen achteraf: je weet wat het kost." },
+        { titel: "Niets zonder overleg", tekst: "We bellen eerst als we iets extra's vinden." },
+        { titel: "Vervangend vervoer", tekst: "Een leenauto of leenfiets terwijl wij aan je auto werken." },
+      ],
+    },
+    stappen: {
+      kop: "Zo plan je een afspraak",
+      items: [
+        { titel: "Plan je afspraak", tekst: "Vertel om welke auto het gaat en wat er moet gebeuren, via het formulier of de chat." },
+        { titel: "Breng je auto", tekst: "Lever hem 's ochtends in. Wachten kan ook, of neem de leenfiets." },
+        { titel: "Weer veilig op weg", tekst: "We laten je weten wanneer hij klaar is en leggen uit wat we hebben gedaan." },
+      ],
+    },
+    galerij: { kop: "In de werkplaats", fotos: ["schaar", "onder", "motorkap", "pompen", "olie", "wassen"] },
+    reviews: [
+      { naam: "Voorbeeldklant", tekst: "Eerlijk advies: ze zeiden dat mijn remmen nog prima waren. Dat hoor je niet vaak bij een garage." },
+      { naam: "Voorbeeldklant", tekst: "APK en onderhoud in één ochtend, en ik kon met de leenfiets naar mijn werk. Top geregeld." },
+      { naam: "Voorbeeldklant", tekst: "Mijn occasion rijdt na een jaar nog als een zonnetje. Fijne mensen en duidelijke afspraken." },
+    ],
+    uren: {
+      kop: "Openingstijden",
+      regels: [
+        { dag: "Maandag t/m vrijdag", tijd: "08:00 – 17:30" },
+        { dag: "Zaterdag", tijd: "09:00 – 13:00" },
+        { dag: "Zondag", tijd: "Gesloten" },
+      ],
+    },
+    faq: [
+      { vraag: "Kan ik wachten tijdens de APK?", antwoord: "Ja, voor de APK en kleine klussen kun je bij ons wachten. Er staat koffie klaar." },
+      { vraag: "Blijft mijn fabrieksgarantie gelden?", antwoord: "Ja, we werken volgens de voorschriften van de fabrikant en gebruiken onderdelen van dezelfde kwaliteit." },
+      { vraag: "Doen jullie ook hybride en elektrische auto's?", antwoord: "Ja, onze monteurs zijn opgeleid voor hybride en elektrische auto's." },
+      { vraag: "Kunnen jullie mijn banden bewaren?", antwoord: "Ja, in ons bandenhotel. Bij het wisselen controleren we meteen het profiel en de spanning." },
+    ],
+    cta: { kop: "Tijd voor onderhoud of APK?", tekst: "Plan een afspraak, dan staat er een plek in de werkplaats voor je klaar.", knop: "Plan een afspraak" },
+    contact: { kop: "Plan een afspraak", tekst: "Vertel om welke auto het gaat en wat er moet gebeuren. We stellen een moment voor en bevestigen het dezelfde dag." },
+    werken: { kop: "Werken bij De Rotonde", tekst: "Monteur, bandenwisselaar of autopoetser: in de drukke weken zoeken we extra handen. Kijk welke diensten er openstaan en reageer met één klik." },
   },
 ];
 

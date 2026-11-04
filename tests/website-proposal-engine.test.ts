@@ -128,6 +128,16 @@ describe("de nieuwe website: puur", () => {
     expect(site.templateFor("Bakkerij Modern Desembrood").id).toBe("horeca");
     expect(site.templateFor("Adviesbureau Kompas").id).toBe("algemeen");
     expect(site.templateFor("Marktzicht Eten & Drinken").id).toBe("horeca");
+    // kapper en garage (4 nov), zonder dat een snackbar, hovenier of aannemer erin valt
+    expect(site.templateFor("Kapsalon Lotte Knippen Kleuren").id).toBe("kapper");
+    expect(site.templateFor("Barbershop Ali").id).toBe("kapper");
+    expect(site.templateFor("Nagelstudio Pink Gellak").id).toBe("kapper");
+    expect(site.templateFor("Autobedrijf Smit Onderhoud Occasions").id).toBe("garage");
+    expect(site.templateFor("Garage Pietersen APK Elektrisch rijden").id).toBe("garage");
+    expect(site.templateFor("Cafetaria De Hoek Snackbar Kapsalon Friet").id).toBe("horeca");
+    expect(site.templateFor("Hoveniersbedrijf Groen Heggen knippen").id).toBe("bouw");
+    expect(site.templateFor("Aannemer Jansen Garage ombouwen").id).toBe("bouw");
+    expect(site.templateFor("Installateur cv-ketel onderhoudsbeurt").id).toBe("bouw");
     const bouw = site.templateFor("schilder");
     // sinds 4 nov in de stijl beleving, precies zoals schwarzwald.zekerflex.com: zonder eigen kleur hun bosgroen en oranje
     expect(site.proposalTheme("#14213D", bouw, null)).toMatchObject({ kleur: "#14213D", accent: "#FF5F1F", stijl: "beleving" });
@@ -185,6 +195,22 @@ describe("de nieuwe website: puur", () => {
     const bouw = site.proposalPages(company, site.templateFor("schilder"), facts, { hero: null, over: null, galerij: [] }, () => `b${n++}`);
     expect(bouw.some((p) => p.slug === "werken-bij")).toBe(false);
     expect(bouw[0]!.blocks.find((b) => b.type === "diensten")?.props).toMatchObject({ kop: "Wat we voor je bouwen" });
+  });
+
+  it("een kapper en een garage werken op afspraak: die knop, hun openingstijden op home, en bij de garage een werken-bij-pagina", () => {
+    const facts = { ...extractBusiness(OUDE_SITE, "https://devries-schilders.nl/"), uren: [{ dag: "Dinsdag t/m zaterdag", tijd: "09:00 – 17:30" }] };
+    const company = site.proposalCompany(facts, { naam: "Kapsalon Lotte", plaats: "Rijssen", kvk: "", sector: "Kappers" });
+    let n = 0;
+    for (const [tekst, kop, werkenBij] of [["kapsalon", "Onze behandelingen", false], ["autobedrijf", "Wat we voor je auto doen", true]] as const) {
+      const t = site.templateFor(tekst);
+      const pages = site.proposalPages(company, t, facts, { hero: null, over: null, galerij: [] }, () => `b${n++}`);
+      const home = pages[0]!.blocks;
+      expect(home.find((b) => b.type === "hero")?.props).toMatchObject({ knop: "Maak een afspraak" });
+      expect(home.find((b) => b.type === "diensten")?.props).toMatchObject({ kop });
+      expect(home.some((b) => b.type === "openingstijden"), t.id).toBe(true);
+      expect(pages.some((p) => p.slug === "werken-bij"), t.id).toBe(werkenBij);
+      expect(siteSaveSchema.safeParse({ theme: site.proposalTheme(null, t, null), bedrijf: company, pages }).success, t.id).toBe(true);
+    }
   });
 
   it("vult de site met hun echte gegevens: foto per dienst, sterke punten, uren, vragen, klantverhalen, aanbod- en fotopagina", () => {

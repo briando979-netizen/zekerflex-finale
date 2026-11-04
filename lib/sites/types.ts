@@ -452,6 +452,42 @@ export const SECTOR_TEMPLATES: SectorTemplate[] = [
       { vraag: "Hebben jullie een wachtlijst?", antwoord: "Bel ons voor de actuele situatie." },
     ],
   },
+  {
+    id: "kapper",
+    naam: "Kapper en beauty",
+    omschrijving: "Stijlvol en persoonlijk, voor kapsalon, barbier of schoonheidssalon.",
+    theme: { kleur: "#4A2C40", accent: "#E8A598" },
+    heroKop: "Welkom bij {bedrijf}",
+    heroTekst: "Knippen, kleuren en verzorgen in {plaats}. Maak eenvoudig een afspraak.",
+    over: "Bij {bedrijf} neem je even de tijd voor jezelf. We luisteren naar wat je wilt en geven eerlijk advies over wat bij je past.",
+    diensten: [
+      { titel: "Knippen", tekst: "Voor dames, heren en kinderen, met advies over wat bij je past." },
+      { titel: "Kleuren", tekst: "Van een frisse kleur tot highlights en balayage." },
+      { titel: "Verzorging", tekst: "Behandelingen voor haar, huid en nagels." },
+    ],
+    faq: [
+      { vraag: "Moet ik een afspraak maken?", antwoord: "Dat is het fijnst: dan staat er iemand voor je klaar. Bel, app of stuur een bericht." },
+      { vraag: "Kan ik mijn afspraak verzetten?", antwoord: "Ja, laat het ons uiterlijk een dag van tevoren weten." },
+    ],
+  },
+  {
+    id: "garage",
+    naam: "Garage en auto",
+    omschrijving: "Degelijk en duidelijk, voor garage, autobedrijf of bandenservice.",
+    theme: { kleur: "#1F2A37", accent: "#F5B700" },
+    heroKop: "{bedrijf}: je auto in goede handen",
+    heroTekst: "Onderhoud, APK en reparatie in {plaats} en omgeving. Je weet vooraf wat het kost.",
+    over: "{bedrijf} houdt je auto veilig op de weg. We leggen uit wat er moet gebeuren en doen niets zonder jouw akkoord.",
+    diensten: [
+      { titel: "APK-keuring", tekst: "Met een duidelijke prijs vooraf, en reparaties alleen in overleg." },
+      { titel: "Onderhoud", tekst: "Kleine en grote beurten volgens het onderhoudsboekje." },
+      { titel: "Banden en reparatie", tekst: "Banden wisselen, remmen, uitlaat en storingen." },
+    ],
+    faq: [
+      { vraag: "Kan ik wachten tijdens de APK?", antwoord: "Ja, voor de APK en kleine klussen kun je bij ons wachten." },
+      { vraag: "Blijft mijn fabrieksgarantie gelden?", antwoord: "Ja, we werken volgens de voorschriften van de fabrikant." },
+    ],
+  },
 ];
 
 const fillIn = (s: string, c: Pick<Company, "naam" | "plaats">) =>
