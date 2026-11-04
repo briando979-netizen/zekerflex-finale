@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { Model3DViewer } from "@/components/marketing/Model3DViewer";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
-import { IconHeart, ShopProductCard } from "@/components/marketing/ShopProductCard";
+import { IconCart, IconHeart, SELLER, ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
-import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { bySize, priceParts, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import { specFor } from "@/lib/shop/product-specs";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
-// De productpagina. Telefoon: foto's om doorheen te vegen (met stipjes) en een
-// vaste koopknop onderin zodra de gewone knop uit beeld is. Computer: de foto's
-// groot onder elkaar, de informatie ernaast blijft staan tijdens scrollen.
-// Details in uitklapblokken (<details>: werkt zonder JavaScript en met een schermlezer).
+// De productpagina, opgebouwd als op een grote marktplaats. Telefoon: titel,
+// foto, koopblok onder elkaar en een vaste koopknop onderin zodra de gewone uit
+// beeld is. Computer: foto's links, titel en koopblok rechts (het koopblok blijft
+// staan tijdens scrollen). Daaronder beschrijving, specificaties en verzending.
 
 export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 export type PdpBundleItem = { id: string; name: string; imageUrl: string | null; priceCents: number };
@@ -39,9 +39,11 @@ export type PdpProduct = {
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
-const LABEL = "text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-mute";
+const H2 = "font-display text-[20px] font-bold tracking-tight text-ink sm:text-[22px]";
+const OPTION = "min-w-12 rounded-lg border px-3.5 py-2 text-[14px] font-semibold transition";
+const option = (on: boolean) => `${OPTION} ${on ? "border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500" : "border-hairstrong bg-white text-ink hover:border-brand-500"}`;
 
-/** Een gerelateerd product als etalagekaart (zelfde kaart als op de shop-homepage). */
+/** Een gerelateerd product als kaart (zelfde kaart als op de shop-homepage). */
 const asCard = (p: PdpProduct): ShopCardProduct => ({
   id: p.id,
   slug: p.slug,
@@ -66,9 +68,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const [show3d, setShow3d] = useState(false);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
-  const [sizeOpen, setSizeOpen] = useState(false);
   const [buyVisible, setBuyVisible] = useState(true);
-  const stripRef = useRef<HTMLDivElement | null>(null);
   const buyRef = useRef<HTMLDivElement | null>(null);
 
   const sizes = useMemo(() => [...new Set(product.variants.map((v) => v.size).filter((s): s is string => Boolean(s)))].sort(bySize), [product.variants]);
@@ -83,6 +83,9 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const variantStock = variant?.stock ?? product.stock;
   const canBuy = Boolean(variant) && variantStock > 0;
   const buyLabel = !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
+  const [euros, cents] = priceParts(variantPriceCents / 100);
+  const fav = wishlist.has(product.id);
+  const shownImage = gallery[active] ?? gallery[0];
 
   // de vaste koopknop op de telefoon staat er zolang de gewone niet in beeld is
   useEffect(() => {
@@ -101,100 +104,106 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   };
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 pb-28 pt-8 sm:px-8 md:pt-12 lg:px-12 lg:pb-16">
-      <nav aria-label="Broodkruimel" className="mb-8 flex min-w-0 items-center gap-2 whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-lux-mute">
-        <Link href="/shop" className="shrink-0 hover:text-lux-ink">{t.shop.shopBreadcrumb}</Link>
-        <span aria-hidden>/</span>
-        <Link href={`/shop?cat=${encodeURIComponent(product.category)}#collectie`} className="shrink-0 hover:text-lux-ink">{product.category}</Link>
-        <span aria-hidden>/</span>
-        <span className="min-w-0 truncate text-lux-ink">{product.name}</span>
+    <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-14">
+      <nav aria-label="Broodkruimel" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[13px] text-neutralx-500">
+        <Link href="/shop" className="shrink-0 text-brand-600 hover:underline">
+          {t.shop.shopBreadcrumb}
+        </Link>
+        <span aria-hidden>›</span>
+        <Link href={`/shop?cat=${encodeURIComponent(product.category)}#collectie`} className="shrink-0 text-brand-600 hover:underline">
+          {product.category === "Cadeaus" ? t.shop.navTeams : product.category}
+        </Link>
+        <span aria-hidden>›</span>
+        <span className="min-w-0 truncate">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-        {/* galerij: telefoon vegen, computer onder elkaar (dezelfde elementen, dus één download per foto) */}
-        <div className="-mx-5 sm:mx-0">
-          {gallery.length === 0 ? (
-            <div className="relative aspect-[4/5] w-full bg-lux-stone">
-              <ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} className="text-[#C8BCA9]" />
-            </div>
-          ) : (
-            <div
-              ref={stripRef}
-              onScroll={() => {
-                const el = stripRef.current;
-                if (el && el.clientWidth > 0) setActive(Math.round(el.scrollLeft / el.clientWidth));
-              }}
-              aria-roledescription="carrousel"
-              className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] lg:block lg:space-y-4 lg:overflow-visible"
-            >
-              {gallery.map((src, i) => (
-                <div key={src} role="group" aria-label={fmt(t.shop.photoOf, { n: i + 1, total: gallery.length })} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-lux-stone">
-                  {i === 0 && show3d && product.model3dUrl ? (
-                    <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={src} className="h-full w-full" />
-                  ) : (
-                    <Image src={src} alt={i === 0 ? product.name : ""} fill priority={i === 0} sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover" />
-                  )}
-                  {i === 0 && product.model3dUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setShow3d((v) => !v)}
-                      aria-pressed={show3d}
-                      className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-lux-ink shadow-e1 transition hover:bg-white"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                        <path d="M12 22V11.5M20 6.5l-8 5-8-5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                      </svg>
-                      {show3d ? "Terug naar foto" : "Bekijk in 3D"}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-5">
+        {/* titel (op de telefoon boven de foto) */}
+        <div className="lg:col-start-2 lg:row-start-1">
+          {product.badge && <span className="mb-2 inline-block rounded-md bg-money-soft px-2 py-1 text-[12px] font-bold text-money-ink">{product.badge}</span>}
+          <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">{product.name}</h1>
+          <p className="mt-2 text-[14px] text-neutralx-500">
+            {fmt(t.shop.soldBy, { seller: SELLER })}
+            {spec.fit && (
+              <>
+                {" · "}
+                <span className="text-ink">{t.shop.fit}</span> {spec.fit}
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* foto's */}
+        <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
+          <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-hair bg-paper-soft">
+            {!shownImage ? (
+              <ProductPlaceholder name={product.name} slug={product.slug} category={product.category} glyphSize={96} className="text-neutralx-300" />
+            ) : active === 0 && show3d && product.model3dUrl ? (
+              <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={shownImage} className="h-full w-full" />
+            ) : (
+              <Image src={shownImage} alt={active === 0 ? product.name : ""} fill priority sizes="(min-width: 1440px) 720px, (min-width: 1024px) 52vw, 100vw" className="object-cover" />
+            )}
+            {active === 0 && product.model3dUrl && (
+              <button
+                type="button"
+                onClick={() => setShow3d((v) => !v)}
+                aria-pressed={show3d}
+                className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[13px] font-bold text-ink shadow-e1 transition hover:bg-paper-soft"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  <path d="M12 22V11.5M20 6.5l-8 5-8-5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                </svg>
+                {show3d ? "Terug naar foto" : "Bekijk in 3D"}
+              </button>
+            )}
+          </div>
           {gallery.length > 1 && (
-            <div className="mt-4 flex justify-center gap-2 lg:hidden" aria-hidden>
+            <div className="mt-3 flex gap-2">
               {gallery.map((src, i) => (
-                <span key={src} className={`h-1.5 rounded-full transition-all ${i === active ? "w-5 bg-lux-ink" : "w-1.5 bg-lux-line"}`} />
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => {
+                    setActive(i);
+                    setShow3d(false);
+                  }}
+                  aria-label={fmt(t.shop.photoOf, { n: i + 1, total: gallery.length })}
+                  aria-pressed={active === i}
+                  className={`relative h-[72px] w-[72px] overflow-hidden rounded-lg border-2 transition ${active === i ? "border-brand-500" : "border-hair hover:border-hairstrong"}`}
+                >
+                  <Image src={src} alt="" fill sizes="72px" className="object-cover" />
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* informatie: blijft op een computer naast de foto's staan */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="flex items-start justify-between gap-3">
-            {product.badge ? <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-lux-gold">{product.badge}</span> : <span />}
-            <button
-              type="button"
-              aria-label={wishlist.has(product.id) ? t.shop.removeFromFavorites : t.shop.addToFavorites}
-              aria-pressed={wishlist.has(product.id)}
-              onClick={() => wishlist.toggle(product.id)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-lux-line text-lux-ink transition hover:border-lux-ink"
-            >
-              <IconHeart filled={wishlist.has(product.id)} />
-            </button>
-          </div>
-          <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-[-0.01em] text-lux-ink sm:text-5xl">{product.name}</h1>
-          <p className="mt-5 text-xl text-lux-ink">{money(variantPriceCents)}</p>
-          <p className="mt-1 text-[12px] text-lux-mute">{t.shop.inclVat}</p>
-          {spec.fit && (
-            <p className="mt-5 text-[14px] text-lux-mute">
-              <span className="text-lux-ink">{t.shop.fit}</span> {spec.fit}
-            </p>
-          )}
+        {/* koopblok */}
+        <section aria-label={t.shop.addToCart} className="self-start rounded-xl border border-hair bg-white p-5 shadow-e1 sm:p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-2">
+          <p className="text-ink">
+            <span className="sr-only">{money(variantPriceCents)}</span>
+            <span aria-hidden className="flex items-start">
+              <span className="text-[34px] font-extrabold leading-none tracking-tight">{euros},</span>
+              <span className="text-[17px] font-extrabold leading-none">{cents}</span>
+            </span>
+          </p>
+          <p className="mt-1.5 text-[13px] text-neutralx-500">{t.shop.inclVat}</p>
 
           {sizes.length > 0 && (
-            <div className="mt-7">
+            <div className="mt-5">
               <div className="flex items-baseline justify-between">
-                <p className={LABEL}>{t.shop.size}</p>
+                <p className="text-[14px] font-bold text-ink">
+                  {t.shop.size}
+                  {selSize ? <span className="font-normal text-neutralx-600">: {selSize}</span> : null}
+                </p>
                 {spec.sizeTable && (
-                  <a href="#maattabel" onClick={() => setSizeOpen(true)} className="text-[12px] text-lux-mute underline underline-offset-4 hover:text-lux-ink">
+                  <a href="#maattabel" className="text-[13px] font-semibold text-brand-600 underline underline-offset-2">
                     {t.shop.sizeTable}
                   </a>
                 )}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {sizes.map((s) => (
                   <button
                     key={s}
@@ -204,7 +213,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                       setSelSize(s);
                       setAdded(false);
                     }}
-                    className={`min-w-12 border px-4 py-2.5 text-[13px] transition ${selSize === s ? "border-lux-ink bg-lux-ink text-white" : "border-lux-line text-lux-ink hover:border-lux-ink"}`}
+                    className={option(selSize === s)}
                   >
                     {s}
                   </button>
@@ -213,9 +222,12 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
             </div>
           )}
           {colors.length > 0 && (
-            <div className="mt-6">
-              <p className={LABEL}>{t.shop.color}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4">
+              <p className="text-[14px] font-bold text-ink">
+                {t.shop.color}
+                {selColor ? <span className="font-normal text-neutralx-600">: {selColor}</span> : null}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {colors.map((c) => (
                   <button
                     key={c}
@@ -225,7 +237,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                       setSelColor(c);
                       setAdded(false);
                     }}
-                    className={`rounded-full border px-4 py-2 text-[13px] transition ${selColor === c ? "border-lux-ink bg-lux-ink text-white" : "border-lux-line text-lux-ink hover:border-lux-ink"}`}
+                    className={option(selColor === c)}
                   >
                     {c}
                   </button>
@@ -234,152 +246,189 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
             </div>
           )}
 
-          <div ref={buyRef} className="mt-8 flex items-center gap-3">
-            <div className="inline-flex items-center rounded-full border border-lux-line">
-              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Minder" className="px-4 py-3 text-lg">
-                −
-              </button>
-              <span className="min-w-8 text-center text-[14px]">{qty}</span>
-              <button type="button" onClick={() => setQty((q) => Math.min(20, q + 1))} aria-label="Meer" className="px-4 py-3 text-lg">
-                +
-              </button>
-            </div>
-            <button type="button" onClick={addToCart} disabled={!canBuy} className="flex-1 rounded-full bg-lux-ink py-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black disabled:opacity-40">
+          <p className={`mt-5 text-[14px] font-bold ${variant && variantStock <= 0 ? "text-crit" : variant ? "text-ok" : "text-neutralx-600"}`}>
+            {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}
+          </p>
+
+          <div ref={buyRef} className="mt-4 flex items-center gap-2.5">
+            <label className="sr-only" htmlFor="pdp-aantal">
+              {t.shop.quantity}
+            </label>
+            <select
+              id="pdp-aantal"
+              value={qty}
+              onChange={(e) => setQty(Number(e.target.value))}
+              className="h-12 w-[4.5rem] shrink-0 rounded-lg border border-hairstrong bg-white px-2 text-center text-[15px] font-semibold text-ink"
+            >
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={addToCart}
+              disabled={!canBuy}
+              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-[15px] font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-neutralx-300"
+            >
+              <IconCart size={19} />
               {buyLabel}
             </button>
           </div>
           {added && (
-            <p role="status" className="mt-3 text-[13px] text-lux-ink">
+            <p role="status" className="mt-3 text-[13px] text-ink">
               {fmt(t.shop.addedToCart, { n: count })}{" "}
-              <Link href="/shop" className="underline underline-offset-4">
+              <Link href="/shop" className="font-semibold text-brand-600 underline underline-offset-2">
                 {t.shop.continueShopping}
               </Link>
             </p>
           )}
-          <p className="mt-3 text-[12px] text-lux-mute">{variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}</p>
+          <button
+            type="button"
+            aria-pressed={fav}
+            onClick={() => wishlist.toggle(product.id)}
+            className={`mt-3 inline-flex items-center gap-2 text-[14px] font-semibold ${fav ? "text-crit" : "text-brand-600 hover:underline"}`}
+          >
+            <IconHeart filled={fav} />
+            {fav ? t.shop.removeFromFavorites : t.shop.addToFavorites}
+          </button>
 
+          <div className="mt-5 border-t border-hair pt-4">
+            <p className="text-[14px] font-bold text-ink">{fmt(t.shop.buyBoxSeller, { seller: SELLER })}</p>
+            <ul className="mt-2.5 space-y-2 text-[13px] text-neutralx-600">
+              {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice].map((line) => (
+                <li key={line} className="flex gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0 text-ok" aria-hidden>
+                    <path d="m5 12.5 4.5 4.5L19 7.5" />
+                  </svg>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* beschrijving en specificaties */}
+      <div className="mt-12 grid gap-10 border-t border-hair pt-10 lg:grid-cols-2 lg:gap-12">
+        <section aria-labelledby="pdp-beschrijving">
+          <h2 id="pdp-beschrijving" className={H2}>
+            {t.shop.productDescription}
+          </h2>
+          <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
+            {spec.bullets.map((b) => (
+              <li key={b} className="flex gap-3">
+                <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
           {product.bundleItems && product.bundleItems.length > 0 && (
-            <div className="mt-7 border border-lux-line p-5">
-              <p className={LABEL}>{t.shop.bundleContains}</p>
-              <ul className="mt-3 space-y-2 text-[14px] text-lux-ink">
+            <div className="mt-6 rounded-xl border border-hair p-5">
+              <p className="text-[14px] font-bold text-ink">{t.shop.bundleContains}</p>
+              <ul className="mt-3 space-y-2 text-[14px] text-ink">
                 {product.bundleItems.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between">
+                  <li key={b.id} className="flex items-center justify-between gap-4">
                     <span>{b.name}</span>
-                    <span className="text-lux-mute">{money(b.priceCents)}</span>
+                    <span className="text-neutralx-500">{money(b.priceCents)}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
+        </section>
 
-          <div className="mt-10 border-b border-lux-line">
-            <Fold title={t.shop.productDescription} defaultOpen>
-              <ul className="space-y-2.5 text-[14px] leading-relaxed text-lux-mute">
-                {spec.bullets.map((b) => (
-                  <li key={b} className="flex gap-3">
-                    <span aria-hidden className="mt-[0.6rem] h-px w-3 shrink-0 bg-lux-gold" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            </Fold>
-            {spec.sizeTable && (
-              <Fold id="maattabel" title={t.shop.sizeTable} open={sizeOpen} onToggle={setSizeOpen}>
-                <p className="text-[12px] text-lux-mute">{spec.sizeTable.note}</p>
-                {spec.sizeTable.legend && (
-                  <ul className="mt-2 text-[12px] text-lux-mute">
-                    {spec.sizeTable.legend.map((l) => (
-                      <li key={l}>{l}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[320px] border-collapse text-[13px]">
-                    <thead>
-                      <tr className="border-b border-lux-line text-left">
-                        {spec.sizeTable.columns.map((c) => (
-                          <th key={c} className="py-2 pr-4 font-semibold text-lux-ink">{c}</th>
+        <div className="space-y-10">
+          {spec.sizeTable && (
+            <section id="maattabel" aria-labelledby="pdp-maattabel" className="scroll-mt-32 lg:scroll-mt-24">
+              <h2 id="pdp-maattabel" className={H2}>
+                {t.shop.sizeTable}
+              </h2>
+              <p className="mt-2 text-[13px] text-neutralx-500">{spec.sizeTable.note}</p>
+              {spec.sizeTable.legend && (
+                <ul className="mt-1 text-[13px] text-neutralx-500">
+                  {spec.sizeTable.legend.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-4 overflow-x-auto rounded-xl border border-hair">
+                <table className="w-full min-w-[320px] border-collapse text-[14px]">
+                  <thead className="bg-paper-soft">
+                    <tr className="text-left">
+                      {spec.sizeTable.columns.map((c) => (
+                        <th key={c} scope="col" className="px-4 py-2.5 font-bold text-ink">
+                          {c}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.sizeTable.rows.map((row) => (
+                      <tr key={String(row[0])} className="border-t border-hair">
+                        {row.map((cell, ci) => (
+                          <td key={ci} className={`px-4 py-2.5 ${ci === 0 ? "font-bold text-ink" : "text-neutralx-600"}`}>
+                            {typeof cell === "number" ? cell.toFixed(1) : cell}
+                          </td>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {spec.sizeTable.rows.map((row) => (
-                        <tr key={String(row[0])} className="border-b border-lux-line/70">
-                          {row.map((cell, ci) => (
-                            <td key={ci} className={`py-2 pr-4 ${ci === 0 ? "font-semibold text-lux-ink" : "text-lux-mute"}`}>
-                              {typeof cell === "number" ? cell.toFixed(1) : cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Fold>
-            )}
-            <Fold title={t.shop.shippingReturns}>
-              <ul className="space-y-2.5 text-[14px] leading-relaxed text-lux-mute">
-                {[t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, t.shop.securePaymentNote].map((line) => (
-                  <li key={line} className="flex gap-3">
-                    <span aria-hidden className="mt-[0.6rem] h-px w-3 shrink-0 bg-lux-gold" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            </Fold>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+          <section aria-labelledby="pdp-verzending">
+            <h2 id="pdp-verzending" className={H2}>
+              {t.shop.shippingReturns}
+            </h2>
+            <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
+              {[t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, t.shop.securePaymentNote].map((line) => (
+                <li key={line} className="flex gap-3">
+                  <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </div>
 
       {related.length > 0 && (
-        <div className="mt-20 border-t border-lux-line pt-14">
-          <h2 className="font-serif text-4xl text-lux-ink">{boughtTogether ? t.shop.boughtTogether : t.shop.alsoViewed}</h2>
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 md:grid-cols-4">
+        <section aria-labelledby="pdp-meer" className="mt-12 border-t border-hair pt-10">
+          <h2 id="pdp-meer" className={H2}>
+            {boughtTogether ? t.shop.boughtTogether : t.shop.alsoViewed}
+          </h2>
+          <ul className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             {related.map((r) => (
-              <ShopProductCard key={r.id} p={asCard(r)} sizes="(min-width: 768px) 25vw, 50vw" />
+              <li key={r.id}>
+                <ShopProductCard p={asCard(r)} sizes="(min-width: 768px) 25vw, 50vw" />
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
 
       {/* telefoon: vaste koopknop zodra de gewone uit beeld is */}
       {!buyVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-lux-line bg-white/95 px-5 pt-3 backdrop-blur lg:hidden" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
-          <div className="flex items-center gap-4">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-hair bg-white/95 px-4 pt-3 backdrop-blur lg:hidden" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+          <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] text-lux-ink">{product.name}</p>
-              <p className="text-[13px] text-lux-mute">{money(variantPriceCents)}</p>
+              <p className="truncate text-[13px] font-semibold text-ink">{product.name}</p>
+              <p className="text-[15px] font-extrabold text-ink">{money(variantPriceCents)}</p>
             </div>
             <button
               type="button"
               onClick={() => (canBuy ? addToCart() : buyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }))}
-              className="shrink-0 rounded-full bg-lux-ink px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-5 text-[14px] font-bold text-white"
             >
+              <IconCart size={17} />
               {buyLabel}
             </button>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-/** Uitklapblok. Met `open`/`onToggle` van buiten te openen (de link "Maattabel" bij de maten). */
-function Fold({ title, children, id, defaultOpen = false, open, onToggle }: { title: string; children: ReactNode; id?: string; defaultOpen?: boolean; open?: boolean; onToggle?: (open: boolean) => void }) {
-  return (
-    <details
-      id={id}
-      className="group scroll-mt-28 border-t border-lux-line py-5"
-      {...(open !== undefined ? { open } : defaultOpen ? { open: true } : {})}
-      onToggle={(e) => onToggle?.(e.currentTarget.open)}
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-serif text-2xl text-lux-ink [&::-webkit-details-marker]:hidden">
-        {title}
-        <span aria-hidden className="font-sans text-xl font-light text-lux-mute transition group-open:rotate-45">
-          +
-        </span>
-      </summary>
-      <div className="mt-4">{children}</div>
-    </details>
   );
 }

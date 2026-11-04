@@ -1,80 +1,66 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Dict } from "@/lib/i18n/dictionaries";
+import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 
-// De vaste delen van de shop-homepage. Serveronderdelen: geen JavaScript in de
-// browser. Het interactieve raster staat in ShopStorefront, de kaarten in
-// ShopProductCard. Teksten komen uit het woordenboek (taalkeuze in de kop).
+// De vaste delen van de shop-homepage, opgebouwd als een marktplaats.
+// Serveronderdelen: geen JavaScript in de browser. Het interactieve assortiment
+// staat in ShopStorefront, de kaarten in ShopProductCard. Teksten komen uit het
+// woordenboek (taalkeuze in de kop).
 
 type T = Dict["shop"];
-const WRAP = "mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12";
-export const LUX_PRIMARY =
-  "inline-flex items-center justify-center rounded-full bg-lux-ink px-7 py-3.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black";
-const LUX_GHOST =
-  "inline-flex items-center justify-center rounded-full border border-lux-ink/25 px-7 py-3.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-lux-ink transition hover:border-lux-ink";
-const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.24em] text-lux-gold";
+const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
+const H2 = "font-display text-[22px] font-bold tracking-tight text-ink sm:text-[26px]";
 
-export function ShopHero({ t }: { t: T }) {
+/** Grote banner met twee zakelijke tegels ernaast. */
+export function ShopMarketHero({ t }: { t: T }) {
   return (
-    <section className="bg-lux-bg">
-      <div className="mx-auto grid max-w-[1440px] lg:min-h-[min(78vh,760px)] lg:grid-cols-2">
-        <div className="relative aspect-[4/3] sm:aspect-[16/10] lg:order-2 lg:aspect-auto">
+    <section aria-labelledby="shop-kop" className="bg-paper-soft">
+      <div className={`${WRAP} grid gap-4 py-4 sm:py-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`}>
+        <div className="relative isolate flex min-h-[300px] overflow-hidden rounded-2xl bg-brand-700 text-white sm:min-h-[360px] lg:min-h-[400px]">
           {/* het grootste beeld van de pagina: meteen laden (LCP) */}
-          <Image
-            src="/marketing/freelancer-at-work.jpg"
-            alt=""
-            fill
-            priority
-            sizes="(min-width: 1440px) 720px, (min-width: 1024px) 50vw, 100vw"
-            className="object-cover object-[30%_center]"
-          />
-        </div>
-        <div className="flex flex-col justify-center px-5 py-12 sm:px-8 sm:py-16 lg:order-1 lg:px-14 xl:px-20">
-          <p className={EYEBROW}>ZekerFlex Shop</p>
-          <h1 className="mt-5 font-serif text-[2.6rem] leading-[1.02] tracking-[-0.01em] text-lux-ink sm:text-6xl xl:text-7xl">{t.heroTitle}</h1>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-lux-mute">{t.heroSub}</p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="#collectie" className={LUX_PRIMARY}>
-              {t.heroCta}
-            </Link>
-            <Link href="/shop?cat=Cadeaus#collectie" className={LUX_GHOST}>
-              {t.navTeams}
-            </Link>
+          <Image src="/marketing/freelancer-at-work.jpg" alt="" fill priority sizes="(min-width: 1440px) 940px, (min-width: 1024px) 66vw, 100vw" className="-z-10 object-cover object-[75%_center]" />
+          <span aria-hidden className="absolute inset-0 -z-10 bg-brand-700/80 sm:bg-transparent sm:bg-gradient-to-r sm:from-brand-700 sm:via-brand-700/90 sm:to-brand-700/0" />
+          <div className="flex max-w-xl flex-col justify-center p-6 sm:p-10 lg:p-12">
+            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-brand-mint">ZekerFlex Shop</p>
+            <h1 id="shop-kop" className="mt-3 font-display text-[2rem] font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+              {t.heroTitle}
+            </h1>
+            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/90 sm:text-[16px]">{t.heroSub}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="#collectie" className="inline-flex h-12 items-center rounded-lg bg-brand-mint px-6 text-[15px] font-bold text-ink transition hover:brightness-95">
+                {t.heroCta}
+              </Link>
+              <Link href={`/shop?cat=${encodeURIComponent("Werk & PBM")}#collectie`} className="inline-flex h-12 items-center rounded-lg border border-white/50 px-6 text-[15px] font-bold text-white transition hover:bg-white/10">
+                {t.navPbm}
+              </Link>
+            </div>
           </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <PromoTile tone="ink" title={t.businessTileTitle} body={t.businessTileBody} cta={t.teamsCta} href="/contact" />
+          <PromoTile tone="money" title={t.kitsTileTitle} body={t.kitsTileBody} cta={t.discover} href="#pakketten" />
         </div>
       </div>
     </section>
   );
 }
 
-const USP_ICON: Record<"certified" | "nextDay" | "invoice" | "returns", string> = {
-  certified: "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4",
-  nextDay: "M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z",
-  invoice: "M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4",
-  returns: "M9 7H4V2M4 7a8 8 0 111.5 9",
-};
-
-export function ShopUsps({ t }: { t: T }) {
-  const items = [
-    { key: "certified" as const, label: t.uspCertified },
-    { key: "nextDay" as const, label: t.uspNextDay },
-    { key: "invoice" as const, label: t.uspInvoice },
-    { key: "returns" as const, label: t.uspReturns },
-  ];
+function PromoTile({ tone, title, body, cta, href }: { tone: "ink" | "money"; title: string; body: string; cta: string; href: string }) {
+  const dark = tone === "ink";
   return (
-    <div className="border-y border-lux-line bg-white">
-      <ul className={`${WRAP} grid grid-cols-2 gap-x-6 gap-y-4 py-6 lg:grid-cols-4`}>
-        {items.map((u) => (
-          <li key={u.key} className="flex items-center gap-3 text-[12px] tracking-[0.02em] text-lux-ink">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-lux-gold" aria-hidden>
-              <path d={USP_ICON[u.key]} />
-            </svg>
-            {u.label}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Link
+      href={href}
+      className={`group flex flex-col justify-between rounded-2xl p-6 transition hover:shadow-e2 ${dark ? "bg-ink text-white" : "border border-money/25 bg-money-soft text-ink"}`}
+    >
+      <span>
+        <span className="block text-[18px] font-bold leading-snug">{title}</span>
+        <span className={`mt-2 block text-[14px] leading-relaxed ${dark ? "text-white/80" : "text-neutralx-700"}`}>{body}</span>
+      </span>
+      <span className={`mt-5 inline-flex items-center gap-1.5 text-[14px] font-bold ${dark ? "text-brand-mint" : "text-money-ink"}`}>
+        {cta} <span aria-hidden className="transition group-hover:translate-x-0.5">→</span>
+      </span>
+    </Link>
   );
 }
 
@@ -82,47 +68,70 @@ export type CategoryTile = { cat: string; label: string; image: string | null; c
 
 export function ShopCategoryTiles({ t, tiles }: { t: T; tiles: CategoryTile[] }) {
   return (
-    <section className="bg-white">
-      <div className={`${WRAP} py-16 lg:py-24`}>
-        <h2 className="font-serif text-4xl text-lux-ink sm:text-5xl">{t.shopByCategory}</h2>
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+    <section aria-labelledby="shop-categorieen" className="bg-white">
+      <div className={`${WRAP} py-8 lg:py-10`}>
+        <h2 id="shop-categorieen" className={H2}>
+          {t.shopByCategory}
+        </h2>
+        <ul className="mt-5 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
           {tiles.map((c) => (
-            <Link key={c.cat} href={`/shop?cat=${encodeURIComponent(c.cat)}#collectie`} className="group relative block aspect-[3/4] overflow-hidden bg-lux-stone">
-              {c.image && (
-                <Image src={c.image} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover transition duration-700 ease-out-quint group-hover:scale-[1.04]" />
-              )}
-              <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-              <span className="absolute inset-x-4 bottom-4 text-white sm:inset-x-5 sm:bottom-5">
-                <span className="block font-serif text-2xl leading-tight sm:text-3xl">{c.label}</span>
-                <span className="mt-1.5 inline-block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
-                  {t.discover} <span aria-hidden>→</span>
+            <li key={c.cat}>
+              <Link
+                href={`/shop?cat=${encodeURIComponent(c.cat)}#collectie`}
+                className="group flex items-center gap-3.5 rounded-xl border border-hair bg-white p-3 transition hover:border-brand-500 hover:shadow-e1"
+              >
+                <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-paper-soft sm:h-[72px] sm:w-[72px]">
+                  {c.image && <Image src={c.image} alt="" fill sizes="72px" className="object-cover transition duration-500 group-hover:scale-105" />}
                 </span>
-              </span>
-            </Link>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-bold text-ink group-hover:underline">{c.label}</span>
+                  <span className="mt-0.5 block text-[12px] text-neutralx-500">{fmt(t.articles, { n: c.count })}</span>
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );
 }
 
-export function ShopTeams({ t }: { t: T }) {
+const SERVICE_ICON: Record<"certified" | "nextDay" | "invoice" | "returns", string> = {
+  certified: "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4",
+  nextDay: "M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z",
+  invoice: "M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4",
+  returns: "M9 7H4V2M4 7a8 8 0 111.5 9",
+};
+
+/** Vier beloftes in blokken (levering, retour, op rekening, gecertificeerd). */
+export function ShopService({ t }: { t: T }) {
+  const items = [
+    { key: "nextDay" as const, label: t.uspNextDay, sub: t.freeShipping },
+    { key: "returns" as const, label: t.uspReturns, sub: t.shippingReturns },
+    { key: "invoice" as const, label: t.uspInvoice, sub: t.businessQuote },
+    { key: "certified" as const, label: t.uspCertified, sub: t.navPbm },
+  ];
   return (
-    <section className="bg-lux-bg">
-      <div className="mx-auto grid max-w-[1440px] lg:grid-cols-2">
-        <div className="relative aspect-[16/10] lg:aspect-auto lg:min-h-[560px]">
-          <Image src="/marketing/team-shift.jpg" alt="" fill sizes="(min-width: 1440px) 720px, (min-width: 1024px) 50vw, 100vw" className="object-cover" />
-        </div>
-        <div className="flex flex-col justify-center px-5 py-14 sm:px-8 lg:px-14 xl:px-20">
-          <p className={EYEBROW}>{t.navTeams}</p>
-          <h2 className="mt-5 font-serif text-4xl leading-[1.05] text-lux-ink sm:text-5xl">{t.teamsTitle}</h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-lux-mute">{t.teamsBody}</p>
-          <div className="mt-9">
-            <Link href="/contact" className={LUX_PRIMARY}>
-              {t.teamsCta}
-            </Link>
-          </div>
-        </div>
+    <section aria-labelledby="shop-service" className="border-t border-hair bg-paper-soft">
+      <div className={`${WRAP} py-10`}>
+        <h2 id="shop-service" className={H2}>
+          {t.serviceTitle}
+        </h2>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((u) => (
+            <li key={u.key} className="flex items-start gap-3.5 rounded-xl border border-hair bg-white p-4">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d={SERVICE_ICON[u.key]} />
+                </svg>
+              </span>
+              <span>
+                <span className="block text-[15px] font-bold text-ink">{u.label}</span>
+                <span className="mt-0.5 block text-[13px] text-neutralx-500">{u.sub}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -144,34 +153,38 @@ const KITS = [
 ];
 const search = (q: string) => `/shop?q=${encodeURIComponent(q)}#collectie`;
 
-/** Echte links (ook voor Google): het raster opent met die zoekterm. */
+/** Pakketten per soort werk en een lijst zoekwoorden: echte links (ook voor Google), het assortiment opent met die zoekterm. */
 export function ShopMoreCategories({ t }: { t: T }) {
   return (
-    <section className="border-t border-lux-line bg-white">
-      <div className={`${WRAP} grid gap-14 py-16 lg:grid-cols-2 lg:py-24`}>
+    <section id="pakketten" aria-labelledby="shop-pakketten" className="scroll-mt-32 border-t border-hair bg-white lg:scroll-mt-20">
+      <div className={`${WRAP} grid gap-10 py-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:py-12`}>
         <div>
-          <h2 className="font-serif text-3xl text-lux-ink sm:text-4xl">{t.kitsTitle}</h2>
-          <p className="mt-2 text-[13px] text-lux-mute">{t.kitsSub}</p>
-          <ul className="mt-8 divide-y divide-lux-line border-y border-lux-line">
+          <h2 id="shop-pakketten" className={H2}>
+            {t.kitsTitle}
+          </h2>
+          <p className="mt-1 text-[14px] text-neutralx-500">{t.kitsSub}</p>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {KITS.map((k) => (
               <li key={k.title}>
-                <Link href={search(k.q)} className="group flex items-baseline justify-between gap-4 py-4">
+                <Link href={search(k.q)} className="group flex h-full items-center justify-between gap-4 rounded-xl border border-hair p-4 transition hover:border-brand-500 hover:shadow-e1">
                   <span>
-                    <span className="block text-[15px] text-lux-ink">{k.title}</span>
-                    <span className="mt-0.5 block text-[12px] text-lux-mute">{k.items}</span>
+                    <span className="block text-[15px] font-bold text-ink group-hover:underline">{k.title}</span>
+                    <span className="mt-0.5 block text-[13px] text-neutralx-500">{k.items}</span>
                   </span>
-                  <span aria-hidden className="text-lux-mute transition group-hover:translate-x-1 group-hover:text-lux-ink">→</span>
+                  <span aria-hidden className="text-brand-600 transition group-hover:translate-x-0.5">
+                    →
+                  </span>
                 </Link>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <h2 className="font-serif text-3xl text-lux-ink sm:text-4xl">{t.moreCategories}</h2>
-          <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-3 text-[13px] text-lux-mute">
+          <h2 className={H2}>{t.moreCategories}</h2>
+          <ul className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[14px]">
             {CATEGORY_LINKS.map((c) => (
               <li key={c}>
-                <Link href={search(c.split(" ")[0] ?? c)} className="transition hover:text-lux-ink">
+                <Link href={search(c.split(" ")[0] ?? c)} className="text-brand-600 hover:underline">
                   {c}
                 </Link>
               </li>
@@ -186,13 +199,15 @@ export function ShopMoreCategories({ t }: { t: T }) {
 export function ShopNewsletter({ t }: { t: T }) {
   const [before, after] = t.newsletterBody.split("{code}");
   return (
-    <section className="bg-lux-ink text-white">
-      <div className={`${WRAP} grid gap-10 py-16 md:grid-cols-2 md:items-center lg:py-20`}>
+    <section aria-labelledby="shop-nieuwsbrief" className="bg-brand-700 text-white">
+      <div className={`${WRAP} grid gap-8 py-12 md:grid-cols-2 md:items-center`}>
         <div>
-          <h2 className="font-serif text-4xl leading-tight sm:text-5xl">{t.newsletterTitle}</h2>
-          <p className="mt-4 max-w-md text-[14px] leading-relaxed text-white/65">
+          <h2 id="shop-nieuwsbrief" className="font-display text-[26px] font-extrabold leading-tight tracking-tight sm:text-[32px]">
+            {t.newsletterTitle}
+          </h2>
+          <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/85">
             {before}
-            <span className="font-mono font-semibold tracking-wide text-[#D9B97E]">WELKOM10</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono font-bold tracking-wide text-brand-mint">WELKOM10</span>
             {after}
           </p>
         </div>

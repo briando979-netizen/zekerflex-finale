@@ -51,6 +51,19 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
 
 export const shopMoney = (euros: number): string => `€ ${euros.toFixed(2).replace(".", ",")}`;
 
+/** "12,95" in twee delen voor de grote prijs op een kaart: ["12", "95"]; hele euro's als ["12", "-"]. */
+export function priceParts(euros: number): [string, string] {
+  const [whole = "0", frac = "00"] = euros.toFixed(2).split(".");
+  return [whole, frac === "00" ? "-" : frac];
+}
+
+/** Voorraad zoals de kaart hem toont: genoeg, weinig (5 of minder) of uitverkocht. */
+export function cardStock(p: Pick<ShopCardProduct, "variants">): { kind: "ruim" | "weinig" | "uit"; n: number } {
+  const n = p.variants.reduce((s, v) => s + Math.max(0, v.stock), 0);
+  if (n <= 0) return { kind: "uit", n: 0 };
+  return { kind: n <= 5 ? "weinig" : "ruim", n };
+}
+
 /** Maten in de volgorde die mensen verwachten: XS < S < M < L < XL, 38 < 39, "39-42" op zijn eerste getal. */
 const LETTER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
 export function bySize(a: string, b: string): number {
@@ -64,5 +77,5 @@ export function bySize(a: string, b: string): number {
   return a.localeCompare(b, "nl");
 }
 
-/** Breedtes voor next/image in het productraster: 2 kolommen op de telefoon, 3 op een tablet, 4 op een computer. */
-export const GRID_SIZES = "(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw";
+/** Breedtes voor next/image in het productraster: 2 kolommen op de telefoon, 3 op een tablet en naast de filters, 4 op een breed scherm. */
+export const GRID_SIZES = "(min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw";

@@ -5,15 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
 import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
-import { fmt } from "@/lib/i18n/dictionaries";
+import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 
-// Gedeelde shop-omlijsting: aankondigingsbalk, kop met categorieën + logo +
-// winkelwagen, de voettekst, de winkelwagen-lade en het afrekenvenster. Zit in
-// app/shop/layout.tsx, dus elke /shop-pagina krijgt hem.
-// Andere onderdelen openen de lade met window-event "zf:shop-cart-open".
+// Gedeelde shop-omlijsting, opgebouwd als een marktplaats: een servicebalk, de
+// merkbalk met een grote zoekbalk (blijft staan tijdens scrollen), de
+// categoriebalk, de voettekst, de winkelwagen-lade en het afrekenvenster. Zit in
+// app/shop/layout.tsx, dus elke /shop-pagina krijgt hem. Andere onderdelen
+// openen de lade met window-event "zf:shop-cart-open".
 
 type ApiVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 type ApiProduct = { id: string; slug?: string | null; name: string; priceCents: number; imageUrl?: string | null; variants?: ApiVariant[] };
@@ -21,8 +23,8 @@ type CartLine = { variantId: string; name: string; priceCents: number; imageUrl:
 
 export const CART_OPEN_EVENT = "zf:shop-cart-open";
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
-const CAPS = "text-[12px] font-semibold uppercase tracking-[0.14em]";
-const WRAP = "mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12";
+const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
+const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 
 export function ShopChrome({ children }: { children: ReactNode }) {
   const { locale, t } = useI18n();
@@ -32,7 +34,6 @@ export function ShopChrome({ children }: { children: ReactNode }) {
     { label: t.shop.navWerkdag, cat: "Werkdag" },
     { label: t.shop.navTeams, cat: "Cadeaus" },
   ];
-  const [promo, setPromo] = useState(true);
   const [menu, setMenu] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
@@ -41,6 +42,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", address: "", postalCode: "", city: "" });
   const [catalog, setCatalog] = useState<ApiProduct[]>([]);
   const { cart, add, remove, count } = useShopCart();
+  const wishlist = useShopWishlist();
 
   // De catalogus is alleen nodig om de winkelwagen te tonen: pas ophalen als
   // er iets in zit of de lade opengaat (eerder op elke pagina, ook bij leeg).
@@ -119,117 +121,208 @@ export function ShopChrome({ children }: { children: ReactNode }) {
   const languageSelect = (cls: string) => (
     <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)} aria-label={t.shell.language} className={cls}>
       {EMPLOYER_LOCALES.map((code) => (
-        <option key={code} value={code}>{LOCALE_LABELS[code]}</option>
+        <option key={code} value={code}>
+          {LOCALE_LABELS[code]}
+        </option>
       ))}
     </select>
   );
 
   return (
-    <div className="min-h-screen bg-white font-sans text-lux-ink">
-      {promo && (
-        <div className="relative bg-lux-ink text-center text-white">
-          <p className="px-10 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/85">{t.shop.announcement}</p>
-          <button type="button" onClick={() => setPromo(false)} aria-label={t.shop.close} className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center text-lg leading-none text-white/70 hover:text-white">
-            ×
-          </button>
-        </div>
-      )}
+    <div className="min-h-screen bg-white font-sans text-ink">
+      <a href="#shop-inhoud" className="sr-only z-[60] rounded-md bg-white px-4 py-2 text-[14px] font-semibold text-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+        {t.shop.skipToContent}
+      </a>
 
-      <header className="sticky top-0 z-40 border-b border-lux-line bg-white/85 backdrop-blur-md">
-        <div className={`${WRAP} grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4`}>
-          <div className="flex items-center gap-7">
-            <button type="button" onClick={() => setMenu(true)} aria-label={t.shop.menu} className="-ml-2 grid h-10 w-10 place-items-center lg:hidden">
-              <IconMenu />
-            </button>
-            <nav aria-label="Winkelnavigatie" className="hidden items-center gap-7 lg:flex">
-              {NAV.map((n) => (
-                <Link key={n.cat} href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`} className={`${CAPS} whitespace-nowrap text-lux-ink/80 transition hover:text-lux-ink`}>
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
+      {/* servicebalk */}
+      <div className="bg-ink text-white">
+        <div className={`${WRAP} flex h-9 items-center justify-between gap-4 text-[12px]`}>
+          <ul className="flex min-w-0 items-center gap-5 overflow-hidden">
+            <ServicePoint>{t.shop.uspNextDay}</ServicePoint>
+            <ServicePoint className="hidden sm:flex">{t.shop.freeShipping}</ServicePoint>
+            <ServicePoint className="hidden lg:flex">{t.shop.uspReturns}</ServicePoint>
+            <ServicePoint className="hidden xl:flex">{t.shop.uspInvoice}</ServicePoint>
+          </ul>
+          <div className="hidden shrink-0 items-center gap-5 md:flex">
+            <Link href="/contact" className="text-white/85 hover:text-white hover:underline">
+              {t.shop.business}
+            </Link>
+            <Link href="/kennis/faq" className="text-white/85 hover:text-white hover:underline">
+              {t.shop.customerService}
+            </Link>
+            {languageSelect("rounded border border-white/25 bg-transparent px-1.5 py-0.5 text-[12px] text-white [&>option]:text-ink")}
           </div>
+        </div>
+      </div>
 
-          <Link href="/shop" className="flex items-center gap-2.5" aria-label="ZekerFlex Shop">
-            <LogoGlyph size={26} tone="dark" />
-            <span className="font-serif text-[1.65rem] leading-none tracking-[-0.01em]">
-              ZekerFlex <span className="align-middle text-[10px] font-sans font-semibold uppercase tracking-[0.3em] text-lux-gold">Shop</span>
+      {/* merkbalk met zoeken: blijft staan tijdens scrollen */}
+      <header className="sticky top-0 z-40 bg-brand-700 text-white shadow-e1">
+        <div className={`${WRAP} flex h-14 items-center gap-2 sm:gap-4 lg:h-[72px] lg:gap-6`}>
+          <button type="button" onClick={() => setMenu(true)} aria-label={t.shop.menu} className="-ml-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-white/10 lg:hidden">
+            <IconMenu />
+          </button>
+          <Link href="/shop" className="flex shrink-0 items-center gap-2" aria-label="ZekerFlex Shop">
+            <LogoGlyph size={30} tone="light" />
+            <span className="font-display text-[20px] font-extrabold leading-none tracking-tight lg:text-[22px]">
+              ZekerFlex<span className="ml-1 text-brand-mint">shop</span>
             </span>
           </Link>
-
-          <div className="flex items-center justify-end gap-1 sm:gap-2">
-            {languageSelect("hidden rounded-full border border-lux-line bg-transparent px-2.5 py-1 text-[11px] font-semibold text-lux-mute sm:inline")}
-            <Link href="/shop/account" aria-label={t.shop.account} className="grid h-10 w-10 place-items-center rounded-full transition hover:bg-lux-stone">
-              <IconUser />
-            </Link>
-            <button type="button" onClick={() => setDrawer(true)} aria-label={`${t.shop.cart} (${count})`} className="relative grid h-10 w-10 place-items-center rounded-full transition hover:bg-lux-stone">
-              <IconBag />
-              {count > 0 && <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-lux-ink px-1 text-[10px] font-semibold text-white">{count}</span>}
-            </button>
+          <div className="hidden min-w-0 flex-1 md:block">
+            <SearchForm t={t} id="zoek-kop" />
           </div>
+          <nav aria-label={t.shop.account} className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+            <HeaderLink href="/shop/account" label={t.shop.account}>
+              <IconUser />
+            </HeaderLink>
+            <HeaderLink href="/shop/account" label={t.shop.favorites} badge={wishlist.count}>
+              <IconHeartLine />
+            </HeaderLink>
+            <button
+              type="button"
+              onClick={() => setDrawer(true)}
+              aria-label={`${t.shop.cart} (${count})`}
+              className="relative flex h-11 items-center gap-2 rounded-lg px-2.5 transition hover:bg-white/10"
+            >
+              <IconCart />
+              <span className="hidden text-[13px] font-semibold xl:inline">{t.shop.cart}</span>
+              {count > 0 && (
+                <span className="absolute left-6 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand-mint px-1 text-[11px] font-bold text-ink">{count}</span>
+              )}
+            </button>
+          </nav>
+        </div>
+        <div className="px-4 pb-2.5 sm:px-6 md:hidden">
+          <SearchForm t={t} id="zoek-telefoon" />
         </div>
       </header>
 
-      {children}
+      {/* categoriebalk */}
+      <nav aria-label={t.shop.allCategories} className="border-b border-hair bg-white">
+        <div className={`${WRAP} flex h-12 items-center gap-1 overflow-x-auto [scrollbar-width:none]`}>
+          <button type="button" onClick={() => setMenu(true)} className="hidden h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[14px] font-bold text-ink hover:bg-paper-soft lg:inline-flex">
+            <IconMenu />
+            {t.shop.allCategories}
+          </button>
+          <span aria-hidden className="mx-1 hidden h-5 w-px bg-hair lg:block" />
+          {NAV.map((n) => (
+            <Link
+              key={n.cat}
+              href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`}
+              className="inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft"
+            >
+              {n.label}
+            </Link>
+          ))}
+          <Link href="/shop?cat=Cadeaus#collectie" className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex">
+            {t.shop.business} →
+          </Link>
+        </div>
+      </nav>
 
-      <footer className="border-t border-lux-line bg-lux-bg">
-        <div className={`${WRAP} grid gap-12 py-16 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]`}>
+      <div id="shop-inhoud" tabIndex={-1} className="outline-none">
+        {children}
+      </div>
+
+      <footer className="bg-ink text-white">
+        <div className="border-b border-white/10">
+          <ul className={`${WRAP} grid grid-cols-2 gap-x-6 gap-y-4 py-7 text-[13px] lg:grid-cols-4`}>
+            {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice].map((u) => (
+              <ServicePoint key={u} className="text-white/90">
+                {u}
+              </ServicePoint>
+            ))}
+          </ul>
+        </div>
+        <div className={`${WRAP} grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.3fr]`}>
           <div>
-            <p className="font-serif text-3xl leading-none">ZekerFlex</p>
-            <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-lux-mute">{t.shop.uspCertified} · {t.shop.uspReturns}</p>
+            <p className="flex items-center gap-2 font-display text-[22px] font-extrabold">
+              <LogoGlyph size={28} tone="light" />
+              ZekerFlex<span className="text-brand-mint">shop</span>
+            </p>
+            <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-white/70">{t.shop.uspCertified}</p>
           </div>
           <FooterCol title={t.shop.help} links={[{ label: t.shop.faq, href: "/kennis/faq" }, { label: t.shop.contact, href: "/contact" }, { label: t.shop.orderStatus, href: "/shop/account" }]} />
           <FooterCol title={t.shop.ordering} links={[{ label: t.shop.businessQuote, href: "/contact" }, { label: t.shop.terms, href: "/voorwaarden" }, { label: t.shop.myAccount, href: "/shop/account" }]} />
           <FooterCol title="ZekerFlex" links={[{ label: "Over ZekerFlex", href: "/over-ons" }, { label: "Werken bij", href: "/over-ons#werken-bij" }, { label: "Uitleg in het kort", href: "/uitleg" }, { label: t.shop.toPlatform, href: "/dashboard" }]} />
           <div>
-            <p className={`${CAPS} text-[11px] text-lux-mute`}>{t.shop.payWith}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="text-[13px] font-bold">{t.shop.payWith}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {["iDEAL", "Mastercard", "Visa", "Apple Pay", "Op rekening"].map((m) => (
-                <span key={m} className="border border-lux-line bg-white px-2 py-1 text-[11px] text-lux-mute">{m}</span>
+                <span key={m} className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-ink">
+                  {m}
+                </span>
               ))}
             </div>
-            <p className={`${CAPS} mt-6 text-[11px] text-lux-mute`}>{t.shop.deliveredBy}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="mt-6 text-[13px] font-bold">{t.shop.deliveredBy}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {["PostNL", "DHL"].map((m) => (
-                <span key={m} className="border border-lux-line bg-white px-2 py-1 text-[11px] text-lux-mute">{m}</span>
+                <span key={m} className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-ink">
+                  {m}
+                </span>
               ))}
             </div>
           </div>
         </div>
-        <div className="border-t border-lux-line">
-          <div className={`${WRAP} flex flex-col items-center justify-between gap-3 py-6 text-[12px] text-lux-mute sm:flex-row`}>
+        <div className="border-t border-white/10">
+          <div className={`${WRAP} flex flex-col items-center justify-between gap-3 py-5 text-[12px] text-white/70 sm:flex-row`}>
             <p>© {new Date().getFullYear()} ZekerFlex · Werk & PBM shop</p>
             <div className="flex flex-wrap justify-center gap-5">
-              <Link href="/privacy" className="hover:text-lux-ink">Privacyverklaring</Link>
-              <Link href="/voorwaarden" className="hover:text-lux-ink">{t.shop.terms}</Link>
-              <Link href="/cookiebeleid" className="hover:text-lux-ink">Cookiebeleid</Link>
-              <CookieSettingsButton className="hover:text-lux-ink" />
-              <Link href="/toegankelijkheid" className="hover:text-lux-ink">Toegankelijkheid</Link>
+              <Link href="/privacy" className="hover:text-white">
+                Privacyverklaring
+              </Link>
+              <Link href="/voorwaarden" className="hover:text-white">
+                {t.shop.terms}
+              </Link>
+              <Link href="/cookiebeleid" className="hover:text-white">
+                Cookiebeleid
+              </Link>
+              <CookieSettingsButton className="hover:text-white" />
+              <Link href="/toegankelijkheid" className="hover:text-white">
+                Toegankelijkheid
+              </Link>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* menu op de telefoon */}
+      {/* alle categorieën (telefoon: het menu) */}
       {menu && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t.shop.menu}>
-          <button type="button" aria-label={t.shop.close} onClick={() => setMenu(false)} className="absolute inset-0 bg-black/40" />
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t.shop.allCategories}>
+          <button type="button" aria-label={t.shop.close} onClick={() => setMenu(false)} className="absolute inset-0 bg-black/45" />
           <aside className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col bg-white">
-            <div className="flex h-16 items-center justify-between border-b border-lux-line px-5">
-              <span className="font-serif text-2xl">ZekerFlex</span>
-              <button type="button" onClick={() => setMenu(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center text-xl">×</button>
+            <div className="flex h-14 items-center justify-between bg-brand-700 px-4 text-white">
+              <span className="text-[16px] font-bold">{t.shop.allCategories}</span>
+              <button type="button" onClick={() => setMenu(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-lg text-xl hover:bg-white/10">
+                ×
+              </button>
             </div>
-            <nav className="flex-1 overflow-y-auto px-5 py-4">
+            <nav aria-label={t.shop.allCategories} className="flex-1 overflow-y-auto py-2">
+              <Link href="/shop#collectie" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
+                {t.shop.allCategories} <span aria-hidden>›</span>
+              </Link>
               {NAV.map((n) => (
-                <Link key={n.cat} href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`} onClick={() => setMenu(false)} className="block border-b border-lux-line py-4 font-serif text-2xl">
-                  {n.label}
+                <Link
+                  key={n.cat}
+                  href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`}
+                  onClick={() => setMenu(false)}
+                  className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft"
+                >
+                  {n.label} <span aria-hidden>›</span>
                 </Link>
               ))}
-              <Link href="/shop/account" onClick={() => setMenu(false)} className={`${CAPS} mt-6 block py-2 text-lux-mute`}>
-                {t.shop.account}
-              </Link>
+              <div className="mt-3 space-y-1 px-5 py-2 text-[14px]">
+                <Link href="/shop/account" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                  {t.shop.account}
+                </Link>
+                <Link href="/contact" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                  {t.shop.business}
+                </Link>
+                <Link href="/kennis/faq" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                  {t.shop.customerService}
+                </Link>
+              </div>
             </nav>
-            <div className="border-t border-lux-line px-5 py-4">{languageSelect("w-full rounded-full border border-lux-line bg-transparent px-3 py-2 text-[13px]")}</div>
+            <div className="border-t border-hair px-5 py-4">{languageSelect("w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-[14px]")}</div>
           </aside>
         </div>
       )}
@@ -237,70 +330,98 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       {/* winkelwagen-lade */}
       {drawer && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t.shop.cart}>
-          <button type="button" aria-label={t.shop.close} onClick={() => setDrawer(false)} className="absolute inset-0 bg-black/40" />
+          <button type="button" aria-label={t.shop.close} onClick={() => setDrawer(false)} className="absolute inset-0 bg-black/45" />
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white">
-            <div className="flex items-center justify-between border-b border-lux-line px-6 py-5">
-              <h2 className="font-serif text-2xl">
-                {t.shop.cart} <span className="text-lux-mute">({count})</span>
+            <div className="flex items-center justify-between border-b border-hair px-5 py-4">
+              <h2 className="text-[19px] font-bold text-ink">
+                {t.shop.cart} <span className="font-normal text-neutralx-500">({count})</span>
               </h2>
-              <button type="button" onClick={() => setDrawer(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-full text-xl hover:bg-lux-stone">×</button>
+              <button type="button" onClick={() => setDrawer(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-full text-xl hover:bg-paper-soft">
+                ×
+              </button>
             </div>
             {items.length > 0 && (
-              <div className="border-b border-lux-line px-6 py-4">
+              <div className="border-b border-hair px-5 py-3.5">
                 {subtotal >= 50 ? (
-                  <p className="text-[12px] text-lux-ink">✓ {t.shop.freeShippingDone}</p>
+                  <p className="text-[13px] font-semibold text-ok">✓ {t.shop.freeShippingDone}</p>
                 ) : (
                   <>
-                    <p className="text-[12px] text-lux-mute">{fmt(t.shop.freeShippingLeft, { amount: money(50 - subtotal) })}</p>
-                    <div className="mt-2 h-[3px] overflow-hidden bg-lux-stone">
-                      <div className="h-full bg-lux-gold transition-all" style={{ width: `${Math.min(100, (subtotal / 50) * 100)}%` }} />
+                    <p className="text-[13px] text-neutralx-600">{fmt(t.shop.freeShippingLeft, { amount: money(50 - subtotal) })}</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-200">
+                      <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${Math.min(100, (subtotal / 50) * 100)}%` }} />
                     </div>
                   </>
                 )}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-5 py-5">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center py-20 text-center">
-                  <span className="text-lux-mute" aria-hidden>
-                    <IconBag size={32} />
+                  <span className="text-neutralx-400" aria-hidden>
+                    <IconCart size={34} />
                   </span>
-                  <p className="mt-5 font-serif text-2xl">{t.shop.cartEmpty}</p>
-                  <button type="button" onClick={() => setDrawer(false)} className={`${CAPS} mt-7 rounded-full border border-lux-line px-6 py-3 hover:border-lux-ink`}>
+                  <p className="mt-4 text-[18px] font-semibold text-ink">{t.shop.cartEmpty}</p>
+                  <button type="button" onClick={() => setDrawer(false)} className="mt-6 h-11 rounded-lg bg-brand-500 px-6 text-[14px] font-bold text-white hover:bg-brand-600">
                     {t.shop.continueShopping}
                   </button>
                 </div>
               ) : (
-                <ul className="space-y-5">
+                <ul className="divide-y divide-hair">
                   {items.map((l) => (
-                    <li key={l.variantId} className="flex gap-4">
-                      <div className="relative h-24 w-[76px] shrink-0 overflow-hidden bg-lux-stone">
-                        {l.imageUrl ? <Image src={l.imageUrl} alt="" fill sizes="76px" className="object-cover" /> : <div className="grid h-full place-items-center"><LogoGlyph size={26} /></div>}
+                    <li key={l.variantId} className="flex gap-3.5 py-4 first:pt-0">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-hair bg-paper-soft">
+                        {l.imageUrl ? (
+                          <Image src={l.imageUrl} alt="" fill sizes="80px" className="object-cover" />
+                        ) : (
+                          <div className="grid h-full place-items-center">
+                            <LogoGlyph size={26} />
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] leading-snug">{l.name}</p>
-                        <p className="mt-1 text-[12px] text-lux-mute">{money(l.priceCents / 100)}</p>
-                        <div className="mt-2.5 inline-flex items-center border border-lux-line text-[13px]">
-                          <button type="button" onClick={() => remove(l.variantId)} aria-label="Minder" className="px-3 py-1.5">−</button>
-                          <span className="min-w-6 text-center">{l.qty}</span>
-                          <button type="button" onClick={() => add(l.variantId)} aria-label="Meer" className="px-3 py-1.5">+</button>
+                        <p className="text-[14px] font-semibold leading-snug text-ink">{l.name}</p>
+                        <p className="mt-0.5 text-[12px] text-neutralx-500">{money(l.priceCents / 100)}</p>
+                        <div className="mt-2 inline-flex items-center rounded-lg border border-hairstrong text-[14px]">
+                          <button type="button" onClick={() => remove(l.variantId)} aria-label="Minder" className="h-8 w-8">
+                            −
+                          </button>
+                          <span className="min-w-6 text-center font-semibold">{l.qty}</span>
+                          <button type="button" onClick={() => add(l.variantId)} aria-label="Meer" className="h-8 w-8">
+                            +
+                          </button>
                         </div>
                       </div>
-                      <p className="text-[14px]">{money((l.priceCents / 100) * l.qty)}</p>
+                      <p className="text-[14px] font-bold text-ink">{money((l.priceCents / 100) * l.qty)}</p>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
             {items.length > 0 && (
-              <div className="border-t border-lux-line px-6 py-5">
-                <div className="flex justify-between text-[13px] text-lux-mute"><span>{t.shop.subtotal}</span><span>{money(subtotal)}</span></div>
-                <div className="mt-1.5 flex justify-between text-[13px] text-lux-mute"><span>{t.shop.shipping}</span><span>{shipping === 0 ? t.shop.free : money(shipping)}</span></div>
-                <div className="mt-4 flex items-baseline justify-between"><span className="font-serif text-2xl">{t.shop.total}</span><span className="text-[17px] font-semibold">{money(total)}</span></div>
-                <button type="button" onClick={() => { setDrawer(false); setCheckout(true); }} className={`${CAPS} mt-5 w-full rounded-full bg-lux-ink py-4 text-white transition hover:bg-black`}>
+              <div className="border-t border-hair px-5 py-5">
+                <div className="flex justify-between text-[13px] text-neutralx-600">
+                  <span>{t.shop.subtotal}</span>
+                  <span>{money(subtotal)}</span>
+                </div>
+                <div className="mt-1.5 flex justify-between text-[13px] text-neutralx-600">
+                  <span>{t.shop.shipping}</span>
+                  <span>{shipping === 0 ? t.shop.free : money(shipping)}</span>
+                </div>
+                <div className="mt-3 flex items-baseline justify-between">
+                  <span className="text-[17px] font-bold text-ink">{t.shop.total}</span>
+                  <span className="text-[20px] font-extrabold text-ink">{money(total)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawer(false);
+                    setCheckout(true);
+                  }}
+                  className="mt-4 h-12 w-full rounded-lg bg-brand-500 text-[15px] font-bold text-white transition hover:bg-brand-600"
+                >
                   {t.shop.checkout}
                 </button>
-                <Link href="/shop/account" onClick={() => setDrawer(false)} className="mt-4 block text-center text-[12px] text-lux-mute hover:text-lux-ink">
+                <Link href="/shop/account" onClick={() => setDrawer(false)} className="mt-3 block text-center text-[13px] text-neutralx-600 hover:text-ink hover:underline">
                   {t.shop.myOrdersAndFavorites}
                 </Link>
               </div>
@@ -312,28 +433,55 @@ export function ShopChrome({ children }: { children: ReactNode }) {
       {/* afrekenen */}
       {checkout && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 px-4 py-8" role="dialog" aria-modal="true" aria-label={t.shop.checkoutTitle}>
-          <div className="mx-auto max-w-xl bg-white p-7 sm:p-10">
+          <div className="mx-auto max-w-xl rounded-2xl bg-white p-6 sm:p-9">
             <div className="flex items-start justify-between">
-              <h2 className="font-serif text-3xl">{t.shop.checkoutTitle}</h2>
-              <button type="button" onClick={() => setCheckout(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-full text-xl hover:bg-lux-stone">×</button>
+              <h2 className="font-display text-[26px] font-bold tracking-tight text-ink">{t.shop.checkoutTitle}</h2>
+              <button type="button" onClick={() => setCheckout(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-full text-xl hover:bg-paper-soft">
+                ×
+              </button>
             </div>
-            <form onSubmit={placeOrder} className="mt-7 grid gap-4">
+            <form onSubmit={placeOrder} className="mt-6 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="field-label">{t.shop.firstName}<input required className="field-input" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} /></label>
-                <label className="field-label">{t.shop.lastName}<input required className="field-input" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></label>
+                <label className="field-label">
+                  {t.shop.firstName}
+                  <input required autoComplete="given-name" className="field-input" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
+                </label>
+                <label className="field-label">
+                  {t.shop.lastName}
+                  <input required autoComplete="family-name" className="field-input" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
+                </label>
               </div>
-              <label className="field-label">{t.shop.email}<input required type="email" className="field-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></label>
-              <label className="field-label">{t.shop.address}<input required className="field-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} /></label>
+              <label className="field-label">
+                {t.shop.email}
+                <input required type="email" autoComplete="email" className="field-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </label>
+              <label className="field-label">
+                {t.shop.address}
+                <input required autoComplete="street-address" className="field-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+              </label>
               <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-                <label className="field-label">{t.shop.postalCode}<input required className="field-input" value={form.postalCode} onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))} /></label>
-                <label className="field-label">{t.shop.city}<input required className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} /></label>
+                <label className="field-label">
+                  {t.shop.postalCode}
+                  <input required autoComplete="postal-code" className="field-input" value={form.postalCode} onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))} />
+                </label>
+                <label className="field-label">
+                  {t.shop.city}
+                  <input required autoComplete="address-level2" className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+                </label>
               </div>
-              <div className="mt-2 flex items-baseline justify-between border-t border-lux-line pt-5"><span className="font-serif text-2xl">{t.shop.total}</span><span className="text-[17px] font-semibold">{money(total)}</span></div>
-              {orderError && <p role="alert" className="text-sm font-semibold text-crit">{orderError}</p>}
-              <button className={`${CAPS} w-full rounded-full bg-lux-ink py-4 text-white transition hover:bg-black disabled:opacity-60`} type="submit" disabled={placing || items.length === 0}>
+              <div className="mt-2 flex items-baseline justify-between border-t border-hair pt-5">
+                <span className="text-[18px] font-bold text-ink">{t.shop.total}</span>
+                <span className="text-[20px] font-extrabold text-ink">{money(total)}</span>
+              </div>
+              {orderError && (
+                <p role="alert" className="text-sm font-semibold text-crit">
+                  {orderError}
+                </p>
+              )}
+              <button className="h-12 w-full rounded-lg bg-brand-500 text-[15px] font-bold text-white transition hover:bg-brand-600 disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>
                 {placing ? t.shop.toPaymentPending : t.shop.toPayment}
               </button>
-              <p className="text-center text-[11px] text-lux-mute">{t.shop.securePaymentNote}</p>
+              <p className="text-center text-[12px] text-neutralx-500">{t.shop.securePaymentNote}</p>
             </form>
           </div>
         </div>
@@ -342,14 +490,58 @@ export function ShopChrome({ children }: { children: ReactNode }) {
   );
 }
 
+/** De zoekbalk: een gewoon GET-formulier naar /shop, dus het werkt ook zonder JavaScript. */
+function SearchForm({ t, id }: { t: Dict; id: string }) {
+  return (
+    <form role="search" action="/shop#collectie" method="get" className="flex h-11 w-full overflow-hidden rounded-lg bg-white text-ink ring-brand-mint focus-within:ring-2">
+      <select name="cat" aria-label={t.shop.searchIn} defaultValue="" className="hidden max-w-[11rem] shrink-0 border-r border-hair bg-paper-soft px-3 text-[13px] font-semibold text-ink outline-none lg:block">
+        <option value="">{t.shop.allCategories}</option>
+        {CATS.map((c) => (
+          <option key={c} value={c}>
+            {c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : t.shop.navTeams}
+          </option>
+        ))}
+      </select>
+      <label htmlFor={id} className="sr-only">
+        {t.shop.search}
+      </label>
+      <input id={id} name="q" type="search" maxLength={60} placeholder={t.shop.searchPlaceholder} className="min-w-0 flex-1 bg-transparent px-3.5 text-[15px] text-ink outline-none placeholder:text-neutralx-500" />
+      <button type="submit" aria-label={t.shop.search} className="grid w-12 shrink-0 place-items-center bg-brand-mint text-ink transition hover:brightness-95">
+        <IconSearch />
+      </button>
+    </form>
+  );
+}
+
+function HeaderLink({ href, label, badge = 0, children }: { href: string; label: string; badge?: number; children: ReactNode }) {
+  return (
+    <Link href={href} aria-label={badge > 0 ? `${label} (${badge})` : label} className="relative flex h-11 items-center gap-2 rounded-lg px-2.5 transition hover:bg-white/10">
+      {children}
+      <span className="hidden text-[13px] font-semibold xl:inline">{label}</span>
+      {badge > 0 && <span className="absolute left-6 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand-mint px-1 text-[11px] font-bold text-ink">{badge}</span>}
+    </Link>
+  );
+}
+
+function ServicePoint({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <li className={`flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand-mint" aria-hidden>
+        <path d="m5 12.5 4.5 4.5L19 7.5" />
+      </svg>
+      {children}
+    </li>
+  );
+}
+
 function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-lux-mute">{title}</p>
-      <ul className="mt-4 space-y-2.5 text-[13px]">
+      <p className="text-[13px] font-bold">{title}</p>
+      <ul className="mt-3 space-y-2 text-[13px]">
         {links.map((l) => (
           <li key={l.label}>
-            <Link href={l.href} className="transition hover:text-lux-gold">
+            <Link href={l.href} className="text-white/75 transition hover:text-white hover:underline">
               {l.label}
             </Link>
           </li>
@@ -361,24 +553,40 @@ function FooterCol({ title, links }: { title: string; links: { label: string; hr
 
 function IconUser() {
   return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <circle cx="12" cy="8" r="3.5" />
       <path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5" />
     </svg>
   );
 }
-function IconBag({ size = 19 }: { size?: number }) {
+function IconHeartLine() {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
-      <path d="M6 8h12l-1 12H7L6 8Z" />
-      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 21s-7.5-4.6-10-9.1C.5 8.6 2 5 5.6 5 8 5 10 6.5 12 9c2-2.5 4-4 6.4-4C22 5 23.5 8.6 22 11.9 19.5 16.4 12 21 12 21z" />
+    </svg>
+  );
+}
+function IconCart({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.2" />
+      <circle cx="9.5" cy="20" r="1.2" />
+      <circle cx="17" cy="20" r="1.2" />
     </svg>
   );
 }
 function IconMenu() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
-      <path d="M4 7h16M4 12h16M4 17h10" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+function IconSearch() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
     </svg>
   );
 }
