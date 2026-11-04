@@ -51,12 +51,18 @@ export function Voorbeeld({
   teksten,
   tekstModus,
   onKiesTekst,
+  vastPad = null,
+  vernieuw = 0,
 }: {
   thema: Thema;
   /** sleutel → tekst zoals hij nu in de ontwerper staat */
   teksten: Record<string, string>;
   tekstModus: boolean;
   onKiesTekst: (key: string) => void;
+  /** een eigen pagina die je bewerkt (/p/<slug>?concept=1): het voorbeeld springt erheen */
+  vastPad?: string | null;
+  /** telt op na elke bewaarde wijziging van een pagina: het voorbeeld laadt opnieuw */
+  vernieuw?: number;
 }) {
   const [pad, setPad] = useState("/");
   const [apparaat, setApparaat] = useState<Apparaat>("computer");
@@ -68,6 +74,22 @@ export function Voorbeeld({
   const kies = useRef(onKiesTekst);
   modus.current = tekstModus;
   kies.current = onKiesTekst;
+
+  useEffect(() => {
+    if (vastPad) {
+      setLaden(true);
+      setPad(vastPad);
+    }
+  }, [vastPad]);
+
+  useEffect(() => {
+    if (!vernieuw) return;
+    try {
+      frame.current?.contentWindow?.location.reload();
+    } catch {
+      /* andere herkomst */
+    }
+  }, [vernieuw]);
 
   useEffect(() => {
     const el = vak.current;
@@ -149,6 +171,7 @@ export function Voorbeeld({
             className="rounded-lg px-2 py-1.5 text-sm"
             style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-text)" }}
           >
+            {vastPad && !PAGINAS.some((p) => p.pad === vastPad) ? <option value={vastPad}>Deze pagina (concept)</option> : null}
             {PAGINAS.map((p) => (
               <option key={p.pad} value={p.pad}>
                 {p.label}

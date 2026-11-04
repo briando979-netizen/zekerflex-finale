@@ -7,6 +7,8 @@ import { TekstenPaneel } from "@/components/admin/ontwerper/TekstenPaneel";
 import { AiPaneel } from "@/components/admin/ontwerper/AiPaneel";
 import { GeschiedenisPaneel } from "@/components/admin/ontwerper/GeschiedenisPaneel";
 import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
+import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
+import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 
 // ---------------------------------------------------------------------------
 // De Site-ontwerper: links de keuzes, rechts de echte site als voorbeeld.
@@ -18,6 +20,8 @@ import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
 const TABS = [
   { id: "stijl", label: "Stijl" },
   { id: "teksten", label: "Teksten" },
+  { id: "paginas", label: "Pagina's" },
+  { id: "media", label: "Media" },
   { id: "ai", label: "AI-hulp" },
   { id: "geschiedenis", label: "Geschiedenis" },
 ] as const;
@@ -44,6 +48,9 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
   const [tab, setTab] = useState<Tab>("stijl");
   const [teksten, setTeksten] = useState<Record<string, string>>({});
   const [gekozenTekst, setGekozenTekst] = useState<string | null>(null);
+  const [voorbeeldPad, setVoorbeeldPad] = useState<string | null>(null);
+  const [vernieuw, setVernieuw] = useState(0);
+  const verversVoorbeeld = useCallback(() => setVernieuw((n) => n + 1), []);
   const [publiceerOpen, setPubliceerOpen] = useState(false);
   const [notitie, setNotitie] = useState("");
   const [bezig, setBezig] = useState(false);
@@ -271,7 +278,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
 
       <div className="grid gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
         <div className="space-y-3">
-          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="flex gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
+          <div role="tablist" aria-label="Onderdelen van de ontwerper" className="grid grid-cols-3 gap-1 rounded-xl p-1" style={{ background: "var(--a-elev)" }}>
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -281,7 +288,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
                 aria-selected={tab === t.id}
                 aria-controls={`ontwerper-paneel-${t.id}`}
                 onClick={() => setTab(t.id)}
-                className="flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold"
+                className="rounded-lg px-2 py-1.5 text-xs font-semibold"
                 style={{ background: tab === t.id ? "var(--a-panel)" : "transparent", color: tab === t.id ? "var(--a-text)" : "var(--a-mute)", boxShadow: tab === t.id ? "var(--a-shadow-sm)" : "none" }}
               >
                 {t.label}
@@ -295,6 +302,15 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           <div id="ontwerper-paneel-teksten" role="tabpanel" aria-labelledby="ontwerper-tab-teksten" hidden={tab !== "teksten"}>
             <TekstenPaneel gekozen={gekozenTekst} onKies={tekstKeuze} onTeksten={setTeksten} />
           </div>
+          {/* blijft ook bestaan: een half bewerkte pagina gaat niet verloren als je even naar Stijl gaat */}
+          <div id="ontwerper-paneel-paginas" role="tabpanel" aria-labelledby="ontwerper-tab-paginas" hidden={tab !== "paginas"}>
+            <PaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
+          </div>
+          {tab === "media" ? (
+            <div id="ontwerper-paneel-media" role="tabpanel" aria-labelledby="ontwerper-tab-media">
+              <MediaPaneel />
+            </div>
+          ) : null}
           {tab === "ai" ? (
             <div id="ontwerper-paneel-ai" role="tabpanel" aria-labelledby="ontwerper-tab-ai">
               <AiPaneel thema={thema} onProbeer={(t) => wijzig(t)} />
@@ -307,7 +323,7 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           ) : null}
         </div>
         <div className="xl:sticky xl:top-4 xl:h-[calc(100vh-7rem)]">
-          <Voorbeeld thema={thema} teksten={teksten} tekstModus={tab === "teksten"} onKiesTekst={kiesTekst} />
+          <Voorbeeld thema={thema} teksten={teksten} tekstModus={tab === "teksten"} onKiesTekst={kiesTekst} vastPad={voorbeeldPad} vernieuw={vernieuw} />
         </div>
       </div>
     </div>
