@@ -1,4 +1,4 @@
-import { chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { chat, chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
 import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
@@ -106,5 +106,55 @@ export async function chatAntwoord(v: ChatVerzoek, kennis: () => Promise<Kennis>
   } catch (err) {
     logger.warn("sitechat: model niet bereikbaar", { error: (err as Error).message });
     return stroom(terugval, terugval, bewaar);
+  }
+}
+
+/**
+ * Hetzelfde antwoord als één tekst, voor klantsites zonder scripts (formulier →
+ * pagina). Bewaart vraag en antwoord in het gesprek. "mens" = een medewerker
+ * heeft het gesprek, dan antwoordt de assistent niet; "limiet" = te veel vragen.
+ */
+export async function chatAntwoordTekst(
+  v: ChatVerzoek,
+  kennis: () => Promise<Kennis> | Kennis,
+): Promise<{ status: "ok" | "mens" | "limiet"; tekst: string }> {
+  const poort = await fixedWindow(`rl:sitechat:${v.kanaal}:${v.ip}`, 15, 60).catch(() => ({ ok: true }));
+  if (!poort.ok) return { status: "limiet", tekst: "" };
+  const vraag = [...v.berichten].reverse().find((b) => b.rol === "gast")?.tekst ?? "";
+  if (!vraag) return { status: "ok", tekst: "" };
+
+  const gesprek = await voegBerichtToe(v.kanaal, v.id, { rol: "gast", tekst: vraag }, { pagina: v.pagina, account: v.account });
+  if (!aiMagAntwoorden(gesprek)) return { status: "mens", tekst: "" };
+  const bewaar = async (tekst: string) => {
+    await voegBerichtToe(v.kanaal, v.id, { rol: "ai", tekst });
+    return { status: "ok" as const, tekst };
+  };
+  if (!inspectPrompt(vraag).allowed) return bewaar("Daar kan ik niet mee helpen. Stel gerust een vraag over ons aanbod.");
+
+  const k = await kennis();
+  const historie = gesprek.berichten.filter((b) => b.rol === "gast" || b.rol === "ai").slice(-10);
+  const vorige = historie.filter((b) => b.rol === "gast").slice(-2, -1)[0]?.tekst ?? "";
+  const fragmenten = kiesFragmenten(`${vraag} ${vorige}`, k.fragmenten);
+  const terugval = antwoordZonderModel(vraag, k.fragmenten, k.contact);
+
+  await ensureAiNode().catch(() => undefined);
+  if (llmConfigProblem()) return bewaar(terugval);
+  try {
+    const r = await chat({
+      purpose: "public-chat",
+      model: fastModel(),
+      temperature: 0.3,
+      maxTokens: 320,
+      retry: false,
+      timeoutMs: 25_000,
+      messages: [
+        { role: "system", content: bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) }, fragmenten) },
+        ...historie.map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
+      ],
+    });
+    return bewaar(r.text.trim() || terugval);
+  } catch (err) {
+    logger.warn("sitechat: model niet bereikbaar", { error: (err as Error).message });
+    return bewaar(terugval);
   }
 }

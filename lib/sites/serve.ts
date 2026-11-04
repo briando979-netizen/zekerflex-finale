@@ -12,6 +12,8 @@ import { recordSiteView } from "@/lib/sites/stats";
 import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
 import { siteVacancies, vacancyCount } from "@/lib/sites/vacancies";
 import type { Page } from "@/lib/sites/types";
+import { chatAan } from "@/lib/sitechat/site-instelling";
+import { serveSiteChat } from "@/lib/sitechat/site-pagina";
 
 // ---------------------------------------------------------------------------
 // Serving a published site — shared by /site/<naam>/… (on zekerflex.com, kept
@@ -58,6 +60,8 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     if (!n || snapshot.voorbeeld || snapshot.voorstel) return opts;
     return { ...opts, vacatures: await siteVacancies(snapshot.tenantId, n) };
   };
+  // the chat link at the bottom right (lib/sitechat): on by choice, or by default for new sites
+  const pageOpts = async (page: Page): Promise<ServeOptions> => ({ ...(await withVacancies(page)), chat: await chatAan({ id: siteId, createdAt: snapshot.createdAt }) });
   // a page view of a real site counts (lib/sites/stats.ts); never for an example or a proposal,
   // and never in the way of the page itself
   const count = (page: Pick<Page, "slug">) => {
@@ -70,7 +74,11 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     const home = snapshot.pages.find((p) => p.slug === "");
     if (!home) return siteText("Deze website bestaat niet (meer).", 404, opts);
     count(home);
-    return html(renderPage(snapshot, home, await withVacancies(home)));
+    return html(renderPage(snapshot, home, await pageOpts(home)));
+  }
+  // the chat page: plain HTML with forms (lib/sitechat/site-pagina.ts)
+  if (first === "_zf" && second === "chat" && rest.length === 0) {
+    return serveSiteChat(live, { root: opts.root, origin: opts.origin, version: opts.version, noindex: true }, request ?? new Request(`${opts.origin}${opts.root}_zf/chat`));
   }
   if (first === "assets" && second === "site.css" && rest.length === 0) {
     return new Response(siteCss(snapshot.theme), { headers: siteHeaders("text/css; charset=utf-8", "public, max-age=31536000, immutable", opts) });
@@ -108,7 +116,7 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
     const page = snapshot.pages.find((p) => p.slug === first);
     if (page) {
       count(page);
-      return html(renderPage(snapshot, page, await withVacancies(page)));
+      return html(renderPage(snapshot, page, await pageOpts(page)));
     }
     if (first === "privacy" || first === "bedankt") return html(renderSystemPage(snapshot, first, opts));
     const q = new URL(request?.url ?? "http://zf/").searchParams;

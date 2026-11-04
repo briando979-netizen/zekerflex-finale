@@ -32,6 +32,19 @@ export default async function WebsiteBeheerPage() {
         </span>
         <span className="rounded-xl bg-[#ffffff] px-4 py-2 text-sm font-semibold text-[#1a1a1a]">Open de studio</span>
       </Link>
+      {/* de chat op de eigen website (lib/sitechat): aan/uit en meelezen */}
+      <Link href="/werkgever/website/chat" className="card mb-6 flex flex-wrap items-center gap-4 p-5 transition hover:border-brand-300">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-ink text-white" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg font-bold text-ink">Websitechat met AI-assistent</span>
+          <span className="block text-sm text-neutralx-600">Beantwoordt vragen op je website met je eigen gegevens. Lees mee, neem over of laat een collega het oppakken.</span>
+        </span>
+        <span className="btn-ghost">Open de chat</span>
+      </Link>
       <Link href="/werkgever/rijschool" className="card mb-6 flex flex-wrap items-center gap-4 p-5 transition hover:border-brand-300">
         <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-ink text-white" aria-hidden>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

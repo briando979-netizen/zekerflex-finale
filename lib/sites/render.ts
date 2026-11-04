@@ -40,6 +40,8 @@ export interface RenderOptions {
   noindex?: boolean | undefined;
   /** the company's open shifts, loaded live for a page with a vacatures block; absent = show an example */
   vacatures?: SiteVacancy[] | undefined;
+  /** a "Chat met ons" link at the bottom right to the site's chat page …/_zf/chat (lib/sitechat/site-pagina.ts); no script */
+  chat?: boolean | undefined;
 }
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -55,8 +57,37 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header). */
-const CSS_REV = 10;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026). */
+const CSS_REV = 11;
+
+/**
+ * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
+ * …/_zf/chat (lib/sitechat/site-pagina.ts). The body gets room below so the link never covers
+ * the last content (the order form's quantity fields on 320px).
+ */
+const CHAT_CSS = `
+.zfchat{position:fixed;right:18px;bottom:18px;z-index:6;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.22)}.zfchat svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.wa+.zfchat{bottom:80px}body:has(.zfchat){padding-bottom:84px}body:has(.wa+.zfchat){padding-bottom:146px}
+.zfc-pagina{background:var(--soft);padding-bottom:0}.zfc-kop{position:sticky;top:0;z-index:5;background:var(--k);color:var(--k-t);border:0}.zfc-balk{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
+.zfc-terug{color:inherit;font-weight:600;text-decoration:none}.zfc-naam{margin:0;text-align:right;line-height:1.3}.zfc-naam span{display:block;font-size:.8rem;opacity:.9}
+main.zfc.wrap{max-width:820px;padding-top:28px;padding-bottom:56px}.zfc-uitleg{color:var(--mute);font-size:.9rem}.zfc-log{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:12px}
+.zfc-b{max-width:85%;padding:12px 16px;border-radius:18px;background:#fff;border:1px solid var(--line)}.zfc-b p{margin:0;white-space:pre-line}
+.zfc-gast{margin-left:auto;background:var(--k);color:var(--k-t);border-color:transparent}.zfc-medewerker{border:2px solid var(--k)}
+.zfc-sys{max-width:100%;background:none;border:0;padding:0 8px;text-align:center;color:var(--mute);font-size:.88rem}
+.zfc-wie{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:4px}.zfc-gast .zfc-wie{color:inherit;opacity:.85}
+.zfc-anker{margin:0;height:1px}.zfc-sug{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.zfc-form{display:grid;gap:8px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px}.zfc-form label{font-weight:600}.zfc-rij{margin:0}
+.zfc-form textarea,.zfc-velden input,.zfc-velden select,.zfc-velden textarea{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.zfc-acties{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.zfc-acties form{margin:0}
+.zfc-knop{display:inline-block;padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-weight:600;font-size:.92rem;line-height:1.3;text-decoration:none;cursor:pointer}.zfc-knop:disabled{opacity:.6;cursor:default}
+.zfc-melding{padding:10px 14px;border-radius:12px;background:#fde2e2;color:#8a1c1c;font-weight:600}.zfc-ok{padding:10px 14px;border-radius:12px;background:#dcfce7;color:#14532d;font-weight:600}
+.zfc-inert{padding:12px 16px;border-radius:12px;background:#fff7e0;border:1px solid #f0d58a}
+.zfc-afspraak{margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px}.zfc-afspraak h2{font-size:1.3rem}.zfc-velden{display:grid;gap:12px}
+.zfc-velden label{display:grid;gap:4px;font-weight:600;font-size:.95rem}.zfc-twee{display:grid;gap:12px;grid-template-columns:1fr 1fr}@media (max-width:520px){.zfc-twee{grid-template-columns:1fr}}
+.zfc-velden .zfc-akkoord{display:flex;gap:10px;align-items:flex-start;font-weight:400}.zfc-velden .zfc-akkoord input{width:auto;margin-top:5px}`;
+
+/** The stylesheet address of a published site, with the code revision as cache-buster (also for the chat page). */
+export const stylesheetHref = (opts: Pick<RenderOptions, "root" | "version">) => `${opts.root}assets/site.css${opts.version ? `?v=${opts.version}.${CSS_REV}` : ""}`;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
@@ -252,7 +283,7 @@ footer{background:#111417;color:#d7dbe0;padding:48px 0 28px;font-size:.95rem}foo
 .card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
 .steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
 .steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
-.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${winkel}${luxe}`;
+.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${CHAT_CSS}${winkel}${luxe}`;
 }
 
 /** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
@@ -545,6 +576,11 @@ function whatsappButton(ctx: Ctx): string {
   return `<a class="wa" href="${esc(href(ctx, `https://wa.me/${wa}`))}" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C7 3 3 6.6 3 11c0 2.2 1 4.2 2.7 5.6L5 21l4.3-2.3c.9.2 1.8.3 2.7.3 5 0 9-3.6 9-8s-4-8-9-8z"/></svg>WhatsApp</a>`;
 }
 
+/** "Chat met ons" bottom right: a plain link to the site's chat page, no script (lib/sitechat/site-pagina.ts). */
+function chatLink(ctx: Ctx): string {
+  return `<a class="zfchat" href="${esc(ctx.preview ? "#" : `${ctx.root}_zf/chat`)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5z"/></svg>Chat met ons</a>`;
+}
+
 function localBusiness(c: Company, url: string, image: string | null): string {
   const data = {
     "@context": "https://schema.org",
@@ -578,7 +614,7 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const initial = esc((ctx.bedrijf.naam.trim()[0] ?? "Z").toUpperCase());
   const favicon = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><text x="32" y="44" font-family="Arial" font-size="36" font-weight="700" text-anchor="middle" fill="#fff">${initial}</text></svg>`)}`;
   // CSS_REV: the stylesheet is cached for a year per build; a new revision of the code (the shop's styles) gets a new address
-  const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(`${opts.root}assets/site.css${opts.version ? `?v=${opts.version}.${CSS_REV}` : ""}`)}">`;
+  const styles = ctx.preview ? `<style>${css}</style>` : `<link rel="stylesheet" href="${esc(stylesheetHref(opts))}">`;
   const robots = opts.noindex || ctx.voorstel || page.id.startsWith("__") ? '<meta name="robots" content="noindex">' : "";
   // a proposal or an example says nothing to search engines about a business
   const business = page.slug === "" && !ctx.voorbeeld && !ctx.voorstel ? localBusiness(ctx.bedrijf, url, ogImage) : "";
@@ -590,7 +626,7 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
     : ctx.voorbeeld
       ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
       : "";
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}</body></html>`;
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}${opts.chat ? chatLink(ctx) : ""}</body></html>`;
 }
 
 function context(site: RenderableSite, opts: RenderOptions): Ctx {
