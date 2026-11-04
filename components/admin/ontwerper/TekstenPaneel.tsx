@@ -27,6 +27,49 @@ const AI_KNOPPEN = [
 
 const veld = { background: "var(--a-panel)", border: "1px solid var(--a-border)", color: "var(--a-text)" };
 
+/** zelfde vorm als lib/content/geschiedenis.ts (dat bestand gebruikt de server-opslag) */
+export interface TekstWijziging {
+  id: string;
+  key: string;
+  oud: string;
+  nieuw: string;
+  op: string;
+}
+
+export const tijdNl = (iso: string) =>
+  new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+/** Bij het actieve veld: de teksten van vóór eerdere wijzigingen; "Gebruik deze" zet hem in het veld (daarna zelf opslaan). */
+function EerdereVersies({ wijzigingen, huidig, onGebruik }: { wijzigingen: TekstWijziging[]; huidig: string; onGebruik: (t: string) => void }) {
+  // elke oude tekst één keer, en niet de tekst die nu al in het veld staat
+  const gezien = new Set<string>([huidig]);
+  const versies: TekstWijziging[] = [];
+  for (const w of wijzigingen) {
+    if (gezien.has(w.oud) || versies.length >= 5) continue;
+    gezien.add(w.oud);
+    versies.push(w);
+  }
+  if (!versies.length) return null;
+  return (
+    <details className="mt-2 rounded-lg p-2 text-xs" style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
+      <summary className="cursor-pointer font-semibold">Eerdere versies ({versies.length})</summary>
+      <ul className="mt-2 space-y-2">
+        {versies.map((w) => (
+          <li key={w.id} className="space-y-1">
+            <p className="text-[11px]" style={{ color: "var(--a-mute)" }}>
+              Tot {tijdNl(w.op)}
+            </p>
+            <p className="whitespace-pre-line">{w.oud}</p>
+            <button type="button" onClick={() => onGebruik(w.oud)} className="a-button text-[11px]">
+              Gebruik deze
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function TekstenPaneel({
   gekozen,
   onKies,
@@ -48,15 +91,17 @@ export function TekstenPaneel({
   const [bezig, setBezig] = useState<string | null>(null);
   const [melding, setMelding] = useState<{ key: string; tekst: string; fout?: boolean } | null>(null);
   const [voorstel, setVoorstel] = useState<{ key: string; tekst: string } | null>(null);
+  const [geschiedenis, setGeschiedenis] = useState<TekstWijziging[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/content", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { registry: Item[]; values: Record<string, string> } | null) => {
+      .then((d: { registry: Item[]; values: Record<string, string>; geschiedenis?: TekstWijziging[] } | null) => {
         if (!d) return;
         setItems(d.registry);
         setBewaard(d.values);
         setInvoer(d.values);
+        setGeschiedenis(d.geschiedenis ?? []);
       })
       .catch(() => undefined);
   }, []);
@@ -94,10 +139,11 @@ export function TekstenPaneel({
     setMelding(null);
     try {
       const r = await fetch("/api/admin/content", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, value: invoer[key] ?? "" }) });
-      const d = (await r.json().catch(() => null)) as { values?: Record<string, string> } | null;
+      const d = (await r.json().catch(() => null)) as { values?: Record<string, string>; geschiedenis?: TekstWijziging[] } | null;
       if (!r.ok || !d?.values) throw new Error();
       const vals = d.values;
       setBewaard(vals);
+      if (d.geschiedenis) setGeschiedenis(d.geschiedenis);
       setInvoer((cur) => ({ ...cur, [key]: vals[key] ?? cur[key] ?? "" }));
       setMelding({ key, tekst: "Opgeslagen en live." });
     } catch {
@@ -214,6 +260,7 @@ export function TekstenPaneel({
                     {melding.tekst}
                   </p>
                 ) : null}
+                {actief ? <EerdereVersies wijzigingen={geschiedenis.filter((w) => w.key === item.key)} huidig={waarde} onGebruik={(t) => setInvoer((c) => ({ ...c, [item.key]: t }))} /> : null}
               </div>
             );
           })}

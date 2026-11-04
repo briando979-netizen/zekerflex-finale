@@ -12,6 +12,7 @@ import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
 import { SiteFotos } from "@/components/admin/ontwerper/SiteFotos";
+import { TekstWijzigingen } from "@/components/admin/ontwerper/TekstWijzigingen";
 import { Assistent } from "@/components/admin/ontwerper/Assistent";
 
 // ---------------------------------------------------------------------------
@@ -336,8 +337,9 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
             <AiPaneel thema={thema} onProbeer={(t) => wijzig(t)} />
           </div>
           {tab === "geschiedenis" ? (
-            <div id="ontwerper-paneel-geschiedenis" role="tabpanel" aria-labelledby="ontwerper-tab-geschiedenis">
+            <div id="ontwerper-paneel-geschiedenis" role="tabpanel" aria-labelledby="ontwerper-tab-geschiedenis" className="space-y-3">
               <GeschiedenisPaneel versies={geschiedenis} onTerug={zetTerug} bezig={bezig} />
+              <TekstWijzigingen onBekijk={kiesTekst} />
             </div>
           ) : null}
         </div>
