@@ -221,6 +221,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
           : "nog niet: Google geeft deze sleutel geen beeldtegoed (gratis laag)",
     },
     {
+      id: "cloudflare-ai",
+      group: "AI",
+      title: "Gratis AI-foto's via Cloudflare koppelen (aanrader)",
+      why: "Google geeft je sleutel geen beeldtegoed, dus de Studio en de video-editor maken nu geen AI-foto's. Cloudflare geeft elk account 10.000 neurons per dag gratis voor AI; dat is genoeg voor ongeveer 170 foto's per dag met FLUX. Zodra Google wel tegoed geeft, gaat Nano Banana weer voor en blijft Cloudflare de gratis reserve.",
+      how: [
+        "Log in op dash.cloudflare.com (of maak een gratis account).",
+        "Ga naar AI → Workers AI → REST API en klik Create a Workers AI API Token.",
+        "Kopieer de sleutel en je Account ID (staat op dezelfde pagina) en geef ze aan Claude; die zet CLOUDFLARE_AI_TOKEN en CLOUDFLARE_ACCOUNT_ID op de server.",
+      ],
+      auto: true,
+      done: Boolean(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN),
+      ...(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN ? { doneNote: "sleutel staat op de server" } : {}),
+    },
+    {
       id: "hf-token",
       group: "AI",
       title: "Gratis Hugging Face-sleutel voor meer gratis AI-video (optioneel)",

@@ -190,7 +190,7 @@ export function Studio() {
     <div className="space-y-4">
       <PageHead
         title="Studio"
-        subtitle={gemini ? "Maak, bewerk en publiceer beelden voor de site met Google Nano Banana, hetzelfde soort AI waarmee Claude en Gemini foto's maken." : "Maak, bewerk en publiceer beelden voor de site vanuit één werkplek op je eigen server. Er gaat niets naar buiten."}
+        subtitle={health?.backend === "cloudflare" ? "Maak en publiceer beelden voor de site met FLUX, gratis via het dagtegoed van Cloudflare (ongeveer 170 foto's per dag)." : gemini ? "Maak, bewerk en publiceer beelden voor de site met Google Nano Banana, hetzelfde soort AI waarmee Claude en Gemini foto's maken." : "Maak, bewerk en publiceer beelden voor de site vanuit één werkplek op je eigen server. Er gaat niets naar buiten."}
         meta={health ? <Pill tone={ok && !health.warning ? "ok" : "warn"}>{!ok ? "Beeldmodel offline" : health.warning ? "Wacht op tegoed bij Google" : "Beeldmodel online"}</Pill> : undefined}
       />
 
@@ -198,7 +198,7 @@ export function Studio() {
         items={[
           { label: "Beeldplekken live", value: `${live} van ${slots.length}`, hint: live < slots.length ? "de rest toont een illustratie" : "overal een echte foto" },
           { label: "Beeldmodel", value: health === null ? "—" : ok ? (health.warning ? "Geen tegoed" : "Bereikbaar") : health.configured ? "Niet bereikbaar" : "Niet ingesteld", hint: health ? (health.warning ? "zet betalen aan bij Google" : health.backend) : "status laden", ...(health && (!ok || health.warning) ? { tone: "warn" as const } : {}) },
-          { label: "Draait op", value: health === null ? "—" : gemini ? "Google Gemini" : health.local ? "Eigen server" : "Op afstand", hint: health?.models?.[0] ?? "geen model gemeld" },
+          { label: "Draait op", value: health === null ? "—" : gemini ? "Google Gemini" : health.backend === "cloudflare" ? "Cloudflare (gratis)" : health.local ? "Eigen server" : "Op afstand", hint: health?.models?.[0] ?? "geen model gemeld" },
           { label: "Sjablonen", value: presets.length, hint: "klaar voor gebruik" },
         ]}
       />

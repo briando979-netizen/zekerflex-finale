@@ -3,6 +3,7 @@ import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { GEMINI_BEELDMODELLEN, geminiBeeld, geminiBeschikbaar, geminiSlot, VERHOUDINGEN, type BeeldGrootte, type GeminiBeeldModel, type Verhouding } from "@/lib/ai/gemini-media";
+import { cloudflareBeeld, cloudflareBeschikbaar } from "@/lib/ai/cloudflare-beeld";
 
 // ---------------------------------------------------------------------------
 // Self-hosted image generation adapter — the same "point at a model in the box"
@@ -39,17 +40,21 @@ export interface ImageBackendHealth {
   warning?: string;
 }
 
-export type BeeldBackend = "a1111" | "openai" | "comfyui" | "gemini";
+export type BeeldBackend = "a1111" | "openai" | "comfyui" | "gemini" | "cloudflare";
 
 /**
  * Welke beeldgenerator er echt draait. Een eigen Stable Diffusion-server gaat
- * voor (IMAGE_ENABLED); staat die uit en draait de live AI op Gemini, dan maakt
- * Gemini (Nano Banana) de foto's. null = er is niets om foto's mee te maken.
+ * voor (IMAGE_ENABLED). Daarna Gemini (Nano Banana), behalve als Google net
+ * "geen tegoed" meldde en Cloudflare (gratis FLUX) gekoppeld is: dan Cloudflare.
+ * null = er is niets om foto's mee te maken.
  */
 export async function beeldBackend(): Promise<BeeldBackend | null> {
+  if (env.IMAGE_BACKEND === "cloudflare") return cloudflareBeschikbaar() ? "cloudflare" : null;
   if (env.IMAGE_BACKEND === "gemini") return (await geminiBeschikbaar()) ? "gemini" : null;
   if (env.IMAGE_ENABLED) return env.IMAGE_BACKEND;
-  return (await geminiBeschikbaar()) ? "gemini" : null;
+  const gemini = await geminiBeschikbaar();
+  if (cloudflareBeschikbaar() && (!gemini || (await geminiSlot("beeld")))) return "cloudflare";
+  return gemini ? "gemini" : null;
 }
 
 /** Dichtstbijzijnde verhouding die Gemini kent, bij een breedte en hoogte. */
@@ -69,7 +74,19 @@ export function verhoudingVoor(width: number, height: number): Verhouding {
 }
 
 export async function imageHealth(): Promise<ImageBackendHealth> {
-  if ((await beeldBackend()) === "gemini") {
+  const welke = await beeldBackend();
+  if (welke === "cloudflare") {
+    return {
+      configured: true,
+      backend: "cloudflare",
+      baseUrl: "Cloudflare Workers AI",
+      reachable: true,
+      local: false,
+      remoteAllowed: true,
+      models: ["FLUX.1 schnell (gratis, ongeveer 170 per dag)"],
+    };
+  }
+  if (welke === "gemini") {
     const slot = await geminiSlot("beeld");
     return {
       configured: true,
@@ -212,16 +229,37 @@ async function viaGemini(input: { prompt: string; width: number; height: number;
   return { b64: bytes.toString("base64"), mimeType: "image/png", width: meta.width ?? input.width, height: meta.height ?? input.height, backend: "gemini" };
 }
 
+// Cloudflare (FLUX.1 schnell) geeft een JPEG van 1024 × 1024; de editor en de
+// Studio snijden zelf bij ("vullend"). Ook hier PNG voor gelijke uitvoer.
+async function viaCloudflare(input: { prompt: string; width: number; height: number; seed?: number; purpose: string }): Promise<GeneratedImage> {
+  const started = Date.now();
+  const beeld = await cloudflareBeeld(input.prompt, input.seed);
+  const sharp = (await import("sharp")).default;
+  const bytes = await sharp(Buffer.from(beeld.b64, "base64")).png().toBuffer();
+  const meta = await sharp(bytes).metadata();
+  logger.info("image render", { backend: "cloudflare", ms: Date.now() - started, purpose: input.purpose });
+  return { b64: bytes.toString("base64"), mimeType: "image/png", width: meta.width ?? input.width, height: meta.height ?? input.height, backend: "cloudflare", ...(input.seed !== undefined ? { seed: input.seed } : {}) };
+}
+
 export async function generateImage(input: GenerateImageInput): Promise<GeneratedImage> {
-  if ((await beeldBackend()) === "gemini") {
-    return viaGemini({
-      prompt: input.negativePrompt ? `${input.prompt}\n\nVermijd: ${input.negativePrompt}` : input.prompt,
-      width: input.width,
-      height: input.height,
-      purpose: input.purpose ?? "studio",
-      ...(input.geminiModel ? { model: input.geminiModel } : {}),
-      ...(input.geminiGrootte ? { grootte: input.geminiGrootte } : {}),
-    });
+  const welke = await beeldBackend();
+  const cf = () => viaCloudflare({ prompt: input.prompt, width: input.width, height: input.height, purpose: input.purpose ?? "studio", ...(input.seed !== undefined ? { seed: input.seed } : {}) });
+  if (welke === "cloudflare") return cf();
+  if (welke === "gemini") {
+    try {
+      return await viaGemini({
+        prompt: input.negativePrompt ? `${input.prompt}\n\nVermijd: ${input.negativePrompt}` : input.prompt,
+        width: input.width,
+        height: input.height,
+        purpose: input.purpose ?? "studio",
+        ...(input.geminiModel ? { model: input.geminiModel } : {}),
+        ...(input.geminiGrootte ? { grootte: input.geminiGrootte } : {}),
+      });
+    } catch (err) {
+      // Google zonder tegoed: dan de gratis foto van Cloudflare, als die er is.
+      if (err instanceof AppError && err.code === "PRECONDITION_FAILED" && cloudflareBeschikbaar()) return cf();
+      throw err;
+    }
   }
   return runRender(input.purpose ?? "studio", () =>
     env.IMAGE_BACKEND === "a1111"
@@ -262,6 +300,9 @@ export async function editImage(input: EditImageInput & { geminiModel?: GeminiBe
       purpose: input.purpose ?? "studio:edit",
       ...(input.geminiModel ? { model: input.geminiModel } : {}),
     });
+  }
+  if ((await beeldBackend()) === "cloudflare") {
+    throw AppError.precondition("Een foto bewerken kan niet met de gratis Cloudflare-foto's. Daarvoor is Nano Banana nodig (betalen aan bij Google). Een nieuwe foto maken kan wel.");
   }
   if (env.IMAGE_BACKEND !== "a1111") {
     throw AppError.precondition(

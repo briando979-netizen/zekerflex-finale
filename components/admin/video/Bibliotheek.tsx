@@ -443,11 +443,11 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
             </section>
 
             <section className="space-y-1.5">
-              <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>AI-foto (Nano Banana)</p>
+              <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>{beeldAi === "cloudflare" ? "AI-foto (gratis, FLUX via Cloudflare)" : "AI-foto (Nano Banana)"}</p>
               {!beeldAi && <p className="text-[0.6875rem]" style={{ color: "var(--a-warn-ink)" }}>Er is geen beeld-AI gekoppeld.</p>}
               {ai?.beeldMelding && <p className="text-[0.6875rem]" style={{ color: "var(--a-warn-ink)" }}>{ai.beeldMelding}</p>}
               <textarea className="a-input text-[0.8125rem]" rows={2} value={fotoPrompt} onChange={(e) => setFotoPrompt(e.target.value)} placeholder="Bijvoorbeeld: een kok die lachend een bord uitserveert in een druk restaurant" />
-              <div className="grid grid-cols-2 gap-1.5">
+              {beeldAi !== "cloudflare" && <div className="grid grid-cols-2 gap-1.5">
                 <select className="a-input text-xs" value={fotoModel} onChange={(e) => setFotoModel(e.target.value as typeof fotoModel)} aria-label="Beeldmodel">
                   <option value="gemini-3.1-flash-image">Nano Banana 2</option>
                   <option value="gemini-3-pro-image">Nano Banana Pro</option>
@@ -457,7 +457,7 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
                   <option value="2K">2K scherp</option>
                   <option value="4K">4K hoogste</option>
                 </select>
-              </div>
+              </div>}
               <button type="button" className="a-button w-full text-xs" disabled={!beeldAi || fotoPrompt.trim().length < 3 || Boolean(bezig)} onClick={() => void aiFoto()}>
                 Maak foto in {formaat}
               </button>

@@ -17,7 +17,7 @@ export interface VideoBestand {
 }
 
 export interface AiStatus {
-  beeld: "a1111" | "openai" | "comfyui" | "gemini" | null;
+  beeld: "a1111" | "openai" | "comfyui" | "gemini" | "cloudflare" | null;
   gemini: boolean;
   beeldMelding: string | null;
   videoMelding: string | null;

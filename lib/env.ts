@@ -101,13 +101,17 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
-  IMAGE_BACKEND: z.enum(["a1111", "openai", "comfyui", "gemini"]).default("a1111"),
+  IMAGE_BACKEND: z.enum(["a1111", "openai", "comfyui", "gemini", "cloudflare"]).default("a1111"),
   IMAGE_GEMINI_MODEL: z.string().optional(),
   // Gratis AI-video (LTX-2.3) via een Gradio-app: standaard de openbare Space
   // van Lightricks op Hugging Face; zelf draaien op een eigen GPU kan ook.
   // HF_TOKEN (gratis Hugging Face-account) geeft meer dagtegoed.
   VIDEO_GRADIO_URL: z.string().url().optional(),
   HF_TOKEN: z.string().optional(),
+  // Gratis AI-foto's (FLUX.1 schnell) via Cloudflare Workers AI: 10.000 neurons
+  // per dag gratis, ongeveer 170 foto's. Zie lib/ai/cloudflare-beeld.ts.
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_AI_TOKEN: z.string().optional(),
   IMAGE_BASE_URL: z.string().url().default("http://localhost:7860"),
   // Standaard mag de beeldserver alleen lokaal/privé zijn (data blijft binnen).
   // Zet dit op "true" ALLEEN om je EIGEN self-hoste server op afstand te
