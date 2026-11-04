@@ -24,6 +24,7 @@ import { zaakWeergave } from "@/lib/horeca/weergave";
 import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
 import { bewaarReserveerInstellingen, maakReservering, reserveringenOp, zetReserveringStatus, zetReserveringTafel } from "@/lib/horeca/reserveringen";
 import { isDatum, leesInstellingen } from "@/lib/horeca/reserveren";
+import { cijfersVan } from "@/lib/horeca/cijfers-server";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -78,6 +79,11 @@ export async function GET(request: Request): Promise<NextResponse> {
       return new NextResponse(`﻿${[kop, ...regels].join("\r\n")}`, {
         headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="registratie-${zaak.slug}.csv"` },
       });
+    }
+    // ?alleen=cijfers&dagen=7|30 → omzet, couverts, no-shows, top-gerechten en drukte (lib/horeca/cijfers.ts)
+    if (q.get("alleen") === "cijfers") {
+      if (!heeftModule(zaak, "bestellen") && !heeftModule(zaak, "reserveren")) throw AppError.precondition("Zet eerst bestellen of reserveren aan.");
+      return NextResponse.json(await cijfersVan(zaak.id, q.get("dagen") === "30" ? 30 : 7));
     }
     // ?alleen=reserveringen&datum=JJJJ-MM-DD → het reserveringsboek van die dag
     if (q.get("alleen") === "reserveringen") {

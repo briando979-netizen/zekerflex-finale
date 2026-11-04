@@ -12,6 +12,7 @@ import { BestellingenTab } from "@/components/horeca/beheer/BestellingenTab";
 import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
 import { ReserveringenTab } from "@/components/horeca/beheer/ReserveringenTab";
 import { TakenTab } from "@/components/horeca/beheer/TakenTab";
+import { CijfersTab } from "@/components/horeca/beheer/CijfersTab";
 import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types";
 
 // ---------------------------------------------------------------------------
@@ -21,7 +22,7 @@ import type { Antwoord, BeheerData, Doe } from "@/components/horeca/beheer/types
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-type Tab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "taken" | "menukaart" | "modules" | "gegevens";
+type Tab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "taken" | "cijfers" | "menukaart" | "modules" | "gegevens";
 /** De tabbladen; die van een module alleen als die module aan staat. */
 const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
   { id: "overzicht", label: "Overzicht" },
@@ -33,6 +34,7 @@ const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
       ]
     : []),
   ...(modules.includes("taken") ? [{ id: "taken" as const, label: "Takenlijsten" }] : []),
+  ...(modules.includes("bestellen") || modules.includes("reserveren") ? [{ id: "cijfers" as const, label: "Cijfers" }] : []),
   { id: "menukaart", label: "Menukaart" },
   { id: "modules", label: "Modules & abonnement" },
   { id: "gegevens", label: "Gegevens & openingstijden" },
@@ -114,6 +116,7 @@ export function HorecaBeheer() {
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
       {tab === "taken" && z.modules.includes("taken") && <TakenTab />}
+      {tab === "cijfers" && (z.modules.includes("bestellen") || z.modules.includes("reserveren")) && <CijfersTab />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}
       {tab === "modules" && <ModulesTab data={data} doe={doe} />}
       {tab === "gegevens" && <GegevensTab data={data} doe={doe} />}
