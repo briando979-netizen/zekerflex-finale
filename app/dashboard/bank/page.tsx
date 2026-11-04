@@ -5,5 +5,10 @@ export const dynamic = "force-dynamic";
 
 export default async function FreelancerBankPage() {
   await requirePrincipal();
-  return <BankView returnPath="/dashboard/bank" />;
+  return (
+    <>
+      <h1 className="sr-only">ZekerFlex Bank</h1>
+      <BankView returnPath="/dashboard/bank" />
+    </>
+  );
 }

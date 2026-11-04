@@ -74,7 +74,8 @@ export default async function KalenderPage(
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* op een smal scherm schuift de maand opzij: met het toetsenbord bereikbaar (tabIndex) */}
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Maandkalender">
         <div className="min-w-[720px]">
           <div className="grid grid-cols-7 gap-px rounded-t-xl border border-hair bg-hair text-center text-xs font-semibold uppercase tracking-wide text-neutralx-500">
             {t.calendar.weekdays.map((d) => (

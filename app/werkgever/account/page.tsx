@@ -38,8 +38,8 @@ export default async function WerkgeverAccountPage() {
           />
           <dl className="divide-y divide-hair border-t border-hair text-sm">
             <div className="flex items-center justify-between gap-3 px-5 py-3">
-              <span className="text-neutralx-500">E-mail</span>
-              <span className="font-medium text-ink">{user?.email ?? principal.email}</span>
+              <dt className="text-neutralx-500">E-mail</dt>
+              <dd className="font-medium text-ink">{user?.email ?? principal.email}</dd>
             </div>
           </dl>
         </Panel>

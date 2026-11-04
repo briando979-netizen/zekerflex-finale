@@ -489,7 +489,7 @@ export function InboxPage({
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center justify-between gap-2">
                               <span className="truncate text-sm font-semibold text-ink">{o.name}</span>
-                              <span className="flex-shrink-0 text-[10px] text-neutralx-400">{t.lastMessage ? fmtTime(t.lastMessage.at) : ""}</span>
+                              <span className="flex-shrink-0 text-[10px] text-neutralx-500">{t.lastMessage ? fmtTime(t.lastMessage.at) : ""}</span>
                             </span>
                             <span className="flex items-center justify-between gap-2">
                               <span className="truncate text-xs text-neutralx-500">
@@ -604,7 +604,7 @@ export function InboxPage({
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold text-ink">{u.title}</span>
-                        <span className="flex-shrink-0 text-[10px] text-neutralx-400">{fmtTime(u.at)}</span>
+                        <span className="flex-shrink-0 text-[10px] text-neutralx-500">{fmtTime(u.at)}</span>
                       </span>
                       <span className="line-clamp-2 text-xs text-neutralx-500">{u.body}</span>
                     </span>

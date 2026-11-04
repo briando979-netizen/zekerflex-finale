@@ -81,7 +81,7 @@ export function IntegrationsHub() {
       <Card icon="📅" title="Agenda — Google, Outlook, Apple">
         <p>Al je diensten automatisch in je eigen agenda, met wie er komt. Werkt bij elke wijziging vanzelf bij.</p>
         <div className="flex gap-2">
-          <input readOnly value={d.calendarUrl} className="field-input min-w-0 flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
+          <input readOnly value={d.calendarUrl} aria-label="Agendalink" className="field-input min-w-0 flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
           <button
             type="button"
             className="btn-ghost text-xs"

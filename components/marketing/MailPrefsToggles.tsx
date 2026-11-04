@@ -53,12 +53,14 @@ export function MailPrefsToggles({
         {cats.map((c) => (
           <li key={c.slug} className="flex items-start gap-4 p-4">
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-ink">{c.label}</p>
-              <p className="mt-0.5 text-sm leading-relaxed text-neutralx-600">{c.desc}</p>
+              <p id={`mailpref-${c.slug}`} className="font-semibold text-ink">{c.label}</p>
+              <p id={`mailpref-${c.slug}-uitleg`} className="mt-0.5 text-sm leading-relaxed text-neutralx-600">{c.desc}</p>
             </div>
             <button
               type="button"
               role="switch"
+              aria-labelledby={`mailpref-${c.slug}`}
+              aria-describedby={`mailpref-${c.slug}-uitleg`}
               aria-checked={c.on && !all}
               disabled={busy || all}
               onClick={() => post({ category: c.slug, on: !c.on })}

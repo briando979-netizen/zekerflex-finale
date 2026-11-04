@@ -489,11 +489,11 @@ export function NewShiftForm({
             </div>
           </div>
           <div className="space-y-2 p-4 text-sm">
-            <Row k="Uurtarief" v={`€ ${(hourlyRateCents / 100).toFixed(2)}/u`} />
+            <Row k="Uurtarief" v={`€ ${(hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`} />
             <Row k="Duur" v={hours ? `${hours} u${Number(breakMin) ? ` · ${breakMin}m pauze` : ""}` : "—"} />
             <Row k="Plekken" v={`${positions} per dag`} />
             <Row k="Bruto per plek" v={grossPerSeat ? `€ ${(grossPerSeat / 100).toFixed(0)}` : "—"} highlight />
-            <Row k="Platformkosten" v={hours ? `€ ${(Number(hours) * 3.5).toFixed(2)} (€ 3,50/u)` : "—"} />
+            <Row k="Platformkosten" v={hours ? `€ ${(Number(hours) * 3.5).toFixed(2).replace(".", ",")} (€ 3,50/u)` : "—"} />
             {totalDays > 1 && (
               <Row k={`Totaal (${totalDays} dagen)`} v={`€ ${((grossPerSeat * totalDays) / 100).toFixed(0)}`} highlight />
             )}

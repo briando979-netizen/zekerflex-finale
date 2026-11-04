@@ -245,7 +245,7 @@ export function Telefonie({
                     <label key={a.id} className={`mt-2 flex items-center gap-2 text-sm ${a.soon ? "text-neutralx-400" : "text-neutralx-700"}`}>
                       <input type="checkbox" disabled={a.soon} checked={answerAt.includes(a.id)} onChange={() => setAnswerAt((l) => toggle(l, a.id))} className="h-4 w-4" />
                       {a.label}
-                      {a.soon && <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px]">binnenkort</span>}
+                      {a.soon && <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px] text-neutralx-600">binnenkort</span>}
                     </label>
                   ))}
                 </fieldset>
@@ -273,7 +273,7 @@ export function Telefonie({
           </div>
 
           {/* samenvatting */}
-          <aside className="rounded-2xl border border-money/30 bg-money-soft/60 p-5 lg:sticky lg:top-4">
+          <aside aria-label="Jouw samenstelling" className="rounded-2xl border border-money/30 bg-money-soft/60 p-5 lg:sticky lg:top-4">
             <h2 className="font-display text-base font-bold text-ink">Jouw samenstelling</h2>
             <ul className="mt-3 space-y-1.5 text-sm">
               {q.lines.map((l) => (

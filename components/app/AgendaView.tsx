@@ -252,7 +252,7 @@ export function AgendaView({
             <AgendaMonth busy={dayCounts} onPick={pickDay} />
           </Panel>
         )}
-        <aside className="card h-fit space-y-3 p-5 text-sm">
+        <aside aria-label={t.sources} className="card h-fit space-y-3 p-5 text-sm">
           <p className="font-semibold text-ink">{t.sources}</p>
           <ul className="space-y-2">
             <li className="flex items-center justify-between gap-2">

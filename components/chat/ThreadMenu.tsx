@@ -38,10 +38,11 @@ export function SwipeRow({
   return (
     <div className="relative overflow-hidden">
       <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL }} aria-hidden={dx === 0}>
-        <button type="button" onClick={() => { setDx(0); onMore(); }} className="flex-1 bg-neutralx-400 text-xs font-semibold text-white">
+        {/* dicht = aria-hidden: dan ook niet met Tab bereikbaar */}
+        <button type="button" tabIndex={dx === 0 ? -1 : 0} onClick={() => { setDx(0); onMore(); }} className="flex-1 bg-neutralx-400 text-xs font-semibold text-white">
           ⋯<br />Meer
         </button>
-        <button type="button" onClick={() => { setDx(0); onArchive(); }} className="flex-1 bg-brand-600 text-xs font-semibold text-white">
+        <button type="button" tabIndex={dx === 0 ? -1 : 0} onClick={() => { setDx(0); onArchive(); }} className="flex-1 bg-brand-600 text-xs font-semibold text-white">
           🗄<br />{archived ? "Terugzetten" : "Archiveer"}
         </button>
       </div>

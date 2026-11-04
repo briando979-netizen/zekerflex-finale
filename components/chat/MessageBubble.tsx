@@ -9,7 +9,8 @@ const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "😢"];
 
 function Ticks({ m }: { m: Msg }) {
   if (m.pending) return <span>🕓</span>;
-  return <span className={m.readByOthers ? "text-[#53BDEB]" : ""}>{m.readByOthers ? "✓✓" : "✓"}</span>;
+  // gelezen = blauw: op de lichtgroene bubbel donkerblauw (5,3:1; #53BDEB haalde 1,9:1), in donker het WhatsApp-blauw
+  return <span className={m.readByOthers ? "text-[#0369A1] [.app-scope[data-theme=dark]_&]:text-[#53BDEB]" : ""}>{m.readByOthers ? "✓✓" : "✓"}</span>;
 }
 
 function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) {
@@ -281,7 +282,7 @@ export function MessageBubble({
 
         {m.text && <p className="whitespace-pre-wrap break-words text-ink">{m.text}</p>}
 
-        <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-neutralx-400">
+        <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-neutralx-500">
           {m.auto && <span className="italic">automatisch</span>}
           {fmtTime(m.at)}
           {mine && <Ticks m={m} />}

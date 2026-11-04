@@ -56,7 +56,7 @@ export function VolumeCard() {
           <li key={t.name} className={`rounded-lg border px-2 py-1.5 ${t.name === d.tier.name ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-hair text-neutralx-600"}`}>
             <span className="block">{t.name}</span>
             <span className="block">{euro(Math.round(d.baseFeePerHourCents * t.factor))}/u</span>
-            <span className="block text-[10px] text-neutralx-400">vanaf {t.fromHours.toLocaleString("nl-NL")} u</span>
+            <span className="block text-[10px] text-neutralx-500">vanaf {t.fromHours.toLocaleString("nl-NL")} u</span>
           </li>
         ))}
       </ul>
