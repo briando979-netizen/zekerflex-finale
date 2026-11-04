@@ -141,6 +141,23 @@ describe("stijl beleving", () => {
     expect(siteSaveSchema.safeParse({ theme: s.theme, bedrijf: s.bedrijf, pages: s.pages }).success).toBe(true);
   });
 
+  it("geeft een pagina zonder opening een donkere kop met de titel, en het eerste blok daaronder staat op crème", () => {
+    const s = site("beleving");
+    const over = s.pages.find((p) => p.slug === "over-ons")!;
+    const html = renderPage(s, over, opts);
+    expect(html).toContain(`<section class="pagekop"><div class="wrap"><p class="kicker">Het Schwarzwald</p><h1>${over.titel}</h1>`);
+    expect(html).not.toContain('<h1 class="vh">');
+    expect(html).toMatch(/<\/section><section><div class="wrap/);
+    // de omschrijving staat er alleen als hij niet de tekst eronder herhaalt
+    const eigen = { ...over, seoOmschrijving: "Familiebedrijf sinds 1987, midden in de bossen." };
+    expect(renderPage(s, eigen, opts)).toContain("</h1><p>Familiebedrijf sinds 1987, midden in de bossen.</p></div></section>");
+    const kopie = { ...over, seoOmschrijving: "Zelfde tekst als eronder.", blocks: [{ ...newBlock("tekst", id()), props: { kop: "Over", tekst: "Zelfde tekst als eronder. En nog meer." } } as Block] };
+    expect(renderPage(s, kopie, opts)).toContain(`<h1>${over.titel}</h1></div></section>`);
+    // premium houdt de onzichtbare kop
+    const p = site("premium");
+    expect(renderPage(p, p.pages.find((x) => x.slug === "over-ons")!, opts)).toContain(`<h1 class="vh">${over.titel}</h1>`);
+  });
+
   it("knipt de kop en de badge netjes", () => {
     expect(bel.splitKop("Schildersbedrijf De Vries")).toEqual({ rest: "Schildersbedrijf", hl: "De Vries" });
     expect(bel.splitKop("Ambachtelijk brood, elke ochtend vers")).toEqual({ rest: "Ambachtelijk brood, elke ochtend", hl: "vers" });

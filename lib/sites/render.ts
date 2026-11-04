@@ -1,5 +1,5 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import { belevingBlok, belevingCss, metKicker, type BelevingCtx } from "@/lib/sites/beleving-render";
+import { belevingBlok, belevingCss, metKicker, paginaKop, type BelevingCtx } from "@/lib/sites/beleving-render";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
 import {
@@ -55,8 +55,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card). */
-const CSS_REV = 9;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header). */
+const CSS_REV = 10;
 
 /** Pages every published site has besides its own (the shop's: lib/sites/winkel-render.ts). */
 export const SYSTEM_PAGES = ["privacy", "bedankt", "winkel", "bestellen"];
@@ -616,7 +616,7 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
 /**
  * A block in the beleving style: its own layout for the opening, offer cards, steps,
  * reviews and the closing band, the premium one with a small label above it for the rest.
- * The opening is block 0, so the first block after it is on cream, as on the Schwarzwald site.
+ * The first block after the opening (or after the page header, `i` -1) is on cream, as on the Schwarzwald site.
  */
 function belevingHtml(b: Block, i: number, ctx: Ctx, page: Page): string {
   const withForm = ctx.pages.find((p) => p.blocks.some((x) => x.type === "contact"));
@@ -642,11 +642,13 @@ const PREVIEW_FONTS = "/fonts/";
 /** One of the site's own pages as a full HTML document. */
 export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions): string {
   const ctx = context(site, opts);
-  // only the opening block has a visible h1; without one, an invisible h1 with the page title (screen readers, search engines)
-  const h1 = page.blocks.some((b) => b.type === "hero") ? "" : `<h1 class="vh">${esc(page.titel)}</h1>`;
+  // only the opening block has a visible h1; without one, an invisible h1 with the page title (screen readers, search engines),
+  // or in beleving a dark page header with the title, as every page of schwarzwald.zekerflex.com has
+  const hero = page.blocks.some((b) => b.type === "hero");
+  const h1 = hero ? "" : ctx.beleving ? paginaKop(page, ctx.bedrijf, esc) : `<h1 class="vh">${esc(page.titel)}</h1>`;
   // in the builder's preview each block is clickable (data-blok → the editor selects it); visitors never get this
   const blokken = page.blocks.map((b, i) => {
-    const html = ctx.beleving ? belevingHtml(b, i, ctx, page) : renderBlock(b, i, ctx);
+    const html = ctx.beleving ? belevingHtml(b, hero ? i : i - 1, ctx, page) : renderBlock(b, i, ctx);
     return ctx.preview && html ? `<div data-blok="${esc(b.id)}">${html}</div>` : html;
   });
   return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS));

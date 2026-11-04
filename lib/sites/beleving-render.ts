@@ -105,6 +105,9 @@ footer small{margin-top:48px;padding-top:20px;border-top:1px solid rgba(255,255,
 details.q{margin:0 0 12px;padding:18px 22px;border:0;border-radius:1.25rem;background:#fff;box-shadow:0 1px 2px rgba(10,18,14,.04),0 12px 28px -20px rgba(10,18,14,.35)}details.q summary{font-family:${display};font-size:1.08rem}
 form.contact{padding:24px;border-radius:1.75rem;background:#fff;box-shadow:0 1px 2px rgba(10,18,14,.04),0 18px 40px -24px rgba(10,18,14,.35)}
 .contact-grid>div:last-child{align-self:start;padding:28px;border-radius:1.75rem;background:var(--night);color:var(--cream)}.contact-grid>div:last-child h3{color:#fff}.contact-grid>div:last-child a{color:var(--sun)}.contact-grid>div:last-child :focus-visible{outline-color:var(--sun)}
+.pagekop{position:relative;overflow:hidden;padding:72px 0 64px;background:var(--night);color:var(--cream)}@media (min-width:1024px){.pagekop{padding:104px 0 88px}}
+.pagekop::before{content:"";position:absolute;left:-120px;top:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(closest-side,rgba(${a},.32),rgba(${a},0));pointer-events:none}.pagekop::after{content:"";position:absolute;right:-60px;bottom:-120px;width:340px;height:340px;border-radius:50%;background:radial-gradient(closest-side,rgba(${moss},.9),rgba(${moss},0));pointer-events:none}
+.pagekop .wrap{position:relative;z-index:1}.pagekop .kicker{color:var(--sun)}.pagekop h1{max-width:18ch;margin:0;color:var(--cream);font-size:clamp(2.6rem,7vw,5rem);line-height:.95;letter-spacing:-.03em;overflow-wrap:anywhere}.pagekop p:not(.kicker){max-width:40rem;margin:20px 0 0;font-size:1.125rem;line-height:1.6;color:rgba(255,246,234,.8)}.pagekop :focus-visible{outline-color:var(--sun)}
 @media (prefers-reduced-motion:reduce){.tegel img,.gallery.bel img{transition:none}.tegel:hover img,.gallery.bel img:hover{transform:none}}`;
 }
 
@@ -183,6 +186,19 @@ function hero(b: Extract<Block, { type: "hero" }>, bc: BelevingCtx): string {
   const rij = woorden.length ? [...woorden, ...woorden, ...woorden].slice(0, Math.max(12, woorden.length * 2)) : [];
   const ticker = rij.length ? `<div class="ticker" aria-hidden="true"><div class="tk">${rij.map((w) => `<span>${esc(w)}</span><i>✦</i>`).join("")}</div></div>` : "";
   return `<section class="hero bel"><div class="wrap hero-grid${collage ? " met-foto" : ""}"><div class="hero-txt"><h1 style="--n:${kopMaat(p.kop)}">${kop}</h1>${bc.paras(p.tekst)}${acts.length ? `<p class="hero-acts">${acts.join("")}</p>` : ""}</div>${collage}</div></section>${ticker}`;
+}
+
+/**
+ * De kop van een pagina zonder openingsblok (Over ons, Contact): donker, met de naam als label,
+ * de titel groot en de omschrijving eronder, zoals elke pagina van schwarzwald.zekerflex.com.
+ */
+export function paginaKop(page: Page, c: Company, esc: (s: unknown) => string): string {
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const omschrijving = page.seoOmschrijving?.trim() ?? "";
+  // geen intro die de titel herhaalt, of de tekst die er meteen onder staat (bij voorstellen is de omschrijving daar een stukje van)
+  const eersteTekst = page.blocks.map((b) => (b.props as { tekst?: unknown }).tekst).find((t): t is string => typeof t === "string" && t.trim() !== "");
+  const dubbel = !omschrijving || norm(omschrijving) === norm(page.titel) || (eersteTekst !== undefined && norm(eersteTekst).startsWith(norm(omschrijving).slice(0, 60)));
+  return `<section class="pagekop"><div class="wrap"><p class="kicker">${esc(c.naam)}</p><h1>${esc(page.titel)}</h1>${dubbel ? "" : `<p>${esc(omschrijving)}</p>`}</div></section>`;
 }
 
 // ---- de andere blokken -------------------------------------------------------
