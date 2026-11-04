@@ -103,6 +103,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     blurb: "Producten, bestellingen, beeld en huisstijl",
     icon: "shop",
     pages: [
+      { href: "/admin/ontwerper", label: "Site-ontwerper" },
       { href: "/admin/shop", label: "Webshop" },
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/huisstijl", label: "Huisstijl" },

@@ -13,7 +13,7 @@ import { KonamiEasterEgg } from "@/components/ui/KonamiEasterEgg";
 import { Providers } from "@/components/ui/Providers";
 import { CookieConsent } from "@/components/marketing/CookieConsent";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
-import { getBranding, brandingCssVars } from "@/lib/branding/settings";
+import { liveOntwerpCss } from "@/lib/ontwerp/store";
 import { activeSeason } from "@/lib/seasons/settings";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 
@@ -99,7 +99,8 @@ export default async function RootLayout({
   // Runtime huisstijl: overschrijf de merkkleur-variabelen als de eigenaar ze
   // heeft aangepast (Admin → Huisstijl). Staat alles op standaard → null → geen
   // injectie, dus identieke look.
-  const brandingCss = brandingCssVars(await getBranding().catch(() => ({ primaryHex: "#0E5C4A", mintHex: "#4FE0A0" })));
+  // Sinds 4 nov komt die uit de Site-ontwerper (lib/ontwerp): kleuren, lettertypes en vormen.
+  const brandingCss = await liveOntwerpCss().catch(() => null);
   // Feestversiering rond Nederlandse feestdagen (lib/seasons); op gewone dagen laadt er niets.
   const season = await activeSeason().catch(() => null);
   return (

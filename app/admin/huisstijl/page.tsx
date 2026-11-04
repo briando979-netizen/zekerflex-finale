@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead, Panel } from "@/components/admin/kit";
-import { BrandingEditor } from "@/components/admin/BrandingEditor";
 import { ContentEditor } from "@/components/admin/ContentEditor";
 import { SeasonalThemesEditor } from "@/components/admin/SeasonalThemesEditor";
 
@@ -15,7 +14,12 @@ export default async function AdminHuisstijlPage() {
   return (
     <div className="space-y-4">
       <PageHead title="Huisstijl" subtitle="Pas de merkkleuren, teksten en het beeld van ZekerFlex aan, zonder code." />
-      <BrandingEditor />
+      <Panel
+        title="Kleuren, lettertypes en vormen"
+        subtitle="Die stel je in bij de Site-ontwerper: met een live voorbeeld op computer, tablet en telefoon, concept en publiceren, geschiedenis en AI-hulp."
+      >
+        <Link href="/admin/ontwerper" className="a-button a-button-primary">Naar de Site-ontwerper →</Link>
+      </Panel>
       <SeasonalThemesEditor />
       <ContentEditor />
       <Panel

@@ -121,9 +121,13 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // Default: Stripe's card iframe and the YouTube player in privacy mode, which
   // only loads after a click (components/ui/YouTubeEmbed.tsx). The studio also
   // frames 'self' (live preview), blob: (sandbox) and best-effort external https: pages.
+  // The Site-ontwerper (/admin/ontwerper) shows the own site in a same-origin preview frame.
+  const ontwerper = pathname === "/admin/ontwerper" || (pathname?.startsWith("/admin/ontwerper/") ?? false);
   const frameSrc = studio
     ? "frame-src 'self' blob: https:"
-    : "frame-src https://js.stripe.com https://www.youtube-nocookie.com";
+    : ontwerper
+      ? "frame-src 'self' https://www.youtube-nocookie.com"
+      : "frame-src https://js.stripe.com https://www.youtube-nocookie.com";
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";
