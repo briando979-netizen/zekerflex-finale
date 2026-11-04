@@ -1,6 +1,8 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead } from "@/components/admin/kit";
 import { DomeinBestellingen } from "@/components/admin/DomeinBestellingen";
+import { env } from "@/lib/env";
+import { transipConfigured } from "@/lib/mail/hosting/transip";
 
 export const dynamic = "force-dynamic";
 
@@ -10,5 +12,5 @@ export default async function DomeinenPage() {
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="Domeinen is alleen beschikbaar voor platformbeheerders." />;
   }
-  return <DomeinBestellingen />;
+  return <DomeinBestellingen transip={transipConfigured()} ipv4={env.SITES_IPV4} ipv6={env.SITES_IPV6} />;
 }

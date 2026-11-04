@@ -10,12 +10,15 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { BUNDEL_TLDS, euroPrijs, extensie, metBtw } from "@/lib/domeinen/extensies";
 import { leesDomein } from "@/lib/domeinen/naam";
 import { beschikbaarheid } from "@/lib/domeinen/beschikbaar";
+import { dnsVoorWebsite, koppelAanSite, koppelNotitie, koppelUitleg, type Koppeling } from "@/lib/domeinen/koppelen";
+import { registerDomain, transipConfigured } from "@/lib/mail/hosting/transip";
 
 // Een bedrijf bestelt een domeinnaam en betaalt met Stripe Checkout (iDEAL of
 // kaart). De webhook (app/api/webhooks/stripe, metadata.domeinBestellingId)
-// zet hem op BETAALD; ZekerFlex registreert hem (voorlopig met de hand in
-// TransIP) en vinkt hem af in Admin → Domeinen. Met een websiteabonnement is
-// één .nl/.com/.eu/.be het eerste jaar inbegrepen (de bundel).
+// zet hem op BETAALD; ZekerFlex registreert hem in Admin → Domeinen (met de
+// knop via TransIP, of met de hand en dan afvinken). Geregistreerd = meteen op
+// de website van het bedrijf (lib/domeinen/koppelen.ts). Met een
+// websiteabonnement is één .nl/.com/.eu/.be het eerste jaar inbegrepen (de bundel).
 
 const BUNDEL_STATUSSEN = ["ONBOARDING", "SUBMITTED", "ACTIVE"] as const;
 /** Bestellingen die een domein "bezet houden" (een tweede bestelling is dan niet nodig). */
@@ -191,26 +194,65 @@ const MAG_NAAR: Record<DomeinBestelStatus, DomeinBestelStatus[]> = {
   GEANNULEERD: [],
 };
 
-/** Admin vinkt een bestelling af (geregistreerd, mislukt of geannuleerd). */
+/** "user:<id>" → de id, voor het auditspoor van de website. */
+const beheerder = (door: string) => ({ userId: door.startsWith("user:") ? door.slice(5) : door, name: "ZekerFlex" });
+
+/** Admin vinkt een bestelling af (geregistreerd, mislukt of geannuleerd). Geregistreerd: meteen op de website van de klant. */
 export async function zetStatus(id: string, naar: DomeinBestelStatus, notitie: string, door: string): Promise<void> {
   const b = await prisma.domeinBestelling.findUnique({ where: { id } });
   if (!b) throw AppError.notFound("Deze bestelling bestaat niet.");
   if (!MAG_NAAR[b.status].includes(naar)) throw AppError.conflict(`Een bestelling met status ${b.status} kan niet naar ${naar}.`);
+  const koppeling: Koppeling | null =
+    naar === "GEREGISTREERD" ? await koppelAanSite(b.tenantId, b.domein, beheerder(door)).catch((e: unknown) => ({ soort: "fout" as const, melding: (e as Error).message })) : null;
+  const extra = [notitie, koppeling ? koppelNotitie(koppeling) : ""].filter(Boolean).join(" ");
   const { count } = await prisma.domeinBestelling.updateMany({
     where: { id, status: b.status },
-    data: { status: naar, ...(naar === "GEREGISTREERD" ? { afgerondOp: new Date() } : {}), ...(notitie ? { notitie: `${b.notitie} ${notitie}`.trim() } : {}) },
+    data: { status: naar, ...(naar === "GEREGISTREERD" ? { afgerondOp: new Date() } : {}), ...(extra ? { notitie: `${b.notitie} ${extra}`.trim() } : {}) },
   });
   if (count !== 1) throw AppError.conflict("Deze bestelling is net door iemand anders aangepast. Ververs de pagina.");
   await recordAudit({ category: "BILLING", action: "domein.status", actorLabel: door, summary: `${b.domein}: ${b.status} → ${naar}`, targetType: "domein-bestelling", targetId: id }).catch(() => undefined);
-  if (naar === "GEREGISTREERD") {
+  if (koppeling) {
     await sendMail({
       to: b.email,
       kind: "domein-bestelling",
       replyTo: CONTACTS.sales,
       subject: `${b.domein} is vastgelegd`,
-      text: `Goed nieuws: ${b.domein} is voor je vastgelegd. We koppelen hem aan je website of webshop; je hoort het als dat klaar is.\n\nHet ZekerFlex-team`,
+      text: `Goed nieuws: ${b.domein} is voor je vastgelegd.\n\n${koppelUitleg(b.domein, koppeling)}\n\nVragen? Antwoord gewoon op deze mail.\n\nHet ZekerFlex-team`,
     }).catch((e) => logger.warn("domein: mail 'geregistreerd' mislukt", { error: (e as Error).message }));
   }
+}
+
+// één registratie tegelijk per bestelling (twee klikken = twee TransIP-facturen)
+const bezigMet = ((globalThis as { __zfDomeinRegistratie?: Set<string> }).__zfDomeinRegistratie ??= new Set<string>());
+
+/**
+ * Admin drukt op "Registreer": de naam wordt in het TransIP-account van
+ * ZekerFlex vastgelegd, met DNS die naar onze server wijst, en daarna op
+ * geregistreerd gezet (en op de website). Dit maakt een TransIP-factuur, dus
+ * alleen op een klik, nooit vanzelf. Lukt het niet, dan blijft de status staan.
+ */
+export async function registreerBijTransip(id: string, door: string): Promise<void> {
+  if (!transipConfigured()) throw AppError.precondition("De koppeling met TransIP staat nog niet aan (Admin → Te doen). Registreer de naam met de hand in TransIP en vink hem daarna af.");
+  if (bezigMet.has(id)) throw AppError.conflict("Deze naam wordt al geregistreerd. Wacht even en ververs de pagina.");
+  bezigMet.add(id);
+  try {
+    const b = await prisma.domeinBestelling.findUnique({ where: { id } });
+    if (!b) throw AppError.notFound("Deze bestelling bestaat niet.");
+    if (b.status !== "BETAALD" && b.status !== "MISLUKT") throw AppError.conflict("Alleen een betaalde bestelling kun je registreren.");
+    await registerDomain(b.domein, dnsVoorWebsite(b.domein));
+    await zetStatus(id, "GEREGISTREERD", "Geregistreerd via TransIP.", door);
+  } finally {
+    bezigMet.delete(id);
+  }
+}
+
+/** Het bedrijf zet een geregistreerde naam later zelf op zijn website ("Koppel aan mijn website"). */
+export async function koppelBestelling(tenantId: string, id: string, door: { userId: string; name: string }): Promise<void> {
+  const b = await prisma.domeinBestelling.findFirst({ where: { id, tenantId, status: "GEREGISTREERD" }, select: { domein: true } });
+  if (!b) throw AppError.notFound("Deze domeinnaam is (nog) niet voor je vastgelegd.");
+  const k = await koppelAanSite(tenantId, b.domein, door);
+  if (k.soort === "geen-site") throw AppError.notFound("Maak eerst je website in de websitebouwer; daarna koppel je de naam hier.");
+  if (k.soort === "ander-domein") throw AppError.conflict(`Je website gebruikt nu ${k.host}. Koppel dat eerst los in de websitebouwer (tab Domein) en probeer het dan opnieuw.`);
 }
 
 export { MAG_NAAR };

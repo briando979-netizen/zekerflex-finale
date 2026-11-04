@@ -90,17 +90,18 @@ function shortName(name: string): string {
   return labels.length <= 2 ? "@" : labels.slice(0, -2).join(".");
 }
 
-/** The DNS records the company sets at its domain provider. */
-export function dnsRecords(siteId: string, d: Pick<SiteDomain, "host" | "alias">): DnsRecord[] {
+/** The DNS records the company sets at its domain provider (for a domain ZekerFlex registered: the ones we set, without the TXT proof). */
+export function dnsRecords(siteId: string, d: Pick<SiteDomain, "host" | "alias" | "viaZekerflex">): DnsRecord[] {
   const base = baseOf(d);
   const www = wwwOf(d);
   const txtName = `_zekerflex.${base}`;
-  return [
+  const records: DnsRecord[] = [
     { type: "A", name: base, short: shortName(base), value: env.SITES_IPV4, why: "Laat je domein naar ZekerFlex wijzen. Staat er al een A-regel naar een ander adres? Vervang die." },
     { type: "AAAA", name: base, short: shortName(base), value: env.SITES_IPV6, why: "Hetzelfde voor IPv6. Een oude AAAA-regel naar een ander adres moet weg." },
     ...(www ? [{ type: "CNAME" as const, name: www, short: shortName(www), value: base, why: "Zodat ook www werkt. Staat er voor www al een andere regel? Vervang die door deze." }] : []),
     { type: "TXT", name: txtName, short: shortName(txtName), value: verificationRecord(siteId), why: "Bewijst dat het domein van jou is. Alleen jij kunt deze regel zetten." },
   ];
+  return d.viaZekerflex ? records.filter((r) => r.type !== "TXT") : records;
 }
 
 export async function getDomain(siteId: string): Promise<SiteDomain | null> {
@@ -134,6 +135,24 @@ export async function unlinkDomain(siteId: string, by: { userId: string; name: s
   }
   await kvDelete(domainKey(siteId));
   await audit("site.domain.unlinked", by, siteId, `Domein ${d.host} losgekoppeld van een website`);
+}
+
+/**
+ * A domain ZekerFlex registered for this company (Admin → Domeinen). We hold it
+ * and set its DNS ourselves, so there is no TXT proof: claim it right away.
+ * Another own domain that is already linked stays (null): we never swap it unasked.
+ */
+export async function linkRegisteredDomain(siteId: string, domein: string, by: { userId: string; name: string }): Promise<SiteDomain | null> {
+  const { host, alias } = normalizeDomain(domein);
+  const current = await getDomain(siteId);
+  if (current && current.host !== host && current.alias !== host) return null;
+  if (current?.viaZekerflex && current.verifiedAt) return current;
+  const d: SiteDomain = current ?? { host, alias, addedAt: new Date().toISOString(), verifiedAt: null, activeAt: null, check: null };
+  if (!d.verifiedAt) await claimHosts(siteId, d);
+  const next: SiteDomain = { ...d, verifiedAt: d.verifiedAt ?? new Date().toISOString(), viaZekerflex: true };
+  await kvSet(domainKey(siteId), next);
+  await audit("site.domain.registered", by, siteId, `Domein ${d.host} (vastgelegd via ZekerFlex) gekoppeld aan een website`);
+  return next;
 }
 
 /** Claim both names for this site; first one wins, and a half claim is rolled back. */
@@ -227,19 +246,23 @@ export async function checkDomain(siteId: string, by: { userId: string; name: st
   const activeAt = https ? (d.activeAt ?? new Date().toISOString()) : null;
   if (activeAt && !d.activeAt) await audit("site.domain.active", by, siteId, `Website staat nu op https://${d.host}`);
 
+  // een domein dat ZekerFlex vastlegde: wij zetten de DNS, de klant hoeft niets
+  const wijstHier = main.a && main.aaaa;
   const problem = !verifiedAt
     ? "We vinden de TXT-regel nog niet. Zet hem bij je domeinprovider; het kan tot een uur duren voordat hij overal zichtbaar is."
-    : !main.a
-      ? `${d.host} wijst nog niet naar ZekerFlex. Zet de A-regel op ${env.SITES_IPV4} en haal andere A-regels weg.`
-      : !main.aaaa
-        ? `Er staat een AAAA-regel naar een ander adres. Verwijder die, of zet hem op ${env.SITES_IPV6}.`
-        : !site.liveBuild
-          ? "Publiceer je website eerst. Daarna maken we de beveiligde verbinding."
-          : !https
-            ? "De beveiligde verbinding (https) is nog niet klaar. Probeer het over een paar minuten opnieuw."
-            : d.alias && !(alias.a && alias.aaaa)
-              ? `Je website staat online. ${d.alias} wijst nog niet naar ZekerFlex; zet de ${d.alias.startsWith("www.") ? "CNAME" : "A"}-regel, dan werkt dat adres ook.`
-              : null;
+    : d.viaZekerflex && !wijstHier
+      ? "ZekerFlex zet de DNS-regels voor je; je hoeft niets te doen. Het kan een paar uur duren voordat ze overal zichtbaar zijn. Probeer het later opnieuw."
+      : !main.a
+        ? `${d.host} wijst nog niet naar ZekerFlex. Zet de A-regel op ${env.SITES_IPV4} en haal andere A-regels weg.`
+        : !main.aaaa
+          ? `Er staat een AAAA-regel naar een ander adres. Verwijder die, of zet hem op ${env.SITES_IPV6}.`
+          : !site.liveBuild
+            ? "Publiceer je website eerst. Daarna maken we de beveiligde verbinding."
+            : !https
+              ? "De beveiligde verbinding (https) is nog niet klaar. Probeer het over een paar minuten opnieuw."
+              : d.alias && !(alias.a && alias.aaaa)
+                ? `Je website staat online. ${d.alias} wijst nog niet naar ZekerFlex; zet de ${d.alias.startsWith("www.") ? "CNAME" : "A"}-regel, dan werkt dat adres ook.`
+                : null;
   const check: DomainCheck = { at: new Date().toISOString(), txt, a: main.a, aaaa: main.aaaa, alias: alias.a && alias.aaaa, https, problem };
   const next: SiteDomain = { ...d, verifiedAt, activeAt, check };
   await kvSet(domainKey(siteId), next);

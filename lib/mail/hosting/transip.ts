@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
 // where ZekerFlex addresses are made. Auth: a key pair from the TransIP
 // control panel; each token request is RSA-SHA512 signed and the key only
 // works from the whitelisted server IP. Registering a domain creates an
-// invoice: that is not in here, and only ever runs on an admin's click.
+// invoice: registerDomain only ever runs on an admin's click (Admin → Domeinen).
 // ---------------------------------------------------------------------------
 
 const BASE = "https://api.transip.nl/v6";
@@ -129,4 +129,22 @@ export interface DomainAvailability {
 export async function domainAvailability(name: string): Promise<DomainAvailability | null> {
   const d = await call<{ availability?: DomainAvailability }>("GET", `/domain-availability/${encodeURIComponent(name)}`);
   return d?.availability ?? null;
+}
+
+export interface TransipDnsEntry {
+  /** relative to the domain: "@" for the domain itself, "www" */
+  name: string;
+  /** TTL in seconds */
+  expire: number;
+  type: "A" | "AAAA" | "CNAME" | "MX" | "TXT";
+  content: string;
+}
+
+/**
+ * Register a domain in the ZekerFlex TransIP account, with these DNS records.
+ * Contacts and nameservers are the account defaults. This creates a TransIP
+ * invoice, so it only runs when an admin presses "Registreer" (Admin → Domeinen).
+ */
+export async function registerDomain(domainName: string, dnsEntries: TransipDnsEntry[]): Promise<void> {
+  await call("POST", "/domains", { domainName, dnsEntries });
 }

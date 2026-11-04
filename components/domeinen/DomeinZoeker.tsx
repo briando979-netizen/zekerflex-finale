@@ -35,6 +35,8 @@ interface MijnDomein {
   status: BestelStatus;
   bedragCent: number;
   bundel: boolean;
+  /** staat op de website van dit bedrijf */
+  opWebsite?: boolean;
 }
 const BESTEL_LABEL: Record<BestelStatus, string> = {
   OPEN: "Wacht op betaling",
@@ -228,12 +230,26 @@ export function DomeinZoeker({
         </p>
       )}
 
-      {werkgever && mijn && mijn.length > 0 && <MijnDomeinen lijst={mijn} />}
+      {werkgever && mijn && mijn.length > 0 && <MijnDomeinen lijst={mijn} onLijst={setMijn} />}
     </div>
   );
 }
 
-function MijnDomeinen({ lijst }: { lijst: MijnDomein[] }) {
+function MijnDomeinen({ lijst, onLijst }: { lijst: MijnDomein[]; onLijst: (l: MijnDomein[]) => void }) {
+  const [bezig, setBezig] = useState<string | null>(null);
+  const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
+
+  // een vastgelegde naam op de eigen website zetten; daarna de serverversie van de lijst
+  async function koppel(d: MijnDomein) {
+    setBezig(d.id);
+    setMelding(null);
+    const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ koppel: d.id }) }).catch(() => null);
+    setBezig(null);
+    if (!r?.ok) return setMelding({ ok: false, tekst: await fout(r, "Koppelen lukte niet. Probeer het opnieuw.") });
+    onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    setMelding({ ok: true, tekst: `${d.domein} staat nu op je website. Zodra de DNS overal is bijgewerkt (meestal binnen een paar uur), werkt het adres.` });
+  }
+
   return (
     <section aria-labelledby="mijn-domeinen" className="rounded-2xl border border-hair bg-white p-5">
       <h3 id="mijn-domeinen" className="font-display text-lg font-bold text-ink">
@@ -243,13 +259,32 @@ function MijnDomeinen({ lijst }: { lijst: MijnDomein[] }) {
         {lijst.map((d) => (
           <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
             <span className="break-all font-semibold text-ink">{d.domein}</span>
-            <span className="text-neutralx-600">
-              {BESTEL_LABEL[d.status]}
-              {d.bundel ? " · in de bundel" : ""}
+            <span className="flex flex-wrap items-center gap-2 text-neutralx-600">
+              <span>
+                {BESTEL_LABEL[d.status]}
+                {d.status === "GEREGISTREERD" && d.opWebsite ? " · op je website" : ""}
+                {d.bundel ? " · in de bundel" : ""}
+              </span>
+              {d.status === "GEREGISTREERD" && !d.opWebsite && (
+                <button
+                  type="button"
+                  disabled={bezig !== null}
+                  onClick={() => void koppel(d)}
+                  aria-label={`Koppel ${d.domein} aan mijn website`}
+                  className="rounded-full border border-brand-600 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-mintwash disabled:opacity-50"
+                >
+                  {bezig === d.id ? "Bezig…" : "Koppel aan mijn website"}
+                </button>
+              )}
             </span>
           </li>
         ))}
       </ul>
+      {melding && (
+        <p role={melding.ok ? "status" : "alert"} className={`mt-3 text-sm ${melding.ok ? "text-ok" : "text-crit"}`}>
+          {melding.tekst}
+        </p>
+      )}
     </section>
   );
 }

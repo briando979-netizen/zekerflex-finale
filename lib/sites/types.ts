@@ -244,6 +244,8 @@ export interface SiteDomain {
   /** answered over https: visitors and search engines go to the own domain */
   activeAt: string | null;
   check: DomainCheck | null;
+  /** registered by ZekerFlex (Admin → Domeinen): we hold its DNS, so no TXT proof is needed */
+  viaZekerflex?: boolean;
 }
 
 export interface SiteDoc {

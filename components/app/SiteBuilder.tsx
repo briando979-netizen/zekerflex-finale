@@ -784,6 +784,8 @@ interface DomainState {
   verifiedAt: string | null;
   activeAt: string | null;
   check: { at: string; txt: boolean; a: boolean; aaaa: boolean; alias: boolean; https: boolean; problem: string | null } | null;
+  /** vastgelegd via ZekerFlex: wij zetten de DNS */
+  viaZekerflex?: boolean;
 }
 
 function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: (ownDomain: string | null) => void }) {
@@ -865,7 +867,7 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
   }
 
   const items: { label: string; ok: boolean | null }[] = [
-    { label: "Het domein is van jou (TXT-regel)", ok: d.verifiedAt ? true : c ? c.txt : null },
+    { label: d.viaZekerflex ? "Het domein staat bij ZekerFlex" : "Het domein is van jou (TXT-regel)", ok: d.verifiedAt ? true : c ? c.txt : null },
     { label: `${d.host} wijst naar ZekerFlex`, ok: c ? c.a : null },
     { label: "Geen oude IPv6-regel naar een ander adres", ok: c ? c.aaaa : null },
     ...(d.alias ? [{ label: `${d.alias} doet mee`, ok: c ? c.alias : null }] : []),
@@ -878,6 +880,10 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
         <p role="status" className="rounded-lg bg-ok/10 p-3 text-ok">
           Je website staat op{" "}
           <a href={`https://${d.host}`} target="_blank" rel="noopener" className="font-semibold underline">{d.host}</a>.
+        </p>
+      ) : d.viaZekerflex ? (
+        <p className="text-neutralx-600">
+          <strong className="text-ink">{d.host}</strong> staat bij ZekerFlex. Wij zetten deze regels voor je; je hoeft niets te doen. Het kan een paar uur duren. Klik daarna op Controleer.
         </p>
       ) : (
         <p className="text-neutralx-600">

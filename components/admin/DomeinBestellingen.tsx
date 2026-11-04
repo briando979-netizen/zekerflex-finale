@@ -42,8 +42,9 @@ const KNOPPEN: Record<Status, { naar: Status; label: string }[]> = {
 };
 const datum = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" }).format(new Date(iso));
 
-// Admin → Domeinen: wat er besteld is, en afvinken na registreren in TransIP.
-export function DomeinBestellingen() {
+// Admin → Domeinen: wat er besteld is, registreren via TransIP (met de sleutel)
+// of met de hand en dan afvinken. Geregistreerd = meteen op de website van de klant.
+export function DomeinBestellingen({ transip, ipv4, ipv6 }: { transip: boolean; ipv4: string; ipv6: string }) {
   const [rijen, setRijen] = useState<Rij[] | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -71,7 +72,23 @@ export function DomeinBestellingen() {
     }
     // de serverversie overnemen (die kan meer hebben veranderd)
     setRijen(((await r.json()) as { bestellingen: Rij[] }).bestellingen);
-    setOk(`${rij.domein}: ${STATUS[naar].label.toLowerCase()}.${naar === "GEREGISTREERD" ? " De klant krijgt een mail." : ""}`);
+    setOk(`${rij.domein}: ${STATUS[naar].label.toLowerCase()}.${naar === "GEREGISTREERD" ? " De klant krijgt een mail; de notitie zegt of hij op de website staat." : ""}`);
+  }
+
+  // registreren in het TransIP-account van ZekerFlex: maakt daar een factuur
+  async function registreer(rij: Rij) {
+    if (!window.confirm(`${rij.domein} nu registreren bij TransIP? Dit maakt een factuur in het TransIP-account van ZekerFlex.`)) return;
+    setBezig(rij.id);
+    setFout(null);
+    setOk(null);
+    const r = await fetch("/api/admin/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: rij.id, actie: "registreer" }) }).catch(() => null);
+    setBezig(null);
+    if (!r?.ok) {
+      const d = r ? ((await r.json().catch(() => ({}))) as { error?: { message?: string } }) : {};
+      return setFout(d.error?.message ?? "Registreren lukte niet.");
+    }
+    setRijen(((await r.json()) as { bestellingen: Rij[] }).bestellingen);
+    setOk(`${rij.domein} is geregistreerd bij TransIP en wijst naar onze server. De klant krijgt een mail.`);
   }
 
   const lijst = rijen ?? [];
@@ -79,7 +96,7 @@ export function DomeinBestellingen() {
   const omzet = lijst.filter((r) => r.status === "BETAALD" || r.status === "GEREGISTREERD").reduce((s, r) => s + r.bedragCent, 0);
   return (
     <div className="space-y-4">
-      <PageHead title="Domeinen" subtitle="Bestelde domeinnamen. Registreer ze in TransIP en vink ze hier af; de klant krijgt dan een mail." />
+      <PageHead title="Domeinen" subtitle="Bestelde domeinnamen. Registreer ze en vink ze af: de klant krijgt een mail en de naam komt meteen op zijn website." />
       {fout && (
         <Notice tone="crit" role="alert">
           {fout}
@@ -94,6 +111,16 @@ export function DomeinBestellingen() {
           { label: "Betaald (incl. btw)", value: euroPrijs(omzet), tone: "money" },
         ]}
       />
+      <Notice tone={transip ? "ok" : "warn"}>
+        {transip ? (
+          <>Registreren gaat met de knop &quot;Registreer bij TransIP&quot;: de naam komt in het TransIP-account van ZekerFlex en wijst meteen naar onze server.</>
+        ) : (
+          <>
+            De TransIP-sleutel staat nog niet op de server (Admin → Te doen), dus registreer met de hand in TransIP. Zet daar deze DNS-regels: A @ → {ipv4}, AAAA @ → {ipv6}, CNAME www → de
+            domeinnaam zelf. Vink hem daarna hier af op &quot;Geregistreerd&quot;.
+          </>
+        )}
+      </Notice>
       <Panel title="Bestellingen" flush>
         {rijen === null ? (
           <p className="p-4 text-sm" style={{ color: "var(--a-mute)" }}>
@@ -107,6 +134,7 @@ export function DomeinBestellingen() {
               { key: "bedrag", label: "Bedrag", align: "right" },
               { key: "klant", label: "Besteld door", hideOnMobile: true },
               { key: "op", label: "Besteld op", hideOnMobile: true },
+              { key: "notitie", label: "Notitie", hideOnMobile: true },
               { key: "acties", label: "Actie" },
             ]}
             rows={lijst.map((r) => ({
@@ -117,8 +145,14 @@ export function DomeinBestellingen() {
                 bedrag: r.bundel ? "Bundel" : euroPrijs(r.bedragCent),
                 klant: r.email,
                 op: datum(r.aangemaakt),
+                notitie: <span className="text-xs">{r.notitie}</span>,
                 acties: (
                   <span className="flex flex-wrap gap-1.5">
+                    {transip && (r.status === "BETAALD" || r.status === "MISLUKT") && (
+                      <button type="button" className="a-button a-button-primary text-xs" disabled={bezig === r.id} onClick={() => void registreer(r)}>
+                        Registreer bij TransIP
+                      </button>
+                    )}
                     {KNOPPEN[r.status].map((k) => (
                       <button key={k.naar} type="button" className="a-button text-xs" disabled={bezig === r.id} onClick={() => void zet(r, k.naar)}>
                         {k.label}
