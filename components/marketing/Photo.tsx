@@ -1,6 +1,8 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { MARKETING_PHOTOS, isPhotoReady, photoVersion, type PhotoKey } from "@/lib/marketing/photos";
+import { actieveFotoKeuzes } from "@/lib/ontwerp/fotos-store";
+import type { FotoKeuzes } from "@/lib/ontwerp/fotos";
 
 const ASPECT: Record<string, string> = {
   portrait: "aspect-[4/5]",
@@ -9,12 +11,13 @@ const ASPECT: Record<string, string> = {
 };
 
 /**
- * A marketing image slot. Renders the real photo from /public/marketing once it
- * exists on disk (produced in /admin/studio, uploaded there, or dropped in by
- * hand), otherwise the on-brand illustration passed as `fallback`.
- * Server component — filesystem check, no DB.
+ * A marketing image slot. Renders, in order: the replacement chosen in the
+ * Site-ontwerper (Media → Foto's van de site; a photo from the media library on
+ * the storage volume, so it survives a deploy), the real photo from
+ * /public/marketing, or the on-brand illustration passed as `fallback`.
+ * Server component — filesystem check plus one cached KV read per request.
  */
-export function Photo({
+export async function Photo({
   name,
   fallback,
   className = "",
@@ -31,6 +34,16 @@ export function Photo({
 }) {
   const spec = MARKETING_PHOTOS[name];
   const frame = `${ASPECT[spec.aspect] ?? "aspect-[4/3]"} ${rounded} ${className} overflow-hidden`;
+  const keuze = (await actieveFotoKeuzes().catch((): FotoKeuzes => ({})))[name];
+
+  if (keuze) {
+    return (
+      <div className={`relative ${frame}`}>
+        {/* /beeld/<id> is uniek per upload, dus geen ?v= nodig */}
+        <Image src={`/beeld/${keuze.media}`} alt={keuze.alt || spec.alt} fill sizes={sizes} className="object-cover" priority={priority} />
+      </div>
+    );
+  }
 
   if (isPhotoReady(name)) {
     return (

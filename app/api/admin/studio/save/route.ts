@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { MARKETING_PHOTOS, saveMarketingPhoto, removeMarketingPhoto } from "@/lib/marketing/photos";
+import { maakSiteFotoBlijvend, zetFotoKeuze } from "@/lib/ontwerp/fotos-store";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
@@ -32,6 +33,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
 
   if (input.action === "remove") {
     await removeMarketingPhoto(slot);
+    await zetFotoKeuze(slot, null).catch(() => undefined);
     await recordAudit({
       category: "ADMIN",
       action: "studio.photo.remove",
@@ -47,13 +49,15 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   if (bytes.length > 12_000_000) throw AppError.validation("Afbeelding is te groot (max 12 MB).");
 
   const url = await saveMarketingPhoto(slot, bytes);
+  // ook blijvend (overleeft een uitrol): Site-ontwerper → Media → Foto's van de site
+  const blijvend = await maakSiteFotoBlijvend(slot, bytes, `Studio – ${MARKETING_PHOTOS[slot].plek}`);
   await recordAudit({
     category: "ADMIN",
     action: "studio.photo.save",
     actorUserId: principal.userId,
     actorLabel: "user",
     summary: `Marketingfoto geplaatst: ${slot} (${(bytes.length / 1024).toFixed(0)} kB)`,
-    metadata: { slot, bytes: bytes.length },
+    metadata: { slot, bytes: bytes.length, blijvend },
   });
-  return NextResponse.json({ ok: true, slot, ready: true, url });
+  return NextResponse.json({ ok: true, slot, ready: true, url, blijvend });
 });

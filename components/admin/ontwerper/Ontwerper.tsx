@@ -11,6 +11,7 @@ import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
+import { SiteFotos } from "@/components/admin/ontwerper/SiteFotos";
 import { Assistent } from "@/components/admin/ontwerper/Assistent";
 
 // ---------------------------------------------------------------------------
@@ -324,7 +325,8 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
             </div>
           ) : null}
           {tab === "media" ? (
-            <div id="ontwerper-paneel-media" role="tabpanel" aria-labelledby="ontwerper-tab-media">
+            <div id="ontwerper-paneel-media" role="tabpanel" aria-labelledby="ontwerper-tab-media" className="space-y-3">
+              <SiteFotos onVernieuw={verversVoorbeeld} />
               <MediaPaneel />
             </div>
           ) : null}

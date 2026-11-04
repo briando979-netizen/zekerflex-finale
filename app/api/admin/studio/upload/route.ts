@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AppError } from "@/lib/errors";
 import { MARKETING_PHOTOS, saveMarketingPhoto } from "@/lib/marketing/photos";
+import { maakSiteFotoBlijvend } from "@/lib/ontwerp/fotos-store";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
 export const runtime = "nodejs";
@@ -11,8 +12,8 @@ const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"])
 const MAX_BYTES = 15_000_000;
 
 // POST /api/admin/studio/upload  (multipart: slot, file)
-// Filesystem only — writes a marketing image into /public/marketing. Does not
-// touch the database, Redis or auth.
+// Writes a marketing image into /public/marketing (immediate) and into the
+// Site-ontwerper media library + photo choice (KV), so it survives a deploy.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const form = await request.formData().catch(() => {
     throw AppError.validation("Verstuur als multipart/form-data");
@@ -32,6 +33,9 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const url = await saveMarketingPhoto(slot as keyof typeof MARKETING_PHOTOS, bytes);
-  return NextResponse.json({ ok: true, slot, ready: true, url });
+  const plek = slot as keyof typeof MARKETING_PHOTOS;
+  const url = await saveMarketingPhoto(plek, bytes);
+  // ook blijvend (overleeft een uitrol): Site-ontwerper → Media → Foto's van de site
+  const blijvend = await maakSiteFotoBlijvend(plek, bytes, `Studio – ${MARKETING_PHOTOS[plek].plek}`);
+  return NextResponse.json({ ok: true, slot, ready: true, url, blijvend });
 });

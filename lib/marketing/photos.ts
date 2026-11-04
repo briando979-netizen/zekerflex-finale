@@ -11,41 +11,10 @@ import { join } from "node:path";
 // in by hand (see /public/marketing/README.md).
 // ---------------------------------------------------------------------------
 
-export interface PhotoSpec {
-  file: string;
-  alt: string;
-  aspect: "portrait" | "landscape" | "wide";
-}
+// de plekken zelf staan in een puur bestand (de Site-ontwerper toont ze in de browser)
+import { MARKETING_PHOTOS, type PhotoKey } from "@/lib/marketing/photo-specs";
 
-export const MARKETING_PHOTOS = {
-  hero: {
-    file: "hero-freelancer.jpg",
-    alt: "Een zzp'er onderweg naar een dienst, telefoon in de hand",
-    aspect: "portrait",
-  },
-  freelancer: {
-    file: "freelancer-at-work.jpg",
-    alt: "Een zelfstandige aan het werk op locatie",
-    aspect: "landscape",
-  },
-  employer: {
-    file: "employer-branch.jpg",
-    alt: "Een vestigingsmanager bekijkt de bezetting op een tablet",
-    aspect: "landscape",
-  },
-  employerHero: {
-    file: "employer-hero.jpg",
-    alt: "Flexkracht aan het werk in een wasserij",
-    aspect: "portrait",
-  },
-  team: {
-    file: "team-shift.jpg",
-    alt: "Een team flexwerkers tijdens een drukke dienst",
-    aspect: "wide",
-  },
-} satisfies Record<string, PhotoSpec>;
-
-export type PhotoKey = keyof typeof MARKETING_PHOTOS;
+export { MARKETING_PHOTOS, type PhotoKey, type PhotoSpec } from "@/lib/marketing/photo-specs";
 
 export function marketingDir(): string {
   return join(process.cwd(), "public", "marketing");
