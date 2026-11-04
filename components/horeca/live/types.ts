@@ -80,6 +80,28 @@ export interface ZaakKort {
   modules: string[];
 }
 
+export interface BonKop {
+  naam: string;
+  adres: string;
+  plaats: string;
+  telefoon: string;
+  kvk: string;
+  btwNummer: string;
+  voettekst: string;
+}
+
+export interface BonData {
+  id: string;
+  bonNummer: number | null;
+  op: string;
+  tafel: string | null;
+  methode: string;
+  bedragCent: number;
+  fooiCent: number;
+  regels: { naam: string; prijsCent: number; aantal: number; btw: number }[];
+  door: string;
+}
+
 export interface SchermData extends Partial<LiveBasis> {
   rol: SchermRol;
   apparaat: { naam: string } | null;
@@ -88,6 +110,10 @@ export interface SchermData extends Partial<LiveBasis> {
   items?: SchermItem[];
   categorieen?: { id: string; naam: string }[];
   afhaal?: { bereiding: number[]; klaar: number[] };
+  /** kassa en bediening: wat er op de bon staat */
+  bonKop?: BonKop;
+  /** na afrekenen: de bonnen om te tonen of te printen */
+  bonnen?: BonData[];
 }
 
 export interface ApparaatRij {

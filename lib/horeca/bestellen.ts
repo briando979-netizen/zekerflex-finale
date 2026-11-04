@@ -48,6 +48,7 @@ export interface KaartItem {
   prijsCent: number;
   beschikbaar: boolean;
   station: string;
+  btw?: number;
 }
 
 /** Waar een regel staat: keuken en bar melden elk hun eigen regels klaar (lib/horeca/fasen.ts). */
@@ -66,6 +67,10 @@ export interface BestelRegel {
   klaarOp?: string;
   /** wanneer de regel geserveerd werd (ISO); regels die samen gingen, hebben dezelfde tijd */
   geserveerdOp?: string;
+  /** btw-tarief bij het bestellen vastgelegd (lib/horeca/kassa.ts); ontbreekt = 9 */
+  btw?: number;
+  /** zoveel stuks zijn al afgerekend aan de kassa (splitsen per gerecht) */
+  betaaldAantal?: number;
 }
 
 /**
@@ -87,7 +92,9 @@ export function bouwRegels(mand: readonly MandRegel[], kaart: readonly KaartItem
     const al = samen.get(sleutel);
     const aantal = (al?.aantal ?? 0) + m.aantal;
     if (aantal > MAX_AANTAL) return { fout: `Kies een aantal van 1 tot ${MAX_AANTAL}.` };
-    samen.set(sleutel, { itemId: k.id, naam: k.naam, prijsCent: k.prijsCent, aantal, opmerking, station: k.station === "bar" ? "bar" : "keuken" });
+    const regel: BestelRegel = { itemId: k.id, naam: k.naam, prijsCent: k.prijsCent, aantal, opmerking, station: k.station === "bar" ? "bar" : "keuken" };
+    if (typeof k.btw === "number") regel.btw = k.btw;
+    samen.set(sleutel, regel);
   }
   const regels = [...samen.values()];
   return { regels, totaalCent: regels.reduce((s, r) => s + r.prijsCent * r.aantal, 0) };
@@ -115,6 +122,8 @@ export function leesRegels(json: unknown): BestelRegel[] {
     if (x.fase === "gestart" || x.fase === "klaar" || x.fase === "geserveerd") regel.fase = x.fase;
     if (typeof x.klaarOp === "string") regel.klaarOp = x.klaarOp;
     if (typeof x.geserveerdOp === "string") regel.geserveerdOp = x.geserveerdOp;
+    if (typeof x.btw === "number") regel.btw = x.btw;
+    if (typeof x.betaaldAantal === "number" && x.betaaldAantal > 0) regel.betaaldAantal = x.betaaldAantal;
     return [regel];
   });
 }

@@ -29,6 +29,7 @@ import { dashboardVan } from "@/lib/horeca/live";
 import { apparatenVan, bewaarApparaat, koppelcodeVoor, ontkoppel } from "@/lib/horeca/apparaten";
 import { handelAf } from "@/lib/horeca/oproepen";
 import { STAPPEN } from "@/lib/horeca/fasen";
+import { afrekenen, bewaarKassa, dagafsluiting, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -45,7 +46,7 @@ const fout = (err: unknown) => {
 
 async function alles(zaak: HorecaZaak) {
   const [kaart, tafels] = await Promise.all([menukaart(zaak.id), tafelsVan(zaak.id)]);
-  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules), reserveren: leesInstellingen(zaak.reserveren) };
+  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules), reserveren: leesInstellingen(zaak.reserveren), kassa: { btwNummer: zaak.btwNummer, ...leesKassa(zaak.kassa) } };
 }
 
 const eisModule = (zaak: HorecaZaak, m: ModuleSleutel) => {
@@ -63,6 +64,21 @@ export async function GET(request: Request): Promise<NextResponse> {
     const q = new URL(request.url).searchParams;
     // ?alleen=live → het live-dashboard (zaal, cijfers van vandaag, oproepen, takenlijsten, schermen)
     if (q.get("alleen") === "live") return NextResponse.json(await dashboardVan(zaak));
+    // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → CSV voor de boekhouder
+    if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv") {
+      eisModule(zaak, "kassa");
+      if (q.get("alleen") === "kassa") {
+        const datum = q.get("datum") ?? "";
+        if (!isDatum(datum)) throw AppError.validation("Kies een datum.");
+        return NextResponse.json(await dagafsluiting(zaak, datum));
+      }
+      const van = q.get("van") ?? "";
+      const tot = q.get("tot") ?? "";
+      if (!isDatum(van) || !isDatum(tot) || van > tot) throw AppError.validation("Kies een periode.");
+      return new NextResponse(await kassaCsv(zaak, van, tot), {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="kassa-${zaak.slug}-${van}-${tot}.csv"` },
+      });
+    }
     // ?alleen=apparaten → de gekoppelde schermen
     if (q.get("alleen") === "apparaten") return NextResponse.json({ apparaten: await apparatenVan(zaak.id) });
     if (q.get("alleen") === "bestellingen") {
@@ -145,7 +161,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         await ontkoppel(zaak.id, l.id);
         return NextResponse.json({ apparaten: await apparatenVan(zaak.id) });
       }
-      if (l.actie === "oproep-af") await handelAf(zaak.id, l.tafelId, l.soort);
+      if (l.actie === "afrekenen") {
+        eisModule(zaak, "kassa");
+        await afrekenen(zaak, { tafelId: l.tafelId, bestellingId: null, selectie: null, delen: [{ methode: l.methode, bedragCent: 0, fooiCent: 0 }], door: p.fullName });
+        await handelAf(zaak.id, l.tafelId);
+      } else if (l.actie === "oproep-af") await handelAf(zaak.id, l.tafelId, l.soort);
       else if (l.actie === "serveer") await verplaatsFase(zaak, { tafelId: l.tafelId }, "alles", STAPPEN.serveer);
       else {
         await tafelVrij(zaak, l.tafelId);
@@ -222,6 +242,13 @@ export async function POST(request: Request): Promise<NextResponse> {
         else await zetReserveringTafel(zaak, a.id, a.tafelId);
         return NextResponse.json({ ok: true });
       }
+      case "kassa-instellingen":
+        nu = await bewaarKassa(zaak, { btwNummer: a.btwNummer, voettekst: a.voettekst });
+        break;
+      case "kas-tellen":
+        eisModule(zaak, "kassa");
+        await telKas(zaak, a.datum, a.geteldCent, p.fullName);
+        return NextResponse.json(await dagafsluiting(zaak, a.datum));
       case "reserveer-instellingen": {
         const { actie: _a, ...inst } = a;
         nu = await bewaarReserveerInstellingen(zaak, inst);

@@ -5,8 +5,8 @@ import type { SchermData } from "@/components/horeca/live/types";
 
 // Kleine bouwstenen die alle schermen delen (donker, grote raakvlakken).
 
-/** Eén actie naar /api/horeca/scherm; ok = melding, terug = "Ongedaan maken". */
-export type SchermDoe = (actie: Record<string, unknown>, ok?: string, terug?: () => void) => Promise<boolean>;
+/** Eén actie naar /api/horeca/scherm; ok = melding, terug = "Ongedaan maken". Geeft de verse gegevens (met eventuele bonnen) of null bij een fout. */
+export type SchermDoe = (actie: Record<string, unknown>, ok?: string, terug?: () => void) => Promise<SchermData | null>;
 
 export interface SchermProps {
   data: SchermData;

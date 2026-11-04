@@ -7,7 +7,7 @@
 // browser bruikbaar en los te testen.
 // ---------------------------------------------------------------------------
 
-export const MODULE_SLEUTELS = ["reserveren", "bestellen", "qr", "betalen", "taken", "personeel"] as const;
+export const MODULE_SLEUTELS = ["reserveren", "bestellen", "qr", "kassa", "betalen", "taken", "personeel"] as const;
 export type ModuleSleutel = (typeof MODULE_SLEUTELS)[number];
 
 export interface Module {
@@ -56,6 +56,16 @@ export const MODULES: Record<ModuleSleutel, Module> = {
     kort: "Gasten scannen de QR-code op tafel en bestellen zelf van de menukaart",
     punten: ["QR-code per tafel om te printen", "Gast ziet direct wat er is en wat het kost", "Bestelling gaat meteen naar keuken of bar"],
     prijsCentPerMaand: 1900,
+    vereist: ["bestellen"],
+    klaar: true,
+  },
+  kassa: {
+    sleutel: "kassa",
+    naam: "Kassa",
+    kort: "Afrekenen aan de kassa of met de handheld: pin, contant, splitsen, fooi en bon",
+    punten: ["Rekening per tafel, splitsen gelijk of per gerecht", "Fooi, wisselgeld en een bon met btw-specificatie", "Snelle verkoop aan de bar of balie", "Dagafsluiting per betaalwijze en btw-tarief, als CSV voor de boekhouder"],
+    prijsCentPerMaand: 1900,
+    prijsUitleg: "pinnen gaat via je eigen pinautomaat",
     vereist: ["bestellen"],
     klaar: true,
   },

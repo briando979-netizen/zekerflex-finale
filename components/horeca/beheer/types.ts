@@ -20,6 +20,7 @@ export interface Item {
   veganistisch: boolean;
   beschikbaar: boolean;
   station: string;
+  btw: number;
   volgorde: number;
 }
 
@@ -40,6 +41,7 @@ export interface BeheerData {
   tafels: Tafel[];
   maand: { totaalCent: number; losCent: number; bundel: boolean };
   reserveren: ReserveerInstellingen;
+  kassa: { btwNummer: string; voettekst: string };
 }
 
 export type Antwoord = BeheerData | { aan: false; voorstel: { naam: string; plaats: string; telefoon: string; email: string } };

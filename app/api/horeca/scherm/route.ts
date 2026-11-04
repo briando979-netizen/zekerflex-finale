@@ -43,8 +43,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body: unknown = await request.json().catch(() => null);
     const rol = rolUit((body as { rol?: unknown } | null)?.rol);
     const ctx = await schermContext(rol);
-    await voerUit(ctx, rol, lees(schermActieSchema, body));
-    return NextResponse.json({ rol, apparaat: ctx.apparaat ? { naam: ctx.apparaat.naam } : null, ...(await schermDataVan(ctx.zaak, rol)) });
+    const uit = await voerUit(ctx, rol, lees(schermActieSchema, body));
+    return NextResponse.json({ rol, apparaat: ctx.apparaat ? { naam: ctx.apparaat.naam } : null, ...(await schermDataVan(ctx.zaak, rol)), ...(uit.bonnen ? { bonnen: uit.bonnen } : {}) });
   } catch (err) {
     return fout(err);
   }

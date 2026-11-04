@@ -23,6 +23,7 @@ const leeg = (categorieId: string | null): Concept => ({
   veganistisch: false,
   beschikbaar: true,
   station: "keuken",
+  btw: 9,
 });
 
 export function MenukaartTab({ data, doe }: { data: BeheerData; doe: Doe }) {
@@ -160,6 +161,13 @@ function ItemFormulier({ concept, data, doe, sluit }: { concept: Concept; data: 
           <select className="field-input" value={v.station} onChange={(e) => zet("station", e.target.value)}>
             <option value="keuken">Keuken</option>
             <option value="bar">Bar</option>
+          </select>
+        </Veld>
+        <Veld label="Btw (voor de kassabon)" uitleg="9 % voor eten en alcoholvrije dranken, 21 % voor alcohol">
+          <select className="field-input" value={String(v.btw ?? 9)} onChange={(e) => zet("btw", Number(e.target.value))}>
+            <option value="9">9 % (laag tarief)</option>
+            <option value="21">21 % (alcohol)</option>
+            <option value="0">0 %</option>
           </select>
         </Veld>
         <fieldset className="flex flex-wrap items-center gap-4 pt-6 text-sm">

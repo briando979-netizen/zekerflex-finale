@@ -11,6 +11,9 @@ import { SCHERM_ROLLEN } from "@/lib/horeca/schermen";
 // alles wat de zaak wijzigt, gaat langs deze schema's.
 
 const tekst = (max: number) => z.string().trim().max(max);
+const btwTarief = z.union([z.literal(9), z.literal(21), z.literal(0)]);
+const methode = z.enum(["pin", "contant", "ideal", "overig"]);
+const centen = (max: number) => z.number().int().min(0).max(max);
 const kleur = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Kies een kleur.");
 const tijd = z.string().refine(isTijd, "Gebruik UU:MM.");
 const id = z.string().min(1).max(40);
@@ -63,6 +66,7 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
     veganistisch: z.boolean(),
     beschikbaar: z.boolean(),
     station: z.enum(["keuken", "bar"]),
+    btw: btwTarief.default(9),
   }),
   z.object({ actie: z.literal("item-weg"), id }),
   z.object({ actie: z.literal("beschikbaar"), id, beschikbaar: z.boolean() }),
@@ -90,6 +94,8 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   }),
   z.object({ actie: z.literal("reservering-status"), id, status: z.enum(["BEVESTIGD", "AANGEKOMEN", "NIET_GEKOMEN", "GEANNULEERD"]) }),
   z.object({ actie: z.literal("reservering-tafel"), id, tafelId: id.nullable() }),
+  z.object({ actie: z.literal("kassa-instellingen"), btwNummer: tekst(30), voettekst: tekst(300) }),
+  z.object({ actie: z.literal("kas-tellen"), datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Kies een datum."), geteldCent: centen(10_000_000) }),
   z.object({
     actie: z.literal("reserveer-instellingen"),
     slotMinuten: z.union([z.literal(15), z.literal(30), z.literal(60)]),
@@ -129,8 +135,9 @@ export const liveActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("oproep-af"), tafelId: id, soort: oproepSoort.optional() }),
   z.object({ actie: z.literal("tafel-vrij"), tafelId: id }),
   z.object({ actie: z.literal("serveer"), tafelId: id }),
+  z.object({ actie: z.literal("afrekenen"), tafelId: id, methode }),
 ]);
-export const LIVE_ACTIES: readonly string[] = ["apparaat", "apparaat-code", "apparaat-weg", "oproep-af", "tafel-vrij", "serveer"];
+export const LIVE_ACTIES: readonly string[] = ["apparaat", "apparaat-code", "apparaat-weg", "oproep-af", "tafel-vrij", "serveer", "afrekenen"];
 
 /** Wat een gekoppeld scherm kan doen (/api/horeca/scherm); welk scherm wat mag staat in lib/horeca/schermen.ts. */
 export const schermActieSchema = z.discriminatedUnion("actie", [
@@ -144,6 +151,16 @@ export const schermActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("inloop"), personen: z.number().int().min(1).max(100), naam: tekst(80).default(""), tafelId: id.nullable().default(null) }),
   z.object({ actie: z.literal("oproep-af"), tafelId: id, soort: oproepSoort.optional() }),
   z.object({ actie: z.literal("tafel-vrij"), tafelId: id }),
+  // kassa: een tafel of één bestelling, alles of per gerecht, in een of meer delen
+  z.object({
+    actie: z.literal("afrekenen"),
+    tafelId: id.nullable().default(null),
+    bestellingId: id.nullable().default(null),
+    selectie: z.array(z.object({ bestellingId: id, index: z.number().int().min(0).max(MAX_REGELS), aantal: z.number().int().min(1).max(MAX_AANTAL) })).max(200).nullable().default(null),
+    delen: z.array(z.object({ methode, bedragCent: centen(10_000_000).default(0), fooiCent: centen(100_000).default(0) })).min(1, "Kies hoe er betaald wordt.").max(20),
+  }),
+  // snelle verkoop aan de bar of balie: bestellen en meteen afrekenen
+  z.object({ actie: z.literal("verkoop"), mand: mandSchema, methode, fooiCent: centen(100_000).default(0), meegegeven: z.boolean().default(false) }),
 ]);
 export type SchermActieInvoer = z.output<typeof schermActieSchema>;
 

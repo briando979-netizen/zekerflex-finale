@@ -9,14 +9,14 @@ import type { ModuleSleutel } from "@/lib/horeca/modules";
 // Puur, dus ook in de browser bruikbaar en los te testen.
 // ---------------------------------------------------------------------------
 
-export const SCHERM_ROLLEN = ["bediening", "keuken", "bar", "uitgifte", "ontvangst", "afhaal", "overzicht"] as const;
+export const SCHERM_ROLLEN = ["bediening", "kassa", "keuken", "bar", "uitgifte", "ontvangst", "afhaal", "overzicht"] as const;
 export type SchermRol = (typeof SCHERM_ROLLEN)[number];
 
 export type ApparaatSoort = "handheld" | "tablet" | "monitor" | "tv";
 export const APPARAAT_LABEL: Record<ApparaatSoort, string> = { handheld: "Telefoon of handheld", tablet: "Tablet", monitor: "Monitor of pc", tv: "Tv-scherm" };
 
 /** Wat een scherm mag wijzigen (de API controleert dit, lib/horeca/scherm-server.ts). */
-export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij"] as const;
+export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop"] as const;
 export type SchermActie = (typeof SCHERM_ACTIES)[number];
 
 export interface SchermSoort {
@@ -43,7 +43,18 @@ export const SCHERMEN: Record<SchermRol, SchermSoort> = {
     stand: "staand",
     modules: ["bestellen"],
     punten: ["Alle tafels in één oogopslag, wat aandacht vraagt bovenaan", "Bestelling opnemen in een paar tikken, direct naar keuken en bar", "Seintje als er iets klaarstaat of een gast de ober roept", "Tafel vrijgeven na het afrekenen"],
-    acties: ["serveer", "bestelling", "oproep-af", "tafel-vrij", "reservering-status"],
+    acties: ["serveer", "bestelling", "oproep-af", "tafel-vrij", "reservering-status", "afrekenen"],
+    verversSec: 5,
+  },
+  kassa: {
+    rol: "kassa",
+    naam: "Kassa",
+    kort: "Afrekenen aan de bar of balie: rekeningen, splitsen, fooi en bon",
+    apparaten: ["tablet", "monitor"],
+    stand: "liggend",
+    modules: ["kassa"],
+    punten: ["Alle open rekeningen, per tafel of bestelling", "Splitsen gelijk of per gerecht, fooi en wisselgeld", "Bon met btw-specificatie, ook voor een bonprinter", "Snelle verkoop: kiezen en meteen afrekenen"],
+    acties: ["afrekenen", "verkoop", "tafel-vrij"],
     verversSec: 5,
   },
   keuken: {

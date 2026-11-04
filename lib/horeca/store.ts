@@ -26,7 +26,7 @@ const VOORBEELD_KAART: { naam: string; items: VoorbeeldItem[] }[] = [
     naam: "Dranken",
     items: [
       { naam: "Verse muntthee", omschrijving: "Met honing.", prijsCent: 350, allergenen: [], vegetarisch: true, veganistisch: true, station: "bar" },
-      { naam: "Pils van de tap", omschrijving: "", prijsCent: 395, allergenen: ["gluten"], vegetarisch: true, veganistisch: true, station: "bar" },
+      { naam: "Pils van de tap", omschrijving: "", prijsCent: 395, allergenen: ["gluten"], vegetarisch: true, veganistisch: true, station: "bar", btw: 21 },
     ],
   },
 ];
@@ -113,6 +113,7 @@ export async function bewaarItem(
     veganistisch: boolean;
     beschikbaar: boolean;
     station: "keuken" | "bar";
+    btw: number;
   },
 ) {
   if (it.categorieId && !(await prisma.horecaCategorie.findFirst({ where: { id: it.categorieId, zaakId: zaak.id }, select: { id: true } }))) {

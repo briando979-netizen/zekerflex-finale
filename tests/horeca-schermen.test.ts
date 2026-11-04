@@ -32,6 +32,15 @@ describe("horeca-schermen", () => {
     expect(magActie("uitgifte", "fase")).toBe(false);
   });
 
+  it("de kassa rekent af en verkoopt; alleen met de module Kassa", () => {
+    expect(magActie("kassa", "afrekenen")).toBe(true);
+    expect(magActie("kassa", "verkoop")).toBe(true);
+    expect(magActie("bediening", "afrekenen")).toBe(true);
+    expect(magActie("keuken", "afrekenen")).toBe(false);
+    expect(schermBeschikbaar("kassa", ["bestellen"])).toBe(false);
+    expect(schermBeschikbaar("kassa", ["bestellen", "kassa"])).toBe(true);
+  });
+
   it("keuken en bar hebben hun eigen station", () => {
     expect(stationVan("keuken")).toBe("keuken");
     expect(stationVan("bar")).toBe("bar");

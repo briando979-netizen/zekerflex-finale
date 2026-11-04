@@ -11,6 +11,7 @@ import type { SchermDoe, SchermProps } from "@/components/horeca/scherm/ui";
 import { KeukenScherm } from "@/components/horeca/scherm/KeukenScherm";
 import { UitgifteScherm } from "@/components/horeca/scherm/UitgifteScherm";
 import { BedieningApp } from "@/components/horeca/scherm/BedieningApp";
+import { KassaScherm } from "@/components/horeca/scherm/KassaScherm";
 import { OntvangstScherm } from "@/components/horeca/scherm/OntvangstScherm";
 import { AfhaalScherm, OverzichtScherm } from "@/components/horeca/scherm/TvSchermen";
 
@@ -64,10 +65,10 @@ export function SchermApp({ rol, zaakNaam, apparaatNaam }: { rol: SchermRol; zaa
         if (!res.ok || !body) throw new Error(body?.error?.message ?? "Dat lukte niet. Probeer het opnieuw.");
         live.setData(body);
         if (ok) meld({ tekst: ok, fout: false, ...(terug ? { terug } : {}) });
-        return true;
+        return body;
       } catch (e) {
         meld({ tekst: e instanceof Error ? e.message : "Geen verbinding. Probeer het opnieuw.", fout: true });
-        return false;
+        return null;
       }
     },
     [rol, live, meld],
@@ -130,6 +131,8 @@ export function SchermApp({ rol, zaakNaam, apparaatNaam }: { rol: SchermRol; zaa
           <UitgifteScherm {...props} />
         ) : rol === "bediening" ? (
           <BedieningApp {...props} />
+        ) : rol === "kassa" ? (
+          <KassaScherm {...props} />
         ) : rol === "ontvangst" ? (
           <OntvangstScherm {...props} />
         ) : rol === "afhaal" ? (

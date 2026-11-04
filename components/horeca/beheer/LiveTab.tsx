@@ -24,7 +24,7 @@ import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-export type BeheerTab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "taken" | "cijfers" | "menukaart" | "schermen" | "modules" | "gegevens";
+export type BeheerTab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "kassa" | "taken" | "cijfers" | "menukaart" | "schermen" | "modules" | "gegevens";
 
 function Kpi({ label, waarde, uitleg, toon = "neutraal" }: { label: string; waarde: string; uitleg?: string; toon?: "neutraal" | "geld" | "let-op" | "probleem" | "goed" }) {
   const kleur = { neutraal: "text-ink", geld: "text-money-ink", "let-op": "text-warn", probleem: "text-crit", goed: "text-ok" }[toon];
@@ -151,7 +151,7 @@ export function LiveTab({ data, doe, naar }: { data: BeheerData; doe: Doe; naar:
           <div className="mt-3">
             <ZaalTegels zaal={d.zaal} onKies={(t) => setGekozen((x) => (x === t.id ? null : t.id))} />
           </div>
-          {tafel && <TafelPaneel t={tafel} actie={actie} sluit={() => setGekozen(null)} naarBestellen={() => naar("bestellingen")} />}
+          {tafel && <TafelPaneel t={tafel} kassa={heeft("kassa")} actie={actie} sluit={() => setGekozen(null)} naarBestellen={() => naar("bestellingen")} />}
         </section>
 
         <div className="space-y-5">
@@ -328,7 +328,7 @@ export function LiveTab({ data, doe, naar }: { data: BeheerData; doe: Doe; naar:
   );
 }
 
-function TafelPaneel({ t, actie, sluit, naarBestellen }: { t: TafelLive; actie: (b: Record<string, unknown>, ok: string) => Promise<void>; sluit: () => void; naarBestellen: () => void }) {
+function TafelPaneel({ t, kassa, actie, sluit, naarBestellen }: { t: TafelLive; kassa: boolean; actie: (b: Record<string, unknown>, ok: string) => Promise<void>; sluit: () => void; naarBestellen: () => void }) {
   return (
     <section className="mt-4 rounded-xl border border-hairstrong bg-paper-soft p-4" aria-labelledby="tafel-paneel-kop" aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -358,7 +358,21 @@ function TafelPaneel({ t, actie, sluit, naarBestellen }: { t: TafelLive; actie: 
             Oproep afgehandeld
           </button>
         )}
-        {t.openCent > 0 && (
+        {t.openCent > 0 &&
+          kassa &&
+          (["pin", "contant"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                if (window.confirm(`${t.naam}: ${euro(t.openCent)} afrekenen met ${m}?`)) void actie({ actie: "afrekenen", tafelId: t.id, methode: m }, `${t.naam} is afgerekend (${m}) en weer vrij. De bon staat onder Kassa.`);
+              }}
+            >
+              Afrekenen: {m === "pin" ? "pin" : "contant"}
+            </button>
+          ))}
+        {t.openCent > 0 && !kassa && (
           <button
             type="button"
             className="btn-ghost"

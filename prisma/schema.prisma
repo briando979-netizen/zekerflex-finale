@@ -2539,6 +2539,9 @@ model HorecaZaak {
   reserveren      Json     @default("{}")
   // teksten van de website (kop, intro)
   website         Json     @default("{}")
+  // kassa: btw-nummer op de bon en instellingen (voettekst, fooi) (lib/horeca/kassa.ts)
+  btwNummer       String   @default("")
+  kassa           Json     @default("{}")
   // Stripe Connect: het geld gaat rechtstreeks naar de zaak, niet via ZekerFlex.
   stripeAccountId String?
   createdAt       DateTime @default(now())
@@ -2599,6 +2602,12 @@ model HorecaItem {
   veganistisch Boolean          @default(false)
   beschikbaar  Boolean          @default(true) // uitverkocht = false
   station      String           @default("keuken") // keuken of bar: waar de bestelling heen gaat
+  // btw-tarief in procenten (9 eten en alcoholvrij, 21 alcohol, 0)
+  btw          Int              @default(9)
+  // nog te verkopen stuks; null = onbeperkt. Op 0 is het gerecht vanzelf uitverkocht
+  voorraad     Int?
+  // keuzes bij het bestellen, bv. [{ naam: "Bakwijze", keuzes: ["Rare", "Medium"], verplicht: true }]
+  opties       Json             @default("[]")
   volgorde     Int              @default(0)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
@@ -2643,9 +2652,16 @@ model HorecaBetaling {
   stripeSessionId String?              @unique
   // welke bestellingen met deze betaling zijn afgerekend
   bestellingIds   String[]             @default([])
+  // kassa: pin, contant, ideal of overig; wie afrekende; wat er betaald werd (voor de bon en de btw)
+  methode         String               @default("ideal")
+  door            String               @default("")
+  regels          Json                 @default("[]")
+  // volgnummer van de bon per zaak
+  bonNummer       Int?
   createdAt       DateTime             @default(now())
   betaaldOp       DateTime?
 
+  @@unique([zaakId, bonNummer])
   @@index([zaakId, createdAt])
 }
 

@@ -8,7 +8,8 @@ import type { Fase } from "@/lib/horeca/bestellen";
 import { ZaalTegels } from "@/components/horeca/live/ZaalTegels";
 import { OPROEP_LANG, RES_STATUS, tijdTot } from "@/components/horeca/live/teksten";
 import { minTekst } from "@/components/horeca/live/stijl";
-import type { SchermBestelling, SchermItem } from "@/components/horeca/live/types";
+import type { BonData, SchermBestelling, SchermItem } from "@/components/horeca/live/types";
+import { BonVenster } from "@/components/horeca/live/Bon";
 import { ding, tril } from "@/components/horeca/scherm/apparaat";
 import { Knop, Leeg, minSinds, useNieuw, type SchermDoe, type SchermProps } from "@/components/horeca/scherm/ui";
 
@@ -58,7 +59,7 @@ function Regels({ b }: { b: SchermBestelling }) {
   );
 }
 
-function TafelBlad({ t, bestellingen, doe, sluit, bestel }: { t: TafelLive; bestellingen: SchermBestelling[]; doe: SchermDoe; sluit: () => void; bestel: () => void }) {
+function TafelBlad({ t, bestellingen, doe, sluit, bestel, kassa, naBon }: { t: TafelLive; bestellingen: SchermBestelling[]; doe: SchermDoe; sluit: () => void; bestel: () => void; kassa: boolean; naBon: (b: BonData[]) => void }) {
   const eerste = useRef<HTMLButtonElement>(null);
   const sluitRef = useRef(sluit);
   useEffect(() => {
@@ -139,7 +140,29 @@ function TafelBlad({ t, bestellingen, doe, sluit, bestel }: { t: TafelLive; best
           <Knop groot soort="rustig" onClick={bestel}>
             + Bestelling opnemen
           </Knop>
-          {t.openCent > 0 && (
+          {t.openCent > 0 && kassa && (
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label={`${t.naam} afrekenen (${euro(t.openCent)})`}>
+              {(["pin", "contant"] as const).map((m) => (
+                <Knop
+                  key={m}
+                  groot
+                  soort="geld"
+                  onClick={() => {
+                    if (!window.confirm(`${t.naam}: ${euro(t.openCent)} afrekenen met ${m === "pin" ? "pin" : "contant"}?`)) return;
+                    void doe({ actie: "afrekenen", tafelId: t.id, delen: [{ methode: m }] }).then((uit) => {
+                      if (uit?.bonnen?.length) {
+                        sluit();
+                        naBon(uit.bonnen);
+                      }
+                    });
+                  }}
+                >
+                  {m === "pin" ? "Pin" : "Contant"} {euro(t.openCent)}
+                </Knop>
+              ))}
+            </div>
+          )}
+          {t.openCent > 0 && !kassa && (
             <Knop
               groot
               soort="geld"
@@ -329,6 +352,8 @@ export function BedieningApp({ data, doe, nu, geluid }: SchermProps) {
   const [tab, setTab] = useState<Tab>("tafels");
   const [open, setOpen] = useState<string | null>(null);
   const [bestelTafel, setBestelTafel] = useState<string | null>(null);
+  const [bonnen, setBonnen] = useState<BonData[] | null>(null);
+  const kassa = (data.zaak.modules ?? []).includes("kassa");
   const zaal = data.zaal ?? [];
   const bestellingen = data.bestellingen ?? [];
   const oproepen = data.oproepen ?? [];
@@ -457,6 +482,8 @@ export function BedieningApp({ data, doe, nu, geluid }: SchermProps) {
           bestellingen={bestellingen}
           doe={doe}
           sluit={() => setOpen(null)}
+          kassa={kassa}
+          naBon={setBonnen}
           bestel={() => {
             setBestelTafel(tafel.id);
             setOpen(null);
@@ -464,6 +491,8 @@ export function BedieningApp({ data, doe, nu, geluid }: SchermProps) {
           }}
         />
       )}
+
+      {bonnen && data.bonKop && <BonVenster kop={data.bonKop} bonnen={bonnen} sluit={() => setBonnen(null)} />}
 
       <nav aria-label="Bediening" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-white/10 bg-[#0B0F0D]/95 backdrop-blur" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {tabs.map((t) => (

@@ -46,12 +46,12 @@ export const tafelVanCode = (zaakId: string, code: string) => prisma.horecaTafel
  */
 export async function plaatsBestelling(
   zaak: HorecaZaak,
-  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" },
+  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" | "kassa" },
 ): Promise<HorecaBestelling> {
   if (b.tafelId && !(await prisma.horecaTafel.findFirst({ where: { id: b.tafelId, zaakId: zaak.id }, select: { id: true } }))) {
     throw AppError.validation("Kies een bestaande tafel.");
   }
-  const kaart = await prisma.horecaItem.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true } });
+  const kaart = await prisma.horecaItem.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, btw: true } });
   const r = bouwRegels(b.mand, kaart);
   if ("fout" in r) throw AppError.validation(r.fout);
   return prisma.$transaction(async (tx) => {

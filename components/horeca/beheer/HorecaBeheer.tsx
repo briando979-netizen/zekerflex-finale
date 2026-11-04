@@ -14,6 +14,7 @@ import { TakenTab } from "@/components/horeca/beheer/TakenTab";
 import { CijfersTab } from "@/components/horeca/beheer/CijfersTab";
 import { LiveTab, type BeheerTab } from "@/components/horeca/beheer/LiveTab";
 import { SchermenTab } from "@/components/horeca/beheer/SchermenTab";
+import { KassaTab } from "@/components/horeca/beheer/KassaTab";
 import type { Antwoord, Doe } from "@/components/horeca/beheer/types";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +36,7 @@ const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
         { id: "tafels" as const, label: "Tafels & QR" },
       ]
     : []),
+  ...(modules.includes("kassa") ? [{ id: "kassa" as const, label: "Kassa" }] : []),
   ...(modules.includes("taken") ? [{ id: "taken" as const, label: "Takenlijsten" }] : []),
   ...(modules.includes("bestellen") || modules.includes("reserveren") ? [{ id: "cijfers" as const, label: "Cijfers" }] : []),
   { id: "menukaart", label: "Menukaart" },
@@ -118,6 +120,7 @@ export function HorecaBeheer() {
       {tab === "reserveringen" && z.modules.includes("reserveren") && <ReserveringenTab data={data} doe={doe} />}
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
+      {tab === "kassa" && z.modules.includes("kassa") && <KassaTab data={data} doe={doe} />}
       {tab === "taken" && z.modules.includes("taken") && <TakenTab />}
       {tab === "cijfers" && (z.modules.includes("bestellen") || z.modules.includes("reserveren")) && <CijfersTab />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}

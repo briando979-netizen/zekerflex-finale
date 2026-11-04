@@ -19,6 +19,7 @@ import type { BeheerData } from "@/components/horeca/beheer/types";
 const API = "/api/horeca/beheer";
 const STANDAARD_NAAM: Record<SchermRol, string> = {
   bediening: "Telefoon bediening",
+  kassa: "Kassa bar",
   keuken: "Tablet keuken",
   bar: "Tablet bar",
   uitgifte: "Scherm uitgifte",
@@ -50,6 +51,14 @@ function Model({ rol }: { rol: SchermRol }) {
           12 · 14
         </span>
         <span className="flex flex-col items-center justify-center gap-0.5 rounded-[3px] bg-[#06311A] text-[11px] font-bold text-[#86EFAC]">9</span>
+      </span>
+    );
+  } else if (rol === "kassa") {
+    inhoud = (
+      <span className="grid h-full grid-cols-[1fr_2fr_1.2fr] gap-1">
+        <span className="flex flex-col gap-0.5">{[blok("h-2 bg-[#22C55E]", 0), blok("h-2 bg-white/20", 1), blok("h-2 bg-white/20", 2), blok("h-2 bg-[#3A2203]", 3)]}</span>
+        <span className="flex flex-col gap-0.5 rounded-[3px] bg-white/10 p-0.5">{[blok("h-1 bg-white/40", 0), blok("h-1 bg-white/40", 1), blok("h-1 w-2/3 bg-white/40", 2)]}</span>
+        <span className="flex flex-col justify-end gap-0.5">{[blok("h-2 bg-white/20", 0), blok("h-3 bg-[#22C55E]", 1)]}</span>
       </span>
     );
   } else if (rol === "bediening" || rol === "ontvangst") {
