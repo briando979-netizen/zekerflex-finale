@@ -13,6 +13,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { routeWeergave, type RouteWeergave } from "@/lib/rijschool/lesroute";
 import { gesprekMet, gesprekkenVan } from "@/lib/rijschool/berichten";
 import type { BerichtRij, Gesprek } from "@/lib/rijschool/berichten-lijst";
+import { assistentAan } from "@/lib/rijschool/assistent-server";
 
 // ---------------------------------------------------------------------------
 // Wat elk scherm van het rijschool-pakket te zien krijgt, als platte JSON
@@ -235,10 +236,12 @@ export interface BeheerWeergave {
   automails: AutomailInstellingen;
   /** gesprekken met leerlingen (lib/rijschool/berichten.ts), het meest recente bovenaan */
   gesprekken: Gesprek[];
+  /** de AI-assistent op de website staat aan (lib/rijschool/assistent-server.ts) */
+  assistent: boolean;
 }
 
 export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
-  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails, gesprekken] = await Promise.all([
+  const [instructeurs, voertuigen, producten, leerlingen, betalingen, automails, gesprekken, assistent] = await Promise.all([
     prisma.rijschoolInstructeur.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolVoertuig.findMany({ where: { rijschoolId: r.id }, orderBy: { createdAt: "asc" } }),
     prisma.rijschoolProduct.findMany({ where: { rijschoolId: r.id }, orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }] }),
@@ -251,12 +254,14 @@ export async function beheerWeergave(r: Rijschool): Promise<BeheerWeergave> {
     }),
     automailInstellingen(r.id),
     gesprekkenVan(r.id),
+    assistentAan(r.id),
   ]);
   const ids = leerlingen.map((l) => l.id);
   const [saldi, voortgangen] = await Promise.all([saldiVan(ids), voortgangVan(ids)]);
   return {
     automails,
     gesprekken,
+    assistent,
     rijschool: rijschoolInfo(r),
     website: websiteBewerkbaar(r.website),
     instructeurs: instructeurs.map(instructeurRij),

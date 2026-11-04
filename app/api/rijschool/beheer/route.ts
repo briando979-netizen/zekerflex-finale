@@ -23,6 +23,7 @@ import type { Rijschool } from "@prisma/client";
 import { stuurGeslaagd, zetAutomail } from "@/lib/rijschool/automailer";
 import { gesprekMet, markeerGelezen, stuurBericht } from "@/lib/rijschool/berichten";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { zetAssistent } from "@/lib/rijschool/assistent-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -188,6 +189,9 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string): Promise<Reco
     }
     case "berichtGelezen":
       await markeerGelezen((await eigenLeerling(r, a.leerlingId)).id, false);
+      return {};
+    case "assistent":
+      await zetAssistent(r.id, a.aan);
       return {};
   }
 }

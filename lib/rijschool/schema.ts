@@ -5,6 +5,7 @@ import { isOnderdeel } from "@/lib/rijschool/leskaart";
 import { isTheorieOnderdeel } from "@/lib/rijschool/theorie";
 import { websiteSchema } from "@/lib/rijschool/website";
 import { BERICHT_MAX } from "@/lib/rijschool/berichten-lijst";
+import { GESCHIEDENIS_MAX, VRAAG_MAX } from "@/lib/rijschool/assistent";
 
 // ---------------------------------------------------------------------------
 // Invoer van het rijschool-pakket: beheer, publieke site, leerling- en
@@ -176,6 +177,8 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   // berichten met een leerling (lib/rijschool/berichten.ts)
   z.object({ actie: z.literal("bericht"), leerlingId: id, tekst: berichtTekst }),
   z.object({ actie: z.literal("berichtGelezen"), leerlingId: id }),
+  // de AI-assistent op de website aan of uit (lib/rijschool/assistent-server.ts)
+  z.object({ actie: z.literal("assistent"), aan: z.boolean() }),
 ]);
 
 export type BeheerActie = z.infer<typeof beheerActieSchema>;
@@ -193,6 +196,12 @@ export const proeflesSchema = z.object({
   /** honeypot: mensen laten dit leeg */
   website: z.string().max(0).optional(),
   akkoord: z.literal(true, { errorMap: () => ({ message: "Ga akkoord met het verwerken van je gegevens voor de proefles." }) }),
+});
+
+/** Een vraag aan de assistent op de website, met de laatste beurten als context. */
+export const vraagSchema = z.object({
+  vraag: tekst(VRAAG_MAX).min(2, "Stel een vraag."),
+  eerder: z.array(z.object({ van: z.enum(["bezoeker", "assistent"]), tekst: z.string().max(2000) })).max(GESCHIEDENIS_MAX * 2).default([]),
 });
 
 export const accountActieSchema = z.discriminatedUnion("actie", [

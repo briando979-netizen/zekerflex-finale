@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { laadRijschool } from "@/lib/rijschool/pagina";
 import { adresRegels, telefoonWeergave } from "@/lib/rijschool/format";
+import { aiVerwerker, assistentAan } from "@/lib/rijschool/assistent-server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
   if (!r) notFound();
   const contact = [r.email, r.telefoon ? telefoonWeergave(r.telefoon) : ""].filter(Boolean).join(" of ");
   const adres = r.adres ? adresRegels(r.adres, r.plaats).join(", ") : "";
+  const assistent = await assistentAan(r.id).catch(() => false);
   const kop = "mt-6 font-display text-lg font-bold text-ink";
   const tekst = "mt-2 text-sm leading-relaxed text-neutralx-700";
   return (
@@ -49,6 +51,16 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
         Om je rijopleiding te plannen en bij te houden, je lessen te bevestigen en je te herinneren, en je voortgang en tegoed te laten zien. We gebruiken je gegevens niet voor
         reclame en verkopen ze niet. Er zitten geen advertenties of volgcodes van derden in de app.
       </p>
+
+      {assistent && (
+        <>
+          <h2 className={kop}>De assistent op de website</h2>
+          <p className={tekst}>
+            Stel je een vraag aan de assistent op de website (&quot;Stel een vraag&quot;), dan maakt {aiVerwerker()} het antwoord, alleen met de openbare gegevens van {r.naam}.
+            Je vraag en het antwoord worden niet bewaard. Deel er geen persoonlijke gegevens in; voor een afspraak of iets persoonlijks neem je contact op met {r.naam}.
+          </p>
+        </>
+      )}
 
       <h2 className={kop}>Wie ze ziet</h2>
       <p className={tekst}>

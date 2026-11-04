@@ -110,7 +110,39 @@ export function InstellingenTab({ data, doe }: { data: BeheerWeergave; doe: Doe 
         </button>
       </div>
       <Automailer data={data} doe={doe} />
+      <Assistent data={data} doe={doe} />
     </form>
+  );
+}
+
+// De AI-assistent op de website (lib/rijschool/assistent.ts): de schakelaar slaat meteen op.
+function Assistent({ data, doe }: { data: BeheerWeergave; doe: Doe }) {
+  const [fout, setFout] = useState<string | null>(null);
+  return (
+    <section className="card space-y-3 p-5 lg:col-span-2">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">AI-assistent op je website</h2>
+        <p className="text-sm text-neutralx-600">
+          Een knop &quot;Stel een vraag&quot; op je website. De assistent beantwoordt vragen over je prijzen, pakketten, werkgebied, proefles en de veelgestelde vragen,
+          alleen met wat op je website staat. Weet hij iets niet, dan verwijst hij naar je telefoon of mail. Vragen worden niet bewaard; je privacyverklaring vermeldt de
+          assistent vanzelf.
+        </p>
+      </div>
+      <Schakelaar
+        label="Assistent op de website"
+        uitleg="Controleer eerst je pakketten, werkgebied en veelgestelde vragen: daar haalt de assistent zijn antwoorden uit."
+        aan={data.assistent}
+        onChange={async (aan) => {
+          setFout(null);
+          try {
+            await doe({ actie: "assistent", aan });
+          } catch (err) {
+            setFout(foutVan(err));
+          }
+        }}
+      />
+      <Melding fout={fout} />
+    </section>
   );
 }
 

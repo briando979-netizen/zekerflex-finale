@@ -9,6 +9,8 @@ import { winkelLink } from "@/lib/play/api";
 import { Stuur } from "@/components/rijschool/site/Stuur";
 import { SiteMenu } from "@/components/rijschool/site/SiteMenu";
 import { adresRegels, telefoonLink, telefoonWeergave } from "@/lib/rijschool/format";
+import { assistentAan } from "@/lib/rijschool/assistent-server";
+import { VraagAssistent } from "@/components/rijschool/site/VraagAssistent";
 
 // De publieke website van een rijschool, in de ZekerFlex-huisstijl (zoals
 // schwarzwald.zekerflex.com): crème vlakken, een sticky kop met menu en een
@@ -32,6 +34,8 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
   const leerling = await huidigeLeerling(r).catch(() => null);
   // de eigen Android-app, zodra die openbaar in de Play Store staat (lib/rijschool/app)
   const playApp = await prisma.rijschoolApp.findUnique({ where: { rijschoolId: r.id }, select: { pakketnaam: true, liveSinds: true } }).catch(() => null);
+  // de AI-assistent ("Stel een vraag"), alleen als de rijschool hem aanzette
+  const assistent = await assistentAan(r.id).catch(() => false);
   const w = websiteVan(r.website, r);
   const wa = whatsappNummer(w.whatsapp);
   const basis = `/rijschool/${r.slug}`;
@@ -186,6 +190,7 @@ export default async function RijschoolSiteLayout({ children, params }: { childr
           </p>
         </div>
       </footer>
+      {assistent && <VraagAssistent slug={r.slug} naam={r.naam} />}
     </div>
   );
 }
