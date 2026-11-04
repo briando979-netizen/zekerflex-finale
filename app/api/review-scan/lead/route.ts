@@ -12,6 +12,8 @@ import { createLead } from "@/lib/sales/leads";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { cijfer } from "@/lib/review-scan/model";
 import { getReviewScan, markScanLead } from "@/lib/review-scan/run";
+import { maakLeadWarm } from "@/lib/scans/lead";
+import { getScanLog, logStap } from "@/lib/scans/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,17 +43,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     const rapportUrl = `${base}/review-check?r=${scan.id}`;
     const score = scan.rating === null ? "nog geen Google-score" : `${cijfer(scan.rating)} uit ${scan.aantal} reviews`;
     const samenvatting = `Review-scan ${scan.bedrijf.naam}: ${scan.score}/100 (${scan.oordeel}), ${score}${scan.positie ? `, plek ${scan.positie.plek} van ${scan.positie.van} in de buurt` : ""}.`;
-    const lead = await createLead({
-      companyName: scan.bedrijf.naam,
-      contactName: d.name,
-      contactEmail: d.email,
-      contactPhone: d.phone || undefined,
-      source: "review-scan",
-      sourceUrl: scan.bedrijf.website ?? scan.bedrijf.mapsUrl ?? undefined,
-      notes: `${samenvatting} Voorstellen: ${scan.voorstellen.slice(0, 4).map((v) => v.titel).join("; ") || "geen"}. Rapport: ${rapportUrl}`.slice(0, 900),
-      createdById: null,
-    });
+    const notes = `${samenvatting} Voorstellen: ${scan.voorstellen.slice(0, 4).map((v) => v.titel).join("; ") || "geen"}. Rapport: ${rapportUrl}`.slice(0, 900);
+    // de scan maakte al een lead (lib/scans): die wordt warm; anders een nieuwe
+    const log = await getScanLog("reviews", scan.id);
+    const warm = await maakLeadWarm(log?.leadId ?? null, { naam: d.name, email: d.email, telefoon: d.phone }, "review-scan", notes);
+    const lead = warm && log?.leadId
+      ? { id: log.leadId }
+      : await createLead({
+          companyName: scan.bedrijf.naam,
+          contactName: d.name,
+          contactEmail: d.email,
+          contactPhone: d.phone || undefined,
+          source: "review-scan",
+          sourceUrl: scan.bedrijf.website ?? scan.bedrijf.mapsUrl ?? undefined,
+          notes,
+          createdById: null,
+        });
     await markScanLead(scan.id, lead.id).catch(() => undefined);
+    await logStap("reviews", scan.id, "aanvraag", undefined, { leadId: lead.id });
     void recordServerEvent({ path: "/review-check", label: "review-scan-lead", meta: { score: scan.score } });
 
     await sendMail({

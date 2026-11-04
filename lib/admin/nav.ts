@@ -74,6 +74,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     pages: [
       { href: "/admin/sales", label: "Pijplijn" },
       { href: "/admin/websitevoorstellen", label: "Websitevoorstellen" },
+      { href: "/admin/scans", label: "Scans & deals" },
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },
       { href: "/admin/telefonie", label: "Telefonie" },

@@ -43,7 +43,9 @@ async function foutTekst(res: Response | null, standaard: string): Promise<strin
   return body?.error?.message ?? standaard;
 }
 
-export function ReviewScan({ variant, initial = null, startInvoer = "" }: { variant: Variant; initial?: ReviewScanRapport | null; startInvoer?: string }) {
+export function ReviewScan({ variant, initial = null, startInvoer = "", initialDealId = null }: { variant: Variant; initial?: ReviewScanRapport | null; startInvoer?: string; initialDealId?: string | null }) {
+  // het voorstel op maat bij deze scan (lib/scans), alleen op de openbare pagina
+  const [dealId, setDealId] = useState<string | null>(initialDealId);
   const id = useId();
   const [invoer, setInvoer] = useState(startInvoer);
   const [bezig, setBezig] = useState(false);
@@ -61,7 +63,8 @@ export function ReviewScan({ variant, initial = null, startInvoer = "" }: { vari
       setBezig(false);
       return;
     }
-    const data = (await res.json()) as { soort: "rapport"; rapport: ReviewScanRapport } | { soort: "kies"; kandidaten: Kandidaat[] };
+    const data = (await res.json()) as ({ soort: "rapport"; rapport: ReviewScanRapport } | { soort: "kies"; kandidaten: Kandidaat[] }) & { dealId?: string | null };
+    setDealId(typeof data.dealId === "string" ? data.dealId : null);
     if (data.soort === "kies") setKandidaten(data.kandidaten);
     else {
       setRapport(data.rapport);
@@ -122,7 +125,7 @@ export function ReviewScan({ variant, initial = null, startInvoer = "" }: { vari
       </form>
 
       {kandidaten && <Kiezen kandidaten={kandidaten} onKies={(placeId) => void scan({ placeId })} bezig={bezig} />}
-      {rapport && !kandidaten && <Rapport rapport={rapport} variant={variant} />}
+      {rapport && !kandidaten && <Rapport rapport={rapport} variant={variant} dealId={variant === "openbaar" ? dealId : null} />}
     </div>
   );
 }
@@ -300,7 +303,7 @@ function Aanvraag({ scanId }: { scanId: string }) {
   );
 }
 
-function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant: Variant }) {
+function Rapport({ rapport: r, variant, dealId }: { rapport: ReviewScanRapport; variant: Variant; dealId: string | null }) {
   const gescand = new Date(r.at).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
   // ook voor rapporten van vóór de grens: geen onhaalbare doelen tonen
   const doel = r.doel && r.doel.nodig > 0 && r.doel.nodig <= MAX_DOEL_REVIEWS ? r.doel : null;
@@ -475,6 +478,17 @@ function Rapport({ rapport: r, variant }: { rapport: ReviewScanRapport; variant:
         </section>
       )}
 
+      {dealId && (
+        <div className="flex flex-col gap-4 rounded-2xl bg-ink p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <p className="font-display text-xl font-bold">Je voorstel op maat staat klaar</p>
+            <p className="mt-1 text-sm text-white/70">Wat {r.bedrijf.naam} het meeste oplevert, met echte prijzen. Jij vinkt aan wat je wilt.</p>
+          </div>
+          <Link href={`/deal/${dealId}`} className="btn-mint flex-shrink-0 px-6 py-3">
+            Bekijk je voorstel
+          </Link>
+        </div>
+      )}
       {variant === "openbaar" && <Aanvraag scanId={r.id} />}
     </div>
   );

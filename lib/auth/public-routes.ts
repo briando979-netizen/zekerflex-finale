@@ -40,6 +40,7 @@ const PUBLIC_PREFIXES = [
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
   "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
   "/api/review-scan", // gratis review-scan (Google Places) + aanvraagformulier; IP- en dagbegrenzing, rapport op niet te raden id (lib/review-scan/run.ts)
+  "/api/deal", // voorstel op maat na een gratis scan: "bekeken" en "akkoord"; het niet te raden id is de sleutel, IP-begrensd (lib/scans/deal.ts)
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd

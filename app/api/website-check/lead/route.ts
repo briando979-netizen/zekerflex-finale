@@ -11,6 +11,8 @@ import { CONTACTS } from "@/lib/seo";
 import { createLead } from "@/lib/sales/leads";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { getWebsiteCheck, markCheckLead } from "@/lib/website-check/run";
+import { maakLeadWarm } from "@/lib/scans/lead";
+import { getScanLog, logStap } from "@/lib/scans/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,17 +59,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     const nieuw = check.nieuweSite ? ` Liet een nieuwe website maken: ${base}/site/${check.nieuweSite.slug}${check.nieuweSite.score !== null ? ` (${check.nieuweSite.score}/100)` : ""}.` : "";
     const summary = `Website-check ${check.host}: score ${check.score}/100, ${problems.length} problemen, ${attention.length} aandachtspunten${check.platform ? `, gemaakt met ${check.platform}` : ""}. Interesse: ${PLAN_LABEL[d.plan]}.${nieuw}`;
 
-    const lead = await createLead({
-      companyName: d.company || check.host,
-      contactName: d.name,
-      contactEmail: d.email,
-      contactPhone: d.phone || undefined,
-      source: "website-check",
-      sourceUrl: check.finalUrl,
-      notes: `${summary} Belangrijkste: ${problems.slice(0, 4).map((f) => f.title).join("; ") || "geen grote problemen"}. Rapport: ${reportUrl}`.slice(0, 900),
-      createdById: null,
-    });
+    const notes = `${summary} Belangrijkste: ${problems.slice(0, 4).map((f) => f.title).join("; ") || "geen grote problemen"}. Rapport: ${reportUrl}`.slice(0, 900);
+    // de scan maakte al een lead (lib/scans): die wordt warm; anders een nieuwe
+    const log = await getScanLog("website", check.id);
+    const warm = await maakLeadWarm(log?.leadId ?? null, { naam: d.name, email: d.email, telefoon: d.phone }, "website-check", notes);
+    const lead = warm && log?.leadId
+      ? { id: log.leadId }
+      : await createLead({
+          companyName: d.company || check.host,
+          contactName: d.name,
+          contactEmail: d.email,
+          contactPhone: d.phone || undefined,
+          source: "website-check",
+          sourceUrl: check.finalUrl,
+          notes,
+          createdById: null,
+        });
     await markCheckLead(check.id, lead.id).catch(() => undefined);
+    await logStap("website", check.id, "aanvraag", PLAN_LABEL[d.plan], { leadId: lead.id });
     void recordServerEvent({ path: "/website-check", label: "website-check-lead", meta: { host: check.host, plan: d.plan } });
 
     const list = (items: typeof problems) => items.slice(0, 6).map((f) => `<li style="margin:0 0 4px">${esc(f.title)}</li>`).join("");

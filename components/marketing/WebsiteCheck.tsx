@@ -459,9 +459,11 @@ function LeadForm({ result, plans }: { result: WebsiteCheckResult; plans: PlanCa
 /** De nieuwe website bij een rapport, zolang hij nog staat. */
 const geldigeSite = (r: WebsiteCheckResult | null) => (r?.nieuweSite && Date.parse(r.nieuweSite.verloopt) > Date.now() ? r.nieuweSite : null);
 
-export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult | null; plans: PlanCard[] }) {
+export function WebsiteCheck({ initial, plans, initialDealId = null }: { initial: WebsiteCheckResult | null; plans: PlanCard[]; initialDealId?: string | null }) {
   const [url, setUrl] = useState(initial?.host ?? "");
   const [result, setResult] = useState<WebsiteCheckResult | null>(initial);
+  // het voorstel op maat bij deze check (lib/scans)
+  const [dealId, setDealId] = useState<string | null>(initialDealId);
   const [site, setSite] = useState<NieuweSite | null>(() => geldigeSite(initial));
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState(0);
@@ -495,6 +497,7 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
       const r = data.result as WebsiteCheckResult;
       setResult(r);
       setSite(geldigeSite(r));
+      setDealId(typeof data.dealId === "string" ? data.dealId : null);
       window.history.replaceState(null, "", `/website-check?r=${r.id}`);
       requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch {
@@ -666,6 +669,18 @@ export function WebsiteCheck({ initial, plans }: { initial: WebsiteCheckResult |
                   </div>
                 ))}
               </dl>
+
+              {dealId && (
+                <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-ink p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                  <div>
+                    <p className="font-display text-xl font-bold">Je voorstel op maat staat klaar</p>
+                    <p className="mt-1 text-sm text-white/70">Wat {result.host} het meeste oplevert, met echte prijzen. Jij vinkt aan wat je wilt.</p>
+                  </div>
+                  <Link href={`/deal/${dealId}`} className="btn-mint flex-shrink-0 px-6 py-3">
+                    Bekijk je voorstel
+                  </Link>
+                </div>
+              )}
 
               {open.length > 0 && (
                 <div className="mt-8">

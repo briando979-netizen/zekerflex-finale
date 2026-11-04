@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { FetchError, fetchPage, type FetchedPage } from "@/lib/website-check/fetch";
 import { buildFindings, extractFacts, scoreFindings, type CheckCategory, type Finding } from "@/lib/website-check/analyze";
 import type { Overgenomen } from "@/lib/website-check/stijl-keuze";
+import { extractBusiness } from "@/lib/website-check/proposal";
 
 // ---------------------------------------------------------------------------
 // Gratis website-check (zekerflex.com/website-check): haalt de pagina op, meet
@@ -35,6 +36,8 @@ export interface WebsiteCheckResult {
   };
   platform: string | null;
   leadId: string | null;
+  /** wat de site over het bedrijf zelf zegt (openbaar), voor het logboek, de lead en het voorstel op maat (lib/scans) */
+  bedrijf?: { naam: string | null; telefoon: string | null; email: string | null; plaats: string | null; kvk: string | null; reviews: boolean; koppen: string[] } | undefined;
   /** de nieuwe website die de bezoeker liet maken (lib/website-check/nieuwe-site.ts) */
   nieuweSite?: NieuweSite | undefined;
 }
@@ -143,6 +146,7 @@ export async function runWebsiteCheck(rawInput: string): Promise<WebsiteCheckRes
   const crossSite = !sameSite(requested.hostname, final.hostname);
   const origin = crossSite ? requested.origin : final.origin;
   const facts = extractFacts(page.body, page.finalUrl, page.headers);
+  const zaak = extractBusiness(page.body, page.finalUrl);
 
   const [httpVersion, robots, links] = await Promise.all([
     settle(fetchPage(`http://${crossSite ? requested.host : final.host}/`, { headersOnly: true, timeoutMs: 6_000 })),
@@ -186,6 +190,7 @@ export async function runWebsiteCheck(rawInput: string): Promise<WebsiteCheckRes
       brokenLinks: links.filter((l) => l.status === null || l.status >= 400).length,
     },
     platform: facts.platform,
+    bedrijf: { naam: zaak.naam, telefoon: zaak.telefoon, email: zaak.email, plaats: zaak.plaats, kvk: zaak.kvk, reviews: zaak.reviews, koppen: zaak.koppen.slice(0, 8) },
     leadId: null,
   };
   await kvSet(KEY(result.id), result);

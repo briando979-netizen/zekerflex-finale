@@ -8,6 +8,7 @@ import { jsonError } from "@/lib/http/errors";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { ScanFout } from "@/lib/review-scan/places";
 import { getReviewScan, runReviewScan } from "@/lib/review-scan/run";
+import { registreerReviewScan } from "@/lib/scans/registreer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const uitkomst = await runReviewScan(parsed.data);
     if (uitkomst.soort === "rapport") {
       void recordServerEvent({ path: "/review-check", label: "review-scan", meta: { score: uitkomst.rapport.score, aantal: uitkomst.rapport.aantal } });
+      // in het scanlogboek, met een voorstel op maat en (op de achtergrond) een lead (lib/scans)
+      const { dealId } = await registreerReviewScan(uitkomst.rapport);
+      return NextResponse.json({ ok: true, ...uitkomst, dealId });
     }
     return NextResponse.json({ ok: true, ...uitkomst });
   } catch (err) {

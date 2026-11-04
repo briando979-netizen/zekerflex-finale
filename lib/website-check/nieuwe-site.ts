@@ -12,6 +12,7 @@ import type { SiteDoc } from "@/lib/sites/types";
 import { scoreFindings } from "@/lib/website-check/analyze";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { leesHeleSite } from "@/lib/website-check/inlezen-site";
+import { logStap } from "@/lib/scans/store";
 import { getWebsiteCheck, markCheckSite, runWebsiteCheck, type NieuweSite, type WebsiteCheckResult } from "@/lib/website-check/run";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,7 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
   const klaar = await bestaande(check.host);
   if (klaar) {
     await markCheckSite(check.id, klaar);
+    await logStap("website", check.id, "nieuwe-site", klaar.slug, { siteSlug: klaar.slug });
     return { check: { ...check, nieuweSite: klaar }, site: klaar };
   }
 
@@ -145,6 +147,7 @@ export async function maakNieuweSite(checkId: string): Promise<{ check: WebsiteC
   };
   await kvSet(KEY(check.host), site);
   await markCheckSite(check.id, site);
+  await logStap("website", check.id, "nieuwe-site", site.slug, { siteSlug: site.slug });
   logger.info("website check new site", { host: check.host, slug: site.slug, score: site.score, ...overgenomen });
   return { check: { ...check, nieuweSite: site }, site };
 }
@@ -171,5 +174,6 @@ export async function kiesStijl(checkId: string, stijl: unknown, paletId: unknow
   const next: NieuweSite = { ...ns, stijl, palet: palet.id, eigen };
   await kvSet(KEY(check.host), next);
   await markCheckSite(check.id, next);
+  await logStap("website", check.id, "stijl", `${stijl} · ${palet.naam}`);
   return next;
 }

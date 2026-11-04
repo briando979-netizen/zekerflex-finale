@@ -3,6 +3,7 @@ import { Section, SectionHead } from "@/components/marketing/primitives";
 import { ReviewScan } from "@/components/reviews/ReviewScan";
 import { canonical } from "@/lib/seo";
 import { getReviewScan } from "@/lib/review-scan/run";
+import { getScanLog } from "@/lib/scans/store";
 
 const TITLE = "Gratis review-check: hoe scoort je bedrijf op Google?";
 const DESCRIPTION =
@@ -26,11 +27,13 @@ const PUNTEN: [string, string][] = [
 export default async function ReviewCheckPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
   const { r } = await searchParams;
   const initial = r ? await getReviewScan(r) : null;
+  // het voorstel op maat bij deze scan, als die er is (lib/scans)
+  const log = initial ? await getScanLog("reviews", initial.id) : null;
   return (
     <Section>
       <SectionHead eyebrow="Gratis review-check" title="Hoe scoort je bedrijf op Google?" intro={DESCRIPTION} />
       <div className="mt-8 max-w-4xl">
-        <ReviewScan variant="openbaar" initial={initial} />
+        <ReviewScan variant="openbaar" initial={initial} initialDealId={log?.dealId ?? null} />
       </div>
       {!initial && (
         <ul className="mt-10 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">

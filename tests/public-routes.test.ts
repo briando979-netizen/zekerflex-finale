@@ -46,8 +46,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/review-scan", // free public review-scan
     "/api/review-scan/lead", // its contact form
     "/api/klus-plaatsen/website", // /klus-plaatsen reads a company's public front page
-    "/api/review-scan", // free public review-scan
-    "/api/review-scan/lead", // its contact form
+    "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer
   ];

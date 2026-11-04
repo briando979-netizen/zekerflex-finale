@@ -8,6 +8,7 @@ import { jsonError } from "@/lib/http/errors";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { FetchError } from "@/lib/website-check/fetch";
 import { runWebsiteCheck } from "@/lib/website-check/run";
+import { registreerWebsiteCheck } from "@/lib/scans/registreer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +44,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await runWebsiteCheck(parsed.data.url);
     void recordServerEvent({ path: "/website-check", label: "website-check", meta: { host: result.host, score: result.score } });
-    return NextResponse.json({ ok: true, result });
+    // in het scanlogboek, met een voorstel op maat en (op de achtergrond) een lead (lib/scans)
+    const { dealId } = await registreerWebsiteCheck(result);
+    return NextResponse.json({ ok: true, result, dealId });
   } catch (err) {
     if (err instanceof FetchError) {
       return NextResponse.json({ error: { code: err.code, message: err.message } }, { status: 422 });
