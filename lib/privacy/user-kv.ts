@@ -31,6 +31,8 @@ export const ERASABLE_KV_PREFIXES = [
   "mailbox-connection:",
   "mailbox-sent:",
   "nfc-fob-user:",
+  "spoed-uit:",
+  "spoed-wacht:",
   "notif-dismissed:",
   "onboarding-reminder:",
   "os:",

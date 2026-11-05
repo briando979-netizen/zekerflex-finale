@@ -1,0 +1,24 @@
+# WhatsApp-brug voor spoedoproepen (optioneel, zie deploy/whatsapp-brug/README.md).
+# Draait naast de gewone stack op het interne netwerk; de app praat ermee via
+# WHATSAPP_BRUG_URL=http://whatsapp-brug:3900 en WHATSAPP_BRUG_TOKEN.
+#
+#   docker compose -f docker-compose.vps.yml -f docker-compose.whatsapp.yml --env-file .env.production up -d --build whatsapp-brug
+#
+# De gewone uitrol (deploy/scripts/vps-update.sh) raakt deze container niet.
+services:
+  whatsapp-brug:
+    build: ./deploy/whatsapp-brug
+    image: zekerflex-whatsapp-brug:latest
+    restart: unless-stopped
+    environment:
+      BRUG_TOKEN: ${WHATSAPP_BRUG_TOKEN}
+      APP_URL: http://app:3000
+      PORT: "3900"
+      AUTH_DIR: /data/auth
+    volumes:
+      - whatsapp-auth:/data
+    networks: [internal]
+    # Geen `ports:` — alleen bereikbaar voor de app.
+
+volumes:
+  whatsapp-auth:

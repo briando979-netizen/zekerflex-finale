@@ -55,6 +55,17 @@ export interface WorkerPushTexts {
   followMore: (extraDays: number) => string;
   geoTitle: (hours: number) => string;
   geoBody: (title: string, city: string, km: string, time: string, amount: string) => string;
+  /** spoedoproep (lib/spoed): push, sms/WhatsApp en de antwoorden op "1"/"2"/STOP */
+  spoedTitle: (title: string) => string;
+  spoedBody: (company: string, city: string, when: string, rate: string) => string;
+  spoedSms: (title: string, company: string, city: string, when: string, rate: string, link: string) => string;
+  spoedAccepted: (title: string, when: string, link: string) => string;
+  spoedPending: (title: string) => string;
+  spoedDeclined: string;
+  spoedUnknown: string;
+  spoedNone: string;
+  spoedStopped: string;
+  spoedFailed: (reason: string) => string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -103,6 +114,16 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     followMore: (n) => ` (+${n} ${n === 1 ? "dag" : "dagen"})`,
     geoTitle: (h) => `📍 Klus dichtbij — begint over ${h} uur`,
     geoBody: (t, c, km, tm, a) => `${t} in ${c} (±${km} km), start ${tm} · €${a}/uur. Reageer snel in de app.`,
+    spoedTitle: (t) => `⚡ Spoedoproep: ${t}`,
+    spoedBody: (c, s, w, r) => `${c} in ${s} zoekt je nú: ${w} · ${r}. Open de app en neem aan.`,
+    spoedSms: (t, c, s, w, r, l) => `SPOED ZekerFlex: ${c} zoekt ${t} in ${s}, ${w}, ${r}. Antwoord 1 = ik neem aan, 2 = nee. Info: ${l} (STOP = geen berichten meer)`,
+    spoedAccepted: (t, w, l) => `Top, je staat ingepland: ${t}, ${w}. Details: ${l}`,
+    spoedPending: (t) => `Je reactie op ${t} is genoteerd; de opdrachtgever bevestigt zodra zijn bedrijf is goedgekeurd.`,
+    spoedDeclined: "Bedankt voor je antwoord, we zoeken verder. Tot de volgende keer!",
+    spoedUnknown: "Antwoord 1 om de spoedklus aan te nemen of 2 om af te slaan.",
+    spoedNone: "Er staat geen spoedklus meer voor je open. Kijk in de app voor klussen.",
+    spoedStopped: "Oké, je krijgt geen sms of WhatsApp meer voor spoedklussen. Aanzetten kan in de app bij Account.",
+    spoedFailed: (r) => `Dat lukte niet: ${r}`,
   },
   en: {
     hours: "hours",
@@ -149,6 +170,16 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     followMore: (n) => ` (+${n} ${n === 1 ? "day" : "days"})`,
     geoTitle: (h) => `📍 Job nearby — starts in ${h} ${h === 1 ? "hour" : "hours"}`,
     geoBody: (t, c, km, tm, a) => `${t} in ${c} (±${km} km), starts ${tm} · €${a}/hour. Respond quickly in the app.`,
+    spoedTitle: (t) => `⚡ Urgent call: ${t}`,
+    spoedBody: (c, s, w, r) => `${c} in ${s} needs you now: ${w} · ${r}. Open the app and accept.`,
+    spoedSms: (t, c, s, w, r, l) => `URGENT ZekerFlex: ${c} needs ${t} in ${s}, ${w}, ${r}. Reply 1 = I'll take it, 2 = no. Info: ${l} (STOP = no more messages)`,
+    spoedAccepted: (t, w, l) => `Great, you're scheduled: ${t}, ${w}. Details: ${l}`,
+    spoedPending: (t) => `Your response to ${t} is noted; the employer confirms once their company is approved.`,
+    spoedDeclined: "Thanks for replying, we'll keep looking. See you next time!",
+    spoedUnknown: "Reply 1 to take the urgent job or 2 to decline.",
+    spoedNone: "There is no open urgent job for you right now. Check the app for jobs.",
+    spoedStopped: "OK, you will no longer get SMS or WhatsApp for urgent jobs. You can turn it back on in the app under Account.",
+    spoedFailed: (r) => `That didn't work: ${r}`,
   },
   pl: {
     hours: "godz.",
@@ -195,6 +226,16 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     followMore: (n) => ` (+${n} ${n === 1 ? "dzień" : "dni"})`,
     geoTitle: (h) => `📍 Zlecenie w pobliżu — zaczyna się za ${h} godz.`,
     geoBody: (t, c, km, tm, a) => `${t} w ${c} (±${km} km), start ${tm} · €${a}/godz. Odpowiedz szybko w aplikacji.`,
+    spoedTitle: (t) => `⚡ Pilne wezwanie: ${t}`,
+    spoedBody: (c, s, w, r) => `${c} w ${s} potrzebuje Cię teraz: ${w} · ${r}. Otwórz aplikację i przyjmij.`,
+    spoedSms: (t, c, s, w, r, l) => `PILNE ZekerFlex: ${c} szuka ${t} w ${s}, ${w}, ${r}. Odpowiedz 1 = biorę, 2 = nie. Info: ${l} (STOP = koniec wiadomości)`,
+    spoedAccepted: (t, w, l) => `Super, jesteś zaplanowany: ${t}, ${w}. Szczegóły: ${l}`,
+    spoedPending: (t) => `Twoja odpowiedź na ${t} została zapisana; pracodawca potwierdzi po zatwierdzeniu firmy.`,
+    spoedDeclined: "Dziękujemy za odpowiedź, szukamy dalej. Do następnego razu!",
+    spoedUnknown: "Odpowiedz 1, aby przyjąć pilne zlecenie, lub 2, aby odmówić.",
+    spoedNone: "Nie ma teraz otwartego pilnego zlecenia dla Ciebie. Sprawdź zlecenia w aplikacji.",
+    spoedStopped: "OK, nie będziesz już dostawać SMS-ów ani WhatsAppa o pilnych zleceniach. Włączysz to ponownie w aplikacji w Koncie.",
+    spoedFailed: (r) => `Nie udało się: ${r}`,
   },
   ro: {
     hours: "ore",
@@ -241,6 +282,16 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     followMore: (n) => ` (+${n} ${n === 1 ? "zi" : "zile"})`,
     geoTitle: (h) => `📍 Job în apropiere — începe în ${h} ${h === 1 ? "oră" : "ore"}`,
     geoBody: (t, c, km, tm, a) => `${t} în ${c} (±${km} km), start ${tm} · €${a}/oră. Răspunde rapid în aplicație.`,
+    spoedTitle: (t) => `⚡ Apel urgent: ${t}`,
+    spoedBody: (c, s, w, r) => `${c} din ${s} are nevoie de tine acum: ${w} · ${r}. Deschide aplicația și acceptă.`,
+    spoedSms: (t, c, s, w, r, l) => `URGENT ZekerFlex: ${c} caută ${t} în ${s}, ${w}, ${r}. Răspunde 1 = accept, 2 = nu. Info: ${l} (STOP = fără mesaje)`,
+    spoedAccepted: (t, w, l) => `Super, ești programat: ${t}, ${w}. Detalii: ${l}`,
+    spoedPending: (t) => `Răspunsul tău la ${t} este notat; angajatorul confirmă după aprobarea firmei.`,
+    spoedDeclined: "Mulțumim pentru răspuns, căutăm mai departe. Pe data viitoare!",
+    spoedUnknown: "Răspunde 1 pentru a accepta jobul urgent sau 2 pentru a refuza.",
+    spoedNone: "Nu există acum niciun job urgent deschis pentru tine. Vezi joburile în aplicație.",
+    spoedStopped: "OK, nu vei mai primi SMS sau WhatsApp pentru joburi urgente. Poți reactiva în aplicație, la Cont.",
+    spoedFailed: (r) => `Nu a mers: ${r}`,
   },
   uk: {
     hours: "год",
@@ -287,6 +338,16 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     followMore: (n) => ` (+${n} дн.)`,
     geoTitle: (h) => `📍 Робота поруч — починається через ${h} год`,
     geoBody: (t, c, km, tm, a) => `${t} у ${c} (±${km} км), початок ${tm} · €${a}/год. Відповідайте швидко в застосунку.`,
+    spoedTitle: (t) => `⚡ Терміновий виклик: ${t}`,
+    spoedBody: (c, s, w, r) => `${c} у ${s} потребує вас зараз: ${w} · ${r}. Відкрийте застосунок і прийміть.`,
+    spoedSms: (t, c, s, w, r, l) => `ТЕРМІНОВО ZekerFlex: ${c} шукає ${t} у ${s}, ${w}, ${r}. Відповідь 1 = беру, 2 = ні. Інфо: ${l} (STOP = більше без повідомлень)`,
+    spoedAccepted: (t, w, l) => `Чудово, вас заплановано: ${t}, ${w}. Деталі: ${l}`,
+    spoedPending: (t) => `Вашу відповідь на ${t} записано; роботодавець підтвердить після схвалення компанії.`,
+    spoedDeclined: "Дякуємо за відповідь, шукаємо далі. До наступного разу!",
+    spoedUnknown: "Відповідьте 1, щоб узяти термінову роботу, або 2, щоб відмовитися.",
+    spoedNone: "Зараз для вас немає відкритої термінової роботи. Перегляньте роботи в застосунку.",
+    spoedStopped: "Гаразд, ви більше не отримуватимете SMS чи WhatsApp про термінові роботи. Увімкнути знову можна в застосунку в Обліковому записі.",
+    spoedFailed: (r) => `Не вдалося: ${r}`,
   },
 };
 

@@ -7,6 +7,7 @@ import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
+import { SpoedKanaalToggle } from "@/components/app/SpoedKanaalToggle";
 import { ZiekMelden } from "@/components/app/ZiekMelden";
 import { ReliabilityRing } from "@/components/app/ReliabilityRing";
 import { getTheme } from "@/lib/theme/server";
@@ -233,8 +234,9 @@ export default async function AccountPage() {
         <ReferralCard />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 space-y-3">
         <PushToggle />
+        <SpoedKanaalToggle />
       </div>
 
       <div className="mt-4 space-y-5">

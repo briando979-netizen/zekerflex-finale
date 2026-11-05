@@ -27,6 +27,7 @@ const PUBLIC_PREFIXES = [
   "/api/demo", // public "book a demo" form + its .ics link
   "/api/afspraak", // public AI-concierge (bel)afspraak form + its own IP rate limiting
   "/api/telephony", // Twilio voice webhooks — X-Twilio-Signature validated (lib/telephony)
+  "/api/whatsapp", // de WhatsApp-brug (deploy/whatsapp-brug) geeft antwoorden op spoedoproepen door: eigen gedeelde sleutel (WHATSAPP_BRUG_TOKEN)
   "/api/werken-bij", // public job application form
   "/api/kennis/whitepaper", // public whitepaper downloads
   "/api/mail/afmelden",

@@ -741,6 +741,14 @@ const nl = {
     scanFailed: "Het lezen van de foto lukte niet. Vul de gegevens zelf in.",
     scanPdf: "Een PDF lezen we niet automatisch in; vul de gegevens zelf in.",
   },
+  spoed: {
+    title: "Spoedoproepen per sms of WhatsApp",
+    body: "Zoekt een opdrachtgever vlakbij op het laatste moment iemand, dan krijg je naast de melding in de app ook een sms of WhatsApp. Antwoord 1 en je staat ingepland.",
+    on: "Aan",
+    off: "Uit",
+    saving: "Opslaan…",
+    failed: "Opslaan lukte niet.",
+  },
   pay: {
     back: "Instellingen",
     title: "Uitbetalingen",
@@ -1621,6 +1629,14 @@ const en: FreelancerDict = {
     scanFailed: "Reading the photo failed. Please fill in the details yourself.",
     scanPdf: "We don't read PDFs automatically; please fill in the details yourself.",
   },
+  spoed: {
+    title: "Urgent calls by SMS or WhatsApp",
+    body: "When an employer nearby needs someone at the last minute, you also get an SMS or WhatsApp next to the app notification. Reply 1 and you are scheduled.",
+    on: "On",
+    off: "Off",
+    saving: "Saving…",
+    failed: "Saving failed.",
+  },
   pay: {
     back: "Settings",
     title: "Payouts",
@@ -2497,6 +2513,14 @@ const pl: FreelancerDict = {
     scanNothing: "Nie udało się odczytać nic przydatnego ze zdjęcia. Wpisz dane samodzielnie.",
     scanFailed: "Odczyt zdjęcia nie powiódł się. Wpisz dane samodzielnie.",
     scanPdf: "Plików PDF nie odczytujemy automatycznie; wpisz dane samodzielnie.",
+  },
+  spoed: {
+    title: "Pilne wezwania przez SMS lub WhatsApp",
+    body: "Gdy pracodawca w pobliżu szuka kogoś w ostatniej chwili, oprócz powiadomienia w aplikacji dostaniesz też SMS lub WhatsApp. Odpowiedz 1 i jesteś zaplanowany.",
+    on: "Wł.",
+    off: "Wył.",
+    saving: "Zapisywanie…",
+    failed: "Zapis nie powiódł się.",
   },
   pay: {
     back: "Ustawienia",
@@ -3375,6 +3399,14 @@ const ro: FreelancerDict = {
     scanFailed: "Citirea fotografiei a eșuat. Completează datele singur.",
     scanPdf: "PDF-urile nu le citim automat; completează datele singur.",
   },
+  spoed: {
+    title: "Apeluri urgente prin SMS sau WhatsApp",
+    body: "Când un angajator din apropiere caută pe cineva în ultimul moment, primești pe lângă notificarea din aplicație și un SMS sau WhatsApp. Răspunde 1 și ești programat.",
+    on: "Pornit",
+    off: "Oprit",
+    saving: "Se salvează…",
+    failed: "Salvarea a eșuat.",
+  },
   pay: {
     back: "Setări",
     title: "Plăți",
@@ -4251,6 +4283,14 @@ const uk: FreelancerDict = {
     scanNothing: "Не вдалося прочитати нічого корисного з фото. Заповніть дані самостійно.",
     scanFailed: "Не вдалося прочитати фото. Заповніть дані самостійно.",
     scanPdf: "PDF ми не читаємо автоматично; заповніть дані самостійно.",
+  },
+  spoed: {
+    title: "Термінові виклики через SMS або WhatsApp",
+    body: "Коли роботодавець поруч шукає когось в останню мить, окрім сповіщення в застосунку ви отримаєте SMS або WhatsApp. Відповідьте 1, і вас заплановано.",
+    on: "Увімк.",
+    off: "Вимк.",
+    saving: "Збереження…",
+    failed: "Не вдалося зберегти.",
   },
   pay: {
     back: "Налаштування",

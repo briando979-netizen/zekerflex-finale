@@ -1,3 +1,4 @@
+import { smsIngericht, whatsappIngericht } from "@/lib/spoed/kanalen";
 import { randomUUID } from "node:crypto";
 import { Resolver } from "node:dns/promises";
 import { existsSync } from "node:fs";
@@ -254,6 +255,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       auto: true,
       done: Boolean(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN),
       ...(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN ? { doneNote: "sleutel staat op de server" } : {}),
+    },
+    {
+      id: "spoed-kanalen",
+      group: "Bellen & koppelingen",
+      title: "Spoedoproep per sms en WhatsApp aanzetten (optioneel)",
+      why: "Een opdrachtgever die vandaag nog iemand mist, stuurt een spoedoproep naar geschikte krachten in de buurt (Werkgever → Dienst → Spoedoproep). De melding in de app werkt altijd; sms en WhatsApp bereiken ook wie de app niet open heeft, en 'antwoord 1' plant meteen in. Sms loopt via het Twilio-account van de AI-beller (per bericht het Twilio-tarief). WhatsApp loopt via een eigen brug met een los nummer (deploy/whatsapp-brug): gratis, maar WhatsApp kan zo'n nummer blokkeren bij veel berichten. Gebruik dus een apart nummer; krachten kunnen met STOP afmelden.",
+      how: [
+        "Sms: zet TWILIO_SMS_FROM (een Twilio-nummer dat sms mag versturen) in .env.production; leeg = TWILIO_FROM_NUMBER. Zet in Twilio bij dat nummer de sms-webhook op https://zekerflex.com/api/telephony/sms (POST).",
+        "WhatsApp: koop een prepaid simkaart, draai op de VPS deploy/whatsapp-brug/installeer.sh en scan de QR-code uit het log met WhatsApp op die telefoon (Gekoppelde apparaten).",
+        "Daarna staan sms en WhatsApp vanzelf aan in het spoedoproep-paneel.",
+      ],
+      auto: true,
+      done: smsIngericht() || whatsappIngericht(),
+      ...(smsIngericht() || whatsappIngericht() ? { doneNote: [smsIngericht() ? "sms" : null, whatsappIngericht() ? "WhatsApp" : null].filter(Boolean).join(" en ") + " ingericht" } : {}),
     },
     {
       id: "hf-token",

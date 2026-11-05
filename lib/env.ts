@@ -211,6 +211,13 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+  // Sms voor spoedoproepen (lib/spoed): de afzender; leeg = TWILIO_FROM_NUMBER.
+  TWILIO_SMS_FROM: z.string().optional(),
+  // WhatsApp-brug voor spoedoproepen (deploy/whatsapp-brug): een los
+  // containertje met een eigen WhatsApp-nummer. Leeg = geen WhatsApp; push en
+  // sms blijven werken.
+  WHATSAPP_BRUG_URL: z.string().url().optional(),
+  WHATSAPP_BRUG_TOKEN: z.string().optional(),
   // Twilio <Say>-stem. Standaard een NEURALE, natuurlijke NL-stem (Amazon Polly
   // Laura-Neural). Alternatieven: "Polly.Ruben" (man, basis), "Google.nl-NL-Wavenet-D",
   // "Google.nl-NL-Standard-E". Neurale stemmen klinken veel menselijker dan de basis.

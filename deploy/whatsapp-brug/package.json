@@ -1,0 +1,15 @@
+{
+  "name": "zekerflex-whatsapp-brug",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp-brug voor spoedoproepen van ZekerFlex (eigen nummer via Baileys)",
+  "scripts": {
+    "start": "node brug.mjs"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.18",
+    "pino": "9.6.0",
+    "qrcode-terminal": "0.12.0"
+  }
+}

@@ -15,6 +15,7 @@ import { FreelancerRelationButton } from "@/components/app/FreelancerRelationBut
 import { CandidateCardButton } from "@/components/app/CandidateCardButton";
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
 import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
+import { SpoedoproepPaneel } from "@/components/app/SpoedoproepPaneel";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
@@ -131,6 +132,12 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
       {s.status !== "CANCELLED" && verified && (
         <div className="mb-6">
           <RepeatTeamButton shiftId={s.id} teamSize={s.assigned.length} />
+        </div>
+      )}
+
+      {seatsFree > 0 && verified && !shiftEnded && s.status !== "CANCELLED" && s.status !== "DRAFT" && (
+        <div className="mb-6">
+          <SpoedoproepPaneel shiftId={s.id} seatsFree={seatsFree} />
         </div>
       )}
 
