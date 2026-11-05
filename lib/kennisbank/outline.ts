@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
+import { leesVerzamelingKop } from "@/lib/kennisbank/verzameling";
 
 // ---------------------------------------------------------------------------
 // De kennisbank: Outline (open source, Notion-achtig) in Docker op de eigen
@@ -11,7 +12,8 @@ import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 // kunnen erin; de eerste die inlogt is beheerder. ZekerFlex vult hem met de
 // handleidingen uit docs/kennisbank (één map per verzameling) via de API van
 // Outline; daarvoor is een API-sleutel nodig die de beheerder in Outline maakt
-// en in Admin → Kennisbank plakt (KV kennisbank:api).
+// en in Admin → Kennisbank plakt (KV kennisbank:api). Een verzameling met
+// "Toegang: intern" in _verzameling.md is privé (lib/kennisbank/verzameling.ts).
 // ---------------------------------------------------------------------------
 
 const K_API = "kennisbank:api";
@@ -23,7 +25,7 @@ export const kennisbankIngesteld = () => Boolean(env.OUTLINE_URL && outlinePubli
 export interface KennisbankStand {
   apiGezet: boolean;
   laatstGevuld: string | null;
-  verzamelingen: { naam: string; documenten: number }[];
+  verzamelingen: { naam: string; documenten: number; intern: boolean }[];
   laatsteFout: string | null;
 }
 
@@ -73,27 +75,29 @@ interface Document {
 }
 
 /** De handleidingen op schijf: elke submap is een verzameling, elk .md-bestand een document (eerste # = titel). */
-export async function handleidingenOpSchijf(): Promise<{ verzameling: string; uitleg: string; documenten: { titel: string; tekst: string; volgorde: number }[] }[]> {
+export async function handleidingenOpSchijf(): Promise<{ verzameling: string; uitleg: string; intern: boolean; documenten: { titel: string; tekst: string; volgorde: number }[] }[]> {
   const mappen = (await readdir(MAP, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => d.name).sort();
   const uit = [];
   for (const map of mappen) {
     const bestanden = (await readdir(path.join(MAP, map))).filter((f) => f.endsWith(".md")).sort();
     const documenten = [];
     let uitleg = "";
+    let intern = false;
     let verzameling = map.replace(/^\d+-/, "").replace(/-/g, " ");
     for (const f of bestanden) {
       const tekst = await readFile(path.join(MAP, map, f), "utf8");
       if (f === "_verzameling.md") {
-        // eerste regel = naam, de rest = omschrijving
-        const [eerste = "", ...rest] = tekst.trim().split("\n");
-        verzameling = eerste.replace(/^#\s*/, "").trim() || verzameling;
-        uitleg = rest.join("\n").trim();
+        // eerste regel = naam, de rest = omschrijving, "Toegang: intern" = privé
+        const kop = leesVerzamelingKop(tekst, verzameling);
+        verzameling = kop.naam;
+        uitleg = kop.uitleg;
+        intern = kop.intern;
         continue;
       }
       const titel = (/^#\s+(.+)$/m.exec(tekst)?.[1] ?? f.replace(/\.md$/, "")).trim();
       documenten.push({ titel, tekst: tekst.replace(/^#\s+.+\n/, "").trim(), volgorde: documenten.length });
     }
-    uit.push({ verzameling, uitleg, documenten });
+    uit.push({ verzameling, uitleg, intern, documenten });
   }
   return uit;
 }
@@ -105,15 +109,20 @@ export async function vulKennisbank(): Promise<KennisbankStand> {
     const bestaand = await api<Verzameling[]>("collections.list", { limit: 100 });
     const verzamelingen: KennisbankStand["verzamelingen"] = [];
     for (const v of await handleidingenOpSchijf()) {
+      // permission "read" = elk lid leest mee; null = privé (alleen de beheerder en wie hij toevoegt).
+      // Ook bij een bestaande verzameling opnieuw zetten, zodat een later toegevoegde
+      // "Toegang: intern" echt ingaat en niemand per ongeluk interne stukken ziet.
+      const permission = v.intern ? null : "read";
       let col = bestaand.find((c) => c.name === v.verzameling);
-      if (!col) col = await api<Verzameling>("collections.create", { name: v.verzameling, description: v.uitleg, permission: "read", sharing: false });
+      if (col) await api("collections.update", { id: col.id, description: v.uitleg, permission, sharing: false });
+      else col = await api<Verzameling>("collections.create", { name: v.verzameling, description: v.uitleg, permission, sharing: false });
       const docs = await api<Document[]>("documents.list", { collectionId: col.id, limit: 100 });
       for (const d of v.documenten) {
         const al = docs.find((x) => x.title === d.titel);
         if (al) await api("documents.update", { id: al.id, text: d.tekst, publish: true, done: true });
         else await api("documents.create", { collectionId: col.id, title: d.titel, text: d.tekst, publish: true });
       }
-      verzamelingen.push({ naam: v.verzameling, documenten: v.documenten.length });
+      verzamelingen.push({ naam: v.verzameling, documenten: v.documenten.length, intern: v.intern });
     }
     const nieuw: KennisbankStand = { apiGezet: true, laatstGevuld: new Date().toISOString(), verzamelingen, laatsteFout: null };
     await kvSet(K_STAND, nieuw);

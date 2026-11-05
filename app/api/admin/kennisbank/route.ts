@@ -21,7 +21,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
     interneUrl: env.OUTLINE_URL ?? null,
     oidc: clients().map((c) => ({ id: c.id, naam: c.naam, redirectUris: c.redirectUris })),
     stand,
-    opSchijf: opSchijf.map((v) => ({ verzameling: v.verzameling, documenten: v.documenten.map((d) => d.titel) })),
+    opSchijf: opSchijf.map((v) => ({ verzameling: v.verzameling, intern: v.intern, documenten: v.documenten.map((d) => d.titel) })),
   });
 });
 

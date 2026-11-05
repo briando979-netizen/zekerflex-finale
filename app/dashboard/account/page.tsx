@@ -16,6 +16,8 @@ import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
+import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 
 export const dynamic = "force-dynamic";
 
@@ -131,6 +133,8 @@ export default async function AccountPage() {
     {
       items: [
         { label: t.kb, href: "/kennis" },
+        // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
+        ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),
         { label: t.community, href: "/nieuwsbrief" },
       ],
     },

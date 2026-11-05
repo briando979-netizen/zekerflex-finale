@@ -11,7 +11,7 @@ interface Antwoord {
   interneUrl: string | null;
   oidc: { id: string; naam: string; redirectUris: string[] }[];
   stand: { apiGezet: boolean; laatstGevuld: string | null; verzamelingen: { naam: string; documenten: number }[]; laatsteFout: string | null };
-  opSchijf: { verzameling: string; documenten: string[] }[];
+  opSchijf: { verzameling: string; intern: boolean; documenten: string[] }[];
 }
 
 export function KennisbankPanel() {
@@ -107,6 +107,8 @@ export function KennisbankPanel() {
             {d.opSchijf.map((v) => (
               <li key={v.verzameling}>
                 <span className="font-semibold" style={{ color: "var(--a-text)" }}>{v.verzameling}</span>
+                {/* privé: alleen de beheerder van de kennisbank en wie hij toevoegt ("Toegang: intern" in _verzameling.md) */}
+                {v.intern && <span className="ml-1 rounded px-1.5 py-0.5 text-[0.6875rem] font-semibold" style={{ background: "var(--a-trust-soft)", color: "var(--a-trust)" }}>privé (intern)</span>}
                 <span style={{ color: "var(--a-mute)" }}> · {v.documenten.join(" · ")}</span>
               </li>
             ))}
