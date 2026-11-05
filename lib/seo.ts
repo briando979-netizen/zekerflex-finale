@@ -100,6 +100,15 @@ export const SOCIALS: { name: string; href: string }[] = [
   // { name: "LinkedIn", href: "https://www.linkedin.com/company/zekerflex" },
 ];
 
+/**
+ * Het Google Bedrijfsprofiel (4 nov 2026), op het plaats-id van Google. De kaartlink staat in `sameAs`, zodat
+ * Google de site en het profiel als één bedrijf herkent; de reviewlink staat op de contactpagina.
+ */
+export const GOOGLE_PROFIEL = {
+  kaart: "https://www.google.com/maps/search/?api=1&query=ZekerFlex&query_place_id=ChIJocGlj_NR36cRC0v8DBFVqgs",
+  review: "https://search.google.com/local/writereview?placeid=ChIJocGlj_NR36cRC0v8DBFVqgs",
+} as const;
+
 /** App store links. Swap in the real listing URLs once the apps are published. */
 /**
  * Purpose-specific contact addresses. All of these are aliases on the
@@ -165,7 +174,7 @@ export function organizationJsonLd(): Record<string, unknown> {
         availableLanguage: ["nl"],
       },
     ],
-    sameAs: SOCIALS.map((s) => s.href),
+    sameAs: [...SOCIALS.map((s) => s.href), GOOGLE_PROFIEL.kaart],
   };
 }
 

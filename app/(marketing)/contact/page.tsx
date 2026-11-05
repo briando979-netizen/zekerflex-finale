@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
-import { canonical, CONTACTS, SITE } from "@/lib/seo";
+import { canonical, CONTACTS, GOOGLE_PROFIEL, SITE } from "@/lib/seo";
 
 const TITLE = "Contact — ZekerFlex";
 const DESCRIPTION =
@@ -79,6 +79,22 @@ export default function ContactPage() {
           </Link>
           <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
             Klacht indienen ({CONTACTS.klachten})
+          </a>
+        </div>
+      </Section>
+
+      <Section tone="paper">
+        <SectionHead
+          eyebrow="Op Google"
+          title="Al met ZekerFlex gewerkt?"
+          intro="Vertel op Google hoe het ging. Je review helpt andere bedrijven en flexkrachten om ons te vinden, ook als er iets beter kan."
+        />
+        <div className="mt-8 flex flex-wrap gap-4">
+          <a href={GOOGLE_PROFIEL.review} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            Schrijf een review op Google
+          </a>
+          <a href={GOOGLE_PROFIEL.kaart} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+            Bekijk ons op Google Maps
           </a>
         </div>
       </Section>
