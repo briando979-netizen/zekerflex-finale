@@ -17,6 +17,7 @@ const h = vi.hoisted(() => {
     alerts: [] as { key: string }[],
     facturen: [] as Record<string, unknown>[],
     beschikbaar: null as null | { status: string },
+    aangemaakt: [] as Record<string, unknown>[],
   };
   return {
     state,
@@ -30,6 +31,10 @@ const h = vi.hoisted(() => {
         updateMany: async (a: { where: unknown; data: unknown }) => {
           state.updates.push(a);
           return { count: state.updateCount };
+        },
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          state.aangemaakt.push(data);
+          return { id: "nieuw1", ...data };
         },
       },
     },
@@ -60,6 +65,7 @@ vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => h.state.kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void h.state.kv.set(k, v),
 }));
+vi.mock("@/lib/domeinen/beschikbaar", () => ({ beschikbaarheid: async () => "vrij" }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (a: { key: string }) => void h.state.alerts.push(a) }));
 vi.mock("@/lib/domeinen/factuur", () => ({
   maakDomeinFactuur: async (f: Record<string, unknown>) => {
@@ -80,7 +86,7 @@ vi.mock("@/lib/domeinen/koppelen", async (orig) => {
 });
 
 import { metBtw } from "@/lib/domeinen/extensies";
-import { bundelOver, bundelVoor, koppelBestelling, legVast, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
+import { bundelOver, bundelVoor, koppelBestelling, legVast, startBestelling, MAG_NAAR, registreerBijTransip, terugMet, terugPad, verwerkDomeinSessie, zetStatus } from "@/lib/domeinen/bestelling";
 import { AUTO_REGISTREREN_PER_DAG } from "@/lib/domeinen/verlengen-core";
 
 const best = (extra: Record<string, unknown> = {}) => ({
@@ -121,6 +127,7 @@ beforeEach(() => {
   h.state.alerts.length = 0;
   h.state.facturen.length = 0;
   h.state.beschikbaar = null;
+  h.state.aangemaakt.length = 0;
 });
 
 describe("btw", () => {
@@ -331,6 +338,19 @@ describe("registreren via TransIP (knop in Admin)", () => {
       await expect(registreerBijTransip("b1", "user:admin1")).rejects.toThrow(/betaalde bestelling/);
     }
     expect(h.state.registraties).toHaveLength(0);
+  });
+});
+
+describe("bestellen", () => {
+  it("de route geeft meer mee (naam): alleen bedrijf, gebruiker en e-mail gaan naar de database", async () => {
+    h.state.site = { status: "ACTIVE", stripeSubId: "sub_1" };
+    h.state.rij = null;
+    const besteller = { tenantId: "t1", userId: "u1", email: "eigenaar@bakkerij-jansen.nl", naam: "Jan" };
+    const uit = await startBestelling(besteller, "jansen.nl", (pad) => pad);
+    expect(uit.soort).toBe("bundel");
+    const data = h.state.aangemaakt[0] ?? {};
+    expect(data).not.toHaveProperty("naam");
+    expect(data).toMatchObject({ tenantId: "t1", userId: "u1", email: "eigenaar@bakkerij-jansen.nl", domein: "jansen.nl", bundel: true, status: "BETAALD" });
   });
 });
 

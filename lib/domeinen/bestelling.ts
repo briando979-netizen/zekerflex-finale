@@ -57,6 +57,9 @@ export interface Besteller {
   email: string;
 }
 
+/** Alleen deze velden naar de database: de route geeft meer mee (zoals de naam), en Prisma weigert onbekende velden. */
+const wie = (b: Besteller): Besteller => ({ tenantId: b.tenantId, userId: b.userId, email: b.email });
+
 export type StartUitkomst = { soort: "betalen"; url: string } | { soort: "bundel"; id: string };
 
 /** Waar je na de betaalpagina terugkomt: alleen deze eigen pagina's (geen open doorverwijzing). */
@@ -96,7 +99,7 @@ export async function startBestelling(b: Besteller, invoer: string, terugUrl: (p
 
   if (await bundelVoor(b.tenantId, d.tld)) {
     const best = await prisma.domeinBestelling.create({
-      data: { ...b, domein, prijsCent: 0, btwCent: 0, bundel: true, status: "BETAALD", betaaldOp: new Date(), notitie: `Beschikbaarheid bij bestellen: ${status}.` },
+      data: { ...wie(b), domein, prijsCent: 0, btwCent: 0, bundel: true, status: "BETAALD", betaaldOp: new Date(), notitie: `Beschikbaarheid bij bestellen: ${status}.` },
     });
     await naBetaling(best);
     return { soort: "bundel", id: best.id };
@@ -104,7 +107,7 @@ export async function startBestelling(b: Besteller, invoer: string, terugUrl: (p
 
   const p = metBtw(ext.prijsCent);
   const best = await prisma.domeinBestelling.create({
-    data: { ...b, domein, prijsCent: p.exclCent, btwCent: p.btwCent, notitie: `Beschikbaarheid bij bestellen: ${status}.` },
+    data: { ...wie(b), domein, prijsCent: p.exclCent, btwCent: p.btwCent, notitie: `Beschikbaarheid bij bestellen: ${status}.` },
   });
   // de betaalmethode bewaren bij het bedrijf, zodat de verlenging elk jaar vanzelf gaat
   // (kaart, of een SEPA-machtiging uit iDEAL). Een testadres krijgt geen Stripe-klant.
