@@ -19,10 +19,6 @@ rest zf_toegang {
 		username = "zekerflex"
 		password = "$ENV{NETWERK_RADIUS_TOKEN}"
 		timeout = 5
-		tls = ${..tls}
-	}
-
-	tls {
 	}
 
 	pool {
@@ -48,10 +44,6 @@ rest zf_clients {
 		username = "zekerflex"
 		password = "$ENV{NETWERK_RADIUS_TOKEN}"
 		timeout = 5
-		tls = ${..tls}
-	}
-
-	tls {
 	}
 
 	pool {
