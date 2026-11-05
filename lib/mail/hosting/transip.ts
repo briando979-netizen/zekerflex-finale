@@ -56,7 +56,7 @@ async function token(): Promise<string> {
   return data.token;
 }
 
-async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T | undefined> {
+async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T | undefined> {
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: { Authorization: `Bearer ${await token()}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
@@ -140,17 +140,48 @@ export interface TransipDnsEntry {
   content: string;
 }
 
+/** Een whois-contact zoals TransIP het kent (houder, beheerder, technisch). */
+export interface TransipContact {
+  type: "registrant" | "administrative" | "technical";
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  companyKvk: string;
+  companyType: string;
+  street: string;
+  number: string;
+  postalCode: string;
+  city: string;
+  phoneNumber: string;
+  faxNumber: string;
+  email: string;
+  country: string;
+}
+
 /**
  * Register a domain in the ZekerFlex TransIP account, with these DNS records.
- * Contacts and nameservers are the account defaults. This creates a TransIP
- * invoice, so it only runs when an admin presses "Registreer" (Admin → Domeinen).
+ * Without contacts TransIP uses the account defaults (ZekerFlex as holder);
+ * lib/domeinen/houder.ts passes the customer as holder. This creates a TransIP
+ * invoice to ZekerFlex: only after the customer paid (lib/domeinen/bestelling.ts legVast).
  */
-export async function registerDomain(domainName: string, dnsEntries: TransipDnsEntry[]): Promise<void> {
-  await call("POST", "/domains", { domainName, dnsEntries });
+export async function registerDomain(domainName: string, dnsEntries: TransipDnsEntry[], contacts?: TransipContact[]): Promise<void> {
+  await call("POST", "/domains", { domainName, dnsEntries, ...(contacts && contacts.length > 0 ? { contacts } : {}) });
+}
+
+/** De contacten (houder, beheerder, technisch) van een domein in ons account. */
+export async function domainContacts(domainName: string): Promise<TransipContact[]> {
+  const d = await call<{ contacts?: TransipContact[] }>("GET", `/domains/${encodeURIComponent(domainName)}/contacts`);
+  return d?.contacts ?? [];
 }
 
 export interface TransipDomain {
   name: string;
+  /** de verhuiscode (token) van het register; alleen naar de klant via lib/domeinen/behoud.ts */
+  authCode?: string;
+  isTransferLocked?: boolean;
+  supportsLocking?: boolean;
+  hasActionRunning?: boolean;
+  status?: string;
   /** "2026-11-05" */
   registrationDate?: string;
   /** de datum waarop TransIP de naam verlengt (en ZekerFlex factureert) */
@@ -158,6 +189,32 @@ export interface TransipDomain {
   /** "" | "signed" | "cancelled" */
   cancellationStatus?: string;
   cancellationDate?: string;
+}
+
+/**
+ * Het verhuisslot aan of uit. Dicht = de naam kan niet zonder ons naar een
+ * andere partij. TransIP wil het hele domeinobject terug (PUT), dus eerst ophalen.
+ */
+export async function setTransferLock(domainName: string, locked: boolean): Promise<void> {
+  const d = await call<{ domain?: TransipDomain }>("GET", `/domains/${encodeURIComponent(domainName)}`);
+  if (!d?.domain) throw AppError.notFound(`TransIP: ${domainName} staat niet in het account`);
+  if (d.domain.supportsLocking === false || d.domain.isTransferLocked === locked) return;
+  await call("PUT", `/domains/${encodeURIComponent(domainName)}`, { domain: { ...d.domain, isTransferLocked: locked } });
+}
+
+export interface TransipTld {
+  name: string;
+  /** inkoop eerste jaar, centen */
+  price: number;
+  /** inkoop verlenging, centen */
+  recurringPrice: number;
+  cancelTimeFrame?: number;
+}
+
+/** De extensies van het account met de inkoopprijzen (voor de margebewaking). */
+export async function listTlds(): Promise<TransipTld[]> {
+  const d = await call<{ tlds?: TransipTld[] }>("GET", "/tlds");
+  return d?.tlds ?? [];
 }
 
 /** Een domein in het ZekerFlex-account, met zijn verlengdatum. */

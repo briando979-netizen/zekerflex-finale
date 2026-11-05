@@ -34,7 +34,7 @@ const FAQ = [
   },
   {
     q: "Wat kost een domeinnaam?",
-    a: `De prijzen staan hierboven, per jaar en excl. btw. Een .nl kost ${euroPrijs(EXTENSIES[0]?.prijsCent ?? 995)} per jaar. Heb je een websiteabonnement van ZekerFlex (Basis of Pro), dan is je eerste ${bundel} het eerste jaar inbegrepen. Betalen kan met iDEAL of je kaart.`,
+    a: `De prijzen staan hierboven, excl. btw: het eerste jaar en daarna per jaar. Een .nl kost ${euroPrijs(EXTENSIES[0]?.prijsCent ?? 295)} het eerste jaar en daarna ${euroPrijs(EXTENSIES[0]?.verlengCent ?? 1995)} per jaar. Heb je een websiteabonnement van ZekerFlex (Basis of Pro), dan is je eerste ${bundel} het eerste jaar inbegrepen. Betalen kan met iDEAL of je kaart; de verlenging kan automatisch.`,
   },
   {
     q: "Kan ik mijn domein later opzeggen of meenemen?",
@@ -134,7 +134,10 @@ export default function DomeinnaamPagina() {
                       Waarvoor
                     </th>
                     <th scope="col" className="py-2 text-right font-semibold">
-                      Per jaar
+                      Eerste jaar
+                    </th>
+                    <th scope="col" className="py-2 text-right font-semibold">
+                      Daarna per jaar
                     </th>
                   </tr>
                 </thead>
@@ -146,6 +149,7 @@ export default function DomeinnaamPagina() {
                       </th>
                       <td className="py-2.5 text-neutralx-600">{e.omschrijving}</td>
                       <td className="py-2.5 text-right font-semibold text-ink">{euroPrijs(e.prijsCent)}</td>
+                      <td className="py-2.5 text-right text-ink">{euroPrijs(e.verlengCent)}</td>
                     </tr>
                   ))}
                 </tbody>

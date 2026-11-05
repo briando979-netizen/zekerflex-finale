@@ -9,6 +9,8 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { bestellingenVan, bundelOver, koppelBestelling, startBestelling, terugPad } from "@/lib/domeinen/bestelling";
 import { domeinenOpWebsite } from "@/lib/domeinen/koppelen";
 import { verlengStanden, zetAutoVerlengen } from "@/lib/domeinen/verlengen";
+import { behoudStanden, bevestigVerhuis, blijf, vraagVerhuis } from "@/lib/domeinen/behoud";
+import { VERHUIS_REDENEN } from "@/lib/domeinen/behoud-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +33,8 @@ async function bedrijf() {
 
 async function lijst(tenantId: string) {
   const [bestellingen, op, standen] = await Promise.all([bestellingenVan(tenantId), domeinenOpWebsite(tenantId), verlengStanden(tenantId)]);
-  return bestellingen.map((b) => ({ ...b, opWebsite: op.includes(b.domein), ...(standen.get(b.id) ?? {}) }));
+  const behoud = await behoudStanden(bestellingen.filter((b) => b.status === "GEREGISTREERD"));
+  return bestellingen.map((b) => ({ ...b, opWebsite: op.includes(b.domein), ...(standen.get(b.id) ?? {}), behoud: behoud.get(b.id) ?? null }));
 }
 
 const fout = (err: unknown) => {
@@ -52,6 +55,9 @@ export async function GET(): Promise<NextResponse> {
 const schema = z.object({ domein: z.string().trim().min(3).max(260), terug: z.string().max(80).optional() });
 const koppelSchema = z.object({ koppel: z.string().min(1).max(60) });
 const verlengSchema = z.object({ verlengen: z.string().min(1).max(60), aan: z.boolean() });
+const verhuisSchema = z.object({ verhuis: z.string().min(1).max(60), reden: z.enum(VERHUIS_REDENEN) });
+const blijfSchema = z.object({ blijf: z.string().min(1).max(60) });
+const bevestigSchema = z.object({ verhuisBevestig: z.string().min(1).max(60) });
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -60,7 +66,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body: unknown = await request.json().catch(() => null);
     const verlengen = verlengSchema.safeParse(body);
     if (verlengen.success) {
-      await zetAutoVerlengen(b.tenantId, verlengen.data.verlengen, verlengen.data.aan);
+      const { aanbod } = await zetAutoVerlengen(b.tenantId, verlengen.data.verlengen, verlengen.data.aan);
+      return NextResponse.json({ bestellingen: await lijst(b.tenantId), aanbod });
+    }
+    // verhuizen gaat via ZekerFlex: reden → blijfaanbod → (toch) verhuiscode na een dag (lib/domeinen/behoud.ts)
+    const verhuis = verhuisSchema.safeParse(body);
+    if (verhuis.success) {
+      const aanbod = await vraagVerhuis(b.tenantId, verhuis.data.verhuis, verhuis.data.reden);
+      return NextResponse.json({ bestellingen: await lijst(b.tenantId), aanbod });
+    }
+    const blijven = blijfSchema.safeParse(body);
+    if (blijven.success) {
+      await blijf(b.tenantId, blijven.data.blijf);
+      return NextResponse.json({ bestellingen: await lijst(b.tenantId) });
+    }
+    const bevestig = bevestigSchema.safeParse(body);
+    if (bevestig.success) {
+      await bevestigVerhuis(b.tenantId, bevestig.data.verhuisBevestig);
       return NextResponse.json({ bestellingen: await lijst(b.tenantId) });
     }
     const koppel = koppelSchema.safeParse(body);

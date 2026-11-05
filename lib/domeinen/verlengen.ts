@@ -13,6 +13,7 @@ import { payUrl } from "@/lib/billing/pay-link";
 import { cancelDomain, domainInfo, transipConfigured } from "@/lib/mail/hosting/transip";
 import { euroPrijs, extensie } from "@/lib/domeinen/extensies";
 import { maakDomeinFactuur } from "@/lib/domeinen/factuur";
+import { bewaakDomeinen, kortingVoor, stuurVerhuiscodes, verlengenUitGezet } from "@/lib/domeinen/behoud";
 import {
   FACTUUR_DAGEN_VOOR,
   LAATSTE_HERINNERING,
@@ -56,10 +57,10 @@ async function mail(b: Pick<DomeinBestelling, "email" | "domein">, onderwerp: st
   );
 }
 
-/** De prijs van een jaar verlengen, excl. btw (dezelfde lijst als bij bestellen). */
+/** De prijs van een jaar verlengen, excl. btw (de verlengprijs uit dezelfde lijst als bij bestellen). */
 export function verlengPrijsCent(b: Pick<DomeinBestelling, "domein" | "prijsCent">): number {
   const tld = b.domein.slice(b.domein.lastIndexOf(".") + 1);
-  return extensie(tld)?.prijsCent ?? b.prijsCent;
+  return extensie(tld)?.verlengCent ?? b.prijsCent;
 }
 
 async function verlengFactuur(b: DomeinBestelling): Promise<Invoice | null> {
@@ -231,7 +232,8 @@ async function maakVerlenging(b: DomeinBestelling & { verlooptOp: Date }): Promi
   const factuur = await maakDomeinFactuur({
     bestelling: b,
     soort: "verlenging",
-    exclCent: verlengPrijsCent(b),
+    // het blijfaanbod (lib/domeinen/behoud.ts) geldt voor deze ene verlenging
+    exclCent: (await kortingVoor(b)) ?? verlengPrijsCent(b),
     periodeVan: b.verlooptOp,
     periodeTot: jaarLater(b.verlooptOp),
     betaald: null,
@@ -269,6 +271,8 @@ export interface VerlengRonde {
   opgezegd: number;
   incassoBetaald: number;
   incassoMislukt: number;
+  verhuiscodes: number;
+  bewaking: Awaited<ReturnType<typeof bewaakDomeinen>> | null;
   fouten: number;
 }
 
@@ -278,7 +282,7 @@ export interface VerlengRonde {
  * afschrijving of opzegging bezorgen.
  */
 export async function runDomeinVerlengingen(nu = new Date(), opties: { alleenTest?: boolean } = {}): Promise<VerlengRonde> {
-  const r: VerlengRonde = { vastgelegd: 0, facturen: 0, afgeschreven: 0, herinneringen: 0, opgezegd: 0, incassoBetaald: 0, incassoMislukt: 0, fouten: 0 };
+  const r: VerlengRonde = { vastgelegd: 0, facturen: 0, afgeschreven: 0, herinneringen: 0, opgezegd: 0, incassoBetaald: 0, incassoMislukt: 0, verhuiscodes: 0, bewaking: null, fouten: 0 };
   const mag = (b: { email: string }) => !opties.alleenTest || isTestAdres(b.email);
 
   // 1. betaald maar nog niet vastgelegd (register even niet bereikbaar, of de dagelijkse grens)
@@ -334,6 +338,19 @@ export async function runDomeinVerlengingen(nu = new Date(), opties: { alleenTes
       logger.error("domein: verlengen mislukt", { domein: b.domein, error: (err as Error).message });
     }
   }
+  // 5. verhuiscodes waarvan de wachttijd om is, en (niet in een proefronde) alle namen bewaken
+  r.verhuiscodes = await stuurVerhuiscodes(nu, opties).catch((err: unknown) => {
+    r.fouten += 1;
+    logger.error("domein: verhuiscodes mislukt", { error: (err as Error).message });
+    return 0;
+  });
+  if (!opties.alleenTest) {
+    r.bewaking = await bewaakDomeinen(nu).catch((err: unknown) => {
+      r.fouten += 1;
+      logger.error("domein: bewaken mislukt", { error: (err as Error).message });
+      return null;
+    });
+  }
   if (r.fouten > 0) {
     alertOwnerLater({ key: "domein-verlengen-fouten", title: "Domeinnamen verlengen: fouten", detail: `${r.fouten} domeinnaam/namen konden vandaag niet worden verwerkt. Zie Admin → Systeem → Foutmeldingen.`, severity: "warning", url: "/admin/domeinen" });
   }
@@ -342,8 +359,12 @@ export async function runDomeinVerlengingen(nu = new Date(), opties: { alleenTes
 
 // ---- de klant kiest ----------------------------------------------------------------
 
-/** "Automatisch verlengen" aan of uit. Uit: een open verlengfactuur vervalt, en de naam wordt 7 dagen voor de verlengdatum opgezegd. */
-export async function zetAutoVerlengen(tenantId: string, id: string, aan: boolean): Promise<void> {
+/**
+ * "Automatisch verlengen" aan of uit. Uit: een open verlengfactuur vervalt, de
+ * naam wordt 7 dagen voor de verlengdatum opgezegd, de eigenaar krijgt meteen
+ * een melding en de klant het blijfaanbod (terug als { aanbod }).
+ */
+export async function zetAutoVerlengen(tenantId: string, id: string, aan: boolean): Promise<{ aanbod: { normaal: string; aanbod: string } | null }> {
   const b = await prisma.domeinBestelling.findFirst({ where: { id, tenantId } });
   if (!b) throw AppError.notFound("Deze domeinnaam is niet van jouw bedrijf.");
   if (b.status === "OPGEZEGD") throw AppError.conflict(`${b.domein} is al opgezegd. Wil je hem toch houden? Mail ons via sales@zekerflex.com.`);
@@ -354,6 +375,7 @@ export async function zetAutoVerlengen(tenantId: string, id: string, aan: boolea
     if (factuur?.status === "ISSUED" && !factuur.stripePaymentIntentId) await prisma.invoice.updateMany({ where: { id: factuur.id, status: "ISSUED" }, data: { status: "CANCELLED" } });
   }
   await recordAudit({ category: "BILLING", action: "domein.auto-verlengen", actorLabel: "user", summary: `${b.domein}: automatisch verlengen ${aan ? "aan" : "uit"}`, targetType: "domein-bestelling", targetId: b.id }).catch(() => undefined);
+  return { aanbod: aan || b.status !== "GEREGISTREERD" ? null : await verlengenUitGezet(b) };
 }
 
 export interface VerlengStand {

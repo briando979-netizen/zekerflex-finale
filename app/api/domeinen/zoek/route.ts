@@ -21,7 +21,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     const resultaten = await Promise.all(
       domeinen.map(async (domein) => {
         const tld = domein.slice(naam.label.length + 1);
-        return { domein, tld, prijsCent: extensie(tld)?.prijsCent ?? null, status: await beschikbaarheid(domein) };
+        const ext = extensie(tld);
+        return { domein, tld, prijsCent: ext?.prijsCent ?? null, verlengCent: ext?.verlengCent ?? null, status: await beschikbaarheid(domein) };
       }),
     );
     return NextResponse.json({ naam: naam.label, gevraagd: naam.tld, resultaten }, { headers: { "cache-control": "no-store" } });

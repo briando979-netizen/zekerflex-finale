@@ -11,7 +11,8 @@ import { BUNDEL_TLDS, euroPrijs, extensie, metBtw } from "@/lib/domeinen/extensi
 import { leesDomein } from "@/lib/domeinen/naam";
 import { beschikbaarheid } from "@/lib/domeinen/beschikbaar";
 import { dnsVoorWebsite, koppelAanSite, koppelNotitie, koppelUitleg, type Koppeling } from "@/lib/domeinen/koppelen";
-import { domainAvailability, domainInfo, registerDomain, transipConfigured } from "@/lib/mail/hosting/transip";
+import { domainAvailability, domainInfo, registerDomain, setTransferLock, transipConfigured } from "@/lib/mail/hosting/transip";
+import { houderContacten } from "@/lib/domeinen/houder";
 import { maakDomeinFactuur } from "@/lib/domeinen/factuur";
 import { AUTO_REGISTREREN_PER_DAG, datumNl, isTestAdres, jaarLater, leesDatum } from "@/lib/domeinen/verlengen-core";
 import { alertOwnerLater } from "@/lib/ops/alert";
@@ -299,6 +300,29 @@ const autoTellerKey = (dag: string) => `domein-auto-vastgelegd:${dag}`;
 export type VastlegUitkomst = "vastgelegd" | "wacht" | "mislukt";
 
 /**
+ * Registreer met de klant als houder (lib/domeinen/houder.ts). Weigert het
+ * register de bedrijfsgegevens, dan nog een keer met de standaard van het
+ * account (ZekerFlex houder): de klant moet zijn naam hoe dan ook krijgen.
+ * Geeft de regel voor de notitie terug.
+ */
+async function registreerMetHouder(b: DomeinBestelling): Promise<string> {
+  const h = await houderContacten(b);
+  if (h.contacten) {
+    try {
+      await registerDomain(b.domein, dnsVoorWebsite(b.domein), h.contacten);
+      return "Houder: het bedrijf zelf.";
+    } catch (err) {
+      if (!(err instanceof AppError) || err.status !== 422) throw err;
+      logger.warn("domein: register weigerde de houdergegevens", { domein: b.domein, error: err.message });
+      await registerDomain(b.domein, dnsVoorWebsite(b.domein));
+      return `Houder: ZekerFlex (het register weigerde de bedrijfsgegevens: ${err.message.slice(0, 120)}). Pas de houder aan in TransIP.`;
+    }
+  }
+  await registerDomain(b.domein, dnsVoorWebsite(b.domein));
+  return `Houder: ZekerFlex (${h.reden}).`;
+}
+
+/**
  * Leg een betaalde naam vast in het TransIP-account van ZekerFlex, met DNS die
  * naar onze server wijst, en zet hem op geregistreerd (en op de website). Dit
  * maakt bij TransIP een factuur aan ZekerFlex; de klant heeft dan al betaald.
@@ -333,20 +357,24 @@ export async function legVast(b: DomeinBestelling, door: string, handmatig: bool
   bezigMet.add(b.id);
   try {
     let verlooptOp: Date;
+    let houder = "";
     if (test) {
       verlooptOp = jaarLater(new Date());
     } else {
       const beschikbaar = await domainAvailability(b.domein).catch(() => null);
       if (beschikbaar && beschikbaar.status !== "inyouraccount") {
         if (beschikbaar.status !== "free") throw new Error(`de naam is niet meer vrij (${beschikbaar.status})`);
-        await registerDomain(b.domein, dnsVoorWebsite(b.domein));
+        houder = await registreerMetHouder(b);
       } else if (!beschikbaar) {
-        await registerDomain(b.domein, dnsVoorWebsite(b.domein));
+        houder = await registreerMetHouder(b);
       }
+      // verhuizen kan alleen via ZekerFlex (de verhuiscode, lib/domeinen/behoud.ts)
+      await setTransferLock(b.domein, true).catch((e: unknown) => logger.warn("domein: verhuisslot zetten lukte niet", { domein: b.domein, error: (e as Error).message }));
       verlooptOp = leesDatum((await domainInfo(b.domein).catch(() => null))?.renewalDate) ?? jaarLater(new Date());
       if (!handmatig) await kvSet(autoTellerKey(dag), { n: ((await kvGet<{ n: number }>(autoTellerKey(dag)))?.n ?? 0) + 1 });
     }
-    await zetStatus(b.id, "GEREGISTREERD", test ? "Testbestelling: niet echt vastgelegd." : handmatig ? "Vastgelegd via TransIP (knop)." : "Vanzelf vastgelegd via TransIP na betaling.", door, { verlooptOp });
+    const hoe = test ? "Testbestelling: niet echt vastgelegd." : handmatig ? "Vastgelegd via TransIP (knop)." : "Vanzelf vastgelegd via TransIP na betaling.";
+    await zetStatus(b.id, "GEREGISTREERD", [hoe, houder].filter(Boolean).join(" "), door, { verlooptOp });
     return "vastgelegd";
   } catch (err) {
     if (err instanceof AppError && handmatig) throw err;

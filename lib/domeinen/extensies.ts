@@ -1,11 +1,13 @@
-// Domeinnamen die ZekerFlex aanbiedt: de extensies, de prijs per jaar en waar
-// de beschikbaarheid openbaar op te vragen is. Puur bestand (ook bruikbaar in
-// client-code).
+// Domeinnamen die ZekerFlex aanbiedt: de extensies, wat ze ZekerFlex kosten,
+// wat de klant betaalt en waar de beschikbaarheid openbaar op te vragen is.
+// Puur bestand (ook bruikbaar in client-code).
 //
-// PRIJZEN: voorstel van 4 nov (eigenaar vroeg om "een mooie realistische
-// prijs"), excl. btw, per jaar. Ruim boven de inkoop bij TransIP; nieuwe
-// extensies (zoals .online en .shop) zijn bij de verlenging duurder, dus die
-// staan hoger. Pas ze hier aan; alles leest uit deze lijst.
+// PRIJZEN (5 nov 2026, eigenaar: "klein winstmodel"): de inkoop komt uit het
+// TransIP-account van ZekerFlex (API /v6/tlds, excl. btw). Het register maakt
+// het eerste jaar vaak goedkoop en de verlenging duur, dus de klant ziet twee
+// prijzen: eerste jaar en daarna per jaar. Verkoop = inkoop + 15%, minstens
+// € 2 per jaar, afgerond naar boven op ,95 (verkoopPrijs). Nooit onder de inkoop;
+// de dagelijkse ronde waarschuwt als TransIP duurder wordt (lib/domeinen/behoud.ts).
 //
 // RDAP: de openbare opvraagdienst van het register (uit de IANA-bootstraplijst,
 // vast in de code zodat de server nooit een willekeurig adres opvraagt). Waar
@@ -13,8 +15,14 @@
 
 export interface Extensie {
   tld: string;
-  /** prijs per jaar in centen, excl. btw */
+  /** inkoop eerste jaar bij TransIP, in centen excl. btw */
+  inkoopEersteCent: number;
+  /** inkoop verlenging per jaar bij TransIP, in centen excl. btw */
+  inkoopVerlengCent: number;
+  /** verkoop eerste jaar, in centen excl. btw */
   prijsCent: number;
+  /** verkoop verlenging per jaar, in centen excl. btw */
+  verlengCent: number;
   /** basisadres van de RDAP-dienst, of null (dan DNS-controle) */
   rdap: string | null;
   /** bovenaan in de zoekresultaten */
@@ -22,26 +30,40 @@ export interface Extensie {
   omschrijving: string;
 }
 
-export const EXTENSIES: Extensie[] = [
-  { tld: "nl", prijsCent: 995, rdap: "https://rdap.sidn.nl/", populair: true, omschrijving: "Dé extensie voor Nederland" },
-  { tld: "com", prijsCent: 1495, rdap: "https://rdap.verisign.com/com/v1/", populair: true, omschrijving: "Wereldwijd de bekendste" },
-  { tld: "eu", prijsCent: 995, rdap: null, populair: true, omschrijving: "Voor heel Europa" },
-  { tld: "be", prijsCent: 1195, rdap: null, populair: true, omschrijving: "Voor België" },
-  { tld: "net", prijsCent: 1795, rdap: "https://rdap.verisign.com/net/v1/", populair: false, omschrijving: "Alternatief voor .com" },
-  { tld: "org", prijsCent: 1795, rdap: "https://rdap.publicinterestregistry.org/rdap/", populair: false, omschrijving: "Voor verenigingen en stichtingen" },
-  { tld: "de", prijsCent: 1095, rdap: null, populair: false, omschrijving: "Voor Duitsland" },
-  { tld: "info", prijsCent: 2495, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor informatie en uitleg" },
-  { tld: "online", prijsCent: 3995, rdap: "https://rdap.radix.host/rdap/", populair: false, omschrijving: "Voor alles wat online is" },
-  { tld: "shop", prijsCent: 4495, rdap: "https://rdap.gmoregistry.net/rdap/", populair: false, omschrijving: "Voor je webshop" },
-  { tld: "store", prijsCent: 5995, rdap: "https://rdap.radix.host/rdap/", populair: false, omschrijving: "Voor je winkel" },
-  { tld: "app", prijsCent: 2495, rdap: "https://pubapi.registry.google/rdap/", populair: false, omschrijving: "Voor apps (altijd https)" },
-  { tld: "amsterdam", prijsCent: 4995, rdap: "https://rdap.nic.amsterdam/", populair: false, omschrijving: "Voor Amsterdam" },
-  { tld: "frl", prijsCent: 3995, rdap: "https://rdap.centralnic.com/frl/", populair: false, omschrijving: "Voor Friesland" },
-  { tld: "restaurant", prijsCent: 5995, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je restaurant" },
-  { tld: "cafe", prijsCent: 4995, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je café" },
-  { tld: "studio", prijsCent: 3495, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je studio of praktijk" },
-  { tld: "nu", prijsCent: 2995, rdap: null, populair: false, omschrijving: "Kort en krachtig" },
+/** Marge: 15% boven de inkoop, minstens € 2,00. */
+export const MARGE_PROCENT = 15;
+export const MARGE_MINIMUM_CENT = 200;
+
+/** Inkoop → verkoopprijs: inkoop + marge, naar boven afgerond op hele euro's plus 95 cent. */
+export function verkoopPrijs(inkoopCent: number): number {
+  const minimaal = Math.max(inkoopCent * (1 + MARGE_PROCENT / 100), inkoopCent + MARGE_MINIMUM_CENT);
+  return Math.ceil((minimaal - 95) / 100) * 100 + 95;
+}
+
+type Bron = Omit<Extensie, "prijsCent" | "verlengCent">;
+
+const BRON: Bron[] = [
+  { tld: "nl", inkoopEersteCent: 49, inkoopVerlengCent: 1650, rdap: "https://rdap.sidn.nl/", populair: true, omschrijving: "Dé extensie voor Nederland" },
+  { tld: "com", inkoopEersteCent: 899, inkoopVerlengCent: 2799, rdap: "https://rdap.verisign.com/com/v1/", populair: true, omschrijving: "Wereldwijd de bekendste" },
+  { tld: "eu", inkoopEersteCent: 799, inkoopVerlengCent: 2699, rdap: null, populair: true, omschrijving: "Voor heel Europa" },
+  { tld: "be", inkoopEersteCent: 699, inkoopVerlengCent: 2199, rdap: null, populair: true, omschrijving: "Voor België" },
+  { tld: "net", inkoopEersteCent: 1000, inkoopVerlengCent: 2750, rdap: "https://rdap.verisign.com/net/v1/", populair: false, omschrijving: "Alternatief voor .com" },
+  { tld: "org", inkoopEersteCent: 999, inkoopVerlengCent: 2750, rdap: "https://rdap.publicinterestregistry.org/rdap/", populair: false, omschrijving: "Voor verenigingen en stichtingen" },
+  { tld: "de", inkoopEersteCent: 1149, inkoopVerlengCent: 2849, rdap: null, populair: false, omschrijving: "Voor Duitsland" },
+  { tld: "info", inkoopEersteCent: 2999, inkoopVerlengCent: 2999, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor informatie en uitleg" },
+  { tld: "online", inkoopEersteCent: 99, inkoopVerlengCent: 6499, rdap: "https://rdap.radix.host/rdap/", populair: false, omschrijving: "Voor alles wat online is" },
+  { tld: "shop", inkoopEersteCent: 6499, inkoopVerlengCent: 6499, rdap: "https://rdap.gmoregistry.net/rdap/", populair: false, omschrijving: "Voor je webshop" },
+  { tld: "store", inkoopEersteCent: 399, inkoopVerlengCent: 10250, rdap: "https://rdap.radix.host/rdap/", populair: false, omschrijving: "Voor je winkel" },
+  { tld: "app", inkoopEersteCent: 3699, inkoopVerlengCent: 3699, rdap: "https://pubapi.registry.google/rdap/", populair: false, omschrijving: "Voor apps (altijd https)" },
+  { tld: "amsterdam", inkoopEersteCent: 7199, inkoopVerlengCent: 7199, rdap: "https://rdap.nic.amsterdam/", populair: false, omschrijving: "Voor Amsterdam" },
+  { tld: "frl", inkoopEersteCent: 7099, inkoopVerlengCent: 7099, rdap: "https://rdap.centralnic.com/frl/", populair: false, omschrijving: "Voor Friesland" },
+  { tld: "restaurant", inkoopEersteCent: 9999, inkoopVerlengCent: 9999, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je restaurant" },
+  { tld: "cafe", inkoopEersteCent: 6499, inkoopVerlengCent: 6499, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je café" },
+  { tld: "studio", inkoopEersteCent: 4999, inkoopVerlengCent: 4999, rdap: "https://rdap.identitydigital.services/rdap/", populair: false, omschrijving: "Voor je studio of praktijk" },
+  { tld: "nu", inkoopEersteCent: 3999, inkoopVerlengCent: 3999, rdap: null, populair: false, omschrijving: "Kort en krachtig" },
 ];
+
+export const EXTENSIES: Extensie[] = BRON.map((e) => ({ ...e, prijsCent: verkoopPrijs(e.inkoopEersteCent), verlengCent: verkoopPrijs(e.inkoopVerlengCent) }));
 
 /** De bundel: bij een website of webshop van ZekerFlex het eerste jaar inbegrepen. */
 export const BUNDEL_TLDS = ["nl", "com", "eu", "be"] as const;

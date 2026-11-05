@@ -18,6 +18,10 @@ const h = vi.hoisted(() => {
     facturen: [] as Record<string, unknown>[],
     beschikbaar: null as null | { status: string },
     aangemaakt: [] as Record<string, unknown>[],
+    sloten: [] as { domein: string; dicht: boolean }[],
+    houder: { contacten: null, reden: "geen KVK-gegevens van het bedrijf" } as { contacten: unknown[] | null; reden?: string },
+    houderFout: null as null | Error,
+    contactenBijRegistratie: [] as (unknown[] | undefined)[],
   };
   return {
     state,
@@ -56,11 +60,15 @@ vi.mock("@/lib/mail/hosting/transip", () => ({
   transipConfigured: () => h.state.transip,
   domainAvailability: async () => h.state.beschikbaar,
   domainInfo: async () => ({ name: "jansen.nl", renewalDate: "2027-11-05" }),
-  registerDomain: async (domein: string, dns: unknown[]) => {
+  registerDomain: async (domein: string, dns: unknown[], contacten?: unknown[]) => {
     if (h.state.transipFout) throw h.state.transipFout;
+    if (contacten && h.state.houderFout) throw h.state.houderFout;
+    h.state.contactenBijRegistratie.push(contacten);
     h.state.registraties.push({ domein, dns });
   },
+  setTransferLock: async (domein: string, dicht: boolean) => void h.state.sloten.push({ domein, dicht }),
 }));
+vi.mock("@/lib/domeinen/houder", () => ({ houderContacten: async () => h.state.houder }));
 vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => h.state.kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void h.state.kv.set(k, v),
@@ -128,6 +136,10 @@ beforeEach(() => {
   h.state.facturen.length = 0;
   h.state.beschikbaar = null;
   h.state.aangemaakt.length = 0;
+  h.state.sloten.length = 0;
+  h.state.houder = { contacten: null, reden: "geen KVK-gegevens van het bedrijf" };
+  h.state.houderFout = null;
+  h.state.contactenBijRegistratie.length = 0;
 });
 
 describe("btw", () => {
@@ -304,7 +316,7 @@ describe("registreren via TransIP (knop in Admin)", () => {
     expect(u.data.status).toBe("GEREGISTREERD");
     // de verlengdatum komt van het register
     expect(u.data.verlooptOp.toISOString()).toBe("2027-11-05T12:00:00.000Z");
-    expect(notitieVan(0)).toMatch(/Vastgelegd via TransIP \(knop\)\. Op de website/);
+    expect(notitieVan(0)).toMatch(/Vastgelegd via TransIP \(knop\)\. Houder: ZekerFlex \(.*\)\. Op de website/);
     expect(h.state.koppelingen).toHaveLength(1);
   });
   it("TransIP weigert: op mislukt, melding aan de beheerder, geen mail aan de klant", async () => {
@@ -351,6 +363,38 @@ describe("bestellen", () => {
     const data = h.state.aangemaakt[0] ?? {};
     expect(data).not.toHaveProperty("naam");
     expect(data).toMatchObject({ tenantId: "t1", userId: "u1", email: "eigenaar@bakkerij-jansen.nl", domein: "jansen.nl", bundel: true, status: "BETAALD" });
+  });
+});
+
+describe("houder en verhuisslot", () => {
+  it("het bedrijf van de klant als houder, daarna het verhuisslot dicht", async () => {
+    h.state.transip = true;
+    h.state.houder = { contacten: [{ type: "registrant" }, { type: "administrative" }, { type: "technical" }] };
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("vastgelegd");
+    expect(h.state.contactenBijRegistratie[0]).toHaveLength(3);
+    expect(h.state.sloten).toEqual([{ domein: "jansen.nl", dicht: true }]);
+    expect(notitieVan(0)).toMatch(/Houder: het bedrijf zelf\./);
+  });
+  it("weigert het register de bedrijfsgegevens: toch vastleggen, met ZekerFlex als houder", async () => {
+    h.state.transip = true;
+    h.state.houder = { contacten: [{ type: "registrant" }] };
+    const { AppError } = await import("@/lib/errors");
+    h.state.houderFout = AppError.validation("TransIP: invalid contact");
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    expect(await legVast(b as never, "systeem:na-betaling", false)).toBe("vastgelegd");
+    expect(h.state.registraties).toHaveLength(1);
+    expect(h.state.contactenBijRegistratie[0]).toBeUndefined();
+    expect(notitieVan(0)).toMatch(/Houder: ZekerFlex \(het register weigerde/);
+  });
+  it("geen bedrijfsgegevens: ZekerFlex houder, met de reden in de notitie", async () => {
+    h.state.transip = true;
+    const b = best({ status: "BETAALD", email: "eigenaar@bakkerij-jansen.nl" });
+    h.state.rij = b;
+    await legVast(b as never, "systeem:na-betaling", false);
+    expect(notitieVan(0)).toMatch(/Houder: ZekerFlex \(geen KVK-gegevens van het bedrijf\)/);
   });
 });
 

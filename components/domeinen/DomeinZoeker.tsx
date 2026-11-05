@@ -8,7 +8,10 @@ type Status = "vrij" | "bezet" | "waarschijnlijk-vrij" | "onbekend";
 interface Resultaat {
   domein: string;
   tld: string;
+  /** eerste jaar, excl. btw */
   prijsCent: number | null;
+  /** daarna per jaar, excl. btw */
+  verlengCent: number | null;
   status: Status;
 }
 type Soort = "registreren" | "verhuizen";
@@ -42,7 +45,21 @@ interface MijnDomein {
   autoVerlengen?: boolean;
   /** een verlengfactuur die nog betaald moet worden */
   open?: { nummer: string; bedragCent: number; betaalUrl: string; uiterlijk: string | null; incassoLoopt: boolean } | null;
+  /** verhuizen en blijven (lib/domeinen/behoud.ts) */
+  behoud?: { stap: "aanbod" | "gebleven" | "code-wacht" | "code-verstuurd" | "vertrokken" | null; aanbod: Aanbod | null } | null;
 }
+/** het blijfaanbod, incl. btw */
+interface Aanbod {
+  normaal: string;
+  aanbod: string;
+}
+const VERHUIS_REDENEN: { waarde: string; label: string }[] = [
+  { waarde: "te-duur", label: "Te duur" },
+  { waarde: "andere-partij", label: "Ik ga met mijn website naar een andere partij" },
+  { waarde: "niet-meer-nodig", label: "Ik heb de naam niet meer nodig" },
+  { waarde: "anders", label: "Iets anders" },
+];
+const post = (body: unknown) => fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
 const BESTEL_LABEL: Record<BestelStatus, string> = {
   OPEN: "Wacht op betaling",
   BETAALD: "Betaald, we leggen hem nu vast",
@@ -78,7 +95,7 @@ export function DomeinZoeker({
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [res, setRes] = useState<Resultaat[] | null>(null);
-  const [keuze, setKeuze] = useState<{ domein: string; soort: Soort; prijsCent: number | null } | null>(null);
+  const [keuze, setKeuze] = useState<{ domein: string; soort: Soort; prijsCent: number | null; verlengCent: number | null } | null>(null);
   const [verhuis, setVerhuis] = useState("");
   const [werkgever, setWerkgever] = useState(false);
   const [mijn, setMijn] = useState<MijnDomein[] | null>(null);
@@ -162,18 +179,22 @@ export function DomeinZoeker({
             const rest = (
               <>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${LABEL[r.status].klasse}`}>{LABEL[r.status].tekst}</span>
-                {r.prijsCent !== null && <span className="text-sm text-neutralx-700">{euroPrijs(r.prijsCent)} per jaar</span>}
+                {r.prijsCent !== null && (
+                  <span className="text-sm text-neutralx-700">
+                    {r.verlengCent !== null && r.verlengCent !== r.prijsCent ? `${euroPrijs(r.prijsCent)} eerste jaar, daarna ${euroPrijs(r.verlengCent)}` : `${euroPrijs(r.prijsCent)} per jaar`}
+                  </span>
+                )}
                 {kan ? (
                   <button
                     type="button"
                     aria-label={`Kies ${r.domein}`}
                     className={`btn-primary px-4 py-1.5 text-sm ${smal ? "ml-auto" : ""}`}
-                    onClick={() => setKeuze({ domein: r.domein, soort: "registreren", prijsCent: r.prijsCent })}
+                    onClick={() => setKeuze({ domein: r.domein, soort: "registreren", prijsCent: r.prijsCent, verlengCent: r.verlengCent })}
                   >
                     {smal ? "Kies" : `Kies ${r.domein}`}
                   </button>
                 ) : (
-                  <button type="button" className="btn-ghost px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "verhuizen", prijsCent: r.prijsCent })}>
+                  <button type="button" className="btn-ghost px-4 py-1.5 text-sm" onClick={() => setKeuze({ domein: r.domein, soort: "verhuizen", prijsCent: r.prijsCent, verlengCent: r.verlengCent })}>
                     {smal ? "Verhuizen" : "Is hij van jou? Verhuizen"}
                   </button>
                 )}
@@ -205,7 +226,7 @@ export function DomeinZoeker({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (verhuis.trim()) setKeuze({ domein: verhuis.trim(), soort: "verhuizen", prijsCent: null });
+            if (verhuis.trim()) setKeuze({ domein: verhuis.trim(), soort: "verhuizen", prijsCent: null, verlengCent: null });
           }}
           aria-label="Domein verhuizen"
           className="rounded-2xl border border-hair bg-paper-soft p-4"
@@ -228,6 +249,7 @@ export function DomeinZoeker({
             key={keuze.domein}
             domein={keuze.domein}
             prijsCent={keuze.prijsCent}
+            verlengCent={keuze.verlengCent ?? keuze.prijsCent}
             inbegrepen={bundelOver && (BUNDEL_TLDS as readonly string[]).includes(keuze.domein.slice(keuze.domein.indexOf(".") + 1))}
             terugNaar={terugNaar}
             onAnnuleer={() => setKeuze(null)}
@@ -262,6 +284,9 @@ export function DomeinZoeker({
 function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; onLijst: (l: MijnDomein[]) => void; onGekoppeld?: (() => void) | undefined }) {
   const [bezig, setBezig] = useState<string | null>(null);
   const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
+  // welke naam het verhuispaneel open heeft, en het blijfaanbod na "verlengen uit"
+  const [verhuisOpen, setVerhuisOpen] = useState<string | null>(null);
+  const [aanbodNaUit, setAanbodNaUit] = useState<{ id: string; domein: string; aanbod: Aanbod } | null>(null);
 
   // automatisch verlengen aan of uit; daarna de serverversie van de lijst (een open factuur kan vervallen)
   async function verlengen(d: MijnDomein, aan: boolean) {
@@ -270,7 +295,9 @@ function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; on
     const r = await fetch("/api/werkgever/domeinen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ verlengen: d.id, aan }) }).catch(() => null);
     setBezig(null);
     if (!r?.ok) return setMelding({ ok: false, tekst: await fout(r, "Opslaan lukte niet. Probeer het opnieuw.") });
-    onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    const data = (await r.json()) as { bestellingen: MijnDomein[]; aanbod?: Aanbod | null };
+    onLijst(data.bestellingen);
+    setAanbodNaUit(!aan && data.aanbod ? { id: d.id, domein: d.domein, aanbod: data.aanbod } : null);
     setMelding({
       ok: true,
       tekst: aan
@@ -338,10 +365,47 @@ function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; on
                   {bezig === d.id ? "Bezig…" : "Koppel aan mijn website"}
                 </button>
               )}
+              {d.status === "GEREGISTREERD" && d.behoud?.stap !== "code-wacht" && d.behoud?.stap !== "code-verstuurd" && (
+                <button
+                  type="button"
+                  aria-expanded={verhuisOpen === d.id}
+                  onClick={() => setVerhuisOpen((o) => (o === d.id ? null : d.id))}
+                  aria-label={`${d.domein} verhuizen naar een andere partij`}
+                  className="rounded-full px-3 py-1 text-xs font-semibold text-neutralx-600 underline hover:text-ink"
+                >
+                  Verhuizen
+                </button>
+              )}
+              {d.behoud?.stap === "code-wacht" && <span className="text-xs">Je verhuiscode komt binnen een dag per mail</span>}
+              {d.behoud?.stap === "code-verstuurd" && <span className="text-xs">Verhuiscode verstuurd</span>}
             </span>
+            {verhuisOpen === d.id && (
+              <Verhuispaneel
+                d={d}
+                onLijst={(l) => {
+                  onLijst(l);
+                }}
+                onKlaar={(tekst) => {
+                  setVerhuisOpen(null);
+                  setMelding({ ok: true, tekst });
+                }}
+              />
+            )}
           </li>
         ))}
       </ul>
+      {aanbodNaUit && (
+        <BlijfAanbod
+          id={aanbodNaUit.id}
+          domein={aanbodNaUit.domein}
+          aanbod={aanbodNaUit.aanbod}
+          onLijst={onLijst}
+          onKlaar={(tekst) => {
+            setAanbodNaUit(null);
+            setMelding({ ok: true, tekst });
+          }}
+        />
+      )}
       {melding && (
         <p role={melding.ok ? "status" : "alert"} className={`mt-3 text-sm ${melding.ok ? "text-ok" : "text-crit"}`}>
           {melding.tekst}
@@ -351,9 +415,122 @@ function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; on
   );
 }
 
+/** Het blijfaanbod na "verlengen uit": volgend jaar goedkoper. */
+function BlijfAanbod({ id, domein, aanbod, onLijst, onKlaar }: { id: string; domein: string; aanbod: Aanbod; onLijst: (l: MijnDomein[]) => void; onKlaar: (tekst: string) => void }) {
+  const [bezig, setBezig] = useState(false);
+  const [melding, setMelding] = useState<string | null>(null);
+  async function ja() {
+    setBezig(true);
+    const r = await post({ blijf: id });
+    setBezig(false);
+    if (!r?.ok) return setMelding(await fout(r, "Dat lukte niet. Probeer het opnieuw."));
+    onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    onKlaar(`Fijn dat je blijft! ${domein} wordt verlengd voor ${aanbod.aanbod} in plaats van ${aanbod.normaal}.`);
+  }
+  return (
+    <div className="mt-3 rounded-xl border border-brand-500/30 bg-mintwash p-4 text-sm text-ink">
+      <p>
+        <strong>Blijf je toch?</strong> Houd {domein} en betaal volgend jaar {aanbod.aanbod} in plaats van {aanbod.normaal} (incl. btw).
+      </p>
+      {melding && (
+        <p role="alert" className="mt-2 font-semibold text-crit">
+          {melding}
+        </p>
+      )}
+      <button type="button" disabled={bezig} onClick={() => void ja()} className="btn-primary mt-3 px-4 py-1.5 text-sm disabled:opacity-60">
+        {bezig ? "Bezig…" : "Ja, ik blijf"}
+      </button>
+    </div>
+  );
+}
+
+/** Verhuizen gaat via ZekerFlex: reden kiezen, het blijfaanbod zien, dan pas de verhuiscode. */
+function Verhuispaneel({ d, onLijst, onKlaar }: { d: MijnDomein; onLijst: (l: MijnDomein[]) => void; onKlaar: (tekst: string) => void }) {
+  const id = useId();
+  const [reden, setReden] = useState("");
+  const [aanbod, setAanbod] = useState<Aanbod | null | undefined>(undefined);
+  const [bezig, setBezig] = useState(false);
+  const [melding, setMelding] = useState<string | null>(null);
+
+  async function verder(e: FormEvent) {
+    e.preventDefault();
+    if (!reden) return setMelding("Kies waarom je wilt verhuizen.");
+    setBezig(true);
+    setMelding(null);
+    const r = await post({ verhuis: d.id, reden });
+    setBezig(false);
+    if (!r?.ok) return setMelding(await fout(r, "Dat lukte niet. Probeer het opnieuw."));
+    const data = (await r.json()) as { bestellingen: MijnDomein[]; aanbod: Aanbod | null };
+    onLijst(data.bestellingen);
+    setAanbod(data.aanbod);
+  }
+  async function kies(body: unknown, tekst: string) {
+    setBezig(true);
+    setMelding(null);
+    const r = await post(body);
+    setBezig(false);
+    if (!r?.ok) return setMelding(await fout(r, "Dat lukte niet. Probeer het opnieuw."));
+    onLijst(((await r.json()) as { bestellingen: MijnDomein[] }).bestellingen);
+    onKlaar(tekst);
+  }
+
+  return (
+    <div className="mt-2 w-full rounded-xl border border-hair bg-neutralx-50 p-4 text-sm text-ink">
+      {aanbod === undefined ? (
+        <form onSubmit={(e) => void verder(e)} className="grid gap-3">
+          <label htmlFor={`${id}-reden`} className="font-semibold">
+            Waarom wil je {d.domein} verhuizen?
+          </label>
+          <select id={`${id}-reden`} value={reden} onChange={(e) => setReden(e.target.value)} className={VELD}>
+            <option value="">Kies een reden</option>
+            {VERHUIS_REDENEN.map((r) => (
+              <option key={r.waarde} value={r.waarde}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          <button type="submit" disabled={bezig} className="btn-ghost justify-self-start px-4 py-1.5 text-sm disabled:opacity-60">
+            {bezig ? "Bezig…" : "Verder"}
+          </button>
+        </form>
+      ) : (
+        <div className="grid gap-3">
+          {aanbod ? (
+            <p>
+              <strong>Blijf bij ZekerFlex</strong> en betaal volgend jaar {aanbod.aanbod} in plaats van {aanbod.normaal} (incl. btw). Je website, mail en alles
+              blijven gewoon werken.
+            </p>
+          ) : (
+            <p>Jammer dat je wilt verhuizen. Kunnen we iets voor je doen? Antwoord op onze mail of bel ons.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={bezig} onClick={() => void kies({ blijf: d.id }, `Fijn dat je blijft! ${d.domein} blijft gewoon bij ZekerFlex.`)} className="btn-primary px-4 py-1.5 text-sm disabled:opacity-60">
+              {aanbod ? "Ja, ik blijf" : "Ik blijf toch"}
+            </button>
+            <button
+              type="button"
+              disabled={bezig}
+              onClick={() => void kies({ verhuisBevestig: d.id }, `Je verhuiscode voor ${d.domein} komt binnen een dag per mail.`)}
+              className="btn-ghost px-4 py-1.5 text-sm disabled:opacity-60"
+            >
+              Nee, stuur mijn verhuiscode
+            </button>
+          </div>
+        </div>
+      )}
+      {melding && (
+        <p role="alert" className="mt-2 font-semibold text-crit">
+          {melding}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Bestellen({
   domein,
   prijsCent,
+  verlengCent,
   inbegrepen,
   terugNaar,
   onAnnuleer,
@@ -361,6 +538,8 @@ function Bestellen({
 }: {
   domein: string;
   prijsCent: number;
+  /** daarna per jaar, excl. btw */
+  verlengCent: number;
   /** het eerste jaar is inbegrepen bij het (betaalde) websiteabonnement: vooraf laten zien, niet pas na de klik */
   inbegrepen: boolean;
   terugNaar: string;
@@ -371,6 +550,7 @@ function Bestellen({
   const [melding, setMelding] = useState<string | null>(null);
   const [bundel, setBundel] = useState(false);
   const p = metBtw(prijsCent);
+  const v = metBtw(verlengCent);
 
   async function bestel() {
     setBezig(true);
@@ -410,7 +590,7 @@ function Bestellen({
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-neutralx-600">Daarna per jaar, incl. btw</dt>
-              <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
+              <dd className="text-ink">{euroPrijs(v.inclCent)}</dd>
             </div>
           </dl>
           <p className="mt-3 text-sm text-neutralx-600">
@@ -421,7 +601,7 @@ function Bestellen({
         <>
           <dl className="mt-3 max-w-sm space-y-1 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-neutralx-600">Domeinnaam, 1 jaar</dt>
+              <dt className="text-neutralx-600">Domeinnaam, eerste jaar</dt>
               <dd className="text-ink">{euroPrijs(p.exclCent)}</dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -432,10 +612,14 @@ function Bestellen({
               <dt className="text-ink">Totaal</dt>
               <dd className="text-ink">{euroPrijs(p.inclCent)}</dd>
             </div>
+            <div className="flex justify-between gap-4 pt-1">
+              <dt className="text-neutralx-600">Daarna per jaar, incl. btw</dt>
+              <dd className="text-ink">{euroPrijs(v.inclCent)}</dd>
+            </div>
           </dl>
           <p className="mt-3 text-sm text-neutralx-600">
             Je betaalt met iDEAL of je kaart. Met een betaald websiteabonnement van ZekerFlex is je eerste .nl, .com, .eu of .be het eerste jaar inbegrepen. Daarna
-            verlengt hij per jaar, opzeggen kan altijd voor de verlengdatum.
+            verlengt hij per jaar; je krijgt de factuur ruim vooraf en opzeggen kan altijd voor de verlengdatum.
           </p>
         </>
       )}
