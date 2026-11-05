@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import type { Dict } from "@/lib/i18n/dictionaries";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { Paspop } from "@/components/marketing/paskamer/Paspop";
 import { STANDAARD_LICHAAM, pasvormVoor, type Lichaam } from "@/lib/shop/paskamer";
@@ -14,90 +13,6 @@ import type { Gedragen } from "@/lib/shop/paspop-figuur";
 type T = Dict["shop"];
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const H2 = "font-display text-[22px] font-bold tracking-tight text-ink sm:text-[26px]";
-
-/** Grote banner met twee zakelijke tegels ernaast. */
-export function ShopMarketHero({ t }: { t: T }) {
-  return (
-    <section aria-labelledby="shop-kop" className="bg-paper-soft">
-      <div className={`${WRAP} grid gap-4 py-4 sm:py-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`}>
-        <div className="relative isolate flex min-h-[300px] overflow-hidden rounded-2xl bg-brand-700 text-white sm:min-h-[360px] lg:min-h-[400px]">
-          {/* het grootste beeld van de pagina: meteen laden (LCP) */}
-          <Image src="/marketing/freelancer-at-work.jpg" alt="" fill priority sizes="(min-width: 1440px) 940px, (min-width: 1024px) 66vw, 100vw" className="-z-10 object-cover object-[75%_center]" />
-          <span aria-hidden className="absolute inset-0 -z-10 bg-brand-700/80 sm:bg-transparent sm:bg-gradient-to-r sm:from-brand-700 sm:via-brand-700/90 sm:to-brand-700/0" />
-          <div className="flex max-w-xl flex-col justify-center p-6 sm:p-10 lg:p-12">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-brand-mint">ZekerFlex Shop</p>
-            <h1 id="shop-kop" className="mt-3 font-display text-[2rem] font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-              {t.heroTitle}
-            </h1>
-            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/90 sm:text-[16px]">{t.heroSub}</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="#collectie" className="inline-flex h-12 items-center rounded-lg bg-brand-mint px-6 text-[15px] font-bold text-ink transition hover:brightness-95">
-                {t.heroCta}
-              </Link>
-              <Link href={`/shop?cat=${encodeURIComponent("Werk & PBM")}#collectie`} className="inline-flex h-12 items-center rounded-lg border border-white/50 px-6 text-[15px] font-bold text-white transition hover:bg-white/10">
-                {t.navPbm}
-              </Link>
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <PromoTile tone="ink" title={t.businessTileTitle} body={t.businessTileBody} cta={t.teamsCta} href="/contact" />
-          <PromoTile tone="money" title={t.kitsTileTitle} body={t.kitsTileBody} cta={t.discover} href="#pakketten" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PromoTile({ tone, title, body, cta, href }: { tone: "ink" | "money"; title: string; body: string; cta: string; href: string }) {
-  const dark = tone === "ink";
-  return (
-    <Link
-      href={href}
-      className={`group flex flex-col justify-between rounded-2xl p-6 transition hover:shadow-e2 ${dark ? "bg-ink text-white" : "border border-money/25 bg-money-soft text-ink"}`}
-    >
-      <span>
-        <span className="block text-[18px] font-bold leading-snug">{title}</span>
-        <span className={`mt-2 block text-[14px] leading-relaxed ${dark ? "text-white/80" : "text-neutralx-700"}`}>{body}</span>
-      </span>
-      <span className={`mt-5 inline-flex items-center gap-1.5 text-[14px] font-bold ${dark ? "text-brand-mint" : "text-money-ink"}`}>
-        {cta} <span aria-hidden className="transition group-hover:translate-x-0.5">→</span>
-      </span>
-    </Link>
-  );
-}
-
-export type CategoryTile = { cat: string; label: string; image: string | null; count: number };
-
-export function ShopCategoryTiles({ t, tiles }: { t: T; tiles: CategoryTile[] }) {
-  return (
-    <section aria-labelledby="shop-categorieen" className="bg-white">
-      <div className={`${WRAP} py-8 lg:py-10`}>
-        <h2 id="shop-categorieen" className={H2}>
-          {t.shopByCategory}
-        </h2>
-        <ul className="mt-5 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
-          {tiles.map((c) => (
-            <li key={c.cat}>
-              <Link
-                href={`/shop?cat=${encodeURIComponent(c.cat)}#collectie`}
-                className="group flex items-center gap-3.5 rounded-xl border border-hair bg-white p-3 transition hover:border-brand-500 hover:shadow-e1"
-              >
-                <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-paper-soft sm:h-[72px] sm:w-[72px]">
-                  {c.image && <Image src={c.image} alt="" fill sizes="72px" className="object-cover transition duration-500 group-hover:scale-105" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[15px] font-bold text-ink group-hover:underline">{c.label}</span>
-                  <span className="mt-0.5 block text-[12px] text-neutralx-500">{fmt(t.articles, { n: c.count })}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
 
 const SERVICE_ICON: Record<"certified" | "nextDay" | "invoice" | "returns", string> = {
   certified: "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4",

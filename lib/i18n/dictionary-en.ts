@@ -1021,6 +1021,22 @@ export const en: Dict = {
     offerteKlaar: "We will contact you as soon as possible with a tailored quote.",
   },
 
+  shopThuis: {
+    heroEyebrow: "ZekerFlex Shop",
+    heroTitel: "Clothing and workwear that works with you",
+    heroSub: "From safety shoes to a warm fleece: everything for your workday and after. Try it on your own mannequin first.",
+    heroKnop: "Shop the collection",
+    heroPaskamer: "Try the fitting room",
+    categorieTitel: "What are you looking for?",
+    kledingSub: "Hoodies, shirts, fleece and trousers",
+    pbmSub: "Safety shoes, gloves and high visibility",
+    werkdagSub: "Bags, bottles and handy things",
+    cadeausSub: "For a colleague or yourself",
+    looksTitel: "Shop the look",
+    looksSub: "Complete outfits on a mannequin. Adjust them to your own measurements.",
+    lookBekijk: "Adjust",
+  },
+
   greet: {
     morning: "Good morning",
     afternoon: "Good afternoon",
