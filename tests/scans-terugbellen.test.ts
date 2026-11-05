@@ -64,6 +64,7 @@ describe("dealTerugbellen", () => {
     expect(m.text).toContain("06 12345678");
     expect(m.text).toContain("In de ochtend");
     expect(stappen().map((s) => s.stap)).toEqual(["gescand", "aanvraag"]);
+    expect(stappen().at(-1)?.info).toBe("terugbellen, in de ochtend");
   });
 
   it("maakt een nieuwe lead als de scan er geen had, en vraagt maar één keer", async () => {

@@ -141,7 +141,7 @@ export async function dealTerugbellen(id: string, persoon: { naam: string; telef
     }).catch(() => null);
     if (lead) await koppel(d.scan.soort, d.scan.scanId, { leadId: lead.id });
   }
-  await logStap(d.scan.soort, d.scan.scanId, "aanvraag", `terugbellen ${persoon.moment}`);
+  await logStap(d.scan.soort, d.scan.scanId, "aanvraag", `terugbellen, ${moment.toLowerCase()}`);
 
   await sendMail({
     to: CONTACTS.sales,

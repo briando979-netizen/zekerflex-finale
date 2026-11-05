@@ -21,7 +21,9 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const wie = (l: ScanLog) => `${l.naam}${l.host && l.host !== l.naam ? ` (${l.host})` : ""}${l.plaats ? `, ${l.plaats}` : ""}`;
 const regelNieuw = (l: ScanLog) => `${wie(l)} — ${SOORT_LABEL[l.soort].toLowerCase()}, score ${l.score}, ${STATUS_INFO[statusVan(l)].label.toLowerCase()}`;
 const datum = (iso: string) => `${new Date(iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short" })} ${amsterdamClock(iso)}`;
-const regelWacht = (l: ScanLog) => `${wie(l)} — ${STATUS_INFO[statusVan(l)].label.toLowerCase()}, laatst actief ${datum(laatsteActiviteit(l))}`;
+// "Bel me eerst terug" (stap aanvraag met info "terugbellen, in de ochtend"): zet het moment erbij
+const terugbellen = (l: ScanLog) => l.stappen.find((s) => s.stap === "aanvraag" && s.info?.startsWith("terugbellen"))?.info ?? null;
+const regelWacht = (l: ScanLog) => `${wie(l)} — ${terugbellen(l) ?? STATUS_INFO[statusVan(l)].label.toLowerCase()}, laatst actief ${datum(laatsteActiviteit(l))}`;
 
 export async function stuurScanDagoverzicht(nu = new Date()): Promise<{ ok: true; verstuurd: boolean; reden?: string; nieuw: number; akkoord: number; wachten: number }> {
   const dag = amsterdamDayKey(nu);
