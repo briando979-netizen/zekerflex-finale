@@ -6,7 +6,7 @@ import { agentLeeft, isBezig, leesLive, plaatsVerzoek, type LiveStatus, type Ond
 // live-zetter op de server voert ze uit (deploy/bouwer/zf-live.py, onderhoud()).
 // ---------------------------------------------------------------------------
 
-const DIENST: Record<string, Exclude<OnderhoudTaak, "status" | "opruimen">> = {
+const DIENST: Record<string, Exclude<OnderhoudTaak, "status" | "opruimen" | "backup-nu" | "backup-verifieer">> = {
   app: "herstart-app",
   bouwer: "herstart-bouwer",
   webserver: "herstart-caddy",
@@ -22,6 +22,8 @@ const NAAM: Record<OnderhoudTaak, string> = {
   "herstart-caddy": "de webserver",
   "herstart-cron": "de planner",
   opruimen: "het opruimen",
+  "backup-nu": "de back-up",
+  "backup-verifieer": "de hersteltest van de back-up",
 };
 
 /** "herstart de app" → herstart-app; alleen als het bericht er zo mee begint. */

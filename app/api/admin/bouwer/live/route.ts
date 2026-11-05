@@ -57,6 +57,8 @@ const ONDERHOUD_TEKST: Record<OnderhoudTaak, string> = {
   "herstart-caddy": "herstartte de webserver (Caddy)",
   "herstart-cron": "herstartte de planner (cron)",
   opruimen: "maakte schijfruimte vrij",
+  "backup-nu": "maakte meteen een back-up",
+  "backup-verifieer": "startte de hersteltest van de back-up",
 };
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {

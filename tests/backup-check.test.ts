@@ -11,7 +11,7 @@ vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(
 const recordCronRun = vi.fn();
 vi.mock("@/lib/metrics", () => ({ recordCronRun: (...a: unknown[]) => recordCronRun(...a) }));
 
-const { checkBackup, diskAlert, diskUsage, evaluateBackup, parseBackupStatus, readBackupReport } = await import("@/lib/ops/backup");
+const { checkBackup, diskAlert, diskUsage, evaluateBackup, evaluateVerification, parseBackupStatus, parseVerifyStatus, readBackupReport } = await import("@/lib/ops/backup");
 
 const NOW = new Date("2026-11-03T04:00:00Z").getTime();
 const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
@@ -29,7 +29,64 @@ const good = {
   error: "",
 };
 
+const verifyGood = {
+  at: hoursAgo(20),
+  ok: true,
+  file: "zekerflex-20261102-0230.dump",
+  seconds: 41,
+  shaOk: true,
+  listOk: true,
+  restoreOk: true,
+  tables: 131,
+  compared: 131,
+  missing: 0,
+  mismatched: 0,
+  mismatches: [],
+  storage: { ok: true, file: "storage-20261102-0230.tar.gz", files: 212 },
+  encrypted: "ok",
+  offsite: "ok",
+  error: "",
+};
+
+describe("hersteltest beoordelen", () => {
+  it("een geslaagde, verse hersteltest is in orde; oudere statussen zonder versleuteling ook", () => {
+    expect(evaluateVerification(parseVerifyStatus(verifyGood), NOW)).toEqual({ state: "ok", reasons: [] });
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, encrypted: "none", offsite: "none", compared: 0 }), NOW).state).toBe("ok");
+    expect(parseVerifyStatus({ ...verifyGood, encrypted: "onzin" })?.encrypted).toBe("none");
+    expect(parseVerifyStatus(null)).toBeNull();
+  });
+
+  it("nog nooit getest is 'missing' (geen alarm), een week overgeslagen is te oud", () => {
+    expect(evaluateVerification(null, NOW).state).toBe("missing");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, at: hoursAgo(24 * 7 + 20) }), NOW).state).toBe("ok");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, at: hoursAgo(24 * 9) }), NOW)).toMatchObject({ state: "stale" });
+  });
+
+  it("ontbrekende of afwijkende tabellen, een kapotte vingerafdruk of kopie zijn een probleem, met de reden", () => {
+    const mis = evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, missing: 1, mismatched: 3, mismatches: [{ table: "User", expected: 24, got: null }, { table: "Shift", expected: 100, got: 98 }] }), NOW);
+    expect(mis.state).toBe("failed");
+    expect(mis.reasons.join(" ")).toContain("1 tabel ontbreekt");
+    expect(mis.reasons.join(" ")).toContain("2 tabellen hebben");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, shaOk: false }), NOW).reasons[0]).toContain("vingerafdruk");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, encrypted: "failed" }), NOW).reasons[0]).toContain("ontcijferen");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, offsite: "missing" }), NOW).reasons[0]).toContain("buiten de server ontbreekt");
+    expect(evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, restoreOk: false, error: "pg_restore: out of disk" }), NOW).reasons[0]).toContain("out of disk");
+  });
+
+  it("de mislukte terugzetting weegt zwaarder dan de rest", () => {
+    const r = evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, restoreOk: false, shaOk: false, error: "" }), NOW);
+    expect(r.reasons).toEqual(["De back-up kon niet worden teruggezet."]);
+  });
+});
+
 describe("back-up beoordelen", () => {
+  it("de kopie buiten de server en de versleuteling worden gelezen", () => {
+    const s = parseBackupStatus({ ...good, encrypted: true, offsite: { configured: true, target: "scp://u@h/pad", ok: false, error: "Permission denied" } });
+    expect(s?.encrypted).toBe(true);
+    expect(s?.offsite).toEqual({ configured: true, target: "scp://u@h/pad", ok: false, error: "Permission denied" });
+    expect(parseBackupStatus(good)?.offsite.configured).toBe(false);
+  });
+
   it("een verse, proef-teruggezette back-up is in orde", () => {
     expect(evaluateBackup(parseBackupStatus(good), true, NOW)).toEqual({ state: "ok", reasons: [] });
   });

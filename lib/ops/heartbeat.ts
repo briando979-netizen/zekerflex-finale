@@ -41,6 +41,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "pensioen-aangifte", label: "StiPP-pensioenaangifte", maxAgeHours: 24 * 35 },
   // alleen zelf-gehost: backup-dienst in docker-compose.vps.yml + /api/internal/backup/check
   { job: "db-backup", label: "Database-back-up", maxAgeHours: 26 },
+  // elke zondag na de back-up (deploy/backup/entrypoint.sh, run_verify), gemeld door /api/internal/backup/check
+  { job: "db-backup-verify", label: "Back-up: diepgaande hersteltest", maxAgeHours: 24 * 8 + 2 },
   { job: "site-uptime", label: "Uptime-bewaking klantsites", maxAgeHours: 2 },
   { job: "site-weekly-check", label: "Wekelijkse check klantsites", maxAgeHours: 24 * 8 },
   { job: "site-backups", label: "Back-ups klantsites", maxAgeHours: 26 },

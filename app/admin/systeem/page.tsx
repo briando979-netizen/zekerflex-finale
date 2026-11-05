@@ -13,6 +13,7 @@ import { pushChannels } from "@/lib/notifications/push";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { readBackupReport, BACKUP_MAX_AGE_HOURS, DISK_CRIT_PERCENT, DISK_WARN_PERCENT, type BackupReport } from "@/lib/ops/backup";
+import { BackupActies } from "@/components/admin/BackupActies";
 import { env } from "@/lib/env";
 import { smtpConfigured } from "@/lib/mail";
 import { count, dateTimeNl, percentOf, timeAgoNl } from "@/lib/admin/format";
@@ -32,6 +33,25 @@ const BACKUP_STATE: Record<BackupReport["state"], string> = {
   failed: "Mislukt",
   stale: "Te oud",
   missing: "Nog geen",
+};
+const VERIFY_STATE: Record<BackupReport["verificatie"]["state"], string> = {
+  ok: "Geslaagd",
+  failed: "Probleem",
+  stale: "Te lang geleden",
+  missing: "Nog niet gedaan",
+};
+const ENCRYPTED_TEKST: Record<string, string> = {
+  none: "geen versleutelde kopie (BACKUP_PASSPHRASE niet gezet)",
+  ok: "versleutelde kopie ontcijferd en identiek aan het origineel",
+  failed: "versleutelde kopie NIET te ontcijferen",
+  "no-passphrase": "versleutelde kopie aanwezig, maar de wachtwoordzin is niet (meer) bekend op de server",
+};
+const OFFSITE_TEKST: Record<string, string> = {
+  none: "niet ingesteld",
+  ok: "aanwezig en even groot als het origineel",
+  missing: "ontbreekt op de kopieplek",
+  "size-mismatch": "andere grootte dan het origineel",
+  "no-encrypted-copy": "ingesteld, maar er is geen versleutelde kopie om te sturen (zet BACKUP_PASSPHRASE)",
 };
 
 async function ok(fn: () => Promise<unknown>): Promise<{ ok: boolean; ms: number; detail?: string }> {
@@ -71,7 +91,7 @@ export default async function SysteemPage() {
     budgetSnapshot().catch(() => null),
     whisperReachable(),
     cronHeartbeats().catch(() => []),
-    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null })),
+    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } })),
     listErrorGroups(500).catch(() => []),
     leesLive().catch(() => null),
     bouwerGezond(),
@@ -153,6 +173,8 @@ export default async function SysteemPage() {
     },
   ];
   const backupBroken = backup.available && backup.state !== "ok";
+  const verify = backup.verificatie;
+  const verifyBroken = backup.available && (verify.state === "failed" || verify.state === "stale");
   const disk = backup.disk;
   const diskTone = !disk ? "neutral" : disk.usedPercent >= DISK_CRIT_PERCENT ? "crit" : disk.usedPercent >= DISK_WARN_PERCENT ? "warn" : "ok";
   // zelfde eenheid als df en TransIP (1024-machten), anders lijkt de schijf groter
@@ -250,7 +272,7 @@ export default async function SysteemPage() {
           {
             id: "backups",
             label: "Back-ups",
-            badge: backupBroken ? 1 : null,
+            badge: backupBroken || verifyBroken ? (backupBroken ? 1 : 0) + (verifyBroken ? 1 : 0) : null,
             content: !backup.available ? (
               <Panel title="Back-ups">
                 <Empty title="Geen back-upmap op deze omgeving" body="De nachtelijke back-up draait op de server (docker-compose.vps.yml). Hier is niets te tonen." />
@@ -308,7 +330,92 @@ export default async function SysteemPage() {
                     </Panel>
                   </div>
                 </div>
-                <Notice>Deze back-ups staan op dezelfde server als de database. Ze beschermen tegen fouten en wissen, niet tegen het kwijtraken van de hele server. Hoe je ze ook elders bewaart en terugzet staat in deploy/DISASTER-RECOVERY.md.</Notice>
+                {verifyBroken && <Notice tone="crit" role="alert">{verify.reasons.join(" ")}</Notice>}
+                <div className="grid items-start gap-4 lg:grid-cols-[1fr_1fr]">
+                  <Panel
+                    title="Hersteltest (diepgaand)"
+                    subtitle="Elke zondag, en op verzoek: de nieuwste back-up wordt teruggezet en tabel voor tabel vergeleken met het moment van de back-up"
+                    actions={<Pill tone={verify.state === "ok" ? "ok" : verify.state === "missing" ? "neutral" : "crit"}>{VERIFY_STATE[verify.state]}</Pill>}
+                  >
+                    {verify.status ? (
+                      <>
+                        <InfoList
+                          rows={[
+                            { label: "Getest", value: `${dateTimeNl(verify.status.at, now)} (${timeAgoNl(verify.status.at, now.getTime())}), ${count(verify.status.seconds)} s` },
+                            { label: "Bestand", value: verify.status.file || "—" },
+                            { label: "Vingerafdruk", value: verify.status.shaOk ? "klopt" : "klopt niet (bestand veranderd of beschadigd)" },
+                            { label: "Terugzetten", value: verify.status.restoreOk ? `gelukt, ${count(verify.status.tables)} tabellen` : "mislukt" },
+                            {
+                              label: "Rijen per tabel",
+                              value:
+                                verify.status.compared === 0
+                                  ? "niet vergeleken (oudere back-up zonder telling)"
+                                  : verify.status.mismatched === 0
+                                    ? `alle ${count(verify.status.compared)} tabellen precies gelijk aan het moment van de back-up`
+                                    : `${count(verify.status.mismatched)} van ${count(verify.status.compared)} tabellen wijken af${verify.status.missing ? `, ${count(verify.status.missing)} ontbreken` : ""}`,
+                            },
+                            { label: "Uploads", value: verify.status.storage.file ? (verify.status.storage.ok ? `archief compleet leesbaar, ${count(verify.status.storage.files)} bestanden` : "archief niet leesbaar") : "—" },
+                            { label: "Versleutelde kopie", value: ENCRYPTED_TEKST[verify.status.encrypted] ?? verify.status.encrypted },
+                            { label: "Kopie buiten de server", value: OFFSITE_TEKST[verify.status.offsite] ?? verify.status.offsite },
+                          ]}
+                        />
+                        {verify.status.mismatches.length > 0 && (
+                          <ul className="mt-3 space-y-1 text-xs" style={{ color: "var(--a-mute)" }}>
+                            {verify.status.mismatches.slice(0, 12).map((m) => (
+                              <li key={m.table}>
+                                <span className="font-mono" style={{ color: "var(--a-text)" }}>{m.table}</span>: {m.got === null ? "ontbreekt" : `${count(m.got)} in plaats van ${count(m.expected)} rijen`}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <Empty title="Nog geen hersteltest" body="De back-updienst doet de eerste vanzelf bij het opstarten, daarna elke zondag. Of start hem nu met de knop hieronder." />
+                    )}
+                    <div className="mt-4">
+                      <BackupActies agentLeeft={Boolean(liveStand?.hartslag && agentLeeft(liveStand.hartslag))} />
+                    </div>
+                  </Panel>
+                  <div className="space-y-4">
+                    <Panel title="Kopie buiten de server" subtitle="Versleuteld (AES-256) naar een eigen reserveserver of WebDAV-opslag, elke nacht na de back-up">
+                      <InfoList
+                        rows={[
+                          { label: "Versleuteling", value: backup.status?.encrypted ? "aan: naast elke back-up staat een .enc-kopie" : "uit: zet BACKUP_PASSPHRASE in .env.production (en bewaar die zin ook buiten de server)" },
+                          { label: "Kopieplek", value: backup.status?.offsite.configured ? backup.status.offsite.target : "niet ingesteld: zet BACKUP_OFFSITE (scp://… of https://…)" },
+                          {
+                            label: "Laatste nacht",
+                            value: !backup.status?.offsite.configured ? "—" : backup.status.offsite.ok ? "kopie gelukt" : `mislukt: ${backup.status.offsite.error || "onbekende fout"}`,
+                          },
+                        ]}
+                      />
+                    </Panel>
+                    <Panel flush title="Geschiedenis van de hersteltests" subtitle="Nieuwste eerst">
+                      {verify.history.length === 0 ? (
+                        <Empty title="Nog geen tests" />
+                      ) : (
+                        <ul>
+                          {verify.history.slice(0, 12).map((h) => (
+                            <li key={h.at} className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                              <span className="flex items-center gap-2 text-[0.8125rem]" style={{ color: "var(--a-text)" }}>
+                                <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: h.ok ? "var(--a-ok)" : "var(--a-crit)" }} />
+                                {dateTimeNl(h.at, now)}
+                                <span className="sr-only">{h.ok ? " geslaagd" : " mislukt"}</span>
+                              </span>
+                              <span className="num text-xs" style={{ color: "var(--a-mute)" }}>
+                                {h.ok ? `${count(h.compared || h.tables)} tabellen gelijk` : h.error || "probleem"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </Panel>
+                  </div>
+                </div>
+                <Notice>
+                  {backup.status?.offsite.ok
+                    ? "Er staat elke nacht een versleutelde kopie buiten deze server. Terugzetten vanaf die kopie staat in deploy/DISASTER-RECOVERY.md."
+                    : "Deze back-ups staan op dezelfde server als de database. Ze beschermen tegen fouten en wissen, niet tegen het kwijtraken van de hele server. Zet BACKUP_PASSPHRASE en BACKUP_OFFSITE (zie Te doen) voor een versleutelde kopie elders; terugzetten staat in deploy/DISASTER-RECOVERY.md."}
+                </Notice>
               </>
             ),
           },

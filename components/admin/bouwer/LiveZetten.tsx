@@ -356,6 +356,8 @@ const ONDERHOUD: { taak: OnderhoudTaak; label: string; waarschuwing?: string }[]
   { taak: "herstart-caddy", label: "Webserver herstarten", waarschuwing: "De webserver (Caddy) herstarten? De site is een paar seconden onbereikbaar." },
   { taak: "herstart-cron", label: "Planner herstarten" },
   { taak: "opruimen", label: "Schijfruimte vrijmaken" },
+  { taak: "backup-nu", label: "Back-up nu maken" },
+  { taak: "backup-verifieer", label: "Hersteltest van de back-up" },
 ];
 
 function VersieKaart({ titel, sha, onderwerp, datum }: { titel: string; sha: string | undefined; onderwerp: string; datum: string | undefined }) {

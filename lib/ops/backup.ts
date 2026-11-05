@@ -31,7 +31,39 @@ export interface BackupStatus {
   restore: { ok: boolean; tables: number; users: number; liveUsers: number };
   kept: number;
   error: string;
+  /** er staat een versleutelde kopie (.enc) naast de dump (BACKUP_PASSPHRASE gezet) */
+  encrypted: boolean;
+  /** de kopie buiten de server (BACKUP_OFFSITE): ingesteld, doel en of hij deze nacht gelukt is */
+  offsite: { configured: boolean; target: string; ok: boolean; error: string };
 }
+
+/** Eén diepgaande hersteltest (deploy/backup/entrypoint.sh, run_verify → verify.json). */
+export interface VerifyStatus {
+  at: string;
+  ok: boolean;
+  file: string;
+  seconds: number;
+  shaOk: boolean;
+  listOk: boolean;
+  restoreOk: boolean;
+  tables: number;
+  /** zoveel tabellen zijn vergeleken met het moment van de back-up */
+  compared: number;
+  missing: number;
+  mismatched: number;
+  mismatches: { table: string; expected: number; got: number | null }[];
+  storage: { ok: boolean; file: string; files: number };
+  /** none = geen versleutelde kopie; no-passphrase = kopie er wel, sleutel niet bekend */
+  encrypted: "none" | "ok" | "failed" | "no-passphrase";
+  /** none = niet ingesteld */
+  offsite: "none" | "ok" | "missing" | "size-mismatch" | "no-encrypted-copy";
+  error: string;
+}
+
+/** de hersteltest is wekelijks; een week overslaan mag niet ongemerkt */
+export const VERIFY_MAX_AGE_HOURS = 24 * 8 + 2;
+
+export type VerifyState = "ok" | "failed" | "stale" | "missing";
 
 export interface BackupFile {
   name: string;
@@ -55,6 +87,8 @@ export interface BackupReport {
   status: BackupStatus | null;
   files: BackupFile[];
   disk: DiskUsage | null;
+  /** de diepgaande hersteltest (wekelijks en op verzoek) met de geschiedenis, nieuwste eerst */
+  verificatie: { state: VerifyState; reasons: string[]; status: VerifyStatus | null; history: VerifyStatus[] };
 }
 
 const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
@@ -64,6 +98,7 @@ export function parseBackupStatus(raw: unknown): BackupStatus | null {
   const o = raw as Record<string, unknown> | null;
   if (!o || typeof o !== "object" || typeof o.at !== "string" || Number.isNaN(Date.parse(o.at))) return null;
   const r = (o.restore ?? {}) as Record<string, unknown>;
+  const off = (o.offsite ?? {}) as Record<string, unknown>;
   return {
     at: o.at,
     ok: o.ok === true,
@@ -75,7 +110,63 @@ export function parseBackupStatus(raw: unknown): BackupStatus | null {
     restore: { ok: r.ok === true, tables: num(r.tables), users: num(r.users), liveUsers: num(r.liveUsers) },
     kept: num(o.kept),
     error: str(o.error),
+    encrypted: o.encrypted === true,
+    offsite: { configured: off.configured === true, target: str(off.target), ok: off.ok === true, error: str(off.error) },
   };
+}
+
+const ENC_STATES = new Set(["none", "ok", "failed", "no-passphrase"]);
+const OFF_STATES = new Set(["none", "ok", "missing", "size-mismatch", "no-encrypted-copy"]);
+
+export function parseVerifyStatus(raw: unknown): VerifyStatus | null {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o !== "object" || typeof o.at !== "string" || Number.isNaN(Date.parse(o.at))) return null;
+  const st = (o.storage ?? {}) as Record<string, unknown>;
+  const mismatches = Array.isArray(o.mismatches)
+    ? o.mismatches.flatMap((m) => {
+        const x = (m ?? {}) as Record<string, unknown>;
+        return typeof x.table === "string" ? [{ table: x.table, expected: num(x.expected), got: typeof x.got === "number" ? x.got : null }] : [];
+      })
+    : [];
+  return {
+    at: o.at,
+    ok: o.ok === true,
+    file: str(o.file),
+    seconds: num(o.seconds),
+    shaOk: o.shaOk === true,
+    listOk: o.listOk === true,
+    restoreOk: o.restoreOk === true,
+    tables: num(o.tables),
+    compared: num(o.compared),
+    missing: num(o.missing),
+    mismatched: num(o.mismatched),
+    mismatches: mismatches.slice(0, 50),
+    storage: { ok: st.ok === true, file: str(st.file), files: num(st.files) },
+    encrypted: ENC_STATES.has(str(o.encrypted)) ? (str(o.encrypted) as VerifyStatus["encrypted"]) : "none",
+    offsite: OFF_STATES.has(str(o.offsite)) ? (str(o.offsite) as VerifyStatus["offsite"]) : "none",
+    error: str(o.error),
+  };
+}
+
+/** Beoordeelt de laatste diepgaande hersteltest: geslaagd, mislukt (met waarom), te lang geleden of nog nooit gedaan. */
+export function evaluateVerification(status: VerifyStatus | null, now = Date.now()): { state: VerifyState; reasons: string[] } {
+  if (!status) return { state: "missing", reasons: ["Er is nog geen hersteltest gedaan."] };
+  const reasons: string[] = [];
+  if (!status.restoreOk) reasons.push(status.error ? `Terugzetten mislukte: ${status.error}` : "De back-up kon niet worden teruggezet.");
+  else {
+    if (!status.shaOk) reasons.push("De vingerafdruk van het back-upbestand klopt niet meer: het bestand is veranderd of beschadigd.");
+    if (status.missing > 0) reasons.push(`${status.missing} ${status.missing === 1 ? "tabel ontbreekt" : "tabellen ontbreken"} na het terugzetten.`);
+    if (status.mismatched - status.missing > 0) reasons.push(`${status.mismatched - status.missing} ${status.mismatched - status.missing === 1 ? "tabel heeft" : "tabellen hebben"} na het terugzetten een ander aantal rijen dan bij de back-up.`);
+    if (!status.storage.ok) reasons.push("Het archief met uploads is niet compleet te lezen.");
+    if (status.encrypted === "failed") reasons.push("De versleutelde kopie is niet te ontcijferen met de huidige wachtwoordzin.");
+    if (status.offsite === "missing") reasons.push("De kopie buiten de server ontbreekt.");
+    if (status.offsite === "size-mismatch") reasons.push("De kopie buiten de server is niet even groot als het origineel.");
+    if (reasons.length === 0 && !status.ok) reasons.push(status.error || "De hersteltest meldde een probleem.");
+  }
+  if (reasons.length > 0) return { state: "failed", reasons };
+  const ageHours = (now - Date.parse(status.at)) / 3_600_000;
+  if (ageHours > VERIFY_MAX_AGE_HOURS) return { state: "stale", reasons: [`De laatste hersteltest is ${Math.floor(ageHours / 24)} dagen geleden; hij hoort elke week te draaien.`] };
+  return { state: "ok", reasons: [] };
 }
 
 /** Beoordeelt de laatste back-up. `fileFound` = het genoemde dumpbestand staat echt op schijf. */
@@ -106,7 +197,7 @@ export function diskUsage(blocks: number, bfree: number, bavail: number, bsize: 
 }
 
 export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Promise<BackupReport> {
-  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null };
+  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } };
   try {
     if (!(await stat(dir)).isDirectory()) return empty;
   } catch {
@@ -142,7 +233,34 @@ export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Prom
 
   const fileFound = Boolean(status?.file && files.some((f) => f.name === status?.file));
   const { state, reasons } = evaluateBackup(status, fileFound, now);
-  return { available: true, state, reasons, status, files, disk };
+
+  // de diepgaande hersteltest: de laatste (verify.json) en de geschiedenis (één regel per test)
+  let verify: VerifyStatus | null = null;
+  try {
+    verify = parseVerifyStatus(JSON.parse(await readFile(path.join(dir, "verify.json"), "utf8")));
+  } catch {
+    /* nog nooit getest */
+  }
+  let history: VerifyStatus[] = [];
+  try {
+    history = (await readFile(path.join(dir, "verificaties.jsonl"), "utf8"))
+      .split("\n")
+      .filter((l) => l.trim())
+      .flatMap((l) => {
+        try {
+          const v = parseVerifyStatus(JSON.parse(l));
+          return v ? [v] : [];
+        } catch {
+          return [];
+        }
+      })
+      .reverse()
+      .slice(0, 30);
+  } catch {
+    /* geen geschiedenis */
+  }
+  const v = evaluateVerification(verify, now);
+  return { available: true, state, reasons, status, files, disk, verificatie: { state: v.state, reasons: v.reasons, status: verify, history } };
 }
 
 /** Dagelijks na de back-up (cron): hartslag bij succes, anders de eigenaar waarschuwen. */
@@ -162,10 +280,24 @@ export async function checkBackup(now = Date.now(), dir = BACKUP_DIR): Promise<B
     });
   }
 
+  // de wekelijkse hersteltest: hartslag als de laatste geslaagd en vers is, anders waarschuwen
+  // (nog nooit gedaan = de dienst draait de eerste vanzelf bij het opstarten; dan nog geen alarm)
+  if (report.verificatie.state === "ok") {
+    recordCronRun("db-backup-verify", true);
+  } else if (report.verificatie.state !== "missing") {
+    await alertOwner({
+      key: "backup:verify",
+      title: report.verificatie.state === "stale" ? "Hersteltest van de back-up blijft uit" : "Hersteltest van de back-up mislukt",
+      detail: `${report.verificatie.reasons.join(" ")} Een back-up die niet terug te zetten is, is geen back-up. Start de test opnieuw via Admin → Systeem → Back-ups.`,
+      severity: "critical",
+      url: "/admin/systeem#backups",
+    });
+  }
+
   const alert = diskAlert(report.disk);
   if (alert) await alertOwner(alert);
 
-  logger.info("backup check", { state: report.state, diskUsed: report.disk?.usedPercent ?? null });
+  logger.info("backup check", { state: report.state, verify: report.verificatie.state, diskUsed: report.disk?.usedPercent ?? null });
   return report;
 }
 

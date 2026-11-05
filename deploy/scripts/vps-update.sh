@@ -30,6 +30,8 @@ for i in 1 2 3; do
         exit 5
       fi
     fi
+    # de back-updienst heeft een eigen klein image (postgres + scp/curl): gecacht, seconden
+    sudo $C build -q backup > /dev/null 2>&1 || echo "backup: image bouwen mislukt, het oude blijft"
     sudo $C up -d app backup coturn freeradius headscale
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand
     # (nieuwe inode): alleen bij een gewijzigd script opnieuw aanmaken. Niet altijd,

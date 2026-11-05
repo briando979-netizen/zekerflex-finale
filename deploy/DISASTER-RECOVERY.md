@@ -16,6 +16,25 @@ server; de back-up is dus wat je data redt.
   Mislukt, ontbrekend of ouder dan 26 uur → melding aan de eigenaar. Ook bij een
   serverschijf vanaf 85% vol. Zie Admin → Systeem → Back-ups.
 
+**Elke zondag de diepgaande hersteltest** (`run_verify`, ook via Admin → Systeem →
+Back-ups → "Hersteltest nu" of `bash /backup.sh verify`): vingerafdruk van het
+bestand, `pg_restore --list`, terugzetten in `zf_restore_check` en **tabel voor
+tabel het aantal rijen vergelijken** met de telling van het moment van de back-up
+(`<dump>.counts`), het uploads-archief doorlezen, de versleutelde kopie ontcijferen
+en vergelijken, en de kopie buiten de server nameten. Uitkomst in
+`backups/verify.json` + geschiedenis in `backups/verificaties.jsonl`; de app meldt
+een mislukte of uitgebleven test (hartslag `db-backup-verify`).
+
+**Versleutelde kopie buiten de server.** Met `BACKUP_PASSPHRASE` in `.env.production`
+staat naast elke back-up een `.enc` (AES-256-CBC, PBKDF2 210.000 rondes). Met
+`BACKUP_OFFSITE=scp://gebruiker@host/pad` (sleutel in `~/zekerflex/offsite/id_ed25519`
++ `known_hosts`) of `BACKUP_OFFSITE=https://host/webdav/pad/` (+ `BACKUP_OFFSITE_USER`
+/ `BACKUP_OFFSITE_PASS`) gaat die kopie elke nacht naar buiten. Ontcijferen:
+```bash
+openssl enc -d -aes-256-cbc -md sha256 -pbkdf2 -iter 210000 -in zekerflex-20261105-0230.dump.enc -out zekerflex.dump
+```
+(de wachtwoordzin wordt gevraagd; daarna terugzetten zoals hieronder).
+
 **Meteen een back-up maken** (bijv. vóór een riskante migratie):
 ```bash
 cd ~/zekerflex

@@ -102,10 +102,15 @@ services:
     networks: [internal]
 
   # Nachtelijke back-up van de database + uploads, met proef-terugzetting in een
-  # wegwerp-database. Schrijft naar ./backups op de server; de nieuwste 14 blijven
-  # staan. Zie deploy/backup/entrypoint.sh en deploy/DISASTER-RECOVERY.md.
+  # wegwerp-database en elke zondag een diepgaande hersteltest (tabel voor tabel
+  # vergeleken met het moment van de back-up). Met BACKUP_PASSPHRASE komt er een
+  # versleutelde kopie bij, met BACKUP_OFFSITE gaat die naar een plek buiten de
+  # server (scp of WebDAV). Schrijft naar ./backups; de nieuwste 14 blijven staan.
+  # Zie deploy/backup/entrypoint.sh en deploy/DISASTER-RECOVERY.md.
   backup:
-    image: postgres:18-bookworm
+    build:
+      context: deploy/backup
+    image: zekerflex-backup:latest
     restart: unless-stopped
     environment:
       PGHOST: postgres
@@ -117,10 +122,20 @@ services:
       # eigenaar van de back-upbestanden op de host (de deploy-gebruiker), zodat
       # ze zonder sudo naar een andere computer gekopieerd kunnen worden
       BACKUP_UID: ${BACKUP_UID:-1000}
+      # wachtwoordzin voor de versleutelde kopie (.enc); bewaar hem óók buiten de server,
+      # want zonder is de kopie waardeloos. Leeg = geen versleutelde kopie.
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      # kopie buiten de server: scp://gebruiker@host/pad (sleutel in ./offsite/id_ed25519 +
+      # known_hosts) of https://host/webdav/pad/ met BACKUP_OFFSITE_USER/PASS. Leeg = uit.
+      BACKUP_OFFSITE: ${BACKUP_OFFSITE:-}
+      BACKUP_OFFSITE_USER: ${BACKUP_OFFSITE_USER:-}
+      BACKUP_OFFSITE_PASS: ${BACKUP_OFFSITE_PASS:-}
     volumes:
       - ./deploy/backup/entrypoint.sh:/backup.sh:ro
       - ./backups:/backups
       - app-storage:/storage:ro
+      # ssh-sleutel + known_hosts voor scp naar een eigen reserveserver (alleen-lezen)
+      - ./offsite:/offsite:ro
     entrypoint: ["bash", "/backup.sh"]
     depends_on:
       postgres: { condition: service_healthy }

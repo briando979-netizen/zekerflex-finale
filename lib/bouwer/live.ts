@@ -25,7 +25,7 @@ export const GITHUB_REPO = process.env.ZF_GITHUB_REPO || "briando979-netizen/zek
 export type LiveActie = "uitrollen" | "terug" | "onderhoud";
 
 /** Vaste onderhoudstaken die de live-zetter mag doen (zf-live.py, ONDERHOUD); nooit een vrij commando. */
-export const ONDERHOUD_TAKEN = ["status", "herstart-app", "herstart-bouwer", "herstart-caddy", "herstart-cron", "opruimen"] as const;
+export const ONDERHOUD_TAKEN = ["status", "herstart-app", "herstart-bouwer", "herstart-caddy", "herstart-cron", "opruimen", "backup-nu", "backup-verifieer"] as const;
 export type OnderhoudTaak = (typeof ONDERHOUD_TAKEN)[number];
 
 export interface LiveVerzoek {

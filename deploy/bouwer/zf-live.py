@@ -423,6 +423,21 @@ class Uitrol:
                 bericht=f"{dienst} is herstart." if ok else f"Herstarten van {dienst} lukte niet of hij meldt zich niet gezond. Kijk in het log.",
             )
             return
+        if taak in ("backup-nu", "backup-verifieer"):
+            # de back-updienst doet het werk (deploy/backup/entrypoint.sh); de uitkomst
+            # staat daarna in Admin → Systeem → Back-ups (status.json / verify.json)
+            nu_backup = taak == "backup-nu"
+            self.stap("Back-up maken" if nu_backup else "Hersteltest van de back-up")
+            code, staart = self.stroom([*COMPOSE, "exec", "-T", "backup", "bash", "/backup.sh", "now" if nu_backup else "verify"], timeout=3600)
+            gelukt = code == 0 and ("ok=true" in staart)
+            self.zet(
+                staat="klaar" if gelukt else "mislukt",
+                stap="Back-up gemaakt" if nu_backup else "Hersteltest klaar",
+                bericht=("De back-up is gemaakt en proef-teruggezet." if nu_backup else "De hersteltest is geslaagd: de back-up is compleet terug te zetten.")
+                if gelukt
+                else ("De back-up is niet in orde. Kijk in het log en in Admin → Systeem → Back-ups." if nu_backup else "De hersteltest vond een probleem. Kijk in het log en in Admin → Systeem → Back-ups."),
+            )
+            return
         if taak == "opruimen":
             self.stap("Schijfruimte vrijmaken")
             voor = vrije_ruimte()

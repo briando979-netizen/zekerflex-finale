@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 # ZekerFlex nachtelijke back-up (self-host, docker-compose.vps.yml). Draait in het
-# postgres-image, zodat pg_dump precies de versie van de server heeft. Elke nacht
-# om BACKUP_AT (UTC):
-#   1. pg_dump (eigen formaat, gecomprimeerd) naar /backups/db/
+# postgres-image (deploy/backup/Dockerfile), zodat pg_dump precies de versie van
+# de server heeft. Elke nacht om BACKUP_AT (UTC):
+#   1. pg_dump (eigen formaat, gecomprimeerd) naar /backups/db/, met daarnaast de
+#      sha256 en het aantal rijen per tabel op dat moment (voor de hersteltest)
 #   2. het opslagvolume (uploads) als tar.gz naar /backups/storage/
 #   3. proef-terugzetting van de dump in een wegwerp-database: bewijst dat de
 #      back-up echt terug te zetten is, en telt tabellen + gebruikers
-#   4. oude back-ups opruimen (de nieuwste BACKUP_KEEP blijven staan)
-# De uitkomst staat in /backups/status.json. De app ziet de map alleen-lezen en
-# waarschuwt de eigenaar als een nacht mislukt of uitblijft (lib/ops/backup.ts).
+#   4. met BACKUP_PASSPHRASE: een versleutelde kopie (.enc, AES-256) van dump en
+#      uploads; met BACKUP_OFFSITE: die kopie naar een plek buiten de server
+#      (scp naar een eigen reserveserver, of WebDAV-opslag via https)
+#   5. oude back-ups opruimen (de nieuwste BACKUP_KEEP blijven staan)
+# Elke zondag (en op verzoek: `bash /backup.sh verify`) volgt de diepgaande
+# hersteltest: de nieuwste dump wordt teruggezet en tabel voor tabel vergeleken
+# met de aantallen van het moment van de back-up; ook de versleutelde kopie wordt
+# ontcijferd en gecontroleerd, en de kopie buiten de server wordt nagemeten.
+# De uitkomsten staan in /backups/status.json en /backups/verify.json (+ de
+# geschiedenis in verificaties.jsonl). De app ziet de map alleen-lezen en
+# waarschuwt de eigenaar als iets mislukt of uitblijft (lib/ops/backup.ts).
 #
 # Meteen een back-up maken:  docker compose -f docker-compose.vps.yml exec backup bash /backup.sh now
+# Hersteltest nu:            docker compose -f docker-compose.vps.yml exec backup bash /backup.sh verify
 # Terugzetten: zie deploy/DISASTER-RECOVERY.md.
 set -uo pipefail
 
@@ -21,7 +31,12 @@ DIR=/backups
 KEEP="${BACKUP_KEEP:-14}"
 AT="${BACKUP_AT:-02:30}"
 OWNER="${BACKUP_UID:-1000}"
+PASS="${BACKUP_PASSPHRASE:-}"
+OFFSITE="${BACKUP_OFFSITE:-}"
+OFFSITE_USER="${BACKUP_OFFSITE_USER:-}"
+OFFSITE_PASS="${BACKUP_OFFSITE_PASS:-}"
 CHECK_DB=zf_restore_check
+SSH_OPTS=(-i /offsite/id_ed25519 -o UserKnownHostsFile=/offsite/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20)
 
 mkdir -p "$DIR/db" "$DIR/storage"
 chmod 755 "$DIR" "$DIR/db" "$DIR/storage"
@@ -29,13 +44,70 @@ chmod 755 "$DIR" "$DIR/db" "$DIR/storage"
 # foutmeldingen gaan als tekst in JSON: alleen veilige tekens, kort
 clean() { printf '%s' "$1" | tr '\n' ' ' | tr -cd 'A-Za-z0-9 ._:/()=-' | cut -c1-300; }
 num() { case "$1" in ''|*[!0-9]*) echo 0 ;; *) echo "$1" ;; esac; }
+sha() { sha256sum "$1" | cut -d' ' -f1; }
+jsonstr() { printf '"%s"' "$(clean "$1")"; }
 
 prune() { # map patroon
   ls -1t "$1"/$2 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f
 }
 
+# Rijen per tabel (public), gesorteerd: "tabel<TAB>aantal". Voor de hersteltest.
+tel_tabellen() { # database
+  local t
+  for t in $(psql -d "$1" -Atc "select tablename from pg_tables where schemaname = 'public' order by 1" 2>/dev/null); do
+    printf '%s\t%s\n' "$t" "$(num "$(psql -d "$1" -Atc "select count(*) from \"$t\"" 2>/dev/null)")"
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Versleutelen en buiten de server zetten
+# ---------------------------------------------------------------------------
+versleutel() { # bron doel
+  openssl enc -aes-256-cbc -md sha256 -pbkdf2 -iter 210000 -salt -pass env:PASS -in "$1" -out "$2.part" 2>/tmp/enc.err && mv -f "$2.part" "$2" && chown "$OWNER" "$2" && chmod 600 "$2"
+}
+ontcijfer() { # bron doel
+  openssl enc -d -aes-256-cbc -md sha256 -pbkdf2 -iter 210000 -pass env:PASS -in "$1" -out "$2" 2>/tmp/dec.err
+}
+
+# Eén bestand naar de kopieplek. scp://gebruiker@host/pad  of  https://host/webdav/pad/
+offsite_put() { # bestand
+  local f="$1" naam; naam=$(basename "$f")
+  case "$OFFSITE" in
+    scp://*)
+      local rest="${OFFSITE#scp://}" host="${rest%%/*}" pad="/${rest#*/}"
+      scp "${SSH_OPTS[@]}" -q "$f" "$host:$pad/$naam" 2>/tmp/offsite.err ;;
+    https://*)
+      curl -fsS --max-time 1800 -u "$OFFSITE_USER:$OFFSITE_PASS" -T "$f" "${OFFSITE%/}/$naam" -o /dev/null 2>/tmp/offsite.err ;;
+    *) echo "onbekend doel (gebruik scp://gebruiker@host/pad of https://host/pad/)" > /tmp/offsite.err; return 1 ;;
+  esac
+}
+# Grootte van een bestand op de kopieplek (0 = niet gevonden).
+offsite_size() { # bestandsnaam
+  case "$OFFSITE" in
+    scp://*)
+      local rest="${OFFSITE#scp://}" host="${rest%%/*}" pad="/${rest#*/}"
+      num "$(ssh "${SSH_OPTS[@]}" "$host" "stat -c %s '$pad/$1' 2>/dev/null || wc -c < '$pad/$1' 2>/dev/null" 2>/dev/null | tr -dc '0-9')" ;;
+    https://*)
+      num "$(curl -fsSI --max-time 60 -u "$OFFSITE_USER:$OFFSITE_PASS" "${OFFSITE%/}/$1" 2>/dev/null | tr -d '\r' | awk 'tolower($1)=="content-length:" {print $2}' | tail -1)" ;;
+    *) echo 0 ;;
+  esac
+}
+# Alleen de nieuwste BACKUP_KEEP blijven ook daar staan (zelfde patroon, oudste weg).
+offsite_prune() {
+  case "$OFFSITE" in
+    scp://*)
+      local rest="${OFFSITE#scp://}" host="${rest%%/*}" pad="/${rest#*/}"
+      ssh "${SSH_OPTS[@]}" "$host" "cd '$pad' 2>/dev/null && ls -1t zekerflex-*.dump.enc storage-*.tar.gz.enc 2>/dev/null | awk -v k=$KEEP 'BEGIN{a=0;b=0} /^zekerflex-/{a++; if(a>k) print} /^storage-/{b++; if(b>k) print}' | xargs -r rm -f" 2>/dev/null ;;
+    *) : ;; # WebDAV: opruimen laten we aan de opslag zelf (quota/levenscyclus)
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# De nachtelijke back-up
+# ---------------------------------------------------------------------------
 run_backup() {
   local start ts file sfile err="" bytes=0 sbytes=0 restore_ok=false tables=0 users=0 live=0 ok=false
+  local encrypted=false off_ok=false off_err="" off_target=""
   start=$(date +%s)
   ts=$(date -u +%Y%m%d-%H%M)
   file="zekerflex-$ts.dump"
@@ -46,6 +118,10 @@ run_backup() {
     mv -f "$DIR/db/$file.part" "$DIR/db/$file"
     chown "$OWNER" "$DIR/db/$file" && chmod 600 "$DIR/db/$file"
     bytes=$(stat -c %s "$DIR/db/$file")
+    # voor de hersteltest: de vingerafdruk en de rijen per tabel van dit moment
+    sha "$DIR/db/$file" > "$DIR/db/$file.sha256"
+    tel_tabellen "$DB" > "$DIR/db/$file.counts"
+    chown "$OWNER" "$DIR/db/$file.sha256" "$DIR/db/$file.counts"
   else
     err="pg_dump: $(head -c 200 /tmp/dump.err)"
     rm -f "$DIR/db/$file.part"
@@ -81,19 +157,133 @@ run_backup() {
     dropdb --if-exists "$CHECK_DB" 2>/dev/null
   fi
 
+  # versleutelde kopie (alleen met een wachtwoordzin), daarna buiten de server
+  if [ -n "$PASS" ] && [ -n "$file" ]; then
+    if versleutel "$DIR/db/$file" "$DIR/db/$file.enc" && { [ -z "$sfile" ] || versleutel "$DIR/storage/$sfile" "$DIR/storage/$sfile.enc"; }; then
+      encrypted=true
+    else
+      [ -n "$err" ] || err="versleutelen: $(head -c 200 /tmp/enc.err)"
+    fi
+  fi
+  if [ -n "$OFFSITE" ] && [ -n "$file" ]; then
+    off_target="${OFFSITE%%\?*}"
+    if [ "$encrypted" != true ]; then
+      off_err="geen BACKUP_PASSPHRASE: onversleuteld gaat er niets naar buiten"
+    elif offsite_put "$DIR/db/$file.enc" && { [ -z "$sfile" ] || offsite_put "$DIR/storage/$sfile.enc"; }; then
+      off_ok=true
+      offsite_prune
+    else
+      off_err="$(head -c 200 /tmp/offsite.err)"
+    fi
+  fi
+
   [ -n "$file" ] && [ -z "$err" ] && [ "$restore_ok" = true ] && ok=true
 
   prune "$DIR/db" "*.dump"
+  prune "$DIR/db" "*.dump.enc"
   prune "$DIR/storage" "*.tar.gz"
+  prune "$DIR/storage" "*.tar.gz.enc"
+  # hulpbestanden zonder dump: weg
+  for h in "$DIR"/db/*.sha256 "$DIR"/db/*.counts; do
+    [ -e "$h" ] || continue
+    [ -e "${h%.*}" ] || rm -f "$h"
+  done
   rm -f "$DIR"/db/*.part "$DIR"/storage/*.part
 
   local kept tmp="$DIR/.status.json.tmp"
   kept=$(ls -1 "$DIR"/db/*.dump 2>/dev/null | wc -l)
   cat > "$tmp" <<EOF
-{"at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","ok":$ok,"file":"$file","bytes":$bytes,"storageFile":"$sfile","storageBytes":$sbytes,"seconds":$(( $(date +%s) - start )),"restore":{"ok":$restore_ok,"tables":$tables,"users":$users,"liveUsers":$live},"kept":$kept,"error":"$(clean "$err")"}
+{"at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","ok":$ok,"file":"$file","bytes":$bytes,"storageFile":"$sfile","storageBytes":$sbytes,"seconds":$(( $(date +%s) - start )),"restore":{"ok":$restore_ok,"tables":$tables,"users":$users,"liveUsers":$live},"kept":$kept,"encrypted":$encrypted,"offsite":{"configured":$([ -n "$OFFSITE" ] && echo true || echo false),"target":$(jsonstr "$off_target"),"ok":$off_ok,"error":$(jsonstr "$off_err")},"error":$(jsonstr "$err")}
 EOF
   chmod 644 "$tmp" && mv -f "$tmp" "$DIR/status.json"
-  echo "[zf-backup] klaar: ok=$ok bestand=$file ($bytes bytes) terugzetten=$restore_ok tabellen=$tables"
+  echo "[zf-backup] klaar: ok=$ok bestand=$file ($bytes bytes) terugzetten=$restore_ok tabellen=$tables versleuteld=$encrypted buiten=$off_ok"
+}
+
+# ---------------------------------------------------------------------------
+# De diepgaande hersteltest (wekelijks en op verzoek)
+# ---------------------------------------------------------------------------
+run_verify() {
+  local start file="" err="" ok=false sha_ok=false list_ok=false restore_ok=false tables=0
+  local mismatches="[]" missing=0 afwijkend=0 vergeleken=0 storage_ok=false storage_files=0 sfile=""
+  local enc_state="none" off_state="none" off_bytes=0 expected=0
+  start=$(date +%s)
+  file=$(ls -1t "$DIR"/db/*.dump 2>/dev/null | head -1)
+  [ -n "$file" ] && file=$(basename "$file")
+  echo "[zf-backup] hersteltest van ${file:-(geen back-up)}"
+  if [ -z "$file" ]; then
+    err="er is nog geen back-up om te testen"
+  else
+    # 1. vingerafdruk: is het bestand nog precies wat er is weggeschreven?
+    if [ -f "$DIR/db/$file.sha256" ]; then
+      [ "$(sha "$DIR/db/$file")" = "$(cat "$DIR/db/$file.sha256")" ] && sha_ok=true || err="de vingerafdruk van $file klopt niet meer (bestand beschadigd?)"
+    else
+      sha_ok=true # oudere back-up zonder vingerafdruk
+    fi
+    # 2. is het archief leesbaar?
+    pg_restore --list "$DIR/db/$file" > /dev/null 2>/tmp/list.err && list_ok=true || { [ -n "$err" ] || err="archief niet leesbaar: $(head -c 160 /tmp/list.err)"; }
+    # 3. terugzetten en tabel voor tabel vergelijken met het moment van de back-up
+    if [ "$list_ok" = true ]; then
+      dropdb --if-exists "$CHECK_DB" 2>/dev/null
+      if createdb "$CHECK_DB" 2>/tmp/restore.err && pg_restore --no-owner --no-privileges --exit-on-error -d "$CHECK_DB" "$DIR/db/$file" 2>>/tmp/restore.err; then
+        restore_ok=true
+        tables=$(num "$(psql -d "$CHECK_DB" -Atc "select count(*) from information_schema.tables where table_schema = 'public'")")
+        if [ -f "$DIR/db/$file.counts" ]; then
+          tel_tabellen "$CHECK_DB" > /tmp/na.counts
+          # join op tabelnaam: verwacht (bij de back-up) tegenover teruggezet
+          mismatches=$(join -t $'\t' -a 1 -e MISSING -o '0,1.2,2.2' <(sort "$DIR/db/$file.counts") <(sort /tmp/na.counts) | awk -F'\t' '
+            BEGIN { n = 0; printf "[" }
+            {
+              if ($3 == "MISSING") { if (n++) printf ","; printf "{\"table\":\"%s\",\"expected\":%d,\"got\":null}", $1, $2 }
+              else if ($2 != $3) { if (n++) printf ","; printf "{\"table\":\"%s\",\"expected\":%d,\"got\":%d}", $1, $2, $3 }
+            }
+            END { printf "]" }')
+          vergeleken=$(wc -l < "$DIR/db/$file.counts" | tr -dc '0-9')
+          missing=$(printf '%s' "$mismatches" | grep -o '"got":null' | wc -l | tr -dc '0-9')
+          afwijkend=$(printf '%s' "$mismatches" | grep -o '"table"' | wc -l | tr -dc '0-9')
+          [ "$missing" -gt 0 ] && [ -z "$err" ] && err="$missing tabel(len) ontbreken na het terugzetten"
+          [ "$afwijkend" -gt 0 ] && [ -z "$err" ] && [ "$missing" -eq 0 ] && err="$afwijkend tabel(len) hebben na het terugzetten een ander aantal rijen"
+        fi
+      else
+        err="terugzetten: $(head -c 200 /tmp/restore.err)"
+      fi
+      dropdb --if-exists "$CHECK_DB" 2>/dev/null
+    fi
+    # 4. de uploads: is het archief compleet te lezen?
+    sfile=$(ls -1t "$DIR"/storage/*.tar.gz 2>/dev/null | head -1)
+    if [ -n "$sfile" ]; then
+      sfile=$(basename "$sfile")
+      storage_files=$(tar -tzf "$DIR/storage/$sfile" 2>/tmp/tar.err | wc -l | tr -dc '0-9') && storage_ok=true
+      [ "$storage_ok" = true ] || { [ -n "$err" ] || err="uploads-archief niet leesbaar: $(head -c 160 /tmp/tar.err)"; }
+    else
+      storage_ok=true # geen uploads-map (bv. lokaal)
+    fi
+    # 5. de versleutelde kopie: ontcijferen moet precies het origineel geven
+    if [ -f "$DIR/db/$file.enc" ]; then
+      if [ -z "$PASS" ]; then enc_state="no-passphrase"
+      elif ontcijfer "$DIR/db/$file.enc" /tmp/dec.dump && [ "$(sha /tmp/dec.dump)" = "$(sha "$DIR/db/$file")" ]; then enc_state="ok"
+      else enc_state="failed"; [ -n "$err" ] || err="de versleutelde kopie is niet te ontcijferen met de huidige BACKUP_PASSPHRASE"; fi
+      rm -f /tmp/dec.dump
+    fi
+    # 6. de kopie buiten de server: staat hij er, even groot?
+    if [ -n "$OFFSITE" ] && [ -f "$DIR/db/$file.enc" ]; then
+      expected=$(stat -c %s "$DIR/db/$file.enc")
+      off_bytes=$(offsite_size "$file.enc")
+      if [ "$off_bytes" -eq "$expected" ]; then off_state="ok"
+      elif [ "$off_bytes" -eq 0 ]; then off_state="missing"; [ -n "$err" ] || err="de kopie buiten de server ontbreekt ($file.enc)"
+      else off_state="size-mismatch"; [ -n "$err" ] || err="de kopie buiten de server heeft een andere grootte ($off_bytes in plaats van $expected bytes)"; fi
+    elif [ -n "$OFFSITE" ]; then
+      off_state="no-encrypted-copy"
+    fi
+  fi
+  [ -z "$err" ] && [ "$restore_ok" = true ] && [ "$sha_ok" = true ] && [ "$storage_ok" = true ] && [ "$enc_state" != failed ] && ok=true
+
+  local regel tmp="$DIR/.verify.json.tmp"
+  regel=$(printf '{"at":"%s","ok":%s,"file":%s,"seconds":%d,"shaOk":%s,"listOk":%s,"restoreOk":%s,"tables":%d,"compared":%d,"missing":%d,"mismatched":%d,"mismatches":%s,"storage":{"ok":%s,"file":%s,"files":%d},"encrypted":"%s","offsite":"%s","error":%s}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$ok" "$(jsonstr "$file")" $(( $(date +%s) - start )) "$sha_ok" "$list_ok" "$restore_ok" "$tables" "$vergeleken" "$missing" "$afwijkend" "$mismatches" "$storage_ok" "$(jsonstr "$sfile")" "$storage_files" "$enc_state" "$off_state" "$(jsonstr "$err")")
+  printf '%s\n' "$regel" > "$tmp" && chmod 644 "$tmp" && mv -f "$tmp" "$DIR/verify.json"
+  # geschiedenis: de laatste 60 hersteltests
+  { [ -f "$DIR/verificaties.jsonl" ] && tail -n 59 "$DIR/verificaties.jsonl"; printf '%s\n' "$regel"; } > "$DIR/.verificaties.tmp" && chmod 644 "$DIR/.verificaties.tmp" && mv -f "$DIR/.verificaties.tmp" "$DIR/verificaties.jsonl"
+  echo "[zf-backup] hersteltest klaar: ok=$ok tabellen=$tables vergeleken=$vergeleken afwijkend=$afwijkend ontbrekend=$missing uploads=$storage_ok versleuteld=$enc_state buiten=$off_state ${err:+fout=$err}"
 }
 
 seconds_until_next() {
@@ -104,22 +294,25 @@ seconds_until_next() {
   echo $((next - now))
 }
 
-if [ "${1:-}" = "now" ]; then
-  run_backup
-  exit 0
-fi
+case "${1:-}" in
+  now) run_backup; exit 0 ;;
+  verify) run_verify; exit 0 ;;
+esac
 
 trap 'exit 0' TERM INT
 
 # Een nieuwe of herstarte server wacht niet tot de nacht als de laatste back-up
-# ouder is dan een dag.
+# ouder is dan een dag; een eerste hersteltest volgt als die er nog nooit was.
 latest=$(ls -1t "$DIR"/db/*.dump 2>/dev/null | head -1)
 if [ -z "$latest" ] || [ $(( $(date +%s) - $(stat -c %Y "$latest") )) -gt 86400 ]; then
   run_backup
 fi
+[ -f "$DIR/verify.json" ] || run_verify
 
 while true; do
   sleep "$(seconds_until_next)" &
   wait $!
   run_backup
+  # elke zondag de diepgaande hersteltest, meteen na de back-up van die nacht
+  [ "$(date -u +%u)" = 7 ] && run_verify
 done

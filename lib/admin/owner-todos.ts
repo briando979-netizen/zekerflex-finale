@@ -795,14 +795,16 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "backup-offsite",
       group: "Beheer & veiligheid",
-      title: "Kopie van de back-ups buiten de server",
-      why: "De nachtelijke back-ups staan op dezelfde server als de site. Gaat die server stuk of wordt hij gehackt, dan ben je de back-ups ook kwijt.",
+      title: "Versleutelde kopie van de back-ups buiten de server",
+      why: "De nachtelijke back-ups staan op dezelfde server als de site. Gaat die server stuk of wordt hij gehackt, dan ben je de back-ups ook kwijt. De server kan elke nacht zelf een versleutelde kopie wegzetten en controleert bij de wekelijkse hersteltest of die kopie er echt staat en te ontcijferen is.",
       how: [
-        "Kies één van twee: elke nacht een versleutelde kopie naar deze laptop (Claude kan dat instellen met de sleutel die er al op staat), of opslag in de cloud zoals Cloudflare R2 of Backblaze B2 (een paar euro per maand): maak daar een bucket met sleutel aan en geef die aan Claude.",
-        "Claude zet het aan en test één keer een terugzetting vanaf de kopie. Vink het daarna af.",
+        "Kies een plek: een eigen reserveserver (scp) of WebDAV-opslag zoals TransIP STACK, Hetzner Storage Box of Nextcloud (gratis of een paar euro per maand). Geef Claude het adres en de inloggegevens.",
+        "Claude zet in .env.production op de VPS: BACKUP_PASSPHRASE (een lange wachtwoordzin; bewaar die óók in je wachtwoordmanager, want zonder is de kopie waardeloos) en BACKUP_OFFSITE (scp://gebruiker@host/pad of https://host/pad/), en herstart de back-updienst.",
+        "Dit item vinkt zichzelf af zodra de nachtelijke kopie slaagt. De hersteltest (Admin → Systeem → Back-ups) bewijst daarna wekelijks dat de kopie klopt.",
       ],
-      auto: false,
-      ...m("backup-offsite"),
+      auto: true,
+      done: backup?.status?.offsite.ok === true && backup.status.encrypted,
+      ...(backup?.status?.offsite.configured ? { doneNote: backup.status.offsite.ok ? `laatste kopie gelukt naar ${backup.status.offsite.target}` : `laatste kopie mislukt: ${backup.status.offsite.error}` } : {}),
     },
     {
       id: "test-accounts",
