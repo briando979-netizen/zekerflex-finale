@@ -615,7 +615,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Wifi-server (RADIUS) aanzetten voor 'Wifi op de werkvloer'",
       why: "Klanten die het wifi-pakket willen, zetten zich nu op de lijst. De wifi-server (FreeRADIUS) op de eigen server beslist per inlogpoging via het rooster of iemand mag; zonder die server kan niemand betalen of aansluiten.",
       how: [
-        "Vraag Claude de freeradius-dienst aan te zetten (deploy/netwerk) en de poort 1812/udp open te zetten op de server.",
+        "Vraag Claude de freeradius-dienst aan te zetten (deploy/netwerk) en de poort 1812/udp open te zetten op de server (de VPN-relay gebruikt 3490/udp).",
         "De sleutel NETWERK_RADIUS_TOKEN komt dan in .env.production; deze taak vinkt zichzelf af.",
       ],
       auto: true,

@@ -1,7 +1,9 @@
 # Het buitenste verzoek van de wifi-apparatuur van een klant. Bijna altijd EAP
 # (WPA2/WPA3-Enterprise, PEAP): de echte controle gebeurt dan in de binnentunnel
 # (sites-available/inner-tunnel). Een gewoon PAP-verzoek (radtest, een captive
-# portal) vraagt het hier direct aan de app. Geen accounting, geen proxy.
+# portal) vraagt het hier direct aan de app. Geen accounting, geen proxy. Alleen
+# IPv4: met een IPv6-luisteraar erbij komt IPv4-verkeer als ::ffff:… binnen en
+# blijft Packet-Src-IP-Address leeg, zodat de dynamic client geen IP krijgt.
 server default {
 	listen {
 		type = auth
@@ -12,12 +14,6 @@ server default {
 			lifetime = 0
 			idle_timeout = 30
 		}
-	}
-
-	listen {
-		type = auth
-		ipv6addr = ::
-		port = 1812
 	}
 
 	authorize {

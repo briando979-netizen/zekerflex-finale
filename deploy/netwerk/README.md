@@ -30,8 +30,8 @@ dienst van een ander.
 ## Veilige werkplek (VPN): `headscale`
 
 - Beeld `headscale/headscale:0.29.7`, config `headscale/config.yaml`, gegevens in
-  volume `headscale-data`. STUN van de ingebouwde relay op **3479/udp** (3478 is
-  van coturn); geen relays van Tailscale.
+  volume `headscale-data`. STUN van de ingebouwde relay op **3490/udp** (3478 en
+  3479 zijn van coturn); geen relays van Tailscale.
 - Caddy zet `vpn.zekerflex.com` door naar poort 8080 (DNS: A-record naar de VPS;
   Admin → Te doen). De app praat intern met `http://headscale:8080`.
 - API-sleutel maken (eenmalig, 10 jaar):

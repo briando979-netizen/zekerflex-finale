@@ -242,7 +242,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   # Veilige werkplek (VPN, lib/netwerk/headscale.ts): Headscale met ingebouwde
-  # DERP-relay (STUN op 3479/udp; 3478 is van coturn). Caddy zet vpn.zekerflex.com
+  # DERP-relay (STUN op 3490/udp; 3478 en 3479 zijn van coturn). Caddy zet vpn.zekerflex.com
   # door naar poort 8080; de app praat intern via http://headscale:8080 met de
   # API-sleutel HEADSCALE_API_KEY (maken: docker exec zekerflex-headscale-1
   # headscale apikeys create --expiration 3650d). Config: deploy/netwerk/headscale.
@@ -251,7 +251,7 @@ services:
     restart: unless-stopped
     command: ["serve"]
     ports:
-      - "3479:3479/udp"
+      - "3490:3490/udp"
     volumes:
       - ./deploy/netwerk/headscale/config.yaml:/etc/headscale/config.yaml:ro
       - headscale-data:/var/lib/headscale

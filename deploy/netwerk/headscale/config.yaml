@@ -1,7 +1,7 @@
 # ZekerFlex VPN-server (Headscale 0.29, lib/netwerk/headscale.ts): de vrije
 # tegenhanger van Tailscale, op de eigen server. Caddy zet vpn.zekerflex.com
 # door naar poort 8080 (TLS doet Caddy). De ingebouwde DERP-relay (met STUN op
-# 3479/udp, 3478 is van coturn) zorgt dat verbindingen ook achter strenge
+# 3490/udp; 3478 en 3479 zijn van coturn) zorgt dat verbindingen ook achter strenge
 # firewalls werken, zonder relays van Tailscale of anderen.
 server_url: https://vpn.zekerflex.com
 listen_addr: 0.0.0.0:8080
@@ -24,7 +24,7 @@ derp:
     region_code: "zekerflex"
     region_name: "ZekerFlex (Nederland)"
     verify_clients: true
-    stun_listen_addr: "0.0.0.0:3479"
+    stun_listen_addr: "0.0.0.0:3490"
     private_key_path: /var/lib/headscale/derp_server_private.key
     automatically_add_embedded_derp_region: true
     ipv4: 37.97.226.24
