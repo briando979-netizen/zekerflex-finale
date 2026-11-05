@@ -264,9 +264,9 @@ export function ShopPaskamerPromo({ pk }: { pk: Dict["paskamer"] }) {
               {pk.promoKnop} →
             </Link>
           </div>
-          <Link href="/shop/paskamer" aria-label={pk.promoKnop} className="relative flex h-[340px] items-end justify-center gap-2 bg-gradient-to-b from-[#f4f1ea] to-[#e5dfd3] px-4 pt-6 sm:h-[420px] md:h-full md:min-h-[440px]">
+          <Link href="/shop/paskamer" aria-label={pk.promoKnop} className="relative flex h-[340px] items-end justify-center gap-2 bg-gradient-to-b from-[#f4f1ea] to-[#e5dfd3] px-4 pb-2 pt-6 sm:h-[420px] md:h-[460px]">
             {PROMO_LOOKS.map((l, i) => (
-              <Paspop key={i} id={`promo${i}`} lichaam={l.lichaam} huid={l.huid} stukken={promoStukken(l.slugs, l.kleur)} label={pk.titel} achtergrond={false} className="h-[96%] w-auto" />
+              <Paspop key={i} id={`promo${i}`} lichaam={l.lichaam} huid={l.huid} stukken={promoStukken(l.slugs, l.kleur)} label={pk.titel} achtergrond={false} className="h-full w-auto" />
             ))}
           </Link>
         </div>

@@ -177,8 +177,11 @@ export function Paskamer({ producten, looks, start }: { producten: PaskamerProdu
       <div className="mx-auto max-w-[1440px] px-4 pb-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-8 lg:px-8">
         {/* de paspop: op de telefoon blijft hij bovenaan staan terwijl je kiest */}
         <div className="-mx-4 bg-paper-soft px-4 pb-3 max-lg:sticky max-lg:top-[110px] max-lg:z-20 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 lg:pb-0">
-          <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-white shadow-e1 lg:sticky lg:top-[92px] lg:h-[calc(100vh-112px)] lg:max-h-[900px]">
-            <Paspop svgRef={svgRef} lichaam={l} huid={stand.huid} gezicht={stand.gezicht} stukken={teken(items)} label={label} id="pk" className="h-full w-full" />
+          <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:sticky lg:top-[92px] lg:h-[calc(100vh-112px)] lg:max-h-[900px]">
+            {/* de achtergrond zit op het vak (over de volle breedte); bij opslaan als foto komt hij in de tekening */}
+            <div className={`absolute inset-0 pt-2 ${items.length > 0 ? "pb-[72px]" : "pb-2"}`}>
+              <Paspop svgRef={svgRef} lichaam={l} huid={stand.huid} gezicht={stand.gezicht} stukken={teken(items)} label={label} id="pk" achtergrond={false} className="h-full w-full" />
+            </div>
             <button
               type="button"
               onClick={() => setTab("jij")}
@@ -636,6 +639,12 @@ async function svgNaarPng(svg: SVGSVGElement): Promise<Blob> {
   const kloon = svg.cloneNode(true) as SVGSVGElement;
   kloon.setAttribute("width", String(W));
   kloon.setAttribute("height", String(H));
+  // op het scherm zit de achtergrond op het vak; in de foto tekenen we hem mee
+  const vlak = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  vlak.setAttribute("width", "400");
+  vlak.setAttribute("height", "1000");
+  vlak.setAttribute("fill", `url(#${svg.querySelector("radialGradient[id$='-bg']")?.id ?? "pk-bg"})`);
+  kloon.querySelector("defs")?.after(vlak);
   const xml = new XMLSerializer().serializeToString(kloon);
   const url = URL.createObjectURL(new Blob([xml], { type: "image/svg+xml" }));
   try {
