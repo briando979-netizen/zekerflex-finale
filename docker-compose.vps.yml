@@ -87,6 +87,8 @@ services:
       - ./deploy/caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
+      # Toegangslog (JSON, zonder cookies/sleutels) voor de aanvalsbescherming; crowdsec leest mee.
+      - caddy-logs:/var/log/caddy
     depends_on:
       app: { condition: service_started }
     networks: [internal, bouwer-toegang]
@@ -255,6 +257,43 @@ services:
     volumes:
       - ./deploy/netwerk/headscale/config.yaml:/etc/headscale/config.yaml:ro
       - headscale-data:/var/lib/headscale
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Aanvalsbescherming (CrowdSec, deploy/crowdsec): leest de toegangslogs van Caddy en
+  # het ssh-log van de server, herkent scanners, brute force en bekende aanvallers (ook
+  # via de gedeelde blokkadelijst van de community) en bewaart de blokkades. Blokkeren
+  # zelf doet de firewall-bouncer op de host (installeer.sh), die ze hier op
+  # 127.0.0.1:8085 ophaalt; de app leest ze op het interne netwerk voor Admin →
+  # Beveiliging en /beveiliging. De bouncer-sleutels registreert hij bij het starten
+  # (naam = wat na BOUNCER_KEY_ staat); zonder sleutels in .env.production praat niemand mee.
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.8.2
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Amsterdam
+      COLLECTIONS: "crowdsecurity/caddy crowdsecurity/sshd crowdsecurity/http-cve crowdsecurity/base-http-scenarios crowdsecurity/whitelist-good-actors"
+      PARSERS: "crowdsecurity/geoip-enrich"
+      BOUNCER_KEY_zekerflex_app: ${CROWDSEC_BOUNCER_KEY:-}
+      BOUNCER_KEY_host_firewall: ${CROWDSEC_HOST_BOUNCER_KEY:-}
+    volumes:
+      - crowdsec-config:/etc/crowdsec
+      - crowdsec-data:/var/lib/crowdsec/data
+      - ./deploy/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - ./deploy/crowdsec/whitelist.yaml:/etc/crowdsec/parsers/s02-enrich/zekerflex-whitelist.yaml:ro
+      - caddy-logs:/var/log/caddy:ro
+      - /var/log/auth.log:/var/log/auth.log:ro
+    ports:
+      # alleen voor de firewall-bouncer op de host; van buiten dicht (ufw, en gebonden aan localhost)
+      - "127.0.0.1:8085:8080"
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+    mem_limit: 512m
     networks: [internal]
     logging:
       driver: json-file
@@ -473,6 +512,9 @@ volumes:
   redis-data:
   caddy-data:
   caddy-config:
+  caddy-logs:
+  crowdsec-config:
+  crowdsec-data:
   ollama-models:
   bouwer-werk:
   bouwer-db:

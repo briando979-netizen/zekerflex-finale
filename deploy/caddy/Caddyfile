@@ -22,8 +22,34 @@
 	}
 }
 
+# Toegangslog voor de aanvalsbescherming (CrowdSec, deploy/crowdsec): JSON naar een
+# bestand op het gedeelde volume caddy-logs, waar de crowdsec-container meeleest.
+# Privacy: cookies, sleutels en de querystring (daar staan getekende links in) komen
+# er niet in, en na zeven dagen is een bestand weg. Alleen voor beveiliging.
+(toegangslog) {
+	log {
+		output file /var/log/caddy/toegang.log {
+			roll_size 50mb
+			roll_keep 3
+			roll_keep_for 168h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				request>headers>Proxy-Authorization delete
+				request>headers>X-Internal-Token delete
+				resp_headers>Set-Cookie delete
+				request>uri regexp "\?.*$" ""
+			}
+		}
+	}
+}
+
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
+	import toegangslog
 
 	# www en het kale domein delen geen cookies. Wie op www inlogt krijgt de sessie
 	# op www, wordt daarna naar AUTH_URL (zonder www) gestuurd en lijkt dan uitgelogd.
@@ -58,6 +84,7 @@
 # Met X-ZF-Voorstel toont de middleware hier alleen het voorstel (voorstelSite).
 schwarzwald.zekerflex.com {
 	encode zstd gzip
+	import toegangslog
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up X-ZF-Voorstel schwarzwald
@@ -74,6 +101,7 @@ schwarzwald.zekerflex.com {
 # BOUWER_VOORBEELD_HOST in .env.production bv. voorbeeld.zekerflex.com worden.
 {$BOUWER_VOORBEELD_HOST:voorbeeld.37-97-226-24.sslip.io} {
 	encode zstd gzip
+	import toegangslog
 	# zoals overal: alleen hun eigen blokken zetten de koppen voor voorstel/klantsite
 	reverse_proxy bouwer:4200 {
 		header_up -X-ZF-Site-Host
@@ -124,6 +152,7 @@ https:// {
 		on_demand
 	}
 	encode zstd gzip
+	import toegangslog
 	reverse_proxy app:3000 {
 		header_up X-ZF-Site-Host {host}
 		header_up -X-ZF-Voorstel

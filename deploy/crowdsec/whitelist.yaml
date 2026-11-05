@@ -1,0 +1,18 @@
+# Uitzonderingen die nooit een blokkade krijgen: de server zelf (gezondheids-
+# controles, de cron-container, de Bouwer via Caddy) en interne netwerken.
+# Vaste adressen; de computer van de eigenaar staat op de dynamische lijst
+# (cscli allowlists, zie installeer.sh en README.md), want dat adres wisselt.
+name: zekerflex/whitelist
+description: "Eigen server en interne netwerken van ZekerFlex"
+whitelist:
+  reason: "eigen infrastructuur"
+  ip:
+    - "37.97.226.24"
+    - "2a01:7c8:fffd:26f:5054:ff:fe08:a3eb"
+  cidr:
+    - "127.0.0.0/8"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+    - "::1/128"
+    - "fc00::/7"

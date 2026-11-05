@@ -379,6 +379,14 @@ const schema = z.object({
   TURN_SHARED_SECRET: z.string().min(16).optional(),
   TURN_REALM: z.string().default("zekerflex.com"),
 
+  // Aanvalsbescherming (CrowdSec, deploy/crowdsec): de app leest alleen mee. Met de
+  // bouncer-sleutel ziet hij welke adressen geblokkeerd zijn (/beveiliging, Admin →
+  // Beveiliging); met de machine-login ook de meldingen, en kan hij een blokkade opheffen.
+  CROWDSEC_LAPI_URL: z.string().url().optional(),
+  CROWDSEC_BOUNCER_KEY: z.string().optional(),
+  CROWDSEC_MACHINE_ID: z.string().optional(),
+  CROWDSEC_MACHINE_PASSWORD: z.string().optional(),
+
   // Websites die klanten met ZekerFlex bouwen, op hun eigen domein (lib/sites/domain.ts):
   // de adressen die de klant in zijn DNS zet, en waar we na het koppelen controleren
   // of Caddy het certificaat voor dat domein heeft (op de VPS: de caddy-container).

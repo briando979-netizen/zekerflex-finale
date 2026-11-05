@@ -85,6 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/rekentools/wet-dba-check", 0.8, "monthly"),
     entry("/klus-plaatsen", 0.8, "monthly"),
     entry("/over-ons", 0.6, "monthly"),
+    entry("/beveiliging", 0.5, "monthly"),
     entry("/contact", 0.5, "yearly"),
     entry("/developers", 0.6, "monthly"),
 

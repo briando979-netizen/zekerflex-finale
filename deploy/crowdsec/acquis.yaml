@@ -1,0 +1,18 @@
+# Wat de CrowdSec-engine leest (docker-compose.vps.yml, service crowdsec).
+#
+# 1. De toegangslog van Caddy (volume caddy-logs, snippet (toegangslog) in
+#    deploy/caddy/Caddyfile): JSON per verzoek, zonder cookies, sleutels of
+#    querystring. Hieruit komen scanners, brute force op inlogpagina's, bekende
+#    aanvalssoftware en pogingen op bekende kwetsbaarheden (collecties caddy,
+#    base-http-scenarios en http-cve).
+# 2. Het ssh-log van de server (alleen-lezen gemount): wachtwoorden zijn op de
+#    server uit, maar wie blijft proberen hoort op de blokkadelijst (collectie sshd).
+filenames:
+  - /var/log/caddy/*.log
+labels:
+  type: caddy
+---
+filenames:
+  - /var/log/auth.log
+labels:
+  type: syslog

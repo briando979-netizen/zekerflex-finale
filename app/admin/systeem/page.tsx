@@ -25,6 +25,7 @@ import { ErrorJournalPanel } from "@/components/admin/ErrorJournalPanel";
 import { listErrorGroups } from "@/lib/ops/error-journal";
 import { agentLeeft, leesLive } from "@/lib/bouwer/live";
 import { bouwerGezond, bouwerIngesteld, bouwerInstellingen } from "@/lib/bouwer/werker";
+import { crowdsecGezond } from "@/lib/ops/crowdsec";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet, adminPush] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet, adminPush, aanval] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
@@ -100,6 +101,8 @@ export default async function SysteemPage() {
     prisma.webPushSubscription
       .count({ where: { disabledAt: null, user: { disabledAt: null, memberships: { some: { role: "PLATFORM_ADMIN" } } } } })
       .catch(() => null),
+    // Beveiliging → Aanvalsbescherming: de CrowdSec-engine naast Caddy (deploy/crowdsec)
+    crowdsecGezond(),
   ]);
   const now = new Date();
   const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
@@ -160,6 +163,12 @@ export default async function SysteemPage() {
       label: "Live-zetter (uitrollen)",
       state: !liveStand?.hartslag ? "off" : agentLeeft(liveStand.hartslag) ? "ok" : "crit",
       meta: !liveStand?.hartslag ? "niet op deze omgeving" : agentLeeft(liveStand.hartslag) ? "draait op de server" : `reageert niet sinds ${dateTimeNl(liveStand.hartslag.op, now)}`,
+    },
+    // Beveiliging → Aanvalsbescherming: blokkeert scanners, brute force en bekende aanvallers (deploy/crowdsec)
+    {
+      label: "Aanvalsbescherming (CrowdSec)",
+      state: aanval,
+      meta: aanval === "off" ? "niet op deze omgeving" : aanval === "ok" ? "engine bereikbaar, zie Beveiliging" : "engine reageert niet",
     },
     // ZekerFlex AI → Bouwer: de AI-programmeur (deploy/bouwer/werker)
     {

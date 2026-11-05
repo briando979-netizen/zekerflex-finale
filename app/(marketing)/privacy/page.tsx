@@ -75,6 +75,10 @@ export default function PrivacyPage() {
         body="Frauderen we iemand aantreffen, dan verwijderen we die van het platform en houden we gegevens bij op een interne zwarte lijst, zodat opnieuw aanmelden niet mogelijk is. We verwerken hiervoor NAW-gegevens, e-mailadres, geboortedatum en bankrekeningnummer, plus IP-adressen om te bepalen vanaf welk apparaat malafide handelingen zijn verricht. Dit doen we op grond van ons gerechtvaardigd belang, voor een periode van tien jaar, omdat fraude langdurige risico's en een hoog risico op herhaling meebrengt. Word je verwijderd, dan krijg je daarvan bericht met de duur van de blokkade."
       />
       <LegalSection
+        heading="Beveiliging en logbestanden"
+        body="Om het platform te beschermen tegen inbraakpogingen, scanners en overbelasting houdt onze webserver een toegangslog bij: IP-adres, tijdstip, opgevraagde pagina en browsersoort. Cookies, wachtwoorden en sleutels uit links staan daar niet in. Een beschermingssysteem (CrowdSec) leest dit log en blokkeert adressen die zich als aanvaller gedragen, tijdelijk en automatisch. Van zo'n geblokkeerd adres melden we het IP-adres en het soort aanval aan het CrowdSec-netwerk, zodat bekende aanvallers ook elders geweerd worden; gegevens van gewone bezoekers, klanten en flexwerkers delen we niet. We bewaren het toegangslog zeven dagen, op grond van ons gerechtvaardigd belang om de dienst veilig te houden. Op zekerflex.com/beveiliging lees je hoe we de servers verder beschermen."
+      />
+      <LegalSection
         heading="DAC7"
         body="Ben je als freelancer boven een grenswaarde actief — meer dan € 2.000 aan opdrachten of meer dan dertig opdrachten in een rapportagejaar — dan zijn we op grond van DAC7 verplicht gegevens over jou te delen met de Belastingdienst: NAW-gegevens, btw-nummer, KvK-nummer, BSN en bankrekeningnummer. Ontbreken hiervoor gegevens, dan kunnen we je account blokkeren tot je die aanvult. Meer informatie staat op de website van de Belastingdienst."
       />

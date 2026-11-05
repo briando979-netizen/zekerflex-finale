@@ -37,7 +37,9 @@ for i in 1 2 3; do
     sudo $C build -q backup > /dev/null 2>&1 || echo "backup: image bouwen mislukt, het oude blijft"
     # eigen databases voor Metabase en Outline (bestaan ze al, dan gebeurt er niets)
     bash deploy/scripts/databases-aanmaken.sh
-    sudo $C up -d app backup coturn freeradius headscale metabase outline
+    # crowdsec: de aanvalsbescherming (deploy/crowdsec) gaat mee in elke uitrol; de
+    # firewall-bouncer op de host haalt de blokkades bij hem op en hoeft niet mee
+    sudo $C up -d app backup coturn freeradius headscale metabase outline crowdsec
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand

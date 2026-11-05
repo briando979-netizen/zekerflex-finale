@@ -3,12 +3,13 @@ import { hasRole, requirePrincipal } from "@/lib/auth";
 import { KpiStrip, PageHead, Panel } from "@/components/admin/kit";
 import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 import { AdminTwoFactorOverview } from "@/components/admin/AdminTwoFactorOverview";
+import { AanvalsbeschermingPanel } from "@/components/admin/AanvalsbeschermingPanel";
 import { twoFactorStatus } from "@/lib/auth/two-factor";
 import { count, percentOf } from "@/lib/admin/format";
 
 export const dynamic = "force-dynamic";
 
-/** /admin/beveiliging — your own two-step verification; platform admins also see who else has it on. */
+/** /admin/beveiliging — your own two-step verification; platform admins also see who else has it on, and what the attack protection (CrowdSec) is blocking. */
 export default async function BeveiligingPage() {
   const principal = await requirePrincipal();
   const isPlatformAdmin = hasRole(principal, "PLATFORM_ADMIN");
@@ -50,7 +51,7 @@ export default async function BeveiligingPage() {
 
   return (
     <div className="space-y-4">
-      <PageHead title="Beveiliging" subtitle="Je eigen tweestapsverificatie, en wie van de beheerders en werkgevers het al aan heeft." />
+      <PageHead title="Beveiliging" subtitle="Je eigen tweestapsverificatie, wie van de beheerders en werkgevers het al aan heeft, en wat de aanvalsbescherming op de server tegenhoudt." />
       <KpiStrip
         items={[
           { label: "Tweestaps aan", value: `${percentOf(on, people.length)}%`, hint: `${count(on)} van ${count(people.length)} mensen`, tone: on === people.length ? "ok" : "warn" },
@@ -62,6 +63,7 @@ export default async function BeveiligingPage() {
         {own}
         <AdminTwoFactorOverview people={people} selfId={principal.userId} />
       </div>
+      <AanvalsbeschermingPanel />
     </div>
   );
 }
