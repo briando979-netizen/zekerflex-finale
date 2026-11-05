@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { biIngesteld, dashboardLinkVoor, leesBiStand } from "@/lib/bi/metabase";
 import { KAARTEN } from "@/lib/bi/dashboards";
+import { getTheme } from "@/lib/theme/server";
 
 export const metadata: Metadata = { title: "Rapportages" };
 export const dynamic = "force-dynamic";
@@ -13,7 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function RapportagesPage() {
   const principal = await requirePrincipal();
   const tenantId = (await resolveEmployerScope(principal)).tenantIds[0];
-  const [url, stand] = await Promise.all([tenantId && biIngesteld() ? dashboardLinkVoor(tenantId) : Promise.resolve(null), leesBiStand()]);
+  // het dashboard volgt de donkere stand van het portaal (lib/theme: light/dark; Metabase noemt donker "night")
+  const thema = (await getTheme()) === "dark" ? "night" : "light";
+  const [url, stand] = await Promise.all([tenantId && biIngesteld() ? dashboardLinkVoor(tenantId, thema) : Promise.resolve(null), leesBiStand()]);
 
   return (
     <div className="space-y-5">
