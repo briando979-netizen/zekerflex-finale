@@ -51,6 +51,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bouwer-auto", label: "Bouwer: automatische reparaties", maxAgeHours: 2 },
   // elke 2 min: pushmeldingen over de Bouwer en het live zetten
   { job: "bouwer-meldingen", label: "Bouwer: meldingen", maxAgeHours: 2 },
+  // elke 10 min: AI-opdrachten van de video-editor op de achtergrond (lib/video/wachtrij.ts)
+  { job: "video-wachtrij", label: "Video-editor: wachtrij op de achtergrond", maxAgeHours: 2 },
   // dagelijks 10:00 UTC (/api/internal/worker/milestones): profielcijfers + mijlpalen van werkers
   { job: "worker-stats", label: "Werkers: profielcijfers", maxAgeHours: 26 },
   { job: "worker-milestones", label: "Werkers: mijlpalen en seintjes", maxAgeHours: 26 },

@@ -40,6 +40,8 @@ cat > /etc/crontabs/root <<EOF
 0 17 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rijschool/herinneringen"
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/bouwer/auto"
 */2 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/bouwer/meldingen"
+# elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)
+*/10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/video/wachtrij"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"

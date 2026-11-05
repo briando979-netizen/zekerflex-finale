@@ -65,28 +65,43 @@ async function naarPrompt(omschrijving: string, metFoto: boolean): Promise<strin
   return omschrijving;
 }
 
+/** Maak een gratis clip nu (Nederlandse omschrijving → Engelse prompt → LTX) en bewaar hem bij Media. */
+export async function maakClipNu(input: GratisTaakInput): Promise<VideoBestand> {
+  const [prompt, foto] = await Promise.all([naarPrompt(input.omschrijving, Boolean(input.fotoBron)), input.fotoBron ? fotoJpeg(input.fotoBron) : Promise.resolve(null)]);
+  const { mp4 } = await maakGratisClip({ prompt, duur: input.duur, formaat: input.formaat, kwaliteit: input.kwaliteit, ...(foto ? { foto } : {}) });
+  return bewaarBestand(mp4, `AI-clip ${input.omschrijving.slice(0, 50)}`, { herkomst: "ai-clip", gemeld: "video/mp4", duur: input.duur });
+}
+
+/** Neem het gedeelde slot van de gratis generator (één clip tegelijk, ook voor de wachtrij). */
+export async function pakClipSlot(id: string): Promise<boolean> {
+  const bezig = await kvGet<{ op: string; id: string }>(SLOT).catch(() => null);
+  if (bezig && Date.now() - Date.parse(bezig.op) < SLOT_MS) return false;
+  await kvSet(SLOT, { op: new Date().toISOString(), id });
+  return true;
+}
+
+export async function geefClipSlot(): Promise<void> {
+  await kvSet(SLOT, null).catch(() => undefined);
+}
+
 async function voerUit(taak: GratisTaak, input: GratisTaakInput) {
   try {
-    const [prompt, foto] = await Promise.all([naarPrompt(input.omschrijving, Boolean(input.fotoBron)), input.fotoBron ? fotoJpeg(input.fotoBron) : Promise.resolve(null)]);
-    const { mp4 } = await maakGratisClip({ prompt, duur: input.duur, formaat: input.formaat, kwaliteit: input.kwaliteit, ...(foto ? { foto } : {}) });
-    const item = await bewaarBestand(mp4, `AI-clip ${input.omschrijving.slice(0, 50)}`, { herkomst: "ai-clip", gemeld: "video/mp4", duur: input.duur });
+    const item = await maakClipNu(input);
     await kvSet(K(taak.id), { ...taak, status: "klaar", klaarOp: new Date().toISOString(), item } satisfies GratisTaak);
   } catch (err) {
     const fout = err instanceof AppError ? err.message : "De gratis clip lukte niet. Probeer het zo nog eens.";
     if (!(err instanceof AppError)) logger.error("gratis clip mislukt", { error: (err as Error).message });
     await kvSet(K(taak.id), { ...taak, status: "fout", klaarOp: new Date().toISOString(), fout } satisfies GratisTaak).catch(() => undefined);
   } finally {
-    await kvSet(SLOT, null).catch(() => undefined);
+    await geefClipSlot();
   }
 }
 
 export async function startGratisTaak(input: GratisTaakInput): Promise<GratisTaak> {
-  const bezig = await kvGet<{ op: string; id: string }>(SLOT).catch(() => null);
-  if (bezig && Date.now() - Date.parse(bezig.op) < SLOT_MS) {
-    throw AppError.precondition("Er wordt al een gratis clip gemaakt. Wacht tot die klaar is (meestal 1 tot 3 minuten).");
-  }
   const taak: GratisTaak = { id: `t${Date.now().toString(36)}${randomBytes(4).toString("hex")}`, status: "bezig", omschrijving: input.omschrijving.slice(0, 200), op: new Date().toISOString() };
-  await kvSet(SLOT, { op: taak.op, id: taak.id });
+  if (!(await pakClipSlot(taak.id))) {
+    throw AppError.precondition("Er wordt al een gratis clip gemaakt (misschien door de wachtrij). Wacht tot die klaar is (meestal 1 tot 3 minuten).");
+  }
   await kvSet(K(taak.id), taak);
   // Bewust niet afwachten: de taak loopt door nadat dit verzoek klaar is.
   void voerUit(taak, input);

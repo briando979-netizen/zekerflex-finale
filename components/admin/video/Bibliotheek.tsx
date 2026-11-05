@@ -7,6 +7,7 @@ import { meetMedia } from "@/lib/video/speler";
 import type { Formaat } from "@/lib/video/model";
 import { SLEEP_TYPE, type SleepData } from "@/components/admin/video/Tijdlijn";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
+import { Wachtrij } from "@/components/admin/video/Wachtrij";
 import { bestandAdres, getJson, maakGratisClip, postJson, tijdTekst, uploadBestand, verwijderBestand, zetBestandInfo, type AiStatus, type VideoBestand } from "@/components/admin/video/api";
 
 type Tab = "media" | "fotos" | "tekst" | "muziek" | "ai";
@@ -420,6 +421,8 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
             <button type="button" onClick={onAiVideo} className="a-button a-button-primary w-full text-xs">
               ✨ Maak een hele video met AI
             </button>
+
+            <Wachtrij formaat={formaat} onKlaar={onVernieuw} onMelding={onMelding} />
 
             <section className="space-y-1.5 rounded-lg p-2.5" style={{ background: "var(--a-ok-soft)" }}>
               <p className="text-[0.75rem] font-semibold" style={{ color: "var(--a-text)" }}>Gratis AI-videoclip (LTX-2.3)</p>

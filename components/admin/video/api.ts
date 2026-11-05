@@ -136,3 +136,30 @@ export async function maakGratisClip(vraag: GratisClipVraag, onStand?: (seconden
   }
   throw new Error("De clip duurt erg lang. Kijk zo bij Media; hij komt er vaak alsnog bij.");
 }
+
+export interface WachtTaak {
+  id: string;
+  soort: "clip" | "foto" | "video";
+  omschrijving: string;
+  formaat: Project["formaat"];
+  duur: number;
+  status: "wacht" | "bezig" | "klaar" | "fout" | "tegoed";
+  op: string;
+  bijgewerkt: string;
+  volgendePoging?: string;
+  resultaat?: { soort: "bestand" | "project"; id: string; naam: string };
+  melding?: string;
+}
+
+export async function haalWachtrij(): Promise<WachtTaak[]> {
+  return (await getJson<{ taken: WachtTaak[] }>("/api/admin/video/wachtrij", "De wachtrij kon niet geladen worden.")).taken;
+}
+
+export async function zetInWachtrij(taken: { soort: WachtTaak["soort"]; omschrijving: string; formaat: Project["formaat"]; duur: number; fotoBron?: string }[]): Promise<WachtTaak[]> {
+  return (await postJson<{ taken: WachtTaak[] }>("/api/admin/video/wachtrij", { taken }, "Klaarzetten lukte niet.")).taken;
+}
+
+export async function haalUitWachtrij(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/video/wachtrij?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: { message?: string } } | null)?.error?.message ?? "Weghalen lukte niet.");
+}
