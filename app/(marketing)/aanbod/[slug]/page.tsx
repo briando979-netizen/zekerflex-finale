@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CtaBand } from "@/components/marketing/primitives";
@@ -48,31 +49,39 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
       />
 
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint">
-            <Link href="/aanbod" className="hover:underline">
-              Aanbod
-            </Link>{" "}
-            ·{" "}
-            <Link href={`/aanbod#${pijler.sleutel}`} className="hover:underline">
-              {pijler.naam}
-            </Link>
-          </p>
-          <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold md:text-6xl">{a.naam}</h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/70">{a.kort}</p>
-          {a.status === "binnenkort" && (
-            <p className="mt-6 inline-block rounded-full bg-plan-soft px-3 py-1 text-sm font-semibold text-plan-ink">Binnenkort beschikbaar</p>
-          )}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={a.start.href} className="btn-mint">
-              {a.start.label}
-            </Link>
-            {a.start.href !== "/demo" && (
-              <Link href="/demo" className="btn-ghost-invert">
-                Vraag een demo aan
+        <div className={`shell py-20 md:py-24 ${a.foto ? "grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]" : ""}`}>
+          <div>
+            <p className="eyebrow text-brand-mint">
+              <Link href="/aanbod" className="hover:underline">
+                Aanbod
+              </Link>{" "}
+              ·{" "}
+              <Link href={`/aanbod#${pijler.sleutel}`} className="hover:underline">
+                {pijler.naam}
               </Link>
+            </p>
+            <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold md:text-6xl">{a.naam}</h1>
+            <p className="mt-6 max-w-2xl text-lg text-white/70">{a.kort}</p>
+            {a.status === "binnenkort" && (
+              <p className="mt-6 inline-block rounded-full bg-plan-soft px-3 py-1 text-sm font-semibold text-plan-ink">Binnenkort beschikbaar</p>
             )}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href={a.start.href} className="btn-mint">
+                {a.start.label}
+              </Link>
+              {a.start.href !== "/demo" && (
+                <Link href="/demo" className="btn-ghost-invert">
+                  Vraag een demo aan
+                </Link>
+              )}
+            </div>
           </div>
+          {a.foto && (
+            <div className="relative aspect-[4/3] overflow-hidden rounded-xl2 shadow-2xl ring-1 ring-white/10">
+              {/* Foto's uit public/aanbod (bron en licentie in CREDITS.md), via next/image als WebP op maat. */}
+              <Image src={`/aanbod/${a.foto.bestand}`} alt={a.foto.alt} fill sizes="(max-width: 1024px) 100vw, 520px" className="object-cover" priority />
+            </div>
+          )}
         </div>
       </div>
 

@@ -39,6 +39,8 @@ export interface AanbodItem {
   start: { label: string; href: string };
   /** zoekwoorden voor de eigen pagina */
   zoekwoorden?: string[];
+  /** foto in public/aanbod (bron en licentie in public/aanbod/CREDITS.md) */
+  foto?: { bestand: string; alt: string };
 }
 
 export const PIJLERS: Pijler[] = [
@@ -113,6 +115,69 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     pagina: "/uitzendbureau",
     start: DEMO,
+  },
+  {
+    slug: "inchecken-op-locatie",
+    pijler: "personeel",
+    naam: "Inchecken op locatie",
+    kort: "Een tablet bij de ingang: krachten checken in met QR, NFC-sticker of sleutelhanger.",
+    tekst:
+      "Zet een tablet of oud toestel bij de ingang en je hebt een incheckterminal. De kracht scant de QR-code die elke minuut verandert, houdt zijn telefoon tegen de ZekerFlex-sticker of tikt met een NFC-sleutelhanger. De tijd staat meteen in het urenbriefje, zonder app open te doen.",
+    punten: [
+      "Werkt op elke tablet of telefoon met een browser, geen apparaat te kopen",
+      "QR-code die elke minuut wisselt: niet thuis te scannen",
+      "NFC-sticker en sleutelhanger voor wie zonder telefoon wil inchecken",
+      "In- en uitchecktijden direct in het urenbriefje",
+      "Vestigingsadres wordt vastgelegd, niet de locatie van de kracht",
+    ],
+    voorWie: "Horeca, magazijnen, productie en evenementen met een vaste ingang",
+    prijs: "Inbegrepen bij ZekerFlex, geen extra kosten",
+    status: "beschikbaar",
+    start: AANMELDEN,
+    zoekwoorden: ["inchecken personeel", "nfc inchecken", "prikklok tablet", "tijdregistratie flexwerkers", "kiosk inchecken"],
+    foto: { bestand: "inchecken-op-locatie.jpg", alt: "Iemand checkt in op een tablet bij de ingang" },
+  },
+  {
+    slug: "certificaten-in-een-foto",
+    pijler: "personeel",
+    naam: "Certificaten in één foto",
+    kort: "Een foto van een VCA- of BHV-diploma en de gegevens staan ingevuld, gelezen op onze eigen server.",
+    tekst:
+      "Een kracht maakt een foto van zijn diploma en ZekerFlex leest het soort certificaat, het nummer en de vervaldatum er zelf uit. Dat gebeurt op onze eigen server, zonder externe dienst, dus de foto blijft bij ons. Verloopt een certificaat, dan krijgt de kracht op tijd een seintje en zie jij het in het profiel.",
+    punten: [
+      "Soort, nummer, afgifte- en vervaldatum vooraf ingevuld",
+      "VCA, BHV, EHBO, heftruck, rijbewijzen en meer",
+      "Leest Nederlands en Engels, ook scheve telefoonfoto's",
+      "Verloopt een certificaat, dan weet iedereen het op tijd",
+      "Geen externe leesdienst: de foto verlaat onze server niet",
+    ],
+    voorWie: "Opdrachtgevers die certificaten eisen en krachten die ze snel willen toevoegen",
+    prijs: "Inbegrepen bij ZekerFlex, geen extra kosten",
+    status: "beschikbaar",
+    start: AANMELDEN,
+    zoekwoorden: ["vca certificaat registreren", "certificaten personeel bijhouden", "diploma scannen", "ocr certificaat", "vervaldatum vca"],
+    foto: { bestand: "certificaten-in-een-foto.jpg", alt: "Een telefoon maakt een foto van een document" },
+  },
+  {
+    slug: "spoedoproep",
+    pijler: "personeel",
+    naam: "Spoedoproep",
+    kort: "Vandaag nog iemand nodig? Eén oproep naar krachten in de buurt; wie 1 antwoordt, staat ingepland.",
+    tekst:
+      "Valt iemand uit, dan stuur je vanuit de dienst één spoedoproep. Geschikte krachten binnen 10, 25 of 50 kilometer krijgen een melding in de app en, als je dat aanzet, een sms of WhatsApp. Antwoorden ze met 1, dan staan ze meteen ingepland met alle gewone controles. Je ziet live wie is bereikt en wie ja zei.",
+    punten: [
+      "Kies een straal rond de vestiging: 10, 25 of 50 km",
+      "Melding in de app, sms en WhatsApp in de taal van de kracht",
+      "Antwoord 1 = ingepland, 2 = nee; nooit dubbel geboekt",
+      "Live overzicht van wie is bereikt en wie heeft geantwoord",
+      "Alleen krachten die passen bij het werk en niet door jou zijn geblokkeerd",
+    ],
+    voorWie: "Iedereen die weleens op de dag zelf een invaller zoekt",
+    prijs: "Inbegrepen bij ZekerFlex; sms via je eigen Twilio-tarief",
+    status: "beschikbaar",
+    start: AANMELDEN,
+    zoekwoorden: ["invaller vandaag", "spoed personeel", "last minute personeel", "ziekmelding vervanging", "oproepkracht sms"],
+    foto: { bestand: "spoedoproep.jpg", alt: "Een medewerker in een magazijn kijkt op zijn telefoon" },
   },
   {
     slug: "klus-plaatsen",
@@ -440,12 +505,34 @@ export const AANBOD: AanbodItem[] = [
     zoekwoorden: ["facturen uit urenregistratie", "betaalverzoek qr code"],
   },
   {
+    slug: "bedrijfscheck",
+    pijler: "geld",
+    naam: "Btw-nummer en KVK-check",
+    kort: "Controleer gratis een btw-nummer (alle EU-landen) of KVK-nummer voordat je zaken doet.",
+    tekst:
+      "Typ een btw-nummer of KVK-nummer en je ziet in een paar seconden of het klopt: btw-nummers worden rechtstreeks bij VIES van de Europese Commissie gecontroleerd, KVK-nummers linken naar het Handelsregister. Op ZekerFlex gebeurt dezelfde controle vanzelf bij elk bedrijf en elke zzp'er die zich aanmeldt.",
+    punten: [
+      "Btw-nummers uit alle EU-landen, via VIES",
+      "KVK-nummer op vorm gecontroleerd, met zoeklink in het Handelsregister",
+      "Naam en adres erbij waar het land dat vrijgeeft",
+      "Gratis, zonder account; niets wordt bewaard",
+      "Elke aanmelding op ZekerFlex wordt zo automatisch gecontroleerd",
+    ],
+    voorWie: "Ondernemers die een nieuwe leverancier, klant of zzp'er willen nakijken",
+    prijs: "Gratis",
+    status: "beschikbaar",
+    pagina: "/rekentools/btw-nummer-check",
+    start: { label: "Controleer een nummer", href: "/rekentools/btw-nummer-check" },
+    zoekwoorden: ["btw nummer controleren", "vies check", "kvk nummer controleren", "btw id check"],
+    foto: { bestand: "bedrijfscheck.jpg", alt: "Een ondernemer bekijkt papieren naast zijn laptop" },
+  },
+  {
     slug: "rekentools",
     pijler: "geld",
     naam: "Gratis rekentools",
-    kort: "Uurtarief, kosten van een uitzendkracht en de Wet DBA-check.",
+    kort: "Uurtarief, kosten van een uitzendkracht, de Wet DBA-check en de btw-nummer check.",
     tekst: "Snel antwoord op de rekenvragen die bij flexwerk horen, gratis en zonder account.",
-    punten: ["Zzp-uurtarief berekenen", "Kosten van een uitzendkracht", "Wet DBA-check"],
+    punten: ["Zzp-uurtarief berekenen", "Kosten van een uitzendkracht", "Wet DBA-check", "Btw-nummer en KVK-check"],
     voorWie: "Ondernemers en zzp'ers",
     prijs: "Gratis",
     status: "beschikbaar",

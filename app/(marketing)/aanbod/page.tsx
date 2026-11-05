@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CtaBand } from "@/components/marketing/primitives";
@@ -62,7 +63,12 @@ export default function AanbodPagina() {
               </div>
               <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((a) => (
-                  <li key={a.slug} className="flex min-w-0 flex-col rounded-2xl border border-hair bg-white p-6">
+                  <li key={a.slug} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-hair bg-white p-6">
+                    {a.foto && (
+                      <div className="relative -mx-6 -mt-6 mb-5 aspect-[16/9]">
+                        <Image src={`/aanbod/${a.foto.bestand}`} alt={a.foto.alt} fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="min-w-0 font-display text-xl font-bold text-ink">
                         <Link href={aanbodHref(a)} className="hover:underline">

@@ -32,6 +32,12 @@ const TOOLS = [
     body: "Tien vragen over hoe je samenwerkt. Zie waar het op loondienst lijkt en wat je eraan kunt doen.",
   },
   {
+    href: "/rekentools/btw-nummer-check",
+    who: "Voor ondernemers en zzp'ers",
+    title: "Btw-nummer check",
+    body: "Is een btw-nummer geldig? Gecontroleerd bij VIES, voor alle EU-landen. Ook een KVK-nummer opzoeken.",
+  },
+  {
     href: "/prijzen#bedrijven",
     who: "Voor bedrijven",
     title: "Platformkosten per maand",

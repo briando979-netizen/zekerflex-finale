@@ -58,7 +58,7 @@ const PUBLIC_PREFIXES = [
   "/api/toegang", // het kastje bij de slagboom (kentekenherkenning) vraagt per auto of die mag en haalt open-opdrachten op; eigen token per vestiging (lib/locatie/toegang.ts), IP-begrensd. Het beheer (/api/werkgever/locatie) blijft achter de login
   "/api/printen/agent", // de printagent op een computer op locatie haalt de labelwachtrij op en meldt wat geprint is; eigen token per bedrijf (lib/locatie/printen.ts), IP-begrensd
   "/api/websitevoorstel", // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
-  "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts) // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
+  "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([

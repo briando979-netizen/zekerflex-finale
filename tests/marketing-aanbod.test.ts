@@ -39,6 +39,16 @@ describe("aanbod (lib/marketing/aanbod.ts)", () => {
     expect(aanbodVan("bestaat-niet")).toBeUndefined();
   });
 
+  it("elke foto staat in public/aanbod en is vermeld in CREDITS.md", () => {
+    const credits = readFileSync(join(ROOT, "public", "aanbod", "CREDITS.md"), "utf8");
+    for (const a of AANBOD) {
+      if (!a.foto) continue;
+      expect(existsSync(join(ROOT, "public", "aanbod", a.foto.bestand)), `${a.naam} → ${a.foto.bestand}`).toBe(true);
+      expect(credits, `${a.foto.bestand} in CREDITS.md`).toContain(a.foto.bestand);
+      expect(a.foto.alt.length, a.naam).toBeGreaterThan(8);
+    }
+  });
+
   it("de footer-links naar het aanbod bestaan", () => {
     const footer = readFileSync(join(ROOT, "components", "marketing", "SiteFooter.tsx"), "utf8");
     for (const m of footer.matchAll(/href: "\/aanbod\/([a-z0-9-]+)"/g)) expect(aanbodVan(m[1]!), m[1]).toBeDefined();
