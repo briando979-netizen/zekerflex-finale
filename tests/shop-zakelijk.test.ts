@@ -117,3 +117,26 @@ describe("onlangs bekeken", () => {
     expect(metBekeken(veel, "nieuw")[0]).toBe("nieuw");
   });
 });
+
+describe("bedrijfsgegevens bij een bestelling", () => {
+  it("maakt een btw-nummer netjes en controleert de vorm", async () => {
+    const { isBtwNummer, normaliseerBtw } = await import("@/lib/shop/zakelijk");
+    expect(normaliseerBtw("nl 1234.56.789 b01")).toBe("NL123456789B01");
+    expect(isBtwNummer("NL123456789B01")).toBe(true);
+    expect(isBtwNummer("nl123456789b01")).toBe(true);
+    expect(isBtwNummer("NL12345678B01")).toBe(false);
+    expect(isBtwNummer("BE0123456789")).toBe(true);
+    expect(isBtwNummer("DE123456789")).toBe(true);
+    expect(isBtwNummer("XX123")).toBe(false);
+    expect(isBtwNummer("123456789")).toBe(false);
+  });
+
+  it("zet alleen ingevulde gegevens op de bon", async () => {
+    const { zakelijkeRegels } = await import("@/lib/shop/zakelijk");
+    expect(zakelijkeRegels({})).toEqual([]);
+    expect(zakelijkeRegels({ companyName: "Bouw BV", vatNumber: null, reference: "PO-77" })).toEqual([
+      { label: "Bedrijf", waarde: "Bouw BV" },
+      { label: "Uw referentie", waarde: "PO-77" },
+    ]);
+  });
+});

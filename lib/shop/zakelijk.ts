@@ -86,3 +86,30 @@ export function lijstSamenvatting(regels: LijstRegel[]): string {
 /** Wat een bedrijf bij een offerte kan aanvinken (het schema staat in offerte-schema.ts, met zod, alleen voor de server). */
 export const OFFERTE_WENSEN = ["logo", "rekening", "vestigingen"] as const;
 export type OfferteWens = (typeof OFFERTE_WENSEN)[number];
+
+// ---------------------------------------------------------------------------
+// Bedrijfsgegevens bij een bestelling
+// ---------------------------------------------------------------------------
+
+/** "nl 1234.56.789 b01" → "NL123456789B01" (spaties, punten en streepjes eruit, hoofdletters). */
+export const normaliseerBtw = (s: string): string => s.toUpperCase().replace(/[\s.\-_]/g, "");
+
+const EU_LANDEN = "AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK|XI";
+
+/** Klopt de vorm van een btw-nummer? Nederland streng (NL + 9 cijfers + B + 2 cijfers), de rest van de EU op landcode en lengte. */
+export function isBtwNummer(s: string): boolean {
+  const n = normaliseerBtw(s);
+  if (n.startsWith("NL")) return /^NL\d{9}B\d{2}$/.test(n);
+  return new RegExp(`^(${EU_LANDEN})[0-9A-Z+*]{2,12}$`).test(n);
+}
+
+export type ZakelijkeGegevens = { companyName?: string | null; vatNumber?: string | null; reference?: string | null };
+
+/** De zakelijke regels op een bon, pakbon of mail (leeg bij een particuliere bestelling). */
+export function zakelijkeRegels(o: ZakelijkeGegevens): { label: string; waarde: string }[] {
+  return [
+    o.companyName ? { label: "Bedrijf", waarde: o.companyName } : null,
+    o.vatNumber ? { label: "Btw-nummer", waarde: o.vatNumber } : null,
+    o.reference ? { label: "Uw referentie", waarde: o.reference } : null,
+  ].filter((r): r is { label: string; waarde: string } => r !== null);
+}

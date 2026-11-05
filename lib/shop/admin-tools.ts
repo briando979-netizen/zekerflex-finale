@@ -111,7 +111,7 @@ const eur = (c: number) => (c / 100).toFixed(2).replace(".", ",");
 
 export async function ordersCsv(from: Date, to: Date): Promise<string> {
   const orders = await prisma.shopOrder.findMany({ where: { createdAt: { gte: from, lt: to } }, orderBy: { createdAt: "asc" } });
-  const head = "Bestelling;Datum;Status;Naam;E-mail;Adres;Postcode;Plaats;Artikelen;Subtotaal;Verzending;Totaal;Vervoerder;Track & trace";
+  const head = "Bestelling;Datum;Status;Naam;E-mail;Adres;Postcode;Plaats;Artikelen;Subtotaal;Verzending;Totaal;Vervoerder;Track & trace;Bedrijf;Btw-nummer;Referentie";
   const rows = orders.map((o) =>
     [
       o.id,
@@ -128,6 +128,9 @@ export async function ordersCsv(from: Date, to: Date): Promise<string> {
       eur(o.totalCents),
       o.carrier ?? "",
       o.trackingNumber ?? "",
+      o.companyName ?? "",
+      o.vatNumber ?? "",
+      o.reference ?? "",
     ]
       .map(csv)
       .join(";"),
@@ -144,7 +147,8 @@ export async function packingSlipPdf(orderId: string): Promise<{ bytes: Buffer; 
   pdf.gap(6);
   pdf.rule();
   pdf.line("Verzenden naar", 10, { bold: true });
-  pdf.line(`${o.firstName} ${o.lastName}`, 12, { bold: true });
+  if (o.companyName) pdf.line(o.companyName, 12, { bold: true });
+  pdf.line(`${o.firstName} ${o.lastName}`, 12, { bold: !o.companyName });
   pdf.line(o.address, 11);
   pdf.line(`${o.postalCode}  ${o.city}`, 11);
   pdf.gap(8);
@@ -156,6 +160,7 @@ export async function packingSlipPdf(orderId: string): Promise<{ bytes: Buffer; 
   pdf.gap(8);
   pdf.rule();
   pdf.row("Besteld op", o.createdAt.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }));
+  if (o.reference) pdf.row("Referentie klant", o.reference);
   pdf.row("Aantal artikelen", String(((o.itemsJson as unknown as OrderLine[]) ?? []).reduce((s, l) => s + l.qty, 0)));
   pdf.gap(12);
   pdf.line("Vragen of retour? Mail shop@zekerflex.com met je bestelnummer.", 9, { color: [0.4, 0.45, 0.42] });

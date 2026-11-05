@@ -1956,6 +1956,10 @@ model ShopOrder {
   stripePaymentIntentId String?         @unique
   carrier               String? // e.g. "postnl" | "dhl" - free text, shown next to the tracking link
   trackingNumber        String?
+  // zakelijk bestellen (5 nov 2026): op de bon, de pakbon en in de mails; alle drie optioneel
+  companyName           String?
+  vatNumber             String? // genormaliseerd, bijv. NL123456789B01
+  reference             String? // eigen referentie of inkoopnummer van de klant
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 

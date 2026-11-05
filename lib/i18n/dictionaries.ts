@@ -1026,6 +1026,12 @@ export const nl = {
     offerteVerstuur: "Vraag offerte aan",
     offerteKlaarTitel: "Dank je, je aanvraag is binnen",
     offerteKlaar: "We nemen zo snel mogelijk contact met je op met een offerte op maat.",
+    afrekenTitel: "Bedrijfsgegevens",
+    afrekenBedrijf: "Bedrijfsnaam",
+    afrekenBtw: "Btw-nummer (optioneel)",
+    afrekenReferentie: "Je referentie of inkoopnummer (optioneel)",
+    afrekenUitleg: "Deze gegevens komen op je bon, met de btw apart.",
+    afrekenOpBedrijf: "Op bedrijfsnaam bestellen?",
   },
 
   // de shop-startpagina voor gewone klanten (5 nov 2026)

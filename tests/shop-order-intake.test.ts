@@ -222,3 +222,35 @@ describe("GET /api/shop/orders", () => {
     expect(json.orders).toEqual(orders);
   });
 });
+
+describe("POST /api/shop/orders — zakelijk bestellen", () => {
+  it("bewaart bedrijfsnaam, een genormaliseerd btw-nummer en de eigen referentie", async () => {
+    variantFindMany.mockResolvedValue([VARIANT]);
+    orderCreate.mockResolvedValue({ id: "order_z" });
+    orderUpdate.mockResolvedValue({});
+    createCheckoutSession.mockResolvedValue({ id: "cs_test_z", url: "https://checkout.stripe.com/cs_test_z" });
+
+    const res = await POST(req({ ...valid, companyName: "Bouw BV", vatNumber: "nl 1234.56.789 b01", reference: "PO-2026-77" }));
+    expect(res.status).toBe(200);
+    expect(orderCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ companyName: "Bouw BV", vatNumber: "NL123456789B01", reference: "PO-2026-77" }) }),
+    );
+  });
+
+  it("weigert een btw-nummer dat niet klopt, zonder een bestelling te maken", async () => {
+    variantFindMany.mockResolvedValue([VARIANT]);
+    const res = await POST(req({ ...valid, vatNumber: "NL12345" }));
+    expect(res.status).toBe(422);
+    expect(orderCreate).not.toHaveBeenCalled();
+  });
+
+  it("een particuliere bestelling krijgt geen lege bedrijfsvelden", async () => {
+    variantFindMany.mockResolvedValue([VARIANT]);
+    orderCreate.mockResolvedValue({ id: "order_p" });
+    orderUpdate.mockResolvedValue({});
+    createCheckoutSession.mockResolvedValue({ id: "cs_test_p", url: "https://checkout.stripe.com/cs_test_p" });
+    await POST(req(valid));
+    const data = (orderCreate.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
+    expect("companyName" in data || "vatNumber" in data || "reference" in data).toBe(false);
+  });
+});

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { SimplePdf } from "@/lib/pdf/simple";
 import { qrEncode } from "@/lib/qr/encode";
 import { payUrl } from "@/lib/billing/pay-link";
+import { btwOverzicht, btwTarief } from "@/lib/shop/modus";
+import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
@@ -137,6 +139,7 @@ export async function shopOrderReceiptPdf(orderId: string): Promise<{ bytes: Buf
   pdf.row("Datum", nlDate(order.createdAt));
   pdf.row("Naam", `${order.firstName} ${order.lastName}`);
   pdf.row("Adres", `${order.address}, ${order.postalCode} ${order.city}`);
+  for (const r of zakelijkeRegels(order)) pdf.row(r.label, r.waarde);
   pdf.gap(6);
   pdf.rule();
 
@@ -151,6 +154,10 @@ export async function shopOrderReceiptPdf(orderId: string): Promise<{ bytes: Buf
   pdf.row("Subtotaal", euro(order.subtotalCents));
   pdf.row("Verzending", order.shippingCents === 0 ? "Gratis" : euro(order.shippingCents));
   pdf.row("Totaal", euro(order.totalCents), { bold: true, size: 12 });
+  // de btw apart (boeken 9 %, de rest en de verzending 21 %), voor de boekhouding van een zakelijke klant
+  const btw = btwOverzicht(lines.map((l) => ({ centenIncl: l.priceCents, tarief: btwTarief({ name: l.name }), aantal: l.qty })), order.shippingCents);
+  pdf.row("Waarvan btw", euro(btw.btw));
+  pdf.row("Totaal excl. btw", euro(btw.excl));
 
   pdf.gap(14);
   pdf.line(

@@ -79,6 +79,9 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", address: "", postalCode: "", city: "" });
+  // op bedrijfsnaam bestellen: altijd open in de zakelijke stand, particulier op verzoek
+  const [zak, setZak] = useState({ companyName: "", vatNumber: "", reference: "" });
+  const [zakOpen, setZakOpen] = useState(false);
   const [catalog, setCatalog] = useState<ApiProduct[]>([]);
   const { cart, add, remove, count } = useShopCart();
   const wishlist = useShopWishlist();
@@ -154,7 +157,14 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
       const response = await fetch("/api/shop/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, items: items.map((l) => ({ variantId: l.variantId, qty: l.qty })), partner: readPartner() }),
+        body: JSON.stringify({
+          ...form,
+          items: items.map((l) => ({ variantId: l.variantId, qty: l.qty })),
+          partner: readPartner(),
+          ...(zak.companyName.trim() ? { companyName: zak.companyName.trim() } : {}),
+          ...(zak.vatNumber.trim() ? { vatNumber: zak.vatNumber.trim() } : {}),
+          ...(zak.reference.trim() ? { reference: zak.reference.trim() } : {}),
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -551,6 +561,30 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
                   <input required autoComplete="address-level2" className="field-input" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
                 </label>
               </div>
+              {modus === "zakelijk" || zakOpen ? (
+                <fieldset className="grid gap-4 rounded-xl border border-hair p-4">
+                  <legend className="px-1 text-[13px] font-bold text-ink">{t.shopZakelijk.afrekenTitel}</legend>
+                  <label className="field-label">
+                    {t.shopZakelijk.afrekenBedrijf}
+                    <input required={modus === "zakelijk"} autoComplete="organization" className="field-input" value={zak.companyName} onChange={(e) => setZak((z) => ({ ...z, companyName: e.target.value }))} />
+                  </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="field-label">
+                      {t.shopZakelijk.afrekenBtw}
+                      <input className="field-input" placeholder="NL123456789B01" value={zak.vatNumber} onChange={(e) => setZak((z) => ({ ...z, vatNumber: e.target.value }))} />
+                    </label>
+                    <label className="field-label">
+                      {t.shopZakelijk.afrekenReferentie}
+                      <input className="field-input" maxLength={60} value={zak.reference} onChange={(e) => setZak((z) => ({ ...z, reference: e.target.value }))} />
+                    </label>
+                  </div>
+                  <p className="text-[12px] text-neutralx-500">{t.shopZakelijk.afrekenUitleg}</p>
+                </fieldset>
+              ) : (
+                <button type="button" onClick={() => setZakOpen(true)} className="justify-self-start text-[13px] font-semibold text-brand-600 underline underline-offset-2">
+                  {t.shopZakelijk.afrekenOpBedrijf}
+                </button>
+              )}
               <div className="mt-2 flex items-baseline justify-between border-t border-hair pt-5">
                 <span className="text-[18px] font-bold text-ink">{t.shop.total}</span>
                 <span className="text-[20px] font-extrabold text-ink">{money(total)}</span>

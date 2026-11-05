@@ -11,6 +11,7 @@ import { jsonError } from "@/lib/http/errors";
 import { recordAudit } from "@/lib/audit";
 import { createShopOrderCheckoutSession } from "@/lib/billing/stripe";
 import { legPartnerBestellingVast } from "@/lib/shop/partner";
+import { isBtwNummer, normaliseerBtw } from "@/lib/shop/zakelijk";
 import { legVerkopersVast } from "@/lib/shop/verkoper";
 
 export const runtime = "nodejs";
@@ -31,6 +32,10 @@ const schema = z.object({
     .max(40),
   /** partnercode uit een partnerlink (/shop/p/<code>), alleen bewaard in het tabblad */
   partner: z.string().trim().max(40).optional(),
+  /** zakelijk bestellen: komt op de bon, de pakbon en in de mails */
+  companyName: z.string().trim().max(160).optional(),
+  vatNumber: z.string().trim().max(24).optional(),
+  reference: z.string().trim().max(60).optional(),
 });
 
 const variantLabel = (size: string | null, color: string | null): string =>
@@ -57,6 +62,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Controleer je gegevens.", parsed.error.flatten());
     }
     const d = parsed.data;
+    const vat = d.vatNumber ? normaliseerBtw(d.vatNumber) : "";
+    if (vat && !isBtwNummer(vat)) {
+      throw AppError.validation("Dit btw-nummer klopt niet. Een Nederlands btw-nummer ziet eruit als NL123456789B01.");
+    }
 
     const variants = await prisma.shopProductVariant.findMany({
       where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
@@ -123,6 +132,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         subtotalCents,
         shippingCents,
         totalCents,
+        ...(d.companyName ? { companyName: d.companyName } : {}),
+        ...(vat ? { vatNumber: vat } : {}),
+        ...(d.reference ? { reference: d.reference } : {}),
       },
     });
 

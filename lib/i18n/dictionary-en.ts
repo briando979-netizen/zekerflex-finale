@@ -1019,6 +1019,12 @@ export const en: Dict = {
     offerteVerstuur: "Request a quote",
     offerteKlaarTitel: "Thank you, your request is in",
     offerteKlaar: "We will contact you as soon as possible with a tailored quote.",
+    afrekenTitel: "Company details",
+    afrekenBedrijf: "Company name",
+    afrekenBtw: "VAT number (optional)",
+    afrekenReferentie: "Your reference or PO number (optional)",
+    afrekenUitleg: "These details appear on your receipt, with the VAT shown separately.",
+    afrekenOpBedrijf: "Order in a company name?",
   },
 
   shopThuis: {
