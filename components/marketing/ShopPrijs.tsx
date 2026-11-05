@@ -16,7 +16,8 @@ export function ShopPrijs({ centen, product, groot = false }: { centen: number; 
   const [euros, cents] = priceParts(r.hoofd / 100);
   return (
     <>
-      <p className="text-ink">
+      {/* relative: de sr-only-tekst (absoluut) blijft binnen een vegende rij, anders rekt hij de pagina op */}
+      <p className="relative text-ink">
         <span className="sr-only">{`${shopMoney(r.hoofd / 100)}${r.exclusief ? ` ${t.shopZakelijk.exclBtw}` : ""}`}</span>
         <span aria-hidden className="flex items-start">
           <span className={`${groot ? "text-[34px]" : "text-[22px] sm:text-[24px]"} font-extrabold leading-none tracking-tight`}>{euros},</span>

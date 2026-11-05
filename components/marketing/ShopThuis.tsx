@@ -19,7 +19,7 @@ export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCard
   const h = t.shopThuis;
   return (
     <section aria-labelledby="shop-kop" className="overflow-hidden bg-[#f4efe6]">
-      <div className={`${WRAP} grid items-center gap-8 py-8 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12 lg:py-16`}>
+      <div className={`${WRAP} grid items-center gap-8 py-8 sm:py-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12 lg:py-12`}>
         <div>
           <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-brand-600">{h.heroEyebrow}</p>
           <h1 id="shop-kop" className="mt-3 font-display text-[2.4rem] font-extrabold leading-[1.02] tracking-tight text-ink sm:text-6xl">
@@ -44,12 +44,12 @@ export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCard
           </ul>
         </div>
         {uitgelicht.length >= 4 && (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:ml-auto lg:w-full lg:max-w-[540px]">
             {uitgelicht.slice(0, 4).map((p, i) => (
-              <li key={p.id} className={i % 2 === 1 ? "mt-6 sm:mt-10" : ""}>
-                <Link href={`/shop/${p.slug}`} className="group block overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
-                  <span className="relative block aspect-[4/5] overflow-hidden bg-paper-soft">
-                    {p.imageUrl && <Image src={p.imageUrl} alt="" fill priority={i < 2} sizes="(min-width: 1440px) 320px, (min-width: 1024px) 23vw, 46vw" className="object-cover transition duration-700 group-hover:scale-[1.04]" />}
+              <li key={p.id} className={i % 2 === 1 ? "mt-6 sm:mt-10 lg:mt-8" : ""}>
+                <Link href={`/shop/${p.slug}`} className="group relative block overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
+                  <span className="relative block aspect-[4/5] overflow-hidden bg-paper-soft lg:aspect-square">
+                    {p.imageUrl && <Image src={p.imageUrl} alt="" fill priority={i < 2} sizes="(min-width: 1024px) 262px, 46vw" className="object-cover transition duration-700 group-hover:scale-[1.04]" />}
                   </span>
                   <span className="block p-3 sm:p-4">
                     <span className="block truncate text-[13px] font-semibold text-ink sm:text-[14px]">{p.name}</span>
@@ -133,7 +133,7 @@ export function ShopLooks({ t, looks }: { t: Dict; looks: LookKaart[] }) {
             const totaal = stukken.reduce((s, x) => s + x.priceCents, 0);
             return (
               <li key={look.id} className="w-[72%] shrink-0 snap-start sm:w-[44%] lg:w-auto">
-                <Link href={`/shop/paskamer?look=${look.id}`} className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
+                <Link href={`/shop/paskamer?look=${look.id}`} className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
                   <span className="relative block h-[300px] bg-[radial-gradient(ellipse_at_50%_35%,#ffffff_0%,#efe9de_100%)] pt-3">
                     <Paspop
                       id={`look-${look.id}`}
