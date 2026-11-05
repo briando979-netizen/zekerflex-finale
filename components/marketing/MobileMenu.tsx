@@ -18,8 +18,8 @@ import {
 
 // Het mobiele menu (onder 1280 px). Eerst wat je het vaakst komt doen (snelle
 // acties per doelgroep), dan de onderdelen als uitklapbare lijsten, en de knoppen
-// Inloggen / Start vandaag altijd onderin in beeld. Ligt boven de bezoekerstip
-// (z-70) en de chatknop (z-50), onder de cookiebalk (z-90).
+// Inloggen / Start vandaag altijd onderin in beeld. SiteHeader legt de balk met
+// dit menu boven de bezoekerstip en de chatknop zolang het open is.
 // nav: het menu zoals de bovenbalk het toont (bouwNav: standaard + de eigen
 // aanpassingen uit de Site-ontwerper).
 export function MobileMenu({
@@ -39,6 +39,8 @@ export function MobileMenu({
   const [doel, setDoel] = useState<Audience>(audience);
   const [sectie, setSectie] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // waar de bovenbalk eindigt: met de aankondigingsbalk erboven staat hij lager dan 64 px
+  const [boven, setBoven] = useState<number | null>(null);
 
   // Bij openen: focus in het menu, de pagina eronder niet laten meescrollen en
   // alles naast de bovenbalk (inhoud, voettekst, chat, tip) inert maken, zodat
@@ -50,6 +52,7 @@ export function MobileMenu({
     const vorige = html.style.overflow;
     html.style.overflow = "hidden";
     const header = panel?.closest("header");
+    if (header) setBoven(Math.max(0, Math.round(header.getBoundingClientRect().bottom)));
     const buren = header?.parentElement
       ? Array.from(header.parentElement.children).filter((el): el is HTMLElement => el !== header && el instanceof HTMLElement && !el.inert)
       : [];
@@ -85,8 +88,8 @@ export function MobileMenu({
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("a")) onClose();
       }}
-      className="fixed inset-x-0 bottom-0 top-16 z-[80] flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white xl:hidden"
-      style={{ background: "rgb(var(--zf-inkt-rgb, 12 14 18))" }}
+      className="fixed inset-x-0 bottom-0 top-16 flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white xl:hidden"
+      style={{ background: "rgb(var(--zf-inkt-rgb, 12 14 18))", ...(boven !== null ? { top: boven } : {}) }}
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="shell py-4">

@@ -108,7 +108,10 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
 
   return (
     <header
-      className={`sticky top-0 z-50 text-white transition-shadow duration-300 ${
+      // Open mobiel menu: de hele balk (met het menu erin) boven de bezoekerstip (z-70) en
+      // de chatknop (z-50) leggen; de balk is een eigen laag, dus een hoge z-index
+      // binnen het menu alleen helpt niet. De cookiebalk (z-90) blijft erboven.
+      className={`sticky top-0 ${open ? "z-[85]" : "z-50"} text-white transition-shadow duration-300 ${
         scrolled ? "shadow-[0_10px_30px_-18px_rgba(0,0,0,0.7)]" : ""
       }`}
       style={{
