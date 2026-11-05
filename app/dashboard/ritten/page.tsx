@@ -5,6 +5,7 @@ import { MileageLog } from "@/components/app/MileageLog";
 import { currentYear, getMileageLog } from "@/lib/worker/mileage";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { pompprijsVandaag } from "@/lib/bronnen/tick";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function RittenPage(props: { searchParams: Promise<{ jaar?:
   const asked = Number(searchParams.jaar);
   const year = Number.isInteger(asked) && asked >= 2020 && asked <= thisYear ? asked : thisYear;
   const log = await getMileageLog(principal.userId, year);
+  const pomp = await pompprijsVandaag().catch(() => null);
 
   if (!log) {
     return (
@@ -60,6 +62,12 @@ export default async function RittenPage(props: { searchParams: Promise<{ jaar?:
           </Link>
         ))}
       </nav>
+
+      {pomp && (
+        <p className="mb-5 rounded-xl bg-neutralx-100 px-4 py-3 text-sm text-neutralx-700">
+          {t.fuelToday(pomp.benzine, pomp.diesel, pomp.datum)}
+        </p>
+      )}
 
       {!log.homeKnown && (
         <div className="mb-5 rounded-xl border border-warn/30 bg-warn/5 p-4 text-sm text-neutralx-700">

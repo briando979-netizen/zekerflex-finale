@@ -1,0 +1,8 @@
+{
+  "name": "zekerflex-scraper",
+  "private": true,
+  "type": "module",
+  "description": "Headless browser (Playwright) voor de bronnen van ZekerFlex: schermafdrukken en tekst uit pagina's die een echte browser nodig hebben.",
+  "scripts": { "start": "node server.mjs" },
+  "dependencies": { "playwright": "1.56.1" }
+}

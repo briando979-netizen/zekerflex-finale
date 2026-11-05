@@ -56,7 +56,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [internal, bouwer-toegang]
+    networks: [internal, bouwer-toegang, bronnen]
     # Geen `ports:` — alles loopt via Caddy.
 
   caddy:
@@ -336,8 +336,31 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Browser-werker voor de bronnen (lib/bronnen, deploy/scraper): Playwright met
+  # Chromium in een eigen container. Geen database en geen geheimen van de app;
+  # alleen de app praat ermee (SCRAPER_TOKEN, door de uitrol zelf aangemaakt) op een
+  # eigen netwerk, zodat een pagina van buiten nooit bij Postgres of Redis kan.
+  scraper:
+    build:
+      context: deploy/scraper
+    image: zekerflex-scraper:latest
+    restart: unless-stopped
+    init: true
+    environment:
+      SCRAPER_TOKEN: ${SCRAPER_TOKEN:-}
+    mem_limit: 1g
+    cpus: 1
+    shm_size: 512m
+    networks: [bronnen]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 networks:
   internal:
+    driver: bridge
+  # de app en de browser-werker; de werker zit bewust niet op internal
+  bronnen:
     driver: bridge
   # alleen de Bouwer en zijn voorbeeld-database/-redis; geen internet
   bouwer:

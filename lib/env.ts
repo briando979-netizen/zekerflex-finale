@@ -390,6 +390,11 @@ const schema = z.object({
   KVKBASE_API_URL: z.string().url().default("https://api.kvkbase.nl"),
   KVKBASE_API_KEY: z.string().optional(),
 
+  // Browser-werker voor de bronnen (deploy/scraper, lib/bronnen/scraper.ts): Playwright in
+  // een eigen container op het interne netwerk. Zonder token staat hij uit.
+  SCRAPER_URL: z.string().url().default("http://scraper:4300"),
+  SCRAPER_TOKEN: z.string().min(16).optional(),
+
   // Didit - KYC / identity verification.
   DIDIT_BASE_URL: z.string().url().default("https://verification.didit.me"),
   DIDIT_API_KEY: z.string().optional(),
