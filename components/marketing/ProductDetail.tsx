@@ -9,7 +9,9 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { IconCart, IconHeart, SELLER, ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
-import { bySize, priceParts, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { ShopPrijs } from "@/components/marketing/ShopPrijs";
+import { useShopModus } from "@/components/marketing/ShopModus";
 import { specFor } from "@/lib/shop/product-specs";
 import { PaskamerTip } from "@/components/marketing/paskamer/PaskamerTip";
 import { useT } from "@/components/i18n/I18nProvider";
@@ -89,7 +91,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const variantStock = variant?.stock ?? product.stock;
   const canBuy = Boolean(variant) && variantStock > 0;
   const buyLabel = !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
-  const [euros, cents] = priceParts(variantPriceCents / 100);
+  const { modus } = useShopModus();
   const fav = wishlist.has(product.id);
   const shownImage = gallery[active] ?? gallery[0];
 
@@ -187,14 +189,8 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
 
         {/* koopblok */}
         <section aria-label={t.shop.addToCart} className="self-start rounded-xl border border-hair bg-white p-5 shadow-e1 sm:p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-2">
-          <p className="text-ink">
-            <span className="sr-only">{money(variantPriceCents)}</span>
-            <span aria-hidden className="flex items-start">
-              <span className="text-[34px] font-extrabold leading-none tracking-tight">{euros},</span>
-              <span className="text-[17px] font-extrabold leading-none">{cents}</span>
-            </span>
-          </p>
-          <p className="mt-1.5 text-[13px] text-neutralx-500">{t.shop.inclVat}</p>
+          <ShopPrijs centen={variantPriceCents} product={product} groot />
+          <p className="mt-1.5 text-[13px] text-neutralx-500">{modus === "zakelijk" ? t.shopZakelijk.pdpBtwRegel : t.shop.inclVat}</p>
 
           {sizes.length > 0 && (
             <div className="mt-5">

@@ -114,6 +114,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Shop — the storefront and every active product's own page
     entry("/shop", 0.7, "daily"),
     entry("/shop/paskamer", 0.6, "weekly"),
+    entry("/shop/zakelijk", 0.7, "weekly"),
     ...(await prisma.shopProduct.findMany({
       where: { active: true },
       select: { slug: true, updatedAt: true },

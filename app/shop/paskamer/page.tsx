@@ -15,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // De paskamer: alle draagbare, koopbare producten (ook van verkopers) gaan als
 // klein paskamerproduct naar de browser; de rest (prijzen herberekenen,
 // voorraad) blijft bij het afrekenen op de server.
-export default async function PaskamerPage(props: { searchParams: Promise<{ pas?: string }> }) {
-  const { pas } = await props.searchParams;
+export default async function PaskamerPage(props: { searchParams: Promise<{ pas?: string; look?: string }> }) {
+  const { pas, look } = await props.searchParams;
   const rows = await prisma.shopProduct
     .findMany({
       where: { active: true },
@@ -33,5 +33,6 @@ export default async function PaskamerPage(props: { searchParams: Promise<{ pas?
   // een look laten we alleen zien als er minstens twee stukken van leverbaar zijn
   const looks = LOOKS.filter((l) => l.slugs.filter((s) => slugs.has(s)).length >= 2);
   const start = typeof pas === "string" && /^[a-z0-9-]{1,120}$/.test(pas) ? pas : null;
-  return <Paskamer producten={producten} looks={looks} start={start} />;
+  const startLook = typeof look === "string" && looks.some((l) => l.id === look) ? look : null;
+  return <Paskamer producten={producten} looks={looks} start={start} startLook={startLook} />;
 }

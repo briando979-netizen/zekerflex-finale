@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
@@ -10,6 +11,8 @@ import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButto
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
 import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import { ShopModusProvider, useShopModus } from "@/components/marketing/ShopModus";
+import { btwOverzicht, btwTarief, type ShopModus } from "@/lib/shop/modus";
 
 // Gedeelde shop-omlijsting, opgebouwd als een marktplaats: een servicebalk, de
 // merkbalk met een grote zoekbalk (blijft staan tijdens scrollen), de
@@ -19,7 +22,7 @@ import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 
 type ApiVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 type ApiProduct = { id: string; slug?: string | null; name: string; priceCents: number; imageUrl?: string | null; variants?: ApiVariant[] };
-type CartLine = { variantId: string; name: string; priceCents: number; imageUrl: string | null; qty: number };
+type CartLine = { variantId: string; name: string; priceCents: number; imageUrl: string | null; qty: number; tarief: number };
 
 export const CART_OPEN_EVENT = "zf:shop-cart-open";
 // Partnerlink (/shop/p/<code> → ?partner=<code>): alleen in het open tabblad
@@ -36,14 +39,40 @@ const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 
-export function ShopChrome({ children }: { children: ReactNode }) {
+/** De omlijsting met de keuze particulier/zakelijk (uit het cookie, gelezen in app/shop/layout.tsx). */
+export function ShopChrome({ children, modus = "particulier" }: { children: ReactNode; modus?: ShopModus }) {
+  return (
+    <ShopModusProvider modus={modus}>
+      <ShopOmlijsting>{children}</ShopOmlijsting>
+    </ShopModusProvider>
+  );
+}
+
+type NavItem = { label: string; href: string };
+
+/** Het menu onder de zoekbalk: particulier per soort artikel, zakelijk per manier van bestellen. */
+function navVoor(modus: ShopModus, t: Dict): NavItem[] {
+  const cat = (c: string) => `/shop?cat=${encodeURIComponent(c)}#collectie`;
+  return modus === "zakelijk"
+    ? [
+        { label: t.shop.navPbm, href: cat("Werk & PBM") },
+        { label: t.shopZakelijk.navBedrijfskleding, href: cat("Kleding") },
+        { label: t.shopZakelijk.navPakketten, href: "/shop/zakelijk#pakketten" },
+        { label: t.shopZakelijk.navTeam, href: "/shop/zakelijk#team" },
+        { label: t.shopZakelijk.navOfferte, href: "/shop/zakelijk#offerte" },
+      ]
+    : [
+        { label: t.shop.navKleding, href: cat("Kleding") },
+        { label: t.shop.navPbm, href: cat("Werk & PBM") },
+        { label: t.shop.navWerkdag, href: cat("Werkdag") },
+        { label: t.shopZakelijk.navCadeaus, href: cat("Cadeaus") },
+      ];
+}
+
+function ShopOmlijsting({ children }: { children: ReactNode }) {
   const { locale, t } = useI18n();
-  const NAV = [
-    { label: t.shop.navPbm, cat: "Werk & PBM" },
-    { label: t.shop.navKleding, cat: "Kleding" },
-    { label: t.shop.navWerkdag, cat: "Werkdag" },
-    { label: t.shop.navTeams, cat: "Cadeaus" },
-  ];
+  const { modus } = useShopModus();
+  const NAV = navVoor(modus, t);
   const [menu, setMenu] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
@@ -107,13 +136,15 @@ export function ShopChrome({ children }: { children: ReactNode }) {
         if (!hit) return null;
         const { product, variant } = hit;
         const label = [variant.size ? `${t.shop.size} ${variant.size}` : null, variant.color].filter(Boolean).join(", ");
-        return { variantId, name: label ? `${product.name} — ${label}` : product.name, priceCents: variant.priceCents ?? product.priceCents, imageUrl: product.imageUrl ?? null, qty };
+        return { variantId, name: label ? `${product.name} — ${label}` : product.name, priceCents: variant.priceCents ?? product.priceCents, imageUrl: product.imageUrl ?? null, qty, tarief: btwTarief(product) };
       })
       .filter((l): l is CartLine => l !== null);
   }, [catalog, cart, t]);
   const subtotal = items.reduce((s, p) => s + (p.priceCents / 100) * p.qty, 0);
   const shipping = subtotal >= 50 || subtotal === 0 ? 0 : 4.95;
   const total = subtotal + shipping;
+  // zakelijk: hetzelfde bedrag, maar zonder btw met de btw apart
+  const btw = btwOverzicht(items.map((l) => ({ centenIncl: l.priceCents, tarief: l.tarief, aantal: l.qty })), Math.round(shipping * 100));
 
   const placeOrder = async (e: FormEvent) => {
     e.preventDefault();
@@ -160,17 +191,14 @@ export function ShopChrome({ children }: { children: ReactNode }) {
 
       {/* servicebalk */}
       <aside aria-label={t.shop.serviceTitle} className="bg-ink text-white">
-        <div className={`${WRAP} flex h-9 items-center justify-between gap-4 text-[12px]`}>
-          <ul className="flex min-w-0 items-center gap-5 overflow-hidden">
+        <div className={`${WRAP} flex h-10 items-center justify-between gap-4 text-[12px]`}>
+          <ModusKeuze t={t} />
+          <ul className="hidden min-w-0 flex-1 items-center gap-5 overflow-hidden sm:flex">
             <ServicePoint>{t.shop.uspNextDay}</ServicePoint>
-            <ServicePoint className="hidden sm:flex">{t.shop.freeShipping}</ServicePoint>
-            <ServicePoint className="hidden lg:flex">{t.shop.uspReturns}</ServicePoint>
-            <ServicePoint className="hidden xl:flex">{t.shop.uspInvoice}</ServicePoint>
+            <ServicePoint className="hidden lg:flex">{t.shop.freeShipping}</ServicePoint>
+            <ServicePoint className="hidden xl:flex">{t.shop.uspReturns}</ServicePoint>
           </ul>
           <div className="hidden shrink-0 items-center gap-5 md:flex">
-            <Link href="/contact" className="text-white/85 hover:text-white hover:underline">
-              {t.shop.business}
-            </Link>
             <Link href="/kennis/faq" className="text-white/85 hover:text-white hover:underline">
               {t.shop.customerService}
             </Link>
@@ -230,11 +258,7 @@ export function ShopChrome({ children }: { children: ReactNode }) {
           </button>
           <span aria-hidden className="mx-1 hidden h-5 w-px bg-hair lg:block" />
           {NAV.map((n) => (
-            <Link
-              key={n.cat}
-              href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`}
-              className="inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft"
-            >
+            <Link key={n.href} href={n.href} className="inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft">
               {n.label}
             </Link>
           ))}
@@ -242,8 +266,8 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             {t.paskamer.navLabel}
             <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
           </Link>
-          <Link href="/shop?cat=Cadeaus#collectie" className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex">
-            {t.shop.business} →
+          <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex">
+            {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk} →
           </Link>
         </div>
       </nav>
@@ -329,10 +353,13 @@ export function ShopChrome({ children }: { children: ReactNode }) {
               <Link href="/shop#collectie" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
                 {t.shop.allCategories} <span aria-hidden>›</span>
               </Link>
+              <div className="border-b border-hair px-5 py-3">
+                <ModusKeuze t={t} licht onGekozen={() => setMenu(false)} />
+              </div>
               {NAV.map((n) => (
                 <Link
-                  key={n.cat}
-                  href={`/shop?cat=${encodeURIComponent(n.cat)}#collectie`}
+                  key={n.href}
+                  href={n.href}
                   onClick={() => setMenu(false)}
                   className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft"
                 >
@@ -350,8 +377,8 @@ export function ShopChrome({ children }: { children: ReactNode }) {
                 <Link href="/shop/account" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
                   {t.shop.account}
                 </Link>
-                <Link href="/contact" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
-                  {t.shop.business}
+                <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                  {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk}
                 </Link>
                 <Link href="/kennis/faq" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
                   {t.shop.customerService}
@@ -435,16 +462,35 @@ export function ShopChrome({ children }: { children: ReactNode }) {
             </div>
             {items.length > 0 && (
               <div className="border-t border-hair px-5 py-5">
-                <div className="flex justify-between text-[13px] text-neutralx-600">
-                  <span>{t.shop.subtotal}</span>
-                  <span>{money(subtotal)}</span>
-                </div>
-                <div className="mt-1.5 flex justify-between text-[13px] text-neutralx-600">
-                  <span>{t.shop.shipping}</span>
-                  <span>{shipping === 0 ? t.shop.free : money(shipping)}</span>
-                </div>
+                {modus === "zakelijk" ? (
+                  <>
+                    <div className="flex justify-between text-[13px] text-neutralx-600">
+                      <span>{t.shopZakelijk.subtotaalExcl}</span>
+                      <span>{money(btw.excl / 100)}</span>
+                    </div>
+                    <div className="mt-1.5 flex justify-between text-[13px] text-neutralx-600">
+                      <span>{t.shopZakelijk.btw}</span>
+                      <span>{money(btw.btw / 100)}</span>
+                    </div>
+                    <div className="mt-1.5 flex justify-between text-[13px] text-neutralx-600">
+                      <span>{t.shopZakelijk.verzendingIncl}</span>
+                      <span>{shipping === 0 ? t.shop.free : money(shipping)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-[13px] text-neutralx-600">
+                      <span>{t.shop.subtotal}</span>
+                      <span>{money(subtotal)}</span>
+                    </div>
+                    <div className="mt-1.5 flex justify-between text-[13px] text-neutralx-600">
+                      <span>{t.shop.shipping}</span>
+                      <span>{shipping === 0 ? t.shop.free : money(shipping)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="mt-3 flex items-baseline justify-between">
-                  <span className="text-[17px] font-bold text-ink">{t.shop.total}</span>
+                  <span className="text-[17px] font-bold text-ink">{modus === "zakelijk" ? t.shopZakelijk.totaalIncl : t.shop.total}</span>
                   <span className="text-[20px] font-extrabold text-ink">{money(total)}</span>
                 </div>
                 <button
@@ -522,6 +568,38 @@ export function ShopChrome({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Particulier of zakelijk: wisselt het cookie, en springt van de ene startpagina naar de andere. */
+function ModusKeuze({ t, licht = false, onGekozen }: { t: Dict; licht?: boolean; onGekozen?: () => void }) {
+  const { modus, zet } = useShopModus();
+  const pad = usePathname();
+  const router = useRouter();
+  const kies = (m: ShopModus) => {
+    onGekozen?.();
+    if (m === modus) return;
+    zet(m);
+    if (m === "zakelijk" && pad === "/shop") router.push("/shop/zakelijk");
+    else if (m === "particulier" && pad?.startsWith("/shop/zakelijk")) router.push("/shop");
+  };
+  const knop = (m: ShopModus, naam: string) => (
+    <button
+      type="button"
+      aria-pressed={modus === m}
+      onClick={() => kies(m)}
+      className={`h-7 rounded-full px-3 text-[12px] font-bold transition ${
+        modus === m ? (licht ? "bg-brand-500 text-white" : "bg-white text-ink") : licht ? "text-ink hover:bg-paper-soft" : "text-white/80 hover:text-white"
+      }`}
+    >
+      {naam}
+    </button>
+  );
+  return (
+    <div role="group" aria-label={t.shopZakelijk.modusLabel} className={`inline-flex shrink-0 items-center rounded-full p-0.5 ${licht ? "bg-paper-soft" : "bg-white/10"}`}>
+      {knop("particulier", t.shopZakelijk.particulier)}
+      {knop("zakelijk", t.shopZakelijk.zakelijk)}
     </div>
   );
 }

@@ -75,7 +75,7 @@ function teken(items: Item[]): Gedragen[] {
 
 const centen = (c: number) => shopMoney(c / 100);
 
-export function Paskamer({ producten, looks, start }: { producten: PaskamerProduct[]; looks: Look[]; start: string | null }) {
+export function Paskamer({ producten, looks, start, startLook = null }: { producten: PaskamerProduct[]; looks: Look[]; start: string | null; startLook?: string | null }) {
   const t = useT();
   const p = t.paskamer;
   const { stand, zet, geladen, fotoNietBewaard } = usePaskamer();
@@ -113,10 +113,13 @@ export function Paskamer({ producten, looks, start }: { producten: PaskamerProdu
   const trekUit = (id: string) => zet((s) => ({ ...s, aan: s.aan.filter((a) => a.productId !== id) }));
   const wijzigAan = (id: string, w: Partial<Aan>) => zet((s) => ({ ...s, aan: s.aan.map((a) => (a.productId === id ? { ...a, ...w } : a)) }));
 
-  // /shop/paskamer?pas=<slug> (vanaf een productpagina): dat stuk meteen aan
+  // /shop/paskamer?pas=<slug> (vanaf een productpagina): dat stuk meteen aan;
+  // ?look=<id> (vanaf een pakket of de homepage): die hele look aan
   useEffect(() => {
-    if (!geladen || startGedaan.current || !start) return;
+    if (!geladen || startGedaan.current || (!start && !startLook)) return;
     startGedaan.current = true;
+    const lk = startLook ? looks.find((x) => x.id === startLook) : null;
+    if (lk) return lookAan(lk);
     const prod = producten.find((x) => x.slug === start);
     if (prod && !stand.aan.some((a) => a.productId === prod.id)) trekAan(prod);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het laden

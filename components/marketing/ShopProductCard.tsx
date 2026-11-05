@@ -8,7 +8,8 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
-import { GRID_SIZES, cardStock, priceParts, type ShopCardProduct } from "@/components/marketing/shop-product";
+import { GRID_SIZES, cardStock, type ShopCardProduct } from "@/components/marketing/shop-product";
+import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 
 // Eén productkaart zoals op een grote marktplaats: foto, naam, opties, prijs,
 // levering, verkoper en meteen "In winkelwagen". De naam is de link en dekt de
@@ -38,7 +39,6 @@ export function ShopProductCard({
   const single = p.variants.length <= 1 ? p.variants[0] : null;
   const fav = wishlist.has(p.id);
   const stock = cardStock(p);
-  const [euros, cents] = priceParts(p.price);
   const href = p.slug ? `/shop/${p.slug}` : null;
 
   const quickAdd = () => {
@@ -87,13 +87,9 @@ export function ShopProductCard({
       </Title>
       {p.variants.length > 1 && <p className="mt-1 text-[12px] text-neutralx-500">{fmt(t.shop.optionsCount, { n: p.variants.length })}</p>}
 
-      <p className="mt-2 text-ink">
-        <span className="sr-only">{`€ ${euros},${cents}`}</span>
-        <span aria-hidden className="flex items-start">
-          <span className="text-[22px] font-extrabold leading-none tracking-tight sm:text-[24px]">{euros},</span>
-          <span className="text-[13px] font-extrabold leading-none">{cents}</span>
-        </span>
-      </p>
+      <div className="mt-2">
+        <ShopPrijs centen={Math.round(p.price * 100)} product={p} />
+      </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>
         {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? fmt(t.shop.lowStock, { n: stock.n }) : p.seller ? t.shop.deliveryBySeller : t.shop.deliveryTomorrow}

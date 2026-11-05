@@ -120,6 +120,8 @@ const REPLIABLE_KINDS = new Set([
   "open-sollicitatie-bevestiging",
   "shop-order",
   "shop-order-bevestiging",
+  // zakelijk offerteverzoek uit de webshop: replyTo is het bedrijf, sales antwoordt
+  "shop-offerte",
   "uren-correctie-voorstel",
   // Sales outreach: a human on the sales side reads and answers replies.
   "sales-outreach",
