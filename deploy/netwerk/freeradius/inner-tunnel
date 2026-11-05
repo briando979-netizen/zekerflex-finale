@@ -1,0 +1,58 @@
+# De binnentunnel van PEAP/TTLS: hier staat de echte gebruikersnaam (het
+# e-mailadres) en het wachtwoord van het apparaat. De app zegt of deze persoon
+# nu op dit netwerk mag en geeft zijn wifi-wachtwoord terug; mschap vergelijkt
+# dat met wat het apparaat stuurde (MSCHAPv2). Session-Timeout uit het antwoord
+# gaat mee naar buiten, zodat de wifi vanzelf stopt na de dienst.
+server inner-tunnel {
+	listen {
+		ipaddr = 127.0.0.1
+		port = 18120
+		type = auth
+	}
+
+	authorize {
+		filter_username
+		mschap
+		update control {
+			&Proxy-To-Realm := LOCAL
+		}
+		zf_toegang
+		eap {
+			ok = return
+		}
+		pap
+	}
+
+	authenticate {
+		Auth-Type PAP {
+			pap
+		}
+		Auth-Type MS-CHAP {
+			mschap
+		}
+		mschap
+		eap
+	}
+
+	session {
+	}
+
+	post-auth {
+		# Session-Timeout en Reply-Message naar het buitenste antwoord
+		update {
+			&outer.session-state:Session-Timeout := &reply:Session-Timeout
+		}
+		Post-Auth-Type REJECT {
+			attr_filter.access_reject
+			update outer.session-state {
+				&Module-Failure-Message := &request:Module-Failure-Message
+			}
+		}
+	}
+
+	pre-proxy {
+	}
+
+	post-proxy {
+	}
+}

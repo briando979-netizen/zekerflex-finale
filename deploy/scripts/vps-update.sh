@@ -30,7 +30,7 @@ for i in 1 2 3; do
         exit 5
       fi
     fi
-    sudo $C up -d app backup coturn
+    sudo $C up -d app backup coturn freeradius headscale
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand
     # (nieuwe inode): alleen bij een gewijzigd script opnieuw aanmaken. Niet altijd,
     # want lopende gesprekken via de relay vallen dan even weg.

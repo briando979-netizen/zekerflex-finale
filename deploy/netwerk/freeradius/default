@@ -1,0 +1,66 @@
+# Het buitenste verzoek van de wifi-apparatuur van een klant. Bijna altijd EAP
+# (WPA2/WPA3-Enterprise, PEAP): de echte controle gebeurt dan in de binnentunnel
+# (sites-available/inner-tunnel). Een gewoon PAP-verzoek (radtest, een captive
+# portal) vraagt het hier direct aan de app. Geen accounting, geen proxy.
+server default {
+	listen {
+		type = auth
+		ipaddr = *
+		port = 1812
+		limit {
+			max_connections = 16
+			lifetime = 0
+			idle_timeout = 30
+		}
+	}
+
+	listen {
+		type = auth
+		ipv6addr = ::
+		port = 1812
+	}
+
+	authorize {
+		filter_username
+		preprocess
+		eap {
+			ok = return
+		}
+		zf_toegang
+		pap
+	}
+
+	authenticate {
+		Auth-Type PAP {
+			pap
+		}
+		eap
+	}
+
+	preacct {
+		preprocess
+	}
+
+	accounting {
+		ok
+	}
+
+	session {
+	}
+
+	post-auth {
+		update {
+			&reply: += &session-state:
+		}
+		Post-Auth-Type REJECT {
+			attr_filter.access_reject
+			eap
+		}
+	}
+
+	pre-proxy {
+	}
+
+	post-proxy {
+	}
+}

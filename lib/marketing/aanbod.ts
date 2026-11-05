@@ -142,7 +142,7 @@ export const AANBOD: AanbodItem[] = [
     start: DEMO,
   },
   // Netwerkpakketten (lib/netwerk/modules.ts): op de eigen server, zonder licentiekosten bij een ander.
-  // "binnenkort" tot de servers erachter draaien; aanmelden kan al via Werkgever → Wifi en VPN.
+  // 5G blijft "binnenkort" (vergunning en apparatuur per terrein); wifi en VPN draaien op de eigen server.
   {
     slug: "wifi-op-de-werkvloer",
     pijler: "personeel",
@@ -158,7 +158,7 @@ export const AANBOD: AanbodItem[] = [
     ],
     voorWie: "Kantoren, horeca, magazijnen en flexwerkplekken",
     prijs: "€ 49 per vestiging per maand",
-    status: "binnenkort",
+    status: "beschikbaar",
     start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
     zoekwoorden: ["wifi voor flexwerkers", "gast wifi personeel", "wifi rooster", "radius wifi bedrijf"],
   },
@@ -177,7 +177,7 @@ export const AANBOD: AanbodItem[] = [
     ],
     voorWie: "Bedrijven met mensen op afstand, ICT en wie met gevoelige gegevens werkt",
     prijs: "€ 4 per gebruiker per maand, of € 149 per maand voor het hele bedrijf",
-    status: "binnenkort",
+    status: "beschikbaar",
     start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
     zoekwoorden: ["vpn voor flexwerkers", "zakelijke vpn", "veilig thuiswerken", "zero trust netwerk mkb"],
   },

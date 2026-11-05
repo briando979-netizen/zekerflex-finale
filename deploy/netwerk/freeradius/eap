@@ -1,0 +1,54 @@
+# EAP voor WPA2/WPA3-Enterprise: PEAP met MSCHAPv2 (wat Windows, Android,
+# iPhone en Mac standaard kunnen), en TTLS voor wie dat liever heeft. Het
+# certificaat is het echte Let's Encrypt-certificaat van vps.zekerflex.com dat
+# Caddy al heeft (deploy/netwerk/freeradius/entrypoint.sh kopieert het), zodat
+# telefoons de server herkennen zonder eigen certificaat te installeren.
+eap {
+	default_eap_type = peap
+	timer_expire = 60
+	ignore_unknown_eap_types = no
+	cisco_accounting_username_bug = no
+	max_sessions = ${max_requests}
+
+	tls-config tls-common {
+		private_key_file = /certs/server.key
+		certificate_file = /certs/server.crt
+		ca_file = /certs/server.crt
+		cipher_list = "DEFAULT"
+		cipher_server_preference = no
+		tls_min_version = "1.2"
+		tls_max_version = "1.2"
+		ecdh_curve = "prime256v1"
+		cache {
+			enable = no
+		}
+		verify {
+		}
+		ocsp {
+			enable = no
+		}
+	}
+
+	peap {
+		tls = tls-common
+		default_eap_type = mschapv2
+		copy_request_to_tunnel = yes
+		use_tunneled_reply = yes
+		virtual_server = "inner-tunnel"
+	}
+
+	ttls {
+		tls = tls-common
+		default_eap_type = mschapv2
+		copy_request_to_tunnel = yes
+		use_tunneled_reply = yes
+		virtual_server = "inner-tunnel"
+	}
+
+	mschapv2 {
+	}
+
+	gtc {
+		auth_type = PAP
+	}
+}

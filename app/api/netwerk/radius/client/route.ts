@@ -20,11 +20,13 @@ export async function GET(request: Request): Promise<Response> {
   if (!isIP(ip)) return NextResponse.json({ ok: false, reden: "geef ?ip=" }, { status: 400 });
   const c = await radiusClientVoorIp(ip);
   if (!c || !c.aan) return NextResponse.json({ ok: false, reden: "onbekend" }, { status: 404 });
+  // dynamic clients leest deze attributen uit de control-lijst (deploy/netwerk/freeradius/zf-clients)
   return NextResponse.json({
     ok: true,
-    "FreeRADIUS-Client-IP-Address": ip,
-    "FreeRADIUS-Client-Secret": c.secret,
-    "FreeRADIUS-Client-Shortname": `zf-${c.branchId}`,
-    "FreeRADIUS-Client-NAS-Type": "other",
+    "control:FreeRADIUS-Client-IP-Address": ip,
+    "control:FreeRADIUS-Client-Secret": c.secret,
+    "control:FreeRADIUS-Client-Shortname": `zf-${c.branchId}`,
+    "control:FreeRADIUS-Client-NAS-Type": "other",
+    "control:FreeRADIUS-Client-Virtual-Server": "default",
   });
 }

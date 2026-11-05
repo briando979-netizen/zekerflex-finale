@@ -1,0 +1,15 @@
+# Welke klant hoort bij het IP waarvandaan een wifi-verzoek komt? De app weet
+# dat (Werkgever → Wifi en VPN → vestiging) en geeft het geheim terug in de
+# control-attributen die FreeRADIUS voor dynamic clients leest. Onbekend IP of
+# vestiging uit → 404 → geen client, het verzoek wordt genegeerd.
+server zf-clients {
+	authorize {
+		zf_clients
+		if (ok || updated) {
+			ok
+		}
+		else {
+			reject
+		}
+	}
+}

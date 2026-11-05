@@ -4,12 +4,16 @@ import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // De VPN-server van ZekerFlex: Headscale (de vrije tegenhanger van Tailscale)
-// in een eigen container op de server, bereikbaar via HEADSCALE_URL. Elk
-// bedrijf is daar één "gebruiker" (zf-<tenantId>); de apparaten van zijn
-// medewerkers en flexwerkers hangen daaronder, gescheiden van andere bedrijven.
-// Toegangscodes zijn eenmalig en verlopen vanzelf. Zonder HEADSCALE_URL en
-// HEADSCALE_API_KEY is de dienst "nog niet gekoppeld": de schermen zeggen dat
-// dan netjes en niets gaat stuk.
+// in een eigen container op de server (deploy/netwerk/headscale). De app praat
+// intern met de container (HEADSCALE_API_URL, standaard http://headscale:8080);
+// de Tailscale-apps van klanten gebruiken het openbare adres (HEADSCALE_URL,
+// vpn.zekerflex.com via Caddy). Elk bedrijf is daar één "gebruiker"
+// (zf-<tenantId>); de apparaten van zijn medewerkers en flexwerkers hangen
+// daaronder, gescheiden van andere bedrijven. Toegangscodes zijn eenmalig en
+// verlopen vanzelf. Zonder HEADSCALE_URL en HEADSCALE_API_KEY is de dienst
+// "nog niet gekoppeld": de schermen zeggen dat netjes en niets gaat stuk.
+// API van Headscale 0.29: gebruikers hebben een nummer (id); toegangscodes en
+// apparaten worden aan dat nummer gekoppeld, niet aan de naam.
 // ---------------------------------------------------------------------------
 
 export interface VpnApparaat {
@@ -32,8 +36,8 @@ export function vpnAdres(): string | null {
 export const vpnGebruikersnaam = (tenantId: string): string => `zf-${tenantId.toLowerCase().replace(/[^a-z0-9-]/g, "")}`;
 
 async function hs<T>(method: "GET" | "POST" | "DELETE", pad: string, body?: unknown): Promise<T> {
-  const basis = vpnAdres();
-  if (!basis || !env.HEADSCALE_API_KEY) throw AppError.precondition("De VPN-server is nog niet gekoppeld.");
+  if (!vpnGekoppeld()) throw AppError.precondition("De VPN-server is nog niet gekoppeld.");
+  const basis = (env.HEADSCALE_API_URL ?? vpnAdres() ?? "").replace(/\/+$/, "");
   const stop = new AbortController();
   const klok = setTimeout(() => stop.abort(), 8000);
   try {
@@ -60,20 +64,28 @@ async function hs<T>(method: "GET" | "POST" | "DELETE", pad: string, body?: unkn
   }
 }
 
-/** Zorgt dat het bedrijf als gebruiker op de VPN-server bestaat. */
-export async function zorgVpnGebruiker(tenantId: string): Promise<string> {
+interface HsUser {
+  id: string;
+  name: string;
+}
+
+/** Zorgt dat het bedrijf als gebruiker op de VPN-server bestaat; geeft het nummer terug. */
+export async function zorgVpnGebruiker(tenantId: string): Promise<HsUser> {
   const naam = vpnGebruikersnaam(tenantId);
-  const lijst = await hs<{ users?: { name: string }[] }>("GET", "/user");
-  if (!lijst.users?.some((u) => u.name === naam)) await hs("POST", "/user", { name: naam });
-  return naam;
+  const lijst = await hs<{ users?: HsUser[] }>("GET", `/user?name=${encodeURIComponent(naam)}`);
+  const bestaand = lijst.users?.find((u) => u.name === naam);
+  if (bestaand) return bestaand;
+  const nieuw = await hs<{ user?: HsUser }>("POST", "/user", { name: naam, displayName: `ZekerFlex ${tenantId}` });
+  if (!nieuw.user?.id) throw AppError.upstream("De VPN-server maakte geen gebruiker aan.");
+  return nieuw.user;
 }
 
 /** Een eenmalige toegangscode voor één apparaat, geldig voor `uren` uur. */
 export async function maakVpnSleutel(tenantId: string, uren = 24): Promise<{ sleutel: string; verlooptAt: string }> {
-  const naam = await zorgVpnGebruiker(tenantId);
+  const gebruiker = await zorgVpnGebruiker(tenantId);
   const verlooptAt = new Date(Date.now() + Math.max(1, Math.min(uren, 24 * 30)) * 3_600_000).toISOString();
   const r = await hs<{ preAuthKey?: { key?: string; expiration?: string } }>("POST", "/preauthkey", {
-    user: naam,
+    user: gebruiker.id,
     reusable: false,
     ephemeral: false,
     expiration: verlooptAt,
@@ -83,13 +95,17 @@ export async function maakVpnSleutel(tenantId: string, uren = 24): Promise<{ sle
   return { sleutel, verlooptAt: r.preAuthKey?.expiration ?? verlooptAt };
 }
 
-/** De apparaten van dit bedrijf op de VPN-server. Niet gekoppeld of storing: leeg. */
+/** De apparaten van dit bedrijf op de VPN-server. Niet gekoppeld, nog geen gebruiker of storing: leeg. */
 export async function vpnApparaten(tenantId: string): Promise<VpnApparaat[]> {
   if (!vpnGekoppeld()) return [];
   try {
+    const naam = vpnGebruikersnaam(tenantId);
+    const lijst = await hs<{ users?: HsUser[] }>("GET", `/user?name=${encodeURIComponent(naam)}`);
+    const gebruiker = lijst.users?.find((u) => u.name === naam);
+    if (!gebruiker) return [];
     const r = await hs<{ nodes?: { id: string; name?: string; givenName?: string; online?: boolean; lastSeen?: string; ipAddresses?: string[] }[] }>(
       "GET",
-      `/node?user=${encodeURIComponent(vpnGebruikersnaam(tenantId))}`,
+      `/node?user=${encodeURIComponent(gebruiker.id)}`,
     );
     return (r.nodes ?? []).map((n) => ({
       id: String(n.id),

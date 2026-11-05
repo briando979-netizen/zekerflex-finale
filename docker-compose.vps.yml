@@ -188,6 +188,55 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Wifi op de werkvloer (lib/netwerk): FreeRADIUS vraagt per inlogpoging de app of
+  # iemand nu mag (rooster) en kent de wifi-apparatuur van klanten via dynamic
+  # clients. Alleen de eigen sleutel gaat erin. Het certificaat van vps.zekerflex.com
+  # komt van Caddy (alleen lezen). Zonder NETWERK_RADIUS_TOKEN slaapt de dienst.
+  # Config en uitleg: deploy/netwerk/freeradius.
+  freeradius:
+    image: freeradius/freeradius-server:3.2.10-alpine
+    restart: unless-stopped
+    environment:
+      NETWERK_RADIUS_TOKEN: ${NETWERK_RADIUS_TOKEN:-}
+      RADIUS_CERT_HOST: ${NETWERK_RADIUS_HOST:-vps.zekerflex.com}
+    ports:
+      - "1812:1812/udp"
+    volumes:
+      - ./deploy/netwerk/freeradius/clients.conf:/etc/raddb/clients.conf:ro
+      - ./deploy/netwerk/freeradius/zf-rest:/etc/raddb/mods-enabled/zf-rest:ro
+      - ./deploy/netwerk/freeradius/eap:/etc/raddb/mods-available/eap:ro
+      - ./deploy/netwerk/freeradius/default:/etc/raddb/sites-available/default:ro
+      - ./deploy/netwerk/freeradius/inner-tunnel:/etc/raddb/sites-available/inner-tunnel:ro
+      - ./deploy/netwerk/freeradius/zf-clients:/etc/raddb/sites-enabled/zf-clients:ro
+      - ./deploy/netwerk/freeradius/entrypoint.sh:/zf-radius.sh:ro
+      - caddy-data:/caddy-data:ro
+    entrypoint: ["sh", "/zf-radius.sh"]
+    depends_on:
+      app: { condition: service_started }
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Veilige werkplek (VPN, lib/netwerk/headscale.ts): Headscale met ingebouwde
+  # DERP-relay (STUN op 3479/udp; 3478 is van coturn). Caddy zet vpn.zekerflex.com
+  # door naar poort 8080; de app praat intern via http://headscale:8080 met de
+  # API-sleutel HEADSCALE_API_KEY (maken: docker exec zekerflex-headscale-1
+  # headscale apikeys create --expiration 3650d). Config: deploy/netwerk/headscale.
+  headscale:
+    image: headscale/headscale:0.29.7
+    restart: unless-stopped
+    command: ["serve"]
+    ports:
+      - "3479:3479/udp"
+    volumes:
+      - ./deploy/netwerk/headscale/config.yaml:/etc/headscale/config.yaml:ro
+      - headscale-data:/var/lib/headscale
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   # De ZekerFlex Bouwer: AI-programmeur op een eigen kopie van de codebase (Admin →
   # ZekerFlex AI → Bouwer, deploy/bouwer/werker). Geen database en geen app-geheimen:
   # het model en de GitHub-sleutel geeft de app per opdracht mee. Alleen intern
@@ -297,4 +346,5 @@ volumes:
   bouwer-werk:
   bouwer-db:
   android-bouwer-werk:
+  headscale-data:
   android-bouwer-gradle:

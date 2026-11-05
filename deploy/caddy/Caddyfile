@@ -81,6 +81,18 @@ schwarzwald.zekerflex.com {
 	}
 }
 
+# De VPN-server (Headscale, deploy/netwerk/headscale): de Tailscale-apps van
+# klanten melden zich hier. Een vaste naam, dus Caddy haalt het certificaat zelf
+# (DNS: A-record vpn.zekerflex.com → deze VPS; Admin → Te doen). De koppen voor
+# klantsite en voorstel gaan hier weg, zoals in elk blok.
+vpn.zekerflex.com {
+	encode zstd gzip
+	reverse_proxy headscale:8080 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

@@ -1,0 +1,67 @@
+# De koppeling met de ZekerFlex-app (rlm_rest). De app herkent ons aan de vaste
+# sleutel NETWERK_RADIUS_TOKEN (als wachtwoord in Basic-auth; rlm_rest 3.x kent
+# geen eigen koppen). Twee instanties:
+#   zf_toegang  per inlogpoging: mag deze gebruiker nu, op dit netwerk?
+#               antwoord: control:Cleartext-Password + reply:Session-Timeout
+#   zf_clients  welk geheim hoort bij het IP van de wifi-apparatuur (dynamic clients)
+
+rest zf_toegang {
+	connect_uri = "http://app:3000"
+	connect_timeout = 3.0
+
+	authorize {
+		uri = "${..connect_uri}/api/netwerk/radius/authorize"
+		method = "post"
+		body = "json"
+		# in de PEAP-binnentunnel is het IP van de apparatuur dat van het buitenste verzoek
+		data = "{ \"username\": \"%{User-Name}\", \"nasIp\": \"%{%{outer.request:Packet-Src-IP-Address}:-%{Packet-Src-IP-Address}}\" }"
+		auth = "basic"
+		username = "zekerflex"
+		password = "$ENV{NETWERK_RADIUS_TOKEN}"
+		timeout = 5
+		tls = ${..tls}
+	}
+
+	tls {
+	}
+
+	pool {
+		start = 2
+		min = 1
+		max = 16
+		spare = 2
+		uses = 0
+		retry_delay = 10
+		lifetime = 0
+		idle_timeout = 60
+	}
+}
+
+rest zf_clients {
+	connect_uri = "http://app:3000"
+	connect_timeout = 3.0
+
+	authorize {
+		uri = "${..connect_uri}/api/netwerk/radius/client?ip=%{Packet-Src-IP-Address}"
+		method = "get"
+		auth = "basic"
+		username = "zekerflex"
+		password = "$ENV{NETWERK_RADIUS_TOKEN}"
+		timeout = 5
+		tls = ${..tls}
+	}
+
+	tls {
+	}
+
+	pool {
+		start = 1
+		min = 1
+		max = 4
+		spare = 1
+		uses = 0
+		retry_delay = 10
+		lifetime = 0
+		idle_timeout = 60
+	}
+}

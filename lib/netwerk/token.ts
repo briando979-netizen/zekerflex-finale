@@ -19,7 +19,9 @@ export function checkNetwerkToken(request: Request): NetwerkPoort {
   const verwacht = env.NETWERK_RADIUS_TOKEN;
   if (!verwacht) return { ok: false, status: 412, message: "De wifi-dienst is nog niet ingericht (NETWERK_RADIUS_TOKEN ontbreekt)." };
   const auth = request.headers.get("authorization");
-  const gegeven = request.headers.get("x-netwerk-token") ?? (auth?.startsWith("Bearer ") ? auth.slice(7) : null);
+  // rlm_rest (FreeRADIUS 3) kent geen eigen koppen: de sleutel komt dan als wachtwoord in Basic-auth
+  const basis = auth?.startsWith("Basic ") ? Buffer.from(auth.slice(6), "base64").toString("utf8").split(":").slice(1).join(":") : null;
+  const gegeven = request.headers.get("x-netwerk-token") ?? (auth?.startsWith("Bearer ") ? auth.slice(7) : basis);
   if (!gegeven) return { ok: false, status: 401, message: "Geen sleutel." };
   const a = Buffer.from(gegeven);
   const b = Buffer.from(verwacht);

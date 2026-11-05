@@ -6,7 +6,8 @@ import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { AppError } from "@/lib/errors";
 import { hasRole, type Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { LEGE_STAND, leesbareCode, type ModuleSleutel, type ModuleStand, type NetwerkStand } from "@/lib/netwerk/modules";
+import { amsterdamStartOfDay } from "@/lib/time/amsterdam";
+import { LEGE_STAND, leesbareCode, moduleActief, type ModuleSleutel, type ModuleStand, type NetwerkStand } from "@/lib/netwerk/modules";
 
 // ---------------------------------------------------------------------------
 // Wat een bedrijf aan netwerkpakketten heeft en hoe de wifi is ingericht.
@@ -207,6 +208,45 @@ export async function vpnLog(tenantId: string): Promise<VpnSleutelLog[]> {
 export async function noteerVpnSleutel(tenantId: string, item: VpnSleutelLog): Promise<void> {
   const l = await vpnLog(tenantId);
   await kvSet(VPN(tenantId), { sleutels: [item, ...l].slice(0, 200) });
+}
+
+// --- de klussen van vandaag met wifi (werker-app, Account → Wifi) ---------------------------
+
+export interface WifiVandaag {
+  bedrijf: string;
+  vestiging: string;
+  van: string;
+  tot: string;
+  /** de netwerknaam, als het bedrijf daar wifi via ZekerFlex heeft */
+  ssid: string | null;
+}
+
+/** De klussen van vandaag (Nederlandse dag) van deze flexwerker, met per vestiging de wifi-netwerknaam. */
+export async function wifiVandaagVoor(userId: string, nu = new Date()): Promise<WifiVandaag[]> {
+  const profiel = await prisma.freelancerProfile.findUnique({ where: { userId }, select: { id: true } });
+  if (!profiel) return [];
+  const start = amsterdamStartOfDay(nu);
+  const eind = amsterdamStartOfDay(nu, 1);
+  const rijen = await prisma.shiftAssignment.findMany({
+    where: { freelancerId: profiel.id, cancelledAt: null, shift: { status: { notIn: ["DRAFT", "CANCELLED"] }, endsAt: { gte: start }, startsAt: { lt: eind } } },
+    select: { shift: { select: { startsAt: true, endsAt: true, branch: { select: { id: true, name: true, city: true, tenantId: true, tenant: { select: { name: true } } } } } } },
+    orderBy: { shift: { startsAt: "asc" } },
+    take: 20,
+  });
+  const perTenant = new Map<string, Promise<{ actief: boolean; wifi: WifiInstellingen }>>();
+  const uit: WifiVandaag[] = [];
+  for (const r of rijen) {
+    const b = r.shift.branch;
+    let p = perTenant.get(b.tenantId);
+    if (!p) {
+      p = Promise.all([netwerkStand(b.tenantId), wifiInstellingen(b.tenantId)]).then(([stand, wifi]) => ({ actief: moduleActief(stand, "wifi"), wifi }));
+      perTenant.set(b.tenantId, p);
+    }
+    const { actief, wifi } = await p;
+    const v = wifi.vestigingen[b.id];
+    uit.push({ bedrijf: b.tenant.name, vestiging: `${b.name}, ${b.city}`, van: r.shift.startsAt.toISOString(), tot: r.shift.endsAt.toISOString(), ssid: actief && v?.aan ? v.ssid : null });
+  }
+  return uit;
 }
 
 // --- de vestigingen van het bedrijf (uit de database) -------------------------------------

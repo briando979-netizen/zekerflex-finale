@@ -252,7 +252,10 @@ const schema = z.object({
   NETWERK_RADIUS_TOKEN: z.string().min(16).optional(),
   // het adres dat klanten in hun wifi-apparatuur zetten (UDP 1812)
   NETWERK_RADIUS_HOST: z.string().default("vps.zekerflex.com"),
+  // HEADSCALE_URL is het openbare adres voor de Tailscale-apps (vpn.zekerflex.com);
+  // de app zelf praat intern met de container.
   HEADSCALE_URL: z.string().url().optional(),
+  HEADSCALE_API_URL: z.string().url().default("http://headscale:8080"),
   HEADSCALE_API_KEY: z.string().optional(),
 
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
