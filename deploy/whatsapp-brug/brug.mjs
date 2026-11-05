@@ -38,6 +38,8 @@ const jidVan = (naar) => `${String(naar).replace(/\D/g, "")}@s.whatsapp.net`;
 const nummerVan = (jid) => `+${String(jid).split("@")[0].split(":")[0]}`;
 
 async function start() {
+  // Baileys noemt dit een "use…"-functie, maar het is geen React-hook.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   sock = makeWASocket({
