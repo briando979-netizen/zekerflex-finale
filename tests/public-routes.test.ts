@@ -53,6 +53,9 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/domeinen/aanvraag", // request a domain / transfer
     "/api/rijschool/domein", // middleware lookup: which driving school owns this own domain
     "/api/rijschool/domein/bewijs", // https proof on the own domain of a driving school
+    "/api/oidc/authorize", // "Inloggen met ZekerFlex": the route itself sends a guest to /login
+    "/api/oidc/token", // the service exchanges the code with its client secret
+    "/api/oidc/jwks", // public signing key
     "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
     "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
   ];

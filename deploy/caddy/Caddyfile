@@ -105,6 +105,17 @@ vpn.zekerflex.com {
 	}
 }
 
+# Kennisbank: Outline (lib/kennisbank) op een eigen naam; inloggen gaat via
+# "Inloggen met ZekerFlex" (lib/oidc). Standaard een sslip.io-naam; met een
+# A-record kan OUTLINE_HOST kennis.zekerflex.com worden.
+{$OUTLINE_HOST:kennis.37-97-226-24.sslip.io} {
+	encode zstd gzip
+	reverse_proxy outline:3000 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

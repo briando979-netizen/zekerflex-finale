@@ -807,6 +807,30 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(backup?.status?.offsite.configured ? { doneNote: backup.status.offsite.ok ? `laatste kopie gelukt naar ${backup.status.offsite.target}` : `laatste kopie mislukt: ${backup.status.offsite.error}` } : {}),
     },
     {
+      id: "diensten-dns",
+      group: "Beheer & veiligheid",
+      title: "Eigen namen voor rapportages en kennisbank (bi. en kennis.zekerflex.com)",
+      why: "Metabase (rapportages) en Outline (kennisbank) draaien op de eigen server en zijn nu bereikbaar op een technische naam (…sslip.io). Met twee DNS-regels krijgen ze een nette naam op zekerflex.com.",
+      how: [
+        "Zet bij je domeinbeheer twee A-records naar het IP van de VPS (37.97.226.24): bi.zekerflex.com en kennis.zekerflex.com.",
+        "Zeg het tegen Claude; die zet METABASE_HOST en OUTLINE_HOST in .env.production en herstart de webserver. Certificaten komen vanzelf.",
+      ],
+      auto: false,
+      ...m("diensten-dns"),
+    },
+    {
+      id: "kennisbank-api",
+      group: "Beheer & veiligheid",
+      title: "Kennisbank: één keer inloggen en een API-sleutel maken",
+      why: "De kennisbank (Outline) vult zichzelf met de handleidingen uit de code, maar daarvoor is een API-sleutel nodig die alleen een ingelogde beheerder kan maken.",
+      how: [
+        "Open Admin → AI & automatisering → Kennisbank en klik op het adres; log in met je ZekerFlex-account (de eerste wordt beheerder).",
+        "In Outline: Instellingen → API-sleutels → Nieuwe sleutel. Plak hem in Admin → Kennisbank en klik 'Kennisbank vullen'.",
+      ],
+      auto: false,
+      ...m("kennisbank-api"),
+    },
+    {
       id: "test-accounts",
       group: "Beheer & veiligheid",
       title: "Oude wegwerp-testaccounts laten opruimen",

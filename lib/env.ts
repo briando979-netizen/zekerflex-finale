@@ -404,6 +404,13 @@ const schema = z.object({
   METABASE_DB_HOST: z.string().default("postgres"),
   METABASE_DB_NAME: z.string().default("zekerflex"),
 
+  // Kennisbank (Outline, lib/kennisbank) en "Inloggen met ZekerFlex" (lib/oidc): de container
+  // op het interne netwerk, het publieke adres via Caddy, en het client-geheim van Outline
+  // (door de uitrol aangemaakt, deploy/scripts/env-aanvullen.sh).
+  OUTLINE_URL: z.string().url().optional(),
+  OUTLINE_PUBLIC_URL: z.string().url().optional(),
+  OIDC_OUTLINE_SECRET: z.string().min(16).optional(),
+
   // Didit - KYC / identity verification.
   DIDIT_BASE_URL: z.string().url().default("https://verification.didit.me"),
   DIDIT_API_KEY: z.string().optional(),

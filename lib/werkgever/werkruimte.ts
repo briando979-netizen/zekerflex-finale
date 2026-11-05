@@ -97,7 +97,8 @@ export type MenuSleutel =
   | "telefonie"
   | "reviews"
   | "netwerk"
-  | "rapportages";
+  | "rapportages"
+  | "kennisbank";
 
 export type MenuSectie = "beheer" | "klanten" | "administratie" | "personeel";
 
@@ -137,7 +138,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       ...(o.heeftHoreca ? [{ sleutel: "horeca" as const }] : []),
       ...(o.heeftRijschool ? [{ sleutel: "rijschool" as const }] : []),
       ...(["klussen", "kalender", "agenda", ...bank, "favorieten", "berichten", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
-      ...(["uren", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk"] as MenuSleutel[]).map(plek("beheer")),
+      ...(["uren", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
     ];
   }
   // het eigen onderdeel bovenaan, een ander pakket dat ook aanstaat erna
@@ -153,7 +154,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
     ...eigen.map(plek()),
     ...(["agenda", "berichten", "mail", "whatsapp"] as MenuSleutel[]).map(plek()),
     ...klanten.map(plek("klanten")),
-    ...(["facturen", "rapportages", ...bank, "bedrijf"] as MenuSleutel[]).map(plek("administratie")),
+    ...(["facturen", "rapportages", ...bank, "bedrijf", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
     // geen klussen (nog)? Dan één ingang om er een te plaatsen
     ...(o.ookPersoneel ? PERSONEEL_SLEUTELS : (["inhuren"] as const)).map(plek("personeel")),
   ];

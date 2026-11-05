@@ -47,6 +47,7 @@ const PUBLIC_PREFIXES = [
   "/api/kaart", // ZekerFlex Kaart: adres zoeken (PDOK, IP-begrensd) en luchtfoto-tegels (PDOK, alleen NL); alleen lezen, geen gegevens van gebruikers
   "/api/domeinen", // domeinnaam zoeken (alleen lezen, vaste RDAP-adressen) en aanvragen (toestemming verplicht, alleen van de eigen site); beide IP-begrensd (lib/domeinen)
   "/api/horeca/site", // horecasite: bestellen via de QR-code op tafel (IP-begrensd, tafelcode verplicht) en de bestelling volgen; elke route controleert zelf (lib/horeca). Het beheer (/api/horeca/beheer) blijft achter de ZekerFlex-login
+  "/api/oidc", // "Inloggen met ZekerFlex" (lib/oidc): authorize eist zelf een sessie (anders naar /login), token en userinfo zijn voor de dienst (client-geheim / toegangstoken), jwks is openbaar
   "/api/horeca/scherm", // horeca-schermen (keuken, bar, handheld, …): alleen voor een gekoppeld apparaat met eigen ondertekend cookie of de beheerder; koppelen met een code van 15 min, IP-begrensd (lib/horeca/apparaten.ts)
   "/api/rijschool/site", // rijschoolsite: proefles (IP-begrensd), leerling- en instructeur-app met eigen sessie-cookie; elke route controleert zelf (lib/rijschool/accounts.ts). Het beheer (/api/rijschool/beheer) blijft achter de ZekerFlex-login
   "/api/rijschool/domein", // eigen domein van een rijschool: welke rijschool hoort bij een domein (alleen naam, online, hoofdadres; de middleware vraagt dit) en het https-bewijs op dat domein (lib/rijschool/domein.ts)

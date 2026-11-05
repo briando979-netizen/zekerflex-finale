@@ -80,6 +80,8 @@ describe("menuVoor", () => {
       { sleutel: "telefonie", sectie: "beheer" },
       { sleutel: "reviews", sectie: "beheer" },
       { sleutel: "netwerk", sectie: "beheer" },
+      // de kennisbank (Outline, lib/kennisbank): handleidingen, altijd als laatste
+      { sleutel: "kennisbank", sectie: "beheer" },
     ]);
     // pakketten die aanstaan direct na de start, zoals voorheen (horeca vóór rijschool)
     expect(sleutels("personeel", { heeftRijschool: true, heeftHoreca: true }).slice(0, 4)).toEqual(["start", "horeca", "rijschool", "klussen"]);

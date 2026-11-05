@@ -45,6 +45,9 @@ services:
       # Rapportages (lib/bi): Metabase op het interne netwerk; het publieke adres via Caddy
       METABASE_URL: ${METABASE_URL:-http://metabase:3000}
       METABASE_PUBLIC_URL: ${METABASE_PUBLIC_URL:-https://${METABASE_HOST:-bi.37-97-226-24.sslip.io}}
+      # Kennisbank (lib/kennisbank, lib/oidc): Outline op het interne netwerk; publiek via Caddy
+      OUTLINE_URL: ${OUTLINE_URL:-http://outline:3000}
+      OUTLINE_PUBLIC_URL: ${OUTLINE_PUBLIC_URL:-https://${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}}
     volumes:
       - app-storage:/app/storage
       # Back-ups van beheerde klantsites: eigen volume, niet in onze eigen nachtelijke back-up.
@@ -73,6 +76,7 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
       BOUWER_VOORBEELD_HOST: ${BOUWER_VOORBEELD_HOST:-voorbeeld.37-97-226-24.sslip.io}
       METABASE_HOST: ${METABASE_HOST:-bi.37-97-226-24.sslip.io}
+      OUTLINE_HOST: ${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"
@@ -378,6 +382,52 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "3" }
 
+  # Kennisbank (lib/kennisbank): Outline, open source, op de eigen server, met
+  # "Inloggen met ZekerFlex" (OpenID Connect, lib/oidc). Eigen database `outline`
+  # op onze Postgres (deploy/scripts/databases-aanmaken.sh), Redis gedeeld (db 2),
+  # bijlagen op een eigen volume. De geheimen maakt de uitrol zelf aan
+  # (env-aanvullen.sh). Alleen via Caddy bereikbaar op OUTLINE_HOST.
+  outline:
+    image: outlinewiki/outline:0.86.1
+    restart: unless-stopped
+    command: ["sh", "-c", "yarn db:migrate --env=production-ssl-disabled && yarn start"]
+    environment:
+      NODE_ENV: production
+      SECRET_KEY: ${OUTLINE_SECRET_KEY:-}
+      UTILS_SECRET: ${OUTLINE_UTILS_SECRET:-}
+      DATABASE_URL: postgres://zekerflex:${POSTGRES_PASSWORD}@postgres:5432/outline
+      PGSSLMODE: disable
+      REDIS_URL: redis://redis:6379/2
+      URL: https://${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}
+      PORT: 3000
+      FORCE_HTTPS: "false"
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+      FILE_STORAGE_UPLOAD_MAX_SIZE: "26214400"
+      DEFAULT_LANGUAGE: nl_NL
+      WEB_CONCURRENCY: "1"
+      ENABLE_UPDATES: "false"
+      TELEMETRY: "false"
+      OIDC_CLIENT_ID: outline
+      OIDC_CLIENT_SECRET: ${OIDC_OUTLINE_SECRET:-}
+      OIDC_AUTH_URI: ${APP_BASE_URL:-https://zekerflex.com}/api/oidc/authorize
+      OIDC_TOKEN_URI: ${APP_BASE_URL:-https://zekerflex.com}/api/oidc/token
+      OIDC_USERINFO_URI: ${APP_BASE_URL:-https://zekerflex.com}/api/oidc/userinfo
+      OIDC_DISPLAY_NAME: ZekerFlex
+      OIDC_SCOPES: openid profile email
+      OIDC_USERNAME_CLAIM: preferred_username
+    volumes:
+      - outline-data:/var/lib/outline/data
+    mem_limit: 768m
+    cpus: 1
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
+
   # Browser-werker voor de bronnen (lib/bronnen, deploy/scraper): Playwright met
   # Chromium in een eigen container. Geen database en geen geheimen van de app;
   # alleen de app praat ermee (SCRAPER_TOKEN, door de uitrol zelf aangemaakt) op een
@@ -415,6 +465,7 @@ networks:
     driver: bridge
 
 volumes:
+  outline-data:
   app-storage:
   site-backups:
   next-cache:

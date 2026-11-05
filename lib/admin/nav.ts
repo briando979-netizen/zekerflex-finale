@@ -129,6 +129,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/autopilot", label: "Autopilot" },
       { href: "/admin/kennisgraaf", label: "Kennisgraaf" },
       { href: "/admin/bronnen", label: "Bronnen" },
+      { href: "/admin/kennisbank", label: "Kennisbank" },
       { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis" },
     ],
   },

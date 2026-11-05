@@ -20,6 +20,8 @@ import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDo
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
+import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
+import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +83,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
     netwerk: { href: "/werkgever/netwerk", label: "Wifi en VPN", icon: <IShield /> },
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
+    // de kennisbank staat op een eigen adres (Outline); inloggen gaat vanzelf met het ZekerFlex-account
+    kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
@@ -94,6 +98,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     studio: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN"),
   })
     .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
+    .filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())
     .map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
 
   return (
