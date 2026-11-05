@@ -6,6 +6,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
+import { publiekProduct } from "@/lib/shop/publiek";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +50,8 @@ export async function GET(request: Request): Promise<NextResponse> {
         bundleOf: { include: { itemProduct: { select: { id: true, name: true, imageUrl: true, priceCents: true } } } },
       },
     });
-    return NextResponse.json({ products });
+    // Bezoekers krijgen geen inkoopprijs en geen interne verkopersvelden (stond tot 5 nov 2026 open).
+    return NextResponse.json({ products: isAdmin ? products : products.map(publiekProduct) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

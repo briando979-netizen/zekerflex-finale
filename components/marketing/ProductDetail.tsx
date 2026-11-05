@@ -11,6 +11,7 @@ import { IconCart, IconHeart, SELLER, ShopProductCard } from "@/components/marke
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
 import { bySize, priceParts, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import { specFor } from "@/lib/shop/product-specs";
+import { PaskamerTip } from "@/components/marketing/paskamer/PaskamerTip";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -38,6 +39,8 @@ export type PdpProduct = {
   model3dUrl?: string | null;
   /** verkoper op de marktplaats; null = ZekerFlex zelf */
   seller?: string | null;
+  /** heren/vrouwen/kinderen/unisex: voor de paskamer (kindermaat of niet) */
+  gender?: string | null;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -248,6 +251,15 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               </div>
             </div>
           )}
+
+          <PaskamerTip
+            product={product}
+            gekozen={selSize}
+            onKiesMaat={(m) => {
+              setSelSize(m);
+              setAdded(false);
+            }}
+          />
 
           <p className={`mt-5 text-[14px] font-bold ${variant && variantStock <= 0 ? "text-crit" : variant ? "text-ok" : "text-neutralx-600"}`}>
             {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}

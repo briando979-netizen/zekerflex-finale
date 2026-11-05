@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
+import { Paspop } from "@/components/marketing/paskamer/Paspop";
+import { STANDAARD_LICHAAM, pasvormVoor, type Lichaam } from "@/lib/shop/paskamer";
+import type { Gedragen } from "@/lib/shop/paspop-figuur";
 
 // De vaste delen van de shop-homepage, opgebouwd als een marktplaats.
 // Serveronderdelen: geen JavaScript in de browser. Het interactieve assortiment
@@ -214,6 +217,58 @@ export function ShopNewsletter({ t }: { t: T }) {
         {/* de toestemmingsregel (text-white/50) haalt op dit groen geen 4,5:1: hier lichter */}
         <div className="[&_label]:text-white/80">
           <NewsletterSignup source="shop" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// twee vaste looks voor het paskamerblok (zelfde tekening als in de paskamer)
+const PROMO_LOOKS: { lichaam: Lichaam; huid: string; slugs: string[]; kleur?: Record<string, string> }[] = [
+  { lichaam: STANDAARD_LICHAAM.heren, huid: "#d9a989", slugs: ["veiligheidshelm", "veiligheidshesje", "werk-tshirt-2pack", "werkbroek-kniezakken", "werkhandschoenen-grip", "veiligheidsschoenen-s3"] },
+  { lichaam: STANDAARD_LICHAAM.dames, huid: "#a86f4c", slugs: ["business-blouse-dames", "chino-broek-zakelijk", "veiligheidssneakers-s1p"], kleur: { "business-blouse-dames": "#cfe0ef", "chino-broek-zakelijk": "#1f2f4f" } },
+];
+
+function promoStukken(slugs: string[], kleur: Record<string, string> = {}): Gedragen[] {
+  return slugs.flatMap((slug) => {
+    const p = pasvormVoor({ slug, name: slug });
+    return p ? p.stukken.map((s) => ({ slot: s.slot, soort: s.soort, kleur: s.kleur ?? kleur[slug] ?? p.kleur, accent: p.accent, ruimte: 0 })) : [];
+  });
+}
+
+/** Blok op de shop-homepage: de paskamer met twee aangeklede paspoppen (server, geen JavaScript). */
+export function ShopPaskamerPromo({ pk }: { pk: Dict["paskamer"] }) {
+  return (
+    <section aria-labelledby="shop-paskamer" className="bg-white">
+      <div className={`${WRAP} py-6 lg:py-8`}>
+        <div className="grid items-center gap-6 overflow-hidden rounded-2xl bg-ink text-white md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div className="p-6 sm:p-10">
+            <p className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-brand-mint">
+              <span className="rounded-full bg-brand-mint px-2 py-0.5 text-[10px] text-ink">{pk.nieuw}</span> {pk.eyebrow}
+            </p>
+            <h2 id="shop-paskamer" className="mt-3 font-display text-[28px] font-extrabold leading-tight tracking-tight sm:text-[36px]">
+              {pk.titel}
+            </h2>
+            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/85">{pk.promoTekst}</p>
+            <ul className="mt-5 space-y-2 text-[14px] text-white/90">
+              {pk.promoPunten.map((punt) => (
+                <li key={punt} className="flex items-center gap-2.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand-mint" aria-hidden>
+                    <path d="m5 12.5 4.5 4.5L19 7.5" />
+                  </svg>
+                  {punt}
+                </li>
+              ))}
+            </ul>
+            <Link href="/shop/paskamer" className="mt-7 inline-flex h-12 items-center rounded-lg bg-brand-mint px-6 text-[15px] font-bold text-ink transition hover:brightness-95">
+              {pk.promoKnop} →
+            </Link>
+          </div>
+          <Link href="/shop/paskamer" aria-label={pk.promoKnop} className="relative flex h-[340px] items-end justify-center gap-2 bg-gradient-to-b from-[#f4f1ea] to-[#e5dfd3] px-4 pt-6 sm:h-[420px] md:h-full md:min-h-[440px]">
+            {PROMO_LOOKS.map((l, i) => (
+              <Paspop key={i} id={`promo${i}`} lichaam={l.lichaam} huid={l.huid} stukken={promoStukken(l.slugs, l.kleur)} label={pk.titel} achtergrond={false} className="h-[96%] w-auto" />
+            ))}
+          </Link>
         </div>
       </div>
     </section>

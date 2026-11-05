@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 function toDto(p: {
   id: string; slug: string; name: string; description: string; category: string;
   priceCents: number; stock: number; imageUrl: string | null; modelPhotoUrl: string | null; badge: string | null;
+  gender?: string | null;
   seller?: { name: string } | null;
   variants?: { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
   bundleOf?: { itemProduct: { id: string; name: string; imageUrl: string | null; priceCents: number } }[];
@@ -22,6 +23,7 @@ function toDto(p: {
     variants: p.variants ?? [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
     ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
     seller: p.seller?.name ?? null,
+    gender: p.gender ?? null,
   };
 }
 
