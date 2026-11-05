@@ -205,6 +205,12 @@ async function dashboard(sessie: Sessie, stand: BiStand, collectionId: number, k
     if (!bestaat) id = null;
   }
   if (!id) {
+    // een eerdere poging kan het dashboard al gemaakt hebben en daarna gestrand zijn:
+    // dan die hergebruiken, anders komt er bij elke poging een nieuwe "Mijn bedrijf" bij
+    const items = await api<{ data?: Array<{ id: number; name?: string; model?: string }> }>(`/collection/${collectionId}/items?models=dashboard`, { sessie }).catch(() => null);
+    id = items?.data?.find((d) => d.model === "dashboard" && d.name === DASHBOARD_NAAM)?.id ?? null;
+  }
+  if (!id) {
     const r = await api<{ id: number }>("/dashboard", { method: "POST", sessie, body: { name: DASHBOARD_NAAM, description: "Uren, kosten, bezetting en facturen van het eigen bedrijf.", collection_id: collectionId, parameters } });
     id = r.id;
   }
@@ -225,10 +231,25 @@ async function dashboard(sessie: Sessie, stand: BiStand, collectionId: number, k
 
 // ── 4. Inbedden ──────────────────────────────────────────────────────────────
 
-async function inbedden(sessie: Sessie, stand: BiStand): Promise<string> {
+/**
+ * Embedden aanzetten, vóór het dashboard met de embed-vlag wordt opgeslagen (anders
+ * weigert Metabase dat: "Embedding is not enabled"). Sinds 0.52 heet de instelling
+ * enable-embedding-static (getekende links); oudere versies kennen alleen enable-embedding.
+ */
+async function inbeddenAan(sessie: Sessie): Promise<void> {
+  const fouten: string[] = [];
   for (const naam of ["enable-embedding-static", "enable-embedding"]) {
-    await api(`/setting/${naam}`, { method: "PUT", sessie, body: { value: true } }).catch(() => undefined);
+    try {
+      await api(`/setting/${naam}`, { method: "PUT", sessie, body: { value: true } });
+      return;
+    } catch (e) {
+      fouten.push(`${naam}: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
+  throw new Error(`Embedden aanzetten mislukt (${fouten.join("; ")})`);
+}
+
+async function inbedden(sessie: Sessie, stand: BiStand): Promise<string> {
   const huidig = await api<{ value?: string } | string | null>("/setting/embedding-secret-key", { sessie }).catch(() => null);
   const waarde = typeof huidig === "string" ? huidig : huidig?.value;
   if (geldigeInbedsleutel(waarde)) return waarde;
@@ -256,6 +277,7 @@ export async function richtBiIn(): Promise<BiStand> {
     stand.databaseId = await verbindingMetBi(sessie, stand, rolWachtwoord);
     stand.collectionId = await collectie(sessie, stand);
     stand.kaarten = await kaarten(sessie, stand, stand.databaseId, stand.collectionId);
+    await inbeddenAan(sessie);
     stand.dashboardId = await dashboard(sessie, stand, stand.collectionId, stand.kaarten);
     stand.inbedsleutel = await inbedden(sessie, stand);
     stand.ingerichtOp = new Date().toISOString();
