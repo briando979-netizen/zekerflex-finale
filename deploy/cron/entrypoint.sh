@@ -46,6 +46,8 @@ cat > /etc/crontabs/root <<EOF
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)
 */10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/video/wachtrij"
+# elke 10 min: de nieuwste GitHub main alvast controleren in de Bouwer (tsc, eslint, tests; antwoordt meteen)
+*/10 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/controles/tick"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"

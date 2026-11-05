@@ -44,6 +44,7 @@ const schema = z.discriminatedUnion("actie", [
     migraties: z.array(z.string().regex(/^[\w-]{1,120}$/)).max(50).default([]),
     destructiefAkkoord: z.boolean().default(false),
     forceer: z.boolean().default(false),
+    zonderControle: z.boolean().default(false),
   }),
   z.object({ actie: z.literal("terug") }),
   z.object({ actie: z.literal("onderhoud"), taak: z.enum(ONDERHOUD_TAKEN) }),
@@ -90,7 +91,14 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
 
   const verzoek = await plaatsVerzoek(
     body.actie === "uitrollen"
-      ? { actie: "uitrollen", migraties: body.migraties, destructiefAkkoord: body.destructiefAkkoord, forceer: body.forceer, door: principal.email }
+      ? {
+          actie: "uitrollen",
+          migraties: body.migraties,
+          destructiefAkkoord: body.destructiefAkkoord,
+          forceer: body.forceer,
+          ...(body.zonderControle ? { zonderControle: true } : {}),
+          door: principal.email,
+        }
       : { actie: "terug", migraties: [], destructiefAkkoord: false, forceer: false, door: principal.email },
   );
 
@@ -102,7 +110,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     actorLabel: "user",
     summary:
       body.actie === "uitrollen"
-        ? `${principal.email} zette de nieuwste versie live${body.migraties.length ? ` met ${body.migraties.length} database-wijziging(en): ${body.migraties.join(", ")}` : ""}${body.forceer ? " (geforceerd)" : ""}`
+        ? `${principal.email} zette de nieuwste versie live${body.migraties.length ? ` met ${body.migraties.length} database-wijziging(en): ${body.migraties.join(", ")}` : ""}${body.forceer ? " (geforceerd)" : ""}${body.zonderControle ? " (zonder controle)" : ""}`
         : `${principal.email} zette de vorige versie terug`,
   });
 

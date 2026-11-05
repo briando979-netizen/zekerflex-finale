@@ -15,6 +15,8 @@
 //   POST /taken/:id/stop
 //   POST /terminal                   → { opdracht } één shell-commando in de werkkopie (max 2 min)
 //   GET  /voorbeeld, POST /voorbeeld/start, POST /voorbeeld/stop → live voorbeeld (voorbeeld.mjs)
+//   GET  /controles, GET /controles/:sha, POST /controles { sha|"main", vanaf?, opnieuw?, door }
+//                                    → de controle vóór het live zetten (controle.mjs): tsc/eslint/tests op een vastlegging
 import http from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -22,6 +24,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { GITHUB_REPO, REPO_DIR, WERK, controleer, gewijzigdeBestanden, huidigeDiff, nieuweWerkkopie, sh } from "./werkkopie.mjs";
 import { controleTekst, draai, systeemPrompt } from "./agent.mjs";
 import { startVoorbeeld, startVoorbeeldProxy, stopVoorbeeld, voorbeeldStand } from "./voorbeeld.mjs";
+import { controleerVastlegging, lijstUitslagen, samenvattingControle, uitslagVan } from "./controle.mjs";
 
 const POORT = Number(process.env.BOUWER_POORT || 4100);
 const TOKEN = process.env.BOUWER_TOKEN || "";
@@ -31,6 +34,8 @@ const OPEN = new Set(["bezig", "klaar", "mislukt", "conflict", "goedkeuren", "vr
 
 /** @type {{ id: string, abort: AbortController } | null} */
 let actief = null;
+/** De controle vóór het live zetten die nu loopt (controle.mjs), of null. */
+let controleBezig = null;
 
 // ---- opslag ---------------------------------------------------------------------
 
@@ -362,6 +367,34 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/voorbeeld/stop" && req.method === "POST") {
       stopVoorbeeld();
       return antwoord(res, 200, voorbeeldStand());
+    }
+
+    // De controle vóór het live zetten (controle.mjs): uitslagen per vastlegging, en een
+    // nieuwe starten op de achtergrond. De live-zetter roept controle.mjs rechtstreeks aan.
+    if (url.pathname === "/controles" && req.method === "GET") {
+      return antwoord(res, 200, { bezig: controleBezig, uitslagen: (await lijstUitslagen(30)).map(samenvattingControle) });
+    }
+    if (url.pathname === "/controles" && req.method === "POST") {
+      const b = await lichaam(req);
+      const doel = String(b.sha ?? "main");
+      if (!/^(main|[0-9a-f]{7,40})$/.test(doel)) return antwoord(res, 400, { fout: "Onbekende vastlegging" });
+      if (controleBezig) return antwoord(res, 409, { fout: "Er loopt al een controle", bezig: controleBezig });
+      if (actief) return antwoord(res, 409, { fout: "De Bouwer is aan het werk; de controle komt bij de volgende ronde" });
+      const bezig = { doel, begon: new Date().toISOString(), door: String(b.door ?? "app").slice(0, 100), stap: "gestart" };
+      controleBezig = bezig;
+      const log = (soort, tekst) => {
+        bezig.stap = `${soort}: ${String(tekst).slice(0, 200)}`;
+      };
+      void controleerVastlegging({ doel, vanaf: b.vanaf ? String(b.vanaf) : null, opnieuw: Boolean(b.opnieuw), door: bezig.door, log })
+        .catch((e) => console.error("[bouwer] controle mislukt", e))
+        .finally(() => {
+          if (controleBezig === bezig) controleBezig = null;
+        });
+      return antwoord(res, 202, { bezig });
+    }
+    if (delen[0] === "controles" && delen.length === 2 && req.method === "GET") {
+      const u = /^[0-9a-f]{40}$/.test(delen[1]) ? await uitslagVan(delen[1]) : null;
+      return u ? antwoord(res, 200, u) : antwoord(res, 404, { fout: "Geen uitslag voor deze vastlegging" });
     }
 
     if (delen[0] !== "taken") return antwoord(res, 404, { fout: "Onbekend pad" });

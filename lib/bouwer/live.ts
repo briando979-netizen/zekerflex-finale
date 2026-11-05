@@ -38,6 +38,8 @@ export interface LiveVerzoek {
   destructiefAkkoord: boolean;
   /** Ook uitrollen als de live versie niet op GitHub main staat, of al gelijk is. */
   forceer: boolean;
+  /** Ook uitrollen als de controle vóór het bouwen (TypeScript, eslint, tests) faalt. */
+  zonderControle?: boolean;
   door: string;
   op: string;
 }
@@ -65,6 +67,10 @@ export interface LiveStatus {
   migraties: LiveMigratie[];
   /** De server kan "forceer" aanbieden (live staat niet op main, of is al gelijk). */
   kanForceren?: boolean;
+  /** De controle vóór het bouwen faalde; de server biedt "zonder controle" aan. */
+  kanZonderControle?: boolean;
+  /** De uitslag van die controle (deploy/bouwer/werker/controle.mjs) voor deze uitrol. */
+  controle?: { ok: boolean; sha: string; duurSec: number | null; tsc: boolean; eslint: boolean; tests: boolean };
 }
 
 export interface LiveLog {

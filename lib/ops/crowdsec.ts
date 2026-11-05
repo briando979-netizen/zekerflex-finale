@@ -64,7 +64,7 @@ async function machineToken(): Promise<string> {
   }
   const res = await fetch(`${basis()}/v1/watchers/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ machine_id: env.CROWDSEC_MACHINE_ID, password: env.CROWDSEC_MACHINE_PASSWORD, scenarios: [] }),
     cache: "no-store",
     signal: AbortSignal.timeout(8000),
@@ -76,8 +76,11 @@ async function machineToken(): Promise<string> {
   return d.token;
 }
 
+// De LAPI wil een "naam/versie" als User-Agent; met Node's standaard ("node") logt hij elke aanroep als waarschuwing.
+const USER_AGENT = "zekerflex-app/1.0";
+
 async function lapi<T>(pad: string, init: { auth: "bouncer" | "machine"; method?: "GET" | "DELETE" }): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json", "User-Agent": USER_AGENT };
   if (init.auth === "bouncer") headers["X-Api-Key"] = env.CROWDSEC_BOUNCER_KEY ?? "";
   else headers.Authorization = `Bearer ${await machineToken()}`;
   const res = await fetch(`${basis()}${pad}`, { method: init.method ?? "GET", headers, cache: "no-store", signal: AbortSignal.timeout(8000) });

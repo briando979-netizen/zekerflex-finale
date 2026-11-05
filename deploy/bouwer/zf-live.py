@@ -9,9 +9,12 @@ deed, zonder Claude:
   2. controleren: staat de live versie op main? zijn er database-wijzigingen?
      Database-wijzigingen alleen met akkoord op precies die migraties, en pas
      na een geslaagde proef op de echte database in BEGIN … ROLLBACK.
-  3. code uitpakken over ~/zekerflex en deploy/scripts/vps-update.sh draaien
+  3. de controle vóór het bouwen: TypeScript, eslint en tests op precies die
+     vastlegging, in de Bouwer-container (deploy/bouwer/werker/controle.mjs).
+     Faalt die, dan gaat de versie niet live, tenzij "zonder controle" is gevraagd.
+  4. code uitpakken over ~/zekerflex en deploy/scripts/vps-update.sh draaien
      (bouwen, eventueel migreren vóór de start, starten, Caddy herladen)
-  4. wachten tot de nieuwe app gezond is; zo niet, zelf de vorige terugzetten
+  5. wachten tot de nieuwe app gezond is; zo niet, zelf de vorige terugzetten
 
 Stap, uitkomst en log schrijft hij terug naar de KV (bouwer:live:status/log), en
 elke 30 s een hartslag. Alleen standaardbibliotheek; praat met Postgres via
@@ -37,9 +40,13 @@ SRC = os.environ.get("ZF_SRC", os.path.expanduser("~/.zf-bron"))
 REPO = os.environ.get("ZF_REPO", "https://github.com/briando979-netizen/zekerflex-finale.git")
 PG = os.environ.get("ZF_PG_CONTAINER", "zekerflex-postgres-1")
 APP = os.environ.get("ZF_APP_CONTAINER", "zekerflex-app-1")
+BOUWER = os.environ.get("ZF_BOUWER_CONTAINER", "zekerflex-bouwer-1")
 LOGBESTAND = "/tmp/zf-live.log"
 COMPOSE = ["sudo", "docker", "compose", "-f", "docker-compose.vps.yml", "--env-file", ".env.production"]
-VERSIE = 1
+VERSIE = 2
+
+# Namen van de onderdelen van de controle (controle.mjs) in de melding naar de eigenaar.
+CONTROLE_NAAM = {"tsc": "TypeScript", "eslint": "eslint", "tests": "de tests"}
 
 K_VERZOEK = "bouwer:live:verzoek"
 K_STATUS = "bouwer:live:status"
@@ -280,6 +287,39 @@ class Uitrol:
                 )
                 return
 
+        self.stap("Controleren vóór het bouwen (TypeScript, eslint, tests)")
+        uitslag = self.controle(doel, live)
+        if uitslag is None:
+            self.schrijf("controle overgeslagen; de bouw controleert TypeScript nog wel")
+        else:
+            kort = {
+                "ok": bool(uitslag.get("ok")),
+                "sha": str(uitslag.get("sha") or doel),
+                "duurSec": uitslag.get("duurSec"),
+                "tsc": bool((uitslag.get("tsc") or {}).get("ok", True)),
+                "eslint": bool((uitslag.get("eslint") or {}).get("ok", True)),
+                "tests": bool((uitslag.get("tests") or {}).get("ok", True)),
+            }
+            self.zet(controle=kort)
+            if kort["ok"]:
+                self.schrijf(f"controle schoon ({kort['duurSec'] if kort['duurSec'] is not None else '?'} s)")
+            else:
+                falen = [CONTROLE_NAAM[n] for n in ("tsc", "eslint", "tests") if not kort[n]]
+                if self.v.get("zonderControle"):
+                    self.schrijf(f"!! controle faalt op {', '.join(falen)}, maar 'zonder controle' is gevraagd door {self.status['door']}")
+                else:
+                    self.zet(
+                        staat="mislukt",
+                        stap="Controle faalt",
+                        bericht=(
+                            f"Niet live gezet: de controle faalt op {', '.join(falen)}. De vorige versie draait gewoon door. "
+                            "Bekijk de uitslag bij Controles, los het op (of laat de Bouwer het oplossen) en zet dan live. "
+                            "Toch live zetten kan met 'Zonder controle live zetten'."
+                        ),
+                        kanZonderControle=True,
+                    )
+                    return
+
         self.stap("Code klaarzetten op de server")
         archief = subprocess.Popen(["git", "-C", SRC, "archive", doel], stdout=subprocess.PIPE)
         tar = subprocess.run(["tar", "xf", "-", "-C", ZF_DIR, "--no-same-owner"], stdin=archief.stdout, capture_output=True, text=True)
@@ -311,6 +351,41 @@ class Uitrol:
             stap="Live",
             bericht=f"Live: {onderwerp}" + (" (versie kon niet worden bevestigd)" if nieuw != doel else ""),
         )
+
+    def controle(self, doel: str, live: str | None) -> dict | None:
+        """TypeScript, eslint en tests op precies deze vastlegging, in de Bouwer-container
+        (deploy/bouwer/werker/controle.mjs). Voortgang komt regel voor regel in het log, de
+        uitslag als JSON. None = de controle kon niet draaien (Bouwer niet geïnstalleerd of
+        het script ontbreekt nog): dan gaat de uitrol door, met een regel in het log.
+        Dit proces houdt de uitrol-vergrendeling vast, dus --geen-wacht."""
+        args = ["docker", "exec", BOUWER, "node", "/opt/bouwer/controle.mjs", "--sha", doel, "--geen-wacht", "--door", "live-zetter"]
+        if live:
+            args += ["--vanaf", live]
+        try:
+            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except OSError as e:
+            self.schrijf(f"controle overgeslagen: {e}")
+            return None
+
+        def pomp() -> None:
+            assert p.stderr is not None
+            for regel in p.stderr:
+                self.schrijf(regel.rstrip())
+
+        t = threading.Thread(target=pomp, daemon=True)
+        t.start()
+        assert p.stdout is not None
+        uit = p.stdout.read()
+        code = p.wait()
+        t.join(timeout=5)
+        if code == 2 or not uit.strip():
+            self.schrijf("controle overgeslagen: " + (uit.strip()[-300:] or "geen uitslag (Bouwer niet geïnstalleerd of nog de oude versie)"))
+            return None
+        try:
+            return json.loads(uit.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            self.schrijf("controle overgeslagen: uitslag niet te lezen")
+            return None
 
     def opruimen(self, doel: str) -> None:
         """Achterblijvers naar quarantaine, met hetzelfde script als de handmatige uitrollen."""

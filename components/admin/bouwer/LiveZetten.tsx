@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Versie } from "@/lib/bouwer/versie";
 import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek, OnderhoudTaak } from "@/lib/bouwer/live";
 import type { LiveMoment } from "@/lib/bouwer/geschiedenis";
+import { controleTekst, type ControlesStand } from "@/lib/bouwer/controles-tekst";
 import { VoorbeeldPaneel } from "@/components/admin/bouwer/VoorbeeldPaneel";
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ export function LiveZetten() {
   const [verstuurt, setVerstuurt] = useState(false);
   const [gezien, setGezien] = useState(false);
   const [destructiefOk, setDestructiefOk] = useState(false);
+  const [controles, setControles] = useState<ControlesStand | null>(null);
   const logRef = useRef<HTMLPreElement | null>(null);
 
   const laad = useCallback(async (vers = false) => {
@@ -60,7 +62,24 @@ export function LiveZetten() {
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Laden mislukt");
     }
+    // de controles van de Bouwer apart: antwoordt die niet, dan blijft de live-stand gewoon werken
+    const c = await fetch("/api/admin/bouwer/controles", { cache: "no-store" }).catch(() => null);
+    if (c?.ok) setControles((await c.json()) as ControlesStand);
   }, []);
+
+  // de nieuwste main nu laten controleren (tsc, eslint, tests) in plaats van op de planner te wachten
+  const startControle = useCallback(async () => {
+    const res = await fetch("/api/admin/bouwer/controles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sha: "main" }),
+    }).catch(() => null);
+    if (res && !res.ok) {
+      const d = (await res.json().catch(() => ({}))) as { error?: { message?: string } | string };
+      setFout((typeof d.error === "string" ? d.error : d.error?.message) || `Controle starten mislukt (${res.status})`);
+    }
+    await laad();
+  }, [laad]);
 
   const actief = Boolean(stand?.bezig || stand?.verzoek);
   useEffect(() => {
@@ -220,6 +239,11 @@ export function LiveZetten() {
                 doel {kort(status.doel)} · {status.doelOnderwerp}
               </p>
             )}
+            {status.controle && (
+              <p className={`mt-1 text-xs ${status.controle.ok ? "text-brand-mint" : "text-[#F07C6B]"}`}>
+                Controle vóór het bouwen: {controleTekst({ ...status.controle, duurSec: status.controle.duurSec ?? 0 })}
+              </p>
+            )}
 
             {wacht && (
               <div className="mt-3 space-y-2">
@@ -269,6 +293,20 @@ export function LiveZetten() {
               </button>
             )}
 
+            {status.kanZonderControle && !actief && status.staat === "mislukt" && (
+              <button
+                type="button"
+                disabled={!kanKlikken}
+                onClick={() => {
+                  if (window.confirm("Toch live zetten terwijl de controle faalt? De bouw kan dan mislukken (de vorige versie blijft dan draaien), of er komt een fout op de site."))
+                    void stuur({ actie: "uitrollen", zonderControle: true });
+                }}
+                className="ml-2 mt-3 rounded-lg border border-[#F07C6B]/40 px-3 py-1.5 text-xs text-[#F07C6B] hover:bg-[rgba(240,124,107,0.08)] disabled:opacity-40"
+              >
+                Zonder controle live zetten
+              </button>
+            )}
+
             {stand.log.length > 0 && (
               <pre
                 ref={logRef}
@@ -279,6 +317,9 @@ export function LiveZetten() {
             )}
           </section>
         )}
+
+        {/* de controle vóór het live zetten: tsc, eslint en tests op de nieuwste main (lib/bouwer/controles.ts) */}
+        <ControlesPaneel controles={controles} mainSha={github?.main?.sha} liveSha={live?.sha} kanKlikken={!verstuurt} onStart={() => void startControle()} />
 
         {/* wat er nieuw is */}
         {github && github.nieuw.length > 0 && !upToDate && (
@@ -370,6 +411,77 @@ function VersieKaart({ titel, sha, onderwerp, datum }: { titel: string; sha: str
         {datum ? ` · ${tijd(datum)}` : ""}
       </p>
     </div>
+  );
+}
+
+/** Wat de Bouwer van de nieuwste main vond (tsc, eslint, tests), en de laatste uitslagen. Verborgen zonder Bouwer. */
+function ControlesPaneel({
+  controles,
+  mainSha,
+  liveSha,
+  kanKlikken,
+  onStart,
+}: {
+  controles: ControlesStand | null;
+  mainSha: string | undefined;
+  liveSha: string | undefined;
+  kanKlikken: boolean;
+  onStart: () => void;
+}) {
+  if (!controles) return null;
+  const vanMain = mainSha ? (controles.uitslagen.find((u) => u.sha === mainSha) ?? null) : null;
+  const bezig = controles.bezig;
+  return (
+    <section className="rounded-xl border border-white/10 bg-[#0e1116]">
+      <h3 className="flex items-center gap-2 border-b border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-white/40">
+        Controle vóór het live zetten
+        <span className="ml-auto normal-case tracking-normal">
+          {bezig ? (
+            <span className="text-[#7CC5FF]">
+              bezig met {kort(bezig.doel === "main" ? mainSha : bezig.doel)} · {bezig.stap}
+            </span>
+          ) : (
+            <button type="button" disabled={!kanKlikken} onClick={onStart} className="underline hover:text-white/80 disabled:opacity-40">
+              nu controleren
+            </button>
+          )}
+        </span>
+      </h3>
+      <div className="px-4 py-2 text-xs">
+        {!mainSha ? (
+          <p className="text-white/50">De nieuwste versie op GitHub is onbekend.</p>
+        ) : vanMain ? (
+          <p className={vanMain.ok ? "text-brand-mint" : "text-[#F07C6B]"}>
+            Nieuwste main {kort(mainSha)}: {controleTekst(vanMain)} · {tijd(vanMain.klaar)}
+          </p>
+        ) : (
+          <p className="text-white/50">
+            Nieuwste main {kort(mainSha)} is nog niet gecontroleerd; de planner doet dat binnen tien minuten, of klik op “nu controleren”.
+          </p>
+        )}
+      </div>
+      {controles.uitslagen.length > 0 && (
+        <ul className="divide-y divide-white/5 border-t border-white/10">
+          {controles.uitslagen.slice(0, 6).map((u) => (
+            <li key={u.sha} className="flex items-baseline gap-3 px-4 py-2">
+              <span className={`text-[11px] ${u.ok ? "text-brand-mint" : "text-[#F07C6B]"}`} aria-label={u.ok ? "schoon" : "faalt"}>
+                {u.ok ? "✓" : "✗"}
+              </span>
+              <span className="font-mono text-[11px] text-white/35">
+                {u.kort}
+                {u.sha === liveSha ? " (live)" : ""}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-xs text-white/80" title={u.onderwerp}>
+                {u.onderwerp}
+              </span>
+              <span className="flex-shrink-0 text-[11px] text-white/30">
+                {controleTekst(u)} · {tijd(u.klaar)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

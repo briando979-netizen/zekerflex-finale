@@ -147,8 +147,54 @@ export async function huidigeDiff() {
   return r.uit.length > 400_000 ? `${r.uit.slice(0, 400_000)}\n… (diff ingekort)` : r.uit;
 }
 
+// ---- één zware stap tegelijk in deze container ---------------------------------------
+// tsc vraagt ~2 GB; een opdracht van de Bouwer én een controle vóór het live zetten
+// (controle.mjs) passen samen niet in de 3 GB van de container. Een slotbestand met
+// wie en wanneer; ouder dan 40 minuten geldt als vergeten (afgebroken proces).
+const ZWAAR_SLOT = path.join(WERK, "zwaar.lock");
+const ZWAAR_VERLOPEN_MS = 40 * 60_000;
+
+export async function verkrijgZwaarSlot(wie, log, maxWachtMs = 30 * 60_000) {
+  const eind = Date.now() + maxWachtMs;
+  let gemeld = false;
+  for (;;) {
+    try {
+      const fh = await fs.open(ZWAAR_SLOT, "wx");
+      await fh.writeFile(JSON.stringify({ wie, pid: process.pid, op: new Date().toISOString() }));
+      await fh.close();
+      return;
+    } catch (e) {
+      if (e.code !== "EEXIST") throw e;
+    }
+    const st = await fs.stat(ZWAAR_SLOT).catch(() => null);
+    if (!st || Date.now() - st.mtimeMs > ZWAAR_VERLOPEN_MS) {
+      await fs.rm(ZWAAR_SLOT, { force: true });
+      continue;
+    }
+    if (Date.now() > eind) throw new Error("Een andere zware stap (controle of opdracht) houdt de Bouwer al een half uur bezet");
+    if (!gemeld) {
+      log?.("info", "Wachten tot een andere zware stap in de Bouwer klaar is");
+      gemeld = true;
+    }
+    await new Promise((klaar) => setTimeout(klaar, 10_000));
+  }
+}
+
+export async function geefZwaarSlotVrij() {
+  await fs.rm(ZWAAR_SLOT, { force: true });
+}
+
 /** De gouden regels uit AGENTS.md: tsc op het hele project + eslint op de gewijzigde bestanden, plus de tests die erbij horen. */
 export async function controleer(log) {
+  await verkrijgZwaarSlot("opdracht", log);
+  try {
+    return await controleerZonderSlot(log);
+  } finally {
+    await geefZwaarSlotVrij();
+  }
+}
+
+async function controleerZonderSlot(log) {
   const bestanden = (await gewijzigdeBestanden()).filter((b) => b.status !== "D").map((b) => b.pad);
   await wachtOpUitrol(log);
   // na bijwerken met main (of een eigen schemawijziging) moet de Prisma-client mee
@@ -199,7 +245,8 @@ export async function controleer(log) {
   };
 }
 
-function testOmgeving() {
+/** De omgeving voor tests: de wegwerp-database van het voorbeeld, zonder kleurcodes. Ook voor controle.mjs. */
+export function testOmgeving() {
   const db = process.env.BOUWER_VOORBEELD_DB || "";
   return {
     NODE_ENV: "test",

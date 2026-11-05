@@ -88,6 +88,9 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
             <Link href="/verwerkersovereenkomst" className="hover:text-white">
               Verwerkersovereenkomst
             </Link>
+            <Link href="/beveiliging" className="hover:text-white">
+              Beveiliging
+            </Link>
             <Link href="/copyright" className="hover:text-white">
               Copyright
             </Link>

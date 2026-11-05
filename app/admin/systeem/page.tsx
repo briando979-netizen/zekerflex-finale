@@ -26,6 +26,8 @@ import { listErrorGroups } from "@/lib/ops/error-journal";
 import { agentLeeft, leesLive } from "@/lib/bouwer/live";
 import { bouwerGezond, bouwerIngesteld, bouwerInstellingen } from "@/lib/bouwer/werker";
 import { crowdsecGezond } from "@/lib/ops/crowdsec";
+import { nieuwsteControle } from "@/lib/bouwer/controles";
+import { controleTekst } from "@/lib/bouwer/controles-tekst";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +87,7 @@ export default async function SysteemPage() {
     return false;
   }
 
-  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet, adminPush, aanval] = await Promise.all([
+  const [db, cache, llm, budget, whisperOk, crons, backup, errorGroups, liveStand, bouwerOk, bouwerSet, adminPush, aanval, laatsteControle] = await Promise.all([
     ok(() => prisma.$queryRaw`SELECT 1`),
     ok(() => redis.ping()),
     llmHealth().catch(() => ({ ok: false, baseUrl: "?", model: "?" })),
@@ -103,6 +105,8 @@ export default async function SysteemPage() {
       .catch(() => null),
     // Beveiliging → Aanvalsbescherming: de CrowdSec-engine naast Caddy (deploy/crowdsec)
     crowdsecGezond(),
+    // ZekerFlex AI → Live zetten: de nieuwste uitslag van de controle vóór het bouwen (lib/bouwer/controles.ts)
+    nieuwsteControle(),
   ]);
   const now = new Date();
   const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
@@ -169,6 +173,12 @@ export default async function SysteemPage() {
       label: "Aanvalsbescherming (CrowdSec)",
       state: aanval,
       meta: aanval === "off" ? "niet op deze omgeving" : aanval === "ok" ? "engine bereikbaar, zie Beveiliging" : "engine reageert niet",
+    },
+    // ZekerFlex AI → Live zetten: tsc, eslint en tests op de nieuwste main vóór hij live kan (deploy/bouwer/werker/controle.mjs)
+    {
+      label: "Controle vóór uitrol",
+      state: !bouwerIngesteld() || !laatsteControle ? "off" : laatsteControle.ok ? "ok" : "crit",
+      meta: !bouwerIngesteld() ? "niet geïnstalleerd (optioneel)" : !laatsteControle ? "nog geen uitslag" : `${laatsteControle.kort}: ${controleTekst(laatsteControle)}`,
     },
     // ZekerFlex AI → Bouwer: de AI-programmeur (deploy/bouwer/werker)
     {
