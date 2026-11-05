@@ -369,11 +369,14 @@ function MijnDomeinen({ lijst, onLijst, onGekoppeld }: { lijst: MijnDomein[]; on
                 <button
                   type="button"
                   aria-expanded={verhuisOpen === d.id}
-                  onClick={() => setVerhuisOpen((o) => (o === d.id ? null : d.id))}
+                  onClick={() => {
+                    setMelding(null);
+                    setVerhuisOpen((o) => (o === d.id ? null : d.id));
+                  }}
                   aria-label={`${d.domein} verhuizen naar een andere partij`}
                   className="rounded-full px-3 py-1 text-xs font-semibold text-neutralx-600 underline hover:text-ink"
                 >
-                  Verhuizen
+                  Verhuizen naar elders
                 </button>
               )}
               {d.behoud?.stap === "code-wacht" && <span className="text-xs">Je verhuiscode komt binnen een dag per mail</span>}
