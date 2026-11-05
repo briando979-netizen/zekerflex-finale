@@ -180,6 +180,12 @@ export async function anonymizeUser(
       await tx.passwordResetToken.deleteMany({ where: { userId } })
     ).count;
 
+    // NFC key fobs for check-in terminals (lib/incheck/store.ts): the fob → user
+    // mapping is keyed by the fob's hash, so it is found through the user's own list.
+    const fobs = await tx.keyValueStore.findUnique({ where: { key: `nfc-fob-user:${userId}` }, select: { value: true } });
+    const fobHashes = ((fobs?.value as { fobs?: { hash?: string }[] } | null)?.fobs ?? []).map((f) => f.hash).filter((h): h is string => typeof h === "string");
+    if (fobHashes.length) await tx.keyValueStore.deleteMany({ where: { key: { in: fobHashes.map((h) => `nfc-fob:${h}`) } } });
+
     // Personal JSON in the KeyValueStore without a retention duty (agenda,
     // trips, chat settings, contacts, AI memory, 2FA, mailbox login).
     cleared.personal_settings = (

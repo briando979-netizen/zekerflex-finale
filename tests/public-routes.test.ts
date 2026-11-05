@@ -39,6 +39,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/shop/products",
     "/api/shop/media/abc123",
     "/api/company/search",
+    "/api/terminal/abc123-sleutel",
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
     "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail

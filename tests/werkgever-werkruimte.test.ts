@@ -70,6 +70,7 @@ describe("menuVoor", () => {
       { sleutel: "whatsapp" },
       { sleutel: "geblokkeerd" },
       { sleutel: "uren", sectie: "beheer" },
+      { sleutel: "inchecken", sectie: "beheer" },
       { sleutel: "facturen", sectie: "beheer" },
       // rapportages (Metabase, lib/bi) hoort bij de administratie, direct na de facturen
       { sleutel: "rapportages", sectie: "beheer" },

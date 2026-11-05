@@ -44,6 +44,8 @@ const h = vi.hoisted(() => {
     deviceFingerprint: { deleteMany: async () => { state.deleted.push("device"); return { count: 1 }; } },
     passwordResetToken: { deleteMany: async () => ({ count: 0 }) },
     keyValueStore: {
+      // de sleutelhangers van de gebruiker (lib/incheck): geen
+      findUnique: async () => null,
       deleteMany: async ({ where }: { where: unknown }) => {
         state.kvWhere = where;
         return { count: 4 };

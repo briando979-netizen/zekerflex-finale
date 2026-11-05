@@ -30,6 +30,7 @@ export const nl = {
     geblokkeerd: "Geblokkeerd",
     beheer: "Beheer",
     urenGoedkeuren: "Uren goedkeuren",
+    inchecken: "Inchecken op locatie",
     facturen: "Facturen",
     compliance: "Compliance",
     overeenkomsten: "Modelovereenkomsten",

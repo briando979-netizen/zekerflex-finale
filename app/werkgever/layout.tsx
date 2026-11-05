@@ -16,7 +16,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
@@ -74,6 +74,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     whatsapp: { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
     geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     uren: { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock /> },
+    inchecken: { href: "/werkgever/inchecken", label: t.nav.inchecken, icon: <IPin /> },
     facturen: { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc /> },
     compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
     overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },

@@ -27,6 +27,7 @@ export const en: Dict = {
     geblokkeerd: "Blocked",
     beheer: "Manage",
     urenGoedkeuren: "Approve hours",
+    inchecken: "On-site check-in",
     facturen: "Invoices",
     compliance: "Compliance",
     overeenkomsten: "Model agreements",

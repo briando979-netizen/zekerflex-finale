@@ -31,6 +31,12 @@ export interface RecordGpsEventInput {
   mocked?: boolean;
   /** Client timestamp; ignored when it drifts more than 6h from the server clock. */
   recordedAt?: Date;
+  /**
+   * "terminal": the event comes from a check-in terminal at the branch itself (lib/incheck/store.ts),
+   * so the position is the branch and the device is shared by every worker there — no device
+   * fingerprint is registered, and the shared hardware is never flagged as account sharing.
+   */
+  bron?: "apparaat" | "terminal";
 }
 
 export interface RecordGpsEventResult {
@@ -174,8 +180,9 @@ export async function recordGpsEvent(
       });
     }
 
-    // Touch / register the device fingerprint and flag hardware reuse.
-    const fp = await tx.deviceFingerprint.upsert({
+    // Touch / register the device fingerprint and flag hardware reuse (not for a
+    // terminal: that device is meant to be shared by everyone at the branch).
+    const fp = input.bron === "terminal" ? null : await tx.deviceFingerprint.upsert({
       where: {
         userId_hardwareHash: {
           userId: ts.freelancer.userId,
@@ -190,14 +197,16 @@ export async function recordGpsEvent(
       update: { lastSeenAt: new Date() },
     });
 
-    const otherOwners = await tx.deviceFingerprint.findMany({
-      where: {
-        hardwareHash: input.deviceHash,
-        userId: { not: ts.freelancer.userId },
-      },
-      select: { userId: true },
-    });
-    if (otherOwners.length > 0) {
+    const otherOwners = fp
+      ? await tx.deviceFingerprint.findMany({
+          where: {
+            hardwareHash: input.deviceHash,
+            userId: { not: ts.freelancer.userId },
+          },
+          select: { userId: true },
+        })
+      : [];
+    if (fp && otherOwners.length > 0) {
       await tx.deviceFingerprint.update({
         where: { id: fp.id },
         data: {

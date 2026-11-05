@@ -146,6 +146,8 @@ const APP_ALLOWED = [
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   "/shop", "/kennis", "/offline", "/studio",
+  // inchecken op locatie: de korte link op de NFC-sticker en het scherm bij de ingang (lib/incheck)
+  "/i", "/terminal",
 ];
 
 function isAppLaunch(req: NextRequest): boolean {
