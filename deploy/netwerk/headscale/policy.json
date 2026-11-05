@@ -1,0 +1,7 @@
+// ZekerFlex VPN: elk bedrijf is één gebruiker (zf-<tenantId>). Apparaten zien
+// alleen apparaten van dezelfde gebruiker, dus nooit die van een ander bedrijf.
+{
+  "acls": [
+    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:self:*"] }
+  ]
+}

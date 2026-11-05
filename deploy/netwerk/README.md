@@ -40,6 +40,11 @@ dienst van een ander.
   `HEADSCALE_API_KEY=<sleutel>`; daarna `up -d app`.
 - Elk bedrijf is één Headscale-gebruiker (`zf-<tenantId>`); toegangscodes zijn
   eenmalig en verlopen (Werkgever → Wifi en VPN → "Maak een toegangscode").
+- `headscale/policy.json`: apparaten zien alleen apparaten van dezelfde
+  gebruiker (`autogroup:self`), dus nooit die van een ander bedrijf. Staat in de
+  database van headscale; zetten (eenmalig, en opnieuw na een nieuw volume):
+  `docker exec -i zekerflex-headscale-1 headscale policy set -f /dev/stdin < deploy/netwerk/headscale/policy.json`
+  en controleren met `headscale policy get`.
 
 ## Eigen 5G-netwerk
 

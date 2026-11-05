@@ -51,8 +51,9 @@ log:
   level: info
   format: text
 
-# toegangsregels komen later uit de app (per bedrijf); nu: alle apparaten van
-# dezelfde gebruiker (= hetzelfde bedrijf) zien elkaar
+# toegangsregels in de database van headscale, gezet met
+#   docker exec -i zekerflex-headscale-1 headscale policy set -f /dev/stdin < deploy/netwerk/headscale/policy.json
+# (apparaten zien alleen apparaten van dezelfde gebruiker, dus van hetzelfde bedrijf)
 policy:
   mode: database
 
