@@ -25,7 +25,8 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
         </div>
       </div>
 
-      <div className={`shell grid gap-12 py-16 ${voettekst.kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : voettekst.kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : voettekst.kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
+      <h2 className="sr-only">Snel naar</h2>
+      <div className={`shell grid gap-10 py-12 md:gap-12 md:py-16 ${voettekst.kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : voettekst.kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : voettekst.kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
         <div>
           <div className="flex items-center gap-2.5">
             <LogoGlyph size={30} tone="light" />
@@ -47,9 +48,10 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
                 {col.titel}
               </h3>
             ) : null}
-            <ul className="mt-4 space-y-2.5">
+            {/* telefoon: links in twee kolommen, anders werd Platform alleen al twee schermen lang */}
+            <ul className="mt-4 columns-2 gap-x-6 md:columns-1 md:space-y-2.5">
               {col.links.map((l) => (
-                <li key={l.href + l.label}>
+                <li key={l.href + l.label} className="mb-2.5 break-inside-avoid md:mb-0">
                   <Link
                     href={l.href}
                     className="text-sm text-white/70 transition-colors hover:text-white"

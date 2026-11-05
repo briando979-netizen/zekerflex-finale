@@ -231,7 +231,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "cijfers.1", group: "Homepage — cijfers", label: "Onder cijfer 1 (€ 3,50)", default: "standaard platformkosten per gewerkt uur, lager bij volume" },
   { key: "cijfers.2", group: "Homepage — cijfers", label: "Onder cijfer 2 (€ 0)", default: "abonnement en opstartkosten" },
   { key: "cijfers.3", group: "Homepage — cijfers", label: "Onder cijfer 3 (GPS)", default: "check-in en urengoedkeuring op locatie" },
-  { key: "cijfers.4", group: "Homepage — cijfers", label: "Onder cijfer 4 (Na uren)", default: "automatische factuur na goedkeuring" },
+  { key: "cijfers.4", group: "Homepage — cijfers", label: "Onder cijfer 4 (1 klik)", default: "automatische factuur na goedkeuring" },
   { key: "feat.f1.title", group: "Homepage — het platform", label: "Kaart 1: titel", default: "Slimme matching" },
   { key: "feat.f1.body", group: "Homepage — het platform", label: "Kaart 1: tekst", default: "Gewogen score op reistijd, reviews, vakmatch en badge-niveau — niet wie het eerst klikt.", multiline: true },
   { key: "feat.f2.title", group: "Homepage — het platform", label: "Kaart 2: titel", default: "Uitbetaling naar keuze" },

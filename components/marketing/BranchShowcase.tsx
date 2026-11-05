@@ -27,7 +27,7 @@ function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
   return (
     <Link
       href="/klussen"
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hair bg-paper shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-hair bg-paper shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -65,7 +65,7 @@ function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
 export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
   return (
     <section className="relative bg-paper-soft">
-      <div className="shell-4k py-28 lg:py-36">
+      <div className="shell-4k py-16 md:py-28 lg:py-36">
         <Reveal>
           <p className="eyebrow">Branches</p>
           <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
@@ -77,16 +77,26 @@ export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Telefoon: één rij om door te vegen (acht kaarten onder elkaar waren vier
+            schermen scrollen). Vanaf sm het gewone raster. Op de telefoon geen
+            schuif-animatie of vertraging per kaart: die liep mis in de veegrij. */}
+        <div className="-mx-5 mt-10 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-3 pt-1 [scrollbar-width:none] sm:mx-0 sm:mt-14 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:p-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
           {BRANCHES.map((b, i) => (
-            <Reveal key={b.key} delay={i * 70}>
+            <Reveal
+              key={b.key}
+              delay={i * 70}
+              className="w-[78%] flex-none snap-start sm:w-auto max-sm:![transform:none] max-sm:![transition-delay:0ms]"
+            >
               <Card b={b} minRateCents={minRateCents} />
             </Reveal>
           ))}
         </div>
 
+        <p className="mt-2 text-xs text-neutralx-500 sm:hidden" aria-hidden>
+          {BRANCHES.length} branches · veeg voor meer →
+        </p>
         <Reveal delay={120}>
-          <div className="mt-12 flex flex-wrap items-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center gap-4 sm:mt-12">
             <Link href="/klussen" className="btn-primary">
               Bekijk alle klussen
             </Link>

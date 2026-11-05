@@ -68,7 +68,7 @@ export function HeroStage({
   return (
     <section className="relative isolate overflow-hidden hero-ink text-white">
       <div className="aurora" aria-hidden />
-      <div className="shell-4k relative grid min-h-[92vh] items-center gap-16 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-28 2xl:min-h-[88vh]">
+      <div className="shell-4k relative grid min-h-[92vh] items-center gap-12 py-12 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-28 2xl:min-h-[88vh]">
         <div className="reveal" data-shown="true">
           <p className="eyebrow text-brand-mint" data-cms-key="hero.eyebrow">{c.eyebrow}</p>
           <h1 className="fluid-hero mt-5 text-balance font-display font-bold">
@@ -79,18 +79,29 @@ export function HeroStage({
             </span>
           </h1>
           <p className="fluid-lead mt-7 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
-          <div className="mt-10 flex flex-wrap gap-3">
+          {/* twee duidelijke keuzes; op de telefoon onder elkaar over de hele breedte */}
+          <div className="mt-8 grid gap-3 sm:mt-10 sm:flex sm:flex-wrap">
             <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
               {c.ctaPrimary}
             </Link>
             <Link href="/voor-bedrijven" className="btn-ghost-invert text-base" data-cms-key="hero.ctaSecondary">
               {c.ctaSecondary}
             </Link>
-            <Link href="/shop" className="btn-ghost-invert text-base">
-              Naar de shop
-            </Link>
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65">
+          {/* snelle acties: in één tik naar wat de meeste bezoekers komen doen */}
+          <nav aria-label="Direct naar" className="mt-5 flex flex-wrap items-center gap-2 text-sm">
+            <span className="mr-1 text-white/55">Direct naar</span>
+            {SNEL.map((s) => (
+              <Link
+                key={s.href}
+                href={s.href}
+                className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 font-medium text-white/80 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+              >
+                {s.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-8 hidden flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65 sm:flex">
             {["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
@@ -105,14 +116,16 @@ export function HeroStage({
           </div>
           <div
             ref={glassRef}
-            className="glass absolute -bottom-6 -left-4 w-[min(20rem,80%)] rounded-2xl p-4 will-change-transform sm:-left-10"
+            className="glass absolute -bottom-6 -left-4 w-[min(21rem,88%)] rounded-2xl p-4 will-change-transform sm:-left-10"
           >
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-white/65">
-              <span>Nieuwe dienst</span>
-              <span className="pill bg-[rgba(79,224,160,0.16)] text-brand-mint">Gematcht in 6 min</span>
+            <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.14em] text-white/65">
+              <span className="whitespace-nowrap">Nieuwe dienst</span>
+              <span className="pill whitespace-nowrap bg-[rgba(79,224,160,0.16)] normal-case tracking-normal text-brand-mint">Gematcht in 6 min</span>
             </div>
             <p className="mt-3 text-sm font-semibold">Vakkenvuller · avonddienst</p>
-            <p className="text-xs text-white/50">Amsterdam-West · vandaag 17:00–22:00 · € 19,50/uur</p>
+            <p className="text-xs text-white/50">
+              Amsterdam-West · vandaag 17:00–22:00 · <span className="whitespace-nowrap">€ 19,50/uur</span>
+            </p>
             <div className="mt-3 space-y-1.5">
               {[
                 { n: "Noa V.", m: "Silver · 12 min", s: "0,94", top: true },
@@ -138,7 +151,7 @@ export function HeroStage({
 
       <div
         ref={cueRef}
-        className="absolute inset-x-0 bottom-6 flex justify-center"
+        className="absolute inset-x-0 bottom-6 hidden justify-center lg:flex"
         aria-hidden
       >
         <span className="flex flex-col items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/60">
@@ -151,6 +164,13 @@ export function HeroStage({
     </section>
   );
 }
+
+const SNEL = [
+  { label: "Open klussen", href: "/klussen" },
+  { label: "Klus plaatsen", href: "/klus-plaatsen" },
+  { label: "Website-check", href: "/website-check" },
+  { label: "Shop", href: "/shop" },
+];
 
 function Tick() {
   return (

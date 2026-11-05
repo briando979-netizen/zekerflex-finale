@@ -74,12 +74,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       // vertrouwensbalk
       vertrouwen: (
       <section className="relative border-y border-white/10 bg-[#0C0E12] text-white">
-        <div className="shell-4k flex flex-wrap items-center justify-between gap-x-12 gap-y-4 py-9">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/60" data-cms-key="trust.label">{t("trust.label")}</span>
+        {/* telefoon: label boven, de keurmerken netjes in twee kolommen */}
+        <div className="shell-4k grid grid-cols-2 gap-x-6 gap-y-3 py-7 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-12 sm:gap-y-4 sm:py-9">
+          <span className="col-span-2 font-mono text-xs uppercase tracking-[0.2em] text-white/60" data-cms-key="trust.label">{t("trust.label")}</span>
           {lijstRegels(t("trust.items")).map(
             (punt, i) => (
-              <Reveal key={`${i}-${punt}`} as="span" delay={i * 80} className="flex items-center gap-2.5 text-sm font-medium text-white/75" cms={{ key: "trust.items", regel: i }}>
-                <span className="h-1.5 w-1.5 rounded-full bg-brand-mint" />
+              <Reveal key={`${i}-${punt}`} as="span" delay={i * 80} className="flex items-start gap-2.5 text-sm font-medium text-white/75 sm:items-center" cms={{ key: "trust.items", regel: i }}>
+                <span className="mt-[0.45rem] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-mint sm:mt-0" />
                 {punt}
               </Reveal>
             ),
@@ -102,7 +103,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       hoe: (
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
-        <div className="shell-4k py-28 lg:py-36">
+        <div className="shell-4k py-16 md:py-28 lg:py-36">
           <Reveal>
             <p className="eyebrow" data-cms-key="how.eyebrow">{t("how.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="how.title">
@@ -113,10 +114,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </p>
           </Reveal>
 
-          <ol className="mt-16 grid gap-6 md:grid-cols-3 lg:gap-8">
+          <ol className="mt-10 grid md:mt-16 gap-6 md:grid-cols-3 lg:gap-8">
             {STEPS.map((s, i) => (
               <Reveal key={s.n} as="li" delay={i * 120} className="relative">
-                <div className="glass-light group h-full rounded-3xl p-8 transition-transform duration-500 hover:-translate-y-1.5">
+                <div className="glass-light group h-full rounded-3xl p-6 md:p-8 transition-transform duration-500 hover:-translate-y-1.5">
                   <div className="flex items-center gap-4">
                     <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-display text-lg font-bold text-white shadow-glow">
                       {i + 1}
@@ -169,7 +170,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       werkvormen: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-28 lg:py-36">
+        <div className="shell-4k py-16 md:py-28 lg:py-36">
           <Reveal>
             <p className="eyebrow" data-cms-key="work.eyebrow">{t("work.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="work.title">
@@ -182,7 +183,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-5 lg:grid-cols-3">
+          <div className="mt-10 grid md:mt-14 gap-5 lg:grid-cols-3">
             {WORKFORMS.map((vorm, i) => {
               // teksten uit het register (work.f1 …); kleur en link blijven vast
               const w = { ...vorm, kind: t(`${vorm.k}.kind`), who: t(`${vorm.k}.who`), points: lijstRegels(t(`${vorm.k}.points`)), cta: t(`${vorm.k}.cta`) };
@@ -241,14 +242,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       cijfers: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-70" aria-hidden />
-        <div className="shell-4k relative py-24 lg:py-32">
-          <div className="grid gap-14 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="shell-4k relative py-16 md:py-24 lg:py-32">
+          <div className="grid gap-10 sm:grid-cols-2 sm:gap-14 lg:grid-cols-4">
             {/* de grote cijfers staan vast (bedragen: lib/pricing/tiers.ts); de regel eronder is een tekst */}
             {[
               { v: "€ 3,50", k: "cijfers.1" },
               { v: "€ 0", k: "cijfers.2" },
               { v: "GPS", k: "cijfers.3" },
-              { v: "Na uren", k: "cijfers.4" },
+              { v: "1 klik", k: "cijfers.4" },
             ].map((s, i) => (
               <Reveal key={i} delay={i * 100}>
                 <div className="fluid-stat font-display font-bold text-brand-mint">{s.v}</div>
@@ -262,17 +263,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       functies: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-28 lg:py-36">
+        <div className="shell-4k py-16 md:py-28 lg:py-36">
           <Reveal>
             <p className="eyebrow" data-cms-key="feat.eyebrow">{t("feat.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="feat.title">
               {t("feat.title")}
             </h2>
           </Reveal>
-          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid md:mt-16 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f, i) => (
               <Reveal key={f.k} delay={(i % 3) * 90}>
-                <div className="glass-light h-full rounded-2xl p-7">
+                <div className="glass-light h-full rounded-2xl p-6 md:p-7">
                   <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-500">{f.icon}</div>
                   <h3 className="mt-5 font-display text-lg font-semibold" data-cms-key={`${f.k}.title`}>{t(`${f.k}.title`)}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-neutralx-600" data-cms-key={`${f.k}.body`} data-cms-ml="1">{t(`${f.k}.body`)}</p>
@@ -286,7 +287,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       zekerheid: (
       <section className="relative bg-paper">
-        <div className="shell-4k grid gap-16 py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
+        <div className="shell-4k grid gap-10 py-16 md:gap-16 md:py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
           <Reveal>
             <p className="eyebrow" data-cms-key="comp.eyebrow">{t("comp.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 text-balance font-display font-bold" data-cms-key="comp.title">
@@ -313,7 +314,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       citaat: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-60" aria-hidden />
-        <div className="shell-4k relative py-28 lg:py-36">
+        <div className="shell-4k relative py-16 md:py-28 lg:py-36">
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
@@ -330,7 +331,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       vragen: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k grid gap-14 py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
+        <div className="shell-4k grid gap-8 py-16 md:gap-14 md:py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
           <Reveal>
             <p className="eyebrow" data-cms-key="faq.eyebrow">{t("faq.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 font-display font-bold" data-cms-key="faq.title">{t("faq.title")}</h2>
@@ -349,7 +350,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       oproep: (
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-28 lg:py-36">
+        <div className="shell-4k relative py-16 md:py-28 lg:py-36">
           <Reveal className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
               <h2 className="fluid-h2 text-balance font-display font-bold" data-cms-key="cta.title">{t("cta.title")}</h2>
@@ -445,7 +446,7 @@ function ShowcaseSplit({
     <section className={`relative isolate overflow-hidden ${dark ? "hero-ink text-white" : "bg-paper"}`}>
       {dark && <div className="aurora opacity-50" aria-hidden />}
       <div
-        className={`shell-4k relative grid items-center gap-14 py-28 lg:py-36 lg:gap-24 ${
+        className={`shell-4k relative grid items-center gap-10 py-16 md:gap-14 md:py-28 lg:py-36 lg:gap-24 ${
           reverse ? "lg:grid-cols-[0.95fr_1.05fr]" : "lg:grid-cols-[1.05fr_0.95fr]"
         }`}
       >
