@@ -46,10 +46,11 @@ export const ERASABLE_KV_PREFIXES = [
   "werker-agenda:",
   "werker-agenda-taal:",
   "werker-taal:",
+  "netwerk-wifi-ww:",
 ] as const;
 
 /** Hele waarde afschermen: dit zijn (versleutelde) inloggegevens. */
-const SECRET_KEY_PREFIXES = ["auth-2fa:", "mailbox-connection:"];
+const SECRET_KEY_PREFIXES = ["auth-2fa:", "mailbox-connection:", "netwerk-wifi-ww:"];
 /** Woorden in een veldnaam (camelCase/snake_case) die op een geheim wijzen, op welke diepte ook. */
 const SECRET_WORDS = new Set(["password", "passwd", "pwd", "secret", "token", "sealed", "cipher", "ciphertext", "totp", "otp", "hash", "pin", "privatekey", "apikey", "ssh", "credentials"]);
 const HIDDEN = "[afgeschermd]";

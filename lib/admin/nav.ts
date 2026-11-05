@@ -78,6 +78,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },
       { href: "/admin/telefonie", label: "Telefonie" },
+      { href: "/admin/netwerk", label: "Verbinding (wifi, VPN, 5G)" },
       { href: "/admin/recruiter", label: "AI-recruiter" },
       { href: "/admin/ads", label: "Advertenties" },
       { href: "/admin/nieuwsbrief", label: "Nieuwsbrief" },

@@ -19,6 +19,7 @@ import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
+import { activeerNetwerkModule, netwerkAbonnementBeeindigd } from "@/lib/netwerk/abonnement";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
@@ -315,6 +316,11 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         await activateManagedWebsite(session);
         return NextResponse.json({ ok: true });
       }
+      // netwerkpakketten (wifi, VPN): lib/netwerk/abonnement.ts
+      if (session.metadata?.netwerkTenantId) {
+        await activeerNetwerkModule(session);
+        return NextResponse.json({ ok: true });
+      }
       await activateApiSubscription(session);
       return NextResponse.json({ ok: true });
     }
@@ -457,6 +463,8 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
     const sub = event.data.object as Stripe.Subscription;
     if (sub.metadata?.managedWebsiteTenantId) {
       if (event.type === "customer.subscription.deleted") await cancelManagedWebsiteBySub(sub.id);
+    } else if (sub.metadata?.netwerkTenantId) {
+      if (event.type === "customer.subscription.deleted") await netwerkAbonnementBeeindigd(sub.id);
     } else {
       await syncApiSubscription(sub, event.type);
     }

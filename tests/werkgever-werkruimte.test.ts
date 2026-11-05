@@ -77,6 +77,7 @@ describe("menuVoor", () => {
       { sleutel: "website", sectie: "beheer" },
       { sleutel: "telefonie", sectie: "beheer" },
       { sleutel: "reviews", sectie: "beheer" },
+      { sleutel: "netwerk", sectie: "beheer" },
     ]);
     // pakketten die aanstaan direct na de start, zoals voorheen (horeca vóór rijschool)
     expect(sleutels("personeel", { heeftRijschool: true, heeftHoreca: true }).slice(0, 4)).toEqual(["start", "horeca", "rijschool", "klussen"]);
@@ -108,7 +109,7 @@ describe("menuVoor", () => {
       for (const s of PERSONEEL_SLEUTELS) expect(menu.map((p) => p.sleutel)).not.toContain(s);
       expect(menu.filter((p) => p.sleutel === "inhuren")).toEqual([{ sleutel: "inhuren", sectie: "personeel" }]);
       // de rest (contact, website, administratie) blijft
-      for (const s of ["berichten", "mail", "whatsapp", "agenda", "website", "reviews", "telefonie", "facturen", "bank", "bedrijf"] as const) {
+      for (const s of ["berichten", "mail", "whatsapp", "agenda", "website", "reviews", "telefonie", "netwerk", "facturen", "bank", "bedrijf"] as const) {
         expect(menu.map((p) => p.sleutel), `${soort} mist ${s}`).toContain(s);
       }
     }

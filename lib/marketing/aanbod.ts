@@ -141,6 +141,65 @@ export const AANBOD: AanbodItem[] = [
     pagina: "/voor-bureaus",
     start: DEMO,
   },
+  // Netwerkpakketten (lib/netwerk/modules.ts): op de eigen server, zonder licentiekosten bij een ander.
+  // "binnenkort" tot de servers erachter draaien; aanmelden kan al via Werkgever → Wifi en VPN.
+  {
+    slug: "wifi-op-de-werkvloer",
+    pijler: "personeel",
+    naam: "Wifi op de werkvloer",
+    kort: "Flexwerkers krijgen vanzelf wifi zodra hun dienst begint, en raken het kwijt als die eindigt.",
+    tekst:
+      "Geen gedeeld wifi-wachtwoord meer op een briefje. Iedereen logt in met een eigen naam en wachtwoord uit ZekerFlex. Een flexwerker krijgt alleen toegang op de vestiging waar hij die dag ingepland staat, van een half uur voor tot een half uur na de dienst.",
+    punten: [
+      "Geen gedeelde wifi-wachtwoorden meer",
+      "Toegang volgt het rooster: dienst begint, wifi aan",
+      "Eigen medewerkers altijd toegang met hun ZekerFlex-login",
+      "Beveiligd zoals bij grote bedrijven (WPA2/WPA3-Enterprise)",
+    ],
+    voorWie: "Kantoren, horeca, magazijnen en flexwerkplekken",
+    prijs: "€ 49 per vestiging per maand",
+    status: "binnenkort",
+    start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
+    zoekwoorden: ["wifi voor flexwerkers", "gast wifi personeel", "wifi rooster", "radius wifi bedrijf"],
+  },
+  {
+    slug: "veilige-werkplek",
+    pijler: "personeel",
+    naam: "Veilige werkplek (VPN)",
+    kort: "Een versleutelde verbinding naar jullie eigen systemen, voor flexwerkers en medewerkers, waar ze ook zijn.",
+    tekst:
+      "Wie op afstand werkt, krijgt een eigen versleutelde tunnel naar jullie interne systemen. Elk apparaat krijgt een eenmalige toegangscode uit ZekerFlex; niets staat open op internet.",
+    punten: [
+      "Rechtstreekse, versleutelde verbindingen tussen apparaten",
+      "Toegangscodes uit ZekerFlex, eenmalig en met een vervaldatum",
+      "Zie welke apparaten verbonden zijn en zet er een af",
+      "Geen Tailscale-, Cloudflare- of andere VPN-abonnementen nodig",
+    ],
+    voorWie: "Bedrijven met mensen op afstand, ICT en wie met gevoelige gegevens werkt",
+    prijs: "€ 4 per gebruiker per maand, of € 149 per maand voor het hele bedrijf",
+    status: "binnenkort",
+    start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
+    zoekwoorden: ["vpn voor flexwerkers", "zakelijke vpn", "veilig thuiswerken", "zero trust netwerk mkb"],
+  },
+  {
+    slug: "eigen-5g-netwerk",
+    pijler: "personeel",
+    naam: "Eigen 5G-netwerk op het terrein",
+    kort: "Een eigen, afgeschermd mobiel netwerk op een bouwplaats, evenemententerrein of distributiecentrum.",
+    tekst:
+      "Een eigen 5G-netwerk voor handterminals, camera's, routers en machines op het terrein, los van de landelijke netwerken. ZekerFlex levert de software en het simkaartbeheer; voor de vergunning en de apparatuur beginnen we met een gesprek.",
+    punten: [
+      "Eigen frequentie op het terrein, onafhankelijk van de landelijke netwerken",
+      "Simkaarten beheren vanuit je ZekerFlex-beheer",
+      "Voorrang voor belangrijke verbindingen",
+      "Apparatuur erbij tegen kostprijs plus een opslag",
+    ],
+    voorWie: "Bouwlocaties, evenemententerreinen, grote distributiecentra",
+    prijs: "vanaf € 299 per maand, exclusief apparatuur en inrichting",
+    status: "binnenkort",
+    start: DEMO,
+    zoekwoorden: ["private 5g netwerk", "eigen 5g bouwplaats", "campusnetwerk", "lokaal 5g netwerk bedrijf"],
+  },
 
   // ── Online & klanten
   {

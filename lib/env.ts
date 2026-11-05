@@ -246,6 +246,15 @@ const schema = z.object({
   // PEM-privésleutel; mag op één regel met \n in .env.production staan.
   TRANSIP_PRIVATE_KEY: z.string().optional(),
 
+  // Verbinding (lib/netwerk): wifi via een eigen RADIUS-server en VPN via Headscale,
+  // allebei in een container op de eigen server. Zonder sleutel staat de dienst uit
+  // (klanten kunnen zich dan alleen op de lijst zetten, er wordt niets betaald).
+  NETWERK_RADIUS_TOKEN: z.string().min(16).optional(),
+  // het adres dat klanten in hun wifi-apparatuur zetten (UDP 1812)
+  NETWERK_RADIUS_HOST: z.string().default("vps.zekerflex.com"),
+  HEADSCALE_URL: z.string().url().optional(),
+  HEADSCALE_API_KEY: z.string().optional(),
+
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with
   // exponential backoff up to LLM_RETRY_MAX times or LLM_RETRY_MAX_WAIT_MS total.

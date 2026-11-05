@@ -20,6 +20,7 @@ import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDo
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
+import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,10 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     website: { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe /> },
     telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
     reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
+    netwerk: { href: "/werkgever/netwerk", label: "Wifi en VPN", icon: <IShield /> },
   };
+  // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
+  const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
   const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
   const nav: NavItem[] = menuVoor(werkruimte.soort, {
     ookPersoneel: werkruimte.ookPersoneel,
@@ -87,7 +91,9 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     inApp,
     // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
     studio: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN"),
-  }).map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
+  })
+    .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
+    .map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
 
   return (
     <I18nProvider locale={locale} t={clientDict(locale)}>

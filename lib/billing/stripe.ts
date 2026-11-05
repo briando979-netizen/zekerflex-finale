@@ -202,6 +202,54 @@ export async function createWebsiteManagementCheckoutSession(
 }
 
 /** Stripe-hosted portal for a tenant to change plan, update payment method, or cancel. */
+export interface NetwerkCheckoutInput {
+  stripeCustomerId: string;
+  tenantId: string;
+  module: string;
+  naam: string;
+  aantal: number;
+  variant?: string;
+  unitAmountCents: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/**
+ * Abonnement voor een netwerkpakket (lib/netwerk/abonnement.ts): wifi per
+ * vestiging, VPN per gebruiker of voor het hele bedrijf. Zelfde opzet als
+ * Website-beheer; de metadata `netwerkTenantId` stuurt de webhook naar
+ * activeerNetwerkModule.
+ */
+export async function createNetwerkCheckoutSession(input: NetwerkCheckoutInput): Promise<Stripe.Checkout.Session> {
+  if (input.unitAmountCents <= 0) throw AppError.validation("Subscription price must be positive to collect payment");
+  const stripe = getStripeClient();
+  const metadata = {
+    netwerkTenantId: input.tenantId,
+    netwerkModule: input.module,
+    netwerkAantal: String(input.aantal),
+    ...(input.variant ? { netwerkVariant: input.variant } : {}),
+  };
+  return stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: input.stripeCustomerId,
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          recurring: { interval: "month" },
+          product_data: { name: input.naam },
+          unit_amount: input.unitAmountCents,
+        },
+        quantity: input.aantal,
+      },
+    ],
+    metadata,
+    subscription_data: { metadata },
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+  });
+}
+
 export async function createBillingPortalSession(
   stripeCustomerId: string,
   returnUrl: string,

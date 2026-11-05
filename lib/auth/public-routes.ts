@@ -52,6 +52,7 @@ const PUBLIC_PREFIXES = [
   "/api/rijschool/domein", // eigen domein van een rijschool: welke rijschool hoort bij een domein (alleen naam, online, hoofdadres; de middleware vraagt dit) en het https-bewijs op dat domein (lib/rijschool/domein.ts)
   "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)
   "/api/review", // Google-reviews verzamelen: sterren, privébericht en de doorstuurlink naar Google van één verzoek; het niet te raden token is de sleutel, IP-begrensd (lib/review-requests/store.ts). /api/reviews (interne beoordelingen) valt hier niet onder
+  "/api/netwerk/radius", // de RADIUS-server (wifi) vraagt per inlogpoging of iemand mag en welk geheim bij een IP hoort; eigen vaste sleutel NETWERK_RADIUS_TOKEN (lib/netwerk/token.ts). Het beheer (/api/werkgever/netwerk) blijft achter de login
   "/api/websitevoorstel", // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
 ] as const;
 
