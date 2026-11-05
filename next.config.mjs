@@ -16,11 +16,29 @@ const nextConfig = {
   },
   // Keep native / Node-only packages out of the RSC bundle (stable in Next 15).
   // ssh2 laadt optionele native modules (cpu-features, sshcrypto) die webpack niet moet bundelen.
-  serverExternalPackages: ["ioredis", "ssh2"],
+  // tesseract.js (eigen OCR, lib/ocr/engine.ts) start een worker-thread uit zijn
+  // eigen map en laadt wasm: niet bundelen, als gewoon pakket laten.
+  serverExternalPackages: ["ioredis", "ssh2", "tesseract.js", "tesseract.js-core"],
   // The RAG brain reads lib/rag/knowledge/*.md at runtime (lib/rag/corpus.ts) —
   // ship them with every server function, not only the routes that import them.
+  // De OCR-worker en zijn hulppakketten worden via new Worker(pad) geladen, wat
+  // de tracer niet ziet: expliciet meenemen in de standalone-build.
   outputFileTracingIncludes: {
-    "/**": ["./lib/rag/knowledge/**/*.md"],
+    "/**": [
+      "./lib/rag/knowledge/**/*.md",
+      "./node_modules/tesseract.js/**/*",
+      "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/bmp-js/**/*",
+      "./node_modules/idb-keyval/**/*",
+      "./node_modules/is-url/**/*",
+      "./node_modules/node-fetch/**/*",
+      "./node_modules/whatwg-url/**/*",
+      "./node_modules/tr46/**/*",
+      "./node_modules/webidl-conversions/**/*",
+      "./node_modules/regenerator-runtime/**/*",
+      "./node_modules/wasm-feature-detect/**/*",
+      "./node_modules/zlibjs/**/*",
+    ],
   },
   experimental: {
     optimizePackageImports: ["date-fns"],

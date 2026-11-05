@@ -122,13 +122,39 @@ export function CertificatesManager() {
   );
 }
 
+/** Wat de eigen OCR (app/api/ocr/lezen) uit een foto haalt; alles is een voorstel. */
+interface Gelezen {
+  certType: string | null;
+  nummer: string | null;
+  afgegevenOp: string | null;
+  geldigTot: string | null;
+}
+
 function AddForm({ onAdded }: { onAdded: () => void }) {
   const t = useFT().cert;
   const [type, setType] = useState("VCA_BASIS");
+  /** de gebruiker koos zelf een type: dan overschrijft de foto het niet */
+  const [typeGekozen, setTypeGekozen] = useState(false);
+  const [number, setNumber] = useState("");
+  const [issuedOn, setIssuedOn] = useState("");
+  const [expiresOn, setExpiresOn] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: "ok" | "err"; s: string } | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  /** het lezen van de foto: bezig, of de uitkomst in woorden */
+  const [scan, setScan] = useState<{ bezig: boolean; tekst: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  function leegmaken() {
+    formRef.current?.reset();
+    setType("VCA_BASIS");
+    setTypeGekozen(false);
+    setNumber("");
+    setIssuedOn("");
+    setExpiresOn("");
+    setFileName(null);
+    setScan(null);
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -139,8 +165,7 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error?.message ?? t.addFailed);
       setMsg({ t: "ok", s: d.certificate.status === "valid" ? t.addedValid : t.addedPending });
-      formRef.current?.reset();
-      setFileName(null);
+      leegmaken();
       onAdded();
     } catch (err) {
       setMsg({ t: "err", s: (err as Error).message });
@@ -149,12 +174,57 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
     }
   }
 
+  // Een gekozen foto gaat meteen door de eigen OCR; lege velden worden
+  // ingevuld, wat de gebruiker al typte blijft staan.
+  async function leesFoto(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setScan({ bezig: false, tekst: file.type === "application/pdf" ? t.scanPdf : "" });
+      return;
+    }
+    setScan({ bezig: true, tekst: t.scanReading });
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/ocr/lezen", { method: "POST", body: fd });
+      if (!r.ok) throw new Error();
+      const { gelezen } = (await r.json()) as { gelezen: Gelezen };
+      let n = 0;
+      if (gelezen.certType && !typeGekozen && TYPE_KEYS.includes(gelezen.certType as (typeof TYPE_KEYS)[number])) {
+        setType(gelezen.certType);
+        n++;
+      }
+      if (gelezen.nummer && !number) {
+        setNumber(gelezen.nummer);
+        n++;
+      }
+      if (gelezen.afgegevenOp && !issuedOn) {
+        setIssuedOn(gelezen.afgegevenOp);
+        n++;
+      }
+      if (gelezen.geldigTot && !expiresOn) {
+        setExpiresOn(gelezen.geldigTot);
+        n++;
+      }
+      setScan({ bezig: false, tekst: n > 0 ? t.scanFilled(n) : t.scanNothing });
+    } catch {
+      setScan({ bezig: false, tekst: t.scanFailed });
+    }
+  }
+
   return (
     <form ref={formRef} onSubmit={submit} className="h-fit rounded-2xl border border-hair bg-white p-5 shadow-card">
       <h2 className="font-display text-lg font-bold text-ink">{t.addTitle}</h2>
       <label className="field-label mt-4 block">
         {t.type}
-        <select name="type" value={type} onChange={(e) => setType(e.target.value)} className="field-input">
+        <select
+          name="type"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setTypeGekozen(true);
+          }}
+          className="field-input"
+        >
           {TYPE_KEYS.map((k) => (
             <option key={k} value={k}>
               {t.types[k]}
@@ -170,17 +240,17 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
       )}
       <label className="field-label mt-3 block">
         {t.certNumber} <span className="font-normal text-neutralx-400">{t.optional}</span>
-        <input name="number" className="field-input" />
+        <input name="number" value={number} onChange={(e) => setNumber(e.target.value)} className="field-input" />
       </label>
       {/* Two date fields side by side are wider than a phone (date inputs have an intrinsic width): stack them below 640px. */}
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="field-label min-w-0">
           {t.issuedOn}
-          <input type="date" name="issuedOn" className="field-input min-w-0" />
+          <input type="date" name="issuedOn" value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} className="field-input min-w-0" />
         </label>
         <label className="field-label min-w-0">
           {t.expiresOn}
-          <input type="date" name="expiresOn" className="field-input min-w-0" />
+          <input type="date" name="expiresOn" value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} className="field-input min-w-0" />
         </label>
       </div>
       <label className="field-label mt-3 block">
@@ -190,10 +260,22 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
             type="file"
             name="file"
             accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              setFileName(f?.name ?? null);
+              if (f) void leesFoto(f);
+              else setScan(null);
+            }}
             className="w-full min-w-0 text-sm text-neutralx-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
           <p className="mt-1 text-xs text-neutralx-400">{fileName ? t.chosen(fileName) : t.fileHint}</p>
+          {!fileName && <p className="mt-1 text-xs text-neutralx-400">{t.scanHint}</p>}
+          {scan && scan.tekst && (
+            <p role="status" aria-busy={scan.bezig} className={`mt-1.5 text-xs font-medium ${scan.bezig ? "text-neutralx-500" : "text-plan-ink"}`}>
+              {scan.bezig ? "⏳ " : "📷 "}
+              {scan.tekst}
+            </p>
+          )}
         </div>
       </label>
       {msg && <p role="status" className={`mt-3 text-sm ${msg.t === "ok" ? "text-ok" : "text-crit"}`}>{msg.s}</p>}
