@@ -118,6 +118,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   }));
   const missingRequiredCert = certList.find((c) => c.required && !c.have) ?? null;
   const uitzendbureauBlocked = s.viaUitzendbureau && !isPayroll;
+  // Uitzendvoorwaarden (loonstrook, vast loon) zodra de klus via het uitzendbureau
+  // loopt of de werker uitzendkracht is; het label volgt de klus, net als ShiftCard.
+  const agencyTerms = isPayroll || s.viaUitzendbureau;
 
   // Cancellation deadline: 24h before the shift starts.
   const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
@@ -397,9 +400,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         )}
 
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">
-            {ft.card.freelance}
-          </span>
+          {s.viaUitzendbureau ? (
+            <span className="rounded border border-amber-500/40 px-2 py-0.5 text-xs font-semibold text-amber-700">
+              {ft.card.viaAgency}
+            </span>
+          ) : (
+            <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">
+              {ft.card.freelance}
+            </span>
+          )}
           <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
         </div>
         {vsMarket !== null && (
@@ -409,8 +418,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         )}
 
         {/* Fast payout — only when the client offers it (credit-checked) */}
-        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !isPayroll ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
-          {isPayroll ? (
+        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !agencyTerms ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
+          {agencyTerms ? (
             <>
               <span className="font-semibold">{D.payroll}</span> — {ft.market.typeUitzend.filter((_, i) => i !== 1).join(" · ")}
             </>
@@ -427,7 +436,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
         {/* Info chips */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {(isPayroll ? ft.market.typeUitzend : D.chips).map((c) => (
+          {(agencyTerms ? ft.market.typeUitzend : D.chips).map((c) => (
             <span key={c} className="rounded-lg border border-hair bg-white px-2.5 py-1.5 text-xs text-neutralx-600">
               {c}
             </span>
@@ -493,7 +502,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </InfoRow>
           {s.skill && <InfoRow icon="🏷️">{s.skill}</InfoRow>}
           <InfoRow icon="👤">
-            {D.lookingFor(s.positions)}
+            {s.viaUitzendbureau ? D.lookingForAgency(s.positions) : D.lookingFor(s.positions)}
           </InfoRow>
           <InfoRow icon="👕">
             {s.dresscode || D.noDresscode}
@@ -673,7 +682,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <div className="mt-4 divide-y divide-hair rounded-xl bg-paper-soft">
             <StatRow icon="🕐">{D.stat1}</StatRow>
             <StatRow icon="🙂">{D.stat2}</StatRow>
-            <StatRow icon="🐖">{D.stat3}</StatRow>
+            <StatRow icon="🐖">{agencyTerms ? D.stat3Agency : D.stat3}</StatRow>
           </div>
 
           <Link
@@ -724,7 +733,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         )}
 
         <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">
-          {D.footer}
+          {agencyTerms ? D.footerAgency : D.footer}
         </div>
 
         {!settled && (
@@ -791,7 +800,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 disabled={applyDisabled}
                 notReadyReason={applyBlockReason}
                 full
-                fixedRate={isPayroll}
+                fixedRate={agencyTerms}
               />
             </div>
           )}
