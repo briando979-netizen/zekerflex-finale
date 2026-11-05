@@ -1035,6 +1035,10 @@ export const en: Dict = {
     looksTitel: "Shop the look",
     looksSub: "Complete outfits on a mannequin. Adjust them to your own measurements.",
     lookBekijk: "Adjust",
+    onlangsTitel: "Recently viewed",
+    onlangsWis: "Clear the list",
+    pasAanKort: "Try on",
+    kleurenLabel: "Colours: {kleuren}",
   },
 
   greet: {

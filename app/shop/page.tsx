@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getDict } from "@/lib/i18n/server";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
 import { ShopFeatured } from "@/components/marketing/ShopProductCard";
+import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
 import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import { ShopMoreCategories, ShopNewsletter, ShopPaskamerPromo, ShopService } from "@/components/marketing/ShopSections";
 import { ShopCategorieGroot, ShopLooks, ShopThuisHero, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
@@ -90,6 +91,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
       {!browsing && <ShopCategorieGroot t={dict} tegels={tegels} />}
       {!browsing && <ShopLooks t={dict} looks={looks} />}
       {!browsing && featured.length === 5 && <ShopFeatured title={t.popular} products={featured} />}
+      {!browsing && <OnlangsBekeken producten={products} />}
       {!browsing && <ShopPaskamerPromo pk={dict.paskamer} />}
       <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} products={products} pageTitle={browsing} />
       <ShopMoreCategories t={t} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
@@ -8,7 +8,9 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
-import { GRID_SIZES, cardStock, type ShopCardProduct } from "@/components/marketing/shop-product";
+import { GRID_SIZES, bySize, cardStock, type ShopCardProduct } from "@/components/marketing/shop-product";
+import { usePaskamerProfiel } from "@/components/marketing/paskamer/usePaskamer";
+import { kleurHex, maatAdvies, matenVan, pastBijSilhouet, pasvormVoor } from "@/lib/shop/paskamer";
 import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 
 // Eén productkaart zoals op een grote marktplaats: foto, naam, opties, prijs,
@@ -40,6 +42,15 @@ export function ShopProductCard({
   const fav = wishlist.has(p.id);
   const stock = cardStock(p);
   const href = p.slug ? `/shop/${p.slug}` : null;
+  // draagbaar? dan een "Pas aan"-knop, en met een paskamerprofiel op dit toestel meteen jouw maat
+  const profiel = usePaskamerProfiel();
+  const pasvorm = useMemo(() => (p.slug ? pasvormVoor({ slug: p.slug, name: p.name, gender: p.gender ?? null }) : null), [p.slug, p.name, p.gender]);
+  const maten = useMemo(() => matenVan(p, bySize), [p]);
+  const jouwMaat =
+    profiel && pasvorm && maten.length > 0 && pastBijSilhouet({ gender: p.gender ?? null, systeem: pasvorm.systeem }, profiel.lichaam.silhouet)
+      ? maatAdvies(pasvorm.systeem, maten, profiel.lichaam).maat
+      : null;
+  const kleuren = [...new Set(p.variants.map((v) => v.color).filter((c): c is string => Boolean(c)))];
 
   const quickAdd = () => {
     if (!single || single.stock <= 0) return;
@@ -73,6 +84,19 @@ export function ShopProductCard({
         >
           <IconHeart filled={fav} />
         </button>
+        {pasvorm && p.slug && (
+          <Link
+            href={`/shop/paskamer?pas=${encodeURIComponent(p.slug)}`}
+            aria-label={`${t.paskamer.probeerAan}: ${p.name}`}
+            className="absolute bottom-2 left-2 z-10 inline-flex h-8 items-center gap-1 rounded-full bg-white/95 px-2.5 text-[11px] font-bold text-ink shadow-e1 transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="4.5" r="2.5" />
+              <path d="M7 9.5c1.5-1.2 3.2-1.8 5-1.8s3.5.6 5 1.8l-1.2 5.5H8.2zM9.5 15l-.8 6M14.5 15l.8 6" />
+            </svg>
+            {t.shopThuis.pasAanKort}
+          </Link>
+        )}
       </div>
 
       <p className="mt-3 text-[12px] text-neutralx-500">{p.category === "Cadeaus" ? t.shop.navTeams : p.category}</p>
@@ -86,6 +110,14 @@ export function ShopProductCard({
         )}
       </Title>
       {p.variants.length > 1 && <p className="mt-1 text-[12px] text-neutralx-500">{fmt(t.shop.optionsCount, { n: p.variants.length })}</p>}
+      {kleuren.length > 1 && (
+        <p className="mt-1.5 flex items-center gap-1" aria-label={fmt(t.shopThuis.kleurenLabel, { kleuren: kleuren.join(", ") })}>
+          {kleuren.slice(0, 5).map((k) => (
+            <span key={k} title={k} aria-hidden className="h-3.5 w-3.5 rounded-full border border-black/15" style={{ background: kleurHex(k) ?? "#9aa0a6" }} />
+          ))}
+        </p>
+      )}
+      {jouwMaat && <p className="mt-1 text-[12px] font-semibold text-brand-700">{fmt(t.paskamer.jouwMaat, { maat: jouwMaat })}</p>}
 
       <div className="mt-2">
         <ShopPrijs centen={Math.round(p.price * 100)} product={p} />

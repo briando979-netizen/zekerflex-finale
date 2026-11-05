@@ -1043,6 +1043,10 @@ export const nl = {
     looksTitel: "Shop de look",
     looksSub: "Complete combinaties op een paspop. Pas ze aan op je eigen maten.",
     lookBekijk: "Pas aan",
+    onlangsTitel: "Onlangs bekeken",
+    onlangsWis: "Wis de lijst",
+    pasAanKort: "Pas aan",
+    kleurenLabel: "Kleuren: {kleuren}",
   },
 
   greet: {

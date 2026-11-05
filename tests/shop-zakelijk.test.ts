@@ -104,3 +104,16 @@ describe("offerteverzoek", () => {
     expect(isTestOfferte("inkoop@bouwbedrijf.nl")).toBe(false);
   });
 });
+
+describe("onlangs bekeken", () => {
+  it("houdt de nieuwste vooraan, zonder dubbele, hooguit 12", async () => {
+    const { leesBekeken, metBekeken } = await import("@/components/marketing/useOnlangsBekeken");
+    expect(leesBekeken(null)).toEqual([]);
+    expect(leesBekeken("{kapot")).toEqual([]);
+    expect(leesBekeken(JSON.stringify(["a", "b", "a", 3, ""]))).toEqual(["a", "b"]);
+    expect(metBekeken(["a", "b", "c"], "b")).toEqual(["b", "a", "c"]);
+    const veel = Array.from({ length: 12 }, (_, i) => `p${i}`);
+    expect(metBekeken(veel, "nieuw")).toHaveLength(12);
+    expect(metBekeken(veel, "nieuw")[0]).toBe("nieuw");
+  });
+});

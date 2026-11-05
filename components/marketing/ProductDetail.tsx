@@ -14,6 +14,8 @@ import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { useShopModus } from "@/components/marketing/ShopModus";
 import { specFor } from "@/lib/shop/product-specs";
 import { PaskamerTip } from "@/components/marketing/paskamer/PaskamerTip";
+import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
+import { useOnlangsBekeken } from "@/components/marketing/useOnlangsBekeken";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -93,6 +95,11 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const buyLabel = !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
   const { modus } = useShopModus();
   const fav = wishlist.has(product.id);
+  // onthouden voor "Onlangs bekeken" (alleen in deze browser)
+  const { bekeken } = useOnlangsBekeken();
+  useEffect(() => {
+    bekeken(product.id);
+  }, [bekeken, product.id]);
   const shownImage = gallery[active] ?? gallery[0];
 
   // de vaste koopknop op de telefoon staat er zolang de gewone niet in beeld is
@@ -420,6 +427,8 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           </ul>
         </section>
       )}
+
+      <OnlangsBekeken behalve={product.id} ingebed />
 
       {/* telefoon: vaste koopknop zodra de gewone uit beeld is */}
       {!buyVisible && (
