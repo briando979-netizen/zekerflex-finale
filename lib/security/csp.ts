@@ -20,6 +20,15 @@
 // far weaker vector than script injection, so this is a conscious stop here.
 // ---------------------------------------------------------------------------
 
+/** Waar de ingebedde rapportages vandaan komen (Metabase, lib/bi); leeg = niet ingesteld. */
+const METABASE_ORIGIN = (() => {
+  try {
+    return process.env.METABASE_PUBLIC_URL ? new URL(process.env.METABASE_PUBLIC_URL).origin : "";
+  } catch {
+    return "";
+  }
+})();
+
 /** Our own public origin (from APP_BASE_URL); the middleware runs on the edge, so read it directly. */
 const SITE_ORIGIN = (() => {
   try {
@@ -127,11 +136,15 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // 'self' — scoping it to /admin/ontwerper alone blocked the preview whenever
   // you came from another admin page. Public pages keep no 'self' framing.
   const admin = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
+  // De werkgeveromgeving bedt de rapportages van Metabase in (/werkgever/rapportages). Een
+  // CSP hoort bij het document en het menu navigeert aan de clientkant, dus heel /werkgever.
+  const werkgever = pathname === "/werkgever" || (pathname?.startsWith("/werkgever/") ?? false);
+  const metabase = METABASE_ORIGIN && (admin || werkgever) ? ` ${METABASE_ORIGIN}` : "";
   const frameSrc = studio
     ? "frame-src 'self' blob: https:"
     : admin
-      ? "frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com"
-      : "frame-src https://js.stripe.com https://www.youtube-nocookie.com";
+      ? `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${metabase}`
+      : `frame-src https://js.stripe.com https://www.youtube-nocookie.com${metabase}`;
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";

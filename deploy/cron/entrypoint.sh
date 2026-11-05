@@ -40,6 +40,8 @@ cat > /etc/crontabs/root <<EOF
 0 17 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rijschool/herinneringen"
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/bouwer/auto"
 */2 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/bouwer/meldingen"
+# elk uur: Metabase inrichten als dat nog niet lukte, en om 04:00 de views en kaarten bijwerken (lib/bi)
+40 * * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/bi/setup"
 # elk uur: bronnen van buiten ophalen die aan de beurt zijn (pompprijzen, minimumloon, cao, KVK, schermcontrole)
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)

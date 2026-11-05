@@ -80,6 +80,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
     reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
     netwerk: { href: "/werkgever/netwerk", label: "Wifi en VPN", icon: <IShield /> },
+    rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });

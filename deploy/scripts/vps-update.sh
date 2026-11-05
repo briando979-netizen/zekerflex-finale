@@ -17,8 +17,9 @@ if [ -z "${ZF_DEPLOY_LOCKED:-}" ]; then
   exec 9>.zf-slot/deploy.lock
   flock -n 9 || { echo "DEPLOY_BEZIG: er loopt al een uitrol, probeer het straks opnieuw"; echo "DEPLOY_EXIT=3"; exit 3; }
 fi
-# geheimen die alleen op deze server hoeven te bestaan (browser-werker, kennisbank): één keer maken
-bash deploy/scripts/env-aanvullen.sh .env.production
+# geheimen die alleen op deze server hoeven te bestaan (browser-werker, kennisbank, Metabase): één keer
+# maken. Met sudo: .env.production is van root (600) en moet dat blijven.
+sudo bash deploy/scripts/env-aanvullen.sh .env.production
 sudo docker tag zekerflex-app:latest zekerflex-app:rollback
 for i in 1 2 3; do
   if sudo $C build app; then
@@ -34,7 +35,7 @@ for i in 1 2 3; do
     fi
     # de back-updienst heeft een eigen klein image (postgres + scp/curl): gecacht, seconden
     sudo $C build -q backup > /dev/null 2>&1 || echo "backup: image bouwen mislukt, het oude blijft"
-    sudo $C up -d app backup coturn freeradius headscale
+    sudo $C up -d app backup coturn freeradius headscale metabase
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand

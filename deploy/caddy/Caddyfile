@@ -93,6 +93,18 @@ vpn.zekerflex.com {
 	}
 }
 
+# Rapportages: Metabase (lib/bi) op een eigen naam. Standaard een sslip.io-naam
+# (geen DNS nodig); met een A-record kan METABASE_HOST in .env.production
+# bi.zekerflex.com worden. Metabase heeft zijn eigen login; de ingebedde
+# dashboards in /werkgever/rapportages gaan via getekende links.
+{$METABASE_HOST:bi.37-97-226-24.sslip.io} {
+	encode zstd gzip
+	reverse_proxy metabase:3000 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

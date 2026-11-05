@@ -42,6 +42,9 @@ services:
       LLM_FAST_MODEL: ${LLM_FAST_MODEL:-qwen2.5:3b}
       # ZekerFlex Kaart leest zijn data alleen via deze variabele (zie app/kaart-data)
       KAART_DATA_DIR: /app/kaart-data
+      # Rapportages (lib/bi): Metabase op het interne netwerk; het publieke adres via Caddy
+      METABASE_URL: ${METABASE_URL:-http://metabase:3000}
+      METABASE_PUBLIC_URL: ${METABASE_PUBLIC_URL:-https://${METABASE_HOST:-bi.37-97-226-24.sslip.io}}
     volumes:
       - app-storage:/app/storage
       # Back-ups van beheerde klantsites: eigen volume, niet in onze eigen nachtelijke back-up.
@@ -69,6 +72,7 @@ services:
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
       BOUWER_VOORBEELD_HOST: ${BOUWER_VOORBEELD_HOST:-voorbeeld.37-97-226-24.sslip.io}
+      METABASE_HOST: ${METABASE_HOST:-bi.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"
@@ -335,6 +339,44 @@ services:
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
+
+  # Rapportages (lib/bi): Metabase, open source, op de eigen server. Zijn eigen
+  # gegevens staan in de database `metabase` op onze Postgres (de app maakt die aan);
+  # onze cijfers leest hij als rol zf_bi, alleen in het schema bi (lib/bi/views.ts).
+  # Alleen via Caddy bereikbaar op METABASE_HOST (standaard een sslip.io-naam, geen
+  # DNS nodig; zet METABASE_HOST=bi.zekerflex.com zodra de A-record staat).
+  # De Java-VM krijgt 1 GB; de container 1,5 GB.
+  metabase:
+    image: metabase/metabase:v0.56.6
+    restart: unless-stopped
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: zekerflex
+      MB_DB_PASS: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      MB_SITE_URL: https://${METABASE_HOST:-bi.37-97-226-24.sslip.io}
+      MB_SITE_LOCALE: nl
+      MB_ANON_TRACKING_ENABLED: "false"
+      MB_CHECK_FOR_UPDATES: "false"
+      MB_EMBEDDING_APP_ORIGIN: ${APP_BASE_URL:-https://zekerflex.com}
+      JAVA_OPTS: -Xmx1g -XX:+UseSerialGC
+      JAVA_TIMEZONE: Europe/Amsterdam
+    mem_limit: 1536m
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
 
   # Browser-werker voor de bronnen (lib/bronnen, deploy/scraper): Playwright met
   # Chromium in een eigen container. Geen database en geen geheimen van de app;

@@ -395,6 +395,15 @@ const schema = z.object({
   SCRAPER_URL: z.string().url().default("http://scraper:4300"),
   SCRAPER_TOKEN: z.string().min(16).optional(),
 
+  // Metabase (rapportages, lib/bi): de container op het interne netwerk, het publieke adres
+  // voor de ingebedde dashboards (via Caddy), en de beheerder die ZekerFlex zelf aanmaakt.
+  METABASE_URL: z.string().url().optional(),
+  METABASE_PUBLIC_URL: z.string().url().optional(),
+  METABASE_ADMIN_EMAIL: z.string().email().default("beheer@zekerflex.com"),
+  METABASE_ADMIN_PASSWORD: z.string().min(12).optional(),
+  METABASE_DB_HOST: z.string().default("postgres"),
+  METABASE_DB_NAME: z.string().default("zekerflex"),
+
   // Didit - KYC / identity verification.
   DIDIT_BASE_URL: z.string().url().default("https://verification.didit.me"),
   DIDIT_API_KEY: z.string().optional(),

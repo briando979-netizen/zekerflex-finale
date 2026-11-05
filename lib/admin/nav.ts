@@ -30,6 +30,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/te-doen", label: "Te doen" },
       { href: "/admin/cockpit", label: "Cockpit" },
       { href: "/admin/vooruitblik", label: "Vooruitblik" },
+      { href: "/admin/bi", label: "Rapportages (BI)" },
       { href: "/admin/agenda", label: "Agenda" },
       { href: "/admin/kantoor", label: "Live kantoor" },
       { href: "/admin/sim", label: "De Sim" },

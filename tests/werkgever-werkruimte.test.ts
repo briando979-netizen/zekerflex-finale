@@ -71,6 +71,8 @@ describe("menuVoor", () => {
       { sleutel: "geblokkeerd" },
       { sleutel: "uren", sectie: "beheer" },
       { sleutel: "facturen", sectie: "beheer" },
+      // rapportages (Metabase, lib/bi) hoort bij de administratie, direct na de facturen
+      { sleutel: "rapportages", sectie: "beheer" },
       { sleutel: "compliance", sectie: "beheer" },
       { sleutel: "overeenkomsten", sectie: "beheer" },
       { sleutel: "bedrijf", sectie: "beheer" },

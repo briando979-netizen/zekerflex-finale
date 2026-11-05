@@ -58,6 +58,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // dagelijks 10:00 UTC (/api/internal/worker/milestones): profielcijfers + mijlpalen van werkers
   { job: "worker-stats", label: "Werkers: profielcijfers", maxAgeHours: 26 },
   { job: "worker-milestones", label: "Werkers: mijlpalen en seintjes", maxAgeHours: 26 },
+  // elk uur: Metabase ingericht houden (lib/bi/metabase.ts)
+  { job: "bi-setup", label: "Rapportages (Metabase) ingericht", maxAgeHours: 3 },
   // elk uur: bronnen van buiten (lib/bronnen/tick.ts)
   { job: "bronnen", label: "Bronnen van buiten (pompprijzen, minimumloon, cao, KVK, schermcontrole)", maxAgeHours: 3 },
   // dagelijks 11:00 UTC: nieuwe pagina's melden bij Bing/IndexNow
