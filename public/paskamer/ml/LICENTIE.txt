@@ -1,0 +1,5 @@
+Deze bestanden draaien in de browser van de klant en meten een foto (houding en omtrek van de persoon).
+- vision_bundle.mjs en wasm/: MediaPipe Tasks Vision 1.2.2 van Google, Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+- pose_landmarker_lite.task en selfie_segmenter.tflite: MediaPipe-modellen van Google, Apache License 2.0
+Bron: https://github.com/google-ai-edge/mediapipe en https://ai.google.dev/edge/mediapipe/solutions/vision
+De foto verlaat het toestel niet.

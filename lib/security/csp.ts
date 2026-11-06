@@ -127,10 +127,13 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);
   const sandboxFrame = pathname === "/admin/zekerflex-ai/sandbox-frame";
 
+  // De paskamer meet een foto op het toestel (MediaPipe, WebAssembly). Een CSP hoort bij het eerste document,
+  // dus ook wie via een link van /shop komt moet het mogen: voor alle /shop-pagina's, alleen wasm (geen eval van JavaScript).
+  const shopWasm = pathname === "/shop" || (pathname?.startsWith("/shop/") ?? false);
   const scriptSrc =
     dev || sandboxFrame
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${shopWasm ? " 'wasm-unsafe-eval'" : ""}`;
   const connectSrc = dev
     ? "connect-src 'self' ws: http: https:"
     : "connect-src 'self' https://api.stripe.com";

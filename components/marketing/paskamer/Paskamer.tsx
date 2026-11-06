@@ -241,7 +241,21 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
             ))}
           </div>
           <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:h-[calc(100vh-170px)] lg:max-h-[860px]">
-            {weergave === "foto" && <MijnFoto regels={items.map((it) => ({ id: it.prod.id, maat: it.maat, kleur: it.kleur, naam: it.prod.name }))} />}
+            {weergave === "foto" && (
+              <MijnFoto
+                lengte={l.lengte}
+                onToepassen={(u) => {
+                  zet((s) => ({
+                    ...s,
+                    lichaam: { ...s.lichaam, lengte: u.lengte, ...(u.borst ? { borst: u.borst } : {}), ...(u.taille ? { taille: u.taille } : {}) },
+                    ...(u.huid ? { huid: u.huid } : {}),
+                    ...(u.gezicht ? { gezicht: u.gezicht } : {}),
+                    ...(u.haarKleur ? { haarKleur: u.haarKleur } : {}),
+                  }));
+                  setWeergave("3d");
+                }}
+              />
+            )}
             <div className={weergave === "foto" ? "hidden" : "contents"}>
             {/* de achtergrond zit op het vak (over de volle breedte); bij opslaan als foto komt hij in de tekening */}
             <div className={`absolute inset-0 pt-2 ${items.length > 0 ? "pb-[72px]" : "pb-2"}`}>
