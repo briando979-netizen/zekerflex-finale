@@ -16,7 +16,9 @@ import { alleLaatste, bewaarMeting, laatsteMeting, reeksVan } from "@/lib/bronne
 export function aanDeBeurt(id: BronId, laatste: Meting | null, now = Date.now()): boolean {
   if (!laatste) return true;
   const uur = laatste.ok ? BRONNEN[id].elkeUur : 1;
-  return now - Date.parse(laatste.op) >= uur * 3_600_000 - 5 * 60_000;
+  // een onleesbaar tijdstip (NaN) zou de bron anders voorgoed overslaan: dan gewoon halen
+  const op = Date.parse(laatste.op);
+  return Number.isNaN(op) || now - op >= uur * 3_600_000 - 5 * 60_000;
 }
 
 async function naMeting(id: BronId, m: Meting, fouten: number): Promise<void> {

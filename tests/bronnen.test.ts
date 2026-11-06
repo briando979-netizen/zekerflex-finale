@@ -94,6 +94,8 @@ describe("bronnen: planner", () => {
     for (const id of BRON_IDS) expect(BRONNEN[id].elkeUur).toBeGreaterThan(0);
     expect(aanDeBeurt("brandstof", null, NU)).toBe(true);
     expect(aanDeBeurt("brandstof", meting("2026-11-04T07:00:00Z"), NU)).toBe(false);
+    // een onleesbaar tijdstip mag een bron nooit voorgoed overslaan
+    expect(aanDeBeurt("brandstof", meting("2026-11-05THH24:27:04Z"), NU)).toBe(true);
     expect(aanDeBeurt("brandstof", meting("2026-11-04T05:30:00Z"), NU)).toBe(true);
     expect(aanDeBeurt("minimumloon", meting("2026-11-01T06:00:00Z"), NU)).toBe(false);
     expect(aanDeBeurt("minimumloon", meting("2026-11-04T06:30:00Z", false), NU)).toBe(true);
