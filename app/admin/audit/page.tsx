@@ -18,11 +18,26 @@ const SEVERITY: Record<string, { label: string; tone: Tone }> = {
 
 // "Folders" the admin can click through — each maps to one or more of the
 // underlying AuditCategory values so related events sit together.
+// de ruwe categorie uit het logboek in gewone woorden
+const CATEGORIE_LABEL: Record<string, string> = {
+  AUTH: "Inloggen",
+  KYC: "Verificatie",
+  SECURITY: "Beveiliging",
+  TIMESHEET: "Uren",
+  BILLING: "Facturatie",
+  DISPUTE: "Dispuut",
+  COMPANY: "Bedrijf",
+  AGREEMENT: "Overeenkomst",
+  ADMIN: "Beheer",
+  SALES: "Sales",
+  ORCHESTRATION: "Automatisering",
+};
+
 const FOLDERS: { key: string; label: string; categories: AuditCategory[] }[] = [
   { key: "", label: "Alles", categories: [] },
   { key: "gebruikers", label: "Gebruikers", categories: ["AUTH", "KYC"] },
   { key: "bedrijven", label: "Bedrijven", categories: ["COMPANY", "AGREEMENT"] },
-  { key: "security", label: "Security & logins", categories: ["SECURITY"] },
+  { key: "security", label: "Beveiliging & inloggen", categories: ["SECURITY"] },
   { key: "facturatie", label: "Facturatie & uren", categories: ["BILLING", "TIMESHEET"] },
   { key: "disputen", label: "Disputen", categories: ["DISPUTE"] },
   { key: "matching", label: "Matching", categories: ["MATCHING"] },
@@ -92,7 +107,7 @@ export default async function AuditPage(props: { searchParams: Promise<{ folder?
           </span>
         ),
         who: who,
-        category: <Pill dot={false}>{e.category}</Pill>,
+        category: <Pill dot={false}>{CATEGORIE_LABEL[e.category] ?? e.category}</Pill>,
         severity: <Pill tone={sev.tone}>{sev.label}</Pill>,
       },
       sort: { when: e.createdAt.getTime(), who, category: e.category, severity: e.severity },

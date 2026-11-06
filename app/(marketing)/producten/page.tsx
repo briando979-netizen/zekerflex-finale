@@ -21,7 +21,7 @@ const FAQ = [
   { q: "Moet ik het hele platform afnemen?", a: "Nee. Je kunt één losse module nemen — bijvoorbeeld alleen RecruitFlex AI naast je bestaande ATS — of de compliance-API, of de self-hosted stack. Het complete platform is er voor wie álles onder één dak wil." },
   { q: "Kan RecruitFlex AI koppelen met mijn huidige systeem?", a: "Ja. RecruitFlex AI draait als losse SaaS/plug-in en koppelt via REST-API + webhooks aan bestaande ATS'en zoals Carerix, Otys, Bullhorn of Teamtailor — je hoeft je administratie niet te vervangen." },
   { q: "Waarom SovereignOps in plaats van een Amerikaanse cloud?", a: "Voor bedrijven, zorg en ICT-dienstverleners die hun data om AVG-/EU-AI-Act-redenen niet naar OpenAI/Microsoft willen sturen. SovereignOps draait de hele AI- en app-stack op je eigen (goedkope) VPS, met één commando." },
-  { q: "Wat kost de FlexCompliance API?", a: "Usage-based: een klein bedrag per verwerkte loonstrook/aangifte, met een maandelijks minimum. Ideaal voor HR-softwarebouwers en salarisbureaus die StiPP/ABU-logica niet zelf willen bouwen." },
+  { q: "Wat kost de FlexCompliance API?", a: "Op basis van gebruik: een klein bedrag per verwerkte loonstrook/aangifte, met een maandelijks minimum. Ideaal voor HR-softwarebouwers en salarisbureaus die StiPP/ABU-logica niet zelf willen bouwen." },
   { q: "Zijn de prijzen definitief?", a: "Het zijn indicatieve startprijzen; de definitieve prijs stemmen we af op je omvang en gebruik. Vraag een voorstel aan via het formulier of sales@zekerflex.com." },
 ];
 

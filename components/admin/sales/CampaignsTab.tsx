@@ -33,6 +33,7 @@ export type CampaignDto = {
   sources: SourceDto[];
 };
 
+const STATUS_LABEL: Record<string, string> = { DRAFT: "Concept", ACTIVE: "Actief", PAUSED: "Gepauzeerd", DONE: "Afgerond" };
 const STATUS_TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
   ACTIVE: "ok",
   PAUSED: "warn",
@@ -149,7 +150,7 @@ export function CampaignsTab({ initialCampaigns }: { initialCampaigns: CampaignD
             <div className="space-y-3 p-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>{c.name}</span>
-                <APill tone={STATUS_TONE[c.status] ?? "neutral"}>{c.status}</APill>
+                <APill tone={STATUS_TONE[c.status] ?? "neutral"}>{STATUS_LABEL[c.status] ?? c.status}</APill>
                 <APill tone={c.mode === "AUTOPILOT" ? "warn" : "neutral"}>{c.mode}</APill>
               </div>
 
@@ -277,7 +278,7 @@ function SourcesEditor({ campaign, onChange }: { campaign: CampaignDto; onChange
         <li>KVKBase: automatisch op sector/plaats (elke 6 uur)</li>
         {campaign.sources.map((s) => (
           <li key={s.id} className="flex items-center gap-2">
-            <span>{s.kind === "CAREERS_URL" ? "Careers" : s.kind}: {s.url ?? s.label ?? "—"} · laatst {fmt(s.lastRunAt)}</span>
+            <span>{s.kind === "CAREERS_URL" ? "Vacaturepagina" : s.kind}: {s.url ?? s.label ?? "—"} · laatst {fmt(s.lastRunAt)}</span>
             <button type="button" onClick={() => removeSource(s.id)} className="text-[10px] underline" style={{ color: "var(--a-mute)" }}>verwijder</button>
           </li>
         ))}

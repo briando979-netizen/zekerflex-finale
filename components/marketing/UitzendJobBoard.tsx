@@ -40,7 +40,7 @@ const SECTOREN = [
   { emoji: "☕", label: "Horeca & bediening" },
   { emoji: "🎪", label: "Events & promotie" },
   { emoji: "🧹", label: "Schoonmaak & facilitair" },
-  { emoji: "📞", label: "Klantcontact & office" },
+  { emoji: "📞", label: "Klantcontact & kantoor" },
 ];
 
 const CARDS = [

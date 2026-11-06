@@ -25,7 +25,7 @@ export interface ApiPlan {
 export const API_PLANS: Record<PlanKey, ApiPlan> = {
   free: {
     key: "free",
-    label: "Free",
+    label: "Gratis",
     priceCentsPerMonth: 0,
     rateLimitPerMinute: 60,
     monthlyRequestCap: 10_000,
