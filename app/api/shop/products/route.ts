@@ -7,6 +7,8 @@ import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
 import { publiekProduct } from "@/lib/shop/publiek";
+import { bepaalSoort } from "@/lib/shop/winkel-ai";
+import { pasvormVoor } from "@/lib/shop/paskamer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,5 +82,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     data: { productId: product.id, size: null, color: null, priceCents: null, stock: product.stock, sku: `${product.slug}-one` },
   });
   await recordAudit({ category: "ADMIN", action: "shop.product.created", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct aangemaakt: ${product.name}`, targetType: "shop-product", targetId: product.id });
+  // Past dit op de paspop? Weet de naam het niet, laat de AI de soort vastleggen (op de achtergrond, blokkeert niets).
+  if (!pasvormVoor({ slug: product.slug, name: product.name, gender: product.gender })) void bepaalSoort(product);
   return NextResponse.json({ product: { ...product, variants: [defaultVariant] } }, { status: 201 });
 });

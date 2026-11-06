@@ -4,6 +4,7 @@ import { canonical } from "@/lib/seo";
 import { getDict } from "@/lib/i18n/server";
 import { Paskamer } from "@/components/marketing/paskamer/Paskamer";
 import { LOOKS, toPaskamerProduct, type PaskamerProduct } from "@/lib/shop/paskamer";
+import { leesPasvormen } from "@/lib/shop/winkel-ai";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,8 @@ export default async function PaskamerPage(props: { searchParams: Promise<{ pas?
       },
     })
     .catch(() => []);
-  const producten = rows.map(toPaskamerProduct).filter((p): p is PaskamerProduct => p !== null);
+  const soorten = await leesPasvormen();
+  const producten = rows.map((r) => toPaskamerProduct({ ...r, soort: soorten[r.id] ?? null })).filter((p): p is PaskamerProduct => p !== null);
   const slugs = new Set(producten.map((p) => p.slug));
   // een look laten we alleen zien als er minstens twee stukken van leverbaar zijn
   const looks = LOOKS.filter((l) => l.slugs.filter((s) => slugs.has(s)).length >= 2);

@@ -197,6 +197,22 @@ export async function geminiBeeld(input: GeminiBeeldInput): Promise<GeminiBeeld>
   return { b64: beeld.data, mime: beeld.mime, model };
 }
 
+/**
+ * Tekst laten schrijven met zoeken op het web (Google Search grounding): actuele
+ * antwoorden mét bronnen. Gooit een AppError bij geen sleutel of tegoed; de
+ * aanroeper valt dan terug op een gewoon antwoord zonder web.
+ */
+export async function geminiZoekTekst(prompt: string, model: string): Promise<{ tekst: string; bronnen: { titel: string; url: string }[] }> {
+  const res = await geminiFetch(`models/${model}:generateContent`, { contents: [{ role: "user", parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }, 120_000);
+  if (res.status !== 200) throw AppError.upstream(`Google gaf een fout (${res.status}) bij het zoeken.`);
+  const a = JSON.parse(res.text) as { candidates?: { content?: { parts?: { text?: string }[] }; groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] } }[] };
+  const c = a.candidates?.[0];
+  const tekst = (c?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+  if (!tekst) throw AppError.upstream("Google gaf geen antwoord.");
+  const bronnen = (c?.groundingMetadata?.groundingChunks ?? []).flatMap((g) => (g.web?.uri ? [{ titel: g.web.title ?? g.web.uri, url: g.web.uri }] : [])).slice(0, 8);
+  return { tekst, bronnen };
+}
+
 /** Voorlezen met Gemini-TTS. Probeert de modellen na elkaar (elk eigen dagtegoed). WAV-bytes of null. */
 export async function geminiStem(tekst: string, stem = "Kore", toon = "Lees vlot en enthousiast voor, als een reclamespot"): Promise<Buffer | null> {
   const schoon = tekst.trim().slice(0, 4000);

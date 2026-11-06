@@ -149,8 +149,18 @@ const NAAMREGELS: ReadonlyArray<readonly [RegExp, Soort, Maatsysteem]> = [
   [/\btas\b|tote/, "tas", "geen"],
 ];
 
-/** Hoe het product op de paspop komt, of null als het niet te dragen is (fles, boek, oordopjes). */
-export function pasvormVoor(p: { slug: string; name: string; gender?: string | null; firstColor?: string | null }): Pasvorm | null {
+/** Welk maatsysteem bij welke soort hoort (voor producten waarvan de AI of de eigenaar de soort vastlegde). */
+export const SOORT_SYSTEEM: Record<Soort, Maatsysteem> = {
+  tshirt: "boven", overhemd: "boven", blouse: "boven", hoodie: "boven", overshirt: "boven", fleece: "boven", bodywarmer: "boven", softshell: "boven", hesje: "over",
+  chino: "onder", werkbroek: "onder", thermobroek: "onder", riem: "geen", kniebeschermer: "geen",
+  werkschoen: "schoen", sneaker: "schoen", antislip: "schoen", sokken: "sok", handschoen: "hand", snijhandschoen: "hand",
+  pet: "geen", helm: "geen", bril: "geen", tas: "geen",
+};
+export const SOORTEN = Object.keys(SOORT_SYSTEEM) as Soort[];
+export const isSoort = (v: unknown): v is Soort => typeof v === "string" && (SOORTEN as string[]).includes(v);
+
+/** Hoe het product op de paspop komt, of null als het niet te dragen is (fles, boek, oordopjes). `soort` = vastgelegd door de Winkel-AI of de eigenaar. */
+export function pasvormVoor(p: { slug: string; name: string; gender?: string | null; firstColor?: string | null; soort?: Soort | null }): Pasvorm | null {
   const vast = OP_SLUG[p.slug];
   if (vast) {
     const stukken = vast.soorten.map((soort, i) => {
@@ -158,6 +168,10 @@ export function pasvormVoor(p: { slug: string; name: string; gender?: string | n
       return k ? { ...stuk(soort), kleur: k } : stuk(soort);
     });
     return { stukken, systeem: vast.systeem, kleur: vast.kleur, ...(vast.accent ? { accent: vast.accent } : {}) };
+  }
+  if (p.soort && isSoort(p.soort)) {
+    const kind = p.gender === "kinderen" && (SOORT_SYSTEEM[p.soort] === "boven" || SOORT_SYSTEEM[p.soort] === "onder");
+    return { stukken: [stuk(p.soort)], systeem: kind ? "kind" : SOORT_SYSTEEM[p.soort], kleur: kleurHex(p.firstColor ?? null) ?? "#4b5157" };
   }
   const tekst = `${p.name} ${p.slug}`.toLowerCase();
   if (/fles|bottle|boek|book|oordop|gehoor|notes|kit\b/.test(tekst)) return null;
@@ -347,10 +361,12 @@ export function toPaskamerProduct(r: {
   id: string; slug: string; name: string; priceCents: number; imageUrl: string | null; gender: string | null;
   seller?: { name: string } | null;
   variants: PaskamerVariant[];
+  /** door de Winkel-AI of de eigenaar vastgelegde soort (anders raden we uit de naam) */
+  soort?: Soort | null;
 }): PaskamerProduct | null {
   if (r.variants.length === 0) return null; // zonder variant valt er niets af te rekenen
   const firstColor = r.variants.find((v) => v.color)?.color ?? null;
-  const pasvorm = pasvormVoor({ slug: r.slug, name: r.name, gender: r.gender, firstColor });
+  const pasvorm = pasvormVoor({ slug: r.slug, name: r.name, gender: r.gender, firstColor, soort: r.soort ?? null });
   if (!pasvorm) return null;
   return {
     id: r.id, slug: r.slug, name: r.name, priceCents: r.priceCents, imageUrl: r.imageUrl, gender: r.gender,
