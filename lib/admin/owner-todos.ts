@@ -17,6 +17,7 @@ import { listModels3D } from "@/lib/shop/model3d";
 import { playIngesteld } from "@/lib/play/account";
 import { bouwerInstellingen } from "@/lib/bouwer/werker";
 import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
+import { platformPartij } from "@/lib/efactuur/instellingen";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -367,35 +368,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("stripe-btw"),
-    },
-    {
-      id: "partnerprogramma-voorwaarden",
-      group: "Geld & bank",
-      title: "Partnerprogramma webshop: vergoeding en voorwaarden bevestigen",
-      why: "Sinds 4 november kan elk bedrijf in de Websitestudio (Verdienen) links naar de ZekerFlex-webshop delen. Bestelt iemand via zo'n link, dan krijgt dat bedrijf 10% van het productbedrag zonder btw, vast na 35 dagen, uitbetaald vanaf € 25. Dat zijn keuzes van Claude: kijk of ze bij je marges passen. Uitbetalen gaat met de hand via Beheer → Webshop & merk → Partnerprogramma.",
-      how: [
-        "Controleer in Beheer → Webshop de inkoopprijzen: 10% zonder btw moet bij elk product binnen de marge vallen. Een ander percentage? Zeg het tegen Claude; het staat op één plek (lib/shop/partner-core.ts).",
-        "Laat de partnervoorwaarden opnemen in de algemene voorwaarden: wie mag meedoen, geen vergoeding op eigen aankopen, uitbetaling maandelijks, vervalt bij retour. Vraag Claude om een tekst voor te stellen.",
-        "Het cookiebeleid noemt de partnerlink nog niet. De shop onthoudt de partner alleen in het open tabblad (geen cookie). Zeg tegen Claude dat dit in het cookiebeleid moet.",
-        "Vink deze taak af als je akkoord bent.",
-      ],
-      auto: false,
-      ...m("partnerprogramma-voorwaarden"),
-    },
-    {
-      id: "marktplaats-verkopers",
-      group: "Geld & bank",
-      title: "Verkopers op de webshop: Stripe Connect, voorwaarden en DAC7 regelen",
-      why: "Sinds 4 november kunnen geverifieerde bedrijven in de Websitestudio (Verkopen op ZekerFlex) eigen producten aanbieden. Niets komt in de shop zonder jouw goedkeuring in Beheer → Verkopers. Kopers betalen nu aan ZekerFlex en jij maakt het geld van verkopers zelf over, min 12% commissie. Geld innen voor andere bedrijven mag maar beperkt zonder vergunning; met Stripe Connect gaat het geld via Stripe rechtstreeks naar de verkoper. De commissie (12%), uitbetaling na 30 dagen en verzenden binnen 2 werkdagen zijn keuzes van Claude.",
-      how: [
-        "Zet Stripe Connect aan (zie de taak 'Stripe Connect aanzetten'). Zeg het daarna tegen Claude; die laat verkopers hun Stripe-account koppelen en betaalt dan automatisch uit.",
-        "Laat de verkoopvoorwaarden nakijken door een jurist en zet ze in de algemene voorwaarden. De korte versie staat in de Websitestudio onder Verkopen op ZekerFlex. Vraag Claude om de volledige tekst voor te stellen.",
-        "DAC7: een platform met verkopers moet elk jaar vóór 31 januari de verkopen per verkoper melden bij de Belastingdienst (vanaf 30 verkopen of € 2.000 per jaar). Meld ZekerFlex aan als platformexploitant via de Belastingdienst; Claude maakt het jaaroverzicht.",
-        "Klopt 12% commissie voor jou? Een ander percentage zeg je tegen Claude; het staat op één plek (lib/shop/verkoper-core.ts).",
-        "Keur pas daarna de eerste producten goed. Vink deze taak dan af.",
-      ],
-      auto: false,
-      ...m("marktplaats-verkopers"),
     },
     {
       id: "loonweek-grens",
@@ -848,6 +820,34 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Snel en gratis: maak een account bij UptimeRobot of Better Stack en voeg een monitor toe op https://zekerflex.com/api/health.", "Eigen beheer kan ook (Uptime Kuma), maar zet het dan op een andere machine dan de site, anders valt de bewaking tegelijk uit.", "Laat meldingen naar je telefoon/mail sturen en vink deze taak af."],
       auto: false,
       ...m("uptime"),
+    },
+    {
+      id: "efactuur-platform",
+      group: "Geld & bank",
+      title: "Bedrijfsgegevens voor e-facturen (UBL / Peppol) invullen",
+      why: "Elke factuur is nu ook een e-factuur die boekhoudpakketten direct inlezen. Op de platformfacturen (platformkosten, uitzendfacturen) staat ZekerFlex als verkoper: daarvoor zijn het KVK-nummer, btw-nummer en adres nodig. Zonder die gegevens werkt downloaden en mailen wel, maar verzenden via het Peppol-netwerk niet.",
+      how: [
+        "Geef Claude het KVK-nummer, btw-nummer (NL…B01) en het vestigingsadres van ZekerFlex B.V.; die worden PLATFORM_KVK, PLATFORM_VAT, PLATFORM_STREET, PLATFORM_POSTAL_CODE en PLATFORM_CITY op de server.",
+        "Wil je echt via Peppol versturen? Kies dan een Peppol-toegangspunt (zelf hosten met Oxalis/phase4 vraagt een OpenPeppol-certificaat; een Nederlandse dienst zoals eConnect, Storecove of Tradeinterop geeft een API-sleutel). Geef Claude de URL en sleutel (PEPPOL_AP_URL, PEPPOL_AP_TOKEN) en ons Peppol-adres (PEPPOL_SENDER_ID, meestal 0106:KVK-nummer).",
+        "Tot die tijd gaan e-facturen per mail als UBL-bijlage; bedrijven zetten dat zelf aan onder Werkgever → Facturen → E-facturen.",
+      ],
+      auto: true,
+      done: platformPartij().compleet,
+      ...(platformPartij().compleet ? {} : { doneNote: "KVK, btw-nummer of adres ontbreekt nog" }),
+    },
+    {
+      id: "apm-glitchtip",
+      group: "Beheer & veiligheid",
+      title: "Fouten en prestaties bewaken met eigen GlitchTip en Grafana",
+      why: "De site meet nu zelf hoe lang elk verzoek en elke databasequery duurt (Admin → Prestaties) en bewaart fouten in het eigen logboek. Dat geheugen begint bij elke uitrol opnieuw. Een eigen GlitchTip (open source, zoals Sentry) en Grafana op dezelfde server bewaren de geschiedenis, met zoeken en meldingen, zonder abonnement.",
+      how: [
+        "Zeg tegen Claude: 'zet GlitchTip en Grafana aan'. Hij start de extra containers uit infra/docker/docker-compose.observability.yml (±600 MB geheugen; de VPS heeft 8 GB), maakt een beheerder aan en zet GLITCHTIP_DSN in .env.production.",
+        "Kies een adres (bijv. fouten.zekerflex.com en grafana.zekerflex.com, beide alleen voor jou met wachtwoord) of laat ze intern; Claude zet de Caddy-regel erbij.",
+        "Daarna komt elke nieuwe soort fout vanzelf in GlitchTip en zie je in Grafana de responstijden per route en het geheugen van de server.",
+      ],
+      auto: true,
+      done: Boolean(env.GLITCHTIP_DSN),
+      ...(env.GLITCHTIP_DSN ? {} : { doneNote: "GLITCHTIP_DSN nog niet gezet" }),
     },
     {
       id: "backups",

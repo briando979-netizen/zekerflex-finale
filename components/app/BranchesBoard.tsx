@@ -109,6 +109,10 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
                   {b.costCenter ? ` · Kostenplaats ${b.costCenter}` : ""}
                   {" · "}
                   {b._count.shifts} diensten · {b._count.timesheets} urenbriefjes
+                  {" · "}
+                  <a href={`/werkgever/locaties/${b.id}/baken`} className="font-medium text-brand-600 hover:underline">
+                    Locatiebaken (QR, Bluetooth, automatisch inchecken)
+                  </a>
                 </p>
               </div>
               {canManage && b._count.shifts === 0 && b._count.timesheets === 0 && (

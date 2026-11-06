@@ -57,6 +57,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     pages: [
       { href: "/admin/financien", label: "Financiën & winst" },
       { href: "/admin/facturen", label: "Facturen" },
+      { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe", label: "Stripe" },
       { href: "/admin/bank", label: "Bank" },
       { href: "/admin/betalingen", label: "AI-betalingen" },
@@ -142,6 +143,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     icon: "shield",
     pages: [
       { href: "/admin/systeem", label: "Systeem" },
+      { href: "/admin/prestaties", label: "Prestaties" },
       { href: "/admin/disputes", label: "Disputen" },
       { href: "/admin/fraude", label: "Fraude" },
       { href: "/admin/audit", label: "Auditspoor" },

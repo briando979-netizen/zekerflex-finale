@@ -66,6 +66,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     inhuren: { href: "/werkgever/diensten/nieuw", label: "Klus plaatsen", icon: <IBriefcase /> },
     klussen: { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
+    planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
     agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
     bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
     favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },

@@ -2,6 +2,7 @@ import {
   collectDefaultMetrics,
   Counter,
   Gauge,
+  Histogram,
   Registry,
 } from "prom-client";
 import { deploymentTarget } from "@/lib/config/deployment";
@@ -25,6 +26,9 @@ interface MetricsBundle {
   timesheetsApproved: Counter<"track">;
   shiftOffers: Counter<"delivered">;
   usersErased: Counter<string>;
+  /** duur van API-verzoeken (lib/ops/apm.ts) en databasequery's (lib/prisma.ts) */
+  httpDuration: Histogram<"route" | "method" | "status">;
+  dbQueryDuration: Histogram<string>;
 }
 
 const KEY = Symbol.for("zekerflex.metrics");
@@ -99,6 +103,19 @@ function build(): MetricsBundle {
     usersErased: new Counter({
       name: "zf_users_erased_total",
       help: "Accounts anonymised via the AVG erasure flow.",
+      registers: [registry],
+    }),
+    httpDuration: new Histogram({
+      name: "zf_http_request_duration_seconds",
+      help: "Duration of authenticated API requests (withAuth), by route pattern.",
+      labelNames: ["route", "method", "status"],
+      buckets: [0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+      registers: [registry],
+    }),
+    dbQueryDuration: new Histogram({
+      name: "zf_db_query_duration_seconds",
+      help: "Duration of Prisma queries.",
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
       registers: [registry],
     }),
   };

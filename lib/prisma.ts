@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { env } from "@/lib/env";
+import { meetQuery } from "@/lib/ops/apm";
+import { metrics } from "@/lib/metrics/registry";
+import { logger } from "@/lib/logger";
 
 /**
  * Singleton Prisma client. Next.js dev mode re-evaluates modules on every
@@ -17,14 +20,28 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log:
-      env.NODE_ENV === "development"
-        ? ["warn", "error"]
-        : ["error"],
+function maakClient() {
+  // Query-events (duur + kale SQL, zonder parameters) voeden de prestatiemeting
+  // (lib/ops/apm.ts, Admin → Prestaties): trage query's komen in het foutenlogboek.
+  const client = new PrismaClient({
+    log: [
+      { emit: "event", level: "query" },
+      { emit: "stdout", level: "error" },
+      ...(env.NODE_ENV === "development" ? [{ emit: "stdout", level: "warn" } as const] : []),
+    ],
   });
+  client.$on("query", (e) => {
+    try {
+      metrics().dbQueryDuration.observe(e.duration / 1000);
+      if (meetQuery(e.duration, e.query, env.APM_SLOW_QUERY_MS)) logger.warn("trage databasequery", { ms: e.duration, query: e.query.slice(0, 160) });
+    } catch {
+      // meten mag een query nooit in de weg zitten
+    }
+  });
+  return client;
+}
+
+export const prisma = globalForPrisma.prisma ?? maakClient();
 
 if (env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

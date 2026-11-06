@@ -1,37 +1,11 @@
 import { NextResponse } from "next/server";
-import { requirePrincipal, type Principal } from "@/lib/auth";
+import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
-import { prisma } from "@/lib/prisma";
-import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { mayAccessInvoice } from "@/lib/billing/invoice-access";
 import { invoicePdf } from "@/lib/pdf/documents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-async function mayAccessInvoice(p: Principal, invoiceId: string): Promise<boolean> {
-  const inv = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    select: { recipientTenantId: true, recipientFreelancerId: true, issuerFreelancerId: true },
-  });
-  if (!inv) return false;
-
-  // freelancer who issued it, or who is the debtor on a penalty invoice
-  for (const freelancerProfileId of [inv.issuerFreelancerId, inv.recipientFreelancerId]) {
-    if (!freelancerProfileId) continue;
-    const fp = await prisma.freelancerProfile.findFirst({
-      where: { id: freelancerProfileId, userId: p.userId },
-      select: { id: true },
-    });
-    if (fp) return true;
-  }
-  // employer of the recipient tenant
-  if (inv.recipientTenantId) {
-    const scope = await resolveEmployerScope(p).catch(() => null);
-    if (scope?.tenantIds.includes(inv.recipientTenantId)) return true;
-  }
-
-  return p.grants.some((g) => g.role === "PLATFORM_ADMIN");
-}
 
 // GET /api/invoices/:id/pdf — download an invoice as PDF.
 export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {

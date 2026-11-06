@@ -38,6 +38,15 @@ export interface OrgProfileExtra {
   };
   /** what the klus-kaarten show at the top: the branch photo (default) or the organisation's own logo/photo */
   klusBeeld?: "foto" | "logo";
+  /** e-facturen (UBL/Peppol, lib/efactuur): waar en hoe het bedrijf ze wil ontvangen */
+  efactuur?: {
+    /** eigen Peppol-adres als schema:id, bijv. 0106:12345678 (KVK) of 9944:NL123456789B01 (btw); leeg = afgeleid van KVK/btw */
+    peppolId?: string;
+    /** mailadres van het boekhoudpakket dat UBL-bijlagen inleest; leeg = het factuuradres */
+    ontvangstEmail?: string;
+    /** elke nieuwe factuur meteen als e-factuur versturen */
+    automatisch?: boolean;
+  };
   updatedAt?: string;
 }
 

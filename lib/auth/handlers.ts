@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { UserRole } from "@prisma/client";
 import { toErrorBody } from "@/lib/errors";
+import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { metrics } from "@/lib/metrics/registry";
+import { meetVerzoek, routeLabel } from "@/lib/ops/apm";
 import {
   requirePrincipal,
   requireRole,
@@ -47,14 +50,30 @@ export function withAuth<P = Record<string, string>>(handler: AuthedHandler<P>) 
     request: Request,
     ctx: NextRouteContext<P>,
   ): Promise<Response> => {
+    const t0 = Date.now();
+    let response: Response;
     try {
       const principal = await requirePrincipal();
       const params = ((await ctx?.params) ?? {}) as P;
-      return await handler(request, { params, principal });
+      response = await handler(request, { params, principal });
     } catch (err) {
-      return errorResponse(request, err);
+      response = errorResponse(request, err);
     }
+    meetApiVerzoek(request, response.status, Date.now() - t0);
+    return response;
   };
+}
+
+/** Prestatiemeting per route (lib/ops/apm.ts): tellers, histogram en een logregel bij een traag verzoek. */
+function meetApiVerzoek(request: Request, status: number, ms: number): void {
+  try {
+    const route = routeLabel(request.method, new URL(request.url).pathname);
+    meetVerzoek(route, ms, status);
+    metrics().httpDuration.observe({ route, method: request.method, status: String(status) }, ms / 1000);
+    if (ms >= env.APM_SLOW_REQUEST_MS) logger.warn("traag verzoek", { route, ms, status });
+  } catch {
+    // meten mag een antwoord nooit in de weg zitten
+  }
 }
 
 /** Requires the caller to hold at least one of the given roles, anywhere in their grants. */

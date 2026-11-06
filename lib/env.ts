@@ -265,6 +265,37 @@ const schema = z.object({
   HEADSCALE_API_URL: z.string().url().default("http://headscale:8080"),
   HEADSCALE_API_KEY: z.string().optional(),
 
+  // ---- E-facturatie (UBL / Peppol, lib/efactuur) ---------------------------
+  // De bedrijfsgegevens van het platform op de e-factuur (verkoper bij
+  // platformkosten en uitzendfacturen). Leeg = alleen de naam; een e-factuur
+  // via Peppol vraagt minstens het KVK- of btw-nummer.
+  PLATFORM_LEGAL_NAME: z.string().default("ZekerFlex B.V."),
+  PLATFORM_KVK: z.string().optional(),
+  PLATFORM_VAT: z.string().optional(),
+  PLATFORM_STREET: z.string().optional(),
+  PLATFORM_POSTAL_CODE: z.string().optional(),
+  PLATFORM_CITY: z.string().optional(),
+  // Peppol-toegangspunt (access point) met een REST-koppeling: leeg = e-facturen
+  // gaan per mail (UBL-bijlage) en zijn te downloaden; niet via het Peppol-netwerk.
+  PEPPOL_AP_URL: z.string().url().optional(),
+  PEPPOL_AP_TOKEN: z.string().optional(),
+  // Ons eigen Peppol-adres bij dat toegangspunt, bijv. 0106:12345678
+  PEPPOL_SENDER_ID: z.string().optional(),
+
+  // ---- Roosterplanner (lib/planner) ------------------------------------------
+  // Optionele rekendienst met Google OR-Tools (deploy/planner). Leeg = de
+  // ingebouwde oplosser in TypeScript, die hetzelfde antwoordformaat geeft.
+  PLANNER_URL: z.string().url().optional(),
+
+  // ---- Foutopsporing en prestaties (lib/ops/apm) ------------------------------
+  // Sentry-compatibele DSN van een eigen GlitchTip (infra/docker/docker-compose
+  // .observability.yml). Leeg = alleen het eigen foutenlogboek.
+  GLITCHTIP_DSN: z.string().url().optional(),
+  // Vanaf hoeveel milliseconden een verzoek of databasequery als traag in het
+  // foutenlogboek komt.
+  APM_SLOW_REQUEST_MS: z.coerce.number().int().positive().default(2000),
+  APM_SLOW_QUERY_MS: z.coerce.number().int().positive().default(500),
+
   // Fail-safe auto-retry so a brief Ollama hiccup (model load, restart) never
   // surfaces as "not reachable". Retries a connection error / 5xx with
   // exponential backoff up to LLM_RETRY_MAX times or LLM_RETRY_MAX_WAIT_MS total.

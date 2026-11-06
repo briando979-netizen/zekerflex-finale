@@ -39,6 +39,14 @@ export interface MailInput {
   replyTo?: string;
   /** one-click unsubscribe URL — emits List-Unsubscribe headers (bulk mail only) */
   listUnsubscribe?: string;
+  /** bijlagen (bijv. de UBL-XML van een e-factuur); niet in de eigen postbus bewaard */
+  attachments?: MailAttachment[];
+}
+
+export interface MailAttachment {
+  filename: string;
+  contentType: string;
+  content: string | Buffer;
 }
 
 export interface MailResult {
@@ -123,6 +131,44 @@ function buildRaw(input: MailInput, from: string, messageId: string): string {
   const rel = `zfr_${randomUUID().replace(/-/g, "")}`;
   const replyTo = (input.replyTo && input.replyTo.trim()) || env.MAIL_REPLY_TO;
   const unsub = input.listUnsubscribe?.trim();
+  // Bijlagen: het gewone bericht (hieronder gebouwd) wordt het eerste deel van
+  // een multipart/mixed, elke bijlage een deel erna.
+  const bijlagen = input.attachments ?? [];
+  if (bijlagen.length > 0) {
+    const mixed = `zfm_${randomUUID().replace(/-/g, "")}`;
+    const binnen = buildRaw({ ...input, attachments: [] }, from, messageId);
+    const scheiding = binnen.indexOf("\r\n\r\n");
+    const kop = binnen.slice(0, scheiding).split("\r\n");
+    const lichaam = binnen.slice(scheiding + 4);
+    // de Content-Type van het gewone bericht verhuist naar het eerste deel
+    const contentType = kop.find((h) => /^Content-Type:/i.test(h)) ?? "Content-Type: text/plain; charset=UTF-8";
+    const encoding = kop.find((h) => /^Content-Transfer-Encoding:/i.test(h));
+    const algemeen = kop.filter((h) => !/^Content-Type:|^Content-Transfer-Encoding:/i.test(h));
+    return [
+      ...algemeen,
+      `Content-Type: multipart/mixed; boundary="${mixed}"`,
+      "",
+      `--${mixed}`,
+      contentType,
+      ...(encoding ? [encoding] : []),
+      "",
+      lichaam.replace(/\r\n$/, ""),
+      ...bijlagen.flatMap((b) => {
+        const naam = b.filename.replace(/["\r\n]/g, "");
+        const data = typeof b.content === "string" ? Buffer.from(b.content, "utf8") : b.content;
+        return [
+          `--${mixed}`,
+          `Content-Type: ${b.contentType}; name="${naam}"`,
+          `Content-Transfer-Encoding: base64`,
+          `Content-Disposition: attachment; filename="${naam}"`,
+          "",
+          (data.toString("base64").match(/.{1,76}/g) ?? []).join("\r\n"),
+        ];
+      }),
+      `--${mixed}--`,
+      "",
+    ].join("\r\n");
+  }
   const headersCommon = [
     `From: ${from}`,
     `To: ${input.to}`,

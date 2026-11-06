@@ -194,6 +194,19 @@ services:
       app: { condition: service_started }
     networks: [internal]
 
+  # Roosterplanner met Google OR-Tools (deploy/planner): exacte toewijzing van
+  # krachten aan diensten. Optioneel (profiel `planner`, start niet vanzelf):
+  #   docker compose … --profile planner up -d --build planner
+  # en PLANNER_URL=http://planner:8090 in .env.production. Zonder die dienst
+  # rekent de app het rooster zelf uit. Geen geheimen, geen database, intern netwerk.
+  planner:
+    build:
+      context: ./deploy/planner
+    image: zekerflex-planner:latest
+    restart: unless-stopped
+    profiles: [planner]
+    networks: [internal]
+
   # TURN-relay voor gesprekken in de chat, zodat bellen ook achter strenge
   # firewalls werkt. Host-netwerk: ~100 UDP-relaypoorten gaan niet praktisch door
   # Docker's NAT. Alleen deze drie variabelen gaan erin, niet heel .env.production.

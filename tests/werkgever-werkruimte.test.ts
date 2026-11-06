@@ -62,6 +62,7 @@ describe("menuVoor", () => {
       { sleutel: "start" },
       { sleutel: "klussen" },
       { sleutel: "kalender" },
+      { sleutel: "planner" },
       { sleutel: "agenda" },
       { sleutel: "bank" },
       { sleutel: "favorieten" },

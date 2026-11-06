@@ -163,6 +163,14 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
                   <a href={`/api/invoices/${i.id}/pdf`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
                     PDF ↓
                   </a>
+                  <a
+                    href={`/api/invoices/${i.id}/ubl`}
+                    className="ml-2 text-xs font-medium text-brand-600 hover:underline"
+                    title="E-factuur (UBL) voor je boekhoudpakket"
+                    aria-label={`E-factuur UBL — ${i.number}`}
+                  >
+                    UBL ↓
+                  </a>
                 </td>
                 <td className="px-5 py-3 text-right">
                   {i.status === "ISSUED" && (

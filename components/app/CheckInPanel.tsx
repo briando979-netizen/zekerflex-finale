@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
+import { AutoCheckin } from "@/components/app/AutoCheckin";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / check-out on the klus location. Posts to the existing
@@ -126,6 +127,20 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
       )}
       {msg && <p className={`text-sm ${msg.ok ? "text-ok" : "text-warn"}`}>{msg.text}</p>}
       <p className="text-xs text-neutralx-400">{c.privacy}</p>
+      {/* automatisch op de geofence, QR-code of Bluetooth-baken (lib/checkin) */}
+      <AutoCheckin
+        timesheetId={props.timesheetId}
+        scheduledStart={props.scheduledStart}
+        scheduledEnd={props.scheduledEnd}
+        inAt={inAt}
+        outAt={outAt}
+        onEvent={(type, at, ok, text) => {
+          if (type === "CHECK_IN") setInAt(at);
+          else setOutAt(at);
+          setMsg({ ok, text });
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

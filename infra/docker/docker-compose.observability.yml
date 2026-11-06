@@ -71,10 +71,62 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [internal]
 
+  # GlitchTip: open-source, Sentry-compatibele foutopsporing in eigen beheer.
+  # De app stuurt elke nieuwe soort fout uit het eigen foutenlogboek erheen
+  # (lib/ops/glitchtip.ts) zodra GLITCHTIP_DSN in .env.production staat.
+  # Eerste keer: `docker compose … exec glitchtip ./manage.py createsuperuser`,
+  # dan in GlitchTip een project maken en de DSN overnemen. Alleen intern
+  # bereikbaar (poort 8000 op het netwerk); naar buiten via SSH-tunnel of een
+  # eigen Caddy-regel met basisauthenticatie.
+  # Eigen profiel: zet eerst GLITCHTIP_DB_PASSWORD en GLITCHTIP_SECRET_KEY en start
+  # met `--profile glitchtip`; zonder die variabelen starten Prometheus, Grafana en
+  # Loki gewoon zoals voorheen.
+  glitchtip-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles: [glitchtip]
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:-}
+      POSTGRES_DB: glitchtip
+    volumes:
+      - glitchtip-db:/var/lib/postgresql/data
+    networks: [internal]
+
+  glitchtip:
+    image: glitchtip/glitchtip:v5
+    restart: unless-stopped
+    profiles: [glitchtip]
+    depends_on: [glitchtip-db]
+    environment: &glitchtip-env
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@glitchtip-db:5432/glitchtip
+      REDIS_URL: redis://redis:6379/3
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-}
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-https://fouten.zekerflex.com}
+      DEFAULT_FROM_EMAIL: ${MAIL_FROM:-noreply@zekerflex.com}
+      ENABLE_OPEN_USER_REGISTRATION: "False"
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: "90"
+    volumes:
+      - glitchtip-uploads:/code/uploads
+    networks: [internal]
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:v5
+    restart: unless-stopped
+    profiles: [glitchtip]
+    command: ./bin/run-celery-with-beat.sh
+    depends_on: [glitchtip-db]
+    environment: *glitchtip-env
+    volumes:
+      - glitchtip-uploads:/code/uploads
+    networks: [internal]
+
 volumes:
   prom-data:
   grafana-data:
   loki-data:
+  glitchtip-db:
+  glitchtip-uploads:
 
 networks:
   internal:

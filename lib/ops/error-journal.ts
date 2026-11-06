@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { setUnexpectedErrorReporter } from "@/lib/errors";
 import { logger, setLogSink } from "@/lib/logger";
 import { alertOwnerLater } from "@/lib/ops/alert";
+import { stuurNaarGlitchtip } from "@/lib/ops/glitchtip";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
@@ -231,6 +232,8 @@ export async function flushJournal(now = Date.now()): Promise<void> {
       }
     }
     if (fresh.length) alertNewErrors(fresh);
+    // dezelfde batch ook naar een eigen GlitchTip, als die is ingesteld (stil bij fouten)
+    void stuurNaarGlitchtip(batch).catch(() => undefined);
     if (now - state.lastPrune >= PRUNE_EVERY_MS || state.createdSincePrune >= PRUNE_AFTER_NEW) await pruneJournal(now).catch(() => undefined);
   })().finally(() => {
     state.flushing = null;

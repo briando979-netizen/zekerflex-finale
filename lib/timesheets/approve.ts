@@ -38,6 +38,7 @@ import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendUserPush } from "@/lib/notifications/push";
+import { efactuurNaUitgifte } from "@/lib/efactuur/bezorging";
 import { pushHoursApproved } from "@/lib/notifications/approved-push";
 import { runAfter } from "@/lib/run-after";
 import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
@@ -455,7 +456,10 @@ async function approveTimesheetInner(
         description: `platformkosten, shift @ ${ts.branch.name}`,
         log,
       });
+      // e-factuur (UBL/Peppol) als het bedrijf dat aan heeft staan; nooit blokkerend
+      void efactuurNaUitgifte(persisted.platformFeeInvoice.id, ts.branch.tenantId);
     }
+    void efactuurNaUitgifte(persisted.freelancerInvoice.id, ts.branch.tenantId);
 
     return {
       timesheetId: ts.id,
@@ -683,6 +687,7 @@ async function approveViaPayroll(args: {
     log,
     from: env.MAIL_UITZEND_FROM,
   });
+  void efactuurNaUitgifte(uitzendInvoice.id, ts.branch.tenantId);
 
   await rewardReferralsAfterApproval(ts.freelancer.userId, ts.freelancer.user.fullName, principal);
 

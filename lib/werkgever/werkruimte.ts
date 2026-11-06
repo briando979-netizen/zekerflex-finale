@@ -81,6 +81,7 @@ export type MenuSleutel =
   | "inhuren"
   | "klussen"
   | "kalender"
+  | "planner"
   | "agenda"
   | "bank"
   | "favorieten"
@@ -126,7 +127,7 @@ export interface MenuOpties {
 }
 
 /** De personeelsfuncties, in de volgorde van het gewone menu. */
-export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender", "uren", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten"];
+export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "uren", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten"];
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
@@ -139,7 +140,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       { sleutel: "start" },
       ...(o.heeftHoreca ? [{ sleutel: "horeca" as const }] : []),
       ...(o.heeftRijschool ? [{ sleutel: "rijschool" as const }] : []),
-      ...(["klussen", "kalender", "agenda", ...bank, "favorieten", "berichten", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+      ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
       ...(["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk", "locatie", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
     ];
   }
