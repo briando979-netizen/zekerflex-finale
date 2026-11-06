@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_HUBS } from "@/lib/admin/nav";
 
 interface Me {
@@ -19,6 +19,9 @@ interface Cmd {
 
 export function CommandBar() {
   const router = useRouter();
+  // In ZekerFlex OS (/os) is het startmenu de zoekplek, ook op Ctrl+K. Twee
+  // balken over elkaar zou verwarren, dus daar houdt deze zich stil.
+  const inOs = (usePathname() ?? "").startsWith("/os");
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
@@ -38,6 +41,7 @@ export function CommandBar() {
   }, [open]);
 
   useEffect(() => {
+    if (inOs) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -48,7 +52,7 @@ export function CommandBar() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [inOs]);
 
   useEffect(() => {
     if (open) {
@@ -131,7 +135,7 @@ export function CommandBar() {
     setActive((a) => Math.min(a, Math.max(0, filtered.length - 1)));
   }, [filtered.length]);
 
-  if (!open) return null;
+  if (!open || inOs) return null;
 
   const groups = [...new Set(filtered.map((c) => c.group))];
 
@@ -196,7 +200,8 @@ export function CommandBar() {
                         }`}
                       >
                         {c.label}
-                        {c.hint && <span className="font-mono text-[10px] text-neutralx-400">{c.hint}</span>}
+                        {/* op de actieve rij (lichtgroen) is neutralx-400 te licht voor AA */}
+                        {c.hint && <span className={`font-mono text-[10px] ${idx === active ? "text-brand-700" : "text-neutralx-500"}`}>{c.hint}</span>}
                       </button>
                     );
                   })}

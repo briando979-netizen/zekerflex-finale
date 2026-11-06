@@ -6,6 +6,7 @@ import { appsVoor } from "@/lib/os/apps";
 import { osNaam, osRolVan } from "@/lib/os/rol";
 import { getOsInstellingen } from "@/lib/os/store";
 import { standaardInstellingen } from "@/lib/os/instellingen";
+import { vandaagVoor } from "@/lib/os/vandaag";
 import { Bureaublad } from "@/components/os/Bureaublad";
 
 export const runtime = "nodejs";
@@ -28,7 +29,10 @@ export default async function OsPage() {
   if (!principal) redirect("/login?callbackUrl=/os");
 
   const rol = osRolVan(principal);
-  const instellingen = await getOsInstellingen(principal.userId, rol).catch(() => standaardInstellingen(rol));
+  const [instellingen, vandaag] = await Promise.all([
+    getOsInstellingen(principal.userId, rol).catch(() => standaardInstellingen(rol)),
+    vandaagVoor(principal, rol).catch(() => []),
+  ]);
 
-  return <Bureaublad apps={appsVoor(rol)} start={instellingen} rol={rol} naam={osNaam(principal)} tijd={amsterdamClock(new Date())} />;
+  return <Bureaublad apps={appsVoor(rol)} start={instellingen} rol={rol} naam={osNaam(principal)} tijd={amsterdamClock(new Date())} vandaag={vandaag} />;
 }

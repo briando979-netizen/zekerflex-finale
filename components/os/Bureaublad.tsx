@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { OS_CATEGORIEEN, type OsApp, type OsRol } from "@/lib/os/apps";
+import { tintVanApp as tintVan, type OsApp, type OsKaart, type OsRol, type OsTint } from "@/lib/os/apps";
 import { OS_ACHTERGRONDEN, MAX_VASTGEZET, type OsAchtergrond, type OsInstellingen } from "@/lib/os/instellingen";
 import { OsIcoonVak } from "@/components/os/Iconen";
 import { Start } from "@/components/os/Start";
@@ -15,7 +15,6 @@ import { Venster, MIN_BREEDTE, MIN_HOOGTE, TAAKBALK, type VensterStaat } from "@
 // vensters open staan onthoudt alleen deze browser.
 // ---------------------------------------------------------------------------
 
-const tintVan = (app: OsApp) => OS_CATEGORIEEN.find((c) => c.id === app.categorie)?.tint ?? "leisteen";
 const VENSTERS_SLEUTEL = "zf-os-vensters";
 const SMAL = 820;
 
@@ -35,7 +34,15 @@ function nieuwVenster(app: OsApp, aantal: number, laag: number, breedScherm: boo
   };
 }
 
-export function Bureaublad({ apps, start, rol, naam, tijd }: { apps: OsApp[]; start: OsInstellingen; rol: OsRol; naam: string; tijd: string }) {
+const KAART_TINT: Record<OsTint, string> = {
+  groen: "text-brand-mint",
+  blauw: "text-sky-200",
+  goud: "text-amber-200",
+  violet: "text-violet-200",
+  leisteen: "text-white/80",
+};
+
+export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { apps: OsApp[]; start: OsInstellingen; rol: OsRol; naam: string; tijd: string; vandaag?: OsKaart[] }) {
   const [instellingen, setInstellingen] = useState(start);
   const [vensters, setVensters] = useState<VensterStaat[]>([]);
   const [actief, setActief] = useState<string | null>(null);
@@ -171,6 +178,32 @@ export function Bureaublad({ apps, start, rol, naam, tijd }: { apps: OsApp[]; st
           <p role="alert" className="mb-4 inline-block rounded-xl bg-amber-400/15 px-3 py-2 text-sm font-semibold text-amber-100">
             {melding}
           </p>
+        ) : null}
+
+        {vandaag.length ? (
+          <section aria-label="Vandaag" className="mb-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {vandaag.map((k) => {
+              const app = k.app ? appVan(k.app) : undefined;
+              const inhoud = (
+                <>
+                  <span className={`block font-display text-2xl font-bold ${k.actie ? "text-amber-200" : KAART_TINT[k.tint]}`}>{k.waarde}</span>
+                  <span className="mt-0.5 block text-xs text-white/60">{k.label}</span>
+                </>
+              );
+              return (
+                <div key={k.label} className={`rounded-2xl border px-4 py-3 ${k.actie ? "border-amber-300/30 bg-amber-400/[0.08]" : "border-white/10 bg-white/[0.05]"}`}>
+                  {app ? (
+                    <button type="button" onClick={() => openApp(app)} className="w-full text-left">
+                      {inhoud}
+                      <span className="mt-1 block text-[11px] text-white/40">{app.naam} openen →</span>
+                    </button>
+                  ) : (
+                    inhoud
+                  )}
+                </div>
+              );
+            })}
+          </section>
         ) : null}
 
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">

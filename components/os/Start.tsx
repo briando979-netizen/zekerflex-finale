@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { OS_CATEGORIEEN, perCategorie, zoekApps, type OsApp } from "@/lib/os/apps";
+import { perCategorie, tintVanApp as tintVan, zoekApps, type OsApp } from "@/lib/os/apps";
 import { OsIcoonVak } from "@/components/os/Iconen";
 
 // ---------------------------------------------------------------------------
@@ -9,8 +9,6 @@ import { OsIcoonVak } from "@/components/os/Iconen";
 // met Ctrl+K / Cmd+K. Pijltjes omhoog en omlaag lopen door de resultaten,
 // Enter opent, Escape sluit.
 // ---------------------------------------------------------------------------
-
-const tintVan = (app: OsApp) => OS_CATEGORIEEN.find((c) => c.id === app.categorie)?.tint ?? "leisteen";
 
 function AppRij({ app, gekozen, onOpen, onVastzetten, vast }: { app: OsApp; gekozen: boolean; onOpen: () => void; onVastzetten: () => void; vast: boolean }) {
   return (

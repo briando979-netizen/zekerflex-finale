@@ -72,6 +72,8 @@ export interface OsApp {
   href: string;
   icoon: OsIcoon;
   categorie: string;
+  /** eigen kleur; standaard die van de categorie */
+  tint?: OsTint;
   rollen: OsRol[];
   /** extra woorden waarop je de app kunt vinden */
   zoek?: string[];
@@ -160,29 +162,37 @@ const GEDEELDE_APPS: OsApp[] = [
 
 /** Beheer-apps: rechtstreeks uit het beheermenu, zodat een nieuwe beheerpagina vanzelf meekomt. */
 function adminApps(): OsApp[] {
-  const icoon: Record<string, OsIcoon> = {
-    overzicht: "bedrijf",
-    mensen: "mensen",
-    geld: "geld",
-    groei: "groei",
-    communicatie: "chat",
-    shop: "winkel",
-    ai: "ai",
-    systeem: "schild",
+  // per onderdeel een eigen icoon en kleur, zodat je ze op het bureaublad uit elkaar houdt
+  const stijl: Record<string, { icoon: OsIcoon; tint: OsTint }> = {
+    overzicht: { icoon: "bedrijf", tint: "leisteen" },
+    mensen: { icoon: "mensen", tint: "violet" },
+    geld: { icoon: "geld", tint: "goud" },
+    groei: { icoon: "groei", tint: "groen" },
+    communicatie: { icoon: "chat", tint: "blauw" },
+    shop: { icoon: "winkel", tint: "groen" },
+    ai: { icoon: "ai", tint: "violet" },
+    systeem: { icoon: "schild", tint: "blauw" },
   };
-  return ADMIN_HUBS.flatMap((hub) =>
-    hub.pages.map((p) => ({
+  return ADMIN_HUBS.flatMap((hub) => {
+    const s = stijl[hub.id] ?? { icoon: "instellingen" as OsIcoon, tint: "leisteen" as OsTint };
+    return hub.pages.map((p) => ({
       id: `a-${p.href.replace(/^\/admin\/?/, "") || "start"}`.replace(/\//g, "-"),
       naam: p.label,
       uitleg: hub.label,
       href: p.href,
-      icoon: icoon[hub.id] ?? "instellingen",
+      icoon: s.icoon,
+      tint: s.tint,
       categorie: "beheer",
       rollen: ["admin"] as OsRol[],
       zoek: [hub.label, hub.blurb],
       groot: p.href === "/admin/ontwerper" || p.href === "/admin/video" || p.href === "/admin/kantoor" || p.href === "/admin/jarvis",
-    })),
-  );
+    }));
+  });
+}
+
+/** De kleur van een app: zijn eigen tint, anders die van de categorie. */
+export function tintVanApp(app: OsApp): OsTint {
+  return app.tint ?? OS_CATEGORIEEN.find((c) => c.id === app.categorie)?.tint ?? "leisteen";
 }
 
 /** Alle apps van het OS, in vaste volgorde. */
@@ -218,6 +228,21 @@ export function zoekApps(apps: OsApp[], term: string): OsApp[] {
 /** De apps per categorie, in de volgorde van OS_CATEGORIEEN; lege categorieën vallen weg. */
 export function perCategorie(apps: OsApp[]): { categorie: OsCategorie; apps: OsApp[] }[] {
   return OS_CATEGORIEEN.map((categorie) => ({ categorie, apps: apps.filter((a) => a.categorie === categorie.id) })).filter((g) => g.apps.length > 0);
+}
+
+/**
+ * Eén cijfer in de strook "Vandaag" op het bureaublad. Het type staat hier,
+ * in het pure bestand, zodat het bureaublad (een client-component) het kan
+ * gebruiken zonder de databasecode van lib/os/vandaag.ts mee te nemen.
+ */
+export interface OsKaart {
+  label: string;
+  waarde: string;
+  /** app-id uit deze catalogus; een klik opent dat venster */
+  app?: string;
+  tint: OsTint;
+  /** vraagt om actie van deze persoon */
+  actie?: boolean;
 }
 
 /** Wat standaard op het bureaublad staat als iemand nog niets heeft vastgezet. */

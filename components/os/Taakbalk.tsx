@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { logoutAction } from "@/lib/auth/actions";
-import { OS_CATEGORIEEN, type OsApp } from "@/lib/os/apps";
+import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { tintVanApp as tintVan, type OsApp } from "@/lib/os/apps";
 import { OsGlyph, OsIcoonVak } from "@/components/os/Iconen";
 import type { VensterStaat } from "@/components/os/Venster";
 
@@ -11,8 +12,6 @@ import type { VensterStaat } from "@/components/os/Venster";
 // de klok (altijd Nederlandse tijd) en de knoppen voor instellingen en
 // afsluiten. De begintijd komt van de server, zodat de pagina niet knippert.
 // ---------------------------------------------------------------------------
-
-const tintVan = (app: OsApp) => OS_CATEGORIEEN.find((c) => c.id === app.categorie)?.tint ?? "leisteen";
 
 function Klok({ start }: { start: string }) {
   const [tijd, setTijd] = useState(start);
@@ -91,6 +90,8 @@ export function Taakbalk({
       </ul>
 
       <div className="flex flex-shrink-0 items-center gap-1">
+        {/* dezelfde meldingen als in de app-schillen, in de donkere stand */}
+        <NotificationsBell dark />
         <Klok start={tijd} />
         <button type="button" onClick={onInstellingen} aria-label="Instellingen van het bureaublad" title="Instellingen" className="grid h-9 w-9 place-items-center rounded-xl text-white/70 transition hover:bg-white/10 hover:text-white">
           <OsGlyph icoon="instellingen" maat={18} />
