@@ -140,21 +140,17 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // Default: Stripe's card iframe and the YouTube player in privacy mode, which
   // only loads after a click (components/ui/YouTubeEmbed.tsx). The studio also
   // frames 'self' (live preview), blob: (sandbox) and best-effort external https: pages.
-  // The Site-ontwerper (/admin/ontwerper) shows the own site in a same-origin
-  // preview frame. A CSP belongs to the document, and admin pages are reached
-  // by client-side navigation (the admin menu), so EVERY admin page needs
-  // 'self' — scoping it to /admin/ontwerper alone blocked the preview whenever
-  // you came from another admin page. Public pages keep no 'self' framing.
-  const admin = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
-  // ZekerFlex OS (/os) toont elke app in een frame van de eigen site.
-  const os = pathname === "/os" || (pathname?.startsWith("/os/") ?? false);
+  // The Site-ontwerper (/admin/ontwerper) and ZekerFlex OS (/os) show the own
+  // site in a same-origin frame. A CSP belongs to the DOCUMENT, and the app is
+  // reached by client-side navigation: whoever logs in on /login and lands in
+  // /admin, or walks from the homepage into /os, keeps the first document's
+  // policy. Scoping 'self' to /admin and /os (4 and 6 Nov) therefore still
+  // blocked the preview ("inhoud geblokkeerd") after a login. 'self' on every
+  // document costs nothing: a site may always frame itself, and
+  // frame-ancestors 'self' below keeps clickjacking protection intact.
   // het ingebedde BI-dashboard (Rapportages) staat op een eigen host
   const bi = BI_ORIGIN ? ` ${BI_ORIGIN}` : "";
-  const frameSrc = studio
-    ? "frame-src 'self' blob: https:"
-    : admin || os
-      ? `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}`
-      : `frame-src https://js.stripe.com https://www.youtube-nocookie.com${bi}`;
+  const frameSrc = studio ? "frame-src 'self' blob: https:" : `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}`;
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";
