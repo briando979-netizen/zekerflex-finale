@@ -209,10 +209,10 @@ export default function Bestellingen() {
             title="Nog geen bestellingen"
             text="Zodra een klant iets bestelt in je webshop, staat de bestelling hier. Je krijgt dan ook een mail op het e-mailadres van je bedrijf."
           >
-            <Link href="/studio/producten" className={btn.primary}>
+            <Link href="/studio/webshop/producten" className={btn.primary}>
               Producten toevoegen
             </Link>
-            <Link href="/studio/instellingen" className={btn.secondary}>
+            <Link href="/studio/webshop/instellingen" className={btn.secondary}>
               E-mailadres instellen
             </Link>
           </Empty>

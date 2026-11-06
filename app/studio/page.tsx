@@ -1,5 +1,5 @@
-import Overzicht from "@/components/studio/Overzicht";
+import Kiezer from "@/components/studio/Kiezer";
 
-export default function StudioOverzichtPage() {
-  return <Overzicht />;
+export default function StudioKiezerPage() {
+  return <Kiezer />;
 }

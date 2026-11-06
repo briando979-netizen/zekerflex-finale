@@ -261,11 +261,11 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
   const tegels: Tegel[] = b.studio
     ? [
         { href: "/studio", titel: "Studio-overzicht", uitleg: "Bezoekers, bestellingen en wat er nog te doen is." },
-        { href: "/studio/producten", titel: "Producten", uitleg: `${meervoud(s.producten, "product", "producten")} in je webshop.` },
-        { href: "/studio/bestellingen", titel: "Bestellingen", uitleg: "Alles wat klanten in je webshop bestellen.", teller: s.nieuweBestellingen > 0 ? `${s.nieuweBestellingen} nieuw` : undefined },
-        { href: "/studio/website", titel: "Pagina's", uitleg: `${meervoud(s.paginas, "pagina", "pagina's")} met teksten en blokken.` },
-        { href: "/studio/ontwerp", titel: "Ontwerp", uitleg: "Stijl, kleuren, letters en je logo." },
-        { href: "/studio/instellingen", titel: "Instellingen", uitleg: "Webadres, bestellen en bezorgen, bedrijfsgegevens." },
+        { href: "/studio/webshop/producten", titel: "Producten", uitleg: `${meervoud(s.producten, "product", "producten")} in je webshop.` },
+        { href: "/studio/webshop/bestellingen", titel: "Bestellingen", uitleg: "Alles wat klanten in je webshop bestellen.", teller: s.nieuweBestellingen > 0 ? `${s.nieuweBestellingen} nieuw` : undefined },
+        { href: "/studio/website/bouwer", titel: "Pagina's", uitleg: `${meervoud(s.paginas, "pagina", "pagina's")} met teksten en blokken.` },
+        { href: "/studio/webshop/ontwerp", titel: "Ontwerp", uitleg: "Stijl, kleuren, letters en je logo." },
+        { href: "/studio/webshop/instellingen", titel: "Instellingen", uitleg: "Webadres, bestellen en bezorgen, bedrijfsgegevens." },
         { href: "/werkgever/website", titel: "Eigen domein en beheer", uitleg: "Je eigen webadres koppelen en je website laten beheren." },
       ]
     : [

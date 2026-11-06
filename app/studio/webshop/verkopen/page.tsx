@@ -26,7 +26,7 @@ const euro = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ","
 // voorwaarden; elk product gaat eerst langs de beheerder. Regels: lib/shop/verkoper-core.ts.
 export default async function StudioVerkopenPage() {
   const principal = await getPrincipal();
-  if (!principal) redirect("/login?callbackUrl=/studio/verkopen");
+  if (!principal) redirect("/login?callbackUrl=/studio/webshop/verkopen");
   let tenantId: string;
   try {
     tenantId = await siteTenantOf(principal);

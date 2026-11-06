@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useStudio } from "@/components/studio/context";
+import { Domein } from "@/components/studio/Domein";
 import { Card, IExternal, PageHead, btn, input } from "@/components/studio/ui";
 import type { Company, Winkel } from "@/lib/sites/types";
 import { leesBedrag } from "@/lib/sites/winkel";
@@ -16,17 +16,18 @@ import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 const bedrag = (c: number | null) => (c == null ? "" : (c / 100).toFixed(2).replace(".", ","));
 
 export default function Instellingen() {
-  const { data, winkel, saveWinkel, saveSite } = useStudio();
+  const { data, winkel, saveWinkel, saveSite, soort, reload } = useStudio();
   const site = data!.site!;
+  const shop = soort === "webshop";
   return (
     <>
-      <PageHead title="Instellingen" sub="Bestellen, bezorgen en je bedrijfsgegevens." />
+      <PageHead title="Instellingen" sub={shop ? "Bestellen, bezorgen en je bedrijfsgegevens." : "Je bedrijfsgegevens en je webadres."} />
       <div className="space-y-4">
-        <WinkelInstellingen winkel={winkel} onSave={saveWinkel} />
-        <Bedrijf bedrijf={site.bedrijf} onSave={(bedrijf) => saveSite({ bedrijf })} />
+        {shop && <WinkelInstellingen winkel={winkel} onSave={saveWinkel} />}
+        <Bedrijf bedrijf={site.bedrijf} onSave={(bedrijf) => saveSite({ bedrijf })} soort={soort} />
         <Card title="Webadres">
           <p className="text-sm text-[#303030]">
-            Je website staat op{" "}
+            Je {shop ? "webshop" : "website"} staat op{" "}
             {data?.address ? (
               <a href={data.address} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold text-[#005bd3] hover:underline">
                 {data.address.replace(/^https?:\/\//, "")} <IExternal width={14} height={14} />
@@ -36,14 +37,18 @@ export default function Instellingen() {
             )}
             .
           </p>
-          <p className="mt-2 text-sm text-[#616161]">Een eigen domeinnaam (zoals jouwwinkel.nl) koppel je in de paginabouwer onder Domein. Wij regelen het beveiligde slotje.</p>
-          <Link href="/studio/website" className={`${btn.secondary} mt-3`}>Naar de paginabouwer</Link>
-          <details className="mt-4 rounded-xl border border-[#ebebeb] p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-[#1a1a1a]">Nog geen domeinnaam? Zoek en bestel er één</summary>
-            <div className="mt-3">
-              <DomeinZoeker terugNaar="/studio/instellingen" smal />
-            </div>
-          </details>
+          <div className="mt-4 border-t border-[#f1f1f1] pt-4">
+            <h3 className="mb-2 text-sm font-semibold text-[#1a1a1a]">Eigen domeinnaam</h3>
+            <Domein onChange={() => void reload()} />
+          </div>
+          {!shop && (
+            <details className="mt-4 rounded-xl border border-[#ebebeb] p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-[#1a1a1a]">Nog geen domeinnaam? Zoek en bestel er één</summary>
+              <div className="mt-3">
+                <DomeinZoeker terugNaar="/studio/website/instellingen" smal />
+              </div>
+            </details>
+          )}
         </Card>
       </div>
     </>
@@ -128,7 +133,7 @@ const VELDEN: { key: keyof Company; label: string; type?: string; max: number; h
   { key: "kvk", label: "KVK-nummer (8 cijfers)", max: 8 },
 ];
 
-function Bedrijf({ bedrijf, onSave }: { bedrijf: Company; onSave: (c: Company) => Promise<string | null> }) {
+function Bedrijf({ bedrijf, onSave, soort }: { bedrijf: Company; onSave: (c: Company) => Promise<string | null>; soort: "website" | "webshop" }) {
   const [c, setC] = useState<Company>(bedrijf);
   const [bezig, setBezig] = useState(false);
   const [m, setM] = useState<{ ok: boolean; text: string } | null>(null);
@@ -136,7 +141,7 @@ function Bedrijf({ bedrijf, onSave }: { bedrijf: Company; onSave: (c: Company) =
     setBezig(true);
     const fout = await onSave(c);
     setBezig(false);
-    setM(fout ? { ok: false, text: fout } : { ok: true, text: "Opgeslagen. Klik bovenaan op Publiceren om het op je website te zetten." });
+    setM(fout ? { ok: false, text: fout } : { ok: true, text: `Opgeslagen. Klik bovenaan op Publiceren om het op je ${soort === "webshop" ? "webshop" : "website"} te zetten.` });
   };
   return (
     <Card title="Bedrijfsgegevens" actions={<span className="text-xs text-[#707070]">na Publiceren</span>}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { LEGE_WINKEL, type Company, type Media, type SiteDoc, type Theme, type Winkel } from "@/lib/sites/types";
+import { LEGE_WINKEL, type Company, type Media, type SiteDoc, type SiteSoort, type Theme, type Winkel } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Websitestudio: één bron voor de site van het bedrijf (GET /api/werkgever/sites)
@@ -11,6 +11,12 @@ import { LEGE_WINKEL, type Company, type Media, type SiteDoc, type Theme, type W
 // ---------------------------------------------------------------------------
 
 export const API = "/api/werkgever/sites";
+
+/** Het adres van een site-API voor deze soort: `?soort=` zodat website en webshop elk hun eigen site raken. */
+export const apiUrl = (soort: SiteSoort, pad = "", query = ""): string => `${API}${pad}?soort=${soort}${query ? `&${query}` : ""}`;
+
+/** De voorvoegsels van de twee werkruimtes. */
+export const STUDIO_BASE: Record<SiteSoort, string> = { website: "/studio/website", webshop: "/studio/webshop" };
 
 export interface StudioData {
   site: SiteDoc | null;
@@ -22,6 +28,12 @@ export interface StudioData {
 }
 
 interface Studio {
+  /** website of webshop: elke werkruimte heeft een eigen site */
+  soort: SiteSoort;
+  /** het voorvoegsel van deze werkruimte, bv. /studio/webshop */
+  base: string;
+  /** site-API van deze soort, met `?soort=` erbij */
+  api: (pad?: string, query?: string) => string;
   data: StudioData | null;
   error: string | null;
   reload: () => Promise<void>;
@@ -49,16 +61,16 @@ export async function foutVan(res: Response | null, fallback: string): Promise<s
   return d?.error?.message ?? fallback;
 }
 
-export function StudioProvider({ children }: { children: ReactNode }) {
+export function StudioProvider({ soort, children }: { soort: SiteSoort; children: ReactNode }) {
   const [data, setData] = useState<StudioData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const res = await fetch(API, { cache: "no-store" }).catch(() => null);
-    if (!res?.ok) return setError(await foutVan(res, "De Websitestudio kon niet laden."));
+    const res = await fetch(apiUrl(soort), { cache: "no-store" }).catch(() => null);
+    if (!res?.ok) return setError(await foutVan(res, soort === "webshop" ? "De webshop kon niet laden." : "De website kon niet laden."));
     setError(null);
     setData((await res.json()) as StudioData);
-  }, []);
+  }, [soort]);
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -67,6 +79,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const saveWinkel = useCallback(
     async (winkel: Winkel) => {
+      // de winkel hoort altijd bij de webshop van het bedrijf (lib/sites/store.ts winkelSiteOf), dus geen ?soort=
       const res = await fetch(`${API}/winkel`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ winkel }) }).catch(() => null);
       if (!res?.ok) return foutVan(res, "Opslaan lukte niet.");
       setSite(((await res.json()) as { site: SiteDoc }).site);
@@ -80,27 +93,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       const site = data?.site;
       if (!site) return "Maak eerst een website.";
       const body = { theme: patch.theme ?? site.theme, bedrijf: patch.bedrijf ?? site.bedrijf, pages: site.pages };
-      const res = await fetch(API, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+      const res = await fetch(apiUrl(soort), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
       if (!res?.ok) return foutVan(res, "Opslaan lukte niet.");
       setSite(((await res.json()) as { site: SiteDoc }).site);
       return null;
     },
-    [data?.site, setSite],
+    [data?.site, setSite, soort],
   );
 
   const publish = useCallback(async () => {
-    const res = await fetch(`${API}/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "publiceer" }) }).catch(() => null);
+    const res = await fetch(apiUrl(soort, "/publish"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "publiceer" }) }).catch(() => null);
     if (!res?.ok) return foutVan(res, "Publiceren lukte niet.");
     setSite(((await res.json()) as { site: SiteDoc }).site);
     return null;
-  }, [setSite]);
+  }, [setSite, soort]);
 
   const addMedia = useCallback((m: Media) => setData((d) => (d?.site ? { ...d, site: { ...d.site, media: [...d.site.media, m] } } : d)), []);
+
+  const api = useCallback((pad = "", query = "") => apiUrl(soort, pad, query), [soort]);
 
   const value = useMemo<Studio>(() => {
     const site = data?.site ?? null;
     const laatste = site?.builds[0]?.at;
     return {
+      soort,
+      base: STUDIO_BASE[soort],
+      api,
       data,
       error,
       reload,
@@ -111,7 +129,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       unpublished: Boolean(site && (!site.liveBuild || (laatste && site.updatedAt > laatste))),
       winkel: site?.winkel ?? LEGE_WINKEL,
     };
-  }, [data, error, reload, saveWinkel, saveSite, publish, addMedia]);
+  }, [soort, api, data, error, reload, saveWinkel, saveSite, publish, addMedia]);
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;
 }

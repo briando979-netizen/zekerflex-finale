@@ -54,6 +54,19 @@ const nextConfig = {
   logging: {
     fetches: { fullUrl: false },
   },
+  // De studio is gesplitst in /studio/website en /studio/webshop; de oude adressen
+  // (bladwijzers, mails) lopen door naar de nieuwe plek. /studio/website zelf is nu
+  // het overzicht van de website; de paginabouwer staat op /studio/website/bouwer.
+  async redirects() {
+    const naarWebshop = ["producten", "bestellingen", "klanten", "ontwerp", "instellingen", "verkopen", "verdienen"];
+    return [
+      ...naarWebshop.flatMap((d) => [
+        { source: `/studio/${d}`, destination: `/studio/webshop/${d}`, permanent: false },
+        { source: `/studio/${d}/:rest*`, destination: `/studio/webshop/${d}/:rest*`, permanent: false },
+      ]),
+      { source: "/studio/reserveringen", destination: "/studio/website/reserveringen", permanent: false },
+    ];
+  },
   async headers() {
     // The Content-Security-Policy is set per request in middleware.ts so
     // `script-src` can carry a fresh nonce instead of 'unsafe-inline'

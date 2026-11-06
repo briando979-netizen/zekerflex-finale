@@ -1,8 +1,5 @@
-import { env } from "@/lib/env";
-import Website from "@/components/studio/Website";
+import WebsiteOverzicht from "@/components/studio/WebsiteOverzicht";
 
-export const dynamic = "force-dynamic";
-
-export default function StudioWebsitePage() {
-  return <Website origin={new URL(env.APP_BASE_URL).origin} />;
+export default function StudioWebsiteOverzichtPage() {
+  return <WebsiteOverzicht />;
 }

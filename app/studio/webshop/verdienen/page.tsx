@@ -20,7 +20,7 @@ const TONE: Record<PartnerStatus, "ok" | "info" | "warn" | "neutral" | "crit"> =
 // verdient het bedrijf een vergoeding. ZekerFlex levert. Regels: lib/shop/partner-core.ts.
 export default async function StudioVerdienenPage() {
   const principal = await getPrincipal();
-  if (!principal) redirect("/login?callbackUrl=/studio/verdienen");
+  if (!principal) redirect("/login?callbackUrl=/studio/webshop/verdienen");
   let tenantId: string;
   try {
     tenantId = await siteTenantOf(principal);

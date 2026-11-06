@@ -140,7 +140,7 @@ export default function Reserveringen() {
         <PageHead title="Reserveringen" />
         <Card>
           <Empty icon={<ICalendar />} title="Online reserveren staat nog uit" text="Zet het blok Tafel reserveren op je website. Gasten kiezen dan zelf een dag, een tijd en met hoeveel ze komen, en jij ziet alles hier.">
-            <Link href="/studio/website" className={btn.primary}>Naar je website</Link>
+            <Link href="/studio/website/bouwer" className={btn.primary}>Naar je website</Link>
           </Empty>
         </Card>
       </>

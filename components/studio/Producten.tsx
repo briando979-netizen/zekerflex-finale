@@ -64,7 +64,7 @@ export default function Producten() {
             <button type="button" onClick={() => setImporteren(true)} className={btn.secondary}>
               <IStore width={16} height={16} /> Uit ZekerFlex-webshop
             </button>
-            <Link href="/studio/producten/nieuw" className={btn.primary}>
+            <Link href="/studio/webshop/producten/nieuw" className={btn.primary}>
               <IPlus width={16} height={16} /> Product toevoegen
             </Link>
           </>
@@ -75,7 +75,7 @@ export default function Producten() {
       {winkel.producten.length === 0 ? (
         <Card>
           <Empty icon={<ITag />} title="Voeg je eerste product toe" text="Zet je producten met foto's, prijs en omschrijving in je eigen webshop. Klanten bestellen direct via je website.">
-            <Link href="/studio/producten/nieuw" className={btn.primary}>Product toevoegen</Link>
+            <Link href="/studio/webshop/producten/nieuw" className={btn.primary}>Product toevoegen</Link>
             <button type="button" onClick={() => setImporteren(true)} className={btn.secondary}>Uit ZekerFlex-webshop</button>
           </Empty>
         </Card>
@@ -121,7 +121,7 @@ export default function Producten() {
                 {lijst.map((p, i) => {
                   const foto = p.fotos[0] ? media.get(p.fotos[0]) : undefined;
                   return (
-                    <tr key={p.id} onClick={() => router.push(`/studio/producten/${p.id}`)} className="cursor-pointer border-b border-[#f1f1f1] last:border-0 hover:bg-[#fafafa]">
+                    <tr key={p.id} onClick={() => router.push(`/studio/webshop/producten/${p.id}`)} className="cursor-pointer border-b border-[#f1f1f1] last:border-0 hover:bg-[#fafafa]">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-3">
                           {foto ? (
@@ -130,7 +130,7 @@ export default function Producten() {
                           ) : (
                             <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-lg border border-dashed border-[#d4d4d4] text-[#a3a3a3]"><IImage width={18} height={18} /></span>
                           )}
-                          <Link href={`/studio/producten/${p.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-[#1a1a1a] hover:underline">{p.naam}</Link>
+                          <Link href={`/studio/webshop/producten/${p.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-[#1a1a1a] hover:underline">{p.naam}</Link>
                         </div>
                       </td>
                       <td className="px-3 py-2.5">{p.zichtbaar ? <Pill tone="ok">Online</Pill> : <Pill>Verborgen</Pill>}</td>

@@ -53,7 +53,7 @@ export default function ProductEditor({ id }: { id: string }) {
     return (
       <Card>
         <Empty icon={<ITag />} title="Dit product bestaat niet (meer)" text="Misschien is het verwijderd.">
-          <Link href="/studio/producten" className={btn.primary}>Naar alle producten</Link>
+          <Link href="/studio/webshop/producten" className={btn.primary}>Naar alle producten</Link>
         </Empty>
       </Card>
     );
@@ -84,7 +84,7 @@ export default function ProductEditor({ id }: { id: string }) {
     setPrijs(bedragTekst(klaar.prijsCents));
     setWas(bedragTekst(klaar.oudePrijsCents));
     setOpgeslagen(true);
-    if (nieuw) router.replace(`/studio/producten/${klaar.id}`);
+    if (nieuw) router.replace(`/studio/webshop/producten/${klaar.id}`);
   };
   const verwerp = () => {
     setP(basis);
@@ -98,7 +98,7 @@ export default function ProductEditor({ id }: { id: string }) {
     const err = await saveWinkel({ ...winkel, producten: anderen });
     setBezig(false);
     if (err) return setFout(err);
-    router.push("/studio/producten");
+    router.push("/studio/webshop/producten");
   };
 
   const korting = prijsCents != null && wasCents != null && wasCents > prijsCents ? Math.round((1 - prijsCents / wasCents) * 100) : null;
@@ -118,7 +118,7 @@ export default function ProductEditor({ id }: { id: string }) {
       )}
 
       <PageHead
-        back={{ href: "/studio/producten", label: "Terug naar producten" }}
+        back={{ href: "/studio/webshop/producten", label: "Terug naar producten" }}
         title={nieuw && !p.naam ? "Nieuw product" : p.naam || "Naamloos product"}
         sub={opgeslagen ? <span role="status" className="font-medium text-[#0c5132]">Opgeslagen en meteen online.</span> : undefined}
         actions={
@@ -319,7 +319,7 @@ function Categorie({ waarde, opties, onKies }: { waarde: string; opties: string[
 
 /** De foto's van een product: uploaden (ook slepen), kiezen uit eerdere foto's, hoofdfoto en volgorde. */
 function FotoBeheer({ naam, fotos, onFotos }: { naam: string; fotos: string[]; onFotos: (f: string[]) => void }) {
-  const { data, addMedia } = useStudio();
+  const { data, addMedia, api } = useStudio();
   const media = data!.site!.media;
   const opId = useMemo(() => new Map(media.map((m) => [m.id, m])), [media]);
   const [bezig, setBezig] = useState(0);
@@ -339,7 +339,7 @@ function FotoBeheer({ naam, fotos, onFotos }: { naam: string; fotos: string[]; o
       const form = new FormData();
       form.set("file", f);
       form.set("alt", naam || f.name.replace(/\.[a-z0-9]+$/i, ""));
-      const res = await fetch("/api/werkgever/sites/media", { method: "POST", body: form }).catch(() => null);
+      const res = await fetch(api("/media"), { method: "POST", body: form }).catch(() => null);
       setBezig((n) => n - 1);
       if (!res?.ok) {
         setFout(await foutVan(res, `${f.name} kon niet worden toegevoegd.`));

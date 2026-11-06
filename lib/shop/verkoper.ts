@@ -316,7 +316,7 @@ export async function beoordeelProduct(productId: string, oordeel: "goedkeuren" 
     where: { id: p.id },
     data: { sellerStatus: ok ? "goedgekeurd" : "afgewezen", active: ok, sellerNote: ok ? null : (reden ?? "").slice(0, 400) || "Past niet in de ZekerFlex-shop." },
   });
-  const link = `${base()}/studio/verkopen`;
+  const link = `${base()}/studio/webshop/verkopen`;
   if (ok) {
     await mailBeheerders(
       p.sellerTenantId,
@@ -452,7 +452,7 @@ export async function meldVerkopersBetaald(order: { id: string; firstName: strin
       const rec = await kvGet<VerkoperOrder>(orderKey(tenantId, order.id));
       const lijst = eigen.map((l) => `${l.qty}x ${l.name} (${euro(l.priceCents * l.qty)})`).join("\n");
       const adres = `${order.firstName} ${order.lastName}\n${order.address}\n${order.postalCode} ${order.city}`;
-      const link = `${base()}/studio/verkopen`;
+      const link = `${base()}/studio/webshop/verkopen`;
       await mailBeheerders(
         tenantId,
         `Nieuwe bestelling in de ZekerFlex-shop: verstuur binnen ${VERKOPER_VERZENDT_BINNEN_WERKDAGEN} werkdagen`,
