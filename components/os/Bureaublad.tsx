@@ -60,6 +60,27 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
     return () => window.removeEventListener("resize", meet);
   }, []);
 
+  // Vangnet: kom je hier via een interne link (zonder de pagina te laden), dan
+  // geldt nog de CSP van het vorige scherm. Die staat geen frames van de eigen
+  // site toe, dus de browser blokkeert elk app-venster. Dan laden we /os één keer
+  // zelf; open vensters komen terug uit sessionStorage. De markering ?opnieuw=1
+  // voorkomt een lus als het daarna nog steeds niet mag.
+  useEffect(() => {
+    const geblokkeerd = (e: SecurityPolicyViolationEvent) => {
+      if (!/^(frame|child)-src/.test(e.effectiveDirective)) return;
+      if (!e.blockedURI.startsWith(window.location.origin)) return;
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("opnieuw")) {
+        setMelding("Deze app kon niet openen. Laad de pagina opnieuw of open de app in een eigen tabblad.");
+        return;
+      }
+      url.searchParams.set("opnieuw", "1");
+      window.location.replace(url.toString());
+    };
+    document.addEventListener("securitypolicyviolation", geblokkeerd);
+    return () => document.removeEventListener("securitypolicyviolation", geblokkeerd);
+  }, []);
+
   // open vensters terughalen (alleen deze browser; kan ontbreken of geblokkeerd zijn)
   useEffect(() => {
     if (!start.herstelVensters) return;

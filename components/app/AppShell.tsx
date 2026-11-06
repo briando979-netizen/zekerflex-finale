@@ -137,9 +137,11 @@ export function AppShell({
             ZekerFlex-platform
           </div>
           {/* ZekerFlex OS: alle schermen op één bureaublad. De naam is overal gelijk, dus hij hoeft niet vertaald. */}
-          <Link href="/os" className="mb-1 block rounded-xl px-3 py-2 text-xs font-semibold text-brand-600 transition hover:bg-white">
+          {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os */}
+          <a href="/os" target="_top" className="mb-1 block rounded-xl px-3 py-2 text-xs font-semibold text-brand-600 transition hover:bg-white">
             ZekerFlex OS →
-          </Link>
+          </a>
           <Link href="/dashboard/profiel" className="mb-2 block rounded-xl px-3 py-2 text-xs font-medium text-neutralx-500 transition hover:bg-white hover:text-brand-600">
             Profiel en voorkeuren →
           </Link>

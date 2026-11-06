@@ -194,8 +194,11 @@ export function EmployerShell({
 
         <div className="border-t border-hair p-3">
           {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
-          <Link
+          {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os */}
+          <a
             href="/os"
+            target="_top"
             onClick={() => setOpen(false)}
             title={collapsed ? "ZekerFlex OS" : undefined}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-white ${collapsed ? "justify-center" : ""}`}
@@ -209,7 +212,7 @@ export function EmployerShell({
               </svg>
             </span>
             {!collapsed && "ZekerFlex OS"}
-          </Link>
+          </a>
           <Link
             href={settingsHref}
             onClick={() => setOpen(false)}
