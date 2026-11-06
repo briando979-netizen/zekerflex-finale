@@ -4,6 +4,7 @@ import { budgetSnapshot } from "@/lib/ai/governor";
 import { llmHealth } from "@/lib/ai/client";
 import { liveTraffic } from "@/lib/analytics/report";
 import { pushChannels } from "@/lib/notifications/push";
+import { ragChunkAantal } from "@/lib/rag/telling";
 
 // ---------------------------------------------------------------------------
 // One aggregated snapshot for the Admin Control Center (and a compact form for
@@ -134,7 +135,7 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
       [] as { severity: string; category: string; title: string; createdAt: Date }[],
     ),
     safe(() => prisma.voiceAnnouncement.count({ where: { spokenAt: null } }), 0),
-    safe(() => prisma.ragChunk.count(), 0),
+    safe(() => ragChunkAantal(), 0),
     safe(() => prisma.jarvisTurn.count({ where: { status: "RUNNING" } }), 0),
     safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: dayStart } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
     safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),

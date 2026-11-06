@@ -13,6 +13,7 @@ import { ownerTodos } from "@/lib/admin/owner-todos";
 import { bucketCount, bucketSum, deltaPct, safe, timelineKeys, within, type Period } from "@/lib/admin/period";
 import { euro, count, percentOf } from "@/lib/admin/format";
 import { moneyRows, sumOf, visitorSeries } from "@/lib/admin/insights/common";
+import { ragChunkAantal } from "@/lib/rag/telling";
 import type { Tone } from "@/components/admin/kit";
 
 // ---------------------------------------------------------------------------
@@ -126,7 +127,7 @@ export async function homeInsights(period: Period): Promise<HomeInsights> {
     safe(() => prisma.shopProductVariant.count({ where: { stock: { lte: 5 }, product: { active: true } } }), 0),
     safe(() => listConversations("all", 200), []),
     safe(() => budgetSnapshot(), null),
-    safe(() => prisma.ragChunk.count(), 0),
+    safe(() => ragChunkAantal(), 0),
     safe(() => getAutopilotSettings(), null),
     safe(() => prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW", "ESCALATED"] } } }), 0),
     safe(() => prisma.payment.count({ where: { status: { in: ["FAILED", "RETURNED"] } } }), 0),
