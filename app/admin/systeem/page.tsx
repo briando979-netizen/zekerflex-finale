@@ -7,6 +7,7 @@ import { AiFeaturesPanel } from "@/components/admin/AiFeaturesPanel";
 import { RagLab } from "@/components/admin/RagLab";
 import { ModelFleet } from "@/components/admin/ModelFleet";
 import { CronHealthPanel } from "@/components/admin/CronHealthPanel";
+import { ErrorTrendPanel } from "@/components/admin/ErrorTrendPanel";
 import { RondgangPanel } from "@/components/admin/RondgangPanel";
 import { FeatureFlagsPanel } from "@/components/admin/FeatureFlagsPanel";
 import { FunnelPanel } from "@/components/admin/FunnelPanel";
@@ -285,6 +286,7 @@ export default async function SysteemPage() {
             content: (
               <>
                 <CronHealthPanel />
+                <ErrorTrendPanel />
                 <RondgangPanel />
                 <OpsAlerts />
               </>
