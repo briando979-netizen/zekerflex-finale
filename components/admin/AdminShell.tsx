@@ -141,6 +141,21 @@ export function AdminShell({
         </nav>
 
         <div className="flex-shrink-0 space-y-0.5 px-2.5 py-2.5" style={{ borderTop: "1px solid var(--a-side-line)" }}>
+          {/* ZekerFlex OS: elk scherm als app op één bureaublad */}
+          <Link
+            href="/os"
+            className={`flex items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] font-semibold transition-colors hover:bg-[var(--a-side-hover)] ${collapsed ? "lg:justify-center" : ""}`}
+            style={{ color: "var(--a-accent)" }}
+            title={collapsed ? "ZekerFlex OS" : undefined}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="flex-shrink-0">
+              <rect x="1" y="1" width="6" height="6" rx="1.5" />
+              <rect x="9" y="1" width="6" height="6" rx="1.5" />
+              <rect x="1" y="9" width="6" height="6" rx="1.5" />
+              <rect x="9" y="9" width="6" height="6" rx="1.5" />
+            </svg>
+            <span className={collapsed ? "lg:hidden" : ""}>ZekerFlex OS</span>
+          </Link>
           <Link
             href="/"
             className={`flex items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] transition-colors hover:bg-[var(--a-side-hover)] ${collapsed ? "lg:justify-center" : ""}`}

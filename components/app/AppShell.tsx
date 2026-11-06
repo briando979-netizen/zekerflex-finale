@@ -136,6 +136,10 @@ export function AppShell({
             <span className="h-1.5 w-1.5 rounded-full bg-brand-mint animate-pulse-dot" />
             ZekerFlex-platform
           </div>
+          {/* ZekerFlex OS: alle schermen op één bureaublad. De naam is overal gelijk, dus hij hoeft niet vertaald. */}
+          <Link href="/os" className="mb-1 block rounded-xl px-3 py-2 text-xs font-semibold text-brand-600 transition hover:bg-white">
+            ZekerFlex OS →
+          </Link>
           <Link href="/dashboard/profiel" className="mb-2 block rounded-xl px-3 py-2 text-xs font-medium text-neutralx-500 transition hover:bg-white hover:text-brand-600">
             Profiel en voorkeuren →
           </Link>

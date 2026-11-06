@@ -1,0 +1,256 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { OS_CATEGORIEEN, type OsApp, type OsRol } from "@/lib/os/apps";
+import { OS_ACHTERGRONDEN, MAX_VASTGEZET, type OsAchtergrond, type OsInstellingen } from "@/lib/os/instellingen";
+import { OsIcoonVak } from "@/components/os/Iconen";
+import { Start } from "@/components/os/Start";
+import { Taakbalk } from "@/components/os/Taakbalk";
+import { Venster, MIN_BREEDTE, MIN_HOOGTE, TAAKBALK, type VensterStaat } from "@/components/os/Venster";
+
+// ---------------------------------------------------------------------------
+// ZekerFlex OS: het bureaublad. Alle schermen van het platform zijn hier apps
+// die in een venster openen; de taakbalk toont wat open staat. Wat je vastzet
+// en welke achtergrond je kiest, bewaart de server per gebruiker; welke
+// vensters open staan onthoudt alleen deze browser.
+// ---------------------------------------------------------------------------
+
+const tintVan = (app: OsApp) => OS_CATEGORIEEN.find((c) => c.id === app.categorie)?.tint ?? "leisteen";
+const VENSTERS_SLEUTEL = "zf-os-vensters";
+const SMAL = 820;
+
+function nieuwVenster(app: OsApp, aantal: number, laag: number, breedScherm: boolean): VensterStaat {
+  const breedte = Math.min(app.groot ? 1180 : 920, Math.max(MIN_BREEDTE, breedScherm ? window.innerWidth - 120 : window.innerWidth - 24));
+  const hoogte = Math.min(app.groot ? 820 : 660, Math.max(MIN_HOOGTE, window.innerHeight - TAAKBALK - 60));
+  const trap = (aantal % 6) * 28;
+  return {
+    id: app.id,
+    x: Math.max(12, Math.round((window.innerWidth - breedte) / 2) - 60 + trap),
+    y: Math.max(12, 40 + trap),
+    breedte,
+    hoogte,
+    laag,
+    minimaal: false,
+    maximaal: !breedScherm,
+  };
+}
+
+export function Bureaublad({ apps, start, rol, naam, tijd }: { apps: OsApp[]; start: OsInstellingen; rol: OsRol; naam: string; tijd: string }) {
+  const [instellingen, setInstellingen] = useState(start);
+  const [vensters, setVensters] = useState<VensterStaat[]>([]);
+  const [actief, setActief] = useState<string | null>(null);
+  const [startOpen, setStartOpen] = useState(false);
+  const [paneelOpen, setPaneelOpen] = useState(false);
+  const [smal, setSmal] = useState(false);
+  const [melding, setMelding] = useState<string | null>(null);
+  const hoogste = useRef(10);
+  const appVan = useCallback((id: string) => apps.find((a) => a.id === id), [apps]);
+
+  useEffect(() => {
+    const meet = () => setSmal(window.innerWidth < SMAL);
+    meet();
+    window.addEventListener("resize", meet);
+    return () => window.removeEventListener("resize", meet);
+  }, []);
+
+  // open vensters terughalen (alleen deze browser; kan ontbreken of geblokkeerd zijn)
+  useEffect(() => {
+    if (!start.herstelVensters) return;
+    try {
+      const ruw: unknown = JSON.parse(window.sessionStorage.getItem(VENSTERS_SLEUTEL) ?? "[]");
+      if (!Array.isArray(ruw)) return;
+      const geldig = ruw.filter((v): v is VensterStaat => Boolean(v && typeof v === "object" && typeof (v as VensterStaat).id === "string" && apps.some((a) => a.id === (v as VensterStaat).id)));
+      if (!geldig.length) return;
+      hoogste.current = Math.max(10, ...geldig.map((v) => v.laag));
+      setVensters(geldig);
+      setActief(geldig[geldig.length - 1]?.id ?? null);
+    } catch {
+      /* opslag niet beschikbaar */
+    }
+  }, [apps, start.herstelVensters]);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(VENSTERS_SLEUTEL, JSON.stringify(instellingen.herstelVensters ? vensters : []));
+    } catch {
+      /* opslag niet beschikbaar */
+    }
+  }, [vensters, instellingen.herstelVensters]);
+
+  const bewaar = useCallback(async (nieuw: OsInstellingen) => {
+    setInstellingen(nieuw);
+    try {
+      await fetch("/api/os/instellingen", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(nieuw) });
+    } catch {
+      setMelding("Je voorkeur kon niet worden bewaard.");
+    }
+  }, []);
+
+  const openApp = useCallback(
+    (app: OsApp) => {
+      if (app.nieuwTabblad) {
+        window.open(app.href, "_blank", "noopener");
+        return;
+      }
+      hoogste.current += 1;
+      const laag = hoogste.current;
+      setVensters((cur) => {
+        const bestaat = cur.find((v) => v.id === app.id);
+        if (bestaat) return cur.map((v) => (v.id === app.id ? { ...v, minimaal: false, laag } : v));
+        return [...cur, nieuwVenster(app, cur.length, laag, window.innerWidth >= SMAL)];
+      });
+      setActief(app.id);
+    },
+    [],
+  );
+
+  const acties = useMemo(
+    () => ({
+      naarVoren: (id: string) => {
+        hoogste.current += 1;
+        const laag = hoogste.current;
+        setVensters((cur) => cur.map((v) => (v.id === id ? { ...v, laag } : v)));
+        setActief(id);
+      },
+      verplaats: (id: string, x: number, y: number) => setVensters((cur) => cur.map((v) => (v.id === id ? { ...v, x, y } : v))),
+      formaat: (id: string, breedte: number, hoogte: number) => setVensters((cur) => cur.map((v) => (v.id === id ? { ...v, breedte, hoogte } : v))),
+      minimaliseer: (id: string) => {
+        setVensters((cur) => cur.map((v) => (v.id === id ? { ...v, minimaal: true } : v)));
+        setActief((a) => (a === id ? null : a));
+      },
+      maximaliseer: (id: string) => setVensters((cur) => cur.map((v) => (v.id === id ? { ...v, maximaal: !v.maximaal } : v))),
+      sluit: (id: string) => {
+        setVensters((cur) => cur.filter((v) => v.id !== id));
+        setActief((a) => (a === id ? null : a));
+      },
+    }),
+    [],
+  );
+
+  // Ctrl/Cmd + K opent het startmenu, Escape sluit wat open staat
+  useEffect(() => {
+    const toets = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setStartOpen((o) => !o);
+      }
+      if (e.key === "Escape") {
+        setStartOpen(false);
+        setPaneelOpen(false);
+      }
+    };
+    window.addEventListener("keydown", toets);
+    return () => window.removeEventListener("keydown", toets);
+  }, []);
+
+  function vastzetten(id: string) {
+    const vast = instellingen.vastgezet.includes(id);
+    if (!vast && instellingen.vastgezet.length >= MAX_VASTGEZET) {
+      setMelding(`Je bureaublad is vol (${MAX_VASTGEZET} apps). Haal er eerst een af.`);
+      return;
+    }
+    setMelding(null);
+    void bewaar({ ...instellingen, vastgezet: vast ? instellingen.vastgezet.filter((x) => x !== id) : [...instellingen.vastgezet, id] });
+  }
+
+  const tegels = instellingen.vastgezet.map(appVan).filter((a): a is OsApp => Boolean(a));
+  const achtergrond = OS_ACHTERGRONDEN[instellingen.achtergrond];
+
+  return (
+    <div className="relative h-[100dvh] w-full overflow-hidden" style={{ background: achtergrond.css }}>
+      <div className="absolute inset-0 overflow-y-auto px-5 pb-20 pt-7">
+        <header className="mb-6">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">ZekerFlex OS</p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-white">Hallo {naam}</h1>
+          <p className="mt-1 text-sm text-white/55">
+            {rol === "admin" ? "Je beheert het hele platform." : rol === "werkgever" ? "Alles voor je bedrijf op één plek." : "Alles voor je werk op één plek."} Klik op een app, of druk op Ctrl + K.
+          </p>
+        </header>
+
+        {melding ? (
+          <p role="alert" className="mb-4 inline-block rounded-xl bg-amber-400/15 px-3 py-2 text-sm font-semibold text-amber-100">
+            {melding}
+          </p>
+        ) : null}
+
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
+          {tegels.map((app) => (
+            <li key={app.id}>
+              <button
+                type="button"
+                onDoubleClick={() => openApp(app)}
+                onClick={() => openApp(app)}
+                className="flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-mint"
+              >
+                <OsIcoonVak icoon={app.icoon} tint={tintVan(app)} maat="groot" />
+                <span className="line-clamp-2 text-xs font-semibold leading-snug text-white/90">{app.naam}</span>
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => setStartOpen(true)}
+              className="flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center text-white/60 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-mint"
+            >
+              <span className="grid h-14 w-14 place-items-center rounded-2xl border border-dashed border-white/25 text-2xl font-light">+</span>
+              <span className="text-xs font-semibold">Meer apps</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      {vensters.map((v) => {
+        const app = appVan(v.id);
+        return app ? <Venster key={v.id} app={app} tint={tintVan(app)} staat={v} acties={acties} smal={smal} actief={actief === v.id} /> : null;
+      })}
+
+      {paneelOpen ? (
+        <>
+          <button type="button" aria-label="Instellingen sluiten" onClick={() => setPaneelOpen(false)} className="fixed inset-0 z-[60] cursor-default" />
+          <div role="dialog" aria-label="Instellingen van het bureaublad" className="fixed bottom-[64px] right-3 z-[61] w-[min(330px,92vw)] space-y-3 rounded-2xl border border-white/15 bg-[#0C0E12]/95 p-4 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]">
+            <h2 className="text-sm font-semibold text-white">Achtergrond</h2>
+            <div className="grid grid-cols-5 gap-2">
+              {(Object.keys(OS_ACHTERGRONDEN) as OsAchtergrond[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => void bewaar({ ...instellingen, achtergrond: k })}
+                  aria-label={OS_ACHTERGRONDEN[k].naam}
+                  aria-pressed={instellingen.achtergrond === k}
+                  title={OS_ACHTERGRONDEN[k].naam}
+                  style={{ background: OS_ACHTERGRONDEN[k].css }}
+                  className={`h-10 rounded-lg ring-2 transition ${instellingen.achtergrond === k ? "ring-brand-mint" : "ring-white/10 hover:ring-white/30"}`}
+                />
+              ))}
+            </div>
+            <label className="flex items-start gap-2 text-sm text-white/80">
+              <input type="checkbox" checked={instellingen.herstelVensters} onChange={(e) => void bewaar({ ...instellingen, herstelVensters: e.target.checked })} className="mt-1" />
+              Open vensters onthouden tot ik dit tabblad sluit
+            </label>
+            <p className="text-[11px] text-white/45">Je bureaublad en achtergrond zijn van jou en gelden op elk apparaat waarop je inlogt.</p>
+          </div>
+        </>
+      ) : null}
+
+      <Start apps={apps} vastgezet={instellingen.vastgezet} open={startOpen} onSluit={() => setStartOpen(false)} onOpenApp={openApp} onVastzetten={vastzetten} />
+
+      <Taakbalk
+        apps={apps}
+        vensters={vensters}
+        actief={actief}
+        startOpen={startOpen}
+        tijd={tijd}
+        naam={naam}
+        onStart={() => setStartOpen((o) => !o)}
+        onKies={(id) => {
+          const v = vensters.find((x) => x.id === id);
+          if (v?.minimaal === false && actief === id) acties.minimaliseer(id);
+          else acties.naarVoren(id);
+          setVensters((cur) => cur.map((x) => (x.id === id ? { ...x, minimaal: false } : x)));
+        }}
+        onInstellingen={() => setPaneelOpen((o) => !o)}
+      />
+    </div>
+  );
+}

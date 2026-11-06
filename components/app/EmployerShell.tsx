@@ -193,6 +193,23 @@ export function EmployerShell({
         </nav>
 
         <div className="border-t border-hair p-3">
+          {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
+          <Link
+            href="/os"
+            onClick={() => setOpen(false)}
+            title={collapsed ? "ZekerFlex OS" : undefined}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-white ${collapsed ? "justify-center" : ""}`}
+          >
+            <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                <rect x="1" y="1" width="6" height="6" rx="1.5" />
+                <rect x="9" y="1" width="6" height="6" rx="1.5" />
+                <rect x="1" y="9" width="6" height="6" rx="1.5" />
+                <rect x="9" y="9" width="6" height="6" rx="1.5" />
+              </svg>
+            </span>
+            {!collapsed && "ZekerFlex OS"}
+          </Link>
           <Link
             href={settingsHref}
             onClick={() => setOpen(false)}
