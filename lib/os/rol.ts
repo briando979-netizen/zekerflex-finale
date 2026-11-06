@@ -11,6 +11,8 @@ import type { OsRol } from "@/lib/os/apps";
 export function osRolVan(principal: Principal): OsRol {
   if (hasRole(principal, "PLATFORM_ADMIN")) return "admin";
   if (hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER")) return "werkgever";
+  // de buitendienst heeft een eigen omgeving (/sales) en geen werker-profiel
+  if (hasRole(principal, "SALES")) return "verkoper";
   return "werker";
 }
 

@@ -35,6 +35,8 @@ export async function vandaagVoor(principal: Principal, rol: OsRol): Promise<OsK
         { label: "Deze maand besteed", waarde: euro(o.kpis.spentThisMonthCents), app: "b-facturen", tint: "goud" },
       ];
     }
+    // de buitendienst heeft (nog) geen eigen cijfers op het bureaublad
+    if (rol === "verkoper") return [];
     const todos = await ownerTodos();
     const open = todos.filter((t) => !t.done).length;
     return [{ label: "Te doen voor jou", waarde: String(open), app: "a-te-doen", tint: "goud", actie: open > 0 }];

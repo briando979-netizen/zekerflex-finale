@@ -11,7 +11,7 @@ import { ADMIN_HUBS } from "@/lib/admin/nav";
 // beheerpagina staat vanzelf ook in het OS.
 // ---------------------------------------------------------------------------
 
-export const OS_ROLLEN = ["werker", "werkgever", "admin"] as const;
+export const OS_ROLLEN = ["werker", "werkgever", "verkoper", "admin"] as const;
 export type OsRol = (typeof OS_ROLLEN)[number];
 
 /** De iconen die het OS tekent (components/os/Iconen.tsx). */
@@ -85,7 +85,8 @@ export interface OsApp {
 
 const WERKER: OsRol[] = ["werker"];
 const WERKGEVER: OsRol[] = ["werkgever"];
-const IEDEREEN: OsRol[] = ["werker", "werkgever", "admin"];
+const VERKOPER: OsRol[] = ["verkoper"];
+const IEDEREEN: OsRol[] = ["werker", "werkgever", "verkoper", "admin"];
 const ZAKELIJK: OsRol[] = ["werkgever", "admin"];
 
 /** De apps van de werker-app (/dashboard). */
@@ -157,6 +158,12 @@ const WERKGEVER_APPS: OsApp[] = [
   { id: "b-account", naam: "Mijn account", uitleg: "Inloggen, meldingen en privacy.", href: "/werkgever/account", icoon: "mensen", categorie: "account", rollen: WERKGEVER },
 ];
 
+/** De apps van de buitendienst (/sales) — voor wie de rol SALES heeft. */
+const VERKOPER_APPS: OsApp[] = [
+  { id: "v-sales", naam: "Buitendienst", uitleg: "Bedrijfsbezoeken vastleggen en leads binnenhalen.", href: "/sales", icoon: "groei", categorie: "groei", rollen: VERKOPER, zoek: ["bezoek", "lead", "acquisitie"] },
+  { id: "v-websitevoorstellen", naam: "Websitevoorstellen", uitleg: "Een voorstel op maat maken en volgen.", href: "/sales/websitevoorstellen", icoon: "website", categorie: "groei", rollen: VERKOPER, zoek: ["offerte", "voorstel"] },
+];
+
 /** Apps die iedereen heeft: de winkel, de kaart en de gereedschappen. */
 const GEDEELDE_APPS: OsApp[] = [
   { id: "g-shop", naam: "Winkel", uitleg: "Werkkleding, PBM en cadeaus.", href: "/shop", icoon: "winkel", categorie: "online", rollen: IEDEREEN, zoek: ["webshop", "kleding", "bestellen"] },
@@ -206,7 +213,7 @@ export function tintVanApp(app: OsApp): OsTint {
 
 /** Alle apps van het OS, in vaste volgorde. */
 export function alleApps(): OsApp[] {
-  return [...WERKER_APPS, ...WERKGEVER_APPS, ...GEDEELDE_APPS, ...adminApps()];
+  return [...WERKER_APPS, ...WERKGEVER_APPS, ...VERKOPER_APPS, ...GEDEELDE_APPS, ...adminApps()];
 }
 
 /** De apps die iemand met deze rol mag zien. Een beheerder ziet ook de werkgever- en werker-apps niet: die horen bij een eigen account. */
@@ -258,5 +265,6 @@ export interface OsKaart {
 export const STANDAARD_VASTGEZET: Record<OsRol, string[]> = {
   werker: ["w-klussen", "w-diensten", "w-uren", "w-berichten", "w-uitbetalingen", "g-shop"],
   werkgever: ["b-start", "b-diensten", "b-uren", "b-kalender", "b-berichten", "b-facturen"],
+  verkoper: ["v-sales", "v-websitevoorstellen", "g-kaart", "g-kennis", "g-aanbod"],
   admin: ["a-start", "a-te-doen", "a-cockpit", "a-gebruikers", "a-financien", "a-sales"],
 };

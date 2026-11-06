@@ -48,6 +48,18 @@ describe("ZekerFlex OS — de appcatalogus", () => {
     expect(appsVoor("admin").filter((a) => a.href.startsWith("/admin")).length).toBeGreaterThan(40);
   });
 
+  it("de buitendienst krijgt zijn eigen omgeving en niet die van een ander", () => {
+    const verkoper = appsVoor("verkoper");
+    expect(verkoper.some((a) => a.href === "/sales")).toBe(true);
+    for (const pad of ["/admin", "/werkgever", "/dashboard"]) {
+      expect(verkoper.some((a) => a.href.startsWith(pad)), pad).toBe(false);
+    }
+    // en andersom: /sales hoort niet bij de werker of de werkgever
+    for (const rol of ["werker", "werkgever"] as const) {
+      expect(appsVoor(rol).some((a) => a.href.startsWith("/sales")), rol).toBe(false);
+    }
+  });
+
   it("wat standaard op het bureaublad staat, bestaat ook en mag bij die rol", () => {
     for (const rol of OS_ROLLEN) {
       const mag = new Set(appsVoor(rol).map((a) => a.id));
