@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# ZekerFlex stem-server (Piper) — los fragment, NIET in docker-compose.vps.yml.
+#
+# Gebruik het als extra bestand náást het hoofdbestand (dat blijft onaangeraakt):
+#
+#   cd ~/zekerflex
+#   sudo docker compose -f docker-compose.vps.yml -f deploy/piper/docker-compose.piper.yml \
+#        --env-file .env.production --profile piper up -d piper
+#
+# Het hoofdbestand levert het netwerk `internal` en de projectnaam; dit bestand
+# voegt alleen de dienst `piper` toe. Profiel `piper`: hij start dus nooit
+# vanzelf mee met een gewone uitrol. Zie README.md in deze map.
+#
+# Waarom deze image (ghcr.io/matatonic/openedai-speech-min):
+#   - Piper eronder (gratis, draait op de CPU, geen sleutel, geen internet nodig
+#     nadat de stem is binnengehaald) en een gewone HTTP-koppeling.
+#   - OpenAI-compatibel: POST /v1/audio/speech. Precies de vorm die lib/ai/piper.ts
+#     als eerste probeert, en dezelfde soort koppeling als Ollama — één patroon
+#     voor alle eigen AI-diensten.
+#   - Geeft MP3 terug (ffmpeg zit in de image). Dat is belangrijk: alle plekken
+#     die de stem al gebruiken (de AI-console, de video-editor) verwachten MP3.
+#   - De variant `-min` is de kleine: alleen Piper, geen torch/XTTS (~1 GB i.p.v.
+#     ~5 GB). Op een CPU-only VPS is dat de enige zinnige keuze.
+# `rhasspy/wyoming-piper` is bewust NIET gekozen: die praat het Wyoming-protocol
+# over een eigen TCP-poort, geen HTTP — daar zou nog een brug tussen moeten.
+# ---------------------------------------------------------------------------
+
+services:
+  piper:
+    image: ghcr.io/matatonic/openedai-speech-min:latest
+    restart: unless-stopped
+    profiles: [piper]
+    volumes:
+      # De stemmen (.onnx + .onnx.json) staan op de VPS, niet in git:
+      # haal ze met `sh deploy/piper/haal-stem.sh`.
+      - ./deploy/piper/stemmen:/app/voices
+      # Welke stemnaam bij welk stembestand hoort (alleen-lezen).
+      - ./deploy/piper/config:/app/config:ro
+    # Alleen vanaf de VPS zelf te testen (loopback, niet vanaf internet):
+    #   curl -s http://127.0.0.1:5000/v1/audio/speech -H 'Content-Type: application/json' \
+    #     -d '{"model":"tts-1","voice":"alloy","input":"Goedemiddag, dit is ZekerFlex.","response_format":"mp3"}' -o /tmp/test.mp3
+    # Mag weg zodra je weet dat het werkt; de app praat via het interne netwerk.
+    ports:
+      - "127.0.0.1:5000:8000"
+    # Geen healthcheck: de image heeft geen curl, en de app heeft er geen nodig —
+    # antwoordt de dienst niet, dan valt lib/ai/neural-tts.ts gewoon terug.
+    networks: [internal]

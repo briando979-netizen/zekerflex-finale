@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# Welke stemnaam bij welk Piper-stembestand hoort (openedai-speech leest dit).
+#
+# De app vraagt standaard om de stem "alloy" (lib/ai/piper.ts →
+# STANDAARD_PIPER_STEM), want dat is de naam die elke OpenAI-compatibele dienst
+# kent. Hier knopen we die naam aan een NEDERLANDSE stem — anders leest een
+# Engelse stem onze Nederlandse teksten voor.
+#
+# Een andere stem? Haal hem binnen met `sh deploy/piper/haal-stem.sh <stem-id>`
+# en zet de bestandsnaam hieronder. De stembestanden staan in deze map onder
+# stemmen/ en in de container op /app/voices.
+# ---------------------------------------------------------------------------
+tts-1:
+  # de standaardstem van ZekerFlex: Nederlands, vrouw, rustig tempo
+  alloy:
+    model: voices/nl_BE-nathalie-medium.onnx
+    speaker: # één spreker in dit model
+  # dezelfde stem onder haar eigen naam, voor wie hem expliciet wil kiezen
+  nl-vrouw:
+    model: voices/nl_BE-nathalie-medium.onnx
+    speaker:
+  # Tweede stem. Haal hem eerst binnen, anders verwijst deze regel naar een
+  # bestand dat er niet is:  sh deploy/piper/haal-stem.sh nl_NL-mls_5809-low
+  # nl-man:
+  #   model: voices/nl_NL-mls_5809-low.onnx
+  #   speaker:

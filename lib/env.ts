@@ -51,6 +51,11 @@ const schema = z.object({
   // Een Maps-Platform-sleutel mag géén TTS, dus dit staat los; valt terug op
   // GOOGLE_MAPS_API_KEY als het niet apart gezet is.
   GOOGLE_TTS_API_KEY: z.string().optional(),
+  // Onze eigen stem-server (Piper, zie deploy/piper/ en lib/ai/piper.ts): een
+  // Nederlandse stem op de VPS die niets per teken kost en geen sleutel nodig
+  // heeft. Leeg = niet ingesteld, dan blijft de stem via Google lopen. In de
+  // container: PIPER_URL=http://piper:8000 (intern netwerk, geen internet).
+  PIPER_URL: z.string().url().optional(),
   OPENOV_BASE_URL: z.string().url().default("https://api.openov.nl"),
 
   // Push: self-hosted Web Push (VAPID / RFC 8291) is the only channel.

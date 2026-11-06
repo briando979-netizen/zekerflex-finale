@@ -5,7 +5,8 @@ import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { extractBusiness } from "@/lib/website-check/proposal";
 import { sameSite } from "@/lib/website-check/run";
 import { analyseerReviews, type Analyse } from "@/lib/review-scan/analyse";
-import { bedrijfDetails, concurrentenVan, ScanFout, zoekBedrijven, type Kandidaat } from "@/lib/review-scan/places";
+import { bedrijvenBron } from "@/lib/integrations/osm-plaatsen";
+import { bedrijfDetails, concurrentenVan, geenBeoordelingenUitleg, ScanFout, zoekBedrijven, type Kandidaat } from "@/lib/review-scan/places";
 import {
   haalbaarDoel,
   inhaalTempo,
@@ -132,7 +133,13 @@ export async function runReviewScan(invoer: { tekst?: string | undefined; placeI
   } else {
     gevonden = await vindBedrijf(leesInvoer(invoer.tekst ?? ""));
   }
-  if ("kandidaten" in gevonden) return { soort: "kies", kandidaten: gevonden.kandidaten };
+  const bron = await bedrijvenBron();
+  if ("kandidaten" in gevonden) {
+    const eerste = gevonden.kandidaten[0];
+    // van onze eigen bron komt geen enkele kandidaat met sterren; zo'n keuzelijst helpt niemand
+    if (bron !== "osm" || !eerste) return { soort: "kies", kandidaten: gevonden.kandidaten };
+    gevonden = { placeId: eerste.placeId, signalen: null };
+  }
 
   const recent = await kvGet<{ id: string; at: string }>(PLAATS_KEY(gevonden.placeId)).catch(() => null);
   if (recent && nu.getTime() - Date.parse(recent.at) < HERGEBRUIK_MS) {
@@ -141,6 +148,9 @@ export async function runReviewScan(invoer: { tekst?: string | undefined; placeI
   }
 
   const d = await bedrijfDetails(gevonden.placeId);
+  // Zonder sterren en reviews is er geen reviewscore te geven. Dat zeggen we dan
+  // ook gewoon, met de naam van het bedrijf erbij; we vullen nooit een cijfer in.
+  if (d.bron === "osm") throw new ScanFout(geenBeoordelingenUitleg(d.naam), "GEEN_BEOORDELINGEN");
   const [concurrenten, signalen] = await Promise.all([
     stil(concurrentenVan(d)).then((c) => c ?? []),
     gevonden.signalen

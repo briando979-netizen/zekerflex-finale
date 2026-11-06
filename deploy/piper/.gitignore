@@ -1,0 +1,3 @@
+# Stembestanden (.onnx, tientallen MB's) horen op de server, niet in git.
+# Binnenhalen met: bash deploy/piper/haal-stem.sh
+stemmen/

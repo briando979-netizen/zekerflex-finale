@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
-import { placesEnabled, lookupCompanyContact } from "@/lib/sales/discovery/places-lookup";
+import { lookupCompanyContact } from "@/lib/sales/discovery/places-lookup";
 
 function safeOrigin(url: string): string | null {
   try {
@@ -89,8 +89,9 @@ export interface ContactScrapeResult {
 }
 
 /** Zoek telefoon + e-mail voor één lead en vul de ontbrekende velden aan.
- *  Bron-volgorde: Google Places (echt nummer + website) → domein raden →
- *  website afzoeken op (nog ontbrekende) telefoon + e-mail. */
+ *  Bron-volgorde: bedrijf opzoeken (Google Places of onze eigen
+ *  OpenStreetMap-bron: echt nummer + website) → domein raden → website
+ *  afzoeken op (nog ontbrekende) telefoon + e-mail. */
 export async function enrichLeadContact(leadId: string): Promise<ContactScrapeResult> {
   const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
   if (!lead) return { origin: null, phone: null, email: null, updated: false };
@@ -99,12 +100,12 @@ export async function enrichLeadContact(leadId: string): Promise<ContactScrapeRe
   let email: string | null = null;
   let origin: string | null = lead.sourceUrl ? safeOrigin(lead.sourceUrl) : null;
 
-  // 1. Google Places: echt telefoonnummer + website (beste bron, als geconfigureerd).
-  if (placesEnabled()) {
-    const p = await lookupCompanyContact(lead.companyName, lead.city).catch(() => null);
-    if (p?.phone) phone = p.phone;
-    if (p?.website && !origin) origin = safeOrigin(p.website);
-  }
+  // 1. Bedrijf opzoeken: echt telefoonnummer + website (beste bron). Google als
+  //    zijn sleutel er is, anders onze eigen OpenStreetMap-bron — die is gratis,
+  //    dus dit staat nooit meer uit.
+  const p = await lookupCompanyContact(lead.companyName, lead.city).catch(() => null);
+  if (p?.phone) phone = p.phone;
+  if (p?.website && !origin) origin = safeOrigin(p.website);
 
   // 2. Nog geen website? Raad het domein.
   if (!origin) {
