@@ -44,8 +44,14 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 ### Geld
 
 - **Platformfee-staffel:** één bron, `lib/pricing/tiers.ts`. De uitzendopslag is niet openbaar.
-- **Stripe-webhook:** elke functie een eigen tak op een metadata-sleutel, idempotent via unieke kolommen (Stripe stuurt soms dubbel).
+- **Stripe-webhook:** elke functie een eigen tak op een metadata-sleutel, idempotent via unieke kolommen (Stripe stuurt soms dubbel). Een eigenaar-todo `stripe-webhook-handtekening` staat klaar als het webhook-secret niet bij het endpoint hoort (de fouten zeggen "No signatures found").
 - **Android-app (TWA):** bank, voorschot, snelle uitbetaling en doorverwijzen zijn in de app verborgen (`lib/app-mode.ts`). Nieuwe geldfuncties daar ook afschermen.
+
+### Testen en controleren
+
+- **Nachtelijke rondgang (rondgang, 6 nov):** elke openbare vaste pagina wordt om 04:20 UTC opgehaald (`lib/ops/rondgang.ts` → cron container → `/api/internal/rondgang` → KV `rondgang:laatste`). Kapot (404, 500, lege pagina, foutgrens) → foutenlogboek "pagina kapot" + Admin → Systeem → Taken (paneel `RondgangPanel.tsx`, hartslag + uitslag). Bewust kleine/loginpagina's in `OVERSLAAN`-set opnemen, anders melden ze vals kapot. `lib/ops/heartbeat.ts` toont de status per cron-taak.
+- **Safari vóór 16.4 (en elk Safari op macOS Catalina) kent geen lookbehind in regex** (`(?<=...)`, `(?<!...)`): `new RegExp` gooit dan "Invalid regular expression: invalid group specifier name" en de hele pagina valt om. Test `tests/regex-safari.test.ts` bewaakt dat: geen lookbehind in code die via `"use client"` de browser bereikt (servercode mag het). Bouwcode (generators, scripts) mag lookbehind gewoon gebruiken.
+- **Navigatielinks testen:** Explore-agent zoekt ongekoppelde routes en dode links met `grep href/router.push` + dynamisch inladen van client-reachable files via `import` matching. Routes nergens gelinkt = bedoeld (alleen via mail/QR/redirect bereikbaar) of vergeten. Per route: "is dit opzettelijk klein/verborgen?" Ongekoppelde UI (bv. knop in een zijpaneel dat bijna niemand ziet) repareren door de link zichtbaarder te maken of de knop weg te halen.
 
 ### Schermen
 
