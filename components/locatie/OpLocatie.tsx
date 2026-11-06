@@ -1026,7 +1026,7 @@ function PrintTab({
                     )}
                   </div>
                 </div>
-                {o.fout && <p className="mt-1 text-xs text-crit">{o.fout}</p>}
+                {o.fout && <p role="alert" className="mt-1 text-xs text-crit">{o.fout}</p>}
                 {bt === o.id && <BluetoothPrint inhoud={o.inhoud} className="mt-2" onKlaar={(printer) => void roep({ action: "print-status", id: o.id, status: "geprint" }).then(() => void printer)} />}
               </li>
             ))}
