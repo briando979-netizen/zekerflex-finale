@@ -412,7 +412,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     }
     const claims = await decodeSession(sessionToken(req));
     if (!claims) {
-      return jsonError("UNAUTHENTICATED", "Authentication required", 401, ctx);
+      return jsonError("UNAUTHENTICATED", "Je bent niet (meer) ingelogd. Log opnieuw in.", 401, ctx);
     }
     return next(req, ctx, claims);
   }
@@ -422,7 +422,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   if (!claims) {
     return rule.redirectOnDeny
       ? loginRedirect(req, ctx)
-      : jsonError("UNAUTHENTICATED", "Authentication required", 401, ctx);
+      : jsonError("UNAUTHENTICATED", "Je bent niet (meer) ingelogd. Log opnieuw in.", 401, ctx);
   }
 
   if (!hasAnyRole(claims, rule.roles)) {
