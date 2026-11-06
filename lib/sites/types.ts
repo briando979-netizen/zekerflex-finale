@@ -25,7 +25,16 @@ export type BlockType =
   | "producten"
   | "uitgelicht"
   | "reserveren"
-  | "burger3d";
+  | "burger3d"
+  | "prijzen"
+  | "team"
+  | "cijfers"
+  | "logos"
+  | "video"
+  | "kaart"
+  | "afbeelding"
+  | "scheiding"
+  | "knoppen";
 
 export interface Item {
   titel: string;
@@ -35,6 +44,21 @@ export interface Item {
 /** A card in the diensten block: an item with an optional photo on top (media id). */
 export interface Dienst extends Item {
   foto?: string | null | undefined;
+}
+
+/** A column of the prijzen block: name, price, a few bullet points (one per line) and an optional button. */
+export interface PrijsPakket {
+  naam: string;
+  /** as typed: "€ 49", "Op aanvraag" */
+  prijs: string;
+  /** "per maand", "per uur"; may be empty */
+  eenheid: string;
+  /** the bullet points, one per line */
+  punten: string;
+  knop: string;
+  knopLink: string;
+  /** shown with a "Meest gekozen" label */
+  uitgelicht: boolean;
 }
 
 export interface BlockProps {
@@ -76,6 +100,36 @@ export interface BlockProps {
   };
   /** a burger in 3D whose layers float apart and fall together while scrolling (lib/sites/burger3d.ts); `lagen` names the seven layers, top first */
   burger3d: { kop: string; tekst: string; lagen: Item[]; knop: string; knopLink: string };
+  /** price list / packages: 1-4 columns */
+  prijzen: { kop: string; tekst: string; items: PrijsPakket[] };
+  /** team members: photo, name, function */
+  team: { kop: string; tekst: string; items: { naam: string; functie: string; foto: string | null }[] };
+  /** big numbers with a label ("25 jaar", "1.200 klanten") */
+  cijfers: { kop: string; items: { waarde: string; label: string }[] };
+  /** a row of logos / partner photos (media ids; the photo's alt text is the partner's name) */
+  logos: { kop: string; fotos: string[] };
+  /** a video without a third-party player: our own photo with a "Bekijk de video" button to an https link */
+  video: { kop: string; tekst: string; foto: string | null; knop: string; link: string };
+  /** address and a route button to an https link; no embedded map of a third party */
+  kaart: { kop: string; tekst: string; adres: string; routeLink: string; knop: string };
+  /** one photo with a caption */
+  afbeelding: { foto: string | null; bijschrift: string; breed: boolean };
+  /** white space or a thin line between two blocks */
+  scheiding: { vorm: "ruimte" | "lijn"; hoogte: "klein" | "normaal" | "groot" };
+  /** a row of 1-4 buttons */
+  knoppen: { kop: string; items: { tekst: string; link: string; vorm: "vol" | "lijn" }[] };
+}
+
+/**
+ * Settings every block can have; all optional, so existing sites stay as they are.
+ * verborgen = temporarily off the page (not deleted); ruimte = room above and below;
+ * achtergrond = a colour from the theme; uitlijning = text alignment.
+ */
+export interface BlockExtra {
+  verborgen?: boolean | undefined;
+  ruimte?: "klein" | "normaal" | "groot" | undefined;
+  achtergrond?: "geen" | "zacht" | "merk" | "accent" | undefined;
+  uitlijning?: "links" | "midden" | "rechts" | undefined;
 }
 
 /**
@@ -142,7 +196,7 @@ export interface SiteVacancy {
   url: string;
 }
 
-export type Block = { [T in BlockType]: { id: string; type: T; props: BlockProps[T] } }[BlockType];
+export type Block = { [T in BlockType]: { id: string; type: T; props: BlockProps[T] } & BlockExtra }[BlockType];
 
 export interface Page {
   id: string;
@@ -152,6 +206,10 @@ export interface Page {
   seoTitel: string;
   seoOmschrijving: string;
   blocks: Block[];
+  /** false = not in the menu and footer (the page still exists); absent = in the menu */
+  menu?: boolean | undefined;
+  /** the name in the menu when it differs from the page title */
+  menuLabel?: string | undefined;
 }
 
 export interface Theme {
@@ -301,6 +359,15 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   uitgelicht: "Uitgelicht product",
   reserveren: "Tafel reserveren",
   burger3d: "3D-burger (beweegt bij scrollen)",
+  prijzen: "Prijslijst of pakketten",
+  team: "Teamleden",
+  cijfers: "Cijfers",
+  logos: "Logo's en partners",
+  video: "Video (knop naar de video)",
+  kaart: "Adres en route",
+  afbeelding: "Afbeelding met bijschrift",
+  scheiding: "Scheiding of ruimte",
+  knoppen: "Rij met knoppen",
 };
 
 /** A fresh block of a type, with sensible example content. */
@@ -365,6 +432,36 @@ export function newBlock(type: BlockType, id: string): Block {
           knopLink: "winkel",
         },
       };
+    case "prijzen":
+      return {
+        id,
+        type,
+        props: {
+          kop: "Onze prijzen",
+          tekst: "Duidelijke prijzen, zonder verrassingen.",
+          items: [
+            { naam: "Basis", prijs: "€ 49", eenheid: "per maand", punten: "Eerste punt\nTweede punt\nDerde punt", knop: "Kies Basis", knopLink: "contact", uitgelicht: false },
+            { naam: "Plus", prijs: "€ 99", eenheid: "per maand", punten: "Alles van Basis\nExtra punt\nNog een extra punt", knop: "Kies Plus", knopLink: "contact", uitgelicht: true },
+            { naam: "Maatwerk", prijs: "Op aanvraag", eenheid: "", punten: "Samen op maat\nVaste contactpersoon", knop: "Vraag een offerte", knopLink: "contact", uitgelicht: false },
+          ],
+        },
+      };
+    case "team":
+      return { id, type, props: { kop: "Ons team", tekst: "", items: [{ naam: "Naam", functie: "Functie", foto: null }, { naam: "Naam", functie: "Functie", foto: null }, { naam: "Naam", functie: "Functie", foto: null }] } };
+    case "cijfers":
+      return { id, type, props: { kop: "", items: [{ waarde: "25", label: "jaar ervaring" }, { waarde: "1.200", label: "tevreden klanten" }, { waarde: "4,8", label: "gemiddeld cijfer" }] } };
+    case "logos":
+      return { id, type, props: { kop: "Zij gingen je voor", fotos: [] } };
+    case "video":
+      return { id, type, props: { kop: "Kijk even mee", tekst: "", foto: null, knop: "Bekijk de video", link: "" } };
+    case "kaart":
+      return { id, type, props: { kop: "Hier vind je ons", tekst: "", adres: "", routeLink: "", knop: "Plan je route" } };
+    case "afbeelding":
+      return { id, type, props: { foto: null, bijschrift: "", breed: false } };
+    case "scheiding":
+      return { id, type, props: { vorm: "ruimte", hoogte: "normaal" } };
+    case "knoppen":
+      return { id, type, props: { kop: "", items: [{ tekst: "Neem contact op", link: "contact", vorm: "vol" }, { tekst: "Bekijk onze diensten", link: "home", vorm: "lijn" }] } };
     case "reserveren":
       return {
         id,

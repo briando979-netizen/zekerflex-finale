@@ -221,6 +221,12 @@ export function kickerVoor(b: Block, c: Company): string {
     vacatures: "Werken bij",
     reserveren: "Reserveren",
     burger3d: "Laag voor laag",
+    prijzen: "Prijzen",
+    team: "Ons team",
+    cijfers: "In cijfers",
+    logos: "Vertrouwd door",
+    video: "Kijk mee",
+    kaart: "Kom langs",
   };
   const t = label[b.type] ?? "";
   const kop = String((b.props as { kop?: unknown }).kop ?? "").toLowerCase();

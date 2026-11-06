@@ -5,6 +5,7 @@ import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Pa
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
 import { nuInNL, reserveerBlokVan } from "@/lib/sites/reserveren";
 import type { MandRegelInfo } from "@/lib/sites/mand";
+import { extraBlokHtml, extraCss } from "@/lib/sites/extra-blokken-render";
 import { burgerBlokHtml, burgerCss, heeftBurger } from "@/lib/sites/burger3d";
 import type { WinkelFilter } from "@/lib/sites/winkel-filter";
 import { gereserveerdBody, reserveerBlokHtml, reserveerCss, reserveerPaginaBody, type ReserveerCtx, type ReserveerStaat } from "@/lib/sites/reserveren-render";
@@ -66,8 +67,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026). */
-const CSS_REV = 17;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026; 18: the builder's new blocks and block settings, 6 Nov 2026). */
+const CSS_REV = 18;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
@@ -293,7 +294,8 @@ ul.cards{list-style:none;margin:0;padding:0}.probeer{margin:14px 0 0}.probeer a{
 .card.photo{padding:0;overflow:hidden}.card.photo img{width:100%;aspect-ratio:4/3;object-fit:cover}.card.photo .body{padding:22px 24px 24px}
 .steps,.usps{list-style:none;margin:0;padding:0;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.steps{counter-reset:stap}.steps h3,.usps h3{margin:0 0 .35em}.steps p:last-child,.usps p:last-child{margin:0}
 .steps li{counter-increment:stap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}section.alt .steps li{border-color:transparent}.steps li::before{content:counter(stap);display:grid;place-items:center;width:40px;height:40px;margin:0 0 14px;border-radius:999px;background:var(--k);color:var(--k-t);font-weight:700}
-.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${CHAT_CSS}${winkel}${luxe}${metBurger ? `\n${burgerCss()}` : ""}`;
+.usps li{position:relative;padding:2px 0 0 44px}.usps li::before{content:"✓";position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--a);color:var(--a-t);font-weight:700}${CHAT_CSS}
+${extraCss()}${winkel}${luxe}${metBurger ? `\n${burgerCss()}` : ""}`;
 }
 
 /** "06 12345678" → "31612345678", the form wa.me wants; null when it can't be a phone number. */
@@ -491,6 +493,8 @@ function renderBlock(b: Block, i: number, ctx: Ctx): string {
       return reserveerBlokHtml(reserveerCtx(ctx), b.props, alt, nuInNL());
     case "burger3d":
       return burgerBlokHtml(b.props, { esc, paras, href: (raw) => href(ctx, raw) }, b.id);
+    default:
+      return extraBlokHtml(b, { esc, paras, img: (id, sizes, eager, alt) => img(ctx, id, sizes, eager, alt), href: (raw) => href(ctx, raw), bedrijf: ctx.bedrijf }, alt) ?? "";
   }
 }
 
@@ -517,9 +521,14 @@ export function vacancyWhen(v: Pick<SiteVacancy, "start" | "eind">): string {
   return `${day} · ${time(v.start)} – ${time(v.eind)}`;
 }
 
+/** The pages in the menu and footer: all, except those the company took out of the menu. */
+export const menuPaginas = (pages: Page[]): Page[] => pages.filter((p) => p.menu !== false);
+/** The name of a page in the menu. */
+export const menuNaam = (p: Pick<Page, "titel" | "menuLabel">): string => p.menuLabel?.trim() || p.titel;
+
 function header(ctx: Ctx, current: Page): string {
-  const links = ctx.pages
-    .map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}"${p.id === current.id ? ' aria-current="page"' : ""}>${esc(p.titel)}</a></li>`)
+  const links = menuPaginas(ctx.pages)
+    .map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}"${p.id === current.id ? ' aria-current="page"' : ""}>${esc(menuNaam(p))}</a></li>`)
     .join("");
   const logo = ctx.logo
     ? `<img src="${esc(ctx.mediaSrc(ctx.logo.file))}" alt="${esc(ctx.bedrijf.naam)}" width="${ctx.logo.width}" height="${ctx.logo.height}" fetchpriority="high" decoding="async">`
@@ -575,7 +584,7 @@ function premiumFooter(ctx: Ctx): string {
   const c = ctx.bedrijf;
   const address = [c.straat, [c.postcode, c.plaats].filter(Boolean).join(" ")].filter(Boolean);
   const hours = ctx.pages.flatMap((p) => p.blocks).find((b): b is Extract<Block, { type: "openingstijden" }> => b.type === "openingstijden");
-  const menu = ctx.pages.map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}">${esc(p.titel)}</a></li>`).join("");
+  const menu = menuPaginas(ctx.pages).map((p) => `<li><a href="${esc(ctx.preview ? "#" : safeHref(p.slug || "home", ctx.root, ctx.pages))}">${esc(menuNaam(p))}</a></li>`).join("");
   const socials = socialLinks(ctx);
   const contact = [
     c.telefoon && `<p><a href="${esc(href(ctx, telHref(c.telefoon)))}">${esc(c.telefoon)}</a></p>`,
@@ -663,11 +672,21 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}${opts.chat ? chatLink(ctx) : ""}</body></html>`;
 }
 
+/** A page without its hidden blocks (a hidden block is off the page, not deleted). */
+const zonderVerborgen = (p: Page): Page => (p.blocks.some((b) => b.verborgen) ? { ...p, blocks: p.blocks.filter((b) => !b.verborgen) } : p);
+
+/** Room, background and alignment the company chose for a block: a wrapper only when one is set, so the default output stays as it was. */
+function metBlokstijl(b: Block, html: string): string {
+  if (!html) return html;
+  const klassen = [b.ruimte && b.ruimte !== "normaal" && `zf-r-${b.ruimte}`, b.achtergrond && b.achtergrond !== "geen" && `zf-bg-${b.achtergrond}`, b.uitlijning && b.uitlijning !== "links" && `zf-u-${b.uitlijning}`].filter(Boolean);
+  return klassen.length ? `<div class="${klassen.join(" ")}">${html}</div>` : html;
+}
+
 function context(site: RenderableSite, opts: RenderOptions): Ctx {
   const media = new Map(site.media.map((m) => [m.id, m]));
   return {
     root: opts.root,
-    pages: site.pages,
+    pages: site.pages.map(zonderVerborgen),
     media,
     mediaSrc: opts.preview ? opts.preview.mediaUrl : (file) => `${opts.root}media/${file}`,
     preview: Boolean(opts.preview),
@@ -711,8 +730,9 @@ function belevingHtml(b: Block, i: number, ctx: Ctx, page: Page): string {
 const PREVIEW_FONTS = "/fonts/";
 
 /** One of the site's own pages as a full HTML document. */
-export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions): string {
+export function renderPage(site: RenderableSite, rawPage: Page, opts: RenderOptions): string {
   const ctx = context(site, opts);
+  const page = zonderVerborgen(rawPage);
   // only the opening block has a visible h1; without one, an invisible h1 with the page title (screen readers, search engines),
   // or in beleving a dark page header with the title, as every page of schwarzwald.zekerflex.com has
   const hero = page.blocks.some((b) => b.type === "hero");
@@ -720,7 +740,8 @@ export function renderPage(site: RenderableSite, page: Page, opts: RenderOptions
   // in the builder's preview each block is clickable (data-blok → the editor selects it); visitors never get this
   const blokken = page.blocks.map((b, i) => {
     const html = ctx.beleving ? belevingHtml(b, hero ? i : i - 1, ctx, page) : renderBlock(b, i, ctx);
-    return ctx.preview && html ? `<div data-blok="${esc(b.id)}">${html}</div>` : html;
+    const gestyled = metBlokstijl(b, html);
+    return ctx.preview && gestyled ? `<div data-blok="${esc(b.id)}">${gestyled}</div>` : gestyled;
   });
   return htmlDoc(ctx, page, h1 + blokken.join(""), opts, siteCss(site.theme, PREVIEW_FONTS, heeftBurger(site.pages)));
 }

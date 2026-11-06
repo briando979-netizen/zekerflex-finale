@@ -15,25 +15,36 @@ const klok = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Een tijd schrijf je 
 const dagTijd = z.object({ van: klok, tot: klok }).nullable();
 const reserveerTijden = z.object({ "0": dagTijd, "1": dagTijd, "2": dagTijd, "3": dagTijd, "4": dagTijd, "5": dagTijd, "6": dagTijd });
 
+/** an https address, or empty (a video or route link; never a third-party embed) */
+const httpsLink = z.string().trim().max(300).regex(/^$|^https:\/\/[^\s<>"']+$/, "Een link begint met https://.");
+/** settings every block can have (lib/sites/types.ts BlockExtra) */
+const basis = {
+  id: z.string().max(40),
+  verborgen: z.boolean().optional(),
+  ruimte: z.enum(["klein", "normaal", "groot"]).optional(),
+  achtergrond: z.enum(["geen", "zacht", "merk", "accent"]).optional(),
+  uitlijning: z.enum(["links", "midden", "rechts"]).optional(),
+};
+
 const block = z.discriminatedUnion("type", [
-  z.object({ id: z.string().max(40), type: z.literal("hero"), props: z.object({ kop, tekst, knop: short, knopLink: link, foto: mediaId }) }),
-  z.object({ id: z.string().max(40), type: z.literal("tekst"), props: z.object({ kop, tekst }) }),
-  z.object({ id: z.string().max(40), type: z.literal("tekstFoto"), props: z.object({ kop, tekst, foto: mediaId, fotoLinks: z.boolean() }) }),
-  z.object({ id: z.string().max(40), type: z.literal("diensten"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst, foto: mediaId.optional() })).max(12) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("galerij"), props: z.object({ kop, fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(24) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("reviews"), props: z.object({ kop, items: z.array(z.object({ naam: short, tekst, sterren: z.number().int().min(0).max(5) })).max(12) }) }), // 0: een klantverhaal zonder sterren (geen verzonnen score)
-  z.object({ id: z.string().max(40), type: z.literal("faq"), props: z.object({ kop, items: z.array(z.object({ vraag: short, antwoord: tekst })).max(20) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("openingstijden"), props: z.object({ kop, regels: z.array(z.object({ dag: short, tijd: short })).max(10) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("cta"), props: z.object({ kop, tekst, knop: short, knopLink: link }) }),
-  z.object({ id: z.string().max(40), type: z.literal("contact"), props: z.object({ kop, tekst, formulier: z.boolean() }) }),
-  z.object({ id: z.string().max(40), type: z.literal("vacatures"), props: z.object({ kop, tekst, aantal: z.number().int().min(1).max(12) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("stappen"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("usps"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("producten"), props: z.object({ kop, tekst, categorie: z.string().trim().max(60), aantal: z.number().int().min(1).max(48) }) }),
-  z.object({ id: z.string().max(40), type: z.literal("uitgelicht"), props: z.object({ productId: z.string().regex(/^$|^p[a-z0-9]{6,20}$/), kop, tekst, fotoLinks: z.boolean() }) }),
-  z.object({ id: z.string().max(40), type: z.literal("burger3d"), props: z.object({ kop, tekst, lagen: z.array(z.object({ titel: short, tekst: z.string().trim().max(300) })).max(7), knop: short, knopLink: link }) }),
+  z.object({ ...basis, type: z.literal("hero"), props: z.object({ kop, tekst, knop: short, knopLink: link, foto: mediaId }) }),
+  z.object({ ...basis, type: z.literal("tekst"), props: z.object({ kop, tekst }) }),
+  z.object({ ...basis, type: z.literal("tekstFoto"), props: z.object({ kop, tekst, foto: mediaId, fotoLinks: z.boolean() }) }),
+  z.object({ ...basis, type: z.literal("diensten"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst, foto: mediaId.optional() })).max(12) }) }),
+  z.object({ ...basis, type: z.literal("galerij"), props: z.object({ kop, fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(24) }) }),
+  z.object({ ...basis, type: z.literal("reviews"), props: z.object({ kop, items: z.array(z.object({ naam: short, tekst, sterren: z.number().int().min(0).max(5) })).max(12) }) }), // 0: een klantverhaal zonder sterren (geen verzonnen score)
+  z.object({ ...basis, type: z.literal("faq"), props: z.object({ kop, items: z.array(z.object({ vraag: short, antwoord: tekst })).max(20) }) }),
+  z.object({ ...basis, type: z.literal("openingstijden"), props: z.object({ kop, regels: z.array(z.object({ dag: short, tijd: short })).max(10) }) }),
+  z.object({ ...basis, type: z.literal("cta"), props: z.object({ kop, tekst, knop: short, knopLink: link }) }),
+  z.object({ ...basis, type: z.literal("contact"), props: z.object({ kop, tekst, formulier: z.boolean() }) }),
+  z.object({ ...basis, type: z.literal("vacatures"), props: z.object({ kop, tekst, aantal: z.number().int().min(1).max(12) }) }),
+  z.object({ ...basis, type: z.literal("stappen"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
+  z.object({ ...basis, type: z.literal("usps"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
+  z.object({ ...basis, type: z.literal("producten"), props: z.object({ kop, tekst, categorie: z.string().trim().max(60), aantal: z.number().int().min(1).max(48) }) }),
+  z.object({ ...basis, type: z.literal("uitgelicht"), props: z.object({ productId: z.string().regex(/^$|^p[a-z0-9]{6,20}$/), kop, tekst, fotoLinks: z.boolean() }) }),
+  z.object({ ...basis, type: z.literal("burger3d"), props: z.object({ kop, tekst, lagen: z.array(z.object({ titel: short, tekst: z.string().trim().max(300) })).max(7), knop: short, knopLink: link }) }),
   z.object({
-    id: z.string().max(40),
+    ...basis,
     type: z.literal("reserveren"),
     props: z.object({
       kop,
@@ -46,6 +57,25 @@ const block = z.discriminatedUnion("type", [
       maxGasten: z.number().int().min(1).max(2000),
     }),
   }),
+  z.object({
+    ...basis,
+    type: z.literal("prijzen"),
+    props: z.object({
+      kop,
+      tekst,
+      items: z
+        .array(z.object({ naam: short, prijs: z.string().trim().max(40), eenheid: z.string().trim().max(40), punten: z.string().trim().max(600), knop: short, knopLink: link, uitgelicht: z.boolean() }))
+        .max(4),
+    }),
+  }),
+  z.object({ ...basis, type: z.literal("team"), props: z.object({ kop, tekst, items: z.array(z.object({ naam: short, functie: short, foto: mediaId })).max(12) }) }),
+  z.object({ ...basis, type: z.literal("cijfers"), props: z.object({ kop, items: z.array(z.object({ waarde: z.string().trim().max(24), label: short })).max(6) }) }),
+  z.object({ ...basis, type: z.literal("logos"), props: z.object({ kop, fotos: z.array(z.string().regex(/^m[a-z0-9]{6,20}$/)).max(12) }) }),
+  z.object({ ...basis, type: z.literal("video"), props: z.object({ kop, tekst, foto: mediaId, knop: short, link: httpsLink }) }),
+  z.object({ ...basis, type: z.literal("kaart"), props: z.object({ kop, tekst, adres: z.string().trim().max(300), routeLink: httpsLink, knop: short }) }),
+  z.object({ ...basis, type: z.literal("afbeelding"), props: z.object({ foto: mediaId, bijschrift: short, breed: z.boolean() }) }),
+  z.object({ ...basis, type: z.literal("scheiding"), props: z.object({ vorm: z.enum(["ruimte", "lijn"]), hoogte: z.enum(["klein", "normaal", "groot"]) }) }),
+  z.object({ ...basis, type: z.literal("knoppen"), props: z.object({ kop, items: z.array(z.object({ tekst: short, link, vorm: z.enum(["vol", "lijn"]) })).max(4) }) }),
 ]);
 
 const cents = z.number().int().min(0).max(10_000_000);
@@ -92,6 +122,8 @@ const page = z.object({
   seoTitel: z.string().trim().max(70),
   seoOmschrijving: z.string().trim().max(170),
   blocks: z.array(block).max(30),
+  menu: z.boolean().optional(),
+  menuLabel: z.string().trim().max(40).optional(),
 });
 
 export const companySchema = z.object({
