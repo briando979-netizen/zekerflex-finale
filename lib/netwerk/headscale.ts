@@ -95,6 +95,25 @@ export async function maakVpnSleutel(tenantId: string, uren = 24): Promise<{ sle
   return { sleutel, verlooptAt: r.preAuthKey?.expiration ?? verlooptAt };
 }
 
+export interface HsNode {
+  id: string;
+  name?: string;
+  givenName?: string;
+  online?: boolean;
+  lastSeen?: string;
+  ipAddresses?: string[];
+  /** van wie het apparaat is; headscale geeft hier een object terug */
+  user?: { id?: string | number; name?: string } | null;
+}
+
+/** Hoort dit apparaat bij deze VPN-gebruiker? Op naam of op id, wat er is. */
+export function hoortBij(node: HsNode, gebruiker: { id: string; name: string }): boolean {
+  const u = node.user;
+  if (!u) return false;
+  if (typeof u.name === "string" && u.name === gebruiker.name) return true;
+  return u.id !== undefined && String(u.id) === String(gebruiker.id);
+}
+
 /** De apparaten van dit bedrijf op de VPN-server. Niet gekoppeld, nog geen gebruiker of storing: leeg. */
 export async function vpnApparaten(tenantId: string): Promise<VpnApparaat[]> {
   if (!vpnGekoppeld()) return [];
@@ -103,17 +122,20 @@ export async function vpnApparaten(tenantId: string): Promise<VpnApparaat[]> {
     const lijst = await hs<{ users?: HsUser[] }>("GET", `/user?name=${encodeURIComponent(naam)}`);
     const gebruiker = lijst.users?.find((u) => u.name === naam);
     if (!gebruiker) return [];
-    const r = await hs<{ nodes?: { id: string; name?: string; givenName?: string; online?: boolean; lastSeen?: string; ipAddresses?: string[] }[] }>(
-      "GET",
-      `/node?user=${encodeURIComponent(gebruiker.id)}`,
-    );
-    return (r.nodes ?? []).map((n) => ({
-      id: String(n.id),
-      naam: n.givenName || n.name || `apparaat ${n.id}`,
-      online: n.online === true,
-      laatstGezien: n.lastSeen ?? null,
-      adressen: n.ipAddresses ?? [],
-    }));
+    // Alle apparaten opvragen en zelf filteren. `/node?user=<id>` gaf op onze
+    // Headscale-versie een 500 (6 nov, vier keer in het foutenlogboek) terwijl
+    // `/node` zonder filter gewoon werkt; zo zijn we niet afhankelijk van hoe
+    // een versie dat filter uitlegt.
+    const r = await hs<{ nodes?: HsNode[] }>("GET", "/node");
+    return (r.nodes ?? [])
+      .filter((n) => hoortBij(n, gebruiker))
+      .map((n) => ({
+        id: String(n.id),
+        naam: n.givenName || n.name || `apparaat ${n.id}`,
+        online: n.online === true,
+        laatstGezien: n.lastSeen ?? null,
+        adressen: n.ipAddresses ?? [],
+      }));
   } catch {
     return [];
   }
