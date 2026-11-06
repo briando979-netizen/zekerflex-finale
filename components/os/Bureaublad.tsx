@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tintVanApp as tintVan, type OsApp, type OsKaart, type OsRol, type OsTint } from "@/lib/os/apps";
 import { OS_ACHTERGRONDEN, MAX_VASTGEZET, type OsAchtergrond, type OsInstellingen } from "@/lib/os/instellingen";
-import { OsIcoonVak } from "@/components/os/Iconen";
+import { Tegel } from "@/components/os/Tegel";
 import { Start } from "@/components/os/Start";
 import { Taakbalk } from "@/components/os/Taakbalk";
 import { Venster, MIN_BREEDTE, MIN_HOOGTE, TAAKBALK, type VensterStaat } from "@/components/os/Venster";
@@ -160,6 +160,17 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
     void bewaar({ ...instellingen, vastgezet: vast ? instellingen.vastgezet.filter((x) => x !== id) : [...instellingen.vastgezet, id] });
   }
 
+  /** een app een plek naar voren of naar achteren op het bureaublad */
+  function verplaatsTegel(id: string, richting: -1 | 1) {
+    const lijst = [...instellingen.vastgezet];
+    const i = lijst.indexOf(id);
+    const j = i + richting;
+    if (i < 0 || j < 0 || j >= lijst.length) return;
+    const [x] = lijst.splice(i, 1);
+    if (x) lijst.splice(j, 0, x);
+    void bewaar({ ...instellingen, vastgezet: lijst });
+  }
+
   const tegels = instellingen.vastgezet.map(appVan).filter((a): a is OsApp => Boolean(a));
   const achtergrond = OS_ACHTERGRONDEN[instellingen.achtergrond];
 
@@ -209,17 +220,16 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
         ) : null}
 
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
-          {tegels.map((app) => (
+          {tegels.map((app, i) => (
             <li key={app.id}>
-              <button
-                type="button"
-                onDoubleClick={() => openApp(app)}
-                onClick={() => openApp(app)}
-                className="flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-mint"
-              >
-                <OsIcoonVak icoon={app.icoon} tint={tintVan(app)} maat="groot" />
-                <span className="line-clamp-2 text-xs font-semibold leading-snug text-white/90">{app.naam}</span>
-              </button>
+              <Tegel
+                app={app}
+                eerste={i === 0}
+                laatste={i === tegels.length - 1}
+                onOpen={() => openApp(app)}
+                onVerplaats={(richting) => verplaatsTegel(app.id, richting)}
+                onAfhalen={() => vastzetten(app.id)}
+              />
             </li>
           ))}
           <li>
