@@ -32,8 +32,8 @@ export const KV_RONDGANG = "rondgang:laatste";
 
 /** Vaste routes die zonder login bereikbaar horen te zijn. */
 const PRIVE = ["/admin", "/dashboard", "/werkgever", "/studio", "/sales", "/scherm", "/start", "/berichten", "/kyc", "/verifieer-email", "/terminal", "/i/"];
-/** Uitgezonderd: pagina's die bewust een lege, kleine of bijzondere staat hebben. */
-const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/wachtwoord-herstellen", "/mail/voorkeuren", "/nieuwsbrief/bevestigen", "/nieuwsbrief/afmelden", "/kaart"]);
+/** Uitgezonderd: pagina's die bewust een lege, kleine of bijzondere staat hebben (ook een inlogpoort met alleen een knop). */
+const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/wachtwoord-herstellen", "/mail/voorkeuren", "/nieuwsbrief/bevestigen", "/nieuwsbrief/afmelden", "/kaart", "/voorstel/schwarzwald/beheer"]);
 
 export function openbareRoutes(paginas: readonly { route: string; dynamic: boolean }[] = APP_PAGES): string[] {
   return paginas
