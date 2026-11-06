@@ -310,12 +310,14 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   // Read-only inspection sessions (lib/auth/inspect.ts) may never write.
+  // 423, geen 403: CrowdSec telt een reeks 403's als inbraakpoging en sloot op
+  // 6 nov zo het IP van de eigenaar buiten (elke POST/beacon in de sessie = 403).
   if (!READ_METHODS.has(req.method)) {
     const claims = await decodeSession(sessionToken(req));
     if (claims?.inspect) {
       return NextResponse.json(
         { error: { code: "READ_ONLY", message: "Inspectiemodus is alleen-lezen — hier kan niets worden opgeslagen." } },
-        { status: 403 },
+        { status: 423 },
       );
     }
   }

@@ -43,17 +43,17 @@ describe("read-only inspection links", () => {
     const w = new NextRequest(new URL("https://www.zekerflex.com/api/me/bank-verify"), { method: "POST" });
     w.cookies.set(SESSION_COOKIE, admin);
     w.cookies.set(VIEW_AS_COOKIE, viewAs);
-    expect((await middleware(w)).status).toBe(403);
+    expect((await middleware(w)).status).toBe(423);
     // the admin's own API (e.g. to stop viewing) still works as the admin
     const a = new NextRequest(new URL("https://www.zekerflex.com/api/admin/view-as"), { method: "POST" });
     a.cookies.set(SESSION_COOKIE, admin);
     a.cookies.set(VIEW_AS_COOKIE, viewAs);
-    expect((await middleware(a)).status).not.toBe(403);
+    expect((await middleware(a)).status).not.toBe(423);
     // the public website chat is a visitor action: it works (as the admin), not read-only
     const chat = new NextRequest(new URL("https://www.zekerflex.com/api/chat"), { method: "POST" });
     chat.cookies.set(SESSION_COOKIE, admin);
     chat.cookies.set(VIEW_AS_COOKIE, viewAs);
-    expect((await middleware(chat)).status).not.toBe(403);
+    expect((await middleware(chat)).status).not.toBe(423);
   });
 
   it("refuses every write from an inspection session", async () => {
@@ -61,6 +61,7 @@ describe("read-only inspection links", () => {
     const req = new NextRequest(new URL("https://www.zekerflex.com/api/me/bank-verify"), { method: "POST" });
     req.cookies.set(SESSION_COOKIE, session);
     const res = await middleware(req);
-    expect(res.status).toBe(403);
+    // 423 (alleen-lezen), geen 403: die telt CrowdSec als inbraakpoging
+    expect(res.status).toBe(423);
   });
 });

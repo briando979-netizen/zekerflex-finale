@@ -38,6 +38,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Een CSP hoort bij het document:** wie via een `<Link>` navigeert, houdt de CSP van de eerste pagina. Een versoepeling (bijv. `frame-src 'self'`) dus per hele omgeving zetten (alle `/admin`), niet per losse route (`lib/security/csp.ts`).
 - **Nieuwe openbare API-route** → `lib/auth/public-routes.ts` + `tests/public-routes.test.ts`.
 - **Storingen in Redis/KV mogen inloggen niet blokkeren** (fail-open voor slot/limiet).
+- **Geen 403 voor iets wat een gewone sessie vaak raakt** (alleen-lezen, inspectie): CrowdSec telt een reeks 403's als inbraakpoging en blokkeert het hele IP (ook ssh). Gebruik 423 met een eigen `code`. Testen vanaf een nieuw IP: eerst `cscli allowlists add zekerflex-eigen <ip>`; het IP van de pc van de eigenaar wisselt (mobiel).
 - **Testen met mail of bedrijven:** alleen testadressen; nooit een echte lead. Let op: sendMail houdt alleen `.test`/`.example`/`.invalid`/localhost in de eigen postbus (`isReservedTestAddress`); `@example.com` gaat wél via SMTP (en kaatst terug). En een melding die je code naar een intern adres stuurt (sales@, info@) gaat altijd echt, ook bij een testklant: sla die over voor testadressen (zie `lib/domeinen/bestelling.ts`).
 
 ### Geld
