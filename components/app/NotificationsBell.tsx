@@ -61,6 +61,8 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const [open, setOpen] = useState(false);
   const [seenAt, setSeenAt] = useState(0);
   const [filter, setFilter] = useState<string>("all");
+  // hoeveel px het paneel naar rechts schuift zodat het ook op een telefoon binnen beeld blijft
+  const [shift, setShift] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -148,16 +150,20 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   const panelStyle = dark
     ? { background: "var(--a-panel)", border: "1px solid var(--a-border-strong)", color: "var(--a-text)" }
     : {};
-  const mute = dark ? { color: "var(--a-mute)" } : { color: "#8A93A0" };
-  const borderCol = dark ? "var(--a-border)" : "#E6E7E1";
-  const rowBorder = dark ? "1px solid var(--a-border)" : "1px solid #F0F0EC";
+  // Buiten de beheeromgeving volgen de kleuren de donkere stand van de app (--app-*, zie globals.css);
+  // de lichte waarde is de terugval. Vroeger stonden hier vaste lichte kleuren: in donker onleesbaar.
+  const mute = dark ? { color: "var(--a-mute)" } : { color: "var(--app-fg-faint, #8A93A0)" };
+  const titleStyle = dark ? { color: "var(--a-text)" } : { color: "var(--app-fg, #1A1F27)" };
+  const bodyStyle = dark ? { color: "var(--a-mute)" } : { color: "var(--app-fg-muted, #616B78)" };
+  const borderCol = dark ? "var(--a-border)" : "var(--app-edge, #E6E7E1)";
+  const rowBorder = dark ? "1px solid var(--a-border)" : "1px solid var(--app-edge, #F0F0EC)";
   const openBtnStyle = dark
     ? { background: "var(--a-elev)", border: "1px solid var(--a-border)", color: "var(--a-text)" }
-    : { background: "#EAF7F1", color: "#0E5C4A" };
+    : { background: "var(--app-accent-soft, #EAF7F1)", color: "var(--app-accent-ink, #0E5C4A)" };
   const readBtnStyle = dark
     ? { background: "transparent", border: "1px solid var(--a-border)", color: "var(--a-mute)" }
-    : { background: "transparent", border: "1px solid #E6E7E1", color: "#616B78" };
-  const linkColor = dark ? "var(--a-text)" : "#0E5C4A";
+    : { background: "transparent", border: "1px solid var(--app-edge-strong, #E6E7E1)", color: "var(--app-fg-muted, #616B78)" };
+  const linkColor = dark ? "var(--a-text)" : "var(--app-accent-ink, #0E5C4A)";
 
   const tabClass = (active: boolean) =>
     `flex-shrink-0 whitespace-nowrap border-b-2 px-0.5 pb-2 pt-1 text-sm font-semibold transition ${
@@ -171,7 +177,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
           <span className="text-base leading-none">{ICON[it.kind] ?? "•"}</span>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <span className="flex items-center gap-2 text-sm font-semibold" style={dark ? { color: "var(--a-text)" } : { color: "#1A1F27" }}>
+              <span className="flex items-center gap-2 text-sm font-semibold" style={titleStyle}>
                 <span className="min-w-0">{it.title}</span>
                 {it.urgent && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#f87171]" />}
               </span>
@@ -179,7 +185,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                 {dateLabel(it.at)}
               </span>
             </div>
-            <p className="mt-1 text-sm leading-relaxed" style={dark ? { color: "var(--a-mute)" } : { color: "#616B78" }}>
+            <p className="mt-1 text-sm leading-relaxed" style={bodyStyle}>
               {it.body}
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -218,13 +224,21 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
       <button
         type="button"
         onClick={() => {
+          if (!open) {
+            markSeen();
+            // op een smal scherm zit de bel niet aan de rechterrand: schuif het paneel zo dat het past
+            const r = ref.current?.getBoundingClientRect();
+            const vw = window.innerWidth;
+            const w = Math.min(416, vw - 20);
+            setShift(r ? Math.max(0, 10 - (r.right - w)) : 0);
+          }
           setOpen((v) => !v);
-          if (!open) markSeen();
         }}
+        aria-expanded={open}
         className={
           dark
             ? "relative grid h-9 w-9 place-items-center rounded-xl"
-            : "relative grid h-9 w-9 place-items-center rounded-lg border border-hairstrong text-neutralx-500 hover:text-ink"
+            : "relative grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
         }
         style={dark ? { background: "var(--a-elev)", border: "1px solid var(--a-border)", color: "var(--a-text)" } : {}}
         aria-label="Meldingen"
@@ -234,7 +248,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
           <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
         {unseen > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#f87171] px-1 text-[9px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#f87171] px-1 text-[10px] font-bold leading-none text-white">
             {unseen > 9 ? "9+" : unseen}
           </span>
         )}
@@ -243,7 +257,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
       {open && (
         <div
           className="absolute right-0 top-full z-[60] mt-2 flex max-h-[min(36rem,calc(100dvh-5rem))] w-[min(26rem,calc(100vw-1.25rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
-          style={panelStyle}
+          style={{ ...panelStyle, right: -shift }}
         >
           {/* Koptekst */}
           <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>

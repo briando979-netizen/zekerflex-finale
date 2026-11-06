@@ -779,6 +779,8 @@ body {
   --app-fg-faint: #717784;
   --app-edge: #262B33;
   --app-edge-strong: #343A44;
+  --app-accent-soft: rgb(var(--brand-mint-rgb) / 0.12);
+  --app-accent-ink: rgb(var(--brand-mint-rgb));
 
   color-scheme: dark;
   color: var(--app-fg);
