@@ -101,6 +101,14 @@ services:
   postgres:
     image: postgres:18.6-bookworm
     restart: unless-stopped
+    # init: een klein init-proces is PID 1, niet de postmaster. Zonder dat erft de
+    # postmaster elk `docker exec … psql` (live-zetter, sessies, scripts) als kind;
+    # eindigt zo'n psql met exitcode ≥ 2 (SQL-fout met ON_ERROR_STOP, kapotte pipe),
+    # dan ziet Postgres 17+ dat als een gecrashte backend en herstart hij ALLE
+    # verbindingen ("terminating any other active server processes"; 6 nov, twee keer).
+    init: true
+    # de database als laatste kandidaat voor de OOM-killer (Ollama/next build eerder)
+    oom_score_adj: -900
     environment:
       POSTGRES_USER: zekerflex
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
@@ -175,6 +183,11 @@ services:
   ollama:
     image: ollama/ollama:0.40.13
     restart: unless-stopped
+    # Met "alles gratis" aan laadt Ollama het taalmodel in het geheugen (3,5 GB op
+    # 6 nov). Begrensd, en als eerste kandidaat voor de OOM-killer: liever het model
+    # opnieuw laden dan de database of de app kwijt (6 nov: OOM-kill van llama-server).
+    mem_limit: 4g
+    oom_score_adj: 500
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:
