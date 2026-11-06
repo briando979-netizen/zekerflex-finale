@@ -167,3 +167,40 @@ describe("opgeslagen paskamer", () => {
     expect(leesStand(JSON.stringify({ lichaam: { silhouet: "kind", lengte: 250 } })).lichaam.lengte).toBe(134);
   });
 });
+
+describe("3D-paspop", () => {
+  it("koppelt elke kledingsoort aan een bestaand 3D-onderdeel", async () => {
+    const { stuk3D } = await import("@/lib/shop/paspop3d/kleding");
+    const fs = await import("node:fs");
+    const manifest = JSON.parse(fs.readFileSync("public/paskamer/3d/manifest.json", "utf8")) as { delen: Record<string, unknown> };
+    const soorten = ["tshirt", "overhemd", "blouse", "hoodie", "overshirt", "fleece", "bodywarmer", "softshell", "hesje", "chino", "werkbroek", "thermobroek", "werkschoen", "sneaker", "antislip"] as const;
+    for (const sil of ["heren", "dames", "kind"] as const) {
+      for (const s of soorten) {
+        const d = stuk3D(s, "top", sil);
+        if (d && "deel" in d) expect(manifest.delen[d.deel], `${s}/${sil}`).toBeDefined();
+      }
+    }
+  });
+
+  it("gewichtfactor loopt van slank (-1) tot zwaar (+1)", async () => {
+    const { gewichtFactor } = await import("@/lib/shop/paspop3d/model");
+    expect(gewichtFactor("heren", 23.5)).toBe(0);
+    expect(gewichtFactor("heren", 10)).toBe(-1);
+    expect(gewichtFactor("dames", 60)).toBe(1);
+  });
+
+  it("de gezichtsfoto komt met de ogen op de ogen van het model", async () => {
+    const { gezichtsVlak, FOTO_OGEN } = await import("@/lib/shop/paspop3d/model");
+    const v = gezichtsVlak([0, 7.28, 1.25], [0, 6.16, 1.35]);
+    const top = v.midden[1] + v.maat[1] / 2;
+    expect(top - FOTO_OGEN * v.maat[1]).toBeCloseTo(7.28, 5);
+    expect(v.maat[0]).toBeCloseTo(v.maat[1] * 0.8, 5);
+  });
+
+  it("de opgeslagen stand kent haar met veilige standaardwaarden", async () => {
+    const { leesStand } = await import("@/components/marketing/paskamer/usePaskamer");
+    const s = leesStand(JSON.stringify({ lichaam: { silhouet: "dames" }, haar: "raar", haarKleur: "rood" }));
+    expect(s.haar).toBe("staart");
+    expect(s.haarKleur).toBe("#3b2a1f");
+  });
+});

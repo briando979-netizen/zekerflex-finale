@@ -1,0 +1,4 @@
+De 3D-onderdelen in deze map (lichaam, vormen, huid, haar, ogen, kleding, schoenen) zijn afgeleid van MakeHuman.
+Die bestanden zijn uitgebracht onder CC0 1.0 Universal (publiek domein): https://creativecommons.org/publicdomain/zero/1.0/
+Bron: https://github.com/makehumancommunity/makehuman en makehuman_system_assets_cc0.zip (makehumancommunity.org).
+Gebouwd met scripts/paskamer/bouw-3d.mjs.

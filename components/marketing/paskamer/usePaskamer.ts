@@ -13,10 +13,10 @@ const KEY = "zf_paskamer_v1";
 const EVT = "zf-paskamer";
 
 export type Aan = { productId: string; maat: string | null; kleur: string | null };
-export type PaskamerStand = { lichaam: Lichaam; huid: string; gezicht: string | null; aan: Aan[] };
+export type PaskamerStand = { lichaam: Lichaam; huid: string; gezicht: string | null; aan: Aan[]; haar: "kort" | "staart" | "bob" | "geen"; haarKleur: string };
 
 export const HUIDKLEUREN = ["#f3d3bd", "#e8b896", "#d9a989", "#c58c6a", "#a86f4c", "#8d5a3b", "#6b4330", "#4a2e22"] as const;
-export const STANDAARD_STAND: PaskamerStand = { lichaam: STANDAARD_LICHAAM.heren, huid: "#d9a989", gezicht: null, aan: [] };
+export const STANDAARD_STAND: PaskamerStand = { lichaam: STANDAARD_LICHAAM.heren, huid: "#d9a989", gezicht: null, aan: [], haar: "kort", haarKleur: "#3b2a1f" };
 
 const getal = (v: unknown, min: number, max: number): number | null => (typeof v === "number" && Number.isFinite(v) && v >= min && v <= max ? v : null);
 const uit = <T extends string>(v: unknown, opties: readonly T[], standaard: T): T => (opties.includes(v as T) ? (v as T) : standaard);
@@ -48,7 +48,9 @@ export function leesStand(raw: string | null): PaskamerStand {
           .slice(0, 20)
           .map((a) => ({ productId: String(a.productId), maat: typeof a.maat === "string" ? a.maat : null, kleur: typeof a.kleur === "string" ? a.kleur : null }))
       : [];
-    return { lichaam, huid, gezicht, aan };
+    const haar = uit(d.haar, ["kort", "staart", "bob", "geen"] as const, silhouet === "dames" ? "staart" : "kort");
+    const haarKleur = typeof d.haarKleur === "string" && /^#[0-9a-f]{6}$/i.test(d.haarKleur) ? d.haarKleur : STANDAARD_STAND.haarKleur;
+    return { lichaam, huid, gezicht, aan, haar, haarKleur };
   } catch {
     return STANDAARD_STAND;
   }

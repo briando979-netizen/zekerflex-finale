@@ -9,7 +9,15 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { bySize, shopMoney } from "@/components/marketing/shop-product";
+import dynamic from "next/dynamic";
 import { Paspop } from "@/components/marketing/paskamer/Paspop";
+import type { Paspop3DHandle } from "@/components/marketing/paskamer/Paspop3D";
+import type { Stand3D } from "@/components/marketing/paskamer/paskamer3d";
+import { HAARKLEUREN, basisKleding, huidTextuur, ruimteFactor, stuk3D } from "@/lib/shop/paspop3d/kleding";
+import { gewichtFactor } from "@/lib/shop/paspop3d/model";
+
+// three.js en het 3D-model laden pas als dit onderdeel in beeld komt
+const Paspop3D = dynamic(() => import("@/components/marketing/paskamer/Paspop3D").then((m) => m.Paspop3D), { ssr: false });
 import { FotoBijsnijden } from "@/components/marketing/paskamer/FotoBijsnijden";
 import { HUIDKLEUREN, usePaskamer, type Aan, type PaskamerStand } from "@/components/marketing/paskamer/usePaskamer";
 import {
@@ -75,6 +83,45 @@ function teken(items: Item[]): Gedragen[] {
 
 const centen = (c: number) => shopMoney(c / 100);
 
+/** De stand van de 3D-paspop: lichaam, huid, haar en de gedragen onderdelen (met basiskleding waar niets gekozen is). */
+function maak3D(stand: PaskamerStand, items: Item[]): Stand3D {
+  const l = stand.lichaam;
+  const sil = l.silhouet;
+  const hoogte = l.lengte / 100;
+  const bmi = l.gewicht && l.gewicht > 15 ? l.gewicht / (hoogte * hoogte) : sil === "kind" ? { slank: 15, gemiddeld: 17, stevig: 20.5 }[l.bouw] : { slank: 20, gemiddeld: 23.5, stevig: 29 }[l.bouw];
+  const kleding: Stand3D["kleding"] = [];
+  const extra: Stand3D["extra"] = [];
+  for (const it of items) {
+    for (const s of it.prod.pasvorm.stukken) {
+      const kleur = s.kleur ?? kleurHex(it.kleur) ?? it.prod.pasvorm.kleur;
+      const d = stuk3D(s.soort, s.slot, sil);
+      if (!d) continue;
+      if ("extra" in d) extra.push({ soort: d.extra, kleur });
+      else kleding.push({ deel: d.deel, kleur: d.kleurbaar ? kleur : "#ffffff", ruimte: d.ruimte + ruimteFactor(it.advies.ruimte), laag: d.laag });
+    }
+  }
+  const heeft = (re: RegExp) => kleding.some((k) => re.test(k.deel));
+  for (const b of basisKleding(sil)) {
+    const broek = /^broek/.test(b.deel);
+    const schoen = /sneaker|schoen/.test(b.deel);
+    const aanwezig = broek ? heeft(/^broek/) : schoen ? heeft(/schoen|sneaker/) : heeft(/^(shirt|overhemd|blouse|lang|jas)/);
+    if (!aanwezig) kleding.push({ deel: b.deel, kleur: b.kleur, ruimte: 0, laag: b.laag });
+  }
+  return {
+    silhouet: sil,
+    lengte: l.lengte,
+    gewicht: gewichtFactor(sil, bmi),
+    huidTextuur: huidTextuur(stand.huid, sil),
+    huidKleur: stand.gezicht ? stand.huid : null,
+    gezicht: stand.gezicht,
+    haar: stand.haar,
+    haarKleur: stand.haarKleur,
+    oogKleur: "bruin",
+    kleding,
+    extra,
+  };
+}
+
 export function Paskamer({ producten, looks, start, startLook = null }: { producten: PaskamerProduct[]; looks: Look[]; start: string | null; startLook?: string | null }) {
   const t = useT();
   const p = t.paskamer;
@@ -86,6 +133,9 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
   const [melding, setMelding] = useState("");
   const [kanDelen, setKanDelen] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const drieD = useRef<Paspop3DHandle | null>(null);
+  const [vlak, setVlak] = useState(false); // true: 3D niet beschikbaar, dan de tekening
+  const [draait, setDraait] = useState(true);
   const startGedaan = useRef(false);
 
   const perId = useMemo(() => new Map(producten.map((x) => [x.id, x])), [producten]);
@@ -143,9 +193,10 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
 
   const bewaar = async (delen: boolean) => {
     const svg = svgRef.current;
-    if (!svg) return;
+    const drie = drieD.current;
+    if (!svg && !drie) return;
     try {
-      const blob = await svgNaarPng(svg);
+      const blob = drie ? await (await fetch(drie.foto())).blob() : await svgNaarPng(svg as SVGSVGElement);
       const bestandsnaam = "mijn-zekerflex-look.png";
       const file = new File([blob], bestandsnaam, { type: "image/png" });
       if (delen && navigator.canShare?.({ files: [file] })) {
@@ -183,8 +234,29 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
           <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:sticky lg:top-[92px] lg:h-[calc(100vh-112px)] lg:max-h-[900px]">
             {/* de achtergrond zit op het vak (over de volle breedte); bij opslaan als foto komt hij in de tekening */}
             <div className={`absolute inset-0 pt-2 ${items.length > 0 ? "pb-[72px]" : "pb-2"}`}>
-              <Paspop svgRef={svgRef} lichaam={l} huid={stand.huid} gezicht={stand.gezicht} stukken={teken(items)} label={label} id="pk" achtergrond={false} className="h-full w-full" />
+              {vlak ? (
+                <Paspop svgRef={svgRef} lichaam={l} huid={stand.huid} gezicht={stand.gezicht} stukken={teken(items)} label={label} id="pk" achtergrond={false} className="h-full w-full" />
+              ) : (
+                <Paspop3D stand={maak3D(stand, items)} label={label} handle={drieD} onFout={() => setVlak(true)} />
+              )}
             </div>
+            {!vlak && (
+              <div className="absolute right-3 top-3 flex flex-col gap-1.5" role="group" aria-label={p.draaiLabel}>
+                {([["voor", 0], ["zij", Math.PI / 2], ["achter", Math.PI]] as const).map(([n, h]) => (
+                  <button key={n} type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(h))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                    {n === "voor" ? p.kantVoor : n === "zij" ? p.kantZij : p.kantAchter}
+                  </button>
+                ))}
+                <button type="button" aria-pressed={draait} onClick={() => (setDraait(!draait), drieD.current?.draaien(!draait))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                  {draait ? p.stopDraaien : p.autoDraai}
+                </button>
+                {stand.gezicht && (
+                  <button type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(0), drieD.current?.inzoomen(true))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                    {p.inzoomGezicht}
+                  </button>
+                )}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setTab("jij")}
@@ -583,6 +655,15 @@ function JijPaneel({
 
       <Blok titel={p.voorkeur}>
         <Segment<Voorkeur> waarde={l.voorkeur} opties={[["nauw", p.nauw], ["normaal", p.normaal], ["ruim", p.ruim]]} onKies={(voorkeur) => zetL({ voorkeur })} label={p.voorkeur} />
+      </Blok>
+
+      <Blok titel={p.haarTitel}>
+        <Segment<PaskamerStand["haar"]> waarde={stand.haar} opties={[["kort", p.haarKort], ["staart", p.haarStaart], ["bob", p.haarBob], ["geen", p.haarGeen]]} onKies={(haar) => zet((s) => ({ ...s, haar }))} label={p.haarTitel} />
+        <div role="group" aria-label={p.haarKleurLabel} className="mt-3 flex flex-wrap gap-2">
+          {HAARKLEUREN.map((k) => (
+            <button key={k} type="button" aria-label={k} aria-pressed={stand.haarKleur === k} onClick={() => zet((s) => ({ ...s, haarKleur: k }))} className={`h-8 w-8 rounded-full border-2 ${stand.haarKleur === k ? "border-brand-500 ring-2 ring-brand-500/30" : "border-white shadow-e1"}`} style={{ background: k }} />
+          ))}
+        </div>
       </Blok>
 
       <Blok titel={p.huid}>
