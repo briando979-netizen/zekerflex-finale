@@ -70,6 +70,11 @@ vi.mock("@/lib/sales/suppression", () => ({
 vi.mock("@/lib/sales/discovery/kvkbase", () => ({
   discoverViaKvkBase: vi.fn().mockResolvedValue({ created: 0, seen: 0, queries: [], skipped: 0 }),
 }));
+vi.mock("@/lib/sales/discovery/bedrijven", () => ({
+  discoverBedrijven: vi
+    .fn()
+    .mockResolvedValue({ bron: "openstreetmap", created: 0, seen: 0, queries: [], skipped: 0 }),
+}));
 vi.mock("@/lib/sales/discovery/careers", () => ({
   crawlCareersSource: vi.fn().mockResolvedValue({ created: 0, updated: 0, pagesFetched: 0, blockedByRobots: 0, emailFound: null, vacancySignal: null, companyName: null }),
 }));

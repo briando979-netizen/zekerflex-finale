@@ -14,7 +14,7 @@ import {
   globalSendCountToday,
   withinSendWindow,
 } from "@/lib/sales/campaign";
-import { discoverViaKvkBase } from "@/lib/sales/discovery/kvkbase";
+import { discoverBedrijven } from "@/lib/sales/discovery/bedrijven";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
@@ -147,16 +147,17 @@ async function runDiscovery(campaign: SalesCampaign, force: boolean, errors: str
     where: { campaignId: campaign.id, enabled: true },
   });
 
-  // Implicit KVKBase discovery when the campaign targets sectors but has no
-  // explicit KVKBASE source.
+  // Bedrijven zoeken zodra de campagne sectoren noemt en er geen eigen bron is
+  // ingesteld. Welke bron dat wordt (onze eigen of de betaalde) staat in
+  // Admin → Alles gratis; zie lib/sales/discovery/bedrijven.ts.
   const hasKvkSource = sources.some((s) => s.kind === "KVKBASE");
   if (!hasKvkSource && campaign.targetSectors.length) {
     const key = `sales:disc:kvk:${campaign.id}`;
     if (force || !(await redis.get(key).catch(() => null))) {
       const r = await safe(
-        "kvkbase-discovery",
-        () => discoverViaKvkBase(campaign),
-        { created: 0, seen: 0, queries: [], skipped: 0 },
+        "bedrijven-discovery",
+        () => discoverBedrijven(campaign),
+        { bron: "openstreetmap" as const, created: 0, seen: 0, queries: [], skipped: 0 },
         errors,
       );
       discovered += r.created;
@@ -173,9 +174,9 @@ async function runDiscovery(campaign: SalesCampaign, force: boolean, errors: str
 
     if (source.kind === "KVKBASE") {
       const r = await safe(
-        `kvkbase-source:${source.id}`,
-        () => discoverViaKvkBase(campaign),
-        { created: 0, seen: 0, queries: [], skipped: 0 },
+        `bedrijven-source:${source.id}`,
+        () => discoverBedrijven(campaign),
+        { bron: "openstreetmap" as const, created: 0, seen: 0, queries: [], skipped: 0 },
         errors,
       );
       discovered += r.created;
