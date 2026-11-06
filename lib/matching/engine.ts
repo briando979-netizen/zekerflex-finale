@@ -382,11 +382,11 @@ async function autoAssign(
       where: { shiftId: shift.id, cancelledAt: null },
     });
     if (taken >= shift.positions) {
-      throw AppError.conflict("Shift filled before auto-assignment committed");
+      throw AppError.conflict("De dienst was al vol voordat de automatische toewijzing rond was.");
     }
     // The candidate pool skips busy workers, but they may have taken another shift since.
     const overlap = await findOverlappingShift(tx, freelancerId, { shiftId: shift.id, startsAt: shift.startsAt, endsAt: shift.endsAt });
-    if (overlap) throw AppError.conflict("Freelancer took an overlapping shift before auto-assignment committed");
+    if (overlap) throw AppError.conflict("De kracht nam intussen een overlappende dienst aan.");
 
     const assignment = await tx.shiftAssignment.create({
       data: {

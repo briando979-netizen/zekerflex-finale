@@ -74,7 +74,7 @@ export async function createSession(
     logger.error("didit create-session transport error", {
       error: (err as Error).message,
     });
-    throw AppError.upstream("Didit is temporarily unreachable");
+    throw AppError.upstream("De identiteitscontrole (Didit) is tijdelijk niet bereikbaar.");
   }
 
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -135,10 +135,10 @@ export async function getDecision(sessionId: string): Promise<DiditDecision> {
     logger.error("didit get-decision transport error", {
       error: (err as Error).message,
     });
-    throw AppError.upstream("Didit is temporarily unreachable");
+    throw AppError.upstream("De identiteitscontrole (Didit) is tijdelijk niet bereikbaar.");
   }
 
-  if (res.status === 404) throw AppError.notFound("Unknown Didit session");
+  if (res.status === 404) throw AppError.notFound("Onbekende verificatiesessie.");
   if (!res.ok) throw AppError.upstream(`Didit responded ${res.status}`);
 
   const data = (await res.json()) as Record<string, unknown>;

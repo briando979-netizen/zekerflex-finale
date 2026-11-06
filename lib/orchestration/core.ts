@@ -314,7 +314,7 @@ export interface FindingResolution {
 
 export async function resolveFinding(id: string, res: FindingResolution) {
   const finding = await prisma.orchestrationFinding.findUnique({ where: { id } });
-  if (!finding) throw AppError.notFound("Finding not found");
+  if (!finding) throw AppError.notFound("Bevinding niet gevonden.");
 
   const statusMap = {
     acknowledge: "ACKNOWLEDGED",

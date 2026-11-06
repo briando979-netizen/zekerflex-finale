@@ -65,7 +65,7 @@ export async function draftOutreach(
   stepIndex = 0,
 ) {
   const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
-  if (!lead) throw AppError.notFound("Sales lead not found");
+  if (!lead) throw AppError.notFound("Lead niet gevonden.");
 
   const step = Math.max(0, Math.min(OUTREACH_STEP_SYSTEM.length - 1, stepIndex));
   const system = OUTREACH_STEP_SYSTEM[step] ?? OUTREACH_SYSTEM;
@@ -147,7 +147,7 @@ export async function editOutreach(
   actorUserId: string,
 ) {
   const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
-  if (!outreach) throw AppError.notFound("Outreach not found");
+  if (!outreach) throw AppError.notFound("Outreach niet gevonden.");
   if (outreach.status !== "DRAFT") {
     throw AppError.precondition("Alleen concepten kunnen worden bewerkt");
   }
@@ -177,7 +177,7 @@ export async function editOutreach(
 
 export async function approveOutreach(id: string, actorUserId: string | null) {
   const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
-  if (!outreach) throw AppError.notFound("Outreach not found");
+  if (!outreach) throw AppError.notFound("Outreach niet gevonden.");
   if (outreach.status !== "DRAFT") {
     throw AppError.precondition("Alleen een concept kan worden goedgekeurd");
   }
@@ -207,7 +207,7 @@ export async function approveOutreach(id: string, actorUserId: string | null) {
 /** Drop a draft/approved/scheduled outreach without sending it. */
 export async function discardOutreach(id: string, actorUserId: string | null) {
   const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
-  if (!outreach) throw AppError.notFound("Outreach not found");
+  if (!outreach) throw AppError.notFound("Outreach niet gevonden.");
   if (["SENT"].includes(outreach.status)) {
     throw AppError.precondition("Een verzonden mail kan niet worden weggegooid");
   }
@@ -230,7 +230,7 @@ export async function discardOutreach(id: string, actorUserId: string | null) {
 /** Record that a human sent this outreach. The platform never sends mail. */
 export async function markOutreachSent(id: string, actorUserId: string) {
   const outreach = await prisma.salesOutreach.findUnique({ where: { id } });
-  if (!outreach) throw AppError.notFound("Outreach not found");
+  if (!outreach) throw AppError.notFound("Outreach niet gevonden.");
   if (outreach.status !== "APPROVED") {
     throw AppError.precondition(
       "Alleen goedgekeurde outreach kan als verzonden worden gemarkeerd",

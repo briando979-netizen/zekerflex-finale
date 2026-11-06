@@ -118,7 +118,7 @@ export async function recordGpsEvent(
     throw AppError.conflict("Je bent al ingecheckt voor deze dienst.");
   }
   if (input.type !== GpsEventType.CHECK_IN && !hasCheckIn) {
-    throw AppError.precondition("Check in before sending heartbeats or checking out");
+    throw AppError.precondition("Check eerst in voordat je uitcheckt.");
   }
   if (input.type === GpsEventType.CHECK_OUT && hasCheckOut) {
     throw AppError.conflict("Je bent al uitgecheckt voor deze dienst.");

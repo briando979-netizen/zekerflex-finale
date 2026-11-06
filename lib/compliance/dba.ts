@@ -271,7 +271,7 @@ export async function evaluateDbaCompliance(
     where: { id: branchId },
     select: { id: true, tenantId: true },
   });
-  if (!branch) throw AppError.notFound("Branch not found");
+  if (!branch) throw AppError.notFound("Vestiging niet gevonden.");
 
   const entries = await collectApprovedWork(freelancerId, window);
   const metrics = computeMetrics(entries, {

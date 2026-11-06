@@ -7,7 +7,7 @@ let client: Stripe | null = null;
 /** Lazily constructed so a missing key fails at call time, not at import time. */
 export function getStripeClient(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
-    throw AppError.upstream("Stripe is not configured");
+    throw AppError.upstream("Stripe is nog niet ingericht.");
   }
   if (!client) {
     client = new Stripe(env.STRIPE_SECRET_KEY);
@@ -37,7 +37,7 @@ export async function createInvoiceCheckoutSession(
   input: InvoiceCheckoutInput,
 ): Promise<Stripe.Checkout.Session> {
   if (input.totalCents <= 0) {
-    throw AppError.validation("Invoice total must be positive to collect payment");
+    throw AppError.validation("Het factuurbedrag moet groter dan 0 zijn om te kunnen innen.");
   }
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
@@ -84,7 +84,7 @@ export async function createBulkInvoiceCheckoutSession(
     throw AppError.validation("Geen facturen geselecteerd");
   }
   if (input.invoices.some((i) => i.totalCents <= 0)) {
-    throw AppError.validation("Invoice total must be positive to collect payment");
+    throw AppError.validation("Het factuurbedrag moet groter dan 0 zijn om te kunnen innen.");
   }
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
@@ -130,7 +130,7 @@ export async function createSubscriptionCheckoutSession(
   input: SubscriptionCheckoutInput,
 ): Promise<Stripe.Checkout.Session> {
   if (input.priceCentsPerMonth <= 0) {
-    throw AppError.validation("Subscription price must be positive to collect payment");
+    throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
   }
   const stripe = getStripeClient();
 
@@ -175,7 +175,7 @@ export async function createWebsiteManagementCheckoutSession(
   input: WebsiteManagementCheckoutInput,
 ): Promise<Stripe.Checkout.Session> {
   if (input.priceCentsPerMonth <= 0) {
-    throw AppError.validation("Subscription price must be positive to collect payment");
+    throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
   }
   const stripe = getStripeClient();
   const metadata = { managedWebsiteTenantId: input.tenantId, websitePlan: input.plan };
@@ -221,7 +221,7 @@ export interface NetwerkCheckoutInput {
  * activeerNetwerkModule.
  */
 export async function createNetwerkCheckoutSession(input: NetwerkCheckoutInput): Promise<Stripe.Checkout.Session> {
-  if (input.unitAmountCents <= 0) throw AppError.validation("Subscription price must be positive to collect payment");
+  if (input.unitAmountCents <= 0) throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
   const stripe = getStripeClient();
   const metadata = {
     netwerkTenantId: input.tenantId,
@@ -491,7 +491,7 @@ export async function createBankTopupSession(input: {
 /** Verifies the Stripe signature and returns the parsed event. Throws on a bad signature. */
 export function constructWebhookEvent(rawBody: string, signature: string): Stripe.Event {
   if (!env.STRIPE_WEBHOOK_SECRET) {
-    throw AppError.upstream("Stripe webhook secret is not configured");
+    throw AppError.upstream("Het Stripe-webhook-secret is niet ingesteld.");
   }
   const stripe = getStripeClient();
   return stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET);

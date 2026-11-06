@@ -45,7 +45,7 @@ export async function triggerInstantPayout(
   req: SepaInstantPayoutRequest,
 ): Promise<SepaInstantPayoutResult> {
   if (req.amountCents <= 0) {
-    throw AppError.validation("Payout amount must be positive");
+    throw AppError.validation("Het uit te betalen bedrag moet groter dan 0 zijn.");
   }
 
   if (req.stripeConnectedAccountId) {
@@ -67,15 +67,15 @@ export async function triggerInstantPayout(
         endToEndId: req.endToEndId,
         error: (err as Error).message,
       });
-      throw AppError.paymentFailed("Could not transfer via Stripe Connect");
+      throw AppError.paymentFailed("De overboeking via Stripe lukte niet.");
     }
   }
 
   if (!isValidIban(req.creditorIban)) {
-    throw AppError.validation("Creditor IBAN failed checksum validation");
+    throw AppError.validation("Het IBAN van de ontvanger klopt niet (controlegetal).");
   }
   if (!env.SEPA_API_BASE_URL || !env.SEPA_API_KEY || !env.SEPA_CREDITOR_IBAN) {
-    throw AppError.upstream("Instant SEPA provider is not configured");
+    throw AppError.upstream("Directe SEPA-uitbetaling is nog niet ingericht.");
   }
 
   const payload = {
@@ -105,7 +105,7 @@ export async function triggerInstantPayout(
       endToEndId: req.endToEndId,
       error: (err as Error).message,
     });
-    throw AppError.paymentFailed("Could not reach the payment provider");
+    throw AppError.paymentFailed("De betaaldienst is nu niet bereikbaar.");
   }
 
   if (res.status === 409) {

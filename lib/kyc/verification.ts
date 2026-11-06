@@ -36,7 +36,7 @@ export async function startFreelancerKyc(
   freelancerProfileId: string,
 ): Promise<StartKycResult> {
   if (!isDiditEnabled()) {
-    throw AppError.upstream("KYC verification is not configured");
+    throw AppError.upstream("Identiteitscontrole is nog niet ingericht.");
   }
 
   const fp = await prisma.freelancerProfile.findUnique({

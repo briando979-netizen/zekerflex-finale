@@ -343,12 +343,12 @@ export function extractJson<T>(text: string): T {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = (fenced?.[1] ?? text).trim();
   const start = candidate.search(/[{[]/);
-  if (start === -1) throw AppError.upstream("LLM did not return JSON");
+  if (start === -1) throw AppError.upstream("Het taalmodel gaf geen JSON terug.");
   const end = Math.max(candidate.lastIndexOf("}"), candidate.lastIndexOf("]"));
   try {
     return JSON.parse(candidate.slice(start, end + 1)) as T;
   } catch {
-    throw AppError.upstream("LLM returned malformed JSON");
+    throw AppError.upstream("Het taalmodel gaf onleesbare JSON terug.");
   }
 }
 

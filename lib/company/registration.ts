@@ -221,7 +221,7 @@ export async function registerTenantCompany(
     where: { id: input.tenantId },
     select: { id: true },
   });
-  if (!tenant) throw AppError.notFound("Organization not found");
+  if (!tenant) throw AppError.notFound("Organisatie niet gevonden.");
 
   const profile = await lookupCompany(input.kvkNumber, { enrich: true });
   const validation = validateCompanyProfile(profile);

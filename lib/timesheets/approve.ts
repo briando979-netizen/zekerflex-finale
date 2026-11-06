@@ -264,7 +264,7 @@ async function approveTimesheetInner(
       select: { id: true },
     });
     if (!platformTenant) {
-      throw AppError.precondition("Platform tenant is not configured");
+      throw AppError.precondition("De platformorganisatie is niet ingesteld.");
     }
 
     const payoutGate = evaluatePayoutGate({
@@ -553,7 +553,7 @@ async function approveViaPayroll(args: {
     select: { id: true },
   });
   if (!platformTenant) {
-    throw AppError.precondition("Platform tenant is not configured");
+    throw AppError.precondition("De platformorganisatie is niet ingesteld.");
   }
 
   // The opslag agreed with this client (falls back to the default rate).

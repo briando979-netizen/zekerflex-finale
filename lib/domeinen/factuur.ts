@@ -27,7 +27,7 @@ export interface DomeinFactuurInvoer {
 
 async function platformTenantId(): Promise<string> {
   const t = await prisma.tenant.findFirst({ where: { type: "PLATFORM" }, select: { id: true } });
-  if (!t) throw AppError.precondition("Platform tenant is not configured");
+  if (!t) throw AppError.precondition("De platformorganisatie is niet ingesteld.");
   return t.id;
 }
 

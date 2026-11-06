@@ -64,7 +64,7 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
       path,
       error: (err as Error).message,
     });
-    throw AppError.upstream("KVKBase is temporarily unreachable");
+    throw AppError.upstream("De KVK-dienst is tijdelijk niet bereikbaar.");
   }
 
   if (res.ok) return (await res.json()) as T;
@@ -79,7 +79,7 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
     case 401:
     case 403:
       logger.error("kvkbase auth rejected", { code });
-      throw AppError.upstream("KVKBase rejected the API credentials");
+      throw AppError.upstream("De KVK-dienst weigert de sleutel van ZekerFlex.");
     case 404:
       throw AppError.notFound("Geen inschrijving gevonden voor dit KVK-nummer.");
     case 402:

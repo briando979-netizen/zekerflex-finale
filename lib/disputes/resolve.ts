@@ -38,7 +38,7 @@ export async function resolveDispute(
     where: { id: input.disputeId },
     include: { timesheet: { include: { branch: { select: { tenantId: true } } } } },
   });
-  if (!dispute) throw AppError.notFound("Dispute not found");
+  if (!dispute) throw AppError.notFound("Geschil niet gevonden.");
 
   assertBranchAccess(
     input.principal,
@@ -50,7 +50,7 @@ export async function resolveDispute(
     dispute.status === DisputeStatus.RESOLVED_APPROVED ||
     dispute.status === DisputeStatus.RESOLVED_OVERRULED
   ) {
-    throw AppError.conflict("Dispute is already resolved");
+    throw AppError.conflict("Dit geschil is al afgehandeld.");
   }
 
   let resolvedMinutes: number;
@@ -60,7 +60,7 @@ export async function resolveDispute(
     status = DisputeStatus.RESOLVED_APPROVED;
   } else {
     if (input.resolvedMinutes === undefined || input.resolvedMinutes < 0) {
-      throw AppError.validation("OVERRULE requires a non-negative resolvedMinutes");
+      throw AppError.validation("Bij overrulen horen vastgestelde minuten (0 of meer).");
     }
     if (input.resolvedMinutes > dispute.claimedMinutes) {
       throw AppError.validation(

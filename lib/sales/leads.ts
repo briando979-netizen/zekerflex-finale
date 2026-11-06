@@ -112,7 +112,7 @@ export async function getLead(id: string) {
     where: { id },
     include: { outreach: { orderBy: { createdAt: "desc" } } },
   });
-  if (!lead) throw AppError.notFound("Sales lead not found");
+  if (!lead) throw AppError.notFound("Lead niet gevonden.");
   return lead;
 }
 
@@ -167,7 +167,7 @@ function heuristicScore(sector: string | null, sbiCodes: string[]): {
 /** Enrich a lead from the Handelsregister when it carries a KVK number. */
 export async function enrichLead(id: string, actorUserId: string | null) {
   const lead = await prisma.salesLead.findUnique({ where: { id } });
-  if (!lead) throw AppError.notFound("Sales lead not found");
+  if (!lead) throw AppError.notFound("Lead niet gevonden.");
   if (!lead.kvkNumber || !isKvkBaseEnabled()) {
     return lead;
   }
@@ -204,7 +204,7 @@ export async function enrichLead(id: string, actorUserId: string | null) {
 /** Score a lead's fit (LLM, heuristic fallback). */
 export async function scoreLead(id: string, actorUserId: string | null) {
   const lead = await prisma.salesLead.findUnique({ where: { id } });
-  if (!lead) throw AppError.notFound("Sales lead not found");
+  if (!lead) throw AppError.notFound("Lead niet gevonden.");
 
   const enrichment = (lead.enrichmentJson ?? {}) as {
     sbiCodes?: string[];
