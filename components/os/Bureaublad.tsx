@@ -170,7 +170,9 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">ZekerFlex OS</p>
           <h1 className="mt-1 font-display text-2xl font-bold text-white">Hallo {naam}</h1>
           <p className="mt-1 text-sm text-white/55">
-            {rol === "admin" ? "Je beheert het hele platform." : rol === "werkgever" ? "Alles voor je bedrijf op één plek." : "Alles voor je werk op één plek."} Klik op een app, of druk op Ctrl + K.
+            {rol === "admin" ? "Je beheert het hele platform." : rol === "werkgever" ? "Alles voor je bedrijf op één plek." : "Alles voor je werk op één plek."}{" "}
+            {/* de sneltoets alleen noemen waar een toetsenbord is */}
+            {smal ? "Tik op een app om te beginnen." : "Klik op een app, of druk op Ctrl + K."}
           </p>
         </header>
 

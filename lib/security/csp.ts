@@ -29,6 +29,22 @@ const SITE_ORIGIN = (() => {
   }
 })();
 
+/**
+ * De herkomst van het BI-dashboard (METABASE_PUBLIC_URL), of leeg als BI niet
+ * is ingericht. Werkgever → Rapportages en Admin → Rapportages tonen dat
+ * dashboard in een frame; zonder deze regel blokkeert de CSP het stil.
+ */
+const BI_ORIGIN = (() => {
+  const ruw = (process.env.METABASE_PUBLIC_URL ?? "").trim();
+  if (!ruw) return "";
+  try {
+    const { origin, protocol } = new URL(ruw);
+    return protocol === "https:" ? origin : "";
+  } catch {
+    return "";
+  }
+})();
+
 /** 16 random bytes, base64 — safe for a CSP nonce and an HTTP header value. */
 export function generateNonce(): string {
   const bytes = new Uint8Array(16);
@@ -129,11 +145,13 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   const admin = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
   // ZekerFlex OS (/os) toont elke app in een frame van de eigen site.
   const os = pathname === "/os" || (pathname?.startsWith("/os/") ?? false);
+  // het ingebedde BI-dashboard (Rapportages) staat op een eigen host
+  const bi = BI_ORIGIN ? ` ${BI_ORIGIN}` : "";
   const frameSrc = studio
     ? "frame-src 'self' blob: https:"
     : admin || os
-      ? "frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com"
-      : "frame-src https://js.stripe.com https://www.youtube-nocookie.com";
+      ? `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}`
+      : `frame-src https://js.stripe.com https://www.youtube-nocookie.com${bi}`;
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";
