@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { storeUpload } from "@/lib/storage/local";
+import { veiligUploadType } from "@/lib/storage/validate";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
@@ -28,9 +29,11 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   }
   const bytes = Buffer.from(await file.arrayBuffer());
 
+  // Het type komt uit de bytes zelf, niet uit wat de browser meestuurt: een
+  // HTML- of SVG-bestand mag nooit als zodanig vanaf ons domein terugkomen.
   const stored = await storeUpload({
     filename: file.name || "bestand",
-    mimeType: file.type || "application/octet-stream",
+    mimeType: veiligUploadType(bytes, file.type),
     bytes,
     uploadedById: principal.userId,
   });

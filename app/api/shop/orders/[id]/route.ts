@@ -6,6 +6,9 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell, mailButton } from "@/lib/mail";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonError } from "@/lib/http/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,8 +66,21 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
 // tracking page (app/shop/bestelling/[id]). No auth: /shop checkout is
 // guest-only, so the unguessable cuid id is what scopes access — only the
 // fields a customer needs to see are returned, never the full admin record.
-export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   const { id } = await props.params;
+  // De volgpagina vraagt elke 8 s (ruim 70 per 10 min); dit houdt het raden van
+  // bestelnummers tegen zonder een echte klant te hinderen.
+  try {
+    await enforceRateLimit({
+      name: "shop-order-status",
+      identifier: clientIp(req),
+      limit: 240,
+      windowSeconds: 600,
+      message: "Te veel aanvragen vanaf dit adres, probeer het over enkele minuten opnieuw.",
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
   const order = await prisma.shopOrder.findUnique({
     where: { id },
     select: {

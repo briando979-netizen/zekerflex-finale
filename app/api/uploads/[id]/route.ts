@@ -15,8 +15,10 @@ export const GET = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_r
   return new Response(new Uint8Array(file.bytes), {
     headers: {
       "Content-Type": file.mimeType,
-      "Content-Disposition": `inline; filename="${encodeURIComponent(file.filename)}"`,
+      // Alleen beeld en PDF tonen we in de browser; de rest komt als download.
+      "Content-Disposition": `${file.mimeType.startsWith("image/") || file.mimeType === "application/pdf" ? "inline" : "attachment"}; filename="${encodeURIComponent(file.filename)}"`,
       "Cache-Control": "private, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 });
