@@ -12,6 +12,8 @@ H="--header=x-internal-token: ${INTERNAL_CRON_TOKEN}"
 mkdir -p /etc/crontabs
 cat > /etc/crontabs/root <<EOF
 0 3 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/matching/tick"
+# Nachtelijke rondgang langs elke openbare pagina; wat kapot is komt in het foutenlogboek (lib/ops/rondgang.ts).
+20 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rondgang"
 0 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/active-hours/recompute"
 0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/orchestration/tick"
 # RAG twee keer per dag (de route zegt "elke ~12 uur"): valt één run weg door een uitrol, dan blijft de hartslag (26 u) toch vers
