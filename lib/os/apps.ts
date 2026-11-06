@@ -94,7 +94,8 @@ const WERKER_APPS: OsApp[] = [
   { id: "w-klussen", naam: "Klussen zoeken", uitleg: "Diensten bij jou in de buurt die bij je vak passen.", href: "/dashboard/klussen", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["ontdekken", "vacatures", "werk", "markt"] },
   { id: "w-diensten", naam: "Mijn klussen", uitleg: "Wat je hebt aangenomen, van vandaag tot volgende maand.", href: "/dashboard/diensten", icoon: "agenda", categorie: "werk", rollen: WERKER, zoek: ["geaccepteerd", "planning"] },
   { id: "w-uren", naam: "Uren", uitleg: "Uren indienen en volgen tot ze zijn goedgekeurd.", href: "/dashboard/uren", icoon: "uren", categorie: "werk", rollen: WERKER },
-  { id: "w-inchecken", naam: "Inchecken", uitleg: "Op locatie in- en uitchecken met je telefoon.", href: "/dashboard/inchecken", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["gps", "checkin"] },
+  // w-inchecken (/dashboard/inchecken) en b-planner (/werkgever/planner) staan uit tot hun pagina's op main staan:
+  // het werk van sessie 03 (lib/checkin, lib/planner) is nooit gecommit, dus de knoppen wezen naar een 404.
   { id: "w-beschikbaarheid", naam: "Beschikbaarheid", uitleg: "Wanneer je kunt werken, per dag en dagdeel.", href: "/dashboard/beschikbaarheid", icoon: "agenda", categorie: "planning", rollen: WERKER },
   { id: "w-agenda", naam: "Agenda-koppeling", uitleg: "Je diensten in je eigen agenda-app.", href: "/dashboard/agenda-koppeling", icoon: "agenda", categorie: "planning", rollen: WERKER, zoek: ["ical", "google agenda"] },
   { id: "w-favorieten", naam: "Favoriete opdrachtgevers", uitleg: "Volg bedrijven en hoor het als ze werk plaatsen.", href: "/dashboard/favorieten", icoon: "ster", categorie: "werk", rollen: WERKER },
@@ -126,7 +127,6 @@ const WERKGEVER_APPS: OsApp[] = [
   { id: "b-start", naam: "Startscherm", uitleg: "Je dag in één oogopslag.", href: "/werkgever", icoon: "bedrijf", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["dashboard", "overzicht"] },
   { id: "b-diensten", naam: "Klussen plaatsen", uitleg: "Een dienst uitzetten en reacties bekijken.", href: "/werkgever/diensten", icoon: "werk", categorie: "werk", rollen: WERKGEVER, zoek: ["vacature", "dienst", "inhuren"] },
   { id: "b-kalender", naam: "Kalender", uitleg: "Wie wanneer werkt, per vestiging.", href: "/werkgever/kalender", icoon: "agenda", categorie: "planning", rollen: WERKGEVER, zoek: ["rooster"] },
-  { id: "b-planner", naam: "Planner", uitleg: "Diensten slim inplannen en verdelen.", href: "/werkgever/planner", icoon: "agenda", categorie: "planning", rollen: WERKGEVER, zoek: ["rooster", "planning"] },
   { id: "b-agenda", naam: "Agenda", uitleg: "Afspraken en koppeling met je eigen agenda.", href: "/werkgever/agenda", icoon: "agenda", categorie: "planning", rollen: WERKGEVER },
   { id: "b-uren", naam: "Uren goedkeuren", uitleg: "Ingediende uren nakijken en akkoord geven.", href: "/werkgever/uren", icoon: "uren", categorie: "werk", rollen: WERKGEVER },
   { id: "b-team", naam: "Team", uitleg: "Collega's en managers met hun rechten.", href: "/werkgever/team", icoon: "mensen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["collega", "gebruikers"] },
