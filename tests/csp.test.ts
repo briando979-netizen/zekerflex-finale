@@ -36,10 +36,12 @@ describe("buildContentSecurityPolicy — production", () => {
     expect(csp).toContain("manifest-src 'self'");
   });
 
-  it("only allows Stripe's iframe and YouTube's privacy-mode player by default; never 'self' framing outside the studio", () => {
+  it("allows the own site, Stripe's iframe and YouTube's privacy-mode player by default; blob:/https: only in the studio", () => {
     const frameSrc = csp.split("; ").find((d) => d.startsWith("frame-src"))!;
-    expect(frameSrc).toBe("frame-src https://js.stripe.com https://www.youtube-nocookie.com");
-    expect(frameSrc).not.toContain("'self'");
+    // 'self' on every document: the CSP belongs to the first document, and whoever logs in on
+    // /login and lands in /admin keeps it (6 Nov: the Site-ontwerper preview was blocked).
+    expect(frameSrc).toBe("frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com");
+    expect(frameSrc).not.toContain("blob:");
     expect(frameSrc).not.toContain("https://www.youtube.com"); // only the no-cookie host
   });
 
@@ -79,14 +81,14 @@ describe("buildContentSecurityPolicy — ZekerFlex AI studio (scoped relaxations
     expect(csp).toContain("https://js.stripe.com");
   });
 
-  it("every admin page may frame same-origin pages: the Site-ontwerper preview is reached by client-side navigation, and the CSP stays the one of the first admin page", () => {
-    for (const pathname of ["/admin", "/admin/cockpit", "/admin/huisstijl", "/admin/ontwerper"]) {
+  it("every document may frame same-origin pages: the Site-ontwerper preview is reached by client-side navigation (also from /login), and the CSP stays the one of the first document", () => {
+    for (const pathname of ["/admin", "/admin/cockpit", "/admin/huisstijl", "/admin/ontwerper", "/login", "/administratie", "/"]) {
       const frameSrc = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname }).split("; ").find((d) => d.startsWith("frame-src"))!;
       expect(frameSrc, pathname).toBe("frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com");
     }
-    // a public page that merely starts with "/admin" is not an admin page
+    // the studio's wider policy (blob:, https:) stays scoped to the studio
     const pub = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/administratie" }).split("; ").find((d) => d.startsWith("frame-src"))!;
-    expect(pub).not.toContain("'self'");
+    expect(pub).not.toContain("blob:");
   });
 });
 
