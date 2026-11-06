@@ -33,13 +33,13 @@ export class AppError extends Error {
     this.details = details;
   }
 
-  static unauthenticated(message = "Authentication required") {
+  static unauthenticated(message = "Je bent niet (meer) ingelogd. Log opnieuw in.") {
     return new AppError("UNAUTHENTICATED", message, 401);
   }
-  static forbidden(message = "Not allowed") {
+  static forbidden(message = "Dit mag je niet doen.") {
     return new AppError("FORBIDDEN", message, 403);
   }
-  static notFound(message = "Resource not found") {
+  static notFound(message = "Niet gevonden.") {
     return new AppError("NOT_FOUND", message, 404);
   }
   static validation(message: string, details?: unknown) {
@@ -136,7 +136,7 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
       body: {
         error: {
           code: "VALIDATION_FAILED",
-          message: "Request validation failed",
+          message: "Niet alle gegevens zijn goed ingevuld. Controleer je invoer.",
           details: err.flatten ? err.flatten() : err.issues,
         },
       },
@@ -152,7 +152,7 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
   }
   return {
     status: 500,
-    body: { error: { code: "INTERNAL", message: "Unexpected server error" } },
+    body: { error: { code: "INTERNAL", message: "Er ging iets mis aan onze kant. Probeer het later opnieuw." } },
     headers: {},
   };
 }

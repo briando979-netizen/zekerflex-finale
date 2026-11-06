@@ -39,7 +39,7 @@ export async function PUT(request: Request): Promise<Response> {
     await ensureFreelancer(p.userId);
     const { enabled } = schema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Body must be JSON");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
       }),
     );
     await setPassportPublic(p.userId, enabled);

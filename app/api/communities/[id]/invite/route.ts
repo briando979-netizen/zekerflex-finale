@@ -23,7 +23,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     if (!c || !isMember(c, p.userId)) throw AppError.notFound("Community niet gevonden");
     if (!canManage(c, p.userId)) throw AppError.forbidden("Alleen beheerders kunnen uitnodigen.");
     const input = inviteSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
 
     const invite = await inviteToCommunity(
@@ -60,7 +60,7 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
   try {
     const p = await requirePrincipal();
     const { token } = acceptSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
     const c = await acceptInvite(params.id, token, p.userId);
     if (!c) throw AppError.validation("Uitnodiging ongeldig of verlopen.");

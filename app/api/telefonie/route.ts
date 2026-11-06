@@ -49,7 +49,7 @@ const cancelSchema = z.object({ action: z.literal("cancel"), scope: z.enum(["bed
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     });
     if (body?.action === "cancel") {
       const input = cancelSchema.parse(body);

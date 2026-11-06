@@ -24,7 +24,7 @@ export async function POST(_request: Request, props: { params: Promise<{ shiftId
     const parsed = paramsSchema.safeParse(params);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: { code: "VALIDATION_FAILED", message: "Invalid shift id" } },
+        { error: { code: "VALIDATION_FAILED", message: "Onbekende dienst." } },
         { status: 422 },
       );
     }

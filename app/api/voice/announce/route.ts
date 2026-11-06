@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const json = await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     });
     const parsed = bodySchema.parse(json);
 
@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(
       row
         ? { ok: true, id: row.id, text: row.text }
-        : { ok: false, reason: "voice disabled" },
+        : { ok: false, reason: "Spraak staat uit." },
       { status: row ? 201 : 200 },
     );
   } catch (err) {

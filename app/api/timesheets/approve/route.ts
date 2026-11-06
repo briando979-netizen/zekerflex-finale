@@ -34,11 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
 
     const json = await request.json().catch(() => {
-      throw AppError.validation("Request body must be valid JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     });
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
-      throw AppError.validation("Invalid request body", parsed.error.flatten());
+      throw AppError.validation("Niet alle gegevens zijn goed ingevuld.", parsed.error.flatten());
     }
 
     const result = await approveTimesheet({

@@ -28,7 +28,7 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
     const { shiftId } = paramsSchema.parse(params);
     const { decision } = bodySchema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Body must be valid JSON");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
       }),
     );
 
@@ -36,7 +36,7 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.forbidden("No freelancer profile for this user");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     const result = await recordOfferResponse(shiftId, profile.id, decision);
     if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));

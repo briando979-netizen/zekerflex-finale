@@ -29,7 +29,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         vatValid: true,
       },
     });
-    if (!profile) throw AppError.forbidden("No freelancer profile for this user");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     const latest = await prisma.identityVerification.findFirst({
       where: { userId: principal.userId, provider: "DIDIT" },

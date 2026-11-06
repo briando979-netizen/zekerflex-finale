@@ -52,7 +52,7 @@ async function rateGate(request: Request): Promise<RateResult> {
 async function handle(request: Request): Promise<Response> {
   const gate = await rateGate(request);
   if (!gate.ok) {
-    return new Response(JSON.stringify({ errors: [{ message: "Too many requests" }] }), {
+    return new Response(JSON.stringify({ errors: [{ message: "Te veel verzoeken. Probeer het straks opnieuw." }] }), {
       status: 429,
       headers: { "content-type": "application/json", "Retry-After": String(gate.retryAfterSeconds || 60), ...rateLimitHeaders(gate) },
     });

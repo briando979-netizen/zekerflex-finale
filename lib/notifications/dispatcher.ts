@@ -399,10 +399,10 @@ export async function recordOfferResponse(
       (match.status !== MatchStatus.NOTIFIED &&
         match.status !== MatchStatus.VIEWED)
     ) {
-      throw AppError.conflict("This offer is no longer open");
+      throw AppError.conflict("Dit aanbod staat niet meer open.");
     }
     if (match.expiresAt && match.expiresAt.getTime() < Date.now()) {
-      throw AppError.precondition("This offer has expired");
+      throw AppError.precondition("Dit aanbod is verlopen.");
     }
 
     const shift = await tx.shift.findUniqueOrThrow({
@@ -416,7 +416,7 @@ export async function recordOfferResponse(
       where: { shiftId, cancelledAt: null },
     });
     if (taken >= shift.positions) {
-      throw AppError.conflict("This shift is already fully staffed");
+      throw AppError.conflict("Deze dienst is al vol.");
     }
     // Not on two shifts at once (the offer may predate another booking).
     const overlap = await findOverlappingShift(tx, freelancerId, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt });

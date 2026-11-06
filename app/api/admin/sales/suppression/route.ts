@@ -18,7 +18,7 @@ const postSchema = z.object({
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const { email, reason } = postSchema.parse(json);
   await addSuppression(email, reason, principal.userId);
@@ -29,7 +29,7 @@ const deleteSchema = z.object({ email: z.string().trim().email() });
 
 export const DELETE = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const { email } = deleteSchema.parse(json);
   await removeSuppression(email, principal.userId);

@@ -169,7 +169,7 @@ export async function registerFreelancerCompany(
     where: { id: input.freelancerProfileId },
     select: { id: true, vatNumber: true },
   });
-  if (!fp) throw AppError.notFound("Freelancer profile not found");
+  if (!fp) throw AppError.notFound("Werkersprofiel niet gevonden.");
 
   const profile = await lookupCompany(input.kvkNumber, { enrich: true });
   const validation = validateCompanyProfile(profile);

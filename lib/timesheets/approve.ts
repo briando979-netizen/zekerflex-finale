@@ -143,7 +143,7 @@ async function approveTimesheetInner(
   const log = logger.child({ timesheetId, module: "timesheet-approve" });
 
   const unlock = await acquireLock(`timesheet:approve:${timesheetId}`, 20_000);
-  if (!unlock) throw AppError.conflict("Approval already in progress");
+  if (!unlock) throw AppError.conflict("Goedkeuren is al bezig.");
 
   try {
     const ts = await prisma.timesheet.findUnique({
@@ -155,7 +155,7 @@ async function approveTimesheetInner(
         freelancer: { include: { user: true } },
       },
     });
-    if (!ts) throw AppError.notFound("Timesheet not found");
+    if (!ts) throw AppError.notFound("Urenbriefje niet gevonden.");
 
     assertBranchAccess(principal, ts.branchId, ts.branch.tenantId);
 
@@ -194,7 +194,7 @@ async function approveTimesheetInner(
       input.correctedBillableMinutes ??
       (ts.billableMinutes > 0 ? ts.billableMinutes : computeBillableMinutes(ts));
     if (billableMinutes <= 0) {
-      throw AppError.validation("Billable minutes must be positive");
+      throw AppError.validation("Het aantal uren moet groter dan 0 zijn.");
     }
 
     // --- Fraude-/fouten-detectie -------------------------------------

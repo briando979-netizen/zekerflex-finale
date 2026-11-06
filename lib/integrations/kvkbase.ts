@@ -81,7 +81,7 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
       logger.error("kvkbase auth rejected", { code });
       throw AppError.upstream("KVKBase rejected the API credentials");
     case 404:
-      throw AppError.notFound("No Handelsregister entry for this KVK number");
+      throw AppError.notFound("Geen inschrijving gevonden voor dit KVK-nummer.");
     case 402:
     case 429:
       throw AppError.upstream(

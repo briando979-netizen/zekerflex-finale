@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // stop mass account creation from one source; captcha when the owner enabled it
     await throttleIp(request, { name: "register", limit: 10, windowSeconds: 3600, message: "Te veel aanmeldingen vanaf dit adres. Probeer het later opnieuw." });
     const json = (await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     })) as { captcha?: string };
     if (!(await verifyCaptcha(json.captcha, clientIp(request)))) {
       throw AppError.validation("De beveiligingscheck is niet gelukt. Ververs de pagina en probeer opnieuw.");

@@ -33,7 +33,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   const params = Object.fromEntries(new URL(request.url).searchParams);
   const parsed = querySchema.safeParse(params);
   if (!parsed.success) {
-    throw AppError.validation("Invalid query", parsed.error.flatten());
+    throw AppError.validation("Ongeldige zoekopdracht.", parsed.error.flatten());
   }
   const q = parsed.data;
 

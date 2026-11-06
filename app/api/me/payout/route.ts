@@ -60,7 +60,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const { speed, acceptTerms: accepting } = putSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
     // 1 minuut / 3 dagen = ZekerFlex neemt je vordering over: only with the
     // overdrachtsvoorwaarden accepted (once per terms version, recorded).
@@ -83,7 +83,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const { amountCents } = advanceSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
 
     // The cap check (outstandingAdvanceCents vs. maxAdvanceCents) reads then

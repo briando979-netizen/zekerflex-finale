@@ -99,9 +99,9 @@ export async function recordGpsEvent(
       dispute: { select: { id: true } },
     },
   });
-  if (!ts) throw AppError.notFound("Timesheet not found");
+  if (!ts) throw AppError.notFound("Urenbriefje niet gevonden.");
   if (ts.freelancerId !== input.freelancerProfileId) {
-    throw AppError.forbidden("This timesheet belongs to another freelancer");
+    throw AppError.forbidden("Dit urenbriefje is van een andere werker.");
   }
   if (ts.status !== TimesheetStatus.DRAFT) {
     throw AppError.precondition(
@@ -115,13 +115,13 @@ export async function recordGpsEvent(
   );
 
   if (input.type === GpsEventType.CHECK_IN && hasCheckIn) {
-    throw AppError.conflict("Already checked in for this shift");
+    throw AppError.conflict("Je bent al ingecheckt voor deze dienst.");
   }
   if (input.type !== GpsEventType.CHECK_IN && !hasCheckIn) {
     throw AppError.precondition("Check in before sending heartbeats or checking out");
   }
   if (input.type === GpsEventType.CHECK_OUT && hasCheckOut) {
-    throw AppError.conflict("Already checked out for this shift");
+    throw AppError.conflict("Je bent al uitgecheckt voor deze dienst.");
   }
 
   const recordedAt = resolveRecordedAt(input.recordedAt);

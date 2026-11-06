@@ -136,7 +136,7 @@ describe("getPrincipal — DB is authoritative over stale JWT claims", () => {
     const p = await getPrincipal();
     expect(hasRole(p!, "PLATFORM_ADMIN")).toBe(false);
     expect(hasRole(p!, "HQ_ADMIN")).toBe(false);
-    expect(() => assertOrganizationAccess(p!, "org_never")).toThrow(/No membership/);
+    expect(() => assertOrganizationAccess(p!, "org_never")).toThrow(/niet bij deze organisatie/);
     expect(() => requireRole(p!, "PLATFORM_ADMIN")).toThrow();
   });
 
@@ -156,7 +156,7 @@ describe("getPrincipal — DB is authoritative over stale JWT claims", () => {
     });
     const p = await getPrincipal();
     expect(p!.grants).toEqual([]);
-    expect(() => assertOrganizationAccess(p!, "org_a")).toThrow(/No membership/);
+    expect(() => assertOrganizationAccess(p!, "org_a")).toThrow(/niet bij deze organisatie/);
   });
 });
 
@@ -176,7 +176,7 @@ function principal(overrides: Partial<Principal>): Principal {
 describe("requireRole / hasRole", () => {
   it("throws forbidden when the principal has none of the required roles", () => {
     const p = principal({ grants: [{ role: "FREELANCER", organizationId: "org_a", locationIds: [] }] });
-    expect(() => requireRole(p, "PLATFORM_ADMIN")).toThrow(/Requires one of/);
+    expect(() => requireRole(p, "PLATFORM_ADMIN")).toThrow(/niet de juiste rechten/);
   });
 
   it("does not throw when the principal has one of the required roles", () => {
@@ -188,7 +188,7 @@ describe("requireRole / hasRole", () => {
 describe("assertOrganizationAccess — cross-tenant guard", () => {
   it("blocks access to an organization the principal has no membership in", () => {
     const p = principal({ grants: [{ role: "HQ_ADMIN", organizationId: "org_a", locationIds: [] }] });
-    expect(() => assertOrganizationAccess(p, "org_b")).toThrow(/No membership/);
+    expect(() => assertOrganizationAccess(p, "org_b")).toThrow(/niet bij deze organisatie/);
   });
 
   it("allows access to an organization the principal belongs to", () => {
@@ -207,7 +207,7 @@ describe("assertBranchAccess — location scoping", () => {
     const p = principal({
       grants: [{ role: "LOCAL_MANAGER", organizationId: "org_a", locationIds: ["branch_ams"] }],
     });
-    expect(() => assertBranchAccess(p, "branch_utr", "org_a")).toThrow(/No access to this location/);
+    expect(() => assertBranchAccess(p, "branch_utr", "org_a")).toThrow(/geen toegang tot deze vestiging/);
   });
 
   it("allows a LOCAL_MANAGER access to a branch explicitly in their grant", () => {
@@ -228,7 +228,7 @@ describe("assertBranchAccess — location scoping", () => {
     const p = principal({
       grants: [{ role: "LOCAL_MANAGER", organizationId: "org_a", locationIds: ["branch_ams"] }],
     });
-    expect(() => assertBranchAccess(p, "branch_ams", "org_b")).toThrow(/No membership/);
+    expect(() => assertBranchAccess(p, "branch_ams", "org_b")).toThrow(/niet bij deze organisatie/);
   });
 
   it("HQ_ADMIN of the org may access any of its branches without an explicit grant", () => {
@@ -243,6 +243,6 @@ describe("assertBranchAccess — location scoping", () => {
 
   it("a FREELANCER grant (no admin role) is never sufficient for branch access", () => {
     const p = principal({ grants: [{ role: "FREELANCER", organizationId: "org_a", locationIds: [] }] });
-    expect(() => assertBranchAccess(p, "branch_x", "org_a")).toThrow(/No access to this location/);
+    expect(() => assertBranchAccess(p, "branch_x", "org_a")).toThrow(/geen toegang tot deze vestiging/);
   });
 });

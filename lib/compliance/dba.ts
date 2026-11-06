@@ -355,7 +355,7 @@ export async function assertFreelancerMatchable(
     where: { id: freelancerId },
     select: { matchingBlockedUntil: true, isBlacklisted: true, blacklistReason: true },
   });
-  if (!profile) throw AppError.notFound("Freelancer profile not found");
+  if (!profile) throw AppError.notFound("Werkersprofiel niet gevonden.");
 
   if (profile.isBlacklisted) {
     throw AppError.complianceBlocked(

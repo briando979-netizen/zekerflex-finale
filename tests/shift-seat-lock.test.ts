@@ -146,7 +146,7 @@ describe("recordOfferResponse — last-seat race", () => {
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
-      message: expect.stringContaining("fully staffed"),
+      message: expect.stringContaining("al vol"),
     });
   });
 

@@ -44,7 +44,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");
     const input = putSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
 
     const patch: Partial<FiscalProfile> = {};

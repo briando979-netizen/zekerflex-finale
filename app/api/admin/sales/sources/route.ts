@@ -26,7 +26,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) throw AppError.validation("Ongeldige bron", parsed.error.flatten());
@@ -59,7 +59,7 @@ const deleteSchema = z.object({ id: z.string().min(1).max(128) });
 
 export const DELETE = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const { id } = deleteSchema.parse(json);
   await prisma.salesDiscoverySource.delete({ where: { id } }).catch(() => undefined);

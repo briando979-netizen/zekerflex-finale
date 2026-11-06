@@ -22,7 +22,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
     Object.fromEntries(new URL(request.url).searchParams),
   );
   if (!parsed.success) {
-    throw AppError.validation("Invalid query", parsed.error.flatten());
+    throw AppError.validation("Ongeldige zoekopdracht.", parsed.error.flatten());
   }
   const { q, types, limit } = parsed.data;
   const sourceTypes = types

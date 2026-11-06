@@ -29,7 +29,7 @@ const patchSchema = z.discriminatedUnion("action", [
 export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
   const { id } = paramsSchema.parse(params);
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = patchSchema.parse(json);
 

@@ -164,7 +164,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     }
     const input = sendSchema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Body must be JSON");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
       }),
     );
 

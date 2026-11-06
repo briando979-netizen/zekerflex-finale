@@ -46,7 +46,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
 
     const { decision, note } = schema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
 
     const updated = await decideClaim(params.id, decision, p.userId, note);

@@ -24,7 +24,7 @@ export async function buildContext(): Promise<GraphQLContext> {
 
 function requireRoles(ctx: GraphQLContext, ...roles: UserRole[]): Principal {
   if (!ctx.principal) {
-    throw new GraphQLError("Authentication required", {
+    throw new GraphQLError("Je bent niet ingelogd.", {
       extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
     });
   }

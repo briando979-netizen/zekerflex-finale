@@ -18,13 +18,13 @@ export const GET = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_r
 
   if (!isServerTtsEnabled()) {
     return NextResponse.json(
-      { error: { code: "PRECONDITION_FAILED", message: "Server TTS (Piper) not configured" } },
+      { error: { code: "PRECONDITION_FAILED", message: "Spraak (Piper) is niet ingesteld op de server." } },
       { status: 501 },
     );
   }
 
   const row = await prisma.voiceAnnouncement.findUnique({ where: { id } });
-  if (!row) throw AppError.notFound("Announcement not found");
+  if (!row) throw AppError.notFound("Omroepbericht niet gevonden.");
 
   const wav = await synthesize(row.text);
   return new Response(new Uint8Array(wav), {

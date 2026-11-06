@@ -33,7 +33,7 @@ export async function POST(): Promise<NextResponse> {
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.forbidden("No freelancer profile for this user");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     const result = await startFreelancerKyc(profile.id);
     return NextResponse.json(result);

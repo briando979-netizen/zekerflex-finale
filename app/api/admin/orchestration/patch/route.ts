@@ -17,7 +17,7 @@ const bodySchema = z.object({
 // The code advisor: returns a PROPOSED diff + rationale. Never writes anything.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = bodySchema.parse(json);
 

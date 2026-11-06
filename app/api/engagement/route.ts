@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.notFound("No freelancer profile");
+    if (!profile) throw AppError.notFound("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     await recordEngagement(profile.id, kind);
     return NextResponse.json({ ok: true, kind });

@@ -25,7 +25,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {

@@ -15,7 +15,7 @@ const bodySchema = z.object({
 // POST /api/admin/rag/ask - answer a question from the local total memory.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const { question } = bodySchema.parse(json);
 

@@ -86,7 +86,7 @@ export function hasRole(p: Principal, ...roles: UserRole[]): boolean {
 
 export function requireRole(p: Principal, ...roles: UserRole[]): void {
   if (!hasRole(p, ...roles)) {
-    throw AppError.forbidden(`Requires one of: ${roles.join(", ")}`);
+    throw AppError.forbidden(`Je account heeft hiervoor niet de juiste rechten (nodig: ${roles.join(", ")}).`);
   }
 }
 
@@ -97,7 +97,7 @@ export function requireRole(p: Principal, ...roles: UserRole[]): void {
 export function assertOrganizationAccess(p: Principal, organizationId: string): void {
   if (hasRole(p, "PLATFORM_ADMIN")) return;
   if (!p.grants.some((g) => g.organizationId === organizationId)) {
-    throw AppError.forbidden("No membership for this organization");
+    throw AppError.forbidden("Je hoort niet bij deze organisatie.");
   }
 }
 
@@ -118,7 +118,7 @@ export function assertBranchAccess(
 
   const orgGrants = p.grants.filter((g) => g.organizationId === tenantId);
   if (orgGrants.length === 0) {
-    throw AppError.forbidden("No membership for this organization");
+    throw AppError.forbidden("Je hoort niet bij deze organisatie.");
   }
 
   for (const g of orgGrants) {
@@ -128,7 +128,7 @@ export function assertBranchAccess(
       if (g.locationIds.includes(branchId)) return;
     }
   }
-  throw AppError.forbidden("No access to this location");
+  throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
 }
 
 /** Alias using the platform's public vocabulary. */

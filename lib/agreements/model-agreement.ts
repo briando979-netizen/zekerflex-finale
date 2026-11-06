@@ -241,7 +241,7 @@ export async function signModelAgreement(
     const agreement = await tx.modelAgreement.findUnique({
       where: { id: agreementId },
     });
-    if (!agreement) throw AppError.notFound("Model agreement not found");
+    if (!agreement) throw AppError.notFound("Modelovereenkomst niet gevonden.");
     if (
       agreement.status === ModelAgreementStatus.DECLINED ||
       agreement.status === ModelAgreementStatus.SUPERSEDED ||

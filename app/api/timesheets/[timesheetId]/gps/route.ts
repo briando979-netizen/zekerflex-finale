@@ -38,7 +38,7 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     const { timesheetId } = paramsSchema.parse(params);
     const body = bodySchema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Body must be valid JSON");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
       }),
     );
 
@@ -46,7 +46,7 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.forbidden("No freelancer profile for this user");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     const result = await recordGpsEvent({
       timesheetId,

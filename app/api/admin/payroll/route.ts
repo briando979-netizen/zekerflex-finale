@@ -29,7 +29,7 @@ const bodySchema = z.object({
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const { isoWeek, action } = bodySchema.parse(
     await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }),
   );
 

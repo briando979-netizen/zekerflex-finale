@@ -23,7 +23,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const input = schema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
     const profile = await saveUserProfileExtra(p.userId, {
       ...(input.headline !== undefined ? { headline: input.headline } : {}),

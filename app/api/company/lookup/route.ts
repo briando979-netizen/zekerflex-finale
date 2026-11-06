@@ -21,7 +21,7 @@ const querySchema = z
       .optional()
       .transform((v) => v === "true" || v === "1"),
   })
-  .refine((v) => v.kvk || v.q, { message: "Provide `kvk` or `q`" });
+  .refine((v) => v.kvk || v.q, { message: "Vul een KVK-nummer of bedrijfsnaam in." });
 
 /**
  * GET /api/company/lookup?kvk=12345678[&enrich=true]  -> Handelsregister profile
@@ -35,7 +35,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     await requirePrincipal();
 
     if (!isKvkBaseEnabled()) {
-      throw AppError.upstream("Company lookup is not configured");
+      throw AppError.upstream("Bedrijven opzoeken is nu niet beschikbaar.");
     }
 
     const { searchParams } = new URL(request.url);
@@ -45,7 +45,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       enrich: searchParams.get("enrich") ?? undefined,
     });
     if (!parsed.success) {
-      throw AppError.validation("Invalid query", parsed.error.flatten());
+      throw AppError.validation("Ongeldige zoekopdracht.", parsed.error.flatten());
     }
 
     if (parsed.data.kvk) {

@@ -32,21 +32,21 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
     const json = await request.json().catch(() => {
-      throw AppError.validation("Body must be valid JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     });
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
-      throw AppError.validation("Invalid request body", parsed.error.flatten());
+      throw AppError.validation("Niet alle gegevens zijn goed ingevuld.", parsed.error.flatten());
     }
     const { kvkNumber, target } = parsed.data;
 
     if (target === "organization") {
       const organizationId = parsed.data.organizationId;
       if (!organizationId) {
-        throw AppError.validation("organizationId is required for target=organization");
+        throw AppError.validation("Kies eerst de organisatie.");
       }
       if (!hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN")) {
-        throw AppError.forbidden("Requires HQ_ADMIN or PLATFORM_ADMIN");
+        throw AppError.forbidden("Alleen een beheerder van het hoofdkantoor kan dit doen.");
       }
       assertOrganizationAccess(principal, organizationId);
       const result = await registerTenantCompany({ tenantId: organizationId, kvkNumber });
@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.forbidden("No freelancer profile for this user");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     const result = await registerFreelancerCompany({
       freelancerProfileId: profile.id,

@@ -4,11 +4,11 @@ import { Section, SectionHead } from "@/components/marketing/primitives";
 import { canonical, CONTACTS, SITE } from "@/lib/seo";
 import { PLAN_KEYS, API_PLANS } from "@/lib/api-plans/catalog";
 
-const euro = (cents: number) => `€${(cents / 100).toFixed(0)}`;
+const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 
-const TITLE = "Developers — ZekerFlex API";
+const TITLE = "Ontwikkelaars — de ZekerFlex-API";
 const DESCRIPTION =
-  "ZekerFlex public REST API and GraphQL endpoint: read open shifts and approved timesheets, create shifts, and register webhooks. OpenAPI spec, authentication and example requests.";
+  "De openbare REST-API en het GraphQL-endpoint van ZekerFlex: open diensten en goedgekeurde uren lezen, diensten aanmaken en webhooks registreren. Met OpenAPI-specificatie, uitleg over sleutels en voorbeelden.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -29,50 +29,48 @@ export default function DevelopersPage() {
     <>
       <div className="hero-ink text-white">
         <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint">Developers</p>
+          <p className="eyebrow text-brand-mint">Ontwikkelaars</p>
           <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
-            Build on {SITE.name}
+            Bouw op {SITE.name}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            A REST API for shifts, timesheets and webhooks, plus a read-mostly GraphQL endpoint. Both run
-            against the same data as the dashboard — nothing here is a separate sandbox.
+            Een REST-API voor diensten, urenbriefjes en webhooks, plus een GraphQL-endpoint (vooral lezen). Beide werken op
+            dezelfde gegevens als het dashboard; er is geen aparte testomgeving.
           </p>
         </div>
       </div>
 
       <Section tone="paper">
-        <SectionHead eyebrow="Reference" title="OpenAPI spec" />
+        <SectionHead eyebrow="Naslag" title="OpenAPI-specificatie" />
         <p className="mt-4 max-w-2xl text-[1.05rem] leading-relaxed text-neutralx-600">
-          The full machine-readable spec — every endpoint, request/response schema and error shape — is
-          published at{" "}
+          De volledige machineleesbare specificatie, met elk endpoint, elk schema en het foutformaat, staat op{" "}
           <a href="/openapi.json" className="font-semibold text-brand-700 hover:underline">
             {SITE.url}/openapi.json
           </a>
-          . Point any OpenAPI-aware tool (Postman, an LLM function-calling layer, a codegen client) at it
-          directly.
+          . Je kunt er elke OpenAPI-tool rechtstreeks op aansluiten (Postman, een AI-koppeling, een codegenerator).
         </p>
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Authentication" title="API keys" />
+        <SectionHead eyebrow="Toegang" title="API-sleutels" />
         <div className="mt-4 max-w-2xl space-y-3 text-[1.05rem] leading-relaxed text-neutralx-600">
           <p>
-            Every request needs an API key, either as a Bearer token or an <code>x-api-key</code> header:
+            Elk verzoek heeft een API-sleutel nodig, als Bearer-token of in de header <code>x-api-key</code>:
           </p>
         </div>
         <Code>{`Authorization: Bearer zf_live_...
-# or
+# of
 x-api-key: zf_live_...`}</Code>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutralx-600">
-          Keys are scoped (<code>shifts:read</code>, <code>shifts:write</code>, <code>timesheets:read</code>,{" "}
-          <code>webhooks:manage</code>, <code>invoices:read</code>, <code>users:read</code>) and rate-limited
-          per your plan (see pricing below) — every response carries <code>RateLimit-Limit</code>,{" "}
-          <code>RateLimit-Remaining</code> and <code>RateLimit-Reset</code> headers so you can self-throttle
-          before hitting a 429. Logged-in employers create and manage their own keys at{" "}
+          Sleutels hebben vaste rechten (<code>shifts:read</code>, <code>shifts:write</code>, <code>timesheets:read</code>,{" "}
+          <code>webhooks:manage</code>, <code>invoices:read</code>, <code>users:read</code>) en een limiet per abonnement (zie
+          de prijzen hieronder). Elk antwoord bevat de headers <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code> en{" "}
+          <code>RateLimit-Reset</code>, zodat je zelf kunt afremmen vóór een 429. Ingelogde werkgevers maken en beheren hun
+          sleutels zelf op{" "}
           <Link href="/werkgever/integraties" className="font-semibold text-brand-700 hover:underline">
             /werkgever/integraties
-          </Link>{" "}
-          — no need to email anyone for the Free tier. Need Scale-level volume? Talk to{" "}
+          </Link>
+          ; voor Gratis hoef je niemand te mailen. Meer volume nodig dan Scale? Mail{" "}
           <a href={`mailto:${CONTACTS.partners}`} className="font-semibold text-brand-700 hover:underline">
             {CONTACTS.partners}
           </a>
@@ -82,7 +80,7 @@ x-api-key: zf_live_...`}</Code>
 
       <Section tone="soft">
         <div id="pricing" className="scroll-mt-24" />
-        <SectionHead eyebrow="Pricing" title="Plans" />
+        <SectionHead eyebrow="Prijzen" title="Abonnementen" />
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLAN_KEYS.map((key) => {
             const plan = API_PLANS[key];
@@ -90,23 +88,19 @@ x-api-key: zf_live_...`}</Code>
               <div key={key} className="card p-5">
                 <p className="font-display text-base font-bold text-ink">{plan.label}</p>
                 <p className="mt-1 text-xl font-bold text-ink">
-                  {plan.priceCentsPerMonth === null
-                    ? "Custom"
-                    : plan.priceCentsPerMonth === 0
-                      ? "Free"
-                      : `${euro(plan.priceCentsPerMonth)}/mo`}
+                  {plan.priceCentsPerMonth === null ? "Op maat" : plan.priceCentsPerMonth === 0 ? "Gratis" : `${euro(plan.priceCentsPerMonth)}/mnd`}
                 </p>
                 <ul className="mt-3 space-y-1 text-xs text-neutralx-600">
-                  <li>{plan.rateLimitPerMinute} req/min</li>
-                  <li>{plan.monthlyRequestCap ? `${plan.monthlyRequestCap.toLocaleString("en-US")}/month` : "Negotiated"}</li>
-                  <li>{plan.scopes.length} scopes</li>
+                  <li>{plan.rateLimitPerMinute} verzoeken per minuut</li>
+                  <li>{plan.monthlyRequestCap ? `${plan.monthlyRequestCap.toLocaleString("nl-NL")} per maand` : "In overleg"}</li>
+                  <li>{plan.scopes.length} rechten</li>
                 </ul>
               </div>
             );
           })}
         </div>
         <p className="mt-6 text-sm text-neutralx-600">
-          Start free, upgrade any time from{" "}
+          Begin gratis en stap over wanneer je wilt via{" "}
           <Link href="/werkgever/integraties" className="font-semibold text-brand-700 hover:underline">
             /werkgever/integraties
           </Link>
@@ -121,7 +115,7 @@ x-api-key: zf_live_...`}</Code>
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">GET /api/public/v1/shifts</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              Open shifts for your organization. Requires <code>shifts:read</code>.
+              De open diensten van je organisatie. Vereist <code>shifts:read</code>.
             </p>
             <Code>{`curl ${SITE.url}/api/public/v1/shifts \\
   -H "Authorization: Bearer zf_live_..."`}</Code>
@@ -130,7 +124,7 @@ x-api-key: zf_live_...`}</Code>
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">POST /api/public/v1/shifts</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              Create a shift and run matching against it. Requires <code>shifts:write</code>.
+              Maak een dienst aan en start de matching. Vereist <code>shifts:write</code>.
             </p>
             <Code>{`curl -X POST ${SITE.url}/api/public/v1/shifts \\
   -H "Authorization: Bearer zf_live_..." \\
@@ -148,7 +142,7 @@ x-api-key: zf_live_...`}</Code>
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">GET /api/public/v1/timesheets/approved</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              Approved/paid timesheets for your organization. Requires <code>timesheets:read</code>.
+              Goedgekeurde en betaalde urenbriefjes van je organisatie. Vereist <code>timesheets:read</code>.
             </p>
             <Code>{`curl ${SITE.url}/api/public/v1/timesheets/approved \\
   -H "Authorization: Bearer zf_live_..."`}</Code>
@@ -157,7 +151,7 @@ x-api-key: zf_live_...`}</Code>
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">GET /api/public/v1/shifts/&#123;id&#125;</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              One shift of your organization, including who is scheduled (first name + initial). Requires <code>shifts:read</code>.
+              Eén dienst van je organisatie, met wie er ingepland staat (voornaam en voorletter). Vereist <code>shifts:read</code>.
             </p>
             <Code>{`curl ${SITE.url}/api/public/v1/shifts/SHIFT_ID \\
   -H "Authorization: Bearer zf_live_..."`}</Code>
@@ -166,25 +160,25 @@ x-api-key: zf_live_...`}</Code>
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">GET /api/public/v1/invoices</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              Invoices addressed to your organization, newest first. Optional <code>?since=2026-10-01</code>. Requires <code>invoices:read</code>.
+              Facturen aan je organisatie, nieuwste eerst. Optioneel <code>?since=2026-10-01</code>. Vereist <code>invoices:read</code>.
             </p>
             <Code>{`curl "${SITE.url}/api/public/v1/invoices?since=2026-10-01" \\
   -H "Authorization: Bearer zf_live_..."`}</Code>
           </div>
 
           <div>
-            <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">Calendar feed (iCal)</h3>
+            <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">Agendafeed (iCal)</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              A secret, subscribable <code>.ics</code> URL with all your shifts and who is coming — for Google Calendar, Outlook and
-              Apple Calendar. Get it (and rotate it) in Werkgever → Koppelingen. No API key needed; the token in the URL is the credential.
+              Een geheime <code>.ics</code>-link waarop je je kunt abonneren, met al je diensten en wie er komt, voor Google Agenda, Outlook en
+              Apple Agenda. Je haalt hem op (en vernieuwt hem) via Werkgever → Koppelingen. Geen API-sleutel nodig: het token in de link geeft toegang.
             </p>
           </div>
 
           <div>
             <h3 className="break-words font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">POST /api/public/v1/webhooks</h3>
             <p className="mt-1.5 text-sm text-neutralx-600">
-              Register a URL for shift/timesheet/dispute events. Requires <code>webhooks:manage</code>. The
-              signing secret is returned once, in the response — store it immediately.
+              Registreer een URL voor meldingen over diensten, uren en geschillen. Vereist <code>webhooks:manage</code>. Het
+              ondertekeningsgeheim krijg je één keer terug, in het antwoord; bewaar het meteen.
             </p>
             <Code>{`curl -X POST ${SITE.url}/api/public/v1/webhooks \\
   -H "Authorization: Bearer zf_live_..." \\
@@ -198,31 +192,28 @@ x-api-key: zf_live_...`}</Code>
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Alternative" title="GraphQL" />
+        <SectionHead eyebrow="Alternatief" title="GraphQL" />
         <p className="mt-4 max-w-2xl text-[1.05rem] leading-relaxed text-neutralx-600">
-          A read-mostly GraphQL endpoint is available at{" "}
-          <code className="break-all">{`${SITE.url}/api/graphql`}</code>, authenticated with the same session/role system as the
-          dashboard (not API keys) — it&apos;s meant for logged-in users and internal tooling, not third-party
-          integrations. Introspect the schema directly against the endpoint to see the full set of queries
-          and types.
+          Er is ook een GraphQL-endpoint (vooral lezen) op <code className="break-all">{`${SITE.url}/api/graphql`}</code>, met dezelfde
+          inlog en rollen als het dashboard (geen API-sleutels). Het is bedoeld voor ingelogde gebruikers en interne tools, niet voor
+          koppelingen van derden. Vraag het schema rechtstreeks op bij het endpoint voor alle queries en types.
         </p>
       </Section>
 
       <Section tone="paper">
-        <SectionHead eyebrow="For agents" title="Machine-readable discovery" />
+        <SectionHead eyebrow="Voor AI-agents" title="Machineleesbaar overzicht" />
         <ul className="mt-6 max-w-2xl list-disc space-y-2 pl-5 text-[1.05rem] leading-relaxed text-neutralx-600">
           <li>
-            <code className="break-all">{`${SITE.url}/llms.txt`}</code> — what {SITE.name} is, when to use it, and links to everything below.
+            <code className="break-all">{`${SITE.url}/llms.txt`}</code>: wat {SITE.name} is, wanneer je het gebruikt, en links naar alles hieronder.
           </li>
           <li>
-            <code className="break-all">{`${SITE.url}/openapi.json`}</code> — the full REST API spec.
+            <code className="break-all">{`${SITE.url}/openapi.json`}</code>: de volledige specificatie van de REST-API.
           </li>
           <li>
-            <code className="break-all">{`${SITE.url}/sitemap.xml`}</code> — every indexable page.
+            <code className="break-all">{`${SITE.url}/sitemap.xml`}</code>: elke vindbare pagina.
           </li>
           <li>
-            Homepage and the 404 page both honor <code>Accept: text/markdown</code> with a real Markdown
-            body instead of HTML.
+            De homepage en de 404-pagina geven bij <code>Accept: text/markdown</code> echte Markdown terug in plaats van HTML.
           </li>
         </ul>
       </Section>

@@ -43,7 +43,7 @@ export async function startFreelancerKyc(
     where: { id: freelancerProfileId },
     select: { id: true, userId: true, user: { select: { email: true, kycStatus: true } } },
   });
-  if (!fp) throw AppError.notFound("Freelancer profile not found");
+  if (!fp) throw AppError.notFound("Werkersprofiel niet gevonden.");
 
   // Reuse an open session if one is still pending.
   const open = await prisma.identityVerification.findFirst({

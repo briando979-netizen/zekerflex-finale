@@ -35,11 +35,11 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
 
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const json = await request.json().catch(() => {
-    throw AppError.validation("Body must be JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {
-    throw AppError.validation("Invalid lead", parsed.error.flatten());
+    throw AppError.validation("De lead is niet goed ingevuld.", parsed.error.flatten());
   }
   const lead = await createLead({
     ...parsed.data,

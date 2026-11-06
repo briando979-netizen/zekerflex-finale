@@ -37,7 +37,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
         freelancer: { select: { userId: true } },
       },
     });
-    if (!agreement) throw AppError.notFound("Model agreement not found");
+    if (!agreement) throw AppError.notFound("Modelovereenkomst niet gevonden.");
 
     let party: "FREELANCER" | "CLIENT";
     if (agreement.freelancer.userId === principal.userId) {
@@ -46,7 +46,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
       assertOrganizationAccess(principal, agreement.tenantId);
       party = "CLIENT";
     } else {
-      throw AppError.forbidden("Not a party to this model agreement");
+      throw AppError.forbidden("Je bent geen partij bij deze modelovereenkomst.");
     }
 
     const result = await signModelAgreement(id, party, principal.userId);

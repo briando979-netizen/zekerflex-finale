@@ -59,7 +59,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     if (!c || !isMember(c, p.userId)) throw AppError.notFound("Community niet gevonden");
     if (!canManage(c, p.userId)) throw AppError.forbidden("Alleen beheerders kunnen dit wijzigen.");
     const input = patchSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Body must be JSON");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
     const updated = await renameCommunity(
       c,

@@ -23,11 +23,11 @@ const bodySchema = z.object({
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const log = logger.forRequest(request, { route: "POST /api/admin/console/confirm" });
   const json = await request.json().catch(() => {
-    throw AppError.validation("Request body must be valid JSON");
+    throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
   });
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    throw AppError.validation("Invalid request body", parsed.error.flatten());
+    throw AppError.validation("Niet alle gegevens zijn goed ingevuld.", parsed.error.flatten());
   }
 
   try {

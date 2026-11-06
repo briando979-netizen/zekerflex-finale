@@ -229,7 +229,7 @@ export async function runMatchingForShift(
         assignments: { where: { cancelledAt: null }, select: { id: true } },
       },
     });
-    if (!shift) throw AppError.notFound("Shift not found");
+    if (!shift) throw AppError.notFound("Dienst niet gevonden.");
     if (!MATCHABLE_STATUSES.includes(shift.status)) {
       throw AppError.precondition(
         `Shift is not matchable (status ${shift.status})`,
