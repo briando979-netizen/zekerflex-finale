@@ -5,6 +5,7 @@ import { platformAccount } from "@/lib/bank/accounts";
 import { getFees } from "@/lib/bank/fees";
 import { transfer } from "@/lib/bank/ledger";
 import { movePot } from "@/lib/bank/pots";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Keeping accounts positive. Normal debits can never pass zero; only a card
@@ -45,7 +46,7 @@ export async function settleNegativeBalances(now = new Date()): Promise<{ covere
           kind: "FEE_MONTHLY",
           description: `Kosten rood staan (week ${week.slice(-2)})`,
           toDescription: `Rood staan ${account.holderName} ${week}`,
-          fromCounterparty: "ZekerFlex B.V.",
+          fromCounterparty: PLATFORM_NAAM,
           toCounterparty: account.holderName,
           idempotencyKey: `overdraft-fee:${account.id}:${week}`,
           allowNegative: true,

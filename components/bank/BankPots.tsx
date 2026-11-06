@@ -123,7 +123,7 @@ export function BankPots(props: {
           >
             {dep > balanceCents ? "Onvoldoende saldo" : `${euro(Number.isFinite(dep) ? dep : 0)} vastzetten`}
           </button>
-          <p className="text-xs text-neutralx-400">Vanaf € 100. Rente wordt op de einddatum uitgekeerd door ZekerFlex B.V.</p>
+          <p className="text-xs text-neutralx-400">Vanaf € 100. Rente wordt op de einddatum uitgekeerd door Zekerflex, Inc.</p>
         </div>
       )}
 

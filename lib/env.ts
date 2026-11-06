@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { loadLocalEnv } from "@/lib/config/load-env";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // Pull the local .env into process.env first (no-op under Next, which already
 // did it) so scripts / seed / tests are self-sufficient.
@@ -279,7 +280,7 @@ const schema = z.object({
   // De bedrijfsgegevens van het platform op de e-factuur (verkoper bij
   // platformkosten en uitzendfacturen). Leeg = alleen de naam; een e-factuur
   // via Peppol vraagt minstens het KVK- of btw-nummer.
-  PLATFORM_LEGAL_NAME: z.string().default("ZekerFlex B.V."),
+  PLATFORM_LEGAL_NAME: z.string().default(PLATFORM_NAAM),
   PLATFORM_KVK: z.string().optional(),
   PLATFORM_VAT: z.string().optional(),
   PLATFORM_STREET: z.string().optional(),
@@ -397,7 +398,7 @@ const schema = z.object({
   SEPA_API_BASE_URL: z.string().url().optional(),
   SEPA_API_KEY: z.string().optional(),
   SEPA_CREDITOR_IBAN: z.string().optional(),
-  SEPA_CREDITOR_NAME: z.string().default("ZekerFlex B.V."),
+  SEPA_CREDITOR_NAME: z.string().default(PLATFORM_NAAM),
 
   // Stripe — online collection of employer invoices (Checkout Sessions).
   // Without a secret key, "Betaal nu" reports the provider as unconfigured.

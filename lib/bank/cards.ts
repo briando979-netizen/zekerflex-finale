@@ -10,6 +10,7 @@ import { getFees } from "@/lib/bank/fees";
 import { book, transfer } from "@/lib/bank/ledger";
 import { applyRoundUp } from "@/lib/bank/autosave";
 import { rewardStatus } from "@/lib/rewards/levels";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Bank payment cards (Stripe Issuing, on the platform account).
@@ -165,7 +166,7 @@ export async function requestCard(input: {
       kind: "FEE_CARD",
       description: `Kosten ${type === "physical" ? "fysieke" : "virtuele"} betaalpas`,
       toDescription: `Paskosten ${account.holderName}`,
-      fromCounterparty: "ZekerFlex B.V.",
+      fromCounterparty: PLATFORM_NAAM,
       toCounterparty: account.holderName,
       idempotencyKey: feeKey,
     });

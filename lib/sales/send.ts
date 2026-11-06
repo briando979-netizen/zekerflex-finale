@@ -54,11 +54,11 @@ function buildBody(lead: SalesLead, outreach: SalesOutreach): { text: string; ht
     `${inner}
      <p style="margin:18px 0 0">${cta}</p>
      <p style="margin:20px 0 0;font-size:12px;color:#8A938C">
-       ZekerFlex B.V. · Amsterdam · Je ontvangt dit bericht als zakelijke introductie omdat
+       Zekerflex, Inc. · Je ontvangt dit bericht als zakelijke introductie omdat
        ${lead.companyName} mogelijk baat heeft bij flexibele bezetting.
      </p>`,
   );
-  const text = `${bodyText}\n\nMeer weten: ${env.APP_BASE_URL.replace(/\/+$/, "")}/voor-bedrijven\n\nZekerFlex B.V., Amsterdam`;
+  const text = `${bodyText}\n\nMeer weten: ${env.APP_BASE_URL.replace(/\/+$/, "")}/voor-bedrijven\n\nZekerflex, Inc.`;
   return { text, html };
 }
 

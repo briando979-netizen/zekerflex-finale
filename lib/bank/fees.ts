@@ -6,6 +6,7 @@ import { platformAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
 import { feeDiscountPct } from "@/lib/rewards/levels";
 import { businessFeeDiscountPct } from "@/lib/rewards/business";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // What ZekerFlex Bank costs. The admin sets the amounts (/admin/bank). Fees
@@ -97,7 +98,7 @@ async function chargeBatch(due: BankAccount[], fees: BankFees, platformId: strin
           kind: "FEE_MONTHLY",
           description: `Maandkosten ZekerFlex Bank ${period}`,
           toDescription: `Maandkosten ${account.holderName} ${period}`,
-          fromCounterparty: "ZekerFlex B.V.",
+          fromCounterparty: PLATFORM_NAAM,
           toCounterparty: account.holderName,
           idempotencyKey: `fee-monthly:${account.id}:${period}`,
           allowFrozen: true,

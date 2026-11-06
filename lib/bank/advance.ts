@@ -6,6 +6,7 @@ import { platformAccount, personalAccount } from "@/lib/bank/accounts";
 import { creditEarning, getPayoutDestination } from "@/lib/bank/earnings";
 import { book, transfer } from "@/lib/bank/ledger";
 import type { Advance } from "@/lib/payouts/advances";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Voorschot (advance) through ZekerFlex Bank. When a freelancer receives
@@ -28,7 +29,7 @@ export async function payAdvanceToBank(advance: Advance, holderName: string): Pr
     holderName,
     amountCents: advance.netCents,
     description: `Voorschot op je verdiensten (na ${(advance.feeCents / 100).toFixed(2).replace(".", ",")} vergoeding)`,
-    counterparty: "ZekerFlex B.V.",
+    counterparty: PLATFORM_NAAM,
     reference: advance.id,
     idempotencyKey: `advance:${advance.id}`,
   });
@@ -60,7 +61,7 @@ export async function settleBankAdvances(userId: string, holderName: string): Pr
           kind: "FEE_MONTHLY",
           description: "Vergoeding voorschot",
           toDescription: `Voorschotvergoeding ${holderName}`,
-          fromCounterparty: "ZekerFlex B.V.",
+          fromCounterparty: PLATFORM_NAAM,
           toCounterparty: holderName,
           idempotencyKey: `advance-fee:${a.id}`,
           allowNegative: true,

@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { platformAccount } from "@/lib/bank/accounts";
 import { bookWith, transfer } from "@/lib/bank/ledger";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Pots ("potjes") and fixed-term deposits inside a ZekerFlex Bank account.
@@ -148,7 +149,7 @@ export async function matureDeposits(now = new Date()): Promise<{ matured: numbe
           description: `Rente deposito ${pot.account.holderName}`,
           toDescription: `Rente ${pot.name} (${(pot.interestBps / 100).toFixed(2).replace(".", ",")}% per jaar)`,
           fromCounterparty: pot.account.holderName,
-          toCounterparty: "ZekerFlex B.V.",
+          toCounterparty: PLATFORM_NAAM,
           idempotencyKey: `interest:${pot.id}`,
           allowNegative: true,
           allowFrozen: true,

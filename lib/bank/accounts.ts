@@ -3,6 +3,7 @@ import type { BankAccount } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { hasRole, type Principal } from "@/lib/auth";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Which ZekerFlex Bank account a signed-in person works with:
@@ -59,7 +60,7 @@ async function openAccount(data: Pick<BankAccount, "ownerType" | "holderName"> &
 export async function platformAccount(): Promise<BankAccount> {
   return (
     (await prisma.bankAccount.findFirst({ where: { ownerType: "PLATFORM" } })) ??
-    openAccount({ ownerType: "PLATFORM", holderName: "ZekerFlex B.V." })
+    openAccount({ ownerType: "PLATFORM", holderName: PLATFORM_NAAM })
   );
 }
 

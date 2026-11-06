@@ -5,6 +5,7 @@ import { payUrl } from "@/lib/billing/pay-link";
 import { btwOverzicht, btwTarief } from "@/lib/shop/modus";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Every date and time in these documents is Dutch time (the server runs in UTC).
@@ -506,7 +507,7 @@ export function blankAgreementPdf(personName: string): { bytes: Buffer; filename
   pdf.rule();
 
   pdf.row("Opdrachtnemer", personName);
-  pdf.row("Platform", "ZekerFlex B.V.");
+  pdf.row("Platform", PLATFORM_NAAM);
   pdf.row("Opgesteld op", nlDate(new Date()));
   pdf.row("Status", "concept — nog niet gekoppeld aan een opdracht");
   pdf.gap(10);

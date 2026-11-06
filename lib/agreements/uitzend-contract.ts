@@ -3,6 +3,7 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { kvAppend, kvGet } from "@/lib/storage/kv";
 import { amsterdamParts } from "@/lib/time/amsterdam";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Uitzendovereenkomst — the temp-work employment contract between ZekerFlex
@@ -15,7 +16,7 @@ import { amsterdamParts } from "@/lib/time/amsterdam";
 // ---------------------------------------------------------------------------
 
 export const CONTRACT_MONTHS = 3;
-const EMPLOYER_NAME = "ZekerFlex B.V.";
+const EMPLOYER_NAME = PLATFORM_NAAM;
 const EMPLOYER_KVK = "00000000";
 
 export interface UitzendContract {

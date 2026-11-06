@@ -51,7 +51,7 @@ export async function GET(request: Request): Promise<Response> {
         pdf.row(`${day}  ${e.description}`.slice(0, 70), `${e.amountCents > 0 ? "+" : ""}${money(e.amountCents)}`);
       }
       pdf.gap(14);
-      pdf.line("Het tegoed op ZekerFlex Bank-rekeningen staat op de rekening van ZekerFlex B.V. bij Stripe Payments Europe.", 8.5, { color: [0.4, 0.45, 0.42] });
+      pdf.line("Het tegoed op ZekerFlex Bank-rekeningen staat op de rekening van Zekerflex, Inc. bij Stripe Payments Europe.", 8.5, { color: [0.4, 0.45, 0.42] });
       return new Response(new Uint8Array(pdf.toBuffer()), {
         headers: {
           "Content-Type": "application/pdf",

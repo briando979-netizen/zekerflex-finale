@@ -644,7 +644,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
             <p>
               Betaalpas: virtueel {fees.cardVirtualCents === 0 ? "gratis" : `eenmalig ${euro(fees.cardVirtualCents)}`}, fysiek {fees.cardPhysicalCents === 0 ? "gratis" : `eenmalig ${euro(fees.cardPhysicalCents)}`}.
             </p>
-            <p className="pt-2 text-neutralx-400">Het geld op ZekerFlex Bank-rekeningen staat op de rekening van ZekerFlex B.V. bij Stripe Payments Europe. Betalingen in en uit lopen via Stripe en SEPA.</p>
+            <p className="pt-2 text-neutralx-400">Het geld op ZekerFlex Bank-rekeningen staat op de rekening van Zekerflex, Inc. bij Stripe Payments Europe. Betalingen in en uit lopen via Stripe en SEPA.</p>
           </div>
         </div>
       )}

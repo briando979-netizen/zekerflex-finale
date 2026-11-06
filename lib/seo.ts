@@ -1,3 +1,4 @@
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 // Read APP_BASE_URL directly from process.env (not lib/env) so this module stays
 // free of the full env-schema validation — it's imported by statically collected
 // pages (layout, sitemap, robots, marketing) that run at build time without
@@ -144,7 +145,7 @@ export function organizationJsonLd(): Record<string, unknown> {
     "@type": "Organization",
     "@id": ORG_ID,
     name: SITE.name,
-    legalName: "ZekerFlex B.V.",
+    legalName: PLATFORM_NAAM,
     url: SITE.url,
     logo: `${SITE.url}/icon.svg`,
     image: `${SITE.url}/opengraph-image`,

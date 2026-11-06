@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { book } from "@/lib/bank/ledger";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (r
 
   const entry = await book(
     account.id,
-    { amountCents: input.amountCents, kind: "ADJUSTMENT", description: `Correctie: ${input.reason}`, counterparty: "ZekerFlex B.V.", idempotencyKey: `adjust:${randomUUID()}` },
+    { amountCents: input.amountCents, kind: "ADJUSTMENT", description: `Correctie: ${input.reason}`, counterparty: PLATFORM_NAAM, idempotencyKey: `adjust:${randomUUID()}` },
     { allowFrozen: true },
   );
   await recordAudit({

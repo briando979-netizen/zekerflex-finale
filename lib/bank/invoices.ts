@@ -5,6 +5,7 @@ import { recordAudit } from "@/lib/audit";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { platformAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 /**
  * Pays an open invoice from a ZekerFlex Bank account: the organisation (or,
@@ -41,7 +42,7 @@ export async function payInvoiceFromBank(input: { invoiceId: string; accountId: 
     kind: "INVOICE_PAYMENT",
     description: `Factuur ${invoice.number}`,
     toDescription: `Factuur ${invoice.number} betaald door ${account.holderName}`,
-    fromCounterparty: "ZekerFlex B.V.",
+    fromCounterparty: PLATFORM_NAAM,
     toCounterparty: account.holderName,
     reference: invoice.id,
     idempotencyKey: `invoice-pay:${invoice.id}`,

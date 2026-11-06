@@ -6,6 +6,7 @@ import { platformAccount, personalAccount } from "@/lib/bank/accounts";
 import { transfer } from "@/lib/bank/ledger";
 import { prisma } from "@/lib/prisma";
 import { notifyBank } from "@/lib/bank/notify";
+import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 // ---------------------------------------------------------------------------
 // Doorverwijzen met bonus. Everyone gets a personal code (/r/<code> sets a
@@ -90,7 +91,7 @@ export async function rewardReferral(newUserId: string, newUserAccount: BankAcco
         description: `Verwijsbonus voor ${newcomer?.fullName ?? "een nieuwe gebruiker"}`,
         toDescription: `Verwijsbonus: ${newcomer?.fullName ?? "je uitnodiging"} is gestart 🎉`,
         fromCounterparty: referrer.fullName,
-        toCounterparty: "ZekerFlex B.V.",
+        toCounterparty: PLATFORM_NAAM,
         idempotencyKey: `ref-reward:${newUserId}:referrer`,
         allowNegative: true,
       });
@@ -105,7 +106,7 @@ export async function rewardReferral(newUserId: string, newUserAccount: BankAcco
         description: `Welkomstbonus ${newcomer?.fullName ?? ""}`.trim(),
         toDescription: `Welkomstbonus — uitgenodigd door ${referrer?.fullName ?? "een vriend"} 🎁`,
         fromCounterparty: newUserAccount.holderName,
-        toCounterparty: "ZekerFlex B.V.",
+        toCounterparty: PLATFORM_NAAM,
         idempotencyKey: `ref-reward:${newUserId}:newcomer`,
         allowNegative: true,
       });
