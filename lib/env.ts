@@ -77,6 +77,11 @@ const schema = z.object({
   LLM_CODE_MODEL: z.string().optional(),
   LLM_TRANSLATE_MODEL: z.string().optional(),
   LLM_API_KEY: z.string().optional(),
+  // Reservemodel (lib/ai/client.ts): als het hoofdmodel (bv. Gemini op de gratis
+  // laag) na de herhalingen nog 429/5xx geeft of onbereikbaar is, antwoordt dit
+  // model, meestal de eigen Ollama op de server. Leeg = geen reserve.
+  LLM_FALLBACK_BASE_URL: z.string().url().optional(),
+  LLM_FALLBACK_MODEL: z.string().optional(),
   LLM_EMBED_MODEL: z.string().optional(),
   // Optional: embed via a DIFFERENT endpoint than chat. Lets chat run on a free
   // frontier model (LLM_BASE_URL, e.g. Gemini) while embeddings run on local

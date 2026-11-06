@@ -42,6 +42,9 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
       LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
       LLM_FAST_MODEL: ${LLM_FAST_MODEL:-qwen2.5:3b}
+      # Reserve als het externe model (Gemini, gratis laag) even niet antwoordt: de eigen Ollama.
+      LLM_FALLBACK_BASE_URL: ${LLM_FALLBACK_BASE_URL:-http://ollama:11434/v1}
+      LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-qwen2.5:3b}
       # ZekerFlex Kaart leest zijn data alleen via deze variabele (zie app/kaart-data)
       KAART_DATA_DIR: /app/kaart-data
       # Rapportages (lib/bi): Metabase op het interne netwerk; het publieke adres via Caddy

@@ -183,13 +183,35 @@ function isTransient(err: unknown): boolean {
   return (err as Error)?.name === "TypeError"; // fetch failed / ECONNREFUSED
 }
 
+/**
+ * Het reservemodel (env LLM_FALLBACK_*): meestal de eigen Ollama op de server,
+ * voor als het hoofdmodel (bv. Gemini op de gratis laag) na alle herhalingen
+ * nog steeds 429/5xx geeft of niet te bereiken is. Null als er geen reserve is
+ * of de reserve dezelfde server is als het hoofdmodel.
+ */
+export function fallbackTarget(): { base: string; model: string } | null {
+  const base = env.LLM_FALLBACK_BASE_URL?.replace(/\/+$/, "");
+  const model = env.LLM_FALLBACK_MODEL;
+  if (!base || !model) return null;
+  if (base === baseUrl()) return null;
+  return { base, model };
+}
+
+/** Een fout waarbij de reserve zin heeft: tijdelijk (429/5xx/onbereikbaar), niet een verkeerde vraag. */
+function reserveZinvol(err: unknown): boolean {
+  if (isTransient(err)) return true;
+  const m = err instanceof Error ? err.message : "";
+  return /LLM (50[234]|429)\b|niet bereikbaar|fetch failed|ECONNREFUSED/i.test(m);
+}
+
 async function postOnce(
   path: string,
   payload: unknown,
   timeoutMs: number,
+  doel?: { base: string },
 ): Promise<unknown> {
-  const llmKey = await getLlmApiKey();
-  const res = await fetch(`${baseUrl()}${path}`, {
+  const llmKey = doel ? null : await getLlmApiKey();
+  const res = await fetch(`${doel?.base ?? baseUrl()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -299,25 +321,27 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
   const timeoutMs = timeoutFor(opts);
   return withGovernor(opts.purpose ?? "chat", async () => {
     try {
-      const data = (await post(
-        "/chat/completions",
-        {
-          model,
-          messages: opts.messages,
-          temperature: opts.temperature ?? 0.2,
-          stream: false,
-          // keep_alive is Ollama-only; remote OpenAI-compat providers (Gemini)
-          // reject it with HTTP 400, so only send it for local inference.
-          ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
-          ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
-          ...(opts.json ? { response_format: { type: "json_object" } } : {}),
-        },
-        timeoutMs,
-        opts.retry ?? true,
-      )) as {
-        model?: string;
-        choices?: { message?: { content?: string } }[];
+      const payload = {
+        model,
+        messages: opts.messages,
+        temperature: opts.temperature ?? 0.2,
+        stream: false,
+        // keep_alive is Ollama-only; remote OpenAI-compat providers (Gemini)
+        // reject it with HTTP 400, so only send it for local inference.
+        ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
+        ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       };
+      let data: { model?: string; choices?: { message?: { content?: string } }[] };
+      try {
+        data = (await post("/chat/completions", payload, timeoutMs, opts.retry ?? true)) as typeof data;
+      } catch (err) {
+        const reserve = fallbackTarget();
+        if (!reserve || !reserveZinvol(err)) throw err;
+        // Het hoofdmodel is (even) weg: antwoord met de reserve in plaats van een foutmelding.
+        logger.warn("llm hoofdmodel weg - reservemodel antwoordt", { host: llmHost(), reserve: new URL(reserve.base).host, model: reserve.model, purpose: opts.purpose });
+        data = (await postOnce("/chat/completions", { ...payload, model: reserve.model, keep_alive: env.LLM_KEEP_ALIVE }, timeoutMs, reserve)) as typeof data;
+      }
       const usage = readUsage(data);
       return {
         value: {
@@ -397,12 +421,12 @@ export async function* chatStream(
   }
 
   const llmKey = await getLlmApiKey();
-  const streamOnce = (m: string): Promise<Response> =>
-    fetch(`${baseUrl()}/chat/completions`, {
+  const streamOnce = (m: string, doel?: { base: string }): Promise<Response> =>
+    fetch(`${doel?.base ?? baseUrl()}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(llmKey ? { Authorization: `Bearer ${llmKey}` } : {}),
+        ...(llmKey && !doel ? { Authorization: `Bearer ${llmKey}` } : {}),
       },
       signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
@@ -411,10 +435,15 @@ export async function* chatStream(
         temperature: opts.temperature ?? 0.4,
         stream: true,
         // keep_alive is Ollama-only; remote providers (Gemini) 400 on it.
-        ...(isLocalInference() ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
+        ...(isLocalInference() || doel ? { keep_alive: env.LLM_KEEP_ALIVE } : {}),
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
       }),
     });
+  const reserve = fallbackTarget();
+  const viaReserve = async (reden: string): Promise<Response> => {
+    logger.warn("llm hoofdmodel weg - reservemodel streamt", { host: llmHost(), reserve: new URL(reserve!.base).host, model: reserve!.model, reden });
+    return streamOnce(reserve!.model, reserve!);
+  };
 
   let res: Response;
   try {
@@ -431,8 +460,17 @@ export async function* chatStream(
     if (res.status === 404 && model !== env.LLM_MODEL) {
       res = await streamOnce(env.LLM_MODEL);
     }
+    // Nog steeds overbelast na de herhalingen: de reserve antwoordt.
+    if (reserve && [429, 502, 503, 504].includes(res.status)) {
+      res = await viaReserve(`HTTP ${res.status}`);
+    }
   } catch (err) {
-    throw unreachable(err);
+    if (!reserve) throw unreachable(err);
+    try {
+      res = await viaReserve((err as Error).message?.slice(0, 80) ?? "onbereikbaar");
+    } catch {
+      throw unreachable(err);
+    }
   }
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => "");
