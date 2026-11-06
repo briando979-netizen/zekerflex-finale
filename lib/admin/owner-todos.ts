@@ -333,6 +333,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(issuing === null ? m("issuing-active") : {}),
     },
     {
+      id: "stripe-webhook-handtekening",
+      group: "Geld & bank",
+      title: "Stripe-webhook: de handtekening klopt niet (webhook-secret controleren)",
+      why: "Het foutenlogboek (Systeem → Foutmeldingen) toont sinds 6 november herhaald 'No signatures found matching the expected signature' op POST /api/webhooks/stripe. Dan verwerkt ZekerFlex die Stripe-gebeurtenissen (betalingen, terugboekingen) niet. Meestal staat in Stripe een tweede endpoint of is het secret opnieuw gemaakt, zodat STRIPE_WEBHOOK_SECRET op de server niet meer bij dat endpoint hoort.",
+      how: [
+        "Ga in Stripe naar Developers → Webhooks en kijk welke endpoints naar zekerflex.com wijzen; verwijder dubbele of oude.",
+        "Open het endpoint https://zekerflex.com/api/webhooks/stripe, klik 'Reveal signing secret' (whsec_…) en vergelijk met STRIPE_WEBHOOK_SECRET in .env.production op de server.",
+        "Wijkt het af: zet het juiste secret in .env.production en herstart de app-container (de live-zetter: Onderhoud → herstart-app).",
+        "Controleer in Stripe bij het endpoint of nieuwe gebeurtenissen daarna op 200 staan; de melding verdwijnt dan uit het foutenlogboek.",
+      ],
+      auto: false,
+      ...m("stripe-webhook-handtekening"),
+    },
+    {
       id: "stripe-expired",
       group: "Geld & bank",
       title: "Stripe-melding 'checkout.session.expired' aanzetten",
