@@ -61,7 +61,7 @@ export default async function InstellingenPage() {
 
   const account: Card[] = [
     { title: s.cAccountT, sub: s.cAccountS, href: "/werkgever/account", icon: <IUser /> },
-    { title: s.cDeleteAccountT, sub: s.cDeleteAccountS, href: "/dashboard/account/verwijderen", icon: <IUser /> },
+    { title: s.cDeleteAccountT, sub: s.cDeleteAccountS, href: "/account-verwijderen", icon: <IUser /> },
   ];
 
   return (

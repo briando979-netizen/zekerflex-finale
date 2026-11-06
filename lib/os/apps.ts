@@ -95,7 +95,7 @@ const WERKER_APPS: OsApp[] = [
   { id: "w-klussen", naam: "Klussen zoeken", uitleg: "Diensten bij jou in de buurt die bij je vak passen.", href: "/dashboard/klussen", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["ontdekken", "vacatures", "werk", "markt"] },
   { id: "w-diensten", naam: "Mijn klussen", uitleg: "Wat je hebt aangenomen, van vandaag tot volgende maand.", href: "/dashboard/diensten", icoon: "agenda", categorie: "werk", rollen: WERKER, zoek: ["geaccepteerd", "planning"] },
   { id: "w-uren", naam: "Uren", uitleg: "Uren indienen en volgen tot ze zijn goedgekeurd.", href: "/dashboard/uren", icoon: "uren", categorie: "werk", rollen: WERKER },
-  { id: "w-inchecken", naam: "Inchecken", uitleg: "Op locatie in- en uitchecken met je telefoon.", href: "/dashboard/inchecken", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["gps", "checkin"] },
+  { id: "w-inchecken", naam: "Inchecken", uitleg: "Op locatie in- en uitchecken met je telefoon.", href: "/dashboard/incheck", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["gps", "checkin"] },
   { id: "w-beschikbaarheid", naam: "Beschikbaarheid", uitleg: "Wanneer je kunt werken, per dag en dagdeel.", href: "/dashboard/beschikbaarheid", icoon: "agenda", categorie: "planning", rollen: WERKER },
   { id: "w-agenda", naam: "Agenda-koppeling", uitleg: "Je diensten in je eigen agenda-app.", href: "/dashboard/agenda-koppeling", icoon: "agenda", categorie: "planning", rollen: WERKER, zoek: ["ical", "google agenda"] },
   { id: "w-favorieten", naam: "Favoriete opdrachtgevers", uitleg: "Volg bedrijven en hoor het als ze werk plaatsen.", href: "/dashboard/favorieten", icoon: "ster", categorie: "werk", rollen: WERKER },

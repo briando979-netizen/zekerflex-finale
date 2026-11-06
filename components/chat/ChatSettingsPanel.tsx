@@ -194,7 +194,7 @@ export function ChatSettingsPanel({
       <div>
         {back("Account")}
         <Row icon="👤" title="Persoonlijke gegevens" onClick={() => (window.location.href = employer ? "/werkgever/bedrijf" : "/dashboard/profiel")} />
-        <Row icon="🛡" title="Tweestapsverificatie" onClick={() => (window.location.href = employer ? "/werkgever/instellingen" : "/dashboard/account/beveiliging")} />
+        <Row icon="🛡" title="Tweestapsverificatie" onClick={() => (window.location.href = employer ? "/werkgever/account" : "/dashboard/account/beveiliging")} />
         <Row icon="🔐" title="Wachtwoord wijzigen" onClick={() => (window.location.href = "/wachtwoord-vergeten")} />
         <Row icon="📦" title="Download mijn gegevens" sub="Alles wat ZekerFlex van je heeft, als bestand" onClick={() => (window.location.href = "/api/me/gegevens/export")} />
         <Row icon="🗑" title="Account verwijderen" onClick={() => (window.location.href = "/account-verwijderen")} />
