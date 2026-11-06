@@ -71,9 +71,20 @@ export function GratisAi() {
             Alles gratis — AI op onze eigen server
           </p>
           <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>
-            Staat dit aan, dan gaat élke AI-taak naar ons eigen model op de VPS. Dat kost niets per vraag en de
-            gegevens blijven op onze eigen server. Het model is kleiner dan een betaald model, dus lange of
-            ingewikkelde opdrachten worden eenvoudiger beantwoord.
+            Staat dit aan, dan gaat élke AI-taak naar ons eigen model op de VPS: dat kost niets per vraag en de
+            gegevens blijven op onze eigen server.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--a-warn-ink, var(--a-mute))" }}>
+            <strong>Eerlijk gemeten op 6 november.</strong> Onze server heeft vijf processors en geen videokaart.
+            Het model doet er dan ongeveer acht seconden over een kort antwoord, en het kent ZekerFlex niet uit
+            zichzelf: op de vraag wat ZekerFlex doet, antwoordde het over &ldquo;winstprocenten vaststellen&rdquo;.
+            Een groter model (qwen3:4b) was nóg trager: ruim vier minuten per antwoord. Zet dit dus aan als het
+            tegoed bij de aanbieder op is of je even helemaal zelfstandig wilt draaien — niet als vaste keuze voor
+            teksten die een klant leest.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>
+            Je hoeft hier niets voor te doen bij een storing: valt de betaalde aanbieder weg of geeft hij een
+            foutcode, dan antwoordt onze eigen server al automatisch (het reservemodel).
           </p>
         </div>
         <button

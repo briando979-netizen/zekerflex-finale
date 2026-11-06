@@ -53,9 +53,9 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     naam: "AI-taalmodel",
     waarvoor: "Alle AI: chat, samenvatten, vertalen, beoordelen, teksten schrijven",
     nu: "Gemini van Google: tot een bepaald aantal vragen per dag gratis, daarboven per gebruik afgerekend",
-    eigen: "Ons eigen model op de VPS (Ollama). Zet de knop hierboven aan en élke AI-taak draait gratis op onze eigen server.",
+    eigen: "Ons eigen model op de VPS (Ollama) staat al als reserve klaar: valt de aanbieder weg of geeft hij een foutcode, dan antwoordt onze server vanzelf. Met de knop hierboven gaat álles erheen — gemeten op 6 november is dat trager (±8 seconden) en inhoudelijk zwakker, dus doe dat bewust.",
     status: "schakelbaar",
-    env: ["LLM_BASE_URL", "LLM_API_KEY", "AI_ALLOW_REMOTE"],
+    env: ["LLM_BASE_URL", "LLM_API_KEY", "AI_ALLOW_REMOTE", "LLM_FALLBACK_BASE_URL"],
   },
   {
     id: "embeddings",
