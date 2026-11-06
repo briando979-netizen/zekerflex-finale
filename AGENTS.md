@@ -77,6 +77,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 
 - Pas je een bestaande route of functie aan, draai dan alle tests die dat pad raken (zoek in `tests/`), niet alleen je nieuwe.
 - Pure hulpjes in `.ts`, niet `.tsx` (vitest leest geen JSX). Module met prisma testen: `vi.mock("@/lib/prisma", () => ({ prisma: {} }))`. `AppError.validation` geeft 422. Geen `.refine` binnen `z.discriminatedUnion`.
+- **Tests met datums worden tijdbommen:** de live-controle draait `vitest related` in UTC en houdt dan élke uitrol tegen. Bevries de klok (`vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime`), geef een datum altijd een zone (`"2026-09-02T06:30:00+02:00"`, nooit zonder) en geef een `now`-parameter door aan alles wat een tijd vastlegt.
 - **Fouten zoeken:** eerst het foutenlogboek (Admin → Systeem → Foutmeldingen, `lib/ops/error-journal.ts`); meet vóór je een oorzaak noemt.
 - **Taken voor de eigenaar** (sleutels, accounts, iets in een extern portaal) horen in `lib/admin/owner-todos.ts` (Admin → Te doen); aan/uit zonder uitrol via `lib/flags`.
 
