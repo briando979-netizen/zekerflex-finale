@@ -12,6 +12,7 @@ import { announce } from "@/lib/voice/announce";
 import { chatJson } from "@/lib/ai/client";
 import { QUERIES } from "@/lib/admin-console/queries";
 import { MUTATIONS } from "@/lib/admin-console/mutations";
+import { LEEG_ANTWOORD, responseSchema } from "@/lib/orchestration/antwoord";
 import { gatherSnapshot } from "@/lib/orchestration/snapshot";
 import { proposePatch } from "@/lib/orchestration/dev-advisor";
 import { retrieveContext } from "@/lib/rag/query";
@@ -48,19 +49,8 @@ Regels:
 - CODE_PATCH: action = {"description": string, "files": string[]} - alleen als er duidelijk een codebug is.
 - Verzin geen namen buiten de catalogus. Max 8 bevindingen. Als alles gezond is: één INFO-bevinding.`;
 
-const findingSchema = z.object({
-  severity: z.nativeEnum(FindingSeverity).catch(FindingSeverity.INFO),
-  category: z.string().max(40).default("general"),
-  title: z.string().max(160),
-  detail: z.string().max(2000).default(""),
-  actionKind: z.nativeEnum(FindingActionKind).catch(FindingActionKind.NONE),
-  action: z.record(z.unknown()).nullish(),
-});
-
-const responseSchema = z.object({
-  summary: z.string().max(1000).default(""),
-  findings: z.array(findingSchema).max(20).default([]),
-});
+// Het antwoord van het model lezen we soepel; de regels daarvoor staan in
+// lib/orchestration/antwoord.ts (puur, dus los te testen).
 
 /**
  * Mirrors a cycle's outcome into the Jarvis event log under agent "analyst" —
@@ -196,7 +186,7 @@ export async function runOrchestrationCycle(
         ]
       : [];
 
-    const parsed = responseSchema.parse(
+    const antwoord = responseSchema.safeParse(
       await chatJson<unknown>({
     purpose: "orchestration",
         messages: [
@@ -208,6 +198,13 @@ export async function runOrchestrationCycle(
         maxTokens: 1200,
       }),
     );
+    // Geen bruikbaar antwoord (geen object, of helemaal leeg): dan maken we er
+    // een lege ronde van met een duidelijke melding, in plaats van de hele
+    // cyclus te laten mislukken en niets op te slaan.
+    const parsed = antwoord.success ? antwoord.data : LEEG_ANTWOORD;
+    if (!antwoord.success) {
+      logger.warn("orchestration: antwoord niet te lezen", { runId: run.id, reden: antwoord.error.issues[0]?.message ?? "onbekend" });
+    }
 
     const codePatchTitles: string[] = [];
     for (const f of parsed.findings) {
