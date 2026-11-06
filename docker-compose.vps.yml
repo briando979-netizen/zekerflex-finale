@@ -19,6 +19,8 @@
 
 name: zekerflex
 
+# Versies van kant-en-klare images staan vast (exact de versies die op 6 nov 2026 draaiden):
+# een `pull` brengt dan nooit stil een nieuwe grote versie binnen. Bijwerken = hier bewust verhogen.
 services:
   app:
     build:
@@ -66,7 +68,7 @@ services:
     # Geen `ports:` — alles loopt via Caddy.
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.7-alpine
     restart: unless-stopped
     # Alleen wat de Caddyfile leest, niet heel .env.production: anders maakt elke
     # nieuwe sleutel daarin (van welke functie ook) Caddy bij de volgende uitrol
@@ -94,7 +96,7 @@ services:
     networks: [internal, bouwer-toegang]
 
   postgres:
-    image: postgres:18-bookworm
+    image: postgres:18.6-bookworm
     restart: unless-stopped
     environment:
       POSTGRES_USER: zekerflex
@@ -152,7 +154,7 @@ services:
     networks: [internal]
 
   redis:
-    image: redis:7-bookworm
+    image: redis:7.4.12-bookworm
     restart: unless-stopped
     command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
     volumes:
@@ -168,7 +170,7 @@ services:
   # geen externe dienst. Op een kleine VPS kun je deze service weglaten en in
   # plaats daarvan LLM_API_KEY + LLM_BASE_URL (+ AI_ALLOW_REMOTE=true) zetten.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.13
     restart: unless-stopped
     volumes:
       - ollama-models:/root/.ollama
@@ -182,7 +184,7 @@ services:
   # Self-host scheduler: triggert de interne cron-endpoints op schema (zoals
   # Vercel-Cron deed). Zonder deze service draait geen enkele geplande taak.
   cron:
-    image: alpine:3.20
+    image: alpine:3.20.10
     restart: unless-stopped
     # alleen wat het rooster nodig heeft, niet heel .env.production (zie caddy)
     environment:
@@ -351,7 +353,7 @@ services:
   # los van de echte database, op een eigen netwerk zonder internet. Het vaste
   # wachtwoord is bewust: niets anders dan de Bouwer kan erbij.
   bouwer-db:
-    image: postgres:18-bookworm
+    image: postgres:18.6-bookworm
     restart: unless-stopped
     environment:
       POSTGRES_USER: voorbeeld
@@ -363,7 +365,7 @@ services:
     networks: [bouwer]
 
   bouwer-redis:
-    image: redis:7-bookworm
+    image: redis:7.4.12-bookworm
     restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb"]
     mem_limit: 128m
