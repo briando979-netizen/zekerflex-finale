@@ -561,9 +561,9 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
 
   useEffect(() => {
     void fetch("/api/admin/bouwer/instellingen", { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: { model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean; modellen: string[] }) => {
-        setData(d);
+        setData({ ...d, modellen: Array.isArray(d.modellen) ? d.modellen : [] });
         setModel(d.modelGekozen ? d.model : "");
       })
       .catch(() => setMelding("Instellingen laden mislukt"));

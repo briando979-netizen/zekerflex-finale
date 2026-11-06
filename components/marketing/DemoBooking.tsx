@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 
 type Step = "date" | "time" | "info" | "done";
 
@@ -20,7 +21,12 @@ function startOfMonth(d: Date): Date {
 }
 
 export function DemoBooking() {
-  const now = useMemo(() => new Date(), []);
+  // De dag van vandaag in Nederlandse tijd, als lokale datum op server én client:
+  // de server draait in UTC en zou rond middernacht anders nog de vorige maand tonen (hydratiefout #418).
+  const now = useMemo(() => {
+    const p = amsterdamParts(new Date());
+    return new Date(p.year, p.month - 1, p.day);
+  }, []);
   const minMonth = useMemo(() => startOfMonth(now), [now]);
   const maxMonth = useMemo(() => {
     const m = startOfMonth(now);

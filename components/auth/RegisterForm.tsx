@@ -209,6 +209,7 @@ export function RegisterForm({
     try {
       const res = await fetch("/api/auth/generate-password");
       const d = await res.json();
+      if (!res.ok || typeof d?.password !== "string") throw new Error("geen wachtwoord");
       setPw(d.password);
       setPw2(d.password);
       setShowPw(true);

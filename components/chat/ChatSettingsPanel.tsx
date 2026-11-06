@@ -99,13 +99,17 @@ export function ChatSettingsPanel({
 
   const loadOverview = () =>
     fetch("/api/inbox/prefs", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setOverview)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && !d.error) setOverview(d);
+      })
       .catch(() => undefined);
   useEffect(() => {
     fetch("/api/chat/settings", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => setS(d.settings ?? d))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && !d.error) setS(d.settings ?? d);
+      })
       .catch(() => undefined);
     void loadOverview();
     setLook(readLook());

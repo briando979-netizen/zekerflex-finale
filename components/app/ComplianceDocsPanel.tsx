@@ -246,8 +246,11 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
   const [d, setD] = useState<Data | null>(null);
   const load = () =>
     fetch("/api/me/documents", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setD)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: Data | null) => {
+        // een foutantwoord ({ error }) mag niet als gegevens in de state (crash op d.docs)
+        if (d && Array.isArray(d.docs)) setD(d);
+      })
       .catch(() => undefined);
   useEffect(() => {
     void load();

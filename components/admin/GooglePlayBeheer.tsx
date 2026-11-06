@@ -41,7 +41,7 @@ export function GooglePlayBeheer() {
 
   useEffect(() => {
     void fetch("/api/admin/google-play")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: Stand) => setStand(d))
       .catch(() => setMelding({ tone: "crit", tekst: "Laden mislukt." }));
   }, []);
