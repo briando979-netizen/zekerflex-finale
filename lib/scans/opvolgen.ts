@@ -71,7 +71,7 @@ export async function stuurVoorstel(sleutel: string, emailRuw: string, notitie: 
   if (res.suppressed) throw AppError.validation("Dit adres heeft zich afgemeld voor zakelijke introducties; we hebben niets verstuurd.");
   if (res.error) throw AppError.upstream(`Versturen lukte niet: ${res.error}`);
 
-  await logStap(k.soort, k.scanId, "opgevolgd", `${email} · ${door.naam}`);
+  await logStap(k.soort, k.scanId, "opgevolgd", `${email} · ${door.naam}`, {}, now);
   if (log.leadId) {
     const lead = await prisma.salesLead.findUnique({ where: { id: log.leadId }, select: { notes: true, contactEmail: true } }).catch(() => null);
     if (lead) {

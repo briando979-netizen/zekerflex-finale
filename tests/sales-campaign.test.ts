@@ -29,17 +29,17 @@ const base = {
 
 describe("withinSendWindow", () => {
   it("is inside on a weekday at 10:00", () => {
-    expect(withinSendWindow(base, new Date("2026-09-02T10:00:00"))).toBe(true); // Wed
+    expect(withinSendWindow(base, new Date("2026-09-02T10:00:00+02:00"))).toBe(true); // Wed
   });
   it("is outside before the start hour", () => {
-    expect(withinSendWindow(base, new Date("2026-09-02T06:30:00"))).toBe(false);
+    expect(withinSendWindow(base, new Date("2026-09-02T06:30:00+02:00"))).toBe(false);
   });
   it("is outside on a Saturday when workdaysOnly", () => {
-    expect(withinSendWindow(base, new Date("2026-09-05T10:00:00"))).toBe(false); // Sat
+    expect(withinSendWindow(base, new Date("2026-09-05T10:00:00+02:00"))).toBe(false); // Sat
   });
   it("allows the weekend when workdaysOnly is false", () => {
     expect(
-      withinSendWindow({ ...base, workdaysOnly: false } as SalesCampaign, new Date("2026-09-05T10:00:00")),
+      withinSendWindow({ ...base, workdaysOnly: false } as SalesCampaign, new Date("2026-09-05T10:00:00+02:00")),
     ).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Kiest een werker een vervanger, dan:
 // - weigert het als de vervanger op dat moment al elders werkt (zonder te zeggen waar),
@@ -78,10 +78,15 @@ vi.mock("@/lib/prisma", () => {
 import { reassignAssignment } from "@/lib/replacements/reassign";
 
 beforeEach(() => {
+  // de dienst begint op 5 nov 2026; zonder vaste klok is hij na die dag "al begonnen"
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-04T12:00:00Z"));
   h.overlap = null;
   h.pushes.length = 0;
   h.tasks.length = 0;
 });
+
+afterEach(() => vi.useRealTimers());
 
 describe("reassignAssignment", () => {
   it("laat de vervanger en de opdrachtgever het meteen weten", async () => {

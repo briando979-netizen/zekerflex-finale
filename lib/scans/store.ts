@@ -24,11 +24,18 @@ export async function bewaarScanLog(log: ScanLog): Promise<ScanLog> {
  * Een vervolgstap vastleggen, met eventueel een veld erbij (in één keer, zodat twee schrijfacties elkaar niet
  * overschrijven); zonder logboek (een scan van vóór 4 nov 2026) gebeurt er niets. Faalt stil.
  */
-export async function logStap(soort: ScanSoort, scanId: string, stap: ScanStap, info?: string, velden: Partial<Pick<ScanLog, "leadId" | "siteSlug">> = {}): Promise<void> {
+export async function logStap(
+  soort: ScanSoort,
+  scanId: string,
+  stap: ScanStap,
+  info?: string,
+  velden: Partial<Pick<ScanLog, "leadId" | "siteSlug">> = {},
+  now = new Date(),
+): Promise<void> {
   try {
     const log = await getScanLog(soort, scanId);
     if (!log) return;
-    const next = { ...metStap(log, stap, new Date().toISOString(), info), ...velden };
+    const next = { ...metStap(log, stap, now.toISOString(), info), ...velden };
     await bewaarScanLog(next);
   } catch {
     /* het logboek mag een scan nooit laten mislukken */
