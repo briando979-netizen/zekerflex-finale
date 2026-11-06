@@ -47,7 +47,7 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(n.volgorde.at(-1)).toBe(eigenSleutel(oproep));
     expect(n.volgorde).not.toContain("blok:bestaatniet");
     const o = n.eigen.find((b) => b.id === oproep.id);
-    expect(o && "knop" in o ? o.knop.link : "?").toBe("");
+    expect(o?.soort === "oproep" ? o.knop.link : "?").toBe("");
     const z = zichtbareSecties(n);
     expect(z[1]).toBe(eigenSleutel(tekst));
     expect(z.filter((id) => !isSectie(id)).length).toBe(2);

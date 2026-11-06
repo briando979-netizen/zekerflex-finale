@@ -33,6 +33,8 @@ export type Blok = Basis &
     | { soort: "galerij"; kop: string; beelden: string[] }
     | { soort: "oproep"; kop: string; tekst: string; knop: Knop }
     | { soort: "ruimte"; grootte: "klein" | "middel" | "groot" }
+    // contactformulier: een inzending komt als lead in Admin → Sales (app/api/ontwerp/formulier)
+    | { soort: "formulier"; kop: string; tekst: string; knop: string; bedankt: string; telefoon: boolean; bedrijf: boolean }
   );
 export type BlokSoort = Blok["soort"];
 
@@ -48,6 +50,7 @@ export const BLOK_SOORTEN: { soort: BlokSoort; label: string; uitleg: string }[]
   { soort: "galerij", label: "Galerij", uitleg: "Een raster van foto's" },
   { soort: "oproep", label: "Oproep", uitleg: "Afsluitende oproep met een knop" },
   { soort: "ruimte", label: "Witruimte", uitleg: "Lucht tussen twee blokken" },
+  { soort: "formulier", label: "Formulier", uitleg: "Contactformulier: een aanvraag komt als lead in Sales" },
 ];
 
 export interface PaginaInhoud {
@@ -141,6 +144,10 @@ export function opVormVanOrigineel(origineel: PaginaInhoud, vertaling: PaginaInh
       }
       case "ruimte":
         return o;
+      case "formulier": {
+        const t = v as typeof o;
+        return { ...o, kop: t.kop, tekst: t.tekst, knop: t.knop || o.knop, bedankt: t.bedankt || o.bedankt };
+      }
     }
   };
   const perId = new Map(vertaling.blokken.map((b) => [b.id, b]));
@@ -230,6 +237,17 @@ export function normalizeBlok(raw: unknown): Blok | null {
       return { ...basis, soort: "oproep", kop: tekst(r.kop, 160), tekst: tekst(r.tekst, 400), knop: knop(r.knop) };
     case "ruimte":
       return { ...basis, soort: "ruimte", grootte: een(r.grootte, ["klein", "middel", "groot"] as const, "middel") };
+    case "formulier":
+      return {
+        ...basis,
+        soort: "formulier",
+        kop: tekst(r.kop, 160),
+        tekst: tekst(r.tekst, 600),
+        knop: tekst(r.knop, 40) || "Versturen",
+        bedankt: tekst(r.bedankt, 300) || "Bedankt! We nemen snel contact met je op.",
+        telefoon: r.telefoon !== false,
+        bedrijf: r.bedrijf === true,
+      };
     default:
       return null;
   }
@@ -246,6 +264,8 @@ export function normalizeInhoud(raw: unknown): PaginaInhoud {
 }
 
 /** Een leeg blok van een soort, met voorbeeldtekst zodat je direct ziet hoe het eruitziet. */
+// de overload geeft het nauwe type terug (leegBlok("oproep") heeft een knop-object, "formulier" een knoptekst)
+export function leegBlok<S extends BlokSoort>(soort: S): Extract<Blok, { soort: S }>;
 export function leegBlok(soort: BlokSoort): Blok {
   const leeg: Knop = { tekst: "", link: "" };
   const b = { id: nieuwId(), achtergrond: "licht" as Achtergrond };
@@ -272,6 +292,8 @@ export function leegBlok(soort: BlokSoort): Blok {
       return { ...b, achtergrond: "merk", soort, kop: "Klaar om te beginnen?", tekst: "Maak in een paar minuten een gratis account.", knop: { tekst: "Account aanmaken", link: "/register" } };
     case "ruimte":
       return { ...b, soort, grootte: "middel" };
+    case "formulier":
+      return { ...b, achtergrond: "zacht", soort, kop: "Neem contact op", tekst: "Laat je gegevens achter, dan nemen we binnen één werkdag contact met je op.", knop: "Versturen", bedankt: "Bedankt! We nemen snel contact met je op.", telefoon: true, bedrijf: true };
   }
 }
 
