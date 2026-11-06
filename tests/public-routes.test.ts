@@ -56,6 +56,9 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/oidc/authorize", // "Inloggen met ZekerFlex": the route itself sends a guest to /login
     "/api/oidc/token", // the service exchanges the code with its client secret
     "/api/oidc/jwks", // public signing key
+    "/api/toegang/kenteken", // the barrier box asks whether a plate may enter (own token per branch)
+    "/api/toegang/opdrachten", // the barrier box polls for manual open commands
+    "/api/printen/agent", // the print agent fetches the label queue (own token per company)
     "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
     "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
   ];
@@ -66,6 +69,10 @@ describe("isPublicApiRoute — allowed", () => {
 
 describe("isPublicApiRoute — protected (must NOT be public)", () => {
   const cases = [
+    "/api/werkgever/locatie", // Op locatie: the employer board stays behind the login
+    "/api/locatie/portofoon", // radio channels: session only
+    "/api/me/kluis", // a worker's access codes: session only
+    "/api/printen/wachtrij", // only /api/printen/agent is public, not anything else under /api/printen
     "/api/company/lookup", // shares the /api/company prefix with the public search route
     "/api/company/register",
     "/api/orgs", // bare collection route

@@ -15,9 +15,10 @@ import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
 import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { inAndroidApp } from "@/lib/app-mode-server";
-import { getFreelancerDict } from "@/lib/i18n/server";
+import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
+import { locatieTeksten } from "@/lib/locatie/teksten";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,8 @@ export default async function AccountPage() {
   const inApp = await inAndroidApp();
   const ft = await getFreelancerDict();
   const t = ft.acct;
+  // Op locatie (portofoon, toegangscodes, kenteken): eigen vijftalige teksten (lib/locatie/teksten.ts)
+  const lt = locatieTeksten(await getLocale()).account;
   const [card, overview, fiscal, myReplacements, matched, notCompleted, theme] = await Promise.all([
     getUserCard(principal.userId),
     getFreelancerOverview(principal.userId),
@@ -88,6 +91,9 @@ export default async function AccountPage() {
           external: true,
         },
         { label: t.favorites, href: "/dashboard/favorieten" },
+        { label: lt.portofoon, href: "/dashboard/portofoon" },
+        { label: lt.kluis, href: "/dashboard/toegangscodes" },
+        { label: lt.voertuig, href: "/dashboard/voertuig" },
         { label: t.hidden, href: "/dashboard/account/verborgen" },
       ],
     },

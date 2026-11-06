@@ -1,0 +1,3 @@
+# Kentekenherkenning op het kastje: fast-alpr (vrije software, ONNX-modellen) + OpenCV voor de camera.
+fast-alpr[onnx]>=0.2
+opencv-python-headless>=4.9

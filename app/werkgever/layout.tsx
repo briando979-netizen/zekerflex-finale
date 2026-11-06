@@ -85,9 +85,12 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
     // de kennisbank staat op een eigen adres (Outline); inloggen gaat vanzelf met het ZekerFlex-account
     kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
+    locatie: { href: "/werkgever/op-locatie", label: "Op locatie", icon: <IGrid /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
+  // de Op locatie-modules (portofoon, toegang, kluis, printen) ook (lib/locatie)
+  const locatieAan = await featureEnabled("locatie-modules", { userId: principal.userId });
   const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
   const nav: NavItem[] = menuVoor(werkruimte.soort, {
     ookPersoneel: werkruimte.ookPersoneel,
@@ -99,6 +102,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   })
     .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
     .filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())
+    .filter(({ sleutel }) => sleutel !== "locatie" || locatieAan)
     .map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
 
   return (

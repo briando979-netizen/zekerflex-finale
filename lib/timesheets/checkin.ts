@@ -6,6 +6,7 @@ import { recordAudit } from "@/lib/audit";
 import { recordEngagement } from "@/lib/engagement/events";
 import { evaluateGeofence } from "@/lib/geo/geofencing";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
+import { badgeNaInchecken } from "@/lib/locatie/printen";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / heartbeat / check-out ingestion.
@@ -255,6 +256,8 @@ export async function recordGpsEvent(
 
   if (input.type === GpsEventType.CHECK_IN) {
     void recordEngagement(input.freelancerProfileId, "CHECK_IN");
+    // Op locatie: een badge of naamsticker in de printwachtrij, als het bedrijf dat aan heeft
+    void badgeNaInchecken({ tenantId: ts.branch.tenantId, branchId: ts.branchId, timesheetId: ts.id, userId: ts.freelancer.userId });
     void dispatchWebhook("freelancer.checked_in", ts.branch.tenantId, {
       timesheetId: ts.id,
       freelancerId: input.freelancerProfileId,

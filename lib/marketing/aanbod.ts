@@ -201,6 +201,85 @@ export const AANBOD: AanbodItem[] = [
     zoekwoorden: ["private 5g netwerk", "eigen 5g bouwplaats", "campusnetwerk", "lokaal 5g netwerk bedrijf"],
   },
 
+  // Op locatie (lib/locatie/modules.ts): vier modules voor de werkvloer, op de eigen server en zonder licentiekosten.
+  // Aanzetten kan direct onder Werkgever → Op locatie; de prijs is nog "op aanvraag" (geen verzonnen prijzen).
+  {
+    slug: "portofoon-in-de-app",
+    pijler: "personeel",
+    naam: "Portofoon in de app",
+    kort: "Druk, praat, los: je team op locatie hoort je direct, zonder losse portofoons.",
+    tekst:
+      "Een flexwerker op een evenement, bouwplaats of in een distributiecentrum houdt de knop ingedrukt en praat; iedereen in hetzelfde kanaal hoort het meteen. Elke klus en elke vestiging heeft een eigen kanaal, en wie ingepland staat zit er vanzelf in. Is iemand even niet verbonden, dan laat je een spraakbericht achter dat vanzelf afspeelt.",
+    punten: [
+      "Een kanaal per klus en per vestiging; wie ingepland staat, zit er vanzelf in",
+      "Houd de knop ingedrukt en praat; je ziet wie er luistert en wie er praat",
+      "Versleuteld, rechtstreeks tussen de telefoons, via onze eigen servers",
+      "Geen bereik? Spreek een bericht in; het speelt bij de ander vanzelf af",
+      "Op elke telefoon, in de browser of de ZekerFlex-app; geen portofoons huren",
+    ],
+    voorWie: "Evenementen, beveiliging, bouw, logistiek en magazijnen met teams die elkaar snel moeten bereiken",
+    status: "beschikbaar",
+    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
+    zoekwoorden: ["portofoon app", "push to talk app", "walkie talkie app bedrijf", "portofoon evenement personeel", "team communicatie bouwplaats"],
+  },
+  {
+    slug: "toegang-op-kenteken",
+    pijler: "personeel",
+    naam: "Toegang op kenteken",
+    kort: "Een camera leest het kenteken; staat de bestuurder vandaag ingepland, dan gaat de slagboom open.",
+    tekst:
+      "Bij de ingang van het terrein leest een gewone IP-camera het kenteken. ZekerFlex kijkt in het rooster: staat deze flexwerker, medewerker of leverancier nu bij jullie ingepland, dan geeft de slagboom of het hek vrij. Elke aankomst staat in het logboek, de planner krijgt een melding en de flexwerker is welkom zonder te bellen of aan te melden bij de portier.",
+    punten: [
+      "Flexwerkers vullen hun kenteken één keer in; jij hoeft niets over te typen",
+      "Open alleen voor wie nu ingepland staat, of voor een bezoeker met een tijdvenster",
+      "Logboek van elke aankomst met tijd, kenteken en naam; de planner krijgt een melding",
+      "Handmatig openen vanuit je ZekerFlex-beheer, met één druk op de knop",
+      "Werkt met een gewone IP-camera (RTSP) en een klein kastje bij de slagboom",
+    ],
+    voorWie: "Bouwplaatsen, distributiecentra, evenemententerreinen en bedrijfsterreinen met een slagboom of hek",
+    status: "beschikbaar",
+    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
+    zoekwoorden: ["kentekenherkenning slagboom", "kenteken toegang bouwplaats", "automatische toegang terrein personeel", "anpr slagboom", "kentekenherkenning parkeerplaats bedrijf"],
+  },
+  {
+    slug: "sleutelkluis",
+    pijler: "personeel",
+    naam: "Sleutelkluis",
+    kort: "Wifi-codes, alarmcodes en inloggegevens die een flexwerker alleen ziet zolang de dienst duurt.",
+    tekst:
+      "Je legt per vestiging vast wat een flexwerker op de werkvloer nodig heeft: het wifi-wachtwoord, de alarmcode, de code van het sleutelkastje of de inlog van de kassa. Wie ingepland staat, ziet dat vanaf twee uur voor de dienst tot het einde ervan; daarna is het weg. Je ziet wie wat bekeken heeft, en krijgt een seintje als een code na een dienst beter vervangen kan worden.",
+    punten: [
+      "Versleuteld opgeslagen op onze eigen server; nooit via chat, papier of een groepsapp",
+      "Zichtbaar van twee uur vóór de dienst tot het einde; daarna automatisch ingetrokken",
+      "Per vestiging of voor het hele bedrijf; je eigen team ziet alles, een flexwerker alleen zijn dienst",
+      "Logboek: wie bekeek welke code wanneer",
+      "Een seintje als een code na een dienst beter vervangen kan worden",
+    ],
+    voorWie: "Horeca, retail, schoonmaak, beveiliging en kantoren die flexwerkers toegang geven tot panden, kassa's en systemen",
+    status: "beschikbaar",
+    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
+    zoekwoorden: ["wachtwoorden delen met personeel", "alarmcode flexwerker", "sleutelbeheer personeel", "wifi wachtwoord personeel veilig", "toegangscodes tijdelijk delen"],
+  },
+  {
+    slug: "badges-en-labels-printen",
+    pijler: "personeel",
+    naam: "Badges en labels printen",
+    kort: "Checkt een flexwerker in, dan rolt zijn bezoekersbadge of naamsticker direct uit de printer.",
+    tekst:
+      "Zodra iemand incheckt op locatie maakt ZekerFlex een badge: naam, bedrijf, klus en een controlecode. Die gaat naar een goedkope thermische labelprinter op de werkvloer, via de computer of rechtstreeks via Bluetooth vanaf een telefoon. Ook naamstickers, verzendlabels en incheckbonnen print je zo, zonder printsoftware van een ander.",
+    punten: [
+      "Badge of naamsticker direct bij het inchecken, zonder dat iemand iets hoeft te doen",
+      "Print vanaf elke computer (ook Linux of Mac) of via Bluetooth vanaf een telefoon",
+      "Sjablonen voor bezoekersbadge, naamsticker, verzendlabel en incheckbon",
+      "Werkt met de meeste thermische labelprinters (Brother QL, Dymo, Zebra, Bluetooth-bonprinters)",
+      "Een printwachtrij per vestiging, met een logboek van wat geprint is",
+    ],
+    voorWie: "Evenementen, magazijnen, bouwplaatsen en kantoren waar bezoekers en flexwerkers herkenbaar moeten zijn",
+    status: "beschikbaar",
+    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
+    zoekwoorden: ["bezoekersbadge printen", "naamsticker printen bij inchecken", "labelprinter personeel", "badge printer evenement", "thermische labelprinter bedrijf"],
+  },
+
   // ── Online & klanten
   {
     slug: "website",

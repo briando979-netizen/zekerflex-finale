@@ -1,0 +1,16 @@
+[Unit]
+Description=ZekerFlex Toegang op kenteken (kastje bij de slagboom)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/zekerflex-toegang
+EnvironmentFile=/opt/zekerflex-toegang/.env
+ExecStart=/opt/zekerflex-toegang/.venv/bin/python3 /opt/zekerflex-toegang/toegang_agent.py
+Restart=always
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target

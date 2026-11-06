@@ -1,0 +1,16 @@
+[Unit]
+Description=ZekerFlex printagent (badges en labels)
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/zekerflex-printen
+EnvironmentFile=/opt/zekerflex-printen/.env
+ExecStart=/usr/bin/python3 /opt/zekerflex-printen/print_agent.py
+Restart=always
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target

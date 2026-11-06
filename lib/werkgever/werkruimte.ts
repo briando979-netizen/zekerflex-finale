@@ -98,7 +98,8 @@ export type MenuSleutel =
   | "reviews"
   | "netwerk"
   | "rapportages"
-  | "kennisbank";
+  | "kennisbank"
+  | "locatie";
 
 export type MenuSectie = "beheer" | "klanten" | "administratie" | "personeel";
 
@@ -138,7 +139,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       ...(o.heeftHoreca ? [{ sleutel: "horeca" as const }] : []),
       ...(o.heeftRijschool ? [{ sleutel: "rijschool" as const }] : []),
       ...(["klussen", "kalender", "agenda", ...bank, "favorieten", "berichten", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
-      ...(["uren", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
+      ...(["uren", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk", "locatie", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
     ];
   }
   // het eigen onderdeel bovenaan, een ander pakket dat ook aanstaat erna
@@ -148,7 +149,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       : soort === "horeca"
         ? ["horeca", ...(o.heeftRijschool ? (["rijschool"] as const) : [])]
         : [o.studio ? "studio" : "website", ...(o.heeftRijschool ? (["rijschool"] as const) : []), ...(o.heeftHoreca ? (["horeca"] as const) : [])];
-  const klanten: MenuSleutel[] = [...(soort === "website" && !o.studio ? [] : (["website"] as const)), "reviews", "telefonie", "netwerk"];
+  const klanten: MenuSleutel[] = [...(soort === "website" && !o.studio ? [] : (["website"] as const)), "reviews", "telefonie", "netwerk", "locatie"];
   return [
     { sleutel: "start" },
     ...eigen.map(plek()),

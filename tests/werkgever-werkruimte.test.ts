@@ -80,6 +80,7 @@ describe("menuVoor", () => {
       { sleutel: "telefonie", sectie: "beheer" },
       { sleutel: "reviews", sectie: "beheer" },
       { sleutel: "netwerk", sectie: "beheer" },
+      { sleutel: "locatie", sectie: "beheer" },
       // de kennisbank (Outline, lib/kennisbank): handleidingen, altijd als laatste
       { sleutel: "kennisbank", sectie: "beheer" },
     ]);
