@@ -6,6 +6,8 @@ vi.mock("@/lib/analytics/track", () => ({ recordServerEvent: vi.fn() }));
 vi.mock("@/lib/mail", () => ({
   sendMail: vi.fn().mockResolvedValue({ delivered: true }),
   mailShell: (title: string, body: string) => `<html>${title}${body}</html>`,
+  // de route gebruikt ook escapeHtml uit lib/mail; zonder deze mock gaf hij een 500 en was de uitrolcontrole rood
+  escapeHtml: (s: string) => s,
 }));
 
 const createLead = vi.fn();
