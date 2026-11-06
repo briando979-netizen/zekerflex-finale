@@ -73,7 +73,8 @@ export const TALEN = {
   tr: { naam: "Turks", eigen: "Türkçe" },
 } as const;
 export type Taal = keyof typeof TALEN;
-export const isTaal = (v: unknown): v is Taal => typeof v === "string" && v in TALEN;
+// Object.hasOwn, niet `in`: anders telt "constructor" als taal en valt /p/<slug>/constructor om.
+export const isTaal = (v: unknown): v is Taal => typeof v === "string" && Object.hasOwn(TALEN, v);
 
 export interface Pagina {
   id: string;
