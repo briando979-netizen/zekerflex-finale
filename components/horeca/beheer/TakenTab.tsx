@@ -49,7 +49,9 @@ export function TakenTab() {
   // het vinkje staat meteen aan zodra je tikt, ook al is de server nog bezig
   const [bezig, setBezig] = useState("");
 
-  useEffect(() => setWie(leesNaam()), []);
+  useEffect(() => {
+    void setWie(leesNaam());
+  }, []);
   const laad = useCallback(async (d: string) => {
     try {
       setLijsten((await stuur<{ lijsten: Lijst[] }>(`${API}?alleen=taken&datum=${d}`)).lijsten);

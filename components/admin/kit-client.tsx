@@ -498,7 +498,9 @@ export function DataTable({
     });
   }, [rows, query, active, sort]);
 
-  useEffect(() => setPage(0), [query, active, sort]);
+  useEffect(() => {
+    void setPage(0);
+  }, [query, active, sort]);
 
   const pages = Math.max(1, Math.ceil(shown.length / pageSize));
   const current = Math.min(page, pages - 1);

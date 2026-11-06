@@ -349,7 +349,9 @@ export function Klanten({ namen, vandaag, start }: { namen: Record<string, strin
   const [gekozen, setGekozen] = useState(start);
   const paneel = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setGekozen(start), [start]);
+  useEffect(() => {
+    void setGekozen(start);
+  }, [start]);
 
   const lijst = useMemo(() => {
     const q = zoek.trim().toLowerCase();

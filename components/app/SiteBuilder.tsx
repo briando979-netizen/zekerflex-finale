@@ -220,7 +220,9 @@ function ScaledPreview({ html, title, device, gekozen, onKies }: { html: string;
     el?.classList.add("zf-gekozen");
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [gekozen]);
-  useEffect(() => markeer(), [markeer]);
+  useEffect(() => {
+    void markeer();
+  }, [markeer]);
 
   // the page has no scripts of its own (sandbox); the builder listens from outside: click a block = edit it
   const geladen = () => {

@@ -59,8 +59,12 @@ export function ShopStorefront({
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   // links als /shop?cat=… of /shop?q=… (zoekbalk, categorievakken) zetten het raster opnieuw
-  useEffect(() => setCategory(initialCat), [initialCat]);
-  useEffect(() => setQuery(initialQuery), [initialQuery]);
+  useEffect(() => {
+    void setCategory(initialCat);
+  }, [initialCat]);
+  useEffect(() => {
+    void setQuery(initialQuery);
+  }, [initialQuery]);
 
   useEffect(() => {
     if (!panel) return;

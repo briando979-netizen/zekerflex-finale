@@ -29,7 +29,9 @@ export function FeatureFlagsPanel() {
       .then((d) => d && setRows(d.flags))
       .catch(() => undefined);
   }, []);
-  useEffect(() => load(), [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function save(key: string, patch: { enabled?: boolean; rolloutPct?: number }) {
     setBusy(key);

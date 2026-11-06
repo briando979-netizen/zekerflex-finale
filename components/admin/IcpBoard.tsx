@@ -50,7 +50,9 @@ export function IcpBoard() {
       })
       .catch(() => undefined);
   }, []);
-  useEffect(() => load(), [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (!d) return <div className="a-panel h-28 animate-pulse" />;
   const o = d.opgave;

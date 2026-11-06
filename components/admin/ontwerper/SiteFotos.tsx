@@ -27,7 +27,9 @@ interface Plek {
 function PlekRij({ p, bezig, onKies, onAlt, onStandaard }: { p: Plek; bezig: boolean; onKies: (media: string) => void; onAlt: (alt: string) => void; onStandaard: () => void }) {
   const [kiezen, setKiezen] = useState(false);
   const [alt, setAlt] = useState(p.keuze?.alt ?? "");
-  useEffect(() => setAlt(p.keuze?.alt ?? ""), [p.keuze?.alt, p.keuze?.media]);
+  useEffect(() => {
+    void setAlt(p.keuze?.alt ?? "");
+  }, [p.keuze?.alt, p.keuze?.media]);
   const bron = p.keuze ? `/beeld/${p.keuze.media}?klein=1` : p.standaard;
   return (
     <li className="space-y-2 rounded-xl p-3" style={paneel}>

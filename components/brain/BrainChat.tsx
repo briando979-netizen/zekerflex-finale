@@ -33,7 +33,9 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
       })
       .catch(() => undefined);
   }, []);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+  useEffect(() => {
+    void end.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, busy]);
 
   async function ask(q: string) {
     const question = q.trim();

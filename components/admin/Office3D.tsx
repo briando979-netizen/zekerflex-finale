@@ -134,7 +134,9 @@ export function Office3D() {
   const [nowHour, setNowHour] = useState(12);
   const [timeOverride, setTimeOverride] = useState<number | null>(null);
   const [canFull, setCanFull] = useState(false);
-  useEffect(() => setCanFull(Boolean(document.fullscreenEnabled)), []);
+  useEffect(() => {
+    void setCanFull(Boolean(document.fullscreenEnabled));
+  }, []);
   const [latest, setLatest] = useState<CityEvent | null>(null);
   const [replay, setReplay] = useState<{ at: string; left: number; total: number } | null>(null);
   const [hourly, setHourly] = useState<{ labels: string[]; values: number[] } | null>(null);

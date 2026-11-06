@@ -191,7 +191,9 @@ export function Composer({
   const [preview, setPreview] = useState<{ file: File; kind: "image" | "file" } | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
-  useEffect(() => setHoverDevice(window.matchMedia(HOVER).matches), []);
+  useEffect(() => {
+    void setHoverDevice(window.matchMedia(HOVER).matches);
+  }, []);
 
   async function aiSuggest() {
     setAiBusy(true);

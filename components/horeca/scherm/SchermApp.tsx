@@ -40,8 +40,12 @@ export function SchermApp({ rol, zaakNaam, apparaatNaam }: { rol: SchermRol; zaa
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
-  useEffect(() => setGemount(true), []);
-  useEffect(() => houdSchermAan(), []);
+  useEffect(() => {
+    void setGemount(true);
+  }, []);
+  useEffect(() => {
+    void houdSchermAan();
+  }, []);
 
   // geluid mag pas na een tik (regel van de browser); de voorkeur onthoudt dit apparaat
   useEffect(() => {

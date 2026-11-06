@@ -80,7 +80,9 @@ export function BonWeergave({ kop, bon }: { kop: BonKop; bon: BonData }) {
 /** Na afrekenen: de bon(nen) groot in beeld, printen of klaar. */
 export function BonVenster({ kop, bonnen, sluit }: { kop: BonKop; bonnen: BonData[]; sluit: () => void }) {
   const klaar = useRef<HTMLButtonElement>(null);
-  useEffect(() => klaar.current?.focus(), []);
+  useEffect(() => {
+    void klaar.current?.focus();
+  }, []);
   const totaal = bonnen.reduce((s, b) => s + b.bedragCent + b.fooiCent, 0);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3">

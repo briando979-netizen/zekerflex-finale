@@ -39,7 +39,9 @@ export function CollusionBoard() {
       .catch(() => setPairs([]))
       .finally(() => setBusy(false));
   }, []);
-  useEffect(() => load(days), [load, days]);
+  useEffect(() => {
+    void load(days);
+  }, [load, days]);
 
   return (
     <section className="rounded-2xl border border-hair bg-white">

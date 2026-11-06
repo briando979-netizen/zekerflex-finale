@@ -33,7 +33,9 @@ export function ClawbacksPanel() {
       .then(setData)
       .catch(() => undefined);
   }, []);
-  useEffect(() => load(), [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (!data) return null;
 
