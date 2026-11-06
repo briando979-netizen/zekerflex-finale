@@ -4,6 +4,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { PageHeader, Panel, KpiCard, money } from "@/components/app/ui";
 import { BillingPrefsForm } from "@/components/app/BillingPrefsForm";
+import { EfactuurSettings } from "@/components/werkgever/EfactuurSettings";
 import { InvoicesOverview, type InvoiceRow } from "@/components/app/InvoicesOverview";
 import { payUrl } from "@/lib/billing/pay-link";
 import { getDict } from "@/lib/i18n/server";
@@ -78,6 +79,13 @@ export default async function WerkgeverFacturenPage() {
               costCentres: billing.costCentres ?? [],
             }}
           />
+        </Panel>
+      </div>
+
+      {/* e-factuur (lib/efactuur): Peppol-adres, ontvangstadres en automatisch versturen */}
+      <div id="e-factuur" className="mt-8 scroll-mt-24">
+        <Panel title="E-factuur (UBL / Peppol)">
+          <EfactuurSettings />
         </Panel>
       </div>
 
