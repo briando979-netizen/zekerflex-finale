@@ -34,8 +34,12 @@ services:
       # De stemmen (.onnx + .onnx.json) staan op de VPS, niet in git:
       # haal ze met `sh deploy/piper/haal-stem.sh`.
       - ./deploy/piper/stemmen:/app/voices
-      # Welke stemnaam bij welk stembestand hoort (alleen-lezen).
-      - ./deploy/piper/config:/app/config:ro
+      # Welke stemnaam bij welk stembestand hoort. NIET op alleen-lezen zetten:
+      # de image schrijft bij het starten zelf zijn standaardbestanden hierheen
+      # (pre_process_map.yaml en voice_to_speaker.default.yaml) en stopt met
+      # "Read-only file system" als dat niet mag. Onze eigen
+      # voice_to_speaker.yaml laat hij staan.
+      - ./deploy/piper/config:/app/config
     # Alleen vanaf de VPS zelf te testen (loopback, niet vanaf internet):
     #   curl -s http://127.0.0.1:5000/v1/audio/speech -H 'Content-Type: application/json' \
     #     -d '{"model":"tts-1","voice":"alloy","input":"Goedemiddag, dit is ZekerFlex.","response_format":"mp3"}' -o /tmp/test.mp3

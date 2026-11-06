@@ -53,7 +53,7 @@ export const KEUZE_UITLEG: KeuzeUitleg[] = [
     id: "stem",
     naam: "Tekst naar spraak",
     gevolg:
-      "Eigen: Piper op onze eigen server. Die moet eerst aangezet worden (Admin → Te doen); tot die tijd blijft 'automatisch' bij Google.",
+      "Eigen: Piper op onze eigen server, een Nederlandse stem die niets per keer kost. Draait sinds 6 november; 'automatisch' zou hier nog naar Google gaan.",
   },
 ];
 
