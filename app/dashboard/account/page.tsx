@@ -82,6 +82,9 @@ export default async function AccountPage() {
         { label: t.admin, href: "/dashboard/administratie" },
         { label: t.forecast, href: "/dashboard/vooruitblik" },
         { label: t.assistant, href: "/dashboard/assistent" },
+        // ZekerFlex OS: een eigennaam (in elke taal gelijk). external = gewone <a>: /os moet als eigen
+        // document laden, anders blijft de CSP van dit scherm gelden en openen de app-vensters niet.
+        ...(inApp ? [] : [{ label: "ZekerFlex OS", href: "/os", external: true }]),
         { label: t.availability, href: "/dashboard/beschikbaarheid" },
         { label: t.trips, href: "/dashboard/ritten" },
         { label: t.calendar, href: "/dashboard/agenda-koppeling" },

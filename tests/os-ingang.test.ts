@@ -16,6 +16,11 @@ describe("ingang naar ZekerFlex OS", () => {
     expect(bron).toMatch(/<a\s[^>]*href="\/os"[^>]*target="_top"/);
   });
 
+  it("de werker-app (FreelancerShell) heeft een ingang via Account, ook als gewone link", () => {
+    const bron = readFileSync(join(ROOT, "app/dashboard/account/page.tsx"), "utf8");
+    expect(bron).toMatch(/href: "\/os", external: true/);
+  });
+
   it("het bureaublad herlaadt één keer als de browser een app-venster blokkeert", () => {
     const bron = readFileSync(join(ROOT, "components/os/Bureaublad.tsx"), "utf8");
     expect(bron).toContain("securitypolicyviolation");
