@@ -5,7 +5,7 @@ import { siteTenantOf } from "@/lib/sites/access";
 import { bestellingenVan } from "@/lib/sites/bestellingen";
 import { klantenUit } from "@/lib/sites/klanten";
 import { alleReserveringen } from "@/lib/sites/reserveringen-opslag";
-import { siteOfTenant } from "@/lib/sites/store";
+import { winkelSiteOf } from "@/lib/sites/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await winkelSiteOf(await siteTenantOf(p));
     if (!site) return NextResponse.json({ klanten: [] });
     const [bestellingen, reserveringen] = await Promise.all([bestellingenVan(site.id, 3000), alleReserveringen(site.id)]);
     return NextResponse.json({ klanten: klantenUit(bestellingen, reserveringen) });

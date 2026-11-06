@@ -248,9 +248,14 @@ export interface SiteDomain {
   viaZekerflex?: boolean;
 }
 
+/** De twee varianten van ZekerFlex Sites: een website bouwen, of een webshop openen. Ontbreekt = website. */
+export type SiteSoort = "website" | "webshop";
+
 export interface SiteDoc {
   id: string;
   tenantId: string;
+  /** website bouwen of webshop openen; een bedrijf kan van elke soort één hebben */
+  soort?: SiteSoort | undefined;
   slug: string;
   theme: Theme;
   bedrijf: Company;

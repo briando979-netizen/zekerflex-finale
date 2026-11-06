@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { mayPublish, siteTenantOf } from "@/lib/sites/access";
+import { mayPublish, siteTenantOf, soortVan } from "@/lib/sites/access";
 import { checkDomain, dnsRecords, getDomain, linkDomain, unlinkDomain } from "@/lib/sites/domain";
 import { siteOfTenant } from "@/lib/sites/store";
 
@@ -15,18 +15,18 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("ontkoppel") }),
 ]);
 
-async function mySite() {
+async function mySite(request: Request) {
   const p = await requirePrincipal();
   const tenantId = await siteTenantOf(p);
-  const site = await siteOfTenant(tenantId);
-  if (!site) throw AppError.notFound("Maak eerst een website.");
+  const site = await siteOfTenant(tenantId, soortVan(request));
+  if (!site) throw AppError.notFound("Maak eerst een website of webshop.");
   return { p, tenantId, site };
 }
 
 // GET /api/werkgever/sites/domain — the own domain of my website and the DNS records to set.
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const { site } = await mySite();
+    const { site } = await mySite(request);
     const domein = await getDomain(site.id);
     return NextResponse.json({ domein, records: domein ? dnsRecords(site.id, domein) : [] });
   } catch (err) {
@@ -39,7 +39,7 @@ export async function GET(): Promise<NextResponse> {
 // An own domain is part of hosting, so linking and checking need Website-beheer (or free access).
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const { p, tenantId, site } = await mySite();
+    const { p, tenantId, site } = await mySite(request);
     const input = schema.parse(await request.json().catch(() => ({})));
     const by = { userId: p.userId, name: p.fullName };
     if (input.action === "ontkoppel") {

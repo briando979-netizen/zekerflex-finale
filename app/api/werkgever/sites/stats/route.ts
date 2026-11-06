@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { siteTenantOf } from "@/lib/sites/access";
+import { siteTenantOf, soortVan } from "@/lib/sites/access";
 import { siteStats } from "@/lib/sites/stats";
 import { siteOfTenant } from "@/lib/sites/store";
 
@@ -16,7 +16,7 @@ const RANGES = [7, 30, 90] as const;
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await siteOfTenant(await siteTenantOf(p), soortVan(request));
     if (!site) throw AppError.notFound("Maak eerst een website.");
     const asked = Number(new URL(request.url).searchParams.get("dagen"));
     const dagen = RANGES.find((r) => r === asked) ?? 30;

@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { siteTenantOf } from "@/lib/sites/access";
 import { readMedia, siteOfTenant } from "@/lib/sites/store";
+import type { SiteDoc } from "@/lib/sites/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,8 +11,12 @@ export const dynamic = "force-dynamic";
 export async function GET(_request: Request, { params }: { params: Promise<{ file: string }> }): Promise<Response> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const tenantId = await siteTenantOf(p);
     const { file } = await params;
+    // de foto hoort bij de website of bij de webshop van dit bedrijf: zoek in beide
+    const id = file.replace(/(-k)?\.webp$/, "");
+    const kandidaten = await Promise.all([siteOfTenant(tenantId, "website"), siteOfTenant(tenantId, "webshop")]);
+    const site: SiteDoc | undefined = kandidaten.find((s): s is SiteDoc => Boolean(s?.media.some((m) => m.id === id))) ?? kandidaten.find((s): s is SiteDoc => Boolean(s));
     if (!site) return new Response("Niet gevonden", { status: 404 });
     const bytes = await readMedia(site.id, file);
     return new Response(new Uint8Array(bytes), {

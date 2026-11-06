@@ -4,7 +4,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { siteTenantOf } from "@/lib/sites/access";
 import { BESTEL_STATUSSEN, bestellingenVan, zetBestelStatus, type BestelStatus } from "@/lib/sites/bestellingen";
-import { siteOfTenant } from "@/lib/sites/store";
+import { winkelSiteOf } from "@/lib/sites/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await winkelSiteOf(await siteTenantOf(p));
     return NextResponse.json({ bestellingen: site ? await bestellingenVan(site.id) : [] });
   } catch (err) {
     const { status, body } = toErrorBody(err);
@@ -28,7 +28,7 @@ const statusSchema = z.object({ id: z.string().max(40), status: z.enum(BESTEL_ST
 export async function PATCH(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await winkelSiteOf(await siteTenantOf(p));
     if (!site) throw AppError.notFound("Maak eerst een website.");
     const input = statusSchema.parse(await request.json().catch(() => ({})));
     const bestelling = await zetBestelStatus(site.id, input.id, input.status);

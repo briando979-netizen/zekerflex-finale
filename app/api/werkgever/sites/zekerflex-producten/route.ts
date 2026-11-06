@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { siteTenantOf } from "@/lib/sites/access";
-import { siteOfTenant } from "@/lib/sites/store";
+import { winkelSiteOf } from "@/lib/sites/store";
 import { koppelZekerflexProduct, zekerflexCatalogus } from "@/lib/sites/zekerflex-producten";
 
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await winkelSiteOf(await siteTenantOf(p));
     if (!site) throw AppError.notFound("Maak eerst een website.");
     const { id } = z.object({ id: z.string().min(1).max(60) }).parse(await request.json().catch(() => ({})));
     return NextResponse.json(await koppelZekerflexProduct(site.id, id), { status: 201 });

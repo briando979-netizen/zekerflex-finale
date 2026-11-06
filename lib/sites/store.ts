@@ -8,13 +8,15 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete, kvGet, kvListKeys, kvListValues, kvSet } from "@/lib/storage/kv";
 import type { CleanImage } from "@/lib/media/clean-image";
-import { SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain, type SiteProposalMark } from "@/lib/sites/types";
+import { LEGE_WINKEL, SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain, type SiteProposalMark, type SiteSoort } from "@/lib/sites/types";
+import { webshopPages, webshopTemplate } from "@/lib/sites/webshop-templates";
 import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Sites storage.
 //   KV "site:<id>"                  — the site being edited
-//   KV "site-tenant:<tenantId>"     — the site of a company (one for now)
+//   KV "site-tenant:<tenantId>"     — the website of a company (one)
+//   KV "webshop-tenant:<tenantId>"  — the webshop of a company (one; a separate variant, same engine)
 //   KV "site-slug:<slug>"           — claimed address part (unique key: first wins)
 //   KV "site-build:<id>:<buildId>"  — a published snapshot; visitors see doc.liveBuild
 //   KV "site-contact:<id>:<msgId>"  — messages sent through the contact form
@@ -31,7 +33,7 @@ const KEEP_BUILDS = 10;
 const MAX_MEDIA = 600;
 
 const siteKey = (id: string) => `site:${id}`;
-const tenantKey = (tenantId: string) => `site-tenant:${tenantId}`;
+const tenantKey = (tenantId: string, soort: SiteSoort = "website") => (soort === "webshop" ? `webshop-tenant:${tenantId}` : `site-tenant:${tenantId}`);
 const slugKey = (slug: string) => `site-slug:${slug}`;
 const buildKey = (id: string, buildId: string) => `site-build:${id}:${buildId}`;
 const contactPrefix = (id: string) => `site-contact:${id}:`;
@@ -59,9 +61,18 @@ export async function getSite(id: string): Promise<SiteDoc | null> {
   return isSiteId(id) ? kvGet<SiteDoc>(siteKey(id)) : null;
 }
 
-export async function siteOfTenant(tenantId: string): Promise<SiteDoc | null> {
-  const id = await kvGet<string>(tenantKey(tenantId));
+/** De website (standaard) of de webshop van een bedrijf. */
+export async function siteOfTenant(tenantId: string, soort: SiteSoort = "website"): Promise<SiteDoc | null> {
+  const id = await kvGet<string>(tenantKey(tenantId, soort));
   return id ? getSite(id) : null;
+}
+
+/**
+ * De site waar de winkel van een bedrijf in zit: de webshop, en anders een website die al
+ * producten heeft (zo werken de winkels die vóór de scheiding in een website zijn gemaakt gewoon door).
+ */
+export async function winkelSiteOf(tenantId: string): Promise<SiteDoc | null> {
+  return (await siteOfTenant(tenantId, "webshop")) ?? (await siteOfTenant(tenantId, "website"));
 }
 
 async function claimSlug(base: string, siteId: string): Promise<string> {
@@ -80,19 +91,24 @@ async function claimSlug(base: string, siteId: string): Promise<string> {
 }
 
 export async function createSite(tenantId: string, by: { userId: string; name: string }, input: z.infer<typeof createSchema>): Promise<SiteDoc> {
-  if (await siteOfTenant(tenantId)) throw AppError.conflict("Je bedrijf heeft al een website.");
-  const template = SECTOR_TEMPLATES.find((t) => t.id === input.templateId) ?? SECTOR_TEMPLATES[0]!;
+  const soort: SiteSoort = input.soort ?? "website";
+  if (await siteOfTenant(tenantId, soort)) throw AppError.conflict(soort === "webshop" ? "Je bedrijf heeft al een webshop." : "Je bedrijf heeft al een website.");
+  const shopTemplate = webshopTemplate(input.templateId);
+  const template = soort === "webshop" ? shopTemplate : (SECTOR_TEMPLATES.find((t) => t.id === input.templateId) ?? SECTOR_TEMPLATES[0]!);
   const id = rid("s");
   const slug = await claimSlug(input.bedrijf.naam, id);
   const now = new Date().toISOString();
   const site: SiteDoc = {
     id,
     tenantId,
+    ...(soort === "webshop" ? { soort } : {}),
     slug,
-    // the house style for every new site: premium since 3 Nov 2026, beleving (exactly like schwarzwald.zekerflex.com) since 4 Nov; existing sites keep theirs
-    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: "beleving" },
+    // the house style for every new site: premium since 3 Nov 2026, beleving (exactly like schwarzwald.zekerflex.com) since 4 Nov; existing sites keep theirs.
+    // A webshop starts in premium (white product cards on cream); the company can switch in Ontwerp.
+    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: soort === "webshop" ? "premium" : "beleving" },
     bedrijf: input.bedrijf,
-    pages: pagesFromTemplate(template, input.bedrijf, () => rid("b", 8)),
+    pages: soort === "webshop" ? webshopPages(shopTemplate, input.bedrijf, () => rid("b", 8)) : pagesFromTemplate(template as (typeof SECTOR_TEMPLATES)[number], input.bedrijf, () => rid("b", 8)),
+    ...(soort === "webshop" ? { winkel: LEGE_WINKEL } : {}),
     media: [],
     liveBuild: null,
     builds: [],
@@ -100,8 +116,8 @@ export async function createSite(tenantId: string, by: { userId: string; name: s
     updatedAt: now,
   };
   await kvSet(siteKey(id), site);
-  await kvSet(tenantKey(tenantId), id);
-  await recordAudit({ category: "SALES", action: "site.created", actorUserId: by.userId, summary: `Website ${slug} aangemaakt (${template.naam})`, targetType: "site", targetId: id });
+  await kvSet(tenantKey(tenantId, soort), id);
+  await recordAudit({ category: "SALES", action: "site.created", actorUserId: by.userId, summary: `${soort === "webshop" ? "Webshop" : "Website"} ${slug} aangemaakt (${template.naam})`, targetType: "site", targetId: id });
   return site;
 }
 

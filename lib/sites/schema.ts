@@ -137,5 +137,7 @@ export const siteSaveSchema = z
 
 export const createSchema = z.object({
   templateId: z.string().max(40),
+  /** website bouwen (standaard) of webshop openen */
+  soort: z.enum(["website", "webshop"]).optional(),
   bedrijf: companySchema,
 });

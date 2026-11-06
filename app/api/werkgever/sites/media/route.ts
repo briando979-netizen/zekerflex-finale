@@ -4,7 +4,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { cleanImage, importRemoteImage, IMAGE_MAX_INPUT_BYTES, SITE_IMAGE_MAX_PX, SITE_IMAGE_SMALL_PX } from "@/lib/media/clean-image";
-import { siteTenantOf } from "@/lib/sites/access";
+import { siteTenantOf, soortVan } from "@/lib/sites/access";
 import { addMedia, siteOfTenant } from "@/lib/sites/store";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const p = await requirePrincipal();
     await enforceRateLimit({ name: "site-media", identifier: p.userId, limit: 80, windowSeconds: 3600, message: "Even rustig aan met foto's toevoegen; probeer het zo opnieuw." });
     const tenantId = await siteTenantOf(p);
-    const site = await siteOfTenant(tenantId);
+    const site = await siteOfTenant(tenantId, soortVan(request));
     if (!site) throw AppError.notFound("Maak eerst een website.");
 
     if ((request.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {

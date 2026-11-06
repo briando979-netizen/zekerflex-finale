@@ -4,7 +4,7 @@ import { hasRole, type Principal } from "@/lib/auth";
 import { freeAccess } from "@/lib/billing/comp";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getManagedWebsite, isUnlocked } from "@/lib/website/manage";
-import type { Company } from "@/lib/sites/types";
+import type { Company, SiteSoort } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Who may build a company's website, and who may put it online. Building and
@@ -12,6 +12,9 @@ import type { Company } from "@/lib/sites/types";
 // needs the Website-beheer subscription — or a platform admin or free (comp)
 // account, who may use every paid feature (lib/billing/comp).
 // ---------------------------------------------------------------------------
+
+/** Website of webshop: de studio vraagt met `?soort=webshop`; zonder is het de website (zo werken oude aanroepen door). */
+export const soortVan = (request: Request): SiteSoort => (new URL(request.url).searchParams.get("soort") === "webshop" ? "webshop" : "website");
 
 /** The company whose website this person edits (HQ admin, or a platform admin's own company). */
 export async function siteTenantOf(p: Principal): Promise<string> {

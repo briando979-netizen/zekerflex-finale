@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { mayPublish, siteTenantOf } from "@/lib/sites/access";
+import { mayPublish, siteTenantOf, soortVan } from "@/lib/sites/access";
 import { listContactMessages, publishSite, setLiveBuild, siteOfTenant } from "@/lib/sites/store";
 
 export const runtime = "nodejs";
@@ -19,8 +19,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const tenantId = await siteTenantOf(p);
-    const site = await siteOfTenant(tenantId);
-    if (!site) throw AppError.notFound("Maak eerst een website.");
+    const site = await siteOfTenant(tenantId, soortVan(request));
+    if (!site) throw AppError.notFound("Maak eerst een website of webshop.");
     const input = schema.parse(await request.json().catch(() => ({})));
     const by = { userId: p.userId, name: p.fullName };
     if (input.action === "offline") return NextResponse.json({ site: await setLiveBuild(site.id, null, by) });
@@ -39,10 +39,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 // GET — messages visitors sent through the contact form.
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const site = await siteOfTenant(await siteTenantOf(p));
+    const site = await siteOfTenant(await siteTenantOf(p), soortVan(request));
     return NextResponse.json({ messages: site ? await listContactMessages(site.id) : [] });
   } catch (err) {
     const { status, body } = toErrorBody(err);
