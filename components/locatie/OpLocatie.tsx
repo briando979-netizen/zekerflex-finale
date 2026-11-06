@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { TABS, type Tab } from "@/lib/locatie/tabs";
 import {
   BESLUIT_TEKST,
   KLUIS_SOORT_ICOON,
@@ -37,15 +38,8 @@ import { Portofoon, type KanaalInfo } from "@/components/locatie/Portofoon";
 // Alles via /api/werkgever/locatie; de server geeft na elke handeling de hele stand terug.
 // ---------------------------------------------------------------------------
 
-export type Tab = "overzicht" | "portofoon" | "toegang" | "kluis" | "printen";
-export const TABS: { key: Tab; label: string }[] = [
-  { key: "overzicht", label: "Overzicht" },
-  { key: "portofoon", label: "Portofoon" },
-  { key: "toegang", label: "Toegang" },
-  { key: "kluis", label: "Sleutelkluis" },
-  { key: "printen", label: "Badges en labels" },
-];
-export const isTab = (s: unknown): s is Tab => TABS.some((t) => t.key === s);
+// De tabbladen staan in lib/locatie/tabs.ts: de pagina (server) leest ?tab= en
+// mag daarvoor niets uit dit clientbestand aanroepen.
 
 interface Vestiging {
   id: string;

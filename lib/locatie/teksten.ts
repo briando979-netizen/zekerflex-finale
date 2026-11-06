@@ -19,10 +19,10 @@ const nl = {
     verbinden: "Verbinden…",
     houdIngedrukt: "Houd ingedrukt om te praten",
     praat: "Je praat",
-    spreekt: (naam: string) => `${naam} praat`,
+    spreekt: "{naam} praat",
     stil: "Stil",
     niemand: "Je bent alleen in dit kanaal",
-    aanwezig: (n: number) => (n === 1 ? "1 persoon luistert" : `${n} personen luisteren`),
+    aanwezig: { een: "1 persoon luistert", meer: "{n} personen luisteren" },
     verlaat: "Kanaal verlaten",
     bericht: "Spraakbericht inspreken",
     berichtUitleg: "Voor wie nu niet verbonden is: het bericht komt in het groepsgesprek en speelt af bij wie het kanaal opent.",
@@ -31,7 +31,7 @@ const nl = {
     gedempt: "Geluid uit",
     geluidAan: "Geluid aan",
     openChat: "Groepsgesprek openen",
-    verbonden: (n: number) => (n === 1 ? "verbonden met 1 telefoon" : `verbonden met ${n} telefoons`),
+    verbonden: { een: "verbonden met 1 telefoon", meer: "verbonden met {n} telefoons" },
     uit: "Dit onderdeel staat op dit moment uit.",
   },
   kluis: {
@@ -44,7 +44,7 @@ const nl = {
     gekopieerd: "Gekopieerd",
     gebruikersnaam: "Gebruikersnaam",
     gelogd: "Bekijken wordt vastgelegd voor de werkgever.",
-    tot: (tijd: string) => `zichtbaar tot ${tijd}`,
+    tot: "zichtbaar tot {tijd}",
     fout: "Dat lukte niet. Probeer het opnieuw.",
   },
   voertuig: {
@@ -79,10 +79,10 @@ const en: LocatieTeksten = {
     verbinden: "Connecting…",
     houdIngedrukt: "Hold to talk",
     praat: "You are talking",
-    spreekt: (naam) => `${naam} is talking`,
+    spreekt: "{naam} is talking",
     stil: "Quiet",
     niemand: "You are alone in this channel",
-    aanwezig: (n) => (n === 1 ? "1 person listening" : `${n} people listening`),
+    aanwezig: { een: "1 person listening", meer: "{n} people listening" },
     verlaat: "Leave channel",
     bericht: "Record a voice message",
     berichtUitleg: "For anyone not connected right now: the message goes to the group chat and plays when they open the channel.",
@@ -91,7 +91,7 @@ const en: LocatieTeksten = {
     gedempt: "Sound off",
     geluidAan: "Sound on",
     openChat: "Open group chat",
-    verbonden: (n) => (n === 1 ? "connected to 1 phone" : `connected to ${n} phones`),
+    verbonden: { een: "connected to 1 phone", meer: "connected to {n} phones" },
     uit: "This feature is currently switched off.",
   },
   kluis: {
@@ -104,7 +104,7 @@ const en: LocatieTeksten = {
     gekopieerd: "Copied",
     gebruikersnaam: "Username",
     gelogd: "Viewing is logged for the employer.",
-    tot: (tijd) => `visible until ${tijd}`,
+    tot: "visible until {tijd}",
     fout: "That didn't work. Please try again.",
   },
   voertuig: {
@@ -133,10 +133,10 @@ const pl: LocatieTeksten = {
     verbinden: "Łączenie…",
     houdIngedrukt: "Przytrzymaj, aby mówić",
     praat: "Mówisz",
-    spreekt: (naam) => `${naam} mówi`,
+    spreekt: "{naam} mówi",
     stil: "Cisza",
     niemand: "Jesteś sam w tym kanale",
-    aanwezig: (n) => (n === 1 ? "1 osoba słucha" : `${n} osób słucha`),
+    aanwezig: { een: "1 osoba słucha", meer: "{n} osób słucha" },
     verlaat: "Opuść kanał",
     bericht: "Nagraj wiadomość głosową",
     berichtUitleg: "Dla tych, którzy nie są teraz połączeni: wiadomość trafia do czatu grupowego i odtwarza się, gdy otworzą kanał.",
@@ -145,7 +145,7 @@ const pl: LocatieTeksten = {
     gedempt: "Dźwięk wyłączony",
     geluidAan: "Dźwięk włączony",
     openChat: "Otwórz czat grupowy",
-    verbonden: (n) => (n === 1 ? "połączono z 1 telefonem" : `połączono z ${n} telefonami`),
+    verbonden: { een: "połączono z 1 telefonem", meer: "połączono z {n} telefonami" },
     uit: "Ta funkcja jest obecnie wyłączona.",
   },
   kluis: {
@@ -158,7 +158,7 @@ const pl: LocatieTeksten = {
     gekopieerd: "Skopiowano",
     gebruikersnaam: "Nazwa użytkownika",
     gelogd: "Podgląd jest rejestrowany dla pracodawcy.",
-    tot: (tijd) => `widoczne do ${tijd}`,
+    tot: "widoczne do {tijd}",
     fout: "Nie udało się. Spróbuj ponownie.",
   },
   voertuig: {
@@ -187,10 +187,10 @@ const ro: LocatieTeksten = {
     verbinden: "Se conectează…",
     houdIngedrukt: "Ține apăsat pentru a vorbi",
     praat: "Vorbești",
-    spreekt: (naam) => `${naam} vorbește`,
+    spreekt: "{naam} vorbește",
     stil: "Liniște",
     niemand: "Ești singur pe acest canal",
-    aanwezig: (n) => (n === 1 ? "1 persoană ascultă" : `${n} persoane ascultă`),
+    aanwezig: { een: "1 persoană ascultă", meer: "{n} persoane ascultă" },
     verlaat: "Părăsește canalul",
     bericht: "Înregistrează un mesaj vocal",
     berichtUitleg: "Pentru cei care nu sunt conectați acum: mesajul ajunge în chatul de grup și se redă când deschid canalul.",
@@ -199,7 +199,7 @@ const ro: LocatieTeksten = {
     gedempt: "Sunet oprit",
     geluidAan: "Sunet pornit",
     openChat: "Deschide chatul de grup",
-    verbonden: (n) => (n === 1 ? "conectat la 1 telefon" : `conectat la ${n} telefoane`),
+    verbonden: { een: "conectat la 1 telefon", meer: "conectat la {n} telefoane" },
     uit: "Această funcție este momentan oprită.",
   },
   kluis: {
@@ -212,7 +212,7 @@ const ro: LocatieTeksten = {
     gekopieerd: "Copiat",
     gebruikersnaam: "Utilizator",
     gelogd: "Vizualizarea este înregistrată pentru angajator.",
-    tot: (tijd) => `vizibil până la ${tijd}`,
+    tot: "vizibil până la {tijd}",
     fout: "Nu a mers. Încearcă din nou.",
   },
   voertuig: {
@@ -241,10 +241,10 @@ const uk: LocatieTeksten = {
     verbinden: "З’єднання…",
     houdIngedrukt: "Утримуйте, щоб говорити",
     praat: "Ви говорите",
-    spreekt: (naam) => `${naam} говорить`,
+    spreekt: "{naam} говорить",
     stil: "Тихо",
     niemand: "Ви самі в цьому каналі",
-    aanwezig: (n) => (n === 1 ? "1 людина слухає" : `${n} людей слухають`),
+    aanwezig: { een: "1 людина слухає", meer: "{n} людей слухають" },
     verlaat: "Вийти з каналу",
     bericht: "Записати голосове повідомлення",
     berichtUitleg: "Для тих, хто зараз не на зв’язку: повідомлення потрапляє в груповий чат і відтворюється, коли вони відкриють канал.",
@@ -253,7 +253,7 @@ const uk: LocatieTeksten = {
     gedempt: "Звук вимкнено",
     geluidAan: "Звук увімкнено",
     openChat: "Відкрити груповий чат",
-    verbonden: (n) => (n === 1 ? "з’єднано з 1 телефоном" : `з’єднано з ${n} телефонами`),
+    verbonden: { een: "з’єднано з 1 телефоном", meer: "з’єднано з {n} телефонами" },
     uit: "Ця функція зараз вимкнена.",
   },
   kluis: {
@@ -266,7 +266,7 @@ const uk: LocatieTeksten = {
     gekopieerd: "Скопійовано",
     gebruikersnaam: "Ім’я користувача",
     gelogd: "Перегляд фіксується для роботодавця.",
-    tot: (tijd) => `видно до ${tijd}`,
+    tot: "видно до {tijd}",
     fout: "Не вдалося. Спробуйте ще раз.",
   },
   voertuig: {
@@ -287,3 +287,27 @@ const uk: LocatieTeksten = {
 export const LOCATIE_TEKSTEN: Record<Locale, LocatieTeksten> = { nl, en, pl, ro, uk };
 
 export const locatieTeksten = (locale: Locale): LocatieTeksten => LOCATIE_TEKSTEN[locale] ?? nl;
+
+// --- tekst met een plaatshouder -------------------------------------------
+// De teksten hierboven zijn gewone tekst met {naam}, {n} of {tijd} erin, nooit
+// een functie: een servercomponent mag geen functie aan een clientcomponent
+// doorgeven ("Functions cannot be passed directly to Client Components" — dan
+// valt de hele pagina om). Invullen doet de client met deze twee hulpjes.
+
+/** "{naam} praat" + {naam: "Sam"} → "Sam praat". */
+export function vulIn(sjabloon: string, waarden: Record<string, string | number>): string {
+  return sjabloon.replace(/\{(\w+)\}/gu, (heel, sleutel: string) => {
+    const waarde = waarden[sleutel];
+    return waarde === undefined ? heel : String(waarde);
+  });
+}
+
+export interface Aantalstekst {
+  een: string;
+  meer: string;
+}
+
+/** Eén of meer: "1 persoon luistert" of "3 personen luisteren". */
+export function vulAantal(tekst: Aantalstekst, n: number): string {
+  return n === 1 ? tekst.een : vulIn(tekst.meer, { n });
+}

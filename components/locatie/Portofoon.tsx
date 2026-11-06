@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { biedtAan } from "@/lib/locatie/modules";
-import { LOCATIE_TEKSTEN, type LocatieTeksten } from "@/lib/locatie/teksten";
+import { LOCATIE_TEKSTEN, vulAantal, vulIn, type LocatieTeksten } from "@/lib/locatie/teksten";
 
 // ---------------------------------------------------------------------------
 // De portofoon: kies een kanaal, houd de knop ingedrukt en praat. De spraak
@@ -513,7 +513,11 @@ export function Portofoon({
         <p className="truncate font-display text-lg font-bold text-ink">📻 {kanaal.titel}</p>
         <p className="truncate text-xs text-neutralx-500">{kanaal.ondertitel}</p>
         <p className="mt-2 text-xs text-neutralx-500">
-          {fase === "verbinden" ? t.verbinden : anderen.length === 0 ? t.niemand : `${t.aanwezig(anderen.length)} · ${t.verbonden(verbondenMet)}`}
+          {fase === "verbinden"
+            ? t.verbinden
+            : anderen.length === 0
+              ? t.niemand
+              : `${vulAantal(t.aanwezig, anderen.length)} · ${vulAantal(t.verbonden, verbondenMet)}`}
         </p>
         {anderen.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Aanwezig">
@@ -534,7 +538,7 @@ export function Portofoon({
 
       <div className="mt-6 flex flex-col items-center">
         <p className={`h-6 text-sm font-semibold ${praat ? "text-ok" : sprekerNaam ? "text-brand-700" : "text-neutralx-400"}`} aria-live="polite">
-          {praat ? t.praat : sprekerNaam ? t.spreekt(sprekerNaam) : t.stil}
+          {praat ? t.praat : sprekerNaam ? vulIn(t.spreekt, { naam: sprekerNaam }) : t.stil}
         </p>
         <button
           type="button"

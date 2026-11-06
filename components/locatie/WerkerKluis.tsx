@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KLUIS_SOORT_ICOON, type KluisItemMeta } from "@/lib/locatie/modules";
-import { LOCATIE_TEKSTEN, type LocatieTeksten } from "@/lib/locatie/teksten";
+import { LOCATIE_TEKSTEN, vulIn, type LocatieTeksten } from "@/lib/locatie/teksten";
 
 // ---------------------------------------------------------------------------
 // Werker → Toegangscodes: per dienst de codes die de werkgever klaarzette,
@@ -76,7 +76,7 @@ export function WerkerKluis({ t = LOCATIE_TEKSTEN.nl, terugHref = "/dashboard/ac
               <div className="border-b border-hair px-4 py-3">
                 <p className="font-semibold text-ink">{d.titel}</p>
                 <p className="text-xs text-neutralx-500">
-                  {d.bedrijf} · {d.vestiging} · {klok(d.startsAt)}–{klok(d.endsAt)} · {t.kluis.tot(klok(d.endsAt))}
+                  {d.bedrijf} · {d.vestiging} · {klok(d.startsAt)}–{klok(d.endsAt)} · {vulIn(t.kluis.tot, { tijd: klok(d.endsAt) })}
                 </p>
               </div>
               <ul className="divide-y divide-hair">

@@ -3,7 +3,8 @@ import { featureEnabled } from "@/lib/flags";
 import { PageHeader } from "@/components/app/ui";
 import { bordData } from "@/lib/locatie/bord";
 import { locatieScope } from "@/lib/locatie/store";
-import { OpLocatie, isTab, type OpLocatieData } from "@/components/locatie/OpLocatie";
+import { isTab } from "@/lib/locatie/tabs";
+import { OpLocatie, type OpLocatieData } from "@/components/locatie/OpLocatie";
 
 export const dynamic = "force-dynamic";
 
