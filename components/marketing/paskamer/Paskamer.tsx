@@ -12,6 +12,7 @@ import { bySize, shopMoney } from "@/components/marketing/shop-product";
 import dynamic from "next/dynamic";
 import { Paspop } from "@/components/marketing/paskamer/Paspop";
 import type { Paspop3DHandle } from "@/components/marketing/paskamer/Paspop3D";
+import { MijnFoto } from "@/components/marketing/paskamer/MijnFoto";
 import type { Stand3D } from "@/components/marketing/paskamer/paskamer3d";
 import { HAARKLEUREN, basisKleding, huidTextuur, ruimteFactor, stuk3D } from "@/lib/shop/paspop3d/kleding";
 import { gewichtFactor } from "@/lib/shop/paspop3d/model";
@@ -136,6 +137,7 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
   const drieD = useRef<Paspop3DHandle | null>(null);
   const [vlak, setVlak] = useState(false); // true: 3D niet beschikbaar, dan de tekening
   const [draait, setDraait] = useState(true);
+  const [weergave, setWeergave] = useState<"3d" | "foto">("3d");
   const startGedaan = useRef(false);
 
   const perId = useMemo(() => new Map(producten.map((x) => [x.id, x])), [producten]);
@@ -223,15 +225,24 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
           {p.titel}
         </h1>
         <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-neutralx-600">{p.intro}</p>
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-mintwash px-3 py-1 text-[12px] font-semibold text-brand-700">
-          <IconSlot /> {p.privacy}
+        <p className="mt-2 inline-flex max-w-2xl items-start gap-1.5 rounded-2xl bg-mintwash px-3 py-1.5 text-[12px] leading-snug font-semibold text-brand-700">
+          <IconSlot /> {p.privacyKop}
         </p>
       </section>
 
       <div className="mx-auto max-w-[1440px] px-4 pb-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-8 lg:px-8">
         {/* de paspop: op de telefoon blijft hij bovenaan staan terwijl je kiest */}
-        <div className="-mx-4 bg-paper-soft px-4 pb-3 max-lg:sticky max-lg:top-[110px] max-lg:z-20 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 lg:pb-0">
-          <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:sticky lg:top-[92px] lg:h-[calc(100vh-112px)] lg:max-h-[900px]">
+        <div className="-mx-4 bg-paper-soft px-4 pb-3 max-lg:sticky max-lg:top-[110px] max-lg:z-20 sm:-mx-6 sm:px-6 lg:sticky lg:top-[92px] lg:mx-0 lg:self-start lg:px-0 lg:pb-0">
+          <div role="group" aria-label={p.weergaveLabel} className="mb-2 grid grid-cols-2 rounded-xl bg-white p-1 shadow-e1">
+            {([["3d", p.weergave3d], ["foto", p.weergaveFoto]] as const).map(([id, naam]) => (
+              <button key={id} type="button" aria-pressed={weergave === id} onClick={() => setWeergave(id)} className={`h-9 rounded-lg text-[13px] font-bold transition ${weergave === id ? "bg-brand-500 text-white" : "text-ink hover:bg-paper-soft"}`}>
+                {naam}
+              </button>
+            ))}
+          </div>
+          <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:h-[calc(100vh-170px)] lg:max-h-[860px]">
+            {weergave === "foto" && <MijnFoto regels={items.map((it) => ({ id: it.prod.id, maat: it.maat, kleur: it.kleur, naam: it.prod.name }))} />}
+            <div className={weergave === "foto" ? "hidden" : "contents"}>
             {/* de achtergrond zit op het vak (over de volle breedte); bij opslaan als foto komt hij in de tekening */}
             <div className={`absolute inset-0 pt-2 ${items.length > 0 ? "pb-[72px]" : "pb-2"}`}>
               {vlak ? (
@@ -275,6 +286,7 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
 
