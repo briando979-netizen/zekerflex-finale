@@ -8,7 +8,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 1. **Verifieer vóór elke commit** en lees de output:
    - `npx tsc --noEmit -p .`  (moet 0 fouten geven)
    - `npx eslint <gewijzigde bestanden>`  (moet schoon zijn)
-   - `npx vitest run <tests die je wijziging raken>` (of `npx vitest related <bestanden>`)
+   - `npx vitest related --run <gewijzigde bestanden>` — dit is wat de live-zetter doet; draai het zelf, niet `vitest run` (alles)
    Commit/push **alleen** als alles schoon is.
 2. **Pushen naar `main` is nog niet live, maar wel de volgende uitrol.** Live zetten gaat via Admin → ZekerFlex AI → Live zetten (de live-zetter op de VPS) of `deploy/scripts/vps-update.sh`; die zetten GitHub `main` live. Migraties draaien **niet** vanzelf: alleen met `ZF_MIGREER=1`, na een droge proef (`BEGIN … ROLLBACK`). Push dus alleen gecontroleerde wijzigingen.
 3. **Strikte TypeScript:** `noUncheckedIndexedAccess` (guard `arr[i]` met `?? …`) en `exactOptionalPropertyTypes` (nooit `prop: undefined` toekennen; laat de key weg of type `| undefined`).
