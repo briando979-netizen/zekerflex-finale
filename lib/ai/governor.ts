@@ -3,6 +3,7 @@ import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
+import { gratisAan } from "@/lib/ai/gratis";
 
 // ---------------------------------------------------------------------------
 // AI budget governor.
@@ -41,6 +42,8 @@ export function llmHost(): string {
 }
 
 export function isLocalInference(): boolean {
+  // "alles gratis": dan draait het model op onze eigen server, wat de omgeving ook zegt
+  if (gratisAan()) return true;
   return PRIVATE_HOST.test(llmHost());
 }
 

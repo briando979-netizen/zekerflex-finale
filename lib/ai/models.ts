@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { getRoleOverrideCached } from "@/lib/ai/llm-model";
+import { gratisAan, gratisModel } from "@/lib/ai/gratis";
 
 // ---------------------------------------------------------------------------
 // Model fleet — one self-hosted model per kind of work, picked by `purpose`.
@@ -77,6 +78,8 @@ function configured(role: ModelRole): string | undefined {
  *  token-free, no redeploy) wins over the env config; a text role without its
  *  own model falls back to the main model, so one big model can drive them all. */
 export function modelFor(role: ModelRole): string {
+  // "alles gratis": alle taaltaken draaien op het model van onze eigen server
+  if (gratisAan()) return gratisModel(role);
   const ov = getRoleOverrideCached(role);
   if (ov) return ov;
   if (role === "main") return env.LLM_MODEL;

@@ -127,6 +127,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     icon: "ai",
     pages: [
       { href: "/admin/zekerflex-ai", label: "ZekerFlex AI" },
+      { href: "/admin/gratis", label: "Alles gratis" },
       { href: "/admin/specialisten", label: "Specialisten" },
       { href: "/admin/ai-teams", label: "AI-teams" },
       { href: "/admin/autopilot", label: "Autopilot" },

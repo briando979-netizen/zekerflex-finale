@@ -7,6 +7,7 @@ import { modelForPurpose } from "@/lib/ai/models";
 import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
 import { getLlmApiKey } from "@/lib/ai/llm-key";
 import { primeMainModel, effectiveMainModel } from "@/lib/ai/llm-model";
+import { gratisAan, gratisBasis, primeGratis } from "@/lib/ai/gratis";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -117,6 +118,8 @@ function timeoutFor(opts: ChatOptions): number {
 }
 
 function baseUrl(): string {
+  // "alles gratis" (Admin → ZekerFlex AI): altijd onze eigen AI-server
+  if (gratisAan()) return gratisBasis();
   const node = usesNodeRegistry() ? registeredNodeUrl() : null;
   return node ? `${node}/v1` : env.LLM_BASE_URL.replace(/\/+$/, "");
 }
@@ -131,7 +134,9 @@ function llmHost(): string {
 
 /** Make sure this instance knows the registered AI node (cheap, cached ~20 s). */
 export async function ensureAiNode(): Promise<void> {
-  if (usesNodeRegistry()) await primeNode();
+  // eerst de gratis stand: die bepaalt welke server en welk model we kiezen
+  await primeGratis();
+  if (!gratisAan() && usesNodeRegistry()) await primeNode();
   await primeMainModel();
 }
 
