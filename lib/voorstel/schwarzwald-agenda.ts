@@ -89,7 +89,8 @@ const OPEN_GROEP = { van: 13 * 60, tot: 22 * 60 + 30 };
 
 export const STANDAARD: AgendaConfig = { regels: AGENDA, open: STANDAARD_OPEN, gesloten: [] };
 
-export const isDatum = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
+// ook de dag zelf moet bestaan: "2026-02-30" parset als 2 maart en gaf een verkeerde kop
+export const isDatum = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
 export const isTijd = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
 export function weekdag(datum: string): number {

@@ -22,7 +22,8 @@ export default async function PrintLabelPage({ params, searchParams }: { params:
   const o = await opdracht(scope.tenantId, id);
   if (!o || (scope.branchIds && o.branchId && !scope.branchIds.includes(o.branchId))) notFound();
   const { auto } = await searchParams;
-  const f = LABEL_FORMAAT[o.inhoud.soort];
+  // een oude printopdracht met een onbekende soort mag de pagina niet omgooien
+  const f = LABEL_FORMAAT[o.inhoud.soort] ?? LABEL_FORMAAT.badge;
   const bon = f.hoogte === 0;
   const breedte = `${f.breedte}mm`;
   const hoogte = bon ? "auto" : `${f.hoogte}mm`;
