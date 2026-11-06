@@ -7,6 +7,15 @@ vi.mock("@/lib/billing/stripe", () => ({ constructWebhookEvent: (...a: unknown[]
 const claimIdempotency = vi.fn().mockResolvedValue(true);
 vi.mock("@/lib/redis", () => ({ claimIdempotency: (...a: unknown[]) => claimIdempotency(...a) }));
 
+const { logWarn, fakeLog } = vi.hoisted(() => {
+  const logWarn = vi.fn();
+  const fakeLog: Record<string, unknown> = { warn: (...a: unknown[]) => logWarn(...a), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  fakeLog.forRequest = () => fakeLog;
+  fakeLog.child = () => fakeLog;
+  return { logWarn, fakeLog };
+});
+vi.mock("@/lib/logger", () => ({ logger: fakeLog }));
+
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/claims/fulfillment", () => ({ fulfillPaidClaim: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/billing/api-subscription-sync", () => ({
@@ -165,5 +174,26 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
     });
     const res = await POST(new NextRequest("http://localhost/api/webhooks/stripe", { method: "POST", body: "{}" }));
     expect(res.status).toBe(400);
+  });
+
+  it("logt bij een afgekeurde handtekening alleen soort, modus en tijd van de gebeurtenis", async () => {
+    constructWebhookEvent.mockImplementation(() => {
+      throw new Error("bad signature");
+    });
+    logWarn.mockClear();
+    const body = JSON.stringify({ id: "evt_geheim", type: "charge.refunded", livemode: false, created: 1762300000, data: { object: { customer: "cus_x" } } });
+    const res = await POST(new NextRequest("http://localhost/api/webhooks/stripe", { method: "POST", body, headers: { "stripe-signature": "t=1,v1=abc" } }));
+    expect(res.status).toBe(400);
+    expect(logWarn).toHaveBeenCalledWith("rejected stripe webhook (bad signature)", {
+      error: "bad signature",
+      eventType: "charge.refunded",
+      livemode: false,
+      eventCreated: "2025-11-04T23:46:40.000Z",
+    });
+
+    // geen geldige JSON: dan alleen de fout
+    logWarn.mockClear();
+    await POST(new NextRequest("http://localhost/api/webhooks/stripe", { method: "POST", body: "<html>", headers: { "stripe-signature": "t=1,v1=abc" } }));
+    expect(logWarn).toHaveBeenCalledWith("rejected stripe webhook (bad signature)", { error: "bad signature" });
   });
 });

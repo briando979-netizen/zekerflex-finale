@@ -21,7 +21,9 @@ export interface WebsiteKlus {
   logo: string | null;
 }
 
-const WORD = (words: string) => new RegExp(`(?<![\\p{L}\\d])(?:${words})(?![\\p{L}\\d])`, "giu");
+// Geen lookbehind: dit bestand gaat mee naar de browser en Safari vóór 16.4 kent
+// dat niet (de pagina viel daar al om bij het laden; tests/regex-safari.test.ts).
+const WORD = (words: string) => new RegExp(`(?:^|[^\\p{L}\\d])(?:${words})(?![\\p{L}\\d])`, "giu");
 
 /** Words on a company's front page that point to one of the shift templates. Order breaks a tie. */
 const SIGNALS: [string, RegExp][] = [
@@ -122,7 +124,7 @@ export function iconHref(html: string, pageUrl: string): string | null {
 /** A known town named in the text (with its capital, so no common word), longest name first. */
 export function cityFromText(text: string, cities: readonly string[]): string | null {
   for (const city of [...cities].sort((a, b) => b.length - a.length)) {
-    const re = new RegExp(`(?<![\\p{L}])${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}])`, "u");
+    const re = new RegExp(`(?:^|[^\\p{L}])${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}])`, "u");
     if (re.test(text)) return city;
   }
   return null;

@@ -495,7 +495,9 @@ export function ondertitels(tekst: string, start: number, duur: number, woorden 
   const zinnen = tekst
     .replace(/\s+/g, " ")
     .trim()
-    .split(/(?<=[.!?])\s+/)
+    // zonder lookbehind: dit draait ook in de browser (Safari vóór 16.4)
+    .replace(/([.!?])\s+/g, "$1\u0000")
+    .split("\u0000")
     .filter(Boolean);
   const stukken: string[] = [];
   for (const zin of zinnen) {

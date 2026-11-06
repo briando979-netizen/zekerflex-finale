@@ -245,6 +245,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
+/** Soort, modus en tijd van een afgekeurde gebeurtenis, uit de niet-geverifieerde body; nooit meer dan dat. */
+function unverifiedEventSummary(rawBody: string): { eventType?: string; livemode?: boolean; eventCreated?: string } {
+  try {
+    const raw: unknown = JSON.parse(rawBody);
+    if (!raw || typeof raw !== "object") return {};
+    const o = raw as Record<string, unknown>;
+    const out: { eventType?: string; livemode?: boolean; eventCreated?: string } = {};
+    if (typeof o.type === "string" && /^[\w.]{1,60}$/.test(o.type)) out.eventType = o.type;
+    if (typeof o.livemode === "boolean") out.livemode = o.livemode;
+    if (typeof o.created === "number" && Number.isFinite(o.created)) out.eventCreated = new Date(o.created * 1000).toISOString();
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> {
   const log = logger.forRequest(request, { route: "POST /api/webhooks/stripe" });
   const rawBody = await request.text();
@@ -255,7 +271,10 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     if (!signature) throw new Error("missing stripe-signature header");
     event = constructWebhookEvent(rawBody, signature);
   } catch (err) {
-    log.warn("rejected stripe webhook (bad signature)", { error: (err as Error).message });
+    // Wat kwam er binnen? Alleen soort, modus en tijd uit de (ongecontroleerde)
+    // body, zodat het logboek laat zien of het een testmodus-endpoint, een oude
+    // signing-secret of iets anders is. Er wordt niets mee gedaan.
+    log.warn("rejected stripe webhook (bad signature)", { error: (err as Error).message, ...unverifiedEventSummary(rawBody) });
     return NextResponse.json({ error: "invalid signature" }, { status: 400 });
   }
 

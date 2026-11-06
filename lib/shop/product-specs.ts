@@ -62,8 +62,11 @@ export const PRODUCT_SPECS: Record<string, ProductSpec> = {
 export function specFor(slug: string, description: string): ProductSpec {
   const hit = PRODUCT_SPECS[slug];
   if (hit) return hit;
+  // Zin voor zin, zonder lookbehind: Safari vóór 16.4 kent dat niet en de
+  // productpagina viel daar om (tests/regex-safari.test.ts).
   const bullets = description
-    .split(/(?<=\.)\s+|\s+·\s+/)
+    .replace(/\.\s+/g, ".\u0000")
+    .split(/\u0000|\s+·\s+/)
     .map((s) => s.replace(/\.$/, "").trim())
     .filter(Boolean);
   return { bullets };
