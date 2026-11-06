@@ -101,6 +101,7 @@ export type MenuSleutel =
   | "netwerk"
   | "rapportages"
   | "kennisbank"
+  | "assistent"
   | "locatie";
 
 export type MenuSectie = "beheer" | "klanten" | "administratie" | "personeel";
@@ -140,7 +141,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       { sleutel: "start" },
       ...(o.heeftHoreca ? [{ sleutel: "horeca" as const }] : []),
       ...(o.heeftRijschool ? [{ sleutel: "rijschool" as const }] : []),
-      ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+      ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
       ...(["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "website", "telefonie", "reviews", "netwerk", "locatie", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
     ];
   }
@@ -155,7 +156,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   return [
     { sleutel: "start" },
     ...eigen.map(plek()),
-    ...(["agenda", "berichten", "mail", "whatsapp"] as MenuSleutel[]).map(plek()),
+    ...(["agenda", "berichten", "assistent", "mail", "whatsapp"] as MenuSleutel[]).map(plek()),
     ...klanten.map(plek("klanten")),
     ...(["facturen", "rapportages", ...bank, "bedrijf", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
     // geen klussen (nog)? Dan één ingang om er een te plaatsen

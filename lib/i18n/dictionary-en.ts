@@ -28,6 +28,7 @@ export const en: Dict = {
     beheer: "Manage",
     urenGoedkeuren: "Approve hours",
     inchecken: "On-site check-in",
+    assistent: "Assistant",
     facturen: "Invoices",
     compliance: "Compliance",
     overeenkomsten: "Model agreements",

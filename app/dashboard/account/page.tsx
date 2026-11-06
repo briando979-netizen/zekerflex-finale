@@ -81,6 +81,8 @@ export default async function AccountPage() {
       items: [
         { label: t.admin, href: "/dashboard/administratie" },
         { label: t.forecast, href: "/dashboard/vooruitblik" },
+        { label: t.assistant, href: "/dashboard/assistent" },
+        { label: t.availability, href: "/dashboard/beschikbaarheid" },
         { label: t.trips, href: "/dashboard/ritten" },
         { label: t.calendar, href: "/dashboard/agenda-koppeling" },
         { label: t.workNumber, href: "/dashboard/telefonie" },

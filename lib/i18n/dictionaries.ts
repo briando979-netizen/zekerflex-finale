@@ -31,6 +31,7 @@ export const nl = {
     beheer: "Beheer",
     urenGoedkeuren: "Uren goedkeuren",
     inchecken: "Inchecken op locatie",
+    assistent: "Assistent",
     facturen: "Facturen",
     compliance: "Compliance",
     overeenkomsten: "Modelovereenkomsten",

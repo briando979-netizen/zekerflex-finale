@@ -76,6 +76,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     uren: { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock /> },
     inchecken: { href: "/werkgever/inchecken", label: t.nav.inchecken, icon: <IPin /> },
+    assistent: { href: "/werkgever/assistent", label: t.nav.assistent, icon: <IChat /> },
     facturen: { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc /> },
     compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
     overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },

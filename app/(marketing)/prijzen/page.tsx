@@ -120,6 +120,12 @@ export default async function PrijzenPage() {
             Vergelijk de kosten per uur
           </Link>
         </p>
+        <p className="mt-2 text-center text-sm text-neutralx-600">
+          Liever een maandabonnement met extra modules (AI-recruiter, snelle uitbetaling, uitzend, bank)?{" "}
+          <Link href="/abonnementen" className="font-semibold text-brand-600 underline">
+            Bekijk de abonnementen
+          </Link>
+        </p>
       </Section>
 
       <Section tone="soft">

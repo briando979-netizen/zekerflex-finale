@@ -67,6 +67,7 @@ describe("menuVoor", () => {
       { sleutel: "bank" },
       { sleutel: "favorieten" },
       { sleutel: "berichten" },
+      { sleutel: "assistent" },
       { sleutel: "mail" },
       { sleutel: "whatsapp" },
       { sleutel: "geblokkeerd" },
