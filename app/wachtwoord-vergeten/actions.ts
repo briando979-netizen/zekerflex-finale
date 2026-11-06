@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
 
 export interface ForgotState {
@@ -13,7 +14,9 @@ export async function forgotPasswordAction(_prev: ForgotState, formData: FormDat
   if (!parsed.success) {
     return { done: false, error: "Vul een geldig e-mailadres in." };
   }
-  await requestPasswordReset(parsed.data.email).catch(() => undefined);
+  const kop = await headers();
+  const ip = kop.get("x-forwarded-for")?.split(",")[0]?.trim() || kop.get("x-real-ip")?.trim() || "local";
+  await requestPasswordReset(parsed.data.email, ip).catch(() => undefined);
   // Always report success — no user enumeration.
   return { done: true, error: null };
 }

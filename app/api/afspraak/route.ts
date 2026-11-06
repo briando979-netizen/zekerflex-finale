@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, mailShell, mailButton } from "@/lib/mail";
+import { sendMail, mailShell, mailButton, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -111,10 +111,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `Nieuwe ${label.toLowerCase()} ingepland door de ZekerFlex AI-assistent.\n\nNaam: ${d.name}\nE-mail: ${rec.email}\n${rec.phone ? `Telefoon: ${rec.phone}\n` : ""}${d.company ? `Bedrijf: ${d.company}\n` : ""}Voorkeur: ${when}\n${d.topic ? `\nOnderwerp:\n${d.topic}\n` : ""}\nReferentie: ${rec.id}`,
       html: mailShell(
         `Nieuwe ${label.toLowerCase()}`,
-        `<p style="margin:0 0 4px"><strong>${d.name}</strong></p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${rec.email}${rec.phone ? ` · ${rec.phone}` : ""}${d.company ? ` · ${d.company}` : ""}</p>
+        `<p style="margin:0 0 4px"><strong>${escapeHtml(d.name)}</strong></p>
+         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${escapeHtml(rec.email)}${rec.phone ? ` · ${escapeHtml(rec.phone)}` : ""}${d.company ? ` · ${escapeHtml(d.company)}` : ""}</p>
          <p style="margin:0 0 6px;font-size:15px;color:#17211C"><strong>Voorkeur:</strong> ${when}</p>
-         ${d.topic ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${d.topic.replace(/</g, "&lt;")}</p>` : ""}
+         ${d.topic ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${escapeHtml(d.topic)}</p>` : ""}
          <p style="margin:12px 0 0;font-size:12px;color:#667469">Type: ${label} · Referentie: ${rec.id}</p>`,
       ),
     }).catch((e) => logger.warn("afspraak notify failed", { error: (e as Error).message }));

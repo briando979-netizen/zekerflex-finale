@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
 
 // Shared auth gate for internal cron / scheduler endpoints. Accepts the token
@@ -18,16 +19,22 @@ export type InternalGate =
 
 export function checkInternalToken(request: Request): InternalGate {
   const authHeader = request.headers.get("authorization");
+  // Alleen via een kop: een geheim in de adresregel (?token=) komt in toegangslogs en
+  // foutmeldingen terecht. Vergelijken in constante tijd (geen timing-lek).
   const provided =
     request.headers.get("x-internal-token") ??
-    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null) ??
-    new URL(request.url).searchParams.get("token");
+    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
 
   const accepted = [env.CRON_SECRET, env.INTERNAL_CRON_TOKEN].filter(
     (s): s is string => Boolean(s),
   );
   if (accepted.length > 0) {
-    return provided && accepted.includes(provided)
+    const gelijk = (a: string, b: string) => {
+      const x = Buffer.from(a);
+      const y = Buffer.from(b);
+      return x.length === y.length && timingSafeEqual(x, y);
+    };
+    return provided && accepted.some((s) => gelijk(s, provided))
       ? { ok: true }
       : { ok: false, status: 401, message: "Bad internal token" };
   }

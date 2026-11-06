@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { sendMail, mailShell } from "@/lib/mail";
+import { sendMail, mailShell, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -80,9 +80,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `${heading} via ${sourceUrl}\n\n${viaProduct ? "Product" : "Pakket"}: ${interestLabel}\nBedrijf: ${d.company}\nNaam: ${d.name}\nE-mail: ${d.email}\n${d.phone ? `Telefoon: ${d.phone}\n` : ""}${d.message ? `\nBericht:\n${d.message}\n` : ""}`,
       html: mailShell(
         heading,
-        `<p style="margin:0 0 4px"><strong>${d.company}</strong> — ${interestLabel}</p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${d.name} · ${d.email}${d.phone ? ` · ${d.phone}` : ""}</p>
-         ${d.message ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${d.message.replace(/</g, "&lt;")}</p>` : ""}`,
+        `<p style="margin:0 0 4px"><strong>${escapeHtml(d.company)}</strong> — ${escapeHtml(interestLabel)}</p>
+         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${escapeHtml(d.name)} · ${escapeHtml(d.email)}${d.phone ? ` · ${escapeHtml(d.phone)}` : ""}</p>
+         ${d.message ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${escapeHtml(d.message)}</p>` : ""}`,
       ),
     }).catch((e) => logger.warn("partner notify failed", { error: (e as Error).message }));
 

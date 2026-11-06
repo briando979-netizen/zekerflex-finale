@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, mailShell } from "@/lib/mail";
+import { sendMail, mailShell, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -78,13 +78,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `Nieuwe aanvraag via zekerflex.com/uitzendbureau\n\nBedrijf: ${d.company}\nContactpersoon: ${d.contactName}\nE-mail: ${d.email}\n${d.phone ? `Telefoon: ${d.phone}\n` : ""}${d.headcount ? `Aantal medewerkers: ${d.headcount}\n` : ""}${d.sector ? `Sector: ${d.sector}\n` : ""}${d.note ? `\nToelichting:\n${d.note}\n` : ""}\nReferentie: ${lead.id}`,
       html: mailShell(
         "Nieuwe uitzendbureau-aanvraag",
-        `<p style="margin:0 0 4px"><strong>${d.company}</strong></p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${d.contactName} · ${d.email}${
-           d.phone ? ` · ${d.phone}` : ""
+        `<p style="margin:0 0 4px"><strong>${escapeHtml(d.company)}</strong></p>
+         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${escapeHtml(d.contactName)} · ${escapeHtml(d.email)}${
+           d.phone ? ` · ${escapeHtml(d.phone)}` : ""
          }</p>
-         ${d.headcount ? `<p style="margin:0 0 4px;font-size:14px;color:#3C4A42"><strong>Aantal medewerkers:</strong> ${d.headcount}</p>` : ""}
-         ${d.sector ? `<p style="margin:0 0 4px;font-size:14px;color:#3C4A42"><strong>Sector:</strong> ${d.sector}</p>` : ""}
-         ${d.note ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${d.note.replace(/</g, "&lt;")}</p>` : ""}
+         ${d.headcount ? `<p style="margin:0 0 4px;font-size:14px;color:#3C4A42"><strong>Aantal medewerkers:</strong> ${escapeHtml(String(d.headcount))}</p>` : ""}
+         ${d.sector ? `<p style="margin:0 0 4px;font-size:14px;color:#3C4A42"><strong>Sector:</strong> ${escapeHtml(d.sector)}</p>` : ""}
+         ${d.note ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${escapeHtml(d.note)}</p>` : ""}
          <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${lead.id}</p>`,
       ),
     }).catch((e) => logger.warn("uitzendbureau notify failed", { error: (e as Error).message }));

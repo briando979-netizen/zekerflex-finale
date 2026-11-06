@@ -18,6 +18,9 @@ vi.mock("@/lib/redis", () => ({
   redis: { get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue("OK") },
 }));
 
+// de crawler haalt pagina's op via de beveiligde fetcher (SSRF-vrij); hier nagebootst
+const fetchMock = vi.fn();
+vi.mock("@/lib/website-check/fetch", () => ({ fetchPage: (url: string) => fetchMock(url) }));
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import type { SalesDiscoverySource } from "@prisma/client";
 
@@ -58,20 +61,17 @@ const source = {
   label: null,
 } as unknown as SalesDiscoverySource;
 
-let fetchMock: ReturnType<typeof vi.fn>;
+async function alsPagina(r: ReturnType<typeof res>) {
+  return { status: r.status, headers: { "content-type": r.headers.get("content-type") ?? "" }, body: new TextDecoder().decode(await r.arrayBuffer()) };
+}
 
 beforeEach(() => {
-  fetchMock = vi.fn(async (url: string) => {
-    const hit = PAGES[url.split("#")[0]!];
-    if (hit) return hit as unknown as Response;
-    return res(404, "text/html", "") as unknown as Response;
-  });
-  vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async (url: string) => alsPagina(PAGES[url.split("#")[0]!] ?? res(404, "text/html", "")));
 });
 
 afterEach(() => {
   vi.clearAllMocks();
-  vi.unstubAllGlobals();
 });
 
 describe("careers crawler", () => {

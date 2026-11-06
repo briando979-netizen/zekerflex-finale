@@ -1,3 +1,4 @@
+import { fetchPage } from "@/lib/website-check/fetch";
 // ---------------------------------------------------------------------------
 // KVKBase gives us a company's legal name, city and SBI codes — never a
 // website. Without a URL the careers-crawler (careers.ts) has nothing to
@@ -78,15 +79,11 @@ function extractSiteName(html: string): string | null {
 
 async function fetchHomepage(origin: string): Promise<string | null> {
   try {
-    const res = await fetch(origin, {
-      redirect: "follow",
-      headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml" },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    const ct = (res.headers.get("content-type") ?? "").toLowerCase();
-    if (!res.ok || !/text\/html|application\/xhtml/.test(ct)) return null;
-    const buf = await res.arrayBuffer();
-    return Buffer.from(buf.slice(0, MAX_BYTES)).toString("utf8");
+    // via de beveiligde fetcher: een geraden domein kan naar ons eigen netwerk wijzen of doorsturen
+    const res = await fetchPage(origin, { timeoutMs: FETCH_TIMEOUT_MS, maxBytes: MAX_BYTES, userAgent: UA });
+    const ct = (res.headers["content-type"] ?? "").toLowerCase();
+    if (res.status < 200 || res.status >= 300 || !/text\/html|application\/xhtml/.test(ct)) return null;
+    return res.body.slice(0, MAX_BYTES);
   } catch {
     return null;
   }

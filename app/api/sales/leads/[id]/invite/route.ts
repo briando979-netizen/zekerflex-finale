@@ -4,7 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { markLeadInvited } from "@/lib/sales/leads";
 import { signEmployerInvite, inviteUrl } from "@/lib/sales/invite";
-import { sendMail, mailShell, mailButton } from "@/lib/mail";
+import { sendMail, mailShell, mailButton, escapeHtml } from "@/lib/mail";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -47,7 +47,7 @@ export async function POST(_req: Request, props: { params: Promise<{ id: string 
         `Deze link is 14 dagen geldig.`,
       html: mailShell(
         "Je account staat klaar",
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, ${p.fullName} van ZekerFlex heeft alvast een account voor <strong>${lead.companyName}</strong> klaargezet.</p>
+        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first ?? "")}, ${escapeHtml(p.fullName)} van ZekerFlex heeft alvast een account voor <strong>${escapeHtml(lead.companyName)}</strong> klaargezet.</p>
          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Rond je aanmelding in een paar minuten af — je bedrijfsgegevens zijn al ingevuld.</p>
          <p style="margin:0 0 20px">${mailButton(url, "Aanmelding afronden")}</p>
          <p style="margin:0;font-size:12px;color:#667469">De link is 14 dagen geldig. Werkt de knop niet? Kopieer: <br><span style="word-break:break-all">${url}</span></p>`,

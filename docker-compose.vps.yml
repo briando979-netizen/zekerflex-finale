@@ -184,9 +184,10 @@ services:
   cron:
     image: alpine:3.20
     restart: unless-stopped
-    env_file: [.env.production]
+    # alleen wat het rooster nodig heeft, niet heel .env.production (zie caddy)
     environment:
       CRON_TARGET: ${CRON_TARGET:-http://app:3000}
+      INTERNAL_CRON_TOKEN: ${INTERNAL_CRON_TOKEN:-}
     volumes:
       - ./deploy/cron/entrypoint.sh:/entrypoint.sh:ro
     command: ["sh", "/entrypoint.sh"]

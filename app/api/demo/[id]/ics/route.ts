@@ -1,4 +1,11 @@
 import { getDemoRequest } from "@/lib/demo/store";
+import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+
+/** Tekst in een iCalendar-veld: geen regeleinden, komma's of puntkomma's die het bestand breken. */
+function icsTekst(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +27,10 @@ function addMinutes(date: string, time: string, mins: number): string {
 }
 
 // GET /api/demo/<id>/ics — the demo as a calendar file.
-export async function GET(_req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }): Promise<Response> {
+  // het id is kort: geen onbeperkt raden vanaf één adres
+  const ip = clientIp(req);
+  if (ip !== "local" && !(await fixedWindow(`rl:ip:demo-ics:${ip}`, 30, 600)).ok) return new Response("Te veel verzoeken", { status: 429 });
   const params = await props.params;
   const rec = await getDemoRequest(params.id);
   if (!rec) return new Response("Not found", { status: 404 });
@@ -43,7 +53,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
     `DTSTART:${dt(rec.date, rec.time)}`,
     `DTEND:${addMinutes(rec.date, rec.time, 30)}`,
     `SUMMARY:${summary}`,
-    `DESCRIPTION:${description}`,
+    `DESCRIPTION:${icsTekst(description)}`,
     `LOCATION:${isCall ? "Telefonisch" : "Online"}`,
     "STATUS:TENTATIVE",
     "END:VEVENT",

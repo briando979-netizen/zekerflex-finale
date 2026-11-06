@@ -121,7 +121,7 @@ function flatHeaders(h: http.IncomingHttpHeaders): Record<string, string> {
   return out;
 }
 
-function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean; maxBytes: number }): Promise<RawResponse> {
+function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean; maxBytes: number; userAgent?: string }): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
     const started = performance.now();
     const mod = url.protocol === "https:" ? https : http;
@@ -140,7 +140,7 @@ function requestOnce(url: URL, opts: { timeoutMs: number; headersOnly: boolean; 
         lookup: guardedLookup,
         timeout: opts.timeoutMs,
         headers: {
-          "user-agent": USER_AGENT,
+          "user-agent": opts.userAgent ?? USER_AGENT,
           accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "accept-encoding": "gzip, deflate, br",
           "accept-language": "nl-NL,nl;q=0.9,en;q=0.7",
@@ -205,6 +205,8 @@ export interface FetchOptions {
   headersOnly?: boolean;
   /** maximale grootte over de lijn; standaard 3 MB (genoeg voor een HTML-pagina) */
   maxBytes?: number;
+  /** eigen User-Agent (bijv. de sales-bot); standaard die van de website-check */
+  userAgent?: string;
 }
 
 /** Zoals fetchPage, maar met de ruwe bytes (afbeeldingen, lettertypes). */
@@ -216,7 +218,7 @@ export async function fetchResource(rawUrl: string, opts: FetchOptions = {}): Pr
   const redirects: string[] = [];
   let current = assertFetchableUrl(rawUrl);
   for (let hop = 0; ; hop++) {
-    const res = await requestOnce(current, { timeoutMs, headersOnly: Boolean(opts.headersOnly), maxBytes });
+    const res = await requestOnce(current, { timeoutMs, headersOnly: Boolean(opts.headersOnly), maxBytes, ...(opts.userAgent ? { userAgent: opts.userAgent } : {}) });
     const location = res.headers.location;
     if (REDIRECT.has(res.status) && location) {
       if (hop >= maxRedirects) throw new FetchError("Deze website stuurt te vaak door.", "REDIRECTS");

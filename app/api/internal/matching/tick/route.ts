@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Hobby plan only allows daily cron jobs (Pro+ unlocks sub-daily). If/when
  * this project moves to Pro, tighten the schedule in vercel.json; a
  * non-Vercel scheduler (GitHub Actions, k8s CronJob) hitting this with the
- * `x-internal-token` header (or `?token=`) can already run as often as needed.
+ * `x-internal-token` header can already run as often as needed.
  */
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);

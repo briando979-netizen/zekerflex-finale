@@ -40,6 +40,14 @@
 				request>headers>Authorization delete
 				request>headers>Proxy-Authorization delete
 				request>headers>X-Internal-Token delete
+				request>headers>X-Api-Key delete
+				request>headers>X-Netwerk-Token delete
+				request>headers>X-Toegang-Token delete
+				request>headers>X-Print-Token delete
+				request>headers>X-Cron-Secret delete
+				request>headers>X-Signature delete
+				request>headers>X-Signature-Simple delete
+				request>headers>X-Twilio-Signature delete
 				resp_headers>Set-Cookie delete
 				request>uri regexp "\?.*$" ""
 			}
@@ -47,9 +55,26 @@
 	}
 }
 
+# Grootte van wat een bezoeker mag sturen. Next bufferde tot 210 MB voor iedereen
+# (middlewareClientMaxBodySize); grote uploads horen alleen bij het beheer en de
+# eigen uploadroute, de rest (formulieren, chatmedia, documenten) past in 25 MB.
+(bodylimiet) {
+	@grootupload path /api/admin/* /api/uploads*
+	request_body @grootupload {
+		max_size 220MB
+	}
+	@gewoon not path /api/admin/* /api/uploads*
+	request_body @gewoon {
+		max_size 25MB
+	}
+}
+
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
 	import toegangslog
+	import bodylimiet
+	# HSTS alleen hier (eigen domeinen), niet op klantdomeinen: dat is hún domein
+	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 
 	# www en het kale domein delen geen cookies. Wie op www inlogt krijgt de sessie
 	# op www, wordt daarna naar AUTH_URL (zonder www) gestuurd en lijkt dan uitgelogd.
@@ -85,6 +110,7 @@
 schwarzwald.zekerflex.com {
 	encode zstd gzip
 	import toegangslog
+	import bodylimiet
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up X-ZF-Voorstel schwarzwald
@@ -153,6 +179,7 @@ https:// {
 	}
 	encode zstd gzip
 	import toegangslog
+	import bodylimiet
 	reverse_proxy app:3000 {
 		header_up X-ZF-Site-Host {host}
 		header_up -X-ZF-Voorstel

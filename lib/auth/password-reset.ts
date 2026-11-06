@@ -22,13 +22,20 @@ import { isBreached, scorePassword } from "@/lib/auth/password";
 
 const TTL_SECONDS = 60 * 60;
 
-export async function requestPasswordReset(rawEmail: string): Promise<void> {
+export async function requestPasswordReset(rawEmail: string, ip = "local"): Promise<void> {
   const email = rawEmail.toLowerCase().trim();
 
   // Redis-backed cooldown so the endpoint can't be used to blast mail — works
   // across every serverless instance, unlike an in-process Map.
   const gate = await fixedWindow(`password-reset:rl:${privateRateLimitIdentifier(email)}`, 1, 60);
   if (!gate.ok) return;
+  // Ook per adres (IP): anders kan één bron per minuut onbeperkt verschillende
+  // bestaande adressen laten mailen (mail-bombing via ons domein). 5 per 10 min, 30 per dag.
+  if (ip !== "local") {
+    const kort = await fixedWindow(`rl:ip:password-reset:${ip}`, 5, 600);
+    const dag = await fixedWindow(`rl:ip:password-reset-dag:${ip}`, 30, 86_400);
+    if (!kort.ok || !dag.ok) return;
+  }
 
   const user = await prisma.user.findFirst({
     where: { email, disabledAt: null },

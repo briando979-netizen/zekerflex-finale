@@ -613,3 +613,8 @@ export function hoursCorrectionProposedEmail(
     ),
   };
 }
+
+/** Voor HTML-mails: elke waarde die van een bezoeker komt hierdoorheen (naam, bedrijf, e-mail, bericht). */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}

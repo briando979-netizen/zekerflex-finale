@@ -1,3 +1,4 @@
+import { fetchPage } from "@/lib/website-check/fetch";
 import type { SalesDiscoverySource } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
@@ -52,19 +53,14 @@ async function fetchText(
   url: string,
 ): Promise<{ status: number; contentType: string; body: string } | null> {
   try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml,text/plain" },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
-    if (!res.ok) return { status: res.status, contentType, body: "" };
+    // via de beveiligde fetcher: nooit naar het eigen netwerk (ook niet via een redirect), begrensd in tijd en grootte
+    const res = await fetchPage(url, { timeoutMs: FETCH_TIMEOUT_MS, maxBytes: MAX_BYTES, userAgent: UA });
+    const contentType = (res.headers["content-type"] ?? "").toLowerCase();
+    if (res.status < 200 || res.status >= 300) return { status: res.status, contentType, body: "" };
     if (!/text\/html|text\/plain|application\/xhtml/.test(contentType)) {
       return { status: res.status, contentType, body: "" };
     }
-    const buf = await res.arrayBuffer();
-    const body = Buffer.from(buf.slice(0, MAX_BYTES)).toString("utf8");
-    return { status: res.status, contentType, body };
+    return { status: res.status, contentType, body: res.body.slice(0, MAX_BYTES) };
   } catch (err) {
     logger.warn("careers fetch failed", { url, error: (err as Error).message });
     return null;

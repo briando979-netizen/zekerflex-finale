@@ -85,10 +85,9 @@ const nextConfig = {
             value:
               "camera=(self), microphone=(self), geolocation=(self), display-capture=(self), payment=(), usb=()",
           },
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
-          },
+          // Strict-Transport-Security zet Caddy, alleen op de eigen domeinen: deze
+          // koppen gaan ook mee naar klantdomeinen (/site-domein/…) en HSTS met
+          // includeSubDomains+preload hoort niet op het domein van een klant.
         ],
       },
       {

@@ -1,3 +1,4 @@
+import { fetchPage as veiligOphalen } from "@/lib/website-check/fetch";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
@@ -34,15 +35,11 @@ const JUNK_EMAIL = /\.(png|jpe?g|gif|svg|webp|css|js)$|@(sentry|wixpress|example
 
 async function fetchPage(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    const ct = (res.headers.get("content-type") ?? "").toLowerCase();
-    if (!res.ok || !/text\/html|xhtml/.test(ct)) return null;
-    const buf = await res.arrayBuffer();
-    return Buffer.from(buf.slice(0, MAX_BYTES)).toString("utf8");
+    // via de beveiligde fetcher: nooit naar het eigen netwerk (ook niet via een redirect), begrensd in tijd en grootte
+    const res = await veiligOphalen(url, { timeoutMs: TIMEOUT_MS, maxBytes: MAX_BYTES, userAgent: UA });
+    const ct = (res.headers["content-type"] ?? "").toLowerCase();
+    if (res.status < 200 || res.status >= 300 || !/text\/html|xhtml/.test(ct)) return null;
+    return res.body.slice(0, MAX_BYTES);
   } catch {
     return null;
   }

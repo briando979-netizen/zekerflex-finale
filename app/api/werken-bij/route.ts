@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, mailShell } from "@/lib/mail";
+import { sendMail, mailShell, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -133,9 +133,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `Nieuwe open sollicitatie via zekerflex.com/over-ons#werken-bij\n\n${summary}\n\nReferentie: ${app.id}`,
       html: mailShell(
         "Nieuwe open sollicitatie",
-        `<pre style="white-space:pre-wrap;font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#3C4A42">${summary
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")}</pre>
+        `<pre style="white-space:pre-wrap;font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#3C4A42">${escapeHtml(summary)}</pre>
          <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${app.id} · bekijk de sollicitatie + bijlagen in /admin/sollicitaties.</p>`,
       ),
     }).catch((e) => logger.warn("open application notify failed", { error: (e as Error).message }));

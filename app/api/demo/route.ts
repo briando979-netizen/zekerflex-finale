@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, mailShell, mailButton } from "@/lib/mail";
+import { sendMail, mailShell, mailButton, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -96,12 +96,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `Nieuwe demo-aanvraag via zekerflex.com/demo\n\nBedrijf: ${rec.company}\nNaam: ${rec.firstName} ${rec.lastName}\nE-mail: ${rec.email}\n${rec.phone ? `Telefoon: ${rec.phone}\n` : ""}Voorkeur: ${when}\n${rec.note ? `\nOpmerking:\n${rec.note}\n` : ""}\nReferentie: ${rec.id}`,
       html: mailShell(
         "Nieuwe demo-aanvraag",
-        `<p style="margin:0 0 4px"><strong>${rec.company}</strong></p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${rec.firstName} ${rec.lastName} · ${rec.email}${
-           rec.phone ? ` · ${rec.phone}` : ""
+        `<p style="margin:0 0 4px"><strong>${escapeHtml(rec.company)}</strong></p>
+         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${escapeHtml(rec.firstName)} ${escapeHtml(rec.lastName)} · ${escapeHtml(rec.email)}${
+           rec.phone ? ` · ${escapeHtml(rec.phone)}` : ""
          }</p>
          <p style="margin:0 0 6px;font-size:15px;color:#17211C"><strong>Voorkeur:</strong> ${when}</p>
-         ${rec.note ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${rec.note.replace(/</g, "&lt;")}</p>` : ""}
+         ${rec.note ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap">${escapeHtml(rec.note)}</p>` : ""}
          <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${rec.id}</p>`,
       ),
     }).catch((e) => logger.warn("demo notify failed", { error: (e as Error).message }));

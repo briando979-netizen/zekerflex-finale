@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { sendMail, mailShell } from "@/lib/mail";
+import { sendMail, mailShell, escapeHtml } from "@/lib/mail";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -79,10 +79,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       text: `Nieuwe sales-partner aanmelding via /sales-partner\n\nNaam: ${d.name}\nE-mail: ${d.email}\n${d.phone ? `Telefoon: ${d.phone}\n` : ""}${d.region ? `Regio: ${d.region}\n` : ""}${d.experience ? `\nErvaring:\n${d.experience}\n` : ""}${d.motivation ? `\nMotivatie:\n${d.motivation}\n` : ""}`,
       html: mailShell(
         "Nieuwe sales-partner aanmelding",
-        `<p style="margin:0 0 4px"><strong>${d.name}</strong>${d.region ? ` — ${d.region}` : ""}</p>
-         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${d.email}${d.phone ? ` · ${d.phone}` : ""}</p>
-         ${d.experience ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap"><strong>Ervaring:</strong> ${d.experience.replace(/</g, "&lt;")}</p>` : ""}
-         ${d.motivation ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap"><strong>Motivatie:</strong> ${d.motivation.replace(/</g, "&lt;")}</p>` : ""}`,
+        `<p style="margin:0 0 4px"><strong>${escapeHtml(d.name)}</strong>${d.region ? ` — ${escapeHtml(d.region)}` : ""}</p>
+         <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${escapeHtml(d.email)}${d.phone ? ` · ${escapeHtml(d.phone)}` : ""}</p>
+         ${d.experience ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap"><strong>Ervaring:</strong> ${escapeHtml(d.experience)}</p>` : ""}
+         ${d.motivation ? `<p style="margin:8px 0 0;font-size:14px;color:#3C4A42;white-space:pre-wrap"><strong>Motivatie:</strong> ${escapeHtml(d.motivation)}</p>` : ""}`,
       ),
     }).catch((e) => logger.warn("sales-partner notify failed", { error: (e as Error).message }));
 

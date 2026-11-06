@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+// de homepage wordt opgehaald via de beveiligde fetcher (SSRF-vrij); hier nagebootst
+const fetchMock = vi.fn();
+vi.mock("@/lib/website-check/fetch", () => ({ fetchPage: (url: string) => fetchMock(url) }));
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 
 // KVKBase never gives a website, only a legal name. A guessed domain is only
@@ -7,15 +10,8 @@ import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 // completely unrelated business that just happens to own a similar-looking
 // domain.
 
-const fetchMock = vi.fn();
-vi.stubGlobal("fetch", fetchMock);
-
 function htmlResponse(title: string) {
-  return {
-    ok: true,
-    headers: { get: () => "text/html; charset=utf-8" },
-    arrayBuffer: async () => Buffer.from(`<html><head><title>${title}</title></head></html>`),
-  };
+  return { status: 200, headers: { "content-type": "text/html; charset=utf-8" }, body: `<html><head><title>${title}</title></head></html>` };
 }
 
 afterEach(() => vi.clearAllMocks());
