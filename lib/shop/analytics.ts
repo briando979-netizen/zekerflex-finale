@@ -1,7 +1,7 @@
 // Sales analytics & insights
 
 export interface SalesMetrics {
-  totalRevenueC ents: number;
+  totalRevenueCents: number;
   orderCount: number;
   subscriptionCount: number;
   churnRate: number; // percentage
@@ -29,11 +29,11 @@ export function calculateMetrics(
   orders: Array<{ totalCents: number; purchaseMode: "onetime" | "subscription" }>,
   subscriptions: Array<{ monthlyPriceCents: number; status: string }>
 ): SalesMetrics {
-  const totalRevenueCents = orders.reduce((sum, o) => sum + o.totalCents, 0);
+  const orderRevenue = orders.reduce((sum, o) => sum + o.totalCents, 0);
   const subscriptionRevenue = subscriptions.reduce((sum, s) => sum + s.monthlyPriceCents, 0);
 
   return {
-    totalRevenueCents: totalRevenueCents + subscriptionRevenue,
+    totalRevenueCents: orderRevenue + subscriptionRevenue,
     orderCount: orders.length,
     subscriptionCount: subscriptions.length,
     churnRate: 5, // TODO: calculate from cancellations
