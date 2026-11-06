@@ -855,8 +855,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Dit item vinkt zichzelf af zodra de nachtelijke kopie slaagt. De hersteltest (Admin → Systeem → Back-ups) bewijst daarna wekelijks dat de kopie klopt.",
       ],
       auto: true,
-      done: backup?.status?.offsite.ok === true && backup.status.encrypted,
-      ...(backup?.status?.offsite.configured ? { doneNote: backup.status.offsite.ok ? `laatste kopie gelukt naar ${backup.status.offsite.target}` : `laatste kopie mislukt: ${backup.status.offsite.error}` } : {}),
+      done: backup?.status?.offsite?.ok === true && backup.status.encrypted,
+      ...(backup?.status?.offsite?.configured ? { doneNote: backup.status.offsite?.ok ? `laatste kopie gelukt naar ${backup.status.offsite?.target}` : `laatste kopie mislukt: ${backup.status.offsite?.error}` } : {}),
     },
     {
       id: "diensten-dns",
