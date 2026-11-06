@@ -176,7 +176,8 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden" style={{ background: achtergrond.css }}>
-      <div className="absolute inset-0 overflow-y-auto px-5 pb-20 pt-7">
+      {/* main: het bureaublad is het hoofdgebied, zodat een schermlezer alles in een herkenbaar deel vindt */}
+      <main className="absolute inset-0 overflow-y-auto px-5 pb-20 pt-7">
         <header className="mb-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">ZekerFlex OS</p>
           <h1 className="mt-1 font-display text-2xl font-bold text-white">Hallo {naam}</h1>
@@ -243,7 +244,7 @@ export function Bureaublad({ apps, start, rol, naam, tijd, vandaag = [] }: { app
             </button>
           </li>
         </ul>
-      </div>
+      </main>
 
       {vensters.map((v) => {
         const app = appVan(v.id);
