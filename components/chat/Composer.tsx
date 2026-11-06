@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent } fr
 import { fmtBytes, fmtDuration, type Msg } from "./shared";
 import { readDraft, writeDraft } from "./drafts";
 import { Portal } from "./Portal";
+import { PollMaker } from "./PollMaker";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
 
 export interface OutgoingMessage {
@@ -14,6 +15,8 @@ export interface OutgoingMessage {
   replyToId?: string;
   /** set: this rewrites your own message instead of sending a new one */
   editId?: string;
+  /** kind "poll": de vraag is `text` */
+  poll?: { options: string[]; multi: boolean };
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -186,6 +189,7 @@ export function Composer({
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ file: File; kind: "image" | "file" } | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => setHoverDevice(window.matchMedia(HOVER).matches), []);
 
@@ -529,6 +533,14 @@ export function Composer({
               <MenuItem icon="📷" label="Camera" onClick={() => camRef.current?.click()} />
               <MenuItem icon="📄" label="Document" onClick={() => fileRef.current?.click()} />
               <MenuItem icon="📍" label="Locatie delen" onClick={shareLocation} />
+              <MenuItem
+                icon="📊"
+                label="Peiling"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setPollOpen(true);
+                }}
+              />
             </div>
           )}
           {emojiOpen && (
@@ -671,6 +683,16 @@ export function Composer({
             const p = preview;
             setPreview(null);
             void sendFile(p.file, p.kind, caption);
+          }}
+        />
+      )}
+
+      {pollOpen && (
+        <PollMaker
+          onCancel={() => setPollOpen(false)}
+          onSend={(p) => {
+            setPollOpen(false);
+            void onSend({ text: p.question, kind: "poll", poll: { options: p.options, multi: p.multi } });
           }}
         />
       )}

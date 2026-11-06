@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { kvAppend, kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { sluitPeiling, stem, type MessagePoll } from "@/lib/messaging/poll";
 
 // ---------------------------------------------------------------------------
 // In-platform messaging ("de chat") — Postgres-backed (KeyValueStore) — was
@@ -19,7 +20,8 @@ export type MessageKind =
   | "file"
   | "image"
   | "location"
-  | "call";
+  | "call"
+  | "poll";
 
 export interface MessageAttachment {
   /** id in the per-thread chat media store (lib/messaging/media.ts) */
@@ -71,13 +73,15 @@ export interface ChatMessage {
   forwarded?: boolean;
   /** door de afzender bewerkt: wanneer (de bubbel toont "bewerkt" met deze tijd) */
   editedAt?: string;
+  /** kind "poll": de keuzes en stemmen; de vraag staat in `text` (lib/messaging/poll.ts) */
+  poll?: MessagePoll;
 }
 
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
 export const EDIT_WINDOW_MS = 24 * 3_600_000;
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll">
 >;
 
 export interface ChatThread {
@@ -122,6 +126,8 @@ export function previewText(m: {
       return "📎 Bestand";
     case "location":
       return "📍 Locatie";
+    case "poll":
+      return `📊 ${m.text}`;
     case "call":
       return m.call?.mode === "video"
         ? "📹 Videogesprek"
@@ -379,6 +385,33 @@ export async function editMessage(threadId: string, messageId: string, text: str
   return updated;
 }
 
+/**
+ * Peiling: zet de hele keuze van één persoon (leeg = intrekken), of sluit hem
+ * (`sluit`; de afzender-check doet de route). Null als het bericht geen
+ * (open) peiling is.
+ */
+export async function updatePoll(
+  threadId: string,
+  messageId: string,
+  change: { userId: string; optionIds: string[] } | { sluit: true },
+  now = new Date(),
+): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  if (idx === -1) return null;
+  const m = list[idx]!;
+  if (m.kind !== "poll" || !m.poll || m.deleted) return null;
+  if ("sluit" in change) {
+    list[idx] = { ...m, poll: sluitPeiling(m.poll, now) };
+  } else {
+    if (m.poll.closedAt) return null;
+    list[idx] = { ...m, poll: stem(m.poll, change.userId, change.optionIds) };
+  }
+  await kvSet(key, list.slice(-5000));
+  return list[idx]!;
+}
+
 export async function postMessage(
   threadId: string,
   from: string,
@@ -404,6 +437,7 @@ export async function postMessage(
     ...(extra.replyTo ? { replyTo: extra.replyTo } : {}),
     ...(extra.auto ? { auto: true } : {}),
     ...(extra.forwarded ? { forwarded: true } : {}),
+    ...(kind === "poll" && extra.poll ? { poll: extra.poll } : {}),
   };
   await kvAppend(messagesKey(threadId), msg, 5000);
 

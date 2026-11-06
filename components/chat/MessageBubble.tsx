@@ -5,6 +5,7 @@ import { canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTime, linkParts, typ
 import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
+import { PollCard } from "./PollCard";
 
 /** Lang drukken (telefoon) opent het actiepaneel na zoveel ms. */
 const LONG_PRESS_MS = 450;
@@ -160,6 +161,9 @@ export function MessageBubble({
   onNotice,
   onStar,
   starred,
+  onPollVote,
+  onPollClose,
+  names,
 }: {
   m: Msg;
   mine: boolean;
@@ -192,6 +196,12 @@ export function MessageBubble({
   /** bericht bewaren met een ster */
   onStar?: (m: Msg) => void;
   starred?: boolean;
+  /** peiling: je hele keuze ([] = intrekken) */
+  onPollVote?: (m: Msg, optionIds: string[]) => void;
+  /** peiling sluiten (alleen de maker) */
+  onPollClose?: (m: Msg) => void;
+  /** userId → naam, voor wie op een peiling stemde */
+  names?: Record<string, string>;
 }) {
   const [pick, setPick] = useState<null | "up" | "down">(null);
   const pickOpen = pick !== null;
@@ -264,7 +274,7 @@ export function MessageBubble({
               },
             ]
           : []),
-        ...(onForward && !m.pending ? [{ key: "fwd", label: "Doorsturen", icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
+        ...(onForward && !m.pending && m.kind !== "poll" ? [{ key: "fwd", label: "Doorsturen", icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
         ...(onPin && !m.pending
           ? [{ key: "pin", label: pinnedId === m.id ? "Losmaken" : "Vastzetten", icon: <IconPin className="h-4 w-4" />, run: () => onPin(m) }]
           : []),
@@ -587,6 +597,19 @@ export function MessageBubble({
               </a>
             )}
 
+            {m.kind === "poll" && (
+              <PollCard
+                question={m.text}
+                poll={m.poll}
+                mine={mine}
+                disabled={Boolean(m.pending || m.failed)}
+                {...(myUserId ? { myUserId } : {})}
+                {...(names ? { names } : {})}
+                {...(onPollVote ? { onVote: (ids: string[]) => onPollVote(m, ids) } : {})}
+                {...(onPollClose ? { onClose: () => onPollClose(m) } : {})}
+              />
+            )}
+
             {textOnly ? (
               <>
                 <p className="whitespace-pre-wrap break-words text-ink">
@@ -597,7 +620,7 @@ export function MessageBubble({
               </>
             ) : (
               <>
-                {m.text && (
+                {m.text && m.kind !== "poll" && (
                   <p className="mt-0.5 whitespace-pre-wrap break-words text-ink">
                     <RichText text={m.text} mine={mine} />
                   </p>

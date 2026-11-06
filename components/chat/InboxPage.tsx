@@ -35,6 +35,7 @@ import { Portal } from "./Portal";
 import { BrainChat } from "@/components/brain/BrainChat";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
+import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
 import {
   canEdit,
   canShareScreen,
@@ -473,6 +474,7 @@ export function InboxPage({
     if (msg.editId) return saveEdit(msg.editId, msg.text);
     const threadId = active;
     const tmpId = "tmp" + Date.now();
+    const peiling = msg.kind === "poll" && msg.poll ? maakPeiling(msg.text, msg.poll.options, msg.poll.multi) : null;
     const optimistic: Msg = {
       id: tmpId,
       from: me?.userId ?? "me",
@@ -482,6 +484,7 @@ export function InboxPage({
       pending: true,
       ...(msg.attachment ? { attachment: msg.attachment } : {}),
       ...(msg.location ? { location: msg.location } : {}),
+      ...(peiling ? { poll: peiling.poll } : {}),
     };
     outbox.current.set(tmpId, msg);
     setMessages((m) => [...m, optimistic]);
@@ -507,6 +510,30 @@ export function InboxPage({
     outbox.current.delete(m.id);
     if (original) void send(original);
   };
+  // Peiling: meteen zichtbaar, daarna de serverversie overnemen (met de stemmen van anderen erin)
+  const updatePollRemote = async (msg: Msg, body: { optionIds: string[] } | { sluit: true }, optimistic: (p: NonNullable<Msg["poll"]>) => NonNullable<Msg["poll"]>) => {
+    if (!active || !msg.poll) return;
+    const threadId = active;
+    setMessages((prev) => prev.map((m) => (m.id === msg.id && m.poll ? { ...m, poll: optimistic(m.poll) } : m)));
+    const r = await fetch(`/api/inbox/${threadId}/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: msg.id, ...body }),
+    }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (r?.ok && d?.poll) {
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, poll: d.poll } : m)));
+      return;
+    }
+    say(d?.error?.message ?? (r ? "Dat lukte niet. Probeer het opnieuw." : "Geen verbinding. Probeer het opnieuw."), true);
+    void loadThread(threadId);
+  };
+  const votePoll = (msg: Msg, optionIds: string[]) => {
+    if (me) void updatePollRemote(msg, { optionIds }, (p) => stem(p, me.userId, optionIds));
+  };
+  const closePoll = (msg: Msg) => void updatePollRemote(msg, { sluit: true }, (p) => sluitPeiling(p));
+  const dirNames: Record<string, string> = Object.fromEntries(Object.entries(dir).map(([id, u]) => [id, u.name]));
+
   const discard = (m: Msg) => {
     setMessages((prev) => prev.filter((x) => x.id !== m.id));
     outbox.current.delete(m.id);
@@ -1265,6 +1292,9 @@ export function InboxPage({
                         onNotice={say}
                         onStar={(s) => void toggleSaved(activeThread.id, s.id, !savedHere.includes(s.id))}
                         starred={savedHere.includes(m.id)}
+                        onPollVote={votePoll}
+                        onPollClose={closePoll}
+                        {...(m.kind === "poll" ? { names: dirNames } : {})}
                         {...(me ? { myUserId: me.userId } : {})}
                         {...(pinned ? { pinnedId: pinned.id } : {})}
                       />

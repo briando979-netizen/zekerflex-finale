@@ -24,6 +24,7 @@ import { blockedBetween, checkChatPin, getChatPrefs, isMuted, visibleFrom } from
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
+import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from "@/lib/messaging/poll";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,7 +118,7 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
 
 const sendSchema = z.object({
   text: z.string().trim().max(4000).optional().default(""),
-  kind: z.enum(["text", "voice", "file", "image", "location", "call"]).optional().default("text"),
+  kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll"]).optional().default("text"),
   attachment: z
     .object({
       mediaId: z.string().min(1).max(64),
@@ -142,6 +143,13 @@ const sendSchema = z.object({
     })
     .optional(),
   replyToId: z.string().min(1).max(64).optional(),
+  // kind "poll": de vraag is `text`; maakPeiling ruimt lege en dubbele keuzes op
+  poll: z
+    .object({
+      options: z.array(z.string().max(POLL_OPTION_MAX)).min(POLL_MIN_OPTIONS).max(POLL_MAX_OPTIONS),
+      multi: z.boolean().optional().default(false),
+    })
+    .optional(),
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
@@ -176,6 +184,13 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     if (input.kind === "call" && !input.call) throw AppError.validation("Gespreksinfo ontbreekt");
 
     const extra: MessageExtra = {};
+    let text = input.text;
+    if (input.kind === "poll") {
+      const peiling = input.poll ? maakPeiling(input.text, input.poll.options, input.poll.multi) : null;
+      if (!peiling) throw AppError.validation("Een peiling heeft een vraag en minstens twee verschillende keuzes.");
+      text = peiling.question;
+      extra.poll = peiling.poll;
+    }
     if (input.attachment) {
       // Only what this user just uploaded in this thread: an upload id from elsewhere
       // (an ID photo, an invoice) must not be pulled into a chat and read through it.
@@ -221,7 +236,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
         ? (await anyPlatformAdmin()) ?? p.userId
         : p.userId;
 
-    const msg = await postMessage(thread.id, from, input.text, input.kind, extra);
+    const msg = await postMessage(thread.id, from, text, input.kind, extra);
 
     // auto-reply for 1-on-1 threads (skipped for call logs)
     if (thread.kind === "direct" && input.kind !== "call") {

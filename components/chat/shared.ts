@@ -1,6 +1,7 @@
 // Shared types + helpers for the chat UI (dock + full page).
 
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
+import type { MessagePoll } from "@/lib/messaging/poll";
 
 export interface ChatUser {
   userId: string;
@@ -33,7 +34,7 @@ export interface Msg {
   from: string;
   at: string;
   text: string;
-  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call";
+  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll";
   attachment?: Attachment;
   location?: { lat: number; lng: number; label?: string };
   call?: CallInfo;
@@ -48,6 +49,8 @@ export interface Msg {
   forwarded?: boolean;
   /** bewerkt door de afzender: wanneer */
   editedAt?: string;
+  /** kind "poll": keuzes en stemmen; de vraag staat in `text` (lib/messaging/poll.ts) */
+  poll?: MessagePoll;
 }
 
 /** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */
