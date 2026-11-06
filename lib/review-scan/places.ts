@@ -132,7 +132,7 @@ function kandidaatVanOsm(p: OsmPlaats): Kandidaat {
 
 /** Bedrijven die bij een zoekterm passen (hooguit 5), optioneel rond een punt op de kaart. */
 export async function zoekBedrijven(zoekterm: string, rond?: { lat: number; lng: number } | null): Promise<Kandidaat[]> {
-  if ((await bedrijvenBron()) === "osm") return zoekBijOsm(zoekterm, rond);
+  if ((await bedrijvenBron("review-bedrijven")) === "osm") return zoekBijOsm(zoekterm, rond);
   const viaGoogle = await viaGoogleZoeken(zoekterm, rond).catch((err: unknown) => {
     // Google weg of leeg? Dan onze eigen bron, zodat het zoeken blijft werken
     if (err instanceof ScanFout && err.code === "GOOGLE") {
@@ -174,7 +174,7 @@ async function viaGoogleZoeken(zoekterm: string, rond?: { lat: number; lng: numb
  */
 export async function bedrijfDetails(placeId: string): Promise<PlaatsDetails> {
   if (leesOsmPlaatsId(placeId)) return osmDetails(placeId);
-  if ((await bedrijvenBron()) === "osm") throw new ScanFout(geenBeoordelingenUitleg(null), "GEEN_BEOORDELINGEN");
+  if ((await bedrijvenBron("review-bedrijven")) === "osm") throw new ScanFout(geenBeoordelingenUitleg(null), "GEEN_BEOORDELINGEN");
   const p = await google(`/places/${encodeURIComponent(placeId)}?languageCode=nl&regionCode=NL`, { method: "GET", velden: DETAIL_VELDEN });
   const basis = kandidaatVan(p);
   if (!basis) throw new ScanFout("Dit bedrijf vonden we niet op Google.", "NIET_GEVONDEN");
@@ -259,7 +259,7 @@ const kaal = (host: string) => host.toLowerCase().replace(/^www\./, "");
  */
 export async function googleVoorWebsite(naam: string | null, plaats: string | null, host: string): Promise<GoogleVoorSite | null> {
   if (!naam) return null;
-  if ((await bedrijvenBron()) === "google") {
+  if ((await bedrijvenBron("review-bedrijven")) === "google") {
     const viaGoogle = await viaGoogleVoorWebsite(naam, plaats, host).catch((err: Error) => {
       logger.info("profiel bij de website: google viel weg, we kijken bij onze eigen bron", { reden: err.message.slice(0, 120) });
       return null;

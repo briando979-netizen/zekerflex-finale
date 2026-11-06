@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { gratisAan, primeGratis } from "@/lib/ai/gratis";
+import { gebruikEigenVers, type KeuzeDienst } from "@/lib/gratis/keuzes";
 
 // ---------------------------------------------------------------------------
 // Bedrijven opzoeken via OpenStreetMap — onze eigen, gratis bron: geen sleutel,
@@ -123,14 +123,13 @@ export function osmVergeetAlles(): void {
 export type BedrijvenBron = "google" | "osm";
 
 /**
- * Onze eigen bron gaat voor zodra "alles gratis" aanstaat of er geen
- * Google-sleutel is. Staat Google wél aan, dan blijft die de eerste keus, met
- * OSM als terugval. De schakelaar komt uit KV (lib/ai/gratis.ts) en is 60 s
- * gecachet, dus dit kost niets.
+ * Welke bron voor dit doel? Dat staat per dienst ingesteld in Admin → Alles
+ * gratis (lib/gratis/keuzes.ts): de buitendienst zoekt standaard in onze eigen
+ * bron, de review-scan standaard bij Google — want de sterren staan alléén
+ * daar. De standen komen uit KV en zijn 60 s gecachet, dus dit kost niets.
  */
-export async function bedrijvenBron(): Promise<BedrijvenBron> {
-  await primeGratis();
-  return !env.GOOGLE_MAPS_API_KEY || gratisAan() ? "osm" : "google";
+export async function bedrijvenBron(doel: KeuzeDienst = "sales-bedrijven"): Promise<BedrijvenBron> {
+  return (await gebruikEigenVers(doel, Boolean(env.GOOGLE_MAPS_API_KEY))) ? "osm" : "google";
 }
 
 // --- id's van OSM-objecten -------------------------------------------------------

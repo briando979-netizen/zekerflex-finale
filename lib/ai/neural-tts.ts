@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { gratisAan, primeGratis } from "@/lib/ai/gratis";
+import { gebruikEigenVers } from "@/lib/gratis/keuzes";
 import { piperAan, piperSpreek } from "@/lib/ai/piper";
 
 // ---------------------------------------------------------------------------
@@ -78,9 +78,10 @@ export async function synthesizeSpeechMedia(text: string, voiceName = "nl-NL-Wav
   const schoon = text.trim();
   if (!schoon) return null;
   const key = ttsKey();
-  // De stand van "alles gratis" komt uit KV; even verversen kost niets (60s cache).
-  await primeGratis().catch(() => undefined);
-  const eigenEerst = gratisAan() || !key;
+  // De keuze voor de stem staat in KV (Admin → Alles gratis); verversen kost
+  // niets (cache van 60 s). Standaard "automatisch": zolang Piper niet draait
+  // en er een Google-sleutel is, blijft het Google.
+  const eigenEerst = await gebruikEigenVers("stem", Boolean(key)).catch(() => !key);
 
   if (eigenEerst) {
     const eigen = await eigenStem(schoon);

@@ -1,5 +1,6 @@
 import { GRATIS_DIENSTEN, type GratisDienst, type GratisStatus } from "@/lib/gratis/diensten";
 import { getGratisStand } from "@/lib/ai/gratis";
+import { getKeuzes, type KeuzeDienst } from "@/lib/gratis/keuzes";
 
 // ---------------------------------------------------------------------------
 // De stand per dienst: staat er een sleutel klaar, en gebruiken we die nu echt?
@@ -23,14 +24,30 @@ function heeftSleutel(namen: string[] | undefined): boolean {
   });
 }
 
+/** Welke dienst in het overzicht hoort bij welke keuze-schakelaar. */
+const KEUZE_VAN: Partial<Record<string, KeuzeDienst>> = {
+  reistijd: "reistijd",
+  bedrijven: "sales-bedrijven",
+  stem: "stem",
+};
+
 export async function dienstenStand(): Promise<{ diensten: DienstStand[]; aiGratis: boolean; kostNu: number }> {
-  const stand = await getGratisStand();
+  const [stand, keuzes] = await Promise.all([getGratisStand(), getKeuzes()]);
   const diensten = GRATIS_DIENSTEN.map<DienstStand>((d) => {
     const sleutel = heeftSleutel(d.env);
-    // de AI is de enige die we met een knop kunnen omzetten: staat die aan,
-    // dan kost hij niets meer, ook al staat de betaalde sleutel er nog.
-    const kostNu =
-      d.id === "ai" ? !stand.aan && sleutel : (d.status === "bouwen" || d.status === "nodig") && sleutel;
+    const keuze = KEUZE_VAN[d.id];
+    let kostNu: boolean;
+    if (d.id === "ai") {
+      // de AI staat op de grote knop: aan = niets meer betalen
+      kostNu = !stand.aan && sleutel;
+    } else if (keuze) {
+      // deze dienst heeft een eigen keuze: alleen "betaald" (of "automatisch"
+      // terwijl de grote knop uitstaat) laat de teller nog lopen
+      const eigen = keuzes[keuze] === "eigen" || (keuzes[keuze] === "auto" && stand.aan);
+      kostNu = sleutel && !eigen;
+    } else {
+      kostNu = (d.status === "bouwen" || d.status === "nodig") && sleutel;
+    }
     return { ...d, sleutel, kostNu };
   });
   return { diensten, aiGratis: stand.aan, kostNu: diensten.filter((d) => d.kostNu).length };

@@ -133,7 +133,7 @@ export async function runReviewScan(invoer: { tekst?: string | undefined; placeI
   } else {
     gevonden = await vindBedrijf(leesInvoer(invoer.tekst ?? ""));
   }
-  const bron = await bedrijvenBron();
+  const bron = await bedrijvenBron("review-bedrijven");
   if ("kandidaten" in gevonden) {
     const eerste = gevonden.kandidaten[0];
     // van onze eigen bron komt geen enkele kandidaat met sterren; zo'n keuzelijst helpt niemand

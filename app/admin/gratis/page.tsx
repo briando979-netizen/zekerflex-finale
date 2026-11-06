@@ -1,7 +1,9 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { KpiStrip, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { GratisAi } from "@/components/admin/GratisAi";
+import { GratisKeuzes } from "@/components/admin/GratisKeuzes";
 import { GRATIS_STATUS_LABEL, GRATIS_STATUS_TINT } from "@/lib/gratis/diensten";
+import { getKeuzes } from "@/lib/gratis/keuzes";
 import { dienstenStand, telling } from "@/lib/gratis/status";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export default async function GratisPage() {
     return <PageHead title="Geen toegang" subtitle="Dit overzicht is alleen voor platformbeheerders." />;
   }
 
-  const { diensten } = await dienstenStand();
+  const [{ diensten }, keuzes] = await Promise.all([dienstenStand(), getKeuzes()]);
   const t = telling(diensten);
 
   return (
@@ -38,8 +40,15 @@ export default async function GratisPage() {
       />
 
       <div className="mt-4 space-y-4">
-        <Panel title="De AI zelf" subtitle="De grootste kostenpost: elke vraag aan een betaald model kost geld per keer.">
+        <Panel title="De AI zelf" subtitle="Eén knop die élke AI-taak naar ons eigen model stuurt.">
           <GratisAi />
+        </Panel>
+
+        <Panel
+          title="Per dienst kiezen"
+          subtitle="Los van de grote knop: hier zet je één dienst over zonder de rest te raken."
+        >
+          <GratisKeuzes begin={keuzes} />
         </Panel>
 
         <Panel title="Alle diensten van buiten" subtitle={`${diensten.length} diensten, met ons eigen alternatief ernaast.`}>

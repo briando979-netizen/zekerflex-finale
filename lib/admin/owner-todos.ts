@@ -836,6 +836,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(platformPartij().compleet ? {} : { doneNote: "KVK, btw-nummer of adres ontbreekt nog" }),
     },
     {
+      id: "piper-stem",
+      group: "Beheer & veiligheid",
+      title: "Eigen stem aanzetten (Piper), zodat voorlezen niets meer kost",
+      why: "De AI-console, de AI-beller en de stem onder een video liepen via Google Text-to-Speech, dat per teken afrekent. Piper is een klein spraakmodel dat op onze eigen VPS draait: geen sleutel, geen kosten per keer, en de tekst verlaat onze server niet. Zolang PIPER_URL niet gezet is, blijft alles precies zoals het was.",
+      how: [
+        "Zeg tegen Claude: 'zet de eigen stem aan'. Hij haalt het Nederlandse stemmodel binnen, start de piper-container erbij en zet PIPER_URL in .env.production. Volledige uitleg staat in deploy/piper/README.md.",
+        "Daarna in Admin → ZekerFlex AI de knop 'alles gratis' aanzetten als je wilt dat ook de AI zelf op onze eigen server draait; de stem pakt Piper dan altijd eerst.",
+        "Controleren kan met Admin → Alles gratis: daar staat per dienst of hij nog geld kost.",
+      ],
+      auto: true,
+      done: Boolean(env.PIPER_URL),
+      ...(env.PIPER_URL ? {} : { doneNote: "PIPER_URL nog niet gezet" }),
+    },
+    {
       id: "apm-glitchtip",
       group: "Beheer & veiligheid",
       title: "Fouten en prestaties bewaken met eigen GlitchTip en Grafana",

@@ -1,7 +1,8 @@
 import { cached, redis } from "@/lib/redis";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { gratisAan, primeGratis } from "@/lib/ai/gratis";
+import { gebruikEigen, primeKeuzes } from "@/lib/gratis/keuzes";
+import { primeGratis } from "@/lib/ai/gratis";
 import {
   fetchDistanceMatrix,
   type DistanceMatrixLeg,
@@ -11,12 +12,13 @@ import type { GeoPoint, TravelEstimate } from "@/types/matching";
 import type { TravelMode } from "@prisma/client";
 
 /**
- * Rekenen we het zelf uit? Ja zodra de knop "alles gratis" aanstaat of er geen
- * Google-sleutel is. Google rekent per opvraging af; onze eigen rekenregel
- * (lib/geo/eigen-afstand.ts) kost niets en stuurt geen adres naar buiten.
+ * Rekenen we het zelf uit? Dat staat per dienst ingesteld in Admin → Alles
+ * gratis (standaard: zelf). Google rekent per opvraging af; onze eigen
+ * rekenregel (lib/geo/eigen-afstand.ts) kost niets en stuurt geen adres naar
+ * buiten.
  */
 function eigenRekenen(): boolean {
-  return gratisAan() || !env.GOOGLE_MAPS_API_KEY;
+  return gebruikEigen("reistijd", Boolean(env.GOOGLE_MAPS_API_KEY));
 }
 
 /** Onze eigen schatting in de vorm die de matching verwacht. */
@@ -72,8 +74,8 @@ export async function estimateTravel(
   )},${round(destination.longitude)}:${hourBucket.toISOString()}:${modes.sort().join(",")}`;
 
   return cached(key, 900, async () => {
-    // De stand van "alles gratis" staat in KV, met een cache van een minuut.
-    await primeGratis();
+    // De standen staan in KV, met een cache van een minuut.
+    await Promise.all([primeGratis(), primeKeuzes()]);
     if (eigenRekenen()) {
       void recordRoutingOutcome("eigen");
       return eigenEstimates(origin, destination, modes);
