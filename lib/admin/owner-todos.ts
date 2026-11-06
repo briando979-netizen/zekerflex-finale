@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { env } from "@/lib/env";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { llmHealth } from "@/lib/ai/client";
+import { llmGezondheidGecachet } from "@/lib/ai/gezondheid";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
 import { platformAdminIds } from "@/lib/messaging/contacts";
@@ -176,7 +176,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
-    llmHealth(),
+    llmGezondheidGecachet(),
     adminTwoFactor(),
     adminHasPush(),
     getReminderSettings().catch(() => ({ enabled: false })),

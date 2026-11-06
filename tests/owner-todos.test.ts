@@ -17,6 +17,10 @@ vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? nu
 vi.mock("@/lib/env", () => ({ env: live.env }));
 vi.mock("@/lib/ai/client", () => ({
   ensureAiNode: async () => undefined, llmHealth: async () => ({ ok: false, baseUrl: "", model: "m", detail: "geen model" }) }));
+// de gecachte variant (lib/ai/gezondheid.ts) trekt anders echt Redis mee
+vi.mock("@/lib/ai/gezondheid", () => ({
+  llmGezondheidGecachet: async () => ({ ok: false, baseUrl: "", model: "m", detail: "geen model" }),
+}));
 vi.mock("@/lib/billing/stripe", () => ({
   getStripeClient: () => ({
     accounts: { retrieveCurrent: async () => ({ capabilities: {} }) },

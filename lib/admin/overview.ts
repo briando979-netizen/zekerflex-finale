@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 import { budgetSnapshot } from "@/lib/ai/governor";
-import { llmHealth } from "@/lib/ai/client";
+import { llmGezondheidGecachet } from "@/lib/ai/gezondheid";
 import { liveTraffic } from "@/lib/analytics/report";
 import { pushChannels } from "@/lib/notifications/push";
 import { ragChunkAantal } from "@/lib/rag/telling";
@@ -107,7 +107,7 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
       await redis.ping();
       return true;
     }, false),
-    llmHealth(),
+    llmGezondheidGecachet(),
     safe(() => budgetSnapshot(), null),
     safe(() => liveTraffic(), null),
     safe(() => prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }), 0),
