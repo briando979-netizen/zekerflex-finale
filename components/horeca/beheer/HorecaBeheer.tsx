@@ -61,6 +61,11 @@ export function HorecaBeheer() {
   useEffect(() => {
     void laad();
   }, [laad]);
+  // de menukaart toont voorraad die intussen door bestellingen (gast, bediening, kassa) is afgeboekt:
+  // bij elk openen van het tabblad de data opnieuw ophalen, anders zie je een oude teller
+  useEffect(() => {
+    if (tab === "menukaart") void laad();
+  }, [tab, laad]);
   // ?tab=reserveringen (bijv. vanaf een tegel op /werkgever): na het laden één keer
   // dat tabblad openen, als het er is (een module-tabblad alleen als de module aan staat)
   const tabUitLink = useRef(false);
