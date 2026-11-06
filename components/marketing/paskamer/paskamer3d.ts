@@ -496,6 +496,44 @@ export async function maakPaskamer3D(houder: HTMLElement, onKlaar?: () => void):
         rand.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 1.05);
         rand.position.set(0, ogen[1] + 0.23, ogen[2] - rr + 0.18);
         extras.add(rand);
+      } else if (e.soort === "riem" || e.soort === "tas") {
+        // afmetingen van de romp op heuphoogte (zonder de armen)
+        const bekken = midden(Pn, gw.pelvis ?? []);
+        const yRiem = bekken[1] + 0.55;
+        let xm = 0, zmin = Infinity, zmax = -Infinity;
+        for (let i = 0; i < Pn.length; i += 3) {
+          const x = Pn[i] ?? 0, y = Pn[i + 1] ?? 0, z = Pn[i + 2] ?? 0;
+          if (Math.abs(y - yRiem) > 0.12 || Math.abs(x) > 1.7) continue;
+          xm = Math.max(xm, Math.abs(x));
+          zmin = Math.min(zmin, z);
+          zmax = Math.max(zmax, z);
+        }
+        if (!isFinite(zmin)) continue;
+        const zc = (zmin + zmax) / 2;
+        if (e.soort === "riem") {
+          const band = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.22, 64, 1, true), new THREE.MeshPhysicalMaterial({ color: e.kleur, roughness: 0.55, clearcoat: 0.3, side: THREE.DoubleSide }));
+          band.scale.set(xm + 0.26, 1, (zmax - zmin) / 2 + 0.26);
+          band.position.set(0, yRiem, zc);
+          band.castShadow = true;
+          extras.add(band);
+          const gesp = new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.3, 0.07, 3, 0.02), new THREE.MeshPhysicalMaterial({ color: "#c9b27c", metalness: 0.9, roughness: 0.3 }));
+          gesp.position.set(0, yRiem, zmax + 0.3);
+          extras.add(gesp);
+        } else {
+          const tas = new THREE.Mesh(new RoundedBoxGeometry(1.1, 0.95, 0.42, 4, 0.14), new THREE.MeshPhysicalMaterial({ color: e.kleur, roughness: 0.85, sheen: 0.4 }));
+          tas.position.set(-(xm + 0.5), yRiem - 0.4, zc);
+          tas.castShadow = true;
+          extras.add(tas);
+          const sch = midden(Pn, gw["l-shoulder"] ?? []);
+          const bocht = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(sch[0] - 0.2, sch[1] + 0.25, zc + 0.1),
+            new THREE.Vector3(sch[0] * 0.2, (sch[1] + yRiem) / 2 + 0.3, zmax + 0.4),
+            new THREE.Vector3(-(xm + 0.45), yRiem + 0.2, zc + 0.3),
+            new THREE.Vector3(-(xm + 0.5), yRiem + 0.1, zc),
+          ]);
+          const riem = new THREE.Mesh(new THREE.TubeGeometry(bocht, 40, 0.045, 8), new THREE.MeshPhysicalMaterial({ color: new THREE.Color(e.kleur).multiplyScalar(0.7), roughness: 0.8 }));
+          extras.add(riem);
+        }
       } else if (e.soort === "kniebeschermers") {
         for (const k of ["l", "r"] as const) {
           const knie = midden(Pn, gw[`${k}-knee`] ?? []);

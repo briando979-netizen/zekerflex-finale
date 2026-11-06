@@ -241,17 +241,17 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
               )}
             </div>
             {!vlak && (
-              <div className="absolute right-3 top-3 flex flex-col gap-1.5" role="group" aria-label={p.draaiLabel}>
+              <div className="absolute right-3 top-3 flex flex-col gap-1.5 max-sm:inset-x-3 max-sm:right-auto max-sm:top-12 max-sm:flex-row max-sm:flex-wrap" role="group" aria-label={p.draaiLabel}>
                 {([["voor", 0], ["zij", Math.PI / 2], ["achter", Math.PI]] as const).map(([n, h]) => (
-                  <button key={n} type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(h))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                  <button key={n} type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(h))} className="h-8 rounded-full bg-white/95 px-2.5 text-[11px] sm:px-3 sm:text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
                     {n === "voor" ? p.kantVoor : n === "zij" ? p.kantZij : p.kantAchter}
                   </button>
                 ))}
-                <button type="button" aria-pressed={draait} onClick={() => (setDraait(!draait), drieD.current?.draaien(!draait))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                <button type="button" aria-pressed={draait} onClick={() => (setDraait(!draait), drieD.current?.draaien(!draait))} className="h-8 rounded-full bg-white/95 px-2.5 text-[11px] sm:px-3 sm:text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
                   {draait ? p.stopDraaien : p.autoDraai}
                 </button>
                 {stand.gezicht && (
-                  <button type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(0), drieD.current?.inzoomen(true))} className="h-8 rounded-full bg-white/95 px-3 text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
+                  <button type="button" onClick={() => (setDraait(false), drieD.current?.draaien(false), drieD.current?.kijk(0), drieD.current?.inzoomen(true))} className="h-8 rounded-full bg-white/95 px-2.5 text-[11px] sm:px-3 sm:text-[12px] font-bold text-ink shadow-e1 hover:bg-white">
                     {p.inzoomGezicht}
                   </button>
                 )}

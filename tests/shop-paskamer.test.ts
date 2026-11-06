@@ -204,3 +204,12 @@ describe("3D-paspop", () => {
     expect(s.haarKleur).toBe("#3b2a1f");
   });
 });
+
+describe("3D-riem en tas", () => {
+  it("riem en tas worden accessoires op de paspop", async () => {
+    const { stuk3D } = await import("@/lib/shop/paspop3d/kleding");
+    expect(stuk3D("riem", "riem", "heren")).toEqual({ extra: "riem" });
+    expect(stuk3D("tas", "tas", "dames")).toEqual({ extra: "tas" });
+    expect(stuk3D("sokken", "sokken", "heren")).toBeNull();
+  });
+});

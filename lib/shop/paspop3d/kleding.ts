@@ -3,7 +3,7 @@
 
 import type { Silhouet, Slot, Soort } from "@/lib/shop/paskamer";
 
-export type Accessoire = "helm" | "pet" | "bril" | "handschoenen" | "kniebeschermers";
+export type Accessoire = "helm" | "pet" | "bril" | "handschoenen" | "kniebeschermers" | "riem" | "tas";
 export type Stuk3D = { deel: string; laag: number; ruimte: number; kleurbaar: boolean } | { extra: Accessoire } | null;
 
 /** Lagen van binnen naar buiten; een hogere laag krijgt iets meer ruimte zodat de stof niet door de laag eronder prikt. */
@@ -51,8 +51,12 @@ export function stuk3D(soort: Soort, slot: Slot, silhouet: Silhouet): Stuk3D {
       return { extra: "bril" };
     case "kniebeschermer":
       return { extra: "kniebeschermers" };
+    case "riem":
+      return { extra: "riem" };
+    case "tas":
+      return { extra: "tas" };
     default:
-      // sokken zitten in de schoenen; riem en tas komen in een volgende ronde
+      // sokken zitten al in de schoenen van het model
       return null;
   }
 }
