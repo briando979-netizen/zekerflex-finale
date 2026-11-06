@@ -27,6 +27,7 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "autopilot", label: "Autopilot", description: "Laat de autopilot-acties draaien (naast de eigen aan/uit in Admin → Autopilot).", default: true },
   { key: "uren-auto-goedkeuren", label: "Uren automatisch goedkeuren aanbieden", description: "Toon opdrachtgevers de optie om uren automatisch te laten goedkeuren.", default: true },
   { key: "qr-betalen", label: "QR-betalen", description: "QR-betaallink op facturen.", default: true },
+  { key: "winkel-ai-autopubliceren", label: "Winkel-AI zet producten zelf aan", description: "De winkel-agent zet een door hem gemaakt product zelf aan, maar alleen met echte voorraad én een echte foto. Uit = jij zet ze aan.", default: false },
   { key: "shop", label: "Webshop", description: "De klus-gear webshop.", default: true },
   { key: "ai-vertalen", label: "AI-vertalen in chat", description: "Herschrijven/vertalen-knop in de chat.", default: true },
   { key: "netwerk-pakketten", label: "Verbinding: wifi, VPN en 5G", description: "De netwerkpakketten in het werkgever-menu (Wifi en VPN) en hun API. Uit = het onderdeel is weg; bestaande instellingen blijven bewaard.", default: true },
