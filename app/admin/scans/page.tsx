@@ -49,14 +49,14 @@ export default async function ScansPage() {
       samenvatting: s.samenvatting,
       rapport: s.rapport,
       status: statusVan(s),
-      stappen: s.stappen.map((x) => ({ stap: x.stap, at: x.at, info: x.info ?? null })),
+      stappen: (s.stappen ?? []).map((x) => ({ stap: x.stap, at: x.at, info: x.info ?? null })),
       siteSlug: s.siteSlug,
       lead: lead ? { status: lead.status, contact: lead.contactName, bron: lead.source } : s.leadId ? { status: "?", contact: null, bron: "" } : null,
       deal: d
         ? {
             id: d.id,
             status: d.status,
-            gekozen: d.opties.filter((o) => d.keuze.includes(o.id)).map((o) => o.naam),
+            gekozen: (d.opties ?? []).filter((o) => (d.keuze ?? []).includes(o.id)).map((o) => o.naam),
             eenmalig: totaal?.eenmaligCent ?? 0,
             maand: totaal?.maandCent ?? 0,
             verlopen: dealVerlopen(d, nu),

@@ -29,7 +29,7 @@ async function load(userId: string): Promise<Record2fa> {
 
 export async function twoFactorStatus(userId: string): Promise<{ enabled: boolean; enabledAt: string | null; recoveryLeft: number }> {
   const r = await load(userId);
-  return { enabled: Boolean(r.secret && r.enabledAt), enabledAt: r.enabledAt, recoveryLeft: r.recovery.length };
+  return { enabled: Boolean(r.secret && r.enabledAt), enabledAt: r.enabledAt, recoveryLeft: (r.recovery ?? []).length };
 }
 
 export async function hasTwoFactor(userId: string): Promise<boolean> {

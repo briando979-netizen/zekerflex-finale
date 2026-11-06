@@ -49,7 +49,7 @@ export async function getOntwerpStaat(): Promise<OntwerpStaat> {
     conceptOp: concept?.op ?? null,
     live: liveThema,
     liveOp: live?.op ?? null,
-    geschiedenis: (geschiedenis ?? []).map((v) => ({ ...v, thema: normalizeThema(v.thema) })),
+    geschiedenis: (Array.isArray(geschiedenis) ? geschiedenis : []).map((v) => ({ ...v, thema: normalizeThema(v.thema) })),
   };
 }
 

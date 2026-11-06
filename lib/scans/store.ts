@@ -62,7 +62,7 @@ export async function lijstScans(limit = 1000): Promise<ScanLog[]> {
   const oud: ScanLog[] = checks
     .filter((c) => !bekend.has(scanSleutel("website", c.id)))
     .map((c) => {
-      const problemen = c.findings.filter((f) => f.status === "probleem").length;
+      const problemen = (c.findings ?? []).filter((f) => f.status === "probleem").length;
       const stappen: ScanLog["stappen"] = [{ stap: "gescand", at: c.at }];
       if (c.nieuweSite) stappen.push({ stap: "nieuwe-site", at: c.nieuweSite.at, info: c.nieuweSite.slug });
       if (c.leadId) stappen.push({ stap: "aanvraag", at: c.at });

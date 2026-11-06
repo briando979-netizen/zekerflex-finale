@@ -56,7 +56,7 @@ export function samenvatBlokkades(lijst: Blokkade[]): BlokkadeSamenvatting {
   }
   const perScenario = [...tel]
     .map(([scenario, aantal]) => ({ scenario, aantal }))
-    .sort((a, b) => b.aantal - a.aantal || a.scenario.localeCompare(b.scenario))
+    .sort((a, b) => b.aantal - a.aantal || (a.scenario ?? "").localeCompare(b.scenario ?? ""))
     .slice(0, 8);
   return { totaal: lijst.length, eigen, community, handmatig, perScenario };
 }

@@ -37,7 +37,9 @@ export default async function AuditPage(props: { searchParams: Promise<{ folder?
   }
 
   const folder = FOLDERS.find((f) => f.key === (searchParams.folder ?? "")) ?? FOLDERS[0]!;
-  const q = searchParams.q?.trim() ?? "";
+  // ?q=a&q=b komt als array binnen: alleen de eerste waarde telt
+  const qRuw = searchParams.q;
+  const q = (Array.isArray(qRuw) ? qRuw[0] : qRuw)?.trim() ?? "";
   const period = resolvePeriod(searchParams.periode);
   const where = {
     ...(folder.categories.length ? { category: { in: folder.categories } } : {}),

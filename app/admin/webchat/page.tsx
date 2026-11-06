@@ -17,8 +17,9 @@ export default async function WebchatPage() {
   const conversations = await safe(() => listConversations("all", 1000), []);
   const recent = conversations.filter((c) => new Date(c.startedAt) >= period.from);
   const human = conversations.filter((c) => c.status === "human");
-  const unread = conversations.reduce((n, c) => n + c.unread, 0);
-  const takenOver = recent.filter((c) => c.messages.some((m) => m.role === "agent")).length;
+  // oude gesprekken in de opslag kunnen velden missen: nooit NaN of een crash
+  const unread = conversations.reduce((n, c) => n + (c.unread ?? 0), 0);
+  const takenOver = recent.filter((c) => (c.messages ?? []).some((m) => m.role === "agent")).length;
 
   return (
     <div className="space-y-4">

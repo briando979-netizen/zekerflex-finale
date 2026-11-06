@@ -41,7 +41,8 @@ export default async function BeveiligingPage() {
     byUser.set(r.user.id, cur);
   }
   const people = await Promise.all(
-    [...byUser.values()].map(async (u) => ({ ...u, twoFactor: (await twoFactorStatus(u.id)).enabled })),
+    // één mislukte KV-lezing mag de hele pagina niet omgooien
+    [...byUser.values()].map(async (u) => ({ ...u, twoFactor: await twoFactorStatus(u.id).then((s) => s.enabled).catch(() => false) })),
   );
   people.sort((a, b) => Number(a.twoFactor) - Number(b.twoFactor) || a.name.localeCompare(b.name));
 

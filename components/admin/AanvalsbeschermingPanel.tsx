@@ -47,8 +47,8 @@ export async function AanvalsbeschermingPanel() {
           <span className="font-mono text-xs">
             {adres}
             <span className="ml-2 font-sans" style={{ color: "var(--a-mute)" }}>
-              {vlagVan(m.source.cn)} {m.source.cn ?? ""}
-              {m.source.as_name ? ` · ${m.source.as_name}` : ""}
+              {vlagVan(m.source?.cn)} {m.source?.cn ?? ""}
+              {m.source?.as_name ? ` · ${m.source.as_name}` : ""}
             </span>
           </span>
         ),

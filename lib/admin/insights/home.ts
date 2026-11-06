@@ -154,7 +154,7 @@ export async function homeInsights(period: Period): Promise<HomeInsights> {
   const overdueCents = sumOf(overdue, (i) => i.totalCents);
   const staleCrons = crons.filter((c) => c.stale).length;
   const needHuman = conversations.filter((c) => c.status === "human").length;
-  const unread = sumOf(conversations, (c) => c.unread);
+  const unread = sumOf(conversations, (c) => c.unread ?? 0);
   const callsNow = calls.filter((c) => new Date(c.at) >= from);
   const interested = callsNow.filter((c) => c.outcome?.interested).length;
   const shopCents = sumOf(orders, (o) => o.totalCents);
