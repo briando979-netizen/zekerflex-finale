@@ -90,7 +90,8 @@ const ZAKELIJK: OsRol[] = ["werkgever", "admin"];
 
 /** De apps van de werker-app (/dashboard). */
 const WERKER_APPS: OsApp[] = [
-  { id: "w-klussen", naam: "Klussen zoeken", uitleg: "Diensten bij jou in de buurt die bij je vak passen.", href: "/dashboard", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["ontdekken", "vacatures", "werk"] },
+  { id: "w-start", naam: "Startscherm", uitleg: "Je dag in één oogopslag.", href: "/dashboard", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["overzicht", "home"] },
+  { id: "w-klussen", naam: "Klussen zoeken", uitleg: "Diensten bij jou in de buurt die bij je vak passen.", href: "/dashboard/klussen", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["ontdekken", "vacatures", "werk", "markt"] },
   { id: "w-diensten", naam: "Mijn klussen", uitleg: "Wat je hebt aangenomen, van vandaag tot volgende maand.", href: "/dashboard/diensten", icoon: "agenda", categorie: "werk", rollen: WERKER, zoek: ["geaccepteerd", "planning"] },
   { id: "w-uren", naam: "Uren", uitleg: "Uren indienen en volgen tot ze zijn goedgekeurd.", href: "/dashboard/uren", icoon: "uren", categorie: "werk", rollen: WERKER },
   { id: "w-inchecken", naam: "Inchecken", uitleg: "Op locatie in- en uitchecken met je telefoon.", href: "/dashboard/inchecken", icoon: "werk", categorie: "werk", rollen: WERKER, zoek: ["gps", "checkin"] },
@@ -113,6 +114,10 @@ const WERKER_APPS: OsApp[] = [
   { id: "w-beoordelingen", naam: "Beoordelingen", uitleg: "Wat opdrachtgevers over je werk zeggen.", href: "/dashboard/beoordelingen", icoon: "ster", categorie: "account", rollen: WERKER, zoek: ["reviews", "sterren"] },
   { id: "w-vooruitblik", naam: "Vooruitblik", uitleg: "Wat je deze maand ongeveer gaat verdienen.", href: "/dashboard/vooruitblik", icoon: "groei", categorie: "geld", rollen: WERKER },
   { id: "w-assistent", naam: "Assistent", uitleg: "Vraag het de AI-assistent, in je eigen taal.", href: "/dashboard/assistent", icoon: "ai", categorie: "ai", rollen: WERKER },
+  { id: "w-wifi", naam: "Wifi op het werk", uitleg: "Verbinden met het netwerk van de locatie.", href: "/dashboard/wifi", icoon: "instellingen", categorie: "werk", rollen: WERKER, zoek: ["netwerk", "internet"] },
+  { id: "w-portofoon", naam: "Portofoon", uitleg: "Praten met je ploeg op locatie.", href: "/dashboard/portofoon", icoon: "telefoon", categorie: "communicatie", rollen: WERKER, zoek: ["walkie", "ploeg"] },
+  { id: "w-toegangscodes", naam: "Toegangscodes", uitleg: "Codes en sleutels voor de locatie waar je werkt.", href: "/dashboard/toegangscodes", icoon: "schild", categorie: "werk", rollen: WERKER, zoek: ["sleutel", "deur", "kluis"] },
+  { id: "w-voertuig", naam: "Voertuig", uitleg: "De auto of bus die bij je dienst hoort.", href: "/dashboard/voertuig", icoon: "kaart", categorie: "werk", rollen: WERKER, zoek: ["auto", "bus", "kenteken"] },
   { id: "w-account", naam: "Accountinstellingen", uitleg: "Inloggen, taal, meldingen en privacy.", href: "/dashboard/account", icoon: "instellingen", categorie: "account", rollen: WERKER },
 ];
 
@@ -145,6 +150,10 @@ const WERKGEVER_APPS: OsApp[] = [
   { id: "b-integraties", naam: "Koppelingen", uitleg: "ZekerFlex verbinden met je eigen systemen.", href: "/werkgever/integraties", icoon: "instellingen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["api", "koppeling"] },
   { id: "b-bedrijf", naam: "Bedrijfsgegevens", uitleg: "KVK, btw, adres en logo.", href: "/werkgever/bedrijf", icoon: "bedrijf", categorie: "bedrijf", rollen: WERKGEVER },
   { id: "b-instellingen", naam: "Instellingen", uitleg: "Hoe je werkruimte werkt.", href: "/werkgever/instellingen", icoon: "instellingen", categorie: "account", rollen: WERKGEVER },
+  { id: "b-netwerk", naam: "Verbinding", uitleg: "Wifi op de werkvloer, veilige werkplek en 5G.", href: "/werkgever/netwerk", icoon: "instellingen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["wifi", "vpn", "internet", "5g"] },
+  { id: "b-op-locatie", naam: "Op locatie", uitleg: "Portofoon, toegang, sleutelkluis en badges.", href: "/werkgever/op-locatie", icoon: "schild", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["portofoon", "sleutel", "badge", "kenteken"] },
+  { id: "b-rapportages", naam: "Rapportages", uitleg: "Cijfers en grafieken over je bedrijf.", href: "/werkgever/rapportages", icoon: "groei", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["bi", "cijfers", "dashboard"] },
+  { id: "b-beoordelingen", naam: "Beoordelingen", uitleg: "Wat jij van je krachten vond, en zij van jou.", href: "/werkgever/reviews", icoon: "ster", categorie: "werk", rollen: WERKGEVER },
   { id: "b-account", naam: "Mijn account", uitleg: "Inloggen, meldingen en privacy.", href: "/werkgever/account", icoon: "mensen", categorie: "account", rollen: WERKGEVER },
 ];
 

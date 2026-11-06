@@ -100,6 +100,33 @@ export function Venster({ app, tint, staat, acties, smal, actief }: { app: OsApp
           </span>
           <span className="block truncate text-[11px] text-white/45">{app.href}</span>
         </span>
+        <KnopVak
+          titel="Opnieuw laden"
+          onClick={() => {
+            // eigen frame, dus dit mag; bij een andere herkomst doet de browser niets
+            try {
+              frame.current?.contentWindow?.location.reload();
+            } catch {
+              if (frame.current) frame.current.src = app.href;
+            }
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" />
+          </svg>
+        </KnopVak>
+        <a
+          href={app.href}
+          target="_blank"
+          rel="noopener"
+          title="In een eigen tabblad openen"
+          aria-label={`${app.naam} in een eigen tabblad openen`}
+          className="grid h-7 w-7 place-items-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+          </svg>
+        </a>
         <KnopVak titel="Kleiner" onClick={() => acties.minimaliseer(staat.id)}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
             <path d="M3 9h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
