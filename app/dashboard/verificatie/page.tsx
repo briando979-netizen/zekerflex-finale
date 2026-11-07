@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
@@ -11,6 +12,7 @@ import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { VerificationAutoRefresh } from "@/components/app/VerificationAutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,7 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <VerificationAutoRefresh />
       <BackLink fallbackHref="/dashboard/account" label={pt.back} />
       <PageHeader
         title={pt.title}
