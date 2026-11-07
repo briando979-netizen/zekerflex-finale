@@ -5,6 +5,8 @@ import { recordCronRun } from "@/lib/metrics";
 import { chat, embed } from "@/lib/ai/client";
 import { gratisAan, gratisModel, primeGratis } from "@/lib/ai/gratis";
 import { vastBegin } from "@/lib/chat/publiek-begin";
+import { kvGet } from "@/lib/storage/kv";
+import { K_STATUS, uitrolHoudtModelStil, type LiveStatus } from "@/lib/bouwer/live";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,12 +27,18 @@ async function handle(request: Request): Promise<NextResponse> {
     // en hoeft een gast alleen op zijn eigen vraag te wachten (lib/chat/publiek-systeem.ts)
     const begin = await vastBegin();
     await Promise.all([
-      chat({ purpose: "ai-warm", messages: [...begin, { role: "user", content: "ok" }], maxTokens: 1, retry: false, timeoutMs: 120_000 }),
+      chat({ purpose: "ai-warm", messages: [...begin, { role: "user", content: "ok" }], maxTokens: 1, retry: false, timeoutMs: 40_000 }),
       embed("ok"),
     ]);
     recordCronRun("ai-warm", true);
     return NextResponse.json({ ok: true, model: gratisModel("main"), ms: Date.now() - t0 });
   } catch (err) {
+    // tijdens (en net na) een uitrol staat het model bewust stil: geen storing, geen melding aan de eigenaar
+    if (uitrolHoudtModelStil(await kvGet<LiveStatus>(K_STATUS).catch(() => null))) {
+      recordCronRun("ai-warm", true);
+      logger.info("ai warm houden overgeslagen: uitrol bezig", { error: (err as Error).message });
+      return NextResponse.json({ ok: true, overgeslagen: "uitrol bezig", ms: Date.now() - t0 });
+    }
     recordCronRun("ai-warm", false);
     logger.warn("ai warm houden mislukt", { error: (err as Error).message, ms: Date.now() - t0 });
     return NextResponse.json({ ok: false, ms: Date.now() - t0 }, { status: 200 });

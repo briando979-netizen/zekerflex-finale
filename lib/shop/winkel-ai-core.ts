@@ -121,3 +121,90 @@ export const inkoopTotaal = (regels: InkoopRegel[]) => ({ stuks: regels.reduce((
 
 /** De btw-tarieven die voor de prijsberekening gelden (boeken 9 %). */
 export const tariefVoor = (naam: string, slug = slugVan(naam)): number => btwTarief({ name: naam, slug });
+
+// ── Een productconcept van het model soepel lezen ───────────────────────────
+
+export const WINKEL_CATEGORIEEN = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+export type WinkelCategorie = (typeof WINKEL_CATEGORIEEN)[number];
+export type Doelgroep = "heren" | "vrouwen" | "kinderen" | "unisex";
+
+export interface ConceptRuw {
+  name: string;
+  category: WinkelCategorie;
+  gender: Doelgroep | null;
+  collection: string | null;
+  badge: string | null;
+  description: string;
+  bullets: string[];
+  sizes: string[];
+  colors: string[];
+  soort: string | null;
+}
+
+/** Tekst uit een modelveld, of null bij leeg, "null", "geen" of iets wat geen tekst is. */
+function veld(v: unknown, max: number): string | null {
+  const s = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "";
+  return !s || /^(null|none|geen|n\/a|-)$/i.test(s) ? null : s.slice(0, max);
+}
+
+const lijstVan = (v: unknown): unknown[] => (Array.isArray(v) ? v : typeof v === "string" ? v.split(/[,;\n]+/) : []);
+
+/** De categorie, ook als het model hem net anders schrijft ("pbm", "Werkkleding", het hele sjabloon "Werk & PBM|Kleding"). */
+export function categorieVan(v: unknown): WinkelCategorie {
+  const s = (typeof v === "string" ? v : "").trim().toLowerCase();
+  const precies = WINKEL_CATEGORIEEN.find((c) => c.toLowerCase() === s);
+  if (precies) return precies;
+  if (/pbm|veilig|werkkled|bescherm|werkschoen|helm|hesje/.test(s)) return "Werk & PBM";
+  if (/cadeau|gift|kado/.test(s)) return "Cadeaus";
+  if (/werkdag|lunch|thermos|drinkfles|\bfles\b|\btas\b|kantoor/.test(s)) return "Werkdag";
+  return "Kleding";
+}
+
+/** Voor wie; twijfel (of het sjabloon "heren|vrouwen|…" teruggegeven) = null. */
+export function doelgroepVan(v: unknown): Doelgroep | null {
+  const s = (typeof v === "string" ? v : "").trim().toLowerCase();
+  if (!s || s.includes("|")) return null;
+  if (/^(heren|man|mannen|men|male)$/.test(s)) return "heren";
+  if (/^(vrouwen|vrouw|dames|women|female)$/.test(s)) return "vrouwen";
+  if (/^(kinderen|kind|kids|children)$/.test(s)) return "kinderen";
+  if (s === "unisex") return "unisex";
+  return null;
+}
+
+/** Een omschrijving van hooguit 600 tekens, afgekapt op een hele zin als dat kan. */
+function omschrijving(s: string): string {
+  if (s.length <= 600) return s;
+  const kort = s.slice(0, 600);
+  const zin = kort.lastIndexOf(". ");
+  return zin > 200 ? kort.slice(0, zin + 1) : `${kort.slice(0, 597).trimEnd()}…`;
+}
+
+/**
+ * Een productconcept uit het antwoord van een model, soepel gelezen: het eigen
+ * (kleinere) model wijkt vaak net af van het voorbeeld. Null alleen als er echt
+ * geen naam of omschrijving in staat.
+ */
+export function leesConcept(ruw: unknown): ConceptRuw | null {
+  let o: unknown = Array.isArray(ruw) ? ruw[0] : ruw;
+  if (o && typeof o === "object" && !("name" in o) && !("naam" in o)) {
+    const binnen = Object.values(o as Record<string, unknown>).find((v) => v && typeof v === "object" && !Array.isArray(v) && ("name" in v || "naam" in v));
+    if (binnen) o = binnen;
+  }
+  if (!o || typeof o !== "object") return null;
+  const r = o as Record<string, unknown>;
+  const name = veld(r.name ?? r.naam ?? r.titel ?? r.title, 120);
+  const beschrijving = veld(r.description ?? r.beschrijving ?? r.omschrijving, 2000);
+  if (!name || name.length < 2 || !beschrijving || beschrijving.length < 10) return null;
+  return {
+    name,
+    category: categorieVan(r.category ?? r.categorie),
+    gender: doelgroepVan(r.gender ?? r.doelgroep ?? r.geslacht),
+    collection: veld(r.collection ?? r.collectie, 60),
+    badge: veld(r.badge, 40),
+    description: omschrijving(beschrijving),
+    bullets: lijstVan(r.bullets ?? r.punten).flatMap((b) => veld(b, 120) ?? []).slice(0, 6),
+    sizes: schoneMaten(lijstVan(r.sizes ?? r.maten)),
+    colors: schoneKleuren(lijstVan(r.colors ?? r.kleuren).map((k) => (typeof k === "string" ? k.trim() : k))),
+    soort: veld(r.soort, 40),
+  };
+}

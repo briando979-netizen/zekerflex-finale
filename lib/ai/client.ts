@@ -114,7 +114,20 @@ export function viaRegisteredNode(): boolean {
  */
 function timeoutFor(opts: ChatOptions): number {
   const base = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
-  return viaRegisteredNode() ? Math.max(base, 120_000) : base;
+  if (viaRegisteredNode()) return Math.max(base, 120_000);
+  return gratisTimeout(base, gratisAan());
+}
+
+/**
+ * "Alles gratis": ons eigen model rekent op de CPU van de VPS en is trager dan
+ * Gemini, waarvoor de wachttijden gekozen zijn ("timed out after 30000ms" bij de
+ * orchestratie en de offerte-analyse, 7 nov). Taken op de achtergrond (≥ 20 s)
+ * krijgen drie keer zo lang, hooguit 3 minuten. Korte aanroepen waar iemand op
+ * wacht (telefoon, snelle keuzes: 6–15 s) houden hun grens: die hebben een eigen
+ * terugval, en een beller kan geen minuten wachten.
+ */
+export function gratisTimeout(base: number, gratis: boolean): number {
+  return gratis && base >= 20_000 ? Math.min(base * 3, 180_000) : base;
 }
 
 function baseUrl(): string {

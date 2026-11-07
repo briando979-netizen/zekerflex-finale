@@ -210,3 +210,16 @@ export async function githubOverzicht(live: Versie | null, vers = false): Promis
   ghCache = { key, at: Date.now(), data };
   return data;
 }
+
+/**
+ * Staat het eigen AI-model nu bewust stil door een uitrol? deploy/scripts/vps-update.sh
+ * stopt Ollama tijdens het bouwen en start hem daarna weer; in die tijd (en de eerste
+ * 10 minuten erna, terwijl het model weer laadt) is een mislukte opwarmtik geen
+ * storing en hoort de eigenaar er geen melding van te krijgen (7 nov: 4× "ai-warm mislukt").
+ */
+export function uitrolHoudtModelStil(s: Pick<LiveStatus, "staat" | "bijgewerkt"> | null | undefined, nu = Date.now()): boolean {
+  if (!s) return false;
+  const sinds = nu - Date.parse(s.bijgewerkt);
+  if (!Number.isFinite(sinds)) return false;
+  return s.staat === "bezig" ? sinds < 45 * 60_000 : sinds < 10 * 60_000;
+}

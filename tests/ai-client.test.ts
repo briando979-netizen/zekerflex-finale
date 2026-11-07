@@ -15,7 +15,7 @@ vi.mock("@/lib/storage/kv", async (importOriginal) => ({
   kvSet: async () => undefined,
 }));
 
-import { _resetLlmBreaker, chat, extractJson } from "@/lib/ai/client";
+import { _resetLlmBreaker, chat, extractJson, gratisTimeout } from "@/lib/ai/client";
 
 function mockFetch(impl: (url: string, init: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn(impl);
@@ -134,5 +134,19 @@ describe("extractJson", () => {
 
   it("throws on a reply with no JSON", () => {
     expect(() => extractJson("no json here")).toThrow();
+  });
+});
+
+describe("wachttijd met het eigen model (alles gratis)", () => {
+  it("geeft taken op de achtergrond drie keer zo lang, hooguit 3 minuten", () => {
+    expect(gratisTimeout(30_000, true)).toBe(90_000);
+    expect(gratisTimeout(60_000, true)).toBe(180_000);
+    expect(gratisTimeout(120_000, true)).toBe(180_000);
+  });
+
+  it("laat korte aanroepen waar iemand op wacht, en Gemini, zoals ze zijn", () => {
+    expect(gratisTimeout(8_000, true)).toBe(8_000);
+    expect(gratisTimeout(15_000, true)).toBe(15_000);
+    expect(gratisTimeout(30_000, false)).toBe(30_000);
   });
 });

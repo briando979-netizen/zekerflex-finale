@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STANDAARD_BELEID, inkoopAdvies, inkoopTotaal, leesBeleid, maakVarianten, margeVan, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan } from "@/lib/shop/winkel-ai-core";
+import { STANDAARD_BELEID, categorieVan, doelgroepVan, inkoopAdvies, inkoopTotaal, leesBeleid, leesConcept, maakVarianten, margeVan, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan } from "@/lib/shop/winkel-ai-core";
 
 describe("prijs uit inkoop en marge", () => {
   it("rekent de marge op de verkoopprijs excl. btw en rondt af op x,95", () => {
@@ -79,5 +79,58 @@ describe("soort vastgelegd door de AI", () => {
     expect(p?.stukken[0]?.slot).toBe("jas");
     // kinderkleding krijgt kindermaten
     expect(pasvormVoor({ slug: "k", name: "K", gender: "kinderen", soort: "tshirt" })?.systeem).toBe("kind");
+  });
+});
+
+describe("productconcept van het model soepel lezen", () => {
+  const goed = { name: "Softshell werkjas", category: "Kleding", gender: "unisex", description: "Een lichte softshell jas voor op de werkvloer en onderweg.", bullets: ["Winddicht"], sizes: ["S", "M", "L"], colors: ["zwart", "navy"], soort: "jas" };
+
+  it("leest een net antwoord zoals bedoeld", () => {
+    const c = leesConcept(goed);
+    expect(c?.name).toBe("Softshell werkjas");
+    expect(c?.category).toBe("Kleding");
+    expect(c?.gender).toBe("unisex");
+    expect(c?.sizes).toEqual(["S", "M", "L"]);
+    expect(c?.colors).toEqual(["Zwart", "Navy"]);
+  });
+
+  it("verdraagt wat een klein model vaak anders doet", () => {
+    const c = leesConcept({
+      product: {
+        naam: "Thermo bodywarmer",
+        category: "Werk & PBM|Kleding",
+        gender: "heren|vrouwen|kinderen|unisex|null",
+        collection: "null",
+        badge: null,
+        beschrijving: `${"Warm en licht. ".repeat(60)}`,
+        bullets: "Warm, Licht, Wasbaar",
+        maten: "S, M, L, XL",
+        kleuren: "Zwart, Grijs",
+      },
+    });
+    expect(c?.name).toBe("Thermo bodywarmer");
+    expect(c?.category).toBe("Werk & PBM");
+    expect(c?.gender).toBeNull();
+    expect(c?.collection).toBeNull();
+    expect(c?.description.length).toBeLessThanOrEqual(600);
+    expect(c?.description.endsWith(".")).toBe(true);
+    expect(c?.bullets).toEqual(["Warm", "Licht", "Wasbaar"]);
+    expect(c?.sizes).toEqual(["S", "M", "L", "XL"]);
+    expect(c?.colors).toEqual(["Zwart", "Grijs"]);
+  });
+
+  it("kiest een passende categorie bij een eigen woord", () => {
+    expect(categorieVan("werkkleding")).toBe("Werk & PBM");
+    expect(categorieVan("cadeau")).toBe("Cadeaus");
+    expect(categorieVan("drinkfles")).toBe("Werkdag");
+    expect(categorieVan("iets anders")).toBe("Kleding");
+    expect(doelgroepVan("Dames")).toBe("vrouwen");
+  });
+
+  it("geeft null zonder naam of zonder omschrijving", () => {
+    expect(leesConcept({ name: "X", description: "Een omschrijving van genoeg tekens." })).toBeNull();
+    expect(leesConcept({ name: "Werkjas", description: "kort" })).toBeNull();
+    expect(leesConcept("geen object")).toBeNull();
+    expect(leesConcept([goed])?.name).toBe("Softshell werkjas");
   });
 });

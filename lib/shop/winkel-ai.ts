@@ -12,19 +12,20 @@ import { recordAudit } from "@/lib/audit";
 import { chat, chatJson } from "@/lib/ai/client";
 import { modelForPurpose } from "@/lib/ai/models";
 import { geminiZoekTekst } from "@/lib/ai/gemini-media";
+import { gratisAan, primeGratis } from "@/lib/ai/gratis";
 import { extractJson } from "@/lib/ai/client";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { generateAndAttachConceptPhoto } from "@/lib/shop/concept-photos";
 import { SOORTEN, isSoort, type Soort } from "@/lib/shop/paskamer";
 import {
-  STANDAARD_BELEID, inkoopAdvies, leesBeleid, maakVarianten, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan, tariefVoor,
+  STANDAARD_BELEID, WINKEL_CATEGORIEEN, inkoopAdvies, leesBeleid, leesConcept, maakVarianten, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan, tariefVoor,
   type InkoopRegel, type MargeBeleid,
 } from "@/lib/shop/winkel-ai-core";
 
 const K_BELEID = "shop:ai:beleid";
 const K_PASVORMEN = "shop:pasvormen";
 
-export const CATEGORIEEN = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+export const CATEGORIEEN = WINKEL_CATEGORIEEN;
 
 // ---------------------------------------------------------------------------
 // Beleid (marge, levertijd) en het register van pasvormen
@@ -57,19 +58,6 @@ export async function zetPasvorm(productId: string, soort: Soort | null): Promis
 // Productconcept
 // ---------------------------------------------------------------------------
 
-const conceptSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  category: z.enum(CATEGORIEEN),
-  gender: z.enum(["heren", "vrouwen", "kinderen", "unisex"]).nullable().optional(),
-  collection: z.string().trim().max(60).nullable().optional(),
-  badge: z.string().trim().max(40).nullable().optional(),
-  description: z.string().trim().min(10).max(600),
-  bullets: z.array(z.string().trim().max(120)).max(6).default([]),
-  sizes: z.array(z.unknown()).default([]),
-  colors: z.array(z.unknown()).default([]),
-  soort: z.string().nullable().optional(),
-});
-
 export type Concept = {
   name: string;
   category: (typeof CATEGORIEEN)[number];
@@ -95,27 +83,20 @@ export async function maakConcept(inv: { idee: string; doelgroep?: string | unde
   const ruw = await chatJson<unknown>({
     purpose: "shop-product",
     temperature: 0.4,
-    maxTokens: 900,
+    maxTokens: 1200,
     messages: [
       { role: "system", content: SYSTEEM },
       { role: "user", content: `Idee van de eigenaar: ${inv.idee.slice(0, 1500)}${inv.doelgroep ? `\nDoelgroep: ${inv.doelgroep.slice(0, 100)}` : ""}` },
     ],
+  }).catch((e: unknown) => {
+    // alleen een onleesbaar antwoord opvangen; een AI die niet bereikbaar is, blijft een eigen melding
+    if (e instanceof Error && /gaf (geen|onleesbare) JSON/.test(e.message)) return null;
+    throw e;
   });
-  const p = conceptSchema.safeParse(ruw);
-  if (!p.success) throw AppError.upstream("De AI gaf geen bruikbaar productconcept. Probeer het met iets meer uitleg opnieuw.");
-  const d = p.data;
-  const concept: Concept = {
-    name: d.name,
-    category: d.category,
-    gender: d.gender ?? null,
-    collection: d.collection ?? null,
-    badge: d.badge ?? null,
-    description: d.description.slice(0, 600),
-    bullets: d.bullets,
-    sizes: schoneMaten(d.sizes),
-    colors: schoneKleuren(d.colors),
-    soort: isSoort(d.soort) ? d.soort : null,
-  };
+  // soepel lezen (lib/shop/winkel-ai-core.ts): het eigen, kleinere model wijkt vaak net af van het voorbeeld
+  const d = leesConcept(ruw);
+  if (!d) throw AppError.upstream("De AI gaf geen bruikbaar productconcept. Probeer het met iets meer uitleg opnieuw.");
+  const concept: Concept = { ...d, soort: isSoort(d.soort) ? d.soort : null };
   const prijs = inv.inkoopCents && inv.inkoopCents > 0 ? prijsUitInkoop(inv.inkoopCents, beleid.margePct, tariefVoor(concept.name)) : null;
   return { concept, prijs, beleid };
 }
@@ -233,15 +214,21 @@ export async function zoekTrends(focus?: string): Promise<TrendUitkomst> {
   let tekst = "";
   let bronnen: { titel: string; url: string }[] = [];
   let metWeb = false;
-  try {
-    const r = await geminiZoekTekst(vraag, modelForPurpose("shop-trends"));
-    tekst = r.tekst;
-    bronnen = r.bronnen;
-    metWeb = true;
-  } catch (e) {
-    logger.info("winkel-ai: trends zonder web", { reden: (e as Error).message.slice(0, 120) });
-    tekst = (await chat({ purpose: "shop-trends", temperature: 0.4, maxTokens: 900, messages: [{ role: "user", content: vraag }] })).text;
+  // Zoeken op internet kan alleen bij Google (Gemini). Met "alles gratis" aan (lib/ai/gratis.ts)
+  // vragen we Google niets, en het eigen model heeft een naam die Google niet kent (gaf een 404).
+  await primeGratis();
+  const zoekModel = modelForPurpose("shop-trends");
+  if (!gratisAan() && zoekModel.startsWith("gemini")) {
+    try {
+      const r = await geminiZoekTekst(vraag, zoekModel);
+      tekst = r.tekst;
+      bronnen = r.bronnen;
+      metWeb = true;
+    } catch (e) {
+      logger.info("winkel-ai: trends zonder web", { reden: (e as Error).message.slice(0, 120) });
+    }
   }
+  if (!metWeb) tekst = (await chat({ purpose: "shop-trends", temperature: 0.4, maxTokens: 900, messages: [{ role: "user", content: vraag }] })).text;
   const lijst = extractJson<unknown>(tekst);
   const trends: Trend[] = (Array.isArray(lijst) ? lijst : []).flatMap((t) => {
     const o = (t ?? {}) as Record<string, unknown>;
