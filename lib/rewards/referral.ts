@@ -7,6 +7,7 @@ import { transfer } from "@/lib/bank/ledger";
 import { prisma } from "@/lib/prisma";
 import { notifyBank } from "@/lib/bank/notify";
 import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // Doorverwijzen met bonus. Everyone gets a personal code (/r/<code> sets a
@@ -72,6 +73,8 @@ export async function recordReferral(newUserId: string, code: string | null | un
  * company account). Never throws — a reward must not break an approval.
  */
 export async function rewardReferral(newUserId: string, newUserAccount: BankAccount | null): Promise<boolean> {
+  // de bonus werd op ZekerFlex Bank gestort; die staat uit (lib/app-mode.ts, BANK_AAN)
+  if (!BANK_AAN) return false;
   try {
     const ref = await kvGet<Referral>(`ref-by:${newUserId}`);
     if (!ref || ref.rewardedAt) return false;

@@ -4,6 +4,7 @@ import { PageHeader, EmptyState } from "@/components/app/ui";
 import { getWorkerMilestones, type Milestone } from "@/lib/worker/milestones";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { currentYear } from "@/lib/worker/mileage";
+import { BANK_AAN } from "@/lib/app-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,7 @@ export default async function AdministratiePage() {
       )}
 
       <div className="mt-6 flex flex-wrap gap-3 text-sm">
-        {!inApp && (
+        {!inApp && BANK_AAN && (
           <Link href="/dashboard/bank" className="font-semibold text-brand-600 hover:underline">
             → Belasting-potje &amp; btw-overzicht
           </Link>

@@ -24,7 +24,7 @@ export const PAYOUT_SPEEDS: Record<
 > = {
   instant: {
     label: "Betaalopdracht direct indienen",
-    sub: "Bij ZekerFlex Bank direct geboekt; externe bankverwerking kan langer duren",
+    sub: "Je bank kan er daarna nog even over doen",
     feeRate: env.PAYOUT_INSTANT_FEE_RATE, // 4%
     withinDays: 0,
   },

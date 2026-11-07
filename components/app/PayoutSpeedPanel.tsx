@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { useFT } from "@/components/i18n/useFT";
+import { BANK_AAN } from "@/lib/app-mode";
 
 type Speed = "instant" | "threeDay" | "standard";
 
@@ -144,12 +145,17 @@ export function PayoutSpeedPanel() {
         </div>
       </section>
 
+      {/* Een voorschot liep via ZekerFlex Bank; die staat uit (lib/app-mode.ts, BANK_AAN).
+          Alleen wie nog een voorschot heeft, ziet dat hier staan. */}
+      {(BANK_AAN || d.advances.length > 0) && (
       <section className="surface p-6">
         <p className="eyebrow">{t.eyebrowAdvance}</p>
         <h2 className="mt-1 font-display text-lg font-bold text-ink">{t.advTitle}</h2>
+        {BANK_AAN && (
         <p className="mt-1 text-sm text-neutralx-500">
           {t.advBody(d.advanceFeeRatePct)}
         </p>
+        )}
 
         {d.outstandingAdvanceCents > 0 && (
           <p className="mt-3 rounded-lg bg-warn/10 px-3 py-2 text-xs text-neutralx-700">
@@ -157,6 +163,7 @@ export function PayoutSpeedPanel() {
           </p>
         )}
 
+        {BANK_AAN && (
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <label className="block">
             <span className="field-label">{t.amount}</span>
@@ -178,6 +185,7 @@ export function PayoutSpeedPanel() {
           </button>
           <span className="text-xs text-neutralx-400">{t.max(euro(d.maxAdvanceCents))}</span>
         </div>
+        )}
         {advErr && <p role="alert" className="mt-2 text-xs text-crit">{advErr}</p>}
 
         {d.advances.length > 0 && (
@@ -198,6 +206,7 @@ export function PayoutSpeedPanel() {
           </ul>
         )}
       </section>
+      )}
     </div>
   );
 }

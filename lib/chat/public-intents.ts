@@ -11,7 +11,8 @@ export interface IntentReply {
   suggestions: string[];
 }
 
-const START = ["Hoe snel word ik uitbetaald?", "Wat kost ZekerFlex voor bedrijven?", "Hoe meld ik me aan?", "Wat is ZekerFlex Bank?"];
+// ZekerFlex Bank, het voorschot voor zzp'ers en de doorverwijsbonus staan uit (lib/app-mode.ts, BANK_AAN): niet beloven.
+const START = ["Hoe snel word ik uitbetaald?", "Wat kost ZekerFlex voor bedrijven?", "Hoe meld ik me aan?", "Kan ik zonder KVK werken?"];
 
 function hourGreeting(now = new Date()): string {
   const h = Number(new Intl.DateTimeFormat("nl-NL", { hour: "numeric", hourCycle: "h23", timeZone: "Europe/Amsterdam" }).format(now));
@@ -22,13 +23,13 @@ const SMALL_TALK: { re: RegExp; answer: () => IntentReply }[] = [
   {
     re: /^(hoi+|hoii*|hallo+|hey+|hee+|hi+|hello|yo|hai|dag|goede(morgen|middag|avond|nacht)|morgen|moi|heuj|hallo daar|salut)[\s!.,?]*$/i,
     answer: () => ({
-      reply: `${hourGreeting()}! 👋 Leuk dat je er bent. Ik ben de ZekerFlex-assistent en help je met alles over werken via ZekerFlex, personeel inhuren, uitbetalen en ZekerFlex Bank. Waar kan ik je mee helpen?`,
+      reply: `${hourGreeting()}! 👋 Leuk dat je er bent. Ik ben de ZekerFlex-assistent en help je met alles over werken via ZekerFlex, personeel inhuren en uitbetalen. Waar kan ik je mee helpen?`,
       suggestions: START,
     }),
   },
   {
     re: /^(bedankt|dank ?je( wel)?|dank u( wel)?|thanks|thx|top|super|perfect|fijn|helder|duidelijk|ok(é|e|ay)?|oké|prima|mooi)[\s!.,]*$/i,
-    answer: () => ({ reply: "Graag gedaan! 😊 Kan ik je nog ergens anders mee helpen?", suggestions: ["Hoe meld ik me aan?", "Contact met een mens", "Wat is ZekerFlex Bank?"] }),
+    answer: () => ({ reply: "Graag gedaan! 😊 Kan ik je nog ergens anders mee helpen?", suggestions: ["Hoe meld ik me aan?", "Contact met een mens", "Hoe snel word ik uitbetaald?"] }),
   },
   {
     re: /^(doei|dag dag|tot ziens|later|bye|tot later|fijne dag)[\s!.,]*$/i,
@@ -48,8 +49,8 @@ const SMALL_TALK: { re: RegExp; answer: () => IntentReply }[] = [
   {
     re: /^(wat (doet|is) zekerflex|wat doen jullie|vertel (eens )?(over|meer)|uitleg)[\s?!.]*$/i,
     answer: () => ({
-      reply: "ZekerFlex verbindt bedrijven met gecontroleerde zzp'ers en uitzendkrachten voor losse diensten. Bedrijven plaatsen een klus en betalen alleen per gewerkt uur; werkenden kiezen zelf hun klussen en worden snel uitbetaald — ook direct op hun eigen ZekerFlex Bank-rekening.",
-      suggestions: ["Ik zoek werk", "Ik zoek personeel", "Wat is ZekerFlex Bank?"],
+      reply: "ZekerFlex verbindt bedrijven met gecontroleerde zzp'ers en uitzendkrachten voor losse diensten. Bedrijven plaatsen een klus en betalen alleen per gewerkt uur; werkenden kiezen zelf hun klussen en kiezen zelf hoe snel ze worden uitbetaald, op hun eigen bankrekening.",
+      suggestions: ["Ik zoek werk", "Ik zoek personeel", "Wat kost ZekerFlex voor bedrijven?"],
     }),
   },
 ];
@@ -65,11 +66,11 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /uitbetaal|betaald|payout|wanneer.*(betaal|geld)|hoe snel.*geld/i,
-    answer: { reply: "Na goedkeuring van je uren kies je per klus: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever betaalt. Bij externe banken kan de bijschrijving daarna langer duren; een boeking via ZekerFlex Bank is direct zichtbaar.", suggestions: ["Wat is ZekerFlex Bank?", "Kan ik een voorschot krijgen?", "Hoe vul ik mijn uren in?"] },
+    answer: { reply: "Na goedkeuring van je uren kies je per klus: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever betaalt. Het geld gaat naar je eigen bankrekening; je bank kan er daarna nog even over doen.", suggestions: ["Hoe vul ik mijn uren in?", "Kan ik zonder KVK werken?"] },
   },
   {
     re: /voorschot/i,
-    answer: { reply: "Ja: je kunt een voorschot opnemen op uren die al goedgekeurd of onderweg zijn, tegen een kleine vergoeding. Ontvang je je verdiensten op ZekerFlex Bank, dan staat het voorschot direct op je rekening en wordt het verrekend met je volgende uitbetaling.", suggestions: ["Wat is ZekerFlex Bank?", "Hoe snel word ik uitbetaald?"] },
+    answer: { reply: "Een voorschot voor zzp'ers is er op dit moment niet. Wil je eerder je geld, kies dan na goedkeuring van je uren 'direct indienen' (4%) of 'binnen 3 werkdagen' (2%). Werk je als uitzendkracht en biedt je opdrachtgever het aan, dan krijg je na goedkeuring wel een voorschot op je loon.", suggestions: ["Hoe snel word ik uitbetaald?", "Kan ik zonder KVK werken?"] },
   },
   {
     // vóór de prijs-regel: "reiskosten" bevat "kost"
@@ -82,24 +83,29 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /zekerflex bank|bankrekening|rekening openen|\bbank\b/i,
-    answer: { reply: "ZekerFlex Bank is je eigen rekening in de app: verdiensten komen er direct op, je kunt potjes maken, sparen met vaste rente, geld overmaken en betaalverzoeken sturen. De eerste 30 dagen zijn gratis.", suggestions: ["Kan ik sparen?", "Wat kost de bank?"] },
+    answer: { reply: "ZekerFlex Bank is gestopt. Je verdiensten gaan altijd naar je eigen bankrekening (IBAN); die vul je in bij Account.", suggestions: ["Hoe snel word ik uitbetaald?", "Hoe meld ik me aan?"] },
   },
   {
-    re: /betaalpas|pinpas|debitcard|kaart aanvragen|apple pay|google pay/i,
-    // betaalpassen kunnen nog niet: Stripe weigerde de kaartuitgifte op 30 oktober 2026; geen belofte doen
-    answer: { reply: "Een ZekerFlex-betaalpas is er nog niet: daarvoor zijn we nog in gesprek met een kaartpartner. Je verdiensten ontvang je gewoon op je eigen bankrekening, en daar betaal je met je eigen pas.", suggestions: ["Hoe snel word ik uitbetaald?", "Wat is ZekerFlex Bank?"] },
+    // vóór de betaalpas-regel: Apple Pay en Google Pay zijn er wél, als betaalwijze
+    re: /apple pay|google pay/i,
+    answer: { reply: "In de webshop en bij afrekenen aan tafel in de horeca kun je met Apple Pay en Google Pay betalen, net als met iDEAL of je pas. Een eigen ZekerFlex-pas in je Wallet is er niet.", suggestions: ["Hoe snel word ik uitbetaald?", "Ik zoek werk"] },
+  },
+  {
+    re: /betaalpas|pinpas|debitcard|kaart aanvragen/i,
+    // betaalpassen kunnen niet: Stripe weigerde de kaartuitgifte op 30 oktober 2026; geen belofte doen
+    answer: { reply: "Een ZekerFlex-betaalpas is er niet. Je verdiensten ontvang je op je eigen bankrekening, en daar betaal je met je eigen pas.", suggestions: ["Hoe snel word ik uitbetaald?", "Hoe meld ik me aan?"] },
   },
   {
     re: /sparen|spaarrente|rente|potje|vastzetten|deposito/i,
-    answer: { reply: "Met potjes zet je geld apart (bijvoorbeeld voor belasting of vakantie), automatisch of met afronden. Wil je rente? Zet geld vast voor 1 tot 10 jaar tegen een vaste rente; op de einddatum komt het met rente terug op je rekening.", suggestions: ["Wat is ZekerFlex Bank?", "Belasting reserveren als zzp'er"] },
+    answer: { reply: "Sparen, potjes en rente heeft ZekerFlex niet. Je verdiensten gaan naar je eigen bankrekening; sparen doe je bij je eigen bank.", suggestions: ["Hoe snel word ik uitbetaald?", "Hoe zit het met btw en belasting?"] },
   },
   {
     re: /uitzend|zonder kvk|geen kvk|loonstrook|payroll/i,
-    answer: { reply: "Geen KVK? Dan werk je via ZekerFlex als uitzendkracht: wij regelen loonheffing, vakantiegeld en pensioen. Je krijgt na goedkeuring van je uren binnen een minuut een voorschot en de rest op je wekelijkse loonstrook.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
+    answer: { reply: "Geen KVK? Dan werk je via ZekerFlex als uitzendkracht: wij regelen loonheffing, vakantiegeld en pensioen. Je loon komt op je wekelijkse loonstrook; biedt je opdrachtgever het aan, dan krijg je na goedkeuring van je uren al een voorschot.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
   },
   {
     re: /belasting|btw|inkomstenbelasting|aangifte|kvk|kleineondernemers|\bkor\b/i,
-    answer: { reply: "Als zzp'er heb je een KVK-inschrijving nodig. ZekerFlex maakt je facturen automatisch, en in ZekerFlex Bank → Belasting zie je per kwartaal de btw die je moet afdragen en wat je opzij zet voor inkomstenbelasting — in één tik naar je potje Belasting. Onder Je administratie download je een jaaroverzicht met omzet, btw, uren en kilometers voor je aangifte.", suggestions: ["Kan ik als uitzendkracht werken?", "Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Als zzp'er heb je een KVK-inschrijving nodig. ZekerFlex maakt je facturen automatisch. Onder Je administratie zie je je urencriterium, btw en de KOR, en download je een jaaroverzicht met omzet, btw, uren en kilometers voor je aangifte.", suggestions: ["Kan ik als uitzendkracht werken?", "Hoe snel word ik uitbetaald?"] },
   },
   {
     re: /uren (invullen|indienen|schrijven)|inchecken|uitchecken|urenbrief|timesheet/i,
@@ -111,15 +117,15 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /verzeker|aov|aansprakelijk|ongevallen|rechtsbijstand/i,
-    answer: { reply: "Via ZekerFlex Bank → Verzekeren kun je verzekeringen afsluiten zoals arbeidsongeschiktheid en aansprakelijkheid, met de premie maandelijks van je saldo. De verzekeraar draagt het risico; zodra er een aanbod beschikbaar is zie je het daar.", suggestions: ["Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Verzekeringen sluit ZekerFlex niet af. Als zzp'er regel je je aansprakelijkheids- en arbeidsongeschiktheidsverzekering zelf, bij een verzekeraar of bijvoorbeeld een broodfonds.", suggestions: ["Hoe zit het met btw en belasting?", "Contact met een mens"] },
   },
   {
     re: /verwijs|uitnodig|vriend|bonus|referral/i,
-    answer: { reply: "Nodig iemand uit met je persoonlijke link (bij Account of ZekerFlex Bank). Zodra die persoon de eerste klus afrondt krijg jij een bonus en zij een welkomstbonus — direct op ZekerFlex Bank.", suggestions: ["Wat is ZekerFlex Bank?", "Hoe meld ik me aan?"] },
+    answer: { reply: "Een bonus voor doorverwijzen is er op dit moment niet. Ken je iemand die werk zoekt of personeel nodig heeft? Stuur die gerust naar zekerflex.com.", suggestions: ["Ik zoek werk", "Ik zoek personeel"] },
   },
   {
     re: /level|badge|xp|beloning/i,
-    answer: { reply: "Met elke afgeronde klus en goede review verdien je XP en stijg je van Starter tot Diamant. Hogere levels geven echte voordelen, zoals korting op bankkosten tot helemaal gratis.", suggestions: ["Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Met elke afgeronde klus en goede review verdien je XP en stijg je van Starter tot Diamant. Je level staat als badge op je profiel, zodat opdrachtgevers zien hoeveel ervaring je hebt.", suggestions: ["Ik zoek werk", "Hoe meld ik me aan?"] },
   },
   {
     re: /\bdba\b|schijnzelfstand|modelovereenkomst|wet dba/i,

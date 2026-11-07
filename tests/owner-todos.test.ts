@@ -84,8 +84,9 @@ describe("owner to-do list", () => {
     const t = await byId();
     expect(t.sepa!.done).toBe(true);
     expect(t.llm!.done).toBe(false);
-    expect(t["issuing-active"]!.done).toBe(false);
-    expect(t.insurer!.done).toBe(false);
+    // ZekerFlex Bank staat uit (lib/app-mode.ts): passen en verzekeraar zijn dan niet meer nodig
+    expect(t["issuing-active"]!.done).toBe(true);
+    expect(t.insurer!.done).toBe(true);
   });
 
   it("manual items can be ticked off, with who and when", async () => {

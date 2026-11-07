@@ -160,12 +160,6 @@ export const GUIDES: Article[] = [
           "De fee wordt ingehouden op de totale factuur, zodat je vooraf precies weet wat er netto overblijft.",
         ],
       },
-      {
-        heading: "Voorschot",
-        paragraphs: [
-          "Je kunt ook een voorschot aanvragen op je openstaande diensten: maximaal 80% van wat er nog aankomt, tegen 3% over het voorgeschoten bedrag. Dat wordt automatisch verrekend met je volgende uitbetaling.",
-        ],
-      },
     ],
   },
   {
@@ -330,7 +324,6 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
     items: [
       { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformkosten, met de juiste btw-behandeling." },
       { q: "Wanneer krijg ik mijn geld?", a: "Dat kies je zelf per dienst, nadat je uren zijn goedgekeurd: de betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (0%, binnen 30 dagen). De bijschrijving bij een externe bank kan daarna langer duren." },
-      { q: "Kan ik een voorschot krijgen?", a: "Ja, op je eerstvolgende betaling. Kosten: 3% over het voorschot, automatisch verrekend met je volgende uitbetaling." },
       { q: "Houdt ZekerFlex mijn kilometers bij?", a: "Ja. Elke dienst waarvoor je uren indient, staat als rit in je kilometer-administratie, met een geschatte afstand die je zelf kunt aanpassen. Ritten buiten ZekerFlex voeg je toe. Je downloadt de lijst voor je boekhouder, en als zzp'er staan je kilometers ook in je jaaroverzicht voor de aangifte (€ 0,23 per zakelijke km met je eigen auto, indicatief)." },
     ],
   },

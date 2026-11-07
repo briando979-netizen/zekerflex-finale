@@ -8,7 +8,7 @@ import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
 import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
-import { APP_COOKIE, isAppBlockedPath } from "@/lib/app-mode";
+import { APP_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
 import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink, VIEW_AS_COOKIE } from "@/lib/auth/inspect";
 
 export const config = {
@@ -372,6 +372,18 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   ) {
     const url = req.nextUrl.clone();
     url.pathname = "/start";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): schermen terug naar het
+  // eigen overzicht, API's een 423 met eigen code (geen 403: CrowdSec telt die).
+  if (isBankPath(pathname)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: { code: "BANK_GESTOPT", message: "ZekerFlex Bank is gestopt. Je verdiensten gaan naar je eigen rekening." } }, { status: 423 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = pathname.startsWith("/werkgever") ? "/werkgever" : "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }

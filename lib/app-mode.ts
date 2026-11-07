@@ -14,6 +14,25 @@ export const APP_COOKIE = "zf_app";
 /** Paths that are off-limits inside the app — bounced to /start. */
 export const APP_BLOCKED_PATHS = ["/dashboard/bank", "/werkgever/bank", "/betaalverzoek"];
 
+/**
+ * ZekerFlex Bank staat uit (7 nov 2026), voor iedereen, niet alleen in de app:
+ * een tegoed bewaren vraagt een vergunning (e-geld), Stripe gaf geen passen en
+ * er is geen verzekeraar. Verdiensten gaan altijd naar de eigen IBAN. Daarmee
+ * vallen ook weg wat alleen via de bank liep: betaalverzoeken, het voorschot op
+ * de bank, de doorverwijsbonus (werd op de bank gestort), potjes, vaste
+ * opdrachten en de bankkosten. De boekhouding (lib/bank) en de gegevens blijven
+ * staan; deze schakelaar weer op true zet alles terug.
+ */
+export const BANK_AAN = false;
+
+/** De schermen en API's van de bank (niet /api/me/bank-verify: dat is je eigen rekening bevestigen). */
+const BANK_PATHS = ["/dashboard/bank", "/werkgever/bank", "/betaalverzoek", "/api/me/bank", "/api/betaal/verzoek"];
+
+/** Dicht omdat de bank uit staat (BANK_AAN). */
+export function isBankPath(pathname: string): boolean {
+  return !BANK_AAN && BANK_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function isAppBlockedPath(pathname: string): boolean {
   return APP_BLOCKED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

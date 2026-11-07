@@ -27,7 +27,7 @@ describe("public chat assistant without a model", () => {
     expect(payout).toContain("binnen 3 werkdagen indienen (2%)");
     expect(payout).toContain("gratis wachten");
     expect(payout).not.toContain("1 minuut");
-    expect(topicAnswer("wat is zekerflex bank")?.reply).toContain("eigen rekening");
+    expect(topicAnswer("wat is zekerflex bank")?.reply).toContain("gestopt");
     expect(topicAnswer("ik heb geen kvk")?.reply).toContain("uitzendkracht");
     expect(topicAnswer("hoe moet ik inchecken")?.reply).toContain("check je in");
     expect(topicAnswer("ik zoek personeel voor mijn restaurant")?.reply).toContain("€ 3,50");
@@ -41,7 +41,14 @@ describe("public chat assistant without a model", () => {
       const antwoord = topicAnswer(vraag)?.reply ?? "";
       expect(antwoord).not.toMatch(/virtuele (betaal)?pas|fysieke pas|apple pay/i);
     }
-    expect(topicAnswer("hoe vraag ik een betaalpas aan")?.reply).toContain("is er nog niet");
+    expect(topicAnswer("hoe vraag ik een betaalpas aan")?.reply).toContain("is er niet");
+  });
+
+  it("belooft niets wat via ZekerFlex Bank liep (die staat uit)", () => {
+    for (const vraag of ["kan ik sparen", "krijg ik een bonus als ik iemand uitnodig", "kan ik een voorschot krijgen", "kan ik me verzekeren", "wat is zekerflex bank", "hoe zit het met btw"]) {
+      expect(topicAnswer(vraag)?.reply ?? "", vraag).not.toMatch(/ZekerFlex Bank →|welkomstbonus|vaste rente|van je saldo|direct op ZekerFlex/i);
+    }
+    expect(PUBLIEK_SYSTEEM).toContain("ZekerFlex Bank is gestopt");
   });
 
   it("geeft een korte vraag het vaste antwoord en een lange eigen vraag aan het model", () => {

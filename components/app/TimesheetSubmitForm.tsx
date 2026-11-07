@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { useFT } from "@/components/i18n/useFT";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // "Uren invullen" as a short guided flow instead of one long form:
@@ -68,6 +69,8 @@ export function TimesheetSubmitForm({
   // Android app: only the standard payout — fast payout and ZekerFlex Bank are
   // web-only financial features (lib/app-mode.ts).
   const inApp = useInAndroidApp() === true;
+  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen keuze "op de bank", altijd de eigen IBAN
+  const geenBank = inApp || !BANK_AAN;
   const SPEEDS = SPEED_ORDER.filter((s) => !inApp || s === "standard").map((speed) => ({ speed, ...T.speeds[speed] }));
   const NOT_WORKED = NOT_WORKED_IDS.map((id) => ({ id, label: T.notWorked[id] ?? id }));
   const [step, setStep] = useState<Step>("worked");
@@ -432,8 +435,8 @@ export function TimesheetSubmitForm({
               </span>
             </label>
           )}
-          {!inApp && <p className="mt-4 text-sm font-semibold text-ink">{T.whereTo}</p>}
-          <div className={`mt-2 grid grid-cols-2 gap-2 ${inApp ? "hidden" : ""}`}>
+          {!geenBank && <p className="mt-4 text-sm font-semibold text-ink">{T.whereTo}</p>}
+          <div className={`mt-2 grid grid-cols-2 gap-2 ${geenBank ? "hidden" : ""}`}>
             <button type="button" onClick={() => setToBank(true)} className={`rounded-xl border px-3 py-3 text-left text-sm ${toBank ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
               <span className="block font-semibold">{T.bankTitle}</span>
               <span className="block text-xs text-neutralx-500">{T.bankBody}</span>

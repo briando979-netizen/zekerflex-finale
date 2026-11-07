@@ -99,7 +99,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // booked back from the next earnings). Via a plain IBAN there is no way
     // to settle it, so don't create a request nothing would ever act on.
     if (!(await canAdvanceToBank(p.userId))) {
-      throw AppError.precondition("Een voorschot kan als je verdiensten op ZekerFlex Bank ontvangt (Bank → Instellingen). Dan staat het direct op je rekening en wordt het met je volgende uitbetaling verrekend.");
+      throw AppError.precondition("Een voorschot voor zzp'ers kan op dit moment niet. Wil je eerder je geld, kies dan bij je uren 'direct indienen' of 'binnen 3 werkdagen'.");
     }
     const overview = await getFreelancerOverview(p.userId);
     try {

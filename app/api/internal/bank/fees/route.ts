@@ -9,6 +9,7 @@ import { settleNegativeBalances } from "@/lib/bank/overdraft";
 import { runStandingOrders } from "@/lib/bank/standing";
 import { runScheduledPayouts } from "@/lib/payouts/execute";
 import { autoRisk, autoSepaBatch, coverageCheck } from "@/lib/bank/automation";
+import { BANK_AAN } from "@/lib/app-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,13 +23,16 @@ async function handle(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   }
   try {
-    const fees = await chargeMonthlyFees();
-    const premiums = await chargeDuePremiums();
-    const deposits = await matureDeposits();
-    const standing = await runStandingOrders();
+    // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen bankkosten, premies, deposito's,
+    // vaste opdrachten of rood-staan meer. De uitbetalingen hieronder lopen gewoon door.
+    const uit = { overgeslagen: "ZekerFlex Bank staat uit" };
+    const fees = BANK_AAN ? await chargeMonthlyFees() : uit;
+    const premiums = BANK_AAN ? await chargeDuePremiums() : uit;
+    const deposits = BANK_AAN ? await matureDeposits() : uit;
+    const standing = BANK_AAN ? await runStandingOrders() : uit;
     // Freelancers who chose payout "within 3 working days".
     const scheduledPayouts = await runScheduledPayouts().catch((e) => ({ error: (e as Error).message }));
-    const overdraft = await settleNegativeBalances();
+    const overdraft = BANK_AAN ? await settleNegativeBalances() : uit;
     // Self-running: risk first (a frozen account's withdrawal still pays out,
     // but no new money moves), then the SEPA batch, then the coverage check.
     const risk = await autoRisk().catch((e) => ({ error: (e as Error).message }));

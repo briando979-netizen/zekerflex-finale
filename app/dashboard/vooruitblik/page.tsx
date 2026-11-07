@@ -6,6 +6,7 @@ import { inAndroidApp } from "@/lib/app-mode-server";
 import { getEarningsGoal } from "@/lib/dashboard/earnings-goal";
 import { EarningsGoalCard } from "@/components/app/EarningsGoalCard";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { BANK_AAN } from "@/lib/app-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -86,7 +87,7 @@ export default async function VooruitblikPage() {
               </div>
               <span className="whitespace-nowrap font-display text-2xl font-bold text-brand-700">{euro(forecast.taxReserveCents)}</span>
             </div>
-            {!inApp && (
+            {!inApp && BANK_AAN && (
               <Link href="/dashboard/bank" className="btn-primary mt-4 inline-block text-sm">
                 {t.taxCta}
               </Link>

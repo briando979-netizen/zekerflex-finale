@@ -18,6 +18,10 @@ import { playIngesteld } from "@/lib/play/account";
 import { bouwerInstellingen } from "@/lib/bouwer/werker";
 import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
 import { platformPartij } from "@/lib/efactuur/instellingen";
+import { BANK_AAN } from "@/lib/app-mode";
+
+/** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
+const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -328,9 +332,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Geef Claude de documentatie van die partij; de regels voor limieten en blokkades die al gebouwd zijn, worden hergebruikt.",
         `Komt Stripe er toch op terug, dan vinkt deze taak zichzelf af. Daarna nog nodig: op de Stripe-webhook ${ISSUING_EVENTS.join(", ")}, de publishable key (pk_live_…) op de server en Apple/Google Pay onder Issuing → Settings.`,
       ],
-      auto: issuing !== null,
-      done: issuing === true,
-      ...(issuing === null ? m("issuing-active") : {}),
+      // niet nodig zolang ZekerFlex Bank uit staat (lib/app-mode.ts, BANK_AAN)
+      auto: issuing !== null || !BANK_AAN,
+      ...(!BANK_AAN ? { done: true, doneNote: BANK_UIT } : { done: issuing === true, ...(issuing === null ? m("issuing-active") : {}) }),
     },
     {
       id: "stripe-webhook-handtekening",
@@ -451,7 +455,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       why: "Verzekeringen staan uit tot er een echte verzekeraar is ingevuld; bemiddelen vraagt een AFM-vergunning of een samenwerking met een verzekeraar.",
       how: ["Maak afspraken met een verzekeraar of volmachtkantoor.", "Admin → Bank → Verzekeringen: vul de verzekeraar in en zet producten aan."],
       auto: true,
-      done: products.some((p) => p.active && p.insurer.trim()),
+      done: !BANK_AAN || products.some((p) => p.active && p.insurer.trim()),
+      ...(!BANK_AAN ? { doneNote: BANK_UIT } : {}),
     },
     {
       id: "bank-name",
@@ -459,8 +464,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Naam 'ZekerFlex Bank' juridisch laten toetsen",
       why: "Het woord 'bank' is in Nederland beschermd (Wft). Je hebt dit risico bewust geaccepteerd; laat het toetsen voordat je er groot mee adverteert.",
       how: ["Laat een jurist of compliance-adviseur kijken naar naam en opzet (gelden op Stripe, geen eigen bankvergunning)."],
-      auto: false,
-      ...m("bank-name"),
+      auto: !BANK_AAN,
+      ...(!BANK_AAN ? { done: true, doneNote: BANK_UIT } : m("bank-name")),
     },
     {
       id: "domain",
