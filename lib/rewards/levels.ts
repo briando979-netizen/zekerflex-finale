@@ -20,12 +20,12 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-  { id: "starter", name: "Starter", minXp: 0, emoji: "🌱", feeDiscountPct: 0, perks: ["Toegang tot alle klussen", "Gratis virtuele pas"] },
+  { id: "starter", name: "Starter", minXp: 0, emoji: "🌱", feeDiscountPct: 0, perks: ["Toegang tot alle klussen"] },
   { id: "brons", name: "Brons", minXp: 500, emoji: "🥉", feeDiscountPct: 10, perks: ["Bronzen badge op je profiel", "10% korting op bankkosten"] },
   { id: "zilver", name: "Zilver", minXp: 1500, emoji: "🥈", feeDiscountPct: 25, perks: ["Zilveren badge", "25% korting op bankkosten", "Opvallen bij opdrachtgevers"] },
   { id: "goud", name: "Goud", minXp: 4000, emoji: "🥇", feeDiscountPct: 50, perks: ["Gouden badge", "50% korting op bankkosten", "Voorrang in de matching"] },
   { id: "platina", name: "Platina", minXp: 10000, emoji: "💎", feeDiscountPct: 100, perks: ["Platina badge", "Gratis ZekerFlex Bank", "Persoonlijke support"] },
-  { id: "diamant", name: "Diamant", minXp: 25000, emoji: "👑", feeDiscountPct: 100, perks: ["Diamant badge", "Gratis ZekerFlex Bank", "Gratis fysieke betaalpas", "Uitnodiging voor events"] },
+  { id: "diamant", name: "Diamant", minXp: 25000, emoji: "👑", feeDiscountPct: 100, perks: ["Diamant badge", "Gratis ZekerFlex Bank", "Uitnodiging voor events"] },
 ];
 
 export interface Badge {

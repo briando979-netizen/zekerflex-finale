@@ -55,6 +55,8 @@ interface Payload {
   entries: Entry[];
   cards: CardRow[];
   stripePublishableKey: string | null;
+  /** false = Stripe Issuing staat niet aan: geen pas aanbieden */
+  pasUitgifte?: boolean;
   payoutDestination: "iban" | "bank" | null;
 }
 
@@ -553,6 +555,7 @@ export function BankView({ returnPath }: { returnPath: string }) {
           balanceCents={account.balanceCents}
           holderName={account.holderName}
           publishableKey={data.stripePublishableKey}
+          uitgifte={data.pasUitgifte ?? false}
           team={role === "organisation"}
           onChanged={changed}
         />

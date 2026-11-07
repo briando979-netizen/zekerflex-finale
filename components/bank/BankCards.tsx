@@ -63,11 +63,13 @@ export function BankCards(props: {
   balanceCents: number;
   holderName: string;
   publishableKey: string | null;
+  /** kan ZekerFlex nu echt een pas uitgeven (Stripe Issuing live)? Anders geen aanvraagknop */
+  uitgifte: boolean;
   /** company account: cards per employee with a monthly budget */
   team?: boolean;
   onChanged: (note: { ok: boolean; text: string }) => void | Promise<void>;
 }) {
-  const { cards, fees, canManage, frozen, balanceCents, publishableKey, onChanged, team = false } = props;
+  const { cards, fees, canManage, frozen, balanceCents, publishableKey, uitgifte, onChanged, team = false } = props;
   const [assignee, setAssignee] = useState("");
   const [budget, setBudget] = useState("");
   const [open, setOpen] = useState(false);
@@ -180,7 +182,7 @@ export function BankCards(props: {
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-hair px-5 py-3">
         <span className="text-sm font-semibold">Betaalpassen</span>
-        {canManage && !frozen && (
+        {canManage && !frozen && uitgifte && (
           <button type="button" onClick={() => setOpen(!open)} className="ml-auto rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white">
             {open ? "Annuleren" : "+ Pas aanvragen"}
           </button>
@@ -248,7 +250,11 @@ export function BankCards(props: {
       )}
 
       {cards.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-neutralx-400">Nog geen betaalpas. Elke betaling met de pas gaat direct van je ZekerFlex Bank-saldo af.</p>
+        <p className="px-5 py-8 text-center text-sm text-neutralx-400">
+          {uitgifte
+            ? "Nog geen betaalpas. Elke betaling met de pas gaat direct van je ZekerFlex Bank-saldo af."
+            : "Een betaalpas is er nog niet: ZekerFlex kan op dit moment geen passen uitgeven. Je saldo, betalen met iDEAL en uitbetalen naar je eigen rekening werken gewoon."}
+        </p>
       ) : (
         <ul className="grid gap-4 p-5 sm:grid-cols-2">
           {cards.map((c) => {

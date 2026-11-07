@@ -136,6 +136,29 @@ async function ensureCardholder(account: BankAccount, d: CardholderDetails, emai
   return holder.id;
 }
 
+const pasStand = globalThis as unknown as { zfPasUitgifte?: { aan: boolean; tot: number } };
+
+/**
+ * Kan ZekerFlex nu echt een pas uitgeven? Alleen als Stripe Issuing live aan
+ * staat (card_issuing actief op het account). Stripe wees Issuing op 30 okt af;
+ * zolang dat zo is, bieden we geen pas aan. 10 minuten onthouden (globalThis:
+ * gedeeld over de routes).
+ */
+export async function pasUitgifteMogelijk(): Promise<boolean> {
+  const nu = Date.now();
+  const eerder = pasStand.zfPasUitgifte;
+  if (eerder && eerder.tot > nu) return eerder.aan;
+  let aan = eerder?.aan ?? false;
+  try {
+    const acct = await getStripeClient().accounts.retrieveCurrent();
+    aan = (acct.capabilities as Record<string, string> | undefined)?.card_issuing === "active";
+  } catch {
+    // geen sleutel of Stripe even weg: de vorige stand houden (standaard: geen pas)
+  }
+  pasStand.zfPasUitgifte = { aan, tot: nu + 10 * 60_000 };
+  return aan;
+}
+
 /** The holder requests a card: pay the fee, create cardholder + card. */
 export async function requestCard(input: {
   account: BankAccount;
@@ -150,6 +173,9 @@ export async function requestCard(input: {
   const { account, type, details } = input;
   if (account.ownerType === "PLATFORM") throw AppError.validation("De platformrekening krijgt geen pas");
   if (account.frozenAt) throw AppError.precondition("Deze rekening is geblokkeerd");
+  if (!(await pasUitgifteMogelijk())) {
+    throw AppError.precondition("Een betaalpas is er nog niet: ZekerFlex kan op dit moment geen passen uitgeven. Je saldo, betalen met iDEAL en uitbetalen naar je eigen rekening werken gewoon.");
+  }
   const active = await prisma.bankCard.count({ where: { accountId: account.id, status: { in: ["active", "inactive"] } } });
   if (active >= 5) throw AppError.precondition("Je hebt al 5 passen — zeg er eerst een op");
 

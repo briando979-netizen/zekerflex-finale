@@ -6,7 +6,7 @@ import { accountForPrincipal, formatAccountNumber } from "@/lib/bank/accounts";
 import { getFees, monthlyFeeFor } from "@/lib/bank/fees";
 import { env } from "@/lib/env";
 import { getPayoutDestination } from "@/lib/bank/earnings";
-import { cardControls, cardMeta } from "@/lib/bank/cards";
+import { cardControls, cardMeta, pasUitgifteMogelijk } from "@/lib/bank/cards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +38,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       role,
       canMoveMoney,
       stripePublishableKey: env.STRIPE_PUBLISHABLE_KEY ?? null,
+      // alleen als Stripe Issuing echt aan staat, bieden we een pas aan (lib/bank/cards.ts)
+      pasUitgifte: await pasUitgifteMogelijk(),
       payoutDestination: role === "personal" ? await getPayoutDestination(p.userId) : null,
       fees: {
         monthlyCents: monthlyFeeFor(account, fees),

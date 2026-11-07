@@ -24,7 +24,7 @@ const FACTS = `
 - Werken zonder KVK is mogelijk als uitzendkracht via het ZekerFlex-uitzendbureau (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).
 - Werkgevers krijgen staffelkorting bij veel uren: van € 3,50 tot € 2,50 per uur.
 - Werkgevers die snelle uitbetaling aanbieden (na kredietcheck) krijgen sneller reacties op hun klussen.
-- ZekerFlex Bank: eigen rekening in de app, verdiensten direct erop, gratis virtuele betaalpas, eerste 30 dagen gratis.
+- ZekerFlex Bank: eigen saldo in de app, verdiensten direct erop, eerste 30 dagen gratis. Een betaalpas is er nog niet: beloof die nooit.
 `.trim();
 
 const AUDIENCE_BRIEF: Record<AdAudience, string> = {
