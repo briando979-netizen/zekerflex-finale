@@ -11,6 +11,7 @@ import type { Theme } from "@/lib/theme/config";
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -87,7 +88,7 @@ export function FreelancerShell({
   children: ReactNode;
 }) {
   useLocaleSync();
-  const tabs = inApp ? TABS.filter((t) => t.key !== "bank") : TABS;
+  const tabs = inApp || !BANK_AAN ? TABS.filter((t) => t.key !== "bank") : TABS;
   const pathname = usePathname();
   const ft = useFT();
   const isActive = (href: string) =>

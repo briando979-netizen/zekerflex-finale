@@ -8,6 +8,7 @@
 // personeelsfuncties in het menu: niets wat iemand gebruikt, verdwijnt.
 // Puur (geen prisma of kv): de layout koppelt de sleutels aan adres, label en icoon.
 // ---------------------------------------------------------------------------
+import { BANK_AAN } from "@/lib/app-mode";
 
 export const WERKRUIMTES = ["personeel", "rijschool", "horeca", "website"] as const;
 export type Werkruimte = (typeof WERKRUIMTES)[number];
@@ -134,7 +135,8 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 
 /** Het menu van /werkgever voor deze werkruimte. */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
-  const bank: MenuSleutel[] = o.inApp ? [] : ["bank"];
+  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN)
+  const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
   if (soort === "personeel") {
     // het gewone menu, precies zoals het altijd was
     return [

@@ -15,7 +15,7 @@ const OPTIONS: { speed: Speed; badge?: string; body: string; factoring: boolean 
     badge: "Directe betaalopdracht 🚀",
     body:
       "ZekerFlex dient na goedkeuring direct een betaalopdracht in en neemt jouw vordering over " +
-      "(4% vergoeding). Bij ZekerFlex Bank wordt het bedrag direct geboekt; bij een externe bank kan bijschrijving langer duren.",
+      "(4% vergoeding). Je bank kan er daarna nog even over doen voordat het op je rekening staat.",
     factoring: true,
   },
   {

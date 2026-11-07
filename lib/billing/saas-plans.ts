@@ -42,10 +42,10 @@ export const SAAS_PLANS: Record<SaasPlanKey, SaasPlan> = {
   business: {
     key: "business",
     label: "Business",
-    tagline: "Voor uitzend & detachering met loonadministratie en bank.",
+    tagline: "Voor uitzend & detachering met loonadministratie.",
     priceCentsPerMonth: 399_00,
     selfService: true,
-    features: ["Alles uit Pro", "Uitzend: ABU-fasen + StiPP-pensioenaangifte", "ZekerFlex Bank (kaarten & uitbetalingen)", "Prioriteit-support"],
+    features: ["Alles uit Pro", "Uitzend: ABU-fasen + StiPP-pensioenaangifte", "Prioriteit-support"],
     entitlements: ["marketplace", "matching", "recruiter", "fastpay", "analytics", "uitzend", "bank"],
   },
   enterprise: {

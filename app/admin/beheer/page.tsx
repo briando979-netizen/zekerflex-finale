@@ -12,7 +12,7 @@ const CARDS: { title: string; desc: string; href: string }[] = [
   { title: "Financiën & tarieven", desc: "Je marge, btw-positie, reserveringen en instelbare tarieven: Stripe-kosten, btw, belasting, maandlasten en uitzendopslag.", href: "/admin/financien" },
   { title: "Systeem, functies & AI", desc: "Functies aan en uit zonder nieuwe versie, geplande taken, systeemchecks en de status van het AI-brein.", href: "/admin/systeem" },
   { title: "Autopilot", desc: "Laat de AI zelf herinneringen, nieuwe matches en rapportages doen, binnen harde grenzen.", href: "/admin/autopilot" },
-  { title: "ZekerFlex Bank", desc: "Maandelijkse bankkosten voor personen en organisaties.", href: "/admin/bank" },
+  { title: "ZekerFlex Bank (gestopt)", desc: "Alleen inzien: de rekeningen en saldo's van voor het stoppen, en wat er nog uitbetaald moet worden.", href: "/admin/bank" },
   { title: "Werkvormen & btw", desc: "Zzp, flexwerker of uitzendkracht en de btw-afhandeling per gebruiker.", href: "/admin/fiscaal" },
   { title: "Pensioenaangifte", desc: "De maandelijkse aangifte aan StiPP voor uitzendkrachten.", href: "/admin/pensioen" },
   { title: "ICP-opgave", desc: "Grensoverschrijdende prestaties met verlegde btw.", href: "/admin/icp" },

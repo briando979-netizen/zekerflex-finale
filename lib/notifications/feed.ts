@@ -10,6 +10,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { recentNotes } from "@/lib/bank/notify";
 import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
 import { REACTIE_MARGE_MS } from "@/lib/offers/verval";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -264,7 +265,8 @@ export async function getNotifications(principal: Principal): Promise<Notificati
   }
 
   // ── ZekerFlex Bank (only an existing account — never opens one) ──
-  try {
+  // De bank staat uit (lib/app-mode.ts, BANK_AAN): dan ook geen bankmeldingen meer.
+  if (BANK_AAN) try {
     const employerGrant = principal.grants.find((g) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(g.role));
     const account = admin
       ? null

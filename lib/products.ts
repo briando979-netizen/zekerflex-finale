@@ -120,7 +120,7 @@ export const FLAGSHIP: Product = {
   kicker: "Het complete flex-/uitzendplatform",
   tagline: "De hele motor onder één dak — voor bureaus die het complete pakket zoeken.",
   concept:
-    "Het overkoepelende platform: marktplaats, AI-recruiter, matching, uren → facturen, uitzend (ABU/StiPP), bank en webshop. Als white-label onder je eigen merk, of volledig self-hosted.",
+    "Het overkoepelende platform: marktplaats, AI-recruiter, matching, uren → facturen, uitzend (ABU/StiPP) en webshop. Als white-label onder je eigen merk, of volledig self-hosted.",
   audience: "Nieuwe of overstappende flex-/uitzendbureaus",
   deployment: "platform",
   salesComplexity: "hoog",
@@ -134,7 +134,7 @@ export const FLAGSHIP: Product = {
   features: [
     "Marktplaats + automatische matching",
     "AI-recruiter, uren → facturen, uitzend (ABU/StiPP)",
-    "ZekerFlex Bank, webshop en betalingen",
+    "Webshop en betalingen",
     "Eigen merk, kleuren en subdomein",
   ],
   reused: ["het volledige platform"],

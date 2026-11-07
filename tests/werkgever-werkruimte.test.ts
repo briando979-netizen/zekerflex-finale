@@ -64,7 +64,7 @@ describe("menuVoor", () => {
       { sleutel: "kalender" },
       { sleutel: "planner" },
       { sleutel: "agenda" },
-      { sleutel: "bank" },
+      // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen "bank" meer
       { sleutel: "favorieten" },
       { sleutel: "berichten" },
       { sleutel: "assistent" },
@@ -90,6 +90,8 @@ describe("menuVoor", () => {
     // pakketten die aanstaan direct na de start, zoals voorheen (horeca vóór rijschool)
     expect(sleutels("personeel", { heeftRijschool: true, heeftHoreca: true }).slice(0, 4)).toEqual(["start", "horeca", "rijschool", "klussen"]);
     expect(sleutels("personeel", { inApp: true })).not.toContain("bank");
+    // de bank staat voor iedereen uit, ook op de website
+    for (const soort of ["personeel", "rijschool", "horeca", "website"] as const) expect(sleutels(soort, {})).not.toContain("bank");
   });
 
   it("elke werkruimte zet het eigen onderdeel direct na de start", () => {
@@ -117,7 +119,7 @@ describe("menuVoor", () => {
       for (const s of PERSONEEL_SLEUTELS) expect(menu.map((p) => p.sleutel)).not.toContain(s);
       expect(menu.filter((p) => p.sleutel === "inhuren")).toEqual([{ sleutel: "inhuren", sectie: "personeel" }]);
       // de rest (contact, website, administratie) blijft
-      for (const s of ["berichten", "mail", "whatsapp", "agenda", "website", "reviews", "telefonie", "netwerk", "facturen", "bank", "bedrijf"] as const) {
+      for (const s of ["berichten", "mail", "whatsapp", "agenda", "website", "reviews", "telefonie", "netwerk", "facturen", "bedrijf"] as const) {
         expect(menu.map((p) => p.sleutel), `${soort} mist ${s}`).toContain(s);
       }
     }

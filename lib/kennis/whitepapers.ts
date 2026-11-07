@@ -5,7 +5,7 @@
 //   • a downloadable PDF from /api/kennis/whitepaper/[slug] (lib/pdf/whitepaper)
 // Tax facts (KOR limit, ZVW %, kilometer rate, urencriterium) are Dutch law and
 // kept as-is; platform figures follow the ZekerFlex money model
-// (€3,50/uur werkgeversfee, uitbetaalkeuze 4% / 2% / 0%, voorschot 3%).
+// (€3,50/uur werkgeversfee, uitbetaalkeuze 4% / 2% / 0%).
 // ---------------------------------------------------------------------------
 
 export type Block =
@@ -157,7 +157,7 @@ export const WHITEPAPERS: Whitepaper[] = [
           },
           {
             t: "p",
-            text: "Bij de eerste twee opties draagt ZekerFlex het debiteurenrisico: je krijgt je geld ook als de opdrachtgever te laat of niet betaalt. Kies je voor wachten, dan draag je dat risico zelf. Een voorschot van maximaal 80% op je openstaande diensten kan tegen 3%.",
+            text: "Bij de eerste twee opties draagt ZekerFlex het debiteurenrisico: je krijgt je geld ook als de opdrachtgever te laat of niet betaalt. Kies je voor wachten, dan draag je dat risico zelf.",
           },
         ],
       },

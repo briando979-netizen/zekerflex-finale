@@ -46,6 +46,18 @@ describe("middleware — app mode", () => {
     }
   });
 
+  it("ZekerFlex Bank staat uit: ook in een gewone browser terug naar het overzicht, de API zegt 423", async () => {
+    for (const [p, doel] of [["/dashboard/bank", "/dashboard"], ["/werkgever/bank", "/werkgever"], ["/betaalverzoek/abc", "/dashboard"]] as const) {
+      const res = await middleware(req(p));
+      expect(res.status, p).toBe(307);
+      expect(new URL(res.headers.get("location")!).pathname, p).toBe(doel);
+    }
+    const api = await middleware(req("/api/me/bank/topup"));
+    expect(api.status).toBe(423);
+    expect(((await api.json()) as { error: { code: string } }).error.code).toBe("BANK_GESTOPT");
+    expect((await middleware(req("/api/me/bank-verify"))).status).not.toBe(423);
+  });
+
   it("leaves the website alone in a normal browser", async () => {
     const res = await middleware(req("/"));
     expect(res.status).toBe(200);

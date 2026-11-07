@@ -20,6 +20,7 @@ import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { locatieTeksten } from "@/lib/locatie/teksten";
+import { BANK_AAN } from "@/lib/app-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ export default async function AccountPage() {
         { label: t.trips, href: "/dashboard/ritten" },
         { label: t.calendar, href: "/dashboard/agenda-koppeling" },
         { label: t.workNumber, href: "/dashboard/telefonie" },
-        ...(inApp ? [] : [{ label: t.bank, href: "/dashboard/bank" }]),
+        ...(inApp || !BANK_AAN ? [] : [{ label: t.bank, href: "/dashboard/bank" }]),
         { label: t.question, href: "/kennis" },
         {
           label: t.feedback,

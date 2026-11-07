@@ -3,6 +3,7 @@ import { personalAccount } from "@/lib/bank/accounts";
 import { book, type BookedEntry } from "@/lib/bank/ledger";
 import { applyEarningRule } from "@/lib/bank/autosave";
 import { notifyIncoming } from "@/lib/bank/notify";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // Earnings straight onto ZekerFlex Bank. A freelancer can choose to receive
@@ -16,6 +17,8 @@ export type PayoutDestination = "iban" | "bank";
 const key = (userId: string) => `bank-payout-pref:${userId}`;
 
 export async function getPayoutDestination(userId: string): Promise<PayoutDestination> {
+  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): altijd de eigen IBAN, ook wie eerder "bank" koos
+  if (!BANK_AAN) return "iban";
   return (await kvGet<PayoutDestination>(key(userId))) === "bank" ? "bank" : "iban";
 }
 

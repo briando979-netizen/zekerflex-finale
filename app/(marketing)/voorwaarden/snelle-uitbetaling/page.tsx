@@ -24,7 +24,7 @@ export default function SnelleUitbetalingPage() {
     >
       <LegalSection
         heading="1. Wat snelle uitbetaling is"
-        body="Normaal ontvang je je factuurbedrag zodra de Opdrachtgever betaalt. Kies je voor snelle uitbetaling, dan draag je je vordering op de Opdrachtgever voor die klus over aan ZekerFlex (cessie, art. 3:94 BW). ZekerFlex dient een betaalopdracht in voor het factuurbedrag minus de vergoeding en int het volledige bedrag zelf bij de Opdrachtgever. Een betaalopdracht is geen garantie op bijschrijving binnen die termijn: verwerking en bijschrijving zijn mede afhankelijk van de betaalprovider en ontvangende bank. Een boeking binnen ZekerFlex Bank is direct zichtbaar in je ZekerFlex Bank-rekening."
+        body="Normaal ontvang je je factuurbedrag zodra de Opdrachtgever betaalt. Kies je voor snelle uitbetaling, dan draag je je vordering op de Opdrachtgever voor die klus over aan ZekerFlex (cessie, art. 3:94 BW). ZekerFlex dient een betaalopdracht in voor het factuurbedrag minus de vergoeding en int het volledige bedrag zelf bij de Opdrachtgever. Een betaalopdracht is geen garantie op bijschrijving binnen die termijn: verwerking en bijschrijving zijn mede afhankelijk van de betaalprovider en ontvangende bank."
       />
       <LegalSection
         heading="2. Vergoeding"

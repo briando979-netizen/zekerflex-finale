@@ -1,4 +1,5 @@
 import { ADMIN_HUBS } from "@/lib/admin/nav";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex OS — de appcatalogus. Elk scherm van het platform is hier één app:
@@ -213,7 +214,8 @@ export function tintVanApp(app: OsApp): OsTint {
 
 /** Alle apps van het OS, in vaste volgorde. */
 export function alleApps(): OsApp[] {
-  return [...WERKER_APPS, ...WERKGEVER_APPS, ...VERKOPER_APPS, ...GEDEELDE_APPS, ...adminApps()];
+  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): de bank-apps van werker en werkgever niet tonen
+  return [...WERKER_APPS, ...WERKGEVER_APPS, ...VERKOPER_APPS, ...GEDEELDE_APPS, ...adminApps()].filter((a) => BANK_AAN || (a.id !== "w-bank" && a.id !== "b-bank"));
 }
 
 /** De apps die iemand met deze rol mag zien. Een beheerder ziet ook de werkgever- en werker-apps niet: die horen bij een eigen account. */

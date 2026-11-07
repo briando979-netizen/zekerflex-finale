@@ -4,6 +4,7 @@ import { copyText } from "@/lib/clipboard";
 
 import { useEffect, useState } from "react";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
+import { BANK_AAN } from "@/lib/app-mode";
 
 interface Level {
   id: string;
@@ -52,7 +53,8 @@ function useRewards() {
 // bank-related perks and badges go too.
 const BANK_PERK = /bank|betaalpas|virtuele pas|fysieke pas/i;
 const BANK_BADGES = new Set(["banker", "saver", "card"]);
-const appPerks = (perks: string[], inApp: boolean) => (inApp ? perks.filter((p) => !BANK_PERK.test(p)) : perks);
+// ZekerFlex Bank staat ook op de website uit (BANK_AAN): dan gaan ze daar ook weg.
+const appPerks = (perks: string[], inApp: boolean) => (inApp || !BANK_AAN ? perks.filter((p) => !BANK_PERK.test(p)) : perks);
 
 /** Level, progress to the next one, perks and badges (freelancers). */
 export function LevelCard() {
@@ -61,7 +63,7 @@ export function LevelCard() {
   const [open, setOpen] = useState(false);
   const s = data?.status;
   if (!s) return null;
-  const badges = inApp ? s.badges.filter((b) => !BANK_BADGES.has(b.id)) : s.badges;
+  const badges = inApp || !BANK_AAN ? s.badges.filter((b) => !BANK_BADGES.has(b.id)) : s.badges;
   return (
     <div className="card overflow-hidden">
       <div className="bg-gradient-to-br from-[#1f1b4d] via-[#2d2470] to-[#0E5C4A] p-5 text-white">
@@ -125,7 +127,7 @@ export function LevelCard() {
           </ul>
         )}
         <p className="text-[11px] text-neutralx-400">
-          XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld{inApp ? "." : ", plus bonussen voor ZekerFlex Bank, potjes en een pas."}
+          XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld{inApp || !BANK_AAN ? "." : ", plus bonussen voor ZekerFlex Bank, potjes en een pas."}
         </p>
       </div>
     </div>
@@ -199,7 +201,8 @@ export function ReferralCard() {
   const data = useRewards();
   const inApp = useInAndroidApp();
   const [copied, setCopied] = useState(false);
-  if (!data || inApp !== false) return null;
+  // de bonus werd op ZekerFlex Bank gestort; die staat uit (BANK_AAN), dus geen bonus te beloven
+  if (!data || inApp !== false || !BANK_AAN) return null;
   const r = data.referral;
   async function share() {
     const text = `Werk en verdien via ZekerFlex — met je eigen gratis bankrekening. Meld je aan met mijn link en krijg ${euro(r.rewards.newUserCents)} welkomstbonus: ${r.link}`;

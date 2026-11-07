@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Deze test bewaakt de bank zelf; die staat op de site uit (lib/app-mode.ts, BANK_AAN), hier aan.
+// De stand "uit" staat in tests/bank-uit.test.ts.
+vi.mock("@/lib/app-mode", async (orig) => ({ ...(await orig<typeof import("@/lib/app-mode")>()), BANK_AAN: true }));
+
 const kv = vi.hoisted(() => new Map<string, unknown>());
 const transfer = vi.hoisted(() => vi.fn());
 

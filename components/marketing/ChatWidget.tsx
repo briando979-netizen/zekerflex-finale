@@ -15,10 +15,10 @@ interface Msg {
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "Hoi! 👋 Ik ben de ZekerFlex-assistent. Zoek je werk of personeel, heb je een vraag over uitbetalen, ZekerFlex Bank of aanmelden? Vraag maar raak — ik antwoord meteen.",
+    "Hoi! 👋 Ik ben de ZekerFlex-assistent. Zoek je werk of personeel, heb je een vraag over uitbetalen of aanmelden? Vraag maar raak — ik antwoord meteen.",
 };
 
-const SUGGESTIONS = ["Ik zoek werk", "Ik zoek personeel", "Hoe snel word ik uitbetaald?", "Wat is ZekerFlex Bank?", "Wat kost ZekerFlex voor bedrijven?"];
+const SUGGESTIONS = ["Ik zoek werk", "Ik zoek personeel", "Hoe snel word ik uitbetaald?", "Kan ik zonder KVK werken?", "Wat kost ZekerFlex voor bedrijven?"];
 
 /** The server appends follow-ups as a final line "[[a|b|c]]" — split it off (also while it streams in). */
 function splitSuggestions(content: string): { text: string; suggestions: string[] } {
@@ -40,7 +40,6 @@ const INTENTS: { re: RegExp; label: string; ask: string }[] = [
   { re: /btw|kvk|factuur|facturatie|kleineondernemers|kor/i, label: "Btw & facturatie", ask: "Heb ik een btw-nummer nodig?" },
   { re: /veilig|privacy|gegevens|avg|data/i, label: "Privacy & veiligheid", ask: "Is mijn data veilig?" },
   { re: /contact|hulp|bereik|mail|telefoon/i, label: "Contact", ask: "Hoe kan ik contact opnemen?" },
-  { re: /bank|rekening|pas|sparen|potje/i, label: "ZekerFlex Bank", ask: "Wat is ZekerFlex Bank?" },
   { re: /uren|inchecken|uitchecken/i, label: "Uren & inchecken", ask: "Hoe vul ik mijn uren in?" },
 ];
 

@@ -11,6 +11,7 @@ import { rijschoolKerncijfers } from "@/lib/rijschool/kerncijfers";
 import { MODULES, MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { horecaCijfers, websiteCijfers } from "@/lib/werkgever/werkruimte-cijfers";
 import type { WerkruimteContext } from "@/lib/werkgever/werkruimte-server";
+import { BANK_AAN } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // Het startscherm van /werkgever voor een rijschool, horecazaak of wie alleen een
@@ -319,7 +320,7 @@ function extraTegels(inApp: boolean): Tegel[] {
     { href: "/werkgever/netwerk", titel: "Wifi en VPN", uitleg: "Wifi die het rooster volgt, een veilige verbinding op afstand en een eigen 5G-netwerk." },
     { href: "/werkgever/agenda", titel: "Agenda", uitleg: "Afspraken uit je mail, chat en WhatsApp, vanzelf bij elkaar." },
     { href: "/werkgever/facturen", titel: "Facturen", uitleg: "Facturen van ZekerFlex." },
-    ...(inApp ? [] : [{ href: "/werkgever/bank", titel: "ZekerFlex Bank", uitleg: "Zakelijke rekening en betalingen." }]),
+    ...(inApp || !BANK_AAN ? [] : [{ href: "/werkgever/bank", titel: "ZekerFlex Bank", uitleg: "Zakelijke rekening en betalingen." }]),
     { href: "/werkgever/bedrijf", titel: "Bedrijfsprofiel", uitleg: "Je bedrijfsgegevens en KVK." },
   ];
 }
