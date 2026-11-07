@@ -2571,6 +2571,7 @@ model HorecaZaak {
   betalingen    HorecaBetaling[]
   reserveringen HorecaReservering[]
   takenlijsten  HorecaTakenlijst[]
+  oefenklussen  OefenKlus[]
 }
 
 model HorecaTafel {
@@ -2771,4 +2772,64 @@ model DomeinBestelling {
   @@index([status])
   @@index([domein])
   @@index([status, verlooptOp])
+}
+
+// ---------------------------------------------------------------------------
+// Oefenklussen: praktijkshifts voor trainingen in de horeca-branche. Een zaak
+// kan oefenklussen aanbieden waar vrijwilligers/trainees kunnen aanmelden.
+// De zaak accepteert of weigert aanmeldingen en markeert deelnemers als afgerond.
+// ---------------------------------------------------------------------------
+
+enum OefenKlusAanmeldingStatus {
+  AANGEMELD
+  GEACCEPTEERD
+  GEWEIGERD
+  AFGEROND
+  GEANNULEERD
+}
+
+model OefenKlus {
+  id                String   @id @default(cuid())
+  zaakId            String
+  zaak              HorecaZaak @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  titel             String
+  beschrijving      String
+  datum             DateTime // startdatum van de oefenklus
+  startTijd         String   // "HH:MM"
+  eindTijd          String   // "HH:MM"
+  maxAanmeldingen   Int      @default(5)
+  niveau            String   @default("beginner") // beginner, intermediate, advanced
+  vereisten         String   @default("") // wat men moet weten
+  actief            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  aanmeldingen OefenKlusAanmelding[]
+
+  @@index([zaakId, actief])
+  @@index([datum])
+}
+
+model OefenKlusAanmelding {
+  id          String @id @default(cuid())
+  oefenKlusId String
+  oefenKlus   OefenKlus @relation(fields: [oefenKlusId], references: [id], onDelete: Cascade)
+
+  voornaam   String
+  achternaam String
+  email      String
+  telefoon   String @default("")
+  ervaring   String // geen, minder-dan-1-jaar, 1-tot-3-jaar, meer-dan-3-jaar
+  opmerkingen String @default("")
+
+  status         OefenKlusAanmeldingStatus @default(AANGEMELD)
+  notitieZaak    String @default("") // notitie van de zaak
+  afgerondOp     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([oefenKlusId, email])
+  @@index([oefenKlusId, status])
+  @@index([email])
 }
