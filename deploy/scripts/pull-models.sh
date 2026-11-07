@@ -7,7 +7,7 @@ COMPOSE="docker compose -f docker-compose.prod.yml"
 
 set -a; source .env.production; set +a
 
-for m in "${LLM_MODEL:-qwen2.5:3b}" "${LLM_FAST_MODEL:-llama3.2:1b}" "${LLM_EMBED_MODEL:-nomic-embed-text}"; do
+for m in "${LLM_MODEL:-gemma3:4b}" "${LLM_FAST_MODEL:-gemma3:4b}" "${LLM_EMBED_MODEL:-granite-embedding:278m}"; do
   echo "▸ ollama pull $m"
   $COMPOSE exec -T ollama ollama pull "$m"
 done

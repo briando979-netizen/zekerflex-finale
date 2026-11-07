@@ -75,12 +75,12 @@ export function GratisAi() {
             gegevens blijven op onze eigen server.
           </p>
           <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--a-warn-ink, var(--a-mute))" }}>
-            <strong>Eerlijk gemeten op 6 november.</strong> Onze server heeft vijf processors en geen videokaart.
-            Het model doet er dan ongeveer acht seconden over een kort antwoord, en het kent ZekerFlex niet uit
-            zichzelf: op de vraag wat ZekerFlex doet, antwoordde het over &ldquo;winstprocenten vaststellen&rdquo;.
-            Een groter model (qwen3:4b) was nóg trager: ruim vier minuten per antwoord. Zet dit dus aan als het
-            tegoed bij de aanbieder op is of je even helemaal zelfstandig wilt draaien — niet als vaste keuze voor
-            teksten die een klant leest.
+            <strong>Eerlijk gemeten op 7 november.</strong> Onze server heeft vijf processors en geen videokaart. Van
+            vijf modellen deed alleen gemma3:4b zes ZekerFlex-taken goed: de staffel voor 600 uur (€ 2.075), een
+            melding in het Pools, gegevens uit een vacature en een eerlijke keuze tussen werkers. Een kort antwoord
+            duurt 3 à 5 seconden; na een tijd stilte komt er eenmalig zo&apos;n 6 seconden laadtijd bij. Feiten over
+            ZekerFlex haalt het uit de kennisbank, niet uit zichzelf. Voor lange teksten die een klant leest, blijft
+            een groot model sterker.
           </p>
           <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>
             Je hoeft hier niets voor te doen bij een storing: valt de betaalde aanbieder weg of geeft hij een

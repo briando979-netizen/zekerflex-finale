@@ -20,14 +20,17 @@ import { gratisAan, gratisModel } from "@/lib/ai/gratis";
 
 export type ModelRole = "main" | "fast" | "reasoning" | "code" | "translate" | "vision" | "embed";
 
+// Aanbevolen voor onze eigen server (5 processors, geen videokaart, 4 GB voor de AI), gemeten op
+// 7 november: één model voor alle taaltaken houdt het geheugen laag en het antwoord snel; gemma3:4b
+// kan ook beeld. Alleen modellen die commercieel gebruikt mogen worden.
 export const MODEL_ROLES: { role: ModelRole; label: string; env: string; recommended: string }[] = [
-  { role: "main", label: "Hoofdmodel — antwoorden en schrijven", env: "LLM_MODEL", recommended: "qwen3:4b" },
-  { role: "fast", label: "Snel — routeren, rerank, korte antwoorden", env: "LLM_FAST_MODEL", recommended: "qwen3:1.7b" },
-  { role: "reasoning", label: "Redeneren — plannen, beoordelen, analyses", env: "LLM_REASONING_MODEL", recommended: "qwen3:4b" },
-  { role: "code", label: "Code — dev-advies en orchestratie", env: "LLM_CODE_MODEL", recommended: "qwen2.5-coder:3b" },
-  { role: "translate", label: "Vertalen — meertalige chat", env: "LLM_TRANSLATE_MODEL", recommended: "qwen3:4b" },
-  { role: "vision", label: "Beeld — ID/selfie en foto's", env: "LLM_VISION_MODEL", recommended: "qwen2.5vl:7b" },
-  { role: "embed", label: "Vectoren — RAG-embeddings", env: "LLM_EMBED_MODEL", recommended: "nomic-embed-text" },
+  { role: "main", label: "Hoofdmodel — antwoorden en schrijven", env: "LLM_MODEL", recommended: "gemma3:4b" },
+  { role: "fast", label: "Snel — routeren, rerank, korte antwoorden", env: "LLM_FAST_MODEL", recommended: "gemma3:4b" },
+  { role: "reasoning", label: "Redeneren — plannen, beoordelen, analyses", env: "LLM_REASONING_MODEL", recommended: "gemma3:4b" },
+  { role: "code", label: "Code — dev-advies en orchestratie", env: "LLM_CODE_MODEL", recommended: "gemma3:4b" },
+  { role: "translate", label: "Vertalen — meertalige chat", env: "LLM_TRANSLATE_MODEL", recommended: "gemma3:4b" },
+  { role: "vision", label: "Beeld — ID/selfie en foto's", env: "LLM_VISION_MODEL", recommended: "gemma3:4b" },
+  { role: "embed", label: "Vectoren — RAG-embeddings", env: "LLM_EMBED_MODEL", recommended: "granite-embedding:278m" },
 ];
 
 /** purpose (as passed to chat/chatJson) → which kind of model does it best */

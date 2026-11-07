@@ -31,7 +31,10 @@ export function eigenBasisUrl(): string {
   return basis.replace(/\/+$/, "");
 }
 
-export const STANDAARD_GRATIS_MODEL = "qwen2.5:3b";
+// Gemeten op 7 november op onze eigen server (zes ZekerFlex-taken): gemma3:4b rekende als enige
+// de staffel goed, vertaalde goed naar het Pools en gaf geldige JSON; mag commercieel gebruikt worden.
+// qwen2.5:3b (de vorige standaard) mag dat niet en rekende fout.
+export const STANDAARD_GRATIS_MODEL = "gemma3:4b";
 
 const leeg = (): GratisStand => ({ aan: false, basis: "", model: "" });
 let cache: { v: GratisStand; at: number } = { v: leeg(), at: 0 };
