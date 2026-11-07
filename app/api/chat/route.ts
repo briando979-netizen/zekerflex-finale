@@ -1,7 +1,7 @@
 import { withUsage } from "@/lib/ops/usage";
 import { z } from "zod";
 import { chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
-import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
+import { fallbackAnswer, kortGenoegVoorVastAntwoord, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
 import { appendMessage, isConversationId } from "@/lib/chat/webchat";
 import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -39,7 +39,7 @@ Feiten die je mag gebruiken:
 - Aanmelden vereist KVK-inschrijving (zzp) en identiteitsverificatie (KYC).
 - Facturatie verloopt via reverse billing: ZekerFlex maakt de facturen automatisch aan.
 - ZekerFlex gebruikt gespecialiseerde dienstverleners voor onderdelen zoals hosting, betalingen, e-mail en identiteitscontroles. De AI-assistent kan op een eigen modelserver draaien.
-- ZekerFlex Bank: eigen rekening in de app; verdiensten direct erop, potjes, sparen met vaste rente, overmaken, betaalverzoeken, gratis virtuele betaalpas. Eerste 30 dagen gratis.
+- ZekerFlex Bank: eigen rekening in de app; verdiensten direct erop, potjes, sparen met vaste rente, overmaken, betaalverzoeken. Eerste 30 dagen gratis. Een betaalpas is er nog niet: beloof die nooit.
 - Zonder KVK werk je als uitzendkracht via ZekerFlex (loonstrook; een mogelijk voorschot wordt na goedkeuring als betaalopdracht ingediend en bijschrijving hangt af van betaalprovider en bank).
 - Op de dag van de klus check je in en uit op locatie; uren vul je in stappen in.
 
@@ -135,10 +135,11 @@ async function handlePOST(request: Request): Promise<Response> {
   const ownAnswer = withSuggestions(
     topic ?? (knowledgeHits[0] && confident ? { reply: knowledgeHits[0].text, suggestions: ["Contact met een mens", "Hoe meld ik me aan?"] } : fallbackAnswer()),
   );
-  // No model connected, or a known question (also mid-conversation): answer
-  // ourselves — curated facts, instantly, without waiting on the model.
+  // No model connected, or a short known question (also mid-conversation):
+  // answer ourselves — curated facts, instantly, without waiting on the model.
+  // A long question of its own goes to the model, with the topic as a hint.
   await ensureAiNode();
-  if (llmConfigProblem() || topic) {
+  if (llmConfigProblem() || (topic && kortGenoegVoorVastAntwoord(question))) {
     return textStream(ownAnswer, question, undefined, saveReply);
   }
   const smartFallback = ownAnswer;
@@ -166,12 +167,20 @@ async function handlePOST(request: Request): Promise<Response> {
           },
         ]
       : [];
+    const topicMsgs = topic
+      ? [
+          {
+            role: "system" as const,
+            content: `Een standaardantwoord dat misschien past. Gebruik het alleen als het de vraag echt beantwoordt, en let op of de vrager een bedrijf of een werker is:\n${topic.reply}`,
+          },
+        ]
+      : [];
     const gen = chatStream({
       purpose: "public-chat",
       ...(shortConversation ? { model: fastModel() } : {}),
       temperature: 0.3,
       maxTokens: 260,
-      messages: [{ role: "system", content: SYSTEM }, ...knowledgeMsgs, ...exampleMsgs, ...parsed.messages],
+      messages: [{ role: "system", content: SYSTEM }, ...knowledgeMsgs, ...topicMsgs, ...exampleMsgs, ...parsed.messages],
     });
     return textStream(gen, question, smartFallback, saveReply);
   } catch (err) {

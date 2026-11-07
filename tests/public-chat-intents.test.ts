@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallbackAnswer, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
+import { fallbackAnswer, kortGenoegVoorVastAntwoord, smallTalk, topicAnswer, VAST_ANTWOORD_MAX_WOORDEN, withSuggestions } from "@/lib/chat/public-intents";
 
 describe("public chat assistant without a model", () => {
   it.each(["hoi", "Hoi!", "hallo", "hey", "goedemorgen", "Hi"])("greets back on %s with options", (t) => {
@@ -33,6 +33,22 @@ describe("public chat assistant without a model", () => {
     expect(topicAnswer("houden jullie mijn kilometers bij?")?.reply).toContain("kilometer-administratie");
     expect(topicAnswer("mag ik reiskosten aftrekken")?.reply).toContain("€ 0,23");
     expect(topicAnswer("hoe doe ik mijn aangifte")?.reply).toContain("jaaroverzicht");
+  });
+
+  it("belooft geen betaalpas die we (nog) niet kunnen leveren", () => {
+    for (const vraag of ["hoe vraag ik een betaalpas aan", "wat kost het", "wat is zekerflex bank", "wat levert een hoger level op"]) {
+      const antwoord = topicAnswer(vraag)?.reply ?? "";
+      expect(antwoord).not.toMatch(/virtuele (betaal)?pas|fysieke pas|apple pay/i);
+    }
+    expect(topicAnswer("hoe vraag ik een betaalpas aan")?.reply).toContain("is er nog niet");
+  });
+
+  it("geeft een korte vraag het vaste antwoord en een lange eigen vraag aan het model", () => {
+    expect(kortGenoegVoorVastAntwoord("wat kost het?")).toBe(true);
+    expect(kortGenoegVoorVastAntwoord("ik zoek personeel voor mijn restaurant")).toBe(true);
+    expect(kortGenoegVoorVastAntwoord("Mijn kok heeft zich net ziek gemeld en ik heb vanavond een zaal vol. Kan ik via jullie vandaag nog iemand vinden?")).toBe(false);
+    expect(kortGenoegVoorVastAntwoord(`  ${"woord ".repeat(VAST_ANTWOORD_MAX_WOORDEN)} `)).toBe(true);
+    expect(kortGenoegVoorVastAntwoord("woord ".repeat(VAST_ANTWOORD_MAX_WOORDEN + 1))).toBe(false);
   });
 
   it("sends follow-ups in the widget's wire format", () => {

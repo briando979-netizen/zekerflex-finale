@@ -78,15 +78,16 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /prijs|prijzen|kost|tarief|fee|commissie|abonnement|wat betaal/i,
-    answer: { reply: "Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen als er echt iemand werkt — geen abonnement of opstartkosten. Voor werkenden is ZekerFlex gratis; ZekerFlex Bank is de eerste 30 dagen gratis en de virtuele betaalpas altijd.", suggestions: ["Plan een demo", "Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen als er echt iemand werkt — geen abonnement of opstartkosten. Voor werkenden is ZekerFlex gratis.", suggestions: ["Plan een demo", "Hoe snel word ik uitbetaald?"] },
   },
   {
     re: /zekerflex bank|bankrekening|rekening openen|\bbank\b/i,
-    answer: { reply: "ZekerFlex Bank is je eigen rekening in de app: verdiensten komen er direct op, je kunt potjes maken, sparen met vaste rente, geld overmaken en betaalverzoeken sturen, en een gratis virtuele betaalpas aanvragen. De eerste 30 dagen zijn gratis.", suggestions: ["Hoe vraag ik een betaalpas aan?", "Kan ik sparen?", "Wat kost de bank?"] },
+    answer: { reply: "ZekerFlex Bank is je eigen rekening in de app: verdiensten komen er direct op, je kunt potjes maken, sparen met vaste rente, geld overmaken en betaalverzoeken sturen. De eerste 30 dagen zijn gratis.", suggestions: ["Kan ik sparen?", "Wat kost de bank?"] },
   },
   {
     re: /betaalpas|pinpas|debitcard|kaart aanvragen|apple pay|google pay/i,
-    answer: { reply: "In ZekerFlex Bank → Passen vraag je zelf een pas aan: de virtuele pas is gratis en direct te gebruiken (ook in Apple Pay en Google Pay), een fysieke pas komt per post. Elke betaling gaat direct van je saldo af en je stelt zelf limieten in.", suggestions: ["Wat is ZekerFlex Bank?", "Wat kost de bank?"] },
+    // betaalpassen kunnen nog niet: Stripe weigerde de kaartuitgifte op 30 oktober 2026; geen belofte doen
+    answer: { reply: "Een ZekerFlex-betaalpas is er nog niet: daarvoor zijn we nog in gesprek met een kaartpartner. Je verdiensten ontvang je gewoon op je eigen bankrekening, en daar betaal je met je eigen pas.", suggestions: ["Hoe snel word ik uitbetaald?", "Wat is ZekerFlex Bank?"] },
   },
   {
     re: /sparen|spaarrente|rente|potje|vastzetten|deposito/i,
@@ -118,7 +119,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /level|badge|xp|beloning/i,
-    answer: { reply: "Met elke afgeronde klus en goede review verdien je XP en stijg je van Starter tot Diamant. Hogere levels geven echte voordelen, zoals korting op bankkosten tot helemaal gratis en een gratis fysieke pas.", suggestions: ["Wat is ZekerFlex Bank?"] },
+    answer: { reply: "Met elke afgeronde klus en goede review verdien je XP en stijg je van Starter tot Diamant. Hogere levels geven echte voordelen, zoals korting op bankkosten tot helemaal gratis.", suggestions: ["Wat is ZekerFlex Bank?"] },
   },
   {
     re: /\bdba\b|schijnzelfstand|modelovereenkomst|wet dba/i,
@@ -168,6 +169,15 @@ export function smallTalk(text: string): IntentReply | null {
 }
 
 /** A known topic. */
+/**
+ * Een vast antwoord past bij een korte vraag ("wat kost het?"). Een lange, eigen
+ * vraag ("mijn kok is ziek, kan ik vanavond nog iemand krijgen?") raakt vaak één
+ * los woord van een onderwerp; die gaat naar het taalmodel, met het vaste
+ * antwoord als hint.
+ */
+export const VAST_ANTWOORD_MAX_WOORDEN = 12;
+export const kortGenoegVoorVastAntwoord = (text: string) => text.trim().split(/\s+/).filter(Boolean).length <= VAST_ANTWOORD_MAX_WOORDEN;
+
 export function topicAnswer(text: string): IntentReply | null {
   return TOPICS.find((x) => x.re.test(norm(text)))?.answer ?? null;
 }

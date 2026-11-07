@@ -6,6 +6,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { attachmentResponse } from "@/lib/mail/attachment-response";
+import { isReservedTestAddress } from "@/lib/mail";
 import { lees } from "@/lib/horeca/schema";
 import { verstuur } from "@/lib/horeca/mail";
 import { bonMail, bonPdf, bonUitToken } from "@/lib/horeca/bon";
@@ -48,7 +49,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const perBon = createHash("sha256").update(m.t).digest("hex").slice(0, 24);
     await enforceRateLimit({ name: "horeca-bon-mail-per-bon", identifier: perBon, limit: 5, windowSeconds: 86_400, message: "Deze bon is vandaag al een paar keer gemaild." });
     const { zaak, bon, kop } = gevonden;
-    if (!(await verstuur(bonMail(zaak, kop, bon, m.t, m.email)))) throw AppError.upstream("De mail kon niet worden verstuurd. Download de bon of probeer het later opnieuw.");
+    // een testadres (.test, .example, …) blijft in de eigen postbus: dat telt als gelukt
+    const gelukt = await verstuur(bonMail(zaak, kop, bon, m.t, m.email));
+    if (!gelukt && !isReservedTestAddress(m.email)) throw AppError.upstream("De mail kon niet worden verstuurd. Download de bon of probeer het later opnieuw.");
     return NextResponse.json({ ok: true });
   } catch (err) {
     return fout(err);
