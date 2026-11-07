@@ -376,6 +376,8 @@ model FreelancerProfile {
   replacementsTaken    ReplacementRequest[]  @relation("ReplacementSubstitute")
   // Cancellation-penalty invoices where this freelancer is the debtor (employer_owed direction).
   penaltyInvoicesOwed  Invoice[]             @relation("InvoiceRecipientFreelancer")
+  // Favorited shifts (bookmarks)
+  shiftFavorites      ShiftFavorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -627,6 +629,7 @@ model Shift {
   matches         ShiftMatch[]
   assignments     ShiftAssignment[]
   modelAgreements ModelAgreement[]
+  favorites       ShiftFavorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2837,4 +2840,27 @@ model OefenKlusAanmelding {
   @@unique([oefenKlusId, email])
   @@index([oefenKlusId, status])
   @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Shift Favorites: flexwerkers kunnen klussen 'favoriet' markeren
+// (bookmarken) voor makkelijke terugvinding en alerts op nieuwe uren
+// bij dezelfde werkgever/locatie.
+// ---------------------------------------------------------------------------
+
+model ShiftFavorite {
+  id              String @id @default(cuid())
+  freelancerId    String
+  freelancer      FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  shiftId         String
+  shift           Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  // Notificatie-voorkeur: push bij vergelijkbare shifts?
+  alertSimilar    Boolean @default(true)
+
+  createdAt       DateTime @default(now())
+
+  @@unique([freelancerId, shiftId])
+  @@index([freelancerId])
+  @@index([shiftId])
 }
