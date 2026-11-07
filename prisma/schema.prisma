@@ -725,6 +725,9 @@ model ShiftAssignment {
   cancelledAt  DateTime?
   cancelReason String?
 
+  // Reminder tracking
+  reminderSent1h Boolean @default(false)
+
   shift      Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
 
