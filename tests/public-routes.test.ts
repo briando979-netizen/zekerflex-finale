@@ -63,6 +63,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/printen/agent", // the print agent fetches the label queue (own token per company)
     "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
     "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
+    "/api/horeca/bon", // a guest's receipt as pdf or mail, only with a signed link to one paid receipt
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -97,6 +98,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/indexnow-key/extra", // exact match only
     "/api/rijschool/beheer", // the driving-school admin stays behind the ZekerFlex login
     "/api/horeca/beheer", // the horeca admin stays behind the ZekerFlex login
+    "/api/horeca/bonnen", // only /api/horeca/bon itself is public, not a lookalike prefix
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

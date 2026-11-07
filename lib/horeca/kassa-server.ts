@@ -1,6 +1,8 @@
 import type { HorecaBetaling, HorecaZaak } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
+import { tekenMet } from "@/lib/horeca/link";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
@@ -124,6 +126,8 @@ export async function bonVan(zaak: HorecaZaak, b: HorecaBetaling) {
     fooiCent: b.fooiCent,
     regels: Array.isArray(b.regels) ? (b.regels as unknown as BonRegel[]) : [],
     door: b.door,
+    // ondertekende link voor de gast (QR-code, mail, pdf): lib/horeca/bon.ts
+    token: tekenMet(env.AUTH_SECRET, "bon", b.id),
   };
 }
 

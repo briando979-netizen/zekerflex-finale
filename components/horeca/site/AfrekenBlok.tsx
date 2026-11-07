@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BonDelen } from "@/components/horeca/live/BonDelen";
 
 // Afrekenen aan tafel met iDEAL: de gast ziet wat er open staat, kiest eventueel
 // een fooi en betaalt via Stripe. Terug van Stripe toont dit blok of het geld
@@ -19,6 +20,8 @@ interface Stand {
   bedragCent: number;
   fooiCent: number;
   bonNummer: number | null;
+  /** ondertekende link naar de bon (alleen als betaald) */
+  token?: string;
 }
 
 export type Terug = { betaling: "gelukt" | "geannuleerd"; b: string } | null;
@@ -100,6 +103,14 @@ export function AfrekenBlok({ slug, code, terug }: { slug: string; code: string;
         )}
         {!betaald && stand?.status !== "MISLUKT" && <p className="mt-2">{wachten ? "Dit duurt meestal een paar seconden." : "Je bank heeft het nog niet bevestigd. De bediening ziet het zodra het binnen is."}</p>}
         {stand?.status === "MISLUKT" && <p className="mt-2">Er is niets afgeschreven. Probeer het opnieuw of vraag de bediening om de rekening.</p>}
+        {betaald && stand?.token && (
+          <div className="mt-5 space-y-3 border-t border-white/15 pt-4">
+            <a href={`/bon/${stand.token}`} className="inline-block rounded-full bg-[var(--rs-accent-knop)] px-5 py-2.5 font-bold text-[var(--rs-op-accent)]">
+              Bekijk je bon
+            </a>
+            <BonDelen token={stand.token} donker />
+          </div>
+        )}
       </div>
     );
   }

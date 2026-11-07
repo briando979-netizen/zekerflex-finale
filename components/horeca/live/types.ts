@@ -104,6 +104,8 @@ export interface BonData {
   fooiCent: number;
   regels: { naam: string; prijsCent: number; aantal: number; btw: number }[];
   door: string;
+  /** ondertekende link voor de gast: /bon/<token> (QR-code, pdf, mail) */
+  token?: string;
 }
 
 export interface SchermData extends Partial<LiveBasis> {

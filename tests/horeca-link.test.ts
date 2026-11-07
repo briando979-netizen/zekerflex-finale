@@ -19,4 +19,11 @@ describe("horeca-links", () => {
     expect(leesMet(geheim, "annuleer", undefined)).toBeNull();
     expect(leesMet(geheim, "annuleer", "a".repeat(300))).toBeNull();
   });
+
+  it("een bonlink opent geen reservering en andersom", () => {
+    const bon = tekenMet(geheim, "bon", id);
+    expect(leesMet(geheim, "bon", bon)).toBe(id);
+    expect(leesMet(geheim, "annuleer", bon)).toBeNull();
+    expect(leesMet(geheim, "bon", tekenMet(geheim, "annuleer", id))).toBeNull();
+  });
 });

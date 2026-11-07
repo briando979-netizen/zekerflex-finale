@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BonDelen } from "@/components/horeca/live/BonDelen";
 import { btwSpecificatie, METHODE_LABEL, type Methode } from "@/lib/horeca/kassa";
 import type { BonData, BonKop } from "@/components/horeca/live/types";
 
@@ -84,6 +85,8 @@ export function BonVenster({ kop, bonnen, sluit }: { kop: BonKop; bonnen: BonDat
     void klaar.current?.focus();
   }, []);
   const totaal = bonnen.reduce((s, b) => s + b.bedragCent + b.fooiCent, 0);
+  const [keuze, setKeuze] = useState(0);
+  const gekozen = bonnen[keuze] ?? bonnen[0];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3">
       <style>{PRINT}</style>
@@ -92,10 +95,37 @@ export function BonVenster({ kop, bonnen, sluit }: { kop: BonKop; bonnen: BonDat
           Betaald <span className="text-[#86EFAC]">€ {bedrag(totaal)}</span>
         </h2>
         <p className="mt-1 text-center text-sm text-[#B8C4BD]">{bonnen.length > 1 ? `${bonnen.length} bonnen` : "De bon staat klaar."}</p>
-        <div id="zf-bon-print" className="mt-4 flex-1 space-y-4 overflow-y-auto">
-          {bonnen.map((b) => (
-            <BonWeergave key={b.id} kop={kop} bon={b} />
-          ))}
+        <div className="mt-4 flex-1 overflow-y-auto">
+          <div id="zf-bon-print" className="space-y-4">
+            {bonnen.map((b) => (
+              <BonWeergave key={b.id} kop={kop} bon={b} />
+            ))}
+          </div>
+          {gekozen?.token && (
+            <section aria-labelledby="bon-gast" className="mt-4 rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+              <h3 id="bon-gast" className="font-display text-lg font-bold text-white">
+                Bon voor de gast
+              </h3>
+              {bonnen.length > 1 && (
+                <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Kies de bon">
+                  {bonnen.map((b, i) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      aria-pressed={i === keuze}
+                      onClick={() => setKeuze(i)}
+                      className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-white/25 ${i === keuze ? "bg-white text-[#141A17]" : "text-white"}`}
+                    >
+                      Bon {b.bonNummer ?? i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3">
+                <BonDelen key={gekozen.token} token={gekozen.token} qr donker />
+              </div>
+            </section>
+          )}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" onClick={() => window.print()} className="min-h-12 rounded-xl bg-white/10 font-bold text-white ring-1 ring-white/20 hover:bg-white/15">

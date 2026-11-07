@@ -10,6 +10,7 @@ import { leesRegels } from "@/lib/horeca/bestellen";
 import { rekeningVan, totaalVan } from "@/lib/horeca/kassa";
 import { heeftModule } from "@/lib/horeca/modules";
 import { boekAf, bonRegels, fooiGeldig, idealRegels, leesIdealRegels } from "@/lib/horeca/ideal";
+import { bonToken } from "@/lib/horeca/bon";
 
 // ---------------------------------------------------------------------------
 // Afrekenen aan tafel met iDEAL. Elke zaak heeft een eigen Stripe-account
@@ -229,7 +230,7 @@ export async function verwerkHorecaSessie(session: Stripe.Checkout.Session): Pro
 }
 
 /** De stand van een betaling voor de gast. Staat hij nog open, dan vragen we het Stripe zelf (de webhook kan later komen). */
-export async function afrekenStand(zaakId: string, tafelId: string, betalingId: string): Promise<{ status: "OPEN" | "BETAALD" | "MISLUKT"; bedragCent: number; fooiCent: number; bonNummer: number | null }> {
+export async function afrekenStand(zaakId: string, tafelId: string, betalingId: string): Promise<{ status: "OPEN" | "BETAALD" | "MISLUKT"; bedragCent: number; fooiCent: number; bonNummer: number | null; token?: string }> {
   const lees = () => prisma.horecaBetaling.findFirst({ where: { id: betalingId, zaakId, tafelId, methode: "ideal" }, select: { status: true, bedragCent: true, fooiCent: true, bonNummer: true, stripeSessionId: true } });
   let b = await lees();
   if (!b) throw AppError.notFound("Deze betaling bestaat niet.");
@@ -243,7 +244,7 @@ export async function afrekenStand(zaakId: string, tafelId: string, betalingId: 
       logger.warn("horeca: stand bij Stripe niet gelezen", { error: err instanceof Error ? err.message : String(err) });
     }
   }
-  return { status: b.status, bedragCent: b.bedragCent, fooiCent: b.fooiCent, bonNummer: b.bonNummer };
+  return { status: b.status, bedragCent: b.bedragCent, fooiCent: b.fooiCent, bonNummer: b.bonNummer, ...(b.status === "BETAALD" ? { token: bonToken(betalingId) } : {}) };
 }
 
 /** Voor de platformbeheerder: alleen inzien. Welke zaken online afrekenen en wat er binnenkwam. */
