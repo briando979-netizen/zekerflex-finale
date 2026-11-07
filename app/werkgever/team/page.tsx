@@ -1,33 +1,31 @@
-import { requirePrincipal, hasRole } from "@/lib/auth";
+import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, Panel } from "@/components/app/ui";
-import { TeamBoard } from "@/components/app/TeamBoard";
+import { PageHeader, Panel, EmptyState } from "@/components/app/ui";
+import { TeamPanel } from "@/components/werkgever/TeamPanel";
+import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function TeamPage() {
+export default async function WerkgeverTeamPage() {
+  const c = (await getDict()).team;
   const principal = await requirePrincipal();
-  await resolveEmployerScope(principal);
-  const canManage = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
+  const scope = await resolveEmployerScope(principal);
+  const tenantId = scope.tenantIds[0];
+
+  if (!tenantId) {
+    return (
+      <>
+        <PageHeader title={c.title} />
+        <EmptyState title={c.noOrgTitle} body={c.noOrgBody} />
+      </>
+    );
+  }
 
   return (
     <>
-      <PageHeader
-        title="Team"
-        subtitle="Beheer wie er namens je organisatie bij ZekerFlex kan — als beheerder, lokale manager van specifieke vestigingen, of geschillenbeheerder."
-      />
-
-      <Panel
-        title="Teamleden"
-        subtitle={
-          canManage
-            ? "Nodig collega's uit en beheer hun rol en vestigingen."
-            : "Alleen een beheerder (HQ_ADMIN) kan teamleden uitnodigen of verwijderen."
-        }
-      >
-        <div className="p-5">
-          <TeamBoard canManage={canManage} />
-        </div>
+      <PageHeader title={c.title} subtitle={c.subtitle} />
+      <Panel title={c.panel}>
+        <TeamPanel tenantId={tenantId} />
       </Panel>
     </>
   );
