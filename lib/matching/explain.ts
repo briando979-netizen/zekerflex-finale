@@ -39,7 +39,7 @@ function band(x: number): ReasonStrength {
 }
 
 function translatePenalty(p: string): string {
-  if (/travel estimated/i.test(p)) return "reistijd is geschat (routekaart tijdelijk niet beschikbaar)";
+  if (/travel estimated/i.test(p)) return "reistijd is geschat uit de afstand (geen live route)";
   return p;
 }
 

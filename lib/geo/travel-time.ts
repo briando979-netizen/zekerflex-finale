@@ -26,6 +26,7 @@ function eigenEstimate(
   origin: GeoPoint,
   destination: GeoPoint,
   mode: TravelMode,
+  bron: "eigen" | "terugval",
 ): TravelEstimate {
   const s = schatTussenPunten(origin, destination, mode);
   return {
@@ -33,6 +34,7 @@ function eigenEstimate(
     durationMinutes: s.durationMinutes,
     distanceMeters: s.distanceMeters,
     approximate: true,
+    bron,
   };
 }
 
@@ -41,12 +43,14 @@ function eigenEstimates(
   origin: GeoPoint,
   destination: GeoPoint,
   modes: TravelMode[],
+  bron: "eigen" | "terugval",
 ): TravelEstimate[] {
   return schatAlleWijzen(origin, destination, modes).map((s) => ({
     mode: s.mode,
     durationMinutes: s.durationMinutes,
     distanceMeters: s.distanceMeters,
     approximate: true,
+    bron,
   }));
 }
 
@@ -69,7 +73,8 @@ export async function estimateTravel(
   const round = (n: number) => Math.round(n * 1000) / 1000; // ~110m grid
   const hourBucket = new Date(arrivalAt);
   hourBucket.setMinutes(0, 0, 0);
-  const key = `travel:v1:${round(origin.latitude)},${round(origin.longitude)}->${round(
+  // v2: schattingen dragen hun bron (eigen of terugval); oude zonder bron niet meer gebruiken
+  const key = `travel:v2:${round(origin.latitude)},${round(origin.longitude)}->${round(
     destination.latitude,
   )},${round(destination.longitude)}:${hourBucket.toISOString()}:${modes.sort().join(",")}`;
 
@@ -78,7 +83,7 @@ export async function estimateTravel(
     await Promise.all([primeGratis(), primeKeuzes()]);
     if (eigenRekenen()) {
       void recordRoutingOutcome("eigen");
-      return eigenEstimates(origin, destination, modes);
+      return eigenEstimates(origin, destination, modes, "eigen");
     }
 
     let matrix: Map<TravelMode, DistanceMatrixLeg | null>;
@@ -94,18 +99,19 @@ export async function estimateTravel(
         error: (err as Error).message,
       });
       void recordRoutingOutcome("fallback");
-      return eigenEstimates(origin, destination, modes);
+      return eigenEstimates(origin, destination, modes, "terugval");
     }
 
     void recordRoutingOutcome("live");
     return modes.map((mode) => {
       const leg = matrix.get(mode);
-      if (!leg) return eigenEstimate(origin, destination, mode);
+      if (!leg) return eigenEstimate(origin, destination, mode, "terugval");
       return {
         mode,
         durationMinutes: Math.round(leg.durationSeconds / 60),
         distanceMeters: leg.distanceMeters,
         approximate: false,
+        bron: "live" as const,
       };
     });
   });

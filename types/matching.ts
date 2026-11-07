@@ -75,6 +75,11 @@ export interface TravelEstimate {
   distanceMeters: number;
   /** true when derived from a heuristic rather than a live routing API. */
   approximate: boolean;
+  /**
+   * Waar de schatting vandaan komt: live route, onze eigen rekenregel (bewuste keuze, "alles gratis")
+   * of de terugval omdat de routedienst uitviel. Alleen een terugval is een waarschuwing waard.
+   */
+  bron?: "live" | "eigen" | "terugval" | undefined;
 }
 
 export interface MatchScoreBreakdown {

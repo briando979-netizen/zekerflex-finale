@@ -95,6 +95,8 @@ describe("reistijd: zelf rekenen of Google vragen", () => {
     expect(staat.googleAanroepen).toBe(0);
     expect(uit).toHaveLength(2);
     expect(uit.every((e) => e.approximate)).toBe(true);
+    // eigen rekenregel of terugval: in beide gevallen een schatting, met de bron erbij
+    expect(uit.every((e) => e.bron === "eigen" || e.bron === "terugval")).toBe(true);
   });
 
   it("zet je deze dienst op 'betaald', dan gebruikt hij Google en is het geen schatting", async () => {
@@ -106,6 +108,7 @@ describe("reistijd: zelf rekenen of Google vragen", () => {
       durationMinutes: 40,
       distanceMeters: 44_000,
       approximate: false,
+      bron: "live",
     });
     const stats = await getTravelRoutingStats();
     expect(stats.live).toBe(1);

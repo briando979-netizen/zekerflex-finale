@@ -83,6 +83,24 @@ describe("scoreCandidateSignals", () => {
     expect(res.score).toBeGreaterThan(0.7);
   });
 
+  it("waarschuwt alleen bij een terugval, niet bij onze eigen rekenregel", () => {
+    const met = (bron: "eigen" | "terugval" | undefined) =>
+      scoreCandidateSignals(
+        {
+          home: { latitude: 52.372, longitude: 4.903 },
+          reliabilityScore: 0.9,
+          acceptanceScore: 0.8,
+          skillRating: 4.5,
+          travel: { mode: "BICYCLING", durationMinutes: 8, distanceMeters: 1900, approximate: true, bron },
+        },
+        shift,
+        config,
+      ).breakdown.penalties;
+    expect(met("eigen")).toEqual([]);
+    expect(met("terugval")).toEqual(["travel estimated (routing API unavailable)"]);
+    expect(met(undefined)).toEqual(["travel estimated (routing API unavailable)"]);
+  });
+
   it("rejects a candidate over the travel cap", () => {
     const res = scoreCandidateSignals(
       {

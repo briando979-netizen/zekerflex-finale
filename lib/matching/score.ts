@@ -118,7 +118,9 @@ export function scoreCandidateSignals(
     localCatchmentMeters(shift.branchGeofenceRadiusMeters);
 
   const penalties: string[] = [];
-  if (signals.travel.approximate) {
+  // Onze eigen rekenregel is een bewuste keuze (alles gratis), geen storing: geen waarschuwing.
+  // Alleen als de routedienst uitviel en we terugvielen, staat er "routekaart tijdelijk niet beschikbaar".
+  if (signals.travel.approximate && signals.travel.bron !== "eigen") {
     penalties.push("travel estimated (routing API unavailable)");
   }
 
