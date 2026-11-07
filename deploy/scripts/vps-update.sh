@@ -21,12 +21,15 @@ fi
 # maken. Met sudo: .env.production is van root (600) en moet dat blijven.
 sudo bash deploy/scripts/env-aanvullen.sh .env.production
 sudo docker tag zekerflex-app:latest zekerflex-app:rollback
-# Het eigen taalmodel (Ollama, ±3,5 GB met gemma3:4b + granite-embedding) en de build (±4 GB) passen
+# Het eigen taalmodel (Ollama, ±3,5 GB met gemma3:4b + granite-embedding) en de build (±4 GB) pasten
 # samen niet in de 8 GB van deze server: op 7 nov liep de load naar 138 en was de site 20 minuten
-# weg. Tijdens het bouwen staat Ollama daarom stil; aan het eind, ook als het bouwen mislukt, start
-# hij weer (trap). Het model laadt daarna vanzelf (cron /api/internal/ai/warm, elke 4 minuten).
+# weg. Sinds de upgrade naar 16 GB (7 nov) blijft Ollama draaien (dan blijft de AI-chat werken tijdens
+# een uitrol); alleen als er vóór het bouwen minder dan 6 GB vrij is, staat hij stil en start hij aan
+# het eind weer, ook als het bouwen mislukt (trap). Het model laadt daarna vanzelf (cron ai/warm).
 OLLAMA_WAS_AAN=""
-if sudo docker ps --format '{{.Names}}' | grep -qx zekerflex-ollama-1; then
+VRIJ_MB=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+echo "geheugen vrij vóór het bouwen: ${VRIJ_MB} MB"
+if [ "${VRIJ_MB:-0}" -lt 6144 ] && sudo docker ps --format '{{.Names}}' | grep -qx zekerflex-ollama-1; then
   OLLAMA_WAS_AAN=1
   sudo docker stop -t 10 zekerflex-ollama-1 > /dev/null && echo "ollama: stil tijdens het bouwen"
 fi
