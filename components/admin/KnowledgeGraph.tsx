@@ -226,9 +226,12 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
       drag.current.moved = true;
       kick(0.3);
     } else if (pan.current) {
-      const dx = e.clientX - pan.current.x;
-      const dy = e.clientY - pan.current.y;
-      setView((v) => ({ ...v, tx: pan.current!.tx + dx, ty: pan.current!.ty + dy }));
+      // het sleepbegin nu vastpakken: React draait de update later, en loslaten (onUp) kan pan.current
+      // intussen op null zetten (iPhone: "null is not an object (evaluating 'J.current.tx')")
+      const start = pan.current;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      setView((v) => ({ ...v, tx: start.tx + dx, ty: start.ty + dy }));
     }
   };
   const onUp = (_e: RPointerEvent, node?: GNode) => {
