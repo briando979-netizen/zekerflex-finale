@@ -7,9 +7,9 @@ import { logger } from "@/lib/logger";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { IDEAL_KOSTEN_CENT, isTestAdres } from "@/lib/rijschool/betalen";
 import { leesRegels } from "@/lib/horeca/bestellen";
-import { rekeningVan, totaalVan } from "@/lib/horeca/kassa";
+import { rekeningVan, totaalVan, type Selectie } from "@/lib/horeca/kassa";
 import { heeftModule } from "@/lib/horeca/modules";
-import { boekAf, bonRegels, fooiGeldig, idealRegels, leesIdealRegels } from "@/lib/horeca/ideal";
+import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, leesIdealRegels } from "@/lib/horeca/ideal";
 import { bonToken } from "@/lib/horeca/bon";
 
 // ---------------------------------------------------------------------------
@@ -107,40 +107,64 @@ export async function stripeDashboard(z: Pick<HorecaZaak, "stripeAccountId">): P
   return (await getStripeClient().accounts.createLoginLink(z.stripeAccountId)).url;
 }
 
-/** Wat er aan een tafel nog open staat, als regels voor een iDEAL-betaling. */
-export async function openRekening(zaakId: string, tafelId: string) {
-  const lijst = (
-    await prisma.horecaBestelling.findMany({
+/** Zo lang houdt een lopende iDEAL-betaling haar gerechten vast (de betaalpagina is 35 minuten geldig). */
+const VASTHOUDEN_MS = 36 * 60_000;
+
+type Db = Pick<typeof prisma, "horecaBestelling" | "horecaBetaling">;
+
+/**
+ * Wat er aan een tafel nog te betalen is: de open rekening min wat een andere
+ * gast nu al aan het betalen is. `inBetalingCent` = het bedrag dat bij een
+ * lopende betaling hoort.
+ */
+export async function openRekening(zaakId: string, tafelId: string, db: Db = prisma) {
+  const [bestellingen, lopend] = await Promise.all([
+    db.horecaBestelling.findMany({
       where: { zaakId, tafelId, betaald: false, status: { not: "GEANNULEERD" } },
       orderBy: { createdAt: "asc" },
       select: { id: true, nummer: true, status: true, betaald: true, regels: true },
-    })
-  ).map((b) => ({ ...b, regels: leesRegels(b.regels) }));
-  const regels = idealRegels(rekeningVan(lijst));
-  return { regels, totaalCent: totaalVan(regels) };
+    }),
+    db.horecaBetaling.findMany({ where: { zaakId, tafelId, methode: "ideal", status: "OPEN", createdAt: { gte: new Date(Date.now() - VASTHOUDEN_MS) } }, select: { regels: true } }),
+  ]);
+  const inBetaling = lopend.flatMap((b) => leesIdealRegels(b.regels));
+  const open = beschikbaar(rekeningVan(bestellingen.map((b) => ({ ...b, regels: leesRegels(b.regels) }))), inBetaling);
+  const regels = idealRegels(open);
+  return { open, regels, totaalCent: totaalVan(regels), inBetalingCent: totaalVan(inBetaling) };
 }
 
-/** Start de betaling van alles wat aan deze tafel open staat. Geeft het adres van de betaalpagina van Stripe. */
-export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id" | "naam">, code: string, fooiCent: number): Promise<string> {
+/**
+ * Start een betaling aan tafel: alles wat open staat, of alleen de keuze van
+ * deze gast ("alleen wat ik had"). Geeft het adres van de betaalpagina van Stripe.
+ */
+export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id" | "naam">, code: string, fooiCent: number, selectie: Selectie[] | null = null): Promise<string> {
   if (!z.stripeAccountId || !(await onlineAfrekenenAan(z))) throw AppError.precondition("Online afrekenen staat bij deze zaak nog niet aan. Vraag de bediening om de rekening.");
-  const { regels, totaalCent } = await openRekening(z.id, tafel.id);
-  if (!regels.length) throw AppError.conflict("Er staat niets open op deze tafel.");
-  if (totaalCent < 100) throw AppError.validation("Online afrekenen kan vanaf € 1. Vraag de bediening.");
-  if (!fooiGeldig(fooiCent, totaalCent)) throw AppError.validation("Kies een fooi tussen € 0 en het bedrag van de rekening, hooguit € 100.");
 
-  const b = await prisma.horecaBetaling.create({
-    data: {
-      zaakId: z.id,
-      tafelId: tafel.id,
-      bedragCent: totaalCent,
-      fooiCent,
-      status: "OPEN",
-      methode: "ideal",
-      door: "Gast aan tafel (iDEAL)",
-      regels: regels as unknown as object[],
-      bestellingIds: [...new Set(regels.map((r) => r.bestellingId))],
-    },
+  // onder een slot per tafel: twee gasten die tegelijk op betalen drukken, kiezen nooit hetzelfde
+  const b = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`horeca-afrekenen:${tafel.id}`}))`;
+    const { open, regels: alles } = await openRekening(z.id, tafel.id, tx);
+    if (!alles.length) throw AppError.conflict("Er staat niets (meer) open op deze tafel. Wordt er al betaald? Kijk even bij je tafelgenoten.");
+    const gekozen = selectie?.length ? kiesRegels(open, selectie) : alles;
+    if ("fout" in gekozen) throw AppError.conflict(gekozen.fout);
+    const totaalCent = totaalVan(gekozen);
+    if (totaalCent < 100) throw AppError.validation("Online afrekenen kan vanaf € 1. Kies meer of vraag de bediening.");
+    if (!fooiGeldig(fooiCent, totaalCent)) throw AppError.validation("Kies een fooi tussen € 0 en het bedrag dat je betaalt, hooguit € 100.");
+    return tx.horecaBetaling.create({
+      data: {
+        zaakId: z.id,
+        tafelId: tafel.id,
+        bedragCent: totaalCent,
+        fooiCent,
+        status: "OPEN",
+        methode: "ideal",
+        door: selectie?.length ? "Gast aan tafel, eigen deel (iDEAL)" : "Gast aan tafel (iDEAL)",
+        regels: gekozen as unknown as object[],
+        bestellingIds: [...new Set(gekozen.map((r) => r.bestellingId))],
+      },
+    });
   });
+  const totaalCent = b.bedragCent;
+  const wat = selectie?.length ? `Eigen deel ${tafel.naam}` : `Rekening ${tafel.naam}`;
   const metadata = { horecaZaakId: z.id, horecaBetalingId: b.id };
   const pagina = `${basis()}/horeca/${z.slug}/tafel/${encodeURIComponent(code)}`;
   let sessie: Stripe.Checkout.Session;
@@ -150,12 +174,12 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
       payment_method_types: ["ideal"],
       locale: "nl",
       line_items: [
-        { quantity: 1, price_data: { currency: "eur", unit_amount: totaalCent, product_data: { name: `Rekening ${tafel.naam} · ${z.naam}`.slice(0, 250) } } },
+        { quantity: 1, price_data: { currency: "eur", unit_amount: totaalCent, product_data: { name: `${wat} · ${z.naam}`.slice(0, 250) } } },
         ...(fooiCent > 0 ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: fooiCent, product_data: { name: "Fooi" } } }] : []),
       ],
       metadata,
       payment_intent_data: {
-        description: `${z.naam}: rekening ${tafel.naam}`.slice(0, 250),
+        description: `${z.naam}: ${wat.toLowerCase()}`.slice(0, 250),
         on_behalf_of: z.stripeAccountId,
         transfer_data: { destination: z.stripeAccountId },
         application_fee_amount: IDEAL_KOSTEN_CENT,
@@ -164,7 +188,7 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
       // kort geldig: een betaalpagina van gisteren mag geen rekening van vandaag afrekenen
       expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
       success_url: `${pagina}?betaling=gelukt&b=${b.id}`,
-      cancel_url: `${pagina}?betaling=geannuleerd`,
+      cancel_url: `${pagina}?betaling=geannuleerd&b=${b.id}`,
     });
   } catch (err) {
     await prisma.horecaBetaling.update({ where: { id: b.id }, data: { status: "MISLUKT" } }).catch(() => undefined);
@@ -245,6 +269,30 @@ export async function afrekenStand(zaakId: string, tafelId: string, betalingId: 
     }
   }
   return { status: b.status, bedragCent: b.bedragCent, fooiCent: b.fooiCent, bonNummer: b.bonNummer, ...(b.status === "BETAALD" ? { token: bonToken(betalingId) } : {}) };
+}
+
+/**
+ * De gast brak het betalen af (terug van Stripe via "annuleren"): de betaalpagina
+ * vervalt meteen en de gerechten komen weer vrij voor de rest van de tafel. Was
+ * er toch al betaald, dan wordt dat gewoon verwerkt.
+ */
+export async function stopAfrekenen(zaakId: string, tafelId: string, betalingId: string): Promise<void> {
+  const b = await prisma.horecaBetaling.findFirst({ where: { id: betalingId, zaakId, tafelId, methode: "ideal", status: "OPEN" }, select: { stripeSessionId: true } });
+  if (!b) return;
+  if (b.stripeSessionId) {
+    try {
+      const stripe = getStripeClient();
+      const s = await stripe.checkout.sessions.retrieve(b.stripeSessionId);
+      if (s.payment_status === "paid") {
+        await verwerkHorecaSessie(s);
+        return;
+      }
+      if (s.status === "open") await stripe.checkout.sessions.expire(b.stripeSessionId);
+    } catch (err) {
+      logger.warn("horeca: betaalpagina niet laten vervallen", { error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  await prisma.horecaBetaling.updateMany({ where: { id: betalingId, status: "OPEN" }, data: { status: "MISLUKT" } });
 }
 
 /** Voor de platformbeheerder: alleen inzien. Welke zaken online afrekenen en wat er binnenkwam. */

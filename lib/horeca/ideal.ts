@@ -43,6 +43,42 @@ export function leesIdealRegels(json: unknown): IdealRegel[] {
   });
 }
 
+/**
+ * Wat er nog te kiezen is: de open rekening min wat een andere gast aan tafel
+ * op dit moment al aan het betalen is (een lopende iDEAL-betaling). Zo kunnen
+ * twee gasten niet tegelijk hetzelfde gerecht afrekenen.
+ */
+export function beschikbaar(rekening: readonly RekeningRegel[], inBetaling: readonly IdealRegel[]): RekeningRegel[] {
+  const bezet = new Map<string, number>();
+  for (const r of inBetaling) bezet.set(`${r.bestellingId}:${r.index}`, (bezet.get(`${r.bestellingId}:${r.index}`) ?? 0) + r.aantal);
+  return rekening.flatMap((r) => {
+    const over = r.aantal - (bezet.get(`${r.bestellingId}:${r.index}`) ?? 0);
+    return over > 0 ? [{ ...r, aantal: over }] : [];
+  });
+}
+
+/**
+ * De keuze van een gast ("alleen wat ik had") als regels voor één betaling.
+ * Dubbele keuzes worden opgeteld; meer kiezen dan er open staat, of iets wat
+ * niet (meer) op de rekening staat, is een fout.
+ */
+export function kiesRegels(open: readonly RekeningRegel[], selectie: readonly Selectie[]): IdealRegel[] | { fout: string } {
+  const per = new Map<string, number>();
+  for (const s of selectie) {
+    if (!Number.isInteger(s.aantal) || s.aantal < 1) return { fout: "Kies hoeveel je van elk gerecht betaalt." };
+    per.set(`${s.bestellingId}:${s.index}`, (per.get(`${s.bestellingId}:${s.index}`) ?? 0) + s.aantal);
+  }
+  if (!per.size) return { fout: "Kies wat je wilt betalen." };
+  const uit: IdealRegel[] = [];
+  for (const [sleutel, aantal] of per) {
+    const r = open.find((x) => `${x.bestellingId}:${x.index}` === sleutel);
+    if (!r) return { fout: "Een gerecht staat niet meer open. Ververs de rekening." };
+    if (aantal > r.aantal) return { fout: `Van ${r.naam} staat nog ${r.aantal} open.` };
+    uit.push({ naam: r.naam, prijsCent: r.prijsCent, aantal, btw: r.btw, bestellingId: r.bestellingId, index: r.index });
+  }
+  return uit;
+}
+
 /** Alleen wat op de bon hoort (naam, prijs, aantal, btw). */
 export const bonRegels = (regels: readonly IdealRegel[]): BonRegel[] => regels.map(({ naam, prijsCent, aantal, btw }) => ({ naam, prijsCent, aantal, btw }));
 

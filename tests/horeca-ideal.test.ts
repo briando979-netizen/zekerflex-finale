@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BestelRegel } from "@/lib/horeca/bestellen";
 import { rekeningVan } from "@/lib/horeca/kassa";
-import { boekAf, bonRegels, fooiGeldig, idealRegels, leesIdealRegels, MAX_FOOI_CENT } from "@/lib/horeca/ideal";
+import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, leesIdealRegels, MAX_FOOI_CENT } from "@/lib/horeca/ideal";
 
 const regel = (naam: string, prijsCent: number, aantal: number, extra: Partial<BestelRegel> = {}): BestelRegel => ({ itemId: naam, naam, prijsCent, aantal, opmerking: "", station: "keuken", ...extra });
 
@@ -64,6 +64,39 @@ describe("iDEAL aan tafel", () => {
       { naam: "Zonder btw", prijsCent: 100, aantal: 1, btw: 9, bestellingId: "b2", index: 0 },
     ]);
     expect(leesIdealRegels({ niet: "een lijst" })).toEqual([]);
+  });
+
+  it("laat niet kiezen wat een ander aan tafel al aan het betalen is", () => {
+    const rekening = rekeningVan(bestellingen());
+    const ander = [{ naam: "Burger", prijsCent: 1795, aantal: 1, btw: 9, bestellingId: "b1", index: 0 }];
+    const open = beschikbaar(rekening, ander);
+    expect(open.find((r) => r.naam === "Burger")?.aantal).toBe(1);
+    expect(beschikbaar(rekening, [...ander, ...ander]).find((r) => r.naam === "Burger")).toBeUndefined();
+    expect(beschikbaar(rekening, [])).toEqual(rekening);
+  });
+
+  it("maakt van een eigen keuze de regels van één betaling", () => {
+    const open = rekeningVan(bestellingen());
+    const regels = kiesRegels(open, [
+      { bestellingId: "b1", index: 1, aantal: 1 },
+      { bestellingId: "b1", index: 1, aantal: 1 },
+      { bestellingId: "b2", index: 0, aantal: 1 },
+    ]);
+    expect(regels).toEqual([
+      { naam: "Pils", prijsCent: 395, aantal: 2, btw: 21, bestellingId: "b1", index: 1 },
+      { naam: "Koffie", prijsCent: 290, aantal: 1, btw: 9, bestellingId: "b2", index: 0 },
+    ]);
+    // en na betaling boekt precies die keuze af
+    const uit = boekAf(bestellingen(), regels as ReturnType<typeof idealRegels>);
+    expect(uit.ok && uit.wijzigingen.find((w) => w.id === "b1")?.helemaal).toBe(false);
+  });
+
+  it("weigert een keuze die niet (meer) open staat", () => {
+    const open = rekeningVan(bestellingen());
+    expect(kiesRegels(open, [{ bestellingId: "b1", index: 1, aantal: 3 }])).toEqual({ fout: "Van Pils staat nog 2 open." });
+    expect(kiesRegels(open, [{ bestellingId: "b3", index: 0, aantal: 1 }])).toEqual({ fout: "Een gerecht staat niet meer open. Ververs de rekening." });
+    expect(kiesRegels(open, [])).toEqual({ fout: "Kies wat je wilt betalen." });
+    expect(kiesRegels(open, [{ bestellingId: "b2", index: 0, aantal: 0 }])).toEqual({ fout: "Kies hoeveel je van elk gerecht betaalt." });
   });
 
   it("accepteert alleen een redelijke fooi", () => {
