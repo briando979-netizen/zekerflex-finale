@@ -147,6 +147,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     blurb: "Geschillen, fraude, beveiliging en techniek",
     icon: "shield",
     pages: [
+      { href: "/admin/instellingen", label: "Platform-instellingen" },
       { href: "/admin/systeem", label: "Systeem" },
       { href: "/admin/prestaties", label: "Prestaties" },
       { href: "/admin/disputes", label: "Disputen" },
