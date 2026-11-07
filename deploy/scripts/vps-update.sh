@@ -21,6 +21,19 @@ fi
 # maken. Met sudo: .env.production is van root (600) en moet dat blijven.
 sudo bash deploy/scripts/env-aanvullen.sh .env.production
 sudo docker tag zekerflex-app:latest zekerflex-app:rollback
+# Het eigen taalmodel (Ollama, ±3,5 GB met gemma3:4b + granite-embedding) en de build (±4 GB) passen
+# samen niet in de 8 GB van deze server: op 7 nov liep de load naar 138 en was de site 20 minuten
+# weg. Tijdens het bouwen staat Ollama daarom stil; aan het eind, ook als het bouwen mislukt, start
+# hij weer (trap). Het model laadt daarna vanzelf (cron /api/internal/ai/warm, elke 4 minuten).
+OLLAMA_WAS_AAN=""
+if sudo docker ps --format '{{.Names}}' | grep -qx zekerflex-ollama-1; then
+  OLLAMA_WAS_AAN=1
+  sudo docker stop -t 10 zekerflex-ollama-1 > /dev/null && echo "ollama: stil tijdens het bouwen"
+fi
+ollama_terug() {
+  if [ -n "$OLLAMA_WAS_AAN" ]; then sudo docker start zekerflex-ollama-1 > /dev/null 2>&1 && echo "ollama: weer gestart"; fi
+}
+trap ollama_terug EXIT
 for i in 1 2 3; do
   if sudo $C build app; then
     # Migreren met de Prisma uit het nieuwe image, vóór de nieuwe app start. Mislukt
