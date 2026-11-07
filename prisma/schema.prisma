@@ -2696,7 +2696,7 @@ model HorecaReservering {
   telefoon  String
   opmerking String                  @default("")
   status    HorecaReserveringStatus @default(BEVESTIGD)
-  bron      String                  @default("online") // online of bediening
+  bron      String                  @default("online") // online (eigen site), agent (AI-assistent) of bediening
   createdAt DateTime                @default(now())
   updatedAt DateTime                @updatedAt
 

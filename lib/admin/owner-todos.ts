@@ -357,6 +357,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(webhookEvents === null ? m("stripe-expired") : {}),
     },
     {
+      id: "stripe-agentische-handel",
+      group: "Geld & bank",
+      title: "Webshop verkopen via AI-assistenten (Stripe) aanzetten",
+      why: "ZekerFlex stuurt de productlijst van de webshop elk kwartier naar Stripe (Admin → Verkoop via AI). Stripe deelt die met AI-assistenten zoals ChatGPT en Copilot, regelt daar het afrekenen en meldt de bestelling bij ons; die komt binnen als gewone webshopbestelling. Pas na deze stappen in het Stripe-dashboard zien assistenten de producten.",
+      how: [
+        "Ga naar dashboard.stripe.com/agentic-commerce, kies bij 'Agentic commerce for retail' Get started en meld je aan als verkoper.",
+        "Vul het Stripe-profiel in met de voorwaarden (zekerflex.com/voorwaarden), de privacyverklaring (zekerflex.com/privacy) en het retourbeleid (30 dagen retour).",
+        "Zet de btw goed: Instellingen → Belastingen, Nederland met het btw-nummer (de prijzen in de lijst zijn inclusief btw). Dit hoort ook bij de taak 'Btw op abonnementen'.",
+        "Kijk bij Feed history of de productlijst binnen is (Admin → Verkoop via AI → 'Productlijst nu naar Stripe sturen'), test één product met View feed → Test.",
+        "Kies per AI-assistent ⋯ → Request connection. Vink deze taak af zodra er één op 'Enabled' staat.",
+      ],
+      auto: false,
+      ...m("stripe-agentische-handel"),
+    },
+    {
       id: "stripe-connect-profiel",
       group: "Geld & bank",
       title: "Stripe Connect aanzetten (platformprofiel invullen)",

@@ -26,6 +26,7 @@ import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
+import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -461,6 +462,29 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
 
     const invoiceId = session.metadata?.invoiceId;
     if (!invoiceId) {
+      // Een bestelling via een AI-assistent: Stripe regelde het afrekenen, dus zonder
+      // onze kenmerken; de regels dragen het id uit onze productlijst (lib/shop/agent-handel-server.ts).
+      if (session.mode === "payment" && session.payment_status === "paid") {
+        const agent = await maakAgentBestelling(session.id);
+        if (agent) {
+          if (agent.nieuw) {
+            const order = agent.order;
+            await recordAudit({
+              category: "ADMIN",
+              action: "shop.order.agent",
+              actorLabel: "integration:stripe",
+              summary: `Shopbestelling ${order.id} via een AI-assistent betaald`,
+              targetType: "shop-order",
+              targetId: order.id,
+              metadata: { sessionId: session.id, eventType: event.type, totalCents: order.totalCents },
+            });
+            await decrementVariantStock(order.id, (order.itemsJson as ShopOrderLine[] | null) ?? []);
+            await notifyShopOrderPaid(order);
+            await meldVerkopersBetaald(order);
+          }
+          return NextResponse.json({ ok: true, matched: true });
+        }
+      }
       log.warn("stripe session without invoiceId metadata", { sessionId: session.id });
       return NextResponse.json({ ok: true, matched: false });
     }

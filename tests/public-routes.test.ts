@@ -64,6 +64,10 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
     "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
     "/api/horeca/bon", // a guest's receipt as pdf or mail, only with a signed link to one paid receipt
+    "/api/agent/horeca", // AI assistants list restaurants with online booking
+    "/api/agent/horeca/de-zaak/beschikbaarheid", // free times for a day
+    "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
+    "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -99,6 +103,8 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/rijschool/beheer", // the driving-school admin stays behind the ZekerFlex login
     "/api/horeca/beheer", // the horeca admin stays behind the ZekerFlex login
     "/api/horeca/bonnen", // only /api/horeca/bon itself is public, not a lookalike prefix
+    "/api/agent", // only the horeca booking API is public, not every agent route
+    "/api/agent/horecabeheer", // not a lookalike prefix
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

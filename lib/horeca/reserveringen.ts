@@ -45,11 +45,12 @@ export interface NieuweReservering {
   opmerking: string;
 }
 
-export async function maakReservering(zaak: HorecaZaak, r: NieuweReservering, bron: "online" | "bediening") {
+/** online = de eigen site, agent = een AI-assistent (/api/agent/horeca): allebei binnen de online grenzen. */
+export async function maakReservering(zaak: HorecaZaak, r: NieuweReservering, bron: "online" | "agent" | "bediening") {
   if (!isDatum(r.datum) || !/^\d{2}:\d{2}$/.test(r.tijd)) throw AppError.validation("Kies een datum en tijd.");
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`horeca-reservering:${zaak.id}:${r.datum}`}))`;
-    if (bron === "online") {
+    if (bron !== "bediening") {
       const { inst, cap } = await capaciteitVan(tx, zaak);
       const fout = reserveerFout(r, zaak.openingstijden, inst, cap, await bezetOp(tx, zaak.id, r.datum), nuNL());
       if (fout) throw AppError.validation(fout);

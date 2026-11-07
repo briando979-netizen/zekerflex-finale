@@ -13,6 +13,7 @@ import { createShopOrderCheckoutSession } from "@/lib/billing/stripe";
 import { legPartnerBestellingVast } from "@/lib/shop/partner";
 import { isBtwNummer, normaliseerBtw } from "@/lib/shop/zakelijk";
 import { legVerkopersVast } from "@/lib/shop/verkoper";
+import { verzendkostenVoor } from "@/lib/shop/verzending";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,7 +117,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const subtotalCents = lines.reduce((s, l) => s + l.priceCents * l.qty, 0);
-    const shippingCents = subtotalCents >= 5000 || subtotalCents === 0 ? 0 : 495;
+    const shippingCents = verzendkostenVoor(subtotalCents);
     const totalCents = subtotalCents + shippingCents;
 
     const order = await prisma.shopOrder.create({

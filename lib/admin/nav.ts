@@ -111,6 +111,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     pages: [
       { href: "/admin/ontwerper", label: "Site-ontwerper" },
       { href: "/admin/shop", label: "Webshop" },
+      { href: "/admin/verkoop-via-ai", label: "Verkoop via AI" },
       { href: "/admin/shop-ai", label: "Winkel-AI" },
       { href: "/admin/markten", label: "Agenten & markten" },
       { href: "/admin/partners", label: "Partnerprogramma" },

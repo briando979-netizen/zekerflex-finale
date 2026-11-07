@@ -76,6 +76,7 @@ export function OntvangstScherm({ data, doe }: SchermProps) {
                   {r.status === "BEVESTIGD" && ` · ${tijdTot(r.tijd, nuMin)}`}
                   {r.telefoon && ` · ${r.telefoon}`}
                   {r.bron === "online" && " · online geboekt"}
+                  {r.bron === "agent" && " · geboekt via AI-assistent"}
                 </p>
                 {r.opmerking && <p className="mt-1 rounded-md bg-black/20 px-2 py-1 text-sm text-[#FDE68A]">{r.opmerking}</p>}
                 <div className="mt-3 flex flex-wrap items-center gap-2">

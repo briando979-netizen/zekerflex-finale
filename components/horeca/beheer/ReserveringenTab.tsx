@@ -110,6 +110,7 @@ export function ReserveringenTab({ data, doe }: { data: BeheerData; doe: Doe }) 
                   <span className="font-display text-lg">{r.tijd}</span> · {r.personen} {r.personen === 1 ? "persoon" : "personen"} · {r.naam}
                   <span className={`${PIL[r.status]} ml-2`}>{LABEL[r.status]}</span>
                   {r.bron === "bediening" && <span className="pill-neutral ml-2">ingeboekt</span>}
+                  {r.bron === "agent" && <span className="pill-neutral ml-2">via AI-assistent</span>}
                 </p>
                 <p className="text-sm text-neutralx-600">
                   {r.telefoon && (

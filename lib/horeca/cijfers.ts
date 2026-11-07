@@ -106,7 +106,7 @@ export function berekenCijfers(van: string, tot: string, vandaag: string, bestel
     const dag = dagen.get(r.datum);
     if (!dag) continue;
     reserveringenTeld += 1;
-    if (r.bron === "online") online += 1;
+    if (r.bron === "online" || r.bron === "agent") online += 1;
     if (r.status === "NIET_GEKOMEN") dag.noShows += 1;
     else dag.couverts += r.personen;
     if (r.datum < vandaag) {
