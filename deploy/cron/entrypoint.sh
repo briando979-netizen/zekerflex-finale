@@ -24,6 +24,8 @@ cat > /etc/crontabs/root <<EOF
 15 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/winkel-agent/tick"
 30 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/markten/tick"
 0 7 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/ai/watchdog"
+# Eigen taalmodel warm houden (alleen met "alles gratis" aan): na een afgeschoten model staat het binnen 4 min weer klaar.
+*/4 * * * * wget -q -O /dev/null -T 150 "$H" "$APP/api/internal/ai/warm"
 0 5 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/payroll/abu-phase-sweep"
 0 9 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/claims/collections-sweep"
 30 5 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/agenda/sweep"

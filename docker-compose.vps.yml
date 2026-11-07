@@ -183,11 +183,16 @@ services:
   ollama:
     image: ollama/ollama:0.40.13
     restart: unless-stopped
-    # Met "alles gratis" aan laadt Ollama het taalmodel in het geheugen (3,5 GB op
-    # 6 nov). Begrensd, en als eerste kandidaat voor de OOM-killer: liever het model
-    # opnieuw laden dan de database of de app kwijt (6 nov: OOM-kill van llama-server).
+    # Met "alles gratis" aan laadt Ollama het taalmodel in het geheugen (gemma3:4b
+    # 2,9 GB + granite-embedding 0,6 GB op 7 nov). Begrensd, en als eerste kandidaat
+    # voor de OOM-killer: liever het model opnieuw laden dan de database of de app kwijt.
+    # Flash attention met een q8-cache halveert het werkgeheugen per gesprek, zodat
+    # beide modellen ruimer binnen de grens passen. Warm houden: /api/internal/ai/warm.
     mem_limit: 4g
     oom_score_adj: 500
+    environment:
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: q8_0
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:
