@@ -11,9 +11,10 @@
 # TLS: zet SITE_ADDRESS in .env.production op je domein zodra de A-record naar
 # deze VPS wijst; Caddy haalt dan automatisch een Let's Encrypt-certificaat op.
 #
-# Zware AI-diensten (ollama/whisper/sd) zitten hier bewust NIET in: op een CPU-
-# only VPS draaien die slecht. De app valt terug op sjablonen, of je zet een
-# externe LLM aan via LLM_API_KEY + LLM_BASE_URL in .env.production.
+# AI op de eigen server (16 GB sinds 7 nov): het taalmodel (ollama) en de
+# spraakherkenning (whisper) zitten hier wel in. Beeldgeneratie (sd) niet: zonder
+# grafische kaart duurt een foto minuten en vraagt hij 4–6 GB. Een externe LLM kan
+# via LLM_API_KEY + LLM_BASE_URL in .env.production.
 #
 # Dit bestand migreert of seedt de database nooit. Zie deploy/README.md.
 
@@ -45,6 +46,11 @@ services:
       # Reserve als het externe model (Gemini, gratis laag) even niet antwoordt: de eigen Ollama.
       LLM_FALLBACK_BASE_URL: ${LLM_FALLBACK_BASE_URL:-http://ollama:11434/v1}
       LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-gemma3:4b}
+      # Spraakherkenning (Whisper op de eigen server, dienst "whisper" hieronder): de microfoon in Jarvis
+      # en de spraakinvoer in de werker-app (lib/asr/transcribe.ts). Proef 7 nov: 2 s per zin.
+      WHISPER_ENABLED: ${WHISPER_ENABLED:-true}
+      WHISPER_BASE_URL: ${WHISPER_BASE_URL:-http://whisper:8000/v1}
+      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       # ZekerFlex Kaart leest zijn data alleen via deze variabele (zie app/kaart-data)
       KAART_DATA_DIR: /app/kaart-data
       # Rapportages (lib/bi): Metabase op het interne netwerk; het publieke adres via Caddy
@@ -201,6 +207,22 @@ services:
       timeout: 10s
       retries: 5
     networks: [internal, bouwer-toegang]
+
+  # Spraakherkenning (faster-whisper "small", meertalig, goed in het Nederlands). Alleen intern
+  # bereikbaar (http://whisper:8000/v1). Proef 7 nov: Nederlandse zin vrijwel woordelijk, 8 s de
+  # eerste keer (model laden), daarna 2 s; ±750 MB in gebruik. Het model staat in een eigen volume.
+  whisper:
+    image: fedirz/faster-whisper-server:0.5.0-cpu
+    restart: unless-stopped
+    mem_limit: 2g
+    oom_score_adj: 400
+    environment:
+      WHISPER__MODEL: Systran/faster-whisper-small
+      WHISPER__INFERENCE_DEVICE: cpu
+      WHISPER__COMPUTE_TYPE: int8
+    volumes:
+      - whisper-models:/root/.cache/huggingface
+    networks: [internal]
 
   # Self-host scheduler: triggert de interne cron-endpoints op schema (zoals
   # Vercel-Cron deed). Zonder deze service draait geen enkele geplande taak.
@@ -553,6 +575,7 @@ volumes:
   crowdsec-config:
   crowdsec-data:
   ollama-models:
+  whisper-models:
   bouwer-werk:
   bouwer-db:
   android-bouwer-werk:

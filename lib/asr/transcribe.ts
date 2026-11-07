@@ -5,9 +5,9 @@ import { AppError } from "@/lib/errors";
 // ---------------------------------------------------------------------------
 // ASR — Automatic Speech Recognition via Whisper (OpenAI-compatible endpoint)
 //
-// Uses the same self-hosted LLM_BASE_URL that the rest of the platform uses,
-// expecting a /v1/audio/transcriptions endpoint (Ollama supports this with
-// a Whisper model, e.g. `ollama pull whisper`).
+// Gaat naar de eigen Whisper-server (WHISPER_BASE_URL, dienst "whisper" in
+// docker-compose.vps.yml) als WHISPER_ENABLED aan staat; anders naar
+// LLM_BASE_URL, voor een AI-node die zelf /v1/audio/transcriptions kent.
 //
 // Accepts audio as a Buffer (WAV/MP3/OGG/WebM) and returns a transcript.
 // Language defaults to "nl" (Dutch) but can be overridden.
@@ -30,26 +30,35 @@ export async function transcribeAudio(
   filename: string,
   opts: TranscribeOptions = {},
 ): Promise<TranscribeResult> {
-  const base = env.LLM_BASE_URL ?? "http://localhost:11434/v1";
+  // De eigen Whisper-server (dienst "whisper" op de VPS) als die aan staat; Ollama kent geen
+  // /audio/transcriptions, dus het taalmodel is alleen nog de terugval voor een LocalAI-achtige node.
+  const viaWhisper = env.WHISPER_ENABLED;
+  const base = (viaWhisper ? env.WHISPER_BASE_URL : (env.LLM_BASE_URL ?? "http://localhost:11434/v1")).replace(/\/+$/, "");
   const url = `${base}/audio/transcriptions`;
   const start = Date.now();
 
   const form = new FormData();
-  const blob = new Blob([audio.buffer as ArrayBuffer], { type: mimeTypeFor(filename) });
+  // precies de bytes van de opname: audio.buffer kan bij een kleine Buffer een groter, gedeeld geheugenblok zijn
+  const blob = new Blob([new Uint8Array(audio)], { type: mimeTypeFor(filename) });
   form.append("file", blob, filename);
-  form.append("model", "whisper");
+  form.append("model", viaWhisper ? env.WHISPER_MODEL : "whisper");
   form.append("language", opts.language ?? "nl");
   form.append("response_format", "json");
   if (opts.prompt) form.append("prompt", opts.prompt);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 30_000);
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 60_000);
 
   try {
-    const res = await fetch(url, { method: "POST", body: form, signal: controller.signal });
+    const res = await fetch(url, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+      ...(viaWhisper && env.WHISPER_API_KEY ? { headers: { Authorization: `Bearer ${env.WHISPER_API_KEY}` } } : {}),
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw AppError.upstream(`ASR endpoint fout ${res.status}: ${text.slice(0, 200)}`);
+      throw AppError.upstream(`Spraakherkenning gaf een fout (${res.status}): ${text.slice(0, 200)}`);
     }
     const json = (await res.json()) as { text?: string };
     const text = (json.text ?? "").trim();

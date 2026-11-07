@@ -155,8 +155,13 @@ export default async function SysteemPage() {
     },
     {
       label: "Beeldgenerator (Studio)",
-      state: env.IMAGE_ENABLED ? "ok" : "off",
-      meta: env.IMAGE_ENABLED ? `${env.IMAGE_BACKEND}, ${env.IMAGE_BASE_URL}` : "uitgeschakeld (optioneel)",
+      // eigen beeldserver, of de gratis Cloudflare-route (FLUX, ±170 foto's per dag; lib/ai/images.ts → beeldBackend)
+      state: env.IMAGE_ENABLED || (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN) ? "ok" : "off",
+      meta: env.IMAGE_ENABLED
+        ? `${env.IMAGE_BACKEND}, ${env.IMAGE_BASE_URL}`
+        : env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN
+          ? "Cloudflare FLUX (gratis, ±170 foto's per dag)"
+          : "wacht op de gratis Cloudflare-sleutel (Admin → Te doen: Gratis AI-foto's via Cloudflare)",
     },
     {
       label: "Database-back-up",

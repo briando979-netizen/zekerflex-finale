@@ -55,7 +55,7 @@ for i in 1 2 3; do
     bash deploy/scripts/databases-aanmaken.sh
     # crowdsec: de aanvalsbescherming (deploy/crowdsec) gaat mee in elke uitrol; de
     # firewall-bouncer op de host haalt de blokkades bij hem op en hoeft niet mee
-    sudo $C up -d app backup coturn freeradius headscale metabase outline crowdsec
+    sudo $C up -d app backup coturn freeradius headscale metabase outline crowdsec whisper
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand
