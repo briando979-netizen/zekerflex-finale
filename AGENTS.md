@@ -46,6 +46,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Platformfee-staffel:** één bron, `lib/pricing/tiers.ts`. De uitzendopslag is niet openbaar.
 - **Stripe-webhook:** elke functie een eigen tak op een metadata-sleutel, idempotent via unieke kolommen (Stripe stuurt soms dubbel). Een eigenaar-todo `stripe-webhook-handtekening` staat klaar als het webhook-secret niet bij het endpoint hoort (de fouten zeggen "No signatures found").
 - **Android-app (TWA):** bank, voorschot, snelle uitbetaling en doorverwijzen zijn in de app verborgen (`lib/app-mode.ts`). Nieuwe geldfuncties daar ook afschermen.
+- **ZekerFlex Bank staat uit** (`BANK_AAN = false` in `lib/app-mode.ts`, 7 nov): geen vergunning voor een tegoed, geen passen (Stripe zei nee), geen verzekeraar. Verdiensten gaan altijd naar de eigen IBAN; voorschot voor zzp'ers en de doorverwijsbonus liepen via de bank en staan dus ook uit. Bouw niets nieuws op de bank en beloof het nergens (site, chat, advertenties). Alleen wat nu echt kan, staat op de site.
 
 ### Testen en controleren
 
