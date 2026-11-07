@@ -119,6 +119,7 @@ model User {
   resolvedDisputes     Dispute[]              @relation("DisputeResolvedBy")
   apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
   webPushSubscriptions WebPushSubscription[]
+  shiftsCreated        Shift[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
