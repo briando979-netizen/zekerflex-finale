@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BASIS, BUNDEL, MODULES, MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { euro } from "@/lib/horeca/weergave";
 import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
+import { StripeKoppeling } from "@/components/horeca/beheer/StripeKoppeling";
 
 // Modules & abonnement: de basis zit er altijd in, losse modules zet de zaak
 // aan of uit. Wat nog niet klaar is, staat er eerlijk als "binnenkort" en is
@@ -62,6 +63,7 @@ export function ModulesTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                 {m.prijsUitleg && <span className="font-normal text-neutralx-500">, {m.prijsUitleg}</span>}
               </p>
               {nodig.length > 0 && <p className="mt-1 text-xs text-neutralx-500">Werkt samen met: {nodig.join(", ")} (gaat vanzelf mee aan).</p>}
+              {k === "betalen" && isAan && <StripeKoppeling />}
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
                 {m.klaar ? (
                   <button

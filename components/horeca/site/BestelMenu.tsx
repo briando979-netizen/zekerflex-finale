@@ -5,6 +5,7 @@ import { ALLERGENEN, type Allergeen } from "@/lib/horeca/allergenen";
 import { MAX_AANTAL, STATUS_LABEL, type BestelStatus } from "@/lib/horeca/bestellen";
 import type { Gekozen, OptieGroep } from "@/lib/horeca/opties";
 import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
+import { AfrekenBlok, type Terug } from "@/components/horeca/site/AfrekenBlok";
 
 // Bestellen aan tafel via de QR-code: de menukaart met "+"-knoppen, een vast
 // mandje onderin, en na het bestellen het volgnummer met de status die vanzelf
@@ -65,7 +66,7 @@ function RoepKnoppen({ slug, code }: { slug: string; code: string }) {
   );
 }
 
-export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code: string; tafel: string; groepen: MenuGroep[] }) {
+export function BestelMenu({ slug, code, tafel, groepen, afrekenen = false, terug = null }: { slug: string; code: string; tafel: string; groepen: MenuGroep[]; afrekenen?: boolean; terug?: Terug }) {
   const [mand, setMand] = useState<Record<string, number>>({});
   const [extra, setExtra] = useState<OptieRegel[]>([]);
   const [kiezen, setKiezen] = useState<MenuGroep["items"][number] | null>(null);
@@ -141,8 +142,9 @@ export function BestelMenu({ slug, code, tafel, groepen }: { slug: string; code:
       )}
       <div className="mx-auto max-w-3xl space-y-6 px-4 pt-6">
         <p className="text-sm text-[#4B5563]">
-          Je bestelt voor <strong className="text-[#0A120E]">{tafel}</strong>. Je rekent af zoals je gewend bent.
+          Je bestelt voor <strong className="text-[#0A120E]">{tafel}</strong>. {afrekenen ? "Afrekenen kan hier met iDEAL of gewoon bij de bediening." : "Je rekent af zoals je gewend bent."}
         </p>
+        {afrekenen && <AfrekenBlok slug={slug} code={code} terug={terug} />}
         <RoepKnoppen slug={slug} code={code} />
         {groepen.map((g) => (
           <section key={g.id} aria-labelledby={`g-${g.id}`} className="rounded-[1.75rem] bg-white p-5 shadow-[0_1px_2px_rgba(10,18,14,0.06)]">

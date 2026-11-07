@@ -360,10 +360,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "stripe-connect-profiel",
       group: "Geld & bank",
       title: "Stripe Connect aanzetten (platformprofiel invullen)",
-      why: "Rijscholen laten leerlingen met iDEAL betalen naar hun eigen bankrekening, en freelancers krijgen hun geld via een eigen Stripe-account. Daarvoor maakt ZekerFlex voor hen een Stripe-account aan (Connect). Stripe weigert dat nu: 'You must complete your platform profile to use Connect'. Op 3 november getest met een tijdelijke testrijschool.",
+      why: "Rijscholen laten leerlingen met iDEAL betalen naar hun eigen bankrekening, horecagasten rekenen aan tafel af met iDEAL (geld naar het eigen account van de zaak), en freelancers krijgen hun geld via een eigen Stripe-account. Daarvoor maakt ZekerFlex voor hen een Stripe-account aan (Connect). Stripe weigert dat nu: 'You must complete your platform profile to use Connect'. Op 3 november getest met een tijdelijke testrijschool.",
       how: [
         "Ga naar dashboard.stripe.com/connect/accounts/overview en vul de vragenlijst van het platformprofiel in.",
-        "Antwoorden die passen: ZekerFlex is een platform/marktplaats; accounts zijn Express; jullie verbonden accounts zijn rijscholen en zzp'ers in Nederland; geld loopt via 'destination charges' (de klant betaalt op ZekerFlex, het geld gaat naar het account van de rijschool); ZekerFlex houdt alleen de transactiekosten in.",
+        "Antwoorden die passen: ZekerFlex is een platform/marktplaats; accounts zijn Express; jullie verbonden accounts zijn rijscholen, horecazaken en zzp'ers in Nederland; geld loopt via 'destination charges' (de klant betaalt op ZekerFlex, het geld gaat meteen naar het account van de rijschool of zaak); ZekerFlex houdt alleen de transactiekosten in.",
         "Vink deze taak daarna af en zeg het tegen Claude; die test het koppelen opnieuw met een tijdelijke testrijschool (er beweegt geen geld).",
       ],
       auto: false,

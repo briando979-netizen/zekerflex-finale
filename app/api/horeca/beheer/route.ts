@@ -31,6 +31,7 @@ import { apparatenVan, bewaarApparaat, koppelcodeVoor, ontkoppel } from "@/lib/h
 import { handelAf } from "@/lib/horeca/oproepen";
 import { STAPPEN } from "@/lib/horeca/fasen";
 import { afrekenen, bewaarKassa, dagafsluiting, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
+import { koppelStripe, stripeDashboard, stripeStand } from "@/lib/horeca/betalen";
 import type { HorecaZaak } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -65,6 +66,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     const q = new URL(request.url).searchParams;
     // ?alleen=live → het live-dashboard (zaal, cijfers van vandaag, oproepen, takenlijsten, schermen)
     if (q.get("alleen") === "live") return NextResponse.json(await dashboardVan(zaak));
+    // ?alleen=stripe → is het Stripe-account van de zaak gekoppeld en klaar voor iDEAL aan tafel (lib/horeca/betalen.ts)
+    if (q.get("alleen") === "stripe") return NextResponse.json(await stripeStand(zaak, true));
     // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → CSV voor de boekhouder
     if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv") {
       eisModule(zaak, "kassa");
@@ -133,6 +136,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json(await alles(await maakZaak(tenantId, g)));
     }
     const { zaak, p } = await eisBeheer();
+    // afrekenen aan tafel: het eigen Stripe-account van de zaak koppelen of openen
+    const stripeActie = (body as { actie?: unknown } | null)?.actie;
+    if (stripeActie === "stripe-koppelen" || stripeActie === "stripe-overzicht") {
+      eisModule(zaak, "betalen");
+      return NextResponse.json({ url: stripeActie === "stripe-koppelen" ? await koppelStripe(zaak, { email: p.email }) : await stripeDashboard(zaak) });
+    }
     // takenlijsten (module taken) hebben een eigen schema
     if (TAKEN_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {
       eisModule(zaak, "taken");

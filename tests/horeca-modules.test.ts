@@ -5,7 +5,12 @@ import { schoneAllergenen } from "@/lib/horeca/allergenen";
 describe("horeca-modules", () => {
   it("aanzetten zet ook aan wat een module nodig heeft", () => {
     expect(zetModule([], "qr", true)).toEqual(["bestellen", "qr"]);
-    expect(zetModule(["reserveren"], "betalen", true)).toEqual(["reserveren", "bestellen", "betalen"]);
+    // afrekenen gaat via de QR-pagina aan tafel, dus die gaat mee aan
+    expect(zetModule(["reserveren"], "betalen", true)).toEqual(["reserveren", "bestellen", "qr", "betalen"]);
+  });
+
+  it("qr uitzetten zet afrekenen aan tafel ook uit", () => {
+    expect(zetModule(["bestellen", "qr", "betalen"], "qr", false)).toEqual(["bestellen"]);
   });
 
   it("uitzetten zet ook uit wat erop rust", () => {

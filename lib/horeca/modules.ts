@@ -72,12 +72,12 @@ export const MODULES: Record<ModuleSleutel, Module> = {
   betalen: {
     sleutel: "betalen",
     naam: "Afrekenen",
-    kort: "Gasten rekenen aan tafel af met iDEAL; het geld gaat direct naar jullie rekening",
-    punten: ["Afrekenen via de QR-code op tafel", "Fooi toevoegen", "Overzicht van wat betaald is"],
+    kort: "Gasten rekenen aan tafel af met iDEAL; het geld gaat via Stripe direct naar jullie eigen rekening",
+    punten: ["Afrekenen via de QR-code op tafel", "Fooi kiezen", "Elke betaling als bon in de kassa, met btw", "Uitbetaling vanzelf naar jullie bank via je eigen Stripe-account"],
     prijsCentPerMaand: 900,
     prijsUitleg: "plus de iDEAL-kosten per betaling (doorberekend, zonder marge)",
-    vereist: ["bestellen"],
-    klaar: false,
+    vereist: ["bestellen", "qr"],
+    klaar: true,
   },
   taken: {
     sleutel: "taken",

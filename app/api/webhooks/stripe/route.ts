@@ -21,6 +21,7 @@ import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 import { activeerNetwerkModule, netwerkAbonnementBeeindigd } from "@/lib/netwerk/abonnement";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
+import { verwerkHorecaSessie } from "@/lib/horeca/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
@@ -382,6 +383,12 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
           metadata: { sessionId: session.id, eventType: event.type },
         });
       }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Een gast rekent aan tafel af (iDEAL naar het eigen Stripe-account van de zaak): lib/horeca/betalen.ts
+    if (session.metadata?.horecaBetalingId) {
+      await verwerkHorecaSessie(session);
       return NextResponse.json({ ok: true });
     }
 

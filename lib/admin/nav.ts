@@ -59,6 +59,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/facturen", label: "Facturen" },
       { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe", label: "Stripe" },
+      { href: "/admin/horeca-betalingen", label: "Horeca-betalingen" },
       { href: "/admin/bank", label: "Bank" },
       { href: "/admin/betalingen", label: "AI-betalingen" },
       { href: "/admin/verloning", label: "Verloning" },
