@@ -129,14 +129,18 @@ export function redenOverslaan(p: CatalogusProduct, basis: string): string | nul
   return null;
 }
 
-/** De regels van de productlijst (één per variant), plus wat er bewust buiten bleef. */
+/**
+ * De regels van de productlijst (één per variant), plus wat er bewust buiten
+ * bleef. Een product dat in de shop uit staat, telt daar niet mee: het staat
+ * ook niet in de webshop.
+ */
 export function productRijen(producten: readonly CatalogusProduct[], basis: string): { rijen: ProductRij[]; overgeslagen: { naam: string; reden: string }[] } {
   const rijen: ProductRij[] = [];
   const overgeslagen: { naam: string; reden: string }[] = [];
   for (const p of producten) {
     const reden = redenOverslaan(p, basis);
     if (reden) {
-      overgeslagen.push({ naam: p.name, reden });
+      if (p.active) overgeslagen.push({ naam: p.name, reden });
       continue;
     }
     const groep = p.variants.length > 1;

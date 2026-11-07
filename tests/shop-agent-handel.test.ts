@@ -94,7 +94,12 @@ describe("productlijst voor AI-assistenten", () => {
       BASIS,
     );
     expect(rijen).toEqual([]);
-    expect(overgeslagen.map((o) => o.reden)).toEqual(["staat uit", "bundel (wordt als één product verkocht)", "verkopersproduct nog niet goedgekeurd", "geen foto", "geen maat of variant"]);
+    // wat in de shop uit staat, staat ook niet bij "niet in de lijst"
+    expect(overgeslagen.map((o) => o.reden)).toEqual(["bundel (wordt als één product verkocht)", "verkopersproduct nog niet goedgekeurd", "geen foto", "geen maat of variant"]);
+  });
+
+  it("een vast id uit de beginvoorraad (shop_hoodie) krijgt ook een foto-adres", () => {
+    expect(beeldLink({ id: "shop_hoodie", imageUrl: "/shop/hoodie.webp", imageUploadId: null }, BASIS)).toBe("https://zekerflex.com/api/shop/beeld/shop_hoodie.jpg");
   });
 
   it("een JPEG uit public/ gaat rechtstreeks, al het andere via de JPEG-route", () => {

@@ -31,7 +31,8 @@ async function bron(p: { imageUploadId: string | null; imageUrl: string | null }
 
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   const id = (await props.params).id.replace(/\.jpe?g$/i, "");
-  if (!/^[a-z0-9]{10,40}$/i.test(id)) return niet();
+  // cuid's, maar ook vaste id's uit de beginvoorraad zoals "shop_hoodie"
+  if (!/^[a-z0-9_-]{3,60}$/i.test(id)) return niet();
   try {
     await enforceRateLimit({ name: "shop-beeld", identifier: clientIp(request), limit: 600, windowSeconds: 600 });
   } catch (err) {

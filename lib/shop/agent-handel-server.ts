@@ -126,6 +126,9 @@ async function stuurFeed(soort: FeedSoort, csv: string, nu: Date): Promise<{ id:
   return { id: String(imp.id ?? ""), status: "processing" };
 }
 
+/** Een aantal uit de v2-API: die geeft int64 als tekst ("143"). */
+const aantal = (v: unknown): number | undefined => (typeof v === "number" ? v : typeof v === "string" && /^\d+$/.test(v) ? Number(v) : undefined);
+
 /** Werkt de uitslag van een eerdere upload bij zolang Stripe er nog mee bezig was. */
 async function werkUitslagBij(stand: FeedStand | undefined): Promise<FeedStand | undefined> {
   if (!stand?.importId || isEindstand(stand.status)) return stand;
@@ -138,15 +141,17 @@ async function werkUitslagBij(stand: FeedStand | undefined): Promise<FeedStand |
     ? (d.succeeded_with_errors.samples as Record<string, unknown>[]).slice(0, 10).map((s) => ({
         id: String(s.id ?? ""),
         veld: String(s.field ?? ""),
-        regel: Number(s.row ?? 0),
+        regel: aantal(s.row) ?? 0,
         bericht: String(s.error_message ?? "").slice(0, 300),
       }))
     : undefined;
+  const gelukt = aantal(klaar?.success_count);
+  const fouten = aantal(klaar?.error_count);
   return {
     ...stand,
     status,
-    ...(typeof klaar?.success_count === "number" ? { gelukt: klaar.success_count } : {}),
-    ...(typeof klaar?.error_count === "number" ? { fouten: klaar.error_count } : {}),
+    ...(gelukt !== undefined ? { gelukt } : {}),
+    ...(fouten !== undefined ? { fouten } : {}),
     ...(voorbeelden ? { voorbeelden } : {}),
     ...(mis ? { melding: `Stripe kon het bestand niet verwerken (${String(mis.code ?? "onbekend")}): ${String(mis.failure_message ?? "").slice(0, 300)}` } : {}),
   };
