@@ -588,6 +588,10 @@ model Shift {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
+  // Wie deze klus aanmaakte — voor factuurrouting naar de verantwoordelijke, niet naar admins
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
   title            String
   description      String?
   // Shown to a freelancer as a distinct "kledingvoorschriften" item, separate
@@ -629,6 +633,7 @@ model Shift {
 
   @@index([branchId, status])
   @@index([startsAt])
+  @@index([createdByUserId])
 }
 
 // ===========================================================================
