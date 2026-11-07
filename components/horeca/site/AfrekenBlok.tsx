@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { fooiOpties } from "@/lib/horeca/kassa";
 import { BonDelen } from "@/components/horeca/live/BonDelen";
 
-// Afrekenen aan tafel met iDEAL: de gast ziet wat er open staat en betaalt
+// Afrekenen aan tafel (iDEAL, pas, Apple Pay, Google Pay): de gast ziet wat er open staat en betaalt
 // alles, of alleen wat hij zelf had (ieder zijn eigen deel). Wat een ander aan
 // tafel op dat moment betaalt, staat er niet meer tussen. Terug van Stripe toont
 // dit blok of het geld binnen is; dat vraagt de server aan Stripe zelf.
@@ -161,7 +161,7 @@ export function AfrekenBlok({ slug, code, terug }: { slug: string; code: string;
       )}
       {!rekening ? (
         <button type="button" disabled={bezig} onClick={() => void open()} className="w-full rounded-full bg-[var(--rs-accent-knop)] px-5 py-3 font-bold text-[var(--rs-op-accent)] disabled:opacity-60">
-          {bezig ? "Rekening laden…" : "Afrekenen met iDEAL"}
+          {bezig ? "Rekening laden…" : "Online afrekenen"}
         </button>
       ) : !rekening.regels.length ? (
         <p role="status" className="text-sm font-semibold">
@@ -252,14 +252,14 @@ export function AfrekenBlok({ slug, code, terug }: { slug: string; code: string;
           )}
           {rekening.kan ? (
             <button type="button" disabled={bezig || teBetalen < 100} onClick={() => void betaal()} className="w-full rounded-full bg-[var(--rs-accent-knop)] px-5 py-3 font-bold text-[var(--rs-op-accent)] disabled:opacity-60">
-              {bezig ? "Betaalpagina openen…" : teBetalen < 100 ? (wijze === "eigen" ? "Kies wat je had" : "Online betalen kan vanaf € 1") : `Betaal ${euro(teBetalen + fooi)} met iDEAL`}
+              {bezig ? "Betaalpagina openen…" : teBetalen < 100 ? (wijze === "eigen" ? "Kies wat je had" : "Online betalen kan vanaf € 1") : `Betaal ${euro(teBetalen + fooi)}`}
             </button>
           ) : (
             <p role="status" className="rounded-xl bg-[#FEF3C7] px-3 py-2 text-sm font-semibold text-[#92400E]">
               Online afrekenen staat hier nog niet aan. Vraag de bediening om de rekening.
             </p>
           )}
-          <p className="text-xs text-[#4B5563]">Je betaalt veilig via Stripe. Het geld gaat rechtstreeks naar de zaak.</p>
+          <p className="text-xs text-[#4B5563]">Met iDEAL, Apple Pay, Google Pay of je pas. Je betaalt veilig via Stripe; het geld gaat rechtstreeks naar de zaak.</p>
         </div>
       )}
       {fout && (

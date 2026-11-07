@@ -45,7 +45,7 @@ export function StripeKoppeling() {
       {stand === null ? (
         <p className="text-neutralx-500">Stripe-account controleren…</p>
       ) : stand.klaar ? (
-        <p className="font-semibold text-ok">Stripe-account klaar: gasten kunnen aan tafel afrekenen met iDEAL.</p>
+        <p className="font-semibold text-ok">Stripe-account klaar: gasten kunnen aan tafel afrekenen met iDEAL, Apple Pay, Google Pay of hun pas.</p>
       ) : stand.gekoppeld ? (
         <p className="font-semibold text-warn">{stand.ingevuld ? "Stripe controleert je gegevens nog. Dit duurt meestal kort." : "Maak je aanmelding bij Stripe af om betalingen te ontvangen."}</p>
       ) : (

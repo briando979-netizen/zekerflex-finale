@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { bedragVeld, centVan, foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
 import { euro } from "@/lib/horeca/weergave";
-import { METHODE_LABEL, type Methode, type ZRapport } from "@/lib/horeca/kassa";
+import { methodeLabel, type ZRapport } from "@/lib/horeca/kassa";
 import { plusDagen } from "@/lib/horeca/reserveren";
 import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
 import { BonVenster } from "@/components/horeca/live/Bon";
@@ -254,7 +254,7 @@ export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                     <span className="w-16 font-semibold tabular-nums text-ink">#{b.bonNummer}</span>
                     <span className="w-14 tabular-nums text-neutralx-600">{amsterdamClock(b.op)}</span>
                     <span className="min-w-0 flex-1 truncate text-ink">
-                      {b.tafel ?? "Balie"} · {METHODE_LABEL[b.methode as Methode] ?? b.methode}
+                      {b.tafel ?? "Balie"} · {methodeLabel(b.methode)}
                       {b.door && <span className="text-neutralx-500"> · {b.door}</span>}
                     </span>
                     <span className="tabular-nums text-ink">

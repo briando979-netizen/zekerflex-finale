@@ -1,14 +1,16 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { afrekenOverzicht } from "@/lib/horeca/betalen";
+import { methodeLabel } from "@/lib/horeca/kassa";
 import { count, dateTimeNl, euro } from "@/lib/admin/format";
 import { KpiStrip, NameCell, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { DataTable, type TableRow } from "@/components/admin/kit-client";
 
 export const dynamic = "force-dynamic";
 
-// Afrekenen aan tafel met iDEAL, voor de platformbeheerder: alleen inzien.
-// Het geld gaat bij elke betaling meteen door naar het eigen Stripe-account van
-// de zaak (lib/horeca/betalen.ts); hier staat geen enkele knop die iets wijzigt.
+// Afrekenen aan tafel (iDEAL, pas, Apple Pay, Google Pay), voor de platformbeheerder:
+// alleen inzien. Het geld gaat bij elke betaling meteen door naar het eigen
+// Stripe-account van de zaak (lib/horeca/betalen.ts); hier staat geen enkele
+// knop die iets wijzigt.
 
 const STATUS: Record<string, { label: string; tone: "ok" | "warn" | "crit" }> = {
   BETAALD: { label: "Betaald", tone: "ok" },
@@ -39,13 +41,25 @@ export default async function HorecaBetalingenPage() {
         zaak: <NameCell name={zaak} sub={b.tafel?.naam ?? "Zonder tafel"} />,
         status: <Pill tone={s.tone}>{s.label}</Pill>,
         bedrag: euro(b.bedragCent),
+        wijze: b.status === "BETAALD" ? methodeLabel(b.methode) : "—",
+        kosten: b.kosten ? euro(b.kosten.echtCent) : "—",
         fooi: b.fooiCent ? euro(b.fooiCent) : "—",
         bon: b.bonNummer ? String(b.bonNummer) : "—",
         op: dateTimeNl(b.betaaldOp ?? b.createdAt),
         let: b.door.includes("LET OP") ? <Pill tone="crit">Al afgerekend: terugbetalen</Pill> : "",
       },
-      sort: { zaak, status: b.status, bedrag: b.bedragCent, fooi: b.fooiCent, bon: b.bonNummer ?? 0, op: (b.betaaldOp ?? b.createdAt).getTime() },
-      csv: { zaak, tafel: b.tafel?.naam ?? "", status: s.label, bedrag: (b.bedragCent / 100).toFixed(2), fooi: (b.fooiCent / 100).toFixed(2), bon: b.bonNummer ?? "", op: (b.betaaldOp ?? b.createdAt).toISOString() },
+      sort: { zaak, status: b.status, bedrag: b.bedragCent, wijze: b.methode, kosten: b.kosten?.echtCent ?? 0, fooi: b.fooiCent, bon: b.bonNummer ?? 0, op: (b.betaaldOp ?? b.createdAt).getTime() },
+      csv: {
+        zaak,
+        tafel: b.tafel?.naam ?? "",
+        status: s.label,
+        wijze: b.status === "BETAALD" ? methodeLabel(b.methode) : "",
+        bedrag: (b.bedragCent / 100).toFixed(2),
+        fooi: (b.fooiCent / 100).toFixed(2),
+        stripekosten: b.kosten ? (b.kosten.echtCent / 100).toFixed(2) : "",
+        bon: b.bonNummer ?? "",
+        op: (b.betaaldOp ?? b.createdAt).toISOString(),
+      },
     };
   });
 
@@ -66,15 +80,15 @@ export default async function HorecaBetalingenPage() {
 
   return (
     <div className="space-y-4">
-      <PageHead title="Horeca-betalingen" subtitle="Gasten die aan tafel afrekenen met iDEAL. Alleen om in te zien: het geld gaat direct naar het eigen Stripe-account van de zaak." />
+      <PageHead title="Horeca-betalingen" subtitle="Gasten die aan tafel online afrekenen: iDEAL, Apple Pay, Google Pay of een pas. Alleen om in te zien: het geld gaat direct naar het eigen Stripe-account van de zaak." />
 
       <Notice>
-        ZekerFlex houdt per betaling alleen de iDEAL-kosten in die Stripe rekent (€ 0,29). De rest staat op het Stripe-account van de zaak en Stripe betaalt het vanzelf uit op haar bankrekening. Terugbetalen doet de zaak zelf in haar Stripe-overzicht.
+        ZekerFlex houdt per betaling alleen in wat Stripe echt rekent: iDEAL € 0,29, een pas of Apple Pay meestal 1,5% + € 0,25. Vooraf wordt het maximum ingehouden (3,25% + € 0,25, een pas van buiten Europa); direct na de betaling gaat het verschil terug naar de zaak. De rest staat op het Stripe-account van de zaak en Stripe betaalt het vanzelf uit op haar bankrekening. Terugbetalen doet de zaak zelf in haar Stripe-overzicht.
       </Notice>
 
       <KpiStrip
         items={[
-          { label: "Zaken klaar voor iDEAL", value: count(d.zaken.filter((z) => z.stripe.klaar).length), hint: `van ${count(d.zaken.length)} horecazaken` },
+          { label: "Zaken klaar voor online afrekenen", value: count(d.zaken.filter((z) => z.stripe.klaar).length), hint: `van ${count(d.zaken.length)} horecazaken` },
           { label: "Betalingen", value: count(recent.length), hint: "laatste 30 dagen" },
           { label: "Ontvangen", value: euro(recent.reduce((s, b) => s + b.bedragCent, 0)), hint: "laatste 30 dagen, zonder fooi", tone: "money" },
           { label: "Fooi", value: euro(recent.reduce((s, b) => s + b.fooiCent, 0)), hint: "laatste 30 dagen" },
@@ -88,6 +102,8 @@ export default async function HorecaBetalingenPage() {
             { key: "zaak", label: "Zaak en tafel" },
             { key: "status", label: "Stand" },
             { key: "bedrag", label: "Bedrag", align: "right" },
+            { key: "wijze", label: "Betaald met", hideOnMobile: true },
+            { key: "kosten", label: "Stripe-kosten", align: "right", hideOnMobile: true },
             { key: "fooi", label: "Fooi", align: "right", hideOnMobile: true },
             { key: "bon", label: "Bon", align: "right", hideOnMobile: true },
             { key: "op", label: "Wanneer", hideOnMobile: true },

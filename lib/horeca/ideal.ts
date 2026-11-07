@@ -113,3 +113,28 @@ export function boekAf(
   }
   return { ok: true, wijzigingen };
 }
+
+// ── Betaalwijze en kosten (iDEAL, pas, Apple Pay, Google Pay) ───────────────
+
+/**
+ * Wat ZekerFlex vooraf inhoudt: genoeg voor de duurste betaalwijze (een pas van
+ * buiten Europa kost bij Stripe 3,25% + € 0,25) en minstens de iDEAL-kosten. Na
+ * de betaling gaat het verschil met wat Stripe echt rekende terug naar de zaak
+ * (lib/horeca/betalen.ts), zodat ZekerFlex precies de kosten inhoudt.
+ */
+export const kostenVooraf = (totaalCent: number, idealCent: number): number => Math.max(idealCent, Math.ceil((totaalCent * 325) / 10_000) + 25);
+
+/** Wat er nog terug moet naar de zaak: vooraf ingehouden min de echte kosten min wat al terug is. */
+export const terugNaarZaak = (voorafCent: number, echtCent: number, alTerugCent: number): number =>
+  Math.max(0, voorafCent - Math.max(0, echtCent) - Math.max(0, alTerugCent));
+
+export type OnlineMethode = "ideal" | "kaart" | "apple_pay" | "google_pay";
+
+/** Waarmee de gast betaalde, uit de betaling van Stripe (payment_method_details). */
+export function onlineMethode(d: { type?: string | null; card?: { wallet?: { type?: string | null } | null } | null } | null | undefined): OnlineMethode {
+  if (!d?.type || d.type === "ideal") return "ideal";
+  const wallet = d.card?.wallet?.type;
+  if (wallet === "apple_pay") return "apple_pay";
+  if (wallet === "google_pay") return "google_pay";
+  return "kaart";
+}

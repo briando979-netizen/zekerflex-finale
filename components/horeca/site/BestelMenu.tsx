@@ -142,7 +142,7 @@ export function BestelMenu({ slug, code, tafel, groepen, afrekenen = false, teru
       )}
       <div className="mx-auto max-w-3xl space-y-6 px-4 pt-6">
         <p className="text-sm text-[#4B5563]">
-          Je bestelt voor <strong className="text-[#0A120E]">{tafel}</strong>. {afrekenen ? "Afrekenen kan hier met iDEAL of gewoon bij de bediening." : "Je rekent af zoals je gewend bent."}
+          Je bestelt voor <strong className="text-[#0A120E]">{tafel}</strong>. {afrekenen ? "Afrekenen kan hier met iDEAL, Apple Pay, Google Pay of je pas, of gewoon bij de bediening." : "Je rekent af zoals je gewend bent."}
         </p>
         {afrekenen && <AfrekenBlok slug={slug} code={code} terug={terug} />}
         <RoepKnoppen slug={slug} code={code} />

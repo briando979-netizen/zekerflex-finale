@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BonDelen } from "@/components/horeca/live/BonDelen";
-import { btwSpecificatie, METHODE_LABEL, type Methode } from "@/lib/horeca/kassa";
+import { btwSpecificatie, methodeLabel } from "@/lib/horeca/kassa";
 import type { BonData, BonKop } from "@/components/horeca/live/types";
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ export function BonWeergave({ kop, bon }: { kop: BonKop; bon: BonData }) {
       {lijn}
       <Rij l="Totaal" r={`€ ${bedrag(bon.bedragCent)}`} vet />
       {bon.fooiCent > 0 && <Rij l="Fooi" r={`€ ${bedrag(bon.fooiCent)}`} />}
-      <Rij l={`Betaald (${METHODE_LABEL[bon.methode as Methode] ?? bon.methode})`} r={`€ ${bedrag(bon.bedragCent + bon.fooiCent)}`} />
+      <Rij l={`Betaald (${methodeLabel(bon.methode)})`} r={`€ ${bedrag(bon.bedragCent + bon.fooiCent)}`} />
       {lijn}
       <div className="grid grid-cols-3 gap-1 tabular-nums">
         <span>Btw</span>

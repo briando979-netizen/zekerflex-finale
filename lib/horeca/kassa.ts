@@ -12,6 +12,18 @@ export const METHODEN = ["pin", "contant", "ideal", "overig"] as const;
 export type Methode = (typeof METHODEN)[number];
 export const METHODE_LABEL: Record<Methode, string> = { pin: "Pin", contant: "Contant", ideal: "iDEAL", overig: "Overig" };
 
+/**
+ * Online aan tafel betaald (via Stripe): na de betaling weten we waarmee. Deze
+ * staan niet in de kassa om te kiezen, maar wel op de bon en in het Z-rapport.
+ */
+export const ONLINE_LABEL: Record<string, string> = { kaart: "Pas", apple_pay: "Apple Pay", google_pay: "Google Pay" };
+
+/** De naam van een betaalwijze op de bon en in het Z-rapport. */
+export function methodeLabel(m: string): string {
+  if (Object.hasOwn(METHODE_LABEL, m)) return METHODE_LABEL[m as Methode];
+  return (Object.hasOwn(ONLINE_LABEL, m) ? ONLINE_LABEL[m] : undefined) ?? m;
+}
+
 /** De Nederlandse btw-tarieven: eten en alcoholvrij 9 %, alcohol 21 %. */
 export const BTW_TARIEVEN = [9, 21, 0] as const;
 export type BtwTarief = (typeof BTW_TARIEVEN)[number];
@@ -196,7 +208,7 @@ export function zRapport(betalingen: readonly KassaBetaling[]): ZRapport {
     omzetCent: betalingen.reduce((s, b) => s + b.bedragCent, 0),
     fooiCent: betalingen.reduce((s, b) => s + b.fooiCent, 0),
     perMethode: [...per.entries()]
-      .map(([methode, x]) => ({ methode, label: METHODE_LABEL[methode as Methode] ?? methode, ...x }))
+      .map(([methode, x]) => ({ methode, label: methodeLabel(methode), ...x }))
       .sort((a, b) => b.bedragCent - a.bedragCent),
     btw: btwSpecificatie(betalingen.flatMap((b) => b.regels)),
     contantCent: (contant?.bedragCent ?? 0) + (contant?.fooiCent ?? 0),

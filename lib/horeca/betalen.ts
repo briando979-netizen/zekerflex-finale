@@ -9,15 +9,31 @@ import { IDEAL_KOSTEN_CENT, isTestAdres } from "@/lib/rijschool/betalen";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { rekeningVan, totaalVan, type Selectie } from "@/lib/horeca/kassa";
 import { heeftModule } from "@/lib/horeca/modules";
-import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, leesIdealRegels } from "@/lib/horeca/ideal";
+import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, kostenVooraf, leesIdealRegels, onlineMethode, terugNaarZaak, type OnlineMethode } from "@/lib/horeca/ideal";
 import { bonToken } from "@/lib/horeca/bon";
+import { kvGetMany, kvSet } from "@/lib/storage/kv";
+
+/** Online betaald aan tafel: zo staat een betaling na afloop in de database (eerst altijd "ideal"). */
+const ONLINE: OnlineMethode[] = ["ideal", "kaart", "apple_pay", "google_pay"];
+
+/** Per betaling: waarmee, wat vooraf ingehouden, wat Stripe echt rekende en wat terugging (voor het beheer). */
+export interface HorecaKosten {
+  methode: OnlineMethode;
+  voorafCent: number;
+  echtCent: number;
+  terugCent: number;
+  op: string;
+}
+const kKosten = (betalingId: string) => `horeca:kosten:${betalingId}`;
 
 // ---------------------------------------------------------------------------
-// Afrekenen aan tafel met iDEAL. Elke zaak heeft een eigen Stripe-account
-// (Connect Express) onder het platform van ZekerFlex. De gast betaalt via
-// Stripe; het geld gaat bij de betaling meteen door naar het account van de
-// zaak en Stripe betaalt het vanzelf uit op haar bankrekening. ZekerFlex houdt
-// alleen de iDEAL-kosten in die Stripe rekent (doorberekend, geen marge).
+// Afrekenen aan tafel met iDEAL, een pas, Apple Pay of Google Pay. Elke zaak
+// heeft een eigen Stripe-account (Connect Express) onder het platform van
+// ZekerFlex. De gast betaalt via Stripe; het geld gaat bij de betaling meteen
+// door naar het account van de zaak en Stripe betaalt het vanzelf uit op haar
+// bankrekening. ZekerFlex houdt alleen de kosten in die Stripe echt rekent
+// (doorberekend, geen marge): vooraf het maximum (kostenVooraf), na de betaling
+// gaat het verschil met de echte kosten terug naar de zaak (verrekenKosten).
 //
 // Betaald = Stripe zegt het: de webhook, of bij terugkeer van de gast een
 // opvraging bij Stripe zelf (nooit wat de browser meldt). Dubbel verwerken
@@ -50,7 +66,7 @@ export async function stripeStand(z: Pick<HorecaZaak, "stripeAccountId">, vers =
   }
 }
 
-/** Kan een gast aan tafel nu met iDEAL afrekenen? (module aan en Stripe klaar) */
+/** Kan een gast aan tafel nu online afrekenen? (module aan en Stripe klaar) */
 export const onlineAfrekenenAan = async (z: Pick<HorecaZaak, "stripeAccountId" | "modules">) => heeftModule(z, "betalen") && (await stripeStand(z)).klaar;
 
 const basis = () => env.APP_BASE_URL.replace(/\/+$/, "");
@@ -156,8 +172,9 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
         bedragCent: totaalCent,
         fooiCent,
         status: "OPEN",
+        // tot de betaling binnen is "ideal"; daarna de echte betaalwijze (verwerkHorecaSessie)
         methode: "ideal",
-        door: selectie?.length ? "Gast aan tafel, eigen deel (iDEAL)" : "Gast aan tafel (iDEAL)",
+        door: selectie?.length ? "Gast aan tafel, eigen deel" : "Gast aan tafel",
         regels: gekozen as unknown as object[],
         bestellingIds: [...new Set(gekozen.map((r) => r.bestellingId))],
       },
@@ -171,7 +188,8 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
   try {
     sessie = await getStripeClient().checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["ideal"],
+      // "card" geeft ook Apple Pay en Google Pay op een telefoon die dat kan
+      payment_method_types: ["ideal", "card"],
       locale: "nl",
       line_items: [
         { quantity: 1, price_data: { currency: "eur", unit_amount: totaalCent, product_data: { name: `${wat} · ${z.naam}`.slice(0, 250) } } },
@@ -182,7 +200,8 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
         description: `${z.naam}: ${wat.toLowerCase()}`.slice(0, 250),
         on_behalf_of: z.stripeAccountId,
         transfer_data: { destination: z.stripeAccountId },
-        application_fee_amount: IDEAL_KOSTEN_CENT,
+        // het maximum; na de betaling gaat het verschil met de echte kosten terug (verrekenKosten)
+        application_fee_amount: kostenVooraf(totaalCent + fooiCent, IDEAL_KOSTEN_CENT),
         metadata,
       },
       // kort geldig: een betaalpagina van gisteren mag geen rekening van vandaag afrekenen
@@ -192,12 +211,58 @@ export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id
     });
   } catch (err) {
     await prisma.horecaBetaling.update({ where: { id: b.id }, data: { status: "MISLUKT" } }).catch(() => undefined);
-    logger.warn("horeca: iDEAL starten mislukt", { zaakId: z.id, error: err instanceof Error ? err.message : String(err) });
+    logger.warn("horeca: online afrekenen starten mislukt", { zaakId: z.id, error: err instanceof Error ? err.message : String(err) });
     throw AppError.upstream("De betaalpagina kon niet worden geopend. Probeer het opnieuw of vraag de bediening.");
   }
   if (!sessie.url) throw AppError.upstream("Stripe gaf geen betaalpagina terug.");
   await prisma.horecaBetaling.update({ where: { id: b.id }, data: { stripeSessionId: sessie.id } });
   return sessie.url;
+}
+
+interface StripeBetaling {
+  methode: OnlineMethode;
+  /** de application fee (wat ZekerFlex vooraf inhield) */
+  feeId: string | null;
+  voorafCent: number;
+  alTerugCent: number;
+  /** wat Stripe echt rekende; null als Stripe het nog niet weet */
+  echtCent: number | null;
+}
+
+/** De betaling achter een sessie: waarmee betaald, en de kosten (buiten elk slot: netwerk). */
+async function stripeBetaling(session: Stripe.Checkout.Session): Promise<StripeBetaling | null> {
+  const id = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  if (!id) return null;
+  const pi = await getStripeClient().paymentIntents.retrieve(id, { expand: ["latest_charge.balance_transaction", "latest_charge.application_fee"] });
+  const ch = pi.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+  if (!ch) return null;
+  const bt = ch.balance_transaction && typeof ch.balance_transaction === "object" ? ch.balance_transaction : null;
+  const fee = ch.application_fee && typeof ch.application_fee === "object" ? ch.application_fee : null;
+  return {
+    methode: onlineMethode(ch.payment_method_details),
+    feeId: fee?.id ?? (typeof ch.application_fee === "string" ? ch.application_fee : null),
+    voorafCent: ch.application_fee_amount ?? 0,
+    alTerugCent: fee?.amount_refunded ?? 0,
+    echtCent: bt ? bt.fee : null,
+  };
+}
+
+/**
+ * ZekerFlex houdt precies de echte kosten in: wat vooraf meer werd ingehouden,
+ * gaat terug naar de zaak (een gedeeltelijke terugboeking van de application
+ * fee). Veilig bij herhaling: wat al terug is, telt mee, en Stripe krijgt een
+ * vaste sleutel. Weet Stripe de kosten nog niet, dan gooit hij, zodat de
+ * webhook het later opnieuw probeert (het boeken zelf is dan al gebeurd).
+ */
+async function verrekenKosten(betalingId: string, sb: StripeBetaling): Promise<void> {
+  if (!sb.feeId) return;
+  if (sb.echtCent === null) throw new Error("horeca: de kosten van Stripe zijn nog niet bekend; later opnieuw");
+  const terug = terugNaarZaak(sb.voorafCent, sb.echtCent, sb.alTerugCent);
+  if (terug > 0) {
+    await getStripeClient().applicationFees.createRefund(sb.feeId, { amount: terug, metadata: { horecaBetalingId: betalingId, reden: "verschil met de echte Stripe-kosten" } }, { idempotencyKey: `horeca-kosten:${betalingId}:${terug}` });
+  }
+  if (sb.echtCent > sb.voorafCent) logger.warn("horeca: Stripe rekende meer dan vooraf ingehouden", { betalingId, voorafCent: sb.voorafCent, echtCent: sb.echtCent });
+  await kvSet(kKosten(betalingId), { methode: sb.methode, voorafCent: sb.voorafCent, echtCent: sb.echtCent, terugCent: sb.alTerugCent + terug, op: new Date().toISOString() } satisfies HorecaKosten);
 }
 
 /**
@@ -211,6 +276,13 @@ export async function verwerkHorecaSessie(session: Stripe.Checkout.Session): Pro
   const zaakId = m.horecaZaakId;
   if (!betalingId || !zaakId) return false;
   if (session.payment_status !== "paid") return true; // iDEAL bevestigt soms later (async_payment_succeeded)
+
+  // waarmee betaald en wat het kostte; lukt dat even niet, dan boeken we toch (de bon zegt dan iDEAL niet zeker)
+  const sb = await stripeBetaling(session).catch((err: unknown) => {
+    logger.warn("horeca: betaling bij Stripe niet gelezen", { betalingId, error: err instanceof Error ? err.message : String(err) });
+    return null;
+  });
+  const methode: OnlineMethode = sb?.methode ?? "ideal";
 
   const uit = await prisma.$transaction(async (tx) => {
     const slot = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBetaling" WHERE id = ${betalingId} AND "zaakId" = ${zaakId} FOR UPDATE`;
@@ -238,24 +310,28 @@ export async function verwerkHorecaSessie(session: Stripe.Checkout.Session): Pro
         betaaldOp: new Date(),
         bonNummer: (laatste._max.bonNummer ?? 0) + 1,
         fooiCent,
+        methode,
         stripeSessionId: session.id,
         regels: bonRegels(regels) as unknown as object[],
         bestellingIds: af.ok ? ids : [],
-        door: af.ok ? b.door : "Gast aan tafel (iDEAL) · LET OP: was al afgerekend, betaal terug via Stripe",
+        door: af.ok ? b.door : "Gast aan tafel (online) · LET OP: was al afgerekend, betaal terug via Stripe",
       },
     });
     return af.ok ? { soort: "geboekt" as const, bedragCent: b.bedragCent, fooiCent } : { soort: "dubbel" as const, bedragCent: b.bedragCent, fooiCent, fout: af.fout };
   });
 
   if (uit.soort === "onbekend") logger.warn("horeca: betaalde sessie zonder betaling", { sessionId: session.id, zaakId });
-  else if (uit.soort === "dubbel") logger.warn("horeca: iDEAL betaald voor een rekening die al was afgerekend", { sessionId: session.id, zaakId, bedragCent: uit.bedragCent, reden: uit.fout });
-  else if (uit.soort === "geboekt") logger.info("horeca: iDEAL-betaling verwerkt", { sessionId: session.id, zaakId, bedragCent: uit.bedragCent, fooiCent: uit.fooiCent });
+  else if (uit.soort === "dubbel") logger.warn("horeca: online betaald voor een rekening die al was afgerekend", { sessionId: session.id, zaakId, bedragCent: uit.bedragCent, reden: uit.fout });
+  else if (uit.soort === "geboekt") logger.info("horeca: online betaling verwerkt", { sessionId: session.id, zaakId, methode, bedragCent: uit.bedragCent, fooiCent: uit.fooiCent });
+  // ook bij "al": een eerdere ronde kan Stripe niet hebben gelezen (betaalwijze) of de kosten nog niet verrekend
+  if (uit.soort === "al" && sb && sb.methode !== "ideal") await prisma.horecaBetaling.updateMany({ where: { id: betalingId, methode: "ideal" }, data: { methode: sb.methode } });
+  if (uit.soort !== "onbekend" && sb) await verrekenKosten(betalingId, sb);
   return true;
 }
 
 /** De stand van een betaling voor de gast. Staat hij nog open, dan vragen we het Stripe zelf (de webhook kan later komen). */
 export async function afrekenStand(zaakId: string, tafelId: string, betalingId: string): Promise<{ status: "OPEN" | "BETAALD" | "MISLUKT"; bedragCent: number; fooiCent: number; bonNummer: number | null; token?: string }> {
-  const lees = () => prisma.horecaBetaling.findFirst({ where: { id: betalingId, zaakId, tafelId, methode: "ideal" }, select: { status: true, bedragCent: true, fooiCent: true, bonNummer: true, stripeSessionId: true } });
+  const lees = () => prisma.horecaBetaling.findFirst({ where: { id: betalingId, zaakId, tafelId, methode: { in: ONLINE } }, select: { status: true, bedragCent: true, fooiCent: true, bonNummer: true, stripeSessionId: true } });
   let b = await lees();
   if (!b) throw AppError.notFound("Deze betaling bestaat niet.");
   if (b.status === "OPEN" && b.stripeSessionId) {
@@ -301,12 +377,14 @@ export async function afrekenOverzicht(dagen = 90) {
   const [zaken, betalingen] = await Promise.all([
     prisma.horecaZaak.findMany({ orderBy: { naam: "asc" }, select: { id: true, naam: true, slug: true, plaats: true, modules: true, stripeAccountId: true } }),
     prisma.horecaBetaling.findMany({
-      where: { methode: "ideal", createdAt: { gte: sinds } },
+      // online aan tafel: met een Stripe-sessie, of gestart en (nog) niet betaald; niet wat de kassa als iDEAL boekte
+      where: { methode: { in: ONLINE }, createdAt: { gte: sinds }, OR: [{ stripeSessionId: { not: null } }, { status: { not: "BETAALD" } }] },
       orderBy: { createdAt: "desc" },
       take: 500,
-      select: { id: true, zaakId: true, bedragCent: true, fooiCent: true, status: true, bonNummer: true, door: true, createdAt: true, betaaldOp: true, tafel: { select: { naam: true } } },
+      select: { id: true, zaakId: true, bedragCent: true, fooiCent: true, status: true, methode: true, bonNummer: true, door: true, createdAt: true, betaaldOp: true, tafel: { select: { naam: true } } },
     }),
   ]);
   const metStand = await Promise.all(zaken.map(async (z) => ({ ...z, betalenAan: heeftModule(z, "betalen"), stripe: await stripeStand(z) })));
-  return { zaken: metStand, betalingen, sinds };
+  const kosten = await kvGetMany<HorecaKosten>(betalingen.map((b) => kKosten(b.id)));
+  return { zaken: metStand, betalingen: betalingen.map((b) => ({ ...b, kosten: kosten.get(kKosten(b.id)) ?? null })), sinds };
 }

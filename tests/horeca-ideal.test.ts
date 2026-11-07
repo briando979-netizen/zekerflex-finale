@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BestelRegel } from "@/lib/horeca/bestellen";
-import { rekeningVan } from "@/lib/horeca/kassa";
-import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, leesIdealRegels, MAX_FOOI_CENT } from "@/lib/horeca/ideal";
+import { methodeLabel, rekeningVan } from "@/lib/horeca/kassa";
+import { beschikbaar, boekAf, bonRegels, fooiGeldig, idealRegels, kiesRegels, kostenVooraf, leesIdealRegels, MAX_FOOI_CENT, onlineMethode, terugNaarZaak } from "@/lib/horeca/ideal";
 
 const regel = (naam: string, prijsCent: number, aantal: number, extra: Partial<BestelRegel> = {}): BestelRegel => ({ itemId: naam, naam, prijsCent, aantal, opmerking: "", station: "keuken", ...extra });
 
@@ -108,5 +108,37 @@ describe("iDEAL aan tafel", () => {
     expect(fooiGeldig(-1, 2500)).toBe(false);
     expect(fooiGeldig(12.5, 2500)).toBe(false);
     expect(fooiGeldig("100", 2500)).toBe(false);
+  });
+});
+
+describe("betaalwijze en kosten aan tafel", () => {
+  it("houdt vooraf genoeg in voor de duurste pas, en minstens de iDEAL-kosten", () => {
+    expect(kostenVooraf(500, 29)).toBe(42); // € 5: 3,25% = 16,25 → 17 + 25
+    expect(kostenVooraf(4250, 29)).toBe(164); // € 42,50: 138,125 → 139 + 25
+    expect(kostenVooraf(100, 29)).toBe(29); // € 1: 4 + 25 = 29
+    expect(kostenVooraf(10, 29)).toBe(29);
+  });
+
+  it("stort het verschil met de echte kosten terug, nooit meer dan er over is", () => {
+    expect(terugNaarZaak(164, 89, 0)).toBe(75); // Nederlandse pas: 1,5% + € 0,25 = € 0,89
+    expect(terugNaarZaak(164, 29, 0)).toBe(135); // toch iDEAL
+    expect(terugNaarZaak(164, 89, 75)).toBe(0); // al teruggestort (webhook kwam twee keer)
+    expect(terugNaarZaak(164, 200, 0)).toBe(0); // duurder dan gedacht: niets terug
+  });
+
+  it("leest de betaalwijze uit Stripe", () => {
+    expect(onlineMethode({ type: "ideal" })).toBe("ideal");
+    expect(onlineMethode({ type: "card", card: { wallet: { type: "apple_pay" } } })).toBe("apple_pay");
+    expect(onlineMethode({ type: "card", card: { wallet: { type: "google_pay" } } })).toBe("google_pay");
+    expect(onlineMethode({ type: "card", card: { wallet: null } })).toBe("kaart");
+    expect(onlineMethode(null)).toBe("ideal");
+  });
+
+  it("de bon noemt de echte betaalwijze", () => {
+    expect(methodeLabel("apple_pay")).toBe("Apple Pay");
+    expect(methodeLabel("kaart")).toBe("Pas");
+    expect(methodeLabel("ideal")).toBe("iDEAL");
+    expect(methodeLabel("pin")).toBe("Pin");
+    expect(methodeLabel("constructor")).toBe("constructor");
   });
 });

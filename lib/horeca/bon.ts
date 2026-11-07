@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { SimplePdf } from "@/lib/pdf/simple";
 import type { MailInput } from "@/lib/mail";
 import { leesMet, tekenMet } from "@/lib/horeca/link";
-import { btwSpecificatie, METHODE_LABEL, type Methode } from "@/lib/horeca/kassa";
+import { btwSpecificatie, methodeLabel } from "@/lib/horeca/kassa";
 import { bonKop, bonVan, type Bon } from "@/lib/horeca/kassa-server";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ export function bonPdf(kop: Kop, bon: Bon): Buffer {
   for (const r of bon.regels) pdf.row(`${r.aantal} x ${r.naam}`, bedrag(r.prijsCent * r.aantal));
   pdf.rule().row("Totaal", `€ ${bedrag(bon.bedragCent)}`, { bold: true });
   if (bon.fooiCent > 0) pdf.row("Fooi", `€ ${bedrag(bon.fooiCent)}`);
-  pdf.row(`Betaald (${METHODE_LABEL[bon.methode as Methode] ?? bon.methode})`, `€ ${bedrag(bon.bedragCent + bon.fooiCent)}`);
+  pdf.row(`Betaald (${methodeLabel(bon.methode)})`, `€ ${bedrag(bon.bedragCent + bon.fooiCent)}`);
   pdf.rule().section("Btw", 10.5);
   for (const b of btwSpecificatie(bon.regels)) pdf.row(`${b.tarief}% over € ${bedrag(b.exclCent)}`, `€ ${bedrag(b.btwCent)}`);
   if (kop.voettekst) pdf.rule().line(kop.voettekst);
