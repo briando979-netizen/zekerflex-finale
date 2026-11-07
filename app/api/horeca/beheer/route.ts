@@ -3,9 +3,11 @@ import { bevestigingGast, verstuur } from "@/lib/horeca/mail";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
-import { aanzettenSchema, beheerActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES } from "@/lib/horeca/schema";
+import { aanzettenSchema, beheerActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES, uitbetaalSchema } from "@/lib/horeca/schema";
 import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
-import { beheerContext, eisBeheer } from "@/lib/horeca/toegang";
+import { beheerContext, eisBeheer, isEigenaar } from "@/lib/horeca/toegang";
+import { neemOp, uitbetaalStand, zetAutomatischUitbetalen } from "@/lib/horeca/uitbetalen";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import {
   bewaarCategorie,
   bewaarItem,
@@ -68,6 +70,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (q.get("alleen") === "live") return NextResponse.json(await dashboardVan(zaak));
     // ?alleen=stripe → is het Stripe-account van de zaak gekoppeld en klaar voor iDEAL aan tafel (lib/horeca/betalen.ts)
     if (q.get("alleen") === "stripe") return NextResponse.json(await stripeStand(zaak, true));
+    // ?alleen=uitbetalen → saldo bij Stripe, automatisch of met de hand, laatste uitbetalingen (lib/horeca/uitbetalen.ts)
+    if (q.get("alleen") === "uitbetalen") {
+      eisModule(zaak, "betalen");
+      return NextResponse.json({ stand: await uitbetaalStand(zaak), eigenaar: await isEigenaar(zaak) });
+    }
     // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → CSV voor de boekhouder
     if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv") {
       eisModule(zaak, "kassa");
@@ -141,6 +148,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (stripeActie === "stripe-koppelen" || stripeActie === "stripe-overzicht") {
       eisModule(zaak, "betalen");
       return NextResponse.json({ url: stripeActie === "stripe-koppelen" ? await koppelStripe(zaak, { email: p.email }) : await stripeDashboard(zaak) });
+    }
+    // het geld van de zaak bij Stripe: automatisch uitbetalen aan/uit en zelf opnemen. Alleen de eigenaar.
+    if (stripeActie === "uitbetalen-automatisch" || stripeActie === "uitbetalen-opnemen") {
+      eisModule(zaak, "betalen");
+      if (!(await isEigenaar(zaak))) throw AppError.precondition("Alleen de eigenaar van de zaak kan het uitbetalen regelen.");
+      const u = lees(uitbetaalSchema, body);
+      if (u.actie === "uitbetalen-automatisch") return NextResponse.json({ stand: await zetAutomatischUitbetalen(zaak, u.aan, { userId: p.userId }) });
+      await enforceRateLimit({ name: "horeca-opname", identifier: zaak.id, limit: 10, windowSeconds: 3600 });
+      return NextResponse.json(await neemOp(zaak, u.bedragCent ?? null, { userId: p.userId }));
     }
     // takenlijsten (module taken) hebben een eigen schema
     if (TAKEN_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Uitbetalen } from "@/components/horeca/beheer/Uitbetalen";
 
 // Afrekenen aan tafel: het eigen Stripe-account van de zaak. Koppelen opent de
 // aanmelding bij Stripe (bedrijfsgegevens, bankrekening); daarna betaalt Stripe
@@ -41,6 +42,7 @@ export function StripeKoppeling() {
   }
 
   return (
+    <>
     <div className="mt-3 rounded-xl border border-hair p-3 text-sm">
       {stand === null ? (
         <p className="text-neutralx-500">Stripe-account controleren…</p>
@@ -71,5 +73,8 @@ export function StripeKoppeling() {
         </p>
       )}
     </div>
+    {/* het geld van de zaak bij Stripe: automatisch uitbetalen of zelf opnemen */}
+    {stand?.klaar && <Uitbetalen />}
+    </>
   );
 }

@@ -196,6 +196,12 @@ export const gastReserveringSchema = z.object({
 /** Een gast bestelt via de QR-code op tafel (/api/horeca/site/<slug>/bestellen). */
 export const gastBestellingSchema = z.object({ code: z.string().min(6).max(40), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") });
 
+/** Het geld van de zaak bij Stripe (Afrekenen → Jullie geld): automatisch uitbetalen aan/uit, of zelf opnemen (lib/horeca/uitbetalen.ts). */
+export const uitbetaalSchema = z.discriminatedUnion("actie", [
+  z.object({ actie: z.literal("uitbetalen-automatisch"), aan: z.boolean() }),
+  z.object({ actie: z.literal("uitbetalen-opnemen"), bedragCent: z.number().int().min(100).max(100_000_000).optional() }),
+]);
+
 export type BeheerActie = z.infer<typeof beheerActieSchema>;
 
 /** Parse of gooi een nette Nederlandse fout (eerste melding). */
