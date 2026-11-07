@@ -4,6 +4,7 @@ import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { chat, embed } from "@/lib/ai/client";
 import { gratisAan, gratisModel, primeGratis } from "@/lib/ai/gratis";
+import { vastBegin } from "@/lib/chat/publiek-begin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +21,11 @@ async function handle(request: Request): Promise<NextResponse> {
   if (!gratisAan()) return NextResponse.json({ ok: true, overgeslagen: "alles gratis staat uit" });
   const t0 = Date.now();
   try {
+    // met precies het vaste begin van de openbare chat: dan ligt dat begin ingelezen klaar
+    // en hoeft een gast alleen op zijn eigen vraag te wachten (lib/chat/publiek-systeem.ts)
+    const begin = await vastBegin();
     await Promise.all([
-      chat({ purpose: "ai-warm", messages: [{ role: "user", content: "Zeg alleen: ok" }], maxTokens: 1, retry: false, timeoutMs: 120_000 }),
+      chat({ purpose: "ai-warm", messages: [...begin, { role: "user", content: "ok" }], maxTokens: 1, retry: false, timeoutMs: 120_000 }),
       embed("ok"),
     ]);
     recordCronRun("ai-warm", true);

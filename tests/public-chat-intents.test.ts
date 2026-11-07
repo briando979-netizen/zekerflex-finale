@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fallbackAnswer, kortGenoegVoorVastAntwoord, smallTalk, topicAnswer, VAST_ANTWOORD_MAX_WOORDEN, withSuggestions } from "@/lib/chat/public-intents";
+import { PUBLIEK_SYSTEEM } from "@/lib/chat/publiek-systeem";
 
 describe("public chat assistant without a model", () => {
   it.each(["hoi", "Hoi!", "hallo", "hey", "goedemorgen", "Hi"])("greets back on %s with options", (t) => {
@@ -49,6 +50,13 @@ describe("public chat assistant without a model", () => {
     expect(kortGenoegVoorVastAntwoord("Mijn kok heeft zich net ziek gemeld en ik heb vanavond een zaal vol. Kan ik via jullie vandaag nog iemand vinden?")).toBe(false);
     expect(kortGenoegVoorVastAntwoord(`  ${"woord ".repeat(VAST_ANTWOORD_MAX_WOORDEN)} `)).toBe(true);
     expect(kortGenoegVoorVastAntwoord("woord ".repeat(VAST_ANTWOORD_MAX_WOORDEN + 1))).toBe(false);
+  });
+
+  it("de vaste instructie kent de spoedoproep en belooft geen betaalpas", () => {
+    expect(PUBLIEK_SYSTEEM).toContain("spoedoproep");
+    expect(PUBLIEK_SYSTEEM).toContain("bedrijf of een werker");
+    expect(PUBLIEK_SYSTEEM).toContain("beloof die nooit");
+    expect(PUBLIEK_SYSTEEM).not.toMatch(/modelserver/i);
   });
 
   it("sends follow-ups in the widget's wire format", () => {

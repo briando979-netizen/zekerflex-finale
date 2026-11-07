@@ -6,7 +6,9 @@ import { appendMessage, isConversationId } from "@/lib/chat/webchat";
 import { fixedWindow } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
-import { logExchange, topExamples } from "@/lib/learn/store";
+import { logExchange } from "@/lib/learn/store";
+import { vastBegin } from "@/lib/chat/publiek-begin";
+import { gratisAan, primeGratis } from "@/lib/ai/gratis";
 import { advancedRecall } from "@/lib/rag/advanced";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 
@@ -27,25 +29,6 @@ const bodySchema = z.object({
   conversationId: z.string().optional(),
   page: z.string().max(200).optional(),
 });
-
-const SYSTEM = `Je bent de publieke assistent op de website van ZekerFlex, een Nederlands
-platform voor flexibel werk. Je helpt werknemers en werkgevers met vragen over het platform.
-
-Feiten die je mag gebruiken:
-- ZekerFlex matcht werknemers aan losse diensten (shifts) op basis van reistijd, betrouwbaarheid en vakmatch.
-- Freelancers worden niet automatisch meteen uitbetaald: na goedkeuring van de uren kiezen ze zelf per dienst — betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). Bijschrijving bij een externe bank kan langer duren. Een voorschot van max. 80% op openstaande diensten kan tegen 3%.
-- ZekerFlex legt afspraken per relatie vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Deze hulpmiddelen geven geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend.
-- Werkgevers betalen alleen bij gebruik: € 3,50 platformkosten per gewerkt uur. Geen abonnement, geen opstartkosten.
-- Aanmelden vereist KVK-inschrijving (zzp) en identiteitsverificatie (KYC).
-- Facturatie verloopt via reverse billing: ZekerFlex maakt de facturen automatisch aan.
-- ZekerFlex gebruikt gespecialiseerde dienstverleners voor onderdelen zoals hosting, betalingen, e-mail en identiteitscontroles. De AI-assistent kan op een eigen modelserver draaien.
-- ZekerFlex Bank: eigen rekening in de app; verdiensten direct erop, potjes, sparen met vaste rente, overmaken, betaalverzoeken. Eerste 30 dagen gratis. Een betaalpas is er nog niet: beloof die nooit.
-- Zonder KVK werk je als uitzendkracht via ZekerFlex (loonstrook; een mogelijk voorschot wordt na goedkeuring als betaalopdracht ingediend en bijschrijving hangt af van betaalprovider en bank).
-- Op de dag van de klus check je in en uit op locatie; uren vul je in stappen in.
-
-Regels: antwoord kort (max 4 zinnen), in het Nederlands, vriendelijk en concreet.
-Verzin geen prijzen of functies die hierboven niet staan. Weet je iets niet, verwijs naar
-info@zekerflex.com of de pagina Voor bedrijven / Voor freelancers.`;
 
 function textStream(
   chunks: AsyncIterable<string> | string,
@@ -146,24 +129,19 @@ async function handlePOST(request: Request): Promise<Response> {
 
   const shortConversation = parsed.messages.length <= 4;
   try {
-    const examples = await topExamples("public", 2).catch(() => []);
-    const exampleMsgs = examples.length
-      ? [
-          {
-            role: "system" as const,
-            content:
-              "Voorbeelden van eerdere goede antwoorden (gebruik dezelfde toon en feiten):\n" +
-              examples.map((e) => `V: ${e.q}\nA: ${e.a}`).join("\n\n"),
-          },
-        ]
-      : [];
-    const knowledgeMsgs = knowledgeHits.length
+    // vast begin (instructie + voorbeelden) altijd vooraan en letterlijk gelijk: het eigen model
+    // hergebruikt het dan (lib/chat/publiek-systeem.ts). Op het eigen model (geen videokaart,
+    // ±55 tokens/s inlezen) gaat er minder kennisbank mee: 3 kortere stukken in plaats van 4.
+    await primeGratis();
+    const begin = await vastBegin();
+    const hits = gratisAan() ? knowledgeHits.slice(0, 3).map((h) => ({ ...h, excerpt: h.excerpt.slice(0, 450) })) : knowledgeHits;
+    const knowledgeMsgs = hits.length
       ? [
           {
             role: "system" as const,
             content:
               "Relevante info uit de ZekerFlex-kennisbank voor deze vraag (gebruik dit, verzin niets extra's):\n" +
-              knowledgeHits.map((h) => `[${h.source}] ${h.title}\n${h.excerpt}`).join("\n\n"),
+              hits.map((h) => `[${h.source}] ${h.title}\n${h.excerpt}`).join("\n\n"),
           },
         ]
       : [];
@@ -180,7 +158,7 @@ async function handlePOST(request: Request): Promise<Response> {
       ...(shortConversation ? { model: fastModel() } : {}),
       temperature: 0.3,
       maxTokens: 260,
-      messages: [{ role: "system", content: SYSTEM }, ...knowledgeMsgs, ...topicMsgs, ...exampleMsgs, ...parsed.messages],
+      messages: [...begin, ...knowledgeMsgs, ...topicMsgs, ...parsed.messages],
     });
     return textStream(gen, question, smartFallback, saveReply);
   } catch (err) {
