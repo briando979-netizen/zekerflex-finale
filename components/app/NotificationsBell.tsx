@@ -220,7 +220,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex-shrink-0">
       <button
         type="button"
         onClick={() => {
@@ -229,8 +229,8 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
             // op een smal scherm zit de bel niet aan de rechterrand: schuif het paneel zo dat het past
             const r = ref.current?.getBoundingClientRect();
             const vw = window.innerWidth;
-            const w = Math.min(416, vw - 20);
-            setShift(r ? Math.max(0, 10 - (r.right - w)) : 0);
+            const w = Math.min(416, vw - 40);
+            setShift(r ? Math.max(0, 40 - (r.right - w)) : 0);
           }
           setOpen((v) => !v);
         }}
@@ -257,7 +257,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
       {open && (
         <div
           className="fixed top-full z-[60] mt-2 flex max-h-[min(36rem,calc(100dvh-5rem))] w-[min(26rem,calc(100vw-1.25rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
-          style={{ ...panelStyle, right: Math.max(10, shift) }}
+          style={{ ...panelStyle, right: Math.max(20, shift), pointerEvents: "auto" }}
         >
           {/* Koptekst */}
           <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>
