@@ -47,16 +47,46 @@ export type FotoUitkomst = {
 };
 
 async function naarCanvas(bestand: File, max = 1280): Promise<HTMLCanvasElement> {
-  const bmp = await createImageBitmap(bestand);
-  const f = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * f);
-  c.height = Math.round(bmp.height * f);
-  const ctx = c.getContext("2d");
-  if (!ctx) throw new Error("canvas");
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
-  return c;
+  // Try createImageBitmap first (faster), fall back to Image for Safari compatibility
+  try {
+    const bmp = await createImageBitmap(bestand);
+    const f = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * f);
+    c.height = Math.round(bmp.height * f);
+    const ctx = c.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    return c;
+  } catch {
+    // Safari fallback: use Image
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(bestand);
+      const img = new Image();
+      img.onload = () => {
+        const f = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * f);
+        c.height = Math.round(img.height * f);
+        const ctx = c.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error("canvas"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("image-load"));
+      };
+      img.crossOrigin = "anonymous";
+      img.src = url;
+    });
+  }
 }
 
 function pixels(c: HTMLCanvasElement, x: number, y: number, w: number, h: number): Uint8ClampedArray {
