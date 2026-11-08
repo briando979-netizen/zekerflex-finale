@@ -137,6 +137,14 @@ model Tenant {
   forms                Form[]
   formResponses        FormResponse[]
 
+  // Compliance & Audit
+  complianceFrameworks ComplianceFrameworkDefinition[] @relation("ComplianceFrameworks")
+  auditSchedules       AuditSchedule[]                @relation("AuditSchedules")
+  riskAssessments      RiskAssessment[]               @relation("RiskAssessments")
+  governancePolicies   GovernancePolicy[]             @relation("GovernancePolicies")
+  attestations         Attestation[]                  @relation("Attestations")
+  complianceReports    ComplianceReport[]             @relation("ComplianceReports")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -4547,10 +4555,10 @@ model Employee {
   attendance      Attendance[]
   reviews         PerformanceReview[]
   goals           EmployeeGoal[]
-  compliance      ComplianceDocument[]
+  compliance      EmployeeComplianceDocument[]
   training        Training[]
   backgroundCheck BackgroundCheck[]
-  feedback        Feedback[]
+  feedback        EmployeeFeedback[]
   slips           SalarySlip[]
 
   createdAt DateTime @default(now())
@@ -4653,7 +4661,7 @@ model EmployeeGoal {
   @@index([employeeId])
 }
 
-model ComplianceDocument {
+model EmployeeComplianceDocument {
   id              String   @id @default(cuid())
   employeeId      String
   employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -4704,7 +4712,7 @@ model BackgroundCheck {
   @@index([employeeId])
 }
 
-model Feedback {
+model EmployeeFeedback {
   id              String   @id @default(cuid())
   employeeId      String
   employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -6356,4 +6364,264 @@ model StakeholderEngagement {
   @@index([tenantId])
   @@index([engagementDate])
   @@index([stakeholderType])
+}
+
+// ===========================================================================
+// Marketing Resource Management (MRM) System — 6 subsystems
+// ===========================================================================
+
+// 1. Campaign Management — multi-channel campaigns, orchestration, scheduling
+model MrmCampaign {
+  id              String   @id @default(cuid())
+  tenantId        String
+  name            String
+  description     String?
+  status          String   @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, PAUSED, COMPLETED, ARCHIVED
+  type            String   // EMAIL, SOCIAL, CONTENT, PAID_ADS, WEBINAR, MULTI_CHANNEL
+  channels        String[] // "email", "linkedin", "twitter", "tiktok", "facebook", "instagram", "youtube"
+  
+  // Scheduling
+  scheduledStart   DateTime?
+  scheduledEnd     DateTime?
+  
+  // Performance
+  impressions      Int      @default(0)
+  clicks           Int      @default(0)
+  conversions      Int      @default(0)
+  budget           Float    // in cents, amounts stored as integers
+  spend            Float    @default(0)
+  roi              Float?
+  
+  // Relations
+  assets           MrmDigitalAsset[]
+  automations      MrmAutomationWorkflow[]
+  budgetLines      MrmBudgetLine[]
+  attributionData  MrmAttribution[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([status])
+  @@index([scheduledStart])
+}
+
+// 2. Asset Management — digital asset library, versions, approvals, brand guidelines
+model MrmDigitalAsset {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        MrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  name            String
+  description     String?
+  type            String   // IMAGE, VIDEO, DOCUMENT, TEMPLATE, AUDIO, DESIGN
+  category        String?  // HERO, THUMBNAIL, LOGO, BRAND_ASSET, etc.
+  
+  // Storage
+  fileUrl         String
+  fileSize        Int      // bytes
+  mimeType        String
+  
+  // Versioning
+  version         Int      @default(1)
+  parentAssetId   String?  // if this is a version of another asset
+  
+  // Approvals & Brand Guidelines
+  approvalStatus  String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedBy      String?
+  approvalNotes   String?
+  brandGuidelineId String?
+  
+  // Metadata
+  tags            String[]
+  usage           Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([campaignId])
+  @@index([approvalStatus])
+  @@index([type])
+}
+
+// 3. Resource Planning — team capacity, project management, resource allocation
+model MrmResourceAllocation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  campaignId      String?
+  campaign        MrmCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  resourceId      String   // userId or team id
+  resourceType    String   // USER, TEAM, AGENCY
+  resourceName    String
+  
+  // Capacity
+  allocatedHours  Float
+  utilizedHours   Float    @default(0)
+  remainingHours  Float
+  capacity        Float    @default(100) // percentage
+  
+  // Time period
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Status
+  status          String   @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([resourceType])
+}
+
+// 4. Budget Management — allocation, spend tracking, ROI analysis
+model MrmBudgetLine {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        MrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  lineItem        String   // MEDIA_SPEND, PRODUCTION, TALENT, TOOLS, etc.
+  allocatedBudget Float    // in cents
+  spentBudget     Float    @default(0)
+  forecastedBudget Float?
+  
+  // ROI Analysis
+  expectedReturn  Float?   // expected revenue
+  actualReturn    Float    @default(0)
+  roiPercentage   Float?
+  
+  // Cost tracking
+  costCenter      String?
+  departmentId    String?
+  
+  startDate       DateTime
+  endDate         DateTime
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([campaignId])
+  @@index([lineItem])
+}
+
+// 5. Marketing Automation — workflow builder, triggers, lead scoring, nurture
+model MrmAutomationWorkflow {
+  id              String   @id @default(cuid())
+  campaignId      String?
+  campaign        MrmCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  tenantId        String
+  
+  name            String
+  description     String?
+  status          String   @default("DRAFT") // DRAFT, ACTIVE, PAUSED, ARCHIVED
+  type            String   // LEAD_NURTURE, WELCOME_SERIES, RE_ENGAGEMENT, DRIP, TRIGGER_BASED
+  
+  // Trigger configuration
+  triggerType     String   // ON_SIGNUP, ON_PURCHASE, ON_ENGAGEMENT, TIME_DELAY, MANUAL
+  triggerConfig   Json     // trigger settings/conditions
+  
+  // Lead scoring
+  enableLeadScoring Boolean @default(false)
+  scoringRules    Json?    // lead scoring configuration
+  
+  // Steps/sequences
+  steps           MrmWorkflowStep[]
+  
+  // Performance
+  totalSent       Int      @default(0)
+  opened          Int      @default(0)
+  clicked         Int      @default(0)
+  converted       Int      @default(0)
+  
+  // Timing
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  startedAt       DateTime?
+  
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([triggerType])
+}
+
+// Workflow steps within an automation
+model MrmWorkflowStep {
+  id              String   @id @default(cuid())
+  workflowId      String
+  workflow        MrmAutomationWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  stepNumber      Int
+  action          String   // SEND_EMAIL, SEND_SMS, ADD_TAG, UPDATE_LEAD_SCORE, etc.
+  actionConfig    Json     // specific configuration for this action
+  
+  delayMinutes    Int      @default(0)
+  condition       Json?    // conditional logic
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workflowId])
+  @@unique([workflowId, stepNumber])
+}
+
+// 6. Attribution & Analytics — multi-touch attribution, channel mix, forecasting
+model MrmAttribution {
+  id              String   @id @default(cuid())
+  campaignId      String?
+  campaign        MrmCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  tenantId        String
+  
+  conversionId    String   // reference to a conversion/opportunity
+  
+  // Touchpoints in the conversion path
+  touchpoints     String[] // array of campaign ids that contributed
+  
+  // Attribution models
+  attributionModel String  // FIRST_TOUCH, LAST_TOUCH, LINEAR, TIME_DECAY, U_SHAPED, W_SHAPED, CUSTOM
+  
+  // Channel attribution
+  channelWeights  Json     // weights per channel for multi-touch
+  
+  // Financial
+  totalValue      Float    // revenue attributed to this conversion
+  attributedValue Float    // value after attribution model applied
+  costPerConversion Float?
+  
+  // Time period
+  conversionDate  DateTime
+  attributionWindow String @default("30_DAYS") // 7_DAYS, 30_DAYS, 90_DAYS, 12_MONTHS
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([conversionDate])
+}
+
+// Attribution analysis for forecasting & optimization
+model MrmAttributionAnalysis {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  period          String   // YYYY-MM
+  analysisType    String   // CHANNEL_MIX, FORECASTING, OPTIMIZATION
+  
+  // Channel performance summary
+  channelData     Json     // aggregated metrics per channel
+  
+  // Forecasting
+  forecast        Json?    // revenue/conversion forecast
+  confidence      Float?   // confidence level of forecast
+  
+  // Optimization recommendations
+  recommendations Json?    // suggested optimizations
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([period])
 }

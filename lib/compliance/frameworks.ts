@@ -1,176 +1,303 @@
-export interface ComplianceFramework {
+﻿import { prisma } from "@/lib/prisma";
+import { ComplianceFramework, ComplianceStatus } from "@prisma/client";
+import type { ComplianceFrameworkStatus } from "./types";
+
+export async function initializeFramework(
+  tenantId: string,
+  framework: ComplianceFramework,
+  standards: string[]
+): Promise<void> {
+  const existing = await prisma.complianceFrameworkDefinition.findFirst({
+    where: { tenantId, framework }
+  });
+
+  if (existing) return;
+
+  await prisma.complianceFrameworkDefinition.create({
+    data: {
+      tenantId,
+      framework,
+      name: `${framework} Compliance`,
+      standards,
+      controls: {
+        create: getControlsForFramework(framework).map(c => ({
+          controlId: c.id,
+          controlName: c.name,
+          description: c.description,
+          objective: c.objective,
+          testProcedure: c.testProcedure
+        }))
+      }
+    }
+  });
+}
+
+export async function getFrameworkStatus(
+  tenantId: string,
+  framework: ComplianceFramework
+): Promise<ComplianceFrameworkStatus | null> {
+  const frameworkDef = await prisma.complianceFrameworkDefinition.findFirst({
+    where: { tenantId, framework },
+    include: { controls: { include: { checkResults: true } } }
+  });
+
+  if (!frameworkDef) return null;
+
+  const total = frameworkDef.controls.length;
+  const compliant = frameworkDef.controls.filter(
+    c => c.status === ComplianceStatus.COMPLIANT
+  ).length;
+
+  const lastCheck = Math.max(
+    ...frameworkDef.controls.map(c => c.lastCheckedAt?.getTime() ?? 0)
+  );
+
+  return {
+    frameworkId: frameworkDef.id,
+    framework: frameworkDef.framework,
+    name: frameworkDef.name,
+    controlsTotal: total,
+    controlsCompliant: compliant,
+    lastCheckedAt: lastCheck > 0 ? new Date(lastCheck) : null,
+    compliancePercentage: total > 0 ? Math.round((compliant / total) * 100) : 0,
+    status: compliant === total ? ComplianceStatus.COMPLIANT : ComplianceStatus.IN_PROGRESS
+  };
+}
+
+export async function listFrameworks(tenantId: string): Promise<ComplianceFrameworkStatus[]> {
+  const frameworks = await prisma.complianceFrameworkDefinition.findMany({
+    where: { tenantId, isActive: true },
+    include: { controls: { include: { checkResults: true } } }
+  });
+
+  return frameworks.map(fw => {
+    const total = fw.controls.length;
+    const compliant = fw.controls.filter(c => c.status === ComplianceStatus.COMPLIANT).length;
+    const lastCheck = Math.max(
+      ...fw.controls.map(c => c.lastCheckedAt?.getTime() ?? 0)
+    );
+
+    return {
+      frameworkId: fw.id,
+      framework: fw.framework,
+      name: fw.name,
+      controlsTotal: total,
+      controlsCompliant: compliant,
+      lastCheckedAt: lastCheck > 0 ? new Date(lastCheck) : null,
+      compliancePercentage: total > 0 ? Math.round((compliant / total) * 100) : 0,
+      status: compliant === total ? ComplianceStatus.COMPLIANT : ComplianceStatus.IN_PROGRESS
+    };
+  });
+}
+
+export async function updateControlStatus(
+  controlId: string,
+  status: ComplianceStatus,
+  evidence: string | null,
+  performedBy: string | null
+): Promise<void> {
+  const control = await prisma.complianceControl.findUnique({ where: { id: controlId } });
+  if (!control) throw new Error("Control not found");
+
+  await prisma.complianceControl.update({
+    where: { id: controlId },
+    data: {
+      status,
+      lastCheckedAt: new Date(),
+      nextCheckDate: calculateNextCheckDate(status),
+      checkResults: {
+        create: {
+          checkDate: new Date(),
+          status,
+          evidence,
+          performedBy
+        }
+      }
+    }
+  });
+}
+
+function getControlsForFramework(framework: ComplianceFramework): Array<{
   id: string;
   name: string;
   description: string;
-  requirements: ComplianceRequirement[];
-  enforceable: boolean;
+  objective: string;
+  testProcedure: string;
+}> {
+  const controls: Record<ComplianceFramework, typeof controls> = {
+    GDPR: [
+      {
+        id: "GDPR-1",
+        name: "Data Processing Agreements",
+        description: "Ensure DPAs are in place with all processors",
+        objective: "Contractual protection for personal data",
+        testProcedure: "Review DPA copies and verify signatures"
+      },
+      {
+        id: "GDPR-2",
+        name: "Privacy by Design",
+        description: "Implement privacy-first design principles",
+        objective: "Protect personal data from collection",
+        testProcedure: "Audit system architecture and policies"
+      },
+      {
+        id: "GDPR-3",
+        name: "Data Subject Rights",
+        description: "Enable access, rectification, erasure requests",
+        objective: "Fulfill data subject obligations",
+        testProcedure: "Test data export and deletion processes"
+      }
+    ],
+    ISO27001: [
+      {
+        id: "ISO-1",
+        name: "Information Security Policy",
+        description: "Documented information security policy",
+        objective: "Establish security governance",
+        testProcedure: "Review policy document and approvals"
+      },
+      {
+        id: "ISO-2",
+        name: "Access Control",
+        description: "Implement role-based access control",
+        objective: "Restrict unauthorized system access",
+        testProcedure: "Audit access lists and permissions"
+      },
+      {
+        id: "ISO-3",
+        name: "Incident Management",
+        description: "Incident detection and response procedures",
+        objective: "Minimize impact of security incidents",
+        testProcedure: "Test incident response plan"
+      }
+    ],
+    SOC2: [
+      {
+        id: "SOC2-1",
+        name: "Security Program",
+        description: "Comprehensive security program in place",
+        objective: "Protect systems from unauthorized access",
+        testProcedure: "Review and test security controls"
+      },
+      {
+        id: "SOC2-2",
+        name: "Change Management",
+        description: "Controlled system change procedures",
+        objective: "Prevent unauthorized modifications",
+        testProcedure: "Audit change logs and approvals"
+      },
+      {
+        id: "SOC2-3",
+        name: "System Availability",
+        description: "Maintain system availability and performance",
+        objective: "Ensure operational resilience",
+        testProcedure: "Review uptime metrics and backups"
+      }
+    ],
+    NEN_7510: [
+      {
+        id: "NEN-1",
+        name: "Information Governance",
+        description: "Healthcare information governance",
+        objective: "Protect patient data",
+        testProcedure: "Review governance documentation"
+      },
+      {
+        id: "NEN-2",
+        name: "Risk Management",
+        description: "Healthcare-specific risk assessments",
+        objective: "Identify and mitigate healthcare risks",
+        testProcedure: "Review risk register"
+      },
+      {
+        id: "NEN-3",
+        name: "Compliance Monitoring",
+        description: "Ongoing compliance verification",
+        objective: "Maintain healthcare standards",
+        testProcedure: "Test monitoring procedures"
+      }
+    ],
+    CCPA: [
+      {
+        id: "CCPA-1",
+        name: "Consumer Rights",
+        description: "Honor CCPA data subject rights",
+        objective: "Fulfill California privacy law",
+        testProcedure: "Test consumer request fulfillment"
+      },
+      {
+        id: "CCPA-2",
+        name: "Opt-Out Mechanism",
+        description: "Implement sale opt-out functionality",
+        objective: "Allow data sale prohibition",
+        testProcedure: "Test opt-out process"
+      },
+      {
+        id: "CCPA-3",
+        name: "Notice Requirements",
+        description: "Display required privacy notices",
+        objective: "Inform consumers of data practices",
+        testProcedure: "Verify privacy notices"
+      }
+    ],
+    HIPAA: [
+      {
+        id: "HIPAA-1",
+        name: "Protected Health Information",
+        description: "Safeguard PHI data",
+        objective: "Prevent unauthorized PHI access",
+        testProcedure: "Audit PHI storage and transmission"
+      },
+      {
+        id: "HIPAA-2",
+        name: "Breach Notification",
+        description: "Report PHI breaches within 60 days",
+        objective: "Fulfill breach notification requirements",
+        testProcedure: "Test breach notification process"
+      },
+      {
+        id: "HIPAA-3",
+        name: "Audit Controls",
+        description: "Log and monitor PHI access",
+        objective: "Detect unauthorized PHI access",
+        testProcedure: "Review audit logs"
+      }
+    ],
+    AVG: [
+      {
+        id: "AVG-1",
+        name: "Rechtmatige grondslag",
+        description: "Rechtmatige basis voor gegevensverwerking",
+        objective: "Voldoen aan AVG verplichtingen",
+        testProcedure: "Controleer verwerkingsbasis"
+      },
+      {
+        id: "AVG-2",
+        name: "Transparantie",
+        description: "Transparante privacyverklaringen",
+        objective: "Gegevenssujetten informeren",
+        testProcedure: "Controleer privacybeleid"
+      },
+      {
+        id: "AVG-3",
+        name: "Gegevensveiligheid",
+        description: "Veiligheidsmaatregelen gegevens",
+        objective: "Bescherm persoonsgegevens",
+        testProcedure: "Controleer beveiligingsmaatregelen"
+      }
+    ],
+    CUSTOM: []
+  };
+
+  return controls[framework] ?? [];
 }
 
-export interface ComplianceRequirement {
-  id: string;
-  name: string;
-  description: string;
-  control: string;
-  status: "MET" | "NOT_MET" | "PARTIAL" | "IN_PROGRESS";
-  dueDate?: Date;
-  evidence?: string;
-  remediation?: string;
-}
-
-export const GDPR_FRAMEWORK: ComplianceFramework = {
-  id: "gdpr",
-  name: "GDPR (General Data Protection Regulation)",
-  description: "EU data protection regulation",
-  enforceable: true,
-  requirements: [
-    {
-      id: "gdpr-consent",
-      name: "Explicit Consent",
-      description: "Collect explicit consent for data processing",
-      control: "GDPR Article 7",
-      status: "MET",
-    },
-    {
-      id: "gdpr-dpia",
-      name: "Data Protection Impact Assessment",
-      description: "Conduct DPIA for high-risk processing",
-      control: "GDPR Article 35",
-      status: "MET",
-    },
-    {
-      id: "gdpr-rtbf",
-      name: "Right to be Forgotten",
-      description: "Allow users to request data deletion",
-      control: "GDPR Article 17",
-      status: "MET",
-    },
-    {
-      id: "gdpr-dpp",
-      name: "Data Protection Officer",
-      description: "Appoint DPO if required",
-      control: "GDPR Article 37",
-      status: "MET",
-    },
-  ],
-};
-
-export const HIPAA_FRAMEWORK: ComplianceFramework = {
-  id: "hipaa",
-  name: "HIPAA (Health Insurance Portability and Accountability Act)",
-  description: "US healthcare data protection",
-  enforceable: true,
-  requirements: [
-    {
-      id: "hipaa-encryption",
-      name: "Encryption",
-      description: "Encrypt PHI in transit and at rest",
-      control: "HIPAA 45 CFR 164.312(a)(2)(i)",
-      status: "MET",
-    },
-    {
-      id: "hipaa-access-controls",
-      name: "Access Controls",
-      description: "Implement unique user identification",
-      control: "HIPAA 45 CFR 164.312(a)(2)(i)",
-      status: "MET",
-    },
-    {
-      id: "hipaa-audit-controls",
-      name: "Audit Controls",
-      description: "Implement audit logging and monitoring",
-      control: "HIPAA 45 CFR 164.312(b)",
-      status: "MET",
-    },
-  ],
-};
-
-export const SOC2_FRAMEWORK: ComplianceFramework = {
-  id: "soc2",
-  name: "SOC2 (Service Organization Control 2)",
-  description: "Trust Service Criteria for service organizations",
-  enforceable: false,
-  requirements: [
-    {
-      id: "soc2-cc",
-      name: "Common Criteria",
-      description: "Meet CC criteria for trust",
-      control: "CC6.1",
-      status: "MET",
-    },
-    {
-      id: "soc2-availability",
-      name: "Availability",
-      description: "System is available for operations as committed",
-      control: "A1",
-      status: "MET",
-    },
-    {
-      id: "soc2-confidentiality",
-      name: "Confidentiality",
-      description: "Protect confidential information",
-      control: "C1",
-      status: "MET",
-    },
-  ],
-};
-
-export const PCI_DSS_FRAMEWORK: ComplianceFramework = {
-  id: "pci-dss",
-  name: "PCI DSS (Payment Card Industry Data Security Standard)",
-  description: "Payment card data security",
-  enforceable: true,
-  requirements: [
-    {
-      id: "pci-firewall",
-      name: "Firewall Configuration",
-      description: "Install and maintain firewall",
-      control: "PCI DSS Requirement 1",
-      status: "MET",
-    },
-    {
-      id: "pci-encryption",
-      name: "Encryption",
-      description: "Encrypt card data in transit",
-      control: "PCI DSS Requirement 4",
-      status: "MET",
-    },
-    {
-      id: "pci-vulnerability",
-      name: "Vulnerability Management",
-      description: "Protect systems from malware",
-      control: "PCI DSS Requirement 6",
-      status: "MET",
-    },
-  ],
-};
-
-export const FRAMEWORKS: Record<string, ComplianceFramework> = {
-  gdpr: GDPR_FRAMEWORK,
-  hipaa: HIPAA_FRAMEWORK,
-  soc2: SOC2_FRAMEWORK,
-  "pci-dss": PCI_DSS_FRAMEWORK,
-};
-
-export function getFramework(id: string): ComplianceFramework | null {
-  return FRAMEWORKS[id] || null;
-}
-
-export function getAllFrameworks(): ComplianceFramework[] {
-  return Object.values(FRAMEWORKS);
-}
-
-export function getRequirement(frameworkId: string, requirementId: string): ComplianceRequirement | null {
-  const framework = getFramework(frameworkId);
-  if (!framework) return null;
-  return framework.requirements.find((r) => r.id === requirementId) || null;
-}
-
-export function getComplianceStatus(framework: ComplianceFramework): {
-  compliant: number;
-  total: number;
-  percentage: number;
-} {
-  const compliant = framework.requirements.filter((r) => r.status === "MET").length;
-  const total = framework.requirements.length;
-  return { compliant, total, percentage: Math.round((compliant / total) * 100) };
+function calculateNextCheckDate(status: ComplianceStatus): Date {
+  const nextDate = new Date();
+  if (status === ComplianceStatus.COMPLIANT) {
+    nextDate.setDate(nextDate.getDate() + 90);
+  } else {
+    nextDate.setDate(nextDate.getDate() + 30);
+  }
+  return nextDate;
 }
