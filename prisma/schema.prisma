@@ -169,6 +169,10 @@ model Tenant {
   encryptionKeys       EncryptionKey[]      @relation("EncryptionKeysTenant")
   roleAuditLogs        RoleAuditLog[]       @relation("RoleAuditLogsTenant")
 
+  // MLOps - Models & Features
+  mlopsModels          Model[]
+  mlopsFeatures        Feature[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -9315,4 +9319,259 @@ model RoleAuditLog {
   @@index([tenantId])
   @@index([userId])
   @@index([timestamp])
+}
+
+// ===========================================================================
+// MLOps - Model Management & Monitoring (6 subsystems)
+// ===========================================================================
+
+// 1. Model Training
+model Model {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  status          String   @default("active") // active, archived, deprecated
+  tenantId        String
+  tenant          Tenant   @relation("mlopsModels", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  versions        ModelVersion[]
+  trainingRuns    TrainingRun[]
+  deployments     ModelDeployment[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model TrainingRun {
+  id              String   @id @default(cuid())
+  modelId         String
+  model           Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  status          String   @default("in_progress") // in_progress, completed, failed, cancelled
+  datasetPath     String
+  config          Json     // training configuration
+  metrics         Json?    // training metrics
+
+  modelVersionId  String?
+  modelVersion    ModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([modelId])
+  @@index([status])
+}
+
+// 2. Model Registry & Versioning
+model ModelVersion {
+  id              String   @id @default(cuid())
+  modelId         String
+  model           Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  version         String   // semantic versioning
+  status          String   @default("training") // training, validated, deployed, rejected, archived
+  metrics         Json?    // performance metrics
+  tags            String[] @default([])
+
+  trainingRunId   String?
+  trainingRun     TrainingRun? @relation(fields: [trainingRunId], references: [id], onDelete: SetNull)
+
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  predictions     Prediction[]
+  deployments     ModelDeployment[]
+  abTestsAsControl ABTest[] @relation("ControlVersion")
+  abTestsAsTreatment ABTest[] @relation("TreatmentVersion")
+  canaryAsNew     CanaryRelease[] @relation("NewVersion")
+  canaryAsCurrent CanaryRelease[] @relation("CurrentVersion")
+  modelMetrics    ModelMetric[]
+
+  @@unique([modelId, version])
+  @@index([modelId])
+  @@index([status])
+}
+
+// 3. Model Deployment
+model ModelDeployment {
+  id              String   @id @default(cuid())
+  modelVersionId  String
+  modelVersion    ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+
+  endpoint        String   @unique
+  status          String   @default("deploying") // deploying, healthy, degraded, failed
+  replicas        Int      @default(3)
+  healthyReplicas Int?
+
+  resourceLimits  Json?    // CPU, memory limits
+  config          Json?    // deployment configuration
+
+  deployedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([modelVersionId])
+  @@index([status])
+}
+
+model ABTest {
+  id                      String   @id @default(cuid())
+  controlVersionId        String
+  controlVersion          ModelVersion @relation("ControlVersion", fields: [controlVersionId], references: [id], onDelete: Cascade)
+
+  treatmentVersionId      String
+  treatmentVersion        ModelVersion @relation("TreatmentVersion", fields: [treatmentVersionId], references: [id], onDelete: Cascade)
+
+  status                  String   @default("running") // running, completed, aborted
+  trafficSplitControl     Int      @default(50)  // percentage
+  trafficSplitTreatment   Int      @default(50)  // percentage
+
+  successMetric           String
+  successThreshold        Float    @default(0.05)
+
+  controlMetrics          Json?    // accumulated metrics
+  treatmentMetrics        Json?    // accumulated metrics
+  samplesCollected        Int      @default(0)
+
+  startedAt               DateTime @default(now())
+  endAt                   DateTime
+  completedAt             DateTime?
+
+  createdAt               DateTime @default(now())
+
+  @@index([status])
+}
+
+model CanaryRelease {
+  id                      String   @id @default(cuid())
+  newVersionId            String
+  newVersion              ModelVersion @relation("NewVersion", fields: [newVersionId], references: [id], onDelete: Cascade)
+
+  currentVersionId        String
+  currentVersion          ModelVersion @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: Cascade)
+
+  status                  String   @default("in_progress") // in_progress, completed, rolled_back
+  currentCanaryTraffic    Int      @default(5)   // percentage
+  targetCanaryTraffic     Int      @default(100)
+  maxCanaryTraffic        Int      @default(100)
+
+  incrementPercentage     Int      @default(10)  // per increment
+  incrementIntervalMinutes Int     @default(60)
+
+  canaryErrorMetrics      Json?    // error rate, latency, etc
+
+  startedAt               DateTime @default(now())
+  nextIncrementAt         DateTime
+  completedAt             DateTime?
+
+  createdAt               DateTime @default(now())
+
+  @@index([status])
+}
+
+// 4. Feature Store
+model Feature {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  dataType        String   // numeric, categorical, text, datetime, boolean
+  source          String   // table, api, computed
+  transformCode   String?  // SQL or JavaScript
+  tags            String[] @default([])
+  ownerTeam       String
+
+  version         Int      @default(1)
+  status          String   @default("active") // active, deprecated
+
+  tenantId        String
+  tenant          Tenant   @relation("mlopsFeatures", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  predictions     Prediction[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Prediction {
+  id                String   @id @default(cuid())
+  modelVersionId    String
+  modelVersion      ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+
+  featureId         String
+  feature           Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  entityId          String   // entity being predicted for
+  prediction        Float
+  actual            Float?   // ground truth
+  error             Float?   // abs(prediction - actual)
+  latencyMs         Int?     // inference latency
+
+  value             String   // stored feature value
+  timestamp         DateTime @default(now())
+
+  createdAt         DateTime @default(now())
+
+  @@index([modelVersionId])
+  @@index([featureId])
+  @@index([entityId])
+  @@index([timestamp])
+}
+
+// 5. Monitoring & Drift Detection
+model ModelMetric {
+  id                String   @id @default(cuid())
+  modelVersionId    String
+  modelVersion      ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+
+  metricName        String   // accuracy, drift, latency, etc
+  metricValue       Float
+  metadata          Json?    // additional data
+
+  recordedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@index([modelVersionId])
+  @@index([metricName])
+  @@index([recordedAt])
+}
+
+// 6. Model Agreements (compliance & audit)
+model ModelAgreement {
+  id              String   @id @default(cuid())
+  modelId         String?
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  branchId        String?
+  branch          Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  freelancerId    String?
+  freelancer      FreelancerProfile? @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
+
+  agreementType   String   // data_consent, bias_audit, performance_sla
+  status          String   @default("active") // active, expired, revoked
+
+  effectiveAt     DateTime
+  expiresAt       DateTime?
+
+  terms           Json?    // agreement terms & conditions
+
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
 }
