@@ -99,6 +99,13 @@ model Tenant {
   partner              Partner?
   reseller             Reseller?
 
+  // Accounting
+  invoicesAsIssuer     Invoice[]             @relation("InvoiceIssuer")
+  invoicesAsRecipient  Invoice[]             @relation("InvoiceRecipient")
+  expenses             Expense[]
+  journalEntries       JournalEntry[]
+  taxPayments          TaxPayment[]
+
   // Email Marketing
   emailTemplates       EmailTemplate[]
   emailCampaigns       EmailCampaign[]
