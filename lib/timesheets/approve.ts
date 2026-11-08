@@ -153,7 +153,6 @@ async function approveTimesheetInner(
         dispute: true,
         branch: { include: { tenant: true } },
         freelancer: { include: { user: true } },
-        shiftAssignment: { include: { shift: true } },
       },
     });
     if (!ts) throw AppError.notFound("Urenbriefje niet gevonden.");
@@ -456,7 +455,6 @@ async function approveTimesheetInner(
         totalCents: persisted.billing.platformFeeInvoice.totalCents,
         description: `platformkosten, shift @ ${ts.branch.name}`,
         log,
-        shiftCreatorId: ts.shiftAssignment?.shift?.createdByUserId,
       });
       // e-factuur (UBL/Peppol) als het bedrijf dat aan heeft staan; nooit blokkerend
       void efactuurNaUitgifte(persisted.platformFeeInvoice.id, ts.branch.tenantId);
@@ -688,7 +686,6 @@ async function approveViaPayroll(args: {
     description: `uitzendkracht-uren, week ${weekLabel}`,
     log,
     from: env.MAIL_UITZEND_FROM,
-    shiftCreatorId: ts.shiftAssignment?.shift?.createdByUserId,
   });
   void efactuurNaUitgifte(uitzendInvoice.id, ts.branch.tenantId);
 
@@ -729,11 +726,11 @@ async function notifyInvoiceIssued(args: {
   description: string;
   log: ReturnType<typeof logger.child>;
   from?: string;
-  shiftCreatorId?: string | null;
 }): Promise<void> {
   try {
-    // Factuur naar shift creator → billing email → tenant admins
-    const to = await recipientsFor(args.tenantId, args.shiftCreatorId);
+    // Billing address if set, otherwise the company's admins — before this, no
+    // billing address meant no invoice mail at all.
+    const to = await recipientsFor(args.tenantId);
     if (to.length === 0) return;
     const mail = invoiceIssuedEmail(
       args.orgName,

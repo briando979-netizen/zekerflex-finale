@@ -24,11 +24,8 @@ function minutesBetween(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 60_000);
 }
 
-// ⚠️ LOCAL DEVELOPMENT ONLY
-// This seed.ts has guards to REFUSE running against production.
-// See the guard at the top of the function.
-const PASSWORD = "LocalDevPassword_ChangeMe";
-// A single mod-97-valid NL test IBAN, reused for every freelancer payout in DEV.
+const PASSWORD = "Zeker!2026";
+// A single mod-97-valid NL test IBAN, reused for every freelancer payout.
 const TEST_IBAN = "NL91ABNA0417164300";
 
 async function hash(pw: string): Promise<string> {

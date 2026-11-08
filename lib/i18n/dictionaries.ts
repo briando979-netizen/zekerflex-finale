@@ -532,13 +532,6 @@ export const nl = {
     noOrgTitle: "Geen organisatie",
     noOrgBody: "Aan dit account is geen organisatie gekoppeld.",
   },
-  team: {
-    title: "Team",
-    subtitle: "Beheer wie er allemaal toegang tot dit bedrijfsaccount hebben.",
-    panel: "Teamleden en uitnodigingen",
-    noOrgTitle: "Geen organisatie",
-    noOrgBody: "Aan dit account is geen organisatie gekoppeld.",
-  },
   mailbox: {
     title: "Mail",
     subtitle: "Je eigen mailbox en alle mail van ZekerFlex op één plek.",

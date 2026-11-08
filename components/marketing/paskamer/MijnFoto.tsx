@@ -23,8 +23,6 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
   const [borst, setBorst] = useState("");
   const [taille, setTaille] = useState("");
   const [afm, setAfm] = useState<{ w: number; h: number } | null>(null);
-  const [manuelMode, setManuelMode] = useState(false);
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const invoer = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -40,17 +38,11 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
     setStap("laden");
     setFout("");
     setUit(null);
-    setManuelMode(false);
     try {
       const { meetFoto } = await import("@/components/marketing/paskamer/fotoMeting");
       setUit(await meetFoto(f, l, (s) => setStap(s)));
-    } catch (err) {
-      // Safari fallback: allow manual measurement
-      setManuelMode(true);
-      setFout(p.pasFotoMislukt + " — Vul je maten handmatig in");
-      const reader = new FileReader();
-      reader.onload = (e) => setFotoUrl(e.target?.result as string);
-      reader.readAsDataURL(f);
+    } catch {
+      setFout(p.pasFotoMislukt);
     } finally {
       setStap("");
     }
@@ -74,11 +66,11 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
   return (
     <div className="absolute inset-0 flex flex-col bg-white">
       <div className="relative min-h-0 flex-1 overflow-y-auto p-4">
-        {(uit && afm) || (manuelMode && fotoUrl) ? (
+        {uit && afm ? (
           <div className="mx-auto h-full max-h-full w-full">
-            <div className="relative mx-auto h-full max-w-full" style={{ aspectRatio: manuelMode && fotoUrl ? "3/4" : `${uit?.beeld ? "1/1" : "3/4"}` }}>
+            <div className="relative mx-auto h-full max-w-full" style={{ aspectRatio: `${afm.w} / ${afm.h}` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- lokale foto van de klant */}
-              <img src={uit?.beeld || fotoUrl || ""} alt={p.pasFotoJouw} className="h-full w-full rounded-xl object-contain" />
+              <img src={uit.beeld} alt={p.pasFotoJouw} className="h-full w-full rounded-xl object-contain" />
               {punten && (
                 <svg viewBox={`0 0 ${afm.w} ${afm.h}`} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
                   {uit.meting &&
@@ -142,19 +134,16 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
           </p>
         ))}
 
-        {(uit && !probleem) || manuelMode ? (
+        {uit && !probleem && (
           <div className="space-y-2.5">
-            {uit && (
-              <div className="flex flex-wrap items-center gap-3">
-                {uit.gezicht && (
-                  // eslint-disable-next-line @next/next/no-img-element -- uitgesneden gezicht uit de foto
-                  <img src={uit.gezicht} alt={p.fotoTitel} className="h-14 w-[45px] rounded-[50%] border border-hair object-cover" />
-                )}
-                {uit.huid && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.huid }} aria-hidden />{p.huid}</span>}
-                {uit.haarKleur && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.haarKleur }} aria-hidden />{p.haarTitel}</span>}
-              </div>
-            )}
-            {manuelMode && <p className="text-[12px] text-neutralx-600">Vul je lichaamsmaten in (in centimeters)</p>}
+            <div className="flex flex-wrap items-center gap-3">
+              {uit.gezicht && (
+                // eslint-disable-next-line @next/next/no-img-element -- uitgesneden gezicht uit de foto
+                <img src={uit.gezicht} alt={p.fotoTitel} className="h-14 w-[45px] rounded-[50%] border border-hair object-cover" />
+              )}
+              {uit.huid && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.huid }} aria-hidden />{p.huid}</span>}
+              {uit.haarKleur && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.haarKleur }} aria-hidden />{p.haarTitel}</span>}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <label className="text-[12px] font-semibold text-ink">
                 {p.borst} (cm)
@@ -177,30 +166,22 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
             </div>
             <p className="text-[11px] text-neutralx-500">{p.pasFotoGeschat}</p>
           </div>
-        ) : null}
+        )}
 
         <div className="flex flex-wrap gap-2">
           <input ref={invoer} type="file" accept="image/*" className="sr-only" aria-label={p.pasFotoKies} onChange={(e) => kies(e.target.files?.[0])} />
           <button type="button" onClick={() => invoer.current?.click()} disabled={stap !== ""} className="h-10 rounded-lg border border-hairstrong px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-soft disabled:opacity-50">
             {uit ? p.pasFotoAndere : p.pasFotoKies}
           </button>
-          {(uit && !probleem) || manuelMode ? (
+          {uit && !probleem && (
             <button
               type="button"
-              onClick={() => onToepassen({
-                lengte,
-                borst: getal(borst, 60, 160),
-                taille: getal(taille, 50, 160),
-                huid: uit?.huid || null,
-                haarKleur: uit?.haarKleur || null,
-                gezicht: uit?.gezicht || null
-              })}
-              className="h-10 flex-1 rounded-lg bg-brand-500 px-4 text-[13px] font-bold text-white hover:bg-brand-600 disabled:opacity-50"
-              disabled={!getal(borst, 60, 160) || !getal(taille, 50, 160)}
+              onClick={() => onToepassen({ lengte, borst: getal(borst, 60, 160), taille: getal(taille, 50, 160), huid: uit.huid, haarKleur: uit.haarKleur, gezicht: uit.gezicht })}
+              className="h-10 flex-1 rounded-lg bg-brand-500 px-4 text-[13px] font-bold text-white hover:bg-brand-600"
             >
               {p.pasFotoToepassen}
             </button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

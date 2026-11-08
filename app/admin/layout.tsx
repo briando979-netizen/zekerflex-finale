@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
-import { requireAdminTwoFactor } from "@/lib/auth/admin-security";
 import { ensureBootChecked } from "@/lib/config/startup";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ChatDock } from "@/components/chat/ChatDock";
@@ -19,13 +18,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!principal) redirect("/login?callbackUrl=/admin");
   if (!hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN", "DISPUTE_MANAGER")) {
     redirect("/dashboard");
-  }
-
-  // Admins moeten 2FA hebben
-  if (hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN")) {
-    await requireAdminTwoFactor(principal.userId).catch(() => {
-      redirect("/dashboard/account?setup=2fa");
-    });
   }
 
   const avatars = await getUserAvatars([principal.userId]);

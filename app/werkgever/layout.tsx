@@ -81,7 +81,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
     overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },
     bedrijf: { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid /> },
-    team: { href: "/werkgever/team", label: "Team", icon: <IShield /> },
     website: { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe /> },
     telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
     reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },

@@ -1,124 +1,176 @@
-import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
+import { haversineMeters } from "@/lib/geo/geofencing";
+import {
+  branchMatchingConfigSchema,
+  type GeoPoint,
+  type MatchScoreBreakdown,
+  type ResolvedMatchingConfig,
+  type TravelEstimate,
+} from "@/types/matching";
+import type { BadgeLevel, TravelMode } from "@prisma/client";
 
-export interface MatchScore {
-  freelancerId: string;
-  score: number;
-  factors: {
-    skillMatch: number;
-    distanceMatch: number;
-    availabilityMatch: number;
-    ratingMatch: number;
+// Pure scoring math for the matching engine - no DB / Redis / network imports so
+// it can be unit-tested in isolation and reused by simulation tooling.
+
+const DEFAULT_TRAVEL_MODES: TravelMode[] = ["TRANSIT", "DRIVING", "BICYCLING"];
+
+/** Additive score bonus per trust tier. Small by design - never decisive. */
+const BADGE_BONUS: Record<BadgeLevel, number> = {
+  BRONZE: 0,
+  SILVER: 0.015,
+  GOLD: 0.03,
+  PLATINUM: 0.05,
+};
+
+export const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
+
+/** Home-to-branch distance (m) under which a freelancer counts as "local". */
+export function localCatchmentMeters(branchGeofenceRadius: number): number {
+  return Math.max(2500, branchGeofenceRadius * 10);
+}
+
+export function resolveMatchingConfig(raw: unknown): ResolvedMatchingConfig {
+  const parsed = branchMatchingConfigSchema.safeParse(raw ?? {});
+  const cfg = parsed.success ? parsed.data : {};
+
+  const w = {
+    reliability: cfg.weights?.reliability ?? env.MATCHING_WEIGHT_RELIABILITY,
+    travel: cfg.weights?.travel ?? env.MATCHING_WEIGHT_TRAVEL,
+    skill: cfg.weights?.skill ?? env.MATCHING_WEIGHT_SKILL,
+  };
+  const sum = w.reliability + w.travel + w.skill || 1;
+
+  return {
+    minScore: cfg.minScore ?? env.MATCHING_MIN_SCORE,
+    maxTravelMinutes: cfg.maxTravelMinutes ?? env.MATCHING_MAX_TRAVEL_MINUTES,
+    weights: {
+      reliability: w.reliability / sum,
+      travel: w.travel / sum,
+      skill: w.skill / sum,
+    },
+    travelModes:
+      (cfg.travelModes as TravelMode[] | undefined) ?? DEFAULT_TRAVEL_MODES,
+    autoAcceptance: cfg.autoAcceptance
+      ? {
+          enabled: cfg.autoAcceptance.enabled,
+          minScore: cfg.autoAcceptance.minScore,
+          minAcceptanceScore: cfg.autoAcceptance.minAcceptanceScore,
+          minReliabilityScore: cfg.autoAcceptance.minReliabilityScore,
+          requireWithinGeofence:
+            cfg.autoAcceptance.requireWithinGeofence ?? true,
+          maxSeatsToAutoFill: cfg.autoAcceptance.maxSeatsToAutoFill ?? 1,
+        }
+      : null,
+    offerTtlMinutes: cfg.offerTtlMinutes ?? 20,
+    notificationWaveSize:
+      cfg.notificationWaveSize === undefined ? 10 : cfg.notificationWaveSize,
   };
 }
 
-export async function scoreShiftMatch(shiftId: string, freelancerId: string): Promise<number> {
-  const [shift, freelancer, reviews] = await Promise.all([
-    prisma.shift.findUnique({
-      where: { id: shiftId },
-      include: { company: true },
-    }),
-    prisma.freelancerProfile.findUnique({
-      where: { id: freelancerId },
-      include: { skills: true },
-    }),
-    prisma.shiftReview.findMany({
-      where: { shiftAssignment: { freelancerId } },
-    }),
-  ]);
-
-  if (!shift || !freelancer) {
-    return 0;
-  }
-
-  let score = 0;
-
-  // Skill matching (0-30 points)
-  const requiredSkills = shift.requiredSkills as string[] | null;
-  if (requiredSkills && requiredSkills.length > 0 && freelancer.skills) {
-    const freelancerSkills = freelancer.skills.map((s) => s.naam.toLowerCase());
-    const matchedSkills = requiredSkills.filter((s) => freelancerSkills.includes(s.toLowerCase()));
-    score += (matchedSkills.length / requiredSkills.length) * 30;
-  } else {
-    score += 30;
-  }
-
-  // Distance matching (0-25 points)
-  if (freelancer.latitude && freelancer.longitude && shift.latitude && shift.longitude) {
-    const distance = calculateDistance(
-      freelancer.latitude,
-      freelancer.longitude,
-      shift.latitude as number,
-      shift.longitude as number,
-    );
-    score += Math.max(0, 25 - distance / 2);
-  }
-
-  // Availability match (0-25 points)
-  const worksOnDays = freelancer.worksOnDays as string[] | null;
-  if (worksOnDays) {
-    const shiftDay = new Date(shift.startsAt).toLocaleDateString("en-US", { weekday: "long" });
-    if (worksOnDays.includes(shiftDay)) {
-      score += 25;
-    }
-  } else {
-    score += 25;
-  }
-
-  // Rating match (0-20 points)
-  if (reviews.length > 0) {
-    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-    score += (avgRating / 5) * 20;
-  } else {
-    score += 15;
-  }
-
-  return Math.min(100, Math.max(0, score));
+/**
+ * Exponential decay of travel time to a [0,1] score. A commute at or above
+ * `maxMinutes` scores ~0.05; a zero-minute commute scores 1.
+ */
+export function travelScore(minutes: number, maxMinutes: number): number {
+  if (minutes <= 0) return 1;
+  if (minutes >= maxMinutes) return 0.05;
+  const k = 3 / maxMinutes;
+  return Math.max(0.05, Math.exp(-k * minutes));
 }
 
-export async function findBestMatches(shiftId: string, limit = 10): Promise<MatchScore[]> {
-  const shift = await prisma.shift.findUnique({
-    where: { id: shiftId },
-  });
+export function skillScore(rating: number | null, minRating: number): number {
+  if (rating === null) return minRating > 0 ? 0 : 0.5;
+  return clamp01(rating / 5);
+}
 
-  if (!shift) {
-    return [];
+export interface ShiftScoringContext {
+  location: GeoPoint;
+  minSkillRating: number;
+  branchGeofenceRadiusMeters: number;
+}
+
+export interface CandidateSignals {
+  home: GeoPoint;
+  reliabilityScore: number;
+  acceptanceScore: number;
+  skillRating: number | null;
+  badgeLevel?: BadgeLevel | null;
+  travel: TravelEstimate;
+}
+
+export interface CandidateScore {
+  score: number;
+  breakdown: MatchScoreBreakdown;
+  withinGeofence: boolean;
+  eligible: boolean;
+  ineligibleReason?: string;
+}
+
+/** Deterministically score one candidate against one shift. */
+export function scoreCandidateSignals(
+  signals: CandidateSignals,
+  shift: ShiftScoringContext,
+  config: ResolvedMatchingConfig,
+): CandidateScore {
+  const homeDistanceMeters = haversineMeters(signals.home, shift.location);
+  const withinGeofence =
+    homeDistanceMeters <=
+    localCatchmentMeters(shift.branchGeofenceRadiusMeters);
+
+  const penalties: string[] = [];
+  // Onze eigen rekenregel is een bewuste keuze (alles gratis), geen storing: geen waarschuwing.
+  // Alleen als de routedienst uitviel en we terugvielen, staat er "routekaart tijdelijk niet beschikbaar".
+  if (signals.travel.approximate && signals.travel.bron !== "eigen") {
+    penalties.push("travel estimated (routing API unavailable)");
   }
 
-  const freelancers = await prisma.freelancerProfile.findMany({
-    where: {
-      active: true,
-      NOT: { assignments: { some: { shiftId } } },
-    },
-    take: 100,
-  });
-
-  const scores = await Promise.all(
-    freelancers.map(async (f) => ({
-      freelancerId: f.id,
-      score: await scoreShiftMatch(shiftId, f.id),
-    })),
+  const reliability = clamp01(signals.reliabilityScore);
+  const travelComponent = travelScore(
+    signals.travel.durationMinutes,
+    config.maxTravelMinutes,
   );
+  const skill = skillScore(signals.skillRating, shift.minSkillRating);
 
-  return scores
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => ({
-      ...s,
-      factors: {
-        skillMatch: 0,
-        distanceMatch: 0,
-        availabilityMatch: 0,
-        ratingMatch: 0,
-      },
-    }));
-}
+  const badge = signals.badgeLevel ? BADGE_BONUS[signals.badgeLevel] : 0;
 
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  let score =
+    config.weights.reliability * reliability +
+    config.weights.travel * travelComponent +
+    config.weights.skill * skill;
+  score += 0.05 * (clamp01(signals.acceptanceScore) - 0.5);
+  score += badge;
+  score = clamp01(score);
+
+  const breakdown: MatchScoreBreakdown = {
+    reliability,
+    travel: travelComponent,
+    skill,
+    badge,
+    weights: config.weights,
+    penalties,
+  };
+
+  let eligible = true;
+  let ineligibleReason: string | undefined;
+  if (signals.travel.durationMinutes > config.maxTravelMinutes) {
+    eligible = false;
+    ineligibleReason = `Travel ${signals.travel.durationMinutes}m exceeds cap ${config.maxTravelMinutes}m`;
+  } else if (
+    signals.skillRating !== null &&
+    signals.skillRating < shift.minSkillRating
+  ) {
+    eligible = false;
+    ineligibleReason = `Skill rating ${signals.skillRating} below required ${shift.minSkillRating}`;
+  } else if (score < config.minScore) {
+    eligible = false;
+    ineligibleReason = `Score ${score.toFixed(2)} below branch minimum ${config.minScore}`;
+  }
+
+  return {
+    score,
+    breakdown,
+    withinGeofence,
+    eligible,
+    ...(ineligibleReason ? { ineligibleReason } : {}),
+  };
 }

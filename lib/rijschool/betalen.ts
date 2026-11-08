@@ -76,27 +76,6 @@ async function koppel(r: Rijschool): Promise<string> {
   const stripe = getStripeClient();
   let id = r.stripeAccountId;
   if (!id) {
-    // Fetch company registration data to pre-fill Stripe account
-    const tenant = await prisma.tenant.findFirst({
-      where: { rijschool: { id: r.id } },
-      select: {
-        kvkNumber: true,
-        companyRegistration: {
-          select: {
-            kvkNumber: true,
-            tradeName: true,
-            street: true,
-            houseNumber: true,
-            postalCode: true,
-            city: true,
-          },
-        },
-      },
-    });
-
-    const reg = tenant?.companyRegistration;
-    const kvk = (reg?.kvkNumber ?? tenant?.kvkNumber ?? "").replace(/\D/g, "").slice(0, 8);
-
     const a = await stripe.accounts.create({
       type: "express",
       country: "NL",
@@ -106,18 +85,6 @@ async function koppel(r: Rijschool): Promise<string> {
         url: siteUrl(r),
         mcc: "8299", // scholen en opleidingen
         product_description: "Rijlessen en lespakketten",
-      },
-      company: {
-        name: r.naam,
-        ...(kvk && { tax_id: kvk }),
-        address: reg
-          ? {
-              city: reg.city,
-              country: "NL",
-              line1: [reg.street, reg.houseNumber].filter(Boolean).join(" "),
-              postal_code: reg.postalCode,
-            }
-          : undefined,
       },
       capabilities: { card_payments: { requested: true }, transfers: { requested: true }, ideal_payments: { requested: true } },
       metadata: { rijschoolId: r.id },

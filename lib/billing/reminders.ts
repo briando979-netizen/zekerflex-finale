@@ -84,13 +84,7 @@ export async function overdueInvoices(now = new Date()): Promise<OverdueInvoice[
 }
 
 /** Billing contact, or else the company's admins (most employers never fill in a separate billing address). */
-export async function recipientsFor(tenantId: string, shiftCreatorId?: string | null): Promise<string[]> {
-  // Prioriteit: shift creator → billing email → tenant admins
-  if (shiftCreatorId) {
-    const creator = await prisma.user.findUnique({ where: { id: shiftCreatorId }, select: { email: true, disabledAt: true } });
-    if (creator && !creator.disabledAt) return [creator.email];
-  }
-
+export async function recipientsFor(tenantId: string): Promise<string[]> {
   const extra = await getOrgProfileExtra(tenantId);
   if (extra.billingEmail) return [extra.billingEmail];
   const admins = await prisma.membership.findMany({ where: { tenantId, role: "HQ_ADMIN", user: { disabledAt: null } }, select: { user: { select: { email: true } } }, take: 3 });

@@ -59,7 +59,6 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/facturen", label: "Facturen" },
       { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe", label: "Stripe" },
-      { href: "/admin/stripe-gebruikers", label: "Stripe-verificatie" },
       { href: "/admin/horeca-betalingen", label: "Horeca-betalingen" },
       { href: "/admin/bank", label: "Bank (gestopt)" },
       { href: "/admin/betalingen", label: "AI-betalingen" },
@@ -147,7 +146,6 @@ export const ADMIN_HUBS: AdminHub[] = [
     blurb: "Geschillen, fraude, beveiliging en techniek",
     icon: "shield",
     pages: [
-      { href: "/admin/instellingen", label: "Platform-instellingen" },
       { href: "/admin/systeem", label: "Systeem" },
       { href: "/admin/prestaties", label: "Prestaties" },
       { href: "/admin/disputes", label: "Disputen" },
