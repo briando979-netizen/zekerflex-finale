@@ -1,40 +1,106 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { z } from "zod";
+import { recordAuditEvent } from "./compliance";
+import { generateTenantKey } from "./isolation";
 
-export const tenantSchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().regex(/^[a-z0-9-]+$/),
-  email: z.string().email(),
-  plan: z.enum(["STARTER", "PROFESSIONAL", "ENTERPRISE"]),
-  status: z.enum(["ACTIVE", "TRIAL", "SUSPENDED", "CANCELLED"]),
-  customDomain: z.string().optional(),
-  usageLimit: z.number().positive().optional(),
+/**
+ * Tenant lifecycle management: create, read, update, delete.
+ */
+
+export const createTenantSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(["PLATFORM", "ENTERPRISE_HQ", "FRANCHISE"]),
+  country: z.string().default("NL"),
+  kvkNumber: z.string().optional(),
+  parentId: z.string().optional(),
 });
 
-export async function createTenant(data: z.infer<typeof tenantSchema>) {
-  const validated = tenantSchema.parse(data);
+export const updateTenantSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  country: z.string().optional(),
+  kvkNumber: z.string().optional(),
+});
 
-  const existingSlug = await prisma.tenant.findUnique({
-    where: { slug: validated.slug },
-  });
+/**
+ * Create a new tenant with full enterprise setup.
+ */
+export async function createTenant(
+  data: z.infer<typeof createTenantSchema>,
+  adminUserId?: string
+) {
+  const validated = createTenantSchema.parse(data);
 
-  if (existingSlug) {
-    throw AppError.validation("Slug already exists");
-  }
-
-  return await prisma.tenant.create({
+  // Create tenant
+  const tenant = await prisma.tenant.create({
     data: {
       ...validated,
-      subdomain: validated.slug,
-      createdAt: new Date(),
     },
   });
+
+  // Generate encryption key for tenant
+  const encryptionKey = generateTenantKey();
+  await prisma.tenantEncryptionKey.create({
+    data: {
+      tenantId: tenant.id,
+      encryptedKeyMaterial: encryptionKey,
+    },
+  });
+
+  // Add admin to tenant if provided
+  if (adminUserId) {
+    await prisma.membership.create({
+      data: {
+        userId: adminUserId,
+        tenantId: tenant.id,
+        role: "HQ_ADMIN",
+      },
+    });
+
+    // Create default team
+    const defaultTeam = await prisma.team.create({
+      data: {
+        tenantId: tenant.id,
+        name: "Default Team",
+        permissions: ["tenant:manage", "team:view"],
+      },
+    });
+
+    // Add admin to default team
+    await prisma.teamMember.create({
+      data: {
+        userId: adminUserId,
+        tenantId: tenant.id,
+        teamId: defaultTeam.id,
+        role: "OWNER" as any,
+      },
+    });
+  }
+
+  // Record audit event
+  await recordAuditEvent({
+    tenantId: tenant.id,
+    action: "TENANT_CREATED",
+    actorId: adminUserId,
+    targetType: "Tenant",
+    targetId: tenant.id,
+    changes: validated,
+  });
+
+  return tenant;
 }
 
+/**
+ * Get tenant by ID.
+ */
 export async function getTenant(tenantId: string) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
+    include: {
+      domains: true,
+      teams: true,
+      ssoProviders: true,
+    },
   });
 
   if (!tenant) {
@@ -44,58 +110,136 @@ export async function getTenant(tenantId: string) {
   return tenant;
 }
 
-export async function getTenantBySlug(slug: string) {
-  return await prisma.tenant.findUnique({
-    where: { slug },
-  });
-}
-
+/**
+ * Update tenant.
+ */
 export async function updateTenant(
   tenantId: string,
-  data: Partial<z.infer<typeof tenantSchema>>
+  data: z.infer<typeof updateTenantSchema>,
+  actorId?: string
 ) {
-  return await prisma.tenant.update({
+  const existing = await getTenant(tenantId);
+  const validated = updateTenantSchema.parse(data);
+
+  const updated = await prisma.tenant.update({
     where: { id: tenantId },
-    data,
+    data: validated,
   });
+
+  // Record audit event
+  await recordAuditEvent({
+    tenantId,
+    action: "TENANT_UPDATED",
+    actorId,
+    targetType: "Tenant",
+    targetId: tenantId,
+    changes: {
+      before: {
+        name: existing.name,
+        country: existing.country,
+      },
+      after: validated,
+    },
+  });
+
+  return updated;
 }
 
-export async function suspendTenant(tenantId: string) {
-  return await updateTenant(tenantId, { status: "SUSPENDED" });
-}
-
-export async function reactivateTenant(tenantId: string) {
-  return await updateTenant(tenantId, { status: "ACTIVE" });
-}
-
+/**
+ * List all tenants.
+ */
 export async function listTenants(limit = 50, offset = 0) {
   return await prisma.tenant.findMany({
     take: limit,
     skip: offset,
     orderBy: { createdAt: "desc" },
+    include: {
+      domains: { where: { verified: true } },
+      teams: { select: { id: true, name: true } },
+    },
   });
 }
 
-export async function getTenantUsage(tenantId: string) {
-  const tenant = await getTenant(tenantId);
-
-  const userCount = await prisma.user.count({
-    where: { tenantId },
-  });
-
-  const apiCallsMonth = await prisma.auditLog.count({
-    where: {
-      tenantId,
-      createdAt: {
-        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+/**
+ * Get tenant with full hierarchy (parent + children).
+ */
+export async function getTenantHierarchy(tenantId: string) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: {
+      parent: true,
+      children: {
+        include: { children: true },
       },
     },
   });
 
+  if (!tenant) {
+    throw AppError.notFound("Tenant not found");
+  }
+
+  return tenant;
+}
+
+/**
+ * Get tenant stats and usage.
+ */
+export async function getTenantStats(tenantId: string) {
+  const tenant = await getTenant(tenantId);
+
+  const memberCount = await prisma.membership.count({
+    where: { tenantId },
+  });
+
+  const teamCount = await prisma.team.count({
+    where: { tenantId },
+  });
+
+  const domainCount = await prisma.tenantDomain.count({
+    where: { tenantId },
+  });
+
+  const ssoCount = await prisma.ssoProvider_rel.count({
+    where: { tenantId },
+  });
+
+  const auditCount = await prisma.tenantAuditTrail.count({
+    where: { tenantId },
+  });
+
   return {
-    users: userCount,
-    apiCallsMonth,
-    limit: tenant.usageLimit,
-    percentUsed: tenant.usageLimit ? (userCount / tenant.usageLimit) * 100 : null,
+    id: tenant.id,
+    name: tenant.name,
+    type: tenant.type,
+    members: memberCount,
+    teams: teamCount,
+    domains: domainCount,
+    ssoProviders: ssoCount,
+    auditEvents: auditCount,
+    createdAt: tenant.createdAt,
+    updatedAt: tenant.updatedAt,
   };
+}
+
+/**
+ * Delete tenant and all related data.
+ */
+export async function deleteTenant(tenantId: string, actorId?: string) {
+  const tenant = await getTenant(tenantId);
+
+  // Record deletion
+  await recordAuditEvent({
+    tenantId,
+    action: "TENANT_DELETED",
+    actorId,
+    targetType: "Tenant",
+    targetId: tenantId,
+    changes: { deleted: true },
+  });
+
+  // Cascade delete all tenant data
+  // Note: Prisma handles this via onDelete: Cascade in schema
+  return await prisma.tenant.delete({
+    where: { id: tenantId },
+  });
 }
