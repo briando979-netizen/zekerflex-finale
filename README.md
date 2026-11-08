@@ -1,7 +1,10 @@
 # ZekerFlex Platform
 
-Next-gen freelance & workforce management platform. Next.js 14 (App Router)
-application with a Node.js serverless backend, PostgreSQL/Prisma and Redis.
+Next-gen freelance & workforce management platform. **Next.js 15.5.28** (App Router)
+application with Node.js 22+, PostgreSQL/Prisma, Redis, and enterprise AI matching.
+
+**⚠️ Production Architecture: VPS (Docker Compose + Caddy on TransIP)**
+See `deploy/` for Docker, VPS scripts, and deployment runbooks.
 
 ## Folder structure
 
