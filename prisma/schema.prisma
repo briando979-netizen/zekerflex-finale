@@ -132,6 +132,11 @@ model Tenant {
   damFolders           DamFolder[]           @relation("DamFolders")
   damCollections       DamCollection[]       @relation("DamCollections")
 
+  // Custom Fields & Forms
+  customFields         CustomField[]
+  forms                Form[]
+  formResponses        FormResponse[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
