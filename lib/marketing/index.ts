@@ -2,6 +2,14 @@ export * from "./campaigns";
 export * from "./deals";
 export * from "./distribution";
 
+// Marketing Automation - 6 subsystems
+export * from "./email-campaigns";
+export * from "./segmentation";
+export * from "./automation-workflows";
+export * from "./ab-testing";
+export * from "./campaign-analytics";
+export * from "./integrations";
+
 export const MARKETING_POSITIONS = {
   HERO: "hero",
   DASHBOARD: "dashboard",

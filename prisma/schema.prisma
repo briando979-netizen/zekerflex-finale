@@ -92,6 +92,17 @@ model Tenant {
   shopProducts         ShopProduct[]         @relation("ShopSeller")
   employees            Employee[]            @relation("Employees")
 
+  // Support System
+  supportTickets       Ticket[]
+  knowledgeBaseArticles Article[]
+  supportChatSessions  ChatSession[]
+  supportAutomationRules AutomationRule[]
+  supportBotResponses  BotResponse[]
+  supportMetrics       SupportMetric[]
+  supportEmailIntegrations EmailIntegration[]
+  supportSlackIntegrations SlackIntegration[]
+  supportWebhookIntegrations WebhookIntegration[]
+
   // Marketplace
   appsDeveloped        MarketplaceApp[]      @relation("AppDeveloper")
   appInstallations     MarketplaceAppInstallation[] @relation("AppInstallations")
@@ -145,6 +156,10 @@ model Tenant {
   attestations         Attestation[]                  @relation("Attestations")
   complianceReports    ComplianceReport[]             @relation("ComplianceReports")
 
+  // Inventory & Asset Management
+  assets               Asset[]
+  auditCycles          AuditCycle[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -179,6 +194,16 @@ model User {
   presence             UserPresence?
   sentMessages         ChatMessage[]
   reactions            MessageReaction[]
+
+  // Support System
+  ticketsCreated       Ticket[]             @relation("TicketsCreated")
+  ticketsAssigned      Ticket[]             @relation("TicketsAssigned")
+  ticketMessages       TicketMessage[]
+  ticketActivities     TicketActivity[]
+  chatSessionsAsCustomer ChatSession[]      @relation("ChatSessionsAsCustomer")
+  chatSessionsAsAgent  ChatSession[]        @relation("ChatSessionsAsAgent")
+  supportChatMessages  SupportChatMessage[]
+  chatActivities       ChatActivity[]
 
   // Affiliate & Referral
   affiliate            Affiliate?  @relation("AffiliateUser")
@@ -3790,6 +3815,8 @@ model EmailCampaign {
 
   sends EmailSend[]
   automations EmailAutomation[] @relation("CampaignAutomations")
+  abTests EmailABTest[] @relation("ABTests")
+  segments EmailSegment[]
 
   @@index([tenantId])
   @@index([status])
@@ -3820,6 +3847,7 @@ model EmailList {
 
   subscribers EmailSubscriber[]
   campaigns EmailCampaign[]
+  segments EmailSegment[]
 
   @@index([tenantId])
   @@index([type])
@@ -3892,6 +3920,9 @@ model EmailSend {
 
   createdAt DateTime @default(now())
 
+  clickEvents EmailClickEvent[]
+  conversionEvents EmailConversionEvent[]
+
   @@index([campaignId])
   @@index([subscriberId])
   @@index([status])
@@ -3933,6 +3964,99 @@ model EmailAutomation {
   @@index([type])
   @@index([enabled])
 }
+
+// Email Segmentation - target specific audiences
+model EmailSegment {
+  id        String @id @default(cuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name      String
+  description String?
+  rules     Json // Segmentation rules
+  combinationLogic String @default("AND") // AND or OR
+
+  listId    String?
+  list      EmailList? @relation(fields: [listId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// Email A/B Testing - test variations
+model EmailABTest {
+  id        String @id @default(cuid())
+  campaignId String
+  campaign  EmailCampaign @relation("ABTests", fields: [campaignId], references: [id], onDelete: Cascade)
+
+  type      String // subject_line, content, send_time, sender_name
+  variantA  Json
+  variantB  Json
+
+  splitPercentage Int @default(50)
+  testDuration Int? // Hours
+  successMetric String @default("open_rate") // open_rate, click_rate, conversion_rate
+
+  status    String @default("CREATED") // CREATED, RUNNING, COMPLETED
+  winner    String? // A or B
+
+  variantAMetrics Json?
+  variantBMetrics Json?
+
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+// Email Click Events - track link clicks
+model EmailClickEvent {
+  id        String @id @default(cuid())
+  sendId    String
+  send      EmailSend @relation(fields: [sendId], references: [id], onDelete: Cascade)
+
+  url       String
+  timestamp DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@index([sendId])
+  @@index([url])
+}
+
+// Email Conversion Events - track conversions
+model EmailConversionEvent {
+  id        String @id @default(cuid())
+  sendId    String
+  send      EmailSend @relation(fields: [sendId], references: [id], onDelete: Cascade)
+
+  value     Int? // In cents
+  timestamp DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@index([sendId])
+}
+
+// Update EmailSend to include relations
+// (Note: EmailSend model should include these new relations:
+//  clickEvents EmailClickEvent[]
+//  conversionEvents EmailConversionEvent[])
+
+// Update EmailCampaign to include A/B tests relation
+// (Note: EmailCampaign model should include:
+//  abTests EmailABTest[] @relation("ABTests")
+//  segments EmailSegment[])
+
+// Update EmailList to include EmailSegment relation
+// (Note: EmailList model should include:
+//  segments EmailSegment[])
 
 // ---------------------------------------------------------------------------
 // CRM: Contacts, Deals, Activities, Sales Pipeline
@@ -4456,6 +4580,8 @@ model InventoryProduct {
   stock        InventoryStock?
   movements    InventoryMovement[]
   purchaseOrders InventoryPurchaseOrder[]
+  reservations InventoryReservation[]
+  audits       InventoryAudit[]
 
   @@unique([tenantId, sku])
   @@index([tenantId])
@@ -4617,6 +4743,118 @@ model InventoryReport {
   @@index([tenantId])
   @@index([type])
   @@index([generatedAt])
+}
+
+// Asset Management
+model Asset {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation("Assets", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name                String
+  category            String
+  serialNumber        String?
+  assetTag            String?  @unique
+  description         String?
+  purchasePriceCents  Int      // in cents
+  purchaseDate        DateTime
+  depreciationYears   Int      @default(5)
+  depreciationMethod  String   @default("STRAIGHT_LINE") // STRAIGHT_LINE, DECLINING_BALANCE
+  owner               String?
+  location            String?
+  status              String   @default("ACTIVE") // ACTIVE, INACTIVE, DISPOSED, MAINTENANCE
+  customFields        Json     @default("{}")
+
+  movements           AssetMovement[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([status])
+  @@index([location])
+}
+
+model AssetMovement {
+  id              String   @id @default(cuid())
+  assetId         String
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  fromLocation    String
+  toLocation      String
+  previousOwner   String?
+  newOwner        String?
+  notes           String?
+  recordedAt      DateTime @default(now())
+
+  @@index([assetId])
+  @@index([recordedAt])
+}
+
+// Reservations
+model InventoryReservation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  productId   String
+  product     InventoryProduct @relation("Reservations", fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity    Int
+  reservedBy  String
+  holdUntil   DateTime
+  purpose     String?
+  reference   String?
+  status      String   @default("ACTIVE") // ACTIVE, CONFIRMED, CANCELLED, EXPIRED
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+  expiredAt   DateTime?
+  cancellationReason String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([status])
+  @@index([holdUntil])
+  @@index([reservedBy])
+}
+
+// Auditing & Discrepancy Detection
+model InventoryAudit {
+  id                String   @id @default(cuid())
+  tenantId          String
+  productId         String
+  product           InventoryProduct @relation("Audits", fields: [productId], references: [id], onDelete: Cascade)
+
+  systemQuantity    Int      // what system says
+  physicalQuantity  Int      // what we counted
+  variance          Int      // difference
+  variancePercent   Float    // percentage
+  status            String   @default("MATCHED") // MATCHED, DISCREPANCY
+  countedBy         String
+  location          String?
+  notes             String?
+
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AuditCycle {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation("AuditCycles", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name              String
+  frequency         String   // WEEKLY, MONTHLY, QUARTERLY
+  nextAuditDate     DateTime
+  status            String   @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([nextAuditDate])
 }
 
 // ===========================================================================
@@ -4842,6 +5080,7 @@ model Affiliate {
   trackings         Tracking[]
   commissions       Commission[]
   payouts           Payout[]
+  performanceMetrics PerformanceMetric[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4939,7 +5178,26 @@ model Payout {
   @@index([status])
 }
 
+model PerformanceMetric {
+  id                String   @id @default(cuid())
+  affiliateId       String
+  affiliate         Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 
+  month             DateTime // first day of the month
+  conversions       Int      @default(0)
+  revenue           Int      @default(0) // in cents
+  commissions       Int      @default(0) // in cents
+  avgConversionRate Float    @default(0)
+  roi               Float    @default(0) // return on investment
+  clickCount        Int      @default(0)
+  impressions       Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([affiliateId, month])
+  @@index([affiliateId])
+}
 
 model PaymentReminder {
   id                  String   @id @default(cuid())
@@ -8347,13 +8605,496 @@ model MobileUser {
   id              String    @id @default(cuid())
   userId          String    @unique
   user            User      @relation("UserMobilePrefs", fields: [userId], references: [id], onDelete: Cascade)
-  
+
   pushOptedIn     Boolean   @default(true)
   optInSource     String?   // auto, user, banner
   lastOptInAt     DateTime?
-  
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   @@index([userId])
+}
+
+// ===========================================================================
+// Customer Support & Ticketing System (6 subsystems)
+// ===========================================================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  RESOLVED
+  CLOSED
+  REOPEN_REQUESTED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+// 1. Ticket Management — Create, assign, resolve tickets
+model Ticket {
+  id              String          @id @default(cuid())
+  tenantId        String
+  tenant          Tenant          @relation("SupportTickets", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Ticket identity
+  ticketNumber    String          @unique // e.g., TICKET-001
+  subject         String
+  description     String
+
+  // Customer info
+  customerId      String?
+  customer        User?           @relation("TicketsCreated", fields: [customerId], references: [id], onDelete: SetNull)
+  customerEmail   String?         // For anonymous tickets
+
+  // Assignment & prioritization
+  assignedToId    String?
+  assignedTo      User?           @relation("TicketsAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+  status          TicketStatus    @default(OPEN)
+  priority        TicketPriority  @default(MEDIUM)
+
+  // Category & tagging
+  category        String?         // "billing", "technical", "general", "feature_request"
+  subcategory     String?
+  tags            String[]        @default([])
+
+  // Workflow tracking
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  reopenCount     Int             @default(0)
+
+  // SLA metrics
+  slaBreachCount  Int             @default(0)
+  escalationLevel Int             @default(0)     // 0=normal, 1=escalated, 2=critical
+
+  // Relationships
+  messages        TicketMessage[]
+  activities      TicketActivity[]
+  automationLogs  TicketAutomationLog[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+// Ticket message/conversation thread
+model TicketMessage {
+  id              String   @id @default(cuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // Author
+  authorId        String?
+  author          User?    @relation("TicketMessages", fields: [authorId], references: [id], onDelete: SetNull)
+  authorName      String   // Display name for anonymous messages
+  authorEmail     String?  // For email-based tickets
+
+  // Content
+  message         String
+  attachmentUrls  String[] @default([])  // URLs to attachments
+
+  // Type
+  isInternalNote  Boolean  @default(false)
+  messageType     String   @default("reply")  // "reply", "internal_note", "system"
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// Ticket activity log
+model TicketActivity {
+  id              String   @id @default(cuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  action          String   // "assigned", "status_changed", "priority_changed", "reopened", etc.
+  actorId         String?
+  actor           User?    @relation("TicketActivities", fields: [actorId], references: [id], onDelete: SetNull)
+
+  oldValue        String?
+  newValue        String?
+  metadata        Json     @default("{}")
+
+  createdAt       DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// 2. Knowledge Base — Articles, FAQs, search
+model Article {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("KnowledgeBaseArticles", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Content
+  title           String
+  slug            String
+  content         String   @db.Text
+
+  // Organization
+  category        String   // "getting-started", "troubleshooting", "billing", "account"
+  subcategory     String?
+  tags            String[] @default([])
+
+  // Metadata
+  description     String?
+  keywords        String[] @default([])
+  featured        Boolean  @default(false)
+
+  // Publishing
+  published       Boolean  @default(false)
+  publishedAt     DateTime?
+
+  // Engagement metrics
+  views           Int      @default(0)
+  helpfulCount    Int      @default(0)
+  unhelpfulCount  Int      @default(0)
+
+  // Related articles
+  relatedArticleIds String[] @default([])
+
+  // SEO & tracking
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([category])
+  @@index([published])
+  @@index([featured])
+}
+
+// Article search index for full-text search
+model ArticleSearchIndex {
+  id              String   @id @default(cuid())
+  articleId       String   @unique
+  tenantId        String
+
+  // Searchable content
+  searchText      String   @db.Text  // Concatenated title, content, keywords
+  wordCount       Int
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// 3. Chat Support — Real-time chat, queue, resolution
+model ChatSession {
+  id              String          @id @default(cuid())
+  tenantId        String
+  tenant          Tenant          @relation("SupportChatSessions", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Customer & agent
+  customerId      String?
+  customer        User?           @relation("ChatSessionsAsCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  agentId         String?
+  agent           User?           @relation("ChatSessionsAsAgent", fields: [agentId], references: [id], onDelete: SetNull)
+
+  // Queue management
+  queuePosition   Int?            // Position in queue if waiting
+  waitingTime     Int?            // Seconds waited before agent pickup
+
+  // Session status
+  status          String          @default("open")  // "waiting", "active", "on_hold", "closed"
+
+  // Metrics
+  startedAt       DateTime        @default(now())
+  agentPickedUpAt DateTime?
+  closedAt        DateTime?
+  durationSeconds Int?
+
+  // Satisfaction
+  csat            Int?            // 1-5 customer satisfaction rating
+  csatComment     String?
+
+  // Messages & activity
+  messages        SupportChatMessage[]
+  activities      ChatActivity[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([agentId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model SupportChatMessage {
+  id              String   @id @default(cuid())
+  sessionId       String
+  session         ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Author
+  senderId        String
+  sender          User     @relation("SupportChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderType      String   // "customer" | "agent" | "bot"
+  senderName      String
+
+  // Content
+  message         String
+  attachmentUrls  String[] @default([])
+
+  createdAt       DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ChatActivity {
+  id              String   @id @default(cuid())
+  sessionId       String
+  session         ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  action          String   // "agent_assigned", "on_hold", "resumed", "transferred"
+  actorId         String?
+  actor           User?    @relation("ChatActivities", fields: [actorId], references: [id], onDelete: SetNull)
+
+  metadata        Json     @default("{}")
+
+  createdAt       DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([action])
+}
+
+// 4. Automation — Rules, bot responses, routing
+model AutomationRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportAutomationRules", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Rule definition
+  name            String
+  description     String?
+  enabled         Boolean  @default(true)
+
+  // Trigger configuration
+  triggerType     String   // "on_ticket_created", "on_message", "on_status_change", "on_priority_change"
+  triggerCondition Json    // { field, operator, value }
+
+  // Actions
+  actions         String[] // Array of action names: "auto_assign", "send_reply", "tag", "escalate"
+  actionConfig    Json     // Configuration for each action
+
+  // Execution tracking
+  matchCount      Int      @default(0)  // How many times this rule matched
+
+  // Ordering
+  priority        Int      @default(0)  // Higher = executed first
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([enabled])
+  @@index([triggerType])
+}
+
+model TicketAutomationLog {
+  id              String   @id @default(cuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  automationRuleId String?
+  ruleName        String
+  action          String   // What automation did
+  result          String   // success | failed
+  errorMessage    String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+// Bot response templates
+model BotResponse {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportBotResponses", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name            String
+  trigger         String   // keyword or pattern to trigger this response
+  response        String   @db.Text
+
+  category        String?
+  confidence      Float    @default(0.8)  // Match confidence threshold
+
+  enabled         Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([enabled])
+}
+
+// 5. Analytics — Response time, resolution rate, CSAT
+model SupportMetric {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportMetrics", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Period
+  date            String   @db.Date  // YYYY-MM-DD for daily metrics
+
+  // Ticket metrics
+  ticketsCreated  Int      @default(0)
+  ticketsResolved Int      @default(0)
+  ticketsClosed   Int      @default(0)
+  avgResponseTime Int?     // minutes
+  avgResolutionTime Int?   // minutes
+
+  // Agent metrics
+  agentCount      Int      @default(0)
+  avgAgentLoad    Float    @default(0)  // tickets per agent
+
+  // Customer satisfaction
+  avgCsat         Float?   // Average CSAT score (1-5)
+  csatRespondents Int      @default(0)  // How many customers rated
+
+  // Queue metrics
+  avgWaitTime     Int?     // minutes
+  chatSessionCount Int     @default(0)
+  avgChatDuration Int?     // seconds
+
+  // Escalation metrics
+  escalationCount Int      @default(0)
+  slaBreachCount  Int      @default(0)
+
+  // Performance by priority
+  priorityBreakdown Json   @default("{}") // { LOW: {created, resolved}, MEDIUM: {...} }
+
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+  @@index([date])
+}
+
+// 6. Integration — Email tickets, Slack alerts, webhooks
+model EmailIntegration {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportEmailIntegrations", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Email configuration
+  supportEmail    String
+  imapServer      String?
+  imapPort        Int?     @default(993)
+  encryptedPassword String? // Encrypted IMAP password
+
+  // Forwarding rules
+  autoCreateTickets Boolean @default(true)
+  tagAddedEmails  String[] @default([])  // Auto-tags for email-sourced tickets
+
+  // Sync status
+  lastSyncAt      DateTime?
+  syncErrors      Int      @default(0)
+
+  enabled         Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+model SlackIntegration {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportSlackIntegrations", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // OAuth tokens (encrypted)
+  encryptedBotToken String
+  encryptedUserToken String?
+
+  // Channel configuration
+  alertChannelId  String?  // Where to post support alerts
+  ticketChannelId String?  // Where to post new tickets
+
+  // Permissions
+  canPostMessages Boolean @default(true)
+  canReadMessages Boolean @default(false)  // For reading Slack conversations as tickets
+
+  enabled         Boolean @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+model WebhookIntegration {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("SupportWebhookIntegrations", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Webhook endpoint
+  url             String
+  secret          String   // HMAC secret for signing
+
+  // Events to subscribe to
+  events          String[] @default([])  // "ticket.created", "ticket.updated", "message.sent"
+
+  // Retry configuration
+  maxRetries      Int      @default(3)
+  retryDelaySeconds Int    @default(300)
+
+  // Status
+  enabled         Boolean  @default(true)
+  lastTriggeredAt DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// Audit log for webhook deliveries
+model WebhookDeliveryLog {
+  id              String   @id @default(cuid())
+  webhookId       String
+  webhook         WebhookIntegration @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  eventType       String
+  payload         Json
+  statusCode      Int?
+  responseBody    String?
+
+  attempt         Int      @default(1)
+  success         Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([createdAt])
 }
