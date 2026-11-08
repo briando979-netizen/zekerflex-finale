@@ -4977,6 +4977,149 @@ model TaxPayment {
 
   @@index([tenantId])
   @@index([year])
+}
+
+// ===========================================================================
+// Calendar & Scheduling
+// ===========================================================================
+
+model Calendar {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  color       String?
+  description String?
+  isShared    Boolean @default(false)
+
+  events      CalendarEvent[]
+  shares      CalendarShare[]
+  integrations CalendarIntegration[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id          String @id @default(cuid())
+  calendarId  String
+  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+
+  isRecurring Boolean @default(false)
+  recurrenceRule String?
+  reminders   Int[] @default([15])
+
+  externalEventId String?
+  externalProvider String? // "google", "outlook", "apple"
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([calendarId])
+  @@index([startTime])
+  @@index([externalEventId])
+}
+
+model CalendarShare {
+  id          String @id @default(cuid())
+  calendarId  String
+  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  targetUserId String
+  targetUser   User @relation("CalendarShares", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  permission  String @default("view") // "view" | "edit"
+
+  createdAt   DateTime @default(now())
+
+  @@unique([calendarId, targetUserId])
+  @@index([targetUserId])
+}
+
+model CalendarIntegration {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  calendarId  String
+  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  provider    String // "google" | "outlook" | "ical" | "apple"
+  accessToken String?
+  refreshToken String?
+  externalId  String?
+
+  lastSyncedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([calendarId])
+}
+
+model UserAvailability {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workingHours Json @default("{}")
+  bufferMinutes Int @default(15)
+  bufferPosition String @default("after") // "before" | "after"
+
+  meetingFreeStart Int? // hour (0-23)
+  meetingFreeEnd   Int?
+
+  blocks      AvailabilityBlock[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AvailabilityBlock {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String // "vacation" | "focus" | "block"
+  title       String
+
+  startDate   DateTime?
+  endDate     DateTime?
+
+  dayOfWeek   Int? // 0-6
+  startTime   String? // "09:00"
+  endTime     String? // "17:00"
+
+  availability UserAvailability @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RoomReservation {
+  id          String @id @default(cuid())
+  roomId      String
+
+  startTime   DateTime
+  endTime     DateTime
+
+  meetingId   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([roomId])
+  @@index([startTime])
+}
   @@index([periodType])
 }
 
