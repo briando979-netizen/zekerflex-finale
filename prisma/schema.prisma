@@ -4979,3 +4979,183 @@ model TaxPayment {
   @@index([year])
   @@index([periodType])
 }
+
+// ===========================================================================
+// Digital Asset Management (DAM)
+// ===========================================================================
+
+model DamAsset {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation("DamAssets", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name                String
+  description         String?
+  type                String   // IMAGE, VIDEO, DOCUMENT, AUDIO, OTHER
+  mimeType            String
+  fileSize            Int
+  url                 String
+  thumbnailUrl        String?
+
+  folderId            String?
+  folder              DamFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  tags                String[] @default([])
+  metadata            Json?
+
+  versions            DamAssetVersion[]
+  shares              DamAssetShare[]
+  publicLinks         DamPublicLink[]
+  downloads           DamDownloadLog[]
+  collectionAssets    DamCollectionAsset[]
+
+  uploadedBy          String
+  uploadedAt          DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  archivedAt          DateTime?
+
+  @@index([tenantId])
+  @@index([folderId])
+  @@index([uploadedAt])
+  @@index([archivedAt])
+}
+
+model DamAssetVersion {
+  id                  String   @id @default(cuid())
+  assetId             String
+  asset               DamAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  version             Int
+  url                 String
+
+  createdAt           DateTime @default(now())
+
+  @@index([assetId])
+  @@unique([assetId, version])
+}
+
+model DamFolder {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation("DamFolders", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name                String
+  parentId            String?
+  parent              DamFolder? @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children            DamFolder[] @relation("FolderHierarchy")
+
+  assets              DamAsset[]
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model DamAssetShare {
+  id                  String   @id @default(cuid())
+  assetId             String
+  asset               DamAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  userId              String
+  permission          String   // VIEW, DOWNLOAD, EDIT, MANAGE
+
+  sharedAt            DateTime @default(now())
+
+  @@index([assetId])
+  @@index([userId])
+  @@unique([assetId, userId])
+}
+
+model DamPublicLink {
+  id                  String   @id @default(cuid())
+  token               String   @unique @default(cuid())
+  assetId             String
+  asset               DamAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  downloads           Int      @default(0)
+  expiresAt           DateTime?
+  createdAt           DateTime @default(now())
+  lastAccessedAt      DateTime?
+
+  @@index([assetId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model DamDownloadLog {
+  id                  String   @id @default(cuid())
+  assetId             String
+  asset               DamAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  userId              String?
+  downloadedAt        DateTime @default(now())
+
+  @@index([assetId])
+  @@index([userId])
+  @@index([downloadedAt])
+}
+
+model DamCollection {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation("DamCollections", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name                String
+  description         String?
+  isSmart             Boolean  @default(false)
+  rules               Json?
+
+  assets              DamCollectionAsset[]
+  comments            DamCollectionComment[]
+  shares              DamCollectionShare[]
+
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model DamCollectionAsset {
+  id                  String   @id @default(cuid())
+  collectionId        String
+  collection          DamCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  assetId             String
+  asset               DamAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  addedAt             DateTime @default(now())
+
+  @@index([collectionId])
+  @@index([assetId])
+  @@unique([collectionId, assetId])
+}
+
+model DamCollectionComment {
+  id                  String   @id @default(cuid())
+  collectionId        String
+  collection          DamCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  userId              String
+  text                String
+
+  createdAt           DateTime @default(now())
+
+  @@index([collectionId])
+  @@index([userId])
+}
+
+model DamCollectionShare {
+  id                  String   @id @default(cuid())
+  collectionId        String
+  collection          DamCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  userId              String
+  permission          String   // VIEW, EDIT
+
+  sharedAt            DateTime @default(now())
+
+  @@index([collectionId])
+  @@index([userId])
+  @@unique([collectionId, userId])
+}
