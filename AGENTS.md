@@ -9,6 +9,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
    - `npx tsc --noEmit -p .`  (moet 0 fouten geven)
    - `npx eslint <gewijzigde bestanden>`  (moet schoon zijn)
    - `npx vitest related --run <gewijzigde bestanden>` — dit is wat de live-zetter doet; draai het zelf, niet `vitest run` (alles)
+   - Raak je `prisma/schema.prisma` aan: `npx prisma validate` (met `DATABASE_URL` en `DATABASE_URL_UNPOOLED` gezet, anders keurt hij elk schema af). 8 nov werd het schema bij één commit ongeldig en bouwden 147 commits erop door voordat iemand het zag; main is toen teruggezet (tak `bewaard-2026-11-08`).
    Commit/push **alleen** als alles schoon is.
 2. **Pushen naar `main` is nog niet live, maar wel de volgende uitrol.** Live zetten gaat via Admin → ZekerFlex AI → Live zetten (de live-zetter op de VPS) of `deploy/scripts/vps-update.sh`; die zetten GitHub `main` live. Migraties draaien **niet** vanzelf: alleen met `ZF_MIGREER=1`, na een droge proef (`BEGIN … ROLLBACK`). Push dus alleen gecontroleerde wijzigingen.
 3. **Strikte TypeScript:** `noUncheckedIndexedAccess` (guard `arr[i]` met `?? …`) en `exactOptionalPropertyTypes` (nooit `prop: undefined` toekennen; laat de key weg of type `| undefined`).
