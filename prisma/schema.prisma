@@ -5395,3 +5395,142 @@ model FormResponse {
   @@index([dataHash])
   @@index([submittedAt])
 }
+
+// ===========================================================================
+// Compliance & Audit
+// ===========================================================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  action        String
+  resource      String
+  resourceId    String
+  changes       String?  // JSON for field changes
+
+  ipAddress     String
+  userAgent     String
+  status        String   // SUCCESS | FAILURE
+  reason        String?
+  metadata      String?  // JSON metadata
+
+  hash          String   @unique
+  previousHash  String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model DataGovernance {
+  id                String   @id @default(cuid())
+  dataType          String   @unique
+  classification    String   // PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED, PERSONAL, SENSITIVE
+  retentionDays     Int
+  residency         String   // EU, US, ANY, SAME_AS_STORAGE
+  requiresEncryption Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([classification])
+  @@index([dataType])
+}
+
+model DataDeletion {
+  id              String   @id @default(cuid())
+  dataType        String
+  recordId        String
+  scheduledDate   DateTime
+  status          String   // PENDING, COMPLETED, FAILED
+  error           String?
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([dataType])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model AccessGrant {
+  id          String   @id @default(cuid())
+  userId      String
+  resource    String
+  action      String
+  expiresAt   DateTime?
+  grantedAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource])
+  @@index([expiresAt])
+}
+
+model AccessPolicy {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // RBAC, ABAC, PBAC
+  rules       String   // JSON array of rules
+  active      Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([active])
+}
+
+model RiskAssessment {
+  id                    String   @id @default(cuid())
+  title                 String
+  description           String
+  category              String
+  likelihood            Int      // 1-5
+  impact                Int      // 1-5
+  severity              String   // CRITICAL, HIGH, MEDIUM, LOW
+  score                 Int      // 1-25
+  status                String   // OPEN, IN_PROGRESS, MITIGATED, ACCEPTED, RESOLVED
+  owner                 String?
+  mitigationStrategy    String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([severity])
+  @@index([status])
+  @@index([category])
+}
+
+model Incident {
+  id            String   @id @default(cuid())
+  incidentId    String
+  severity      String   // CRITICAL, HIGH, MEDIUM, LOW
+  description   String
+  status        String   // OPEN, INVESTIGATING, RESOLVED
+  reportedAt    DateTime
+  resolvedAt    DateTime?
+
+  createdAt     DateTime @default(now())
+
+  @@index([severity])
+  @@index([status])
+  @@index([reportedAt])
+}
+
+model GdprConsent {
+  id            String   @id @default(cuid())
+  userId        String
+  consentType   String   // marketing, analytics, profiling
+  value         Boolean
+  consentDate   DateTime
+  revokeDate    DateTime?
+  ipAddress     String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([consentType])
+}
