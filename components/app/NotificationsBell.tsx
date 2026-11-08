@@ -256,8 +256,8 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-[60] mt-2 flex max-h-[min(36rem,calc(100dvh-5rem))] w-[min(26rem,calc(100vw-1.25rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
-          style={{ ...panelStyle, right: -shift }}
+          className="fixed top-full z-[60] mt-2 flex max-h-[min(36rem,calc(100dvh-5rem))] w-[min(26rem,calc(100vw-1.25rem))] flex-col overflow-hidden rounded-xl bg-white shadow-lift"
+          style={{ ...panelStyle, right: Math.max(10, shift) }}
         >
           {/* Koptekst */}
           <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>
