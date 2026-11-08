@@ -2898,6 +2898,543 @@ model Video {
   @@index([createdAt])
 }
 
+// ===========================================================================
+// Marketplace Ecosystem
+// ===========================================================================
+
+enum AppStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  PUBLISHED
+  SUSPENDED
+  REJECTED
+}
+
+enum AppCategory {
+  INTEGRATION
+  AUTOMATION
+  REPORTING
+  ANALYTICS
+  PAYMENT
+  COMMUNICATION
+  PRODUCTIVITY
+  SECURITY
+  TRAINING
+  CUSTOM
+}
+
+enum DeveloperTier {
+  INDIVIDUAL
+  STARTUP
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum PartnerTier {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PartnerType {
+  INTEGRATION
+  RESELLER
+  AGENCY
+  CONSULTANT
+  TECHNOLOGY
+  TRAINING
+  DATA
+  RESEARCH
+}
+
+// Third-party applications in the marketplace
+model MarketplaceApp {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  description     String
+  longDescription String?
+  status          AppStatus   @default(DRAFT)
+  category        AppCategory
+
+  developerTenantId String
+  developerTenant   Tenant @relation("AppDeveloper", fields: [developerTenantId], references: [id])
+
+  logoUrl         String?
+  bannerUrl       String?
+  screenshots     Json? // array of URLs
+
+  version         String      @default("1.0.0")
+  currentVersion  String      @default("1.0.0")
+
+  // OAuth
+  oauthClientId   String
+  oauthClientSecret String
+  oauthRedirectUris Json // array of URLs
+
+  // Scopes requested
+  requestedScopes Json? // array of scope strings
+
+  // Installation
+  installationCount Int @default(0)
+  activeInstallations Int @default(0)
+
+  // Revenue
+  monthlyRecurringRevenueCents Int @default(0)
+  totalRevenueAllTimeCents Int @default(0)
+  platformFeeBasisPoints Int @default(3000) // 30%
+
+  // Ratings
+  averageRating Float @default(0) // 0-5
+  reviewCount Int @default(0)
+
+  documentation String? // markdown
+  supportUrl String?
+  privacyPolicyUrl String?
+  termsUrl String?
+
+  // Webhook
+  webhookSecret String? @unique
+  webhookUrl String?
+
+  isPublished Boolean @default(false)
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  installations MarketplaceAppInstallation[]
+  reviews AppReview[]
+  versions AppVersion[]
+  analytics AppAnalytics[]
+  events AppEvent[]
+
+  @@index([developerTenantId])
+  @@index([status])
+  @@index([category])
+  @@index([installationCount])
+}
+
+model AppVersion {
+  id String @id @default(cuid())
+  appId String
+  app MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  version String
+  description String?
+  releaseNotes String?
+
+  isCurrentVersion Boolean @default(false)
+  releasedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([appId, version])
+  @@index([appId])
+}
+
+model MarketplaceAppInstallation {
+  id String @id @default(cuid())
+  appId String
+  app MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant Tenant @relation("AppInstallations", fields: [tenantId], references: [id])
+
+  accessToken String @unique
+  refreshToken String?
+  scopes Json // array of scopes granted
+
+  installationDate DateTime @default(now())
+  lastAccessedAt DateTime?
+
+  isActive Boolean @default(true)
+  config Json? // app-specific config
+
+  @@unique([appId, tenantId])
+  @@index([appId])
+  @@index([tenantId])
+}
+
+model AppReview {
+  id String @id @default(cuid())
+  appId String
+  app MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant Tenant @relation("AppReviews", fields: [tenantId], references: [id])
+
+  rating Int // 1-5
+  title String
+  content String
+
+  isVerifiedPurchase Boolean @default(true)
+  helpfulCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([appId])
+  @@index([rating])
+}
+
+model AppAnalytics {
+  id String @id @default(cuid())
+  appId String
+  app MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  date DateTime
+
+  installs Int @default(0)
+  uninstalls Int @default(0)
+  activeUsers Int @default(0)
+  events Int @default(0)
+
+  revenueGeneratedCents Int @default(0)
+  platformFeeCents Int @default(0)
+
+  @@unique([appId, date])
+  @@index([appId])
+}
+
+model AppEvent {
+  id String @id @default(cuid())
+  appId String
+  app MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  type String // custom event type
+  tenantId String
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([appId, type])
+}
+
+// Developer portal access
+model Developer {
+  id String @id @default(cuid())
+  tenantId String @unique
+  tenant Tenant @relation("Developer", fields: [tenantId], references: [id])
+
+  tier DeveloperTier @default(INDIVIDUAL)
+
+  // API
+  apiKeysCount Int @default(0)
+  apiCallsThisMonth Int @default(0)
+  apiCallsLimit Int @default(1000000)
+
+  // Webhook
+  webhooksCount Int @default(0)
+
+  // Certification
+  isCertified Boolean @default(false)
+  certificationDate DateTime?
+
+  // Profile
+  companyName String?
+  website String?
+  supportEmail String
+  documentation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tier])
+}
+
+// Partner programs
+model Partner {
+  id String @id @default(cuid())
+  tenantId String @unique
+  tenant Tenant @relation("Partner", fields: [tenantId], references: [id])
+
+  type PartnerType
+  tier PartnerTier @default(SILVER)
+
+  // Revenue sharing
+  revenueSplitPercentage Int // 10, 20, 30 etc
+  ytdRevenueShareCents Int @default(0)
+
+  // Contact
+  primaryContactEmail String
+  supportEmail String?
+
+  // Marketing
+  coMarketingAllowed Boolean @default(true)
+  exclusivityRegions Json? // array of region codes
+
+  // Metrics
+  customerCount Int @default(0)
+  totalRevenueGeneratedCents Int @default(0)
+
+  status String @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  joinedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([tier])
+}
+
+// Reseller accounts
+model Reseller {
+  id String @id @default(cuid())
+  tenantId String @unique
+  tenant Tenant @relation("Reseller", fields: [tenantId], references: [id])
+
+  // Commission structure
+  discountPercentage Int // 10-30%
+  commissionPercentageBasisPoints Int // 500-3000
+
+  // Territory
+  territory String? // region code or country
+  exclusiveTerritory Boolean @default(false)
+
+  // Customers
+  customerCount Int @default(0)
+  totalRevenueGeneratedCents Int @default(0)
+
+  // Contact
+  contactEmail String
+  supportEmail String?
+
+  status String @default("ACTIVE")
+  joinedAt DateTime @default(now())
+
+  @@index([territory])
+}
+
+// Agency partners (implementation, consulting, training)
+model Agency {
+  id String @id @default(cuid())
+  tenantId String @unique
+  tenant Tenant @relation("Agency", fields: [tenantId], references: [id])
+
+  // Services
+  services Json // array: "IMPLEMENTATION", "CONSULTING", "TRAINING", "CUSTOM_DEVELOPMENT"
+
+  // Performance
+  certifiedImplementers Int @default(0)
+  projectsCompleted Int @default(0)
+  customersSatisfactionScore Float? // 0-5
+
+  // Revenue
+  totalRevenueGeneratedCents Int @default(0)
+
+  // Credentials
+  isCertified Boolean @default(false)
+  certifications Json? // array of cert names/dates
+
+  // Contact
+  contactEmail String
+  website String?
+
+  status String @default("ACTIVE")
+  joinedAt DateTime @default(now())
+
+  @@index([services])
+}
+
+// Integration partnerships
+model Integration {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+
+  // Type
+  category String // CRM, PAYMENT, COMMUNICATION, etc
+  type String // WEBHOOK, OAUTH, API, CUSTOM
+
+  // Description
+  description String
+  documentation String?
+  logoUrl String?
+
+  // Configuration
+  configSchema Json? // JSON schema for setup
+  authMethod String // OAUTH, API_KEY, BASIC, CUSTOM
+
+  // Endpoints
+  webhookUrl String?
+  apiBaseUrl String?
+
+  // Status
+  status String @default("ACTIVE") // ACTIVE, BETA, DEPRECATED
+
+  // Usage
+  tenantCount Int @default(0)
+  dailyEventsCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
+// Extension marketplace
+model Extension {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+
+  description String
+  category String
+
+  developerTenantId String
+  developerTenant Tenant @relation("ExtensionDeveloper", fields: [developerTenantId], references: [id])
+
+  code String // JavaScript code for extension
+  codeHash String @unique
+
+  version String @default("1.0.0")
+
+  // Marketplace
+  isPublished Boolean @default(false)
+  installationCount Int @default(0)
+
+  // Revenue
+  isPaid Boolean @default(false)
+  priceCents Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([developerTenantId])
+  @@index([isPublished])
+}
+
+// Template marketplace
+model Template {
+  id String @id @default(cuid())
+  name String
+  description String
+
+  category String // workflow, report, dashboard, form
+
+  creatorTenantId String?
+  creatorTenant Tenant? @relation("TemplateCreator", fields: [creatorTenantId], references: [id])
+
+  content Json // template configuration
+
+  isPublished Boolean @default(false)
+  isPaid Boolean @default(false)
+  priceCents Int?
+
+  usageCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublished])
+}
+
+// Add-ons system
+model AddOn {
+  id String @id @default(cuid())
+  name String
+  description String
+  type String // FEATURE, CAPACITY, SUPPORT, TRAINING, CUSTOM
+
+  category String
+
+  basePriceCents Int // monthly
+  billingPeriod String @default("MONTHLY")
+
+  features Json? // array of features unlocked
+
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+// Tenant's active add-ons
+model TenantAddOn {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation("TenantAddOns", fields: [tenantId], references: [id])
+
+  addOnId String
+  addOn AddOn @relation(fields: [addOnId], references: [id])
+
+  quantity Int @default(1)
+  priceCents Int // locked price at purchase
+
+  activeSince DateTime @default(now())
+  renewsAt DateTime?
+
+  @@unique([tenantId, addOnId])
+  @@index([tenantId])
+}
+
+// Data exchange partnerships
+model DataExchange {
+  id String @id @default(cuid())
+  name String
+  description String
+
+  providerTenantId String
+  providerTenant Tenant @relation("DataExchangeProvider", fields: [providerTenantId], references: [id])
+
+  consumerTenantId String
+  consumerTenant Tenant @relation("DataExchangeConsumer", fields: [consumerTenantId], references: [id])
+
+  dataType String // what data is being exchanged
+  encryptionKey String?
+
+  status String @default("PENDING") // PENDING, ACTIVE, TERMINATED
+
+  revenueSharePercentage Int? // if data has direct revenue
+  totalValueExchangedCents Int @default(0)
+
+  agreedAt DateTime?
+  startedAt DateTime?
+  endedAt DateTime?
+
+  @@unique([providerTenantId, consumerTenantId, dataType])
+  @@index([providerTenantId])
+  @@index([status])
+}
+
+// Certification program
+model Certification {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String
+
+  level Int @default(1) // 1-5
+  prerequisites String? // prerequisite cert IDs
+
+  courseUrl String?
+  examUrl String?
+
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([level])
+}
+
+model UserCertification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation("UserCertifications", fields: [userId], references: [id])
+
+  certificationId String
+  certification Certification @relation(fields: [certificationId], references: [id])
+
+  earnedAt DateTime @default(now())
+  expiresAt DateTime?
+  certificateUrl String?
+
+  @@unique([userId, certificationId])
+  @@index([userId])
+}
+
 // ---------------------------------------------------------------------------
 // HD Gallery: Media library with HD support, chunked uploads, analytics
 // Supports images, videos, audio files with full-quality preservation
