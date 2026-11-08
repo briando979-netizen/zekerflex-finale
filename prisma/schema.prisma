@@ -1,4 +1,4 @@
-﻿// ---------------------------------------------------------------------------
+/ ---------------------------------------------------------------------------
 // ZekerFlex - Prisma schema
 // PostgreSQL. All monetary values are stored as integer cents (Int) to avoid
 // floating point drift. Coordinates are decimal degrees (Float).
@@ -160,6 +160,15 @@ model Tenant {
   assets               Asset[]
   auditCycles          AuditCycle[]
 
+  // Security & Access Control
+  roles                Role[]               @relation("RolesTenant")
+  permissions          Permission[]         @relation("PermissionsTenant")
+  attributePolicies    AttributePolicy[]    @relation("AttributePoliciesTenant")
+  ssoConfig            SsoConfig?           @relation("SsoConfigs")
+  securityEvents       SecurityEvent[]      @relation("SecurityEventsTenant")
+  encryptionKeys       EncryptionKey[]      @relation("EncryptionKeysTenant")
+  roleAuditLogs        RoleAuditLog[]       @relation("RoleAuditLogsTenant")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -229,6 +238,11 @@ model User {
   mobileMetrics        MobileMetrics[]
   mobileSessions       MobileSession[]
   mobileUser           MobileUser?  @relation("UserMobilePrefs")
+
+  // Security & Access Control
+  roles                RoleMembership[]       @relation("UserRoles")
+  securityEvents       SecurityEvent[]        @relation("SecurityEventsUser")
+  roleAuditLogs        RoleAuditLog[]         @relation("RoleAuditLogs")
 
 }
 
@@ -9097,4 +9111,208 @@ model WebhookDeliveryLog {
 
   @@index([webhookId])
   @@index([createdAt])
+}
+// ===========================================================================
+// Advanced Security & Access Control
+// ===========================================================================
+
+// Role-Based Access Control (RBAC)
+model Role {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("RolesTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  permissions Permission[] @relation("RolePermissions")
+  memberships RoleMembership[]
+
+  priority    Int      @default(0)
+  isBuiltIn   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("PermissionsTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  code        String
+  description String?
+
+  resource    String   @default("general")
+  action      String   @default("read")
+
+  roles       Role[]   @relation("RolePermissions")
+
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([resource])
+}
+
+model RoleMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserRoles", fields: [userId], references: [id], onDelete: Cascade)
+
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  activatedAt DateTime?
+  expiresAt   DateTime?
+
+  metadata    Json     @default("{}")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+}
+
+model AttributePolicy {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("AttributePoliciesTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  rules       Json     @default("[]")
+
+  effect      String   @default("allow")
+
+  resources   String[] @default([])
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model SsoConfig {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation("SsoConfigs", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  provider    String
+
+  clientId    String
+  encryptedClientSecret String
+
+  authorizationUrl String?
+  tokenUrl    String?
+  userInfoUrl String?
+
+  samlMetadataUrl String?
+  encryptedSamlCert String?
+
+  discoveryUrl String?
+
+  autoProvisionUsers Boolean @default(true)
+  mapGroupsToRoles   Boolean @default(false)
+
+  isEnabled   Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("SecurityEventsTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?    @relation("SecurityEventsUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  eventType   String
+
+  action      String
+  resource    String?
+  oldValue    Json?
+  newValue    Json?
+
+  severity    String   @default("info")
+
+  ipAddress   String?
+  userAgent   String?
+  originHost  String?
+
+  status      String   @default("success")
+  failureReason String?
+
+  timestamp   DateTime @default(now())
+
+  auditLogId  String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([timestamp])
+}
+
+model EncryptionKey {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("EncryptionKeysTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  algorithm   String   @default("aes-256-gcm")
+  keyVersion  Int      @default(1)
+
+  encryptedKey String
+
+  createdAt   DateTime @default(now())
+  rotatedAt   DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+
+  isActive    Boolean  @default(true)
+
+  lastUsedAt  DateTime?
+  usageCount  Int      @default(0)
+
+  @@unique([tenantId, name, keyVersion])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model RoleAuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("RoleAuditLogsTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation("RoleAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  roleId      String
+  role        Role     @relation("RoleAuditLogs", fields: [roleId], references: [id], onDelete: Cascade)
+
+  action      String
+  reason      String?
+  changedBy   String?
+
+  timestamp   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([timestamp])
 }
