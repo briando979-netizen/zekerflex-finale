@@ -5137,8 +5137,6 @@ model RoomReservation {
   @@index([roomId])
   @@index([startTime])
 }
-  @@index([periodType])
-}
 
 // ===========================================================================
 // Digital Asset Management (DAM)
@@ -5869,4 +5867,245 @@ model IntegrationError {
 
   @@index([integrationId])
   @@index([createdAt])
+}
+
+// ===========================================================================
+// Facility Management
+// ===========================================================================
+
+model FacilitySpace {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   // OFFICE, CONFERENCE, LOUNGE, STORAGE, OTHER
+  capacity        Int
+  floor           Int
+  area            Float
+  equipment       String[]
+  utilization     Float    @default(0)
+
+  bookings        SpaceBooking[]
+  feedback        WorkplaceFeedback[]
+  energyUsage     EnergyConsumption[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([utilization])
+}
+
+model SpaceBooking {
+  id              String   @id @default(cuid())
+  spaceId         String
+  startTime       DateTime
+  endTime         DateTime
+  bookedBy        String
+  status          String   // CONFIRMED, CANCELLED
+  notes           String?
+
+  space           FacilitySpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([spaceId])
+  @@index([startTime])
+  @@index([status])
+}
+
+model MaintenanceTask {
+  id              String   @id @default(cuid())
+  assetId         String
+  type            String   // PREVENTIVE, REACTIVE, EMERGENCY
+  description     String
+  scheduledDate   DateTime?
+  priority        String   // LOW, MEDIUM, HIGH, CRITICAL
+  status          String   // SCHEDULED, IN_PROGRESS, COMPLETED
+  notes           String?
+  cost            Float?
+  completedBy     String?
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([assetId])
+  @@index([status])
+  @@index([priority])
+}
+
+model MaintenanceSchedule {
+  id              String   @id @default(cuid())
+  assetId         String
+  type            String   // PREVENTIVE, REACTIVE
+  interval        String   // MONTHLY, QUARTERLY, ANNUALLY
+  nextScheduled   DateTime
+
+  createdAt       DateTime @default(now())
+
+  @@index([assetId])
+  @@index([nextScheduled])
+}
+
+model FacilityAsset {
+  id              String   @id @default(cuid())
+  name            String
+  type            String
+  location        String
+  purchaseDate    DateTime
+  purchaseValue   Float
+  currentValue    Float
+  status          String   // ACTIVE, MAINTENANCE, RETIRED
+
+  maintenanceTasks MaintenanceTask[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([location])
+}
+
+model WorkplaceFeedback {
+  id              String   @id @default(cuid())
+  spaceId         String
+  category        String   // SAFETY, COMFORT, CLEANLINESS, TEMPERATURE, NOISE, LIGHTING
+  rating          Int
+  comment         String?
+  submittedBy     String
+
+  space           FacilitySpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([spaceId])
+  @@index([category])
+  @@index([rating])
+}
+
+model SafetyIncident {
+  id              String   @id @default(cuid())
+  spaceId         String
+  description     String
+  severity        String   // LOW, MEDIUM, HIGH, CRITICAL
+  reportedBy      String
+  resolved        Boolean  @default(false)
+  resolutionNotes String?
+
+  reportedAt      DateTime @default(now())
+  resolvedAt      DateTime?
+
+  @@index([spaceId])
+  @@index([severity])
+  @@index([resolved])
+}
+
+model EnergyConsumption {
+  id              String   @id @default(cuid())
+  spaceId         String
+  consumption     Float    // kWh or other unit
+  unit            String   @default("kWh")
+
+  space           FacilitySpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  recordedAt      DateTime @default(now())
+
+  @@index([spaceId])
+  @@index([recordedAt])
+}
+
+// ===========================================================================
+// Financial Planning & Analysis
+// ===========================================================================
+
+model FinancialForecast {
+  id              String   @id @default(cuid())
+  entityId        String
+  period          String   // YYYY-MM
+  revenue         Float
+  expense         Float
+  cashFlow        Float
+  margin          Float
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([entityId, period])
+  @@index([entityId])
+  @@index([period])
+}
+
+model Budget {
+  id              String   @id @default(cuid())
+  entityId        String
+  period          String   // YYYY-MM
+  revenueTarget   Float
+  expenseTarget   Float
+  status          String   // DRAFT, APPROVED, ACTIVE, CLOSED
+
+  allocations     BudgetAllocation[]
+  actuals         ActualExpense[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([entityId, period])
+  @@index([entityId])
+  @@index([status])
+}
+
+model BudgetAllocation {
+  id              String   @id @default(cuid())
+  budgetId        String
+  department      String
+  budget          Float
+
+  budget_rel      Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@index([department])
+}
+
+model ActualExpense {
+  id              String   @id @default(cuid())
+  budgetId        String
+  entityId        String
+  period          String   // YYYY-MM
+  department      String
+  category        String
+  amount          Float
+
+  budget_rel      Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@index([entityId])
+  @@index([period])
+  @@index([department])
+}
+
+model Consolidation {
+  id              String   @id @default(cuid())
+  parentEntityId  String
+  period          String   // YYYY-MM
+  revenue         Float
+  expense         Float
+  intercompanyEliminations Float @default(0)
+  margin          Float
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([parentEntityId, period])
+  @@index([parentEntityId])
+}
+
+model IntercompanyTransaction {
+  id              String   @id @default(cuid())
+  parentEntityId  String
+  fromEntity      String
+  toEntity        String
+  period          String   // YYYY-MM
+  amount          Float
+  type            String   // SALE, SERVICE, RECHARGE
+
+  @@index([parentEntityId])
+  @@index([period])
 }
