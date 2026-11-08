@@ -3489,3 +3489,119 @@ model GalleryItem {
   @@index([createdAt])
   @@index([contentHash])
 }
+
+// ---------------------------------------------------------------------------
+// Real-time Features: Presence, Chat, Live Data
+// ---------------------------------------------------------------------------
+
+model UserPresence {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status    String   @default("offline") // online, away, offline, in-call
+  device    String   @default("desktop") // desktop, mobile
+  lastSeen  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ChatMessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+  REACTION
+  SYSTEM
+}
+
+model ChatMessage {
+  id        String            @id @default(cuid())
+  threadId  String
+  senderId  String
+  sender    User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  content   String
+  type      ChatMessageType   @default(TEXT)
+
+  reactions MessageReaction[]
+
+  editedAt  DateTime?
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([threadId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model MessageReaction {
+  id        String @id @default(cuid())
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  emoji     String
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, emoji, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+// Video Management & Analytics
+model Video {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  slug          String   @unique
+
+  // Hosting provider (vimeo, youtube, self-hosted)
+  provider      String   @default("vimeo")
+  providerUrl   String   // Vimeo ID, YouTube URL, etc.
+  embedUrl      String?  // Generated embed URL
+
+  category      String   // tutorial, walkthrough, guide, story, faq
+  role          String?  // general, employer, worker, admin
+
+  thumbnailUrl  String?
+  duration      Int?     // seconds
+
+  views         Int      @default(0)
+  engagementRate Float  @default(0)
+
+  quality       String   @default("720p") // 360p, 720p, 1080p, 4k
+  tags          String[] @default([])
+
+  featured      Boolean  @default(false)
+  published     Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  publishedAt   DateTime?
+
+  @@index([category])
+  @@index([role])
+  @@index([featured])
+  @@index([published])
+}
+
+model VideoView {
+  id        String   @id @default(cuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  userId    String?  // null = anonymous
+  watchTime Int      @default(0) // seconds
+
+  createdAt DateTime @default(now())
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([createdAt])
+}
