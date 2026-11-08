@@ -6572,3 +6572,142 @@ model MrmAttributionAnalysis {
   @@index([tenantId])
   @@index([period])
 }
+// ===========================================================================
+// Payout System
+// ===========================================================================
+
+model InstantPayout {
+  id              String    @id @default(cuid())
+  freelancerId    String
+  amount          Int       // Amount in cents
+  bankAccountId   String
+  status          String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  requestedAt     DateTime
+  processedAt     DateTime?
+  completedAt     DateTime?
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([freelancerId])
+  @@index([status])
+}
+
+model BankAccount {
+  id              String    @id @default(cuid())
+  freelancerId    String
+  accountHolder   String
+  iban            String
+  accountNumber   String?
+  routingNumber   String?
+  verified        Boolean   @default(false)
+  status          String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  verifiedAt      DateTime?
+
+  @@unique([freelancerId, iban])
+  @@index([freelancerId])
+}
+
+model FeeBreakdown {
+  id                      String    @id @default(cuid())
+  payoutId                String
+  grossAmount             Int
+  platformFee             Int
+  taxWithholding          Int
+  insuranceDeduction      Int
+  otherDeductions         Int
+  netAmount               Int
+  currency                String    @default("EUR")
+  createdAt               DateTime  @default(now())
+
+  @@index([payoutId])
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  invoiceNumber   String    @unique
+  freelancerId    String
+  payoutId        String
+  issueDate       DateTime
+  dueDate         DateTime
+  totalAmount     Int
+  status          String    @default("ISSUED") // ISSUED, PAID, ARCHIVED
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  lineItems       InvoiceLineItem[]
+
+  @@index([freelancerId])
+  @@index([payoutId])
+}
+
+model InvoiceLineItem {
+  id              String    @id @default(cuid())
+  invoiceId       String
+  description     String
+  unitAmount      Int
+  quantity        Int
+  totalAmount     Int
+  createdAt       DateTime  @default(now())
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model PaymentTransaction {
+  id              String    @id @default(cuid())
+  freelancerId    String
+  amount          Int
+  status          String    @default("PENDING")
+  initiatedAt     DateTime
+  completedAt     DateTime?
+  failureReason   String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([freelancerId])
+  @@index([status])
+}
+
+model PaymentSecurityLog {
+  id              String    @id @default(cuid())
+  payoutId        String
+  fraudScore      Int
+  riskLevel       String    // LOW, MEDIUM, HIGH
+  factors         String[]
+  approved        Boolean
+  timestamp       DateTime  @default(now())
+
+  @@index([payoutId])
+  @@index([riskLevel])
+}
+
+model ShiftLocation {
+  id              String    @id @default(cuid())
+  shiftId         String
+  userId          String
+  latitude        Float
+  longitude       Float
+  accuracy        Float
+  createdAt       DateTime  @default(now())
+
+  @@index([shiftId])
+  @@index([userId])
+}
+
+model BiometricCredential {
+  id              String    @id @default(cuid())
+  userId          String
+  type            String    // fingerprint, face, iris
+  enrolled        Boolean   @default(false)
+  verified        Int       @default(0)
+  failureCount    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([type])
+}
