@@ -6711,3 +6711,179 @@ model BiometricCredential {
   @@index([userId])
   @@index([type])
 }
+
+// ===========================================================================
+// Worker Retention & Engagement (Wave 6 - ZekerFlex Features)
+// ===========================================================================
+
+model WorkerEngagementScore {
+  id              String   @id @default(cuid())
+  workerId        String   @unique
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  score           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workerId])
+  @@index([score])
+}
+
+model ChurnPrediction {
+  id                    String   @id @default(cuid())
+  workerId              String   @unique
+  worker                FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  riskScore             Int      @default(0)
+  daysSinceLastShift    Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([workerId])
+  @@index([riskScore])
+}
+
+model WorkerIncentive {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  type            String
+  amount          Int
+  requirement     String
+  expiresAt       DateTime
+  claimedAt       DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([expiresAt])
+}
+
+model WorkerNotification {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  title           String
+  body            String
+  type            String
+  actionUrl       String?
+  readAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([createdAt])
+}
+
+model PersonalisedOffer {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  incentiveAmount Int
+  conditions      String
+  expiresAt       DateTime
+  claimedAt       DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([expiresAt])
+}
+
+model WorkerLevel {
+  id              String   @id @default(cuid())
+  workerId        String   @unique
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  level           Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workerId])
+  @@index([level])
+}
+
+model WorkerAchievement {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  type            String
+  unlockedAt      DateTime @default(now())
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@unique([workerId, type])
+}
+
+model ReengagementCampaign {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  campaignType    String
+  bonusAmount     Int?
+  success         Boolean  @default(false)
+  engagedAt       DateTime?
+  expiresAt       DateTime
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([campaignType])
+}
+
+model SpecialPromotion {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  bonusPercentage Int
+  expiresAt       DateTime
+  redeemedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([expiresAt])
+}
+
+model WorkerReferral {
+  id              String   @id @default(cuid())
+  referrerId      String
+  referrer        FreelancerProfile @relation("ReferrerWorker", fields: [referrerId], references: [id], onDelete: Cascade)
+  
+  referredId      String
+  referred        FreelancerProfile @relation("ReferredWorker", fields: [referredId], references: [id], onDelete: Cascade)
+  
+  bonusAmount     Int
+  activatedAt     DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([referrerId])
+  @@index([referredId])
+  @@unique([referrerId, referredId])
+}
+
+model WorkerPayment {
+  id              String   @id @default(cuid())
+  workerId        String
+  worker          FreelancerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  amount          Int
+  type            String
+  description     String
+  paidAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([workerId])
+  @@index([type])
+}
