@@ -2868,3 +2868,32 @@ model ShiftFavorite {
   @@index([freelancerId])
   @@index([shiftId])
 }
+
+// ---------------------------------------------------------------------------
+// Video Management: tutorials, walkthroughs, guides
+// Real video hosting (Vimeo, YouTube, self-hosted) with analytics
+// ---------------------------------------------------------------------------
+
+model Video {
+  id                String   @id @default(cuid())
+  title             String
+  description       String
+  category          String   // tutorial | walkthrough | guide | story | faq
+  role              String   // general | employer | worker | admin
+  durationSeconds   Int
+  thumbnailUrl      String
+  hostedOn          String   // vimeo | youtube | self-hosted
+  hostId            String
+  qualities         String[] @default([]) // 360p | 720p | 1080p | 4K
+  subtitles         Json     @default("[]") // [{language, url}]
+  playlist          String?
+  views             Int      @default(0)
+  watchTime         Int      @default(0) // total seconds watched across all viewers
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([role])
+  @@index([views])
+  @@index([createdAt])
+}
