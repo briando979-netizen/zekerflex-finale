@@ -95,11 +95,44 @@ async function koppel(z: HorecaZaak): Promise<string> {
   const stripe = getStripeClient();
   let id = z.stripeAccountId;
   if (!id) {
+    // Fetch company registration data to pre-fill Stripe account
+    const tenant = await prisma.tenant.findFirst({
+      where: { horecaZaak: { id: z.id } },
+      select: {
+        kvkNumber: true,
+        companyRegistration: {
+          select: {
+            kvkNumber: true,
+            tradeName: true,
+            street: true,
+            houseNumber: true,
+            postalCode: true,
+            city: true,
+          },
+        },
+      },
+    });
+
+    const reg = tenant?.companyRegistration;
+    const kvk = (reg?.kvkNumber ?? tenant?.kvkNumber ?? "").replace(/\D/g, "").slice(0, 8);
+
     const a = await stripe.accounts.create({
       type: "express",
       country: "NL",
       ...(z.email ? { email: z.email } : {}),
       business_profile: { name: z.naam, url: `${basis()}/horeca/${z.slug}`, mcc: "5812", product_description: "Eten en drinken in ons restaurant of café" },
+      company: {
+        name: z.naam,
+        ...(kvk && { tax_id: kvk }),
+        address: reg
+          ? {
+              city: reg.city,
+              country: "NL",
+              line1: [reg.street, reg.houseNumber].filter(Boolean).join(" "),
+              postal_code: reg.postalCode,
+            }
+          : undefined,
+      },
       capabilities: { card_payments: { requested: true }, transfers: { requested: true }, ideal_payments: { requested: true } },
       metadata: { horecaZaakId: z.id },
     });
