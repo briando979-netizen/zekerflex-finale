@@ -59,8 +59,8 @@ export function analyzeBundle(modules: BundleModule[]): BundleAnalyse {
 
   const waarschuwingen: string[] = [];
 
-  for (const module of modules) {
-    const waarschuwing = detectGrootteWaarschuwing(module);
+  for (const mod of modules) {
+    const waarschuwing = detectGrootteWaarschuwing(mod);
     if (waarschuwing) {
       waarschuwingen.push(waarschuwing);
     }
@@ -88,8 +88,8 @@ export function detectDeadCode(modules: BundleModule[]): BundleModule[] {
 export function detectDuplicatesDependencies(modules: BundleModule[]): string[] {
   const versies = new Map<string, number>();
 
-  for (const module of modules) {
-    for (const dep of module.afhankelijkheden) {
+  for (const mod of modules) {
+    for (const dep of mod.afhankelijkheden) {
       const basisnaam = dep.split("@")[0];
       versies.set(basisnaam, (versies.get(basisnaam) ?? 0) + 1);
     }
@@ -120,12 +120,12 @@ export interface CodeSplitSuggestie {
 export function suggestCodeSplitting(modules: BundleModule[]): CodeSplitSuggestie[] {
   const suggesties: CodeSplitSuggestie[] = [];
 
-  for (const module of modules) {
-    if (module.grootte > GROOTTE_WAARSCHUWINGEN.GROOT && module.afhankelijkheden.length > 5) {
+  for (const mod of modules) {
+    if (mod.grootte > GROOTTE_WAARSCHUWINGEN.GROOT && mod.afhankelijkheden.length > 5) {
       suggesties.push({
-        module: module.naam,
-        voorstel: `Code-split ${module.naam} in kleinere chunks`,
-        geschatteBesparing: module.grootte * 0.2,
+        module: mod.naam,
+        voorstel: `Code-split ${mod.naam} in kleinere chunks`,
+        geschatteBesparing: mod.grootte * 0.2,
       });
     }
   }
