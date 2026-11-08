@@ -1,66 +1,86 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { AppError, toErrorBody } from "@/lib/errors";
+import * as kyc from "@/lib/compliance/kyc";
+import * as certs from "@/lib/compliance/certifications";
+import * as tracking from "@/lib/compliance/tracking";
+import * as fraud from "@/lib/compliance/fraud";
+import * as identity from "@/lib/compliance/identity";
+import * as docs from "@/lib/compliance/documentation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
-    const year = parseInt(request.nextUrl.searchParams.get("year") || new Date().getFullYear().toString());
+    const action = request.nextUrl.searchParams.get("action") || "status";
 
-    const freelancer = await prisma.freelancerProfile.findUnique({
-      where: { userId: principal.userId },
-    });
-
-    if (!freelancer) {
-      throw AppError.notFound("Freelancer not found");
+    switch (action) {
+      case "kyc":
+        return NextResponse.json(await kyc.getKycStatus(principal.userId));
+      case "certs":
+        return NextResponse.json(await certs.getCertifications(principal.userId));
+      case "compliance":
+        return NextResponse.json(await tracking.trackCompliance(principal.userId));
+      case "fraud":
+        return NextResponse.json(await fraud.getFraudStatus(principal.userId));
+      case "identity":
+        return NextResponse.json(await identity.getIdentityStatus(principal.userId));
+      case "documents":
+        return NextResponse.json(await docs.getDocuments(principal.userId));
+      default:
+        return NextResponse.json({
+          kyc: await kyc.getKycStatus(principal.userId),
+          compliance: await tracking.trackCompliance(principal.userId),
+          fraud: await fraud.getFraudStatus(principal.userId),
+          identity: await identity.getIdentityStatus(principal.userId),
+        });
     }
+  } catch (err) {
+    const { status, body } = toErrorBody(err);
+    return NextResponse.json(body, { status });
+  }
+}
 
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year + 1, 0, 1);
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    const principal = await requirePrincipal();
+    const body = await request.json();
+    const action = request.nextUrl.searchParams.get("action");
 
-    const [earnings, expenses, invoices] = await Promise.all([
-      prisma.shiftAssignment.aggregate({
-        where: {
-          freelancerId: freelancer.id,
-          status: "COMPLETED",
-          completedAt: { gte: yearStart, lt: yearEnd },
-        },
-        _sum: { earnedCents: true },
-      }),
-      prisma.platformFee.aggregate({
-        where: {
-          freelancerId: freelancer.id,
-          createdAt: { gte: yearStart, lt: yearEnd },
-        },
-        _sum: { amountCents: true },
-      }),
-      prisma.invoice.findMany({
-        where: {
-          tenantId: freelancer.userId,
-          status: "PAID",
-          paidAt: { gte: yearStart, lt: yearEnd },
-        },
-      }),
-    ]);
-
-    const grossIncome = (earnings._sum.earnedCents || 0) / 100;
-    const expenses_ = (expenses._sum.amountCents || 0) / 100;
-    const netIncome = grossIncome - expenses_;
-    const taxEstimate = Math.round(netIncome * 0.30 * 100) / 100;
-
-    return NextResponse.json({
-      taxReport: {
-        year,
-        grossIncome: Math.round(grossIncome),
-        expenses: Math.round(expenses_),
-        netIncome: Math.round(netIncome),
-        estimatedTax: taxEstimate,
-        invoicesIssued: invoices.length,
-      },
-    });
+    switch (action) {
+      case "verify-document":
+        return NextResponse.json(
+          await kyc.verifyDocument(principal.userId, body),
+          { status: 201 },
+        );
+      case "add-cert":
+        return NextResponse.json(
+          await certs.addCertification(principal.userId, body),
+          { status: 201 },
+        );
+      case "setup-mfa":
+        return NextResponse.json(
+          await identity.setupMultiFactorAuth(
+            principal.userId,
+            body.email,
+            body.phone,
+          ),
+          { status: 201 },
+        );
+      case "upload-tax":
+        return NextResponse.json(
+          await docs.uploadTaxForm(principal.userId, body.formType, body.documentUrl),
+          { status: 201 },
+        );
+      case "flag-fraud":
+        return NextResponse.json(
+          await fraud.flagProfile(principal.userId, body.reason),
+          { status: 201 },
+        );
+      default:
+        throw AppError.validation("Unknown action");
+    }
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

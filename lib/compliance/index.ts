@@ -4,4 +4,10 @@ export { assessRisk, mitigateRisk, monitorRisk, getRiskDashboard } from "./risks
 export { createPolicy, approvePolicy, reviewPolicy, listPolicies } from "./governance";
 export { registerAttestation, validateAttestation, renewAttestation, checkExpired } from "./attestations";
 export { generateReport, filingReport, alertOnCompliance, getDashboard } from "./reporting";
+export * from './contracts';
+export * from './tax-documentation';
+export * from './insurance';
+export * from './regulatory';
+export * from './monitoring';
+export * from './legal-docs';
 export type { ComplianceFrameworkStatus, AuditResult, RiskMetrics, PolicyState, AttestationStatus, ReportingStatus } from "./types";
