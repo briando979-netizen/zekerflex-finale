@@ -2897,3 +2897,58 @@ model Video {
   @@index([views])
   @@index([createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// HD Gallery: Media library with HD support, chunked uploads, analytics
+// Supports images, videos, audio files with full-quality preservation
+// ---------------------------------------------------------------------------
+
+model Gallery {
+  id                String   @id @default(cuid())
+  tenantId          String   @unique
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  items             GalleryItem[]
+
+  totalSize         Int      @default(0) // total bytes
+  itemCount         Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model GalleryItem {
+  id                String   @id @default(cuid())
+  galleryId         String
+  gallery           Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+
+  url               String   // Storage path or external URL
+  type              String   // image | video | audio
+  mimeType          String
+
+  width             Int?     // for images/videos
+  height            Int?     // for images/videos
+  duration          Int?     // in seconds, for videos/audio
+
+  size              Int      // in bytes
+  contentHash       String?  // SHA256 for duplicate detection
+
+  tags              String[] @default([])
+  collections       String[] @default([])
+
+  viewCount         Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([galleryId])
+  @@index([type])
+  @@index([viewCount])
+  @@index([createdAt])
+  @@index([contentHash])
+}
