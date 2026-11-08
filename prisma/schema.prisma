@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------
 // ZekerFlex - Prisma schema
 // PostgreSQL. All monetary values are stored as integer cents (Int) to avoid
 // floating point drift. Coordinates are decimal degrees (Float).
@@ -72,7 +72,7 @@ model Tenant {
   companyRegistrationId String?              @unique
   companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
 
-  // Stripe Customer for recurring billing (API subscriptions) — separate from the
+  // Stripe Customer for recurring billing (API subscriptions) â€” separate from the
   // one-off Checkout sessions on Invoice, which don't need a persistent customer.
   stripeCustomerId String? @unique
 
@@ -193,10 +193,22 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Mobile PWA
+  offlineQueue         OfflineQueue[]
+  mobilePushSubs       MobilePushSubscription[]  @relation("MobilePushSubs")
+  biometricKeys        BiometricKey[]  @relation("BiometricKeys")
+  biometricPin         BiometricPin?  @relation("BiometricPin")
+  syncTasks            SyncTask[]
+  appShellCache        AppShellCache[]
+  mobileMetrics        MobileMetrics[]
+  mobileSessions       MobileSession[]
+  mobileUser           MobileUser?  @relation("UserMobilePrefs")
+
 }
 
 // ===========================================================================
-// External API access — lets a third-party system (an integration partner, a
+// External API access â€” lets a third-party system (an integration partner, a
 // connected employer's own tooling) call the public ZekerFlex API on behalf
 // of one organization. Keys are shown once at creation; only a SHA-256 hash
 // is stored, so a leaked database never reveals a usable key.
@@ -226,7 +238,7 @@ model ApiKey {
 
 // ===========================================================================
 // A tenant's paid tier for the public API (lib/api-plans/catalog.ts holds the
-// actual plan definitions — rate limits, monthly caps, allowed scopes — as
+// actual plan definitions â€” rate limits, monthly caps, allowed scopes â€” as
 // code constants, not DB rows, mirroring how PLATFORM_FEE_PER_HOUR_CENTS is a
 // plain env-configurable constant rather than a database-driven price table).
 // No row at all (or status != "active") means the tenant is effectively on
@@ -319,7 +331,7 @@ model BranchManager {
 
 enum BranchKind {
   PERMANENT // self-service-managed vestiging, shown on /werkgever/locaties
-  AD_HOC // one-off address entered directly on a shift (e.g. an offsite demo) — hidden from the locations list
+  AD_HOC // one-off address entered directly on a shift (e.g. an offsite demo) â€” hidden from the locations list
 }
 
 model Branch {
@@ -375,18 +387,18 @@ model FreelancerProfile {
   companyRegistrationId String?              @unique
   companyRegistration   CompanyRegistration? @relation(fields: [companyRegistrationId], references: [id])
 
-  // Destination for instant SEPA payouts. Legacy/manual path — superseded by
+  // Destination for instant SEPA payouts. Legacy/manual path â€” superseded by
   // Stripe Connect below when the freelancer has completed that onboarding.
   payoutIban                    String?
   // True from the moment payoutIban is CHANGED on an already-verified profile
   // until a fresh bank document (ComplianceDocument kind=BANK) is uploaded for
-  // it — see lib/compliance/documents.ts. Payouts are held while this is true
+  // it â€” see lib/compliance/documents.ts. Payouts are held while this is true
   // (lib/timesheets/approve.ts) so a hijacked account can't silently redirect
   // future payouts to a new account. Never retroactively set for existing
-  // IBANs that were never changed — this only gates new changes.
+  // IBANs that were never changed â€” this only gates new changes.
   payoutIbanPendingVerification Boolean @default(false)
 
-  // Stripe Connect Express — the freelancer's own onboarding to receive
+  // Stripe Connect Express â€” the freelancer's own onboarding to receive
   // Transfers from the platform's Stripe balance, paid out to their bank by
   // Stripe. stripePayoutsEnabled mirrors Stripe's account.payouts_enabled.
   stripeConnectedAccountId String? @unique
@@ -412,9 +424,9 @@ model FreelancerProfile {
   activeHoursComputedAt DateTime?
 
   // Rolling behavioural scores in [0,1].
-  // Starts at 100% (benefit of the doubt for a worker with no history yet —
+  // Starts at 100% (benefit of the doubt for a worker with no history yet â€”
   // matches attendancePct()'s null-for-no-history handling in
-  // lib/profile/card.ts) — no-shows, cancellations, punctuality.
+  // lib/profile/card.ts) â€” no-shows, cancellations, punctuality.
   // NOTE: nothing currently adjusts this after account creation; it's a
   // static starting value, not yet a real, continuously-computed score.
   reliabilityScore Float @default(1.0)
@@ -429,7 +441,7 @@ model FreelancerProfile {
   matchingBlockedUntil DateTime? // set by DBA compliance throttle/block
 
   // Last ABU-fase (A/B/C) seen for this uitzendkracht by the phase-transition
-  // sweep (lib/payroll/abu-phase-sweep.ts) — getUitzendStatus() recomputes the
+  // sweep (lib/payroll/abu-phase-sweep.ts) â€” getUitzendStatus() recomputes the
   // phase fresh from timesheets every time, so this is the only persisted
   // value a transition can be diffed against.
   lastAbuPhase   String?
@@ -661,21 +673,21 @@ model Shift {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  // Wie deze klus aanmaakte — voor factuurrouting naar de verantwoordelijke, niet naar admins
+  // Wie deze klus aanmaakte â€” voor factuurrouting naar de verantwoordelijke, niet naar admins
   createdByUserId String?
   createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   title            String
   description      String?
   // Shown to a freelancer as a distinct "kledingvoorschriften" item, separate
-  // from the general description — the reageer flow asks them to explicitly
+  // from the general description â€” the reageer flow asks them to explicitly
   // accept it, so it needs its own field rather than being buried in prose.
   dresscode        String?
   // Practical notes for the worker ("Extra informatie": where to report, parking,
   // who receives you, what to bring), shown on the klus card and detail page.
   extraInfo        String?
   // Restricts this shift to uitzendkrachten (payroll-track workers, see
-  // FiscalProfile.workerKind) — a zzp'er/flexwerker can see it in the
+  // FiscalProfile.workerKind) â€” a zzp'er/flexwerker can see it in the
   // marketplace but can't react to it. Set by the employer at creation time.
   viaUitzendbureau Boolean @default(false)
   requiredSkillId  String?
@@ -693,7 +705,7 @@ model Shift {
   // Set at creation when the employer invites a favorite pool instead of
   // going straight to the open marketplace (see lib/shifts/create.ts). Stays
   // POOL_ONLY until the employer explicitly publishes it (publishShiftAction)
-  // or forever if they never do — there is no automatic expiry/timeout.
+  // or forever if they never do â€” there is no automatic expiry/timeout.
   visibility  ShiftVisibility   @default(PUBLIC)
   poolInvites ShiftPoolInvite[]
 
@@ -711,7 +723,7 @@ model Shift {
 }
 
 // ===========================================================================
-// Favorite pools — an employer groups favorited freelancers into named pools
+// Favorite pools â€” an employer groups favorited freelancers into named pools
 // so a new shift can be privately invited to one pool before it ever reaches
 // the open marketplace (lib/pools/store.ts, lib/shifts/create.ts). Separate
 // from EmployerRelations.favorites (lib/employer/relations.ts, a flat KV
@@ -1039,7 +1051,7 @@ model Dispute {
 enum InvoiceType {
   SELF_BILL_FREELANCER // company <- freelancer services (created on freelancer's behalf)
   PLATFORM_FEE // company <- ZekerFlex platform fee
-  CANCELLATION_PENALTY // late-cancel / no-show 50% claim, either direction — see lib/claims
+  CANCELLATION_PENALTY // late-cancel / no-show 50% claim, either direction â€” see lib/claims
   UITZEND_FEE // company <- ZekerFlex (uitzendbureau): gross wage + markup, payroll track only
   DOMEIN // company <- ZekerFlex: domeinnaam, eerste jaar of verlenging (lib/domeinen/factuur.ts)
 }
@@ -1062,11 +1074,11 @@ model Invoice {
   number      String        @unique
   type        InvoiceType
   status      InvoiceStatus @default(DRAFT)
-  // Null for CANCELLATION_PENALTY — those don't stem from a worked timesheet.
+  // Null for CANCELLATION_PENALTY â€” those don't stem from a worked timesheet.
   timesheetId String?
 
   issuerTenantId        String? // for PLATFORM_FEE the issuer is the platform tenant
-  // Null when the debtor is a freelancer instead of a tenant (recipientFreelancerId set instead) —
+  // Null when the debtor is a freelancer instead of a tenant (recipientFreelancerId set instead) â€”
   // the employer_owed direction of a cancellation-penalty claim.
   recipientTenantId     String?
   // Set only for CANCELLATION_PENALTY invoices where a freelancer is the debtor (late-cancel /
@@ -1096,7 +1108,7 @@ model Invoice {
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
 
-  // Collections lifecycle (CANCELLATION_PENALTY only) — see lib/claims/collections-sweep.ts.
+  // Collections lifecycle (CANCELLATION_PENALTY only) â€” see lib/claims/collections-sweep.ts.
   dueAt              DateTime?
   reminderSentAt     DateTime? // free statutory 14-day notice (WIK) before incassokosten may apply
   overdueEscalatedAt DateTime? // moved into the internal incasso queue, lateFeeCents charged
@@ -1181,7 +1193,7 @@ model Payment {
 }
 
 // ===========================================================================
-// Tenant credit ledger — there is no bank rail to pay a tenant/employer out
+// Tenant credit ledger â€” there is no bank rail to pay a tenant/employer out
 // directly (only freelancers have a Stripe Connect account), so an
 // employer_owed cancellation-penalty claim that a freelancer pays is credited
 // here instead and deducted from that tenant's next generated invoice (see
@@ -1346,7 +1358,7 @@ model EngagementEvent {
 //
 // The "recruiter motor" (lib/sales/engine.ts) discovers companies (KVKBase /
 // careers-page crawl / CSV), enriches + scores them, drafts a 3-step outreach
-// sequence and — in AUTOPILOT mode, within hard caps — sends it. REVIEW mode
+// sequence and â€” in AUTOPILOT mode, within hard caps â€” sends it. REVIEW mode
 // (the default) leaves every mail as a DRAFT for a human to approve.
 // ===========================================================================
 
@@ -1737,7 +1749,7 @@ model AiUsageLog {
 // ===========================================================================
 
 /// Upload bytes kept in Postgres (STORAGE_BACKEND=db, or automatically on
-/// Vercel where the disk is read-only). Keyed by Upload.storageKey ("db:…").
+/// Vercel where the disk is read-only). Keyed by Upload.storageKey ("db:â€¦").
 model UploadBlob {
   storageKey String   @id
   bytes      Bytes
@@ -1766,7 +1778,7 @@ model Upload {
 // ===========================================================================
 // Storage that used to live on local disk (storage/auth/reset,
 // storage/compliance, storage/certificates, storage/payroll,
-// storage/payouts/advances) — unsafe on Vercel's serverless functions, whose
+// storage/payouts/advances) â€” unsafe on Vercel's serverless functions, whose
 // filesystem is read-only outside /tmp and /tmp itself is not shared across
 // invocations. File *bytes* still go through Upload (local disk or S3 per
 // STORAGE_BACKEND); everything here is metadata that must survive between
@@ -1779,7 +1791,7 @@ model Upload {
 // data, profile/messaging prefs, ...). Same root cause as the models above:
 // Vercel's serverless functions can't write outside /tmp. A generic table
 // here is a much faster, lower-risk migration than a bespoke relational
-// table per subsystem — every one of these was already "one JSON blob per
+// table per subsystem â€” every one of these was already "one JSON blob per
 // key", so the shape barely changes, only the storage backend does.
 model KeyValueStore {
   key       String   @id
@@ -1801,7 +1813,7 @@ model PasswordResetToken {
 }
 
 // Confirms a self-service AVG art. 17 erasure request made without being
-// logged in (the Play Store "account deletion" web resource) — proves email
+// logged in (the Play Store "account deletion" web resource) â€” proves email
 // ownership the same way PasswordResetToken proves it for a password reset.
 model AccountDeletionToken {
   id        String   @id // the token itself (random, url-safe)
@@ -1892,7 +1904,7 @@ model PayoutPreference {
 }
 
 // The SEPA Credit Transfer batch (pain.001.001.03) generated once a payroll
-// run is finalised — the real bank-ready payment file finaliseRun() used to
+// run is finalised â€” the real bank-ready payment file finaliseRun() used to
 // stop short of producing. Generated once, immutable (re-finalising an
 // already-finalised week is a no-op, see lib/payroll/engine.ts), downloaded
 // from the admin payroll board for a human to submit in their own banking
@@ -1942,11 +1954,11 @@ model ShopProduct {
   slug          String   @unique
   description   String
   category      String
-  gender        String? // "heren" | "vrouwen" | "kinderen" | "unisex" — null = not gendered (e.g. PBM)
-  collection    String? // e.g. "Winter 2026", "Zakelijk" — null for the existing Werk & PBM line
+  gender        String? // "heren" | "vrouwen" | "kinderen" | "unisex" â€” null = not gendered (e.g. PBM)
+  collection    String? // e.g. "Winter 2026", "Zakelijk" â€” null for the existing Werk & PBM line
   isBundle      Boolean  @default(false)
   priceCents    Int
-  costCents     Int? // inkoopprijs (COGS) — voor margeberekening in admin
+  costCents     Int? // inkoopprijs (COGS) â€” voor margeberekening in admin
   stock         Int      @default(0)
   imageUploadId String?
   modelUploadId String?
@@ -1995,7 +2007,7 @@ model ShopProductVariant {
 }
 
 // A bundle ShopProduct (isBundle: true) lists the real products it contains,
-// purely for display ("Deze bundel bevat:") — it's still sold and paid for
+// purely for display ("Deze bundel bevat:") â€” it's still sold and paid for
 // as a single line at the bundle's own ShopProduct.priceCents.
 model ShopBundleItem {
   id              String @id @default(cuid())
@@ -2011,14 +2023,14 @@ model ShopBundleItem {
 
 enum ShopOrderStatus {
   PENDING_PAYMENT // Stripe Checkout session created, awaiting payment confirmation
-  RECEIVED // paid — ready for fulfillment
+  RECEIVED // paid â€” ready for fulfillment
   CONFIRMED
   SHIPPED
   CANCELLED
   PAYMENT_FAILED
 }
 
-// Real order capture for the /shop checkout — the items are a priced snapshot
+// Real order capture for the /shop checkout â€” the items are a priced snapshot
 // at order time (name/price can change later on ShopProduct; this is what the
 // customer actually agreed to pay).
 model ShopOrder {
@@ -2050,7 +2062,7 @@ model ShopOrder {
 }
 
 // ===========================================================================
-// Managed Website — ZekerFlex beheert de website van een opdrachtgever. Zit
+// Managed Website â€” ZekerFlex beheert de website van een opdrachtgever. Zit
 // achter een abonnement (Stripe): vergrendeld tot betaald, daarna vult de
 // opdrachtgever zijn websitegegevens + SSH-toegang in (AES-256-GCM-verzegeld
 // via lib/security/sealed-secret) zodat wij het onderhoud overnemen.
@@ -2072,9 +2084,9 @@ model ManagedWebsite {
   status          ManagedWebsiteStatus @default(PENDING_PAYMENT)
   plan            String? // "basis" | "pro"
   domain          String?
-  provider        String? // hostingpartij/platform (WordPress, Wix, eigen VPS, …)
+  provider        String? // hostingpartij/platform (WordPress, Wix, eigen VPS, â€¦)
   notes           String?
-  // AES-256-GCM-verzegelde JSON met SSH-host/gebruiker/poort/privésleutel +
+  // AES-256-GCM-verzegelde JSON met SSH-host/gebruiker/poort/privÃ©sleutel +
   // hosting-login. NOOIT plaintext in de DB. Zie lib/security/sealed-secret.ts.
   secretsSealed   String?
   secretsSetAt    DateTime?
@@ -2181,7 +2193,7 @@ model AnalyticsEvent {
 }
 
 // ===========================================================================
-// ZekerFlex Bank — one account per freelancer (user), per organisation
+// ZekerFlex Bank â€” one account per freelancer (user), per organisation
 // (tenant) and one for the platform. The ledger lives here; money in and out
 // moves through Stripe (top-ups via Checkout, cards via Issuing, payouts via
 // the SEPA batch). The funds themselves are held on the platform's Stripe
@@ -2234,7 +2246,7 @@ model BankEntry {
   kind              String
   description       String
   counterparty      String?
-  /// Stripe id, invoice id, card authorization … whatever this booking came from
+  /// Stripe id, invoice id, card authorization â€¦ whatever this booking came from
   reference         String?
   idempotencyKey    String      @unique
   createdAt         DateTime    @default(now())
@@ -2272,7 +2284,7 @@ model BankPot {
   accountId    String
   account      BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   name         String
-  emoji        String      @default("🎯")
+  emoji        String      @default("ðŸŽ¯")
   kind         String      @default("POT") // POT | FIXED
   balanceCents Int         @default(0)
   targetCents  Int?
@@ -2463,7 +2475,7 @@ model RijschoolLeerling {
   @@index([rijschoolId, status])
 }
 
-// Berichten tussen een leerling en de rijschool (lib/rijschool/berichten.ts): één
+// Berichten tussen een leerling en de rijschool (lib/rijschool/berichten.ts): Ã©Ã©n
 // gesprek per leerling. Namens de school schrijft het beheer of een instructeur.
 model RijschoolBericht {
   id          String            @id @default(cuid())
@@ -2496,7 +2508,7 @@ model RijschoolLes {
   start          DateTime
   eind           DateTime
   ophaaladres    String               @default("")
-  // Leskaart: per onderdeel (lib/rijschool/leskaart.ts) een score 1–5 en een notitie.
+  // Leskaart: per onderdeel (lib/rijschool/leskaart.ts) een score 1â€“5 en een notitie.
   beoordeling    Json                 @default("{}")
   verslag        String               @default("") // zichtbaar voor de leerling
   huiswerk       String[]             @default([]) // onderdelen om thuis voor te bereiden
@@ -2516,7 +2528,7 @@ model RijschoolLes {
   @@index([leerlingId, start])
 }
 
-// Lestegoed in minuten: + bij een betaald pakket of handmatig, − voor een
+// Lestegoed in minuten: + bij een betaald pakket of handmatig, âˆ’ voor een
 // gereden les. Het saldo is de som; lesId en betalingId zijn uniek, zodat een
 // les of betaling nooit twee keer telt.
 model RijschoolTegoed {
@@ -2808,13 +2820,13 @@ model HorecaAfvinking {
   datum   String // JJJJ-MM-DD
   taak    Int // plek in de lijst
   door    String
-  waarde  String           @default("") // bv. "4,5 °C"
+  waarde  String           @default("") // bv. "4,5 Â°C"
   op      DateTime         @default(now())
 
   @@unique([lijstId, datum, taak])
 }
 
-// ─────────────────────────────────────────────────────────── Domeinnamen
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Domeinnamen
 // Een domeinnaam die een bedrijf via ZekerFlex bestelt (lib/domeinen/bestelling.ts).
 // Bewust zonder relatie met Tenant: een betaalde bestelling is een financieel
 // gegeven en blijft bestaan als het bedrijf weg is (bewaarplicht).
@@ -2959,13 +2971,91 @@ model Video {
   playlist          String?
   views             Int      @default(0)
   watchTime         Int      @default(0) // total seconds watched across all viewers
+  tags              String[] @default([])
+  sector            String?  // construction | hospitality | logistics | healthcare | retail | other
+  workflow          String?  // onboarding | training | support | promotion | testimonial
+  watermarkEnabled  Boolean  @default(true)
+  captionsRequired  Boolean  @default(true)
+  gdprCompliant     Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  views_analytics   VideoView[]
+  engagements       VideoEngagement[]
+  schedules         VideoSchedule[]
 
   @@index([category])
   @@index([role])
   @@index([views])
   @@index([createdAt])
+  @@index([sector])
+  @@index([workflow])
+  @@index([tags])
+}
+
+
+// Video View Tracking (subsystem 4: Analytics)
+model VideoView {
+  id            String   @id @default(cuid())
+  videoId       String
+  video         Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  userId        String?  // optional, for anonymous viewers
+  watchedFrom   Int      // seconds into video
+  watchedTo     Int      // seconds where user stopped
+  completedPercentage Int // 0-100
+  duration      Int      // seconds spent watching
+  deviceType    String   // mobile | tablet | desktop
+  browser       String?  // user agent simplified
+
+  createdAt     DateTime @default(now())
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([completedPercentage])
+}
+
+// Video Engagement Tracking (subsystem 4: Analytics)
+model VideoEngagement {
+  id            String   @id @default(cuid())
+  videoId       String
+  video         Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  userId        String?
+  engagementType String // click-through | cta-click | share | bookmark | report
+  metadata      Json    @default("{}") // extra data per event
+
+  createdAt     DateTime @default(now())
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([engagementType])
+  @@index([createdAt])
+}
+
+// Video Publishing Schedule (subsystem 3: Scheduler)
+model VideoSchedule {
+  id              String   @id @default(cuid())
+  videoId         String
+  video           Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  platform        String   // youtube | instagram | tiktok | facebook | linkedin | twitter | all
+  scheduledAt     DateTime // when to publish
+  publishedAt     DateTime? // when actually published
+  status          String   @default("scheduled") // scheduled | published | failed | cancelled
+  externalVideoId String?  // ID from the platform after publishing
+  metadata        Json     @default("{}") // platform-specific settings
+  errorMessage    String?  // if failed
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([videoId])
+  @@index([platform])
+  @@index([scheduledAt])
+  @@index([status])
+  @@unique([videoId, platform, scheduledAt])
 }
 
 // ===========================================================================
@@ -6314,10 +6404,10 @@ model StakeholderEngagement {
 }
 
 // ===========================================================================
-// Marketing Resource Management (MRM) System � 6 subsystems
+// Marketing Resource Management (MRM) System — 6 subsystems
 // ===========================================================================
 
-// 1. Campaign Management � multi-channel campaigns, orchestration, scheduling
+// 1. Campaign Management — multi-channel campaigns, orchestration, scheduling
 model MrmCampaign {
   id              String   @id @default(cuid())
   tenantId        String
@@ -6353,7 +6443,7 @@ model MrmCampaign {
   @@index([scheduledStart])
 }
 
-// 2. Asset Management � digital asset library, versions, approvals, brand guidelines
+// 2. Asset Management — digital asset library, versions, approvals, brand guidelines
 model MrmDigitalAsset {
   id              String   @id @default(cuid())
   campaignId      String
@@ -6391,7 +6481,7 @@ model MrmDigitalAsset {
   @@index([type])
 }
 
-// 3. Resource Planning � team capacity, project management, resource allocation
+// 3. Resource Planning — team capacity, project management, resource allocation
 model MrmResourceAllocation {
   id              String   @id @default(cuid())
   tenantId        String
@@ -6423,7 +6513,7 @@ model MrmResourceAllocation {
   @@index([resourceType])
 }
 
-// 4. Budget Management � allocation, spend tracking, ROI analysis
+// 4. Budget Management — allocation, spend tracking, ROI analysis
 model MrmBudgetLine {
   id              String   @id @default(cuid())
   campaignId      String
@@ -6453,7 +6543,7 @@ model MrmBudgetLine {
   @@index([lineItem])
 }
 
-// 5. Marketing Automation � workflow builder, triggers, lead scoring, nurture
+// 5. Marketing Automation — workflow builder, triggers, lead scoring, nurture
 model MrmAutomationWorkflow {
   id              String   @id @default(cuid())
   campaignId      String?
@@ -6513,7 +6603,7 @@ model MrmWorkflowStep {
   @@unique([workflowId, stepNumber])
 }
 
-// 6. Attribution & Analytics � multi-touch attribution, channel mix, forecasting
+// 6. Attribution & Analytics — multi-touch attribution, channel mix, forecasting
 model MrmAttribution {
   id              String   @id @default(cuid())
   campaignId      String?
@@ -6886,4 +6976,1384 @@ model WorkerPayment {
   
   @@index([workerId])
   @@index([type])
+}
+
+// ===========================================================================
+// Lead Capture & Sales Funnel Engine (6 subsystems)
+// ===========================================================================
+
+enum LeadCaptureStatus {
+  PENDING
+  VERIFIED
+  INVALID
+  OPTED_OUT
+}
+
+enum FunnelStageType {
+  LEAD
+  CONTACT
+  TRIAL
+  PAID
+  RETAINED
+  CHURNED
+}
+
+enum AttributionModel {
+  FIRST_TOUCH
+  LAST_TOUCH
+  LINEAR
+  TIME_DECAY
+  U_SHAPED
+}
+
+// 1. Lead Capture — Web forms, email capture, optin tracking
+model LeadCapture {
+  id              String              @id @default(cuid())
+  email           String              @unique
+  name            String?
+  company         String?
+  phone           String?
+  source          String              @default("web_form") // "web_form", "landing_page", "import", "api"
+  formId          String?
+
+  status          LeadCaptureStatus   @default(PENDING)
+  optinAt         DateTime?
+  verifiedAt      DateTime?
+  invalidReason   String?
+
+  // Contact info
+  contactName     String?
+  contactTitle    String?
+  contactPhone    String?
+
+  // Company info
+  kvkNumber       String?
+  industry        String?
+  companySize     String? // "1-10", "11-50", "51-200", "200+"
+
+  // Engagement tracking
+  firstVisitAt    DateTime?
+  lastVisitAt     DateTime?
+  visitCount      Int              @default(0)
+
+  // Metadata
+  ipAddress       String?
+  userAgent       String?
+  referrer        String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+
+  metadata        Json             @default("{}")
+
+  leads           LeadScore[]
+  interactions    LeadInteraction[]
+  funnel          FunnelStage[]
+  sequences       EmailSequence[]
+  attribution     LeadAttribution[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@index([optinAt])
+}
+
+// 2. Lead Scoring — Qualification algorithm
+model LeadScore {
+  id              String           @id @default(cuid())
+  leadCaptureId   String
+  leadCapture     LeadCapture      @relation(fields: [leadCaptureId], references: [id], onDelete: Cascade)
+
+  // Scoring components
+  engagementScore Int              @default(0) // 0-100
+  companyScore    Int              @default(0) // 0-100
+  activityScore   Int              @default(0) // 0-100
+
+  // Total qualified score
+  totalScore      Int              @default(0) // 0-100
+  qualificationRating String       @default("UNQUALIFIED") // "UNQUALIFIED", "LOW", "MEDIUM", "HIGH", "HOT"
+
+  // Scoring factors
+  visitCount      Int              @default(0)
+  engagementMinutes Int            @default(0)
+  formFills       Int              @default(0)
+  emailOpens      Int              @default(0)
+  linkClicks      Int              @default(0)
+
+  // Company-based signals
+  companySize     String?
+  industry        String?
+  annualRevenue   String?
+  marketFit       Int              @default(0) // 0-100
+
+  // Risk signals
+  riskScore       Int              @default(0) // 0-100
+  bounceRisk      Boolean          @default(false)
+
+  // Model & reasoning
+  scoringModel    String           @default("heuristic") // "heuristic", "llm", "hybrid"
+  reasoning       String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadCaptureId])
+  @@index([totalScore])
+  @@index([qualificationRating])
+  @@unique([leadCaptureId])
+}
+
+// 3. Email Sequences — Drip campaigns, templates, personalization
+model EmailSequence {
+  id              String           @id @default(cuid())
+  leadCaptureId   String
+  leadCapture     LeadCapture      @relation(fields: [leadCaptureId], references: [id], onDelete: Cascade)
+
+  sequenceType    String           @default("welcome") // "welcome", "nurture", "re_engagement", "winback"
+  stepNumber      Int              @default(0)
+
+  // Email content
+  subject         String
+  bodyTemplate    String
+  bodyRendered    String?
+
+  // Personalization variables
+  personalizationData Json          @default("{}")
+
+  // Scheduling
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  openedAt        DateTime?
+  clickedAt       DateTime?
+
+  // Campaign info
+  campaignId      String?
+  campaignName    String?
+
+  // Tracking
+  status          String           @default("pending") // "pending", "sent", "opened", "clicked", "bounced", "failed"
+  emailId         String?
+  trackingPixel   String?
+
+  // Engagement metrics
+  openCount       Int              @default(0)
+  clickCount      Int              @default(0)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadCaptureId])
+  @@index([status])
+  @@index([sentAt])
+  @@index([campaignId])
+}
+
+// 4. CRM Integration — Lead storage, interaction tracking
+model LeadInteraction {
+  id              String           @id @default(cuid())
+  leadCaptureId   String
+  leadCapture     LeadCapture      @relation(fields: [leadCaptureId], references: [id], onDelete: Cascade)
+
+  // Interaction type
+  type            String           // "email_open", "link_click", "form_fill", "page_view", "phone_call", "meeting", "note"
+
+  // Interaction details
+  description     String?
+  url             String?
+
+  // Person who interacted
+  actorName       String?
+  actorEmail      String?
+  actorRole       String?
+
+  // Deal pipeline
+  dealStage       String?          // "opportunity", "proposal", "negotiation", "closed_won", "closed_lost"
+  dealValue       Int?             // in cents
+
+  // Timeline
+  duration        Int?             // in seconds
+
+  // Notes & follow-up
+  notes           String?
+  nextAction      String?
+  nextActionDate  DateTime?
+
+  // Metadata
+  metadata        Json             @default("{}")
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadCaptureId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// 5. Conversion Funnel — Stage progression, cycle time
+model FunnelStage {
+  id              String           @id @default(cuid())
+  leadCaptureId   String
+  leadCapture     LeadCapture      @relation(fields: [leadCaptureId], references: [id], onDelete: Cascade)
+
+  // Funnel progression
+  currentStage    FunnelStageType  @default(LEAD)
+  previousStage   FunnelStageType?
+
+  // Stage timeline
+  leadAt          DateTime?
+  contactAt       DateTime?
+  trialAt         DateTime?
+  paidAt          DateTime?
+  retainedAt      DateTime?
+  churnedAt       DateTime?
+
+  // Cycle metrics
+  leadToDealDays  Int?             // days from lead to first deal
+  dealToPaidDays  Int?             // days from deal to first payment
+
+  // Value tracking
+  estimatedValue  Int?             // in cents
+  actualValue     Int?             // in cents
+
+  // Engagement during funnel
+  emailsSent      Int              @default(0)
+  emailsOpened    Int              @default(0)
+  callsMade       Int              @default(0)
+  meetingsHeld    Int              @default(0)
+
+  // Status & reason
+  status          String           @default("active") // "active", "stalled", "won", "lost"
+  lostReason      String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadCaptureId])
+  @@index([currentStage])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 6. Attribution — Channel source, multi-touch attribution
+model LeadAttribution {
+  id              String           @id @default(cuid())
+  leadCaptureId   String
+  leadCapture     LeadCapture      @relation(fields: [leadCaptureId], references: [id], onDelete: Cascade)
+
+  // First touchpoint
+  firstTouchChannel String
+  firstTouchDate  DateTime
+  firstTouchSource String?         // campaign id, referrer, direct, etc.
+
+  // Last touchpoint
+  lastTouchChannel String?
+  lastTouchDate   DateTime?
+  lastTouchSource String?
+
+  // All touchpoints (multi-touch)
+  touchpointChannels String[]      @default([]) // array of channels
+  touchpointCount Int              @default(1)
+
+  // Attribution model
+  attributionModel AttributionModel @default(LAST_TOUCH)
+
+  // Channel weights (for multi-touch)
+  channelWeights  Json             @default("{}")
+
+  // Attribution contribution
+  attributionCredit Float          @default(100.0) // percentage
+
+  // Conversion tracking
+  convertedAt     DateTime?
+  conversionValue Int?             // in cents
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadCaptureId])
+  @@index([firstTouchChannel])
+  @@index([lastTouchChannel])
+  @@index([createdAt])
+}
+
+// ===========================================================================
+// Mobile PWA Optimizer (Wave 7 - Production PWA Features)
+// ===========================================================================
+
+// --- Subsystem 1: Offline-First Caching ---
+model OfflineQueue {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Action type: create_shift, apply_shift, cancel_shift, send_message, etc.
+  action          String
+  resourceType    String    // shift, message, profile, etc.
+  resourceId      String?
+  payload         Json
+
+  // Sync state
+  synced          Boolean   @default(false)
+  syncAttempts    Int       @default(0)
+  lastSyncError   String?
+
+  createdAt       DateTime  @default(now())
+  syncedAt        DateTime?
+  expiresAt       DateTime?  // Auto-delete after 30 days
+
+  @@index([userId])
+  @@index([synced])
+  @@index([createdAt])
+  @@index([action])
+}
+
+// --- Subsystem 2: Push Notifications & Subscriptions ---
+model MobilePushSubscription {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("MobilePushSubs", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Web Push subscription keys
+  endpoint        String    @unique
+  p256dh          String    // Compression key
+  authKey         String    // Authentication secret
+
+  // Device info
+  userAgent       String?
+  platform        String?   // web, ios, android
+  browserName     String?   // chrome, firefox, safari, edge
+
+  // Lifecycle
+  optedIn         Boolean   @default(true)
+  disabledAt      DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastActiveAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([optedIn])
+  @@index([disabledAt])
+}
+
+// --- Subsystem 3: Biometric Authentication ---
+model BiometricKey {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("BiometricKeys", fields: [userId], references: [id], onDelete: Cascade)
+
+  // WebAuthn credential
+  credentialId    String    @unique
+  publicKey       String    // Base64-encoded public key
+
+  // Registration details
+  type            String    // platform, cross-platform (security key)
+  transports      String[]  // usb, nfc, ble, internal, etc.
+  algorithm       String    // ES256, RS256, etc.
+
+  // Usage tracking
+  counter         Int       @default(0)
+  nickname        String?   // e.g., "Mijn telefoon", "Beveiligingssleutel"
+
+  verified        Boolean   @default(false)
+  enrolledAt      DateTime  @default(now())
+  lastUsedAt      DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([verified])
+  @@unique([userId, credentialId])
+}
+
+// Fallback PIN for biometric auth (encrypted at rest)
+model BiometricPin {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation("BiometricPin", fields: [userId], references: [id], onDelete: Cascade)
+
+  // bcrypt hash of PIN
+  pinHash         String
+
+  failedAttempts  Int       @default(0)
+  lockedUntil     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// --- Subsystem 4: Background Sync ---
+model SyncTask {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Task tracking
+  tag             String    // sync-shifts, sync-messages, sync-profile
+  minInterval     Int       @default(60)  // Minimum seconds between syncs
+
+  // Status
+  status          String    @default("idle")  // idle, queued, syncing, completed, failed
+  lastSyncAt      DateTime?
+  nextSyncAt      DateTime?
+
+  // Failure tracking
+  failureCount    Int       @default(0)
+  lastError       String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@unique([userId, tag])
+}
+
+// --- Subsystem 5: App Shell Architecture ---
+model AppShellCache {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content storage
+  key             String    // e.g., "shell-nav", "user-profile", "dashboard-meta"
+  content         Json      // Cached structured data
+
+  // Versioning
+  version         Int       @default(1)
+  etag            String?   // Sync/update detection
+
+  // Lifecycle
+  expiresAt       DateTime
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([key])
+  @@index([expiresAt])
+  @@unique([userId, key])
+}
+
+// --- Subsystem 6: Mobile Metrics & Performance ---
+model MobileMetrics {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Core Web Vitals
+  fcp             Int?      // First Contentful Paint (ms)
+  lcp             Int?      // Largest Contentful Paint (ms)
+  cls             Float?    // Cumulative Layout Shift
+  fid             Int?      // First Input Delay (ms) â€” deprecated but tracked
+  inp             Int?      // Interaction to Next Paint (ms)
+  ttfb            Int?      // Time to First Byte (ms)
+
+  // Performance context
+  pageUrl         String?
+  routePath       String?   // /dashboard, /chat, etc.
+
+  // Device context
+  deviceType      String?   // mobile, tablet, desktop
+  connectionType  String?   // 4g, wifi, 3g, slow-2g, offline
+
+  // Session tracking
+  sessionId       String
+  timestamp       DateTime  @default(now())
+
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([routePath])
+}
+
+// Session tracking for mobile metrics
+model MobileSession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Session info
+  sessionId       String    @unique
+  userAgent       String?
+  platform        String?
+
+  // Performance summary
+  metricsCount    Int       @default(0)
+  avgLcp          Int?
+  avgCls          Float?
+
+  // Lifecycle
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+// ===========================================================================
+// Retention & Engagement Engine (Wave 7 - Production CRM)
+// ===========================================================================
+
+// --- Subsystem 1: Churn Prediction ---
+model ChurnRisk {
+  id                    String   @id @default(cuid())
+  customerId            String   @unique
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // RFM scoring (Recency, Frequency, Monetary)
+  recencyScore          Int      @default(0)    // 0-100: days since last activity
+  frequencyScore        Int      @default(0)    // 0-100: activity frequency
+  monetaryScore         Int      @default(0)    // 0-100: revenue contribution
+
+  // Risk signals
+  riskScore             Int      @default(0)    // 0-100: overall churn probability
+  riskLevel             String   @default("low") // low, medium, high, critical
+  riskFactors           String[] @default([])   // ["inactive", "declining", "support_issues"]
+
+  // Behavioral signals
+  daysSinceLastActivity Int      @default(0)
+  activeFeatureCount    Int      @default(0)
+  supportTicketsLast30d Int      @default(0)
+  usageDecline          Boolean  @default(false)
+
+  // Intervention tracking
+  interventionSent      Boolean  @default(false)
+  interventionDate      DateTime?
+  interventionType      String?  // "email", "call", "offer", "personal"
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([riskScore])
+  @@index([riskLevel])
+  @@index([updatedAt])
+}
+
+// --- Subsystem 2: Re-engagement Campaigns ---
+model RetentionCampaign {
+  id                    String   @id @default(cuid())
+  customerId            String
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Campaign metadata
+  type                  String   // "win_back", "upgrade", "reactivate", "at_risk"
+  status                String   @default("draft")  // draft, scheduled, active, paused, completed
+  name                  String
+
+  // Campaign sequence
+  sequence              String   @default("1")      // "1", "2", "3" in multi-touch
+  channel               String   @default("email")  // email, sms, push, call
+  template              String?  // template name/id
+
+  // Campaign details
+  subject               String?
+  message               String
+  callToAction          String?  // URL or action
+
+  // Incentive tracking
+  incentiveType         String?  // "discount", "credit", "feature_unlock", "personal"
+  incentiveValue        Int?     // cents or percentage
+  incentiveExpiresAt    DateTime?
+
+  // Engagement metrics
+  sentAt                DateTime?
+  openedAt              DateTime?
+  clickedAt             DateTime?
+  convertedAt           DateTime?
+  bounceReason          String?
+
+  // Scheduling
+  scheduledFor          DateTime?
+  sendAfterInactivity   Int?     // days
+  maxAttempts           Int      @default(3)
+  attemptCount          Int      @default(0)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([type])
+  @@index([status])
+  @@index([scheduledFor])
+  @@unique([customerId, type, sequence])
+}
+
+// --- Subsystem 3: Loyalty Program ---
+model LoyaltyPoints {
+  id                    String   @id @default(cuid())
+  customerId            String
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Points balance
+  totalPoints           Int      @default(0)
+  availablePoints       Int      @default(0)
+  redeemedPoints        Int      @default(0)
+
+  // Tier system
+  tier                  String   @default("bronze")   // bronze, silver, gold, platinum
+  tierPoints            Int      @default(0)          // points toward next tier
+  tierQualifiedAt       DateTime?
+  tierExpireAt          DateTime?
+
+  // Lifetime metrics
+  lifetimePoints        Int      @default(0)
+  pointsThisMonth       Int      @default(0)
+  pointsThisYear        Int      @default(0)
+
+  // Gamification
+  badges                String[] @default([])         // "first_purchase", "month_active", etc
+  achievements          String[] @default([])         // milestone names
+
+  // Rewards catalog
+  pendingRewards        String[] @default([])         // reward ids
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([tier])
+  @@index([availablePoints])
+}
+
+// --- Subsystem 4: NPS & Feedback ---
+model CustomerFeedback {
+  id                    String   @id @default(cuid())
+  customerId            String
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // NPS tracking
+  npsScore              Int?     // 0-10
+  npsCategory           String?  // "promoter" (9-10), "passive" (7-8), "detractor" (0-6)
+  npsComment            String?
+
+  // General feedback
+  feedbackType          String   // "nps", "satisfaction", "feature_request", "bug_report"
+  sentiment             String?  // positive, neutral, negative
+  category              String?  // feature, support, pricing, product
+  message               String
+
+  // Response tracking
+  responded             Boolean  @default(false)
+  responseDate          DateTime?
+  responseNotes         String?
+  actionItems           String[] @default([])
+
+  // Survey context
+  surveyId              String?
+  source                String   // "email", "in_app", "webhook"
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([npsScore])
+  @@index([feedbackType])
+  @@index([createdAt])
+}
+
+// --- Subsystem 5: Upsell/Cross-sell ---
+model UpsellOffer {
+  id                    String   @id @default(cuid())
+  customerId            String
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Offer details
+  type                  String   // "upsell", "cross_sell", "addon", "upgrade"
+  productName           String
+  productId             String?
+
+  // Recommendation basis
+  recommendationBasis   String   // "usage_pattern", "similar_customers", "account_growth", "seasonal"
+  relevanceScore        Float    @default(0.5)  // 0-1: confidence in recommendation
+
+  // Offer terms
+  basePrice             Int      // cents
+  discountedPrice       Int?     // cents if applicable
+  discountPercentage    Int?     // 0-100
+  validUntil            DateTime
+
+  // Engagement
+  presented             Boolean  @default(false)
+  presentedAt           DateTime?
+  clicked               Boolean  @default(false)
+  clickedAt             DateTime?
+  purchased             Boolean  @default(false)
+  purchasedAt           DateTime?
+  rejectedAt            DateTime?
+
+  // Metrics
+  impressions           Int      @default(0)
+  ctr                   Float?   // click-through rate
+  conversion            Boolean  @default(false)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([type])
+  @@index([recommendationBasis])
+  @@index([validUntil])
+}
+
+// --- Subsystem 6: Success Metrics ---
+model RetentionMetrics {
+  id                    String   @id @default(cuid())
+  customerId            String   @unique
+  customer              Tenant   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Retention KPIs
+  cohortCreatedAt       DateTime
+  cohortMonth           String   // "2026-11" format for cohort analysis
+
+  // Activity metrics
+  activeDays            Int      @default(0)    // unique days with activity
+  totalSessions         Int      @default(0)
+  avgSessionDuration    Int?     // seconds
+
+  // Revenue metrics
+  totalRevenue          Int      @default(0)    // cents
+  lifetimeValue         Int      @default(0)    // LTV in cents
+  yearlyRevenueRun      Int      @default(0)    // ARR projection in cents
+
+  // Engagement metrics
+  npsAverage            Float?
+  supportContactCount   Int      @default(0)
+  featureAdoptionRate   Float?   // 0-100: % features used
+
+  // Retention rate
+  isActive              Boolean  @default(true)
+  churnedAt             DateTime?
+  churnReason           String?
+
+  // CAC & Payback
+  customerAcquisitionCost Int?   // cents
+  paybackPeriodMonths   Int?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([cohortMonth])
+  @@index([isActive])
+  @@index([lifetimeValue])
+}
+
+// ===========================================================================
+// Analytics & BI Platform — 6 Subsystems
+// ===========================================================================
+
+// 1. Data Warehouse — Daily snapshots of shifts, applications, payments
+model DataSnapshot {
+  id              String    @id @default(cuid())
+
+  // Snapshot metadata
+  snapshotDate    String    @db.Char(10) // YYYY-MM-DD in Amsterdam timezone
+  dataType        String    // "shifts", "applications", "payments", "workers", "employers"
+
+  // Aggregated counts and metrics
+  totalCount      Int       @default(0)
+  activeCount     Int       @default(0)
+  averageValue    Float?    // average hourly rate, application response time, etc.
+  totalValue      Int?      // total in cents (for payments)
+
+  // Dimensional breakdown (JSON for flexibility)
+  breakdown       Json      @default("{}") // { sector: {count, value}, city: {count, value}, etc. }
+
+  // Metadata for lineage
+  source          String?   // e.g., "batch-aggregation", "real-time-sync"
+  processedAt     DateTime  @default(now())
+
+  createdAt       DateTime  @default(now())
+
+  @@unique([snapshotDate, dataType])
+  @@index([snapshotDate])
+  @@index([dataType])
+}
+
+// 2. OLAP Cubes — Multi-dimensional analysis
+model AnalyticsCube {
+  id              String    @id @default(cuid())
+
+  // Cube definition
+  name            String    // e.g., "ShiftPerformance", "WorkerProductivity"
+  dimensions      String[]  // ["sector", "city", "date", "workerTier"]
+  measures        String[]  // ["count", "avgRate", "totalRevenue"]
+
+  // Aggregated data
+  data            Json      // Multi-dimensional array/object structure
+
+  // Metadata
+  builtAt         DateTime  @default(now())
+  expiresAt       DateTime
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([name])
+  @@index([expiresAt])
+}
+
+// 3. Custom Reports — User-defined queries and exports
+model CustomReport {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdByUser   User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  // Report definition
+  title           String
+  description     String?
+  query           Json      // Query definition with filters, grouping, sorting
+
+  // Schedule
+  isScheduled     Boolean   @default(false)
+  scheduleFreq    String?   // "daily", "weekly", "monthly"
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+
+  // Export format preferences
+  formats         String[]  @default(["json"]) // json, pdf, csv, xlsx
+  recipients      String[]  @default([])       // email addresses
+
+  // Shared with other users
+  isPublic        Boolean   @default(false)
+  sharedWith      String[]  @default([])       // user IDs
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([createdByUserId])
+  @@index([nextRunAt])
+}
+
+// 4. Visualization — Charts, dashboards, drill-downs
+model Dashboard {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdByUser   User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  // Dashboard definition
+  title           String
+  description     String?
+  layout          Json      // Grid layout, card positions, sizes
+
+  // Widgets/charts
+  widgets         Json      // Array of { id, type, config, query }
+
+  // Sharing & permissions
+  isPublic        Boolean   @default(false)
+  viewers         String[]  @default([])       // user IDs with view access
+  editors         String[]  @default([])       // user IDs with edit access
+
+  // Refresh strategy
+  refreshIntervalSeconds Int @default(300)
+  lastRefreshedAt DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([createdByUserId])
+}
+
+// 5. Alerts & Thresholds — KPI breach detection, anomaly alerts
+model AlertRule {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdByUser   User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  // Alert definition
+  name            String
+  description     String?
+  metric          String    // e.g., "shift_application_rate", "avg_worker_rating"
+  condition       String    // "gt", "lt", "eq", "range"
+  threshold       Float     // Threshold value
+  thresholdMin    Float?    // For range conditions
+  thresholdMax    Float?    // For range conditions
+
+  // Execution
+  isActive        Boolean   @default(true)
+  checkFrequency  String    @default("hourly") // "realtime", "hourly", "daily"
+
+  // Triggered alerts history
+  triggeredCount  Int       @default(0)
+  lastTriggeredAt DateTime?
+
+  // Recipients & notifications
+  notifyVia       String[]  @default(["email"])
+  recipients      String[]  @default([])
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([metric])
+  @@index([isActive])
+}
+
+model AlertEvent {
+  id              String    @id @default(cuid())
+  alertRuleId     String
+  alertRule       AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+
+  // Event details
+  severity        String    @default("warning") // "info", "warning", "critical"
+  value           Float     // The metric value that triggered the alert
+  message         String
+
+  // Resolution
+  isResolved      Boolean   @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?   // User ID who resolved it
+
+  createdAt       DateTime  @default(now())
+
+  @@index([alertRuleId])
+  @@index([createdAt])
+  @@index([isResolved])
+}
+
+// 6. Data Export — Bulk exports for external analysis
+model DataExport {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedByUserId String
+  requestedByUser User      @relation(fields: [requestedByUserId], references: [id], onDelete: Cascade)
+
+  // Export parameters
+  title           String
+  dataTypes       String[]  // ["shifts", "applications", "payments", "workers"]
+  filters         Json      @default("{}")
+  dateRangeStart  DateTime
+  dateRangeEnd    DateTime
+
+  // Format & destination
+  format          String    // "csv", "json", "parquet"
+  destination     String?   // "s3", "email", "local"
+  s3Bucket        String?
+  s3Key           String?
+
+  // Status tracking
+  status          String    @default("pending") // "pending", "processing", "completed", "failed"
+  progress        Int       @default(0)         // 0-100
+  rowsProcessed   Int       @default(0)
+  totalRows       Int?
+
+  // Result
+  fileUrl         String?
+  fileSize        Int?      // In bytes
+  errorMessage    String?
+
+  // Lifecycle
+  startedAt       DateTime?
+  completedAt     DateTime?
+  expiresAt       DateTime?  // When the export will be deleted
+
+  createdAt       DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([requestedByUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ===========================================================================
+// Compliance & Regulatory Engine (6 subsystems)
+// ===========================================================================
+
+// 1. GDPR/AVG Compliance — Data deletion, export, consent management
+model GdprRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  tenantId      String
+  requestType   String   @default("export")   // "export" | "deletion" | "restriction" | "objection"
+  status        String   @default("pending")  // "pending" | "processing" | "completed" | "expired" | "denied"
+  reason        String?
+
+  // Export details
+  format        String?  @default("json")     // "json" | "csv"
+  downloadUrl   String?
+  expiresAt     DateTime?
+
+  // Processing tracking
+  processedAt   DateTime?
+  completedAt   DateTime?
+  processedBy   String?  // Admin user ID who processed it
+
+  // Audit
+  ipAddress     String?
+  userAgent     String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([requestType])
+  @@index([createdAt])
+}
+
+// 2. SLA Tracking — Response time enforcement, breach alerts
+model SlaMetric {
+  id            String   @id @default(cuid())
+  tenantId      String
+  metricType    String   // "response_time" | "resolution_time" | "uptime" | "availability"
+
+  // Target & threshold
+  targetValue   Float    // In hours/percentage (e.g., 24 for 24-hour response SLA)
+  unit          String   @default("hours")   // "hours" | "days" | "percent"
+  warningLevel  Float    // 80% of target
+
+  // Tracking
+  currentValue  Float    @default(0)
+  status        String   @default("healthy")  // "healthy" | "warning" | "breached"
+
+  // Breach tracking
+  breachCount   Int      @default(0)
+  lastBreach    DateTime?
+  breachDetails Json?    // Store breach history
+
+  // Configuration
+  isActive      Boolean  @default(true)
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([metricType])
+  @@index([status])
+}
+
+// 3. Contract Management — Digital signing, versioning, expiry tracking
+model Contract {
+  id            String   @id @default(cuid())
+
+  // Parties
+  issuerId      String   // Tenant or User ID
+  recipientId   String   // Freelancer or Tenant ID
+
+  // Contract details
+  type          String   // "shift_agreement" | "master_service" | "nda" | "confidentiality" | "employment"
+  title         String
+  description   String?
+
+  // Terms
+  terms         String   // Full contract text (markdown or plain text)
+  startDate     DateTime
+  endDate       DateTime?
+
+  // Compensation
+  hourlyRate    Float?   // In cents
+  flatRate      Float?   // In cents
+
+  // Signature & version tracking
+  status        String   @default("draft")   // "draft" | "sent" | "signed" | "executed" | "terminated" | "expired"
+  version       Int      @default(1)
+
+  issuerSignature    String?
+  issuerSignedAt     DateTime?
+  issuerSignatureIp  String?
+
+  recipientSignature String?
+  recipientSignedAt  DateTime?
+  recipientSignatureIp String?
+
+  // Digital signature (e-signature service integration)
+  signatureService   String?  // "docusign" | "signaturit" | "internal"
+  externalSignId     String?
+
+  // Expiry & renewal
+  expiresAt     DateTime?
+  renewalReminder DateTime?
+  autoRenew     Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([issuerId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([type])
+  @@index([expiresAt])
+}
+
+// 4. Tax Reporting — Invoice generation, tax summaries, quarterly reports
+model TaxReport {
+  id            String   @id @default(cuid())
+
+  // Entity info
+  freelancerId  String
+  tenantId      String
+
+  // Reporting period
+  period        String   // "2024-Q1" | "2024-01" format
+  periodType    String   @default("monthly")  // "monthly" | "quarterly" | "annual"
+  periodStart   DateTime
+  periodEnd     DateTime
+
+  // Financial data
+  grossIncome   Float    @default(0)  // In cents
+  deductions    Float    @default(0)  // In cents
+  taxableIncome Float    @default(0)  // In cents
+  taxesPaid     Float    @default(0)  // In cents
+  netto         Float    @default(0)  // In cents (after tax)
+
+  // Report details
+  invoiceCount  Int      @default(0)
+  documentType  String   @default("tax_summary")  // "invoice" | "tax_form" | "quarterly_report" | "annual_tax_return"
+  status        String   @default("draft")  // "draft" | "generated" | "reviewed" | "filed" | "paid"
+
+  // Generated content
+  content       String?  // JSON or HTML content
+  fileUrl       String?  // Download link
+
+  // Approval & filing
+  reviewedBy    String?  // User ID
+  reviewedAt    DateTime?
+  filedAt       DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([freelancerId])
+  @@index([tenantId])
+  @@index([periodStart])
+  @@index([status])
+  @@index([periodType])
+}
+
+// 5. Fraud Detection — Behavioral anomalies, duplicate booking prevention, ML scoring
+model FraudScore {
+  id            String   @id @default(cuid())
+
+  // Subject
+  freelancerId  String
+
+  // Score & risk assessment
+  overallScore  Float    @default(0)  // 0-100
+  riskLevel     String   @default("low")  // "low" | "medium" | "high" | "critical"
+
+  // Component scores
+  profileRisk   Float    @default(0)
+  activityRisk  Float    @default(0)
+  locationRisk  Float    @default(0)
+  paymentRisk   Float    @default(0)
+
+  // Signals
+  signals       Json     // Array of fraud signals detected
+  flags         Int      @default(0)  // Count of active flags
+
+  // Status & action
+  status        String   @default("monitored")  // "monitored" | "flagged" | "suspended" | "cleared"
+  actionTaken   String?  // Description of action
+
+  // Review & appeal
+  reviewedBy    String?  // Admin user ID
+  reviewedAt    DateTime?
+  appealStatus  String?  // "none" | "pending" | "approved" | "rejected"
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([freelancerId])
+  @@index([riskLevel])
+  @@index([status])
+  @@index([overallScore])
+}
+
+// Extend Tenant model with analytics relations (add to existing Tenant model)
+// analyticsSnapshots DataSnapshot[]
+// analyticsCubes    AnalyticsCube[]
+// customReports     CustomReport[]
+// dashboards        Dashboard[]
+// alertRules        AlertRule[]
+// dataExports       DataExport[]
+
+// Extend User model with analytics relations (add to existing User model)
+// customReports     CustomReport[]
+// dashboards        Dashboard[]
+// alertRules        AlertRule[]
+// dataExports       DataExport[]
+
+// -------------------------------------------------------
+// SEO Organic Growth Engine Models (5 sectors × 21 cities)
+// -------------------------------------------------------
+
+model SeoLandingPage {
+  id              String   @id @default(cuid())
+  sectorSlug      String
+  citySlug        String
+  pageType        String   @default("employer") // "employer" | "worker"
+  
+  title           String
+  description     String
+  canonical       String   @unique
+  
+  viewsThisMonth  Int      @default(0)
+  conversionsThisMonth Int @default(0)
+  
+  lastGeneratedAt DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  
+  @@unique([sectorSlug, citySlug, pageType])
+  @@index([sectorSlug])
+  @@index([citySlug])
+  @@index([pageType])
+}
+
+model SeoPageView {
+  id              String   @id @default(cuid())
+  sectorSlug      String
+  citySlug        String
+  pageType        String   // "employer" | "worker"
+  
+  sessionId       String
+  userId          String?
+  referrer        String?
+  
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+  
+  @@index([sectorSlug])
+  @@index([citySlug])
+  @@index([pageType])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model SeoConversion {
+  id              String   @id @default(cuid())
+  sectorSlug      String
+  citySlug        String
+  pageType        String   // "employer" | "worker"
+  
+  conversionType  String   // "signup" | "login" | "job_applied" | "job_posted"
+  sessionId       String
+  userId          String?
+  
+  value           Int?     // monetaire waarde in cents
+  
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+  
+  @@index([sectorSlug])
+  @@index([citySlug])
+  @@index([pageType])
+  @@index([conversionType])
+  @@index([createdAt])
+}
+
+model SeoKeywordRanking {
+  id              String   @id @default(cuid())
+  sectorSlug      String
+  citySlug        String
+  keyword         String
+  
+  position        Int      // Google SERP position
+  volume          Int?     // search volume
+  difficulty      Int?     // keyword difficulty (0-100)
+  
+  trackedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([sectorSlug, citySlug, keyword])
+  @@index([sectorSlug])
+  @@index([citySlug])
+  @@index([position])
+}
+
+model SeoBacklink {
+  id              String   @id @default(cuid())
+  sourceUrl       String
+  targetUrl       String
+  anchorText      String?
+  
+  domainAuthority Int?
+  pageAuthority   Int?
+  spam            Int?
+  
+  nofollow        Boolean  @default(false)
+  
+  discoveredAt    DateTime @default(now())
+  checkedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@index([sourceUrl])
+  @@index([targetUrl])
+  @@index([domainAuthority])
+}
+
+model SeoAnalyticsDaily {
+  id              String   @id @default(cuid())
+  sectorSlug      String
+  citySlug        String
+  pageType        String   // "employer" | "worker"
+  
+  date            String   // YYYY-MM-DD
+  views           Int      @default(0)
+  uniqueVisitors  Int      @default(0)
+  conversions     Int      @default(0)
+  bounceRate      Float    @default(0.0) // 0-100
+  avgSessionDuration Float @default(0.0) // in seconds
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([sectorSlug, citySlug, pageType, date])
+  @@index([sectorSlug])
+  @@index([citySlug])
+  @@index([date])
+}
+
+model SeoTechnicalIssue {
+  id              String   @id @default(cuid())
+  pageUrl         String
+  issueType       String   // "broken_link" | "missing_meta" | "poor_mobile" | "slow_load"
+  
+  severity        String   @default("medium") // "low" | "medium" | "high"
+  description     String   @db.Text
+  
+  status          String   @default("open") // "open" | "in_progress" | "resolved"
+  resolvedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([pageUrl])
+  @@index([issueType])
+  @@index([severity])
+  @@index([status])
+}
+
+// --- Mobile User Preferences ---
+model MobileUser {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation("UserMobilePrefs", fields: [userId], references: [id], onDelete: Cascade)
+  
+  pushOptedIn     Boolean   @default(true)
+  optInSource     String?   // auto, user, banner
+  lastOptInAt     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
 }

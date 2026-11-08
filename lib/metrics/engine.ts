@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { z } from "zod";
+import { FunnelAnalyzer } from "@/lib/admin/analytics/funnel-analyzer";
+import { RevenueMetricsAnalyzer } from "@/lib/admin/analytics/revenue-metrics";
+import { UserAnalyticsEngine } from "@/lib/admin/analytics/user-analytics";
 
 export const KPISchema = z.object({
   metric: z.string(),
@@ -14,6 +17,16 @@ export const KPISchema = z.object({
 export type KPI = z.infer<typeof KPISchema>;
 
 export class MetricsEngine {
+  private funnelAnalyzer: FunnelAnalyzer;
+  private revenueAnalyzer: RevenueMetricsAnalyzer;
+  private userAnalytics: UserAnalyticsEngine;
+
+  constructor() {
+    this.funnelAnalyzer = new FunnelAnalyzer();
+    this.revenueAnalyzer = new RevenueMetricsAnalyzer();
+    this.userAnalytics = new UserAnalyticsEngine();
+  }
+
   async calculateRevenueKPIs(startDate: Date, endDate: Date) {
     const invoices = await prisma.invoice.findMany({
       where: { createdAt: { gte: startDate, lte: endDate } },
@@ -23,11 +36,15 @@ export class MetricsEngine {
     const count = invoices.length;
     const average = count > 0 ? total / count : 0;
 
+    const metrics = await this.revenueAnalyzer.getRevenueMetrics();
+
     return {
       totalRevenue: total,
       invoiceCount: count,
       averageInvoiceValue: average,
       trend: await this.calculateTrend("revenue", startDate, endDate),
+      mrr: metrics.mrr,
+      platformFeeRevenue: metrics.platformFeeRevenue,
     };
   }
 
@@ -41,27 +58,25 @@ export class MetricsEngine {
     });
 
     const totalUsers = await prisma.user.count();
+    const userMetrics = await this.userAnalytics.getUserMetrics();
 
     return {
       newUsers,
-      activeUsers,
+      activeUsers: userMetrics.activeUsers,
       totalUsers,
       churnRate: await this.calculateChurnRate(endDate),
+      retention: userMetrics.retention,
     };
   }
 
   async calculateConversionKPIs(startDate: Date, endDate: Date) {
-    const shifts = await prisma.freelancerShift.findMany({
-      where: { createdAt: { gte: startDate, lte: endDate } },
-    });
-
-    const acceptedCount = shifts.filter((s) => s.status === "ACCEPTED").length;
-    const conversionRate = shifts.length > 0 ? (acceptedCount / shifts.length) * 100 : 0;
+    const employerFunnel = await this.funnelAnalyzer.getEmployerFunnel(30);
 
     return {
-      offersCreated: shifts.length,
-      offersAccepted: acceptedCount,
-      conversionRate: parseFloat(conversionRate.toFixed(2)),
+      offersCreated: employerFunnel.totalEntrants,
+      offersAccepted: employerFunnel.totalConverted,
+      conversionRate: parseFloat(employerFunnel.overallConversionRate.toFixed(2)),
+      funnelStages: employerFunnel.stages,
     };
   }
 

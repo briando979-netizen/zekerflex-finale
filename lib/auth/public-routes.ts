@@ -58,6 +58,7 @@ const PUBLIC_PREFIXES = [
   "/api/netwerk/radius", // de RADIUS-server (wifi) vraagt per inlogpoging of iemand mag en welk geheim bij een IP hoort; eigen vaste sleutel NETWERK_RADIUS_TOKEN (lib/netwerk/token.ts). Het beheer (/api/werkgever/netwerk) blijft achter de login
   "/api/toegang", // het kastje bij de slagboom (kentekenherkenning) vraagt per auto of die mag en haalt open-opdrachten op; eigen token per vestiging (lib/locatie/toegang.ts), IP-begrensd. Het beheer (/api/werkgever/locatie) blijft achter de login
   "/api/printen/agent", // de printagent op een computer op locatie haalt de labelwachtrij op en meldt wat geprint is; eigen token per bedrijf (lib/locatie/printen.ts), IP-begrensd
+  "/api/mobile/metrics", // Core Web Vitals en prestatiemetingen: anoniem verzameld, IP-begrensd (lib/mobile/metrics.ts)
   "/api/websitevoorstel", // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
   "/api/agent/horeca", // AI-assistenten reserveren een tafel: alleen zaken die online staan met reserveren aan, dezelfde controle onder een slot als de eigen site, IP- en per-gast-begrensd; bekijken/annuleren alleen met de ondertekende annuleerlink (lib/horeca/agent-server.ts)
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)

@@ -1,74 +1,55 @@
 import { prisma } from "@/lib/prisma";
+import { FunnelAnalyzer } from "@/lib/admin/analytics/funnel-analyzer";
+import { UserAnalyticsEngine } from "@/lib/admin/analytics/user-analytics";
 
 export class BIAnalysis {
+  private funnelAnalyzer: FunnelAnalyzer;
+  private userAnalytics: UserAnalyticsEngine;
+
+  constructor() {
+    this.funnelAnalyzer = new FunnelAnalyzer();
+    this.userAnalytics = new UserAnalyticsEngine();
+  }
+
   async cohortAnalysis(startDate: Date, endDate: Date, bucketDays = 7) {
-    const users = await prisma.user.findMany({
-      where: { createdAt: { gte: startDate, lte: endDate } },
-      include: { freelancerShifts: true },
-    });
+    const cohorts = await this.userAnalytics.getRetentionCohorts();
 
-    const cohorts: Record<string, { size: number; revenue: number; retention: number }> = {};
+    const result: Record<string, { size: number; revenue: number; retention: number }> = {};
 
-    for (const user of users) {
-      const weekKey = `Week ${Math.floor((user.createdAt.getTime() - startDate.getTime()) / (bucketDays * 24 * 60 * 60 * 1000))}`;
-
-      if (!cohorts[weekKey]) {
-        cohorts[weekKey] = { size: 0, revenue: 0, retention: 0 };
-      }
-
-      cohorts[weekKey].size += 1;
-      cohorts[weekKey].revenue += user.freelancerShifts.reduce((sum, s) => sum + (s.invoiceId ? 1 : 0), 0);
+    for (const cohort of cohorts) {
+      result[cohort.cohortDate] = {
+        size: cohort.day0,
+        revenue: cohort.day7,
+        retention: cohort.day0 > 0 ? (cohort.day7 / cohort.day0) * 100 : 0,
+      };
     }
 
-    return cohorts;
+    return result;
   }
 
   async funnelAnalysis(stages: string[]) {
-    const funnel: Record<string, number> = {};
+    const funnel = await this.funnelAnalyzer.getEmployerFunnel(30);
 
-    for (const stage of stages) {
-      if (stage === "signup") {
-        funnel[stage] = await prisma.user.count();
-      } else if (stage === "profile_complete") {
-        funnel[stage] = await prisma.freelancerProfile.count();
-      } else if (stage === "first_shift") {
-        funnel[stage] = await prisma.freelancerShift.count({
-          where: { status: { not: "CANCELLED" } },
-        });
-      } else if (stage === "payment_received") {
-        funnel[stage] = await prisma.invoice.count({
-          where: { status: "PAID" },
-        });
-      }
-    }
-
-    const funnelWithConversion = Object.entries(funnel).map(([stage, count], index) => {
-      const previousCount = index === 0 ? count : Object.values(funnel)[index - 1];
-      const conversionRate = previousCount > 0 ? (count / previousCount) * 100 : 100;
-
-      return {
-        stage,
-        users: count,
-        conversionRate: parseFloat(conversionRate.toFixed(2)),
-      };
-    });
-
-    return funnelWithConversion;
+    return funnel.stages.map((stage) => ({
+      stage: stage.name,
+      users: stage.value,
+      conversionRate: parseFloat(stage.conversionRate.toFixed(2)),
+    }));
   }
 
   async retentionCurve(startDate: Date, intervals = [7, 14, 30, 60, 90]) {
-    const newUsers = await prisma.user.findMany({
-      where: { createdAt: { gte: startDate, lte: new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000) } },
-    });
-
+    const cohorts = await this.userAnalytics.getRetentionCohorts();
     const retentionByDay: Record<number, number> = {};
 
-    for (const days of intervals) {
-      const checkDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
-      const retained = newUsers.filter((u) => u.lastLoginAt && u.lastLoginAt >= checkDate).length;
+    if (cohorts.length > 0) {
+      const firstCohort = cohorts[0];
+      const day0 = firstCohort.day0 || 1;
 
-      const retentionRate = newUsers.length > 0 ? (retained / newUsers.length) * 100 : 0;
-      retentionByDay[days] = parseFloat(retentionRate.toFixed(2));
+      retentionByDay[0] = 100;
+      retentionByDay[7] = (firstCohort.day7 / day0) * 100;
+      retentionByDay[14] = (firstCohort.day14 / day0) * 100;
+      retentionByDay[30] = (firstCohort.day30 / day0) * 100;
+      retentionByDay[60] = (firstCohort.day60 / day0) * 100;
     }
 
     return retentionByDay;

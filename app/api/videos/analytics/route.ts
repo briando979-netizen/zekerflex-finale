@@ -1,55 +1,103 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePrincipal } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { AppError, toErrorBody } from "@/lib/errors";
-import { z } from "zod";
+import {
+  getViewAnalytics,
+  getConversionMetrics,
+  getTrendingVideos,
+  trackEngagement,
+  getEngagementMetrics,
+} from "@/lib/videos/analytics";
+import { recordVideoView } from "@/lib/videos/player";
+import { AppError } from "@/lib/errors";
 
-export const dynamic = "force-dynamic";
-
-const analyticsSchema = z.object({
-  videoId: z.string(),
-  watchedSeconds: z.number().nonnegative(),
-});
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
+// GET /api/videos/analytics - Get analytics data
+export async function GET(request: NextRequest) {
   try {
-    await requirePrincipal();
+    const searchParams = request.nextUrl.searchParams;
+    const videoId = searchParams.get("videoId");
+    const action = searchParams.get("action");
 
-    const body = await request.json();
-    const { videoId, watchedSeconds } = analyticsSchema.parse(body);
+    if (videoId && action === "views") {
+      const analytics = await getViewAnalytics(videoId);
+      return NextResponse.json(analytics);
+    }
 
-    const video = await prisma.video.update({
-      where: { id: videoId },
-      data: {
-        views: { increment: 1 },
-        watchTime: { increment: watchedSeconds },
-      },
-    });
+    if (videoId && action === "conversions") {
+      const metrics = await getConversionMetrics(videoId);
+      return NextResponse.json(metrics);
+    }
 
-    return NextResponse.json({ tracked: true, video });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    if (action === "trending") {
+      const hours = parseInt(searchParams.get("hours") ?? "24");
+      const trending = await getTrendingVideos(10, hours);
+      return NextResponse.json(trending);
+    }
+
+    if (videoId && action === "engagement") {
+      const metrics = await getEngagementMetrics(videoId);
+      return NextResponse.json(metrics);
+    }
+
+    return NextResponse.json(
+      { error: "Invalid action" },
+      { status: 400 },
+    );
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to fetch analytics" },
+      { status: 500 },
+    );
   }
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+// POST /api/videos/analytics - Track view or engagement
+export async function POST(request: NextRequest) {
   try {
-    await requirePrincipal();
+    const body = await request.json();
+    const { action } = body;
 
-    const popular = await prisma.video.findMany({
-      orderBy: { views: "desc" },
-      take: 10,
-    });
+    if (action === "view") {
+      const viewId = await recordVideoView({
+        videoId: body.videoId,
+        userId: body.userId,
+        watchedFrom: body.watchedFrom ?? 0,
+        watchedTo: body.watchedTo ?? 0,
+        duration: body.duration ?? 0,
+        deviceType: body.deviceType ?? "desktop",
+        browser: body.browser,
+      });
+      return NextResponse.json({ viewId }, { status: 201 });
+    }
 
-    const mostWatched = await prisma.video.findMany({
-      orderBy: { watchTime: "desc" },
-      take: 10,
-    });
+    if (action === "engagement") {
+      const engagementId = await trackEngagement(
+        body.videoId,
+        body.userId,
+        body.engagementType,
+        body.metadata,
+      );
+      return NextResponse.json({ engagementId }, { status: 201 });
+    }
 
-    return NextResponse.json({ popular, mostWatched });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    return NextResponse.json(
+      { error: "Invalid action" },
+      { status: 400 },
+    );
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to track analytics" },
+      { status: 500 },
+    );
   }
 }

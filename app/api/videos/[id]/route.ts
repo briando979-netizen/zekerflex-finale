@@ -1,51 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { getVideoById, updateVideo, deleteVideo } from "@/lib/videos/manager";
+import { AppError } from "@/lib/errors";
 
-export const dynamic = "force-dynamic";
-
-export async function GET(request: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
+// GET /api/videos/[id] - Get video details
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
-    const video = await prisma.video.findUnique({
-      where: { id: params.id },
-    });
+    const video = await getVideoById(params.id);
 
     if (!video) {
-      throw AppError.notFound("Video not found");
+      return NextResponse.json(
+        { error: "Video not found" },
+        { status: 404 },
+      );
     }
 
-    return NextResponse.json({ video });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    return NextResponse.json(video);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to fetch video" },
+      { status: 500 },
+    );
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
+// PATCH /api/videos/[id] - Update video
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     const body = await request.json();
-
-    const video = await prisma.video.update({
-      where: { id: params.id },
-      data: body,
-    });
-
-    return NextResponse.json({ video });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    const video = await updateVideo(params.id, body);
+    return NextResponse.json(video);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to update video" },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
+// DELETE /api/videos/[id] - Delete video
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
-    await prisma.video.delete({
-      where: { id: params.id },
-    });
-
-    return NextResponse.json({ deleted: true });
-  } catch (err) {
-    const { status, body } = toErrorBody(err);
-    return NextResponse.json(body, { status });
+    await deleteVideo(params.id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to delete video" },
+      { status: 500 },
+    );
   }
 }
