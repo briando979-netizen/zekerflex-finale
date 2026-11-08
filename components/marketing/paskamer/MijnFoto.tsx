@@ -177,7 +177,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
             </div>
             <p className="text-[11px] text-neutralx-500">{p.pasFotoGeschat}</p>
           </div>
-        )}
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <input ref={invoer} type="file" accept="image/*" className="sr-only" aria-label={p.pasFotoKies} onChange={(e) => kies(e.target.files?.[0])} />
