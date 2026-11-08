@@ -5314,3 +5314,79 @@ model DamCollectionShare {
   @@index([userId])
   @@unique([collectionId, userId])
 }
+
+// ===========================================================================
+// Custom Fields & Forms
+// ===========================================================================
+
+model CustomField {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  label       String
+  type        String   // text, number, email, select, etc.
+  required    Boolean  @default(false)
+  disabled    Boolean  @default(false)
+  hidden      Boolean  @default(false)
+  helpText    String?
+  placeholder String?
+  defaultValue String?
+
+  // JSON fields for complex data
+  options     String?  // JSON array of FieldOption
+  validation  String?  // JSON for FieldValidation
+  conditional String?  // JSON for ConditionalDisplay
+  metadata    String?  // JSON metadata
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([type])
+}
+
+model Form {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  title       String
+  description String?
+
+  // JSON fields for complex data
+  fields      String   @default("[]") // JSON array of FormField
+  sections    String   @default("[]") // JSON array of FormSection
+  settings    String   @default("{}") // JSON for FormSettings
+
+  responses   FormResponse[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+model FormResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  tenantId    String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  data        String   // JSON object of field responses
+  dataHash    String   // SHA256 for duplicate detection
+
+  ip          String?  // Requester IP
+  userAgent   String?  // Browser user agent
+
+  submittedAt DateTime @default(now())
+
+  @@index([formId])
+  @@index([tenantId])
+  @@index([dataHash])
+  @@index([submittedAt])
+}
