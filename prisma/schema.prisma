@@ -127,6 +127,11 @@ model Tenant {
   npsTracking          NpsTracking[]
   feedbackWidget       FeedbackWidget?
 
+  // Digital Asset Management (DAM)
+  damAssets            DamAsset[]            @relation("DamAssets")
+  damFolders           DamFolder[]           @relation("DamFolders")
+  damCollections       DamCollection[]       @relation("DamCollections")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -165,6 +170,13 @@ model User {
   // Affiliate & Referral
   affiliate            Affiliate?  @relation("AffiliateUser")
   referrals            Referral[]  @relation("ReferralUser")
+
+  // Calendar & Scheduling
+  calendars            Calendar[]
+  calendarShares       CalendarShare[] @relation("CalendarShares")
+  availability         UserAvailability?
+  availabilityBlocks   AvailabilityBlock[]
+  calendarIntegrations CalendarIntegration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
