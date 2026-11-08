@@ -6109,3 +6109,251 @@ model IntercompanyTransaction {
   @@index([parentEntityId])
   @@index([period])
 }
+
+// ===========================================================================
+// Sustainability & ESG System
+// ===========================================================================
+
+enum EmissionScope {
+  SCOPE_1  // Direct emissions (company vehicles, facilities)
+  SCOPE_2  // Indirect energy emissions (purchased electricity, heat)
+  SCOPE_3  // Other indirect emissions (supply chain, waste, travel)
+}
+
+enum EmissionCategory {
+  VEHICLE_FUEL
+  ELECTRICITY
+  NATURAL_GAS
+  HEATING_OIL
+  WASTE
+  BUSINESS_TRAVEL
+  EMPLOYEE_COMMUTE
+  SUPPLY_CHAIN
+  WATER
+  OTHER
+}
+
+model CarbonFootprint {
+  id                String            @id @default(cuid())
+  tenantId          String
+  reportingPeriod   String            // YYYY-MM
+  scope             EmissionScope
+  category          EmissionCategory
+  emissionsCO2e     Float             // in kg CO2e
+  source            String            // description of data source
+  verified          Boolean           @default(false)
+  verificationDate  DateTime?
+  reductionTarget   Float?            // % reduction target
+  offsetsCO2e       Float?            // carbon offsets in kg CO2e
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("CarbonFootprints", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reportingPeriod, scope, category])
+  @@index([tenantId])
+  @@index([reportingPeriod])
+  @@index([scope])
+}
+
+enum ESGCategory {
+  ENVIRONMENTAL
+  SOCIAL
+  GOVERNANCE
+}
+
+enum ESGMetricType {
+  RATIO
+  PERCENTAGE
+  ABSOLUTE
+  INDEX
+}
+
+model ESGMetric {
+  id                String            @id @default(cuid())
+  tenantId          String
+  reportingPeriod   String            // YYYY-MM
+  category          ESGCategory
+  name              String            // e.g., "Renewable Energy %", "Employee Turnover Rate"
+  value             Float
+  unit              String            // e.g., "%", "per 1000", "tons"
+  metricType        ESGMetricType
+  target            Float?            // benchmark or target value
+  benchmark         String?           // reference for comparison
+  materiality       Boolean           @default(false)  // is this material to stakeholders?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("ESGMetrics", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reportingPeriod, name])
+  @@index([tenantId])
+  @@index([category])
+  @@index([materiality])
+}
+
+enum SupplierESGRating {
+  A     // Excellent ESG performance
+  B     // Good ESG performance
+  C     // Satisfactory ESG performance
+  D     // Poor ESG performance
+  F     // Failed ESG standards
+}
+
+model SupplierESGScore {
+  id                String            @id @default(cuid())
+  tenantId          String
+  supplierId        String
+  supplierName      String
+  assessmentDate    DateTime
+  overallRating     SupplierESGRating
+  environmentScore  Float             // 0-100
+  socialScore       Float             // 0-100
+  governanceScore   Float             // 0-100
+  certifications    String[]          // JSON array of certifications (ISO 14001, B-Corp, etc)
+  riskFlags         String[]          // JSON array of identified risks
+  improvementAreas  String[]          // JSON array of improvement recommendations
+  auditedBy         String?           // third-party auditor name
+  nextReviewDate    DateTime?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("SupplierESGScores", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, supplierId, assessmentDate])
+  @@index([tenantId])
+  @@index([overallRating])
+  @@index([nextReviewDate])
+}
+
+enum ProcurementCriteria {
+  CARBON_NEUTRAL
+  RECYCLABLE
+  FAIR_TRADE
+  LOCAL_SOURCING
+  ORGANIC
+  ENERGY_EFFICIENT
+  WATER_EFFICIENT
+  ETHICAL_LABOR
+  ZERO_WASTE
+}
+
+model GreenProcurement {
+  id                String            @id @default(cuid())
+  tenantId          String
+  productName       String
+  vendorId          String
+  vendorName        String
+  criteria          ProcurementCriteria[]  // JSON array
+  certifications    String[]          // JSON array
+  costPremium       Float?            // % premium over conventional option
+  environmentalImpact String            // kg CO2e saved, water saved, etc
+  quantity          Int
+  purchaseDate      DateTime
+  approvedBy        String
+  notes             String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("GreenProcurements", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([purchaseDate])
+  @@index([criteria])
+}
+
+enum ReportStandard {
+  GRI               // Global Reporting Initiative
+  SASB              // Sustainability Accounting Standards Board
+  TCFD              // Task Force on Climate-related Financial Disclosures
+  ISSB              // International Sustainability Standards Board
+  CDP               // Carbon Disclosure Project
+}
+
+enum VerificationStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  CERTIFIED
+}
+
+model SustainabilityReport {
+  id                String            @id @default(cuid())
+  tenantId          String
+  reportingYear     Int
+  title             String
+  description       String?
+  standards         ReportStandard[]       // JSON array
+  verificationStatus VerificationStatus @default(DRAFT)
+  verifiedBy        String?           // third-party verifier name
+  verificationDate  DateTime?
+  externalLink      String?           // link to published report
+  highlightsCO2e    Float?            // total emissions for period
+  highligtsWater    Float?            // total water use (liters)
+  highlightsWaste   Float?            // total waste (kg)
+  publishedAt       DateTime?
+  dataCompleteness  Float?            // % of data points collected (0-100)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("SustainabilityReports", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reportingYear])
+  @@index([tenantId])
+  @@index([verificationStatus])
+  @@index([publishedAt])
+}
+
+model ESGGovernance {
+  id                String            @id @default(cuid())
+  tenantId          String
+  policyName        String
+  description       String
+  policyType        String            // e.g., "Environmental", "Labor", "Anti-Corruption"
+  effectiveDate     DateTime
+  expiryDate        DateTime?
+  boardApproved     Boolean           @default(false)
+  boardApprovalDate DateTime?
+  approvedBy        String?           // person/role who approved
+  internalLink      String?           // link to policy document
+  complianceChecks  Int               @default(0)  // # of compliance checks conducted
+  lastComplianceCheck DateTime?
+  certificationBody String?           // e.g., "ISO 14001", "B-Corp"
+  certificationExpiry DateTime?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("ESGGovernance", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, policyName])
+  @@index([tenantId])
+  @@index([policyType])
+  @@index([boardApproved])
+}
+
+model StakeholderEngagement {
+  id                String            @id @default(cuid())
+  tenantId          String
+  engagementDate    DateTime
+  stakeholderType   String            // e.g., "Employee", "Customer", "Investor", "NGO"
+  topic             String            // e.g., "Climate Action", "Diversity", "Supply Chain"
+  participantCount  Int
+  feedbackSummary   String
+  actionItems       String[]          // JSON array of action items
+  followUpDate      DateTime?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant            Tenant            @relation("StakeholderEngagement", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([engagementDate])
+  @@index([stakeholderType])
+}
