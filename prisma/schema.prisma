@@ -91,6 +91,21 @@ model Tenant {
   horecaZaak           HorecaZaak?
   shopProducts         ShopProduct[]         @relation("ShopSeller")
 
+  // Marketplace
+  appsDeveloped        MarketplaceApp[]      @relation("AppDeveloper")
+  appInstallations     MarketplaceAppInstallation[] @relation("AppInstallations")
+  appReviews           AppReview[]           @relation("AppReviews")
+  developer            Developer?
+  partner              Partner?
+  reseller             Reseller?
+  agency               Agency?
+  extensionsDeveloped  Extension[]           @relation("ExtensionDeveloper")
+  templateCreated      Template[]            @relation("TemplateCreator")
+  addOns               TenantAddOn[]
+  dataExchangesProvided DataExchange[]       @relation("DataExchangeProvider")
+  dataExchangesConsumed DataExchange[]       @relation("DataExchangeConsumer")
+  gallery              Gallery?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -120,6 +135,11 @@ model User {
   apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
   webPushSubscriptions WebPushSubscription[]
   shiftsCreated        Shift[]
+
+  // Real-time features
+  presence             UserPresence?
+  sentMessages         ChatMessage[]
+  reactions            MessageReaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3554,54 +3574,3 @@ model MessageReaction {
   @@index([userId])
 }
 
-// Video Management & Analytics
-model Video {
-  id            String   @id @default(cuid())
-  title         String
-  description   String?
-  slug          String   @unique
-
-  // Hosting provider (vimeo, youtube, self-hosted)
-  provider      String   @default("vimeo")
-  providerUrl   String   // Vimeo ID, YouTube URL, etc.
-  embedUrl      String?  // Generated embed URL
-
-  category      String   // tutorial, walkthrough, guide, story, faq
-  role          String?  // general, employer, worker, admin
-
-  thumbnailUrl  String?
-  duration      Int?     // seconds
-
-  views         Int      @default(0)
-  engagementRate Float  @default(0)
-
-  quality       String   @default("720p") // 360p, 720p, 1080p, 4k
-  tags          String[] @default([])
-
-  featured      Boolean  @default(false)
-  published     Boolean  @default(false)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  publishedAt   DateTime?
-
-  @@index([category])
-  @@index([role])
-  @@index([featured])
-  @@index([published])
-}
-
-model VideoView {
-  id        String   @id @default(cuid())
-  videoId   String
-  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-
-  userId    String?  // null = anonymous
-  watchTime Int      @default(0) // seconds
-
-  createdAt DateTime @default(now())
-
-  @@index([videoId])
-  @@index([userId])
-  @@index([createdAt])
-}
