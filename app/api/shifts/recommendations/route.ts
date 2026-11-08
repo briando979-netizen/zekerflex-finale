@@ -1,40 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrincipal, hasRole } from "@/lib/auth";
+import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getShiftRecommendations, getPersonalizedMatches } from "@/lib/matching/recommendations";
+import { AppError, toErrorBody } from "@/lib/errors";
+import { findBestMatches } from "@/lib/matching/score";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const p = await getPrincipal();
-    if (!p || !hasRole(p, "FREELANCER")) {
-      return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
-    }
-
-    const type = request.nextUrl.searchParams.get("type") || "recommended";
-    const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") || "10"), 50);
-
+    const principal = await requirePrincipal();
     const freelancer = await prisma.freelancerProfile.findUnique({
-      where: { userId: p.userId },
-      select: { id: true },
+      where: { userId: principal.userId },
     });
 
     if (!freelancer) {
-      return NextResponse.json({ error: "Profiel niet gevonden" }, { status: 404 });
+      throw AppError.notFound("Freelancer not found");
     }
 
-    let results;
+    const page = parseInt(request.nextUrl.searchParams.get("page") || "1");
+    const limit = 10;
+    const offset = (page - 1) * limit;
 
-    if (type === "personalized") {
-      results = await getPersonalizedMatches(freelancer.id);
-    } else {
-      const recommendations = await getShiftRecommendations(freelancer.id, limit);
-      results = { matches: recommendations, reason: "Gebaseerd op jouw skills en werkgeschiedenis" };
-    }
+    const shifts = await prisma.shift.findMany({
+      where: {
+        status: "OPEN",
+        startsAt: { gte: new Date() },
+        NOT: { assignments: { some: { freelancerId: freelancer.id } } },
+      },
+      include: { company: true },
+      skip: offset,
+      take: limit,
+      orderBy: { startsAt: "asc" },
+    });
 
-    return NextResponse.json(results);
+    const withScores = await Promise.all(
+      shifts.map(async (shift) => {
+        const matches = await findBestMatches(shift.id, 1);
+        return {
+          id: shift.id,
+          company: shift.company.name,
+          location: shift.locatie,
+          startTime: shift.startsAt,
+          endTime: shift.endsAt,
+          hourlyRate: shift.hourlyRate,
+          matchScore: matches[0]?.score || 0,
+          description: shift.description,
+        };
+      }),
+    );
+
+    return NextResponse.json({
+      recommendations: withScores.sort((a, b) => b.matchScore - a.matchScore),
+      page,
+      hasMore: shifts.length === limit,
+    });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    const { status, body } = toErrorBody(err);
+    return NextResponse.json(body, { status });
   }
 }
