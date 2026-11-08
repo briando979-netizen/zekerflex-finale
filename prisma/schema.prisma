@@ -4850,59 +4850,6 @@ model Payout {
 }
 
 
-// ===========================================================================
-// Invoicing & Accounting
-// ===========================================================================
-
-model Invoice {
-  id                  String   @id @default(cuid())
-  invoiceNumber       String   @unique
-  issuerId            String
-  issuer              Tenant   @relation("InvoiceIssuer", fields: [issuerId], references: [id])
-  recipientId         String
-  recipient           Tenant   @relation("InvoiceRecipient", fields: [recipientId], references: [id])
-
-  issuedAt            DateTime
-  dueDate             DateTime
-  amountCents         Int      // in cents to avoid floating point
-  currencyCode        String   @default("EUR")
-  paidCents           Int?     // amount paid so far
-  description         String?
-
-  status              String   @default("DRAFT") // DRAFT, SENT, UNPAID, PARTIALLY_PAID, PAID
-  paymentTerms        String   @default("NET_30") // NET_15, NET_30, NET_60, NET_90, IMMEDIATE
-  recurringFrequency  String   @default("ONCE") // ONCE, MONTHLY, QUARTERLY, ANNUALLY
-
-  sentAt              DateTime?
-  paidAt              DateTime?
-
-  payments            Payment[]
-  reminders           PaymentReminder[]
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([issuerId])
-  @@index([recipientId])
-  @@index([status])
-  @@index([dueDate])
-}
-
-model Payment {
-  id                  String   @id @default(cuid())
-  invoiceId           String
-  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  amountCents         Int
-  paymentMethod       String   // BANK_TRANSFER, CARD, CASH, CHECK
-  reference           String?
-  paidAt              DateTime @default(now())
-
-  createdAt           DateTime @default(now())
-
-  @@index([invoiceId])
-  @@index([paidAt])
-}
 
 model PaymentReminder {
   id                  String   @id @default(cuid())
