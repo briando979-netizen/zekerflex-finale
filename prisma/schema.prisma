@@ -101,8 +101,8 @@ model Tenant {
   reseller             Reseller?
 
   // Accounting
-  invoicesAsIssuer     Invoice[]             @relation("InvoiceIssuer")
-  invoicesAsRecipient  Invoice[]             @relation("InvoiceRecipient")
+  invoicesIssued       Invoice[]             @relation("InvoiceIssuer")
+  invoicesReceived     Invoice[]             @relation("InvoiceRecipient")
   expenses             Expense[]
   journalEntries       JournalEntry[]
   taxPayments          TaxPayment[]
@@ -161,6 +161,10 @@ model User {
   presence             UserPresence?
   sentMessages         ChatMessage[]
   reactions            MessageReaction[]
+
+  // Affiliate & Referral
+  affiliate            Affiliate?  @relation("AffiliateUser")
+  referrals            Referral[]  @relation("ReferralUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4700,3 +4704,278 @@ model Feedback {
   @@index([employeeId])
 }
 
+// ===========================================================================
+// Affiliate & Referral Program
+// ===========================================================================
+
+model Affiliate {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation("AffiliateUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  code              String   @unique
+  name              String
+  email             String   @unique
+  status            String   @default("PENDING") // PENDING, APPROVED, SUSPENDED
+  commissionRate    Int      @default(10) // percentage
+  tier              String   @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+
+  totalEarnings     Int      @default(0) // in cents
+  totalConversions  Int      @default(0)
+  lastPayoutAt      DateTime?
+
+  trackings         Tracking[]
+  commissions       Commission[]
+  payouts           Payout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Referral {
+  id                String   @id @default(cuid())
+  referrerId        String
+  referrer          User     @relation("ReferralUser", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  referredUserId    String?
+
+  code              String   @unique
+  link              String   @unique
+  status            String   @default("ACTIVE") // ACTIVE, CONVERTED, EXPIRED
+  reward            Int      // in cents
+  rewardType        String   @default("CREDIT") // CREDIT, DISCOUNT, CASH
+
+  expiresAt         DateTime?
+  convertedAt       DateTime?
+  claimedAt         DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([referrerId])
+  @@index([status])
+}
+
+model Tracking {
+  id                String   @id @default(cuid())
+  affiliateId       String
+  affiliate         Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  userId            String?
+
+  trackingCode      String   @unique
+  utm               Json     // { source, medium, campaign, content }
+  deviceId          String
+
+  firstClick        DateTime
+  lastClick         DateTime
+  converted         Boolean  @default(false)
+  conversionValue   Int      @default(0) // in cents
+  commission        Int      @default(0) // in cents
+
+  attributionModel  String   @default("LAST_CLICK") // FIRST_CLICK, LAST_CLICK, LINEAR, POSITION_BASED
+
+  createdAt DateTime @default(now())
+
+  @@index([affiliateId])
+  @@index([converted])
+}
+
+model Commission {
+  id                String   @id @default(cuid())
+  affiliateId       String
+  affiliate         Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  trackingId        String
+  tracking          Tracking? @relation(fields: [trackingId], references: [id])
+
+  amount            Int      // in cents
+  status            String   @default("PENDING") // PENDING, APPROVED, PAID, DISPUTED
+
+  payoutId          String?
+  payout            Payout?  @relation(fields: [payoutId], references: [id])
+
+  payoutDate        DateTime?
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+model Payout {
+  id                String   @id @default(cuid())
+  affiliateId       String
+  affiliate         Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  amount            Int      // in cents
+  status            String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+
+  commissions       Commission[]
+
+  createdAt DateTime @default(now())
+  completedAt       DateTime?
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+
+// ===========================================================================
+// Invoicing & Accounting
+// ===========================================================================
+
+model Invoice {
+  id                  String   @id @default(cuid())
+  invoiceNumber       String   @unique
+  issuerId            String
+  issuer              Tenant   @relation("InvoiceIssuer", fields: [issuerId], references: [id])
+  recipientId         String
+  recipient           Tenant   @relation("InvoiceRecipient", fields: [recipientId], references: [id])
+
+  issuedAt            DateTime
+  dueDate             DateTime
+  amountCents         Int      // in cents to avoid floating point
+  currencyCode        String   @default("EUR")
+  paidCents           Int?     // amount paid so far
+  description         String?
+
+  status              String   @default("DRAFT") // DRAFT, SENT, UNPAID, PARTIALLY_PAID, PAID
+  paymentTerms        String   @default("NET_30") // NET_15, NET_30, NET_60, NET_90, IMMEDIATE
+  recurringFrequency  String   @default("ONCE") // ONCE, MONTHLY, QUARTERLY, ANNUALLY
+
+  sentAt              DateTime?
+  paidAt              DateTime?
+
+  payments            Payment[]
+  reminders           PaymentReminder[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([issuerId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Payment {
+  id                  String   @id @default(cuid())
+  invoiceId           String
+  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amountCents         Int
+  paymentMethod       String   // BANK_TRANSFER, CARD, CASH, CHECK
+  reference           String?
+  paidAt              DateTime @default(now())
+
+  createdAt           DateTime @default(now())
+
+  @@index([invoiceId])
+  @@index([paidAt])
+}
+
+model PaymentReminder {
+  id                  String   @id @default(cuid())
+  invoiceId           String
+  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  sentAt              DateTime @default(now())
+  reminderNumber      Int      @default(1)
+
+  @@index([invoiceId])
+}
+
+model Refund {
+  id                  String   @id @default(cuid())
+  invoiceId           String
+  amountCents         Int
+  reason              String
+  processedAt         DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Expense {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId              String?
+  amountCents         Int
+  category            String   // TRAVEL, MEALS, SUPPLIES, EQUIPMENT, UTILITIES, OTHER
+  description         String
+  date                DateTime
+
+  taxCategory         String?
+  mileage             Float?   // in km
+  receiptUrl          String?
+
+  status              String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
+  approvedBy          String?
+  approvedAt          DateTime?
+  rejectionReason     String?
+
+  reimbursedAt        DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([date])
+  @@index([status])
+}
+
+model JournalEntry {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  date                DateTime
+  description         String
+  referenceId         String?  // invoice, payment, etc
+
+  ledgerLines         LedgerLine[]
+
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([date])
+}
+
+model LedgerLine {
+  id                  String   @id @default(cuid())
+  entryId             String
+  entry               JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  accountNumber       String   // e.g., "1000" for Assets
+  debitCents          Int      @default(0)
+  creditCents         Int      @default(0)
+
+  @@index([entryId])
+  @@index([accountNumber])
+}
+
+model TaxPayment {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  amountCents         Int
+  paymentDate         DateTime
+  dueDate             DateTime
+
+  periodType          String   // QUARTERLY, MONTHLY
+  period              Int      // 1-4 for quarterly, 1-12 for monthly
+  year                Int
+
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([year])
+  @@index([periodType])
+}
