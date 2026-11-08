@@ -5534,3 +5534,339 @@ model GdprConsent {
   @@index([userId])
   @@index([consentType])
 }
+
+// ===========================================================================
+// Live Streaming System
+// ===========================================================================
+
+enum StreamStatus {
+  OFFLINE
+  LIVE
+  SCHEDULED
+  ARCHIVED
+}
+
+enum RecordingStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model LiveStream {
+  id                  String         @id @default(cuid())
+  userId              String
+  user                User           @relation("StreamUser", fields: [userId], references: [id], onDelete: Cascade)
+  title               String
+  description         String?
+  category            String?
+  tags                String[]
+  streamKey           String         @unique
+  ingestUrl           String
+  status              StreamStatus   @default(OFFLINE)
+  monetizationType    String         @default("free") // free, paid, subscription
+  accessPrice         Int?           // cents
+  accessCurrency      String         @default("EUR")
+  subscriptionMonthlyPrice  Int?
+  subscriptionYearlyPrice   Int?
+  thumbnailUrl        String?
+  isPublic            Boolean        @default(true)
+  recordingEnabled    Boolean        @default(true)
+  viewerCount         Int            @default(0)
+  currentBitrate      Int?
+  currentFps          Int?
+  currentLatency      Int?
+  lastHealthCheck     DateTime?
+  startedAt           DateTime?
+  endedAt             DateTime?
+  scheduledFor        DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  recordings          StreamRecording[]
+  chatMessages        StreamChatMessage[]
+  chatReactions       StreamChatReaction[]
+  viewers             StreamViewer[]
+  moderators          StreamModerator[]
+  donations           StreamDonation[]
+  superChats          StreamSuperChat[]
+  accessTransactions  StreamAccessTransaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([viewerCount])
+}
+
+model StreamRecording {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  thumbnailUrl    String?
+  duration        Int
+  status          RecordingStatus @default(PROCESSING)
+  hlsUrl          String?
+  dashUrl         String?
+  recordedAt      DateTime
+  completedAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  clips           StreamClip[]
+  views           StreamRecordingView[]
+
+  @@index([streamId])
+  @@index([status])
+}
+
+model StreamClip {
+  id              String          @id @default(cuid())
+  recordingId     String
+  recording       StreamRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  startTime       Int
+  endTime         Int
+  duration        Int
+  hlsUrl          String
+  dashUrl         String
+  status          String          @default("completed")
+  createdAt       DateTime        @default(now())
+
+  @@index([recordingId])
+}
+
+model StreamChatMessage {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamChat", fields: [userId], references: [id], onDelete: Cascade)
+  message         String
+  deleted         Boolean         @default(false)
+  timestamp       DateTime        @default(now())
+
+  reactions       StreamChatReaction[]
+
+  @@index([streamId])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model StreamChatReaction {
+  id              String          @id @default(cuid())
+  messageId       String
+  message         StreamChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  emoji           String
+  userId          String
+  user            User            @relation("StreamReaction", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model StreamViewer {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamViewers", fields: [userId], references: [id], onDelete: Cascade)
+  startedAt       DateTime        @default(now())
+  endedAt         DateTime?
+  location        String?
+  deviceType      String          @default("desktop")
+
+  @@index([streamId])
+  @@index([userId])
+}
+
+model StreamModerator {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamModeration", fields: [userId], references: [id], onDelete: Cascade)
+  action          String          // ban, timeout, mute
+  expiresAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([streamId])
+  @@index([userId])
+}
+
+model StreamDonation {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamDonations", fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int
+  message         String?
+  stripePaymentId String?
+  status          String          @default("pending")
+  createdAt       DateTime        @default(now())
+
+  @@index([streamId])
+  @@index([userId])
+}
+
+model StreamSuperChat {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamSuperChats", fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int
+  message         String
+  stripePaymentId String?
+  status          String          @default("pending")
+  pinnedAt        DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([streamId])
+  @@index([userId])
+}
+
+model StreamAccessTransaction {
+  id              String          @id @default(cuid())
+  streamId        String
+  stream          LiveStream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamAccess", fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int
+  type            String          // access_fee, subscription
+  status          String          @default("pending")
+  createdAt       DateTime        @default(now())
+
+  @@index([streamId])
+  @@index([userId])
+}
+
+model StreamRecordingView {
+  id              String          @id @default(cuid())
+  recordingId     String
+  recording       StreamRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation("StreamRecordingViews", fields: [userId], references: [id], onDelete: Cascade)
+  watchTime       Int
+  viewedAt        DateTime        @default(now())
+
+  @@index([recordingId])
+  @@index([userId])
+}
+
+model StreamerPayout {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation("StreamerPayouts", fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int
+  stripeTransferId String?
+  status          String          @default("pending")
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ===========================================================================
+// Integrations
+// ===========================================================================
+
+model Integration {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  category        String   // crm, email, payment, communication, analytics, other
+  icon            String
+  documentation   String
+  requiresAuth    Boolean  @default(true)
+  active          Boolean  @default(true)
+  ratingCount     Int      @default(0)
+  averageRating   Float    @default(0)
+
+  userIntegrations UserIntegration[]
+  webhooks        Webhook[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([active])
+  @@index([averageRating])
+}
+
+model UserIntegration {
+  id              String   @id @default(cuid())
+  userId          String
+  integrationId   String
+  configuration   Json
+  status          String   // ACTIVE, INACTIVE, ERROR
+  accessToken     String?
+  refreshToken    String?
+  tokenExpiry     DateTime?
+  uninstalledAt   DateTime?
+
+  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, integrationId])
+  @@index([userId])
+  @@index([integrationId])
+  @@index([status])
+}
+
+model Webhook {
+  id              String   @id @default(cuid())
+  integrationId   String
+  url             String
+  events          String[] // JSON array
+  secret          String
+  retryAttempts   Int      @default(3)
+  active          Boolean  @default(true)
+
+  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  logs            WebhookLog[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([integrationId])
+  @@index([active])
+}
+
+model WebhookLog {
+  id              String   @id @default(cuid())
+  webhookId       String
+  event           String
+  status          String   // SUCCESS, FAILED
+  statusCode      Int
+  payload         Json
+  response        String?
+
+  webhook         Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model IntegrationError {
+  id              String   @id @default(cuid())
+  integrationId   String
+  errorMessage    String
+  errorCode       String?
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([integrationId])
+  @@index([createdAt])
+}
