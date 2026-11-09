@@ -7,6 +7,7 @@ const claims = new Set<string>();
 const uploads = new Map<string, { bytes: Buffer; filename: string; mimeType: string }>();
 let volgnummer = 0;
 let opslagFaaltBij = 0; // de zoveelste upload mislukt (0 = nooit)
+let redisWeg = false;
 vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => (kv.has(k) ? structuredClone(kv.get(k)) : null),
   kvSet: async (k: string, v: unknown) => void kv.set(k, structuredClone(v)),
@@ -14,7 +15,10 @@ vi.mock("@/lib/storage/kv", () => ({
   kvListEntries: async (p: string) => [...kv.entries()].filter(([k]) => k.startsWith(p)).map(([key, value]) => ({ key, value })),
 }));
 vi.mock("@/lib/redis", () => ({
-  claimIdempotency: async (k: string) => (claims.has(k) ? false : (claims.add(k), true)),
+  claimIdempotency: async (k: string) => {
+    if (redisWeg) throw new Error("ECONNREFUSED");
+    return claims.has(k) ? false : (claims.add(k), true);
+  },
   releaseIdempotency: async (k: string) => void claims.delete(k),
 }));
 vi.mock("@/lib/storage/local", () => ({
@@ -74,6 +78,7 @@ beforeEach(() => {
   uploads.clear();
   volgnummer = 0;
   opslagFaaltBij = 0;
+  redisWeg = false;
 });
 
 const tijdelijk = () => [...kv.keys()].filter((k) => k.startsWith("id-overdracht:"));
@@ -86,7 +91,7 @@ describe("verder op je telefoon (QR)", () => {
     const toestel = await open(code);
     expect(toestel).toMatch(/^[A-Za-z0-9_-]{32}$/);
     expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "geopend" });
-    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(true);
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ok");
     expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "klaar", soort: "ID_CARD" });
   });
 
@@ -108,21 +113,21 @@ describe("verder op je telefoon (QR)", () => {
     expect(await openOverdracht(code, "B".repeat(32), NU)).toEqual({ anderToestel: true });
     expect(await overdrachtGeldig(code, null, NU)).toBeNull();
     expect(await overdrachtGeldig(code, "B".repeat(32), NU)).toBeNull();
-    expect(await leverOverdrachtIn(code, "B".repeat(32), INLEVERING, NU)).toBe(false);
+    expect(await leverOverdrachtIn(code, "B".repeat(32), INLEVERING, NU)).toBe("ongeldig");
     expect(uploads.size).toBe(0);
     expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "geopend", anderToestel: true });
     // het eerste toestel kan na herladen gewoon verder
     expect(await openOverdracht(code, eerste, NU)).toEqual({ userId: "usr_1", toestel: eerste });
-    expect(await leverOverdrachtIn(code, eerste, INLEVERING, NU)).toBe(true);
+    expect(await leverOverdrachtIn(code, eerste, INLEVERING, NU)).toBe("ok");
   });
 
   it("review M1: inleveren kan maar één keer, ook tegelijk (eerst atomair claimen)", async () => {
     const code = await maakOverdracht("usr_1", NU);
     const toestel = await open(code);
     const [a, b] = await Promise.all([leverOverdrachtIn(code, toestel, INLEVERING, NU), leverOverdrachtIn(code, toestel, INLEVERING, NU)]);
-    expect([a, b].filter(Boolean)).toHaveLength(1);
+    expect([a, b].filter((x) => x === "ok")).toHaveLength(1);
     expect(uploads.size).toBe(3); // één set, geen weesbestanden
-    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(false);
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ongeldig");
     expect(await overdrachtGeldig(code, toestel, NU)).toBeNull();
   });
 
@@ -133,7 +138,7 @@ describe("verder op je telefoon (QR)", () => {
     expect(await weigerOverdracht(code, toestel, NU)).toEqual({ userId: "usr_1" });
     expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "geweigerd" });
     expect(await openOverdracht(code, toestel, NU)).toBeNull();
-    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(false);
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ongeldig");
   });
 
   it("review H2: de laptop ziet eerst een voorbeeld en de foto's, en kan alles weggooien", async () => {
@@ -230,6 +235,26 @@ describe("verder op je telefoon (QR)", () => {
     expect([a, b].filter((o) => o && "anderToestel" in o)).toHaveLength(1);
   });
 
+  it("review N4 (6d): Redis even weg is een storing, geen ongeldige link; daarna lukt het gewoon", async () => {
+    const code = await maakOverdracht("usr_1", NU);
+    const toestel = await open(code);
+    redisWeg = true;
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("storing");
+    expect(uploads.size).toBe(0);
+    expect(await overdrachtGeldig(code, toestel, NU)).toEqual({ userId: "usr_1" });
+    redisWeg = false;
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ok");
+  });
+
+  it("review N1 (6d): 'klopt niet' meldt of er al foto's waren (voor de audit)", async () => {
+    const code = await maakOverdracht("usr_1", NU);
+    expect(await annuleerOverdracht("usr_1")).toEqual({ hadFotos: false });
+    const nieuw = await maakOverdracht("usr_1", NU);
+    await leverOverdrachtIn(nieuw, await open(nieuw), INLEVERING, NU);
+    expect(await annuleerOverdracht("usr_1")).toEqual({ hadFotos: true });
+    expect(code).not.toBe(nieuw);
+  });
+
   it("review 3: een ander toestel dat de link bestookt, kan het merkteken niet wissen", async () => {
     const code = await maakOverdracht("usr_1", NU);
     const toestel = await open(code);
@@ -245,7 +270,7 @@ describe("verder op je telefoon (QR)", () => {
     const code = await maakOverdracht("usr_1", NU);
     const toestel = await open(code);
     expect(await openOverdracht(code, "B".repeat(32), NU)).toEqual({ anderToestel: true });
-    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(true);
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ok");
     expect(await openOverdracht(code, "B".repeat(32), NU)).toBeNull();
     expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "klaar", soort: "ID_CARD", anderToestel: true });
     expect(uploads.size).toBe(3);
@@ -255,10 +280,10 @@ describe("verder op je telefoon (QR)", () => {
     const code = await maakOverdracht("usr_1", NU);
     const toestel = await open(code);
     opslagFaaltBij = 2;
-    await expect(leverOverdrachtIn(code, toestel, INLEVERING, NU)).rejects.toThrow();
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("storing");
     expect(uploads.size).toBe(0);
     // de claim is vrijgegeven: meteen opnieuw proberen lukt
-    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(true);
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe("ok");
     expect(await overdrachtUploads("usr_1")).toHaveLength(3);
     expect(await overdrachtUploads("usr_2")).toEqual([]);
   });

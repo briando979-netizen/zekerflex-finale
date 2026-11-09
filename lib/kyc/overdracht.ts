@@ -243,19 +243,25 @@ export async function weigerOverdracht(code: string, toestel: string | null | un
   return { userId: o.userId };
 }
 
-/** Telefoon: de foto's en gegevens inleveren. Daarna is de code klaar (niet nog eens te gebruiken). */
+/**
+ * Telefoon: de foto's en gegevens inleveren. Daarna is de code klaar (niet nog eens te gebruiken).
+ * "storing" (review N4, 6d): Redis of de opslag was even weg; de code blijft geldig en de telefoon
+ * kan het meteen opnieuw proberen. "ongeldig": verkeerde of verlopen code, ander toestel, al ingeleverd.
+ */
 export async function leverOverdrachtIn(
   code: string,
   toestel: string | null | undefined,
   inlevering: { soort: DocSoort; gegevens: OverdrachtGegevens; voor: Foto; achter: Foto; selfie: Foto; net?: string | null },
   nu: Date = new Date(),
-): Promise<boolean> {
+): Promise<"ok" | "ongeldig" | "storing"> {
   const o = await vanCode(code, nu);
-  if (!o || o.status !== "geopend" || !toestelKlopt(o, toestel)) return false;
+  if (!o || o.status !== "geopend" || !toestelKlopt(o, toestel)) return "ongeldig";
   // eerst claimen: tegelijk inleveren met dezelfde code slaat nooit meerdere sets foto's op.
   // Is Redis even weg, dan liever opnieuw proberen dan dubbel opslaan.
-  const geclaimd = await claimIdempotency(`id-overdracht-klaar:${o.userId}:${codeId(o)}`, 60 * 60).catch(() => false);
-  if (!geclaimd) return false;
+  const claim = `id-overdracht-klaar:${o.userId}:${codeId(o)}`;
+  const geclaimd = await claimIdempotency(claim, 60 * 60).catch(() => null);
+  if (geclaimd === null) return "storing";
+  if (!geclaimd) return "ongeldig";
   // eerst het merkteken (review H1): vanaf nu gaat elke inzending van deze persoon naar een mens
   await werkMerkBij(o.userId, nu, (m) => ({ ...m, geleverdOp: nu.toISOString() }));
   const opgeslagen = await Promise.allSettled(
@@ -265,8 +271,8 @@ export async function leverOverdrachtIn(
   if (ids.length !== 3) {
     // half gelukt: niets laten slingeren, en de telefoon mag het meteen opnieuw proberen
     await Promise.all(ids.map((id) => deleteUpload(id).catch(() => undefined)));
-    await releaseIdempotency(`id-overdracht-klaar:${o.userId}:${codeId(o)}`).catch(() => undefined);
-    throw new Error("foto's opslaan mislukt");
+    await releaseIdempotency(claim).catch(() => undefined);
+    return "storing";
   }
   await bewaar({
     ...o,
@@ -276,7 +282,7 @@ export async function leverOverdrachtIn(
     uploads: { voor: ids[0]!, achter: ids[1]!, selfie: ids[2]! },
     net: inlevering.net ?? null,
   });
-  return true;
+  return "ok";
 }
 
 /** Laptop: hoe staat het? (alleen de eigen overdracht, zonder code) */
@@ -336,10 +342,11 @@ export async function overdrachtUploads(userId: string): Promise<string[]> {
   return o?.uploads ? Object.values(o.uploads) : [];
 }
 
-/** Laptop: "klopt niet": alles van de telefoon weg, opnieuw beginnen. */
-export async function annuleerOverdracht(userId: string): Promise<void> {
+/** Laptop: "klopt niet": alles van de telefoon weg, opnieuw beginnen. hadFotos: er was al iets ingeleverd (voor de audit). */
+export async function annuleerOverdracht(userId: string): Promise<{ hadFotos: boolean }> {
   const o = await lees(userId);
   if (o) await wis(o);
+  return { hadFotos: Boolean(o?.uploads) };
 }
 
 /** Laptop: de gegevens van de telefoon bekijken zonder ze op te maken (eerst het formulier controleren). */

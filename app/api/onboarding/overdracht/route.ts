@@ -3,6 +3,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { recordAudit } from "@/lib/audit";
 import { annuleerOverdracht, maakOverdracht, overdrachtFoto, overdrachtStatus, overdrachtVoorbeeld } from "@/lib/kyc/overdracht";
 
 // "Verder op je telefoon" (lib/kyc/overdracht.ts), de kant van de laptop. Alleen
@@ -11,8 +12,11 @@ import { annuleerOverdracht, maakOverdracht, overdrachtFoto, overdrachtStatus, o
 //   GET                 hoe het staat ("wacht", "geopend", "klaar", "geweigerd",
 //                       "verlopen"), of een ander toestel het probeerde, en bij "klaar"
 //                       wat er binnenkwam (naam, documentsoort, einde van het nummer)
-//   GET ?foto=voor|achter|selfie   één foto, zodat de werker eerst controleert
-//   DELETE              "klopt niet": alles van de telefoon weg
+//   GET ?foto=voor|achter|selfie   een klein, wazig voorbeeld (160 px, overdrachtFoto), zodat
+//                       de werker herkent of het zijn foto's zijn; nooit de volledige ID-foto's
+//                       (review H1 en N1), en begrensd
+//   DELETE              "klopt niet": alles van de telefoon weg; waren er al foto's, dan
+//                       komt dat in het auditspoor (geen spoorloos verzamelen, review N1)
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -39,6 +43,7 @@ export async function GET(request: Request): Promise<NextResponse | Response> {
     const welke = new URL(request.url).searchParams.get("foto");
     if (welke !== null) {
       if (!FOTOS.has(welke)) throw AppError.notFound("Onbekende foto");
+      await enforceRateLimit({ name: "id-overdracht-voorbeeld", identifier: principal.userId, limit: 30, windowSeconds: 3600 });
       const f = await overdrachtFoto(principal.userId, welke as "voor" | "achter" | "selfie");
       if (!f) throw AppError.notFound("Deze foto is er niet (meer).");
       return new Response(new Uint8Array(f.bytes), {
@@ -59,7 +64,19 @@ export async function DELETE(): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "FREELANCER");
-    await annuleerOverdracht(principal.userId);
+    const { hadFotos } = await annuleerOverdracht(principal.userId);
+    if (hadFotos) {
+      await recordAudit({
+        category: "SECURITY",
+        action: "kyc.overdracht.klopt_niet",
+        severity: "warning",
+        actorUserId: principal.userId,
+        actorLabel: "user",
+        summary: "Foto's van een tweede toestel afgewezen op de laptop ('klopt niet') en gewist",
+        targetType: "user",
+        targetId: principal.userId,
+      }).catch(() => undefined);
+    }
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
