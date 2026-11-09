@@ -10,6 +10,11 @@ import { env } from "@/lib/env";
 // "ID-kaart", krijgt dezelfde hash. Het uitgevende land zit er bewust niet in:
 // dat is niet altijd bekend (geen leesbare MRZ, rijbewijs), en een treffer
 // leidt alleen tot een menselijke controle.
+//
+// Oude rijen (vóór 9 nov 2026) hebben nog het oude formaat (SHA-256 over
+// "SOORT:NUMMER"). Omzetten kan niet: daarvoor is het documentnummer nodig, en
+// dat bewaren we bewust niet. Een dubbel document tegen zo'n oude rij wordt dus
+// niet gevonden; elke nieuwe verificatie krijgt het nieuwe formaat. Zo laten.
 // ---------------------------------------------------------------------------
 
 /** Zoals zelfdeNummer (lib/kyc/mrz.ts): hoofdletters, alleen A–Z en 0–9, O = 0. */
