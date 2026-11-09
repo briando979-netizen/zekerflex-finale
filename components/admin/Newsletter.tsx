@@ -116,6 +116,34 @@ Română: Îmbunătățim procesul de înscriere și de încărcare a datelor, a
 
 Українською: Ми покращуємо реєстрацію та завантаження даних, тому деякий час вона може працювати з перебоями, а деякі дані можуть читатися неправильно. Трохи зачекайте з реєстрацією: ви отримаєте від нас повідомлення, щойно ми закінчимо. ZekerFlex ще перебуває в активній розробці, а завдання, які ви бачите, — тестові. На початку наступного року ми запустимося онлайн. Дякуємо за розуміння!`,
   },
+  {
+    // het vervolg op de mail hierboven: versturen zodra de onboarding weer soepel werkt (en zet dan de melding in de app uit)
+    label: "Onboarding klaar: je kunt weer verder",
+    subject: "ZekerFlex: de aanmelding werkt weer soepel, je kunt verder",
+    body: `Hoi,
+
+Goed nieuws: we zijn klaar met het verbeteren van de onboarding. Je kunt nu weer soepel en snel je gegevens uploaden.
+
+Zo ga je verder: log in op https://zekerflex.com, open de start bovenaan "Vind jouw klus" en doorloop de stappen. Daarna kun je op klussen reageren en geld verdienen.
+
+Let op: ZekerFlex is nog in ontwikkeling. De klussen die je ziet zijn nog testklussen: geen echt werk, je hoeft er niet heen en er hoort geen betaling bij. Begin volgend jaar gaan we online. Je kunt nu al proeven en bekijken hoe het er straks uitziet.
+
+Loopt er iets niet goed of mis je iets? Antwoord gewoon op deze mail.
+
+Bedankt voor je geduld en je begrip!
+
+Het ZekerFlex-team
+
+---
+
+English: We have finished improving the onboarding. You can now upload your details smoothly and quickly again. Log in at https://zekerflex.com and follow the steps at the top of "Find your job". ZekerFlex is still in development and the jobs you see are test jobs. We go online early next year. Thank you for your patience!
+
+Polski: Skończyliśmy ulepszać rejestrację. Możesz teraz znów sprawnie i szybko przesłać swoje dane. Zaloguj się na https://zekerflex.com i przejdź kroki na górze strony „Znajdź pracę”. ZekerFlex jest nadal w rozwoju, a zlecenia, które widzisz, to zlecenia testowe. Na początku przyszłego roku wystartujemy online. Dziękujemy za cierpliwość!
+
+Română: Am terminat de îmbunătățit înscrierea. Acum îți poți încărca din nou datele fluent și rapid. Autentifică-te pe https://zekerflex.com și parcurge pașii de sus din „Găsește-ți jobul”. ZekerFlex este încă în dezvoltare, iar joburile pe care le vezi sunt joburi de test. Pornim online la începutul anului viitor. Mulțumim pentru răbdare!
+
+Українською: Ми завершили покращення реєстрації. Тепер ви знову можете швидко й без проблем завантажити свої дані. Увійдіть на https://zekerflex.com і пройдіть кроки вгорі сторінки «Знайди роботу». ZekerFlex ще в розробці, а завдання, які ви бачите, — тестові. На початку наступного року ми запустимося онлайн. Дякуємо за терпіння!`,
+  },
 ];
 
 const STATUS: Record<Sub["status"], { label: string; tone: Tone }> = {
