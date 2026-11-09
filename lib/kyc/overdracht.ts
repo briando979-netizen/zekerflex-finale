@@ -25,7 +25,7 @@
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { claimIdempotency } from "@/lib/redis";
+import { claimIdempotency, releaseIdempotency } from "@/lib/redis";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { deleteUpload, readUpload, storeUpload } from "@/lib/storage/local";
 
@@ -108,6 +108,9 @@ async function vanCode(code: string, nu: Date): Promise<Overdracht | null> {
 
 const hashToestel = (token: string) => createHash("sha256").update(token).digest("hex");
 
+/** Per code een eigen deel voor de Redis-claims (nooit het geheim zelf in een sleutel). */
+const claimDeel = (o: Overdracht) => createHash("sha256").update(`claim|${o.geheim}`).digest("hex").slice(0, 24);
+
 /** Hoort dit toesteltoken bij het toestel dat de code als eerste opende? (vaste tijd) */
 function toestelKlopt(o: Overdracht, token: string | null | undefined): boolean {
   if (!o.toestel || typeof token !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(token)) return false;
@@ -127,6 +130,15 @@ export async function openOverdracht(code: string, toestel?: string | null, nu: 
   const o = await vanCode(code, nu);
   if (!o || o.status === "klaar" || o.status === "geweigerd") return null;
   if (o.status === "wacht") {
+    // atomair: twee toestellen die tegelijk openen krijgen nooit allebei een token (review N3).
+    // Bij een Redis-storing toch door: dat venster is klein en het tweede toestel valt dan bij
+    // het inleveren alsnog af (het token klopt niet meer).
+    const eerste = await claimIdempotency(`id-overdracht-open:${o.userId}:${claimDeel(o)}`, 30 * 60).catch(() => true);
+    if (!eerste) {
+      const nu2 = await lees(o.userId);
+      if (nu2 && !nu2.anderToestel) await bewaar({ ...nu2, anderToestel: true });
+      return { anderToestel: true };
+    }
     const token = randomBytes(24).toString("base64url");
     await bewaar({ ...o, status: "geopend", toestel: hashToestel(token) });
     return { userId: o.userId, toestel: token };
@@ -151,24 +163,43 @@ export async function weigerOverdracht(code: string, toestel: string | null | un
   return { userId: o.userId };
 }
 
-/** Telefoon: de foto's en gegevens inleveren. Daarna is de code klaar (niet nog eens te gebruiken). */
+/**
+ * Telefoon: de foto's en gegevens inleveren. Daarna is de code klaar (niet nog eens te gebruiken).
+ * "ongeldig": code, toestel of stand klopt niet (of er is al ingeleverd); "storing": Redis even
+ * weg, de code is nog bruikbaar (review N4).
+ */
 export async function leverOverdrachtIn(
   code: string,
   toestel: string | null | undefined,
   inlevering: { soort: DocSoort; gegevens: OverdrachtGegevens; voor: Foto; achter: Foto; selfie: Foto },
   nu: Date = new Date(),
-): Promise<boolean> {
+): Promise<"ok" | "ongeldig" | "storing"> {
   const o = await vanCode(code, nu);
-  if (!o || o.status !== "geopend" || !toestelKlopt(o, toestel)) return false;
+  if (!o || o.status !== "geopend" || !toestelKlopt(o, toestel)) return "ongeldig";
   // eerst claimen: tegelijk inleveren met dezelfde code slaat nooit meerdere sets foto's op.
   // Is Redis even weg, dan liever opnieuw proberen dan dubbel opslaan.
-  const geclaimd = await claimIdempotency(`id-overdracht-klaar:${o.userId}:${o.gemaakt}`, 60 * 60).catch(() => false);
-  if (!geclaimd) return false;
-  const [voor, achter, selfie] = await Promise.all(
-    [inlevering.voor, inlevering.achter, inlevering.selfie].map((f) => storeUpload({ ...f, uploadedById: o.userId })),
-  );
-  await bewaar({ ...o, status: "klaar", soort: inlevering.soort, gegevens: inlevering.gegevens, uploads: { voor: voor!.id, achter: achter!.id, selfie: selfie!.id } });
-  return true;
+  const claimSleutel = `id-overdracht-klaar:${o.userId}:${claimDeel(o)}`;
+  let geclaimd: boolean;
+  try {
+    geclaimd = await claimIdempotency(claimSleutel, 60 * 60);
+  } catch {
+    return "storing";
+  }
+  if (!geclaimd) return "ongeldig";
+  const opgeslagen: string[] = [];
+  try {
+    for (const f of [inlevering.voor, inlevering.achter, inlevering.selfie]) {
+      opgeslagen.push((await storeUpload({ ...f, uploadedById: o.userId })).id);
+    }
+  } catch (err) {
+    // half opgeslagen: weg ermee en de claim terug, zodat de telefoon het opnieuw kan proberen
+    await Promise.all(opgeslagen.map((id) => deleteUpload(id).catch(() => undefined)));
+    await releaseIdempotency(claimSleutel).catch(() => undefined);
+    throw err;
+  }
+  const [voor, achter, selfie] = opgeslagen;
+  await bewaar({ ...o, status: "klaar", soort: inlevering.soort, gegevens: inlevering.gegevens, uploads: { voor: voor!, achter: achter!, selfie: selfie! } });
+  return "ok";
 }
 
 /** Laptop: hoe staat het? (alleen de eigen overdracht, zonder code) */
@@ -209,10 +240,17 @@ export async function overdrachtFoto(userId: string, welke: "voor" | "achter" | 
   return id ? readUpload(id).catch(() => null) : null;
 }
 
-/** Laptop: "klopt niet": alles van de telefoon weg, opnieuw beginnen. */
-export async function annuleerOverdracht(userId: string): Promise<void> {
+/**
+ * Laptop: "klopt niet": alles van de telefoon weg, opnieuw beginnen. Geeft terug of er al
+ * foto's waren ingeleverd: dan legt de route het vast (review N1), want wie een ander de
+ * foto's laat maken en dan "klopt niet" kiest, mag dat nooit spoorloos doen.
+ */
+export async function annuleerOverdracht(userId: string): Promise<{ hadFotos: boolean }> {
   const o = await lees(userId);
-  if (o) await wis(o);
+  if (!o) return { hadFotos: false };
+  const hadFotos = o.status === "klaar";
+  await wis(o);
+  return { hadFotos };
 }
 
 /** Laptop: de gegevens van de telefoon bekijken zonder ze op te maken (eerst het formulier controleren). */

@@ -58,14 +58,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     const voor = await foto(form, "voor", "De voorkant");
     const achter = await foto(form, "achter", "De achterkant");
     const selfie = await foto(form, "selfie", "De selfie");
-    const ok = await leverOverdrachtIn(v.data.code, v.data.toestel, {
+    const uit = await leverOverdrachtIn(v.data.code, v.data.toestel, {
       soort: v.data.soort,
       gegevens: { nummer: v.data.nummer, datum: v.data.datum, naam: v.data.naam },
       voor,
       achter,
       selfie,
     });
-    if (!ok) throw AppError.notFound("Deze link is niet (meer) geldig, of al gebruikt. Maak op je laptop een nieuwe QR-code.");
+    if (uit === "storing") {
+      return NextResponse.json(
+        { error: { code: "EVEN_NIET", message: "Even geen verbinding met de opslag. Je link is nog geldig: probeer het over een minuut opnieuw." } },
+        { status: 503 },
+      );
+    }
+    if (uit !== "ok") throw AppError.notFound("Deze link is niet (meer) geldig, of al gebruikt. Maak op je laptop een nieuwe QR-code.");
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
