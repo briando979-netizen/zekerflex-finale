@@ -12,6 +12,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
+import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
 import { alertOwnerLater } from "@/lib/ops/alert";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,8 @@ export interface OnboardingInput {
   postalCode: string;
   houseNumber?: string | undefined;
   payoutIban: string;
+  /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
+  ibanCode?: string | undefined;
   documentType: DocKind;
   documentNumber: string;
   documentExpiry: string; // yyyy-mm-dd
@@ -208,6 +211,9 @@ async function ensureFreelancerBase(input: {
   postalCode: string;
   houseNumber?: string | undefined;
   payoutIban: string;
+  ibanCode?: string | undefined;
+  /** De IBAN-bevestiging is al gevraagd (de code is eenmalig: niet nog eens controleren). */
+  ibanAlBevestigd?: boolean | undefined;
 }): Promise<FreelancerBaseResult> {
   const checks: OnboardingResult["checks"] = [];
 
@@ -253,6 +259,10 @@ async function ensureFreelancerBase(input: {
       where: { id: freelancerProfileId },
       select: { payoutIban: true },
     });
+    // Een gewijzigd bestaand IBAN vraagt een tweede bewijs (mailcode of 2FA), net als
+    // in /api/me/fiscal; een eerste IBAN blijft vrij. Vóór elke schrijfactie; gooit
+    // IbanBevestigingFout (423) die de route teruggeeft.
+    if (!input.ibanAlBevestigd) await eisIbanBevestiging(input.userId, existing?.payoutIban, cleanIban, input.ibanCode);
     // Only a CHANGE to an already-set IBAN needs re-verification — the first
     // time this profile ever gets one (fresh onboarding) is not a "change".
     const ibanChanged = Boolean(existing?.payoutIban) && existing!.payoutIban !== cleanIban;
@@ -340,6 +350,7 @@ export async function saveFreelancerBase(input: {
   postalCode: string;
   houseNumber?: string | undefined;
   payoutIban: string;
+  ibanCode?: string | undefined;
 }): Promise<FreelancerBaseResult> {
   const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { freelancerProfile: { select: { id: true } } } });
   if (!user) throw AppError.notFound("Account niet gevonden");
@@ -390,6 +401,7 @@ export async function submitFreelancerOnboarding(
     postalCode: input.postalCode,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,
+    ibanCode: input.ibanCode,
   });
   checks.push(...base.checks);
   const { freelancerProfileId, skipKvk, kvkValid, companyName, companyTradeName, companyStatus } = base;
@@ -648,6 +660,7 @@ export interface WalletOnboardingInput {
   postalCode: string;
   houseNumber?: string | undefined;
   payoutIban: string;
+  ibanCode?: string | undefined;
 }
 
 /**
@@ -666,6 +679,13 @@ export async function submitFreelancerOnboardingViaWallet(
     select: { id: true, fullName: true, freelancerProfile: { select: { id: true } } },
   });
   if (!user) throw AppError.notFound("Account niet gevonden");
+
+  // De IBAN-bevestiging eerst, vóór het eenmalige wallet-resultaat verbruikt wordt: een
+  // 423 mag de verificatie niet laten vervallen. De code is eenmalig, dus alleen hier.
+  if (user.freelancerProfile) {
+    const huidig = await prisma.freelancerProfile.findUnique({ where: { id: user.freelancerProfile.id }, select: { payoutIban: true } });
+    await eisIbanBevestiging(user.id, huidig?.payoutIban, input.payoutIban.replace(/\s+/g, "").toUpperCase(), input.ibanCode);
+  }
 
   const claims = await consumeVerifiedWalletAttempt(input.userId, input.attemptId);
   if (!claims) {
@@ -690,6 +710,7 @@ export async function submitFreelancerOnboardingViaWallet(
     postalCode: input.postalCode,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,
+    ibanAlBevestigd: true,
   });
   checks.push(...base.checks);
   const { skipKvk, kvkValid, companyName } = base;

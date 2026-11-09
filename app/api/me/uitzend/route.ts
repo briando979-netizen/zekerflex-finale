@@ -7,6 +7,7 @@ import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { getFiscal, setFiscal, type FiscalProfile } from "@/lib/fiscal/store";
 import { isValidIban } from "@/lib/billing/sepa";
 import { invalidateBankDoc } from "@/lib/compliance/documents";
+import { bevestigIbanWijziging } from "@/lib/fiscal/iban-bevestiging";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,8 @@ export async function GET(): Promise<NextResponse> {
 const putSchema = z.object({
   loonheffingskorting: z.boolean().optional(),
   iban: z.string().trim().min(15).max(34).optional(),
+  /** Bevestigingscode bij een gewijzigd IBAN: uit de mail, of uit de verificatie-app bij 2FA. */
+  ibanCode: z.string().trim().max(32).optional(),
 });
 
 // PUT /api/me/uitzend — quick fiscal toggles for the uitzend panel.
@@ -56,6 +59,18 @@ export async function PUT(request: Request): Promise<NextResponse> {
       // Only a CHANGE to an already-set IBAN needs re-verification — the
       // first time a worker ever sets one (onboarding) is not a "change".
       ibanChanged = Boolean(before.iban) && before.iban !== clean;
+      // Een gewijzigd rekeningnummer vraagt een tweede bewijs (mailcode of 2FA), net
+      // als in /api/me/fiscal. Zonder bevestiging wordt er niets opgeslagen: 423 met
+      // een eigen code (nooit 403: CrowdSec). Een eerste IBAN blijft vrij.
+      if (ibanChanged) {
+        const bevestiging = await bevestigIbanWijziging(p.userId, clean, input.ibanCode);
+        if (!bevestiging.ok) {
+          return NextResponse.json(
+            { error: { code: bevestiging.code, message: bevestiging.message } },
+            { status: bevestiging.status },
+          );
+        }
+      }
       patch.iban = clean;
       patch.ibanValid = isValidIban(clean);
       if (ibanChanged) patch.ibanPendingVerification = true;

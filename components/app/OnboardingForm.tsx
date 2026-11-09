@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
+import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
+import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 
 interface Check {
@@ -155,6 +158,11 @@ export function OnboardingForm({
   stripeIdentity?: boolean;
 }) {
   const t = AUTH_DICTS[useI18n().locale].onb;
+  const ft = useFT();
+  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
+  const [ibanCode, setIbanCode] = useState("");
+  const [codeMelding, setCodeMelding] = useState<string | null>(null);
+  const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
   const [biz, setBiz] = useState<"kvk" | "vat">("kvk");
   const [method, setMethod] = useState<"stripe" | "upload">(stripeIdentity ? "stripe" : "upload");
   const photos = useRef<Partial<Record<PhotoKey, File>>>({});
@@ -170,6 +178,8 @@ export function OnboardingForm({
     e.preventDefault();
     if (busy) return;
     const body = new FormData(e.currentTarget);
+    if (zonderCode.current) body.delete("ibanCode");
+    zonderCode.current = false;
     if (method === "upload") {
       const absent = (["documentFront", "documentBack", "selfie"] as PhotoKey[]).filter((k) => !photos.current[k]);
       setMissing(absent);
@@ -189,6 +199,9 @@ export function OnboardingForm({
       const data = await res.json().catch(() => ({}));
       if (res.status === 413) {
         setError(t.tooBig);
+      } else if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
+        setIbanCode("");
+        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
       } else if (!res.ok) {
         setError(data?.error?.message ?? t.failed);
       } else if (data.redirectUrl) {
@@ -342,6 +355,20 @@ export function OnboardingForm({
           <span className="field-label">{t.iban}</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />
         </label>
+        {codeMelding && (
+          <IbanCodeVeld
+            name="ibanCode"
+            texts={ft.ibanCode}
+            melding={codeMelding}
+            value={ibanCode}
+            onChange={setIbanCode}
+            onResend={() => {
+              zonderCode.current = true;
+              formRef.current?.requestSubmit();
+            }}
+            busy={busy}
+          />
+        )}
       </fieldset>
 
       <fieldset className="space-y-4" key={attempt}>

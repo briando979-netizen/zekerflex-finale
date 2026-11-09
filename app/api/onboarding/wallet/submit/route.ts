@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
+import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
 import { submitFreelancerOnboardingViaWallet } from "@/lib/onboarding/verify";
 
 export const runtime = "nodejs";
@@ -13,6 +14,8 @@ const bodySchema = z.object({
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
   houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
+  /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
+  ibanCode: z.string().trim().max(32).optional(),
 });
 
 // POST /api/onboarding/wallet/submit — final step of the digital-wallet
@@ -39,10 +42,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       postalCode: parsed.data.postalCode,
       houseNumber: parsed.data.houseNumber,
       payoutIban: parsed.data.payoutIban,
+      ibanCode: parsed.data.ibanCode,
     });
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
+    // Een gewijzigd IBAN zonder (geldige) bevestigingscode: 423 met eigen code, nooit 403.
+    const ibanFout = ibanBevestigingAntwoord(err);
+    if (ibanFout) return NextResponse.json(ibanFout.body, { status: ibanFout.status });
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
   }
