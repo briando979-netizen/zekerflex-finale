@@ -6,7 +6,8 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { prisma } from "@/lib/prisma";
 import { clientDict, getDict, getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme/server";
-import { inAndroidApp } from "@/lib/app-mode-server";
+import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { IosAppProvider } from "@/components/app/useInIosApp";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { EmployerShell } from "@/components/app/EmployerShell";
@@ -42,6 +43,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const t = await getDict();
   // Android app: no ZekerFlex Bank (lib/app-mode.ts)
   const inApp = await inAndroidApp();
+  // iPhone-app: geen koopknoppen voor digitale abonnementen (NietInIphone), al bij de eerste weergave
+  const ios = await inIosApp();
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
@@ -109,6 +112,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     .map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
 
   return (
+    <IosAppProvider ios={ios}>
     <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="employer" />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg">
@@ -131,5 +135,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </EmployerShell>
     </I18nProvider>
+    </IosAppProvider>
   );
 }

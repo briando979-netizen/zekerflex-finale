@@ -8,7 +8,8 @@ import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { clientDict, getLocale } from "@/lib/i18n/server";
-import { inAndroidApp } from "@/lib/app-mode-server";
+import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { IosAppProvider } from "@/components/app/useInIosApp";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { AppOpenPing } from "@/components/app/AppOpenPing";
@@ -31,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
   return (
+    <IosAppProvider ios={await inIosApp()}>
     <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="freelancer" />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg">
@@ -53,5 +55,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </FreelancerShell>
     </I18nProvider>
+    </IosAppProvider>
   );
 }
