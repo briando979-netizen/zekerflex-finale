@@ -9,8 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
-import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
-import { zzpGeschikt } from "@/lib/matching/onderneming";
+import { isMatchEligibleWorker } from "@/lib/matching/geschikt";
 import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
@@ -115,25 +114,10 @@ async function scoreCandidate(
   };
 }
 
-/**
- * vatValid/kvkValid qualifies a zzp'er/flexwerker — but an uitzendkracht has
- * neither by design (ZekerFlex is their employer, no KVK/btw needed), so a
- * plain vatValid+kvkValid filter would exclude every uitzendkracht from ever
- * being auto-matched at all. workerKind lives in the fiscal KV store, not a
- * DB column, so that lookup only runs for candidates who need it: not
- * zzp-eligible, or the shift is reserved for uitzendkrachten outright.
- * A zzp'er from abroad without a KVK counts through a valid EU VAT number
- * (VIES) instead: lib/matching/onderneming.ts.
- */
-export async function isMatchEligibleWorker(
-  profile: { userId: string; vatValid: boolean; kvkValid: boolean; country: string },
-  viaUitzendbureau: boolean,
-): Promise<boolean> {
-  const zzpEligible = zzpGeschikt(profile);
-  if (zzpEligible && !viaUitzendbureau) return true;
-  const fiscal = await getFiscal(profile.userId);
-  return invoiceModeFor(fiscal) === "payroll";
-}
+// De regel "mag deze werker deze klus doen?" staat in lib/matching/geschikt.ts
+// (ook gebruikt bij het overnemen van een klus); hier doorgegeven voor wie hem
+// al uit de matching haalde.
+export { isMatchEligibleWorker };
 
 async function loadCandidatePool(shift: {
   id: string;
