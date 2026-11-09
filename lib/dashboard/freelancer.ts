@@ -66,7 +66,10 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
       onboarding: [
         { label: "Account aangemaakt", done: true },
         { label: "Werkvorm & fiscale gegevens", done: fiscalDone },
-        { label: "KVK/btw gekoppeld en gevalideerd", done: false },
+        // een uitzendkracht heeft geen KVK of btw nodig: dezelfde stap als met profiel (hieronder)
+        isUitzend
+          ? { label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
+          : { label: "KVK/btw gekoppeld en gevalideerd", done: false },
         { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
         { label: "Thuisbasis en rekeningnummer ingesteld", done: false },
       ],

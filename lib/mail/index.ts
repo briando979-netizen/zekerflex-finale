@@ -493,7 +493,7 @@ export function onboardingReminderEmail(
       : kind === "uitzendkracht"
         ? {
             href: `${base}/dashboard/verificatie`,
-            todo: "vul je thuisbasis en rekeningnummer in en bevestig je identiteit",
+            todo: "vul je BSN, thuisbasis en rekeningnummer in, bevestig je identiteit en onderteken je uitzendovereenkomst",
             why: "Daarna kun je direct op klussen reageren en word je uitbetaald via ZekerFlex.",
           }
         : {
