@@ -9,11 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // initialized, so node:fs/os/path are pulled in via require() here rather
 // than a top-level import.
 const envMock = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const fs = require("node:fs") as typeof import("node:fs");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const os = require("node:os") as typeof import("node:os");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const path = require("node:path") as typeof import("node:path");
   return {
     STORAGE_BACKEND: "local" as "local" | "s3",

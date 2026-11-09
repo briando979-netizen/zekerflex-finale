@@ -81,12 +81,10 @@ import { authOptions } from "@/lib/auth/nextauth";
 import { decodeSession, encodeSession } from "@/lib/auth/session";
 import type { RoleGrant } from "@/lib/auth/session";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const credentialsProvider = (authOptions.providers as any[]).find(
   (p) => (typeof p === "function" ? p() : p).id === "credentials" || (typeof p === "function" ? p() : p).type === "credentials",
 );
 // The Credentials provider is a plain config object in v5.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const authorize: (raw: Record<string, unknown>) => Promise<any> =
   (credentialsProvider as any)?.authorize ?? (authOptions.providers as any[])[0].authorize;
 
@@ -203,7 +201,6 @@ describe("jwt.encode / jwt.decode — must be our jose session tokens", () => {
   const decode = authOptions.jwt!.decode!;
 
   it("encode mints a token that lib/auth/session (the Edge verifier) accepts", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const jwt = (await encode({ token: { sub: "usr_1", email: "a@b.nl", name: "A", roles: [GRANT], remember: true } } as any)) as string;
 
     const claims = await decodeSession(jwt);
@@ -212,19 +209,16 @@ describe("jwt.encode / jwt.decode — must be our jose session tokens", () => {
   });
 
   it("encode returns an empty string when there is no subject (no anonymous cookie)", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(await encode({ token: {} } as any)).toBe("");
   });
 
   it("decode round-trips a token produced by encodeSession", async () => {
     const jwt = await encodeSession({ sub: "usr_9", email: "x@y.nl", name: "X", roles: [GRANT] });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = (await decode({ token: jwt } as any)) as any;
     expect(out).toMatchObject({ sub: "usr_9", email: "x@y.nl", name: "X", roles: [GRANT] });
   });
 
   it("decode rejects a garbage / forged token", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(await decode({ token: "not.a.jwt" } as any)).toBeNull();
   });
 });
@@ -234,9 +228,7 @@ describe("callbacks.jwt / callbacks.session — role propagation", () => {
     const cb = authOptions.callbacks!.jwt!;
     const token = await cb({
       token: {},
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       user: { id: "usr_1", email: "a@b.nl", name: "A", roles: [GRANT], remember: true } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     expect(token).toMatchObject({ sub: "usr_1", roles: [GRANT], remember: true });
   });
@@ -246,9 +238,7 @@ describe("callbacks.jwt / callbacks.session — role propagation", () => {
       { role: "HQ_ADMIN", tenantId: "org_a", scopedBranches: [{ branchId: "b1" }] },
     ]);
     const cb = authOptions.callbacks!.jwt!;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const token = await cb({ token: { sub: "usr_1" }, trigger: "update" } as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((token as any).roles).toEqual([
       { role: "HQ_ADMIN", organizationId: "org_a", locationIds: ["b1"] },
     ]);
@@ -257,13 +247,9 @@ describe("callbacks.jwt / callbacks.session — role propagation", () => {
   it("session exposes id + roles from the token to the app", async () => {
     const cb = authOptions.callbacks!.session!;
     const session = await cb({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       session: { user: {} } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       token: { sub: "usr_1", roles: [GRANT] } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((session as any).user).toMatchObject({ id: "usr_1", roles: [GRANT] });
   });
 });
@@ -272,17 +258,13 @@ describe("callbacks.signIn — Google gate", () => {
   const signIn = () => authOptions.callbacks!.signIn!;
 
   it("lets a plain credentials sign-in through untouched", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(await signIn()({ account: { provider: "credentials" } } as any)).toBe(true);
   });
 
   it("blocks a Google identity whose e-mail Google itself marks unverified", async () => {
     const res = await signIn()({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       account: { provider: "google" } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       profile: { email: "spoof@gmail.com", email_verified: false } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       user: {} as any,
     } as any);
     expect(res).toBe(false);
@@ -293,11 +275,8 @@ describe("callbacks.signIn — Google gate", () => {
     userFindFirst.mockResolvedValue({ id: "usr_1", fullName: "Jan", email: "jan@example.nl" });
     userUpdate.mockResolvedValue({});
     const res = await signIn()({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       account: { provider: "google" } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       profile: { email: "jan@example.nl", email_verified: true, name: "Jan" } as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       user: {} as any,
     } as any);
     expect(res).toBe(true);
