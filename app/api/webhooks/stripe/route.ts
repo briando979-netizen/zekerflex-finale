@@ -15,6 +15,7 @@ import { payOnClientPayment } from "@/lib/payouts/execute";
 import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
 import { recordChargeRefund, recordDisputeClosed, recordDisputeOpened, settleClawbacks } from "@/lib/billing/clawback";
 import { recordAudit } from "@/lib/audit";
+import { bonToken } from "@/lib/shop/bon-token";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
@@ -151,7 +152,7 @@ async function notifyShopOrderPaid(order: {
   const lines = (order.itemsJson as ShopOrderLine[] | null) ?? [];
   const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
   const absImg = (u: string | null | undefined) => (u ? (u.startsWith("http") ? u : `${baseUrl}${u}`) : null);
-  const pdfUrl = `${baseUrl}/api/shop/orders/${order.id}/pdf`;
+  const pdfUrl = `${baseUrl}/api/shop/orders/${order.id}/pdf?t=${bonToken(order.id)}`;
 
   const lineRows = lines.map((l) => `${l.qty}x ${l.name} — ${money(l.priceCents * l.qty)}`).join("\n");
   const zak = zakelijkeRegels(order);

@@ -41,7 +41,7 @@ function trackingUrl(carrier: string | null, trackingNumber: string | null): str
   return null;
 }
 
-export function OrderTracking({ orderId }: { orderId: string }) {
+export function OrderTracking({ orderId, bonUrl = null }: { orderId: string; bonUrl?: string | null }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const { clear } = useShopCart();
@@ -161,9 +161,9 @@ export function OrderTracking({ orderId }: { orderId: string }) {
         </div>
       )}
 
-      {order.status === "RECEIVED" && (
+      {order.status === "RECEIVED" && bonUrl && (
         <a
-          href={`/api/shop/orders/${order.id}/pdf`}
+          href={bonUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-6 inline-block text-sm font-semibold text-brand-600 underline"

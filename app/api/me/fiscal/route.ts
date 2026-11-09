@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { validateVat } from "@/lib/integrations/kvkbase";
 import { isValidIban } from "@/lib/billing/sepa";
 import { flagIbanChanged } from "@/lib/compliance/documents";
+import { bevestigIbanWijziging } from "@/lib/fiscal/iban-bevestiging";
 import {
   getFiscal,
   setFiscal,
@@ -43,6 +44,8 @@ const schema = z.object({
   loonheffingskorting: z.boolean().optional(),
   invoiceMode: z.enum(["reverse-billing", "self-invoice", "payroll"]).optional(),
   iban: z.string().trim().min(15).max(34).optional(),
+  /** Bevestigingscode bij een gewijzigd IBAN: uit de mail, of uit de verificatie-app bij 2FA. */
+  ibanCode: z.string().trim().max(32).optional(),
 });
 
 export async function PUT(request: Request): Promise<NextResponse> {
@@ -108,6 +111,20 @@ export async function PUT(request: Request): Promise<NextResponse> {
         patch.bsnLast4 = last4;
       } else if (!before.bsnHash) {
         throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.");
+      }
+    }
+
+    // Een gewijzigd rekeningnummer vraagt een tweede bewijs (mailcode of 2FA):
+    // een gekaapte sessie mag uitbetalingen niet kunnen omleiden. Een eerste
+    // IBAN (onboarding) en ongewijzigd opslaan blijven vrij. Zonder bevestiging
+    // wordt er niets opgeslagen: 423 met een eigen code (nooit 403: CrowdSec).
+    if (patch.iban && before.iban && before.iban !== patch.iban) {
+      const bevestiging = await bevestigIbanWijziging(principal.userId, patch.iban, input.ibanCode);
+      if (!bevestiging.ok) {
+        return NextResponse.json(
+          { error: { code: bevestiging.code, message: bevestiging.message } },
+          { status: bevestiging.status },
+        );
       }
     }
 
