@@ -4,6 +4,7 @@ import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBal
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
 import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
+import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
@@ -79,7 +80,7 @@ export default async function KlussenPage(
       )}
       {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
       {overview.profileComplete && werkrecht.ok && (
-      <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
+        <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
