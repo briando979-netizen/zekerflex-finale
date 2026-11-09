@@ -19,6 +19,8 @@ import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
 import { loadWorkerPrefs, prefsAllowShift, prefsAllowTravel, type WorkerPrefs } from "@/lib/matching/worker-prefs";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
+import { isTestklus } from "@/lib/shifts/testklus";
+import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -225,7 +227,7 @@ export async function runMatchingForShift(
     const shift = await prisma.shift.findUnique({
       where: { id: shiftId },
       include: {
-        branch: true,
+        branch: { include: { tenant: { select: { name: true } } } },
         assignments: { where: { cancelledAt: null }, select: { id: true } },
       },
     });
@@ -254,8 +256,14 @@ export async function runMatchingForShift(
     // pool's members — never the full platform-wide candidate pool — until
     // the employer explicitly publishes it (publishShiftAction flips
     // visibility back to PUBLIC and re-runs matching unrestricted).
-    const restrictToUserIds =
+    let restrictToUserIds =
       shift.visibility === "POOL_ONLY" ? await invitedPoolMemberUserIds(shift.id) : null;
+    // Een testklus nooit als voorstel (of automatisch ingepland) naar echte
+    // werkers, alleen naar interne accounts (lib/shifts/testklus-db.ts).
+    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) {
+      const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.userId));
+      restrictToUserIds = (restrictToUserIds ?? [...intern]).filter((id) => intern.has(id));
+    }
 
     const loaded = await loadCandidatePool({
       id: shift.id,

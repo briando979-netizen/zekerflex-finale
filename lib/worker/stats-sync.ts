@@ -6,6 +6,7 @@ import { levelFor } from "@/lib/rewards/levels";
 import { LATE_CANCEL_RELIABILITY_PENALTY, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { sendUserPush } from "@/lib/notifications/push";
+import { testklusIds } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
 // Dagelijks de profielcijfers van werkers uit echte data bijwerken. Drie
@@ -125,6 +126,10 @@ async function congratulate(userId: string, level: BadgeLevel): Promise<void> {
 export async function syncWorkerStats(now = new Date()): Promise<StatsSyncResult> {
   const since = new Date(now.getTime() - ACCEPTANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const missSince = new Date(now.getTime() - RELIABILITY_WINDOW_DAYS * 864e5);
+  // Een voorstel voor een testklus telt niet mee: daar zit geen werk achter
+  // (lib/shifts/testklus-db.ts). Een voorstel komt vóór het begin van de klus,
+  // dus testklussen die vanaf `since` beginnen dekken het hele venster.
+  const testklussen = await testklusIds(since);
   const [profiles, completedRows, offerRows, missRows] = await Promise.all([
     prisma.freelancerProfile.findMany({ select: { id: true, userId: true, badgeLevel: true, shiftsCompleted: true, acceptanceScore: true, reliabilityScore: true } }),
     prisma.timesheet.groupBy({
@@ -136,7 +141,12 @@ export async function syncWorkerStats(now = new Date()): Promise<StatsSyncResult
     // een automatische toewijzing is geen keuze van de werker.
     prisma.shiftMatch.groupBy({
       by: ["freelancerId", "status"],
-      where: { notifiedAt: { not: null }, status: { in: ["ACCEPTED", "DECLINED", "EXPIRED"] }, createdAt: { gte: since } },
+      where: {
+        notifiedAt: { not: null },
+        status: { in: ["ACCEPTED", "DECLINED", "EXPIRED"] },
+        createdAt: { gte: since },
+        ...(testklussen.length ? { shiftId: { notIn: testklussen } } : {}),
+      },
       _count: { _all: true },
     }),
     prisma.shiftAssignment.findMany({
