@@ -269,6 +269,8 @@ describe("einde: authorizePasskey", () => {
     const b = await begin();
     h.state.limietOp = "rl:passkey-inloggen:203.0.113.9";
     expect(await log(b.cookie, meldAan(toestel, { rpId: RP, origin: ORIGIN, challenge: b.opties.challenge }))).toEqual({ ok: false, code: "passkey_te_vaak" });
+    // ook dan is de challenge verbruikt
+    expect(h.state.redis.size).toBe(0);
   });
 
   it("kapotte invoer: geweigerd zonder te gooien (en de challenge is verbruikt)", async () => {

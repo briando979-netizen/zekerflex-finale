@@ -99,12 +99,13 @@ export async function authorizePasskey(raw: Partial<Record<string, unknown>>, re
   const bron = passkeyBron(env.APP_BASE_URL);
   if (!bron) return { ok: false, code: "passkey_mislukt" };
 
+  // eenmalig: de challenge is vanaf hier weg, wat er verder ook gebeurt (ook bij de limiet hieronder)
+  const opgehaald = await pakInlogUitdaging(cookieUit(request.headers, INLOG_COOKIE));
+
   const ip = clientIp(request);
   const gate = await fixedWindow(`rl:passkey-inloggen:${ip}`, EINDE_LIMIET.max, EINDE_LIMIET.seconden);
   if (!gate.ok) return { ok: false, code: "passkey_te_vaak" };
 
-  // eenmalig: de challenge is vanaf hier weg, wat er verder ook gebeurt
-  const opgehaald = await pakInlogUitdaging(cookieUit(request.headers, INLOG_COOKIE));
   if (opgehaald.status === "storing") {
     logger.warn("passkey: challenge niet te lezen, inlog geweigerd (fail-closed)");
     return { ok: false, code: "passkey_storing" };
