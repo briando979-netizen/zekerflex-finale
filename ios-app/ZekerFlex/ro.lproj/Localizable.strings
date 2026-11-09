@@ -1,0 +1,19 @@
+/* ZekerFlex voor iPhone — teksten (ro). Zelfde inhoud als chip.xml van de Android-app. */
+"chip_titel" = "Citire cip";
+"chip_uitleg" = "Ține cartea de identitate sau pașaportul lipit de partea de sus a spatelui iPhone-ului și nu te mișca.";
+"chip_lezen" = "Cip găsit. Nu te mișca…";
+"chip_controleren" = "Citit. Verificăm cipul…";
+"chip_klaar_echt" = "Gata: datele de pe cip sunt semnate de stat.";
+"chip_klaar_anders" = "Gata. Mai verifică și un angajat.";
+"chip_geen_nfc" = "Acest iPhone nu poate citi cipul. Sari peste acest pas.";
+"chip_fout_lezen" = "Cipul nu a putut fi citit. Ține documentul nemișcat lângă iPhone și încearcă din nou.";
+"chip_fout_sleutel" = "Cipul nu se deschide cu aceste date. Scanează din nou codul de pe document în ZekerFlex.";
+"chip_fout_code" = "Această legătură a expirat. Pornește din nou citirea cipului în ZekerFlex.";
+"chip_fout_net" = "Nu există conexiune cu ZekerFlex. Verifică internetul și încearcă din nou.";
+"chip_bevestig_vraag" = "Aceasta aparține contului ZekerFlex al lui %@. Ești tu?";
+"chip_bevestig_ja" = "Da, sunt eu";
+"chip_bevestig_nee" = "Nu, oprește";
+"ok" = "OK";
+"annuleren" = "Anulează";
+"offline" = "Nu există conexiune cu ZekerFlex. Verifică internetul.";
+"opnieuw" = "Încearcă din nou";

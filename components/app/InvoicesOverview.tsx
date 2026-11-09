@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { PayInvoiceButton } from "@/components/app/PayInvoiceButton";
 import { QrCode } from "@/components/billing/QrCode";
 import { Portal } from "@/components/chat/Portal";
+import { useInIosApp } from "@/components/app/useInIosApp";
 
 export type InvoiceRow = {
   id: string;
@@ -19,6 +20,8 @@ export type InvoiceRow = {
   status: "ISSUED" | "PAID" | string;
   /** signed public pay link (open invoices only) — encoded in the QR */
   payUrl?: string;
+  /** een digitaal product (domeinnaam): in de iPhone-app niet te betalen (App Store 3.1.1) */
+  digitaal?: boolean;
 };
 
 type Dict = {
@@ -59,6 +62,8 @@ type Dict = {
 const moneyExact = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: Dict }) {
+  // in de iPhone-app geen domeinfacturen betalen (null: nog onbekend, dan ook niet tonen)
+  const ios = useInIosApp();
   const outstanding = useMemo(() => invoices.filter((i) => i.status === "ISSUED"), [invoices]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [paying, setPaying] = useState(false);
@@ -138,7 +143,9 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
               <tr key={i.id}>
                 {selectable && (
                   <td className="px-5 py-3">
-                    <input type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} aria-label={i.number} />
+                    {!(i.digitaal && ios !== false) && (
+                      <input type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} aria-label={i.number} />
+                    )}
                   </td>
                 )}
                 <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{i.number}</td>
@@ -173,7 +180,7 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
                   </a>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  {i.status === "ISSUED" && (
+                  {i.status === "ISSUED" && !(i.digitaal && ios !== false) && (
                     <span className="inline-flex items-center gap-2">
                       {i.payUrl && (
                         <button

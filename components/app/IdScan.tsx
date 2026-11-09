@@ -390,6 +390,13 @@ export function IdScan({
   function openChipApp() {
     if (!chip?.code) return;
     setChip({ ...chip, status: "wacht" });
+    // de iPhone-app (ios-app/, ChipLezer.swift): via de brug van de WKWebView, ook nooit in een adres
+    const iphone = (window as unknown as { webkit?: { messageHandlers?: { zfChip?: { postMessage: (m: unknown) => void } } } }).webkit
+      ?.messageHandlers?.zfChip;
+    if (iphone) {
+      iphone.postMessage({ code: chip.code });
+      return;
+    }
     window.location.href = `intent://chip#Intent;scheme=zekerflex;package=com.zekerflex.app;S.code=${encodeURIComponent(chip.code)};end`;
   }
 

@@ -1,0 +1,6 @@
+/* Waarom de app iets mag (ro) */
+"NSCameraUsageDescription" = "Pentru fotografiile documentului de identitate și selfie, și pentru apeluri video.";
+"NSPhotoLibraryUsageDescription" = "Pentru a încărca o fotografie sau un document din biblioteca de fotografii.";
+"NSMicrophoneUsageDescription" = "Pentru apeluri și apeluri video în chat.";
+"NSLocationWhenInUseUsageDescription" = "Pentru a face check-in și check-out la locul de muncă.";
+"NFCReaderUsageDescription" = "Pentru a citi cipul cărții de identitate sau al pașaportului.";

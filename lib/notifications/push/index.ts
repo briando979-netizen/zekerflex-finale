@@ -6,11 +6,14 @@ import {
   pushServiceOf,
   sendWebPush,
 } from "@/lib/notifications/push/web-push";
+import { isApnsEnabled, sendApnsToUsers } from "@/lib/notifications/push/apns";
 
 // ---------------------------------------------------------------------------
 // Push fan-out.
 //
-// Web Push (self-hosted, no third party) is the only channel. FCM support
+// Web Push (self-hosted, no third party), plus APNs for the iPhone app
+// (lib/notifications/push/apns.ts: straight to Apple, also no third party;
+// Web Push does not work inside its WKWebView). FCM support
 // was removed: it pulled in firebase-admin, which drags a critical CVE via
 // its @google-cloud/* -> google-gax -> uuid dependency chain, for a channel
 // nothing here ever configured (env.FIREBASE_* was always unset). If a
@@ -30,11 +33,13 @@ const OFFER_TTL_SECONDS = 15 * 60;
 
 export interface PushChannels {
   webPush: boolean;
+  /** pushmeldingen naar de iPhone-app (APNs) */
+  apns: boolean;
 }
 
 /** Which push channels are configured platform-wide. */
 export function pushChannels(): PushChannels {
-  return { webPush: isWebPushEnabled() };
+  return { webPush: isWebPushEnabled(), apns: isApnsEnabled() };
 }
 
 interface StoredSubscription {
@@ -87,8 +92,22 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
       })
     : [];
 
-  const delivered =
+  let delivered =
     subs.length > 0 ? await fanOut(subs, JSON.stringify({ ...notification, data }), OFFER_TTL_SECONDS) : 0;
+
+  // de iPhone-app (APNs): de apparaatcodes staan per account, niet per profiel
+  if (isApnsEnabled()) {
+    const profiel = await prisma.freelancerProfile
+      .findUnique({ where: { id: offer.freelancerId }, select: { userId: true } })
+      .catch(() => null);
+    if (profiel) {
+      delivered += await sendApnsToUsers([profiel.userId], {
+        ...notification,
+        data: { ...data, url: "/dashboard/klussen", tag: offer.shiftId },
+        ttlSeconds: OFFER_TTL_SECONDS,
+      });
+    }
+  }
 
   if (delivered === 0) {
     logger.warn("shift offer not delivered on any channel", {
@@ -113,11 +132,18 @@ export interface UserPush {
 /** Pushes to every device of the given accounts. Returns how many devices accepted it. */
 export async function sendUserPush(userIds: string[], push: UserPush): Promise<number> {
   const ids = [...new Set(userIds.filter(Boolean))];
-  if (ids.length === 0 || !isWebPushEnabled()) return 0;
-  const subs = await prisma.webPushSubscription.findMany({
-    where: { userId: { in: ids }, disabledAt: null },
-    select: SEND_FIELDS,
-  });
-  if (subs.length === 0) return 0;
-  return fanOut(subs, JSON.stringify({ title: push.title, body: push.body, data: push.data }), push.ttlSeconds);
+  if (ids.length === 0) return 0;
+  let delivered = 0;
+  if (isWebPushEnabled()) {
+    const subs = await prisma.webPushSubscription.findMany({
+      where: { userId: { in: ids }, disabledAt: null },
+      select: SEND_FIELDS,
+    });
+    if (subs.length > 0) {
+      delivered += await fanOut(subs, JSON.stringify({ title: push.title, body: push.body, data: push.data }), push.ttlSeconds);
+    }
+  }
+  // de iPhone-app: zelfde melding via Apple (doet niets zonder APNS_*-sleutels)
+  if (isApnsEnabled()) delivered += await sendApnsToUsers(ids, push);
+  return delivered;
 }

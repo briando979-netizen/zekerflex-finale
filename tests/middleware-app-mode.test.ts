@@ -32,6 +32,25 @@ describe("middleware — app mode", () => {
     expect(web.cookies.get("zf_app_chip")).toBeUndefined();
   });
 
+  it("de iPhone-app (utm_source=ios): dezelfde app-modus plus de iPhone-cookie; Android en de website niet", async () => {
+    const ios = await middleware(req("/start?utm_source=ios&chip=1"));
+    expect(ios.cookies.get("zf_app")?.value).toBe("1");
+    expect(ios.cookies.get("zf_app_ios")?.value).toBe("1");
+    expect(ios.cookies.get("zf_app_chip")?.value).toBe("1");
+    const android = await middleware(req("/start?utm_source=twa"));
+    expect(android.cookies.get("zf_app_ios")).toBeUndefined();
+    const web = await middleware(req("/start"));
+    expect(web.cookies.get("zf_app_ios")).toBeUndefined();
+  });
+
+  it("?app=0 verlaat de app-modus, ook die van de iPhone", async () => {
+    const r = req("/dashboard?app=0", true);
+    r.cookies.set("zf_app_ios", "1");
+    const res = await middleware(r);
+    expect(res.cookies.get("zf_app")?.value).toBe("");
+    expect(res.cookies.get("zf_app_ios")?.value).toBe("");
+  });
+
   it("sends the homepage and marketing pages to /start inside the app", async () => {
     for (const p of ["/", "/voor-bedrijven", "/prijzen", "/klussen"]) {
       const res = await middleware(req(p, true));

@@ -16,6 +16,8 @@ import { prisma } from "@/lib/prisma";
 /** Sleutels (prefix + userId) die bij een verwijderverzoek direct weg mogen. */
 export const ERASABLE_KV_PREFIXES = [
   "agenda:",
+  // apparaatcodes van de iPhone-app (lib/notifications/push/apns.ts)
+  "apns:",
   "agenda-ref:",
   "agenda-mail-state:",
   "agenda-mail-scan:",

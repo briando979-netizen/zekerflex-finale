@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { NietInIphone } from "@/components/app/NietInIphone";
 import {
   ANSWER_AT,
   BUNDLES,
@@ -299,9 +300,11 @@ export function Telefonie({
                 </button>
               </div>
             )}
-            <button type="button" onClick={() => void submit()} disabled={busy} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50">
-              {busy ? "Bezig…" : "Aanvragen"}
-            </button>
+            <NietInIphone>
+              <button type="button" onClick={() => void submit()} disabled={busy} className="mt-4 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50">
+                {busy ? "Bezig…" : "Aanvragen"}
+              </button>
+            </NietInIphone>
             <p className="mt-2 text-[11px] text-neutralx-500">
               {free
                 ? q.onRequest

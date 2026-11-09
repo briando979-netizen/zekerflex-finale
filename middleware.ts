@@ -8,7 +8,7 @@ import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
 import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
-import { APP_CHIP_COOKIE, APP_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
+import { APP_CHIP_COOKIE, APP_COOKIE, APP_IOS_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
 import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink, VIEW_AS_COOKIE } from "@/lib/auth/inspect";
 
 export const config = {
@@ -155,6 +155,8 @@ const APP_ALLOWED = [
 function isAppLaunch(req: NextRequest): boolean {
   return (
     (req.nextUrl.pathname === "/start" && req.nextUrl.searchParams.get("utm_source") === "twa") ||
+    // de iPhone-app (ios-app/): zelfde app-modus, plus APP_IOS_COOKIE
+    (req.nextUrl.pathname === "/start" && req.nextUrl.searchParams.get("utm_source") === "ios") ||
     (req.headers.get("referer") ?? "").startsWith("android-app://com.zekerflex")
   );
 }
@@ -357,8 +359,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (pathname.startsWith("/api/")) return res;
   if (req.nextUrl.searchParams.get("app") === "0") {
     res.cookies.delete(APP_COOKIE);
+    res.cookies.delete(APP_IOS_COOKIE);
   } else if (isAppLaunch(req) && !req.cookies.get(APP_COOKIE)) {
     res.cookies.set(APP_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: !IS_DEV });
+  }
+  // de iPhone-app: bij elke start opnieuw (lib/app-mode.ts APP_IOS_COOKIE)
+  if (isAppLaunch(req) && req.nextUrl.searchParams.get("utm_source") === "ios") {
+    res.cookies.set(APP_IOS_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: !IS_DEV });
   }
   // een app die de chip van een ID-kaart kan lezen (lib/app-mode.ts APP_CHIP_COOKIE): bij elke start opnieuw
   if (isAppLaunch(req) && req.nextUrl.searchParams.get("chip") === "1") {

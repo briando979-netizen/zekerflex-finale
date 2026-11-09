@@ -33,3 +33,6 @@ tsconfig.tsbuildinfo
 /kaart-data
 /backups
 /.zf-slot
+# De iPhone-app (Swift) wordt op een Mac gebouwd, nooit in de image van de site.
+/ios-app
+/codemagic.yaml

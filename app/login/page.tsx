@@ -7,6 +7,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { inIosApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inloggen" };
@@ -23,7 +24,8 @@ export default async function LoginPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  // niet in de iPhone-app: Apple eist dan ook "inloggen met Apple" (App Store 4.8, lib/app-mode.ts)
+  const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   // passkeys alleen op de vaste host uit APP_BASE_URL (niet op sslip-/voorbeeldadressen)
   const bron = passkeyBron(env.APP_BASE_URL);
   const passkeyEnabled = bron !== null && opPasskeyHost(await headers(), bron);

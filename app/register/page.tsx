@@ -6,6 +6,7 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { inIosApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
@@ -32,7 +33,8 @@ export default async function RegisterPage(
           ...(name ? { name } : {}),
         }
       : undefined;
-  const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  // niet in de iPhone-app: Apple eist dan ook "inloggen met Apple" (App Store 4.8, lib/app-mode.ts)
+  const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   const locale = await getLocale();
   const t = AUTH_DICTS[locale].register;
 

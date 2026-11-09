@@ -1,0 +1,42 @@
+# ZekerFlex voor iPhone. Het Xcode-project wordt hieruit gemaakt met XcodeGen
+# (`xcodegen generate`, op de Mac in de cloud: .github/workflows/ios.yml of
+# codemagic.yaml). Zie README.md in deze map.
+name: ZekerFlex
+options:
+  bundleIdPrefix: com.zekerflex
+  deploymentTarget:
+    iOS: "16.0"
+  developmentLanguage: nl
+  createIntermediateGroups: true
+packages:
+  NFCPassportReader:
+    # leest de chip van een paspoort of ID-kaart (ICAO 9303, BAC/PACE); MIT-licentie
+    url: https://github.com/AndyQ/NFCPassportReader
+    from: 2.0.0
+targets:
+  ZekerFlex:
+    type: application
+    platform: iOS
+    sources:
+      - path: ZekerFlex
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - package: NFCPassportReader
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zekerflex.app
+        PRODUCT_NAME: ZekerFlex
+        INFOPLIST_FILE: ZekerFlex/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ZekerFlex/ZekerFlex.entitlements
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # alleen iPhone: op een iPad draait hij als iPhone-app (geen aparte iPad-schermen nodig)
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_BITCODE: "NO"
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "NO"
