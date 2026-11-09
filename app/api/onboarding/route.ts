@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
 import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
@@ -61,6 +62,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "FREELANCER");
+    // niet eindeloos documenten kunnen proberen (review N4)
+    await enforceRateLimit({
+      name: "onboarding-insturen",
+      identifier: principal.userId,
+      limit: 8,
+      windowSeconds: 3600,
+      message: "Je hebt je verificatie vaak ingestuurd. Probeer het over een uur opnieuw, of vraag hulp via support@zekerflex.com.",
+    });
 
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verstuur het formulier als multipart/form-data");

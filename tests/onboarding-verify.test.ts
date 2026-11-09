@@ -334,7 +334,11 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
       ivFindFirst.mockResolvedValue(null);
       expect(result.outcome).toBe("in_review");
-      expect(result.checks.find((c) => c.label.startsWith("Chipgegevens niet eerder"))?.ok).toBe(false);
+      // review N4: de werker ziet niet dat dit zegel elders bekend is; de beoordelaar wel
+      expect(result.checks.find((c) => c.label.startsWith("Chipgegevens niet eerder"))).toBeUndefined();
+      expect(JSON.stringify(result)).not.toContain("ander account");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { checks: { label: string; ok: boolean }[] } } };
+      expect(ivArg.data.rawPayload.checks.find((c) => c.label.startsWith("Chipgegevens niet eerder"))?.ok).toBe(false);
     });
 
     it("hetzelfde document al bij een ander account: een mens kijkt", async () => {
@@ -344,7 +348,12 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
       ivFindFirst.mockResolvedValue(null);
       expect(result.outcome).toBe("in_review");
-      expect(result.checks.find((c) => c.label.startsWith("Document niet al gebruikt"))?.ok).toBe(false);
+      // review N4: de werker ziet niet dat dit document elders bekend is; de beoordelaar wel
+      expect(result.checks.find((c) => c.label.startsWith("Document niet al gebruikt"))).toBeUndefined();
+      expect(JSON.stringify(result)).not.toContain("ander account");
+      expect(result.summary).toContain("in behandeling");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { checks: { label: string; ok: boolean }[] } } };
+      expect(ivArg.data.rawPayload.checks.find((c) => c.label.startsWith("Document niet al gebruikt"))?.ok).toBe(false);
     });
 
     it("nationaliteit buiten de EU/EER: werkvergunning of verblijfsdocument, een mens kijkt", async () => {
