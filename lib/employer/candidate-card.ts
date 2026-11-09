@@ -5,6 +5,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { workerMissed } from "@/lib/profile/card";
+import { gebiedVan } from "@/lib/geo/thuisland";
 
 // ---------------------------------------------------------------------------
 // Profielkaart van een freelancer voor de opdrachtgever — te zien zodra de
@@ -137,7 +138,7 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
     name: user.fullName,
     avatarUrl: avatarUrlFor(freelancerUserId, Boolean(avatars[freelancerUserId])),
     badge: fp.badgeLevel,
-    area: fp.homePostalCode ? fp.homePostalCode.replace(/\s/g, "").slice(0, 4) : null,
+    area: gebiedVan(fp.homePostalCode),
     reliabilityPct: Math.round(fp.reliabilityScore * 100),
     attendancePct,
     shiftsCompleted: fp.shiftsCompleted,

@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { acquireLock } from "@/lib/redis";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
+import { zzpGeschikt } from "@/lib/matching/onderneming";
 import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
@@ -121,12 +122,14 @@ async function scoreCandidate(
  * being auto-matched at all. workerKind lives in the fiscal KV store, not a
  * DB column, so that lookup only runs for candidates who need it: not
  * zzp-eligible, or the shift is reserved for uitzendkrachten outright.
+ * A zzp'er from abroad without a KVK counts through a valid EU VAT number
+ * (VIES) instead: lib/matching/onderneming.ts.
  */
 export async function isMatchEligibleWorker(
-  profile: { userId: string; vatValid: boolean; kvkValid: boolean },
+  profile: { userId: string; vatValid: boolean; kvkValid: boolean; country: string },
   viaUitzendbureau: boolean,
 ): Promise<boolean> {
-  const zzpEligible = profile.vatValid && profile.kvkValid;
+  const zzpEligible = zzpGeschikt(profile);
   if (zzpEligible && !viaUitzendbureau) return true;
   const fiscal = await getFiscal(profile.userId);
   return invoiceModeFor(fiscal) === "payroll";
@@ -174,6 +177,7 @@ async function loadCandidatePool(shift: {
       badgeLevel: true,
       vatValid: true,
       kvkValid: true,
+      country: true,
       skills: shift.requiredSkillId
         ? {
             where: { skillId: shift.requiredSkillId },

@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
+import { ondernemingGeldig } from "@/lib/matching/onderneming";
 import { sendUserPush } from "@/lib/notifications/push";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushWhen } from "@/lib/i18n/worker-push";
@@ -63,13 +64,15 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
     select: {
       id: true,
       kvkValid: true,
+      vatValid: true,
+      country: true,
       isBlacklisted: true,
       matchingBlockedUntil: true,
       user: { select: { kycStatus: true, fullName: true } },
     },
   });
   if (!substitute) throw AppError.validation("Deze kandidaat heeft geen freelancer-profiel meer.");
-  if (substitute.user.kycStatus !== "VERIFIED" || !substitute.kvkValid) {
+  if (substitute.user.kycStatus !== "VERIFIED" || !ondernemingGeldig(substitute)) {
     throw AppError.precondition("Deze kandidaat is niet volledig geverifieerd.");
   }
   if (substitute.isBlacklisted) throw AppError.precondition("Deze kandidaat kan geen diensten aannemen.");

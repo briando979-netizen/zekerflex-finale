@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
+import { ThuisbasisVelden, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
 import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 
@@ -49,6 +50,9 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
   // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
   const [ibanCode, setIbanCode] = useState("");
   const [codeMelding, setCodeMelding] = useState<string | null>(null);
+  // adres in het buitenland niet gevonden: het formulier blijft staan, met de melding erin
+  const [adresFout, setAdresFout] = useState<string | null>(null);
+  const thuisbasisFout = useThuisbasisFout();
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
@@ -103,6 +107,8 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           attemptId,
           kvkNumber: form.get("kvkNumber") || undefined,
           postalCode: form.get("postalCode"),
+          country: form.get("country") || undefined,
+          city: form.get("city") || undefined,
           payoutIban: form.get("payoutIban"),
           ...(ibanCodeWaarde ? { ibanCode: ibanCodeWaarde } : {}),
         }),
@@ -114,6 +120,9 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
         setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
         return;
       }
+      const adres = res.ok ? null : thuisbasisFout(data);
+      setAdresFout(adres);
+      if (adres) return; // de wallet-uitslag is nog niet verbruikt (de route controleert het adres eerst)
       if (!res.ok) {
         setStage({ kind: "error", message: data?.error?.message ?? "Opslaan is mislukt." });
         return;
@@ -208,10 +217,7 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
             <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
           </label>
         )}
-        <label className="block">
-          <span className="field-label">Postcode</span>
-          <input name="postalCode" required placeholder="1012 AB" autoComplete="postal-code" className="field-input" />
-        </label>
+        <ThuisbasisVelden postcodeLabel="Postcode" />
         <label className="block">
           <span className="field-label">IBAN voor uitbetalingen</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />
@@ -230,6 +236,7 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
             busy={saving}
           />
         )}
+        {adresFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{adresFout}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full">
           Verificatie afronden
         </button>

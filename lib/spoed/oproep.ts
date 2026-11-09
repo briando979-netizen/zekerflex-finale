@@ -122,7 +122,7 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
       homeLongitude: { gte: blng - 0.8, lte: blng + 0.8 },
       ...(shift.requiredSkillId ? { skills: { some: { skillId: shift.requiredSkillId } } } : {}),
     },
-    select: { id: true, userId: true, vatValid: true, kvkValid: true, homeLatitude: true, homeLongitude: true, user: { select: { fullName: true, phone: true } } },
+    select: { id: true, userId: true, vatValid: true, kvkValid: true, country: true, homeLatitude: true, homeLongitude: true, user: { select: { fullName: true, phone: true } } },
     take: 800,
   });
   const dichtbij = kandidaten

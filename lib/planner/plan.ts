@@ -129,6 +129,7 @@ async function laadKrachten(tenantId: string, van: Date, tot: Date): Promise<Pla
         reliabilityScore: true,
         vatValid: true,
         kvkValid: true,
+        country: true,
         user: { select: { fullName: true } },
         skills: { select: { skillId: true } },
         assignments: {

@@ -9,6 +9,8 @@ import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
 import { startStripeIdentity, stripeIdentityAvailable } from "@/lib/kyc/stripe-identity";
 import { netwerkVan, overdrachtGegevens, overdrachtMerk, pakOverdracht } from "@/lib/kyc/overdracht";
 import { clientIp } from "@/lib/http/request";
+import { controleerThuisbasis, thuisbasisVelden } from "@/lib/onboarding/thuisbasis-schema";
+import { geocodeThuisbasis } from "@/lib/geo/thuisbasis";
 
 export const runtime = "nodejs";
 
@@ -21,18 +23,18 @@ export const maxDuration = 30;
 const baseSchema = z.object({
   kvkNumber: z.string().trim().max(20).optional(),
   vatNumber: z.string().trim().max(20).optional(),
-  postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
+  ...thuisbasisVelden,
   houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
   /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
   ibanCode: z.string().trim().max(32).optional(),
-});
+}).superRefine(controleerThuisbasis);
 
 const fieldsSchema = z.object({
   // absent for uitzendkrachten — they don't have a KVK (and not when a btw-nummer is used)
   kvkNumber: z.string().trim().max(20).optional(),
   vatNumber: z.string().trim().max(20).optional(),
-  postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
+  ...thuisbasisVelden,
   houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
   ibanCode: z.string().trim().max(32).optional(),
@@ -40,7 +42,7 @@ const fieldsSchema = z.object({
   documentNumber: z.string().trim().min(4).max(20),
   documentExpiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ongeldige datum"),
   nameOnDocument: z.string().trim().min(2).max(120),
-});
+}).superRefine(controleerThuisbasis);
 
 const MAX_BYTES = 12_000_000;
 
@@ -91,6 +93,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         kvkNumber: str("kvkNumber"),
         vatNumber: str("vatNumber"),
         postalCode: form.get("postalCode"),
+        country: str("country"),
+        city: str("city"),
         houseNumber: str("houseNumber"),
         payoutIban: form.get("payoutIban"),
         ibanCode: str("ibanCode"),
@@ -101,6 +105,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         kvkNumber: base.data.kvkNumber ?? "",
         vatNumber: base.data.vatNumber,
         postalCode: base.data.postalCode,
+        country: base.data.country,
+        city: base.data.city,
         houseNumber: base.data.houseNumber,
         payoutIban: base.data.payoutIban,
         ibanCode: base.data.ibanCode,
@@ -124,6 +130,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       kvkNumber: str("kvkNumber"),
       vatNumber: str("vatNumber"),
       postalCode: form.get("postalCode"),
+      country: str("country"),
+      city: str("city"),
       houseNumber: str("houseNumber"),
       payoutIban: form.get("payoutIban"),
       ibanCode: str("ibanCode"),
@@ -137,6 +145,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         parsed.error.issues[0]?.message ?? "Controleer de ingevulde gegevens",
         parsed.error.flatten(),
       );
+    }
+    // Een buitenlands adres dat OSM niet kent: nu al stoppen, vóór de foto's van de
+    // telefoon worden opgehaald (en gewist). De uitslag blijft een uur bewaard, dus
+    // het insturen hieronder vraagt OSM niet nog eens.
+    if (parsed.data.country && parsed.data.country !== "NL") {
+      await geocodeThuisbasis({ land: parsed.data.country, postcode: parsed.data.postalCode, plaats: parsed.data.city });
     }
 
     // Three separate captures in one submission — front, back, selfie — so
@@ -164,6 +178,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       kvkNumber: parsed.data.kvkNumber ?? "",
       vatNumber: parsed.data.vatNumber,
       postalCode: parsed.data.postalCode,
+      country: parsed.data.country,
+      city: parsed.data.city,
       houseNumber: parsed.data.houseNumber,
       payoutIban: parsed.data.payoutIban,
       ibanCode: parsed.data.ibanCode,

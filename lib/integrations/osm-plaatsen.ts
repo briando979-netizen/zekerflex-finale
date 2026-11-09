@@ -31,7 +31,8 @@ const NOMINATIM_OPVRAGEN = "https://nominatim.openstreetmap.org/lookup";
 const OVERPASS = "https://overpass-api.de/api/interpreter";
 
 /** Zo stellen we ons voor bij OSM: de naam van de applicatie en een adres waar uitleg staat. */
-const UA = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot)";
+export const OSM_USER_AGENT = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot)";
+const UA = OSM_USER_AGENT;
 const TIMEOUT_MS = 12_000;
 const CACHE_MS = 60 * 60_000;
 const CACHE_MAX = 500;
