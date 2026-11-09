@@ -517,6 +517,50 @@ export function onboardingReminderEmail(
   };
 }
 
+/**
+ * Een klus die bij een werker past, voor wie het voorstel niet via een pushmelding
+ * aankwam (lib/notifications/klus-mail.ts). Valt onder "Nieuwe klussen die bij je
+ * passen" (klus-alerts): afmelden kan onderaan. Titel, vestiging en plaats komen
+ * van de opdrachtgever en gaan dus door escapeHtml.
+ */
+export function klusVoorstelEmail(input: {
+  fullName: string;
+  title: string;
+  branch: string;
+  city: string;
+  /** "maandag 10 november, 09:00–17:00" (Nederlandse tijd) */
+  when: string;
+  /** "€ 16,50" */
+  rate: string;
+  travelMinutes: number | null;
+  link: string;
+}): MailInput {
+  const first = input.fullName.split(" ")[0] || input.fullName;
+  const reis = input.travelMinutes && input.travelMinutes > 0 ? `, ongeveer ${input.travelMinutes} minuten reizen` : "";
+  const subject = `Er is een klus voor je: ${input.title} in ${input.city}`;
+  const e = escapeHtml;
+  return {
+    to: "",
+    subject,
+    kind: "klus-alert",
+    text: `Hoi ${first},
+
+Er is een klus die bij je past: ${input.title} bij ${input.branch} in ${input.city}, ${input.when}, ${input.rate} per uur${reis}.
+
+Bekijk hem en reageer: ${input.link}
+
+Wie het eerst reageert, maakt de meeste kans. Wil je dit voortaan op je telefoon zien? Zet in de app meldingen aan.`,
+    html: shell(
+      "Er is een klus voor je",
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${e(first)}, er is een klus die bij je past:</p>
+       <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#17211C">${e(input.title)}</p>
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${e(input.branch)}, ${e(input.city)}<br>${e(input.when)}<br>${e(input.rate)} per uur${e(reis)}</p>
+       <p style="margin:0">${button(input.link, "Bekijk de klus")}</p>
+       <p style="margin:20px 0 0;font-size:12px;color:#667469">Wie het eerst reageert, maakt de meeste kans. Wil je dit voortaan meteen op je telefoon zien? Zet in de app meldingen aan.</p>`,
+    ),
+  };
+}
+
 export function passwordResetEmail(fullName: string, link: string): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   return {

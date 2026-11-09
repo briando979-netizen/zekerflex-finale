@@ -9,6 +9,7 @@ import { redis, acquireLock } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { sendShiftOffer } from "@/lib/notifications/push";
+import { mailKlusVoorstel } from "@/lib/notifications/klus-mail";
 import { mayPingNow } from "@/lib/notifications/timing";
 import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
@@ -252,7 +253,7 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
         continue;
       }
 
-      await sendShiftOffer({
+      const bereikt = await sendShiftOffer({
         freelancerId: cand.freelancerId,
         shiftId,
         title: `Nieuwe shift: ${shift.title}`,
@@ -267,6 +268,13 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
           expiresAt: expiresAt.toISOString(),
         },
       });
+      // Geen pushmelding aangekomen: dan per mail (lib/notifications/klus-mail.ts). Los van deze
+      // ronde, zodat het versturen het slot op de klus niet vasthoudt.
+      if (!bereikt) {
+        void mailKlusVoorstel({ freelancerId: cand.freelancerId, shiftId, travelMinutes: cand.travelMinutes }).catch((err: unknown) =>
+          log.warn("klusvoorstel per mail mislukt", { freelancerId: cand.freelancerId, error: err instanceof Error ? err.message : String(err) }),
+        );
+      }
       dispatched += 1;
     }
 
