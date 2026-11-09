@@ -24,8 +24,9 @@ terug, en loopt via de tunnel — **geen Vercel nodig**.
 
 - Status: `systemctl status zekerflex`
 - Logs: `docker compose -f docker-compose.prod.yml logs -f app`
-- Later bijwerken: `git pull && sudo bash deploy/scripts/deploy.sh` (of zet de
-  GitHub auto-deploy aan, zie `.github/workflows/self-host-deploy.yml`).
+- Later bijwerken: alleen via Admin → ZekerFlex AI → Live zetten of
+  `deploy/scripts/vps-update.sh` (met slot, controle en migratiecheck). Er is
+  bewust geen automatische uitrol bij een push naar GitHub.
 
 Heb je nog geen `CLOUDFLARE_TUNNEL_TOKEN`? Laat 'm weg; de installatie draait dan
 gewoon en je vult 'm later in `.env.production` in om live te gaan.
