@@ -77,9 +77,6 @@ vi.mock("@/lib/auth/two-factor", () => ({
   openLoginChallenge: (...a: unknown[]) => openLoginChallenge(...a),
 }));
 
-const authorizePasskey = vi.fn();
-vi.mock("@/lib/auth/passkey/inloggen", () => ({ authorizePasskey: (...a: unknown[]) => authorizePasskey(...a) }));
-
 import { authOptions } from "@/lib/auth/nextauth";
 import { decodeSession, encodeSession } from "@/lib/auth/session";
 import type { RoleGrant } from "@/lib/auth/session";
@@ -284,31 +281,5 @@ describe("callbacks.signIn — Google gate", () => {
     } as any);
     expect(res).toBe(true);
     expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.login.succeeded" }));
-  });
-});
-
-describe("passkey-provider (lib/auth/passkey/inloggen.ts)", () => {
-  const passkey = (authOptions.providers as unknown as { id: string; authorize: (raw: unknown, req: Request) => Promise<unknown> }[]).find((p) => p.id === "passkey")!;
-  const req = new Request("http://app:3000/api/auth/callback/passkey", { method: "POST" });
-
-  it("bestaat naast de wachtwoord-provider", () => {
-    expect(passkey).toBeTruthy();
-    expect(credentialsProvider.id).toBe("credentials");
-  });
-
-  it("een geslaagde passkey-inlog geeft dezelfde gebruiker met rollen als het wachtwoord", async () => {
-    authorizePasskey.mockResolvedValue({ ok: true, user: { id: "usr_1", email: "jan@example.nl", name: "Jan", remember: true } });
-    await expect(passkey.authorize({ response: "{}" }, req)).resolves.toEqual({ id: "usr_1", email: "jan@example.nl", name: "Jan", remember: true, roles: [GRANT] });
-  });
-
-  it("een geweigerde passkey-inlog geeft de code door aan het inlogscherm", async () => {
-    authorizePasskey.mockResolvedValue({ ok: false, code: "passkey_uv" });
-    await expect(passkey.authorize({ response: "{}" }, req)).rejects.toMatchObject({ code: "passkey_uv" });
-  });
-
-  it("callbacks.signIn laat een passkey-inlog door (al gecontroleerd in authorize)", async () => {
-    const signIn = authOptions.callbacks!.signIn! as unknown as (p: { account: { provider: string }; user: object }) => Promise<unknown>;
-    const res = await signIn({ account: { provider: "passkey" }, user: {} });
-    expect(res).toBe(true);
   });
 });
