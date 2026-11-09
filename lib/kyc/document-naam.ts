@@ -33,6 +33,12 @@ export function documentNaamPast(accountNaam: string, doc: DocumentNaam): boolea
   const achter = woorden(doc.achternaam).filter((w) => !TUSSENVOEGSELS.has(w));
   const eersteVoornaam = woorden(doc.voornamen)[0];
   if (achter.length === 0 || !eersteVoornaam || account.length === 0) return false;
-  const achternaamPast = achter.every((w) => accountZonder.includes(w)) || accountZonder.join("").includes(achter.join(""));
+  // aaneengeschreven ("El Bouti" = "Elbouti") alleen als hele, opeenvolgende woorden: "Jong" is niet "Jan de Jonge"
+  const doelAaneen = woorden(doc.achternaam).join("");
+  let aaneen = false;
+  for (let i = 0; i < account.length && !aaneen; i++) {
+    for (let j = i + 1; j <= account.length && !aaneen; j++) aaneen = account.slice(i, j).join("") === doelAaneen;
+  }
+  const achternaamPast = achter.every((w) => accountZonder.includes(w)) || aaneen;
   return achternaamPast && account.includes(eersteVoornaam);
 }

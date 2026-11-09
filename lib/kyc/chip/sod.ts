@@ -193,6 +193,12 @@ export interface SodControle {
   /** het DS-certificaat en de CSCA die hem uitgaf zijn op dit moment geldig */
   geldigOk: boolean;
   land: string | null;
+  /**
+   * hash van het ondertekende LDS (eContent, vastgelegd via messageDigest): blijft
+   * gelijk als iemand de verpakking verandert (0x77, extra certificaat, lengtes,
+   * ECDSA s→n−s), zodat hergebruik bij een ander account te zien is (review N1)
+   */
+  ldsHash: string | null;
   /** het certificaat van de ondertekenaar, zodat een medewerker het kan nakijken (review M4) */
   ds: { uitgever: string; onderwerp: string; serie: string; sha256: string } | null;
   fouten: string[];
@@ -203,11 +209,12 @@ export interface SodControle {
  * gelezen, met tag en lengte) tegen het SOD, en het SOD tegen de CSCA's.
  */
 export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>, csca: X509Certificate[], nu: Date = new Date()): SodControle {
-  const uit: SodControle = { gelezen: false, hashesOk: false, handtekeningOk: false, ketenOk: null, geldigOk: false, land: null, ds: null, fouten: [] };
+  const uit: SodControle = { gelezen: false, hashesOk: false, handtekeningOk: false, ketenOk: null, geldigOk: false, land: null, ldsHash: null, ds: null, fouten: [] };
   let sod: Sod;
   try {
     sod = leesSod(sodBytes);
     uit.gelezen = true;
+    uit.ldsHash = createHash("sha256").update(sod.eContent).digest("hex").slice(0, 48);
   } catch (err) {
     uit.fouten.push(`Het zegel van de chip is niet te lezen (${(err as Error).message})`);
     return uit;

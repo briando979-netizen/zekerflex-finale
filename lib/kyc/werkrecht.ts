@@ -33,6 +33,18 @@ export function werkrechtVan(nationaliteit: string | null | undefined): Werkrech
   return VRIJ.has(c) ? "vrij" : "controle";
 }
 
+/**
+ * Werkrecht uit een MRZ (review N2): de nationaliteit valt onder geen enkel
+ * controlecijfer. "Vrij" daarom alleen als het uitgevende land én de nationaliteit
+ * allebei EU/EER/CH zijn; is één van beide onbekend, dan geen uitspraak (een mens).
+ */
+export function werkrechtUitMrz(m: { land: string; nationaliteit: string }): Werkrecht | null {
+  const nat = werkrechtVan(m.nationaliteit);
+  const land = werkrechtVan(m.land);
+  if (nat === null || land === null) return null;
+  return nat === "vrij" && land === "vrij" ? "vrij" : "controle";
+}
+
 export type Leeftijdsgroep = "volwassen" | "minderjarig" | "te-jong";
 
 /** Leeftijd in hele jaren op een dag (beide yyyy-mm-dd). */

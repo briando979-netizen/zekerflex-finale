@@ -205,6 +205,15 @@ describe("chip: passieve authenticatie", () => {
     expect(u.ds?.serie).toBe(DS.x509.serialNumber);
   });
 
+  it("review N1: de hash van het ondertekende LDS blijft gelijk als de verpakking verandert", () => {
+    const met = controleerChip({ dg1: DG1, dg2: DG2, sod: SOD }, [CSCA.x509], NU);
+    // hetzelfde zegel zonder de buitenste 0x77
+    const zonder = controleerChip({ dg1: DG1, dg2: DG2, sod: leesEen(SOD).waarde }, [CSCA.x509], NU);
+    expect(met.ldsHash).toMatch(/^[0-9a-f]{48}$/);
+    expect(zonder.ldsHash).toBe(met.ldsHash);
+    expect(zonder.echt).toBe(true);
+  });
+
   it("leest AKI en SKI uit de certificaten", () => {
     expect(sleutelIds(CSCA.x509).ski?.equals(sleutelId(cscaSleutel))).toBe(true);
     expect(sleutelIds(DS.x509).aki?.equals(sleutelId(cscaSleutel))).toBe(true);

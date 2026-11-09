@@ -22,6 +22,11 @@ describe("naam op het document tegen het account (review M3)", () => {
     expect(documentNaamPast("Hans de Boer", { achternaam: "DE BOER", voornamen: "JOHANNES" })).toBe(false);
   });
 
+  it("aaneengeschreven alleen als hele woorden: 'Jong' is niet 'Jan de Jonge'", () => {
+    expect(documentNaamPast("Jan de Jonge", { achternaam: "JONG", voornamen: "JAN" })).toBe(false);
+    expect(documentNaamPast("Jan de Jong", { achternaam: "DE JONG", voornamen: "JAN" })).toBe(true);
+  });
+
   it("leeg past nooit", () => {
     expect(documentNaamPast("", { achternaam: "JANSEN", voornamen: "JAN" })).toBe(false);
     expect(documentNaamPast("Jan Jansen", { achternaam: "", voornamen: "JAN" })).toBe(false);

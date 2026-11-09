@@ -14,7 +14,8 @@ import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
 import { documentNaamPast } from "@/lib/kyc/document-naam";
 import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
-import { LEEFTIJD_TEKST, WERKRECHT_TEKST, leeftijdsgroep, werkrechtVan } from "@/lib/kyc/werkrecht";
+import { LEEFTIJD_TEKST, WERKRECHT_TEKST, leeftijdsgroep, werkrechtUitMrz } from "@/lib/kyc/werkrecht";
+import { documentHash } from "@/lib/kyc/document-hash";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
@@ -587,7 +588,7 @@ export async function submitFreelancerOnboarding(
   // een nette handtekening van een ondertekenaar die zeker NIET van de overheid komt (M5): vervalst
   const chipVals = Boolean(chip && chip.handtekeningOk && chip.ketenOk === false);
   // H3: hetzelfde zegel al bij een ander account = hergebruikte chipgegevens
-  const zegelElders = chip
+  const zegelElders = chip?.sodHash
     ? await prisma.identityVerification
         .findFirst({ where: { userId: { not: user.id }, rawPayload: { path: ["chip", "sodHash"], equals: chip.sodHash } }, select: { id: true } })
         .catch(() => null)
@@ -617,29 +618,18 @@ export async function submitFreelancerOnboarding(
       detail: zegelElders ? "Dezelfde chipgegevens zijn al bij een ander account ingestuurd. Een medewerker kijkt mee." : "Niet eerder gezien",
     });
   }
-  // M1: is de foto-MRZ onleesbaar, dan telt de vervaldatum van een echte chip
-  if (!mrzGeldig && chipOk && chip?.vervaldatum) {
-    expiry = new Date(chip.vervaldatum);
-    expiryOk = chip.vervaldatum >= amsterdamDayKey(new Date());
-    expiryCheck.ok = expiryOk;
-    expiryCheck.detail = expiryOk
-      ? `Geldig tot ${datumNl(chip.vervaldatum)} (gelezen van de chip)`
-      : `Volgens de chip is het document verlopen op ${datumNl(chip.vervaldatum)}. Gebruik een geldig document.`;
-  }
 
   // --- automatisch: werkrecht, leeftijd, hetzelfde document elders ---------
-  // Uit de MRZ op de foto, anders van de chip. Alleen de categorie gaat mee in
+  // Uit de MRZ op de foto; van de chip alleen als die echt is (dan gaat het toch naar
+  // een mens, want de chip vervangt de foto-MRZ nooit). Alleen de categorie gaat mee in
   // de uitslag; de nationaliteit en de geboortedatum worden niet bewaard.
-  const werkrecht = mrzGeldig ? werkrechtVan(mrz.nationaliteit) : (chip?.werkrecht ?? null);
-  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : (chip?.leeftijd ?? null);
+  const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : chip?.echt ? chip.werkrecht : null;
+  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : chip?.echt ? chip.leeftijd : null;
   if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
 
-  // hetzelfde document (zelfde soort + nummer, als hash) bij een ander account: een mens kijkt
-  const docHash = createHash("sha256")
-    .update(`${input.documentType}:${input.documentNumber.trim().toUpperCase()}`)
-    .digest("hex")
-    .slice(0, 48);
+  // hetzelfde document (HMAC over het nummer, review N3) bij een ander account: een mens kijkt
+  const docHash = documentHash(input.documentNumber);
   const elders = await prisma.identityVerification
     .findFirst({
       where: { documentNumberHash: docHash, userId: { not: user.id }, status: { in: [KycStatus.VERIFIED, KycStatus.PENDING] } },
@@ -698,9 +688,9 @@ export async function submitFreelancerOnboarding(
     vision.face.looksLive;
   // en de code op het document zelf moet kloppen met wat er getypt is en met het
   // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
-  // (review H1) een echte chip vervangt de foto-MRZ alleen als die onleesbaar is, en mag er nooit mee botsen
+  // (review H1) een chip vervangt de foto-MRZ nooit: een onleesbare MRZ gaat naar een mens, ook met een chip
   const mrzOk =
-    input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk && !chipFotoVerschil) || (!mrzGeldig && chipOk);
+    input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk && !chipFotoVerschil);
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
@@ -708,8 +698,8 @@ export async function submitFreelancerOnboarding(
     numOk &&
     expiryOk &&
     mrzOk &&
-    // werkrecht, leeftijd en een dubbel document beslist altijd een mens
-    werkrecht !== "controle" &&
+    // werkrecht (ook onbekend, review N2), leeftijd en een dubbel document beslist altijd een mens
+    werkrecht === "vrij" &&
     leeftijd !== "minderjarig" &&
     leeftijd !== "te-jong" &&
     !elders &&
@@ -752,11 +742,12 @@ export async function submitFreelancerOnboarding(
           JSON.stringify({
             outcome,
             ai,
-            vision,
+            // zonder het documentnummer en de vervaldatum die het beeldmodel las
+            vision: vision.document ? { ...vision, document: { ...vision.document, documentNumber: null, expiryDate: null } } : vision,
             checks,
             // alleen de uitslag van de MRZ: geen nummer, naam, geboortedatum of BSN
             mrz: mrz
-              ? { geldig: mrz.geldig, volledig: mrz.volledig, soort: mrz.soort, land: mrz.land, verlopen: mrz.verlopen, vervaldatum: mrz.vervaldatum, nummerKlopt: mrzNummerOk, naamKlopt: mrzNaamOk }
+              ? { geldig: mrz.geldig, volledig: mrz.volledig, soort: mrz.soort, verlopen: mrz.verlopen, vervaldatum: mrz.vervaldatum, nummerKlopt: mrzNummerOk, naamKlopt: mrzNaamOk }
               : null,
             // de automatische controles: alleen de categorie
             werkrecht,
@@ -957,10 +948,7 @@ export async function submitFreelancerOnboardingViaWallet(
   const kycStatus: KycStatus =
     outcome === "verified" ? KycStatus.VERIFIED : outcome === "rejected" ? KycStatus.REJECTED : KycStatus.PENDING;
 
-  const docHash = createHash("sha256")
-    .update(`${documentType}:${(claims.documentNumber ?? "").trim().toUpperCase()}`)
-    .digest("hex")
-    .slice(0, 48);
+  const docHash = documentHash(claims.documentNumber ?? "");
 
   await prisma.$transaction(async (tx) => {
     await tx.identityVerification.create({

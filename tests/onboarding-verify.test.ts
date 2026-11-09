@@ -270,14 +270,14 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       expect(opgeslagen).not.toContain("1990-01-01");
     });
 
-    it("een echte chip met het juiste nummer en de juiste naam vervangt een onleesbare MRZ", async () => {
+    it("review H1-rest: een chip vervangt een onleesbare foto-MRZ nooit, ook een echte niet (een mens kijkt)", async () => {
       userFindUnique.mockResolvedValue(jan);
       runVisionReview.mockResolvedValueOnce(VISION_OK);
       leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 8, ms: 900 });
       chipLezing.mockResolvedValueOnce(CHIP_JAN);
       const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
       leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
-      expect(result.outcome).toBe("verified");
+      expect(result.outcome).toBe("in_review");
       expect(result.checks.find((c) => c.label.startsWith("Chip van het document"))?.ok).toBe(true);
       // na de verificatie zijn de chipgegevens weg, en bewaard is alleen de uitslag
       expect(wisChipGegevens).toHaveBeenCalledWith("usr_1");
@@ -377,6 +377,44 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: Record<string, unknown> } };
       expect(["minderjarig", "te-jong"]).toContain(ivArg.data.rawPayload.leeftijd);
       expect(JSON.stringify(ivArg.data.rawPayload)).not.toContain("2010-01-01");
+    });
+
+    it("review N2: werkrecht 'vrij' alleen als uitgevend land én nationaliteit EU/EER/CH zijn", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      // Nederlandse nationaliteit op een document van een land buiten de EU: een mens kijkt
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, land: "UKR" }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("in_review");
+    });
+
+    it("review N2: een rijbewijs (geen nationaliteit) gaat nooit automatisch door", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", documentNumber: "1234567890", files: files() });
+      expect(result.outcome).toBe("in_review");
+    });
+
+    it("review N3: dezelfde hash bij een andere documentsoort, en geen gewone SHA-256", async () => {
+      const { createHash } = await import("node:crypto");
+      userFindUnique.mockResolvedValue(jan);
+      await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "PASSPORT", files: files() });
+      const hashes = ivFindFirst.mock.calls
+        .map((c) => (c[0] as { where: { documentNumberHash?: string } }).where.documentNumberHash)
+        .filter((h): h is string => Boolean(h));
+      expect(hashes).toHaveLength(2);
+      expect(hashes[0]).toBe(hashes[1]);
+      expect(hashes[0]).not.toBe(createHash("sha256").update("ID_CARD:SPECI2014").digest("hex").slice(0, 48));
+    });
+
+    it("bewaart geen documentnummer van het beeldmodel en geen land (nationaliteit) in de uitslag", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce({ ...VISION_OK, document: { ...VISION_OK.document, documentNumber: "SPECI2014", expiryDate: "2030-01-01" } });
+      await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { vision: { document: Record<string, unknown> }; mrz: Record<string, unknown> } } };
+      expect(ivArg.data.rawPayload.vision.document.documentNumber).toBeNull();
+      expect(ivArg.data.rawPayload.mrz).not.toHaveProperty("land");
     });
 
     it("een rijbewijs heeft geen MRZ: daar wordt niets gelezen", async () => {

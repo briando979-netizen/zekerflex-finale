@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { landcode, leeftijdOp, leeftijdsgroep, werkrechtVan } from "@/lib/kyc/werkrecht";
+import { landcode, leeftijdOp, leeftijdsgroep, werkrechtUitMrz, werkrechtVan } from "@/lib/kyc/werkrecht";
 
 describe("recht om te werken (Wet arbeid vreemdelingen)", () => {
   it("EU, EER en Zwitserland: vrij", () => {
@@ -12,6 +12,16 @@ describe("recht om te werken (Wet arbeid vreemdelingen)", () => {
     expect(werkrechtVan("")).toBeNull();
     expect(werkrechtVan(null)).toBeNull();
     expect(landcode("D<<")).toBe("DEU");
+  });
+});
+
+describe("werkrecht uit een MRZ (review N2)", () => {
+  it("vrij alleen als land én nationaliteit EU/EER/CH zijn", () => {
+    expect(werkrechtUitMrz({ land: "NLD", nationaliteit: "NLD" })).toBe("vrij");
+    expect(werkrechtUitMrz({ land: "D<<", nationaliteit: "POL" })).toBe("vrij");
+    expect(werkrechtUitMrz({ land: "UKR", nationaliteit: "NLD" })).toBe("controle");
+    expect(werkrechtUitMrz({ land: "NLD", nationaliteit: "TUR" })).toBe("controle");
+    expect(werkrechtUitMrz({ land: "", nationaliteit: "NLD" })).toBeNull();
   });
 });
 

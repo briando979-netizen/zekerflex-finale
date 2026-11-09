@@ -19,7 +19,7 @@
 // Sleutels met het userId erin (AVG: ERASABLE_KV_PREFIXES in lib/privacy/user-kv.ts).
 // ---------------------------------------------------------------------------
 
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import type { X509Certificate } from "node:crypto";
 import { kvDelete, kvDeleteStale, kvGet, kvListKeys, kvSet } from "@/lib/storage/kv";
@@ -64,8 +64,8 @@ export interface ChipLezing {
   nummerKlopt: boolean;
   /** de naam zoals op de chip, als delen (de verificatie vergelijkt achternaam + eerste voornaam met het account) */
   naamOpChip: { achternaam: string; voornamen: string } | null;
-  /** hash van het zegel: hetzelfde zegel bij een ander account = hergebruikte chipgegevens (review H3) */
-  sodHash: string;
+  /** hash van het ondertekende LDS: hetzelfde bij een ander account = hergebruikte chipgegevens (review H3/N1); null als het zegel onleesbaar is */
+  sodHash: string | null;
   /** het certificaat van de ondertekenaar, voor de beoordelaar (review M4) */
   ds: { uitgever: string; onderwerp: string; serie: string; sha256: string } | null;
   documentnummer: string | null;
@@ -185,7 +185,7 @@ export async function rondChipAf(
     land: u.land,
     nummerKlopt: Boolean(u.mrz?.geldig && zelfdeNummer(u.mrz.documentnummer, s.sessie.nummer)),
     naamOpChip: u.mrz ? { achternaam: u.mrz.achternaam, voornamen: u.mrz.voornamen } : null,
-    sodHash: createHash("sha256").update(bestanden.sod).digest("hex").slice(0, 48),
+    sodHash: u.ldsHash,
     ds: u.ds,
     documentnummer: u.mrz?.geldig ? u.mrz.documentnummer : null,
     vervaldatum: u.mrz?.geldig ? u.mrz.vervaldatum : null,
