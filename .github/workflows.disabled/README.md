@@ -23,3 +23,16 @@ deployment die niet overeenkomt met hoe deze app daadwerkelijk draait
 (Vercel + Neon + Upstash) — die zouden sowieso los daarvan nooit slagen en
 verdienen een aparte beslissing (bijwerken naar de echte infra, of
 verwijderen) voordat ze weer aan gaan.
+
+## 9 nov 2026: `ci.yml` en `uptime.yml` opnieuw hierheen
+
+Ze stonden weer in `.github/workflows/` en faalden allemaal op dezelfde
+billing-lock. `uptime.yml` draaide elke 10 minuten (± 4.300 runs per maand):
+op een private repo is dat ruim boven de gratis minuten, en zo ontstaat een
+rekening. Beide zijn niet nodig, want het werk gebeurt al op onze eigen server:
+
+- vóór elke uitrol: tsc, eslint en de tests in de Bouwer (`deploy/bouwer/werker/controle.mjs`, poort in `zf-live.py`);
+- bereikbaarheid: de nachtelijke rondgang (`lib/ops/rondgang.ts`) en de hartslag per cron-taak (`lib/ops/heartbeat.ts`).
+
+Zet hier niets terug dat volgens een schema draait zonder eerst de kosten te
+rekenen. GitHub zelf (code bewaren) blijft gratis.
