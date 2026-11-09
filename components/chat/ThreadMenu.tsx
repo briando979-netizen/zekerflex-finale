@@ -96,7 +96,7 @@ function Item({ icon, label, danger, onClick }: { icon: string; label: string; d
 }
 
 export type MenuAction =
-  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" }
+  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" | "export" }
   | { action: "mute"; hours: number | null }
   | { action: "list-add" | "list-remove"; list: string }
   | { action: "disappear"; days: 0 | 1 | 7 | 90 };
@@ -176,6 +176,7 @@ export function ThreadMenuSheet({
               {flags.favorite ? <Item icon="☆" label="Verwijder uit favorieten" onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label="Voeg toe aan favorieten" onClick={() => done({ action: "favorite" })} />}
               <Item icon="☰" label="Voeg toe aan lijst" onClick={() => setSub("list")} />
               <Item icon="⏱" label="Verdwijnende berichten" onClick={() => setSub("disappear")} />
+              <Item icon="📤" label="Chat exporteren" onClick={() => done({ action: "export" })} />
               {flags.archived ? <Item icon="🗄" label="Uit archief halen" onClick={() => done({ action: "unarchive" })} /> : <Item icon="🗄" label="Archiveer chat" onClick={() => done({ action: "archive" })} />}
               <Item
                 icon="🧹"

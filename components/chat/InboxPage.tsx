@@ -373,6 +373,26 @@ export function InboxPage({
       setPinAsk({ mode: "set", then: () => void doAction(threadId, a) });
       return;
     }
+    if (a.action === "export") {
+      // Chat exporteren: het gesprek als tekstbestand (lib/messaging/export.ts)
+      const r = await fetch(`/api/inbox/${threadId}/export`, { cache: "no-store", headers: pinHeaders() }).catch(() => null);
+      if (!r?.ok) {
+        const d = await r?.json().catch(() => ({}));
+        say(d?.error?.message ?? "Exporteren lukte niet. Probeer het opnieuw.", true);
+        return;
+      }
+      const naam = /filename="([^"]+)"/.exec(r.headers.get("content-disposition") ?? "")?.[1] ?? "ZekerFlex-chat.txt";
+      const url = URL.createObjectURL(await r.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = naam;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      say("Chat geëxporteerd");
+      return;
+    }
     const r = await fetch(`/api/inbox/${threadId}/prefs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
