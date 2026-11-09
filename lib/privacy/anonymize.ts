@@ -5,6 +5,7 @@ import { recordUserErased } from "@/lib/metrics";
 import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
+import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -240,6 +241,15 @@ export async function anonymizeUser(
       }),
     );
   }
+
+  // Op locatie (kentekens, logregels, het kenteken van de werker): best effort, het wissen houdt niet op een fout
+  await wisPersoonUitLocatie(userId)
+    .then((r) => {
+      cleared.locatie = r.registraties + r.logregels + (r.voertuig ? 1 : 0);
+    })
+    .catch((err) =>
+      logger.warn("erasure: op-locatie wissen mislukt", { error: (err as Error).message }),
+    );
 
   await recordAudit({
     category: "SECURITY",
