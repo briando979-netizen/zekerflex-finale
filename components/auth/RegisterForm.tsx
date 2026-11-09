@@ -9,10 +9,9 @@ import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
+import { emailDomein, isGratisMail } from "@/lib/company/eigendom";
 
 const initial: RegisterState = { error: null };
-
-const WORKER_KINDS = ["zzp", "flexwerker", "uitzendkracht"] as const;
 
 const STRENGTH_COLOR = ["bg-crit", "bg-crit", "bg-warn", "bg-brand-500", "bg-ok"];
 
@@ -51,9 +50,8 @@ export function RegisterForm({
   const t = AUTH_DICTS[locale].register;
   const or = AUTH_DICTS[locale].shell.or;
   const [type, setType] = useState<"freelancer" | "bedrijf">(defaultType);
-  const [workerKind, setWorkerKind] = useState<"zzp" | "flexwerker" | "uitzendkracht">(
-    defaultWorkerKind ?? "flexwerker",
-  );
+  // De richting (ZZP'er, flexwerker, uitzendkracht) kies je na het aanmelden, in de start van de werker-app.
+  // Komt de bezoeker via een pagina die al een richting noemt, dan gaat die mee.
   const [state, formAction] = useFormState(registerAction, initial);
 
   // ---- company (KVK) --------------------------------------------------
@@ -224,6 +222,18 @@ export function RegisterForm({
     }
   }
 
+  // Een gratis adres (gmail, hotmail, …) zegt niets over een bedrijf: dan staat de bezoeker onder werknemer,
+  // tenzij hij zelf "personeel zoeken" koos.
+  const gratisMail = isGratisMail(emailDomein(email));
+  const [bedrijfGekozen, setBedrijfGekozen] = useState(false);
+  const [naarWerk, setNaarWerk] = useState(false);
+  useEffect(() => {
+    if (gratisMail && type === "bedrijf" && !bedrijfGekozen) {
+      setType("freelancer");
+      setNaarWerk(true);
+    }
+  }, [gratisMail, type, bedrijfGekozen]);
+
   const match = pw.length > 0 && pw === pw2;
   const canSubmit =
     (emailState === "free" || emailState === "unavailable") &&
@@ -240,7 +250,12 @@ export function RegisterForm({
             key={k}
             type="button"
             aria-pressed={type === k}
-            onClick={() => setType(k)}
+            onClick={() => {
+              setType(k);
+              // Wie zelf "personeel zoeken" kiest, wordt niet meer teruggezet.
+              if (k === "bedrijf") setBedrijfGekozen(true);
+              setNaarWerk(false);
+            }}
             className={`rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
               type === k ? "bg-brand-500 text-white" : "text-neutralx-600 hover:text-ink"
             }`}
@@ -251,6 +266,17 @@ export function RegisterForm({
       </div>
 
       {state.error && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+
+      {naarWerk && (
+        <p role="status" className="mb-4 rounded-lg bg-warn/10 px-3 py-2.5 text-sm text-neutralx-700">
+          Dit is geen zakelijk e-mailadres, dus we hebben je onder &ldquo;{t.seekWork}&rdquo; gezet. Wil je personeel zoeken? Kies dan &ldquo;{t.seekPeople}&rdquo; en gebruik bij voorkeur je zakelijke e-mailadres.
+        </p>
+      )}
+      {type === "bedrijf" && bedrijfGekozen && gratisMail && (
+        <p role="status" className="mb-4 rounded-lg bg-warn/10 px-3 py-2.5 text-sm text-neutralx-700">
+          Met een gratis e-mailadres controleert ZekerFlex je bedrijf met de hand. Met je zakelijke adres gaat dat sneller.
+        </p>
+      )}
 
       {googleEnabled && (
         <>
@@ -264,30 +290,8 @@ export function RegisterForm({
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="type" value={type} />
-        {type === "freelancer" && <input type="hidden" name="workerKind" value={workerKind} />}
+        {type === "freelancer" && defaultWorkerKind && <input type="hidden" name="workerKind" value={defaultWorkerKind} />}
         {type === "bedrijf" && <input type="hidden" name="kvkNumber" value={kvk} />}
-
-        {type === "freelancer" && (
-          <div>
-            <span className="field-label" id="werkvorm-label">{t.workForm}</span>
-            <div className="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-labelledby="werkvorm-label">
-              {WORKER_KINDS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={workerKind === k}
-                  onClick={() => setWorkerKind(k)}
-                  className={`rounded-lg border px-2 py-2 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                    workerKind === k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
-                  }`}
-                >
-                  <span className="block text-xs font-semibold text-ink">{t.kinds[k][0]}</span>
-                  <span className="block text-[10px] leading-tight text-neutralx-500">{t.kinds[k][1]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {type === "bedrijf" && (
           <label className="block">
