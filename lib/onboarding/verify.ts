@@ -626,14 +626,16 @@ export async function submitFreelancerOnboarding(
   }
 
   // --- automatisch: werkrecht, leeftijd, hetzelfde document elders ---------
-  // Uit de MRZ op de foto; van de chip alleen als die echt is (dan gaat het toch naar
-  // een mens, want de chip vervangt de foto-MRZ nooit). Alleen de categorie gaat mee in
+  // Alleen uit de MRZ op de gefotografeerde kaart, nooit van de chip (review N5, extra slot):
+  // zonder foto-MRZ (rijbewijs, onleesbaar) hoort de chip bij een ánder document dan de foto.
+  // chipOk alleen is niet genoeg: wie een account op naam van een ander maakt en diens
+  // chipnummer bij "rijbewijs" typt, haalt chipOk; dat gaat nu alleen mis op het nummerformaat
+  // (een NL-documentnummer heeft letters), maar niet meer zodra er een CSCA bij komt van een land
+  // met nummers van alleen cijfers. Een eerlijke werker verliest niets: bij hem is het getypte
+  // rijbewijsnummer nooit zijn chipnummer. Onbekend = een mens. Alleen de categorie gaat mee in
   // de uitslag; de nationaliteit en de geboortedatum worden niet bewaard.
-  // Werkrecht en leeftijd van de chip alleen als die chip bij dít account hoort (chipOk: echt én
-  // nummer en naam kloppen), nooit van een willekeurige echte chip: anders geeft een eigen rijbewijs
-  // plus de chip van een ander diens werkrecht (review N5).
-  const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : chipOk && chip ? chip.werkrecht : null;
-  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : chipOk && chip ? chip.leeftijd : null;
+  const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : null;
+  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : null;
   if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
   if (input.viaTweedeToestel) {
