@@ -14,6 +14,8 @@ vi.mock("@/lib/prisma", () => ({
 const recordAudit = vi.fn();
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => recordAudit(...a) }));
 
+vi.mock("@/lib/kyc/bank-login", () => ({ getBankLogin: vi.fn().mockResolvedValue(null) }));
+
 import { updatePersonalInfo } from "@/lib/profile/personal";
 
 afterEach(() => vi.clearAllMocks());
