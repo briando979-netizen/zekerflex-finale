@@ -8,6 +8,7 @@ import { sendMail, mailShell, mailButton } from "@/lib/mail";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
+import { bonToken } from "@/lib/shop/bon-token";
 import { jsonError } from "@/lib/http/errors";
 
 export const runtime = "nodejs";
@@ -43,7 +44,7 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
   // Just shipped with a tracking number on file — let the customer know
   // where to follow it live, rather than leaving them to guess.
   if (before?.status !== "SHIPPED" && order.status === "SHIPPED" && order.trackingNumber) {
-    const trackUrl = `${env.APP_BASE_URL.replace(/\/+$/, "")}/shop/bestelling/${order.id}`;
+    const trackUrl = `${env.APP_BASE_URL.replace(/\/+$/, "")}/shop/bestelling/${order.id}?t=${bonToken(order.id)}`;
     await sendMail({
       to: order.email,
       from: env.MAIL_FROM,

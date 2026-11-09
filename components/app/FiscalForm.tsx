@@ -28,6 +28,8 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
   const [bsn, setBsn] = useState("");
   const [lhk, setLhk] = useState(initial.loonheffingskorting);
   const [iban, setIban] = useState(initial.iban ?? "");
+  const [ibanCode, setIbanCode] = useState("");
+  const [codeNodig, setCodeNodig] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<(FiscalProfile & { resolvedInvoiceMode: string }) | null>(
     initial.workerKind ? { ...initial, resolvedInvoiceMode: "reverse-billing" } : null,
@@ -40,6 +42,7 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
       if (vatNumber.trim()) body.vatNumber = vatNumber.trim();
       if (kvkNumber.trim()) body.kvkNumber = kvkNumber.trim();
       if (kind === "uitzendkracht" && bsn.trim()) body.bsn = bsn.trim();
+      if (ibanCode.trim()) body.ibanCode = ibanCode.trim();
 
       const res = await fetch("/api/me/fiscal", {
         method: "PUT",
@@ -48,8 +51,14 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
       });
       const data = await res.json();
       if (!res.ok) {
+        // Een gewijzigd IBAN vraagt een bevestigingscode (mail of verificatie-app): toon het codeveld.
+        if (res.status === 423 && typeof data?.error?.code === "string" && data.error.code.startsWith("IBAN_")) {
+          setCodeNodig(data.error.message ?? "Vul de bevestigingscode in.");
+        }
         toast.error(data?.error?.message ?? "Opslaan mislukt");
       } else {
+        setCodeNodig(null);
+        setIbanCode("");
         setResult(data);
         toast.success(
           "Fiscale gegevens opgeslagen",
@@ -208,6 +217,19 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
         <Field label="IBAN voor uitbetaling / verloning">
           <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00 BANK 0000 0000 00" className="field-input" />
         </Field>
+        {codeNodig && (
+          <Field label="Bevestigingscode voor je nieuwe IBAN">
+            <input
+              value={ibanCode}
+              onChange={(e) => setIbanCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="Code uit je e-mail of verificatie-app"
+              className="field-input"
+            />
+            <p role="alert" className="mt-1 text-xs text-neutralx-600">{codeNodig} Klik daarna nogmaals op Opslaan.</p>
+          </Field>
+        )}
       </section>
 
       {!switching && missing.length > 0 && (

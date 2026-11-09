@@ -14,6 +14,7 @@ import { legPartnerBestellingVast } from "@/lib/shop/partner";
 import { isBtwNummer, normaliseerBtw } from "@/lib/shop/zakelijk";
 import { legVerkopersVast } from "@/lib/shop/verkoper";
 import { verzendkostenVoor } from "@/lib/shop/verzending";
+import { bonToken } from "@/lib/shop/bon-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -182,8 +183,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         email: d.email,
         lines: lines.map((l) => ({ name: l.name, priceCents: l.priceCents, qty: l.qty })),
         shippingCents,
-        successUrl: `${baseUrl}/shop/bestelling/${order.id}?paid=1`,
-        cancelUrl: `${baseUrl}/shop/bestelling/${order.id}?cancelled=1`,
+        successUrl: `${baseUrl}/shop/bestelling/${order.id}?paid=1&t=${bonToken(order.id)}`,
+        cancelUrl: `${baseUrl}/shop/bestelling/${order.id}?cancelled=1&t=${bonToken(order.id)}`,
       });
     } catch (err) {
       logger.error("shop order checkout session failed", { orderId: order.id, error: (err as Error).message });

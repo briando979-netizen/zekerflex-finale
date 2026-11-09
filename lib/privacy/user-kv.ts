@@ -27,6 +27,7 @@ export const ERASABLE_KV_PREFIXES = [
   "chat-settings:",
   "companion:ctx:",
   "contacts:",
+  "iban-wijziging:",
   "mail-tools:",
   "mailbox-connection:",
   "mailbox-sent:",
