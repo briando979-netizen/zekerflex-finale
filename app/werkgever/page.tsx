@@ -63,7 +63,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
-    tenantId ? tenantVerification(tenantId) : Promise.resolve({ verified: true, via: null, inControle: false }),
+    tenantId ? tenantVerification(tenantId) : Promise.resolve({ verified: true, via: null, inControle: false, buitenlands: false }),
     pendingEmployerReviews(principal).catch(() => []),
     followerCount(scope.tenantIds).catch(() => 0),
     // het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen: vult de KVK-stap vooraf in
