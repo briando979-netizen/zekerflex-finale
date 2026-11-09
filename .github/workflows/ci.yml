@@ -29,7 +29,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - name: Schema valideren
+        run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://x:x@localhost:5432/x
+          DATABASE_URL_UNPOOLED: postgresql://x:x@localhost:5432/x
       - run: npx tsc --noEmit -p .
+      - name: Lint
+        run: npx eslint .
+        env:
+          DATABASE_URL_UNPOOLED: postgresql://x:x@localhost:5432/x
       - run: npx vitest run
 
   e2e:
