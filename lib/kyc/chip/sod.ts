@@ -214,7 +214,6 @@ export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>,
   try {
     sod = leesSod(sodBytes);
     uit.gelezen = true;
-    uit.ldsHash = createHash("sha256").update(sod.eContent).digest("hex").slice(0, 48);
   } catch (err) {
     uit.fouten.push(`Het zegel van de chip is niet te lezen (${(err as Error).message})`);
     return uit;
@@ -243,6 +242,8 @@ export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>,
   uit.ds = { uitgever: ds.issuer.replace(/\n/g, ", "), onderwerp: ds.subject.replace(/\n/g, ", "), serie: ds.serialNumber, sha256: ds.fingerprint256 };
   try {
     uit.handtekeningOk = handtekeningKlopt(sod, ds);
+    // (review N8) alleen een LDS met een geldige handtekening krijgt een hash voor de hergebruikcontrole
+    if (uit.handtekeningOk) uit.ldsHash = createHash("sha256").update(sod.eContent).digest("hex").slice(0, 48);
   } catch (err) {
     uit.fouten.push(`De handtekening is niet te controleren (${(err as Error).message})`);
   }
