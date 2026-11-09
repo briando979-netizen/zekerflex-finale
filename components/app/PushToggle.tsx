@@ -219,7 +219,8 @@ export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { varia
     return (
       <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm">
         <span aria-hidden className="text-lg">🔔</span>
-        <span className="min-w-0 flex-1 text-neutralx-700">
+        {/* basis-60: op een smal scherm gaat de knop naar een eigen regel, anders wordt de tekst een smalle kolom */}
+        <span className="min-w-0 flex-1 basis-60 text-neutralx-700">
           {state === "ios-install" ? texts.ios : texts.aanzetten}
           {error && <span role="alert" className="ml-1 text-crit">{error}</span>}
         </span>
