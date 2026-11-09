@@ -89,7 +89,7 @@ function vlagByte(v: Vlaggen, at: boolean): number {
 export function authData(opts: { rpId: string; vlaggen?: Vlaggen; teller: number; credential?: { id: Buffer; cose: Buffer } }): Buffer {
   const teller = Buffer.alloc(4);
   teller.writeUInt32BE(opts.teller >>> 0, 0);
-  const delen = [sha(opts.rpId), Buffer.from([vlagByte(opts.vlaggen ?? {}, Boolean(opts.credential))]), teller];
+  const delen: Buffer[] = [sha(opts.rpId), Buffer.from([vlagByte(opts.vlaggen ?? {}, Boolean(opts.credential))]), teller];
   if (opts.credential) {
     const len = Buffer.alloc(2);
     len.writeUInt16BE(opts.credential.id.length, 0);

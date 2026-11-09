@@ -40,7 +40,7 @@ describe("registreren (§7.1)", () => {
 
   it("een andere verklaring (packed) lezen we niet: we vertrouwen het toestel niet op attestatie", () => {
     const t = nieuwToestel();
-    const r = registreer(t, ceremonie, { fmt: "packed", attStmt: new Map([["alg", -7], ["sig", Buffer.from("geen echte handtekening")]]) });
+    const r = registreer(t, ceremonie, { fmt: "packed", attStmt: new Map<number | string, Cbor>([["alg", -7], ["sig", Buffer.from("geen echte handtekening")]]) });
     expect(verifieerRegistratie(r, verwacht())).toMatchObject({ ok: true, fmt: "packed" });
   });
 
@@ -54,7 +54,7 @@ describe("registreren (§7.1)", () => {
     ["geen aanraking (UP)", (t) => registreer(t, { ...ceremonie, vlaggen: { up: false } }), {}, "up"],
     ["UV verplicht maar niet gezet", (t) => registreer(t, { ...ceremonie, vlaggen: { uv: false } }), { uvVerplicht: true }, "uv"],
     ["BS zonder BE", (t) => registreer(t, { ...ceremonie, vlaggen: { bs: true } }), {}, "be_bs"],
-    ["fmt none met een verklaring", (t) => registreer(t, ceremonie, { attStmt: new Map([["x", 1]]) }), {}, "ongeldig"],
+    ["fmt none met een verklaring", (t) => registreer(t, ceremonie, { attStmt: new Map<number | string, Cbor>([["x", 1]]) }), {}, "ongeldig"],
   ];
   it.each(weigeringen)("weigert: %s", (_naam, maak, extra, reden) => {
     expect(verifieerRegistratie(maak(nieuwToestel()), verwacht(extra))).toEqual({ ok: false, reden });
