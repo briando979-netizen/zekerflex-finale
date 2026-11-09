@@ -8,6 +8,7 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
 import { isValidIban } from "@/lib/billing/sepa";
 import { nameSimilarity } from "@/lib/onboarding/verify";
+import { banknaamPast } from "@/lib/kyc/naam-match";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,44 @@ export function bankLoginEnabled(): boolean {
 }
 
 export async function getBankLogin(userId: string): Promise<BankLoginResult | null> {
-  return kvGet<BankLoginResult>(key(userId)).catch(() => null);
+  const rec = await kvGet<BankLoginResult>(key(userId)).catch(() => null);
+  return rec ? herbeoordeelNaam(userId, rec) : null;
+}
+
+/**
+ * Een eerdere afwijzing die alléén op de naam viel (het IBAN klopte), opnieuw
+ * bekijken met de huidige regel en de huidige profielnaam. Zo hoeft niemand
+ * opnieuw bij de bank in te loggen (en een cent te betalen) als de regel
+ * slimmer is geworden of als hij zijn profielnaam heeft aangevuld.
+ */
+async function herbeoordeelNaam(userId: string, rec: BankLoginResult): Promise<BankLoginResult> {
+  if (rec.status !== "mismatch" || rec.problems.length !== 1 || rec.problems[0] !== "name") return rec;
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
+    if (!user || !namesMatch(user.fullName, rec.verifiedName)) return rec;
+    const nieuw: BankLoginResult = { ...rec, status: "verified", problems: [] };
+    await kvSet(key(userId), nieuw);
+    await Promise.all([
+      prisma.freelancerProfile
+        .update({ where: { userId }, data: { payoutIbanPendingVerification: false } })
+        .catch(() => undefined),
+      setFiscal(userId, { ibanPendingVerification: false }).catch(() => undefined),
+    ]);
+    await recordAudit({
+      category: "KYC",
+      action: "bank.login_verified",
+      severity: "info",
+      actorUserId: userId,
+      actorLabel: "system",
+      summary: `Bankrekening ••${rec.ibanLast4} alsnog geverifieerd: de naam bij de bank past bij het profiel`,
+      targetType: "user",
+      targetId: userId,
+      metadata: { status: "verified", herbeoordeeld: true, bank: rec.bank },
+    }).catch(() => undefined);
+    return nieuw;
+  } catch {
+    return rec; // database even niet bereikbaar: de oude uitkomst blijft gelden
+  }
 }
 
 export async function clearBankLogin(userId: string): Promise<void> {
@@ -74,6 +112,8 @@ export async function bankLoginProvesIban(userId: string): Promise<boolean> {
 }
 
 export function namesMatch(accountName: string, bankName: string): boolean {
+  // achternaam + voorletter, in elke volgorde en schrijfwijze (lib/kyc/naam-match.ts)
+  if (banknaamPast(accountName, bankName)) return true;
   if (nameSimilarity(accountName, bankName) >= 0.5) return true;
   // Banks often send "J. DE VRIES" — accept a matching surname.
   const norm = (s: string) =>
