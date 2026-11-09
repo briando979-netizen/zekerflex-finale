@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { approveTimesheet } from "@/lib/timesheets/approve";
+import { BULK_MAX, bulkBericht, schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
+import { fraudForTimesheets } from "@/lib/fraud/timesheet";
+import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { prisma } from "@/lib/prisma";
 import { raiseManagerReviewDispute, proposeHoursCorrection } from "@/lib/disputes/raise";
 import { AppError } from "@/lib/errors";
 
@@ -48,6 +52,65 @@ export async function approveTimesheetAction(
     console.error("approveTimesheetAction failed", err);
     const reason = err instanceof Error ? err.message : "onbekende fout";
     return { ok: false, message: `Goedkeuren mislukt: ${reason}`.slice(0, 180) };
+  }
+}
+
+/**
+ * "Keur alles zonder signaal goed": de ids die de werkgever op het scherm zag.
+ * De server kijkt per id opnieuw (eigen vestiging, nog ingediend, geen signaal,
+ * geen extra kosten; lib/timesheets/bulk-goedkeuren.ts) en keurt dan elk
+ * briefje apart goed met dezelfde approveTimesheet() als de knop per rij,
+ * zonder GPS-uitzondering. Wat intussen veranderde, blijft staan.
+ */
+export async function approveCleanTimesheetsAction(timesheetIds: string[]): Promise<ApproveResult> {
+  try {
+    const principal = await requirePrincipal();
+    requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
+    const ids = [...new Set(Array.isArray(timesheetIds) ? timesheetIds : [])]
+      .filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 128)
+      .slice(0, BULK_MAX);
+    if (ids.length === 0) return { ok: false, message: "Er zijn geen uren gekozen." };
+
+    const scope = await resolveEmployerScope(principal);
+    const branchFilter = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
+    const rijen = await prisma.timesheet.findMany({
+      where: { id: { in: ids }, branch: branchFilter, status: "SUBMITTED" },
+      select: {
+        id: true,
+        status: true,
+        extraCostsCents: true,
+        scheduledStart: true,
+        scheduledEnd: true,
+        actualStart: true,
+        actualEnd: true,
+        breakMinutes: true,
+        billableMinutes: true,
+        freelancerId: true,
+        gpsEvents: { select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true } },
+      },
+    });
+    // in de volgorde van het scherm
+    const opVolgorde = ids.flatMap((id) => rijen.filter((r) => r.id === id));
+    const kies = schoneUren(opVolgorde, await fraudForTimesheets(opVolgorde));
+
+    let goedgekeurd = 0;
+    let mislukt = 0;
+    for (const timesheetId of kies) {
+      try {
+        await approveTimesheet({ timesheetId, principal });
+        goedgekeurd++;
+      } catch (err) {
+        mislukt++;
+        console.error("approveCleanTimesheetsAction: één briefje niet goedgekeurd", timesheetId, err instanceof Error ? err.message : err);
+      }
+    }
+    revalidatePath("/werkgever");
+    revalidatePath("/werkgever/uren");
+    return { ok: goedgekeurd > 0, message: bulkBericht(goedgekeurd, mislukt, ids.length - kies.length) };
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: err.message };
+    console.error("approveCleanTimesheetsAction failed", err);
+    return { ok: false, message: "Goedkeuren mislukt. Probeer het opnieuw." };
   }
 }
 

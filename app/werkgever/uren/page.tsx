@@ -4,6 +4,8 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel, EmptyState, StatusPill, KpiCard, money, moneyExact, dateTime } from "@/components/app/ui";
 import { ApproveButton } from "@/components/app/ApproveButton";
 import { AutoApproveToggle } from "@/components/werkgever/AutoApproveToggle";
+import { BulkApproveButton } from "@/components/werkgever/BulkApproveButton";
+import { schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
 import { ProposeCorrectionButton } from "@/components/app/ProposeCorrectionButton";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
 import { getDict } from "@/lib/i18n/server";
@@ -54,6 +56,9 @@ export default async function UrenGoedkeurenPage() {
   const disputed = timesheets.filter((t) => t.status === "DISPUTED").length;
   const totalHours = timesheets.reduce((sum, t) => sum + t.billableMinutes, 0) / 60;
   const oldest = timesheets[0]?.scheduledStart ?? null;
+  // zonder signaal, dispuut of extra kosten: in één keer goed te keuren (vanaf twee)
+  const schoon = schoneUren(timesheets, fraud);
+  const schoonTotal = timesheets.filter((t) => schoon.includes(t.id)).reduce((sum, t) => sum + lineTotal(t), 0);
 
   return (
     <>
@@ -88,6 +93,8 @@ export default async function UrenGoedkeurenPage() {
           </span>
         </div>
       )}
+
+      {schoon.length >= 2 && <BulkApproveButton ids={schoon} bedrag={moneyExact(schoonTotal)} />}
 
       <Panel title={fmt(h.panelSubmitted, { n: timesheets.length })}>
         {timesheets.length === 0 ? (
