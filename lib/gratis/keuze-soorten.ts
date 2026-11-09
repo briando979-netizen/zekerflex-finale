@@ -8,7 +8,7 @@ export type Bron = "eigen" | "betaald" | "auto";
 
 export const BRONNEN = ["eigen", "betaald", "auto"] as const;
 
-export const KEUZE_DIENSTEN = ["reistijd", "sales-bedrijven", "review-bedrijven", "stem"] as const;
+export const KEUZE_DIENSTEN = ["reistijd", "sales-bedrijven", "review-bedrijven", "stem", "kvk-zoeken"] as const;
 export type KeuzeDienst = (typeof KEUZE_DIENSTEN)[number];
 
 export const BRON_LABEL: Record<Bron, string> = {
@@ -55,6 +55,12 @@ export const KEUZE_UITLEG: KeuzeUitleg[] = [
     gevolg:
       "Eigen: Piper op onze eigen server, een Nederlandse stem die niets per keer kost. Draait sinds 6 november; 'automatisch' zou hier nog naar Google gaan.",
   },
+  {
+    id: "kvk-zoeken",
+    naam: "Bedrijf zoeken bij het aanmelden (KVK)",
+    gevolg:
+      "Eigen: alleen onze eigen bedrijvenindex (alles wat we ooit vonden) en, op verzoek, OpenStreetMap voor het adres. Nieuwe bedrijven komen er dan niet bij uit het register; de bezoeker vult die zelf in. Betaald of automatisch: KVKBase vult de index aan zolang er tegoed is en slaat elk antwoord op, zodat dezelfde vraag daarna niets kost.",
+  },
 ];
 
 /**
@@ -67,4 +73,5 @@ export const STANDAARD_KEUZE: Record<KeuzeDienst, Bron> = {
   "sales-bedrijven": "eigen",
   "review-bedrijven": "betaald",
   stem: "auto",
+  "kvk-zoeken": "auto",
 };

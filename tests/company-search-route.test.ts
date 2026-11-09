@@ -1,51 +1,99 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppError } from "@/lib/errors";
+import type { KvkBedrijf } from "@/lib/kvk/types";
 
-const kvk = vi.hoisted(() => ({ autocompleteCompanies: vi.fn(), searchCompanies: vi.fn() }));
-const geheugen = vi.hoisted(() => new Map<string, unknown>());
-vi.mock("@/lib/integrations/kvkbase", () => ({ ...kvk, isKvkBaseEnabled: () => true }));
-vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(async () => ({ ok: true })) }));
-vi.mock("@/lib/redis", () => ({
-  // zoals lib/redis cached(): alleen een geslaagde uitkomst wordt onthouden
-  cached: async (key: string, _ttl: number, produce: () => Promise<unknown>) => {
-    if (geheugen.has(key)) return geheugen.get(key);
-    const v = await produce();
-    geheugen.set(key, v);
-    return v;
-  },
+const bron = vi.hoisted(() => ({
+  indexZoek: vi.fn(),
+  indexNummer: vi.fn(),
+  onthoud: vi.fn(async () => 0),
+  toegestaan: vi.fn(async () => true),
+  registerZoek: vi.fn(),
+  registerNummer: vi.fn(),
+  osmZoek: vi.fn(async () => []),
+  adres: vi.fn(async () => null),
+}));
+const limiet = vi.hoisted(() => ({ enforceRateLimit: vi.fn(async (_spec: { name: string }) => ({ ok: true })) }));
+
+vi.mock("@/lib/rate-limit", () => limiet);
+vi.mock("@/lib/kvk/bronnen-echt", () => ({
+  echteBronnen: () => ({
+    index: { zoek: bron.indexZoek, opNummer: bron.indexNummer, onthoud: bron.onthoud },
+    register: { toegestaan: bron.toegestaan, zoek: bron.registerZoek, opNummer: bron.registerNummer },
+    osm: { zoek: bron.osmZoek, adresVoor: bron.adres },
+    zaai: async () => {},
+  }),
 }));
 
 const { GET } = await import("@/app/api/company/search/route");
-const zoek = (q: string) => GET(new Request(`http://localhost/api/company/search?q=${encodeURIComponent(q)}`));
+const vraag = (query: string) => GET(new Request(`http://localhost/api/company/search?${query}`));
+
+const acme: KvkBedrijf = {
+  kvk: "12345678",
+  naam: "Acme B.V.",
+  handelsnaam: null,
+  rechtsvorm: "Besloten Vennootschap",
+  straat: "Oudegracht",
+  huisnummer: "1",
+  postcode: "3511 AA",
+  plaats: "Utrecht",
+  btw: null,
+  actief: true,
+  bron: "kvkbase",
+  bijgewerkt: "2026-11-01T10:00:00.000Z",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
-  geheugen.clear();
+  bron.indexZoek.mockResolvedValue([]);
+  bron.indexNummer.mockResolvedValue(null);
+  bron.registerZoek.mockResolvedValue([]);
+  bron.registerNummer.mockResolvedValue(null);
+  bron.toegestaan.mockResolvedValue(true);
 });
 
-describe("GET /api/company/search (KVK zoeken bij aanmelden)", () => {
-  it("onthoudt dezelfde zoekvraag: de KVK-dienst wordt maar één keer gevraagd", async () => {
-    kvk.autocompleteCompanies.mockResolvedValue([{ kvkNumber: "12345678", name: "Bakkerij Jansen", city: "Utrecht" }]);
-    const eerst = await (await zoek("Bakkerij Jansen")).json();
-    const daarna = await (await zoek("bakkerij jansen")).json();
-    expect(eerst).toEqual({ configured: true, results: [{ kvkNumber: "12345678", name: "Bakkerij Jansen", city: "Utrecht" }] });
-    expect(daarna).toEqual(eerst);
-    expect(kvk.autocompleteCompanies).toHaveBeenCalledTimes(1);
+describe("GET /api/company/search (bedrijf zoeken bij aanmelden)", () => {
+  it("geeft treffers uit de eigen index in de bekende vorm", async () => {
+    bron.indexZoek.mockResolvedValue([acme]);
+    const res = await vraag("q=acme");
+    expect(res.status).toBe(200);
+    const d = await res.json();
+    expect(d.configured).toBe(true);
+    expect(d.results[0]).toMatchObject({ kvkNumber: "12345678", name: "Acme B.V.", city: "Utrecht", source: "register" });
   });
 
-  it("bij een limiet van de KVK-dienst: geen tweede vraag en geen fout, het formulier vult zelf in", async () => {
-    kvk.autocompleteCompanies.mockRejectedValue(new Error("KVKBase rate limit reached, retry shortly"));
-    const res = await zoek("Bakker");
+  it("bij een limiet van KVKBase: geen fout, een lege lijst met bezet", async () => {
+    bron.registerZoek.mockRejectedValue(new Error("KVKBase rate limit reached, retry shortly"));
+    const res = await vraag("q=bakker");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ configured: true, results: [], bezet: true });
-    expect(kvk.searchCompanies).not.toHaveBeenCalled();
-    // een mislukte vraag wordt niet onthouden
-    kvk.autocompleteCompanies.mockResolvedValue([]);
-    expect(await (await zoek("Bakker")).json()).toEqual({ configured: true, results: [] });
   });
 
-  it("valt bij een andere fout terug op het gewone zoeken", async () => {
-    kvk.autocompleteCompanies.mockRejectedValue(new Error("onbekend antwoord"));
-    kvk.searchCompanies.mockResolvedValue([{ kvkNumber: "87654321", legalName: "Jansen B.V.", city: "Gouda" }]);
-    expect(await (await zoek("Jansen")).json()).toEqual({ configured: true, results: [{ kvkNumber: "87654321", name: "Jansen B.V.", city: "Gouda" }] });
+  it("een te korte of ontbrekende vraag geeft een lege lijst zonder een bron te raken", async () => {
+    expect(await (await vraag("q=ab")).json()).toEqual({ configured: true, results: [] });
+    expect(await (await vraag("")).json()).toEqual({ configured: true, results: [] });
+    expect(bron.indexZoek).not.toHaveBeenCalled();
+  });
+
+  it("?kvk= geeft de gegevens van een bedrijf; een ongeldig nummer een lege lijst", async () => {
+    bron.indexNummer.mockResolvedValue(acme);
+    const d = await (await vraag("kvk=1234%205678")).json();
+    expect(d.results[0]).toMatchObject({ kvkNumber: "12345678", street: "Oudegracht", postalCode: "3511 AA" });
+    expect(await (await vraag("kvk=123")).json()).toEqual({ configured: true, results: [] });
+  });
+
+  it("OpenStreetMap kost een eigen, strakkere limiet", async () => {
+    await vraag("q=bakker&osm=1");
+    const namen = limiet.enforceRateLimit.mock.calls.map((c) => c[0].name);
+    expect(namen).toEqual(["company-search", "company-osm"]);
+    limiet.enforceRateLimit.mockClear();
+    await vraag("kvk=12345678");
+    expect(limiet.enforceRateLimit.mock.calls.map((c) => c[0].name)).toEqual(["company-search", "company-details"]);
+  });
+
+  it("past de limiet toe: 429 en geen bron geraakt", async () => {
+    limiet.enforceRateLimit.mockRejectedValueOnce(AppError.rateLimited("Te veel zoekopdrachten", 60, 30));
+    const res = await vraag("q=bakker");
+    expect(res.status).toBe(429);
+    expect(bron.indexZoek).not.toHaveBeenCalled();
   });
 });

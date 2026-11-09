@@ -6,6 +6,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { registerAction, type RegisterState } from "@/app/register/actions";
 import { googleLoginAction } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
+import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
@@ -57,44 +58,10 @@ export function RegisterForm({
   // ---- company (KVK) --------------------------------------------------
   const [company, setCompany] = useState(prefill?.company ?? "");
   const [kvk, setKvk] = useState(prefill?.kvk ?? "");
-  const [kvkResults, setKvkResults] = useState<{ kvkNumber: string; name: string; city?: string }[]>([]);
-  const [kvkConfigured, setKvkConfigured] = useState(true);
-  const [kvkOpen, setKvkOpen] = useState(false);
   // Een bedrijf buiten Nederland zoekt niet in het Handelsregister; het btw- of registratienummer volgt in de onboarding.
   const [land, setLand] = useState("NL");
   const nederlands = land === "NL";
-
-  useEffect(() => {
-    if (type !== "bedrijf" || !nederlands || kvk || company.trim().length < 2) {
-      setKvkResults([]);
-      setKvkOpen(false);
-      return;
-    }
-    setKvkResults([]);
-    setKvkOpen(false);
-    const controller = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/company/search?q=${encodeURIComponent(company.trim())}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const d = await res.json();
-        if (controller.signal.aborted) return;
-        // KVK-dienst even bezet: geen lijst, gewoon zelf invullen
-        if (d.bezet) return;
-        setKvkConfigured(d.configured !== false);
-        setKvkResults(Array.isArray(d.results) ? d.results : []);
-        setKvkOpen(true);
-      } catch {
-        /* ignore */
-      }
-    }, 350);
-    return () => {
-      clearTimeout(t);
-      controller.abort();
-    };
-  }, [company, type, kvk, nederlands]);
+  const [kvkViaZoeker, setKvkViaZoeker] = useState(false);
 
   // ---- email availability -------------------------------------------
   const [email, setEmail] = useState(prefill?.email ?? "");
@@ -318,48 +285,34 @@ export function RegisterForm({
         )}
 
         {type === "bedrijf" && (
-          <div className="relative">
-            <span className="field-label">Organisatie {kvkConfigured && nederlands && <span className="text-neutralx-400">(zoek in het Handelsregister)</span>}</span>
-            <input
+          <div>
+            {nederlands ? (
+            <KvkZoeker
+              label="Organisatie"
               name="companyName"
-              aria-label="Organisatie"
               required
               autoComplete="organization"
+              placeholder="Bijv. Horeca Groep NL"
               value={company}
-              onChange={(e) => {
-                setCompany(e.target.value);
-                setKvk("");
+              onChange={setCompany}
+              onKies={(t) => {
+                setCompany(t.name);
+                setKvk(t.kvkNumber ?? "");
+                setKvkViaZoeker(t.source === "register");
               }}
-              onFocus={() => kvkResults.length && setKvkOpen(true)}
-              className="field-input"
-              placeholder={kvkConfigured && nederlands ? "Bijv. Horeca Groep NL" : "Naam organisatie"}
+              onWis={() => {
+                setKvk("");
+                setKvkViaZoeker(false);
+              }}
+              hint="Zoek in het Handelsregister op naam, plaats of KVK-nummer, of vul zelf in."
             />
-            {kvk && (
-              <p className="mt-1 text-xs text-ok">✓ KVK {kvk} — geverifieerd in het Handelsregister</p>
+            ) : (
+              <label className="block">
+                <span className="field-label">Organisatie</span>
+                <input name="companyName" required autoComplete="organization" placeholder="Naam organisatie" value={company} onChange={(e) => setCompany(e.target.value)} className="field-input" />
+              </label>
             )}
-            {kvkOpen && kvkResults.length > 0 && !kvk && (
-              <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-hairstrong bg-white shadow-lg">
-                {kvkResults.map((r) => (
-                  <li key={r.kvkNumber}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCompany(r.name);
-                        setKvk(r.kvkNumber);
-                        setKvkOpen(false);
-                      }}
-                      className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-paper-soft"
-                    >
-                      <span>
-                        <span className="block font-medium text-ink">{r.name}</span>
-                        {r.city && <span className="block text-xs text-neutralx-500">{r.city}</span>}
-                      </span>
-                      <span className="mt-0.5 shrink-0 font-mono text-[11px] text-neutralx-400">{r.kvkNumber}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {kvk && !kvkViaZoeker && <p className="mt-1 text-xs text-ok">KVK {kvk}</p>}
           </div>
         )}
 

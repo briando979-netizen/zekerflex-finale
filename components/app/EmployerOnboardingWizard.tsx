@@ -9,6 +9,7 @@ import {
   saveOnboardingProfileAction,
   type EmployerOnboardingState,
 } from "@/app/werkgever/onboarding/actions";
+import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
 import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
@@ -194,6 +195,11 @@ export function EmployerOnboardingWizard({
         ) : (
           <form action={kvkFormAction} className="space-y-4">
             {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
+            <KvkZoeker
+              label="Zoek je bedrijf in het Handelsregister"
+              vulFormulier={{ kvk: "kvkNumber", address: "addressLine", houseNumber: "houseNumber", postalCode: "postalCode", name: "branchName" }}
+              alleenAlsLeeg={["name"]}
+            />
             <label className="block">
               <span className="field-label">{o.country}</span>
               <select name="land" value={land} onChange={(e) => setLand(e.target.value)} className="field-input">

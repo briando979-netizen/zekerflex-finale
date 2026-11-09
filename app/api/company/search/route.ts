@@ -1,71 +1,75 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
-import { cached } from "@/lib/redis";
-import { autocompleteCompanies, isKvkBaseEnabled, searchCompanies } from "@/lib/integrations/kvkbase";
+import { echteBronnen } from "@/lib/kvk/bronnen-echt";
+import { schoonKvk } from "@/lib/kvk/normaliseer";
+import { bedrijfDetails, zoekBedrijven } from "@/lib/kvk/zoek";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ q: z.string().trim().min(2).max(120) });
+const schema = z.object({ q: z.string().trim().max(120) });
 
-/** Dezelfde zoekvraag een halve dag onthouden: tijdens het typen raakt niet elke letter de KVK-dienst. */
-const ZOEK_CACHE_S = 12 * 3600;
-
-/** De KVK-dienst zit aan zijn limiet of zijn tegoed (lib/integrations/kvkbase.ts, 402/429). */
-function isLimiet(err: unknown): boolean {
-  return err instanceof Error && /rate limit|quota/i.test(err.message);
-}
-
-type Treffer = { kvkNumber: string; name: string; city?: string };
-
-async function zoek(q: string): Promise<Treffer[]> {
-  try {
-    const hits = await autocompleteCompanies(q);
-    return hits.slice(0, 8).map((h) => ({ kvkNumber: h.kvkNumber, name: h.name, ...(h.city ? { city: h.city } : {}) }));
-  } catch (err) {
-    // bij een limiet niet meteen nog een vraag aan dezelfde dienst: die loopt er ook tegenaan
-    if (isLimiet(err)) throw err;
-    const hits = await searchCompanies(q);
-    return hits.slice(0, 8).map((h) => ({ kvkNumber: h.kvkNumber, name: h.legalName, ...(h.city ? { city: h.city } : {}) }));
-  }
-}
-
-// GET /api/company/search?q=… — public Handelsregister autocomplete for the
-// sign-up form. Returns { configured:false } when no KVKBase key is set, so the
-// UI can fall back to a plain name field. Rate-limited: each call proxies to
-// the paid KVKBase API.
+// GET /api/company/search?q=…            — bedrijven zoeken op naam, plaats of KVK-nummer
+// GET /api/company/search?q=…&osm=1      — idem, en zoek ook in OpenStreetMap (alleen op verzoek)
+// GET /api/company/search?kvk=12345678   — alle bekende gegevens (adres, btw) van één bedrijf
+//
+// Openbaar, voor het aanmeldformulier. Zoekt eerst in onze eigen bedrijvenindex
+// (lib/kvk/), dan in KVKBase als de eigenaar dat toestaat, en alleen op
+// verzoek in OpenStreetMap. Valt een bron weg, dan komt er een lege lijst: het
+// formulier valt terug op zelf invullen. `configured` blijft true: de eigen
+// index werkt ook zonder KVKBase-sleutel.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
+    const params = new URL(request.url).searchParams;
     await enforceRateLimit({
       name: "company-search",
       identifier: clientIp(request),
-      limit: 20,
+      limit: 30,
       windowSeconds: 60,
       message: "Te veel zoekopdrachten — probeer het over een minuut opnieuw.",
     });
 
-    if (!isKvkBaseEnabled()) {
-      return NextResponse.json({ configured: false, results: [] });
-    }
-    const parsed = schema.safeParse({ q: new URL(request.url).searchParams.get("q") ?? "" });
-    if (!parsed.success) {
-      return NextResponse.json({ configured: true, results: [] });
+    const bronnen = echteBronnen();
+    const kvkParam = params.get("kvk");
+    if (kvkParam !== null) {
+      const kvk = schoonKvk(kvkParam);
+      if (!kvk) return NextResponse.json({ configured: true, results: [] });
+      // details kunnen een betaalde opvraging en een OSM-aanvraag kosten: strakker begrensd
+      await enforceRateLimit({
+        name: "company-details",
+        identifier: clientIp(request),
+        limit: 12,
+        windowSeconds: 60,
+        message: "Te veel opzoekingen — probeer het over een minuut opnieuw.",
+      });
+      const treffer = await bedrijfDetails(kvk, bronnen);
+      return NextResponse.json({ configured: true, results: treffer ? [treffer] : [] });
     }
 
-    const sleutel = `kvk-zoek:${createHash("sha256").update(parsed.data.q.toLowerCase()).digest("hex").slice(0, 32)}`;
-    try {
-      const results = await cached(sleutel, ZOEK_CACHE_S, () => zoek(parsed.data.q));
-      return NextResponse.json({ configured: true, results });
-    } catch (err) {
-      // even bezet: geen fout voor de bezoeker, het formulier valt terug op zelf invullen
-      if (isLimiet(err)) return NextResponse.json({ configured: true, results: [], bezet: true });
-      throw err;
+    const parsed = schema.safeParse({ q: params.get("q") ?? "" });
+    if (!parsed.success) return NextResponse.json({ configured: true, results: [] });
+
+    const metOsm = params.get("osm") === "1";
+    if (metOsm) {
+      // OpenStreetMap vraagt hooguit één aanvraag per seconde en staat geen zoeken-tijdens-typen toe
+      await enforceRateLimit({
+        name: "company-osm",
+        identifier: clientIp(request),
+        limit: 6,
+        windowSeconds: 60,
+        message: "Te veel zoekopdrachten — probeer het over een minuut opnieuw.",
+      });
     }
+    const uitkomst = await zoekBedrijven(parsed.data.q, bronnen, { osm: metOsm });
+    return NextResponse.json({
+      configured: true,
+      results: uitkomst.results,
+      ...(uitkomst.bezet && uitkomst.results.length === 0 ? { bezet: true } : {}),
+    });
   } catch (err) {
     const res = jsonError(err);
     if (res.status >= 500) logger.warn("public company search failed", { error: (err as Error).message });

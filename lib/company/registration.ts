@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { lookupCompany, validateVat } from "@/lib/integrations/kvkbase";
+import { onthoudProfiel } from "@/lib/kvk/index-opslag";
 import type { CompanyProfile } from "@/types/company";
 
 // ---------------------------------------------------------------------------
@@ -172,6 +173,7 @@ export async function registerFreelancerCompany(
   if (!fp) throw AppError.notFound("Werkersprofiel niet gevonden.");
 
   const profile = await lookupCompany(input.kvkNumber, { enrich: true });
+  void onthoudProfiel(profile); // elk antwoord van de betaalde bron blijft in de eigen index
   const validation = validateCompanyProfile(profile);
   if (!validation.ok && !input.allowInactive) {
     throw AppError.precondition(
@@ -224,6 +226,7 @@ export async function registerTenantCompany(
   if (!tenant) throw AppError.notFound("Organisatie niet gevonden.");
 
   const profile = await lookupCompany(input.kvkNumber, { enrich: true });
+  void onthoudProfiel(profile); // elk antwoord van de betaalde bron blijft in de eigen index
   const validation = validateCompanyProfile(profile);
   if (!validation.ok && !input.allowInactive) {
     throw AppError.precondition(
