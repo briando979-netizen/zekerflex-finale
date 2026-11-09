@@ -186,6 +186,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: false,
   },
   {
+    key: "passkeys",
+    label: "Passkeys (inloggen met vingerafdruk, gezicht of pincode): naam van het toestel en de publieke sleutel",
+    days: 0,
+    anchor: "account gesloten / verwijderverzoek / zelf verwijderd",
+    basis: "Alleen nodig zolang je ermee inlogt — art. 17 AVG",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "personal_settings",
     label: "Persoonlijke instellingen en notities (agenda, ritten, chat, contacten, AI-geheugen, tweestapsverificatie)",
     days: 0,

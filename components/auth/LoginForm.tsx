@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { loginAction, googleLoginAction, type LoginState } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
+import { PasskeyLogin } from "@/components/auth/PasskeyLogin";
 import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -46,17 +47,21 @@ export function LoginForm({
   locale = "nl",
   callbackUrl,
   googleEnabled,
+  passkeyEnabled = false,
   errorCode,
   justReset,
 }: {
   locale?: Locale;
   callbackUrl: string;
   googleEnabled: boolean;
+  /** passkeys gelden op deze host (lib/auth/passkey/omgeving.ts); de knop zelf verschijnt alleen als de browser het kan */
+  passkeyEnabled?: boolean;
   errorCode?: string;
   justReset?: boolean;
 }) {
   const [state, formAction] = useFormState(loginAction, initial);
   const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(true);
   const t = AUTH_DICTS[locale].login;
   const or = AUTH_DICTS[locale].shell.or;
   const banner = state.error ?? (errorCode ? (ERROR_COPY[errorCode] ?? t.failed) : null);
@@ -108,21 +113,28 @@ export function LoginForm({
       {banner && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{banner}</p>}
 
       {googleEnabled && (
-        <>
-          <form action={googleLoginAction}>
-            <input type="hidden" name="callbackUrl" value={callbackUrl} />
-            <GoogleButton label={t.google} />
-          </form>
-          <AuthDivider label={or} />
-        </>
+        <form action={googleLoginAction}>
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          <GoogleButton label={t.google} />
+        </form>
       )}
+      {passkeyEnabled && (
+        <PasskeyLogin
+          texts={t.passkey}
+          callbackUrl={callbackUrl}
+          remember={remember}
+          className={googleEnabled ? "mt-3" : ""}
+          {...(googleEnabled ? {} : { divider: or })}
+        />
+      )}
+      {googleEnabled && <AuthDivider label={or} />}
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
 
         <label className="block">
           <span className="field-label">{t.email}</span>
-          <input type="email" name="email" autoComplete="email" required className="field-input" />
+          <input type="email" name="email" autoComplete={passkeyEnabled ? "email webauthn" : "email"} required className="field-input" />
         </label>
 
         <label className="block">
@@ -152,7 +164,8 @@ export function LoginForm({
               type="checkbox"
               name="remember"
               value="1"
-              defaultChecked
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
               className="h-4 w-4 accent-brand-500"
             />
             {t.remember}

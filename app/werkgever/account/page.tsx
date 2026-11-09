@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "@/components/app/ui";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
 import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
+import { PasskeySettings } from "@/components/auth/PasskeySettings";
 import { BirthdayForm } from "@/components/app/BirthdayForm";
 import { getUserBirthday } from "@/lib/seasons/settings";
 
@@ -56,6 +57,12 @@ export default async function WerkgeverAccountPage() {
         <Panel title="Tweestapsverificatie">
           <div className="p-5">
             <TwoFactorSettings recommended />
+          </div>
+        </Panel>
+
+        <Panel title="Inloggen met passkey">
+          <div className="p-5">
+            <PasskeySettings />
           </div>
         </Panel>
 

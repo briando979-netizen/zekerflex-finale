@@ -99,6 +99,35 @@ export async function loginAction(
   }
 }
 
+/** Uitkomst van een passkey-inlog die niet doorging: de code (het scherm kiest de zin); n telt, zodat elke poging een nieuwe staat geeft. */
+export interface PasskeyLoginState {
+  code: string | null;
+  n: number;
+}
+
+/**
+ * Inloggen met een passkey: de browser gaf het antwoord van het toestel
+ * (navigator.credentials.get) als JSON; de passkey-provider controleert het
+ * (lib/auth/passkey/inloggen.ts) en maakt dezelfde sessie als het wachtwoord.
+ * Gelukt → NEXT_REDIRECT (doorgooien). Mislukt → de code.
+ */
+export async function passkeyLoginAction(prev: PasskeyLoginState, formData: FormData): Promise<PasskeyLoginState> {
+  const n = (prev?.n ?? 0) + 1;
+  const response = String(formData.get("response") ?? "");
+  if (!response || response.length > 100_000) return { code: "passkey_mislukt", n };
+  try {
+    await signIn("passkey", {
+      response,
+      remember: formData.get("remember") === "1" ? "1" : "",
+      redirectTo: safeCallback((formData.get("callbackUrl") as string) || undefined),
+    });
+    return { code: null, n };
+  } catch (err) {
+    if (err instanceof AuthError) return { code: codeOf(err) ?? "passkey_mislukt", n };
+    throw err;
+  }
+}
+
 /**
  * Kick off the Google OAuth flow. `signIn` redirects (throws NEXT_REDIRECT),
  * which must propagate so Next performs the redirect.

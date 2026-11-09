@@ -31,6 +31,18 @@ export interface AuthDict {
     twoFaBody: string;
     code: string;
     back: string;
+    /** "Inloggen met passkey" (lib/auth/passkey): knop, wachten, en een zin per foutcode */
+    passkey: {
+      button: string;
+      busy: string;
+      failed: string;
+      expired: string;
+      unknown: string;
+      uv: string;
+      down: string;
+      tooMany: string;
+      locked: string;
+    };
   };
   register: {
     title: string;
@@ -233,6 +245,17 @@ const nl: AuthDict = {
     twoFaBody: "Open je authenticator-app en vul de 6-cijferige code in voor {email}. Telefoon kwijt? Gebruik een van je herstelcodes.",
     code: "Code",
     back: "Terug — met een ander account inloggen",
+    passkey: {
+      button: "Inloggen met passkey",
+      busy: "Bevestig op je toestel…",
+      failed: "Inloggen met je passkey lukte niet. Probeer het opnieuw of log in met je wachtwoord.",
+      expired: "Dat duurde te lang. Probeer het opnieuw.",
+      unknown: "Deze passkey kennen we niet (meer). Log in met je wachtwoord en voeg in je account een nieuwe passkey toe.",
+      uv: "Je account heeft tweestapsverificatie. Bevestig op je toestel met je vingerafdruk, gezicht of pincode, of log in met je wachtwoord en code.",
+      down: "Inloggen met een passkey lukt nu even niet. Log in met je wachtwoord.",
+      tooMany: "Te veel pogingen. Wacht even en probeer het dan opnieuw.",
+      locked: "Te veel pogingen — je account is ongeveer 15 minuten geblokkeerd. Wacht even en probeer daarna opnieuw.",
+    },
   },
   register: {
     title: "Maak je account aan",
@@ -432,6 +455,17 @@ const en: AuthDict = {
     twoFaBody: "Open your authenticator app and enter the 6-digit code for {email}. Lost your phone? Use one of your recovery codes.",
     code: "Code",
     back: "Back — log in with another account",
+    passkey: {
+      button: "Log in with a passkey",
+      busy: "Confirm on your device…",
+      failed: "Logging in with your passkey didn't work. Try again or log in with your password.",
+      expired: "That took too long. Please try again.",
+      unknown: "We don't recognise this passkey (any more). Log in with your password and add a new passkey in your account.",
+      uv: "Your account uses two-step verification. Confirm on your device with your fingerprint, face or PIN, or log in with your password and code.",
+      down: "Logging in with a passkey isn't possible right now. Log in with your password.",
+      tooMany: "Too many attempts. Wait a moment and try again.",
+      locked: "Too many attempts — your account is locked for about 15 minutes. Please wait and try again.",
+    },
   },
   register: {
     title: "Create your account",
@@ -631,6 +665,17 @@ const pl: AuthDict = {
     twoFaBody: "Otwórz aplikację uwierzytelniającą i wpisz 6-cyfrowy kod dla {email}. Zgubiłeś telefon? Użyj jednego z kodów odzyskiwania.",
     code: "Kod",
     back: "Wróć — zaloguj się na inne konto",
+    passkey: {
+      button: "Zaloguj się kluczem dostępu",
+      busy: "Potwierdź na swoim urządzeniu…",
+      failed: "Logowanie kluczem dostępu nie powiodło się. Spróbuj ponownie lub zaloguj się hasłem.",
+      expired: "To trwało zbyt długo. Spróbuj ponownie.",
+      unknown: "Nie rozpoznajemy (już) tego klucza dostępu. Zaloguj się hasłem i dodaj nowy klucz na swoim koncie.",
+      uv: "Twoje konto ma weryfikację dwuetapową. Potwierdź na urządzeniu odciskiem palca, twarzą lub kodem PIN albo zaloguj się hasłem i kodem.",
+      down: "Logowanie kluczem dostępu jest teraz niemożliwe. Zaloguj się hasłem.",
+      tooMany: "Zbyt wiele prób. Poczekaj chwilę i spróbuj ponownie.",
+      locked: "Zbyt wiele prób — konto jest zablokowane na około 15 minut. Poczekaj i spróbuj ponownie.",
+    },
   },
   register: {
     title: "Załóż konto",
@@ -830,6 +875,17 @@ const ro: AuthDict = {
     twoFaBody: "Deschide aplicația de autentificare și introdu codul de 6 cifre pentru {email}. Ai pierdut telefonul? Folosește unul dintre codurile de recuperare.",
     code: "Cod",
     back: "Înapoi — conectare cu alt cont",
+    passkey: {
+      button: "Conectare cu cheie de acces",
+      busy: "Confirmă pe dispozitivul tău…",
+      failed: "Conectarea cu cheia de acces nu a reușit. Încearcă din nou sau conectează-te cu parola.",
+      expired: "A durat prea mult. Încearcă din nou.",
+      unknown: "Nu (mai) recunoaștem această cheie de acces. Conectează-te cu parola și adaugă o cheie nouă în contul tău.",
+      uv: "Contul tău are verificare în doi pași. Confirmă pe dispozitiv cu amprenta, fața sau codul PIN, sau conectează-te cu parola și codul.",
+      down: "Conectarea cu cheie de acces nu este posibilă acum. Conectează-te cu parola.",
+      tooMany: "Prea multe încercări. Așteaptă puțin și încearcă din nou.",
+      locked: "Prea multe încercări — contul tău este blocat pentru aproximativ 15 minute. Așteaptă și încearcă din nou.",
+    },
   },
   register: {
     title: "Creează-ți contul",
@@ -1029,6 +1085,17 @@ const uk: AuthDict = {
     twoFaBody: "Відкрий застосунок-автентифікатор і введи 6-значний код для {email}. Загубив телефон? Використай один із кодів відновлення.",
     code: "Код",
     back: "Назад — увійти з іншим акаунтом",
+    passkey: {
+      button: "Увійти за допомогою ключа доступу",
+      busy: "Підтверди на своєму пристрої…",
+      failed: "Не вдалося увійти за допомогою ключа доступу. Спробуй ще раз або увійди з паролем.",
+      expired: "Це тривало надто довго. Спробуй ще раз.",
+      unknown: "Ми не розпізнаємо (більше) цей ключ доступу. Увійди з паролем і додай новий ключ у своєму акаунті.",
+      uv: "У твоєму акаунті ввімкнено двоетапну перевірку. Підтверди на пристрої відбитком пальця, обличчям або PIN-кодом або увійди з паролем і кодом.",
+      down: "Зараз неможливо увійти за допомогою ключа доступу. Увійди з паролем.",
+      tooMany: "Забагато спроб. Зачекай трохи й спробуй ще раз.",
+      locked: "Забагато спроб — акаунт заблоковано приблизно на 15 хвилин. Зачекай і спробуй знову.",
+    },
   },
   register: {
     title: "Створи акаунт",

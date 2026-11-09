@@ -135,6 +135,7 @@ export default async function AccountPage() {
         { label: t.email, href: "/dashboard/profiel" },
         { label: t.password, href: "/wachtwoord-vergeten" },
         { label: t.twoFactor, href: "/dashboard/account/beveiliging" },
+        { label: t.passkey, href: "/dashboard/account/passkeys" },
         {
           label: t.download,
           href: "/api/me/gegevens/export",

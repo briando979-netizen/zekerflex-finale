@@ -42,6 +42,13 @@ export class SecondFactorInvalid extends CredentialsSignin {
 export class LoginLocked extends CredentialsSignin {
   override code = "locked";
 }
+/** Passkey-inlog geweigerd; de code zegt het inlogscherm waarom (lib/auth/passkey/inloggen.ts). */
+export class PasskeySignin extends CredentialsSignin {
+  constructor(code: string) {
+    super();
+    this.code = code;
+  }
+}
 
 async function loadGrants(userId: string): Promise<RoleGrant[]> {
   const memberships = await prisma.membership.findMany({
@@ -276,6 +283,23 @@ export const authOptions: NextAuthConfig = {
         };
       },
     }),
+    // Passkey (vingerafdruk, gezicht of pincode van het toestel): dezelfde
+    // controles en dezelfde sessie als hierboven, zie lib/auth/passkey/inloggen.ts.
+    // Pas bij gebruik geladen: die module trekt Redis en de WebAuthn-controle mee.
+    Credentials({
+      id: "passkey",
+      name: "Passkey",
+      credentials: {
+        response: { type: "text" },
+        remember: { type: "text" },
+      },
+      async authorize(raw, request) {
+        const { authorizePasskey } = await import("@/lib/auth/passkey/inloggen");
+        const uit = await authorizePasskey(raw, request);
+        if (!uit.ok) throw new PasskeySignin(uit.code);
+        return { ...uit.user, roles: await loadGrants(uit.user.id) };
+      },
+    }),
     ...(googleEnabled
       ? [
           Google({
@@ -291,12 +315,12 @@ export const authOptions: NextAuthConfig = {
   ],
   callbacks: {
     /**
-     * Gatekeeper. Credentials logins are already validated in `authorize`.
+     * Gatekeeper. Credentials and passkey logins are already validated in `authorize`.
      * A Google login is only accepted when the (verified) e-mail belongs to an
      * existing, enabled ZekerFlex account — we do not auto-provision here.
      */
     async signIn({ account, profile, user }) {
-      if (!account || account.provider === "credentials") return true;
+      if (!account || account.provider === "credentials" || account.provider === "passkey") return true;
 
       if (account.provider === "google") {
         const verifiedClaim = (

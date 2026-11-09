@@ -43,6 +43,7 @@ const h = vi.hoisted(() => {
     identityVerification: { deleteMany: async () => { state.deleted.push("kyc"); return { count: 2 }; } },
     deviceFingerprint: { deleteMany: async () => { state.deleted.push("device"); return { count: 1 }; } },
     passwordResetToken: { deleteMany: async () => ({ count: 0 }) },
+    passkey: { deleteMany: async ({ where }: { where: { userId: string } }) => { state.deleted.push(`passkey:${where.userId}`); return { count: 2 }; } },
     keyValueStore: {
       // de sleutelhangers van de gebruiker (lib/incheck): geen
       findUnique: async () => null,
@@ -144,7 +145,9 @@ describe("anonymizeUser", () => {
       kvkNumber: "DELETED-u1",
     });
     expect(h.state.cregUpdates[0]).toMatchObject({ legalName: "[verwijderd]", city: null });
-    expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push"]));
+    expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push", "passkey:u1"]));
+    // passkeys weg: het account blijft geanonimiseerd bestaan, een oud toestel mag er niet meer bij
+    expect(report.cleared.passkeys).toBe(2);
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2"]));
 
     // personal KV (agenda, trips, 2FA, …) wiped by exact key or key + ":"; fiscal/contracts are not on the list

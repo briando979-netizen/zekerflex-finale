@@ -182,6 +182,12 @@ export async function anonymizeUser(
       await tx.passwordResetToken.deleteMany({ where: { userId } })
     ).count;
 
+    // Passkeys: het account blijft (geanonimiseerd) bestaan, dus de cascade grijpt
+    // niet; zonder dit kon een oud toestel nog bij dit account.
+    cleared.passkeys = (
+      await tx.passkey.deleteMany({ where: { userId } })
+    ).count;
+
     // NFC key fobs for check-in terminals (lib/incheck/store.ts): the fob → user
     // mapping is keyed by the fob's hash, so it is found through the user's own list.
     const fobs = await tx.keyValueStore.findUnique({ where: { key: `nfc-fob-user:${userId}` }, select: { value: true } });

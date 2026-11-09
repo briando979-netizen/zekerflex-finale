@@ -34,6 +34,7 @@ vi.mock("@/lib/prisma", () => {
     engagementEvent: { findMany: many([{ kind: "OFFER_RESPONDED", occurredAt: new Date() }]) },
     webPushSubscription: { findMany: many([{ endpoint: "https://push/1" }]) },
     payslipRecord: { findMany: many([]) },
+    passkey: { findMany: vi.fn().mockResolvedValue([{ name: "iPhone", transports: ["internal"], backedUp: true, createdAt: new Date(), lastUsedAt: null }]) },
     deviceFingerprint: { findMany: many([{ hardwareHash: "abc", platform: "android" }]) },
     dispute: { findMany: many([]) },
     auditLog: { findMany: many([{ action: "auth.login.succeeded", summary: "ok" }]) },
@@ -51,6 +52,7 @@ vi.mock("@/lib/prisma", () => {
 });
 
 import { exportUserData, exportFilename } from "@/lib/privacy/export";
+import { prisma } from "@/lib/prisma";
 
 afterEach(() => vi.clearAllMocks());
 
@@ -69,6 +71,11 @@ describe("exportUserData", () => {
     expect(s.invoices).toHaveLength(1);
     expect(s.auditTrail).toHaveLength(1);
     expect(s.webPushSubscriptions).toHaveLength(1);
+    // de lijst toestellen (passkeys) wel, de publieke sleutel en teller niet
+    expect(s.passkeys).toEqual([expect.objectContaining({ name: "iPhone", backedUp: true })]);
+    const passkeyVraag = vi.mocked((prisma as unknown as { passkey: { findMany: (a: unknown) => unknown } }).passkey.findMany).mock.calls[0]?.[0] as { select: Record<string, boolean> };
+    expect(passkeyVraag.select).not.toHaveProperty("publicKey");
+    expect(passkeyVraag.select).not.toHaveProperty("signCount");
 
     const stored = s.storedSettings as { key: string; value: unknown }[];
     expect(stored.map((r) => r.key)).toEqual(["ritten:u1", "auth-2fa:u1", "mail-tools:u1"]);

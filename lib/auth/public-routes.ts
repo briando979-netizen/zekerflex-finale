@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 const PUBLIC_PREFIXES = [
-  "/api/auth", // NextAuth itself + check-email/check-password/generate-password (pre-signup helpers)
+  "/api/auth", // NextAuth itself + check-email/check-password/generate-password (pre-signup helpers) + /api/auth/passkey (begin van inloggen met passkey: eenmalige challenge, IP-begrensd; lib/auth/passkey/inloggen.ts)
   "/api/register",
   "/api/webhooks", // signature-verified (Stripe, Didit)
   "/api/public", // partner API — its own API-key auth (verifyApiKey/requireApiKey)

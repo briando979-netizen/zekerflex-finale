@@ -119,9 +119,39 @@ model User {
   resolvedDisputes     Dispute[]              @relation("DisputeResolvedBy")
   apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
   webPushSubscriptions WebPushSubscription[]
+  passkeys             Passkey[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Passkeys (WebAuthn): inloggen met de vingerafdruk, het gezicht of de pincode
+// van het toestel (lib/auth/passkey). Alleen de publieke sleutel staat hier; de
+// geheime sleutel verlaat het toestel nooit. Gaat mee in de AVG-export (zonder
+// sleutel) en wordt gewist met het account.
+model Passkey {
+  id           String    @id @default(cuid())
+  userId       String
+  // base64url van de credential-id van het toestel: een passkey hoort bij precies één gebruiker
+  credentialId String    @unique
+  // COSE-sleutel zoals het toestel hem gaf, en het algoritme (-7 ES256, -8 EdDSA, -257 RS256)
+  publicKey    Bytes
+  algorithm    Int
+  // teller van het toestel (uint32, daarom BigInt); mag niet teruglopen, behalve als hij altijd 0 is
+  signCount    BigInt    @default(0)
+  // base64url user.id die het toestel bij de passkey bewaart (willekeurig, per gebruiker gelijk)
+  userHandle   String
+  transports   String[]  @default([])
+  // naam die de gebruiker herkent, bijv. "iPhone"
+  name         String
+  // gesynchroniseerd (iCloud-sleutelhanger, Google-wachtwoordmanager)
+  backedUp     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ===========================================================================

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { env } from "@/lib/env";
+import { opPasskeyHost, passkeyBron } from "@/lib/auth/passkey/omgeving";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getLocale } from "@/lib/i18n/server";
@@ -22,6 +24,9 @@ export default async function LoginPage(
 ) {
   const searchParams = await props.searchParams;
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  // passkeys alleen op de vaste host uit APP_BASE_URL (niet op sslip-/voorbeeldadressen)
+  const bron = passkeyBron(env.APP_BASE_URL);
+  const passkeyEnabled = bron !== null && opPasskeyHost(await headers(), bron);
   const locale = await getLocale();
   const t = AUTH_DICTS[locale].login;
 
@@ -44,6 +49,7 @@ export default async function LoginPage(
         locale={locale}
         callbackUrl={safePath(searchParams.callbackUrl)}
         googleEnabled={googleEnabled}
+        passkeyEnabled={passkeyEnabled}
         {...(searchParams.error ? { errorCode: searchParams.error } : {})}
         {...(searchParams.reset ? { justReset: true } : {})}
       />

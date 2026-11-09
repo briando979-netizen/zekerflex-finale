@@ -47,6 +47,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/indexnow-key", // IndexNow verifies site ownership without a session
     "/api/rekentools/uitkomst", // "stuur mij de uitkomst" on the public rekentools
     "/api/auth/werkgever", // /klus-plaatsen: is the caller's own session a werkgever? (yes/no only)
+    "/api/auth/passkey", // begin van inloggen met passkey: eenmalige challenge, IP-begrensd (zonder sessie, je logt juist in)
+    "/api/auth/callback/passkey", // NextAuth: de passkey-provider zelf (controleert challenge, handtekening en account)
     "/api/review-scan", // free public review-scan
     "/api/review-scan/lead", // its contact form
     "/api/klus-plaatsen/website", // /klus-plaatsen reads a company's public front page
@@ -79,6 +81,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/locatie", // Op locatie: the employer board stays behind the login
     "/api/locatie/portofoon", // radio channels: session only
     "/api/me/kluis", // a worker's access codes: session only
+    "/api/me/passkeys", // passkeys toevoegen/verwijderen: alleen met een sessie (en opnieuw bevestigen)
     "/api/printen/wachtrij", // only /api/printen/agent is public, not anything else under /api/printen
     "/api/company/lookup", // shares the /api/company prefix with the public search route
     "/api/company/register",

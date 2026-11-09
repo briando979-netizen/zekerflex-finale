@@ -219,6 +219,15 @@ export async function exportUserData(userId: string): Promise<DataExport> {
     }),
   );
 
+  // De lijst toestellen waarmee je inlogt (passkeys); de publieke sleutel en de teller zijn techniek, geen gegevens over jou.
+  sections.passkeys = await safe("passkeys", () =>
+    prisma.passkey.findMany({
+      where: { userId },
+      select: { name: true, transports: true, backedUp: true, createdAt: true, lastUsedAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  );
+
   sections.payslips = await safe("payslips", () =>
     prisma.payslipRecord.findMany({
       where: { userId },
