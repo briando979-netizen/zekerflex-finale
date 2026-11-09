@@ -77,7 +77,13 @@ function mimeTypeFor(filename: string): string {
     ogg: "audio/ogg",
     webm: "audio/webm",
     m4a: "audio/mp4",
+    mp4: "audio/mp4",
+    aac: "audio/aac",
     flac: "audio/flac",
+    opus: "audio/ogg",
+    oga: "audio/ogg",
+    amr: "audio/amr",
   };
-  return map[ext ?? ""] ?? "audio/wav";
+  // Object.hasOwn: een bestandsnaam als "x.constructor" geeft anders een functie terug
+  return ext && Object.hasOwn(map, ext) ? (map[ext] ?? "audio/wav") : "audio/wav";
 }

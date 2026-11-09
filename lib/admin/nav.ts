@@ -140,6 +140,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/bronnen", label: "Bronnen" },
       { href: "/admin/kennisbank", label: "Kennisbank" },
       { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis" },
+      { href: "/admin/audio", label: "Audio naar tekst" },
     ],
   },
   {
