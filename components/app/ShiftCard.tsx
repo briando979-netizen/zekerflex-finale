@@ -97,7 +97,7 @@ export function ShiftCard({
           {t.cat[cat.key]}
         </span>
         <div className="absolute right-3 top-3">
-          <SaveShiftHeart shiftId={shift.id} />
+          <SaveShiftHeart shiftId={shift.id} labels={{ save: c.save, unsave: c.unsave }} />
         </div>
         {ribbon && (
           <span
