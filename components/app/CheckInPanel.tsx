@@ -43,19 +43,20 @@ function meting(opties: PositionOptions): Promise<GeolocationPosition> {
 
 /**
  * Een verse GPS-meting. Lukt dat niet zonder internet (kelder, koelcel), dan de laatst
- * bekende plek van hoogstens 5 minuten oud (lib/checkin/plek.ts): zo'n tik wordt bewaard
- * met bron "offline" en krijgt altijd een signaal voor de opdrachtgever.
+ * bekende plek van hoogstens 5 minuten oud (lib/checkin/plek.ts). `laatstBekend`: zo'n tik
+ * gaat nooit live (navigator.onLine is niet betrouwbaar) maar altijd in de wachtrij, zodat hij
+ * bron "offline" en dus altijd een signaal voor de opdrachtgever krijgt.
  */
-async function position(c: FreelancerDict["checkin"]): Promise<GeolocationPosition> {
+async function position(c: FreelancerDict["checkin"]): Promise<{ pos: GeolocationPosition; laatstBekend: boolean }> {
   if (!navigator.geolocation) throw new Error(c.noGeo);
   const online = navigator.onLine;
   try {
-    return await meting({ enableHighAccuracy: true, timeout: online ? 20_000 : 10_000, maximumAge: 0 });
+    return { pos: await meting({ enableHighAccuracy: true, timeout: online ? 20_000 : 10_000, maximumAge: 0 }), laatstBekend: false };
   } catch (e) {
     if ((e as GeolocationPositionError).code === 1) throw new Error(c.permission);
     if (!navigator.onLine) {
       const oud = await meting({ enableHighAccuracy: false, timeout: 3_000, maximumAge: LAATST_BEKEND_MAX_MS }).catch(() => null);
-      if (oud && laatstBekendBruikbaar(oud.timestamp, Date.now(), navigator.onLine)) return oud;
+      if (oud && laatstBekendBruikbaar(oud.timestamp, Date.now(), navigator.onLine)) return { pos: oud, laatstBekend: true };
     }
     throw new Error(c.failedGeo);
   }
@@ -139,7 +140,7 @@ export function CheckInPanel(props: { userId: string; timesheetId: string; sched
     const tikOp = new Date().toISOString();
     const id = nieuwId();
     try {
-      const pos = await position(c);
+      const { pos, laatstBekend } = await position(c);
       const plek = {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
@@ -147,8 +148,10 @@ export function CheckInPanel(props: { userId: string; timesheetId: string; sched
         deviceHash: deviceHash(),
       };
       const tik: BewaardeTik | null = type === "HEARTBEAT" ? null : { id, timesheetId, type, tikOp, ...plek };
+      // een oude plek telt alleen als offline tik (met signaal), nooit als gewone; zonder tik (hartslag) niets
+      if (laatstBekend && !tik) throw new Error(c.failedGeo);
       // wacht er nog iets op bereik, dan deze erachter: de volgorde van in- en uitchecken blijft kloppen
-      if (tik && laadTikken(userId).length > 0) {
+      if (tik && (laatstBekend || laadTikken(userId).length > 0)) {
         bewaar(tik);
         return;
       }
