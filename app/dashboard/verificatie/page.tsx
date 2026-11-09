@@ -11,16 +11,10 @@ import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
+import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
 
 export const dynamic = "force-dynamic";
-
-const STRIPE_LABEL: Record<string, string> = {
-  started: "Bezig bij Stripe — de uitslag komt binnen een paar minuten",
-  requires_input: "Niet gelukt bij Stripe",
-  canceled: "Afgebroken",
-  name_mismatch: "Naam wijkt af — wij controleren het handmatig",
-  verified: "Geverifieerd",
-};
 
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
@@ -105,16 +99,16 @@ export default async function VerificatiePage() {
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-ink">Vorige poging:</span>
+            <span className="font-medium text-ink">{pt.attempt.last}</span>
             <StatusPill
               tone={
                 lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
               }
             >
-              {STRIPE_LABEL[lastCheck.decisionStatus ?? ""] ??
-                (lastCheck.decisionStatus === "in_review" ? "In behandeling" : lastCheck.status)}
+              {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
             </StatusPill>
           </div>
+          {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
           {stripeReason && (
             <p className="mt-2 text-neutralx-600">
               Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies &ldquo;Zelf foto&apos;s uploaden&rdquo;.
