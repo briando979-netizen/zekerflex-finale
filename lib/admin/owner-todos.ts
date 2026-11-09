@@ -574,6 +574,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("play-store-app"),
     },
     {
+      id: "app-chip-104",
+      group: "Vindbaarheid & app",
+      title: "Nieuwe Android-app 1.0.4 (chip van je ID lezen) in Google Play zetten",
+      why: "Versie 1.0.4 kan met NFC de chip van een paspoort of ID-kaart lezen: de sterkste ID-controle die er is. Werkers met de oude app zien die stap niet, en aan de website verandert niets.",
+      how: [
+        "Wacht met uploaden tot Claude meldt dat het chiplezen op de server live staat: de beveiligingscontrole daarvan loopt nog. Verandert er daardoor iets aan de app, dan maakt Claude eerst een nieuwe versie.",
+        "Het bestand staat op de pc: C:\\Users\\pc\\Documents\\zekerflex finale\\android-twa\\ZekerFlex-1.0.4-v5.aab (ondertekend met dezelfde sleutel als de vorige versie).",
+        "Ga naar play.google.com/console → ZekerFlex → Testen → Interne tests → Nieuwe release, upload het bestand en probeer de app eerst zelf op je telefoon.",
+        "Werkt het: Productie → Nieuwe release → hetzelfde bestand. Releasenotitie: 'Nieuw: lees de chip van je ID-kaart of paspoort met je telefoon.' NFC is geen gevoelige toestemming, er is geen extra verklaring nodig.",
+        "Vink deze taak af zodra de release in Google Play live staat.",
+      ],
+      auto: false,
+      ...m("app-chip-104"),
+    },
+    {
       id: "play-rijschool-apps",
       group: "Vindbaarheid & app",
       title: "Google Play koppelen voor de apps van rijscholen",
