@@ -16,6 +16,7 @@ import { documentNaamPast } from "@/lib/kyc/document-naam";
 import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
 import { LEEFTIJD_TEKST, WERKRECHT_TEKST, leeftijdsgroep, werkrechtUitMrz } from "@/lib/kyc/werkrecht";
 import { documentHash } from "@/lib/kyc/document-hash";
+import { redenTekst } from "@/lib/onboarding/redenen";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
@@ -898,7 +899,8 @@ export async function submitFreelancerOnboarding(
     actorUserId: user.id,
     actorLabel: "user",
     severity: outcome === "rejected" ? "warning" : "info",
-    summary: `Zelf-verificatie ${user.fullName}: ${outcome} (KVK ${kvkValid ? "geldig" : "niet geldig"})`,
+    // de echte redenen, niet alleen het KVK: een uitzendkracht heeft er geen en kreeg toch "KVK niet geldig" te lezen
+    summary: `Zelf-verificatie ${user.fullName}: ${outcome}${redenTekst(checks)}`,
     targetType: "user",
     targetId: user.id,
     metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available, mrzGeldig, chipEcht: chip?.echt ?? null },
@@ -912,7 +914,7 @@ export async function submitFreelancerOnboarding(
     alertOwnerLater({
       key: `kyc-beoordeling:${user.id}`,
       title: `ID-controle wacht op je: ${user.fullName}`,
-      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${vision.available ? "De beeldcontrole was niet overtuigend." : "Er is geen automatische beeldcontrole, dus bekijk de foto's zelf."} Keur goed of af bij de gebruiker.`,
+      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${vision.available ? "De beeldcontrole was niet overtuigend." : "Er is geen automatische beeldcontrole, dus bekijk de foto's zelf."}${redenTekst(checks)} Keur goed of af bij de gebruiker.`,
       severity: "warning",
       url: `/admin/gebruikers/${user.id}`,
     });
