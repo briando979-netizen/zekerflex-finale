@@ -1,17 +1,26 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// KV in het geheugen
-const kv = new Map<string, unknown>();
+// KV in het geheugen, met het moment van schrijven (zoals updatedAt in de database)
+const kv = new Map<string, { waarde: unknown; op: number }>();
 vi.mock("@/lib/storage/kv", () => ({
-  kvGet: async (k: string) => (kv.has(k) ? structuredClone(kv.get(k)) : null),
-  kvSet: async (k: string, v: unknown) => void kv.set(k, structuredClone(v)),
+  kvGet: async (k: string) => (kv.has(k) ? structuredClone(kv.get(k)!.waarde) : null),
+  kvSet: async (k: string, v: unknown) => void kv.set(k, { waarde: structuredClone(v), op: Date.now() }),
   kvDelete: async (k: string) => void kv.delete(k),
+  kvListKeys: async (p: string) => [...kv.keys()].filter((k) => k.startsWith(p)),
+  kvDeleteStale: async (p: string, voor: Date) => {
+    let n = 0;
+    for (const [k, r] of kv) if (k.startsWith(p) && r.op < voor.getTime() && kv.delete(k)) n++;
+    return n;
+  },
 }));
+vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "proef-geheim-voor-de-chipsessie-test-0123456789" } }));
 
-import { bewaarMrzVoorChip, chipLezing, chipSleutel, chipTekst, rondChipAf, startChipSessie, wisChipGegevens } from "@/lib/kyc/chip/sessie";
+import { bewaarMrzVoorChip, chipLezing, chipSleutel, chipTekst, rondChipAf, ruimChipOp, startChipSessie, wisChipGegevens } from "@/lib/kyc/chip/sessie";
+import { appKanChipLezen } from "@/lib/app-mode";
 import type { MrzUitslag } from "@/lib/kyc/mrz";
 
-// vaste klok: geen tijdbom (AGENTS.md)
+// vaste klok voor de logica: geen tijdbom (AGENTS.md)
 const NU = new Date("2026-11-09T12:00:00+01:00");
 const later = (min: number) => new Date(NU.getTime() + min * 60_000);
 
@@ -74,15 +83,65 @@ describe("chip lezen: de koppeling website → app → server", () => {
     expect(await rondChipAf(code, { dg1: Buffer.from([0x61, 0x00]), sod: Buffer.from("x") }, [], NU)).toBeNull();
     expect(await chipLezing("usr_1", later(30))).not.toBeNull();
     expect(await chipLezing("usr_1", later(61))).toBeNull(); // na een uur te oud
-    // nergens ruwe chipbestanden of het BSN in de opslag
-    expect(JSON.stringify([...kv.values()])).not.toMatch(/999999990|geen zegel/);
+  });
+});
+
+describe("chip lezen: AVG (review 9 nov, H2)", () => {
+  it("alles staat verzegeld: geen documentnummer, geboortedatum of naam leesbaar in de opslag", async () => {
+    await bewaarMrzVoorChip("usr_1", MRZ, NU);
+    const code = (await startChipSessie("usr_1", NU))!;
+    await chipSleutel(code, NU);
+    await startChipSessie("usr_1", NU);
+    const opslag = JSON.stringify([...kv.values()]);
+    for (const geheim of ["IXA12B3C4", "2003-06-16", "030616", "2034-03-12", "340312", "VAN ESSEN", "BRIANDO"]) {
+      expect(opslag).not.toContain(geheim);
+    }
+    // en toch gewoon te gebruiken
+    expect(await chipSleutel(code, NU)).toMatchObject({ documentnummer: "IXA12B3C4" });
   });
 
-  it("na de verificatie wordt alles gewist", async () => {
+  it("geknoeid of onleesbaar telt als niet bestaand", async () => {
+    await bewaarMrzVoorChip("usr_1", MRZ, NU);
+    kv.set("mrz-lezing:usr_1", { waarde: { v: "v1.knoei.knoei.knoei" }, op: Date.now() });
+    expect(await startChipSessie("usr_1", NU)).toBeNull();
+  });
+
+  it("de opruimtaak wist echt wat te oud is (KV kent geen verlooptijd)", async () => {
     await bewaarMrzVoorChip("usr_1", MRZ, NU);
     const code = (await startChipSessie("usr_1", NU))!;
     await rondChipAf(code, { dg1: Buffer.from([0x61, 0x00]), sod: Buffer.from("x") }, [], NU);
+    await bewaarMrzVoorChip("usr_2", MRZ, NU);
+    await startChipSessie("usr_2", NU);
+    // 31 minuten later: MRZ-sleutels (30 min) en sessies (10 min) weg, de uitslag (60 min) nog niet
+    const gewist = await ruimChipOp(new Date(Date.now() + 31 * 60_000));
+    expect(gewist).toBeGreaterThanOrEqual(3);
+    expect([...kv.keys()].filter((k) => k.startsWith("mrz-lezing:") || k.startsWith("chip-sessie:"))).toEqual([]);
+    expect([...kv.keys()].filter((k) => k.startsWith("chip-lezing:"))).toHaveLength(1);
+    // en een uur later ook de uitslag
+    await ruimChipOp(new Date(Date.now() + 61 * 60_000));
+    expect(kv.size).toBe(0);
+  });
+
+  it("na de verificatie wordt alles gewist, ook ongebruikte chipsessies", async () => {
+    await bewaarMrzVoorChip("usr_1", MRZ, NU);
+    const code = (await startChipSessie("usr_1", NU))!;
+    await rondChipAf(code, { dg1: Buffer.from([0x61, 0x00]), sod: Buffer.from("x") }, [], NU);
+    await bewaarMrzVoorChip("usr_1", MRZ, NU);
+    await startChipSessie("usr_1", NU); // nog een, nooit gebruikt
     await wisChipGegevens("usr_1");
     expect([...kv.keys()].filter((k) => k.includes("usr_1"))).toEqual([]);
+  });
+
+  it("de sleutel wordt alleen bewaard in de app die de chip kan lezen, niet op de website", () => {
+    expect(appKanChipLezen("zf_app=1; zf_app_chip=1")).toBe(true);
+    expect(appKanChipLezen("zf_app=1")).toBe(false); // oudere app
+    expect(appKanChipLezen("zf_app_chip=1")).toBe(false);
+    expect(appKanChipLezen("")).toBe(false); // website
+    expect(appKanChipLezen(null)).toBe(false);
+  });
+
+  it("de opruimtaak staat in de cron en in de hartslagbewaking", () => {
+    expect(readFileSync("deploy/cron/entrypoint.sh", "utf8")).toMatch(/\*\/15 \* \* \* \* .*\/api\/internal\/kyc\/chip-opruimen/);
+    expect(readFileSync("lib/ops/heartbeat.ts", "utf8")).toContain('job: "chip-opruimen"');
   });
 });

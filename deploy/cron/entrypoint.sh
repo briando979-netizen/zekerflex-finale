@@ -21,6 +21,8 @@ cat > /etc/crontabs/root <<EOF
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
 0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
 0 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/scans/dagoverzicht"
+# elke 15 min: verzegelde chipgegevens (MRZ-sleutel, chipsessies, uitslagen) echt wissen als ze te oud zijn (lib/kyc/chip/sessie.ts)
+*/15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/kyc/chip-opruimen"
 15 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/winkel-agent/tick"
 # elk kwartier: de productlijst voor AI-assistenten bij Stripe bijwerken, alleen wat veranderde (lib/shop/agent-handel-server.ts)
 */15 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/shop/agent-catalogus"

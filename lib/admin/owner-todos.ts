@@ -852,6 +852,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Overheidscertificaten (CSCA) voor het chiplezen op de server zetten",
       why: "De Android-app kan de chip van een paspoort of ID-kaart lezen. De server controleert dan of de gegevens door de overheid zijn ondertekend. De laatste schakel is het certificaat van de overheid zelf (CSCA). Zonder die bestanden is een chip nooit 'echt bevonden' en kijkt er altijd een medewerker mee.",
       how: [
+        "Wacht met de certificaten tot Claude meldt dat de controle van de chip klaar is (de review van 9 november vroeg nog een paar reparaties). Zolang er geen CSCA staat, telt een chip nooit als echt.",
         "Download de Nederlandse CSCA-certificaten van de overheid (RvIG, zoek op 'CSCA certificaten'), of de ICAO-masterlijst. Voor documenten uit andere landen: de CSCA van dat land.",
         "Geef de bestanden (.pem, .crt, .cer of .der) aan Claude. Die zet ze in de map storage/csca van de app (het opslagvolume, blijft bij een uitrol staan) en controleert het met een echte chip.",
         "Deze taak vinkt zichzelf af zodra er een Nederlands CSCA-certificaat staat.",

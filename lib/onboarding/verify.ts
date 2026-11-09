@@ -736,8 +736,8 @@ export async function submitFreelancerOnboarding(
     metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available, mrzGeldig, chipEcht: chip?.echt ?? null },
   });
 
-  // de chipuitslag en de MRZ-sleutel zijn na de verificatie niet meer nodig
-  if (chip) await wisChipGegevens(user.id);
+  // na elke verificatie: de chipuitslag, de MRZ-sleutel en alle chipsessies weg (ook zonder chip)
+  await wisChipGegevens(user.id).catch(() => undefined);
 
   // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).
   if (outcome === "in_review") {

@@ -72,6 +72,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "sales-offers", label: "Offerte-AI (mailbox)", maxAgeHours: 26 },
   // dagelijks 07:00 UTC: dagoverzicht van de gratis scans aan sales@ (alleen een mail als er iets gebeurde)
   { job: "scan-dagoverzicht", label: "Scans & deals: dagoverzicht aan sales", maxAgeHours: 26 },
+  // elke 15 min: verzegelde chipgegevens van de ID-controle opruimen (lib/kyc/chip/sessie.ts ruimChipOp)
+  { job: "chip-opruimen", label: "ID-controle: chipgegevens opruimen", maxAgeHours: 2 },
   // dagelijks 04:20 UTC: elke openbare pagina ophalen; kapotte pagina's naar het foutenlogboek (lib/ops/rondgang.ts)
   { job: "rondgang", label: "Rondgang langs alle openbare pagina's", maxAgeHours: 26 },
   // dagelijks 06:30 UTC (/api/internal/markten/tick)

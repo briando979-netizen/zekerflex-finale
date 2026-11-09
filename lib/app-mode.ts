@@ -50,6 +50,11 @@ export function cookieStringHasChip(cookie: string | null | undefined): boolean 
   return /(?:^|;\s*)zf_app_chip=1(?:;|$)/.test(cookie ?? "");
 }
 
+/** De Android-app die de chip kan lezen (beide cookies): alleen dan mag de server de sleutel voor de chip bewaren. */
+export function appKanChipLezen(cookie: string | null | undefined): boolean {
+  return cookieStringIsApp(cookie) && cookieStringHasChip(cookie);
+}
+
 export function cookieStringIsApp(cookie: string | null | undefined): boolean {
   return /(?:^|;\s*)zf_app=1(?:;|$)/.test(cookie ?? "");
 }
