@@ -6,6 +6,7 @@ import { registerAccount, registerSchema } from "@/lib/auth/register";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
 import { isBreached, scorePassword } from "@/lib/auth/password";
 import { AppError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 export interface RegisterState {
   error: string | null;
@@ -49,7 +50,13 @@ export async function registerAction(
     return { error: "Aanmaken van het account is mislukt. Probeer het opnieuw." };
   }
 
-  await sendVerificationEmail(account.userId, account.email, parsed.data.fullName).catch(() => undefined);
+  // De gebruiker komt hierna op /verifieer-email, waar hij zelf een nieuwe mail kan aanvragen: alleen loggen.
+  try {
+    const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
+    if (mail.sent && !mail.delivered) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+  } catch (err) {
+    logger.warn("verificatiemail versturen mislukt", { userId: account.userId, error: (err as Error).message });
+  }
 
   try {
     await signIn("credentials", {

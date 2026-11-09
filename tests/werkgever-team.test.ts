@@ -134,6 +134,24 @@ describe("POST /api/werkgever/team", () => {
     expect(res.status).toBe(201);
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ to: "x@y.nl" }));
   });
+
+  it("meldt eerlijk dat de uitnodigingsmail niet is afgeleverd, en zwijgt als hij wel aankwam", async () => {
+    getPrincipal.mockResolvedValue(PRINCIPAL);
+    requireRole.mockImplementation(() => undefined);
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["t1"], branchIds: null });
+    tenantFindUnique.mockResolvedValue({ name: "Acme" });
+    membershipFindFirst.mockResolvedValue(null);
+    createTeamInvite.mockResolvedValue({ record: { id: "i1", email: "x@y.nl", role: "HQ_ADMIN" }, token: "tok" });
+
+    sendMail.mockResolvedValueOnce({ delivered: false, transport: "mailbox" });
+    const mislukt = await POST(jsonReq({ email: "x@y.nl", role: "HQ_ADMIN" }));
+    expect(mislukt.status).toBe(201);
+    expect(((await mislukt.json()) as { waarschuwing?: string }).waarschuwing).toMatch(/niet worden afgeleverd/);
+
+    sendMail.mockResolvedValueOnce({ delivered: true, transport: "smtp" });
+    const gelukt = await POST(jsonReq({ email: "x@y.nl", role: "HQ_ADMIN" }));
+    expect(((await gelukt.json()) as { waarschuwing?: string }).waarschuwing).toBeUndefined();
+  });
 });
 
 describe("DELETE /api/werkgever/team/:membershipId", () => {

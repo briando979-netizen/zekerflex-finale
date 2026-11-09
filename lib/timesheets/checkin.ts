@@ -272,14 +272,14 @@ export async function recordGpsEvent(
       freelancerId: input.freelancerProfileId,
       recordedAt: recordedAt.toISOString(),
       withinGeofence: geo.withinGeofence,
-    }).catch(() => undefined);
+    }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "freelancer.checked_in", tenantId: ts.branch.tenantId, error: (err as Error).message }));
   }
 
   if (result.disputeRaised) {
     void dispatchWebhook("dispute.opened", ts.branch.tenantId, {
       timesheetId: ts.id,
       origin: result.disputeRaised,
-    }).catch(() => undefined);
+    }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "dispute.opened", tenantId: ts.branch.tenantId, error: (err as Error).message }));
     await recordAudit({
       category: "DISPUTE",
       action: "dispute.auto_raised",

@@ -6,6 +6,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 
 export const runtime = "nodejs";
@@ -41,7 +42,9 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     await kvSet(key, { reason, note, by: principal.userId, at: new Date().toISOString() });
     const summary = `${principal.fullName} meldt: niet gewerkt bij ${ts.branch.tenant.name} (${ts.branch.name}) op ${ts.scheduledStart.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })} —${REASONS[reason]}${note ? `: ${note}` : ""}`;
     await recordAudit({ category: "TIMESHEET", action: "timesheet.not_worked", actorUserId: principal.userId, summary, targetType: "timesheet", targetId: ts.id });
-    await sendMail({ to: env.MAIL_ADMIN, subject: `Niet gewerkt gemeld — ${ts.branch.tenant.name}`, text: `${summary}\n\nUrenbriefje: ${ts.id}\nHandel af in de admin (annulering / no-show / uren op nul).`, kind: "timesheet-not-worked" }).catch(() => undefined);
+    await sendMail({ to: env.MAIL_ADMIN, subject: `Niet gewerkt gemeld — ${ts.branch.tenant.name}`, text: `${summary}\n\nUrenbriefje: ${ts.id}\nHandel af in de admin (annulering / no-show / uren op nul).`, kind: "timesheet-not-worked" }).catch((err: unknown) => {
+      logger.warn("niet-gewerkt-melding: admin-mail mislukt", { timesheetId: ts.id, error: (err as Error).message });
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const { status, body } = toErrorBody(err);
