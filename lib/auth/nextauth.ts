@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { featureEnabled } from "@/lib/flags";
 import { recordAudit } from "@/lib/audit";
 import { recordLoginFailure } from "@/lib/metrics";
 import { hasTwoFactor, openLoginChallenge, verifySecondFactor } from "@/lib/auth/two-factor";
@@ -80,7 +81,10 @@ const PLATFORM_TENANT_ID = "org_platform";
 /**
  * First Google login with an unknown (but Google-verified) e-mail: create a
  * freelancer account on the spot so the user lands straight in onboarding.
- * The e-mail is already verified by Google, so `emailVerifiedAt` is set.
+ * Vlag `google-verificatiemail` (standaard aan): het account krijgt dan dezelfde
+ * bevestigingsmail (link + code) als bij een gewone aanmelding en geldt pas als
+ * bevestigd na de code; /start stuurt het intussen naar /verifieer-email. Uit:
+ * Google heeft het adres al bevestigd, dus `emailVerifiedAt` staat meteen.
  */
 async function autoProvisionFromGoogle(
   rawEmail: string,
@@ -88,17 +92,31 @@ async function autoProvisionFromGoogle(
 ): Promise<string | null> {
   const email = rawEmail.toLowerCase().trim();
   if (!email) return null;
+  const verifyByMail = await featureEnabled("google-verificatiemail");
   try {
+    const fullName = (name ?? email.split("@")[0] ?? "Nieuwe gebruiker").slice(0, 120);
     const user = await prisma.user.create({
       data: {
         email,
-        fullName: (name ?? email.split("@")[0] ?? "Nieuwe gebruiker").slice(0, 120),
-        emailVerifiedAt: new Date(),
+        fullName,
+        ...(verifyByMail ? {} : { emailVerifiedAt: new Date() }),
         memberships: { create: { tenantId: PLATFORM_TENANT_ID, role: "FREELANCER" } },
       },
       select: { id: true },
     });
-    logger.info("auto-provisioned freelancer from google login", { email });
+    logger.info("auto-provisioned freelancer from google login", { userId: user.id, verifyByMail });
+    // Mail is best-effort: faalt hij, dan vraagt de gebruiker op /verifieer-email zelf een nieuwe code aan.
+    try {
+      const { sendVerificationEmail, sendWelcomeToUser } = await import("@/lib/auth/email-verify");
+      if (verifyByMail) {
+        const mail = await sendVerificationEmail(user.id, email, fullName);
+        if (mail.sent && !mail.delivered) logger.warn("verificatiemail (Google) niet afgeleverd", { userId: user.id, transport: mail.transport });
+      } else {
+        await sendWelcomeToUser(user.id);
+      }
+    } catch (err) {
+      logger.warn("mail na Google-aanmelding mislukt", { userId: user.id, error: (err as Error).message });
+    }
     return user.id;
   } catch (err) {
     logger.error("google auto-provision failed", { email, error: (err as Error).message });

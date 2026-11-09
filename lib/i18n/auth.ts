@@ -105,6 +105,9 @@ export interface AuthDict {
     saveEmail: string;
     emailChanged: string;
     emailChangedWait: string;
+    openMail: string;
+    resendIn: string;
+    autoHint: string;
   };
   page: {
     back: string;
@@ -427,6 +430,9 @@ const nl: AuthDict = {
     saveEmail: "Pas aan en stuur de code",
     emailChanged: "Aangepast. We hebben een nieuwe code gestuurd naar {email}.",
     emailChangedWait: "Aangepast naar {email}. Vraag over een minuut de code opnieuw aan.",
+    openMail: "Open {naam}",
+    resendIn: "Opnieuw versturen kan over {s} seconden",
+    autoHint: "Dit scherm gaat vanzelf verder zodra je e-mailadres is bevestigd, ook als je de link op een ander apparaat opent.",
   },
   page: {
     back: "Instellingen",
@@ -756,6 +762,9 @@ const en: AuthDict = {
     saveEmail: "Change and send the code",
     emailChanged: "Changed. We sent a new code to {email}.",
     emailChangedWait: "Changed to {email}. Request the code again in a minute.",
+    openMail: "Open {naam}",
+    resendIn: "You can send it again in {s} seconds",
+    autoHint: "This screen continues by itself once your email address is confirmed, even if you open the link on another device.",
   },
   page: {
     back: "Settings",
@@ -1085,6 +1094,9 @@ const pl: AuthDict = {
     saveEmail: "Zmień i wyślij kod",
     emailChanged: "Zmieniono. Wysłaliśmy nowy kod na {email}.",
     emailChangedWait: "Zmieniono na {email}. Poproś o kod ponownie za minutę.",
+    openMail: "Otwórz {naam}",
+    resendIn: "Ponowne wysłanie będzie możliwe za {s} s",
+    autoHint: "Ten ekran przejdzie dalej sam, gdy adres e-mail zostanie potwierdzony, także gdy otworzysz link na innym urządzeniu.",
   },
   page: {
     back: "Ustawienia",
@@ -1414,6 +1426,9 @@ const ro: AuthDict = {
     saveEmail: "Modifică și trimite codul",
     emailChanged: "Modificat. Am trimis un cod nou la {email}.",
     emailChangedWait: "Modificat la {email}. Cere din nou codul peste un minut.",
+    openMail: "Deschide {naam}",
+    resendIn: "Poți retrimite peste {s} secunde",
+    autoHint: "Ecranul continuă singur imediat ce adresa de e-mail este confirmată, chiar dacă deschizi linkul pe alt dispozitiv.",
   },
   page: {
     back: "Setări",
@@ -1743,6 +1758,9 @@ const uk: AuthDict = {
     saveEmail: "Змінити й надіслати код",
     emailChanged: "Змінено. Ми надіслали новий код на {email}.",
     emailChangedWait: "Змінено на {email}. Запросіть код ще раз за хвилину.",
+    openMail: "Відкрити {naam}",
+    resendIn: "Надіслати ще раз можна через {s} с",
+    autoHint: "Цей екран продовжить сам, щойно адресу e-mail буде підтверджено, навіть якщо ви відкриєте посилання на іншому пристрої.",
   },
   page: {
     back: "Налаштування",

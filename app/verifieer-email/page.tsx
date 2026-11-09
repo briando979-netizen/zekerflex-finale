@@ -66,7 +66,7 @@ export default async function VerifieerEmailPage(
         </Link>
       }
     >
-      <ResendVerification locale={locale} devLink={local?.link ?? null} devCode={local?.code ?? null} />
+      <ResendVerification locale={locale} email={user?.email ?? ""} devLink={local?.link ?? null} devCode={local?.code ?? null} />
       <WijzigEmail locale={locale} />
     </AuthShell>
   );

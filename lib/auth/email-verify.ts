@@ -83,7 +83,7 @@ async function markVerified(userId: string): Promise<VerifyResult> {
 }
 
 /** Welcome mail — sent once, right after the address is confirmed (not at sign-up). Best-effort. */
-async function sendWelcome(user: { id: string; email: string; fullName: string; memberships: { role: string }[] }): Promise<void> {
+export async function sendWelcome(user: { id: string; email: string; fullName: string; memberships: { role: string }[] }): Promise<void> {
   try {
     const freelancer = user.memberships.some((m) => m.role === "FREELANCER");
     const workerKind = freelancer ? ((await getFiscal(user.id).catch(() => null))?.workerKind ?? undefined) : undefined;
@@ -109,6 +109,15 @@ export async function confirmVerificationToken(token: string): Promise<VerifyRes
     return { ok: false, reason: "Deze verificatielink is verlopen of al gebruikt." };
   }
   return markVerified(userId);
+}
+
+/** Welkomstmail voor een account dat zonder codemail als bevestigd geldt (Google, vlag uit). Best-effort. */
+export async function sendWelcomeToUser(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, fullName: true, memberships: { select: { role: true } } },
+  });
+  if (user) await sendWelcome(user);
 }
 
 /** The most recent still-valid link + code for a user (shown on the verify page locally). */

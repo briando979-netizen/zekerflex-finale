@@ -38,7 +38,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { confirmVerificationCode, confirmVerificationToken, sendVerificationEmail } from "@/lib/auth/email-verify";
+import { confirmVerificationCode, confirmVerificationToken, sendVerificationEmail, sendWelcomeToUser } from "@/lib/auth/email-verify";
 
 describe("welcome mail after e-mail verification", () => {
   beforeEach(() => {
@@ -71,5 +71,12 @@ describe("welcome mail after e-mail verification", () => {
     const welcome = m.mail.mock.calls.filter((c) => /Welkom/.test(c[0].subject));
     expect(welcome).toHaveLength(1);
     expect(welcome[0]![0].to).toBe("jan@test.nl");
+  });
+
+  it("sendWelcomeToUser (Google, vlag uit) stuurt één welkomstmail en geen codemail", async () => {
+    await sendWelcomeToUser("u1");
+    expect(m.mail).toHaveBeenCalledTimes(1);
+    expect(m.mail.mock.calls[0]![0].subject).toMatch(/Welkom/);
+    expect(m.mail.mock.calls[0]![0].to).toBe("jan@test.nl");
   });
 });

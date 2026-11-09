@@ -36,6 +36,7 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "locatie-modules", label: "Op locatie: portofoon, toegang, kluis, printen", description: "De vier Op locatie-modules in het werkgever-menu, de werker-app en hun API (lib/locatie). Uit = het onderdeel is weg; instellingen, kentekens en de kluis blijven bewaard.", default: true },
   { key: "opbouwfase-melding", label: "Melding 'nog in de opbouwfase'", description: "Balk bovenaan /dashboard en /werkgever: nog niet officieel live, testklussen, gegevens veilig, ideeën welkom. Zet uit bij de officiële start.", default: true },
   { key: "onboarding-onderhoud", label: "Melding 'we verbeteren de aanmelding'", description: "Melding in de start van werkers en werkgevers: we verbeteren de onboarding, dingen kunnen haperen, wacht even tot je bericht krijgt; testklussen; begin volgend jaar online. Zet uit zodra de onboarding weer soepel werkt.", default: true },
+  { key: "google-verificatiemail", label: "Verificatiemail ook bij aanmelden met Google", description: "Aan = een nieuw account dat via Google wordt gemaakt krijgt dezelfde bevestigingsmail (link + code) als een gewone aanmelding en moet het adres eerst bevestigen. Uit = zo’n account geldt meteen als bevestigd en krijgt een welkomstmail. Bestaande accounts veranderen niet.", default: true },
 ];
 
 export interface FlagOverride {

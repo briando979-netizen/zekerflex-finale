@@ -14,6 +14,8 @@ export interface ResendState {
   message: string | null;
   link: string | null;
   code: string | null;
+  /** seconden tot een nieuwe code kan (de wachttijd van de server), anders null */
+  cooldown?: number | null;
 }
 
 export async function resendVerificationAction(): Promise<ResendState> {
@@ -29,10 +31,12 @@ export async function resendVerificationAction(): Promise<ResendState> {
 
   const res = await sendVerificationEmail(principal.userId, user.email, user.fullName);
   if (!res.sent) {
+    const wacht = res.cooldownSeconds ?? 45;
     return {
-      message: `Wacht nog ${res.cooldownSeconds ?? 30} seconden voordat je opnieuw een code aanvraagt.`,
+      message: `Wacht nog ${wacht} seconden voordat je opnieuw een code aanvraagt.`,
       link: null,
       code: null,
+      cooldown: wacht,
     };
   }
   const how = res.delivered
@@ -45,6 +49,7 @@ export async function resendVerificationAction(): Promise<ResendState> {
     message: how,
     link: showLocal ? res.link : null,
     code: showLocal ? res.code ?? null : null,
+    cooldown: 45,
   };
 }
 

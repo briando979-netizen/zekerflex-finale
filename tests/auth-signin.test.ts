@@ -58,6 +58,16 @@ vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => recordAudit(..
 const recordLoginFailure = vi.fn();
 vi.mock("@/lib/metrics", () => ({ recordLoginFailure: (...a: unknown[]) => recordLoginFailure(...a) }));
 
+const featureEnabled = vi.fn();
+vi.mock("@/lib/flags", () => ({ featureEnabled: (...a: unknown[]) => featureEnabled(...a) }));
+
+const sendVerificationEmail = vi.fn();
+const sendWelcomeToUser = vi.fn();
+vi.mock("@/lib/auth/email-verify", () => ({
+  sendVerificationEmail: (...a: unknown[]) => sendVerificationEmail(...a),
+  sendWelcomeToUser: (...a: unknown[]) => sendWelcomeToUser(...a),
+}));
+
 const checkLoginAllowed = vi.fn();
 const registerLoginFailure = vi.fn();
 const clearLoginFailures = vi.fn();
@@ -92,6 +102,9 @@ const GRANT: RoleGrant = { role: "FREELANCER", organizationId: "org_platform", l
 
 beforeEach(() => {
   vi.clearAllMocks();
+  featureEnabled.mockResolvedValue(true);
+  sendVerificationEmail.mockResolvedValue({ sent: true, delivered: true, transport: "mailbox" });
+  sendWelcomeToUser.mockResolvedValue(undefined);
   hasTwoFactor.mockResolvedValue(false);
   checkLoginAllowed.mockResolvedValue({ allowed: true });
   registerLoginFailure.mockResolvedValue({ failures: 1, locked: false });
@@ -281,5 +294,47 @@ describe("callbacks.signIn — Google gate", () => {
     } as any);
     expect(res).toBe(true);
     expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.login.succeeded" }));
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+    expect(sendWelcomeToUser).not.toHaveBeenCalled();
+  });
+
+  describe("eerste Google-login met een onbekend adres", () => {
+    const nieuw = () =>
+      signIn()({
+        account: { provider: "google" } as any,
+        profile: { email: "Nieuw@Example.nl", email_verified: true, name: "Nina" } as any,
+        user: {} as any,
+      } as any);
+    beforeEach(() => {
+      // eerst onbekend, na het aanmaken gevonden
+      userFindFirst.mockReset();
+      userFindFirst.mockResolvedValueOnce(null).mockResolvedValue({ id: "usr_new", fullName: "Nina", email: "nieuw@example.nl" });
+      userCreate.mockResolvedValue({ id: "usr_new" });
+      userUpdate.mockResolvedValue({});
+    });
+
+    it("vlag aan: account niet bevestigd en verificatiemail verstuurd", async () => {
+      expect(await nieuw()).toBe(true);
+      const data = userCreate.mock.calls[0]![0].data;
+      expect(data.email).toBe("nieuw@example.nl");
+      expect(data).not.toHaveProperty("emailVerifiedAt");
+      expect(sendVerificationEmail).toHaveBeenCalledWith("usr_new", "nieuw@example.nl", "Nina");
+      expect(sendWelcomeToUser).not.toHaveBeenCalled();
+      expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.register.oauth" }));
+    });
+
+    it("vlag uit: meteen bevestigd en een welkomstmail, geen codemail", async () => {
+      featureEnabled.mockResolvedValue(false);
+      expect(await nieuw()).toBe(true);
+      expect(userCreate.mock.calls[0]![0].data.emailVerifiedAt).toBeInstanceOf(Date);
+      expect(sendWelcomeToUser).toHaveBeenCalledWith("usr_new");
+      expect(sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it("een mislukte mail blokkeert het inloggen niet", async () => {
+      sendVerificationEmail.mockRejectedValue(new Error("smtp weg"));
+      expect(await nieuw()).toBe(true);
+    });
   });
 });

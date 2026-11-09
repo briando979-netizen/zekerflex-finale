@@ -402,8 +402,14 @@ export function mailButton(href: string, label: string): string {
   return button(href, label);
 }
 
-function shell(title: string, bodyHtml: string): string {
+/** Voorbeeldtekst naast het onderwerp in de inbox; onzichtbaar in de mail zelf. */
+function preheaderHtml(text: string): string {
+  return `<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#F4F5F1">${escapeHtml(text)}</div>`;
+}
+
+function shell(title: string, bodyHtml: string, preheader?: string): string {
   return `<!doctype html><html lang="nl"><body style="margin:0;background:#F4F5F1;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#17211C">
+${preheader ? preheaderHtml(preheader) : ""}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" style="max-width:520px;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #E6E7E1">
 <tr><td style="background:${BRAND};padding:18px 28px">
@@ -415,7 +421,7 @@ function shell(title: string, bodyHtml: string): string {
 ${bodyHtml}
 </td></tr>
 <tr><td style="padding:16px 28px;background:#F4F5F1;color:#667469;font-size:12px">
-ZekerFlex — zeker van je werk. Deze e-mail is verstuurd vanaf de ZekerFlex Sovereign Box.
+ZekerFlex — zeker van je werk · zekerflex.com
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -426,23 +432,35 @@ function button(href: string, label: string): string {
 
 export function verificationEmail(fullName: string, link: string, code?: string): MailInput {
   const first = fullName.split(" ")[0] || fullName;
-  const codeText = code ? `\n\nOf voer deze code in op de bevestigingspagina: ${code}` : "";
+  const e = escapeHtml;
+  const codeText = code ? `\n\nTyp op de bevestigingspagina deze code in: ${code}` : "";
   const codeHtml = code
-    ? `<p style="margin:0 0 8px;font-size:13px;color:#667469">Of voer deze code in op de bevestigingspagina:</p>
-       <p style="margin:0 0 20px;font-size:30px;font-weight:700;letter-spacing:6px;color:#0E5C4A;font-family:Consolas,Menlo,monospace">${code}</p>`
+    ? `<p style="margin:0 0 8px;font-size:13px;color:#667469">Liever een code? Typ deze in op de bevestigingspagina:</p>
+       <p style="margin:0 0 20px;font-size:30px;font-weight:700;letter-spacing:6px;color:#0E5C4A;font-family:Consolas,Menlo,monospace">${e(code)}</p>`
     : "";
   return {
     to: "",
     subject: `Je ZekerFlex-bevestigingscode${code ? `: ${code}` : ""}`,
     kind: "verification",
-    text: `Hoi ${first},\n\nBevestig je e-mailadres om je ZekerFlex-account te activeren:\n${link}${codeText}\n\nDeze code en link zijn 24 uur geldig. Heb je dit niet aangevraagd? Dan kun je deze mail negeren.`,
+    text: `Hoi ${first},
+
+Bevestig je e-mailadres om je ZekerFlex-account te activeren. Open daarvoor deze link:
+${link}${codeText}
+
+De link en de code zijn 24 uur geldig. Is de link verlopen? Log in op zekerflex.com en vraag op het bevestigingsscherm een nieuwe aan.
+
+Heb je geen account bij ZekerFlex aangemaakt? Dan hoef je niets te doen: zonder bevestiging wordt er niets geactiveerd.`,
     html: shell(
       "Bevestig je e-mailadres",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, welkom bij ZekerFlex. Klik op de knop om je account te activeren.</p>
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${e(first)}, welkom bij ZekerFlex. Bevestig je e-mailadres om je account te activeren.</p>
        <p style="margin:0 0 20px">${button(link, "E-mailadres bevestigen")}</p>
        ${codeHtml}
-       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">De code en link zijn 24 uur geldig.</p>`,
+       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link in je browser:<br><span style="word-break:break-all">${e(link)}</span></p>
+       <p style="margin:16px 0 0;font-size:12px;color:#667469">De link en de code zijn 24 uur geldig. Is de link verlopen? Log in en vraag op het bevestigingsscherm een nieuwe aan.</p>
+       <p style="margin:16px 0 0;font-size:12px;color:#667469">Heb je geen account bij ZekerFlex aangemaakt? Dan hoef je niets te doen: zonder bevestiging wordt er niets geactiveerd.</p>`,
+      code
+        ? `Je code is ${code}. Of klik op de knop om je account te activeren (24 uur geldig).`
+        : "Klik op de knop om je account te activeren (24 uur geldig).",
     ),
   };
 }
@@ -454,6 +472,7 @@ export function welcomeEmail(
   workerKind?: "zzp" | "flexwerker" | "uitzendkracht",
 ): MailInput {
   const first = fullName.split(" ")[0] || fullName;
+  const base = appUrl.replace(/\/+$/, "");
   const next =
     type === "bedrijf"
       ? "Rond de onboarding van je organisatie af (KVK + eerste vestiging) en zet je eerste dienst uit."
@@ -464,12 +483,22 @@ export function welcomeEmail(
     to: "",
     subject: "Welkom bij ZekerFlex",
     kind: "welcome",
-    text: `Hoi ${first},\n\nJe e-mailadres is bevestigd en je ZekerFlex-account is klaar.\n\nVolgende stap: ${next}\n\nInloggen: ${appUrl}/login`,
+    text: `Hoi ${first},
+
+Je e-mailadres is bevestigd en je ZekerFlex-account is klaar.
+
+Volgende stap: ${next}
+
+Inloggen: ${base}/login
+
+Vragen? Mail support@zekerflex.com.`,
     html: shell(
       "Welkom bij ZekerFlex",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je e-mailadres is bevestigd en je account is klaar. Fijn dat je er bent.</p>
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je e-mailadres is bevestigd en je account is klaar. Fijn dat je er bent.</p>
        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>Volgende stap:</strong> ${next}</p>
-       <p style="margin:0">${button(`${appUrl}/login`, "Naar ZekerFlex")}</p>`,
+       <p style="margin:0">${button(`${base}/login`, "Naar ZekerFlex")}</p>
+       <p style="margin:20px 0 0;font-size:12px;color:#667469">Vragen? Mail support@zekerflex.com.</p>`,
+      "Je account is klaar. Dit is je volgende stap.",
     ),
   };
 }
@@ -509,10 +538,11 @@ export function onboardingReminderEmail(
     text: `Hoi ${first},\n\nJe ZekerFlex-account is nog niet af: ${todo}. ${why}\n\nHet duurt een paar minuten: ${href}\n\nVragen? Antwoord gewoon op deze mail.`,
     html: shell(
       subject,
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je account is nog niet af: <strong>${todo}</strong>.</p>
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je account is nog niet af: <strong>${todo}</strong>.</p>
        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${why} Het kost een paar minuten.</p>
        <p style="margin:0">${button(href, "Account afmaken")}</p>
        <p style="margin:20px 0 0;font-size:12px;color:#667469">Vragen? Antwoord gewoon op deze mail.</p>`,
+      `Nog een paar minuten werk: ${todo}.`,
     ),
   };
 }
