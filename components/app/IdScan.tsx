@@ -120,7 +120,9 @@ function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; v
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("geen camera");
         const s = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          // zo scherp als de camera kan: de kleine letters van de code onderop het document (MRZ) vragen veel pixels;
+          // een toestel dat minder kan, geeft vanzelf het hoogste wat het heeft
+          video: { facingMode: { ideal: facing }, width: { ideal: 3840 }, height: { ideal: 2160 } },
         });
         if (weg) {
           s.getTracks().forEach((tr) => tr.stop());
