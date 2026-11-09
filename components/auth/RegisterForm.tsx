@@ -8,6 +8,7 @@ import { googleLoginAction } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
+import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
 
 const initial: RegisterState = { error: null };
 
@@ -61,9 +62,12 @@ export function RegisterForm({
   const [kvkResults, setKvkResults] = useState<{ kvkNumber: string; name: string; city?: string }[]>([]);
   const [kvkConfigured, setKvkConfigured] = useState(true);
   const [kvkOpen, setKvkOpen] = useState(false);
+  // Een bedrijf buiten Nederland zoekt niet in het Handelsregister; het btw- of registratienummer volgt in de onboarding.
+  const [land, setLand] = useState("NL");
+  const nederlands = land === "NL";
 
   useEffect(() => {
-    if (type !== "bedrijf" || kvk || company.trim().length < 2) {
+    if (type !== "bedrijf" || !nederlands || kvk || company.trim().length < 2) {
       setKvkResults([]);
       setKvkOpen(false);
       return;
@@ -92,7 +96,7 @@ export function RegisterForm({
       clearTimeout(t);
       controller.abort();
     };
-  }, [company, type, kvk]);
+  }, [company, type, kvk, nederlands]);
 
   // ---- email availability -------------------------------------------
   const [email, setEmail] = useState(prefill?.email ?? "");
@@ -286,8 +290,32 @@ export function RegisterForm({
         )}
 
         {type === "bedrijf" && (
+          <label className="block">
+            <span className="field-label">Waar is je bedrijf gevestigd?</span>
+            <select
+              name="land"
+              value={land}
+              onChange={(e) => {
+                setLand(e.target.value);
+                setKvk("");
+              }}
+              className="field-input"
+            >
+              <option value="NL">Nederland</option>
+              <optgroup label="Europese Unie">
+                {EU_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+              </optgroup>
+              <optgroup label="Buiten de EU">
+                {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+              </optgroup>
+            </select>
+            {!nederlands && <span className="mt-1 block text-xs text-neutralx-400">Na het aanmelden vul je het btw- of registratienummer van je bedrijf in. ZekerFlex controleert je bedrijf daarna.</span>}
+          </label>
+        )}
+
+        {type === "bedrijf" && (
           <div className="relative">
-            <span className="field-label">Organisatie {kvkConfigured && <span className="text-neutralx-400">(zoek in het Handelsregister)</span>}</span>
+            <span className="field-label">Organisatie {kvkConfigured && nederlands && <span className="text-neutralx-400">(zoek in het Handelsregister)</span>}</span>
             <input
               name="companyName"
               aria-label="Organisatie"
@@ -300,7 +328,7 @@ export function RegisterForm({
               }}
               onFocus={() => kvkResults.length && setKvkOpen(true)}
               className="field-input"
-              placeholder={kvkConfigured ? "Bijv. Horeca Groep NL" : "Naam organisatie"}
+              placeholder={kvkConfigured && nederlands ? "Bijv. Horeca Groep NL" : "Naam organisatie"}
             />
             {kvk && (
               <p className="mt-1 text-xs text-ok">✓ KVK {kvk} — geverifieerd in het Handelsregister</p>
