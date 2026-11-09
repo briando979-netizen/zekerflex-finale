@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
-import { ondernemingGeldig } from "@/lib/matching/onderneming";
+import { isMatchEligibleWorker } from "@/lib/matching/geschikt";
 import { sendUserPush } from "@/lib/notifications/push";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushWhen } from "@/lib/i18n/worker-push";
@@ -72,8 +72,20 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
     },
   });
   if (!substitute) throw AppError.validation("Deze kandidaat heeft geen freelancer-profiel meer.");
-  if (substitute.user.kycStatus !== "VERIFIED" || !ondernemingGeldig(substitute)) {
+  if (substitute.user.kycStatus !== "VERIFIED") {
     throw AppError.precondition("Deze kandidaat is niet volledig geverifieerd.");
+  }
+  // Dezelfde regel als de matching (lib/matching/geschikt.ts): een klus via het
+  // uitzendbureau alleen naar een uitzendkracht; een gewone klus naar een zzp'er
+  // met een geldige inschrijving of naar een uitzendkracht.
+  const dienst = await prisma.shift.findUnique({ where: { id: req.shiftId }, select: { viaUitzendbureau: true } });
+  if (!dienst) throw AppError.notFound("Deze dienst bestaat niet meer.");
+  if (!(await isMatchEligibleWorker({ userId: input.substituteUserId, ...substitute }, dienst.viaUitzendbureau))) {
+    throw AppError.precondition(
+      dienst.viaUitzendbureau
+        ? "Deze klus loopt via het uitzendbureau: alleen een uitzendkracht kan hem overnemen."
+        : "Deze kandidaat is niet volledig geverifieerd.",
+    );
   }
   if (substitute.isBlacklisted) throw AppError.precondition("Deze kandidaat kan geen diensten aannemen.");
   if (substitute.matchingBlockedUntil && substitute.matchingBlockedUntil.getTime() > Date.now()) {
