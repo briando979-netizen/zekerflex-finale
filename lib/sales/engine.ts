@@ -15,6 +15,8 @@ import {
   withinSendWindow,
 } from "@/lib/sales/campaign";
 import { discoverBedrijven } from "@/lib/sales/discovery/bedrijven";
+import { gebruikEigenVers } from "@/lib/gratis/keuzes";
+import { isKvkBaseEnabled } from "@/lib/integrations/kvkbase";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
@@ -226,8 +228,13 @@ async function enrichAndScore(
     take: ENRICH_PER_TICK,
   });
 
+  // Verrijken via het Handelsregister kost KVK-tegoed (een opvraging per lead). Alleen als
+  // Admin → Alles gratis voor "bedrijven zoeken" de betaalde bron kiest; standaard niet,
+  // want het maandtegoed is nodig voor aanmelden en de bedrijfscontrole (9 nov: op).
+  // Met de hand verrijken in de pijplijn blijft gewoon kunnen.
+  const viaKvk = !(await gebruikEigenVers("sales-bedrijven", isKvkBaseEnabled()));
   for (const lead of fresh) {
-    if (lead.kvkNumber) {
+    if (lead.kvkNumber && viaKvk) {
       await safe(
         `enrich:${lead.id}`,
         async () => {
