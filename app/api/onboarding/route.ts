@@ -4,6 +4,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
+import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
 import { startStripeIdentity, stripeIdentityAvailable } from "@/lib/kyc/stripe-identity";
 
 export const runtime = "nodejs";
@@ -16,6 +17,8 @@ const baseSchema = z.object({
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
   houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
+  /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
+  ibanCode: z.string().trim().max(32).optional(),
 });
 
 const fieldsSchema = z.object({
@@ -25,6 +28,7 @@ const fieldsSchema = z.object({
   postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode, bijv. 1012 AB"),
   houseNumber: z.string().trim().max(12).optional(),
   payoutIban: z.string().trim().min(15).max(34),
+  ibanCode: z.string().trim().max(32).optional(),
   documentType: z.enum(["PASSPORT", "ID_CARD", "DRIVERS_LICENSE"]),
   documentNumber: z.string().trim().min(4).max(20),
   documentExpiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ongeldige datum"),
@@ -74,6 +78,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         postalCode: form.get("postalCode"),
         houseNumber: str("houseNumber"),
         payoutIban: form.get("payoutIban"),
+        ibanCode: str("ibanCode"),
       });
       if (!base.success) throw AppError.validation(base.error.issues[0]?.message ?? "Controleer de ingevulde gegevens");
       const saved = await saveFreelancerBase({
@@ -83,6 +88,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         postalCode: base.data.postalCode,
         houseNumber: base.data.houseNumber,
         payoutIban: base.data.payoutIban,
+        ibanCode: base.data.ibanCode,
       });
       const redirectUrl = await startStripeIdentity(principal.userId, principal.email);
       return NextResponse.json({ redirectUrl, checks: saved.checks }, { status: 200 });
@@ -94,6 +100,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       postalCode: form.get("postalCode"),
       houseNumber: str("houseNumber"),
       payoutIban: form.get("payoutIban"),
+      ibanCode: str("ibanCode"),
       documentType: form.get("documentType"),
       documentNumber: form.get("documentNumber"),
       documentExpiry: form.get("documentExpiry"),
@@ -123,6 +130,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       postalCode: parsed.data.postalCode,
       houseNumber: parsed.data.houseNumber,
       payoutIban: parsed.data.payoutIban,
+      ibanCode: parsed.data.ibanCode,
       documentType: parsed.data.documentType as DocKind,
       documentNumber: parsed.data.documentNumber,
       documentExpiry: parsed.data.documentExpiry,
@@ -132,6 +140,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
+    // Een gewijzigd IBAN zonder (geldige) bevestigingscode: 423 met eigen code, nooit 403.
+    const ibanFout = ibanBevestigingAntwoord(err);
+    if (ibanFout) return NextResponse.json(ibanFout.body, { status: ibanFout.status });
     const { status, body } = toErrorBody(err);
     if (status >= 500) log.error("onboarding failed", { error: (err as Error).message });
     return NextResponse.json(body, { status });

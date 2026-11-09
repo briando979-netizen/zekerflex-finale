@@ -128,3 +128,41 @@ async function auditWijziging(userId: string, iban: string, via: "2fa" | "mail")
     targetId: userId,
   }).catch(() => undefined);
 }
+
+/** Een ontbrekende of foute bevestiging, vanuit diepere code (onboarding) naar de route; nooit 403 (CrowdSec). */
+export class IbanBevestigingFout extends Error {
+  constructor(
+    readonly status: 423 | 429 | 503,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "IbanBevestigingFout";
+  }
+}
+
+/**
+ * Gedeelde poort voor elke schrijfroute: alleen het WIJZIGEN van een bestaand
+ * IBAN vraagt een bevestiging; een eerste IBAN en een ongewijzigd IBAN blijven
+ * vrij. `nieuwIban` en `bestaandIban` zijn al genormaliseerd (hoofdletters,
+ * zonder spaties). Gooit IbanBevestigingFout bij weigering.
+ */
+export async function eisIbanBevestiging(
+  userId: string,
+  bestaandIban: string | null | undefined,
+  nieuwIban: string,
+  code: string | undefined,
+  now = Date.now(),
+): Promise<void> {
+  if (!bestaandIban || bestaandIban === nieuwIban) return;
+  const r = await bevestigIbanWijziging(userId, nieuwIban, code, now);
+  if (!r.ok) throw new IbanBevestigingFout(r.status, r.code, r.message);
+}
+
+/** Antwoord in dezelfde vorm als /api/me/fiscal, of null als dit geen IBAN-bevestigingsfout is. */
+export function ibanBevestigingAntwoord(
+  err: unknown,
+): { status: number; body: { error: { code: string; message: string } } } | null {
+  if (!(err instanceof IbanBevestigingFout)) return null;
+  return { status: err.status, body: { error: { code: err.code, message: err.message } } };
+}

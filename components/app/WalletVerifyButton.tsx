@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { useFT } from "@/components/i18n/useFT";
+import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
+import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 interface WalletCheck {
@@ -42,6 +45,13 @@ type Stage =
 export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean }) {
   const router = useRouter();
   const pt = AUTH_DICTS[useI18n().locale].page;
+  const ft = useFT();
+  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
+  const [ibanCode, setIbanCode] = useState("");
+  const [codeMelding, setCodeMelding] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
   const [stage, setStage] = useState<Stage>({ kind: "checking" });
 
   useEffect(() => {
@@ -81,7 +91,10 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
   }
 
   async function submit(attemptId: string, form: FormData): Promise<void> {
-    setStage({ kind: "busy", label: "Bezig met opslaan…" });
+    const ibanCodeWaarde = zonderCode.current ? "" : String(form.get("ibanCode") ?? "").trim();
+    zonderCode.current = false;
+    // Geen stage-wissel: het formulier blijft staan, zodat een codeveld de ingevulde gegevens niet wist.
+    setSaving(true);
     try {
       const res = await fetch("/api/onboarding/wallet/submit", {
         method: "POST",
@@ -91,9 +104,16 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           kvkNumber: form.get("kvkNumber") || undefined,
           postalCode: form.get("postalCode"),
           payoutIban: form.get("payoutIban"),
+          ...(ibanCodeWaarde ? { ibanCode: ibanCodeWaarde } : {}),
         }),
       });
       const data = await res.json();
+      if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
+        // De wallet-verificatie is nog niet verbruikt: het formulier blijft, met een codeveld.
+        setIbanCode("");
+        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
+        return;
+      }
       if (!res.ok) {
         setStage({ kind: "error", message: data?.error?.message ?? "Opslaan is mislukt." });
         return;
@@ -102,6 +122,8 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
       if (data.outcome === "verified") setTimeout(() => router.refresh(), 1500);
     } catch {
       setStage({ kind: "error", message: "Kon de gegevens niet opslaan. Controleer je verbinding." });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -173,6 +195,7 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
         </p>
       </div>
       <form
+        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault();
           void submit(stage.attemptId, new FormData(e.currentTarget));
@@ -193,7 +216,21 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           <span className="field-label">IBAN voor uitbetalingen</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />
         </label>
-        <button type="submit" className="btn-primary w-full">
+        {codeMelding && (
+          <IbanCodeVeld
+            name="ibanCode"
+            texts={ft.ibanCode}
+            melding={codeMelding}
+            value={ibanCode}
+            onChange={setIbanCode}
+            onResend={() => {
+              zonderCode.current = true;
+              formRef.current?.requestSubmit();
+            }}
+            busy={saving}
+          />
+        )}
+        <button type="submit" disabled={saving} className="btn-primary w-full">
           Verificatie afronden
         </button>
       </form>

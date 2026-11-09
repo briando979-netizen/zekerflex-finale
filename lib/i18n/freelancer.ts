@@ -11,6 +11,18 @@ import type { Locale } from "@/lib/i18n/config";
 const nl = {
   nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
   lang: { label: "Taal", hint: "Kies de taal van de app." },
+  /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
+  ibanCode: {
+    label: "Bevestigingscode voor je nieuwe IBAN",
+    placeholder: "Code uit je e-mail of verificatie-app",
+    resend: "Stuur code",
+    sent: "We hebben een code naar je e-mailadres gestuurd. Vul die in en sla opnieuw op om je nieuwe rekeningnummer te bevestigen.",
+    need2fa: "Vul de code uit je verificatie-app in en sla opnieuw op om je rekeningnummer te wijzigen.",
+    invalid: "Deze code klopt niet of is al gebruikt.",
+    expired: "Er is geen geldige code meer voor dit rekeningnummer. Vraag een nieuwe code aan.",
+    tooMany: "Te veel pogingen. Probeer het later opnieuw.",
+    mailFailed: "De code kon niet worden verstuurd. Probeer het later opnieuw.",
+  },
   opbouw: {
     titel: "ZekerFlex is nog in de opbouwfase",
     tekst:
@@ -927,6 +939,18 @@ export type FreelancerDict = typeof nl;
 const en: FreelancerDict = {
   nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
   lang: { label: "Language", hint: "Choose the app language." },
+  /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
+  ibanCode: {
+    label: "Confirmation code for your new IBAN",
+    placeholder: "Code from your email or authenticator app",
+    resend: "Send code",
+    sent: "We sent a code to your email address. Enter it and save again to confirm your new bank account number.",
+    need2fa: "Enter the code from your authenticator app and save again to change your bank account number.",
+    invalid: "This code is wrong or has already been used.",
+    expired: "There is no valid code left for this account number. Request a new code.",
+    tooMany: "Too many attempts. Please try again later.",
+    mailFailed: "The code could not be sent. Please try again later.",
+  },
   opbouw: {
     titel: "ZekerFlex is still being built",
     tekst:
@@ -1840,6 +1864,18 @@ const en: FreelancerDict = {
 const pl: FreelancerDict = {
   nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
   lang: { label: "Język", hint: "Wybierz język aplikacji." },
+  /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
+  ibanCode: {
+    label: "Kod potwierdzający dla nowego IBAN",
+    placeholder: "Kod z e-maila lub aplikacji weryfikacyjnej",
+    resend: "Wyślij kod",
+    sent: "Wysłaliśmy kod na Twój adres e-mail. Wpisz go i zapisz ponownie, aby potwierdzić nowy numer konta.",
+    need2fa: "Wpisz kod z aplikacji weryfikacyjnej i zapisz ponownie, aby zmienić numer konta.",
+    invalid: "Ten kod jest błędny lub został już użyty.",
+    expired: "Nie ma już ważnego kodu dla tego numeru konta. Poproś o nowy kod.",
+    tooMany: "Zbyt wiele prób. Spróbuj ponownie później.",
+    mailFailed: "Nie udało się wysłać kodu. Spróbuj ponownie później.",
+  },
   opbouw: {
     titel: "ZekerFlex jest jeszcze w budowie",
     tekst:
@@ -2753,6 +2789,18 @@ const pl: FreelancerDict = {
 const ro: FreelancerDict = {
   nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
   lang: { label: "Limbă", hint: "Alege limba aplicației." },
+  /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
+  ibanCode: {
+    label: "Cod de confirmare pentru noul IBAN",
+    placeholder: "Cod din e-mail sau din aplicația de verificare",
+    resend: "Trimite codul",
+    sent: "Ți-am trimis un cod pe adresa de e-mail. Introdu-l și salvează din nou pentru a confirma noul număr de cont.",
+    need2fa: "Introdu codul din aplicația de verificare și salvează din nou pentru a schimba numărul de cont.",
+    invalid: "Acest cod nu este corect sau a fost deja folosit.",
+    expired: "Nu mai există un cod valid pentru acest număr de cont. Cere un cod nou.",
+    tooMany: "Prea multe încercări. Încearcă din nou mai târziu.",
+    mailFailed: "Codul nu a putut fi trimis. Încearcă din nou mai târziu.",
+  },
   opbouw: {
     titel: "ZekerFlex este încă în construcție",
     tekst:
@@ -3666,6 +3714,18 @@ const ro: FreelancerDict = {
 const uk: FreelancerDict = {
   nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
   lang: { label: "Мова", hint: "Оберіть мову застосунку." },
+  /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
+  ibanCode: {
+    label: "Код підтвердження для нового IBAN",
+    placeholder: "Код з електронної пошти або застосунку перевірки",
+    resend: "Надіслати код",
+    sent: "Ми надіслали код на твою електронну пошту. Введи його й збережи ще раз, щоб підтвердити новий номер рахунку.",
+    need2fa: "Введи код із застосунку перевірки й збережи ще раз, щоб змінити номер рахунку.",
+    invalid: "Цей код неправильний або вже використаний.",
+    expired: "Для цього номера рахунку більше немає чинного коду. Запроси новий код.",
+    tooMany: "Забагато спроб. Спробуй ще раз пізніше.",
+    mailFailed: "Не вдалося надіслати код. Спробуй ще раз пізніше.",
+  },
   opbouw: {
     titel: "ZekerFlex ще в стадії розбудови",
     tekst:
