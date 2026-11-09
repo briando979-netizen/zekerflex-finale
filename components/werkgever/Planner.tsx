@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PlanVoorstel } from "@/lib/planner/plan";
 import { weekLabel, weekPlus } from "@/lib/planner/week";
 import { STANDAARD_INSTELLINGEN, type PlanInstellingen } from "@/lib/planner/solver";
+import { teWeinigGeplaatst, type WeekDrukte } from "@/lib/planner/drukte";
+
+const WEEKDAG_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+const aantal = (n: number) => n.toLocaleString("nl-NL", { maximumFractionDigits: 1 });
 
 // ---------------------------------------------------------------------------
 // Werkgever → Roosterplanner: kies een week, stel de regels in, laat het rooster
@@ -23,12 +27,14 @@ export function Planner({ startWeek }: { startWeek: string }) {
   const [bezig, setBezig] = useState<"rekenen" | "versturen" | null>(null);
   const [weg, setWeg] = useState<Set<string>>(new Set());
   const [melding, setMelding] = useState<{ ok: boolean; text: string } | null>(null);
+  const [drukte, setDrukte] = useState<WeekDrukte | null>(null);
 
   const laad = useCallback(async (w: string) => {
     setLaden(true);
     const r = await fetch(`/api/werkgever/planner?week=${encodeURIComponent(w)}`, { cache: "no-store" }).catch(() => null);
     const d = r?.ok ? await r.json() : null;
     setVoorstel(d?.voorstel ?? null);
+    setDrukte(d?.drukte ?? null);
     if (d?.voorstel?.instellingen) setInst(d.voorstel.instellingen);
     setWeg(new Set());
     setLaden(false);
@@ -93,6 +99,41 @@ export function Planner({ startWeek }: { startWeek: string }) {
           {bezig === "rekenen" ? "Bezig met rekenen…" : voorstel ? "Opnieuw uitrekenen" : "Rooster uitrekenen"}
         </button>
       </div>
+
+      {drukte && (
+        <section className="card p-4" aria-labelledby="drukte-kop">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="drukte-kop" className="text-sm font-semibold text-ink">
+              Verwachte drukte
+            </h2>
+            <p className="text-xs text-neutralx-600">
+              Gemiddeld aantal plekken per dag uit je eigen diensten van de afgelopen {drukte.weken} weken.
+            </p>
+          </div>
+          <ul className="mt-3 grid grid-cols-7 gap-1.5 text-center">
+            {drukte.dagen.map((d) => {
+              const tekort = teWeinigGeplaatst(d);
+              return (
+                <li key={d.datum} className="relative rounded-lg border border-hair px-1 py-2">
+                  <p className="text-xs font-semibold text-ink">
+                    {WEEKDAG_KORT[d.weekdag]} {Number(d.datum.slice(8))}
+                  </p>
+                  <p className="mt-1 text-xs text-neutralx-600">
+                    <span className="sr-only">verwacht </span>~{aantal(d.verwacht)}
+                  </p>
+                  <p className={`mt-0.5 text-xs font-semibold ${tekort ? "text-warn" : "text-ink"}`}>
+                    <span className="sr-only">geplaatst </span>
+                    {d.geplaatst}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-xs text-neutralx-600">
+            Boven: gewoonlijk nodig. Onder: al geplaatst{drukte.dagen.some(teWeinigGeplaatst) ? "; oranje = minder dan gewoonlijk, plaats er op tijd een klus bij." : "."}
+          </p>
+        </section>
+      )}
 
       <details className="card p-4" open={!voorstel}>
         <summary className="cursor-pointer text-sm font-semibold text-ink">Regels voor de planner</summary>
