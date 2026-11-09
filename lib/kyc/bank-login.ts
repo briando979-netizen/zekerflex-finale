@@ -134,6 +134,10 @@ export async function startBankLogin(userId: string, ibanHint?: string): Promise
 /** Called when the freelancer comes back from their bank: read and store the outcome. */
 export async function syncBankLogin(userId: string, sessionId: string): Promise<BankLoginResult | null> {
   if (!/^cs_[A-Za-z0-9_]{10,200}$/.test(sessionId)) return null;
+  // Already recorded (the return page often asks more than once, and the webhook asks too):
+  // don't ask Stripe again, detach nothing twice and keep the audit trail to one entry.
+  const known = await getBankLogin(userId);
+  if (known?.sessionId === sessionId) return known;
   const stripe = getStripeClient();
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["setup_intent", "setup_intent.latest_attempt"],

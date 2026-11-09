@@ -27,6 +27,7 @@ import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
+import { syncBankLogin } from "@/lib/kyc/bank-login";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -402,6 +403,18 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
     // Een domeinnaam die een bedrijf bestelde: lib/domeinen/bestelling.ts (alleen OPEN → BETAALD, dus dubbel is veilig)
     if (session.metadata?.domeinBestellingId) {
       return NextResponse.json({ ok: true, ...(await verwerkDomeinSessie(session)) });
+    }
+
+    // Bankrekening bevestigen via iDEAL (setup, er wordt niets afgeschreven): lib/kyc/bank-login.ts.
+    // Meestal legt de terugkeerpagina het al vast; dit vangt wie de bank-app sluit zonder terug te komen.
+    if (session.metadata?.purpose === "bank-login") {
+      const userId = session.metadata.userId;
+      if (session.mode === "setup" && userId) {
+        await syncBankLogin(userId, session.id).catch((err: unknown) =>
+          log.warn("bank login sync via webhook failed", { error: err instanceof Error ? err.message : String(err) }),
+        );
+      }
+      return NextResponse.json({ ok: true });
     }
 
     const shopOrderId = session.metadata?.shopOrderId;
