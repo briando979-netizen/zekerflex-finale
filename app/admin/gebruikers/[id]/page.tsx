@@ -15,6 +15,11 @@ import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documen
 import { WerkrechtActions } from "@/components/admin/WerkrechtActions";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
 import { landNaam, type WerkrechtStand } from "@/lib/werkrecht/landen";
+import { onboardingData } from "@/lib/admin/insights/onboarding";
+import { OnboardingActies } from "@/components/admin/OnboardingActies";
+import { isOnboardingAudit, stappenVan, tijdlijn, vastStatus } from "@/lib/admin/onboarding-model";
+import { getFiscal } from "@/lib/fiscal/store";
+import { kvGet } from "@/lib/storage/kv";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +113,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     );
   }
 
-  const [auditEntries, approvedCount, disputesRaised, payoutTotal, docs, activity] = await Promise.all([
+  const [auditEntries, approvedCount, disputesRaised, payoutTotal, docs, activity, onboarding, onbFiscal, onbHerinnering] = await Promise.all([
     prisma.auditLog.findMany({
       where: { OR: [{ actorUserId: user.id }, { targetType: "user", targetId: user.id }] },
       orderBy: { createdAt: "desc" },
@@ -123,6 +128,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     }),
     listDocs(user.id),
     user.freelancerProfile ? freelancerActivity(user.freelancerProfile.id) : Promise.resolve(null),
+    onboardingData({ testMeetellen: true, alleenId: user.id }).then((d) => d.rijen[0] ?? null).catch(() => null),
+    getFiscal(user.id).catch(() => null),
+    kvGet<{ stage?: number; at?: string; handmatig?: number }>(`onboarding-reminder:${user.id}`).catch(() => null),
   ]);
 
   // recht om te werken per land (lib/werkrecht), alleen bij werkers
@@ -131,6 +139,20 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
   const profile = user.freelancerProfile;
+  const onbStatus = onboarding ? vastStatus(onboarding, new Date()) : null;
+  const onbStappen = onboarding ? stappenVan(onboarding.doelgroep) : [];
+  const onbTijdlijn = onboarding
+    ? tijdlijn({
+        aangemeld: user.createdAt,
+        emailBevestigdOp: user.emailVerifiedAt,
+        laatsteInlog: user.lastLoginAt,
+        profielAangemaakt: profile?.createdAt ?? null,
+        soort: onboarding.doelgroep === "werker" ? (onbFiscal?.workerKind ?? null) : null,
+        identiteit: user.identityChecks.map((c) => ({ at: c.createdAt, label: `${CHECK_PROVIDER_LABEL[c.provider] ?? c.provider}, ${(CHECK_STATUS[c.status]?.label ?? c.status).toLowerCase()}`, goed: c.status === "VERIFIED" ? true : c.status === "REJECTED" ? false : null })),
+        herinneringen: { aantal: (onbHerinnering?.stage ?? 0) + (onbHerinnering?.handmatig ?? 0), laatsteOp: onbHerinnering?.at ? new Date(onbHerinnering.at) : null },
+        audit: auditEntries.filter((e) => isOnboardingAudit(e.action)).map((e) => ({ at: e.createdAt, action: e.action, summary: e.summary })),
+      })
+    : [];
 
   return (
     <div className="space-y-4">
@@ -177,6 +199,28 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
           {activity && (
             <Panel title="Uren per maand" subtitle="Goedgekeurde uren, de laatste 12 maanden">
               <Chart title="Goedgekeurde uren per maand" kind="bars" unit="hours" labels={activity.labels} series={[{ label: "Uren", values: activity.hoursSeries }]} height={180} emptyText="Nog geen goedgekeurde uren." />
+            </Panel>
+          )}
+
+          {onboarding && onbStatus && (
+            <Panel title="Onboarding" subtitle={onbStatus.stap === -1 ? "Alle stappen zijn gehaald" : `Nu: ${onbStatus.label}`}>
+              <ol className="mb-4 space-y-1.5">
+                {onbStappen.map((st, i) => (
+                  <li key={st.key} className="flex items-center justify-between gap-3 text-[0.8125rem]">
+                    <span style={{ color: "var(--a-dim)" }}>{st.label}</span>
+                    <Pill tone={onboarding.gehaald[i] ? "ok" : "neutral"}>{onboarding.gehaald[i] ? "Gehaald" : "Open"}</Pill>
+                  </li>
+                ))}
+              </ol>
+              {!isDeleted && (
+                <div className="mb-4">
+                  <OnboardingActies userId={user.id} emailBevestigd={Boolean(user.emailVerifiedAt)} bedrijfId={onboarding.doelgroep === "werkgever" && !onboarding.gehaald[4] ? onboarding.tenantId : null} klaar={onbStatus.stap === -1} />
+                </div>
+              )}
+              <Feed
+                emptyText="Nog niets bekend."
+                items={onbTijdlijn.map((e) => ({ key: e.key, text: e.tekst, meta: e.at ? dateTimeNl(e.at) : e.tone === "warn" ? "Nog niet" : "Tijdstip onbekend", ...(e.tone === "neutral" ? {} : { tone: e.tone }) }))}
+              />
             </Panel>
           )}
 

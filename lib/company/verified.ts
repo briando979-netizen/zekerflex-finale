@@ -35,6 +35,33 @@ export async function setKvkBewijs(tenantId: string, bewijs: KvkBewijs): Promise
   await kvSet(bewijsKey(tenantId), bewijs);
 }
 
+export interface VerificatieFeiten {
+  platform: boolean;
+  /** de KVK-inschrijving is actief en niet failliet */
+  kvkActief: boolean;
+  /** aangemelde persoon hoort aantoonbaar bij het bedrijf (KvkBewijs) */
+  kvkBewijs: boolean;
+  /** een beheerder keurde het bedrijf met de hand goed */
+  goedgekeurd: boolean;
+  /** er stonden al mensen ingepland */
+  ingepland: boolean;
+  /** bedrijf buiten Nederland met een btw- of registratienummer: wacht op een beheerder */
+  buitenlands?: boolean;
+}
+
+/** De regel zelf, puur: één bron voor de poort en voor Admin → Onboarding (die dit voor vele bedrijven tegelijk uitrekent). */
+export function verificatieUitFeiten(f: VerificatieFeiten): { verified: boolean; via: TenantVerifiedVia | null; inControle?: boolean; buitenlands?: boolean } {
+  if (f.platform) return { verified: true, via: "platform" };
+  if (f.kvkActief && f.kvkBewijs) return { verified: true, via: "kvk" };
+  if (f.goedgekeurd) return { verified: true, via: "admin" };
+  if (f.ingepland) return { verified: true, via: "history" };
+  if (f.buitenlands) return { verified: false, via: null, inControle: true, buitenlands: true };
+  return { verified: false, via: null, inControle: f.kvkActief };
+}
+
+export const TENANT_APPROVAL_PREFIX = "tenant-approved:";
+export const TENANT_BEWIJS_PREFIX = "tenant-kvk-bewijs:";
+
 /** inControle: the KVK is valid and active but nobody proved they belong to it, so ZekerFlex checks by hand. */
 export async function tenantVerification(tenantId: string): Promise<{ verified: boolean; via: TenantVerifiedVia | null; inControle?: boolean; buitenlands?: boolean }> {
   const tenant = await prisma.tenant.findUnique({
@@ -42,16 +69,17 @@ export async function tenantVerification(tenantId: string): Promise<{ verified: 
     select: { type: true, country: true, vatNumber: true, companyRegistration: { select: { isActive: true, insolvent: true } } },
   });
   if (!tenant) return { verified: false, via: null };
-  if (tenant.type === "PLATFORM") return { verified: true, via: "platform" };
+  const platform = tenant.type === "PLATFORM";
   const kvkActief = Boolean(tenant.companyRegistration?.isActive && !tenant.companyRegistration.insolvent);
-  if (kvkActief && (await kvGet<KvkBewijs>(bewijsKey(tenantId)))) return { verified: true, via: "kvk" };
-  if ((await kvGet<{ approved: boolean }>(approvalKey(tenantId)))?.approved) return { verified: true, via: "admin" };
-  const staffed = await prisma.shiftAssignment.count({ where: { shift: { branch: { tenantId } } }, take: 1 });
-  if (staffed > 0) return { verified: true, via: "history" };
+  if (platform) return verificatieUitFeiten({ platform, kvkActief, kvkBewijs: false, goedgekeurd: false, ingepland: false });
+  const kvkBewijs = kvkActief && Boolean(await kvGet<KvkBewijs>(bewijsKey(tenantId)));
+  if (kvkBewijs) return verificatieUitFeiten({ platform, kvkActief, kvkBewijs, goedgekeurd: false, ingepland: false });
+  const goedgekeurd = Boolean((await kvGet<{ approved: boolean }>(approvalKey(tenantId)))?.approved);
+  if (goedgekeurd) return verificatieUitFeiten({ platform, kvkActief, kvkBewijs, goedgekeurd, ingepland: false });
+  const ingepland = (await prisma.shiftAssignment.count({ where: { shift: { branch: { tenantId } } }, take: 1 })) > 0;
   // Een bedrijf buiten Nederland heeft geen KVK: het wacht op een beheerder (lib/company/buitenland.ts).
-  const buitenlands = (tenant.country ?? "NL") !== "NL" && Boolean(tenant.vatNumber || (await getBuitenlandBewijs(tenantId)));
-  if (buitenlands) return { verified: false, via: null, inControle: true, buitenlands: true };
-  return { verified: false, via: null, inControle: kvkActief };
+  const buitenlands = !ingepland && (tenant.country ?? "NL") !== "NL" && Boolean(tenant.vatNumber || (await getBuitenlandBewijs(tenantId)));
+  return verificatieUitFeiten({ platform, kvkActief, kvkBewijs, goedgekeurd, ingepland, buitenlands });
 }
 
 export async function isTenantVerified(tenantId: string): Promise<boolean> {
