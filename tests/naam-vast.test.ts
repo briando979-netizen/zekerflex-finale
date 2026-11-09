@@ -4,16 +4,17 @@ const userFindUnique = vi.fn();
 const userUpdate = vi.fn().mockResolvedValue({});
 const ivFindFirst = vi.fn();
 const fpUpdate = vi.fn().mockResolvedValue({});
+const fpFindUnique = vi.fn().mockResolvedValue({ payoutIban: "NL91ABNA0417164300" });
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { findUnique: userFindUnique, update: userUpdate },
     identityVerification: { findFirst: ivFindFirst },
-    freelancerProfile: { update: fpUpdate },
+    freelancerProfile: { update: fpUpdate, findUnique: fpFindUnique },
   },
 }));
 vi.mock("@/lib/env", () => ({ env: { STRIPE_SECRET_KEY: "sk_test", APP_BASE_URL: "https://www.zekerflex.com" } }));
 vi.mock("@/lib/billing/stripe", () => ({ getStripeClient: vi.fn() }));
-vi.mock("@/lib/fiscal/store", () => ({ getFiscal: vi.fn(), setFiscal: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/fiscal/store", () => ({ getFiscal: vi.fn().mockResolvedValue(null), setFiscal: vi.fn().mockResolvedValue(undefined) }));
 const kvGet = vi.fn();
 const kvSet = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/storage/kv", () => ({ kvGet, kvSet, kvDelete: vi.fn() }));
@@ -21,7 +22,8 @@ const recordAudit = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/audit", () => ({ recordAudit }));
 
 const { updatePersonalInfo, NAAM_VAST_BERICHT } = await import("@/lib/profile/personal");
-const { getBankLogin } = await import("@/lib/kyc/bank-login");
+const { getBankLogin, syncBankLogin } = await import("@/lib/kyc/bank-login");
+const { getStripeClient } = await import("@/lib/billing/stripe");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -101,5 +103,47 @@ describe("herbeoordeling bank-inlog met ID-document", () => {
     userFindUnique.mockResolvedValueOnce({ fullName: "Jan de Vries" });
     ivFindFirst.mockResolvedValueOnce(null);
     expect((await getBankLogin("u1"))?.status).toBe("verified");
+  });
+});
+
+describe("een nieuwe bank-inlog vergelijkt ook met het ID-document", () => {
+  const zetStripe = (verifiedName: string) => {
+    const sessie = {
+      metadata: { userId: "u1", purpose: "bank-login" },
+      setup_intent: {
+        status: "succeeded",
+        payment_method: "pm_1",
+        latest_attempt: { payment_method_details: { ideal: { iban_last4: "4300", verified_name: verifiedName, bank: "ing", generated_sepa_debit: null } } },
+      },
+    };
+    vi.mocked(getStripeClient).mockReturnValue({
+      checkout: { sessions: { retrieve: vi.fn().mockResolvedValue(sessie) } },
+      paymentMethods: { detach: vi.fn().mockResolvedValue({}) },
+    } as never);
+  };
+
+  it("keurt af als bank en profiel kloppen maar het ID-document een andere naam toont", async () => {
+    zetStripe("J DE VRIES");
+    userFindUnique.mockResolvedValue({ fullName: "Jan de Vries" });
+    ivFindFirst.mockResolvedValue({ rawPayload: { nameOnDocument: "Piet Jansen" } });
+    const rec = await syncBankLogin("u1", "cs_test_a1b2c3d4e5f6g7h8");
+    expect(rec?.status).toBe("mismatch");
+    expect(rec?.problems).toContain("name");
+  });
+
+  it("keurt goed als bank, profiel en document dezelfde persoon zijn", async () => {
+    zetStripe("J DE VRIES");
+    userFindUnique.mockResolvedValue({ fullName: "Jan de Vries" });
+    ivFindFirst.mockResolvedValue({ rawPayload: { nameOnDocument: "Jan de Vries" } });
+    const rec = await syncBankLogin("u1", "cs_test_a1b2c3d4e5f6g7h8");
+    expect(rec?.status).toBe("verified");
+  });
+
+  it("zonder geverifieerd document geldt alleen de profielnaam", async () => {
+    zetStripe("J DE VRIES");
+    userFindUnique.mockResolvedValue({ fullName: "Jan de Vries" });
+    ivFindFirst.mockResolvedValue(null);
+    const rec = await syncBankLogin("u1", "cs_test_a1b2c3d4e5f6g7h8");
+    expect(rec?.status).toBe("verified");
   });
 });
