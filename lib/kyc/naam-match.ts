@@ -67,9 +67,19 @@ function splits(tokens: string[]): Delen {
   return { voorletters, namen };
 }
 
-/** Letters van een naam, gesorteerd: hoofdletters, accenten, spaties, koppeltekens en volgorde vallen weg. */
-function lettersVan(tokens: string[]): string {
-  return tokens.join("").split("").sort().join("");
+/**
+ * Een naam als vergelijkbare vorm: de woorden aaneen ("el bouti" = "elbouti") en de
+ * woorden in vaste volgorde ("vries jan de" = "jan de vries"). Nooit de letters zelf
+ * sorteren: dan zijn "Jan Smit" en "Tim Jans" dezelfde naam.
+ */
+function vormen(tokens: string[]): string[] {
+  return [tokens.join(""), [...tokens].sort().join(" ")];
+}
+
+function zelfdeVorm(a: string[], b: string[]): boolean {
+  const [aaneenA, volgordeA] = vormen(a);
+  const [aaneenB, volgordeB] = vormen(b);
+  return aaneenA === aaneenB || volgordeA === volgordeB;
 }
 
 /**
@@ -82,11 +92,11 @@ export function naamGelijk(a: string, b: string): boolean {
   const ta = woorden(normaliseer(a));
   const tb = woorden(normaliseer(b));
   if (ta.length === 0 || tb.length === 0) return false;
-  if (lettersVan(ta) === lettersVan(tb)) return true;
+  if (zelfdeVorm(ta, tb)) return true;
   const zonder = (t: string[]) => t.filter((w) => !TUSSENVOEGSELS.has(w));
   const za = zonder(ta);
   const zb = zonder(tb);
-  return za.length > 0 && zb.length > 0 && lettersVan(za) === lettersVan(zb);
+  return za.length > 0 && zb.length > 0 && zelfdeVorm(za, zb);
 }
 
 /**

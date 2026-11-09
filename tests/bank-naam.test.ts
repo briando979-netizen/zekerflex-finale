@@ -72,6 +72,9 @@ describe("naamGelijk: dezelfde naam, andere schrijfwijze", () => {
     ["Jan de Vries", "Piet de Vries"],
     ["Jan de Vries", "Jan Jansen"],
     ["Bilal Elbouti", "Bilal Bouti Ahmed"],
+    // dezelfde letters, ander mens: de regel sorteert nooit letters
+    ["Jan Smit", "Tim Jans"],
+    ["Ben Lam", "Mel Nab"],
     ["", "Jan de Vries"],
   ])("%s ≠ %s", (a, b) => {
     expect(naamGelijk(a, b)).toBe(false);
