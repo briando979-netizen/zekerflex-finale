@@ -1,37 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SAVED_EVENT, deviceStore, readSaved, toggleSaved } from "@/lib/shifts/bewaard";
 
-const KEY = "zf-saved-shifts";
-
-function read(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(KEY) || "[]") as string[]);
-  } catch {
-    return new Set();
-  }
-}
-
-/** Per-device "bewaard" toggle on a shift card. Lightweight; no server state. */
-export function SaveShiftHeart({ shiftId }: { shiftId: string }) {
+/**
+ * Per-device "bewaard" toggle on a shift card. Lightweight; no server state.
+ * The klussen feed shows the saved ones under "Bewaard" (MarketplaceView).
+ */
+export function SaveShiftHeart({
+  shiftId,
+  labels = { save: "Bewaar deze klus", unsave: "Verwijder uit bewaard" },
+}: {
+  shiftId: string;
+  /** from the freelancer dictionary (card.save / card.unsave); Dutch by default */
+  labels?: { save: string; unsave: string };
+}) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setSaved(read().has(shiftId));
+    const load = () => setSaved(readSaved(deviceStore()).has(shiftId));
+    load();
+    window.addEventListener(SAVED_EVENT, load);
+    return () => window.removeEventListener(SAVED_EVENT, load);
   }, [shiftId]);
 
   function toggle(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const set = read();
-    if (set.has(shiftId)) set.delete(shiftId);
-    else set.add(shiftId);
-    try {
-      localStorage.setItem(KEY, JSON.stringify([...set]));
-    } catch {
-      /* ignore */
-    }
-    setSaved(set.has(shiftId));
+    setSaved(toggleSaved(deviceStore(), shiftId).has(shiftId));
+    window.dispatchEvent(new Event(SAVED_EVENT));
   }
 
   return (
@@ -39,7 +36,7 @@ export function SaveShiftHeart({ shiftId }: { shiftId: string }) {
       type="button"
       onClick={toggle}
       aria-pressed={saved}
-      aria-label={saved ? "Verwijder uit bewaard" : "Bewaar deze klus"}
+      aria-label={saved ? labels.unsave : labels.save}
       className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink shadow-card backdrop-blur transition hover:scale-110"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} className={saved ? "text-crit" : "text-neutralx-500"}>

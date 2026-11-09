@@ -320,7 +320,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           ←
         </Link>
         <div className="absolute right-4 top-4 flex items-center gap-2">
-          <SaveShiftHeart shiftId={s.id} />
+          <SaveShiftHeart shiftId={s.id} labels={{ save: ft.card.save, unsave: ft.card.unsave }} />
           <ShiftMenu employerName={s.branch} shiftTitle={s.title} />
         </div>
       </div>

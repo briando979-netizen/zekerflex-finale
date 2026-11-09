@@ -9,6 +9,7 @@ import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
 import { hiddenEmployers } from "@/components/app/ShiftMenu";
 import { useFT } from "@/components/i18n/useFT";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
+import { SAVED_EVENT, deviceStore, readSaved } from "@/lib/shifts/bewaard";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -134,9 +135,22 @@ export function MarketplaceView({
   const [loc, setLoc] = useState<LocFilter | null>(null);
   const [locOpen, setLocOpen] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // klussen bewaard met het hartje (op dit apparaat); volgt het hartje meteen
+  const [saved, setSaved] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setHidden(hiddenEmployers());
+  }, []);
+
+  useEffect(() => {
+    const load = () => setSaved(readSaved(deviceStore()));
+    load();
+    window.addEventListener(SAVED_EVENT, load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener(SAVED_EVENT, load);
+      window.removeEventListener("storage", load);
+    };
   }, []);
 
   const toggle = (setter: typeof setQuick) => (key: string) =>
@@ -157,6 +171,7 @@ export function MarketplaceView({
   }, [shifts]);
 
   const QUICK = [
+    { k: "saved", l: mk.qSaved },
     { k: "favorites", l: mk.qFavorites },
     { k: "replacement", l: mk.qReplacement },
     { k: "tomorrow", l: mk.qTomorrow },
@@ -209,6 +224,7 @@ export function MarketplaceView({
       const d = new Date(s.startsAt);
       // Favorieten: bedrijven die je volgt (❤️) of waar je al eerder werkte.
       if (quick.has("favorites") && s.workedHereBefore <= 0 && !s.followed) return false;
+      if (quick.has("saved") && !saved.has(s.id)) return false;
       if (quick.has("replacement") && !s.isReplacement) return false;
       if (quick.has("tomorrow") && !isTomorrow(d)) return false;
       if (quick.has("weekend") && !isUpcomingWeekend(d)) return false;
@@ -225,7 +241,8 @@ export function MarketplaceView({
       return a.startsAt < b.startsAt ? -1 : 1;
     });
     return out;
-  }, [shifts, q, minRate, loc, dayparts, branches, categoryOf, sort, quick, dates, hidden]);
+  }, [shifts, q, minRate, loc, dayparts, branches, categoryOf, sort, quick, dates, hidden, saved]);
+  const savedCount = useMemo(() => shifts.filter((s) => saved.has(s.id)).length, [shifts, saved]);
 
   const Chip = ({ id, label, count, active }: { id: string; label: string; count?: number; active?: boolean }) => {
     const on = openChip === id || Boolean(count) || active;
@@ -267,6 +284,22 @@ export function MarketplaceView({
               <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
+          {(savedCount > 0 || quick.has("saved")) && (
+            <button
+              type="button"
+              onClick={() => toggle(setQuick)("saved")}
+              aria-pressed={quick.has("saved")}
+              className={`flex flex-shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                quick.has("saved") ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
+              }`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-crit" aria-hidden>
+                <path d="M12 20s-7-4.4-9.2-8.5C1.3 8.7 2.8 5.5 6 5.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.2 0 4.7 3.2 3.2 6C19 15.6 12 20 12 20Z" />
+              </svg>
+              {mk.saved}
+              <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">{savedCount}</span>
+            </button>
+          )}
           <Chip id="sort" label={mk.sort} active={sort !== (home ? "match" : "soonest")} />
           <Chip id="quick" label={mk.quick} count={quick.size} />
           <Chip id="times" label={mk.times} count={dayparts.size} />
