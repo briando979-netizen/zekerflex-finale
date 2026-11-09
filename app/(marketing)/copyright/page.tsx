@@ -13,7 +13,7 @@ export default function CopyrightPage() {
       <LegalSection
         body="Aan de inhoud van deze website kunnen op geen enkele wijze rechten worden ontleend."
       />
-      <LegalSection body={`© ${year} ZekerFlex B.V. Alle rechten voorbehouden.`} />
+      <LegalSection body={`© ${year} Zekerflex, Inc. Alle rechten voorbehouden.`} />
     </LegalPage>
   );
 }

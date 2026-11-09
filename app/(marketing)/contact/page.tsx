@@ -34,7 +34,7 @@ export default function ContactPage() {
             Waar kunnen we mee helpen?
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            {SITE.name} is een Nederlands bedrijf (ZekerFlex B.V., gevestigd in Amsterdam). Hieronder het
+            {SITE.name} is een bedrijf van Zekerflex, Inc. (Delaware, VS). Hieronder het
             juiste adres per onderwerp — zo komt je vraag meteen bij de juiste persoon terecht.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">

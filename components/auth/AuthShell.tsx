@@ -65,7 +65,7 @@ export function AuthShell({
           </div>
 
           <p className="relative z-10 font-mono text-xs text-white/40">
-            © {new Date().getFullYear()} ZekerFlex B.V.
+            © {new Date().getFullYear()} Zekerflex, Inc.
           </p>
         </div>
       )}

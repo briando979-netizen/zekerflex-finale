@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <LegalPage
       title="Privacybeleid"
       updated="1 mei 2026"
-      intro="In dit privacybeleid leggen we uit welke gegevens ZekerFlex B.V. ('ZekerFlex') verzamelt als je onze website of app gebruikt of je inschrijft, waarom we die nodig hebben, met wie we ze delen en hoe lang we ze bewaren. We volgen de AVG. Door onze diensten te gebruiken ga je akkoord met dit beleid. Dit beleid kan wijzigen; deze versie geldt sinds 1 mei 2026."
+      intro="In dit privacybeleid leggen we uit welke gegevens Zekerflex, Inc. ('ZekerFlex') verzamelt als je onze website of app gebruikt of je inschrijft, waarom we die nodig hebben, met wie we ze delen en hoe lang we ze bewaren. We volgen de AVG. Door onze diensten te gebruiken ga je akkoord met dit beleid. Dit beleid kan wijzigen; deze versie geldt sinds 1 mei 2026."
       note={
         <>
           Vragen of een verzoek over je gegevens? Mail{" "}
@@ -115,7 +115,7 @@ export default function PrivacyPage() {
       <LegalSection
         heading="Contact"
         list={[
-          "ZekerFlex B.V. — afdeling Support",
+          "Zekerflex, Inc. — afdeling Support",
           "Amsterdam, Nederland",
           "E-mail: privacy@zekerflex.com",
         ]}

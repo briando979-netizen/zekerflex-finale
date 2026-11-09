@@ -67,7 +67,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
 
       <div className="border-t border-white/10">
         <div className="shell flex flex-col items-start justify-between gap-3 py-6 text-xs text-white/65 sm:flex-row sm:items-center">
-          <p>© {year} ZekerFlex B.V. · Amsterdam</p>
+          <p>© {year} Zekerflex, Inc.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
             <Link href="/voorwaarden" className="hover:text-white">
               Gebruiksvoorwaarden

@@ -159,7 +159,7 @@ async function main(): Promise<void> {
   const platform = await prisma.tenant.create({
     data: {
       id: "org_platform",
-      name: "ZekerFlex B.V.",
+      name: "Zekerflex, Inc.",
       type: "PLATFORM",
       country: "NL",
       kvkNumber: "90000001",

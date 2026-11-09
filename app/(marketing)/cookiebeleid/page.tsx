@@ -78,7 +78,7 @@ export default function CookiebeleidPage() {
       <LegalSection
         heading="10. Contactinformatie"
         list={[
-          "ZekerFlex B.V.",
+          "Zekerflex, Inc.",
           "Amsterdam, Nederland",
           "Website: zekerflex.com",
           "E-mail: privacy@zekerflex.com",

@@ -433,7 +433,7 @@ async function writeArchivedForTeam(tenantId) {
           userId: fp.user.id,
           workerName: fp.user.fullName,
           workerBsnLast4: "6782",
-          employerName: "ZekerFlex B.V.",
+          employerName: "Zekerflex, Inc.",
           employerKvk: "00000000",
           signedAt: uzoSignedAt.toISOString(),
           validFrom: uzoSignedAt.toISOString(),

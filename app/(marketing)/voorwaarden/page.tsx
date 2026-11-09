@@ -8,7 +8,7 @@ export default function VoorwaardenPage() {
     <LegalPage
       title="Gebruiksvoorwaarden"
       updated="1 mei 2026"
-      intro="ZekerFlex B.V. (ZekerFlex), gevestigd te Amsterdam en ingeschreven bij de Kamer van Koophandel. Deze gebruiksvoorwaarden regelen het gebruik van het ZekerFlex-platform door opdrachtgevers en opdrachtnemers."
+      intro="Zekerflex, Inc. (ZekerFlex), een vennootschap naar het recht van Delaware (VS). Deze gebruiksvoorwaarden regelen het gebruik van het ZekerFlex-platform door opdrachtgevers en opdrachtnemers."
       note={
         <>
           Vragen over deze voorwaarden? Mail{" "}
