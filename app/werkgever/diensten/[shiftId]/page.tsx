@@ -118,7 +118,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
           <p className="font-semibold text-ink">Dit is een testklus</p>
           <p className="mt-1">
             Freelancers kunnen reageren — je ziet ze hieronder bij &ldquo;Heeft gereageerd&rdquo; en kunt ze al een bericht sturen.
-            Inplannen kan pas zodra je KVK is goedgekeurd; wie gereageerd heeft krijgt dan automatisch een melding om te bevestigen.
+            Inplannen kan pas zodra je bedrijf is goedgekeurd; wie gereageerd heeft krijgt dan automatisch een melding om te bevestigen.
           </p>
         </div>
       )}

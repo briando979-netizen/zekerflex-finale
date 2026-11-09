@@ -114,7 +114,12 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
           <p className="font-semibold text-ink">{inControle ? "We controleren je bedrijf" : "Je bedrijf is nog niet geverifieerd"}</p>
           <p className="mt-1">
             Je kunt alvast één <strong>testklus</strong> plaatsen: die is zichtbaar en freelancers kunnen erop reageren.{" "}
-            {inControle ? (
+            {verificatie.buitenlands ? (
+              <>
+                Je bedrijf is aangemeld. Omdat het buiten Nederland zit, controleert ZekerFlex het zelf met de hand, meestal binnen
+                een werkdag, en je krijgt bericht zodra je mensen kunt inplannen.
+              </>
+            ) : inControle ? (
               <>
                 Je KVK-nummer klopt. We controleren nog of je bij dit bedrijf hoort, meestal binnen een werkdag, en je krijgt bericht
                 zodra je mensen kunt inplannen.
@@ -148,6 +153,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
                 kvkPrefill: tenantKvk?.kvkNumber ?? undefined,
                 verified: companyVerified,
                 inControle,
+                buitenlands: Boolean(verificatie.buitenlands),
                 companyName: o.orgName,
               }}
             />
