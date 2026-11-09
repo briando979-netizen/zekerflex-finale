@@ -37,7 +37,7 @@ describe("geocodeThuisbasis", () => {
   });
 
   it("zoekt in het buitenland bij OSM met alleen postcode, plaats en land", async () => {
-    fetchMock.mockResolvedValue(antwoord([{ lat: "51.2194", lon: "4.4025", address: { city: "Antwerpen", postcode: "2000" } }]));
+    fetchMock.mockImplementation(async () => antwoord([{ lat: "51.2194", lon: "4.4025", address: { city: "Antwerpen", postcode: "2000" } }]));
     const r = await geocodeThuisbasis({ land: "BE", postcode: "2000", plaats: "Antwerpen", huisnummer: "12" });
     expect(r).toMatchObject({ latitude: 51.2194, longitude: 4.4025, postalCode: "BE-2000", city: "Antwerpen", approximate: false });
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
@@ -60,11 +60,13 @@ describe("geocodeThuisbasis", () => {
   });
 
   it("geeft een eerlijke fout als OSM niets vindt, nooit het midden van Nederland", async () => {
-    fetchMock.mockResolvedValue(antwoord([]));
+    // elke aanvraag een eigen antwoord: een Response-body is maar één keer te lezen
+    fetchMock.mockImplementation(async () => antwoord([]));
     const fout = await geocodeThuisbasis({ land: "DE", postcode: "99999", plaats: "Nergens" }).catch((e: unknown) => e);
     expect(fout).toBeInstanceOf(AppError);
     expect((fout as AppError).status).toBe(422);
     expect((fout as AppError).details).toEqual({ reden: "thuisbasis-niet-gevonden" });
+    expect(fetchMock).toHaveBeenCalledTimes(2); // met plaats, daarna zonder
   });
 
   it("meldt het eerlijk als OSM niet bereikbaar is, en onthoudt dat niet", async () => {
@@ -79,7 +81,7 @@ describe("geocodeThuisbasis", () => {
   });
 
   it("vraagt hetzelfde adres binnen het uur niet twee keer (controle vóór de scan + insturen)", async () => {
-    fetchMock.mockResolvedValue(antwoord([{ lat: "50.85", lon: "4.35", address: { city: "Brussel" } }]));
+    fetchMock.mockImplementation(async () => antwoord([{ lat: "50.85", lon: "4.35", address: { city: "Brussel" } }]));
     await geocodeThuisbasis({ land: "BE", postcode: "1000", plaats: "Brussel" });
     await geocodeThuisbasis({ land: "BE", postcode: "1000", plaats: "brussel" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
