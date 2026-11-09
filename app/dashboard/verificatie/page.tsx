@@ -10,7 +10,8 @@ import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
+import Link from "next/link";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
@@ -22,6 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
   const pt = AUTH_DICTS[await getLocale()].page;
+  const klaar = (await getFreelancerDict()).profielAf.klaar;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal, werkrecht] = await Promise.all([
@@ -62,6 +64,23 @@ export default async function VerificatiePage() {
           <Panel title={pt.werkrecht.title}>
             <div className="p-5">
               <WerkrechtPanel />
+            </div>
+          </Panel>
+        </div>
+
+        <div className="mt-6">
+          <Panel title={klaar.nextTitle}>
+            <div className="px-5 py-5">
+              <p className="text-sm font-semibold text-ink">{klaar.title}</p>
+              <p className="mt-1 text-sm text-neutralx-600">{klaar.sub}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/dashboard/klussen" className="btn-primary">{klaar.jobs}</Link>
+                <Link href="/dashboard/profiel" className="btn-ghost">{klaar.profile}</Link>
+                <Link href="/dashboard/beschikbaarheid" className="btn-ghost">{klaar.availability}</Link>
+                {!o.stappen.find((st) => st.key === "push")?.done && (
+                  <Link href="/dashboard/account" className="btn-ghost">{klaar.push}</Link>
+                )}
+              </div>
             </div>
           </Panel>
         </div>

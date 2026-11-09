@@ -77,6 +77,10 @@ export default async function KlussenPage(
           werkrechtOk={werkrecht.ok}
         />
       )}
+      {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
+      {overview.profileComplete && werkrecht.ok && (
+      <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
+      )}
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">

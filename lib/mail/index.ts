@@ -509,11 +509,14 @@ export function onboardingReminderEmail(
   kind: "freelancer" | "uitzendkracht" | "bedrijf",
   appUrl: string,
   step: number,
+  /** de precieze toestand (lib/onboarding/voortgang.ts herinneringInhoud): wat nog open staat, met een pad vanaf de root */
+  inhoud?: { todo: string; why: string; href: string },
 ): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   const base = appUrl.replace(/\/+$/, "");
-  const { href, todo, why } =
-    kind === "bedrijf"
+  const { href, todo, why } = inhoud
+    ? { ...inhoud, href: `${base}${inhoud.href}` }
+    : kind === "bedrijf"
       ? {
           href: `${base}/werkgever`,
           todo: "vul je KVK-nummer en eerste vestiging in",

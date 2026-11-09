@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findProfile = vi.fn();
 const findUser = vi.fn();
-vi.mock("@/lib/prisma", () => ({ prisma: { freelancerProfile: { findUnique: findProfile }, user: { findUnique: findUser } } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { freelancerProfile: { findUnique: findProfile }, user: { findUnique: findUser }, webPushSubscription: { count: async () => 0 } } }));
 const getFiscal = vi.fn();
 vi.mock("@/lib/fiscal/store", () => ({
   getFiscal,

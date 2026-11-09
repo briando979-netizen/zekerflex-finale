@@ -2,11 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { amsterdamStartOfMonth } from "@/lib/time/amsterdam";
+import { werkerStappen, berekenVoortgang, type Stap, type Voortgang, type WerkerStapSleutel } from "@/lib/onboarding/voortgang";
 
 export interface FreelancerOverview {
   hasProfile: boolean;
   profileComplete: boolean;
   onboarding: { label: string; done: boolean }[];
+  /** dezelfde stappen als sleutels (voor de "maak je profiel af"-kaart, vertaald door de pagina) */
+  stappen: Stap<WerkerStapSleutel>[];
+  voortgang: Voortgang<WerkerStapSleutel>;
   badgeLevel: string;
   reliabilityScore: number;
   shiftsCompleted: number;
@@ -51,13 +55,26 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
     },
   });
 
-  const [user, fiscal] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
+  const [user, fiscal, pushAantal] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true, emailVerifiedAt: true } }),
     getFiscal(userId),
+    prisma.webPushSubscription.count({ where: { userId, disabledAt: null } }).catch(() => 0),
   ]);
   const fiscalDone = isFiscalComplete(fiscal);
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
   const uitzendContractSigned = isUitzend ? Boolean(await activeUitzendContract(userId)) : true;
+
+  const stappen = werkerStappen({
+    emailBevestigd: Boolean(user?.emailVerifiedAt),
+    fiscaalKlaar: fiscalDone,
+    uitzend: isUitzend,
+    kvkOfBtw: Boolean(profile?.kvkValid || fiscal.vatValid || fiscal.korApplies),
+    contractGetekend: uitzendContractSigned,
+    identiteitGeverifieerd: user?.kycStatus === "VERIFIED",
+    bankEnThuis: Boolean(profile && (profile.payoutIban || fiscal.iban) && profile.homePostalCode),
+    heeftPush: pushAantal > 0,
+  });
+  const voortgang = berekenVoortgang(stappen);
 
   if (!profile) {
     return {
@@ -73,6 +90,8 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
         { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
         { label: "Thuisbasis en rekeningnummer ingesteld", done: false },
       ],
+      stappen,
+      voortgang,
       badgeLevel: "BRONZE",
       reliabilityScore: 1.0,
       shiftsCompleted: 0,
@@ -156,6 +175,8 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
       { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
       { label: "Thuisbasis en rekeningnummer ingesteld", done: Boolean((profile.payoutIban || fiscal.iban) && profile.homePostalCode) },
     ],
+    stappen,
+    voortgang,
     badgeLevel: profile.badgeLevel,
     reliabilityScore: profile.reliabilityScore,
     shiftsCompleted: profile.shiftsCompleted,

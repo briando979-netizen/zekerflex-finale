@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   users: [] as Record<string, unknown>[],
   kv: new Map<string, unknown>(),
-  mail: vi.fn(async (_x: { subject: string; to: string }) => ({ delivered: true })),
+  mail: vi.fn(async (_x: { subject: string; to: string; text: string }) => ({ delivered: true })),
   code: vi.fn(async () => ({ sent: true })),
   onboarded: false,
   verified: false,
+  inControle: false,
+  klus: false,
 }));
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zf.test" } }));
@@ -15,12 +17,16 @@ vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => m.kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void m.kv.set(k, v),
 }));
-vi.mock("@/lib/prisma", () => ({ prisma: { user: { findMany: async () => m.users } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: { user: { findMany: async () => m.users }, shift: { findFirst: async () => (m.klus ? { id: "s1" } : null) } },
+}));
 vi.mock("@/lib/mail", async (orig) => ({ ...(await orig<typeof import("@/lib/mail")>()), sendMail: m.mail }));
 vi.mock("@/lib/auth/email-verify", () => ({ sendVerificationEmail: m.code }));
 vi.mock("@/lib/fiscal/store", () => ({ getFiscal: async () => ({ workerKind: "zzp" }) }));
 vi.mock("@/lib/onboarding/employer", () => ({ isEmployerOnboarded: async () => m.onboarded }));
-vi.mock("@/lib/company/verified", () => ({ isTenantVerified: async () => m.verified }));
+vi.mock("@/lib/company/verified", () => ({
+  tenantVerification: async () => ({ verified: m.verified, via: null, inControle: m.inControle }),
+}));
 
 import { dueStage, runOnboardingReminders } from "@/lib/onboarding/reminders";
 
@@ -45,6 +51,8 @@ describe("onboarding reminders", () => {
     m.code.mockClear();
     m.onboarded = false;
     m.verified = false;
+    m.inControle = false;
+    m.klus = false;
   });
 
   it("stages: day 1, 3, 7", () => {
@@ -82,8 +90,39 @@ describe("onboarding reminders", () => {
     m.mail.mockClear();
     m.onboarded = true;
     m.verified = true;
+    m.klus = true;
     await runOnboardingReminders(NOW);
     expect(m.mail).not.toHaveBeenCalled();
+  });
+
+  it("verified company without a first klus is reminded to place one", async () => {
+    m.users = [user({ memberships: [{ role: "HQ_ADMIN", tenantId: "t1" }] })];
+    m.onboarded = true;
+    m.verified = true;
+    await runOnboardingReminders(NOW);
+    expect(m.mail).toHaveBeenCalledTimes(1);
+    expect(m.mail.mock.calls[0]![0].text).toMatch(/eerste klus/);
+  });
+
+  it("company that we are checking by hand gets no reminder (nothing for them to do)", async () => {
+    m.users = [user({ memberships: [{ role: "HQ_ADMIN", tenantId: "t1" }] })];
+    m.onboarded = true;
+    m.inControle = true;
+    await runOnboardingReminders(NOW);
+    expect(m.mail).not.toHaveBeenCalled();
+  });
+
+  it("freelancer with a profile but no verified identity gets the verification-only text", async () => {
+    m.users = [user({ freelancerProfile: { id: "fp" } })];
+    await runOnboardingReminders(NOW);
+    expect(m.mail.mock.calls[0]![0].text).toMatch(/bevestig je identiteit/);
+    expect(m.mail.mock.calls[0]![0].text).not.toMatch(/thuisbasis/);
+  });
+
+  it("freelancer who only chose a werkvorm is told that is already done", async () => {
+    m.users = [user({})];
+    await runOnboardingReminders(NOW);
+    expect(m.mail.mock.calls[0]![0].text).toMatch(/werkvorm al gekozen/);
   });
 
   it("platform admins are never nudged", async () => {

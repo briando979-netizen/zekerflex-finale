@@ -5,6 +5,9 @@ import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
 import { pendingEmployerReviews } from "@/lib/reviews/pending";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
+import { werkgeverStappen, berekenVoortgang } from "@/lib/onboarding/voortgang";
+import { WERKGEVER_KAART, WERKGEVER_STAPPEN } from "@/lib/onboarding/werkgever-teksten";
+import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { tenantVerification } from "@/lib/company/verified";
 import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { prisma } from "@/lib/prisma";
@@ -135,6 +138,20 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
         </div>
       )}
       {showWizard && <OnboardingOnderhoudBalk soort="werkgever" />}
+      {/* na de wizard: wat er nog open staat (bv. nog geen eerste klus); verdwijnt vanzelf */}
+      {!showWizard && canOnboard && !startModus && !voorbeeldSoort && (
+        <OnboardingProgress
+          voortgang={berekenVoortgang(
+            werkgeverStappen({ emailBevestigd: emailVerified, bedrijfKlaar: kvkDone, verified: companyVerified, inControle, heeftKlus: w.heeftKlussen }),
+          )}
+          steps={
+            inControle
+              ? { ...WERKGEVER_STAPPEN, verificatie: { title: "Wij controleren je bedrijf", why: "Je KVK-nummer klopt. We controleren of je bij dit bedrijf hoort, meestal binnen een werkdag. Je hoeft niets te doen." } }
+              : WERKGEVER_STAPPEN
+          }
+          texts={WERKGEVER_KAART}
+        />
+      )}
       {showWizard ? (
         <section className="mb-12">
           <p className="eyebrow mb-2">{t.start.eyebrow}</p>

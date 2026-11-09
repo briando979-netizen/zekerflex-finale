@@ -6,14 +6,17 @@ import { sendMail, onboardingReminderEmail } from "@/lib/mail";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
 import { getFiscal } from "@/lib/fiscal/store";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
-import { isTenantVerified } from "@/lib/company/verified";
+import { tenantVerification } from "@/lib/company/verified";
+import { herinneringReden, herinneringInhoud } from "@/lib/onboarding/voortgang";
 
 // ---------------------------------------------------------------------------
 // Reminders for accounts that were created but never finished.
 //
 //  - e-mail address never confirmed → a fresh code mail (day 1 and 3)
 //  - freelancer without verified identity / KVK-or-btw → "maak je account af"
-//  - company without KVK / first branch / verification   → idem
+//  - company without KVK / first branch / verification / first klus → idem, per toestand
+//    (lib/onboarding/voortgang.ts: herinneringReden); wacht ZekerFlex zelf op een
+//    handmatige controle, dan krijgt het bedrijf géén herinnering (er valt niets te doen)
 //
 // Day 1, 3 and 7 after sign-up, one step per run (a user who signed up long
 // ago gets one mail, not three at once), never more than three, and never
@@ -65,18 +68,41 @@ export async function runOnboardingReminders(now = new Date()): Promise<{ checke
       const adminTenant = u.memberships.find((m) => m.role === "HQ_ADMIN")?.tenantId;
       let action: (() => Promise<unknown>) | null = null;
 
-      if (!u.emailVerifiedAt) {
+      const emailBevestigd = Boolean(u.emailVerifiedAt);
+      if (!emailBevestigd) {
         // the code mail again (fresh code); after day 3 we stop chasing an unconfirmed address
         if (state.stage < 2) action = () => sendVerificationEmail(u.id, u.email, u.fullName);
       } else if (freelancer) {
-        const done = u.kycStatus === "VERIFIED" && Boolean(u.freelancerProfile);
-        if (!done) {
+        // eerlijk per toestand: alleen soort gekozen (geen profiel) of profiel zonder bevestigde identiteit
+        const reden = herinneringReden({
+          rol: "werker",
+          emailBevestigd,
+          kycVerified: u.kycStatus === "VERIFIED",
+          heeftProfiel: Boolean(u.freelancerProfile),
+        });
+        if (reden && reden !== "email") {
           const kind = (await getFiscal(u.id).catch(() => null))?.workerKind === "uitzendkracht" ? "uitzendkracht" : "freelancer";
-          action = () => sendMail({ ...onboardingReminderEmail(u.fullName, kind, env.APP_BASE_URL, state.stage + 1), to: u.email });
+          const inhoud = herinneringInhoud(reden);
+          action = () => sendMail({ ...onboardingReminderEmail(u.fullName, kind, env.APP_BASE_URL, state.stage + 1, inhoud), to: u.email });
         }
       } else if (adminTenant) {
-        const done = (await isEmployerOnboarded([adminTenant])) && (await isTenantVerified(adminTenant));
-        if (!done) action = () => sendMail({ ...onboardingReminderEmail(u.fullName, "bedrijf", env.APP_BASE_URL, state.stage + 1), to: u.email });
+        const [bedrijfKlaar, verificatie, klus] = await Promise.all([
+          isEmployerOnboarded([adminTenant]),
+          tenantVerification(adminTenant),
+          prisma.shift.findFirst({ where: { branch: { tenantId: adminTenant } }, select: { id: true } }),
+        ]);
+        const reden = herinneringReden({
+          rol: "bedrijf",
+          emailBevestigd,
+          bedrijfKlaar,
+          verified: verificatie.verified,
+          inControle: Boolean(verificatie.inControle),
+          heeftKlus: Boolean(klus),
+        });
+        if (reden && reden !== "email") {
+          const inhoud = herinneringInhoud(reden);
+          action = () => sendMail({ ...onboardingReminderEmail(u.fullName, "bedrijf", env.APP_BASE_URL, state.stage + 1, inhoud), to: u.email });
+        }
       }
 
       if (action) {
