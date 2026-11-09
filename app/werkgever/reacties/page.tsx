@@ -20,14 +20,15 @@ export default async function WerkgeverReactiesPage() {
   const scope = await resolveEmployerScope(principal);
   const branchFilter = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
 
+  // eerst de openstaande reacties, dan alleen die klussen van dit bedrijf (zo valt geen nieuwe klus weg)
+  const openstaand = (await listCounterOffers(1000)).filter((o) => o.status === "pending");
   const shifts = await prisma.shift.findMany({
-    where: { branch: branchFilter },
+    where: { id: { in: [...new Set(openstaand.map((o) => o.shiftId))] }, branch: branchFilter },
     select: { id: true, title: true, startsAt: true, branch: { select: { name: true } } },
     orderBy: { startsAt: "asc" },
-    take: 500,
   });
   const shiftIds = new Set(shifts.map((s) => s.id));
-  const offers = (await listCounterOffers(1000)).filter((o) => o.status === "pending" && shiftIds.has(o.shiftId));
+  const offers = openstaand.filter((o) => shiftIds.has(o.shiftId));
 
   // per klus: de reacties, de oudste eerst
   const perKlus = new Map<string, typeof offers>();

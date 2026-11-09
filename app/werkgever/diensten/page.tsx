@@ -39,9 +39,10 @@ export default async function WerkgeverDienstenPage() {
     listCounterOffers(500),
   ]);
 
-  const pendingReacties = offers.filter((o) => o.status === "pending").length;
   const offerCountByShift = new Map<string, number>();
   for (const o of offers) if (o.status === "pending") offerCountByShift.set(o.shiftId, (offerCountByShift.get(o.shiftId) ?? 0) + 1);
+  // alleen reacties op de eigen klussen tellen (listCounterOffers geeft die van het hele platform)
+  const pendingReacties = shifts.reduce((n, s) => n + (offerCountByShift.get(s.id) ?? 0), 0);
 
   const now = Date.now();
   const open = shifts.filter((s) => OPEN.includes(s.status) && s.startsAt.getTime() >= now);
