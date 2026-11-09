@@ -58,3 +58,23 @@ describe("openbare klussen zonder testklussen", () => {
     ]);
   });
 });
+
+describe("werker-app: echte klussen eerst", () => {
+  it("zet testklussen onderaan en laat de rest in volgorde", async () => {
+    const { echteKlussenEerst } = await import("@/lib/shifts/testklus");
+    const lijst = [
+      { id: "t1", testklus: true },
+      { id: "e1", testklus: false },
+      { id: "t2", testklus: true },
+      { id: "e2", testklus: false },
+    ];
+    expect([...lijst].sort(echteKlussenEerst).map((s) => s.id)).toEqual(["e1", "e2", "t1", "t2"]);
+  });
+
+  it("zegt alleen 'alleen testklussen' als er iets is en alles test is", async () => {
+    const { alleenTestklussen } = await import("@/lib/shifts/testklus");
+    expect(alleenTestklussen([])).toBe(false); // lege lijst: de gewone lege staat
+    expect(alleenTestklussen([{ testklus: true }, { testklus: true }])).toBe(true);
+    expect(alleenTestklussen([{ testklus: true }, { testklus: false }])).toBe(false);
+  });
+});

@@ -10,6 +10,7 @@ import { hiddenEmployers } from "@/components/app/ShiftMenu";
 import { useFT } from "@/components/i18n/useFT";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { SAVED_EVENT, deviceStore, readSaved } from "@/lib/shifts/bewaard";
+import { echteKlussenEerst } from "@/lib/shifts/testklus";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -233,7 +234,10 @@ export function MarketplaceView({
       return true;
     });
     out = [...out].sort((a, b) => {
-      // Matches for the worker's own job alerts come first ("verschijnt bovenaan"), then the chosen order.
+      // Echte klussen altijd boven testklussen (geen werk achter), daarna de eigen klus-alerts
+      // ("verschijnt bovenaan"), dan de gekozen volgorde.
+      const echt = echteKlussenEerst(a, b);
+      if (echt !== 0) return echt;
       if (Boolean(a.alert) !== Boolean(b.alert)) return a.alert ? -1 : 1;
       if (sort === "match") return (b.match?.score ?? 0) - (a.match?.score ?? 0);
       if (sort === "pay") return b.hourlyRateCents - a.hourlyRateCents;

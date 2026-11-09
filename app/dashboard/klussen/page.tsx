@@ -14,6 +14,7 @@ import { MarketplaceView } from "@/components/app/MarketplaceView";
 import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
+import { alleenTestklussen } from "@/lib/shifts/testklus";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,11 @@ export default async function KlussenPage(
     back: t.greet.back,
     birthday: t.greet.birthday,
   };
+  // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
+  const alleenTest = alleenTestklussen(m.shifts);
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
-  const greetSub = m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 ? t.greet.subDiscover : undefined;
+  const greetSub =
+    m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 && !alleenTest ? t.greet.subDiscover : undefined;
 
   return (
     <>
@@ -99,6 +103,13 @@ export default async function KlussenPage(
               {t.page.toVerification}
             </Link>
           )}
+        </div>
+      )}
+
+      {alleenTest && (
+        <div className="card mb-5 p-5 text-sm">
+          <p className="font-medium text-ink">{t.page.alleenTestTitle}</p>
+          <p className="mt-1 text-neutralx-600">{t.page.alleenTestBody}</p>
         </div>
       )}
 
