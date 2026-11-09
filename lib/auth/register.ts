@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { setFiscal } from "@/lib/fiscal/store";
+import { landSoort, normaliseerLand } from "@/lib/onboarding/buitenland";
 
 const PLATFORM_TENANT_ID = "org_platform";
 
@@ -23,6 +24,13 @@ export const registerSchema = z
       .trim()
       .transform((s) => s.replace(/\D/g, ""))
       .refine((s) => s === "" || s.length === 8, "Ongeldig KVK-nummer")
+      .optional(),
+    /** For type=bedrijf: land van het bedrijf (ISO). Leeg of NL: Nederland, met KVK zoals altijd. */
+    land: z
+      .string()
+      .trim()
+      .max(2)
+      .refine((s) => landSoort(s) !== null, "Kies een land uit de lijst.")
       .optional(),
     /** For type=freelancer: the worker form (drives the fiscal onboarding). */
     workerKind: z.enum(["zzp", "flexwerker", "uitzendkracht"]).optional(),
@@ -70,7 +78,9 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
       return user.id;
     }
 
-    let kvk = input.kvkNumber && input.kvkNumber.length === 8 ? input.kvkNumber : null;
+    // Een bedrijf buiten Nederland heeft geen KVK-nummer: land onthouden, de rest vult de onboarding aan.
+    const land = normaliseerLand(input.land);
+    let kvk = land === "NL" && input.kvkNumber && input.kvkNumber.length === 8 ? input.kvkNumber : null;
     if (kvk) {
       const clash = await tx.tenant.findFirst({ where: { kvkNumber: kvk }, select: { id: true } });
       if (clash) kvk = null; // already claimed — keep the name, drop the number
@@ -79,7 +89,7 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
       data: {
         name: input.companyName!,
         type: "ENTERPRISE_HQ",
-        country: "NL",
+        country: land,
         ...(kvk ? { kvkNumber: kvk } : {}),
       },
       select: { id: true },

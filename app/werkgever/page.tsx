@@ -67,7 +67,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
     pendingEmployerReviews(principal).catch(() => []),
     followerCount(scope.tenantIds).catch(() => 0),
     // het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen: vult de KVK-stap vooraf in
-    tenantId ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { kvkNumber: true } }).catch(() => null) : Promise.resolve(null),
+    tenantId ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { kvkNumber: true, country: true } }).catch(() => null) : Promise.resolve(null),
   ]);
   const companyVerified = verificatie.verified;
   const inControle = Boolean(verificatie.inControle);
@@ -151,6 +151,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
                 answers,
                 coverStepDone: Boolean(ob.coverStepDone),
                 kvkPrefill: tenantKvk?.kvkNumber ?? undefined,
+                landPrefill: tenantKvk?.country ?? undefined,
                 verified: companyVerified,
                 inControle,
                 buitenlands: Boolean(verificatie.buitenlands),

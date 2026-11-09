@@ -82,6 +82,9 @@ export interface CompanyRow {
   id: string;
   name: string;
   kvkNumber: string | null;
+  /** Land van het bedrijf (ISO) en het btw-nummer, voor bedrijven zonder KVK. */
+  country: string;
+  vatNumber: string | null;
   createdAt: Date;
   branches: number;
   members: number;
@@ -98,6 +101,8 @@ export async function companiesInsights(period: Period) {
       id: true,
       name: true,
       kvkNumber: true,
+      country: true,
+      vatNumber: true,
       createdAt: true,
       branches: { select: { id: true } },
       _count: { select: { memberships: true } },
@@ -123,6 +128,8 @@ export async function companiesInsights(period: Period) {
     id: t.id,
     name: t.name,
     kvkNumber: t.kvkNumber,
+    country: t.country,
+    vatNumber: t.vatNumber,
     createdAt: t.createdAt,
     branches: t.branches.length,
     members: t._count.memberships,

@@ -62,6 +62,8 @@ export function EmployerOnboardingWizard({
     coverStepDone?: boolean;
     /** het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen */
     kvkPrefill?: string | undefined;
+    /** het land van het bedrijf (ISO), uit de aanmelding */
+    landPrefill?: string | undefined;
     /** na opnieuw laden: is het bedrijf goedgekeurd, of nog in controle bij ZekerFlex? */
     verified?: boolean | undefined;
     inControle?: boolean | undefined;
@@ -78,7 +80,8 @@ export function EmployerOnboardingWizard({
     done: initial.kvkDone,
     ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), buitenlands: Boolean(initial.buitenlands), companyName: initial.companyName ?? null } : {}),
   });
-  const [land, setLand] = useState("NL");
+  // het land dat bij het aanmelden werd gekozen
+  const [land, setLand] = useState(initial.landPrefill && landSoort(initial.landPrefill) ? initial.landPrefill : "NL");
   const soort = landSoort(land) ?? "NL";
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));

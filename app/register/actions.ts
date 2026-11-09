@@ -25,6 +25,7 @@ export async function registerAction(
     phone: formData.get("phone") || undefined,
     companyName: formData.get("companyName") || undefined,
     kvkNumber: formData.get("kvkNumber") || undefined,
+    land: formData.get("land") || undefined,
     workerKind: formData.get("workerKind") || undefined,
   });
 

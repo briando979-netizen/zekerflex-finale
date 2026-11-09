@@ -4,6 +4,7 @@ import { companiesInsights } from "@/lib/admin/insights/people";
 import { count, dateNl, euro } from "@/lib/admin/format";
 import { BarList, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar } from "@/components/admin/kit";
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
+import { landNaam } from "@/lib/onboarding/buitenland";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,10 @@ export default async function BedrijvenPage(props: { searchParams: Promise<{ per
     return {
       id: c.id,
       href: `/admin/bedrijven/${c.id}`,
-      search: `${c.name} ${c.kvkNumber ?? ""}`,
+      search: `${c.name} ${c.kvkNumber ?? ""} ${c.vatNumber ?? ""} ${landNaam(c.country)}`,
       filters: { verified },
       cells: {
-        name: <NameCell name={c.name} sub={c.kvkNumber ? `KVK ${c.kvkNumber}` : "Geen KVK-nummer"} href={`/admin/bedrijven/${c.id}`} />,
+        name: <NameCell name={c.name} sub={c.kvkNumber ? `KVK ${c.kvkNumber}` : c.country !== "NL" ? `${landNaam(c.country)}${c.vatNumber ? `, btw ${c.vatNumber}` : ""}` : "Geen KVK-nummer"} href={`/admin/bedrijven/${c.id}`} />,
         verified: c.verifiedVia ? <Pill tone="trust">{VIA_LABEL[c.verifiedVia] ?? "Geverifieerd"}</Pill> : <Pill tone="warn">Niet geverifieerd</Pill>,
         branches: count(c.branches),
         members: count(c.members),
@@ -88,7 +89,7 @@ export default async function BedrijvenPage(props: { searchParams: Promise<{ per
             { key: "since", label: "Aangemeld", hideOnMobile: true },
           ]}
           rows={rows}
-          searchPlaceholder="Zoek op naam of KVK"
+          searchPlaceholder="Zoek op naam, KVK, btw of land"
           csvName="bedrijven"
           defaultSort={{ key: "since", dir: "desc" }}
           filters={[{ key: "verified", label: "Verificatie", chips: true, options: [{ value: "ja", label: "Geverifieerd" }, { value: "nee", label: "Niet geverifieerd" }] }]}

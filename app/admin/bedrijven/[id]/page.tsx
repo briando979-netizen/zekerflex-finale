@@ -7,6 +7,8 @@ import { Avatar, Empty, Feed, KpiStrip, Meter, NameCell, PageHead, Panel, Pill, 
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { CompanyActions } from "@/components/admin/CompanyActions";
 import { tenantVerification } from "@/lib/company/verified";
+import { getBuitenlandBewijs } from "@/lib/company/buitenland";
+import { landNaam } from "@/lib/onboarding/buitenland";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +59,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     );
   }
 
-  const [activity, auditEntries, verification] = await Promise.all([
+  const [activity, auditEntries, verification, buitenland] = await Promise.all([
     companyActivity(tenant.id),
     prisma.auditLog.findMany({
       where: { OR: [{ targetType: "tenant", targetId: tenant.id }, { targetType: "user", targetId: { in: tenant.memberships.map((m) => m.userId) } }] },
@@ -66,6 +68,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
       select: { id: true, category: true, action: true, summary: true, severity: true, createdAt: true },
     }),
     tenantVerification(tenant.id),
+    tenant.country !== "NL" ? getBuitenlandBewijs(tenant.id) : Promise.resolve(null),
   ]);
 
   const hqAdmin = tenant.memberships.find((m) => m.role === "HQ_ADMIN")?.user;
@@ -112,14 +115,20 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
           <div className="min-w-0">
             <h1 className="text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: "var(--a-text)" }}>{tenant.name}</h1>
             <p className="mt-0.5 text-sm" style={{ color: "var(--a-mute)" }}>
-              {tenant.kvkNumber ? `KVK ${tenant.kvkNumber}` : "Geen KVK-nummer"}, {tenant.branches.length} {tenant.branches.length === 1 ? "vestiging" : "vestigingen"}
+              {tenant.kvkNumber
+                ? `KVK ${tenant.kvkNumber}`
+                : tenant.country !== "NL"
+                  ? `${landNaam(tenant.country)}${tenant.vatNumber ? `, btw ${tenant.vatNumber}` : ""}${buitenland?.registratieNummer ? `, registratienummer ${buitenland.registratieNummer}` : ""}${buitenland?.btw === "niet-bereikbaar" ? " (btw-nummer nog te controleren: VIES was niet bereikbaar)" : ""}`
+                  : "Geen KVK-nummer"}, {tenant.branches.length} {tenant.branches.length === 1 ? "vestiging" : "vestigingen"}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Pill tone={blocked ? "crit" : "ok"}>{blocked ? "Geblokkeerd" : "Actief"}</Pill>
               <Pill tone={verification.verified ? "trust" : "warn"}>
                 {verification.verified
                   ? `Geverifieerd: ${VERIFIED_VIA[verification.via!] ?? verification.via}`
-                  : verification.inControle
+                  : verification.buitenlands
+                    ? "Buitenlands bedrijf: zoek het zelf op en keur het zo nodig goed"
+                    : verification.inControle
                     ? "KVK klopt: controleer of de aanmelder erbij hoort"
                     : "Niet geverifieerd, alleen testklus"}
               </Pill>
