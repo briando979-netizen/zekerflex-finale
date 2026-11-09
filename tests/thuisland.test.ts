@@ -3,6 +3,7 @@ import { z } from "zod";
 import { buitenlandPostcode, gebiedVan, isThuisland, postcodeGeldig, thuisbasisReden, THUISLANDEN } from "@/lib/geo/thuisland";
 import { controleerThuisbasis, thuisbasisVelden } from "@/lib/onboarding/thuisbasis-schema";
 import { ondernemingGeldig, zzpGeschikt } from "@/lib/matching/onderneming";
+import { VRIJ_VERKEER } from "@/lib/werkrecht/landen";
 
 describe("thuisland", () => {
   it("heeft Nederland eerst en alleen ISO-codes van twee letters", () => {
@@ -12,6 +13,11 @@ describe("thuisland", () => {
     expect(isThuisland("BE")).toBe(true);
     expect(isThuisland("XX")).toBe(false);
     expect(isThuisland("nl")).toBe(false);
+  });
+
+  it("blijft binnen de EU/EER/CH van het werkrecht, plus het VK", () => {
+    const buiten = THUISLANDEN.filter((c) => !VRIJ_VERKEER.has(c) && c !== "GB");
+    expect(buiten).toEqual([]);
   });
 
   it("past de Nederlandse postcoderegel alleen in Nederland toe", () => {

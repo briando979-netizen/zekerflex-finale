@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { THUISLANDEN, thuisbasisReden } from "@/lib/geo/thuisland";
+import { landNaam } from "@/lib/werkrecht/landen";
 
 /**
  * Land, postcode en (alleen in het buitenland) woonplaats van de thuisbasis, in
@@ -20,15 +21,7 @@ export function ThuisbasisVelden({ postcodeLabel }: { postcodeLabel: string }) {
   // Landnamen in de taal van de app (Intl.DisplayNames), in de vaste volgorde van
   // THUISLANDEN (Nederland, dan de buurlanden). Niet op naam sorteren: Node en de
   // browser sorteren soms net anders, en dan klopt de lijst na het laden niet meer (#418).
-  const landen = useMemo(() => {
-    let namen: Intl.DisplayNames | null = null;
-    try {
-      namen = new Intl.DisplayNames([locale], { type: "region" });
-    } catch {
-      namen = null;
-    }
-    return THUISLANDEN.map((code) => ({ code, naam: namen?.of(code) ?? code }));
-  }, [locale]);
+  const landen = useMemo(() => THUISLANDEN.map((code) => ({ code, naam: landNaam(code, locale) })), [locale]);
 
   const buitenland = land !== "NL";
   return (
