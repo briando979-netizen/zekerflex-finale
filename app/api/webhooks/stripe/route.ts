@@ -18,6 +18,7 @@ import { recordAudit } from "@/lib/audit";
 import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
+import { abonnementBetalingMislukt, abonnementFactuurBetaald } from "@/lib/billing/api-subscription-invoice";
 import { activateManagedWebsite, cancelManagedWebsiteBySub } from "@/lib/website/manage";
 import { activeerNetwerkModule, netwerkAbonnementBeeindigd } from "@/lib/netwerk/abonnement";
 import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
@@ -289,7 +290,10 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     }
     claimed = true;
   } catch (err) {
-    log.warn("webhook idempotency store unavailable", { error: (err as Error).message });
+    // Fail-open: een gemist betaalevent is erger dan een dubbele aanroep, en Stripe-retries blokkeren we niet.
+    // Dat is veilig omdat elke tak zelf idempotent is: statusovergang met voorwaarde (updateMany, bestelling
+    // alleen vanuit onbetaald), unieke sleutel (book idempotencyKey, stripeSessionId, Clawback) of "al gedaan"-controle.
+    log.warn("webhook idempotency store unavailable, processing without claim", { error: (err as Error).message, eventId: event.id, eventType: event.type });
   }
 
   try {
@@ -427,14 +431,17 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         log.warn("stripe webhook: shop order not found", { shopOrderId });
         return NextResponse.json({ ok: true, matched: false });
       }
-      if (order.status !== "RECEIVED") {
-        const updated = await prisma.shopOrder.update({
-          where: { id: order.id },
-          data: {
-            status: "RECEIVED",
-            stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
-          },
-        });
+      // Atomair: alleen een nog onbetaalde bestelling gaat naar RECEIVED. Zo voert een dubbel event (ook als de
+      // idempotentie-opslag uitvalt) niets twee keer uit en zet het een al verzonden bestelling niet terug.
+      const claimedOrder = await prisma.shopOrder.updateMany({
+        where: { id: order.id, status: { in: ["PENDING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"] } },
+        data: {
+          status: "RECEIVED",
+          stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        },
+      });
+      if (claimedOrder.count > 0) {
+        const updated = { ...order, status: "RECEIVED" as const };
         await recordAudit({
           category: "ADMIN",
           action: "shop.order.paid",
@@ -531,6 +538,11 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
       log.info("stripe connect account status changed", { accountId: account.id, payoutsEnabled });
     }
   }
+
+  // Abonnementsbetalingen (API-abonnement): mislukt → achterstallig + mail, betaald → weer actief.
+  // Beheerde website en netwerkpakketten hebben een eigen tak en worden daar overgeslagen.
+  if (event.type === "invoice.payment_failed") await abonnementBetalingMislukt(event.data.object);
+  if (event.type === "invoice.paid") await abonnementFactuurBetaald(event.data.object);
 
   if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
     const sub = event.data.object as Stripe.Subscription;
