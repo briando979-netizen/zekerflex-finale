@@ -20,6 +20,14 @@ const nl = {
   },
   date: { wd: ["zo", "ma", "di", "wo", "do", "vr", "za"], mon: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"] },
   cat: { retail: "Retail", horeca: "Horeca", logistiek: "Logistiek", schoonmaak: "Schoonmaak", evenement: "Evenement", zorg: "Zorg", kantoor: "Kantoor", bouw: "Bouw & techniek", productie: "Productie & industrie", promotie: "Promotie & sales", beveiliging: "Beveiliging", kinderopvang: "Kinderopvang & onderwijs", auto: "Auto & fiets", agrarisch: "Land- & tuinbouw", algemeen: "Algemeen", overig: "Overig" },
+  // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
+  pushBanner: {
+    aanzetten: "Zet meldingen aan, dan hoor je het meteen als er een klus bij jou in de buurt is of als je gekozen bent. Anders verloopt een voorstel zonder dat je het ziet.",
+    ios: "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan.",
+    knop: "Meldingen aanzetten",
+    bezig: "Bezig…",
+    nietNu: "Niet nu",
+  },
   card: {
     offer: { pending: "in afwachting", accepted: "geaccepteerd", declined: "afgewezen", withdrawn: "ingetrokken", expired: "niet uitgekozen" } as Record<string, string>,
     specialForYou: "Speciaal voor jou",
@@ -938,6 +946,14 @@ const en: FreelancerDict = {
   },
   date: { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], mon: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] },
   cat: { retail: "Retail", horeca: "Hospitality", logistiek: "Logistics", schoonmaak: "Cleaning", evenement: "Events", zorg: "Care", kantoor: "Office", bouw: "Construction & technical", productie: "Production & industry", promotie: "Promotion & sales", beveiliging: "Security", kinderopvang: "Childcare & education", auto: "Cars & bikes", agrarisch: "Agriculture & horticulture", algemeen: "General", overig: "Other" },
+  // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
+  pushBanner: {
+    aanzetten: "Turn on notifications to hear right away when there is a job near you or when you have been picked. Otherwise an offer can expire before you see it.",
+    ios: "On iPhone you only get notifications once ZekerFlex is on your home screen: tap Share → Add to Home Screen and open it from there.",
+    knop: "Turn on notifications",
+    bezig: "Working…",
+    nietNu: "Not now",
+  },
   card: {
     offer: { pending: "pending", accepted: "accepted", declined: "declined", withdrawn: "withdrawn", expired: "not selected" },
     specialForYou: "Picked for you",
@@ -1853,6 +1869,14 @@ const pl: FreelancerDict = {
   },
   date: { wd: ["nd", "pn", "wt", "śr", "cz", "pt", "sb"], mon: ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"] },
   cat: { retail: "Handel", horeca: "Gastronomia", logistiek: "Logistyka", schoonmaak: "Sprzątanie", evenement: "Wydarzenia", zorg: "Opieka", kantoor: "Biuro", bouw: "Budowa i technika", productie: "Produkcja i przemysł", promotie: "Promocja i sprzedaż", beveiliging: "Ochrona", kinderopvang: "Opieka nad dziećmi i edukacja", auto: "Samochody i rowery", agrarisch: "Rolnictwo i ogrodnictwo", algemeen: "Ogólne", overig: "Inne" },
+  // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
+  pushBanner: {
+    aanzetten: "Włącz powiadomienia, a od razu dowiesz się o zleceniu w pobliżu albo o tym, że cię wybrano. Inaczej oferta może wygasnąć, zanim ją zobaczysz.",
+    ios: "Na iPhonie powiadomienia działają dopiero, gdy ZekerFlex jest na ekranie początkowym: stuknij Udostępnij → Do ekranu początkowego i otwieraj go stamtąd.",
+    knop: "Włącz powiadomienia",
+    bezig: "Chwileczkę…",
+    nietNu: "Nie teraz",
+  },
   card: {
     offer: { pending: "oczekuje", accepted: "zaakceptowano", declined: "odrzucono", withdrawn: "wycofano", expired: "nie wybrano" },
     specialForYou: "Specjalnie dla ciebie",
@@ -2768,6 +2792,14 @@ const ro: FreelancerDict = {
   },
   date: { wd: ["dum", "lun", "mar", "mie", "joi", "vin", "sâm"], mon: ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"] },
   cat: { retail: "Comerț", horeca: "Horeca", logistiek: "Logistică", schoonmaak: "Curățenie", evenement: "Evenimente", zorg: "Îngrijire", kantoor: "Birou", bouw: "Construcții și tehnică", productie: "Producție și industrie", promotie: "Promovare și vânzări", beveiliging: "Pază", kinderopvang: "Îngrijirea copiilor și educație", auto: "Auto și biciclete", agrarisch: "Agricultură și horticultură", algemeen: "General", overig: "Altele" },
+  // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
+  pushBanner: {
+    aanzetten: "Activează notificările ca să afli imediat când există o lucrare lângă tine sau când ai fost ales. Altfel o ofertă poate expira înainte să o vezi.",
+    ios: "Pe iPhone primești notificări doar dacă ZekerFlex e pe ecranul principal: atinge Distribuie → Adaugă pe ecranul principal și deschide-l de acolo.",
+    knop: "Activează notificările",
+    bezig: "Se procesează…",
+    nietNu: "Nu acum",
+  },
   card: {
     offer: { pending: "în așteptare", accepted: "acceptat", declined: "respins", withdrawn: "retras", expired: "nu ai fost ales(ă)" },
     specialForYou: "Special pentru tine",
@@ -3683,6 +3715,14 @@ const uk: FreelancerDict = {
   },
   date: { wd: ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], mon: ["січ", "лют", "бер", "квіт", "трав", "черв", "лип", "серп", "вер", "жовт", "лист", "груд"] },
   cat: { retail: "Торгівля", horeca: "Ресторани й готелі", logistiek: "Логістика", schoonmaak: "Прибирання", evenement: "Події", zorg: "Догляд", kantoor: "Офіс", bouw: "Будівництво й техніка", productie: "Виробництво й промисловість", promotie: "Промоція та продажі", beveiliging: "Охорона", kinderopvang: "Догляд за дітьми й освіта", auto: "Авто й велосипеди", agrarisch: "Сільське господарство й садівництво", algemeen: "Загальне", overig: "Інше" },
+  // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
+  pushBanner: {
+    aanzetten: "Увімкни сповіщення, щоб одразу дізнаватися про роботу поруч або про те, що тебе обрали. Інакше пропозиція може згоріти, перш ніж ти її побачиш.",
+    ios: "На iPhone сповіщення приходять лише тоді, коли ZekerFlex є на початковому екрані: натисни Поділитися → На початковий екран і відкривай звідти.",
+    knop: "Увімкнути сповіщення",
+    bezig: "Зачекай…",
+    nietNu: "Не зараз",
+  },
   card: {
     offer: { pending: "очікує", accepted: "прийнято", declined: "відхилено", withdrawn: "відкликано", expired: "не обрано" },
     specialForYou: "Спеціально для вас",
