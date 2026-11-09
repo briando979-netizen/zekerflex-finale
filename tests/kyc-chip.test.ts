@@ -214,6 +214,13 @@ describe("chip: passieve authenticatie", () => {
     expect(zonder.echt).toBe(true);
   });
 
+  it("review N8: een zegel met een ongeldige handtekening krijgt geen hash voor de hergebruikcontrole", () => {
+    const sod = maakSod({ groepen: { 1: DG1 }, ondertekenaar: sleutel(), dsCert: DS.der });
+    const u = controleerChip({ dg1: DG1, sod }, [CSCA.x509], NU);
+    expect(u.handtekeningOk).toBe(false);
+    expect(u.ldsHash).toBeNull();
+  });
+
   it("leest AKI en SKI uit de certificaten", () => {
     expect(sleutelIds(CSCA.x509).ski?.equals(sleutelId(cscaSleutel))).toBe(true);
     expect(sleutelIds(DS.x509).aki?.equals(sleutelId(cscaSleutel))).toBe(true);

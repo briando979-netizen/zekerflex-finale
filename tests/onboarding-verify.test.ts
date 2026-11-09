@@ -428,6 +428,19 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       expect(ivArg.data.rawPayload.mrz).not.toHaveProperty("land");
     });
 
+    it("review N5 (extra slot): account op naam van de chiphouder + diens nummer bij 'rijbewijs' gaat naar een mens", async () => {
+      // A maakt een account op naam van V, kiest "rijbewijs", typt V's documentnummer (hier
+      // een nummer van alleen cijfers, zoals in veel landen) en leest V's echte chip
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, documentnummer: "123456789" });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", documentNumber: "123456789", files: files() });
+      expect(result.outcome).toBe("in_review");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: Record<string, unknown> } };
+      expect(ivArg.data.rawPayload.werkrecht).toBeNull();
+      expect(ivArg.data.rawPayload.leeftijd).toBeNull();
+    });
+
     it("een rijbewijs heeft geen MRZ: daar wordt niets gelezen", async () => {
       userFindUnique.mockResolvedValue(jan);
       await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", documentNumber: "1234567890", files: files() });
