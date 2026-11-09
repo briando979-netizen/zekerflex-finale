@@ -12,6 +12,7 @@ export type ErrorCode =
   | "COMPLIANCE_BLOCKED"
   | "PAYMENT_FAILED"
   | "RATE_LIMITED"
+  | "NAAM_VASTGEZET"
   | "UPSTREAM_UNAVAILABLE"
   | "INTERNAL";
 
@@ -63,6 +64,10 @@ export class AppError extends Error {
     limit?: number,
   ) {
     return new AppError("RATE_LIMITED", message, 429, { retryAfterSeconds, limit });
+  }
+  /** 423: de naam is met een identiteitsbewijs of bank-inlog bevestigd en staat vast (geen 403: CrowdSec). */
+  static naamVastgezet(message: string) {
+    return new AppError("NAAM_VASTGEZET", message, 423);
   }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);

@@ -49,6 +49,25 @@ export async function getBankLogin(userId: string): Promise<BankLoginResult | nu
 }
 
 /**
+ * De naam op het document van de laatste geslaagde ID-controle, of null. Een profielnaam kan
+ * later veranderen, het document niet: dat is de vaste naam waar een bankrekening bij moet passen.
+ */
+export async function naamOpGeverifieerdDocument(userId: string): Promise<string | null> {
+  try {
+    const row = await prisma.identityVerification.findFirst({
+      where: { userId, decisionStatus: "verified" },
+      orderBy: { verifiedAt: "desc" },
+      select: { rawPayload: true },
+    });
+    const payload = row?.rawPayload;
+    const naam = payload && typeof payload === "object" && !Array.isArray(payload) ? (payload as Record<string, unknown>).nameOnDocument : null;
+    return typeof naam === "string" && naam.trim() ? naam : null;
+  } catch {
+    return null; // geen document bekend (of niet leesbaar): dan geldt alleen de profielnaam
+  }
+}
+
+/**
  * Een eerdere afwijzing die alléén op de naam viel (het IBAN klopte), opnieuw
  * bekijken met de huidige regel en de huidige profielnaam. Zo hoeft niemand
  * opnieuw bij de bank in te loggen (en een cent te betalen) als de regel
@@ -59,6 +78,10 @@ async function herbeoordeelNaam(userId: string, rec: BankLoginResult): Promise<B
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
     if (!user || !namesMatch(user.fullName, rec.verifiedName)) return rec;
+    // Is de identiteit met een document bevestigd, dan moet de banknaam ook bij die naam passen:
+    // een later aangepaste profielnaam mag een rekening van een ander niet alsnog goedkeuren.
+    const docNaam = await naamOpGeverifieerdDocument(userId);
+    if (docNaam && !namesMatch(docNaam, rec.verifiedName)) return rec;
     const nieuw: BankLoginResult = { ...rec, status: "verified", problems: [] };
     await kvSet(key(userId), nieuw);
     await Promise.all([
