@@ -15,11 +15,17 @@ const identityVerificationFindFirst = vi.fn();
 const identityVerificationUpdate = vi.fn();
 const userUpdate = vi.fn();
 const complianceDocumentUpdateMany = vi.fn();
+const complianceDocumentDeleteMany = vi.fn();
+const complianceDocumentCreate = vi.fn();
 const txn = vi.fn(async (fn: (tx: unknown) => unknown) =>
   fn({
     identityVerification: { update: (...a: unknown[]) => identityVerificationUpdate(...a) },
     user: { update: (...a: unknown[]) => userUpdate(...a) },
-    complianceDocument: { updateMany: (...a: unknown[]) => complianceDocumentUpdateMany(...a) },
+    complianceDocument: {
+      updateMany: (...a: unknown[]) => complianceDocumentUpdateMany(...a),
+      deleteMany: (...a: unknown[]) => complianceDocumentDeleteMany(...a),
+      create: (...a: unknown[]) => complianceDocumentCreate(...a),
+    },
   }),
 );
 vi.mock("@/lib/prisma", () => ({
@@ -84,6 +90,36 @@ describe("POST /api/admin/gebruikers/[id]/identiteit/[checkId]", () => {
 
     expect(res.status).toBe(200);
     expect(userUpdate).toHaveBeenCalledWith({ where: { id: "u1" }, data: { kycStatus: "REJECTED" } });
+    expect(complianceDocumentUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("review 2, H1-bis: bij foto's van een tweede toestel komt de voorkant pas bij goedkeuring bij de documenten", async () => {
+    requirePrincipal.mockResolvedValue(admin());
+    identityVerificationFindFirst.mockResolvedValue({
+      id: "c1",
+      userId: "u1",
+      documentType: "ID_CARD",
+      rawPayload: { viaTweedeToestel: true, uploadIds: { front: "up_voor", back: "up_achter", selfie: "up_selfie" } },
+    });
+
+    expect((await POST(req("approve"), ctx)).status).toBe(200);
+    expect(complianceDocumentDeleteMany).toHaveBeenCalledWith({ where: { userId: "u1", kind: "ID" } });
+    expect(complianceDocumentCreate).toHaveBeenCalledWith({ data: { userId: "u1", kind: "ID", uploadId: "up_voor", status: "APPROVED" } });
+    expect(complianceDocumentUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("review 2, H1-bis: afgewezen foto's van een tweede toestel komen nooit bij de documenten", async () => {
+    requirePrincipal.mockResolvedValue(admin());
+    identityVerificationFindFirst.mockResolvedValue({
+      id: "c1",
+      userId: "u1",
+      documentType: "PASSPORT",
+      rawPayload: { viaTweedeToestel: true, uploadIds: { front: "up_voor" } },
+    });
+
+    expect((await POST(req("reject"), ctx)).status).toBe(200);
+    expect(complianceDocumentCreate).not.toHaveBeenCalled();
+    expect(complianceDocumentDeleteMany).not.toHaveBeenCalled();
     expect(complianceDocumentUpdateMany).not.toHaveBeenCalled();
   });
 

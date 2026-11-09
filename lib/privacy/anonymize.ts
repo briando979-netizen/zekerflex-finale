@@ -6,7 +6,7 @@ import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
-import { annuleerOverdracht } from "@/lib/kyc/overdracht";
+import { overdrachtUploads } from "@/lib/kyc/overdracht";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -116,11 +116,15 @@ export async function anonymizeUser(
     if (cert.uploadId) uploadIds.add(cert.uploadId);
   }
 
-  // "Verder op je telefoon": de tijdelijke ID-foto's zitten alleen in de verzegelde KV-rij,
-  // die hieronder verdwijnt. Eerst de foto's zelf weg, anders blijven ze voorgoed staan.
-  await annuleerOverdracht(userId).catch((err) =>
-    logger.warn("erasure: id-overdracht opruimen mislukt", { error: (err as Error).message }),
-  );
+  // De ID-foto's van elke identiteitscontrole (voorkant, achterkant, selfie): de rijen gaan
+  // hieronder weg, dus eerst hun bestanden verzamelen, anders blijven ze voorgoed staan.
+  for (const iv of await prisma.identityVerification.findMany({ where: { userId }, select: { rawPayload: true } })) {
+    const ids = (iv.rawPayload as { uploadIds?: Record<string, unknown> } | null)?.uploadIds ?? {};
+    for (const id of Object.values(ids)) if (typeof id === "string") uploadIds.add(id);
+  }
+  // "Verder op je telefoon": de tijdelijke foto's staan alleen in de verzegelde KV-rij, die
+  // hieronder verdwijnt (geen .catch: liever een mislukte wisronde dan foto's die blijven).
+  for (const id of await overdrachtUploads(userId)) uploadIds.add(id);
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({

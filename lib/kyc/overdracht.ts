@@ -27,24 +27,34 @@
 // meestuurt: wie de vlag weglaat en de foto's los instuurt, gaat ook naar een mens.
 // En de laptop krijgt de foto's alleen klein en wazig te zien (documentnummer en
 // MRZ niet leesbaar), zodat ze nergens anders als "eigen" foto's te gebruiken zijn.
+// De voorkant komt pas na goedkeuring door een medewerker bij de documenten van de
+// werker (lib/onboarding/verify.ts, de beoordelingsroute in /api/admin/gebruikers):
+// anders was hij daar op volle grootte te downloaden (review 2, H1-bis).
 // ---------------------------------------------------------------------------
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { claimIdempotency } from "@/lib/redis";
+import { claimIdempotency, releaseIdempotency } from "@/lib/redis";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { deleteUpload, readUpload, storeUpload } from "@/lib/storage/local";
 
 export const OVERDRACHT_PREFIX = "id-overdracht:";
 /** Per persoon: wanneer er iets via de telefoon binnenkwam, en hoe vaak "niet mijn account" (30 dagen). */
 export const MERK_PREFIX = "id-overdracht-merk:";
+/** Per persoon: bij welke code een tweede toestel het probeerde (los van het merkteken, dat alleen de telefoon zelf schrijft). */
+export const ANDER_PREFIX = "id-overdracht-ander:";
 const DOEL = "kyc-overdracht";
 const GELDIG_MS = 20 * 60_000;
 const OPRUIMEN_MS = 30 * 60_000;
 const MERK_MS = 30 * 86_400_000;
-/** De foto's op de laptop: zo klein en wazig dat het nummer en de MRZ niet te lezen zijn. */
-const VOORBEELD_PX = 320;
+/**
+ * De foto's op de laptop: zo klein en wazig dat het nummer en de MRZ niet te lezen zijn. Op
+ * 160 px past een kaart in de foto in hooguit ~150 px, dus 30 MRZ-tekens in ~5 px per teken
+ * (vóór de vervaging); de OCR (lib/kyc/mrz-lezen.ts) heeft er ~20 nodig. Op het scherm staan
+ * ze toch maar ~130 px breed (drie naast elkaar).
+ */
+const VOORBEELD_PX = 160;
 
 export type DocSoort = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
 export type OverdrachtStatus = "wacht" | "geopend" | "klaar" | "geweigerd";
@@ -75,8 +85,6 @@ export interface OverdrachtMerk {
   geleverdOp: string | null;
   /** hoe vaak een telefoon "dit is niet mijn account" koos */
   geweigerd: number;
-  /** de code (codeId) waarbij een tweede toestel het probeerde */
-  anderBij: string | null;
   op: string;
 }
 
@@ -88,6 +96,7 @@ export interface Foto {
 
 const sleutelVan = (userId: string) => `${OVERDRACHT_PREFIX}${userId}`;
 const merkSleutel = (userId: string) => `${MERK_PREFIX}${userId}`;
+const anderSleutel = (userId: string) => `${ANDER_PREFIX}${userId}`;
 
 async function bewaar(o: Overdracht): Promise<void> {
   await kvSet(sleutelVan(o.userId), { v: sealSecret(JSON.stringify(o), DOEL) });
@@ -109,13 +118,14 @@ async function leesMerk(userId: string): Promise<OverdrachtMerk | null> {
   return {
     geleverdOp: typeof m.geleverdOp === "string" ? m.geleverdOp : null,
     geweigerd: typeof m.geweigerd === "number" ? m.geweigerd : 0,
-    anderBij: typeof m.anderBij === "string" ? m.anderBij : null,
     op: m.op,
   };
 }
 
 async function werkMerkBij(userId: string, nu: Date, wijzig: (m: OverdrachtMerk) => OverdrachtMerk): Promise<void> {
-  const oud = (await leesMerk(userId)) ?? { geleverdOp: null, geweigerd: 0, anderBij: null, op: nu.toISOString() };
+  // alleen de telefoon met het juiste toesteltoken schrijft hier (inleveren, weigeren), na elkaar:
+  // een vreemd toestel dat de link bestookt, schrijft in een eigen sleutel en kan dit niet wissen
+  const oud = (await leesMerk(userId)) ?? { geleverdOp: null, geweigerd: 0, op: nu.toISOString() };
   await kvSet(merkSleutel(userId), { ...wijzig(oud), op: nu.toISOString() });
 }
 
@@ -213,7 +223,7 @@ export async function openOverdracht(code: string, toestel?: string | null, nu: 
   } else if (toestelKlopt(o, toestel)) {
     return { userId: o.userId, toestel: toestel as string };
   }
-  await werkMerkBij(o.userId, nu, (m) => ({ ...m, anderBij: codeId(o) })).catch(() => undefined);
+  await kvSet(anderSleutel(o.userId), { bij: codeId(o), op: nu.toISOString() }).catch(() => undefined);
   return { anderToestel: true };
 }
 
@@ -253,8 +263,9 @@ export async function leverOverdrachtIn(
   );
   const ids = opgeslagen.flatMap((r) => (r.status === "fulfilled" ? [r.value.id] : []));
   if (ids.length !== 3) {
-    // half gelukt: niets laten slingeren
+    // half gelukt: niets laten slingeren, en de telefoon mag het meteen opnieuw proberen
     await Promise.all(ids.map((id) => deleteUpload(id).catch(() => undefined)));
+    await releaseIdempotency(`id-overdracht-klaar:${o.userId}:${codeId(o)}`).catch(() => undefined);
     throw new Error("foto's opslaan mislukt");
   }
   await bewaar({
@@ -276,7 +287,7 @@ export async function overdrachtStatus(
   const o = await lees(userId);
   if (!o) return null;
   if (o.status !== "klaar" && o.status !== "geweigerd" && !geldig(o, nu)) return { status: "verlopen" };
-  const ander = (await leesMerk(userId).catch(() => null))?.anderBij === codeId(o);
+  const ander = (await kvGet<{ bij?: unknown }>(anderSleutel(userId)).catch(() => null))?.bij === codeId(o);
   return { status: o.status, ...(o.soort ? { soort: o.soort } : {}), ...(ander ? { anderToestel: true as const } : {}) };
 }
 
@@ -319,7 +330,13 @@ export async function overdrachtFoto(userId: string, welke: "voor" | "achter" | 
   return klein ? { filename: `${welke}-voorbeeld.jpg`, mimeType: "image/jpeg", bytes: klein } : null;
 }
 
-/** Laptop: "klopt niet" (en het wissen van een account): alles van de telefoon weg, opnieuw beginnen. */
+/** Het wissen van een account (lib/privacy/anonymize.ts): de foto's van een lopende overdracht. */
+export async function overdrachtUploads(userId: string): Promise<string[]> {
+  const o = await lees(userId);
+  return o?.uploads ? Object.values(o.uploads) : [];
+}
+
+/** Laptop: "klopt niet": alles van de telefoon weg, opnieuw beginnen. */
 export async function annuleerOverdracht(userId: string): Promise<void> {
   const o = await lees(userId);
   if (o) await wis(o);
@@ -357,12 +374,13 @@ export async function ruimOverdrachtOp(nu: Date = new Date()): Promise<number> {
       gewist++;
     }
   }
-  const merken = await kvListEntries<Partial<OverdrachtMerk>>(MERK_PREFIX, 5000);
-  for (const { key, value } of merken) {
-    const op = typeof value?.op === "string" ? new Date(value.op).getTime() : NaN;
-    if (!Number.isFinite(op) || nu.getTime() - op > MERK_MS) {
-      await kvDelete(key).catch(() => undefined);
-      gewist++;
+  for (const [prefix, bewaarMs] of [[MERK_PREFIX, MERK_MS], [ANDER_PREFIX, OPRUIMEN_MS]] as const) {
+    for (const { key, value } of await kvListEntries<{ op?: unknown }>(prefix, 5000)) {
+      const op = typeof value?.op === "string" ? new Date(value.op).getTime() : NaN;
+      if (!Number.isFinite(op) || nu.getTime() - op > bewaarMs) {
+        await kvDelete(key).catch(() => undefined);
+        gewist++;
+      }
     }
   }
   return gewist;

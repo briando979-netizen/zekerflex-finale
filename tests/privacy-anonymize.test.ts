@@ -72,6 +72,10 @@ const h = vi.hoisted(() => {
       findUnique: async () => state.user,
     },
     complianceDocument: { findMany: async () => [{ uploadId: "up1" }] },
+    // de ID-foto's van een identiteitscontrole (voorkant, achterkant, selfie)
+    identityVerification: {
+      findMany: async () => [{ rawPayload: { uploadIds: { front: "up_iv_voor", back: "up_iv_achter", selfie: "up_iv_selfie" } } }, { rawPayload: null }],
+    },
     certificate: { findMany: async () => [{ uploadId: "up2" }] },
     $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
   };
@@ -85,6 +89,8 @@ vi.mock("@/lib/storage/local", () => ({
     h.state.uploadsDeleted.push(id);
   },
 }));
+// "Verder op je telefoon": de foto's van een lopende overdracht
+vi.mock("@/lib/kyc/overdracht", () => ({ overdrachtUploads: async () => ["up_tel_voor"] }));
 vi.mock("@/lib/audit", () => ({
   recordAudit: async (a: Record<string, unknown>) => {
     h.state.audits.push(a);
@@ -149,6 +155,8 @@ describe("anonymizeUser", () => {
     // passkeys weg: het account blijft geanonimiseerd bestaan, een oud toestel mag er niet meer bij
     expect(report.cleared.passkeys).toBe(2);
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2"]));
+    // ook alle ID-foto's (achterkant en selfie stonden nergens anders) en die van de telefoon
+    expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up_iv_voor", "up_iv_achter", "up_iv_selfie", "up_tel_voor"]));
 
     // personal KV (agenda, trips, 2FA, …) wiped by exact key or key + ":"; fiscal/contracts are not on the list
     expect(report.cleared.personal_settings).toBe(4);

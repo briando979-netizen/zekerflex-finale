@@ -15,6 +15,7 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 vi.mock("@/lib/redis", () => ({
   claimIdempotency: async (k: string) => (claims.has(k) ? false : (claims.add(k), true)),
+  releaseIdempotency: async (k: string) => void claims.delete(k),
 }));
 vi.mock("@/lib/storage/local", () => ({
   storeUpload: async (i: { bytes: Buffer; filename: string; mimeType: string }) => {
@@ -41,6 +42,7 @@ import {
   overdrachtGeldig,
   overdrachtMerk,
   overdrachtStatus,
+  overdrachtUploads,
   overdrachtVoorbeeld,
   pakOverdracht,
   ruimOverdrachtOp,
@@ -216,7 +218,7 @@ describe("verder op je telefoon (QR)", () => {
     const v = await overdrachtFoto("usr_1", "voor");
     expect(v?.mimeType).toBe("image/jpeg");
     const meta = await sharp(v!.bytes).metadata();
-    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBeLessThanOrEqual(320);
+    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBeLessThanOrEqual(160);
     // de verificatie zelf krijgt de foto ongewijzigd
     expect((await pakOverdracht("usr_1"))?.voor.bytes.equals(groot)).toBe(true);
   });
@@ -226,6 +228,17 @@ describe("verder op je telefoon (QR)", () => {
     const [a, b] = await Promise.all([openOverdracht(code, null, NU), openOverdracht(code, null, NU)]);
     expect([a, b].filter((o) => o && "toestel" in o)).toHaveLength(1);
     expect([a, b].filter((o) => o && "anderToestel" in o)).toHaveLength(1);
+  });
+
+  it("review 3: een ander toestel dat de link bestookt, kan het merkteken niet wissen", async () => {
+    const code = await maakOverdracht("usr_1", NU);
+    const toestel = await open(code);
+    await Promise.all([
+      leverOverdrachtIn(code, toestel, INLEVERING, NU),
+      ...Array.from({ length: 5 }, () => openOverdracht(code, "B".repeat(32), NU)),
+    ]);
+    expect(await overdrachtMerk("usr_1", NU)).toEqual({ viaTelefoon: true, geweigerd: 0 });
+    expect(await overdrachtStatus("usr_1", NU)).toEqual({ status: "klaar", soort: "ID_CARD", anderToestel: true });
   });
 
   it("review 2, L1: een ander toestel overschrijft de overdracht nooit (klaar blijft klaar)", async () => {
@@ -244,6 +257,10 @@ describe("verder op je telefoon (QR)", () => {
     opslagFaaltBij = 2;
     await expect(leverOverdrachtIn(code, toestel, INLEVERING, NU)).rejects.toThrow();
     expect(uploads.size).toBe(0);
+    // de claim is vrijgegeven: meteen opnieuw proberen lukt
+    expect(await leverOverdrachtIn(code, toestel, INLEVERING, NU)).toBe(true);
+    expect(await overdrachtUploads("usr_1")).toHaveLength(3);
+    expect(await overdrachtUploads("usr_2")).toEqual([]);
   });
 
   it("de opruimtaak wist ook merktekens van meer dan 30 dagen oud", async () => {

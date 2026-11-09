@@ -238,6 +238,22 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
     expect(eerste!.find((c) => c.label === "Telefoon en laptop op hetzelfde netwerk")?.ok).toBe(false);
     expect(tweede!.find((c) => c.label === "Foto's na een overdracht via de telefoon")?.ok).toBe(false);
     expect(tweede!.find((c) => c.label === "Telefoon en laptop op hetzelfde netwerk")).toBeUndefined();
+    // de werker leest eerlijk waarom: eerder via de telefoon, niet "nu via je telefoon"
+    expect(los.checks.find((c) => c.label === "Eerder via je telefoon ingestuurd")?.ok).toBe(false);
+  });
+
+  it("review 2, H1-bis: foto's van een tweede toestel komen niet vanzelf bij de documenten (niet te downloaden)", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", kycStatus: "PENDING", freelancerProfile: { id: "fp_1" } });
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
+    await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+      viaTweedeToestel: true,
+    });
+    expect(complianceCreate).not.toHaveBeenCalled();
+    const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { viaTweedeToestel: boolean; uploadIds: { front: string } } } };
+    expect(ivArg.data.rawPayload.viaTweedeToestel).toBe(true);
+    expect(typeof ivArg.data.rawPayload.uploadIds.front).toBe("string");
   });
 
   it("stores all three photos and auto-fills the compliance ID doc from the front photo", async () => {

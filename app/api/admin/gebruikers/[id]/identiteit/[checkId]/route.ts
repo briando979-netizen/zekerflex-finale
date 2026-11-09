@@ -22,7 +22,7 @@ export const POST = withAdminAccess<{ id: string; checkId: string }>(
     const { decision } = schema.parse(await request.json().catch(() => ({})));
     const check = await prisma.identityVerification.findFirst({
       where: { id: params.checkId, userId: params.id },
-      select: { id: true, userId: true, documentType: true },
+      select: { id: true, userId: true, documentType: true, rawPayload: true },
     });
     if (!check) throw AppError.notFound("Controle niet gevonden");
 
@@ -37,7 +37,18 @@ export const POST = withAdminAccess<{ id: string; checkId: string }>(
       // Same document the self-serve flow auto-fills from the front photo —
       // keep it in sync so ComplianceDocsPanel doesn't keep showing
       // "uploaded" once an admin has actually approved the identity check.
-      if (check.documentType !== "DRIVERS_LICENSE") {
+      // Foto's van een tweede toestel ("verder op je telefoon", review 2 H1-bis) staan nog niet
+      // bij de documenten van de werker: de voorkant komt er pas nu bij, goedgekeurd.
+      const ruw = (check.rawPayload ?? {}) as { viaTweedeToestel?: unknown; uploadIds?: { front?: unknown } };
+      const voorkant = ruw.viaTweedeToestel === true && typeof ruw.uploadIds?.front === "string" ? ruw.uploadIds.front : null;
+      if (check.documentType !== "DRIVERS_LICENSE" && voorkant) {
+        if (decision === "approve") {
+          await tx.complianceDocument.deleteMany({ where: { userId: check.userId, kind: ComplianceDocKind.ID } });
+          await tx.complianceDocument.create({
+            data: { userId: check.userId, kind: ComplianceDocKind.ID, uploadId: voorkant, status: ComplianceDocStatus.APPROVED },
+          });
+        }
+      } else if (check.documentType !== "DRIVERS_LICENSE") {
         await tx.complianceDocument.updateMany({
           where: { userId: check.userId, kind: ComplianceDocKind.ID, status: ComplianceDocStatus.UPLOADED },
           data: { status: decision === "approve" ? ComplianceDocStatus.APPROVED : ComplianceDocStatus.REJECTED },

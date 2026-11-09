@@ -37,8 +37,14 @@ export function IdScanTelefoon({ locale }: { locale: Locale }) {
   const [bezig, setBezig] = useState(false);
 
   useEffect(() => {
-    let code = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    let code = "";
     let toestel = "";
+    try {
+      // een kapotte link ("#%E0") mag de pagina niet laten vallen: dan geen code
+      code = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    } catch {
+      code = "";
+    }
     try {
       if (code) {
         // een nieuwe link: een eventueel oud toesteltoken hoort bij een andere code

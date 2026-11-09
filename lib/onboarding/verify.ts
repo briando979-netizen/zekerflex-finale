@@ -646,10 +646,13 @@ export async function submitFreelancerOnboarding(
   if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
   if (input.viaTweedeToestel) {
+    const eerder = input.tweedeToestel?.zonderVlag === true;
     checks.push({
-      label: "Ingestuurd vanaf je telefoon",
+      label: eerder ? "Eerder via je telefoon ingestuurd" : "Ingestuurd vanaf je telefoon",
       ok: false,
-      detail: "Je foto's kwamen via je telefoon binnen. Een medewerker kijkt mee voordat je verificatie rond is.",
+      detail: eerder
+        ? "Je stuurde eerder foto's via je telefoon in. Een medewerker kijkt mee voordat je verificatie rond is."
+        : "Je foto's kwamen via je telefoon binnen. Een medewerker kijkt mee voordat je verificatie rond is.",
     });
   }
   const tt = input.tweedeToestel;
@@ -834,6 +837,8 @@ export async function submitFreelancerOnboarding(
                 }
               : null,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
+            // de beoordelingsroute zet de voorkant pas bij goedkeuring bij de documenten (review 2, H1-bis)
+            viaTweedeToestel: Boolean(input.viaTweedeToestel),
             fileSha256: stored.sha256,
           }),
         ) as Prisma.InputJsonValue,
@@ -853,7 +858,11 @@ export async function submitFreelancerOnboarding(
     // the duplicate we're fixing) or a rejected outcome (e.g. a confident
     // vision face-mismatch) — don't wave through a document we just decided
     // not to trust.
-    if (input.documentType !== "DRIVERS_LICENSE" && outcome !== "rejected") {
+    // Ook niet bij foto's van een tweede toestel (review 2, H1-bis): de werker kan zijn eigen
+    // documenten op volle grootte downloaden (/api/me/documents), en bij een doorgestuurde link
+    // is dat het ID van een ander. Die voorkant komt er pas bij als een medewerker goedkeurt
+    // (app/api/admin/gebruikers/[id]/identiteit/[checkId]).
+    if (input.documentType !== "DRIVERS_LICENSE" && outcome !== "rejected" && !input.viaTweedeToestel) {
       await tx.complianceDocument.deleteMany({
         where: { userId: user.id, kind: ComplianceDocKind.ID },
       });
