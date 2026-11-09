@@ -7,7 +7,9 @@ import { recordAudit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { nameSimilarity } from "@/lib/onboarding/verify";
+import { naamGelijk } from "@/lib/kyc/naam-match";
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { alertOwnerLater } from "@/lib/ops/alert";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -120,19 +122,20 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
     } catch (err) {
       logger.warn("stripe identity outputs not readable", { session: s.id, error: (err as Error).message });
     }
-    // Stripe heeft document, echtheid en selfie al gecontroleerd (9 nov 2026: de eigenaar wil
-    // dat iemand niet blijft hangen op een andere schrijfwijze, "El Bouti" tegenover
-    // "Elbouti"). Een naamverschil keurt dus niet meer af; het blijft zichtbaar in het
-    // auditlog en in rawPayload.nameOk.
-    const nameOk = docName ? nameSimilarity(user.fullName, docName) >= 0.5 : false;
-    const status = KycStatus.VERIFIED;
-    void import("@/lib/analytics/funnel").then(({ recordFunnel }) => recordFunnel("onboarding-werknemer", "verificatie-klaar")).catch(() => undefined);
+    // Zelfde naam in een andere schrijfwijze ("El Bouti"/"Elbouti") telt als gelijk; een echt
+    // andere achternaam blijft handmatige controle (anders kan iemand een account bevestigen
+    // met het ID van een ander: mule-accounts).
+    const nameOk = docName ? nameSimilarity(user.fullName, docName) >= 0.5 || naamGelijk(user.fullName, docName) : false;
+    const status = nameOk ? KycStatus.VERIFIED : KycStatus.PENDING;
+    if (status === KycStatus.VERIFIED) {
+      void import("@/lib/analytics/funnel").then(({ recordFunnel }) => recordFunnel("onboarding-werknemer", "verificatie-klaar")).catch(() => undefined);
+    }
     await prisma.identityVerification.update({
       where: { id: row.id },
       data: {
-        decisionStatus: "verified",
+        decisionStatus: nameOk ? "verified" : "name_mismatch",
         status,
-        verifiedAt: new Date(),
+        verifiedAt: nameOk ? new Date() : null,
         documentType: docType === "passport" ? "PASSPORT" : docType === "driving_license" ? "DRIVERS_LICENSE" : docType ? "ID_CARD" : null,
         expiresAt,
         rawPayload: { provider: PROVIDER, sessionId: s.id, nameOnDocument: docName, nameOk },
@@ -141,13 +144,23 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
     if (user.kycStatus !== KycStatus.REJECTED) await prisma.user.update({ where: { id: user.id }, data: { kycStatus: status } });
     await recordAudit({
       category: "KYC",
-      action: nameOk ? "kyc.stripe_verified" : "kyc.stripe_name_differs",
+      action: nameOk ? "kyc.stripe_verified" : "kyc.stripe_name_mismatch",
       actorLabel: "system:stripe-identity",
-      severity: "info",
-      summary: nameOk ? `${user.fullName} geverifieerd via Stripe Identity` : `${user.fullName} geverifieerd via Stripe Identity; de naam op het document (${docName ?? "onbekend"}) wijkt af van de accountnaam, toch goedgekeurd`,
+      severity: nameOk ? "info" : "warning",
+      summary: nameOk ? `${user.fullName} geverifieerd via Stripe Identity` : `${user.fullName}: Stripe Identity geslaagd, maar naam op document (${docName ?? "onbekend"}) wijkt af — handmatige controle`,
       targetType: "user",
       targetId: user.id,
     });
+    // handmatige controle nodig: zonder melding blijft de werknemer onzichtbaar wachten (4 nov 2026)
+    if (!nameOk) {
+      alertOwnerLater({
+        key: `kyc-beoordeling:${user.id}`,
+        title: `ID-controle wacht op je: ${user.fullName}`,
+        detail: `Stripe keurde het document goed, maar de naam erop (${docName ?? "onbekend"}) lijkt niet op de accountnaam. Bekijk het en keur goed of af bij de gebruiker.`,
+        severity: "warning",
+        url: `/admin/gebruikers/${user.id}`,
+      });
+    }
     return;
   }
 

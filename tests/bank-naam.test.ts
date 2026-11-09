@@ -13,7 +13,7 @@ vi.mock("@/lib/storage/kv", () => ({ kvGet, kvSet, kvDelete: vi.fn() }));
 const recordAudit = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/audit", () => ({ recordAudit }));
 
-const { banknaamPast } = await import("@/lib/kyc/naam-match");
+const { banknaamPast, naamGelijk } = await import("@/lib/kyc/naam-match");
 const { getBankLogin, namesMatch } = await import("@/lib/kyc/bank-login");
 
 describe("banknaamPast: zo schrijven banken de naam", () => {
@@ -34,6 +34,10 @@ describe("banknaamPast: zo schrijven banken de naam", () => {
     ["Bas van Essen", "J.B. VAN ESSEN"], // roepnaam Bas, voorletters J.B.
     ["Briando van Essen", "B VAN ESSEN EN/OF M JANSEN"],
     ["Briando van Essen", "M JANSEN E/O B VAN ESSEN"],
+    // achternaam aaneen of met spatie/koppelteken (9 nov: "El Bouti" tegenover "Elbouti")
+    ["Bilal Elbouti", "B. El Bouti"],
+    ["Bilal Elbouti", "B EL-BOUTI"],
+    ["Bilal El Bouti", "B ELBOUTI"],
   ])("%s ↔ bank %s", (profiel, bank) => {
     expect(banknaamPast(profiel, bank)).toBe(true);
   });
@@ -47,6 +51,30 @@ describe("banknaamPast: zo schrijven banken de naam", () => {
     ["", "B. van Essen"],
   ])("%s ↔ bank %s past niet", (profiel, bank) => {
     expect(banknaamPast(profiel, bank)).toBe(false);
+  });
+});
+
+describe("naamGelijk: dezelfde naam, andere schrijfwijze", () => {
+  it.each([
+    ["Bilal Elbouti", "Bilal El Bouti"],
+    ["El Bouti", "Elbouti"],
+    ["El Bouti", "EL-BOUTI"],
+    ["Zoë Müller", "ZOE MULLER"],
+    ["Jan de Vries", "Vries, Jan de"],
+    ["Jan de Vries", "Jan Vries"],
+    ["Jan d'Hont", "Jan Dhont"],
+  ])("%s = %s", (a, b) => {
+    expect(naamGelijk(a, b)).toBe(true);
+  });
+
+  it.each([
+    ["Jan de Vries", "P. Jansen"],
+    ["Jan de Vries", "Piet de Vries"],
+    ["Jan de Vries", "Jan Jansen"],
+    ["Bilal Elbouti", "Bilal Bouti Ahmed"],
+    ["", "Jan de Vries"],
+  ])("%s ≠ %s", (a, b) => {
+    expect(naamGelijk(a, b)).toBe(false);
   });
 });
 
