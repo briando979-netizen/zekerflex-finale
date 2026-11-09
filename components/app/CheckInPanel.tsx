@@ -8,6 +8,7 @@ import { AutoCheckin } from "@/components/app/AutoCheckin";
 import { WACHTRIJ_GEBEURTENIS, bewaarTik, laadTikken, nieuwId, uitkomstVan, type BewaardeTik } from "@/lib/checkin/wachtrij";
 import { meldWachtrij, verstuurBewaard, weigerTekst, type WachtrijMelding } from "@/lib/checkin/verzenden";
 import { INCHECK_VOOR_MS, UITCHECK_NA_MS } from "@/lib/timesheets/offline";
+import { LAATST_BEKEND_MAX_MS, laatstBekendBruikbaar } from "@/lib/checkin/plek";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / check-out on the klus location. Posts to the existing
@@ -36,15 +37,28 @@ function deviceHash(): string {
   }
 }
 
-function position(c: FreelancerDict["checkin"]): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error(c.noGeo));
-    navigator.geolocation.getCurrentPosition(resolve, (e) => reject(new Error(e.code === 1 ? c.permission : c.failedGeo)), {
-      enableHighAccuracy: true,
-      timeout: 20_000,
-      maximumAge: 0,
-    });
-  });
+function meting(opties: PositionOptions): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, opties));
+}
+
+/**
+ * Een verse GPS-meting. Lukt dat niet zonder internet (kelder, koelcel), dan de laatst
+ * bekende plek van hoogstens 5 minuten oud (lib/checkin/plek.ts): zo'n tik wordt bewaard
+ * met bron "offline" en krijgt altijd een signaal voor de opdrachtgever.
+ */
+async function position(c: FreelancerDict["checkin"]): Promise<GeolocationPosition> {
+  if (!navigator.geolocation) throw new Error(c.noGeo);
+  const online = navigator.onLine;
+  try {
+    return await meting({ enableHighAccuracy: true, timeout: online ? 20_000 : 10_000, maximumAge: 0 });
+  } catch (e) {
+    if ((e as GeolocationPositionError).code === 1) throw new Error(c.permission);
+    if (!navigator.onLine) {
+      const oud = await meting({ enableHighAccuracy: false, timeout: 3_000, maximumAge: LAATST_BEKEND_MAX_MS }).catch(() => null);
+      if (oud && laatstBekendBruikbaar(oud.timestamp, Date.now(), navigator.onLine)) return oud;
+    }
+    throw new Error(c.failedGeo);
+  }
 }
 
 export function CheckInPanel(props: { userId: string; timesheetId: string; scheduledStart: string; scheduledEnd: string; actualStart: string | null; actualEnd: string | null; branchName: string }) {
