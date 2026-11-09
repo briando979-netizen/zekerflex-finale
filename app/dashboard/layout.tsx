@@ -11,6 +11,7 @@ import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
+import { AppOpenPing } from "@/components/app/AppOpenPing";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -45,6 +46,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <OpbouwfaseBalk soort="werker" />
         {children}
         <ChatDock />
+        <AppOpenPing />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </FreelancerShell>
     </I18nProvider>
