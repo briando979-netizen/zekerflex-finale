@@ -7,6 +7,8 @@ import { useFT } from "@/components/i18n/useFT";
 import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
+import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
+import { IdScan, type ScanAfronden, type ScanUitslag } from "@/components/app/IdScan";
 
 interface Check {
   label: string;
@@ -148,71 +150,6 @@ function CameraIcon() {
 type PhotoKey = "documentFront" | "documentBack" | "selfie";
 type DocKey = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
 
-/** Wat /api/onboarding/document-lezen van de foto las (lib/kyc/mrz-lezen.ts voorScherm). */
-interface Lezing {
-  status: "bezig" | "klaar" | "fout";
-  gevonden?: boolean;
-  geldig?: boolean;
-  verlopen?: boolean;
-  documentnummer?: string | null;
-  vervaldatum?: string | null;
-  naam?: string;
-  melding?: string;
-}
-
-const datumNl = (iso: string) => {
-  const [j, m, d] = iso.split("-");
-  return `${d}-${m}-${j}`;
-};
-const titel = (s: string) => s.toLowerCase().replace(/(^|[\s-])(\S)/g, (_m, voor: string, l: string) => voor + l.toUpperCase());
-
-/** Laat direct zien wat er van het document gelezen is: goed, verlopen, of opnieuw fotograferen. */
-function DocumentLezing({ lezing, t }: { lezing: Lezing; t: AuthDict["onb"] }) {
-  if (lezing.status === "bezig") {
-    return <p className="rounded-lg bg-paper-soft px-3 py-2.5 text-xs text-neutralx-600">{t.lezenBezig}</p>;
-  }
-  if (lezing.status === "fout" || !lezing.gevonden || !lezing.geldig) {
-    return (
-      <p className="rounded-lg border border-warn/30 bg-warn/5 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
-        {lezing.melding ?? t.lezenOnzeker}
-      </p>
-    );
-  }
-  if (lezing.verlopen && lezing.vervaldatum) {
-    return (
-      <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
-        {fill(t.lezenVerlopen, { datum: datumNl(lezing.vervaldatum) })}
-      </p>
-    );
-  }
-  return (
-    <div className="rounded-lg border border-ok/30 bg-ok/5 px-3 py-2.5">
-      <p className="text-sm font-semibold text-ink">✓ {t.lezenGoed}</p>
-      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-        {lezing.naam && (
-          <>
-            <dt className="text-neutralx-500">{t.lezenNaam}</dt>
-            <dd className="text-ink">{lezing.naam}</dd>
-          </>
-        )}
-        {lezing.documentnummer && (
-          <>
-            <dt className="text-neutralx-500">{t.lezenNummer}</dt>
-            <dd className="font-mono text-ink">{lezing.documentnummer}</dd>
-          </>
-        )}
-        {lezing.vervaldatum && (
-          <>
-            <dt className="text-neutralx-500">{t.lezenGeldig}</dt>
-            <dd className="text-ink">{datumNl(lezing.vervaldatum)}</dd>
-          </>
-        )}
-      </dl>
-      <p className="mt-1.5 text-xs text-neutralx-500">{t.lezenCijfers}</p>
-    </div>
-  );
-}
-
 export function OnboardingForm({
   defaultName,
   requireKvk = true,
@@ -230,7 +167,10 @@ export function OnboardingForm({
   const [codeMelding, setCodeMelding] = useState<string | null>(null);
   const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
   const [biz, setBiz] = useState<"kvk" | "vat">("kvk");
-  const [method, setMethod] = useState<"stripe" | "upload">(stripeIdentity ? "stripe" : "upload");
+  // drie manieren: Stripe (als dat aanstaat), de ID-scan van ZekerFlex, of zelf foto's uploaden
+  const [method, setMethod] = useState<"stripe" | "zekerflex" | "upload">(stripeIdentity ? "stripe" : "zekerflex");
+  const [scanOpen, setScanOpen] = useState(false);
+  const scanResult = useRef<Result | null>(null);
   const photos = useRef<Partial<Record<PhotoKey, File>>>({});
   const [missing, setMissing] = useState<PhotoKey[]>([]);
   const router = useRouter();
@@ -254,35 +194,47 @@ export function OnboardingForm({
   async function leesDocument(file: File) {
     const nr = ++lezingNr.current;
     setLezing({ status: "bezig" });
-    try {
-      const body = new FormData();
-      body.set("foto", file);
-      const res = await fetch("/api/onboarding/document-lezen", { method: "POST", body });
-      const data = await res.json().catch(() => ({}));
-      if (nr !== lezingNr.current) return;
-      if (!res.ok) {
-        setLezing({ status: "fout", melding: (data?.error?.message as string | undefined) ?? t.lezenOnzeker });
-        return;
-      }
-      const naam = [data.voornamen, data.achternaam].filter(Boolean).map((s: string) => titel(s)).join(" ");
-      setLezing({
-        status: "klaar",
-        gevonden: Boolean(data.gevonden),
-        geldig: Boolean(data.geldig),
-        verlopen: Boolean(data.verlopen),
-        documentnummer: (data.documentnummer as string | null) ?? null,
-        vervaldatum: (data.vervaldatum as string | null) ?? null,
-        ...(naam ? { naam } : {}),
-      });
-      // goed gelezen en niet verlopen: nummer en datum van het document zelf invullen
-      if (data.geldig && !data.verlopen) {
-        if (data.documentnummer) zetVeld("documentNumber", data.documentnummer as string);
-        if (data.vervaldatum) zetVeld("documentExpiry", data.vervaldatum as string);
-        if (data.soort === "PASSPORT" || data.soort === "ID_CARD") setDocType(data.soort);
-      }
-    } catch {
-      if (nr === lezingNr.current) setLezing({ status: "fout", melding: t.lezenOnzeker });
+    const l = await leesDocumentFoto(file, t);
+    if (nr !== lezingNr.current) return;
+    setLezing(l);
+    // goed gelezen en niet verlopen: nummer en datum van het document zelf invullen
+    if (l.status === "klaar" && l.geldig && !l.verlopen) {
+      if (l.documentnummer) zetVeld("documentNumber", l.documentnummer);
+      if (l.vervaldatum) zetVeld("documentExpiry", l.vervaldatum);
+      if (l.soort === "PASSPORT" || l.soort === "ID_CARD") setDocType(l.soort);
     }
+  }
+
+  /** De ID-scan levert foto's en documentgegevens; het basisformulier (KVK, postcode, IBAN) komt hier vandaan. */
+  const afrondenViaScan: ScanAfronden = async (g) => {
+    const form = formRef.current;
+    if (!form) return { ok: false, fout: t.failed };
+    const body = new FormData(form);
+    body.set("documentType", g.documentType);
+    body.set("documentNumber", g.documentNumber);
+    body.set("documentExpiry", g.documentExpiry);
+    body.set("nameOnDocument", g.nameOnDocument);
+    body.set("documentFront", g.front);
+    body.set("documentBack", g.back);
+    body.set("selfie", g.selfie);
+    try {
+      const res = await fetch("/api/onboarding", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 413) return { ok: false, fout: t.tooBig };
+      if (!res.ok) return { ok: false, fout: (data?.error?.message as string | undefined) ?? t.failed };
+      scanResult.current = data as Result;
+      return { ok: true, uitslag: data as Result };
+    } catch {
+      return { ok: false, fout: t.scan.mislukt };
+    }
+  };
+
+  function sluitScan(uitslag: ScanUitslag | null) {
+    setScanOpen(false);
+    const r = scanResult.current;
+    if (!uitslag || !r) return;
+    setResult(r);
+    if (r.outcome === "verified") setTimeout(() => router.refresh(), 1500);
   }
 
   function kiesFoto(k: PhotoKey, f: File) {
@@ -303,6 +255,12 @@ export function OnboardingForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
+    if (method === "zekerflex") {
+      setError(null);
+      scanResult.current = null;
+      setScanOpen(true);
+      return;
+    }
     const body = new FormData(e.currentTarget);
     if (zonderCode.current) body.delete("ibanCode");
     zonderCode.current = false;
@@ -503,31 +461,30 @@ export function OnboardingForm({
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "3." : "2."} {t.identity}
         </legend>
-        {stripeIdentity && (
-          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t.howIdentity}>
-            {(
-              [
-                ["stripe", ...t.stripe],
-                ["upload", ...t.upload],
-              ] as const
-            ).map(([k, title, sub]) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={method === k}
-                onClick={() => setMethod(k)}
-                className={`rounded-xl border px-3 py-2.5 text-left ${method === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
-              >
-                <span className="block text-sm font-semibold text-ink">{title}</span>
-                <span className="block text-xs text-neutralx-500">{sub}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {method === "stripe" ? (
+        <div className={`grid gap-2 ${stripeIdentity ? "sm:grid-cols-3" : "sm:grid-cols-2"}`} role="radiogroup" aria-label={t.howIdentity}>
+          {(
+            [
+              ...(stripeIdentity ? [["stripe", ...t.stripe] as const] : []),
+              ["zekerflex", ...t.scan.optie] as const,
+              ["upload", ...t.upload] as const,
+            ]
+          ).map(([k, title, sub]) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={method === k}
+              onClick={() => setMethod(k)}
+              className={`rounded-xl border px-3 py-2.5 text-left ${method === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
+            >
+              <span className="block text-sm font-semibold text-ink">{title}</span>
+              <span className="block text-xs text-neutralx-500">{sub}</span>
+            </button>
+          ))}
+        </div>
+        {method === "stripe" || method === "zekerflex" ? (
           <p className="rounded-lg bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-600">
-            {t.stripeInfo}
+            {method === "stripe" ? t.stripeInfo : t.scan.info}
           </p>
         ) : (
         <>
@@ -568,11 +525,12 @@ export function OnboardingForm({
       </fieldset>
 
       <button type="submit" disabled={busy} className="btn-trust w-full">
-        {busy ? (method === "stripe" ? t.toStripe : t.checkingBusy) : t.submit}
+        {busy ? (method === "stripe" ? t.toStripe : t.checkingBusy) : method === "zekerflex" ? t.scan.starten : t.submit}
       </button>
       <p className="text-xs leading-relaxed text-neutralx-400">
         {method === "stripe" ? t.stripeNote : t.uploadNote}
       </p>
+      {scanOpen && <IdScan t={t} naam={defaultName} onAfronden={afrondenViaScan} onSluiten={sluitScan} />}
     </form>
   );
 }

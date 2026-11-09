@@ -222,6 +222,43 @@ export interface AuthDict {
     lezenCijfers: string;
     lezenVerlopen: string;
     lezenOnzeker: string;
+    /** de ID-scan van ZekerFlex (components/app/IdScan.tsx) */
+    scan: {
+      optie: [string, string];
+      info: string;
+      starten: string;
+      titel: string;
+      punten: [string, string, string];
+      privacy: string;
+      akkoord: string;
+      annuleren: string;
+      kiesSoort: string;
+      stap: string;
+      voor: { PASSPORT: string; ID_CARD: string; DRIVERS_LICENSE: string };
+      achter: { PASSPORT: string; ID_CARD: string; DRIVERS_LICENSE: string };
+      kader: string;
+      selfie: string;
+      selfieUitleg: string;
+      maakFoto: string;
+      opnieuw: string;
+      gebruik: string;
+      volgende: string;
+      geenCamera: string;
+      cameraApp: string;
+      toch: string;
+      anderDocument: string;
+      gegevens: string;
+      gegevensUitleg: string;
+      afronden: string;
+      bezig: string;
+      bezigUitleg: string;
+      goed: string;
+      review: string;
+      af: string;
+      terug: string;
+      sluiten: string;
+      mislukt: string;
+    };
   };
 }
 
@@ -440,6 +477,49 @@ const nl: AuthDict = {
     lezenCijfers: "De controlecijfers kloppen. We hebben het nummer en de datum voor je ingevuld.",
     lezenVerlopen: "Volgens de code op je document is het verlopen op {datum}. Gebruik een geldig paspoort of geldige ID-kaart.",
     lezenOnzeker: "We konden de code onderop je document niet zeker lezen. Maak de foto opnieuw: recht van boven, de hele kaart in beeld, zonder glans. Je kunt ook gewoon versturen: dan kijkt een medewerker mee.",
+    scan: {
+      optie: [
+        "Automatisch via ZekerFlex",
+        "Scan je ID en een selfie met je camera. Je ziet meteen wat we lezen.",
+      ],
+      info: "Na “Verificatie starten” opent de ID-scan van ZekerFlex. Je maakt met je camera een foto van je document en een selfie. Wij lezen je document direct uit en ronden de verificatie af.",
+      starten: "Verificatie starten",
+      titel: "Je identiteit verifiëren met ZekerFlex",
+      punten: [
+        "Je maakt een foto van je ID-kaart, paspoort of rijbewijs en daarna een selfie, zodat we zien dat jij het bent.",
+        "We lezen de code op je document en vergelijken je selfie met je pasfoto. Dat gebeurt op de eigen server van ZekerFlex, niet bij een andere partij.",
+        "Je foto's worden versleuteld bewaard en alleen voor deze verificatie gebruikt. Je BSN slaan we nooit op. Je kunt je gegevens altijd laten verwijderen.",
+      ],
+      privacy: "Privacybeleid",
+      akkoord: "Akkoord en doorgaan",
+      annuleren: "Annuleren",
+      kiesSoort: "Welk document gebruik je?",
+      stap: "Stap {n} van {totaal}",
+      voor: { PASSPORT: "Pasfotopagina van je paspoort", ID_CARD: "Voorkant van je ID-kaart", DRIVERS_LICENSE: "Voorkant van je rijbewijs" },
+      achter: { PASSPORT: "Achterkant van je paspoort", ID_CARD: "Achterkant van je ID-kaart", DRIVERS_LICENSE: "Achterkant van je rijbewijs" },
+      kader: "Houd je document in het kader: recht van boven, scherp en zonder glans.",
+      selfie: "Maak een selfie",
+      selfieUitleg: "Kijk recht in de camera, met je gezicht in het ovaal. Geen pet of zonnebril.",
+      maakFoto: "Foto maken",
+      opnieuw: "Opnieuw",
+      gebruik: "Deze gebruiken",
+      volgende: "Volgende",
+      geenCamera: "We kunnen je camera niet openen. Geef toestemming in je browser, of maak de foto met je camera-app.",
+      cameraApp: "Foto maken met camera-app",
+      toch: "Toch doorgaan",
+      anderDocument: "Ander document kiezen",
+      gegevens: "Controleer je gegevens",
+      gegevensUitleg: "We konden niet alles automatisch van je document lezen. Vul het aan zoals het op je document staat.",
+      afronden: "Verificatie afronden",
+      bezig: "We controleren je gegevens…",
+      bezigUitleg: "Dit duurt meestal minder dan een halve minuut. Sluit dit scherm niet.",
+      goed: "Je identiteit is bevestigd",
+      review: "We bekijken je aanvraag",
+      af: "Verificatie niet gelukt",
+      terug: "Terug naar ZekerFlex",
+      sluiten: "Sluiten",
+      mislukt: "Versturen is niet gelukt. Controleer je verbinding en probeer het opnieuw.",
+    },
   },
 };
 
@@ -658,6 +738,49 @@ const en: AuthDict = {
     lezenCijfers: "The check digits match. We filled in the number and date for you.",
     lezenVerlopen: "According to the code on your document, it expired on {datum}. Please use a valid passport or ID card.",
     lezenOnzeker: "We couldn't reliably read the code at the bottom of your document. Take the photo again: straight from above, the whole card in view, no glare. You can also just submit: then a staff member will check it.",
+    scan: {
+      optie: [
+        "Automatically via ZekerFlex",
+        "Scan your ID and a selfie with your camera. You see right away what we read.",
+      ],
+      info: "After “Start verification”, the ZekerFlex ID scan opens. You take a photo of your document and a selfie with your camera. We read your document straight away and complete the verification.",
+      starten: "Start verification",
+      titel: "Verify your identity with ZekerFlex",
+      punten: [
+        "You take a photo of your ID card, passport or driving licence and then a selfie, so we can see it's you.",
+        "We read the code on your document and compare your selfie with your photo. This happens on ZekerFlex's own server, not at another company.",
+        "Your photos are stored encrypted and only used for this verification. We never store your BSN. You can always have your data deleted.",
+      ],
+      privacy: "Privacy policy",
+      akkoord: "Agree and continue",
+      annuleren: "Cancel",
+      kiesSoort: "Which document are you using?",
+      stap: "Step {n} of {totaal}",
+      voor: { PASSPORT: "Photo page of your passport", ID_CARD: "Front of your ID card", DRIVERS_LICENSE: "Front of your driving licence" },
+      achter: { PASSPORT: "Back of your passport", ID_CARD: "Back of your ID card", DRIVERS_LICENSE: "Back of your driving licence" },
+      kader: "Keep your document inside the frame: straight from above, sharp and without glare.",
+      selfie: "Take a selfie",
+      selfieUitleg: "Look straight into the camera with your face in the oval. No cap or sunglasses.",
+      maakFoto: "Take photo",
+      opnieuw: "Retake",
+      gebruik: "Use this one",
+      volgende: "Next",
+      geenCamera: "We can't open your camera. Allow access in your browser, or take the photo with your camera app.",
+      cameraApp: "Take photo with camera app",
+      toch: "Continue anyway",
+      anderDocument: "Choose another document",
+      gegevens: "Check your details",
+      gegevensUitleg: "We couldn't read everything from your document automatically. Fill it in as it appears on your document.",
+      afronden: "Complete verification",
+      bezig: "Checking your details…",
+      bezigUitleg: "This usually takes less than half a minute. Don't close this screen.",
+      goed: "Your identity is confirmed",
+      review: "We're reviewing your application",
+      af: "Verification failed",
+      terug: "Back to ZekerFlex",
+      sluiten: "Close",
+      mislukt: "Sending failed. Check your connection and try again.",
+    },
   },
 };
 
@@ -876,6 +999,49 @@ const pl: AuthDict = {
     lezenCijfers: "Cyfry kontrolne się zgadzają. Uzupełniliśmy za Ciebie numer i datę.",
     lezenVerlopen: "Według kodu na Twoim dokumencie jego ważność wygasła {datum}. Użyj ważnego paszportu lub dowodu osobistego.",
     lezenOnzeker: "Nie udało się pewnie odczytać kodu na dole dokumentu. Zrób zdjęcie ponownie: prosto z góry, cała karta w kadrze, bez odblasków. Możesz też po prostu wysłać: wtedy sprawdzi to pracownik.",
+    scan: {
+      optie: [
+        "Automatycznie przez ZekerFlex",
+        "Zeskanuj dokument i zrób selfie aparatem. Od razu zobaczysz, co odczytaliśmy.",
+      ],
+      info: "Po kliknięciu „Rozpocznij weryfikację” otworzy się skan dokumentu ZekerFlex. Robisz aparatem zdjęcie dokumentu i selfie. Od razu odczytujemy dokument i kończymy weryfikację.",
+      starten: "Rozpocznij weryfikację",
+      titel: "Potwierdź swoją tożsamość w ZekerFlex",
+      punten: [
+        "Robisz zdjęcie dowodu osobistego, paszportu lub prawa jazdy, a potem selfie, żebyśmy widzieli, że to Ty.",
+        "Odczytujemy kod z dokumentu i porównujemy selfie ze zdjęciem w dokumencie. Dzieje się to na własnym serwerze ZekerFlex, a nie w innej firmie.",
+        "Twoje zdjęcia są przechowywane w formie zaszyfrowanej i używane tylko do tej weryfikacji. Nigdy nie zapisujemy Twojego numeru BSN. Zawsze możesz poprosić o usunięcie danych.",
+      ],
+      privacy: "Polityka prywatności",
+      akkoord: "Zgadzam się i dalej",
+      annuleren: "Anuluj",
+      kiesSoort: "Jakiego dokumentu używasz?",
+      stap: "Krok {n} z {totaal}",
+      voor: { PASSPORT: "Strona paszportu ze zdjęciem", ID_CARD: "Przód dowodu osobistego", DRIVERS_LICENSE: "Przód prawa jazdy" },
+      achter: { PASSPORT: "Tył paszportu", ID_CARD: "Tył dowodu osobistego", DRIVERS_LICENSE: "Tył prawa jazdy" },
+      kader: "Trzymaj dokument w ramce: prosto z góry, ostro i bez odblasków.",
+      selfie: "Zrób selfie",
+      selfieUitleg: "Patrz prosto w aparat, z twarzą w owalu. Bez czapki i okularów przeciwsłonecznych.",
+      maakFoto: "Zrób zdjęcie",
+      opnieuw: "Ponownie",
+      gebruik: "Użyj tego",
+      volgende: "Dalej",
+      geenCamera: "Nie możemy otworzyć aparatu. Zezwól na dostęp w przeglądarce albo zrób zdjęcie aplikacją aparatu.",
+      cameraApp: "Zdjęcie aplikacją aparatu",
+      toch: "Kontynuuj mimo to",
+      anderDocument: "Wybierz inny dokument",
+      gegevens: "Sprawdź swoje dane",
+      gegevensUitleg: "Nie udało się automatycznie odczytać wszystkiego z dokumentu. Uzupełnij dane tak, jak są w dokumencie.",
+      afronden: "Zakończ weryfikację",
+      bezig: "Sprawdzamy Twoje dane…",
+      bezigUitleg: "Zwykle trwa to krócej niż pół minuty. Nie zamykaj tego ekranu.",
+      goed: "Twoja tożsamość została potwierdzona",
+      review: "Sprawdzamy Twój wniosek",
+      af: "Weryfikacja nie powiodła się",
+      terug: "Wróć do ZekerFlex",
+      sluiten: "Zamknij",
+      mislukt: "Nie udało się wysłać. Sprawdź połączenie i spróbuj ponownie.",
+    },
   },
 };
 
@@ -1094,6 +1260,49 @@ const ro: AuthDict = {
     lezenCijfers: "Cifrele de control se potrivesc. Am completat numărul și data pentru tine.",
     lezenVerlopen: "Conform codului de pe document, acesta a expirat pe {datum}. Folosește un pașaport sau o carte de identitate valabilă.",
     lezenOnzeker: "Nu am putut citi sigur codul din partea de jos a documentului. Fă din nou fotografia: drept de sus, cu tot cardul în cadru, fără reflexii. Poți și să trimiți direct: atunci verifică un angajat.",
+    scan: {
+      optie: [
+        "Automat prin ZekerFlex",
+        "Scanează actul și fă un selfie cu camera. Vezi imediat ce am citit.",
+      ],
+      info: "După „Începe verificarea” se deschide scanarea actului ZekerFlex. Faci cu camera o fotografie a documentului și un selfie. Citim documentul imediat și finalizăm verificarea.",
+      starten: "Începe verificarea",
+      titel: "Verifică-ți identitatea cu ZekerFlex",
+      punten: [
+        "Faci o fotografie a cărții de identitate, a pașaportului sau a permisului de conducere și apoi un selfie, ca să vedem că ești tu.",
+        "Citim codul de pe document și comparăm selfie-ul cu fotografia din act. Asta se întâmplă pe serverul propriu ZekerFlex, nu la altă firmă.",
+        "Fotografiile tale sunt păstrate criptat și folosite doar pentru această verificare. Nu salvăm niciodată BSN-ul tău. Poți oricând cere ștergerea datelor.",
+      ],
+      privacy: "Politica de confidențialitate",
+      akkoord: "Sunt de acord și continui",
+      annuleren: "Anulează",
+      kiesSoort: "Ce document folosești?",
+      stap: "Pasul {n} din {totaal}",
+      voor: { PASSPORT: "Pagina cu fotografie a pașaportului", ID_CARD: "Fața cărții de identitate", DRIVERS_LICENSE: "Fața permisului de conducere" },
+      achter: { PASSPORT: "Spatele pașaportului", ID_CARD: "Spatele cărții de identitate", DRIVERS_LICENSE: "Spatele permisului de conducere" },
+      kader: "Ține documentul în cadru: drept de sus, clar și fără reflexii.",
+      selfie: "Fă un selfie",
+      selfieUitleg: "Privește drept în cameră, cu fața în oval. Fără șapcă sau ochelari de soare.",
+      maakFoto: "Fă fotografia",
+      opnieuw: "Din nou",
+      gebruik: "Folosește-o",
+      volgende: "Mai departe",
+      geenCamera: "Nu putem deschide camera. Permite accesul în browser sau fă fotografia cu aplicația camerei.",
+      cameraApp: "Fotografie cu aplicația camerei",
+      toch: "Continuă oricum",
+      anderDocument: "Alege alt document",
+      gegevens: "Verifică datele",
+      gegevensUitleg: "Nu am putut citi automat tot de pe document. Completează așa cum apare pe document.",
+      afronden: "Finalizează verificarea",
+      bezig: "Verificăm datele tale…",
+      bezigUitleg: "De obicei durează mai puțin de jumătate de minut. Nu închide acest ecran.",
+      goed: "Identitatea ta este confirmată",
+      review: "Analizăm cererea ta",
+      af: "Verificarea nu a reușit",
+      terug: "Înapoi la ZekerFlex",
+      sluiten: "Închide",
+      mislukt: "Trimiterea nu a reușit. Verifică conexiunea și încearcă din nou.",
+    },
   },
 };
 
@@ -1312,6 +1521,49 @@ const uk: AuthDict = {
     lezenCijfers: "Контрольні цифри збігаються. Ми заповнили номер і дату за вас.",
     lezenVerlopen: "За кодом на вашому документі термін його дії закінчився {datum}. Використайте дійсний паспорт або ID-картку.",
     lezenOnzeker: "Не вдалося надійно зчитати код унизу документа. Сфотографуйте ще раз: рівно згори, уся картка в кадрі, без відблисків. Можна також просто надіслати: тоді перевірить працівник.",
+    scan: {
+      optie: [
+        "Автоматично через ZekerFlex",
+        "Скануйте документ і зробіть селфі камерою. Ви одразу побачите, що ми зчитали.",
+      ],
+      info: "Після «Почати перевірку» відкриється сканування документа ZekerFlex. Ви фотографуєте документ і робите селфі камерою. Ми одразу зчитуємо документ і завершуємо перевірку.",
+      starten: "Почати перевірку",
+      titel: "Підтвердьте свою особу в ZekerFlex",
+      punten: [
+        "Ви фотографуєте ID-картку, паспорт або посвідчення водія, а потім робите селфі, щоб ми бачили, що це ви.",
+        "Ми зчитуємо код на документі й порівнюємо селфі з фото в документі. Це відбувається на власному сервері ZekerFlex, а не в іншій компанії.",
+        "Ваші фото зберігаються в зашифрованому вигляді й використовуються лише для цієї перевірки. Ми ніколи не зберігаємо ваш BSN. Ви завжди можете попросити видалити ваші дані.",
+      ],
+      privacy: "Політика конфіденційності",
+      akkoord: "Погоджуюся й продовжую",
+      annuleren: "Скасувати",
+      kiesSoort: "Який документ ви використовуєте?",
+      stap: "Крок {n} з {totaal}",
+      voor: { PASSPORT: "Сторінка паспорта з фото", ID_CARD: "Лицьовий бік ID-картки", DRIVERS_LICENSE: "Лицьовий бік посвідчення водія" },
+      achter: { PASSPORT: "Зворотний бік паспорта", ID_CARD: "Зворотний бік ID-картки", DRIVERS_LICENSE: "Зворотний бік посвідчення водія" },
+      kader: "Тримайте документ у рамці: рівно згори, чітко й без відблисків.",
+      selfie: "Зробіть селфі",
+      selfieUitleg: "Дивіться прямо в камеру, обличчя в овалі. Без кепки й сонцезахисних окулярів.",
+      maakFoto: "Зробити фото",
+      opnieuw: "Ще раз",
+      gebruik: "Використати це",
+      volgende: "Далі",
+      geenCamera: "Не вдається відкрити камеру. Дозвольте доступ у браузері або зробіть фото застосунком камери.",
+      cameraApp: "Фото застосунком камери",
+      toch: "Все одно продовжити",
+      anderDocument: "Вибрати інший документ",
+      gegevens: "Перевірте свої дані",
+      gegevensUitleg: "Не вдалося автоматично зчитати все з документа. Доповніть дані так, як вони вказані в документі.",
+      afronden: "Завершити перевірку",
+      bezig: "Перевіряємо ваші дані…",
+      bezigUitleg: "Зазвичай це триває менше пів хвилини. Не закривайте цей екран.",
+      goed: "Вашу особу підтверджено",
+      review: "Ми розглядаємо вашу заявку",
+      af: "Перевірка не вдалася",
+      terug: "Назад до ZekerFlex",
+      sluiten: "Закрити",
+      mislukt: "Не вдалося надіслати. Перевірте з'єднання й спробуйте ще раз.",
+    },
   },
 };
 
