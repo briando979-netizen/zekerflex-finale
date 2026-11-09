@@ -560,6 +560,7 @@ export function IdScan({
                     />
                   ))}
                 </div>
+                <p className="mt-2 text-xs text-neutralx-500">{s.telefoonVoorbeeldKlein}</p>
                 {tel.voorbeeld && (
                   <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                     <dt className="text-neutralx-500">{s.telefoonNaam}</dt>

@@ -7,9 +7,14 @@ import { logger } from "@/lib/logger";
 import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
 import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
 import { startStripeIdentity, stripeIdentityAvailable } from "@/lib/kyc/stripe-identity";
-import { overdrachtGegevens, pakOverdracht } from "@/lib/kyc/overdracht";
+import { netwerkVan, overdrachtGegevens, overdrachtMerk, pakOverdracht } from "@/lib/kyc/overdracht";
+import { clientIp } from "@/lib/http/request";
 
 export const runtime = "nodejs";
+
+/** Telefoon en laptop op hetzelfde netwerk? Onbekend (null) als een van beide ontbreekt. */
+const zelfdeNetwerk = (telefoon: string | null, laptop: string | null): boolean | null =>
+  telefoon && laptop ? telefoon === laptop : null;
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
@@ -108,6 +113,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     // komen van de telefoon. Eerst het formulier controleren, pas daarna de foto's
     // ophalen (en daarmee de tijdelijke kopie wissen): een tikfout kost geen foto's.
     const viaTelefoon = form.get("overdracht") === "1";
+    // (review H1) Of er iets via de telefoon binnenkwam, weet de server zelf (merkteken, 30 dagen):
+    // wie de vlag weglaat en de foto's van de telefoon los instuurt, gaat net zo goed naar een mens.
+    const merk = await overdrachtMerk(principal.userId);
     const telefoon = viaTelefoon ? await overdrachtGegevens(principal.userId) : null;
     if (viaTelefoon && !telefoon) {
       throw AppError.conflict("De foto's van je telefoon zijn niet (meer) beschikbaar. Maak een nieuwe QR-code en scan opnieuw.");
@@ -138,10 +146,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     let documentFront: Awaited<ReturnType<typeof readImage>>;
     let documentBack: Awaited<ReturnType<typeof readImage>>;
     let selfie: Awaited<ReturnType<typeof readImage>>;
+    let telefoonNet: string | null = null;
     if (viaTelefoon) {
       const opgehaald = await pakOverdracht(principal.userId);
       if (!opgehaald) throw AppError.conflict("De foto's van je telefoon zijn niet (meer) beschikbaar. Maak een nieuwe QR-code en scan opnieuw.");
-      ({ voor: documentFront, achter: documentBack, selfie } = opgehaald);
+      ({ voor: documentFront, achter: documentBack, selfie, net: telefoonNet } = opgehaald);
     } else {
       [documentFront, documentBack, selfie] = await Promise.all([
         readImage(form, "documentFront", "de voorkant van je document"),
@@ -163,7 +172,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       documentExpiry: parsed.data.documentExpiry,
       nameOnDocument: parsed.data.nameOnDocument,
       files: { front: documentFront, back: documentBack, selfie },
-      ...(viaTelefoon ? { viaTweedeToestel: true } : {}),
+      ...(viaTelefoon || merk.viaTelefoon ? { viaTweedeToestel: true } : {}),
+      // voor de beoordelaar (intern): zelfde netwerk als de telefoon, eerdere "niet mijn account"
+      ...(viaTelefoon || merk.viaTelefoon || merk.geweigerd > 0
+        ? {
+            tweedeToestel: {
+              zelfdeNetwerk: zelfdeNetwerk(telefoonNet, netwerkVan(clientIp(request))),
+              geweigerd: merk.geweigerd,
+              zonderVlag: !viaTelefoon && merk.viaTelefoon,
+            },
+          }
+        : {}),
     });
 
     return NextResponse.json(result, { status: 200 });

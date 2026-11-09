@@ -203,6 +203,43 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
     expect(result.checks.some((c) => c.label === "Ingestuurd vanaf je telefoon" && !c.ok)).toBe(true);
   });
 
+  it("review 2, H1/M2: een eerdere 'niet mijn account' gaat naar een mens, de werker ziet niet waarom", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", kycStatus: "PENDING", freelancerProfile: { id: "fp_1" } });
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+      tweedeToestel: { zelfdeNetwerk: null, geweigerd: 1, zonderVlag: false },
+    });
+    expect(result.outcome).toBe("in_review");
+    expect(JSON.stringify(result)).not.toContain("niet mijn account");
+    const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { checks: { label: string; ok: boolean }[] } } };
+    expect(ivArg.data.rawPayload.checks.find((c) => c.label.startsWith("Geen 'dit is niet mijn account'"))?.ok).toBe(false);
+  });
+
+  it("review 2, H1/M2: de beoordelaar ziet of telefoon en laptop op hetzelfde netwerk zaten, en losse foto's na een overdracht", async () => {
+    userFindUnique.mockResolvedValue({ id: "usr_1", fullName: "Jan Jansen", kycStatus: "PENDING", freelancerProfile: { id: "fp_1" } });
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
+    await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+      viaTweedeToestel: true,
+      tweedeToestel: { zelfdeNetwerk: false, geweigerd: 0, zonderVlag: false },
+    });
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
+    const los = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+      viaTweedeToestel: true,
+      tweedeToestel: { zelfdeNetwerk: null, geweigerd: 0, zonderVlag: true },
+    });
+    expect(los.outcome).toBe("in_review");
+    const [eerste, tweede] = ivCreate.mock.calls.map((c) => (c[0] as { data: { rawPayload: { checks: { label: string; ok: boolean }[] } } }).data.rawPayload.checks);
+    expect(eerste!.find((c) => c.label === "Telefoon en laptop op hetzelfde netwerk")?.ok).toBe(false);
+    expect(tweede!.find((c) => c.label === "Foto's na een overdracht via de telefoon")?.ok).toBe(false);
+    expect(tweede!.find((c) => c.label === "Telefoon en laptop op hetzelfde netwerk")).toBeUndefined();
+  });
+
   it("stores all three photos and auto-fills the compliance ID doc from the front photo", async () => {
     userFindUnique.mockResolvedValue({
       id: "usr_1",

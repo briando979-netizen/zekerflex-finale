@@ -30,6 +30,7 @@ export const ERASABLE_KV_PREFIXES = [
   "companion:ctx:",
   "contacts:",
   "id-overdracht:",
+  "id-overdracht-merk:",
   "iban-wijziging:",
   "mail-tools:",
   "mailbox-connection:",

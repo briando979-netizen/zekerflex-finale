@@ -68,6 +68,13 @@ export interface OnboardingInput {
    * aan een vreemd account koppelen (review H1).
    */
   viaTweedeToestel?: boolean | undefined;
+  /**
+   * Signalen voor de beoordelaar bij "verder op je telefoon" (review H1/M2, alleen intern):
+   * telefoon en laptop op hetzelfde netwerk, hoe vaak een telefoon "dit is niet mijn account"
+   * koos (dan beslist ook zonder telefoonfoto's een mens), en of er na een overdracht losse
+   * foto's kwamen in plaats van die van de telefoon.
+   */
+  tweedeToestel?: { zelfdeNetwerk: boolean | null; geweigerd: number; zonderVlag: boolean } | undefined;
 }
 
 export interface OnboardingResult {
@@ -645,6 +652,39 @@ export async function submitFreelancerOnboarding(
       detail: "Je foto's kwamen via je telefoon binnen. Een medewerker kijkt mee voordat je verificatie rond is.",
     });
   }
+  const tt = input.tweedeToestel;
+  if (tt) {
+    if (input.viaTweedeToestel && !tt.zonderVlag) {
+      checks.push({
+        label: "Telefoon en laptop op hetzelfde netwerk",
+        intern: true,
+        ok: tt.zelfdeNetwerk === true,
+        detail:
+          tt.zelfdeNetwerk === true
+            ? "Ja: de telefoon en de laptop gebruikten hetzelfde netwerk"
+            : tt.zelfdeNetwerk === false
+              ? "Nee: andere netwerken. Dat kan ook bij mobiel internet; kijk extra goed of de foto's bij deze persoon horen."
+              : "Onbekend",
+      });
+    }
+    if (tt.zonderVlag) {
+      checks.push({
+        label: "Foto's na een overdracht via de telefoon",
+        intern: true,
+        ok: false,
+        detail: "Er kwamen eerder foto's via de telefoon binnen, maar deze zijn los ingestuurd. Kijk extra goed of het document en de selfie bij deze persoon horen.",
+      });
+    }
+    checks.push({
+      label: "Geen 'dit is niet mijn account' op een telefoon",
+      intern: true,
+      ok: tt.geweigerd === 0,
+      detail:
+        tt.geweigerd === 0
+          ? "Niet gekozen"
+          : `Een telefoon koos ${tt.geweigerd === 1 ? "één keer" : `${tt.geweigerd} keer`} "Dit is niet mijn account" voor dit account (30 dagen). Mogelijk een doorgestuurde link.`,
+    });
+  }
 
   // hetzelfde document (HMAC over het nummer, review N3) bij een ander account: een mens kijkt
   const docHash = documentHash(input.documentNumber);
@@ -722,6 +762,8 @@ export async function submitFreelancerOnboarding(
     leeftijd === "volwassen" &&
     // foto's van een tweede toestel: altijd een mens (review H1, lib/kyc/overdracht.ts)
     !input.viaTweedeToestel &&
+    // een telefoon koos eerder "dit is niet mijn account": ook dan een mens
+    !((input.tweedeToestel?.geweigerd ?? 0) > 0) &&
     !elders &&
     !chipFotoVerschil &&
     !zegelElders &&

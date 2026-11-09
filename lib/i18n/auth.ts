@@ -295,6 +295,7 @@ export interface AuthDict {
       telefoonKlopt: string;
       telefoonKloptNiet: string;
       telefoonAnderToestel: string;
+      telefoonVoorbeeldKlein: string;
       telefoonGeweigerd: string;
     };
   };
@@ -592,6 +593,7 @@ const nl: AuthDict = {
       telefoonKlopt: "Klopt, verstuur mijn verificatie",
       telefoonKloptNiet: "Klopt niet, opnieuw",
       telefoonAnderToestel: "Let op: een ander toestel probeerde deze code ook te openen. Herken je de foto's niet, kies dan 'Klopt niet'.",
+      telefoonVoorbeeldKlein: "Ter bescherming tonen we je foto's hier klein en wat wazig. Wij krijgen ze scherp binnen.",
       telefoonGeweigerd: "Op de telefoon is gekozen voor 'Dit is niet mijn account'. Er is niets verstuurd.",
     },
   },
@@ -889,6 +891,7 @@ const en: AuthDict = {
       telefoonKlopt: "Correct, send my verification",
       telefoonKloptNiet: "Not correct, start again",
       telefoonAnderToestel: "Note: another device also tried to open this code. If you don't recognise the photos, choose 'Not correct'.",
+      telefoonVoorbeeldKlein: "For your protection we show your photos small and slightly blurred here. We receive them sharp.",
       telefoonGeweigerd: "On the phone, 'This is not my account' was chosen. Nothing was sent.",
     },
   },
@@ -1186,6 +1189,7 @@ const pl: AuthDict = {
       telefoonKlopt: "Zgadza się, wyślij moją weryfikację",
       telefoonKloptNiet: "Nie zgadza się, zacznij od nowa",
       telefoonAnderToestel: "Uwaga: inne urządzenie też próbowało otworzyć ten kod. Jeśli nie rozpoznajesz zdjęć, wybierz 'Nie zgadza się'.",
+      telefoonVoorbeeldKlein: "Dla Twojego bezpieczeństwa pokazujemy tu zdjęcia małe i lekko rozmyte. My otrzymujemy je ostre.",
       telefoonGeweigerd: "Na telefonie wybrano 'To nie jest moje konto'. Nic nie zostało wysłane.",
     },
   },
@@ -1483,6 +1487,7 @@ const ro: AuthDict = {
       telefoonKlopt: "Corect, trimite verificarea mea",
       telefoonKloptNiet: "Nu este corect, de la capăt",
       telefoonAnderToestel: "Atenție: un alt dispozitiv a încercat și el să deschidă acest cod. Dacă nu recunoști fotografiile, alege 'Nu este corect'.",
+      telefoonVoorbeeldKlein: "Pentru protecția ta, aici îți arătăm fotografiile mici și ușor neclare. Noi le primim clare.",
       telefoonGeweigerd: "Pe telefon s-a ales 'Nu este contul meu'. Nu s-a trimis nimic.",
     },
   },
@@ -1780,6 +1785,7 @@ const uk: AuthDict = {
       telefoonKlopt: "Правильно, надіслати мою перевірку",
       telefoonKloptNiet: "Неправильно, почати знову",
       telefoonAnderToestel: "Увага: інший пристрій теж намагався відкрити цей код. Якщо ви не впізнаєте фото, виберіть 'Неправильно'.",
+      telefoonVoorbeeldKlein: "Для вашого захисту ми показуємо фото тут маленькими й трохи розмитими. Ми отримуємо їх чіткими.",
       telefoonGeweigerd: "На телефоні вибрано 'Це не мій обліковий запис'. Нічого не надіслано.",
     },
   },

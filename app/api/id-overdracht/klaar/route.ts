@@ -5,7 +5,7 @@ import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { cleanImage } from "@/lib/media/clean-image";
-import { leverOverdrachtIn, type Foto } from "@/lib/kyc/overdracht";
+import { leverOverdrachtIn, netwerkVan, overdrachtGeldig, type Foto } from "@/lib/kyc/overdracht";
 
 // POST /api/id-overdracht/klaar — de telefoon levert de drie foto's en de
 // documentgegevens in. Daarna is de code op; de laptop controleert en rondt de
@@ -55,6 +55,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       naam: form.get("naam"),
     });
     if (!v.success) throw AppError.validation(v.error.issues[0]?.message ?? "Controleer de gegevens");
+    // eerst de code en het toestel (review M1): zonder geldige code geen fotoverwerking
+    const verlopen = "Deze link is niet (meer) geldig, of al gebruikt. Maak op je laptop een nieuwe QR-code.";
+    if (!(await overdrachtGeldig(v.data.code, v.data.toestel))) throw AppError.notFound(verlopen);
     const voor = await foto(form, "voor", "De voorkant");
     const achter = await foto(form, "achter", "De achterkant");
     const selfie = await foto(form, "selfie", "De selfie");
@@ -64,8 +67,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       voor,
       achter,
       selfie,
+      net: netwerkVan(clientIp(request)),
     });
-    if (!ok) throw AppError.notFound("Deze link is niet (meer) geldig, of al gebruikt. Maak op je laptop een nieuwe QR-code.");
+    if (!ok) throw AppError.notFound(verlopen);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);

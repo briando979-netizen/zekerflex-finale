@@ -6,6 +6,7 @@ import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
+import { annuleerOverdracht } from "@/lib/kyc/overdracht";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -114,6 +115,12 @@ export async function anonymizeUser(
   })) {
     if (cert.uploadId) uploadIds.add(cert.uploadId);
   }
+
+  // "Verder op je telefoon": de tijdelijke ID-foto's zitten alleen in de verzegelde KV-rij,
+  // die hieronder verdwijnt. Eerst de foto's zelf weg, anders blijven ze voorgoed staan.
+  await annuleerOverdracht(userId).catch((err) =>
+    logger.warn("erasure: id-overdracht opruimen mislukt", { error: (err as Error).message }),
+  );
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
