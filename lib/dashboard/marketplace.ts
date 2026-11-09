@@ -347,7 +347,9 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
-      if (s.createdAt.getTime() > lastSeen) newSinceLastVisit += 1;
+      const testklus = isTestklus({ title: s.title, bedrijf: s.branch.tenant.name });
+      // "3 nieuw" telt alleen echt werk, geen testklussen
+      if (s.createdAt.getTime() > lastSeen && !testklus) newSinceLastVisit += 1;
       return {
         id: s.id,
         title: s.title,
@@ -385,7 +387,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         myOffer: offerByShift.get(s.id) ?? null,
         fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
-        testklus: isTestklus({ title: s.title, bedrijf: s.branch.tenant.name }),
+        testklus,
         companyRating: ratingByTenant.get(s.branch.tenantId) ?? null,
         companyLogoUrl: beeldByTenant.get(s.branch.tenantId)?.logoUrl ?? null,
         useLogo: beeldByTenant.get(s.branch.tenantId)?.useLogo ?? false,

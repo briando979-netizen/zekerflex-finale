@@ -12,3 +12,13 @@ export function isTestklus(s: { title: string; bedrijf?: string | null }): boole
   if (/\btest[\s-]?klus\b/i.test(s.title)) return true;
   return /^\s*test(\s|$)/i.test(s.bedrijf ?? "");
 }
+
+/** Sorteerhulp: echte klussen altijd vóór testklussen; verder blijft de volgorde gelijk (0). */
+export function echteKlussenEerst(a: { testklus?: boolean }, b: { testklus?: boolean }): number {
+  return Number(Boolean(a.testklus)) - Number(Boolean(b.testklus));
+}
+
+/** Staan er alleen testklussen in de lijst (en minstens één)? Dan zegt de werker-app dat eerlijk. */
+export function alleenTestklussen(shifts: readonly { testklus?: boolean }[]): boolean {
+  return shifts.length > 0 && shifts.every((s) => s.testklus);
+}
