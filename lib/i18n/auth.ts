@@ -266,6 +266,21 @@ export interface AuthDict {
       chipNietEcht: string;
       chipFout: string;
       chipOverslaan: string;
+      /** verder op je telefoon (QR, lib/kyc/overdracht.ts) */
+      telefoonOptie: string;
+      telefoonTitel: string;
+      telefoonUitleg: string;
+      telefoonWacht: string;
+      telefoonVerbonden: string;
+      telefoonOntvangen: string;
+      telefoonVerlopen: string;
+      nieuweCode: string;
+      ofHier: string;
+      telHallo: string;
+      telKlaarTitel: string;
+      telKlaarUitleg: string;
+      telOngeldig: string;
+      telVersturen: string;
     };
   };
 }
@@ -535,6 +550,20 @@ const nl: AuthDict = {
       chipNietEcht: "We konden de chip niet volledig als echt bevestigen. Een medewerker kijkt mee; je kunt gewoon verder.",
       chipFout: "Het chip lezen is niet gelukt. Probeer het opnieuw of sla het over.",
       chipOverslaan: "Overslaan",
+      telefoonOptie: "Verder op je telefoon",
+      telefoonTitel: "Scan de QR-code met je telefoon",
+      telefoonUitleg: "Open de camera van je telefoon en richt hem op de code. Op je telefoon maak je de foto's van je document en een selfie; dit scherm gaat vanzelf verder.",
+      telefoonWacht: "Wachten op je telefoon…",
+      telefoonVerbonden: "Je telefoon is verbonden. Maak de foto's op je telefoon.",
+      telefoonOntvangen: "Ontvangen van je telefoon. We ronden de verificatie af…",
+      telefoonVerlopen: "De code is verlopen.",
+      nieuweCode: "Nieuwe code",
+      ofHier: "Toch hier verder met de webcam",
+      telHallo: "Hoi {naam}! Maak hier de foto's voor je verificatie bij ZekerFlex.",
+      telKlaarTitel: "Klaar! Ga terug naar je laptop",
+      telKlaarUitleg: "Je foto's zijn veilig verstuurd. Op je laptop rondt ZekerFlex de verificatie af. Je kunt dit scherm sluiten.",
+      telOngeldig: "Deze link is niet (meer) geldig. Maak op je laptop een nieuwe QR-code.",
+      telVersturen: "Versturen naar je laptop",
     },
   },
 };
@@ -804,6 +833,20 @@ const en: AuthDict = {
       chipNietEcht: "We couldn't fully confirm the chip as genuine. A staff member will check; you can just continue.",
       chipFout: "Reading the chip didn't work. Try again or skip it.",
       chipOverslaan: "Skip",
+      telefoonOptie: "Continue on your phone",
+      telefoonTitel: "Scan the QR code with your phone",
+      telefoonUitleg: "Open your phone's camera and point it at the code. On your phone you take the photos of your document and a selfie; this screen continues by itself.",
+      telefoonWacht: "Waiting for your phone…",
+      telefoonVerbonden: "Your phone is connected. Take the photos on your phone.",
+      telefoonOntvangen: "Received from your phone. Completing the verification…",
+      telefoonVerlopen: "The code has expired.",
+      nieuweCode: "New code",
+      ofHier: "Continue here with the webcam instead",
+      telHallo: "Hi {naam}! Take the photos for your ZekerFlex verification here.",
+      telKlaarTitel: "Done! Go back to your laptop",
+      telKlaarUitleg: "Your photos were sent securely. ZekerFlex completes the verification on your laptop. You can close this screen.",
+      telOngeldig: "This link is no longer valid. Create a new QR code on your laptop.",
+      telVersturen: "Send to your laptop",
     },
   },
 };
@@ -1073,6 +1116,20 @@ const pl: AuthDict = {
       chipNietEcht: "Nie udało się w pełni potwierdzić autentyczności chipu. Sprawdzi to pracownik; możesz kontynuować.",
       chipFout: "Nie udało się odczytać chipu. Spróbuj ponownie albo pomiń.",
       chipOverslaan: "Pomiń",
+      telefoonOptie: "Kontynuuj na telefonie",
+      telefoonTitel: "Zeskanuj kod QR telefonem",
+      telefoonUitleg: "Otwórz aparat w telefonie i skieruj go na kod. Na telefonie zrobisz zdjęcia dokumentu i selfie; ten ekran przejdzie dalej sam.",
+      telefoonWacht: "Czekamy na telefon…",
+      telefoonVerbonden: "Telefon połączony. Zrób zdjęcia na telefonie.",
+      telefoonOntvangen: "Odebrano z telefonu. Kończymy weryfikację…",
+      telefoonVerlopen: "Kod wygasł.",
+      nieuweCode: "Nowy kod",
+      ofHier: "Jednak tutaj, kamerą internetową",
+      telHallo: "Cześć {naam}! Zrób tutaj zdjęcia do weryfikacji w ZekerFlex.",
+      telKlaarTitel: "Gotowe! Wróć do laptopa",
+      telKlaarUitleg: "Zdjęcia zostały bezpiecznie wysłane. ZekerFlex dokończy weryfikację na laptopie. Możesz zamknąć ten ekran.",
+      telOngeldig: "Ten link jest nieważny. Utwórz nowy kod QR na laptopie.",
+      telVersturen: "Wyślij do laptopa",
     },
   },
 };
@@ -1342,6 +1399,20 @@ const ro: AuthDict = {
       chipNietEcht: "Nu am putut confirma complet autenticitatea cipului. Verifică un angajat; poți continua.",
       chipFout: "Citirea cipului nu a reușit. Încearcă din nou sau sari peste.",
       chipOverslaan: "Sari peste",
+      telefoonOptie: "Continuă pe telefon",
+      telefoonTitel: "Scanează codul QR cu telefonul",
+      telefoonUitleg: "Deschide camera telefonului și îndreapt-o spre cod. Pe telefon faci fotografiile documentului și un selfie; acest ecran continuă singur.",
+      telefoonWacht: "Așteptăm telefonul…",
+      telefoonVerbonden: "Telefonul este conectat. Fă fotografiile pe telefon.",
+      telefoonOntvangen: "Primit de la telefon. Finalizăm verificarea…",
+      telefoonVerlopen: "Codul a expirat.",
+      nieuweCode: "Cod nou",
+      ofHier: "Totuși aici, cu camera web",
+      telHallo: "Salut {naam}! Fă aici fotografiile pentru verificarea ZekerFlex.",
+      telKlaarTitel: "Gata! Întoarce-te la laptop",
+      telKlaarUitleg: "Fotografiile au fost trimise în siguranță. ZekerFlex finalizează verificarea pe laptop. Poți închide acest ecran.",
+      telOngeldig: "Acest link nu mai este valabil. Creează un cod QR nou pe laptop.",
+      telVersturen: "Trimite la laptop",
     },
   },
 };
@@ -1611,6 +1682,20 @@ const uk: AuthDict = {
       chipNietEcht: "Не вдалося повністю підтвердити справжність чипа. Перевірить працівник; можна продовжувати.",
       chipFout: "Не вдалося зчитати чип. Спробуйте ще раз або пропустіть.",
       chipOverslaan: "Пропустити",
+      telefoonOptie: "Продовжити на телефоні",
+      telefoonTitel: "Відскануйте QR-код телефоном",
+      telefoonUitleg: "Відкрийте камеру телефона й наведіть її на код. На телефоні ви сфотографуєте документ і зробите селфі; цей екран продовжить сам.",
+      telefoonWacht: "Чекаємо на телефон…",
+      telefoonVerbonden: "Телефон підключено. Зробіть фото на телефоні.",
+      telefoonOntvangen: "Отримано з телефона. Завершуємо перевірку…",
+      telefoonVerlopen: "Код застарів.",
+      nieuweCode: "Новий код",
+      ofHier: "Все ж тут, з вебкамерою",
+      telHallo: "Привіт, {naam}! Зробіть тут фото для перевірки в ZekerFlex.",
+      telKlaarTitel: "Готово! Поверніться до ноутбука",
+      telKlaarUitleg: "Ваші фото надіслано безпечно. ZekerFlex завершить перевірку на ноутбуці. Можна закрити цей екран.",
+      telOngeldig: "Це посилання недійсне. Створіть новий QR-код на ноутбуці.",
+      telVersturen: "Надіслати на ноутбук",
     },
   },
 };

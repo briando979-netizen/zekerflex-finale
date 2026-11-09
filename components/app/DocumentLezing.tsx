@@ -44,12 +44,16 @@ const titel = (s: string) => s.toLowerCase().replace(/(^|[\s-])(\S)/g, (_m, voor
 /** Een goede lezing: de controlecijfers kloppen en het document is niet verlopen. */
 export const goedGelezen = (l: Lezing | null): boolean => Boolean(l && l.status === "klaar" && l.geldig && !l.verlopen);
 
-/** Stuurt één foto naar de server en geeft terug wat er gelezen is. Gooit nooit. */
-export async function leesDocumentFoto(file: File, t: AuthDict["onb"]): Promise<Lezing> {
+/**
+ * Stuurt één foto naar de server en geeft terug wat er gelezen is. Gooit nooit.
+ * Met `overdracht` (de telefoon na een QR-code, niet ingelogd) via /api/id-overdracht/lezen.
+ */
+export async function leesDocumentFoto(file: File, t: AuthDict["onb"], overdracht?: string): Promise<Lezing> {
   try {
     const body = new FormData();
     body.set("foto", file);
-    const res = await fetch("/api/onboarding/document-lezen", { method: "POST", body });
+    if (overdracht) body.set("code", overdracht);
+    const res = await fetch(overdracht ? "/api/id-overdracht/lezen" : "/api/onboarding/document-lezen", { method: "POST", body });
     const data = (await res.json().catch(() => ({}))) as Antwoord;
     if (!res.ok) return { status: "fout", melding: data.error?.message ?? t.lezenOnzeker };
     const naam = [data.voornamen, data.achternaam]

@@ -29,6 +29,7 @@ export const ERASABLE_KV_PREFIXES = [
   "chip-sessie:",
   "companion:ctx:",
   "contacts:",
+  "id-overdracht:",
   "iban-wijziging:",
   "mail-tools:",
   "mailbox-connection:",
