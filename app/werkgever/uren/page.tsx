@@ -40,7 +40,7 @@ export default async function UrenGoedkeurenPage() {
       freelancer: { select: { user: { select: { fullName: true } } } },
       dispute: { select: { origin: true } },
       gpsEvents: {
-        select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true },
+        select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true, bron: true, ontvangenOp: true },
       },
     },
     orderBy: { submittedAt: "asc" },

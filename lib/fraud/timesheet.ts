@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { amsterdamClock, amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Deterministische fraude-/fouten-detectie op urenbriefjes:
@@ -6,6 +7,9 @@ import { prisma } from "@/lib/prisma";
 //   • onmogelijke tijden (te lang, eindtijd voor begintijd, 0 uur)
 //   • pauzemisbruik (geen wettelijke pauze / absurd lange pauze)
 //   • dubbele uren (overlappende urenbriefjes van dezelfde kracht)
+//   • in- of uitchecken zonder bereik (bron "offline", later binnengekomen):
+//     altijd een waarschuwing, zodat een teruggezette tijd nooit stil meegaat
+//     (niet in "alles zonder signaal goedkeuren", niet in de autopilot)
 // Pure evaluatiefunctie + een DB-helper die de context ophaalt.
 // ---------------------------------------------------------------------------
 
@@ -30,12 +34,23 @@ export interface FraudInput {
     withinGeofence: boolean;
     distanceToBranchMeters: number;
     recordedAt: Date;
+    /** "offline" = zonder bereik op de telefoon bewaard (lib/timesheets/offline.ts) */
+    bron?: string | null;
+    ontvangenOp?: Date | null;
   }[];
   /** aantal andere niet-afgewezen urenbriefjes van dezelfde kracht dat overlapt */
   overlappingCount: number;
 }
 
 const MIN = 60_000;
+const MAAND = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+/** "om 09:15", of "op 10 nov om 07:15" als het een andere dag is dan `ref`. */
+function wanneer(d: Date, ref: Date): string {
+  if (amsterdamDayKey(d) === amsterdamDayKey(ref)) return `om ${amsterdamClock(d)}`;
+  const p = amsterdamParts(d);
+  return `op ${p.day} ${MAAND[p.month - 1] ?? ""} om ${amsterdamClock(d)}`;
+}
 
 export function evaluateTimesheetFraud(i: FraudInput): FraudFlag[] {
   const flags: FraudFlag[] = [];
@@ -61,6 +76,17 @@ export function evaluateTimesheetFraud(i: FraudInput): FraudFlag[] {
   }
   if (checkIn && checkIn.recordedAt.getTime() < i.scheduledStart.getTime() - 45 * MIN) {
     flags.push({ code: "CHECKIN_EARLY", severity: "info", message: "Check-in ruim vóór de geplande starttijd." });
+  }
+  // zonder bereik vastgelegd: de tijd komt van de telefoon, dus altijd even nakijken
+  for (const e of i.gpsEvents) {
+    if (e.bron !== "offline" || (e.type !== "CHECK_IN" && e.type !== "CHECK_OUT")) continue;
+    const wat = e.type === "CHECK_IN" ? "Check-in" : "Check-out";
+    const ontvangen = e.ontvangenOp ? `, ontvangen ${wanneer(e.ontvangenOp, e.recordedAt)}` : "";
+    flags.push({
+      code: e.type === "CHECK_IN" ? "OFFLINE_CHECKIN" : "OFFLINE_CHECKOUT",
+      severity: "warning",
+      message: `${wat} zonder bereik vastgelegd om ${amsterdamClock(e.recordedAt)}${ontvangen}. Controleer of de tijd klopt.`,
+    });
   }
 
   // --- onmogelijke tijden ---
@@ -134,7 +160,7 @@ export async function fraudForTimesheet(timesheetId: string): Promise<FraudFlag[
       billableMinutes: true,
       freelancerId: true,
       gpsEvents: {
-        select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true },
+        select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true, bron: true, ontvangenOp: true },
       },
     },
   });

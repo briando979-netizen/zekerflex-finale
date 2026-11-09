@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { logoutAction } from "@/lib/auth/actions";
+import { UitloggenFormulier } from "@/components/app/UitloggenFormulier";
 import { getUserCard, workerMissWhere } from "@/lib/profile/card";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -262,7 +262,7 @@ export default async function AccountPage() {
           <AccountLanguageRow />
         </div>
 
-        <form action={logoutAction} className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+        <UitloggenFormulier className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
           <button
             type="submit"
             className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-crit hover:bg-crit/5"
@@ -278,7 +278,7 @@ export default async function AccountPage() {
               />
             </svg>
           </button>
-        </form>
+        </UitloggenFormulier>
       </div>
 
       <p className="mt-6 text-center text-xs text-neutralx-400">

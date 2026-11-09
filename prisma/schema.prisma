@@ -903,9 +903,18 @@ model GpsEvent {
   withinGeofence         Boolean
   deviceHash             String
   mocked                 Boolean      @default(false) // OS reported mock-location provider
+  // Waar het event vandaan kwam: "apparaat" (de telefoon, direct verstuurd), "terminal"
+  // (incheckterminal bij de vestiging) of "offline" (zonder bereik op de telefoon bewaard en
+  // later verstuurd; recordedAt = het moment van tikken). Null = van vóór 9 nov 2026.
+  bron                   String?
+  // Alleen bij bron "offline": wanneer de server het event ontving.
+  ontvangenOp            DateTime?
+  // Eigen id van de telefoon per tik (crypto.randomUUID): twee keer versturen telt één keer.
+  clientId               String?
 
   timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
 
+  @@unique([timesheetId, clientId])
   @@index([timesheetId, type])
 }
 

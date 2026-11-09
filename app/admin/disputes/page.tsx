@@ -20,6 +20,7 @@ function toGpsDto(e: GpsEvent): GpsEventDto {
     distanceToBranchMeters: e.distanceToBranchMeters,
     withinGeofence: e.withinGeofence,
     mocked: e.mocked,
+    ontvangenOp: e.bron === "offline" && e.ontvangenOp ? e.ontvangenOp.toISOString() : null,
   };
 }
 

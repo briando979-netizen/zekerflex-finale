@@ -95,6 +95,7 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
         <div className="space-y-4">
           {timesheet.status === "DRAFT" && (
             <CheckInPanel
+              userId={principal.userId}
               timesheetId={timesheet.id}
               scheduledStart={timesheet.scheduledStart.toISOString()}
               scheduledEnd={timesheet.scheduledEnd.toISOString()}

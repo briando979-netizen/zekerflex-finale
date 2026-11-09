@@ -44,6 +44,11 @@ function Row({ event }: { event: GpsEventDto }) {
               mock-locatie
             </span>
           )}
+          {event.ontvangenOp && (
+            <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+              zonder bereik vastgelegd, ontvangen om {formatTime(event.ontvangenOp)}
+            </span>
+          )}
           {event.withinGeofence && !event.mocked && (
             <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">
               geverifieerd

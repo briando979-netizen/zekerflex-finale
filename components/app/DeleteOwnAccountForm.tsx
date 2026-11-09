@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { deleteOwnAccountAction, type DeleteOwnAccountState } from "@/app/dashboard/account/verwijderen/actions";
+import { wisTikken } from "@/lib/checkin/wachtrij";
 
 const initial: DeleteOwnAccountState = { error: null };
 
@@ -19,8 +20,9 @@ export function DeleteOwnAccountForm() {
   const [state, action] = useFormState(deleteOwnAccountAction, initial);
   const [confirmText, setConfirmText] = useState("");
 
+  // het account gaat weg: ook de in- en uitchecks die op dit toestel op bereik wachten
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} onSubmit={() => wisTikken()} className="space-y-4">
       {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
 
       <label className="block">
