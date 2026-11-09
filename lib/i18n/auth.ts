@@ -133,6 +133,20 @@ export interface AuthDict {
     bankLoginNoIban: string;
     bankLoginCancelled: string;
     bankLoginFallback: string;
+    /** Status of the last ID check (Stripe or the built-in one); see lib/kyc/stripe-status.ts */
+    attempt: {
+      last: string;
+      started: string;
+      processing: string;
+      checking: string;
+      requires_input: string;
+      canceled: string;
+      name_mismatch: string;
+      verified: string;
+      in_review: string;
+      rejected: string;
+      expired: string;
+    };
   };
   onb: {
     business: string;
@@ -319,6 +333,19 @@ const nl: AuthDict = {
     bankLoginNoIban: "Je bank gaf een rekening eindigend op {last4}, maar in je profiel staat een ander IBAN. Pas je IBAN aan of log in met de juiste rekening.",
     bankLoginCancelled: "Inloggen bij je bank is afgebroken. Probeer het opnieuw wanneer je wilt.",
     bankLoginFallback: "Geen Nederlandse bank? Upload een bankafschrift",
+    attempt: {
+      last: "Vorige poging:",
+      started: "Bezig bij Stripe — de uitslag komt binnen een paar minuten",
+      processing: "Stripe controleert je ID",
+      checking: "We kijken vanzelf elke paar seconden of de uitslag er is. Je hoeft niets opnieuw te doen.",
+      requires_input: "Niet gelukt bij Stripe",
+      canceled: "Afgebroken",
+      name_mismatch: "Naam wijkt af — wij controleren het handmatig",
+      verified: "Geverifieerd",
+      in_review: "In behandeling",
+      rejected: "Afgewezen",
+      expired: "Verlopen",
+    },
   },
   onb: {
     business: "Onderneming",
@@ -505,6 +532,19 @@ const en: AuthDict = {
     bankLoginNoIban: "Your bank returned an account ending in {last4}, but your profile has a different IBAN. Update your IBAN or log in with the right account.",
     bankLoginCancelled: "Logging in at your bank was cancelled. Try again whenever you like.",
     bankLoginFallback: "No Dutch bank? Upload a bank statement",
+    attempt: {
+      last: "Previous attempt:",
+      started: "In progress at Stripe — the result follows within a few minutes",
+      processing: "Stripe is checking your ID",
+      checking: "We check every few seconds whether the result is in. You don't need to do anything again.",
+      requires_input: "Not successful at Stripe",
+      canceled: "Cancelled",
+      name_mismatch: "Name differs — we will check it by hand",
+      verified: "Verified",
+      in_review: "Under review",
+      rejected: "Rejected",
+      expired: "Expired",
+    },
   },
   onb: {
     business: "Business",
@@ -691,6 +731,19 @@ const pl: AuthDict = {
     bankLoginNoIban: "Bank podał konto kończące się na {last4}, ale w profilu masz inny IBAN. Zmień IBAN albo zaloguj się na właściwe konto.",
     bankLoginCancelled: "Logowanie w banku zostało przerwane. Spróbuj ponownie, kiedy chcesz.",
     bankLoginFallback: "Nie masz holenderskiego banku? Prześlij wyciąg bankowy",
+    attempt: {
+      last: "Poprzednia próba:",
+      started: "W toku w Stripe — wynik pojawi się w ciągu kilku minut",
+      processing: "Stripe sprawdza twój dokument",
+      checking: "Co kilka sekund sprawdzamy, czy wynik już jest. Nie musisz niczego powtarzać.",
+      requires_input: "Nie udało się w Stripe",
+      canceled: "Przerwano",
+      name_mismatch: "Imię i nazwisko się różnią — sprawdzimy to ręcznie",
+      verified: "Zweryfikowano",
+      in_review: "W trakcie sprawdzania",
+      rejected: "Odrzucono",
+      expired: "Wygasło",
+    },
   },
   onb: {
     business: "Działalność",
@@ -877,6 +930,19 @@ const ro: AuthDict = {
     bankLoginNoIban: "Banca a transmis un cont care se termină în {last4}, dar în profil ai alt IBAN. Actualizează IBAN-ul sau autentifică-te cu contul corect.",
     bankLoginCancelled: "Autentificarea la bancă a fost anulată. Încearcă din nou oricând.",
     bankLoginFallback: "Nu ai bancă olandeză? Încarcă un extras de cont",
+    attempt: {
+      last: "Încercarea anterioară:",
+      started: "În curs la Stripe — rezultatul vine în câteva minute",
+      processing: "Stripe îți verifică actul de identitate",
+      checking: "Verificăm la câteva secunde dacă a venit rezultatul. Nu trebuie să refaci nimic.",
+      requires_input: "Nu a reușit la Stripe",
+      canceled: "Întrerupt",
+      name_mismatch: "Numele diferă — îl verificăm manual",
+      verified: "Verificat",
+      in_review: "În analiză",
+      rejected: "Respins",
+      expired: "Expirat",
+    },
   },
   onb: {
     business: "Firmă",
@@ -1063,6 +1129,19 @@ const uk: AuthDict = {
     bankLoginNoIban: "Банк передав рахунок, що закінчується на {last4}, але в профілі інший IBAN. Зміни IBAN або увійди з правильним рахунком.",
     bankLoginCancelled: "Вхід у банк скасовано. Спробуй ще раз, коли захочеш.",
     bankLoginFallback: "Немає нідерландського банку? Завантаж виписку",
+    attempt: {
+      last: "Попередня спроба:",
+      started: "Триває в Stripe — результат буде за кілька хвилин",
+      processing: "Stripe перевіряє твій документ",
+      checking: "Ми кожні кілька секунд перевіряємо, чи є результат. Нічого повторювати не потрібно.",
+      requires_input: "Не вдалося в Stripe",
+      canceled: "Перервано",
+      name_mismatch: "Ім'я відрізняється — перевіримо вручну",
+      verified: "Підтверджено",
+      in_review: "На перевірці",
+      rejected: "Відхилено",
+      expired: "Термін минув",
+    },
   },
   onb: {
     business: "Підприємство",
