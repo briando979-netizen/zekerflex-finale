@@ -26,6 +26,7 @@ vi.mock("@/lib/prisma", () => {
     identityVerification: { findMany: many([{ status: "VERIFIED", decisionStatus: "Approved" }]) },
     certificate: { findMany: many([{ type: "VCA", status: "VALID" }]) },
     complianceDocument: { findMany: many([{ kind: "ID", status: "APPROVED" }]) },
+    workRight: { findMany: many([{ country: "NL", status: "APPROVED" }]) },
     shiftAssignment: { findMany: many([{ shiftId: "s1", source: "ACCEPTED" }]) },
     timesheet: { findMany: many([{ id: "ts1", status: "PAID", billableMinutes: 300 }]) },
     shiftMatch: { findMany: many([{ shiftId: "s1", status: "ACCEPTED", score: 0.9 }]) },

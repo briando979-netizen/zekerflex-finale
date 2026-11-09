@@ -12,6 +12,9 @@ import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
 import { ChooseViewAsAccount } from "@/components/admin/ViewAsControls";
 import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
 import { listDocs, type DocKind, type DocStatus } from "@/lib/compliance/documents";
+import { WerkrechtActions } from "@/components/admin/WerkrechtActions";
+import { werkrechtOverzicht } from "@/lib/werkrecht/store";
+import { landNaam, type WerkrechtStand } from "@/lib/werkrecht/landen";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +56,15 @@ const DOC_KIND_LABEL: Record<DocKind, string> = {
   id: "Identiteitsbewijs",
   bank: "Bankafschrift",
   other: "Overig",
+};
+
+const WERKRECHT_STAND: Record<WerkrechtStand, { label: string; tone: Tone }> = {
+  "verklaring-nodig": { label: "Verklaring nog niet aangevinkt", tone: "warn" },
+  "bewijs-nodig": { label: "Document nodig", tone: "warn" },
+  wacht: { label: "Wacht op jou", tone: "warn" },
+  afgewezen: { label: "Afgewezen", tone: "crit" },
+  verlopen: { label: "Verlopen", tone: "warn" },
+  ok: { label: "In orde", tone: "ok" },
 };
 
 const DOC_STATUS_TONE: Record<DocStatus, Tone> = {
@@ -112,6 +124,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     listDocs(user.id),
     user.freelancerProfile ? freelancerActivity(user.freelancerProfile.id) : Promise.resolve(null),
   ]);
+
+  // recht om te werken per land (lib/werkrecht), alleen bij werkers
+  const werkrechten = user.freelancerProfile ? await werkrechtOverzicht(user.id) : [];
 
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
@@ -288,6 +303,39 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               </ul>
             )}
           </Panel>
+
+          {werkrechten.length > 0 && (
+            <Panel flush title="Recht om te werken">
+              <ul>
+                {werkrechten.map((w) => {
+                  const st = WERKRECHT_STAND[w.stand];
+                  const fileUrl = w.id && w.document ? `/api/admin/gebruikers/${user.id}/werkrecht/${w.id}` : null;
+                  return (
+                    <li key={w.land} className="flex items-start gap-3 px-4 py-3 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium" style={{ color: "var(--a-text)" }}>{landNaam(w.land, "nl")}</p>
+                        <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+                          {w.verklaard ? "Verklaring aangevinkt" : "Verklaring niet aangevinkt"}
+                          {w.idBewijs ? ", bewijs: EU/EER/CH-paspoort of -ID-kaart uit de ID-controle" : ""}
+                          {w.document?.geldigTot ? `, document geldig tot ${w.document.geldigTot.split("-").reverse().join("-")}` : ""}
+                          {w.document?.note ? `, reden afwijzing: ${w.document.note}` : ""}
+                        </p>
+                        {fileUrl && (
+                          <a href={fileUrl} target="_blank" rel="noreferrer" className="text-xs font-medium hover:underline" style={{ color: "var(--a-accent-ink)" }}>
+                            Document bekijken →
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                        <Pill tone={st.tone}>{st.label}</Pill>
+                        {w.id && w.document?.status === "uploaded" && <WerkrechtActions userId={user.id} wrId={w.id} />}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          )}
         </div>
       </div>
     </div>

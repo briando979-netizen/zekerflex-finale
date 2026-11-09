@@ -55,6 +55,7 @@ const h = vi.hoisted(() => {
     webPushSubscription: { deleteMany: async () => { state.deleted.push("push"); return { count: 3 }; } },
     certificate: { deleteMany: async () => ({ count: 1 }) },
     complianceDocument: { deleteMany: async () => ({ count: 2 }) },
+    workRight: { deleteMany: async () => ({ count: 1 }) },
     auditLog: {
       findMany: async () => [
         { id: "a1", summary: "Jan de Vries (jan@example.com) logde in" },
@@ -77,6 +78,8 @@ const h = vi.hoisted(() => {
       findMany: async () => [{ rawPayload: { uploadIds: { front: "up_iv_voor", back: "up_iv_achter", selfie: "up_iv_selfie" } } }, { rawPayload: null }],
     },
     certificate: { findMany: async () => [{ uploadId: "up2" }] },
+    // het bewijs voor het recht om te werken (lib/werkrecht)
+    workRight: { findMany: async () => [{ uploadId: "up_werkrecht" }] },
     $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
   };
 
@@ -154,7 +157,8 @@ describe("anonymizeUser", () => {
     expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push", "passkey:u1"]));
     // passkeys weg: het account blijft geanonimiseerd bestaan, een oud toestel mag er niet meer bij
     expect(report.cleared.passkeys).toBe(2);
-    expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2"]));
+    expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2", "up_werkrecht"]));
+    expect(report.cleared.work_rights).toBe(1);
     // ook alle ID-foto's (achterkant en selfie stonden nergens anders) en die van de telefoon
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up_iv_voor", "up_iv_achter", "up_iv_selfie", "up_tel_voor"]));
 

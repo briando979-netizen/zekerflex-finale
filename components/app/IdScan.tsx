@@ -655,6 +655,12 @@ export function IdScan({
                   {fotoStap === "voor" ? s.voor[soort] : fotoStap === "achter" ? s.achter[soort] : s.selfie}
                 </h2>
                 <p className="mt-1 text-sm text-neutralx-500">{fotoStap === "selfie" ? s.selfieUitleg : s.kader}</p>
+                {soort === "DRIVERS_LICENSE" && fotoStap === "voor" && (
+                  // een rijbewijs mag voor het account; voor betaald werk volgt nog een ID (lib/werkrecht)
+                  <p role="note" className="mt-3 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
+                    {s.rijbewijsUitleg}
+                  </p>
+                )}
                 <div className="mt-4">
                   {voorbeeld ? (
                     <>

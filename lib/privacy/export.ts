@@ -118,6 +118,14 @@ export async function exportUserData(userId: string): Promise<DataExport> {
     }),
   );
 
+  // recht om te werken per land: verklaring en status van het bewijs (lib/werkrecht)
+  sections.workRights = await safe("workRights", () =>
+    prisma.workRight.findMany({
+      where: { userId },
+      select: { country: true, declaredAt: true, declaration: true, status: true, validUntil: true, note: true, reviewedAt: true, createdAt: true },
+    }),
+  );
+
   if (fpId) {
     sections.shiftAssignments = await safe("shiftAssignments", () =>
       prisma.shiftAssignment.findMany({

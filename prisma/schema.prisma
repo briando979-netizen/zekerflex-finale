@@ -120,6 +120,7 @@ model User {
   apiKeysCreated       ApiKey[]               @relation("ApiKeyCreatedBy")
   webPushSubscriptions WebPushSubscription[]
   passkeys             Passkey[]
+  workRights           WorkRight[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1715,6 +1716,7 @@ model Upload {
   jarvisTurn         JarvisTurn?         @relation(fields: [jarvisTurnId], references: [id], onDelete: SetNull)
   complianceDocument ComplianceDocument?
   certificate        Certificate?
+  workRight          WorkRight?
 
   @@index([uploadedById])
   @@index([createdAt])
@@ -1794,6 +1796,33 @@ model ComplianceDocument {
   upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
 
   @@index([userId, kind])
+}
+
+// Recht om te werken per land (9 nov 2026, lib/werkrecht): de verklaring die de
+// werker aanvinkt, en het bewijs dat een medewerker bekijkt (verblijfsdocument,
+// werkvergunning, of een paspoort/ID-kaart als de ID-controle geen EU-document zag).
+// Een EU/EER/CH-document uit de eigen ID-controle telt vanzelf als bewijs voor
+// werken in de EU/EER/CH; dan blijft uploadId leeg.
+model WorkRight {
+  id          String               @id @default(cuid())
+  userId      String
+  country     String // ISO 3166-1 alpha-2, bv. "NL"
+  declaredAt  DateTime?
+  declaration String? // versie van de aangevinkte verklaring (lib/werkrecht/landen.ts)
+  uploadId    String?              @unique
+  status      ComplianceDocStatus? // null = nog geen bewijs geüpload
+  validUntil  DateTime?
+  note        String? // reden bij afwijzen, zichtbaar voor de werker
+  reviewedAt  DateTime?
+  reviewedBy  String? // userId van de medewerker (bewust geen relatie)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload Upload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, country])
+  @@index([status])
 }
 
 enum CertificateStatus {

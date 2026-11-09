@@ -66,6 +66,11 @@ export interface WorkerPushTexts {
   spoedNone: string;
   spoedStopped: string;
   spoedFailed: (reason: string) => string;
+  /** recht om te werken (lib/werkrecht): het document is nagekeken */
+  werkrechtOkTitle: string;
+  werkrechtOkBody: (land: string) => string;
+  werkrechtAfTitle: string;
+  werkrechtAfBody: (land: string, reden: string) => string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -124,6 +129,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     spoedNone: "Er staat geen spoedklus meer voor je open. Kijk in de app voor klussen.",
     spoedStopped: "Oké, je krijgt geen sms of WhatsApp meer voor spoedklussen. Aanzetten kan in de app bij Account.",
     spoedFailed: (r) => `Dat lukte niet: ${r}`,
+    werkrechtOkTitle: "Je document is goedgekeurd",
+    werkrechtOkBody: (l) => `Je mag via ZekerFlex werken in ${l}. Je kunt diensten aannemen.`,
+    werkrechtAfTitle: "Je document is afgewezen",
+    werkrechtAfBody: (l, r) => `Werken in ${l}: ${r} Upload een nieuw document bij Verificatie.`,
   },
   en: {
     hours: "hours",
@@ -180,6 +189,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     spoedNone: "There is no open urgent job for you right now. Check the app for jobs.",
     spoedStopped: "OK, you will no longer get SMS or WhatsApp for urgent jobs. You can turn it back on in the app under Account.",
     spoedFailed: (r) => `That didn't work: ${r}`,
+    werkrechtOkTitle: "Your document has been approved",
+    werkrechtOkBody: (l) => `You may work in ${l} through ZekerFlex. You can now accept shifts.`,
+    werkrechtAfTitle: "Your document was rejected",
+    werkrechtAfBody: (l, r) => `Working in ${l}: ${r} Upload a new document under Verification.`,
   },
   pl: {
     hours: "godz.",
@@ -236,6 +249,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     spoedNone: "Nie ma teraz otwartego pilnego zlecenia dla Ciebie. Sprawdź zlecenia w aplikacji.",
     spoedStopped: "OK, nie będziesz już dostawać SMS-ów ani WhatsAppa o pilnych zleceniach. Włączysz to ponownie w aplikacji w Koncie.",
     spoedFailed: (r) => `Nie udało się: ${r}`,
+    werkrechtOkTitle: "Twój dokument został zatwierdzony",
+    werkrechtOkBody: (l) => `Możesz pracować przez ZekerFlex w kraju: ${l}. Możesz już przyjmować zlecenia.`,
+    werkrechtAfTitle: "Twój dokument został odrzucony",
+    werkrechtAfBody: (l, r) => `Praca w kraju ${l}: ${r} Prześlij nowy dokument w sekcji Weryfikacja.`,
   },
   ro: {
     hours: "ore",
@@ -292,6 +309,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     spoedNone: "Nu există acum niciun job urgent deschis pentru tine. Vezi joburile în aplicație.",
     spoedStopped: "OK, nu vei mai primi SMS sau WhatsApp pentru joburi urgente. Poți reactiva în aplicație, la Cont.",
     spoedFailed: (r) => `Nu a mers: ${r}`,
+    werkrechtOkTitle: "Documentul tău a fost aprobat",
+    werkrechtOkBody: (l) => `Poți lucra prin ZekerFlex în ${l}. Acum poți accepta ture.`,
+    werkrechtAfTitle: "Documentul tău a fost respins",
+    werkrechtAfBody: (l, r) => `Munca în ${l}: ${r} Încarcă un document nou la Verificare.`,
   },
   uk: {
     hours: "год",
@@ -348,6 +369,10 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     spoedNone: "Зараз для вас немає відкритої термінової роботи. Перегляньте роботи в застосунку.",
     spoedStopped: "Гаразд, ви більше не отримуватимете SMS чи WhatsApp про термінові роботи. Увімкнути знову можна в застосунку в Обліковому записі.",
     spoedFailed: (r) => `Не вдалося: ${r}`,
+    werkrechtOkTitle: "Ваш документ схвалено",
+    werkrechtOkBody: (l) => `Ви можете працювати через ZekerFlex у країні: ${l}. Тепер ви можете приймати зміни.`,
+    werkrechtAfTitle: "Ваш документ відхилено",
+    werkrechtAfBody: (l, r) => `Робота в країні ${l}: ${r} Завантажте новий документ у розділі «Перевірка».`,
   },
 };
 

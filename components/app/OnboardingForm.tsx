@@ -518,6 +518,12 @@ export function OnboardingForm({
             <span className="field-label">{t.docNumber}</span>
             <input name="documentNumber" required placeholder="SPECI2014" className="field-input" />
           </label>
+          {docType === "DRIVERS_LICENSE" && (
+            // een rijbewijs mag voor het account; voor betaald werk volgt nog een ID (lib/werkrecht)
+            <p role="note" className="rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink sm:col-span-2">
+              {t.scan.rijbewijsUitleg}
+            </p>
+          )}
           <label className="block">
             <span className="field-label">{t.validUntil}</span>
             <input type="date" name="documentExpiry" required className="field-input" />

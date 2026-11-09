@@ -13,6 +13,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
+import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
+import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ export default async function VerificatiePage() {
   const pt = AUTH_DICTS[await getLocale()].page;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
-  const [o, lastCheck, fiscal] = await Promise.all([
+  const [o, lastCheck, fiscal, werkrecht] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.identityVerification.findFirst({
       where: { userId: principal.userId },
@@ -29,6 +31,7 @@ export default async function VerificatiePage() {
       select: { status: true, decisionStatus: true, createdAt: true, rawPayload: true },
     }),
     getFiscal(principal.userId),
+    werkrechtVoorWerk(principal.userId, "NL"),
   ]);
 
   if (o.profileComplete) {
@@ -38,7 +41,11 @@ export default async function VerificatiePage() {
         <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
         <Panel title="Status">
           <div className="px-5 py-6">
-            <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
+            {werkrecht.ok ? (
+              <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
+            ) : (
+              <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
+            )}
             <ul className="mt-4 space-y-2">
               {o.onboarding.map((s) => (
                 <li key={s.label} className="flex items-center gap-2.5 text-sm">
@@ -49,6 +56,14 @@ export default async function VerificatiePage() {
             </ul>
           </div>
         </Panel>
+
+        <div id="werkrecht" className="mt-6 scroll-mt-20">
+          <Panel title={pt.werkrecht.title}>
+            <div className="p-5">
+              <WerkrechtPanel />
+            </div>
+          </Panel>
+        </div>
 
         <div className="mt-6">
           <Panel title="Verplichte documenten">
@@ -140,6 +155,13 @@ export default async function VerificatiePage() {
         <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
         <div className="mt-4">
           <ComplianceDocsPanel idInForm />
+        </div>
+      </div>
+
+      <div id="werkrecht" className="mt-6 card scroll-mt-20 p-6">
+        <h2 className="font-display text-base font-bold text-ink">{pt.werkrecht.title}</h2>
+        <div className="mt-3">
+          <WerkrechtPanel />
         </div>
       </div>
 

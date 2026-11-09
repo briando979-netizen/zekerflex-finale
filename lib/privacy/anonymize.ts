@@ -125,6 +125,10 @@ export async function anonymizeUser(
   // "Verder op je telefoon": de tijdelijke foto's staan alleen in de verzegelde KV-rij, die
   // hieronder verdwijnt (geen .catch: liever een mislukte wisronde dan foto's die blijven).
   for (const id of await overdrachtUploads(userId)) uploadIds.add(id);
+  // het bewijs voor het recht om te werken (lib/werkrecht): verblijfsdocument, werkvergunning, ID
+  for (const wr of await prisma.workRight.findMany({ where: { userId, uploadId: { not: null } }, select: { uploadId: true } })) {
+    if (wr.uploadId) uploadIds.add(wr.uploadId);
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
@@ -223,6 +227,7 @@ export async function anonymizeUser(
     cleared.compliance_documents = (
       await tx.complianceDocument.deleteMany({ where: { userId } })
     ).count;
+    cleared.work_rights = (await tx.workRight.deleteMany({ where: { userId } })).count;
 
     // Audit log stays append-only — scrub the PII inside it instead. The
     // tamper-evident hash chain covers only the immutable identity fields, so

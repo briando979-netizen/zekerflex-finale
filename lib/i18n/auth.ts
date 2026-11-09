@@ -159,6 +159,30 @@ export interface AuthDict {
       rejected: string;
       expired: string;
     };
+    /** Recht om te werken per land (lib/werkrecht); {land}, {reden}, {datum} vult de client in */
+    werkrecht: {
+      title: string;
+      intro: string;
+      verklaring: string;
+      verklaringKnop: string;
+      verklaard: string;
+      bewijsUitleg: string;
+      bewijsEu: string;
+      geldigTot: string;
+      bestand: string;
+      upload: string;
+      uploading: string;
+      vervang: string;
+      reden: string;
+      documentGeldig: string;
+      anderLand: string;
+      kiesLand: string;
+      toevoegen: string;
+      weg: string;
+      fout: string;
+      nodig: string;
+      stand: Record<"verklaring-nodig" | "bewijs-nodig" | "wacht" | "afgewezen" | "verlopen" | "ok", string>;
+    };
   };
   onb: {
     business: string;
@@ -233,6 +257,8 @@ export interface AuthDict {
       akkoord: string;
       annuleren: string;
       kiesSoort: string;
+      /** bij een rijbewijs: voor betaald werk volgt nog een paspoort, ID-kaart of verblijfsdocument */
+      rijbewijsUitleg: string;
       stap: string;
       voor: { PASSPORT: string; ID_CARD: string; DRIVERS_LICENSE: string };
       achter: { PASSPORT: string; ID_CARD: string; DRIVERS_LICENSE: string };
@@ -454,6 +480,36 @@ const nl: AuthDict = {
       rejected: "Afgewezen",
       expired: "Verlopen",
     },
+    werkrecht: {
+      title: "Recht om te werken",
+      intro: "Voor elk land waar je via ZekerFlex werkt, vink je een verklaring aan en laat je zien dat je daar mag werken. Dat is verplicht: zonder kun je geen betaalde diensten aannemen.",
+      verklaring: "Ik verklaar dat ik in {land} mag werken, dat de gegevens en documenten die ik geef echt zijn en van mij, en dat ik het meteen meld als mijn recht om daar te werken verandert of stopt.",
+      verklaringKnop: "Opslaan",
+      verklaard: "Je hebt de verklaring aangevinkt.",
+      bewijsUitleg: "Upload een document waaruit blijkt dat je in {land} mag werken: een paspoort of ID-kaart (geen rijbewijs), een verblijfsdocument of een werkvergunning. Een medewerker kijkt het na.",
+      bewijsEu: "Je paspoort of ID-kaart uit de EU, de EER of Zwitserland is je bewijs: daarmee mag je hier vrij werken. Je hoeft niets te uploaden.",
+      geldigTot: "Geldig tot",
+      bestand: "Document (foto of pdf, max. 12 MB)",
+      upload: "Document uploaden",
+      uploading: "Bezig met uploaden…",
+      vervang: "Ander document uploaden",
+      reden: "Reden: {reden}",
+      documentGeldig: "Document geldig tot {datum}",
+      anderLand: "Ook in een ander land werken?",
+      kiesLand: "Kies een land",
+      toevoegen: "Toevoegen",
+      weg: "Weghalen",
+      fout: "Dat lukte niet. Probeer het opnieuw.",
+      nodig: "Nog nodig voor betaald werk: je recht om te werken in Nederland. Zie hieronder.",
+      stand: {
+        "verklaring-nodig": "Verklaring nodig",
+        "bewijs-nodig": "Document nodig",
+        "wacht": "Wordt nagekeken",
+        "afgewezen": "Afgewezen",
+        "verlopen": "Verlopen",
+        "ok": "In orde",
+      },
+    },
   },
   onb: {
     business: "Onderneming",
@@ -533,6 +589,7 @@ const nl: AuthDict = {
       akkoord: "Akkoord en doorgaan",
       annuleren: "Annuleren",
       kiesSoort: "Welk document gebruik je?",
+      rijbewijsUitleg: "Dat kan. Voor betaald werk vragen we daarna nog je paspoort, ID-kaart of verblijfsdocument, dat is verplicht van de Belastingdienst.",
       stap: "Stap {n} van {totaal}",
       voor: { PASSPORT: "Pasfotopagina van je paspoort", ID_CARD: "Voorkant van je ID-kaart", DRIVERS_LICENSE: "Voorkant van je rijbewijs" },
       achter: { PASSPORT: "Achterkant van je paspoort", ID_CARD: "Achterkant van je ID-kaart", DRIVERS_LICENSE: "Achterkant van je rijbewijs" },
@@ -752,6 +809,36 @@ const en: AuthDict = {
       rejected: "Rejected",
       expired: "Expired",
     },
+    werkrecht: {
+      title: "Right to work",
+      intro: "For every country where you work through ZekerFlex, you tick a declaration and show that you are allowed to work there. This is required: without it you can't accept paid shifts.",
+      verklaring: "I declare that I am allowed to work in {land}, that the details and documents I provide are genuine and mine, and that I will report it immediately if my right to work there changes or ends.",
+      verklaringKnop: "Save",
+      verklaard: "You have ticked the declaration.",
+      bewijsUitleg: "Upload a document showing that you may work in {land}: a passport or ID card (not a driving licence), a residence document or a work permit. A staff member will check it.",
+      bewijsEu: "Your passport or ID card from the EU, the EEA or Switzerland is your proof: it lets you work here freely. You don't need to upload anything.",
+      geldigTot: "Valid until",
+      bestand: "Document (photo or pdf, max. 12 MB)",
+      upload: "Upload document",
+      uploading: "Uploading…",
+      vervang: "Upload a different document",
+      reden: "Reason: {reden}",
+      documentGeldig: "Document valid until {datum}",
+      anderLand: "Also working in another country?",
+      kiesLand: "Choose a country",
+      toevoegen: "Add",
+      weg: "Remove",
+      fout: "That didn't work. Please try again.",
+      nodig: "Still needed for paid work: your right to work in the Netherlands. See below.",
+      stand: {
+        "verklaring-nodig": "Declaration needed",
+        "bewijs-nodig": "Document needed",
+        "wacht": "Being checked",
+        "afgewezen": "Rejected",
+        "verlopen": "Expired",
+        "ok": "In order",
+      },
+    },
   },
   onb: {
     business: "Business",
@@ -831,6 +918,7 @@ const en: AuthDict = {
       akkoord: "Agree and continue",
       annuleren: "Cancel",
       kiesSoort: "Which document are you using?",
+      rijbewijsUitleg: "That's fine. For paid work we will then also ask for your passport, ID card or residence document; the Dutch Tax Administration (Belastingdienst) requires this.",
       stap: "Step {n} of {totaal}",
       voor: { PASSPORT: "Photo page of your passport", ID_CARD: "Front of your ID card", DRIVERS_LICENSE: "Front of your driving licence" },
       achter: { PASSPORT: "Back of your passport", ID_CARD: "Back of your ID card", DRIVERS_LICENSE: "Back of your driving licence" },
@@ -1050,6 +1138,36 @@ const pl: AuthDict = {
       rejected: "Odrzucono",
       expired: "Wygasło",
     },
+    werkrecht: {
+      title: "Prawo do pracy",
+      intro: "Dla każdego kraju, w którym pracujesz przez ZekerFlex, zaznaczasz oświadczenie i pokazujesz, że możesz tam pracować. To obowiązkowe: bez tego nie możesz przyjmować płatnych zleceń.",
+      verklaring: "Oświadczam, że mogę pracować w kraju: {land}, że podane przeze mnie dane i dokumenty są prawdziwe i należą do mnie oraz że natychmiast zgłoszę, jeśli moje prawo do pracy tam się zmieni lub wygaśnie.",
+      verklaringKnop: "Zapisz",
+      verklaard: "Oświadczenie zostało zaznaczone.",
+      bewijsUitleg: "Prześlij dokument potwierdzający, że możesz pracować w kraju: {land}: paszport lub dowód osobisty (nie prawo jazdy), dokument pobytowy lub zezwolenie na pracę. Pracownik go sprawdzi.",
+      bewijsEu: "Twój paszport lub dowód osobisty z UE, EOG lub Szwajcarii jest dowodem: dzięki niemu możesz tu swobodnie pracować. Nie musisz niczego przesyłać.",
+      geldigTot: "Ważny do",
+      bestand: "Dokument (zdjęcie lub pdf, maks. 12 MB)",
+      upload: "Prześlij dokument",
+      uploading: "Przesyłanie…",
+      vervang: "Prześlij inny dokument",
+      reden: "Powód: {reden}",
+      documentGeldig: "Dokument ważny do {datum}",
+      anderLand: "Pracujesz też w innym kraju?",
+      kiesLand: "Wybierz kraj",
+      toevoegen: "Dodaj",
+      weg: "Usuń",
+      fout: "Nie udało się. Spróbuj ponownie.",
+      nodig: "Do płatnej pracy potrzebne jest jeszcze: prawo do pracy w Holandii. Zobacz poniżej.",
+      stand: {
+        "verklaring-nodig": "Potrzebne oświadczenie",
+        "bewijs-nodig": "Potrzebny dokument",
+        "wacht": "W trakcie sprawdzania",
+        "afgewezen": "Odrzucony",
+        "verlopen": "Wygasł",
+        "ok": "W porządku",
+      },
+    },
   },
   onb: {
     business: "Działalność",
@@ -1129,6 +1247,7 @@ const pl: AuthDict = {
       akkoord: "Zgadzam się i dalej",
       annuleren: "Anuluj",
       kiesSoort: "Jakiego dokumentu używasz?",
+      rijbewijsUitleg: "To w porządku. Do płatnej pracy poprosimy potem jeszcze o paszport, dowód osobisty lub dokument pobytowy – wymaga tego holenderski urząd skarbowy (Belastingdienst).",
       stap: "Krok {n} z {totaal}",
       voor: { PASSPORT: "Strona paszportu ze zdjęciem", ID_CARD: "Przód dowodu osobistego", DRIVERS_LICENSE: "Przód prawa jazdy" },
       achter: { PASSPORT: "Tył paszportu", ID_CARD: "Tył dowodu osobistego", DRIVERS_LICENSE: "Tył prawa jazdy" },
@@ -1348,6 +1467,36 @@ const ro: AuthDict = {
       rejected: "Respins",
       expired: "Expirat",
     },
+    werkrecht: {
+      title: "Dreptul de a munci",
+      intro: "Pentru fiecare țară în care lucrezi prin ZekerFlex, bifezi o declarație și arăți că ai voie să lucrezi acolo. Este obligatoriu: fără aceasta nu poți accepta ture plătite.",
+      verklaring: "Declar că am dreptul să lucrez în {land}, că datele și documentele pe care le furnizez sunt reale și îmi aparțin și că voi anunța imediat dacă dreptul meu de a lucra acolo se schimbă sau încetează.",
+      verklaringKnop: "Salvează",
+      verklaard: "Ai bifat declarația.",
+      bewijsUitleg: "Încarcă un document care arată că ai voie să lucrezi în {land}: un pașaport sau o carte de identitate (nu permis de conducere), un document de ședere sau un permis de muncă. Un angajat îl va verifica.",
+      bewijsEu: "Pașaportul sau cartea ta de identitate din UE, SEE sau Elveția este dovada: cu el poți lucra liber aici. Nu trebuie să încarci nimic.",
+      geldigTot: "Valabil până la",
+      bestand: "Document (fotografie sau pdf, max. 12 MB)",
+      upload: "Încarcă documentul",
+      uploading: "Se încarcă…",
+      vervang: "Încarcă alt document",
+      reden: "Motiv: {reden}",
+      documentGeldig: "Document valabil până la {datum}",
+      anderLand: "Lucrezi și în altă țară?",
+      kiesLand: "Alege o țară",
+      toevoegen: "Adaugă",
+      weg: "Elimină",
+      fout: "Nu a mers. Încearcă din nou.",
+      nodig: "Mai este necesar pentru munca plătită: dreptul tău de a lucra în Țările de Jos. Vezi mai jos.",
+      stand: {
+        "verklaring-nodig": "Este necesară declarația",
+        "bewijs-nodig": "Este necesar un document",
+        "wacht": "Se verifică",
+        "afgewezen": "Respins",
+        "verlopen": "Expirat",
+        "ok": "În regulă",
+      },
+    },
   },
   onb: {
     business: "Firmă",
@@ -1427,6 +1576,7 @@ const ro: AuthDict = {
       akkoord: "Sunt de acord și continui",
       annuleren: "Anulează",
       kiesSoort: "Ce document folosești?",
+      rijbewijsUitleg: "Se poate. Pentru munca plătită îți vom cere apoi și pașaportul, cartea de identitate sau documentul de ședere; acest lucru este obligatoriu conform Belastingdienst (administrația fiscală olandeză).",
       stap: "Pasul {n} din {totaal}",
       voor: { PASSPORT: "Pagina cu fotografie a pașaportului", ID_CARD: "Fața cărții de identitate", DRIVERS_LICENSE: "Fața permisului de conducere" },
       achter: { PASSPORT: "Spatele pașaportului", ID_CARD: "Spatele cărții de identitate", DRIVERS_LICENSE: "Spatele permisului de conducere" },
@@ -1646,6 +1796,36 @@ const uk: AuthDict = {
       rejected: "Відхилено",
       expired: "Термін минув",
     },
+    werkrecht: {
+      title: "Право на роботу",
+      intro: "Для кожної країни, де ви працюєте через ZekerFlex, ви позначаєте декларацію й показуєте, що маєте право там працювати. Це обов’язково: без цього ви не можете приймати оплачувані зміни.",
+      verklaring: "Я заявляю, що маю право працювати в країні: {land}, що надані мною дані й документи справжні та належать мені, і що я негайно повідомлю, якщо моє право працювати там зміниться або припиниться.",
+      verklaringKnop: "Зберегти",
+      verklaard: "Ви позначили декларацію.",
+      bewijsUitleg: "Завантажте документ, який підтверджує, що ви маєте право працювати в країні: {land}: паспорт або ID-картку (не водійське посвідчення), документ про проживання або дозвіл на роботу. Співробітник його перевірить.",
+      bewijsEu: "Ваш паспорт або ID-картка з ЄС, ЄЕЗ або Швейцарії — це ваш доказ: з ним ви можете вільно тут працювати. Нічого завантажувати не потрібно.",
+      geldigTot: "Дійсний до",
+      bestand: "Документ (фото або pdf, макс. 12 МБ)",
+      upload: "Завантажити документ",
+      uploading: "Завантаження…",
+      vervang: "Завантажити інший документ",
+      reden: "Причина: {reden}",
+      documentGeldig: "Документ дійсний до {datum}",
+      anderLand: "Працюєте також в іншій країні?",
+      kiesLand: "Виберіть країну",
+      toevoegen: "Додати",
+      weg: "Видалити",
+      fout: "Не вдалося. Спробуйте ще раз.",
+      nodig: "Для оплачуваної роботи ще потрібно: ваше право працювати в Нідерландах. Див. нижче.",
+      stand: {
+        "verklaring-nodig": "Потрібна декларація",
+        "bewijs-nodig": "Потрібен документ",
+        "wacht": "Перевіряється",
+        "afgewezen": "Відхилено",
+        "verlopen": "Термін дії минув",
+        "ok": "Усе гаразд",
+      },
+    },
   },
   onb: {
     business: "Підприємство",
@@ -1725,6 +1905,7 @@ const uk: AuthDict = {
       akkoord: "Погоджуюся й продовжую",
       annuleren: "Скасувати",
       kiesSoort: "Який документ ви використовуєте?",
+      rijbewijsUitleg: "Так можна. Для оплачуваної роботи ми згодом попросимо ще ваш паспорт, ID-картку або документ про проживання — цього вимагає податкова служба Нідерландів (Belastingdienst).",
       stap: "Крок {n} з {totaal}",
       voor: { PASSPORT: "Сторінка паспорта з фото", ID_CARD: "Лицьовий бік ID-картки", DRIVERS_LICENSE: "Лицьовий бік посвідчення водія" },
       achter: { PASSPORT: "Зворотний бік паспорта", ID_CARD: "Зворотний бік ID-картки", DRIVERS_LICENSE: "Зворотний бік посвідчення водія" },

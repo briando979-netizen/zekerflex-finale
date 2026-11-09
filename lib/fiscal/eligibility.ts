@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
+import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 
 // ---------------------------------------------------------------------------
 // Can this worker actually be paid for a klus? The rule differs by werkvorm:
@@ -8,7 +9,9 @@ import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 //     or the kleineondernemersregeling (KOR).
 //   • uitzendkracht (invoiceMode "payroll") → no KVK; needs a BSN on file and a
 //     rekeningnummer for the loonstrook payout.
-// Identity (KYC) is checked separately by the caller.
+// Identity (KYC) is checked separately by the caller. Daarna, op beide sporen:
+// het recht om in Nederland te werken (verklaring + bewijs, lib/werkrecht).
+// Alle diensten zijn nu in Nederland (Branch heeft geen land).
 // ---------------------------------------------------------------------------
 
 export interface PayoutEligibility {
@@ -19,6 +22,13 @@ export interface PayoutEligibility {
 }
 
 export async function payoutEligibility(userId: string): Promise<PayoutEligibility> {
+  const fiscaal = await fiscalEligibility(userId);
+  if (!fiscaal.ok) return fiscaal;
+  const werkrecht = await werkrechtVoorWerk(userId, "NL");
+  return werkrecht.ok ? fiscaal : { ok: false, track: fiscaal.track, reason: werkrecht.reden };
+}
+
+async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
   const [fiscal, profile] = await Promise.all([
     getFiscal(userId),
     prisma.freelancerProfile.findUnique({
