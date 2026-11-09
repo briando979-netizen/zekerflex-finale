@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { maakAccountMetKvk } from "@/lib/billing/stripe-bedrijf";
 import { betalingOntvangenMail, siteUrl, verstuur } from "@/lib/rijschool/mail";
 
 // ---------------------------------------------------------------------------
@@ -76,7 +77,8 @@ async function koppel(r: Rijschool): Promise<string> {
   const stripe = getStripeClient();
   let id = r.stripeAccountId;
   if (!id) {
-    const a = await stripe.accounts.create({
+    // met de KvK-gegevens alvast ingevuld, zodat de rijschool die bij Stripe niet opnieuw typt
+    const a = await maakAccountMetKvk(stripe, {
       type: "express",
       country: "NL",
       ...(r.email ? { email: r.email } : {}),
@@ -88,7 +90,7 @@ async function koppel(r: Rijschool): Promise<string> {
       },
       capabilities: { card_payments: { requested: true }, transfers: { requested: true }, ideal_payments: { requested: true } },
       metadata: { rijschoolId: r.id },
-    });
+    }, r.tenantId);
     id = a.id;
     // alleen zetten als er nog niets stond: twee keer tegelijk klikken mag geen tweede account opleveren
     const gezet = await prisma.rijschool.updateMany({ where: { id: r.id, stripeAccountId: null }, data: { stripeAccountId: id } });

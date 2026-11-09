@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { maakAccountMetKvk } from "@/lib/billing/stripe-bedrijf";
 import { IDEAL_KOSTEN_CENT, isTestAdres } from "@/lib/rijschool/betalen";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { rekeningVan, totaalVan, type Selectie } from "@/lib/horeca/kassa";
@@ -95,14 +96,15 @@ async function koppel(z: HorecaZaak): Promise<string> {
   const stripe = getStripeClient();
   let id = z.stripeAccountId;
   if (!id) {
-    const a = await stripe.accounts.create({
+    // met de KvK-gegevens alvast ingevuld, zodat de zaak die bij Stripe niet opnieuw typt
+    const a = await maakAccountMetKvk(stripe, {
       type: "express",
       country: "NL",
       ...(z.email ? { email: z.email } : {}),
       business_profile: { name: z.naam, url: `${basis()}/horeca/${z.slug}`, mcc: "5812", product_description: "Eten en drinken in ons restaurant of café" },
       capabilities: { card_payments: { requested: true }, transfers: { requested: true }, ideal_payments: { requested: true } },
       metadata: { horecaZaakId: z.id },
-    });
+    }, z.tenantId);
     id = a.id;
     // alleen zetten als er nog niets stond: twee keer tegelijk klikken mag geen tweede account opleveren
     const gezet = await prisma.horecaZaak.updateMany({ where: { id: z.id, OR: [{ stripeAccountId: null }, { stripeAccountId: "" }] }, data: { stripeAccountId: id } });
