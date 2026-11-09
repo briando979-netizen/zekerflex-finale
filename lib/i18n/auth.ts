@@ -258,6 +258,14 @@ export interface AuthDict {
       terug: string;
       sluiten: string;
       mislukt: string;
+      chipTitel: string;
+      chipUitleg: string;
+      chipStart: string;
+      chipWacht: string;
+      chipEcht: string;
+      chipNietEcht: string;
+      chipFout: string;
+      chipOverslaan: string;
     };
   };
 }
@@ -519,6 +527,14 @@ const nl: AuthDict = {
       terug: "Terug naar ZekerFlex",
       sluiten: "Sluiten",
       mislukt: "Versturen is niet gelukt. Controleer je verbinding en probeer het opnieuw.",
+      chipTitel: "Lees de chip van je document",
+      chipUitleg: "Houd je ID-kaart of paspoort plat tegen de achterkant van je telefoon en houd hem stil. Zo lezen we de gegevens die de overheid op de chip heeft gezet: het sterkste bewijs dat je document echt is.",
+      chipStart: "Chip lezen",
+      chipWacht: "De app leest nu je chip. Houd je document tegen je telefoon; daarna kom je vanzelf hier terug.",
+      chipEcht: "Je chip is gelezen en echt bevonden: de gegevens zijn door de overheid ondertekend.",
+      chipNietEcht: "We konden de chip niet volledig als echt bevestigen. Een medewerker kijkt mee; je kunt gewoon verder.",
+      chipFout: "Het chip lezen is niet gelukt. Probeer het opnieuw of sla het over.",
+      chipOverslaan: "Overslaan",
     },
   },
 };
@@ -780,6 +796,14 @@ const en: AuthDict = {
       terug: "Back to ZekerFlex",
       sluiten: "Close",
       mislukt: "Sending failed. Check your connection and try again.",
+      chipTitel: "Read the chip in your document",
+      chipUitleg: "Hold your ID card or passport flat against the back of your phone and keep it still. This way we read the data the government put on the chip: the strongest proof that your document is genuine.",
+      chipStart: "Read chip",
+      chipWacht: "The app is reading your chip. Hold your document against your phone; afterwards you come back here automatically.",
+      chipEcht: "Your chip was read and found genuine: the data is signed by the government.",
+      chipNietEcht: "We couldn't fully confirm the chip as genuine. A staff member will check; you can just continue.",
+      chipFout: "Reading the chip didn't work. Try again or skip it.",
+      chipOverslaan: "Skip",
     },
   },
 };
@@ -1041,6 +1065,14 @@ const pl: AuthDict = {
       terug: "Wróć do ZekerFlex",
       sluiten: "Zamknij",
       mislukt: "Nie udało się wysłać. Sprawdź połączenie i spróbuj ponownie.",
+      chipTitel: "Odczytaj chip w dokumencie",
+      chipUitleg: "Przyłóż dowód osobisty lub paszport płasko do tyłu telefonu i trzymaj nieruchomo. Tak odczytamy dane zapisane przez państwo w chipie: najmocniejszy dowód, że dokument jest prawdziwy.",
+      chipStart: "Odczytaj chip",
+      chipWacht: "Aplikacja odczytuje teraz chip. Trzymaj dokument przy telefonie; potem wrócisz tu automatycznie.",
+      chipEcht: "Chip odczytany i uznany za prawdziwy: dane są podpisane przez państwo.",
+      chipNietEcht: "Nie udało się w pełni potwierdzić autentyczności chipu. Sprawdzi to pracownik; możesz kontynuować.",
+      chipFout: "Nie udało się odczytać chipu. Spróbuj ponownie albo pomiń.",
+      chipOverslaan: "Pomiń",
     },
   },
 };
@@ -1302,6 +1334,14 @@ const ro: AuthDict = {
       terug: "Înapoi la ZekerFlex",
       sluiten: "Închide",
       mislukt: "Trimiterea nu a reușit. Verifică conexiunea și încearcă din nou.",
+      chipTitel: "Citește cipul documentului",
+      chipUitleg: "Ține cartea de identitate sau pașaportul lipit de spatele telefonului și nu-l mișca. Așa citim datele puse de stat pe cip: cea mai puternică dovadă că documentul este autentic.",
+      chipStart: "Citește cipul",
+      chipWacht: "Aplicația citește acum cipul. Ține documentul lipit de telefon; apoi revii aici automat.",
+      chipEcht: "Cipul a fost citit și găsit autentic: datele sunt semnate de stat.",
+      chipNietEcht: "Nu am putut confirma complet autenticitatea cipului. Verifică un angajat; poți continua.",
+      chipFout: "Citirea cipului nu a reușit. Încearcă din nou sau sari peste.",
+      chipOverslaan: "Sari peste",
     },
   },
 };
@@ -1563,6 +1603,14 @@ const uk: AuthDict = {
       terug: "Назад до ZekerFlex",
       sluiten: "Закрити",
       mislukt: "Не вдалося надіслати. Перевірте з'єднання й спробуйте ще раз.",
+      chipTitel: "Зчитайте чип документа",
+      chipUitleg: "Прикладіть ID-картку або паспорт рівно до задньої панелі телефона й не рухайте. Так ми зчитаємо дані, які держава записала на чип: найнадійніший доказ, що документ справжній.",
+      chipStart: "Зчитати чип",
+      chipWacht: "Застосунок зчитує чип. Тримайте документ біля телефона; потім ви автоматично повернетеся сюди.",
+      chipEcht: "Чип зчитано й визнано справжнім: дані підписані державою.",
+      chipNietEcht: "Не вдалося повністю підтвердити справжність чипа. Перевірить працівник; можна продовжувати.",
+      chipFout: "Не вдалося зчитати чип. Спробуйте ще раз або пропустіть.",
+      chipOverslaan: "Пропустити",
     },
   },
 };

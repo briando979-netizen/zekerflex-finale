@@ -60,6 +60,7 @@ const PUBLIC_PREFIXES = [
   "/api/printen/agent", // de printagent op een computer op locatie haalt de labelwachtrij op en meldt wat geprint is; eigen token per bedrijf (lib/locatie/printen.ts), IP-begrensd
   "/api/websitevoorstel", // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
   "/api/agent/horeca", // AI-assistenten reserveren een tafel: alleen zaken die online staan met reserveren aan, dezelfde controle onder een slot als de eigen site, IP- en per-gast-begrensd; bekijken/annuleren alleen met de ondertekende annuleerlink (lib/horeca/agent-server.ts)
+  "/api/chip", // de Android-app leest de chip van paspoort/ID-kaart: sleutel ophalen en uitslag sturen met een eenmalige code (10 min, in de body, IP-begrensd; lib/kyc/chip/sessie.ts). Starten en de uitslag bekijken (/api/onboarding/chip) blijft achter de login
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
 ] as const;
 

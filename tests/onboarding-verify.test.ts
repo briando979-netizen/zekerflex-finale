@@ -88,6 +88,28 @@ const MRZ_JAN = {
 const leesMrzVanFoto = vi.fn().mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
 vi.mock("@/lib/kyc/mrz-lezen", () => ({ leesMrzVanFoto: (...a: unknown[]) => leesMrzVanFoto(...a) }));
 
+/** de chip van het document (NFC via de app): standaard niet gelezen */
+const chipLezing = vi.fn().mockResolvedValue(null);
+const wisChipGegevens = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/kyc/chip/sessie", () => ({
+  chipLezing: (...a: unknown[]) => chipLezing(...a),
+  wisChipGegevens: (...a: unknown[]) => wisChipGegevens(...a),
+}));
+const CHIP_JAN = {
+  op: "2026-11-09T12:00:00.000Z",
+  echt: true,
+  hashesOk: true,
+  handtekeningOk: true,
+  ketenOk: true,
+  geldigOk: true,
+  land: "NL",
+  nummerKlopt: true,
+  naamOpChip: "Jan Jansen",
+  documentnummer: "SPECI2014",
+  vervaldatum: "2030-01-01",
+  fouten: [],
+};
+
 const alertOwnerLater = vi.fn();
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (...a: unknown[]) => alertOwnerLater(...a) }));
 
@@ -239,6 +261,40 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       expect(opgeslagen).not.toContain("SPECI2014");
       expect(opgeslagen).not.toContain("JANSEN");
       expect(opgeslagen).not.toContain("1990-01-01");
+    });
+
+    it("een echte chip met het juiste nummer en de juiste naam vervangt een onleesbare MRZ", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 8, ms: 900 });
+      chipLezing.mockResolvedValueOnce(CHIP_JAN);
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
+      expect(result.outcome).toBe("verified");
+      expect(result.checks.find((c) => c.label.startsWith("Chip van het document"))?.ok).toBe(true);
+      // na de verificatie zijn de chipgegevens weg, en bewaard is alleen de uitslag
+      expect(wisChipGegevens).toHaveBeenCalledWith("usr_1");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { chip: Record<string, unknown> } } };
+      expect(ivArg.data.rawPayload.chip).toMatchObject({ echt: true, nummerKlopt: true, naamKlopt: true });
+      expect(JSON.stringify(ivArg.data.rawPayload.chip)).not.toContain("SPECI2014");
+    });
+
+    it("een chip ondertekend door een niet-vertrouwde 'overheid' wordt afgewezen", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, echt: false, ketenOk: false });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("rejected");
+    });
+
+    it("een echte chip met een andere naam: een mens kijkt mee", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 8, ms: 900 });
+      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, naamOpChip: "Piet Pietersen" });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
+      expect(result.outcome).toBe("in_review");
     });
 
     it("een rijbewijs heeft geen MRZ: daar wordt niets gelezen", async () => {

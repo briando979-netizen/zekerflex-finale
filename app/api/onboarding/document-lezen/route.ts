@@ -4,13 +4,16 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { leesMrzVanFoto, voorScherm } from "@/lib/kyc/mrz-lezen";
+import { bewaarMrzVoorChip } from "@/lib/kyc/chip/sessie";
 
 // ---------------------------------------------------------------------------
 // POST /api/onboarding/document-lezen — leest vóór het versturen de MRZ van één
 // foto (achterkant ID-kaart of pasfotopagina paspoort) en laat zien wat er
 // gelezen is: nummer, vervaldatum, naam, en of de controlecijfers kloppen. Zo
 // weet de werker meteen of de foto goed is, in plaats van een vage afwijzing
-// achteraf. Er wordt niets bewaard en niets gelogd (de MRZ bevat het BSN).
+// achteraf. Niets gelogd (de MRZ bevat het BSN); bewaard wordt alleen, 30
+// minuten, de sleutel om de chip te openen (nummer, geboorte- en vervaldatum;
+// lib/kyc/chip/sessie.ts). Geen foto, geen naam, geen BSN.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -42,6 +45,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!TOEGESTAAN.has(foto.type.toLowerCase())) throw AppError.validation("Gebruik een JPG-, PNG- of WebP-foto.");
 
     const gelezen = await leesMrzVanFoto(Buffer.from(await foto.arrayBuffer()));
+    // goed gelezen: 30 minuten bewaren als sleutel om de chip te openen (lib/kyc/chip/sessie.ts)
+    if (gelezen.uitslag?.geldig) await bewaarMrzVoorChip(principal.userId, gelezen.uitslag).catch(() => undefined);
     return NextResponse.json({ ...voorScherm(gelezen.uitslag), ms: gelezen.ms }, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);

@@ -19,6 +19,7 @@ import { bouwerInstellingen } from "@/lib/bouwer/werker";
 import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
 import { platformPartij } from "@/lib/efactuur/instellingen";
 import { BANK_AAN } from "@/lib/app-mode";
+import { cscaStand } from "@/lib/kyc/chip/csca";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -194,6 +195,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     unsentProposals(),
   ]);
   const [beeldGelukt, beeldSlot] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld")]);
+  // de overheidscertificaten voor het chiplezen (lib/kyc/chip/csca.ts)
+  const csca = await cscaStand().catch(() => null);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -842,6 +845,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Pak de SMTP-gegevens van je mailprovider (bijv. TransIP, Mailgun, Postmark of je eigen mailserver): host, poort, gebruikersnaam, wachtwoord.", "Geef ze aan Claude; die zet SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS en MAIL_FROM (bijv. no-reply@zekerflex.com) op de server.", "Controleer in Admin → Mail dat nieuwe mails als 'verstuurd' staan in plaats van alleen 'opgeslagen'."],
       auto: true,
       done: Boolean(process.env.SMTP_HOST?.trim()),
+    },
+    {
+      id: "chip-csca",
+      group: "Beheer & veiligheid",
+      title: "Overheidscertificaten (CSCA) voor het chiplezen op de server zetten",
+      why: "De Android-app kan de chip van een paspoort of ID-kaart lezen. De server controleert dan of de gegevens door de overheid zijn ondertekend. De laatste schakel is het certificaat van de overheid zelf (CSCA). Zonder die bestanden is een chip nooit 'echt bevonden' en kijkt er altijd een medewerker mee.",
+      how: [
+        "Download de Nederlandse CSCA-certificaten van de overheid (RvIG, zoek op 'CSCA certificaten'), of de ICAO-masterlijst. Voor documenten uit andere landen: de CSCA van dat land.",
+        "Geef de bestanden (.pem, .crt, .cer of .der) aan Claude. Die zet ze in de map storage/csca van de app (het opslagvolume, blijft bij een uitrol staan) en controleert het met een echte chip.",
+        "Deze taak vinkt zichzelf af zodra er een Nederlands CSCA-certificaat staat.",
+      ],
+      auto: true,
+      done: (csca?.landen ?? []).includes("NL"),
+      ...(csca ? { doneNote: `${csca.aantal} certificaten${csca.landen.length ? `, landen: ${csca.landen.join(", ")}` : ""}` } : {}),
     },
     {
       id: "stripe-identity",

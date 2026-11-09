@@ -40,6 +40,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/shop/media/abc123",
     "/api/company/search",
     "/api/terminal/abc123-sleutel",
+    "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
+    "/api/chip/klaar",
     "/api/whatsapp/inkomend",
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
@@ -79,6 +81,9 @@ describe("isPublicApiRoute — allowed", () => {
 describe("isPublicApiRoute — protected (must NOT be public)", () => {
   const cases = [
     "/api/werkgever/locatie", // Op locatie: the employer board stays behind the login
+    "/api/onboarding/chip/start", // starting a chip read needs the worker's session
+    "/api/onboarding/chip/status",
+    "/api/onboarding/document-lezen",
     "/api/locatie/portofoon", // radio channels: session only
     "/api/me/kluis", // a worker's access codes: session only
     "/api/me/passkeys", // passkeys toevoegen/verwijderen: alleen met een sessie (en opnieuw bevestigen)

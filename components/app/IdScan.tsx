@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Portal } from "@/components/chat/Portal";
 import { type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, goedGelezen, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
+import { cookieStringHasChip, cookieStringIsApp } from "@/lib/app-mode";
 
 // ---------------------------------------------------------------------------
 // ID-scan van ZekerFlex (9 nov 2026): een eigen omgeving zoals die van Stripe.
@@ -37,7 +38,38 @@ export interface ScanUitslag {
 export type ScanAfronden = (g: ScanGegevens) => Promise<{ ok: true; uitslag: ScanUitslag } | { ok: false; fout: string }>;
 
 type T = AuthDict["onb"];
-type Stap = "start" | "soort" | "voor" | "achter" | "selfie" | "gegevens" | "bezig" | "klaar";
+type Stap = "start" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
+
+/** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
+interface ChipStand {
+  /** klaarzetten: code ophalen · gereed: de knop opent de app · wacht: de app leest · klaar · fout */
+  status: "klaarzetten" | "gereed" | "wacht" | "klaar" | "fout";
+  /** het tijdstip van de vorige uitslag: een nieuwe uitslag heeft een ander tijdstip (geen klokvergelijking) */
+  vorige?: string | null;
+  /** de eenmalige code voor de app (10 minuten, mag een paar keer) */
+  code?: string;
+  echt?: boolean;
+  tekst?: string;
+}
+
+/** Een telefoon met een kaart ertegen. */
+function ChipBeeld() {
+  return (
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" aria-hidden className="text-brand-600">
+      <rect x="34" y="10" width="52" height="96" rx="9" stroke="currentColor" strokeWidth="3" />
+      <rect x="18" y="52" width="70" height="44" rx="6" fill="white" stroke="currentColor" strokeWidth="3" />
+      <rect x="28" y="62" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="2.5" />
+      <path d="M96 40c5 5 5 15 0 20M103 33c9 9 9 25 0 34" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+async function laatsteChip(): Promise<{ op: string; echt: boolean; nummerKlopt: boolean } | null> {
+  const res = await fetch("/api/onboarding/chip/status", { cache: "no-store" }).catch(() => null);
+  if (!res?.ok) return null;
+  const data = (await res.json().catch(() => null)) as { lezing?: { op: string; echt: boolean; nummerKlopt: boolean } | null } | null;
+  return data?.lezing ?? null;
+}
 type FotoStap = "voor" | "achter" | "selfie";
 type Fotos = Partial<Record<FotoStap, File>>;
 
@@ -175,6 +207,70 @@ export function IdScan({
   const [gegevens, setGegevens] = useState({ nummer: "", datum: "", naam });
   const [uitslag, setUitslag] = useState<ScanUitslag | null>(null);
   const [fout, setFout] = useState<string | null>(null);
+  const [kanChip, setKanChip] = useState(false);
+  const [chip, setChip] = useState<ChipStand | null>(null);
+  const [naChip, setNaChip] = useState<Stap>("selfie");
+
+  // alleen een app die de chip kan lezen (lib/app-mode.ts): de website en oudere apps slaan de stap over
+  useEffect(() => {
+    setKanChip(cookieStringIsApp(document.cookie) && cookieStringHasChip(document.cookie));
+  }, []);
+
+  // terug uit de app: elke 2 s (alleen als dit scherm zichtbaar is) kijken of er een nieuwe uitslag is
+  const wachtOp = chip?.status === "wacht" ? (chip.vorige ?? "") : null;
+  useEffect(() => {
+    if (wachtOp === null) return;
+    let klaar = false;
+    const kijk = async () => {
+      if (klaar || document.visibilityState !== "visible") return;
+      const l = await laatsteChip();
+      if (!klaar && l && l.op !== wachtOp) {
+        klaar = true;
+        setChip({ status: "klaar", echt: l.echt && l.nummerKlopt });
+      }
+    };
+    const t = setInterval(() => void kijk(), 2000);
+    document.addEventListener("visibilitychange", kijk);
+    const stop = setTimeout(() => {
+      if (!klaar) setChip({ status: "fout", tekst: s.chipFout });
+    }, 4 * 60_000);
+    return () => {
+      klaar = true;
+      clearInterval(t);
+      clearTimeout(stop);
+      document.removeEventListener("visibilitychange", kijk);
+    };
+  }, [wachtOp, s.chipFout]);
+
+  /** Vooraf de code ophalen: Chrome opent de app alleen direct na een tik, dus de knop mag niet eerst wachten. */
+  async function zetChipKlaar() {
+    setChip({ status: "klaarzetten" });
+    try {
+      const vorige = (await laatsteChip())?.op ?? null;
+      const res = await fetch("/api/onboarding/chip/start", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { code?: string; error?: { message?: string } };
+      if (!res.ok || typeof data.code !== "string") {
+        setChip({ status: "fout", tekst: data.error?.message ?? s.chipFout });
+        return;
+      }
+      setChip({ status: "gereed", vorige, code: data.code });
+    } catch {
+      setChip({ status: "fout", tekst: s.chipFout });
+    }
+  }
+
+  // de chipstap opent: meteen de code klaarzetten
+  useEffect(() => {
+    if (stap === "chip" && chip === null) void zetChipKlaar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen van de stap
+  }, [stap, chip]);
+
+  /** Opent ChipActivity in de app; de code gaat als extra mee, nooit in een adres op het web. */
+  function openChipApp() {
+    if (!chip?.code) return;
+    setChip({ ...chip, status: "wacht" });
+    window.location.href = `intent://chip#Intent;scheme=zekerflex;package=com.zekerflex.app;S.code=${encodeURIComponent(chip.code)};end`;
+  }
 
   // de pagina eronder scrollt niet mee zolang de scan open is
   useEffect(() => {
@@ -204,6 +300,7 @@ export function IdScan({
     setLezing(null);
     setVoorbeeld(null);
     setGegevens({ nummer: "", datum: "", naam });
+    setChip(null);
     setStap("voor");
   }
 
@@ -232,6 +329,12 @@ export function IdScan({
 
   function verder(k: FotoStap, alle: Fotos) {
     setVoorbeeld(null);
+    // in de app met NFC: na een goed gelezen MRZ eerst de chip (de MRZ is de sleutel)
+    if (kanChip && k === mrzKant && goedGelezen(lezing) && chip === null) {
+      setNaChip(k === "voor" ? "achter" : "selfie");
+      setStap("chip");
+      return;
+    }
     if (k === "voor") setStap("achter");
     else if (k === "achter") setStap("selfie");
     else if (handmatig) setStap("gegevens");
@@ -382,6 +485,61 @@ export function IdScan({
                       t={t}
                       onFoto={(f) => setVoorbeeld({ file: f, url: URL.createObjectURL(f) })}
                     />
+                  )}
+                </div>
+              </>
+            )}
+
+            {stap === "chip" && (
+              <>
+                <h2 className="font-display text-lg font-bold text-ink">{s.chipTitel}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-neutralx-500">{s.chipUitleg}</p>
+                <div className="grid place-items-center py-8">
+                  <ChipBeeld />
+                </div>
+                {chip?.status === "wacht" && (
+                  <p role="status" className="rounded-lg bg-paper-soft px-3 py-2.5 text-sm text-ink-soft">
+                    {s.chipWacht}
+                  </p>
+                )}
+                {chip?.status === "klaar" && (
+                  <p
+                    role="status"
+                    className={`rounded-lg border px-3 py-2.5 text-sm text-ink ${chip.echt ? "border-ok/30 bg-ok/5" : "border-warn/30 bg-warn/5"}`}
+                  >
+                    {chip.echt ? `✓ ${s.chipEcht}` : s.chipNietEcht}
+                  </p>
+                )}
+                {chip?.status === "fout" && (
+                  <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
+                    {chip.tekst ?? s.chipFout}
+                  </p>
+                )}
+                <div className="mt-6 grid gap-2">
+                  {chip?.status === "klaar" ? (
+                    <button type="button" onClick={() => setStap(naChip)} className="btn-primary w-full">
+                      {s.volgende}
+                    </button>
+                  ) : chip?.status === "fout" ? (
+                    <button type="button" onClick={() => void zetChipKlaar()} className="btn-primary w-full">
+                      {s.opnieuw}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={openChipApp} disabled={!chip?.code} className="btn-primary w-full">
+                      {s.chipStart}
+                    </button>
+                  )}
+                  {chip?.status !== "klaar" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChip({ status: "fout", tekst: "" });
+                        setStap(naChip);
+                      }}
+                      className="btn-ghost w-full"
+                    >
+                      {s.chipOverslaan}
+                    </button>
                   )}
                 </div>
               </>

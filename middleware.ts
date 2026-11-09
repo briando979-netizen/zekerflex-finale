@@ -8,7 +8,7 @@ import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
 import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
-import { APP_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
+import { APP_CHIP_COOKIE, APP_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
 import { INSPECT_PARAM, INSPECT_SESSION_SECONDS, inspectSessionFor, verifyInspectLink, VIEW_AS_COOKIE } from "@/lib/auth/inspect";
 
 export const config = {
@@ -357,6 +357,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     res.cookies.delete(APP_COOKIE);
   } else if (isAppLaunch(req) && !req.cookies.get(APP_COOKIE)) {
     res.cookies.set(APP_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: !IS_DEV });
+  }
+  // een app die de chip van een ID-kaart kan lezen (lib/app-mode.ts APP_CHIP_COOKIE): bij elke start opnieuw
+  if (isAppLaunch(req) && req.nextUrl.searchParams.get("chip") === "1") {
+    res.cookies.set(APP_CHIP_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: !IS_DEV });
   }
   return res;
 }

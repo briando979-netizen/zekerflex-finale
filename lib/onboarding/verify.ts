@@ -12,6 +12,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { naamVoluit, zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
+import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
@@ -470,7 +471,8 @@ export async function submitFreelancerOnboarding(
 
   // --- AI authenticity review (text-only) + vision review (photo content) +
   // de MRZ van het document zelf, tegelijk: drie onafhankelijke controles ------
-  const [ai, vision, mrz] = await Promise.all([
+  // (volgorde van de destructuring = volgorde van de beloften)
+  const [ai, vision, mrz, chip] = await Promise.all([
     aiAuthenticityReview({
       accountName: user.fullName,
       nameOnDocument: input.nameOnDocument,
@@ -489,6 +491,8 @@ export async function submitFreelancerOnboarding(
     }),
     runVisionReview(input.files),
     leesDocumentMrz(input),
+    // de chip, als die net met de app is gelezen (NFC, lib/kyc/chip); een storing blokkeert nooit
+    chipLezing(user.id).catch(() => null),
   ]);
 
   // --- MRZ: wat het document zelf zegt, met controlecijfers (lib/kyc/mrz.ts) ---
@@ -556,6 +560,34 @@ export async function submitFreelancerOnboarding(
     });
   }
 
+  // --- de chip van het document (NFC via de app, passieve authenticatie) ---
+  // Echt = de gegevens staan zo op een chip die een vertrouwde overheid ondertekende.
+  const chipNummerOk = Boolean(chip?.documentnummer && zelfdeNummer(chip.documentnummer, input.documentNumber));
+  const chipNaamOk = Boolean(
+    chip?.naamOpChip &&
+      (nameSimilarity(user.fullName, chip.naamOpChip) >= 0.5 || (companyName ? nameSimilarity(companyName, chip.naamOpChip) >= 0.5 : false)),
+  );
+  const chipOk = Boolean(chip?.echt && chipNummerOk && chipNaamOk);
+  // een nette handtekening van een ondertekenaar die NIET van de echte overheid komt: vervalst
+  const chipVals = Boolean(chip && chip.handtekeningOk && chip.ketenOk === false);
+  if (chip) {
+    checks.push({
+      label: "Chip van het document gelezen (NFC)",
+      ok: chipOk,
+      detail: chipOk
+        ? `Echt bevonden: ondertekend door de overheid${chip.land ? ` (${chip.land})` : ""}; nummer en naam kloppen`
+        : chipVals
+          ? "De chip is niet door de overheid van dit land ondertekend"
+          : chip.echt && !chipNummerOk
+            ? "De chip is echt, maar hoort bij een ander documentnummer dan opgegeven"
+            : chip.echt && !chipNaamOk
+              ? "De chip is echt, maar de naam erop wijkt af van je account"
+              : chip.ketenOk === null && chip.handtekeningOk && chip.hashesOk
+                ? "Het zegel van de chip klopt; het overheidscertificaat controleert een medewerker"
+                : "De chip kon niet als echt worden bevestigd. Een medewerker kijkt mee.",
+    });
+  }
+
   // --- store the three photos (on the box's own disk) -----------------
   const [storedFront, storedBack, storedSelfie] = await Promise.all([
     storeUpload({ filename: front.filename, mimeType: front.mimeType, bytes: front.bytes, uploadedById: user.id }),
@@ -584,6 +616,7 @@ export async function submitFreelancerOnboarding(
     vision.available && vision.face !== null && !vision.face.samePerson && vision.face.faceMatchConfidence >= 0.7;
   const hardFail =
     !expiryOk ||
+    chipVals ||
     ai.verdict === "rejected" ||
     companyStatus === "DISSOLVED" ||
     visionFaceMismatch;
@@ -600,7 +633,8 @@ export async function submitFreelancerOnboarding(
     vision.face.looksLive;
   // en de code op het document zelf moet kloppen met wat er getypt is en met het
   // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
-  const mrzOk = input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk);
+  // (een echte chip met het juiste nummer en de juiste naam is nog sterker dan de MRZ op de foto)
+  const mrzOk = input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk) || chipOk;
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
@@ -656,6 +690,10 @@ export async function submitFreelancerOnboarding(
             mrz: mrz
               ? { geldig: mrz.geldig, volledig: mrz.volledig, soort: mrz.soort, land: mrz.land, verlopen: mrz.verlopen, vervaldatum: mrz.vervaldatum, nummerKlopt: mrzNummerOk, naamKlopt: mrzNaamOk }
               : null,
+            // alleen de uitslag van de chip: geen nummer, naam, pasfoto of BSN
+            chip: chip
+              ? { echt: chip.echt, hashesOk: chip.hashesOk, handtekeningOk: chip.handtekeningOk, ketenOk: chip.ketenOk, geldigOk: chip.geldigOk, land: chip.land, nummerKlopt: chipNummerOk, naamKlopt: chipNaamOk }
+              : null,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
             fileSha256: stored.sha256,
           }),
@@ -695,8 +733,11 @@ export async function submitFreelancerOnboarding(
     summary: `Zelf-verificatie ${user.fullName}: ${outcome} (KVK ${kvkValid ? "geldig" : "niet geldig"})`,
     targetType: "user",
     targetId: user.id,
-    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available, mrzGeldig },
+    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available, mrzGeldig, chipEcht: chip?.echt ?? null },
   });
+
+  // de chipuitslag en de MRZ-sleutel zijn na de verificatie niet meer nodig
+  if (chip) await wisChipGegevens(user.id);
 
   // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).
   if (outcome === "in_review") {

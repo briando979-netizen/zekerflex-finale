@@ -23,6 +23,15 @@ describe("middleware — app mode", () => {
     expect(res.cookies.get("zf_app")?.value).toBe("1");
   });
 
+  it("an app that can read the ID chip (1.0.4+) also gets the chip cookie; older apps and the website do not", async () => {
+    const nieuw = await middleware(req("/start?utm_source=twa&chip=1"));
+    expect(nieuw.cookies.get("zf_app_chip")?.value).toBe("1");
+    const oud = await middleware(req("/start?utm_source=twa"));
+    expect(oud.cookies.get("zf_app_chip")).toBeUndefined();
+    const web = await middleware(req("/start?chip=1"));
+    expect(web.cookies.get("zf_app_chip")).toBeUndefined();
+  });
+
   it("sends the homepage and marketing pages to /start inside the app", async () => {
     for (const p of ["/", "/voor-bedrijven", "/prijzen", "/klussen"]) {
       const res = await middleware(req(p, true));

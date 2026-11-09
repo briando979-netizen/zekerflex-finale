@@ -38,6 +38,18 @@ export function isAppBlockedPath(pathname: string): boolean {
 }
 
 /** True when a raw `document.cookie` / Cookie header string carries the app cookie. */
+/**
+ * De Android-app kan sinds versie 1.0.4 de chip van een paspoort of ID-kaart
+ * lezen (NFC, ChipActivity). Zo'n app start met /start?utm_source=twa&chip=1;
+ * de middleware zet dan deze cookie. Oudere apps en de website zien de stap niet.
+ */
+export const APP_CHIP_COOKIE = "zf_app_chip";
+
+/** True wanneer de cookie-tekst zegt dat deze app de chip kan lezen. */
+export function cookieStringHasChip(cookie: string | null | undefined): boolean {
+  return /(?:^|;\s*)zf_app_chip=1(?:;|$)/.test(cookie ?? "");
+}
+
 export function cookieStringIsApp(cookie: string | null | undefined): boolean {
   return /(?:^|;\s*)zf_app=1(?:;|$)/.test(cookie ?? "");
 }
