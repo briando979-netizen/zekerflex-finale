@@ -144,7 +144,13 @@ export async function completePasswordReset(token: string, newPassword: string):
   });
   // Wie zijn account terugpakt, moet ook een passkey kwijt die een ander er bij
   // heeft gezet: alle passkeys weg, met audit en mail (lib/auth/passkey/beheer.ts).
-  await wisPasskeysNaHerstel(userId);
+  // Het wachtwoord is op dit punt al gewijzigd en de link verbruikt: een fout hier
+  // mag het herstel niet als mislukt melden, maar moet wel opvallen in het logboek.
+  try {
+    await wisPasskeysNaHerstel(userId);
+  } catch (err) {
+    logger.error("passkeys wissen na wachtwoordherstel mislukt", { userId, error: (err as Error).message });
+  }
   logger.info("password reset completed", { userId });
   return { ok: true };
 }
