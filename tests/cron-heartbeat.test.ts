@@ -51,4 +51,24 @@ describe("cron heartbeat watchdog", () => {
     const res = await checkCronHeartbeats(NOW);
     expect(res.stale).toEqual(["ai-watchdog"]);
   });
+
+  it("bewaakt de dagelijkse taken die eerst geen hartslagbewaking hadden", () => {
+    for (const job of ["markten-scan", "winkel-agent", "invoice-reminders", "domein-verlengen", "onboarding-reminders"]) {
+      expect(WATCHED_CRONS.find((c) => c.job === job)?.maxAgeHours, job).toBe(26);
+    }
+  });
+
+  it("bewaakt ai-warm niet: die schrijft geen hartslag als 'alles gratis' uit staat", () => {
+    expect(WATCHED_CRONS.some((c) => c.job === "ai-warm")).toBe(false);
+  });
+
+  it("verwijst in de melding naar de cron-container, niet naar Vercel", async () => {
+    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(2), ok: true };
+    kv["cron-heartbeat:winkel-agent"] = { at: hoursAgo(30), ok: true };
+    kv["cron-heartbeat:first-seen"] = { at: hoursAgo(1000) };
+    await checkCronHeartbeats(NOW);
+    const detail = String((alertOwner.mock.calls[0]![0] as { detail: string }).detail);
+    expect(detail).toContain("cron-container");
+    expect(detail).not.toMatch(/vercel/i);
+  });
 });
