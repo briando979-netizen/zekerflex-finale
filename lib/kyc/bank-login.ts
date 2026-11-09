@@ -211,14 +211,17 @@ export async function syncBankLogin(userId: string, sessionId: string): Promise<
   const ideal = attempt?.payment_method_details?.ideal;
   if (si?.status !== "succeeded" || !ideal?.iban_last4 || !ideal.verified_name) return null;
 
-  const [user, saved, pending] = await Promise.all([
+  const [user, saved, pending, docNaam] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } }),
     currentPayoutIban(userId),
     kvGet<string>(pendingKey(userId)).catch(() => null),
+    naamOpGeverifieerdDocument(userId),
   ]);
   const iban = saved ?? pending;
   const problems: BankLoginResult["problems"] = [];
-  if (!user || !namesMatch(user.fullName, ideal.verified_name)) problems.push("name");
+  // Past de bank bij het profiel én, als er een geverifieerd ID is, ook bij de naam op dat document:
+  // een profielnaam kan zijn aangepast, het document niet (zelfde regel als bij de herbeoordeling).
+  if (!user || !namesMatch(user.fullName, ideal.verified_name) || (docNaam && !namesMatch(docNaam, ideal.verified_name))) problems.push("name");
   if (!iban || !iban.endsWith(ideal.iban_last4)) problems.push("iban");
 
   const rec: BankLoginResult = {
