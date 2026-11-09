@@ -2,7 +2,7 @@ import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
-import { OnboardingProgress } from "@/components/app/OnboardingProgress";
+import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
@@ -36,7 +36,6 @@ export default async function KlussenPage(
     getFreelancerOverview(principal.userId),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
-  const obDone = overview.onboarding.filter((s) => s.done).length;
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -66,12 +65,10 @@ export default async function KlussenPage(
       />
       <WilReagerenNudge />
       {!overview.profileComplete && (
-        <OnboardingProgress
-          done={obDone}
-          total={overview.onboarding.length}
-          title={t.greet.profileLabel}
-          cta={t.page.toVerification}
-          href="/dashboard/verificatie"
+        <WerkerStartWizard
+          workerKind={fiscal.workerKind}
+          emailVerified={Boolean(principal.emailVerifiedAt)}
+          profileComplete={overview.profileComplete}
         />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">

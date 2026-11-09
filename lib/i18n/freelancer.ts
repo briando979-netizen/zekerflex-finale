@@ -10,6 +10,29 @@ import type { Locale } from "@/lib/i18n/config";
 
 const nl = {
   nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
+  start: {
+    eyebrow: "Jouw start",
+    title: "Welkom! Kies eerst welke richting je op wilt.",
+    progress: "{done} van {total} stappen klaar",
+    kindStep: "Kies je richting",
+    emailStep: "Bevestig je e-mailadres",
+    verifyStep: "Gegevens en identiteit",
+    kindHint: "Dit bepaalt hoe je betaald wordt en wat we nog van je vragen. Je kunt het later aanpassen onder Fiscaal.",
+    kinds: {
+      zzp: ["ZZP'er", "Je werkt voor jezelf en factureert zelf. Je hebt een KVK-nummer of een EU-btw-nummer."],
+      flexwerker: ["Flexwerker", "Je werkt op oproepbasis. Btw is optioneel of je valt onder de KOR."],
+      uitzendkracht: ["Uitzendkracht", "Je werkt in loondienst via ZekerFlex. Geen KVK nodig, wel een BSN."],
+    },
+    pick: "Verder",
+    saving: "Bezig…",
+    saveError: "Opslaan lukte niet. Probeer het opnieuw.",
+    chosen: "Gekozen: {kind}",
+    emailBody: "We stuurden een mail met een code of link. Bevestig je adres om verder te kunnen.",
+    emailCta: "Naar bevestigen",
+    verifyBody: "Vul je gegevens in en laat je identiteit controleren. Daarna kun je klussen aannemen.",
+    verifyCta: "Gegevens invullen",
+    browse: "Je kunt hieronder alvast rondkijken naar klussen.",
+  },
   lang: { label: "Taal", hint: "Kies de taal van de app." },
   /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
   ibanCode: {
@@ -1021,6 +1044,29 @@ export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
   nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
+  start: {
+    eyebrow: "Your start",
+    title: "Welcome! First choose which direction you want to take.",
+    progress: "{done} of {total} steps done",
+    kindStep: "Choose your direction",
+    emailStep: "Confirm your e-mail address",
+    verifyStep: "Details and identity",
+    kindHint: "This decides how you get paid and what else we ask of you. You can change it later under Tax.",
+    kinds: {
+      zzp: ["Self-employed (ZZP)", "You work for yourself and invoice yourself. You have a Dutch KVK number or an EU VAT number."],
+      flexwerker: ["Flex worker", "You work on call. VAT is optional, or you fall under the small-business scheme (KOR)."],
+      uitzendkracht: ["Agency worker", "You work as an employee through ZekerFlex. No KVK needed, but you do need a BSN."],
+    },
+    pick: "Continue",
+    saving: "Saving…",
+    saveError: "Saving failed. Please try again.",
+    chosen: "Chosen: {kind}",
+    emailBody: "We sent you an e-mail with a code or link. Confirm your address to continue.",
+    emailCta: "Go to confirmation",
+    verifyBody: "Fill in your details and have your identity checked. After that you can take jobs.",
+    verifyCta: "Fill in details",
+    browse: "You can already browse jobs below.",
+  },
   lang: { label: "Language", hint: "Choose the app language." },
   /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
   ibanCode: {
@@ -2028,6 +2074,29 @@ const en: FreelancerDict = {
 
 const pl: FreelancerDict = {
   nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
+  start: {
+    eyebrow: "Twój start",
+    title: "Witaj! Najpierw wybierz, w którą stronę chcesz iść.",
+    progress: "Ukończone kroki: {done} z {total}",
+    kindStep: "Wybierz swój kierunek",
+    emailStep: "Potwierdź adres e-mail",
+    verifyStep: "Dane i tożsamość",
+    kindHint: "Od tego zależy, jak dostajesz wypłatę i o co jeszcze zapytamy. Możesz to później zmienić w sekcji Podatki.",
+    kinds: {
+      zzp: ["Samozatrudniony (ZZP)", "Pracujesz na własny rachunek i sam wystawiasz faktury. Masz holenderski numer KVK lub numer VAT UE."],
+      flexwerker: ["Pracownik elastyczny", "Pracujesz na wezwanie. VAT jest opcjonalny albo korzystasz ze zwolnienia KOR."],
+      uitzendkracht: ["Pracownik tymczasowy", "Pracujesz na etacie przez ZekerFlex. Nie potrzebujesz KVK, ale potrzebujesz numeru BSN."],
+    },
+    pick: "Dalej",
+    saving: "Zapisywanie…",
+    saveError: "Nie udało się zapisać. Spróbuj ponownie.",
+    chosen: "Wybrano: {kind}",
+    emailBody: "Wysłaliśmy e-mail z kodem lub linkiem. Potwierdź adres, aby przejść dalej.",
+    emailCta: "Przejdź do potwierdzenia",
+    verifyBody: "Uzupełnij dane i zweryfikuj tożsamość. Potem możesz przyjmować zlecenia.",
+    verifyCta: "Uzupełnij dane",
+    browse: "Poniżej możesz już przeglądać zlecenia.",
+  },
   lang: { label: "Język", hint: "Wybierz język aplikacji." },
   /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
   ibanCode: {
@@ -3035,6 +3104,29 @@ const pl: FreelancerDict = {
 
 const ro: FreelancerDict = {
   nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
+  start: {
+    eyebrow: "Startul tău",
+    title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
+    progress: "{done} din {total} pași făcuți",
+    kindStep: "Alege-ți direcția",
+    emailStep: "Confirmă adresa de e-mail",
+    verifyStep: "Date și identitate",
+    kindHint: "Asta stabilește cum ești plătit și ce îți mai cerem. Poți schimba mai târziu la Fiscal.",
+    kinds: {
+      zzp: ["PFA (ZZP)", "Lucrezi pe cont propriu și emiți singur facturile. Ai un număr KVK olandez sau un cod de TVA din UE."],
+      flexwerker: ["Lucrător flexibil", "Lucrezi la cerere. TVA-ul este opțional sau intri sub schema KOR."],
+      uitzendkracht: ["Lucrător temporar", "Lucrezi ca angajat prin ZekerFlex. Nu ai nevoie de KVK, dar ai nevoie de un BSN."],
+    },
+    pick: "Continuă",
+    saving: "Se salvează…",
+    saveError: "Salvarea nu a reușit. Încearcă din nou.",
+    chosen: "Ales: {kind}",
+    emailBody: "Ți-am trimis un e-mail cu un cod sau un link. Confirmă adresa ca să poți continua.",
+    emailCta: "Mergi la confirmare",
+    verifyBody: "Completează-ți datele și verifică-ți identitatea. După aceea poți accepta joburi.",
+    verifyCta: "Completează datele",
+    browse: "Poți deja să cauți joburi mai jos.",
+  },
   lang: { label: "Limbă", hint: "Alege limba aplicației." },
   /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
   ibanCode: {
@@ -4042,6 +4134,29 @@ const ro: FreelancerDict = {
 
 const uk: FreelancerDict = {
   nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
+  start: {
+    eyebrow: "Твій старт",
+    title: "Вітаємо! Спершу обери, у якому напрямку хочеш працювати.",
+    progress: "Виконано кроків: {done} з {total}",
+    kindStep: "Обери свій напрямок",
+    emailStep: "Підтвердь електронну адресу",
+    verifyStep: "Дані та особа",
+    kindHint: "Від цього залежить, як ти отримуєш оплату і що ми ще попросимо. Згодом можна змінити в розділі «Податки».",
+    kinds: {
+      zzp: ["Самозайнятий (ZZP)", "Ти працюєш на себе і сам виставляєш рахунки. У тебе є нідерландський номер KVK або номер ПДВ ЄС."],
+      flexwerker: ["Гнучкий працівник", "Ти працюєш за викликом. ПДВ необов'язковий або ти користуєшся схемою KOR."],
+      uitzendkracht: ["Тимчасовий працівник", "Ти працюєш за наймом через ZekerFlex. KVK не потрібен, потрібен BSN."],
+    },
+    pick: "Далі",
+    saving: "Збереження…",
+    saveError: "Не вдалося зберегти. Спробуй ще раз.",
+    chosen: "Обрано: {kind}",
+    emailBody: "Ми надіслали лист із кодом або посиланням. Підтверди адресу, щоб продовжити.",
+    emailCta: "Перейти до підтвердження",
+    verifyBody: "Заповни свої дані та пройди перевірку особи. Після цього зможеш брати роботу.",
+    verifyCta: "Заповнити дані",
+    browse: "Нижче ти вже можеш переглядати роботу.",
+  },
   lang: { label: "Мова", hint: "Оберіть мову застосунку." },
   /** Codeveld bij een gewijzigd uitbetaal-IBAN (lib/fiscal/iban-code-teksten.ts). */
   ibanCode: {
