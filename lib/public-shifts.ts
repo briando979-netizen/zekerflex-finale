@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { haversineMeters } from "@/lib/geo/geofencing";
+import { isTestklus } from "@/lib/shifts/testklus";
 
 // ---------------------------------------------------------------------------
 // Open klussen as the public (not logged-in) web sees them: /klussen, the city
@@ -24,6 +25,8 @@ export interface PublicShift {
   viaUitzendbureau: boolean;
   createdAt: Date;
   skill: string | null;
+  /** klus van ons eigen testbedrijf (lib/shifts/testklus.ts): niet in lijsten, geen JobPosting, noindex */
+  testklus: boolean;
 }
 
 const OPEN = ["OPEN", "MATCHING", "PARTIALLY_FILLED"] as const;
@@ -72,6 +75,7 @@ const toPublic = (s: Row): PublicShift => ({
   viaUitzendbureau: s.viaUitzendbureau,
   createdAt: s.createdAt,
   skill: s.requiredSkill?.name ?? null,
+  testklus: isTestklus({ title: s.title, bedrijf: s.branch.tenant.name }),
 });
 
 export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number; tenantId?: string } = {}): Promise<PublicShift[]> {
@@ -99,7 +103,8 @@ export async function publicOpenShifts(opts: { near?: { lat: number; lng: number
     take: 500,
     select,
   })) as Row[];
-  let out = rows.map(toPublic);
+  // Testklussen horen niet in openbare lijsten (en dus niet bij Google); op de eigen site van een bedrijf wel.
+  let out = rows.map(toPublic).filter((s) => opts.tenantId || !s.testklus);
   if (near) {
     const { lat, lng, km } = near;
     out = out.filter((s) => haversineMeters({ latitude: lat, longitude: lng }, { latitude: s.latitude, longitude: s.longitude }) <= km * 1000);

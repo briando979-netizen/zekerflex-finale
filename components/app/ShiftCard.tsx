@@ -146,6 +146,12 @@ export function ShiftCard({
         )}
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}
+          {shift.testklus && (
+            <span title={c.testklusUitleg} className="rounded border border-hairstrong bg-paper-soft px-1.5 py-0.5 text-[11px] font-bold text-neutralx-700">
+              {c.testklus}
+            </span>
+          )}
           {special && (
             <span className="rounded border border-crit/30 px-1.5 py-0.5 text-[11px] font-semibold text-crit">
               {c.specialForYou}

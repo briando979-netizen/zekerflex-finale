@@ -378,6 +378,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       )}
 
       <div className="mx-auto max-w-2xl px-4 py-5">
+        {s.testklus && (
+          <p className="mb-4 rounded-xl border border-hairstrong bg-paper-soft px-3.5 py-3 text-sm text-neutralx-700">
+            <strong className="block text-ink">{ft.card.testklus}</strong>
+            {ft.card.testklusUitleg}
+          </p>
+        )}
         <p className="text-sm font-semibold text-brand-600">{cleanBranchLabel(s.branch)}</p>
         <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink">{s.title}</h1>
 

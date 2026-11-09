@@ -7,6 +7,7 @@ import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplac
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { REACTIE_MARGE_MS, reactieVervalt } from "@/lib/offers/verval";
+import { isTestklus } from "@/lib/shifts/testklus";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -123,6 +124,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     replacementNote: null,
     myOffer: null,
     viaUitzendbureau: row.viaUitzendbureau,
+    testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name }),
   };
 }
 

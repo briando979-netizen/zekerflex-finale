@@ -15,6 +15,7 @@ import { followedTenantIds } from "@/lib/worker/follows";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { matchingAlert } from "@/lib/matching/job-alerts";
 import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
+import { isTestklus } from "@/lib/shifts/testklus";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -78,6 +79,8 @@ export interface MarketplaceShift {
   fastPay: boolean;
   /** only uitzendkrachten (payroll-track) can react to this shift */
   viaUitzendbureau: boolean;
+  /** klus van ons eigen testbedrijf (lib/shifts/testklus.ts): geen echt werk, de kaart zegt dat */
+  testklus: boolean;
   /** what other freelancers rated this company (null = no reviews yet) */
   companyRating?: { average: number; count: number } | null;
   /** "Extra informatie" from the employer (where to report, parking, what to bring) */
@@ -276,7 +279,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     branchId: true,
     viaUitzendbureau: true,
     requiredSkill: { select: { name: true } },
-    branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true } },
+    branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
     _count: { select: { assignments: { where: { cancelledAt: null } } } },
   } as const;
 
@@ -382,6 +385,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         myOffer: offerByShift.get(s.id) ?? null,
         fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
+        testklus: isTestklus({ title: s.title, bedrijf: s.branch.tenant.name }),
         companyRating: ratingByTenant.get(s.branch.tenantId) ?? null,
         companyLogoUrl: beeldByTenant.get(s.branch.tenantId)?.logoUrl ?? null,
         useLogo: beeldByTenant.get(s.branch.tenantId)?.useLogo ?? false,
@@ -457,6 +461,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
           postalCode: true,
           geofenceRadiusMeters: true,
           tenantId: true,
+          tenant: { select: { name: true } },
           matchingConfig: true,
         },
       },
@@ -588,6 +593,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       myOffer: null,
       fastPay: (await fastPayAvailableFor([row.branch.tenantId])).get(row.branch.tenantId) ?? false,
       viaUitzendbureau: row.viaUitzendbureau,
+      testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name }),
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {
     // begonnen zonder keuze: niet uitgekozen, niet meer "in afwachting" (lib/offers/verval.ts)
