@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
 
 type Kind = "zzp" | "flexwerker" | "uitzendkracht";
-type StepKey = "kind" | "email" | "verify";
+type StepKey = "kind" | "email" | "verify" | "werkrecht";
 
 const KINDS: Kind[] = ["zzp", "flexwerker", "uitzendkracht"];
 
@@ -33,10 +33,13 @@ export function WerkerStartWizard({
   workerKind,
   emailVerified,
   profileComplete,
+  werkrechtOk,
 }: {
   workerKind: Kind | null;
   emailVerified: boolean;
   profileComplete: boolean;
+  /** recht om te werken in Nederland in orde (lib/werkrecht): verklaring + bewijs */
+  werkrechtOk: boolean;
 }) {
   const t = useFT().start;
   const router = useRouter();
@@ -45,13 +48,13 @@ export function WerkerStartWizard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const done: Record<StepKey, boolean> = { kind: kind !== null, email: emailVerified, verify: profileComplete };
-  const ORDER: StepKey[] = ["kind", "email", "verify"];
+  const done: Record<StepKey, boolean> = { kind: kind !== null, email: emailVerified, verify: profileComplete, werkrecht: werkrechtOk };
+  const ORDER: StepKey[] = ["kind", "email", "verify", "werkrecht"];
   const first = ORDER.find((k) => !done[k]);
   const [open, setOpen] = useState<StepKey>(first ?? "verify");
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
-  const label: Record<StepKey, string> = { kind: t.kindStep, email: t.emailStep, verify: t.verifyStep };
+  const label: Record<StepKey, string> = { kind: t.kindStep, email: t.emailStep, verify: t.verifyStep, werkrecht: t.werkrechtStep };
 
   async function save() {
     if (!pick || busy) return;
@@ -83,7 +86,7 @@ export function WerkerStartWizard({
     <section className="card mb-6 overflow-hidden p-0" aria-labelledby="werker-start-titel">
       <div className="border-b border-hair p-5">
         <p className="eyebrow mb-1">{t.eyebrow}</p>
-        <h2 id="werker-start-titel" className="font-display text-xl font-bold leading-tight text-ink">{t.title}</h2>
+        <h2 id="werker-start-titel" className="font-display text-xl font-bold leading-tight text-ink">{kind === null ? t.title : t.titleRest}</h2>
         <div className="mt-3 flex items-center gap-3">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hair" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
@@ -153,6 +156,13 @@ export function WerkerStartWizard({
                 <div className="space-y-3 px-5 pb-5">
                   <p className="text-sm text-neutralx-600">{t.verifyBody}</p>
                   <Link href="/dashboard/verificatie" className="btn-primary inline-block text-sm">{t.verifyCta}</Link>
+                </div>
+              )}
+
+              {isOpen && k === "werkrecht" && (
+                <div className="space-y-3 px-5 pb-5">
+                  <p className="text-sm text-neutralx-600">{t.werkrechtBody}</p>
+                  {!werkrechtOk && <Link href="/dashboard/verificatie#werkrecht" className="btn-primary inline-block text-sm">{t.werkrechtCta}</Link>}
                 </div>
               )}
             </li>

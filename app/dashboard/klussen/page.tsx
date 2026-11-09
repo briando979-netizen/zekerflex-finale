@@ -8,6 +8,7 @@ import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
 import { getFiscal } from "@/lib/fiscal/store";
+import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 import { isBirthdayToday } from "@/lib/birthday";
 import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
@@ -29,11 +30,12 @@ export default async function KlussenPage(
   const t = await getFreelancerDict();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
 
-  const [fiscal, today, completed, overview] = await Promise.all([
+  const [fiscal, today, completed, overview, werkrecht] = await Promise.all([
     getFiscal(principal.userId),
     todaysShifts(principal.userId),
     completedKlussenCount(principal.userId),
     getFreelancerOverview(principal.userId),
+    werkrechtVoorWerk(principal.userId, "NL"),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
   const greetLabels = {
@@ -64,11 +66,13 @@ export default async function KlussenPage(
         labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
       />
       <WilReagerenNudge />
-      {!overview.profileComplete && (
+      {/* ook ná een compleet profiel: zonder recht om te werken geen betaalde klus (lib/werkrecht) */}
+      {(!overview.profileComplete || !werkrecht.ok) && (
         <WerkerStartWizard
           workerKind={fiscal.workerKind}
           emailVerified={Boolean(principal.emailVerifiedAt)}
           profileComplete={overview.profileComplete}
+          werkrechtOk={werkrecht.ok}
         />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">
