@@ -39,6 +39,7 @@ export default async function WerkgeverDienstenPage() {
     listCounterOffers(500),
   ]);
 
+  const pendingReacties = offers.filter((o) => o.status === "pending").length;
   const offerCountByShift = new Map<string, number>();
   for (const o of offers) if (o.status === "pending") offerCountByShift.set(o.shiftId, (offerCountByShift.get(o.shiftId) ?? 0) + 1);
 
@@ -54,9 +55,14 @@ export default async function WerkgeverDienstenPage() {
         eyebrow={sh.eyebrow}
         subtitle={sh.subtitle}
         action={
-          <Link href="/werkgever/diensten/nieuw" className="btn-primary">
-            {sh.placeShift}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/werkgever/reacties" className="btn-ghost">
+              Reacties{pendingReacties > 0 ? ` (${pendingReacties})` : ""}
+            </Link>
+            <Link href="/werkgever/diensten/nieuw" className="btn-primary">
+              {sh.placeShift}
+            </Link>
+          </div>
         }
       />
 
