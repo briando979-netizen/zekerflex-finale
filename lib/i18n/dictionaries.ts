@@ -515,6 +515,9 @@ export const nl = {
     emptyBody: "Er staan geen uren open ter goedkeuring.",
     disputePill: "Dispuut",
     viaConsole: "Via disputen-console",
+    bulkButton: "Keur alle {n} briefjes zonder signaal goed",
+    bulkHint: "Samen {bedrag}. Met een signaal, extra kosten of een dispuut keur je apart goed.",
+    bulkConfirm: "{n} urenbriefjes zonder signaal goedkeuren, samen {bedrag}? De facturen worden meteen gemaakt.",
   },
   company: {
     title: "Bedrijfsprofiel",

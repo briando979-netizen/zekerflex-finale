@@ -511,6 +511,9 @@ export const en: Dict = {
     emptyBody: "There are no hours awaiting approval.",
     disputePill: "Dispute",
     viaConsole: "Via disputes console",
+    bulkButton: "Approve all {n} timesheets without a signal",
+    bulkHint: "Together {bedrag}. Timesheets with a signal, extra costs or a dispute are approved one by one.",
+    bulkConfirm: "Approve {n} timesheets without a signal, together {bedrag}? The invoices are created right away.",
   },
   company: {
     title: "Company profile",
