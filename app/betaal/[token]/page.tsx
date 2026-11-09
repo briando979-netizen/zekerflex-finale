@@ -7,6 +7,7 @@ import { payUrl, verifyPayToken } from "@/lib/billing/pay-link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { QrCode } from "@/components/billing/QrCode";
 import { PayLinkButton } from "@/components/billing/PayLinkButton";
+import { inIosApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -56,7 +57,9 @@ export default async function BetaalPage(props: {
 
   const recipient = inv.recipientTenant?.name ?? inv.recipientFreelancer?.user.fullName ?? null;
   const justPaid = inv.status === "ISSUED" && returnStatus === "betaald";
-  const payable = inv.status === "ISSUED" && !justPaid && inv.totalCents > 0 && Boolean(recipient);
+  // een domeinnaam (digitaal) is in de iPhone-app niet te betalen (App Store 3.1.1, lib/app-mode.ts)
+  const nietInIphone = inv.type === "DOMEIN" && (await inIosApp());
+  const payable = inv.status === "ISSUED" && !justPaid && inv.totalCents > 0 && Boolean(recipient) && !nietInIphone;
 
   return (
     <main className="min-h-screen bg-paper-soft px-4 py-10">
@@ -107,6 +110,9 @@ export default async function BetaalPage(props: {
                   </p>
                 </>
               ) : (
+                nietInIphone ? (
+                <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">Deze factuur kan niet in de iPhone-app betaald worden.</p>
+                ) : (
                 <p className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600">
                   Deze factuur kan niet online betaald worden. Neem contact op met ZekerFlex via{" "}
                   <a href={`mailto:${env.MAIL_ADMIN}`} className="font-medium text-brand-600 hover:underline">
@@ -114,6 +120,7 @@ export default async function BetaalPage(props: {
                   </a>
                   .
                 </p>
+                )
               )}
             </div>
           </section>

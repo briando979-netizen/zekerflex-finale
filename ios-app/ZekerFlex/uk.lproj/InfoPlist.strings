@@ -1,0 +1,6 @@
+/* Waarom de app iets mag (uk) */
+"NSCameraUsageDescription" = "Для фото документа, що посвідчує особу, селфі та відеодзвінків.";
+"NSPhotoLibraryUsageDescription" = "Щоб завантажити фото або документ із фотобібліотеки.";
+"NSMicrophoneUsageDescription" = "Для дзвінків і відеодзвінків у чаті.";
+"NSLocationWhenInUseUsageDescription" = "Щоб відмічати прихід і відхід на робочому місці.";
+"NFCReaderUsageDescription" = "Щоб зчитати чип ID-картки або паспорта.";

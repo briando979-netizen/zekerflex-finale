@@ -55,6 +55,20 @@ export function appKanChipLezen(cookie: string | null | undefined): boolean {
   return cookieStringIsApp(cookie) && cookieStringHasChip(cookie);
 }
 
+/**
+ * De iPhone-app (ios-app/, WKWebView) start met /start?utm_source=ios en krijgt naast
+ * APP_COOKIE (dezelfde app-modus als Android) deze cookie: Apple wil een paar dingen
+ * anders dan Google. Digitale abonnementen mogen in een iPhone-app alleen via Apple's
+ * eigen betaling (richtlijn 3.1.1), en "inloggen met Google" alleen naast "inloggen met
+ * Apple" (4.8); in de iPhone-app staan die dus uit.
+ */
+export const APP_IOS_COOKIE = "zf_app_ios";
+
+/** True wanneer de cookie-tekst bij de iPhone-app hoort. */
+export function cookieStringIsIos(cookie: string | null | undefined): boolean {
+  return /(?:^|;\s*)zf_app_ios=1(?:;|$)/.test(cookie ?? "");
+}
+
 export function cookieStringIsApp(cookie: string | null | undefined): boolean {
   return /(?:^|;\s*)zf_app=1(?:;|$)/.test(cookie ?? "");
 }

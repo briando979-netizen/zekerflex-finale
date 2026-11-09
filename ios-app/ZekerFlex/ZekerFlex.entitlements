@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- pushmeldingen via Apple (lib/notifications/push/apns.ts) -->
+	<key>aps-environment</key>
+	<string>production</string>
+	<!-- passkeys van zekerflex.com in de app, en links naar de app-schermen openen de app
+	     (app/.well-known/apple-app-site-association/route.ts) -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:zekerflex.com</string>
+		<string>applinks:zekerflex.com</string>
+		<string>applinks:www.zekerflex.com</string>
+	</array>
+	<!-- de chip van een paspoort of ID-kaart lezen (Core NFC) -->
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>TAG</string>
+	</array>
+</dict>
+</plist>

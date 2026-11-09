@@ -5,6 +5,7 @@ import { BASIS, BUNDEL, MODULES, MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { euro } from "@/lib/horeca/weergave";
 import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
 import { StripeKoppeling } from "@/components/horeca/beheer/StripeKoppeling";
+import { NietInIphone } from "@/components/app/NietInIphone";
 
 // Modules & abonnement: de basis zit er altijd in, losse modules zet de zaak
 // aan of uit. Wat nog niet klaar is, staat er eerlijk als "binnenkort" en is
@@ -65,14 +66,25 @@ export function ModulesTab({ data, doe }: { data: BeheerData; doe: Doe }) {
               {nodig.length > 0 && <p className="mt-1 text-xs text-neutralx-500">Werkt samen met: {nodig.join(", ")} (gaat vanzelf mee aan).</p>}
               {k === "betalen" && isAan && <StripeKoppeling />}
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                {m.klaar ? (
+                {m.klaar && isAan ? (
                   <button
                     type="button"
-                    className={isAan ? "btn-ghost" : "btn-primary"}
-                    onClick={() => void doe({ actie: "module", module: k, aan: !isAan }, isAan ? `${m.naam} staat uit.` : `${m.naam} staat aan.`)}
+                    className="btn-ghost"
+                    onClick={() => void doe({ actie: "module", module: k, aan: false }, `${m.naam} staat uit.`)}
                   >
-                    {isAan ? "Uitzetten" : "Aanzetten"}
+                    Uitzetten
                   </button>
+                ) : m.klaar ? (
+                  // aanzetten kost per maand: niet in de iPhone-app (App Store 3.1.1)
+                  <NietInIphone melding>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => void doe({ actie: "module", module: k, aan: true }, `${m.naam} staat aan.`)}
+                    >
+                      Aanzetten
+                    </button>
+                  </NietInIphone>
                 ) : (
                   <p className="text-sm text-neutralx-500">Deze module komt binnenkort in het horeca-pakket.</p>
                 )}

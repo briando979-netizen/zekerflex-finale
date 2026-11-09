@@ -1,0 +1,6 @@
+/* Waarom de app iets mag (pl) */
+"NSCameraUsageDescription" = "Do zdjęć dokumentu tożsamości i selfie oraz do rozmów wideo.";
+"NSPhotoLibraryUsageDescription" = "Aby przesłać zdjęcie lub dokument z biblioteki zdjęć.";
+"NSMicrophoneUsageDescription" = "Do rozmów i rozmów wideo na czacie.";
+"NSLocationWhenInUseUsageDescription" = "Aby meldować przyjście i wyjście w miejscu pracy.";
+"NFCReaderUsageDescription" = "Aby odczytać chip dowodu osobistego lub paszportu.";

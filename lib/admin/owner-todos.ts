@@ -595,6 +595,22 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("app-105"),
     },
     {
+      id: "ios-app",
+      group: "Vindbaarheid & app",
+      title: "ZekerFlex in de App Store (iPhone): Apple-ontwikkelaarsaccount en sleutels",
+      why: "De iPhone-app staat klaar (map ios-app): de site in app-modus met pushmeldingen via Apple, het chiplezen van je ID-kaart via NFC en passkeys. Digitale abonnementen en inloggen met Google staan in de iPhone-app uit, zoals Apple eist. Bouwen gebeurt op een Mac in de cloud, dus je hebt zelf geen Mac nodig.",
+      how: [
+        "Neem het Apple Developer Program (€ 99 per jaar) op developer.apple.com, het liefst als organisatie op naam van Zekerflex, Inc. Daarvoor is een D-U-N-S-nummer nodig: gratis, Apple helpt bij het aanvragen, het duurt meestal 1 à 2 weken.",
+        "Maak daarna in App Store Connect bij Gebruikers en toegang → Integraties → App Store Connect API een teamsleutel met de rol App Manager. Geef Claude het .p8-bestand, de Key ID en de Issuer ID, plus de Team ID (Membership-pagina).",
+        "Maak ook bij Certificates, Identifiers & Profiles → Keys een sleutel met 'Apple Push Notifications service' en geef Claude dat .p8-bestand en de Key ID. Claude zet die op de server (APNS_*, APPLE_TEAM_ID).",
+        "Bouwen gebeurt bij Codemagic (gratis tot 500 minuten per maand): maak een account op codemagic.io (inloggen met GitHub), voeg de repository toe en zet bij Integrations → App Store Connect dezelfde sleutel met de naam ZekerFlex. Claude start de bouw; de app komt in TestFlight.",
+        "Heb je een iPhone? Installeer TestFlight en test de app eerst zelf (inloggen, meldingen, chip lezen). Daarna vult Claude de gegevens voor de App Store in en stuur jij hem ter keuring in.",
+        "Vink deze taak af zodra de app in de App Store staat.",
+      ],
+      auto: false,
+      ...m("ios-app"),
+    },
+    {
       id: "play-rijschool-apps",
       group: "Vindbaarheid & app",
       title: "Google Play koppelen voor de apps van rijscholen",

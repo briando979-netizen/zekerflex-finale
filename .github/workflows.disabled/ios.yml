@@ -1,0 +1,80 @@
+# De iPhone-app bouwen en naar App Store Connect (TestFlight) sturen, op een Mac van
+# GitHub. Staat in workflows.disabled zolang GitHub Actions uit staat (README hier);
+# de eerste keuze is codemagic.yaml. Alleen met de hand starten (Actions → iOS-app →
+# Run workflow), met een buildnummer dat hoger is dan het vorige. Zie ios-app/README.md.
+# Nodig als repository-secrets: ASC_KEY_P8 (inhoud van het .p8-bestand van App Store
+# Connect), ASC_KEY_ID, ASC_ISSUER_ID en APPLE_TEAM_ID. Ondertekenen gaat automatisch
+# met die sleutel (Apple maakt de certificaten zelf aan); er staat niets geheims in git.
+name: iOS-app
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Buildnummer (alleen cijfers, hoger dan het vorige)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bouw:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ios-app
+    env:
+      BUILD: ${{ inputs.build }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controle
+        run: |
+          [[ "$BUILD" =~ ^[0-9]{1,6}$ ]] || { echo "Buildnummer moet uit cijfers bestaan"; exit 1; }
+          [[ -n "$ASC_KEY_ID" && -n "$ASC_ISSUER_ID" && -n "$APPLE_TEAM_ID" ]] || { echo "Secrets ontbreken (zie ios-app/README.md)"; exit 1; }
+
+      - name: Xcode-project maken (XcodeGen)
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Sleutel van App Store Connect
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey.p8"
+
+      - name: Bouwen
+        run: |
+          xcodebuild -project ZekerFlex.xcodeproj -scheme ZekerFlex -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/ZekerFlex.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            archive
+
+      - name: Naar App Store Connect (TestFlight)
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/ZekerFlex.xcarchive" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Sleutel weg
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"

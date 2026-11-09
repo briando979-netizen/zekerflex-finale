@@ -1,0 +1,6 @@
+/* Waarom de app iets mag (en) */
+"NSCameraUsageDescription" = "For photos of your ID document and your selfie, and for video calls.";
+"NSPhotoLibraryUsageDescription" = "To upload a photo or document from your photo library.";
+"NSMicrophoneUsageDescription" = "For calls and video calls in the chat.";
+"NSLocationWhenInUseUsageDescription" = "To check in and out at the workplace.";
+"NFCReaderUsageDescription" = "To read the chip of your ID card or passport.";

@@ -1,0 +1,19 @@
+/* ZekerFlex voor iPhone — teksten (uk). Zelfde inhoud als chip.xml van de Android-app. */
+"chip_titel" = "Зчитування чипа";
+"chip_uitleg" = "Прикладіть ID-картку або паспорт до верхньої частини задньої панелі iPhone і не рухайте.";
+"chip_lezen" = "Чип знайдено. Не рухайте…";
+"chip_controleren" = "Зчитано. Перевіряємо чип…";
+"chip_klaar_echt" = "Готово: дані на чипі підписані державою.";
+"chip_klaar_anders" = "Готово. Ще перевірить працівник.";
+"chip_geen_nfc" = "Цей iPhone не може зчитати чип. Пропустіть цей крок.";
+"chip_fout_lezen" = "Не вдалося зчитати чип. Тримайте документ нерухомо біля iPhone і спробуйте ще раз.";
+"chip_fout_sleutel" = "Чип не відкривається з цими даними. Відскануйте код на документі ще раз у ZekerFlex.";
+"chip_fout_code" = "Це посилання застаріло. Почніть зчитування чипа знову в ZekerFlex.";
+"chip_fout_net" = "Немає з'єднання з ZekerFlex. Перевірте інтернет і спробуйте ще раз.";
+"chip_bevestig_vraag" = "Це стосується облікового запису ZekerFlex: %@. Це ви?";
+"chip_bevestig_ja" = "Так, це я";
+"chip_bevestig_nee" = "Ні, зупинити";
+"ok" = "OK";
+"annuleren" = "Скасувати";
+"offline" = "Немає з'єднання з ZekerFlex. Перевірте інтернет.";
+"opnieuw" = "Спробувати ще раз";

@@ -1,0 +1,37 @@
+# De iPhone-app bouwen op een Mac van Codemagic (gratis tot 500 minuten per maand), als
+# alternatief voor .github/workflows/ios.yml. Zie ios-app/README.md.
+# In Codemagic: Team → Integrations → App Store Connect → sleutel "ZekerFlex" toevoegen
+# (het .p8-bestand, Key ID en Issuer ID). Daarna deze workflow met de hand starten.
+workflows:
+  ios-app:
+    name: ZekerFlex voor iPhone
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    integrations:
+      app_store_connect: ZekerFlex
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.zekerflex.app
+    scripts:
+      - name: Xcode-project maken (XcodeGen)
+        script: |
+          cd ios-app
+          brew install xcodegen
+          xcodegen generate
+      - name: Ondertekenen
+        script: xcode-project use-profiles --project ios-app/ZekerFlex.xcodeproj
+      - name: Bouwen
+        script: |
+          cd ios-app
+          xcode-project build-ipa \
+            --project ZekerFlex.xcodeproj \
+            --scheme ZekerFlex \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+    artifacts:
+      - ios-app/build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

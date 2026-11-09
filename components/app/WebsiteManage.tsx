@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RenewalView } from "@/lib/website/renewal";
 import type { MonitorView } from "@/lib/website/uptime";
+import { NietInIphone } from "@/components/app/NietInIphone";
 
 // ---------------------------------------------------------------------------
 // Opdrachtgevers-onderdeel "Website-beheer". Drie toestanden:
@@ -244,14 +245,16 @@ function LockedView({
                 <li key={f} className="flex gap-2"><span className="text-brand-600">✓</span>{f}</li>
               ))}
             </ul>
-            <button
-              type="button"
-              onClick={() => onSubscribe(key)}
-              disabled={busy !== null}
-              className="mt-5 rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50"
-            >
-              {busy === key ? "Bezig…" : `${plan.label} nemen — ${euro(plan.priceCentsPerMonth)}/mnd`}
-            </button>
+            <NietInIphone melding>
+              <button
+                type="button"
+                onClick={() => onSubscribe(key)}
+                disabled={busy !== null}
+                className="mt-5 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50"
+              >
+                {busy === key ? "Bezig…" : `${plan.label} nemen — ${euro(plan.priceCentsPerMonth)}/mnd`}
+              </button>
+            </NietInIphone>
           </div>
         ))}
       </div>

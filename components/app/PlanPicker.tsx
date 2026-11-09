@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { API_PLANS, PLAN_KEYS, type PlanKey } from "@/lib/api-plans/catalog";
+import { NietInIphone } from "@/components/app/NietInIphone";
 
 const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 
@@ -84,14 +85,16 @@ export function PlanPicker({
                   Huidig abonnement
                 </span>
               ) : free ? null : plan.selfService ? (
-                <button
-                  type="button"
-                  onClick={() => upgrade(key)}
-                  disabled={busy === key}
-                  className="btn-primary mt-4 w-full text-xs disabled:opacity-50"
-                >
-                  {busy === key ? "Bezig…" : "Kiezen"}
-                </button>
+                <NietInIphone>
+                  <button
+                    type="button"
+                    onClick={() => upgrade(key)}
+                    disabled={busy === key}
+                    className="btn-primary mt-4 w-full text-xs disabled:opacity-50"
+                  >
+                    {busy === key ? "Bezig…" : "Kiezen"}
+                  </button>
+                </NietInIphone>
               ) : (
                 <a href="mailto:sales@zekerflex.com" className="btn-ghost mt-4 block w-full text-center text-xs">
                   Contact sales
@@ -103,9 +106,11 @@ export function PlanPicker({
       </div>
       {err && <p role="alert" className="mt-3 text-sm text-crit">{err}</p>}
       {currentPlanKey !== "free" && !free && (
-        <button type="button" onClick={manage} disabled={busy === "portal"} className="btn-ghost mt-4 text-xs disabled:opacity-50">
-          {busy === "portal" ? "Bezig…" : "Abonnement beheren / opzeggen"}
-        </button>
+        <NietInIphone>
+          <button type="button" onClick={manage} disabled={busy === "portal"} className="btn-ghost mt-4 text-xs disabled:opacity-50">
+            {busy === "portal" ? "Bezig…" : "Abonnement beheren / opzeggen"}
+          </button>
+        </NietInIphone>
       )}
     </div>
   );

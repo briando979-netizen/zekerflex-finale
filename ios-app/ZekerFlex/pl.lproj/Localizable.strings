@@ -1,0 +1,19 @@
+/* ZekerFlex voor iPhone — teksten (pl). Zelfde inhoud als chip.xml van de Android-app. */
+"chip_titel" = "Odczyt chipu";
+"chip_uitleg" = "Przyłóż dowód osobisty lub paszport do górnej części tyłu iPhone'a i nie ruszaj.";
+"chip_lezen" = "Chip znaleziony. Nie ruszaj…";
+"chip_controleren" = "Odczytano. Sprawdzamy chip…";
+"chip_klaar_echt" = "Gotowe: dane w chipie są podpisane przez państwo.";
+"chip_klaar_anders" = "Gotowe. Sprawdzi to jeszcze pracownik.";
+"chip_geen_nfc" = "Ten iPhone nie może odczytać chipu. Pomiń ten krok.";
+"chip_fout_lezen" = "Nie udało się odczytać chipu. Trzymaj dokument nieruchomo przy iPhonie i spróbuj ponownie.";
+"chip_fout_sleutel" = "Chip nie otwiera się z tymi danymi. Zeskanuj ponownie kod z dokumentu w ZekerFlex.";
+"chip_fout_code" = "To połączenie wygasło. Rozpocznij odczyt chipu ponownie w ZekerFlex.";
+"chip_fout_net" = "Brak połączenia z ZekerFlex. Sprawdź internet i spróbuj ponownie.";
+"chip_bevestig_vraag" = "To należy do konta ZekerFlex: %@. Czy to Ty?";
+"chip_bevestig_ja" = "Tak, to ja";
+"chip_bevestig_nee" = "Nie, zatrzymaj";
+"ok" = "OK";
+"annuleren" = "Anuluj";
+"offline" = "Brak połączenia z ZekerFlex. Sprawdź internet.";
+"opnieuw" = "Spróbuj ponownie";

@@ -41,6 +41,7 @@ export default async function WerkgeverFacturenPage() {
   const rows: InvoiceRow[] = invoices.map((i) => ({
     id: i.id,
     number: i.number,
+    ...(i.type === "DOMEIN" ? { digitaal: true } : {}),
     typeLabel:
       i.type === "PLATFORM_FEE"
         ? iv.typeFee

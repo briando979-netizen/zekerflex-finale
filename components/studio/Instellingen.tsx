@@ -7,6 +7,7 @@ import { Card, IExternal, PageHead, btn, input } from "@/components/studio/ui";
 import type { Company, Winkel } from "@/lib/sites/types";
 import { leesBedrag } from "@/lib/sites/winkel";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
+import { NietInIphone } from "@/components/app/NietInIphone";
 
 // ---------------------------------------------------------------------------
 // Websitestudio → Instellingen: hoe bestellen en bezorgen werkt (meteen live),
@@ -42,12 +43,14 @@ export default function Instellingen() {
             <Domein onChange={() => void reload()} />
           </div>
           {!shop && (
+            <NietInIphone>
             <details className="mt-4 rounded-xl border border-[#ebebeb] p-3">
               <summary className="cursor-pointer text-sm font-semibold text-[#1a1a1a]">Nog geen domeinnaam? Zoek en bestel er één</summary>
               <div className="mt-3">
                 <DomeinZoeker terugNaar="/studio/website/instellingen" smal />
               </div>
             </details>
+            </NietInIphone>
           )}
         </Card>
       </div>

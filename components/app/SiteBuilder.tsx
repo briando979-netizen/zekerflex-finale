@@ -8,6 +8,7 @@ import SiteStats from "@/components/app/SiteStats";
 import { categorieen } from "@/lib/sites/winkel";
 import { DAGEN } from "@/lib/horeca/tijden";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
+import { NietInIphone } from "@/components/app/NietInIphone";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -864,12 +865,14 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
           </p>
         )}
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
-        <details className="rounded-lg border border-hair p-3">
-          <summary className="cursor-pointer font-semibold text-ink">Nog geen domeinnaam? Zoek en bestel er één</summary>
-          <div className="mt-3">
-            <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal onGekoppeld={() => void herlaad()} />
-          </div>
-        </details>
+        <NietInIphone>
+          <details className="rounded-lg border border-hair p-3">
+            <summary className="cursor-pointer font-semibold text-ink">Nog geen domeinnaam? Zoek en bestel er één</summary>
+            <div className="mt-3">
+              <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal onGekoppeld={() => void herlaad()} />
+            </div>
+          </details>
+        </NietInIphone>
       </div>
     );
   }

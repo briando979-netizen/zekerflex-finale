@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { NietInIphone } from "@/components/app/NietInIphone";
 import {
   MODULE_DEFS,
   MODULE_LIJST,
@@ -327,6 +328,7 @@ export function Verbinding({ data }: { data: VerbindingData }) {
                       </label>
                     )}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <NietInIphone melding>
                       <button type="button" className="btn-primary" disabled={busy === def.sleutel} onClick={() => start(def.sleutel)}>
                         {busy === def.sleutel
                           ? "Even geduld…"
@@ -340,6 +342,7 @@ export function Verbinding({ data }: { data: VerbindingData }) {
                                   ? "Zet aan"
                                   : "Zet aan en betaal"}
                       </button>
+                      </NietInIphone>
                       {!leverbaar && !def.opAanvraag && (
                         <span className="text-xs text-neutralx-500">We richten de server hiervoor in; aanmelden kost nog niets.</span>
                       )}
