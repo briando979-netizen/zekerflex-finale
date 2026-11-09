@@ -163,6 +163,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       documentExpiry: parsed.data.documentExpiry,
       nameOnDocument: parsed.data.nameOnDocument,
       files: { front: documentFront, back: documentBack, selfie },
+      ...(viaTelefoon ? { viaTweedeToestel: true } : {}),
     });
 
     return NextResponse.json(result, { status: 200 });

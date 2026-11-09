@@ -281,6 +281,21 @@ export interface AuthDict {
       telKlaarUitleg: string;
       telOngeldig: string;
       telVersturen: string;
+      /** review H1/H2: eerst het account op de telefoon, eerst controleren op de laptop */
+      telAccountVraag: string;
+      telWaarschuwing: string;
+      telJaMijn: string;
+      telNietMijn: string;
+      telGeweigerd: string;
+      telAnderToestel: string;
+      telefoonControle: string;
+      telefoonNaam: string;
+      telefoonNummer: string;
+      telefoonGeldigTot: string;
+      telefoonKlopt: string;
+      telefoonKloptNiet: string;
+      telefoonAnderToestel: string;
+      telefoonGeweigerd: string;
     };
   };
 }
@@ -564,6 +579,20 @@ const nl: AuthDict = {
       telKlaarUitleg: "Je foto's zijn veilig verstuurd. Op je laptop rondt ZekerFlex de verificatie af. Je kunt dit scherm sluiten.",
       telOngeldig: "Deze link is niet (meer) geldig. Maak op je laptop een nieuwe QR-code.",
       telVersturen: "Versturen naar je laptop",
+      telAccountVraag: "Je bevestigt je identiteit voor het ZekerFlex-account van {naam} ({email}). Is dit jouw eigen account?",
+      telWaarschuwing: "Heeft iemand anders je deze link gestuurd? Stop dan. Met jouw ID en selfie zou die persoon zich als jou kunnen voordoen.",
+      telJaMijn: "Ja, dit is mijn account",
+      telNietMijn: "Nee, dit is niet mijn account",
+      telGeweigerd: "Dank je. De link werkt niet meer en er is niets verstuurd. Probeert iemand je zo te misleiden? Meld het bij support@zekerflex.com.",
+      telAnderToestel: "Deze link is al op een ander toestel geopend. Maak op je laptop een nieuwe QR-code.",
+      telefoonControle: "Dit kwam binnen van je telefoon. Klopt het?",
+      telefoonNaam: "Naam op het document",
+      telefoonNummer: "Documentnummer eindigt op",
+      telefoonGeldigTot: "Geldig tot",
+      telefoonKlopt: "Klopt, verstuur mijn verificatie",
+      telefoonKloptNiet: "Klopt niet, opnieuw",
+      telefoonAnderToestel: "Let op: een ander toestel probeerde deze code ook te openen. Herken je de foto's niet, kies dan 'Klopt niet'.",
+      telefoonGeweigerd: "Op de telefoon is gekozen voor 'Dit is niet mijn account'. Er is niets verstuurd.",
     },
   },
 };
@@ -847,6 +876,20 @@ const en: AuthDict = {
       telKlaarUitleg: "Your photos were sent securely. ZekerFlex completes the verification on your laptop. You can close this screen.",
       telOngeldig: "This link is no longer valid. Create a new QR code on your laptop.",
       telVersturen: "Send to your laptop",
+      telAccountVraag: "You are confirming your identity for the ZekerFlex account of {naam} ({email}). Is this your own account?",
+      telWaarschuwing: "Did someone else send you this link? Then stop. With your ID and selfie that person could pretend to be you.",
+      telJaMijn: "Yes, this is my account",
+      telNietMijn: "No, this is not my account",
+      telGeweigerd: "Thank you. The link no longer works and nothing was sent. Is someone trying to trick you this way? Report it to support@zekerflex.com.",
+      telAnderToestel: "This link has already been opened on another device. Create a new QR code on your laptop.",
+      telefoonControle: "This arrived from your phone. Is it correct?",
+      telefoonNaam: "Name on the document",
+      telefoonNummer: "Document number ends in",
+      telefoonGeldigTot: "Valid until",
+      telefoonKlopt: "Correct, send my verification",
+      telefoonKloptNiet: "Not correct, start again",
+      telefoonAnderToestel: "Note: another device also tried to open this code. If you don't recognise the photos, choose 'Not correct'.",
+      telefoonGeweigerd: "On the phone, 'This is not my account' was chosen. Nothing was sent.",
     },
   },
 };
@@ -1130,6 +1173,20 @@ const pl: AuthDict = {
       telKlaarUitleg: "Zdjęcia zostały bezpiecznie wysłane. ZekerFlex dokończy weryfikację na laptopie. Możesz zamknąć ten ekran.",
       telOngeldig: "Ten link jest nieważny. Utwórz nowy kod QR na laptopie.",
       telVersturen: "Wyślij do laptopa",
+      telAccountVraag: "Potwierdzasz swoją tożsamość dla konta ZekerFlex użytkownika {naam} ({email}). Czy to Twoje własne konto?",
+      telWaarschuwing: "Czy ktoś inny wysłał Ci ten link? W takim razie przerwij. Z Twoim dokumentem i selfie ta osoba mogłaby podszyć się pod Ciebie.",
+      telJaMijn: "Tak, to moje konto",
+      telNietMijn: "Nie, to nie jest moje konto",
+      telGeweigerd: "Dziękujemy. Link już nie działa i nic nie zostało wysłane. Czy ktoś próbuje Cię w ten sposób oszukać? Zgłoś to na support@zekerflex.com.",
+      telAnderToestel: "Ten link został już otwarty na innym urządzeniu. Utwórz nowy kod QR na laptopie.",
+      telefoonControle: "To przyszło z Twojego telefonu. Czy wszystko się zgadza?",
+      telefoonNaam: "Imię i nazwisko w dokumencie",
+      telefoonNummer: "Numer dokumentu kończy się na",
+      telefoonGeldigTot: "Ważny do",
+      telefoonKlopt: "Zgadza się, wyślij moją weryfikację",
+      telefoonKloptNiet: "Nie zgadza się, zacznij od nowa",
+      telefoonAnderToestel: "Uwaga: inne urządzenie też próbowało otworzyć ten kod. Jeśli nie rozpoznajesz zdjęć, wybierz 'Nie zgadza się'.",
+      telefoonGeweigerd: "Na telefonie wybrano 'To nie jest moje konto'. Nic nie zostało wysłane.",
     },
   },
 };
@@ -1413,6 +1470,20 @@ const ro: AuthDict = {
       telKlaarUitleg: "Fotografiile au fost trimise în siguranță. ZekerFlex finalizează verificarea pe laptop. Poți închide acest ecran.",
       telOngeldig: "Acest link nu mai este valabil. Creează un cod QR nou pe laptop.",
       telVersturen: "Trimite la laptop",
+      telAccountVraag: "Îți confirmi identitatea pentru contul ZekerFlex al lui {naam} ({email}). Este acesta contul tău?",
+      telWaarschuwing: "Ți-a trimis altcineva acest link? Atunci oprește-te. Cu actul tău și selfie-ul tău, acea persoană s-ar putea da drept tine.",
+      telJaMijn: "Da, este contul meu",
+      telNietMijn: "Nu, nu este contul meu",
+      telGeweigerd: "Mulțumim. Linkul nu mai funcționează și nu s-a trimis nimic. Încearcă cineva să te păcălească așa? Raportează la support@zekerflex.com.",
+      telAnderToestel: "Acest link a fost deja deschis pe alt dispozitiv. Creează un cod QR nou pe laptop.",
+      telefoonControle: "Acestea au venit de pe telefonul tău. Este corect?",
+      telefoonNaam: "Numele de pe document",
+      telefoonNummer: "Numărul documentului se termină cu",
+      telefoonGeldigTot: "Valabil până la",
+      telefoonKlopt: "Corect, trimite verificarea mea",
+      telefoonKloptNiet: "Nu este corect, de la capăt",
+      telefoonAnderToestel: "Atenție: un alt dispozitiv a încercat și el să deschidă acest cod. Dacă nu recunoști fotografiile, alege 'Nu este corect'.",
+      telefoonGeweigerd: "Pe telefon s-a ales 'Nu este contul meu'. Nu s-a trimis nimic.",
     },
   },
 };
@@ -1696,6 +1767,20 @@ const uk: AuthDict = {
       telKlaarUitleg: "Ваші фото надіслано безпечно. ZekerFlex завершить перевірку на ноутбуці. Можна закрити цей екран.",
       telOngeldig: "Це посилання недійсне. Створіть новий QR-код на ноутбуці.",
       telVersturen: "Надіслати на ноутбук",
+      telAccountVraag: "Ви підтверджуєте свою особу для облікового запису ZekerFlex користувача {naam} ({email}). Це ваш власний обліковий запис?",
+      telWaarschuwing: "Хтось інший надіслав вам це посилання? Тоді зупиніться. З вашим документом і селфі ця людина могла б видати себе за вас.",
+      telJaMijn: "Так, це мій обліковий запис",
+      telNietMijn: "Ні, це не мій обліковий запис",
+      telGeweigerd: "Дякуємо. Посилання більше не працює, нічого не надіслано. Хтось намагається вас так обманути? Повідомте на support@zekerflex.com.",
+      telAnderToestel: "Це посилання вже відкрито на іншому пристрої. Створіть новий QR-код на ноутбуці.",
+      telefoonControle: "Це надійшло з вашого телефона. Усе правильно?",
+      telefoonNaam: "Ім'я в документі",
+      telefoonNummer: "Номер документа закінчується на",
+      telefoonGeldigTot: "Дійсний до",
+      telefoonKlopt: "Правильно, надіслати мою перевірку",
+      telefoonKloptNiet: "Неправильно, почати знову",
+      telefoonAnderToestel: "Увага: інший пристрій теж намагався відкрити цей код. Якщо ви не впізнаєте фото, виберіть 'Неправильно'.",
+      telefoonGeweigerd: "На телефоні вибрано 'Це не мій обліковий запис'. Нічого не надіслано.",
     },
   },
 };

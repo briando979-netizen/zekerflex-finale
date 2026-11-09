@@ -24,7 +24,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Verstuur de foto als multipart/form-data");
     });
     const code = form.get("code");
-    if (typeof code !== "string" || !(await overdrachtGeldig(code))) {
+    const toestel = form.get("toestel");
+    // alleen vanaf het toestel dat de link als eerste opende (lib/kyc/overdracht.ts)
+    if (typeof code !== "string" || !(await overdrachtGeldig(code, typeof toestel === "string" ? toestel : null))) {
       throw AppError.notFound("Deze link is niet (meer) geldig. Maak op je laptop een nieuwe QR-code.");
     }
     const foto = form.get("foto");
