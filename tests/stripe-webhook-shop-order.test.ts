@@ -5,7 +5,7 @@ const constructWebhookEvent = vi.fn();
 vi.mock("@/lib/billing/stripe", () => ({ constructWebhookEvent: (...a: unknown[]) => constructWebhookEvent(...a) }));
 
 const claimIdempotency = vi.fn().mockResolvedValue(true);
-vi.mock("@/lib/redis", () => ({ claimIdempotency: (...a: unknown[]) => claimIdempotency(...a) }));
+vi.mock("@/lib/redis", () => ({ claimIdempotency: (...a: unknown[]) => claimIdempotency(...a), releaseIdempotency: vi.fn().mockResolvedValue(undefined) }));
 
 const { logWarn, fakeLog } = vi.hoisted(() => {
   const logWarn = vi.fn();
@@ -30,14 +30,12 @@ vi.mock("@/lib/mail", () => ({
 }));
 
 const shopOrderFindUnique = vi.fn();
-const shopOrderUpdate = vi.fn();
 const shopOrderUpdateMany = vi.fn();
 const shopVariantUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shopOrder: {
       findUnique: (...a: unknown[]) => shopOrderFindUnique(...a),
-      update: (...a: unknown[]) => shopOrderUpdate(...a),
       updateMany: (...a: unknown[]) => shopOrderUpdateMany(...a),
     },
     shopProductVariant: { updateMany: (...a: unknown[]) => shopVariantUpdateMany(...a) },
@@ -88,14 +86,14 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
       },
     });
     shopOrderFindUnique.mockResolvedValue(ORDER);
-    shopOrderUpdate.mockResolvedValue({ ...ORDER, status: "RECEIVED" });
+    shopOrderUpdateMany.mockResolvedValue({ count: 1 });
 
     const res = await POST(webhookReq({}));
     expect(res.status).toBe(200);
 
-    expect(shopOrderUpdate).toHaveBeenCalledWith(
+    expect(shopOrderUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "order_1" },
+        where: { id: "order_1", status: { in: ["PENDING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"] } },
         data: expect.objectContaining({ status: "RECEIVED", stripePaymentIntentId: "pi_123" }),
       }),
     );
@@ -115,12 +113,12 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
       },
     });
     shopOrderFindUnique.mockResolvedValue(ORDER);
-    shopOrderUpdate.mockResolvedValue({ ...ORDER, status: "RECEIVED" });
+    shopOrderUpdateMany.mockResolvedValue({ count: 1 });
     shopVariantUpdateMany.mockResolvedValueOnce({ count: 0 });
 
     const res = await POST(webhookReq({}));
     expect(res.status).toBe(200);
-    expect(shopOrderUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "RECEIVED" }) }));
+    expect(shopOrderUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "RECEIVED" }) }));
     expect(sendMail).toHaveBeenCalledTimes(2);
   });
 
@@ -133,10 +131,10 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
       },
     });
     shopOrderFindUnique.mockResolvedValue({ ...ORDER, status: "RECEIVED" });
+    shopOrderUpdateMany.mockResolvedValue({ count: 0 }); // de voorwaarde in de update vangt het dubbele event
 
     const res = await POST(webhookReq({}));
     expect(res.status).toBe(200);
-    expect(shopOrderUpdate).not.toHaveBeenCalled();
     expect(sendMail).not.toHaveBeenCalled();
   });
 
@@ -150,7 +148,7 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
     const res = await POST(webhookReq({}));
     expect(res.status).toBe(200);
     expect(shopOrderFindUnique).not.toHaveBeenCalled();
-    expect(shopOrderUpdate).not.toHaveBeenCalled();
+    expect(shopOrderUpdateMany).not.toHaveBeenCalled();
   });
 
   it("marks an abandoned checkout PAYMENT_FAILED on checkout.session.expired", async () => {
