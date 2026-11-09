@@ -14,6 +14,7 @@ import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import type { EmployerScope } from "@/lib/dashboard/employer";
 import { losOp } from "@/lib/planner/service";
 import { planWeek } from "@/lib/planner/week";
+import { berekenDrukte, DRUKTE_WEKEN, type WeekDrukte } from "@/lib/planner/drukte";
 import { STANDAARD_INSTELLINGEN, type PlanDienst, type PlanInstellingen, type PlanKracht, type PlanResultaat } from "@/lib/planner/solver";
 
 /** Alleen een dienst die nog open staat, krijgt een voorstel uit de planner. */
@@ -190,6 +191,23 @@ export function leesInstellingen(raw: unknown): PlanInstellingen {
     voorkeur,
     reiskostenPerKmCents: num(r.reiskostenPerKmCents, 0, 100, STANDAARD_INSTELLINGEN.reiskostenPerKmCents),
   };
+}
+
+/** Verwachte drukte voor een week uit de eigen diensten van de weken ervoor (lib/planner/drukte.ts). */
+export async function leesDrukte(scope: EmployerScope, week: string): Promise<WeekDrukte | null> {
+  const w = planWeek(week);
+  if (!w) return null;
+  const shifts = await prisma.shift.findMany({
+    where: {
+      branch: branchFilter(scope),
+      status: { notIn: [ShiftStatus.DRAFT, ShiftStatus.CANCELLED] },
+      // een dag extra marge: berekenDrukte telt zelf op Nederlandse kalenderdagen
+      startsAt: { gte: new Date(w.van.getTime() - (DRUKTE_WEKEN * 7 + 1) * 86_400_000), lt: w.tot },
+    },
+    select: { startsAt: true, positions: true },
+    take: 5000,
+  });
+  return berekenDrukte(shifts.map((s) => ({ start: s.startsAt, plekken: s.positions })), w.van);
 }
 
 /** Reken het rooster voor een week uit en bewaar het als voorstel. */

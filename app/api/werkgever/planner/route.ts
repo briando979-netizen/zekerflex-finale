@@ -3,7 +3,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { berekenVoorstel, leesInstellingen, leesVoorstel } from "@/lib/planner/plan";
+import { berekenVoorstel, leesDrukte, leesInstellingen, leesVoorstel } from "@/lib/planner/plan";
 import { planWeek, weekSleutelVan } from "@/lib/planner/week";
 
 export const runtime = "nodejs";
@@ -23,12 +23,14 @@ function weekUit(raw: string | null | undefined): string {
   return w ? w.sleutel : weekSleutelVan(new Date());
 }
 
-// GET /api/werkgever/planner?week=2026-W46 — het laatste voorstel voor die week.
+// GET /api/werkgever/planner?week=2026-W46 — het laatste voorstel voor die week
+// en de verwachte drukte (gemiddelde uit de eigen diensten van de weken ervoor).
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const { tenantId } = await context();
+    const { tenantId, scope } = await context();
     const week = weekUit(new URL(request.url).searchParams.get("week"));
-    return NextResponse.json({ week, voorstel: await leesVoorstel(tenantId, week) });
+    const [voorstel, drukte] = await Promise.all([leesVoorstel(tenantId, week), leesDrukte(scope, week)]);
+    return NextResponse.json({ week, voorstel, drukte });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
