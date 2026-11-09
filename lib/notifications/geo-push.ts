@@ -70,7 +70,7 @@ export async function notifyNearbyOpenShifts(now = new Date(), radiusKm = DEFAUL
         homeLongitude: { gte: blng - 0.45, lte: blng + 0.45 },
         ...(shift.requiredSkillId ? { skills: { some: { skillId: shift.requiredSkillId } } } : {}),
       },
-      select: { userId: true, vatValid: true, kvkValid: true, homeLatitude: true, homeLongitude: true },
+      select: { userId: true, vatValid: true, kvkValid: true, country: true, homeLatitude: true, homeLongitude: true },
       take: 500,
     });
 

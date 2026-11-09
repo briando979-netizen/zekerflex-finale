@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
-import { geocodePostcode } from "@/lib/integrations/pdok";
+import { geocodeThuisbasis } from "@/lib/geo/thuisbasis";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
@@ -25,7 +25,7 @@ import { alertOwnerLater } from "@/lib/ops/alert";
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
 //
-//  1. Geocode the home base (PDOK — Dutch government geocoder).
+//  1. Geocode the home base (PDOK in NL, OpenStreetMap abroad: lib/geo/thuisbasis.ts).
 //  2. Validate the KVK against the Handelsregister (KVKBase).
 //  3. Run the built-in ID checker over the uploaded document:
 //     deterministic checks (name match, document-number format, expiry) +
@@ -53,6 +53,10 @@ export interface OnboardingInput {
   /** EU btw-nummer instead of KVK (optional) */
   vatNumber?: string | undefined;
   postalCode: string;
+  /** land van de thuisbasis (ISO, standaard NL); niet het fiscale land, zie lib/geo/thuisland.ts */
+  country?: string | undefined;
+  /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
+  city?: string | undefined;
   houseNumber?: string | undefined;
   payoutIban: string;
   /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
@@ -234,6 +238,10 @@ async function ensureFreelancerBase(input: {
   /** EU btw-nummer instead of a KVK number (e.g. a self-employed worker from Poland) */
   vatNumber?: string | undefined;
   postalCode: string;
+  /** land van de thuisbasis (ISO, standaard NL); niet het fiscale land, zie lib/geo/thuisland.ts */
+  country?: string | undefined;
+  /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
+  city?: string | undefined;
   houseNumber?: string | undefined;
   payoutIban: string;
   ibanCode?: string | undefined;
@@ -242,7 +250,13 @@ async function ensureFreelancerBase(input: {
 }): Promise<FreelancerBaseResult> {
   const checks: OnboardingResult["checks"] = [];
 
-  const geo = await geocodePostcode(input.postalCode, input.houseNumber);
+  // Vóór elke schrijfactie: een buitenlands adres dat OSM niet kent, stopt hier met een eerlijke fout.
+  const geo = await geocodeThuisbasis({
+    land: input.country ?? "NL",
+    postcode: input.postalCode,
+    plaats: input.city,
+    huisnummer: input.houseNumber,
+  });
   checks.push({
     label: "Thuisbasis",
     ok: !geo.approximate,
@@ -373,6 +387,10 @@ export async function saveFreelancerBase(input: {
   kvkNumber: string;
   vatNumber?: string | undefined;
   postalCode: string;
+  /** land van de thuisbasis (ISO, standaard NL); niet het fiscale land, zie lib/geo/thuisland.ts */
+  country?: string | undefined;
+  /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
+  city?: string | undefined;
   houseNumber?: string | undefined;
   payoutIban: string;
   ibanCode?: string | undefined;
@@ -451,6 +469,8 @@ export async function submitFreelancerOnboarding(
     kvkNumber: input.kvkNumber,
     vatNumber: input.vatNumber,
     postalCode: input.postalCode,
+    country: input.country,
+    city: input.city,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,
     ibanCode: input.ibanCode,
@@ -927,6 +947,10 @@ export interface WalletOnboardingInput {
   kvkNumber: string;
   vatNumber?: string | undefined;
   postalCode: string;
+  /** land van de thuisbasis (ISO, standaard NL); niet het fiscale land, zie lib/geo/thuisland.ts */
+  country?: string | undefined;
+  /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
+  city?: string | undefined;
   houseNumber?: string | undefined;
   payoutIban: string;
   ibanCode?: string | undefined;
@@ -977,6 +1001,8 @@ export async function submitFreelancerOnboardingViaWallet(
     kvkNumber: input.kvkNumber,
     vatNumber: input.vatNumber,
     postalCode: input.postalCode,
+    country: input.country,
+    city: input.city,
     houseNumber: input.houseNumber,
     payoutIban: input.payoutIban,
     ibanAlBevestigd: true,

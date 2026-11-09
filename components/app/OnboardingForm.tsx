@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
+import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
 import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
@@ -162,6 +163,7 @@ export function OnboardingForm({
 }) {
   const t = AUTH_DICTS[useI18n().locale].onb;
   const ft = useFT();
+  const thuisbasisFout = useThuisbasisFout();
   // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
   const [ibanCode, setIbanCode] = useState("");
   const [codeMelding, setCodeMelding] = useState<string | null>(null);
@@ -221,7 +223,7 @@ export function OnboardingForm({
       const res = await fetch("/api/onboarding", { method: "POST", body });
       const data = await res.json().catch(() => ({}));
       if (res.status === 413) return { ok: false, fout: t.tooBig };
-      if (!res.ok) return { ok: false, fout: (data?.error?.message as string | undefined) ?? t.failed };
+      if (!res.ok) return { ok: false, fout: thuisbasisFout(data) ?? (data?.error?.message as string | undefined) ?? t.failed };
       scanResult.current = data as Result;
       return { ok: true, uitslag: data as Result };
     } catch {
@@ -238,7 +240,7 @@ export function OnboardingForm({
     try {
       const res = await fetch("/api/onboarding", { method: "POST", body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, fout: (data?.error?.message as string | undefined) ?? t.failed };
+      if (!res.ok) return { ok: false, fout: thuisbasisFout(data) ?? (data?.error?.message as string | undefined) ?? t.failed };
       scanResult.current = data as Result;
       return { ok: true, uitslag: data as Result };
     } catch {
@@ -275,6 +277,15 @@ export function OnboardingForm({
     if (method === "zekerflex") {
       setError(null);
       scanResult.current = null;
+      // een adres in het buitenland eerst controleren: anders blijkt pas ná de scan dat OSM het niet kent
+      const formulier = e.currentTarget;
+      setBusy(true);
+      const fout = await controleerThuisbasisVooraf(formulier, thuisbasisFout, t.failed);
+      setBusy(false);
+      if (fout) {
+        setError(fout);
+        return;
+      }
       setScanOpen(true);
       return;
     }
@@ -304,7 +315,7 @@ export function OnboardingForm({
         setIbanCode("");
         setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
       } else if (!res.ok) {
-        setError(data?.error?.message ?? t.failed);
+        setError(thuisbasisFout(data) ?? data?.error?.message ?? t.failed);
       } else if (data.redirectUrl) {
         window.location.href = data.redirectUrl as string;
         return;
@@ -449,11 +460,7 @@ export function OnboardingForm({
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "2." : "1."} {t.home}
         </legend>
-        {/* Postcode alone places you for travel-distance matching — no house number needed. */}
-        <label className="block">
-          <span className="field-label">{t.postal}</span>
-          <input name="postalCode" required placeholder="1012 AB" autoComplete="postal-code" className="field-input" />
-        </label>
+        <ThuisbasisVelden postcodeLabel={t.postal} />
         <label className="block">
           <span className="field-label">{t.iban}</span>
           <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />

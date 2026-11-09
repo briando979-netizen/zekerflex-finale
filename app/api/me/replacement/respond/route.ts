@@ -9,6 +9,7 @@ import {
   withdrawReplacementResponse,
 } from "@/lib/replacements/store";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
+import { ondernemingGeldig } from "@/lib/matching/onderneming";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,13 +29,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       select: {
         id: true,
         kvkValid: true,
+        vatValid: true,
+        country: true,
         isBlacklisted: true,
         matchingBlockedUntil: true,
         user: { select: { kycStatus: true } },
       },
     });
     if (!profile) throw AppError.forbidden("Geen freelancer-profiel");
-    if (profile.user.kycStatus !== "VERIFIED" || !profile.kvkValid) {
+    if (profile.user.kycStatus !== "VERIFIED" || !ondernemingGeldig(profile)) {
       throw AppError.precondition("Je kunt pas een klus overnemen als je volledig geverifieerd bent.");
     }
     if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.");

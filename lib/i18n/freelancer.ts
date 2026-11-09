@@ -23,6 +23,15 @@ const nl = {
     tooMany: "Te veel pogingen. Probeer het later opnieuw.",
     mailFailed: "De code kon niet worden verstuurd. Probeer het later opnieuw.",
   },
+  /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  thuisbasis: {
+    land: "Land",
+    plaats: "Woonplaats",
+    plaatsPlaceholder: "Bijv. Antwerpen",
+    postcodeHint: "Zoals op je post: 2 tot 12 letters of cijfers.",
+    nietGevonden: "We vonden deze postcode niet in het gekozen land. Controleer de postcode en de woonplaats.",
+    onbereikbaar: "Het adres kon nu niet worden opgezocht. Probeer het over een minuut opnieuw.",
+  },
   opbouw: {
     titel: "ZekerFlex is nog in de opbouwfase",
     tekst:
@@ -1034,6 +1043,15 @@ const en: FreelancerDict = {
     tooMany: "Too many attempts. Please try again later.",
     mailFailed: "The code could not be sent. Please try again later.",
   },
+  /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  thuisbasis: {
+    land: "Country",
+    plaats: "Town or city",
+    plaatsPlaceholder: "E.g. Antwerp",
+    postcodeHint: "As on your post: 2 to 12 letters or digits.",
+    nietGevonden: "We could not find this postcode in the chosen country. Check the postcode and the town.",
+    onbereikbaar: "The address could not be looked up right now. Try again in a minute.",
+  },
   opbouw: {
     titel: "ZekerFlex is still being built",
     tekst:
@@ -2040,6 +2058,15 @@ const pl: FreelancerDict = {
     expired: "Nie ma już ważnego kodu dla tego numeru konta. Poproś o nowy kod.",
     tooMany: "Zbyt wiele prób. Spróbuj ponownie później.",
     mailFailed: "Nie udało się wysłać kodu. Spróbuj ponownie później.",
+  },
+  /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  thuisbasis: {
+    land: "Kraj",
+    plaats: "Miejscowość",
+    plaatsPlaceholder: "Np. Antwerpia",
+    postcodeHint: "Tak jak na listach: od 2 do 12 liter lub cyfr.",
+    nietGevonden: "Nie znaleźliśmy tego kodu pocztowego w wybranym kraju. Sprawdź kod pocztowy i miejscowość.",
+    onbereikbaar: "Nie udało się teraz wyszukać adresu. Spróbuj ponownie za minutę.",
   },
   opbouw: {
     titel: "ZekerFlex jest jeszcze w budowie",
@@ -3048,6 +3075,15 @@ const ro: FreelancerDict = {
     tooMany: "Prea multe încercări. Încearcă din nou mai târziu.",
     mailFailed: "Codul nu a putut fi trimis. Încearcă din nou mai târziu.",
   },
+  /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  thuisbasis: {
+    land: "Țara",
+    plaats: "Localitatea",
+    plaatsPlaceholder: "De ex. Anvers",
+    postcodeHint: "Ca pe corespondența ta: între 2 și 12 litere sau cifre.",
+    nietGevonden: "Nu am găsit acest cod poștal în țara aleasă. Verifică codul poștal și localitatea.",
+    onbereikbaar: "Adresa nu a putut fi căutată acum. Încearcă din nou peste un minut.",
+  },
   opbouw: {
     titel: "ZekerFlex este încă în construcție",
     tekst:
@@ -4054,6 +4090,15 @@ const uk: FreelancerDict = {
     expired: "Для цього номера рахунку більше немає чинного коду. Запроси новий код.",
     tooMany: "Забагато спроб. Спробуй ще раз пізніше.",
     mailFailed: "Не вдалося надіслати код. Спробуй ще раз пізніше.",
+  },
+  /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  thuisbasis: {
+    land: "Країна",
+    plaats: "Населений пункт",
+    plaatsPlaceholder: "Напр. Антверпен",
+    postcodeHint: "Як на твоїй пошті: від 2 до 12 літер або цифр.",
+    nietGevonden: "Ми не знайшли цей поштовий індекс у вибраній країні. Перевір індекс і населений пункт.",
+    onbereikbaar: "Зараз не вдалося знайти адресу. Спробуй ще раз за хвилину.",
   },
   opbouw: {
     titel: "ZekerFlex ще в стадії розбудови",
